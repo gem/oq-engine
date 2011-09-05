@@ -554,29 +554,27 @@ class OqParams(models.Model):
     risk_cell_size = models.FloatField(null=True)
     rupture_aspect_ratio = models.FloatField(null=True)
     RUPTURE_FLOATING_TYPE_CHOICES = (
-        ('only along strike ( rupture full ddw)',
-             'Only along strike ( rupture full DDW)'),
-        ('along strike and down dip', 'Along strike and down dip'),
-        ('along strike & centered down dip',
-             'Along strike & centered down dip'),
+        ('alongstrike', 'Only along strike ( rupture full DDW)'),
+        ('downdip', 'Along strike and down dip'),
+        ('centereddowndip', 'Along strike & centered down dip'),
     )
     rupture_floating_type = models.TextField(
         null=True, choices=RUPTURE_FLOATING_TYPE_CHOICES)
     SADIGH_SITE_TYPE_CHOICES = (
         ('rock', 'Rock'),
-        ('deep-soil', 'Deep-Soil'),
+        ('deepsoil', 'Deep-Soil'),
     )
     sadigh_site_type = models.TextField(
         null=True, choices=SADIGH_SITE_TYPE_CHOICES)
     source_model_lt_random_seed = models.IntegerField(null=True)
     STANDARD_DEVIATION_TYPE_CHOICES = (
         ('total', 'Total'),
-        ('inter-event', 'Inter-Event'),
-        ('intra-event', 'Intra-Event'),
-        ('none (zero)', 'None (zero)'),
-        ('total (mag dependent)', 'Total (Mag Dependent)'),
-        ('total (pga dependent)', 'Total (PGA Dependent)'),
-        ('intra-event (mag dependent)', 'Intra-Event (Mag Dependent)'),
+        ('interevent', 'Inter-Event'),
+        ('intraevent', 'Intra-Event'),
+        ('zero', 'None (zero)'),
+        ('total_mag_dependent', 'Total (Mag Dependent)'),
+        ('total_pga_dependent', 'Total (PGA Dependent)'),
+        ('intraevent_mag_dependent', 'Intra-Event (Mag Dependent)'),
     )
     standard_deviation_type = models.TextField(
         null=True, choices=STANDARD_DEVIATION_TYPE_CHOICES)
@@ -589,11 +587,10 @@ class OqParams(models.Model):
     subduction_rupture_floating_type = models.TextField(
         null=True, choices=RUPTURE_FLOATING_TYPE_CHOICES)
     SOURCE_AS_CHOICES = (
-        ('point sources', 'Point Sources'),
-        ('line sources (random or given strike)',
-             'Line Sources (random or given strike)'),
-        ('cross hair line sources', 'Cross Hair Line Sources'),
-        ('16 spoked line sources', '16 Spoked Line Sources'),
+        ('pointsources', 'Point Sources'),
+        ('linesources', 'Line Sources (random or given strike)'),
+        ('crosshairsources', 'Cross Hair Line Sources'),
+        ('16spokedsources', '16 Spoked Line Sources'),
     )
     treat_area_source_as = models.TextField(
         null=True, choices=SOURCE_AS_CHOICES)

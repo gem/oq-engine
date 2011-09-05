@@ -781,24 +781,24 @@ CREATE TABLE uiapi.oq_params (
             OR
             ((job_type = 'deterministic')
              AND (rupture_aspect_ratio IS NULL))),
-    -- RUPTURE_FLOATING_TYPE_CHOICES = (
-    --     ('only along strike ( rupture full ddw)', 'Only along strike ( rupture full DDW)'),
-    --     ('along strike and down dip', 'Along strike and down dip'),
-    --     ('along strike & centered down dip', 'Along strike & centered down dip'),
-    -- )
+    -- Rupture floating type, one of:
+    --     Only along strike ( rupture full DDW) (alongstrike)
+    --     Along strike and down dip (downdip)
+    --     Along strike & centered down dip (centereddowndip)
     rupture_floating_type VARCHAR
         CONSTRAINT rupture_floating_type_is_set
         CHECK(
             ((job_type IN ('classical', 'event_based'))
-             AND (rupture_floating_type IS NOT NULL))
+             AND (rupture_floating_type IN ('alongstrike', 'downdip', 'centereddowndip')))
             OR
             ((job_type = 'deterministic')
              AND (rupture_floating_type IS NULL))),
-    -- SADIGH_SITE_TYPE_CHOICES = (
-    --     ('rock', 'Rock'),
-    --     ('deep-soil', 'Deep-Soil'),
-    -- )
-    sadigh_site_type VARCHAR,
+    -- Sadigh site type, one of:
+    --     Rock (rock)
+    --     Deep-Soil (deepsoil)
+    sadigh_site_type VARCHAR CONSTRAINT sadigh_site_type_value
+        CHECK(sadigh_site_type IS NULL
+              OR sadigh_site_type IN ('rock', 'deepsoil')),
     source_model_lt_random_seed integer
         CONSTRAINT source_model_lt_random_seed_is_set
         CHECK(
@@ -806,20 +806,19 @@ CREATE TABLE uiapi.oq_params (
             OR
             ((job_type = 'deterministic')
              AND (source_model_lt_random_seed IS NULL))),
-    -- STANDARD_DEVIATION_TYPE_CHOICES = (
-    --     ('total', 'Total'),
-    --     ('inter-event', 'Inter-Event'),
-    --     ('intra-event', 'Intra-Event'),
-    --     ('none (zero)', 'None (zero)'),
-    --     ('total (mag dependent)', 'Total (Mag Dependent)'),
-    --     ('total (pga dependent)', 'Total (PGA Dependent)'),
-    --     ('intra-event (mag dependent)', 'Intra-Event (Mag Dependent)'),
-    -- )
+    -- Standard deviation, one of:
+    --     Total (total)
+    --     Inter-Event (interevent)
+    --     Intra-Event (intraevent)
+    --     None (zero) (zero)
+    --     Total (Mag Dependent) (total_mag_dependent)
+    --     Total (PGA Dependent) (total_pga_dependent)
+    --     Intra-Event (Mag Dependent) (intraevent_mag_dependent)
     standard_deviation_type VARCHAR
         CONSTRAINT standard_deviation_type_is_set
         CHECK(
             ((job_type IN ('classical', 'event_based'))
-             AND (standard_deviation_type IS NOT NULL))
+             AND (standard_deviation_type IN ('total', 'interevent', 'intraevent', 'zero', 'total_mag_dependent', 'total_pga_dependent', 'intraevent_mag_dependent')))
             OR
             ((job_type = 'deterministic')
              AND (standard_deviation_type IS NULL))),
@@ -863,25 +862,28 @@ CREATE TABLE uiapi.oq_params (
             OR
             ((job_type = 'deterministic')
              AND (subduction_rupture_aspect_ratio IS NULL))),
+    -- Rupture floating type, one of:
+    --     Only along strike ( rupture full DDW) (alongstrike)
+    --     Along strike and down dip (downdip)
+    --     Along strike & centered down dip (centereddowndip)
     subduction_rupture_floating_type VARCHAR
         CONSTRAINT subduction_rupture_floating_type_is_set
         CHECK(
             ((job_type IN ('classical', 'event_based'))
-             AND (subduction_rupture_floating_type IS NOT NULL))
+             AND (subduction_rupture_floating_type IN ('alongstrike', 'downdip', 'centereddowndip')))
             OR
             ((job_type = 'deterministic')
              AND (subduction_rupture_floating_type IS NULL))),
-    -- SOURCE_AS_CHOICES = (
-    --     ('point sources', 'Point Sources'),
-    --     ('line sources (random or given strike)', 'Line Sources (random or given strike)'),
-    --     ('cross hair line sources', 'Cross Hair Line Sources'),
-    --     ('16 spoked line sources', '16 Spoked Line Sources'),
-    -- )
+    -- Source as, one of:
+    --     Point Sources (pointsources)
+    --     Line Sources (random or given strike) (linesources)
+    --     Cross Hair Line Sources (crosshairsources)
+    --     16 Spoked Line Sources (16spokedsources)
     treat_area_source_as VARCHAR
         CONSTRAINT treat_area_source_as_is_set
         CHECK(
             ((job_type IN ('classical', 'event_based'))
-             AND (treat_area_source_as IS NOT NULL))
+             AND (treat_area_source_as IN ('pointsources', 'linesources', 'crosshairsources', '16spokedsources')))
             OR
             ((job_type = 'deterministic')
              AND (treat_area_source_as IS NULL))),
