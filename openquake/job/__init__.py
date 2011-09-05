@@ -241,7 +241,7 @@ def prepare_job(params):
         if job.job_type in param.modes and param.default is not None:
             setattr(oqp, param.column, param.default)
 
-    number_re = re.compile('[^0-9.]+')
+    number_re = re.compile('[ ,]+')
 
     for name, value in params.items():
         param = PARAMS[name]
