@@ -23,7 +23,7 @@ Unit tests for the tools/oqbugs.py tool.
 """
 
 import unittest
-from tools.oqbugs import (CommitsOutput, filter_reviewers, filter_bugs,
+from tools.oqbugs import (CommitsOutput, extract_reviewers, filter_bugs,
         launchpad_lookup, fix_apply)
 import mock
 import os
@@ -102,7 +102,7 @@ class OqBugsTestCase(unittest.TestCase):
 
     def test_commits_output_reviewers(self):
         for commit in self.correct_commits:
-            self.assertTrue(len(filter_reviewers(commit)))
+            self.assertTrue(len(extract_reviewers(commit)))
 
     def test_filter_bugs_multiple(self):
         self.assertEquals(
