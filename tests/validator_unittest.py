@@ -92,31 +92,33 @@ class ValidatorSetTestCase(unittest.TestCase):
         self.assertEquals(error_messages, validator.is_valid()[1])
 
 
-class ConfigurationConstraintsTestCase(unittest.TestCase):
+class ConfigurationConstraintsTestCase(unittest.TestCase, helpers.TestMixin):
 
     def test_risk_mandatory_parameters(self):
         sections = [config.RISK_SECTION,
                 config.HAZARD_SECTION, config.GENERAL_SECTION]
+
+        dummy_exposure = self.touch()
 
         params = {}
 
         validator = config.default_validators(sections, params)
         self.assertFalse(validator.is_valid()[0])
 
-        params = {config.EXPOSURE: "/a/path/to/exposure"}
+        params = {config.EXPOSURE: dummy_exposure}
 
         validator = config.default_validators(sections, params)
         self.assertFalse(validator.is_valid()[0])
 
-        params = {config.EXPOSURE: "/a/path/to/exposure",
-                config.REGION_GRID_SPACING: 0.5}
+        params = {config.EXPOSURE: dummy_exposure,
+                  config.REGION_GRID_SPACING: 0.5}
 
         validator = config.default_validators(sections, params)
         self.assertFalse(validator.is_valid()[0])
 
-        params = {config.EXPOSURE: "/a/path/to/exposure",
-                config.INPUT_REGION: "a, polygon",
-                config.REGION_GRID_SPACING: 0.5}
+        params = {config.EXPOSURE: dummy_exposure,
+                  config.INPUT_REGION: "a, polygon",
+                  config.REGION_GRID_SPACING: 0.5}
 
         validator = config.default_validators(sections, params)
         self.assertTrue(validator.is_valid()[0])
@@ -188,3 +190,22 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
 
         validator = config.ComputationTypeValidator(params)
         self.assertFalse(validator.is_valid()[0])
+
+    def test_file_path_validation(self):
+        # existing file
+        params = dict()
+        params['EXPOSURE'] = self.touch()
+
+        validator = config.FilePathValidator(params)
+        self.assertTrue(validator.is_valid()[0])
+
+        # non-existing file
+        params = dict()
+        params['VULNERABILITY'] = '/a/b/c'
+        params['SOURCE_MODEL_LOGIC_TREE_FILE'] = '/a/b/c'
+
+        validator = config.FilePathValidator(params)
+        valid, messages = validator.is_valid()
+
+        self.assertFalse(valid)
+        self.assertEquals(2, len(messages))
