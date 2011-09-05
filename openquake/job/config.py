@@ -22,8 +22,12 @@ its validation.
 """
 
 import os
+import re
 
-from openquake.job.params import PATH_PARAMS
+from django.contrib.gis.db import models
+from openquake.db.models import FloatArrayField
+
+from openquake.job.params import PARAMS, PATH_PARAMS
 
 
 EXPOSURE = "EXPOSURE"
@@ -191,6 +195,78 @@ class FilePathValidator(object):
         return (len(errors) == 0, errors)
 
 
+class BasicParameterValidator(object):
+    """Validator that checks the type of configuration parameters"""
+    NUMBER_RE = re.compile('[ ,]+')
+
+    def __init__(self, params):
+        self.params = params
+
+    @classmethod
+    def to_float_array(cls, value):
+        """Convert string value to floating point value array"""
+        return [float(v) for v in cls.NUMBER_RE.split(value) if len(v)]
+
+    def is_valid(self):
+        """Check type for all parameters"""
+        errors = []
+
+        for name, value in self.params.items():
+            param = PARAMS[name]
+            value = value.strip()
+
+            if param.type is None:
+                continue
+
+            invalid = False
+            try:
+                if param.to_db is not None:
+                    description = 'value'
+                    value = param.to_db(value)
+                elif param.type in (models.BooleanField,
+                                    models.NullBooleanField):
+                    description = 'true/false value'
+                    invalid = value.lower() not in ('0', '1', 'true', 'false')
+                elif param.type is models.PolygonField:
+                    description = 'polygon value'
+                    # check the array contains matching pairs and at least 3
+                    # vertices (allow an empty array)
+                    length = len(self.to_float_array(value))
+                    if length != 0 and (length % 2 == 1 or length < 6):
+                        raise ValueError()
+                elif param.type is models.MultiPointField:
+                    description = 'multi-point value'
+                    # just check the array contains matching pairs
+                    length = len(self.to_float_array(value))
+                    if length % 2 == 1:
+                        raise ValueError()
+                elif param.type is FloatArrayField:
+                    description = 'floating point array value'
+                    value = self.to_float_array(value)
+                elif param.type is models.FloatField:
+                    description = 'floating point value'
+                    value = float(value)
+                elif param.type is models.TextField:
+                    pass
+                elif param.type is models.IntegerField:
+                    description = 'integer value'
+                    value = int(value)
+                else:
+                    raise RuntimeError(
+                        "Invalid parameter type %s for parameter %s" % (
+                            param.type.__name__, name))
+            except KeyError:
+                invalid = True
+            except ValueError:
+                invalid = True
+
+            if invalid:
+                errors.append("Value '%s' is not a valid %s for parameter %s" %
+                              (value, description, name))
+
+        return (len(errors) == 0, errors)
+
+
 def default_validators(sections, params):
     """Create the set of default validators for a job.
 
@@ -209,11 +285,13 @@ def default_validators(sections, params):
     deterministic = DeterministicComputationValidator(sections, params)
     hazard_comp_type = ComputationTypeValidator(params)
     file_path = FilePathValidator(params)
+    parameter = BasicParameterValidator(params)
 
     validators = ValidatorSet()
     validators.add(hazard_comp_type)
     validators.add(deterministic)
     validators.add(exposure)
+    validators.add(parameter)
     validators.add(file_path)
 
     return validators
