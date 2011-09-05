@@ -18,6 +18,7 @@
 
 import mock
 import os
+import textwrap
 import unittest
 
 from django.contrib.gis.geos.polygon import Polygon
@@ -29,6 +30,7 @@ from openquake import flags
 from openquake import shapes
 from openquake.utils import config as oq_config
 from openquake.job import Job, LOG, config, prepare_job, run_job
+from openquake.job import parse_config_files, filter_configuration_parameters
 from openquake.job import spawn_job_supervisor
 from openquake.job.mixins import Mixin
 from openquake.db.models import OqJob, JobStats, OqParams
@@ -239,6 +241,93 @@ class JobDbRecordTestCase(unittest.TestCase):
             row.status = status
             row.save()
             self.assertEqual(Job.is_job_completed(job_id), is_completed)
+
+
+class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
+    maxDiff = None
+
+    def test_parse_files(self):
+        content = '''
+            [GENERAL]
+            CALCULATION_MODE = Event Based
+
+            [HAZARD]
+            MINIMUM_MAGNITUDE = 5.0
+            '''
+        config_path = self.touch(content=textwrap.dedent(content))
+
+        params, sections = parse_config_files(config_path, [])
+
+        self.assertEquals(
+            {'BASE_PATH': '/tmp',
+             'CALCULATION_MODE': 'Event Based',
+             'MINIMUM_MAGNITUDE': '5.0'},
+            params)
+        self.assertEquals(['GENERAL', 'HAZARD'], sorted(sections))
+
+    def test_parse_files_defaults(self):
+        content = '''
+            [GENERAL]
+            CALCULATION_MODE = Event Based
+
+            [HAZARD]
+            MINIMUM_MAGNITUDE = 5.0
+            '''
+        config_path = self.touch(content=textwrap.dedent(content))
+
+        params, sections = parse_config_files(config_path, [])
+
+        self.assertEquals(
+            {'BASE_PATH': '/tmp',
+             'MINIMUM_MAGNITUDE': '5.0',
+             'CALCULATION_MODE': 'Event Based'},
+            params)
+        self.assertEquals(['GENERAL', 'HAZARD'], sorted(sections))
+
+        default_content = '''
+            [GENERAL]
+            CALCULATION_MODE = Event Based
+            REGION_GRID_SPACING = 0.1
+
+            [HAZARD]
+            MINIMUM_MAGNITUDE = 6.0
+            '''
+        default_path = self.touch(content=textwrap.dedent(default_content))
+
+        def_params, def_sections = parse_config_files(
+            config_path, [default_path])
+
+        self.assertEquals(
+            {'BASE_PATH': '/tmp',
+             'CALCULATION_MODE': 'Event Based',
+             'REGION_GRID_SPACING': '0.1',
+             'MINIMUM_MAGNITUDE': '5.0'},
+            def_params)
+        self.assertEquals(['GENERAL', 'HAZARD'], sorted(def_sections))
+
+    def test_filter_parameters(self):
+        content = '''
+            [GENERAL]
+            CALCULATION_MODE = Event Based
+            # unknown parameter
+            FOO = 5
+
+            [HAZARD]
+            MINIMUM_MAGNITUDE = 5.0
+            # not used for this job type
+            COMPUTE_MEAN_HAZARD_CURVE = true
+            '''
+        config_path = self.touch(content=textwrap.dedent(content))
+
+        params, sections = parse_config_files(config_path, [])
+        params, sections = filter_configuration_parameters(params, sections)
+
+        self.assertEquals(
+            {'BASE_PATH': '/tmp',
+             'MINIMUM_MAGNITUDE': '5.0',
+             'CALCULATION_MODE': 'Event Based'},
+            params)
+        self.assertEquals(['GENERAL', 'HAZARD'], sorted(sections))
 
 
 class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
