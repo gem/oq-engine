@@ -36,10 +36,8 @@ oqpath.set_oq_path()
 
 from openquake import job
 from openquake import kvs
-from openquake import logs
 from openquake.utils import config
 
-LOG = logs.LOG
 
 SHORT_ARGS = 'hlj:'
 LONG_ARGS = ['help', 'job=', 'list']
@@ -138,16 +136,16 @@ def clear_job_data(job_id):
         raise
 
     logs.init_logs(level='info', log_type=config.get("logging", "backend"))
-    job.setup_job_logging(job_id=job_id)
 
-    LOG.info('Attempting to clear cache data for job %s...' % job_id)
+    logger = job.Job.get_logger_for(job_id)
+    logger.info('Attempting to clear cache data...')
 
     result = kvs.cache_gc(job_id)
 
     if result is None:
-        LOG.info('Job %s not found.' % job_id)
+        logger.info('Job not found.')
     else:
-        LOG.info('Removed %s keys.' % result)
+        logger.info('Removed %s keys.', result)
 
 
 def show_help():
