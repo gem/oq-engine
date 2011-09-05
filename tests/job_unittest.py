@@ -32,7 +32,7 @@ from openquake.utils import config as oq_config
 from openquake.job import Job, config, prepare_job, run_job
 from openquake.job import spawn_job_supervisor
 from openquake.job.mixins import Mixin
-from openquake.db.models import OqJob
+from openquake.db.models import OqJob, JobStats
 from openquake.risk.job import general
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
@@ -271,6 +271,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'MAXIMUM_DISTANCE': '200.0',
         'NUMBER_OF_LOGIC_TREE_SAMPLES': '2',
         'PERIOD': '0.0',
+        'DAMPING': '5.0',
         'AGGREGATE_LOSS_CURVE': '1',
         'NUMBER_OF_SEISMICITY_HISTORIES': '1',
         'INCLUDE_FAULT_SOURCE': 'true',
@@ -291,7 +292,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'INTENSITY_MEASURE_TYPE': 'PGA',
         'REFERENCE_VS30_VALUE': '759.0',
         'COMPONENT': 'Average Horizontal (GMRotI50)',
-                'PERIOD': '0.0',
+        'PERIOD': '0.0',
+        'DAMPING': '5.0',
         'NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS': '5',
         'TRUNCATION_LEVEL': '3',
         'GMPE_TRUNCATION_TYPE': '1 Sided',
@@ -321,6 +323,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'MAXIMUM_DISTANCE': '200.0',
         'NUMBER_OF_LOGIC_TREE_SAMPLES': '5',
         'PERIOD': '1.0',
+        'DAMPING': '5.0',
         'AGGREGATE_LOSS_CURVE': 'true',
         'NUMBER_OF_SEISMICITY_HISTORIES': '1',
         'INCLUDE_FAULT_SOURCE': 'true',
@@ -395,6 +398,9 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'realizations': 2,
              'histories': None,
              'gm_correlated': None,
+             'damping': None,
+             'gmf_calculation_number': None,
+             'rupture_surface_discretization': None,
              }, self.job.oq_params)
 
     def test_prepare_classical_job_over_sites(self):
@@ -427,7 +433,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              }, self.job.oq_params)
 
     def test_prepare_deterministic_job(self):
-
         params = self.BASE_DETERMINISTIC_PARAMS.copy()
         params['REGION_VERTEX'] = \
             '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
@@ -453,6 +458,9 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'realizations': None,
              'histories': None,
              'gm_correlated': True,
+             'damping': None,
+             'gmf_calculation_number': 5,
+             'rupture_surface_discretization': 0.1,
              }, self.job.oq_params)
 
     def test_prepare_deterministic_job_over_sites(self):
@@ -511,6 +519,9 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'realizations': 5,
              'histories': 1,
              'gm_correlated': False,
+             'damping': 5.0,
+             'gmf_calculation_number': None,
+             'rupture_surface_discretization': None,
              }, self.job.oq_params)
 
     def test_prepare_event_based_job_over_sites(self):
@@ -720,3 +731,46 @@ class RunJobTestCase(unittest.TestCase):
             job = OqJob.objects.get(pk=job.job_id)
             self.assertEqual(job.supervisor_pid, 42)
             self.assertEqual(job.job_pid, 54321)
+
+
+class JobStatsTestCase(unittest.TestCase):
+    '''
+    Tests related to capturing job stats.
+    '''
+
+    def setUp(self):
+        # Test 'event-based' job
+        self.eb_job = helpers.job_from_file('smoketests/simplecase/config.gem')
+
+    def test_record_initial_stats(self):
+        '''
+        Verify that :py:method:`openquake.job.Job._record_initial_stats`
+        reports initial job stats.
+
+        As we add fields to the uiapi.job_stats table, this test will need to
+        be updated to check for this new information.
+        '''
+        self.eb_job._record_initial_stats()
+
+        actual_stats = JobStats.objects.get(oq_job=self.eb_job.job_id)
+
+        self.assertTrue(actual_stats.start_time is not None)
+        self.assertEqual(91, actual_stats.num_sites)
+
+    def test_job_launch_calls_record_initial_stats(self):
+        '''
+        When a job is launched, make sure that
+        :py:method:`openquake.job.Job._record_initial_stats` is called.
+        '''
+        # Mock out pieces of the test job so it doesn't actually run.
+        haz_execute = 'openquake.hazard.opensha.EventBasedMixin.execute'
+        risk_execute = \
+            'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute'
+        record = 'openquake.job.Job._record_initial_stats'
+
+        with patch(haz_execute) as _haz_mock:
+            with patch(risk_execute) as _risk_mock:
+                with patch(record) as record_mock:
+                    self.eb_job.launch()
+
+                    self.assertEqual(1, record_mock.call_count)
