@@ -21,7 +21,6 @@
 import os
 import unittest
 
-from openquake.db.alchemy.db_utils import get_db_session
 from openquake.output.risk import (
     LossCurveDBWriter, LossMapDBWriter, LossCurveDBReader, LossMapDBReader)
 from openquake.shapes import Site, Curve
@@ -87,12 +86,11 @@ class LossCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def setUp(self):
         self.job = self.setup_classic_job()
-        self.session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
         self.display_name = os.path.basename(output_path)
 
-        self.writer = LossCurveDBWriter(self.session, output_path, self.job.id)
-        self.reader = LossCurveDBReader(self.session)
+        self.writer = LossCurveDBWriter(output_path, self.job.id)
+        self.reader = LossCurveDBReader()
 
     def normalize(self, values):
         result = []
@@ -117,33 +115,32 @@ class LossCurveDBWriterTestCase(LossCurveDBBaseTestCase):
         self.writer.serialize(RISK_LOSS_CURVE_DATA)
 
         # output record
-        self.assertEqual(1, len(self.job.output_set))
+        self.assertEqual(1, len(self.job.output_set.all()))
 
-        [output] = self.job.output_set
+        output = self.job.output_set.get()
         self.assertTrue(output.db_backed)
         self.assertTrue(output.path is None)
         self.assertEqual(self.display_name, output.display_name)
         self.assertEqual("loss_curve", output.output_type)
-        self.assertTrue(self.job is output.oq_job)
 
         # loss curve record
-        self.assertEqual(1, len(output.losscurve_set))
+        self.assertEqual(1, len(output.losscurve_set.all()))
 
-        [loss_curve] = output.losscurve_set
+        loss_curve = output.losscurve_set.get()
 
         self.assertEqual(loss_curve.unit, 'EUR')
         self.assertEqual(loss_curve.end_branch_label, None)
         self.assertEqual(loss_curve.category, None)
 
         # loss curve data records
-        self.assertEqual(4, len(loss_curve.losscurvedata_set))
+        self.assertEqual(4, len(loss_curve.losscurvedata_set.all()))
 
         inserted_data = []
 
-        for lcd in loss_curve.losscurvedata_set:
-            loc = lcd.location.coords(self.session)
+        for lcd in loss_curve.losscurvedata_set.all():
+            loc = lcd.location
 
-            data = (Site(loc[0], loc[1]),
+            data = (Site(loc.x, loc.y),
                     (Curve(zip(lcd.losses, lcd.poes)),
                     {u'assetID': lcd.asset_ref}))
 
@@ -228,12 +225,11 @@ class LossMapDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def setUp(self):
         self.job = self.setup_classic_job()
-        self.session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
         self.display_name = os.path.basename(output_path)
 
-        self.writer = LossMapDBWriter(self.session, output_path, self.job.id)
-        self.reader = LossMapDBReader(self.session)
+        self.writer = LossMapDBWriter(output_path, self.job.id)
+        self.reader = LossMapDBReader()
 
 
 class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
@@ -253,17 +249,16 @@ class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
         self.writer.serialize(data)
 
         # Output record
-        self.assertEqual(1, len(self.job.output_set))
-        [output] = self.job.output_set
+        self.assertEqual(1, len(self.job.output_set.all()))
+        output = self.job.output_set.get()
         self.assertTrue(output.db_backed)
         self.assertTrue(output.path is None)
         self.assertEqual(self.display_name, output.display_name)
         self.assertEqual("loss_map", output.output_type)
-        self.assertTrue(self.job is output.oq_job)
 
         # LossMap record
-        self.assertEqual(1, len(output.lossmap_set))
-        [metadata] = output.lossmap_set
+        self.assertEqual(1, len(output.lossmap_set.all()))
+        metadata = output.lossmap_set.get()
         self.assertEqual(DETERMINISTIC_LOSS_MAP_METADATA['deterministic'],
                          metadata.deterministic)
         self.assertEqual(DETERMINISTIC_LOSS_MAP_METADATA['endBranchLabel'],
@@ -275,25 +270,25 @@ class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
         self.assertEqual(None, metadata.poe)
 
         # LossMapData records
-        self.assertEqual(3, len(metadata.lossmapdata_set))
-        [data_a, data_b, data_c] = sorted(metadata.lossmapdata_set,
+        self.assertEqual(3, len(metadata.lossmapdata_set.all()))
+        [data_a, data_b, data_c] = sorted(metadata.lossmapdata_set.all(),
                                           key=lambda d: d.id)
 
-        self.assertEqual(SITE_A, Site(*data_a.location.coords(self.session)))
+        self.assertEqual(SITE_A, Site(*data_a.location.coords))
         self.assertEqual(SITE_A_ASSET_ONE['assetID'], data_a.asset_ref)
         self.assertEqual(SITE_A_DETERMINISTIC_LOSS_ONE['mean_loss'],
                         data_a.value)
         self.assertEqual(SITE_A_DETERMINISTIC_LOSS_ONE['stddev_loss'],
                          data_a.std_dev)
 
-        self.assertEqual(SITE_A, Site(*data_b.location.coords(self.session)))
+        self.assertEqual(SITE_A, Site(*data_b.location.coords))
         self.assertEqual(SITE_A_ASSET_TWO['assetID'], data_b.asset_ref)
         self.assertEqual(SITE_A_DETERMINISTIC_LOSS_TWO['mean_loss'],
                          data_b.value)
         self.assertEqual(SITE_A_DETERMINISTIC_LOSS_TWO['stddev_loss'],
                          data_b.std_dev)
 
-        self.assertEqual(SITE_B, Site(*data_c.location.coords(self.session)))
+        self.assertEqual(SITE_B, Site(*data_c.location.coords))
         self.assertEqual(SITE_B_ASSET_ONE['assetID'], data_c.asset_ref)
         self.assertEqual(SITE_B_DETERMINISTIC_LOSS_ONE['mean_loss'],
                          data_c.value)
@@ -312,17 +307,16 @@ class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
         self.writer.serialize(data)
 
         # Output record
-        self.assertEqual(1, len(self.job.output_set))
-        [output] = self.job.output_set
+        self.assertEqual(1, len(self.job.output_set.all()))
+        output = self.job.output_set.get()
         self.assertTrue(output.db_backed)
         self.assertTrue(output.path is None)
         self.assertEqual(self.display_name, output.display_name)
         self.assertEqual("loss_map", output.output_type)
-        self.assertTrue(self.job is output.oq_job)
 
         # LossMap record
-        self.assertEqual(1, len(output.lossmap_set))
-        [metadata] = output.lossmap_set
+        self.assertEqual(1, len(output.lossmap_set.all()))
+        metadata = output.lossmap_set.get()
         self.assertEqual(NONDETERMINISTIC_LOSS_MAP_METADATA['deterministic'],
                          metadata.deterministic)
         self.assertEqual(NONDETERMINISTIC_LOSS_MAP_METADATA['endBranchLabel'],
@@ -335,21 +329,21 @@ class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
                          metadata.poe)
 
         # LossMapData records
-        self.assertEqual(3, len(metadata.lossmapdata_set))
-        [data_a, data_b, data_c] = sorted(metadata.lossmapdata_set,
+        self.assertEqual(3, len(metadata.lossmapdata_set.all()))
+        [data_a, data_b, data_c] = sorted(metadata.lossmapdata_set.all(),
                                           key=lambda d: d.id)
 
-        self.assertEqual(SITE_A, Site(*data_a.location.coords(self.session)))
+        self.assertEqual(SITE_A, Site(*data_a.location.coords))
         self.assertEqual(SITE_A_ASSET_ONE['assetID'], data_a.asset_ref)
         self.assertEqual(SITE_A_NONDETERMINISTIC_LOSS_ONE['value'],
                          data_a.value)
 
-        self.assertEqual(SITE_A, Site(*data_b.location.coords(self.session)))
+        self.assertEqual(SITE_A, Site(*data_b.location.coords))
         self.assertEqual(SITE_A_ASSET_TWO['assetID'], data_b.asset_ref)
         self.assertEqual(SITE_A_NONDETERMINISTIC_LOSS_TWO['value'],
                          data_b.value)
 
-        self.assertEqual(SITE_B, Site(*data_c.location.coords(self.session)))
+        self.assertEqual(SITE_B, Site(*data_c.location.coords))
         self.assertEqual(SITE_B_ASSET_ONE['assetID'], data_c.asset_ref)
         self.assertEqual(SITE_B_NONDETERMINISTIC_LOSS_ONE['value'],
                          data_c.value)
