@@ -559,6 +559,10 @@ class DbTestMixin(TestMixin):
         oqp.area_source_magnitude_scaling_relationship = \
             'W&C 1994 Mag-Length Rel.'
         oqp.area_source_discretization = 0.1
+        oqp.treat_area_source_as = 'pointsources'
+        oqp.subduction_rupture_floating_type = 'downdip'
+        oqp.rupture_floating_type = 'downdip'
+        oqp.sadigh_site_type = 'rock'
         oqp.region = (
             "POLYGON((-81.3 37.2, -80.63 38.04, -80.02 37.49, -81.3 37.2))")
         oqp.save()
