@@ -84,7 +84,8 @@ class CommitsOutput(object):
             returns read lines
         """
 
-        git_cmd = shlex.split("git log --merges --since='%s'" % time)
+        #git_cmd = shlex.split("git log --merges --since='%s'" % time)
+        git_cmd = ["git", "log", "--merges",  "--since", time]
 
         if until:
             git_cmd.extend(shlex.split("--until='%s'" % until))
@@ -152,7 +153,7 @@ def changelog(launchpad, commit_lines):
         def __call__(self, parser, namespace, values, option_string=None):
 
             for commit_line in commit_lines:
-                reviewers = filter_reviewers(commit_line)
+                reviewers = extract_reviewers(commit_line)
                 # TODO: generalize filter_bugs to match multiple lines and
                 # speed up the launchpad_lookup process
                 bugs = launchpad_lookup(launchpad,
@@ -241,7 +242,7 @@ def arg_parse():
     return args
 
 
-def filter_reviewers(reviewers):
+def extract_reviewers(reviewers):
     """
         Little helper function to filter reviewers
     """
@@ -273,6 +274,9 @@ def launchpad_lookup(lp, bugs):
 def filter_bugs(commit):
     """
         Little helper function to filter bugs
+
+        Discards also bugs that are starting with '*' which are marked to be
+        skipped
     """
     bugs = RE_BUGS.findall(commit)
     if len(bugs):
