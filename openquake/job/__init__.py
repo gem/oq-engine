@@ -25,6 +25,7 @@ import urlparse
 import logging
 
 from ConfigParser import ConfigParser, RawConfigParser
+from datetime import datetime
 from django.db import transaction
 from django.contrib.gis.geos import GEOSGeometry
 
@@ -34,7 +35,7 @@ from openquake import kvs
 from openquake import logs
 from openquake import OPENQUAKE_ROOT
 from openquake import shapes
-from openquake.db.models import OqJob, OqParams, OqUser
+from openquake.db.models import OqJob, OqParams, OqUser, JobStats
 from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
@@ -231,6 +232,7 @@ def prepare_job(params):
 
     if oqp.imt == 'sa':
         oqp.period = float(params.get('PERIOD', 0.0))
+        oqp.damping = float(params.get('DAMPING', 0.0))
 
     if oqp.job_type == 'classical':
         oqp.imls = [float(v) for v in
@@ -246,6 +248,11 @@ def prepare_job(params):
         oqp.investigation_time = float(params.get('INVESTIGATION_TIME', 0.0))
         oqp.min_magnitude = float(params.get('MINIMUM_MAGNITUDE', 0.0))
         oqp.realizations = int(params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
+    else:
+        oqp.gmf_calculation_number = int(
+            params['NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS'])
+        oqp.rupture_surface_discretization = float(
+            params['RUPTURE_SURFACE_DISCRETIZATION'])
 
     if oqp.job_type == 'event_based':
         oqp.histories = int(params['NUMBER_OF_SEISMICITY_HISTORIES'])
@@ -485,6 +492,8 @@ class Job(object):
         """ Based on the behaviour specified in the configuration, mix in the
         correct behaviour for the tasks and then execute them.
         """
+        self._record_initial_stats()
+
         output_dir = os.path.join(self.base_path, self['OUTPUT_DIR'])
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -622,3 +631,16 @@ class Job(object):
         "Return the intensity measure levels as specified in the config file"
         return self.extract_values_from_config('INTENSITY_MEASURE_LEVELS',
                                                separator=',')
+
+    def _record_initial_stats(self):
+        '''
+        Report initial job stats (such as start time) by adding a
+        uiapi.job_stats record to the db.
+        '''
+        oq_job = OqJob.objects.get(id=self.job_id)
+
+        stats = JobStats(oq_job=oq_job)
+        stats.start_time = datetime.utcnow()
+        stats.num_sites = len(self.sites_to_compute())
+
+        stats.save()
