@@ -23,7 +23,12 @@ Base classes for the output methods of the various codecs.
 import logging
 from os.path import basename
 
-from openquake.db.alchemy.models import OqJob, Output
+from django.db import transaction
+from django.db import connections
+from django.db import router
+from django.contrib.gis.db import models as gis_models
+
+from openquake.db import models
 
 LOGGER = logging.getLogger('serializer')
 LOGGER.setLevel(logging.DEBUG)
@@ -108,10 +113,9 @@ class DBWriter(object):
     override serialize().
     """
 
-    def __init__(self, session, nrml_path, oq_job_id):
+    def __init__(self, nrml_path, oq_job_id):
         self.nrml_path = nrml_path
         self.oq_job_id = oq_job_id
-        self.session = session
         self.output = None
         self.bulk_inserter = None
 
@@ -121,13 +125,11 @@ class DBWriter(object):
         assert self.output is None
 
         LOGGER.info("> insert_output")
-        job = self.session.query(OqJob).filter(
-            OqJob.id == self.oq_job_id).one()
-        self.output = Output(owner=job.owner, oq_job=job,
-                             display_name=basename(self.nrml_path),
-                             output_type=output_type, db_backed=True)
-        self.session.add(self.output)
-        self.session.flush()
+        job = models.OqJob.objects.get(id=self.oq_job_id)
+        self.output = models.Output(owner=job.owner, oq_job=job,
+                                    display_name=basename(self.nrml_path),
+                                    output_type=output_type, db_backed=True)
+        self.output.save()
         LOGGER.info("output = '%s'" % self.output)
         LOGGER.info("< insert_output")
 
@@ -143,6 +145,7 @@ class DBWriter(object):
         """
         raise NotImplementedError()
 
+    @transaction.commit_on_success('reslt_writer')
     def serialize(self, iterable):
         """
         Implementation of the "serialize" interface.
@@ -166,8 +169,7 @@ class DBWriter(object):
             self.insert_datum(key, values)
 
         if self.bulk_inserter:
-            self.bulk_inserter.flush(self.session)
-        self.session.commit()
+            self.bulk_inserter.flush()
 
         LOGGER.info("serialized %s points" % len(iterable))
         LOGGER.info("< serialize")
@@ -204,9 +206,14 @@ def compose_writers(writers):
 class BulkInserter(object):
     """Handle bulk object insertion"""
 
-    def __init__(self, sa_model):
-        """Create a new bulk inserter for a SQLAlchemy model class"""
-        self.table = sa_model.__table__
+    def __init__(self, dj_model):
+        """
+        Create a new bulk inserter for a Django model class
+
+        :param dj_model: Django model
+        :type dj_model: :class:`django.db.models.Model`
+        """
+        self.table = dj_model
         self.fields = None
         self.values = []
         self.count = 0
@@ -219,7 +226,7 @@ class BulkInserter(object):
         subsequent add_entry() calls must provide the same set of
         keyword arguments.
 
-        Handles PostGIS/GeoAlchemy types.
+        Handles PostGIS/GeoDjango types.
         """
         if not self.fields:
             self.fields = kwargs.keys()
@@ -228,24 +235,32 @@ class BulkInserter(object):
             self.values.append(kwargs[k])
         self.count += 1
 
-    def flush(self, session):
+    def flush(self):
         """Inserts the entries in the database using a bulk insert query"""
         if not self.values:
             return
 
-        cursor = session.connection().connection.cursor()
+        alias = router.db_for_write(self.table)
+        cursor = connections[alias].cursor()
         value_args = []
+
+        field_map = dict()
+        for f in self.table._meta.fields:  # pylint: disable=W0212
+            field_map[f.column] = f
+
         for f in self.fields:
-            col = self.table.columns[f]
-            if hasattr(col.type, 'srid'):
-                value_args.append('GeomFromText(%%s, %d)' % col.type.srid)
+            col = field_map[f]
+            if isinstance(col, gis_models.GeometryField):
+                value_args.append('GeomFromText(%%s, %d)' % col.srid)
             else:
                 value_args.append('%s')
 
-        sql = "INSERT INTO %s.%s (%s) VALUES " % (
-            self.table.schema, self.table.name, ", ".join(self.fields)) + \
+        # pylint: disable=W0212
+        sql = "INSERT INTO \"%s\" (%s) VALUES " % (
+            self.table._meta.db_table, ", ".join(self.fields)) + \
             ", ".join(["(" + ", ".join(value_args) + ")"] * self.count)
         cursor.execute(sql, self.values)
+        transaction.set_dirty(using=alias)
 
         self.fields = None
         self.values = []

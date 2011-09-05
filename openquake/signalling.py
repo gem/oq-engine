@@ -20,11 +20,125 @@
 """
 Classes dealing with amqp signalling between jobbers, workers and supervisors.
 """
+import logging
 import time
 
 from amqplib import client_0_8 as amqp
 
 from openquake.utils import config
+
+
+_ROUTING_KEY_PREFIX = 'log'
+_ROUTING_KEY_TYPES = ('failed', 'succeeded', 'fatal', 'error', 'warn',
+    'info', 'debug')
+
+
+def generate_routing_key(job_id, type_):
+    """
+    Generate an amqp routing key to route messages of a job.
+
+    :param job_id: the id of the job or '*' for a key matching any job
+    :type job_id: int or the string '*'
+    :param type_: the type of the message. One of
+      - 'failed', to match messages notifying the failure of a job
+      - 'succeeded', to match messages notifying the success of job
+      - a logging level, e.g. 'ERROR', to match logging messages
+      - '*' to match any type of message
+    :type type_: string
+    :return: the routing key
+    :rtype: string
+    """
+    assert type_ == '*' or type_ in _ROUTING_KEY_TYPES, \
+           'invalid routing type %r' % type_
+
+    assert isinstance(job_id, (int, long)) or job_id == '*', \
+           'invalid job id %r' % job_id
+
+    return '%s.%s.%s' % (_ROUTING_KEY_PREFIX, type_, job_id)
+
+
+def parse_routing_key(routing_key):
+    """
+    Extract the job id and routing key type from a routing key.
+
+    Raises a ValueError if the key is malformed.
+
+    :param routing_key: the routing key
+    :type routing_key: string
+    :return: the tuple (job_id, routing_key_type)
+    :rtype: job_id int, routing_key_type string
+    """
+
+    prefix, type_, job_id = routing_key.split('.')
+
+    if prefix != _ROUTING_KEY_PREFIX:
+        raise ValueError('invalid prefix %r for a signalling routing key'
+                            % prefix)
+
+    job_id = int(job_id)
+
+    if type_ not in _ROUTING_KEY_TYPES:
+        raise ValueError('invalid type %r for a signalling routing key'
+                         % type_)
+
+    return job_id, type_
+
+
+def connect():
+    """
+    Create an amqp channel for signalling using the parameters from
+    openquake.cfg.
+
+    Create the exchange too if it doesn't exist yet.
+
+    :return: the tuple (connection, channel)
+    """
+    cfg = config.get_section("amqp")
+
+    conn = amqp.Connection(host=cfg['host'],
+                           userid=cfg['user'],
+                           password=cfg['password'],
+                           virtual_host=cfg['vhost'])
+    chn = conn.channel()
+    # I use the vhost as a realm, which seems to be an arbitrary string
+    chn.access_request(cfg['vhost'], active=True, read=True, write=True)
+    chn.exchange_declare(cfg['exchange'], 'topic', auto_delete=False)
+
+    return conn, chn
+
+
+def declare_and_bind_queue(job_id, levels, name=''):
+    """
+    Create an amqp queue for sending/receiving messages and binds it to the
+    exchange of specific job and levels.
+
+    It is safe to call this function more than once.  If the exchange, queue or
+    bindings already exists, this function won't create them again.
+
+    :param job_id: the id of the job
+    :type job_id: int
+    :param levels: the signalling levels, e.g. 'ERROR'
+    :type levels: iterable of strings
+    :param name: the name for the queue, '' (empty string) to give the queue an
+                 automatically generated name
+    :type name: string
+    :return: the name of the created queue
+    :rtype: string
+    """
+    cfg = config.get_section("amqp")
+
+    conn, chn = connect()
+
+    name, _, _ = chn.queue_declare(queue=name, auto_delete=False)
+
+    for level in levels:
+        chn.queue_bind(name, cfg['exchange'],
+                       routing_key=generate_routing_key(job_id, level))
+
+    chn.close()
+    conn.close()
+
+    return name
 
 
 class LogMessageConsumer(object):
@@ -48,34 +162,28 @@ class LogMessageConsumer(object):
         :param levels: the logging levels we are interested in
         :type levels: None for all the levels (translated to a '*' in the
                       routing_key) or an iterable of stings
-                      (e.g. ['ERROR', 'CRITICAL'])
+                      (e.g. ['error', 'fatal'])
         :param timeout: the optional timeout in seconds. When it expires the
                         `timeout_callback` will be called.
         :type timeout: None or float
         """
 
+        self.job_id = job_id
         self.timeout = timeout
 
-        cfg = config.get_section("amqp")
-
-        self.conn = amqp.Connection(host=cfg['host'],
-                                    userid=cfg['user'],
-                                    password=cfg['password'],
-                                    virtual_host=cfg['vhost'])
-        self.chn = self.conn.channel()
-        # I use the vhost as a realm, which seems to be an arbitrary string
-        self.chn.access_request(cfg['vhost'], active=False, read=True)
-        self.chn.exchange_declare(cfg['exchange'], 'topic', auto_delete=True)
-
-        self.qname = 'supervisor-%s' % job_id
-        self.chn.queue_declare(self.qname)
+        self.conn, self.chn = connect()
 
         if levels is None:
             levels = ('*',)
 
-        for level in levels:
-            self.chn.queue_bind(self.qname, cfg['exchange'],
-                               routing_key='log.%s.%s' % (level, job_id))
+        self.qname = declare_and_bind_queue(self.job_id, levels,
+                                            self.get_queue_name())
+
+    def get_queue_name(self):  # pylint: disable=R0201
+        """
+        The name of the queue that will contain the messages of this consumer.
+        """
+        return ''
 
     def __enter__(self):
         return self
@@ -142,4 +250,51 @@ class LogMessageConsumer(object):
         Can raise StopIteration to stop the loop inside `run` and let it return
         to the caller.
         """
-        raise NotImplementedError()
+        pass
+
+
+def signal_job_outcome(job_id, outcome):
+    """
+    Send an amqp message to publish the outcome of a job.
+
+    :param job_id: the id of the job
+    :type job_id: int
+    :param outcome: the outcome of the job, 'succeeded' or 'failed'
+    :type outcome: string
+    """
+    cfg = config.get_section("amqp")
+
+    conn, chn = connect()
+
+    chn.basic_publish(amqp.Message(), exchange=cfg['exchange'],
+                      routing_key=generate_routing_key(job_id, outcome))
+
+    chn.close()
+    conn.close()
+
+
+class Collector(LogMessageConsumer):
+    """
+    Log the signalling messages with the supplied logger.
+
+    :param job_id: the id of a job to log only messages of a particular job, or
+                   '*' to log them all, regardless of the job
+    :type job_id: int or the '*' string
+    :param logger: the logger that will receive the messages
+    :type logger: :py:class:`logging.Logger`
+    """
+    def __init__(self, job_id, logger):
+        super(Collector, self).__init__(job_id)
+
+        self.logger = logger
+
+    def message_callback(self, msg):
+        try:
+            # pylint: disable=W0612
+            job_id, level = \
+                parse_routing_key(msg.delivery_info['routing_key'])
+        except ValueError:
+            pass
+        else:
+            if level in ('debug', 'info', 'warn', 'error', 'fatal'):
+                self.logger.log(getattr(logging, level.upper()), msg.body)

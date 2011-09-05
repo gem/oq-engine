@@ -33,7 +33,10 @@ class FloatArrayField(models.Field):  # pylint: disable=R0904
         return 'float[]'
 
     def get_prep_value(self, value):
-        return "{" + ', '.join(str(v) for v in value) + "}"
+        if value:
+            return "{" + ', '.join(str(v) for v in value) + "}"
+        else:
+            return None
 
 
 ## Tables in the 'admin' schema.
@@ -398,7 +401,7 @@ class Upload(models.Model):
         (u'succeeded', u'Succeeded'),
     )
     status = models.TextField(choices=STATUS_CHOICES, default='pending')
-    job_pid = models.IntegerField()
+    job_pid = models.IntegerField(default=0)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
@@ -419,6 +422,7 @@ class Input(models.Model):
         (u'lt_gmpe', u'GMPE Logic Tree'),
         (u'exposure', u'Exposure'),
         (u'vulnerability', u'Vulnerability'),
+        (u'rupture', u'Rupture'),
     )
     input_type = models.TextField(choices=INPUT_TYPE_CHOICES)
     # Number of bytes in the file:
@@ -460,6 +464,20 @@ class OqJob(models.Model):
         db_table = 'uiapi\".\"oq_job'
 
 
+class JobStats(models.Model):
+    '''
+    Capture various statistics about a job.
+    '''
+    oq_job = models.ForeignKey('OqJob')
+    start_time = models.DateTimeField(editable=False)
+    stop_time = models.DateTimeField(editable=False)
+    # The number of total sites in job
+    num_sites = models.IntegerField()
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'uiapi\".\"job_stats'
+
+
 class OqParams(models.Model):
     '''
     Parameters needed to run an OpenQuake job
@@ -468,11 +486,9 @@ class OqParams(models.Model):
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
         (u'deterministic', u'Deterministic'),
-
     )
     job_type = models.TextField(choices=JOB_TYPE_CHOICES)
-    upload = models.ForeignKey('Upload')
-    region_grid_spacing = models.FloatField()
+    upload = models.ForeignKey('Upload', null=True)
     min_magnitude = models.FloatField(null=True)
     investigation_time = models.FloatField(null=True)
     COMPONENT_CHOICES = (
@@ -488,6 +504,7 @@ class OqParams(models.Model):
     )
     imt = models.TextField(choices=IMT_CHOICES)
     period = models.FloatField(null=True)
+    damping = models.FloatField(null=True)
     TRUNC_TYPE_CHOICES = (
        (u'none', u'None'),
        (u'onesided', u'One-sided'),
@@ -504,8 +521,14 @@ class OqParams(models.Model):
     realizations = models.IntegerField(null=True)
     histories = models.IntegerField(null=True)
     gm_correlated = models.BooleanField(null=True)
+    gmf_calculation_number = models.IntegerField(null=True)
+    rupture_surface_discretization = models.FloatField(null=True)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
-    region = models.PolygonField(srid=4326)
+
+    # We can specify a (region and region_grid_spacing) or sites, but not both.
+    region = models.PolygonField(srid=4326, null=True)
+    region_grid_spacing = models.FloatField(null=True)
+    sites = models.MultiPointField(srid=4326, null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"oq_params'
@@ -528,6 +551,8 @@ class Output(models.Model):
         (u'gmf', u'Ground Motion Field'),
         (u'loss_curve', u'Loss Curve'),
         (u'loss_map', u'Loss Map'),
+        (u'collapse_map', u'Collapse map'),
+        (u'bcr_distribution', u'Benefit-cost ratio distribution'),
     )
     output_type = models.TextField(choices=OUTPUT_TYPE_CHOICES)
     # Number of bytes in the file:
@@ -711,6 +736,59 @@ class AggregateLossCurveData(models.Model):
         db_table = 'riskr\".\"aggregate_loss_curve_data'
 
 
+class CollapseMap(models.Model):
+    '''
+    Holds metadata for the collapse map
+    '''
+
+    output = models.ForeignKey("Output")
+    exposure_model = models.ForeignKey("ExposureModel")
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"collapse_map'
+
+
+class CollapseMapData(models.Model):
+    '''
+    Holds the actual data for the collapse map
+    '''
+
+    collapse_map = models.ForeignKey("CollapseMap")
+    asset_ref = models.TextField()
+    value = models.FloatField()
+    std_dev = models.FloatField()
+    location = models.PointField(srid=4326)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"collapse_map_data'
+
+
+class BCRDistribution(models.Model):
+    '''
+    Holds metadata for the benefit-cost ratio distribution
+    '''
+
+    output = models.ForeignKey("Output")
+    exposure_model = models.ForeignKey("ExposureModel")
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"bcr_distribution'
+
+
+class BCRDistributionData(models.Model):
+    '''
+    Holds the actual data for the benefit-cost ratio distribution
+    '''
+
+    bcr_distribution = models.ForeignKey("BCRDistribution")
+    asset_ref = models.TextField()
+    bcr = models.FloatField()
+    location = models.PointField(srid=4326)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"bcr_distribution_data'
+
+
 ## Tables in the 'oqmif' schema.
 
 
@@ -738,7 +816,7 @@ class ExposureData(models.Model):
     exposure_model = models.ForeignKey("ExposureModel")
     asset_ref = models.TextField()
     value = models.FloatField()
-    vulnerability_function = models.ForeignKey("VulnerabilityFunction")
+    vf_ref = models.TextField()
     structure_type = models.TextField(null=True)
     retrofitting_cost = models.FloatField(null=True)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)

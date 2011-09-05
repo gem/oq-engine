@@ -18,16 +18,20 @@
 
 import mock
 import os
-import sqlalchemy
 import unittest
 
-from openquake import java
+from django.contrib.gis.geos.polygon import Polygon
+from django.contrib.gis.geos.collections import MultiPoint
+from django.core import exceptions
+
 from openquake import kvs
 from openquake import flags
-from openquake.db.alchemy.db_utils import get_db_session
-from openquake.db.alchemy.models import OqJob
-from openquake.job import Job, LOG, prepare_job, run_job
+from openquake import shapes
+from openquake.utils import config as oq_config
+from openquake.job import Job, LOG, config, prepare_job, run_job
+from openquake.job import spawn_job_supervisor
 from openquake.job.mixins import Mixin
+from openquake.db.models import OqJob, JobStats
 from openquake.risk.job import general
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
@@ -47,17 +51,24 @@ REGION_TEST_FILE = "small.region"
 FLAGS = flags.FLAGS
 
 
-def _toCoordList(polygon):
-    session = get_db_session("reslt", "writer")
-
+def _to_coord_list(geometry):
     pts = []
 
-    # postgis -> lon/lat -> config lat/lon, skip the closing point
-    for c in polygon.coords(session)[0][:-1]:
-        pts.append("%.2f" % c[1])
-        pts.append("%.2f" % c[0])
+    if isinstance(geometry, Polygon):
+        # Ignore the last coord:
+        for c in geometry.coords[0][:-1]:
+            pts.append(str(c[1]))
+            pts.append(str(c[0]))
 
-    return ", ".join(pts)
+        return ', '.join(pts)
+    elif isinstance(geometry, MultiPoint):
+        for c in geometry.coords:
+            pts.append(str(c[1]))
+            pts.append(str(c[0]))
+
+        return ', '.join(pts)
+    else:
+        raise RuntimeError('Unexpected geometry type: %s' % type(geometry))
 
 
 class JobTestCase(unittest.TestCase):
@@ -180,57 +191,6 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(self.job, Job.from_kvs(self.job.job_id))
         helpers.cleanup_loggers()
 
-    def test_job_calls_cleanup(self):
-        """
-        This test ensures that jobs call
-        :py:method:`openquake.job.Job.cleanup`.
-
-        The test job file defines an Event-Based calculation; the Event-Based
-        mixins are mocked in this test (so the entire calculation isn't
-        actually run).
-        """
-        haz_exec_path = 'openquake.hazard.opensha.EventBasedMixin.execute'
-        risk_exec_path = \
-            'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute'
-
-        with patch(haz_exec_path) as haz_exec:
-            haz_exec.return_value = []
-
-            with patch(risk_exec_path) as risk_exec:
-                risk_exec.return_value = []
-
-                with patch('openquake.job.Job.cleanup') as clean_mock:
-                    self.job.launch()
-
-                    self.assertEqual(1, clean_mock.call_count)
-
-    def test_cleanup_calls_cache_gc(self):
-        """
-        This ensures that the job cleanup method
-        :py:method:`openquake.job.Job.cleanup` properly initiates KVS
-        garbage collection.
-        """
-        expected_args = (['python', 'bin/cache_gc.py',
-                          '--job=%d' % self.job.job_id], )
-
-        with patch('subprocess.Popen') as popen_mock:
-            self.job.cleanup()
-
-            self.assertEqual(1, popen_mock.call_count)
-
-            actual_args, actual_kwargs = popen_mock.call_args
-
-            self.assertEqual(expected_args, actual_args)
-
-            # testing the kwargs is slight more complex, since stdout is
-            # directed to /dev/null
-            popen_stdout = actual_kwargs['stdout']
-            self.assertTrue(isinstance(popen_stdout, file))
-            self.assertEqual('/dev/null', popen_stdout.name)
-            self.assertEqual('w', popen_stdout.mode)
-
-            self.assertEqual(os.environ, actual_kwargs['env'])
-
 
 class JobDbRecordTestCase(unittest.TestCase):
 
@@ -246,49 +206,38 @@ class JobDbRecordTestCase(unittest.TestCase):
 
     def test_job_db_record_for_output_type_db(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
-
-        session = get_db_session("uiapi", "writer")
-
-        session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
+        OqJob.objects.get(id=self.job.job_id)
 
     def test_job_db_record_for_output_type_xml(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'xml')
-
-        session = get_db_session("uiapi", "writer")
-
-        session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
+        OqJob.objects.get(id=self.job.job_id)
 
     def test_set_status(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
-
-        session = get_db_session("reslt", "writer")
-
         status = 'running'
         self.job.set_status(status)
-
-        job = session.query(OqJob).filter(OqJob.id == self.job.job_id).one()
-
-        self.assertEqual(status, job.status)
+        self.assertEqual(status, OqJob.objects.get(id=self.job.job_id).status)
 
     def test_get_status_from_db(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
+        row = OqJob.objects.get(id=self.job.job_id)
 
-        session = get_db_session("reslt", "writer")
-        session.query(OqJob).update({'status': 'failed'})
-        session.commit()
-        self.assertEqual(Job.get_status_from_db(self.job.job_id), 'failed')
-        session.query(OqJob).update({'status': 'running'})
-        session.commit()
-        self.assertEqual(Job.get_status_from_db(self.job.job_id), 'running')
+        row.status = "failed"
+        row.save()
+        self.assertEqual("failed", Job.get_status_from_db(self.job.job_id))
+
+        row.status = "running"
+        row.save()
+        self.assertEqual("running", Job.get_status_from_db(self.job.job_id))
 
     def test_is_job_completed(self):
         job_id = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db').job_id
-        session = get_db_session("reslt", "writer")
+        row = OqJob.objects.get(id=job_id)
         pairs = [('pending', False), ('running', False),
                  ('succeeded', True), ('failed', True)]
         for status, is_completed in pairs:
-            session.query(OqJob).update({'status': status})
-            session.commit()
+            row.status = status
+            row.save()
             self.assertEqual(Job.is_job_completed(job_id), is_completed)
 
 
@@ -304,6 +253,90 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
     As a side-effect, also tests that the inserted record satisfied
     the DB constraints.
     """
+    BASE_CLASSICAL_PARAMS = {
+        'CALCULATION_MODE': 'Classical',
+        'POES_HAZARD_MAPS': '0.01 0.1',
+        'INTENSITY_MEASURE_TYPE': 'PGA',
+        'MINIMUM_MAGNITUDE': '5.0',
+        'INVESTIGATION_TIME': '50.0',
+        'TREAT_GRID_SOURCE_AS': 'Point Sources',
+        'INCLUDE_AREA_SOURCES': 'true',
+        'TREAT_AREA_SOURCE_AS': 'Point Sources',
+        'QUANTILE_LEVELS': '0.25 0.50',
+        'INTENSITY_MEASURE_LEVELS': '0.005, 0.007, 0.0098, 0.0137, 0.0192',
+        'GROUND_MOTION_CORRELATION': 'true',
+        'GMPE_TRUNCATION_TYPE': '2 Sided',
+        'STANDARD_DEVIATION_TYPE': 'Total',
+        'MAXIMUM_DISTANCE': '200.0',
+        'NUMBER_OF_LOGIC_TREE_SAMPLES': '2',
+        'PERIOD': '0.0',
+        'DAMPING': '5.0',
+        'AGGREGATE_LOSS_CURVE': '1',
+        'NUMBER_OF_SEISMICITY_HISTORIES': '1',
+        'INCLUDE_FAULT_SOURCE': 'true',
+        'FAULT_SURFACE_DISCRETIZATION': '1.0',
+        'REFERENCE_VS30_VALUE': '760.0',
+        'COMPONENT': 'Average Horizontal (GMRotI50)',
+        'CONDITIONAL_LOSS_POE': '0.01',
+        'TRUNCATION_LEVEL': '3',
+        'COMPUTE_MEAN_HAZARD_CURVE': 'true',
+        'AREA_SOURCE_DISCRETIZATION': '0.1',
+    }
+
+    BASE_DETERMINISTIC_PARAMS = {
+        'CALCULATION_MODE': 'Deterministic',
+        'GMPE_MODEL_NAME': 'BA_2008_AttenRel',
+        'GMF_RANDOM_SEED': '3',
+        'RUPTURE_SURFACE_DISCRETIZATION': '0.1',
+        'INTENSITY_MEASURE_TYPE': 'PGA',
+        'REFERENCE_VS30_VALUE': '759.0',
+        'COMPONENT': 'Average Horizontal (GMRotI50)',
+        'PERIOD': '0.0',
+        'DAMPING': '5.0',
+        'NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS': '5',
+        'TRUNCATION_LEVEL': '3',
+        'GMPE_TRUNCATION_TYPE': '1 Sided',
+        'GROUND_MOTION_CORRELATION': 'true',
+    }
+
+    BASE_EVENT_BASED_PARAMS = {
+        'CALCULATION_MODE': 'Event Based',
+        'POES_HAZARD_MAPS': '0.01 0.10',
+        'INTENSITY_MEASURE_TYPE': 'SA',
+        'INCLUDE_GRID_SOURCES': 'false',
+        'INCLUDE_SUBDUCTION_FAULT_SOURCE': 'false',
+        'RUPTURE_ASPECT_RATIO': '1.5',
+        'MINIMUM_MAGNITUDE': '5.0',
+        'SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA': '0.0',
+        'INVESTIGATION_TIME': '50.0',
+        'TREAT_GRID_SOURCE_AS': 'Point Sources',
+        'INCLUDE_AREA_SOURCES': 'true',
+        'TREAT_AREA_SOURCE_AS': 'Point Sources',
+        'QUANTILE_LEVELS': '0.25 0.50',
+        'INTENSITY_MEASURE_LEVELS': '0.005, 0.007, 0.0098, 0.0137, 0.0192',
+        'GROUND_MOTION_CORRELATION': 'false',
+        'GMPE_TRUNCATION_TYPE': 'None',
+        'STANDARD_DEVIATION_TYPE': 'Total',
+        'SUBDUCTION_FAULT_RUPTURE_OFFSET': '10.0',
+        'RISK_CELL_SIZE': '0.0005',
+        'MAXIMUM_DISTANCE': '200.0',
+        'NUMBER_OF_LOGIC_TREE_SAMPLES': '5',
+        'PERIOD': '1.0',
+        'DAMPING': '5.0',
+        'AGGREGATE_LOSS_CURVE': 'true',
+        'NUMBER_OF_SEISMICITY_HISTORIES': '1',
+        'INCLUDE_FAULT_SOURCE': 'true',
+        'SUBDUCTION_RUPTURE_ASPECT_RATIO': '1.5',
+        'FAULT_SURFACE_DISCRETIZATION': '1.0',
+        'REFERENCE_VS30_VALUE': '760.0',
+        'COMPONENT': 'Average Horizontal',
+        'CONDITIONAL_LOSS_POE': '0.01',
+        'TRUNCATION_LEVEL': '3',
+        'COMPUTE_MEAN_HAZARD_CURVE': 'true',
+        'AREA_SOURCE_DISCRETIZATION': '0.1',
+        'FAULT_RUPTURE_OFFSET': '5.0',
+    }
+
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
@@ -313,41 +346,40 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         self.assertEquals(expected, got_params)
 
+    def test_prepare_job_raises_if_no_geometry(self):
+        '''
+        If no geometry is specified (neither SITES nor REGION_VERTEX +
+        REGION_GRID_SPACING), a RuntimeError should be raised.
+
+        Note: The job validator _should_ catch any such error before we hit
+        prepare_job.
+        '''
+        params = self.BASE_CLASSICAL_PARAMS.copy()
+
+        self.assertRaises(RuntimeError, prepare_job, params)
+
+    def test_prepare_job_raises_if_both_geometries_specified(self):
+        '''
+        If both SITES and REGION_VERTEX + REGION_GRID_SPACING are specified, a
+        RuntimeError should be raised. A job config can only have one or the
+        other.
+        '''
+        params = self.BASE_CLASSICAL_PARAMS.copy()
+
+        params['REGION_VERTEX'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
+        params['REGION_GRID_SPACING'] = '0.1'
+        params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
+
+        self.assertRaises(RuntimeError, prepare_job, params)
+
     def test_prepare_classical_job(self):
-        params = {
-            'CALCULATION_MODE': 'Classical',
-            'POES_HAZARD_MAPS': '0.01 0.1',
-            'INTENSITY_MEASURE_TYPE': 'PGA',
-            'REGION_VERTEX': '37.90, -121.90, 37.90, -121.60, 37.50, -121.60',
-            'MINIMUM_MAGNITUDE': '5.0',
-            'INVESTIGATION_TIME': '50.0',
-            'TREAT_GRID_SOURCE_AS': 'Point Sources',
-            'INCLUDE_AREA_SOURCES': 'true',
-            'TREAT_AREA_SOURCE_AS': 'Point Sources',
-            'QUANTILE_LEVELS': '0.25 0.50',
-            'INTENSITY_MEASURE_LEVELS': '0.005, 0.007, 0.0098, 0.0137, 0.0192',
-            'GROUND_MOTION_CORRELATION': 'true',
-            'GMPE_TRUNCATION_TYPE': '2 Sided',
-            'STANDARD_DEVIATION_TYPE': 'Total',
-            'MAXIMUM_DISTANCE': '200.0',
-            'NUMBER_OF_LOGIC_TREE_SAMPLES': '2',
-            'REGION_GRID_SPACING': '0.1',
-            'PERIOD': '0.0',
-            'AGGREGATE_LOSS_CURVE': '1',
-            'NUMBER_OF_SEISMICITY_HISTORIES': '1',
-            'INCLUDE_FAULT_SOURCE': 'true',
-            'FAULT_SURFACE_DISCRETIZATION': '1.0',
-            'REFERENCE_VS30_VALUE': '760.0',
-            'COMPONENT': 'Average Horizontal (GMRotI50)',
-            'CONDITIONAL_LOSS_POE': '0.01',
-            'TRUNCATION_LEVEL': '3',
-            'COMPUTE_MEAN_HAZARD_CURVE': 'true',
-            'AREA_SOURCE_DISCRETIZATION': '0.1',
-        }
+        params = self.BASE_CLASSICAL_PARAMS.copy()
+        params['REGION_VERTEX'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
+        params['REGION_GRID_SPACING'] = '0.1'
 
         self.job = prepare_job(params)
         self.assertEquals(params['REGION_VERTEX'],
-                          _toCoordList(self.job.oq_params.region))
+                          _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
             {'job_type': 'classical',
              'upload': None,
@@ -365,29 +397,49 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'realizations': 2,
              'histories': None,
              'gm_correlated': None,
+             'damping': None,
+             'gmf_calculation_number': None,
+             'rupture_surface_discretization': None,
+             }, self.job.oq_params)
+
+    def test_prepare_classical_job_over_sites(self):
+        '''
+        Same as test_prepare_classical_job, but with geometry specified as
+        a list of sites.
+        '''
+        params = self.BASE_CLASSICAL_PARAMS.copy()
+        params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
+
+        self.job = prepare_job(params)
+        self.assertEquals(params['SITES'],
+                          _to_coord_list(self.job.oq_params.sites))
+        self.assertFieldsEqual(
+            {'job_type': 'classical',
+             'upload': None,
+             'min_magnitude': 5.0,
+             'investigation_time': 50.0,
+             'component': 'gmroti50',
+             'imt': 'pga',
+             'period': None,
+             'truncation_type': 'twosided',
+             'truncation_level': 3.0,
+             'reference_vs30_value': 760.0,
+             'imls': [0.005, 0.007, 0.0098, 0.0137, 0.0192],
+             'poes': [0.01, 0.1],
+             'realizations': 2,
+             'histories': None,
+             'gm_correlated': None,
              }, self.job.oq_params)
 
     def test_prepare_deterministic_job(self):
-        params = {
-            'CALCULATION_MODE': 'Deterministic',
-            'GMPE_MODEL_NAME': 'BA_2008_AttenRel',
-            'GMF_RANDOM_SEED': '3',
-            'RUPTURE_SURFACE_DISCRETIZATION': '0.1',
-            'INTENSITY_MEASURE_TYPE': 'PGA',
-            'REFERENCE_VS30_VALUE': '759.0',
-            'COMPONENT': 'Average Horizontal (GMRotI50)',
-            'REGION_GRID_SPACING': '0.02',
-            'REGION_VERTEX': '34.07, -118.25, 34.07, -118.22, 34.04, -118.22',
-            'PERIOD': '0.0',
-            'NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS': '5',
-            'TRUNCATION_LEVEL': '3',
-            'GMPE_TRUNCATION_TYPE': '1 Sided',
-            'GROUND_MOTION_CORRELATION': 'true',
-        }
+        params = self.BASE_DETERMINISTIC_PARAMS.copy()
+        params['REGION_VERTEX'] = \
+            '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
+        params['REGION_GRID_SPACING'] = '0.02'
 
         self.job = prepare_job(params)
         self.assertEquals(params['REGION_VERTEX'],
-                          _toCoordList(self.job.oq_params.region))
+                          _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
             {'job_type': 'deterministic',
              'upload': None,
@@ -405,51 +457,50 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'realizations': None,
              'histories': None,
              'gm_correlated': True,
+             'damping': None,
+             'gmf_calculation_number': 5,
+             'rupture_surface_discretization': 0.1,
+             }, self.job.oq_params)
+
+    def test_prepare_deterministic_job_over_sites(self):
+        '''
+        Same as test_prepare_deterministic_job, but with geometry specified as
+        a list of sites.
+        '''
+
+        params = self.BASE_DETERMINISTIC_PARAMS.copy()
+        params['SITES'] = '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
+
+        self.job = prepare_job(params)
+        self.assertEquals(params['SITES'],
+                          _to_coord_list(self.job.oq_params.sites))
+        self.assertFieldsEqual(
+            {'job_type': 'deterministic',
+             'upload': None,
+             'min_magnitude': None,
+             'investigation_time': None,
+             'component': 'gmroti50',
+             'imt': 'pga',
+             'period': None,
+             'truncation_type': 'onesided',
+             'truncation_level': 3.0,
+             'reference_vs30_value': 759.0,
+             'imls': None,
+             'poes': None,
+             'realizations': None,
+             'histories': None,
+             'gm_correlated': True,
              }, self.job.oq_params)
 
     def test_prepare_event_based_job(self):
-        params = {
-            'CALCULATION_MODE': 'Event Based',
-            'POES_HAZARD_MAPS': '0.01 0.10',
-            'INTENSITY_MEASURE_TYPE': 'SA',
-            'REGION_VERTEX': '33.88, -118.30, 33.88, -118.06, 33.76, -118.06',
-            'INCLUDE_GRID_SOURCES': 'false',
-            'INCLUDE_SUBDUCTION_FAULT_SOURCE': 'false',
-            'RUPTURE_ASPECT_RATIO': '1.5',
-            'MINIMUM_MAGNITUDE': '5.0',
-            'SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA': '0.0',
-            'INVESTIGATION_TIME': '50.0',
-            'TREAT_GRID_SOURCE_AS': 'Point Sources',
-            'INCLUDE_AREA_SOURCES': 'true',
-            'TREAT_AREA_SOURCE_AS': 'Point Sources',
-            'QUANTILE_LEVELS': '0.25 0.50',
-            'INTENSITY_MEASURE_LEVELS': '0.005, 0.007, 0.0098, 0.0137, 0.0192',
-            'GROUND_MOTION_CORRELATION': 'false',
-            'GMPE_TRUNCATION_TYPE': 'None',
-            'STANDARD_DEVIATION_TYPE': 'Total',
-            'SUBDUCTION_FAULT_RUPTURE_OFFSET': '10.0',
-            'RISK_CELL_SIZE': '0.0005',
-            'MAXIMUM_DISTANCE': '200.0',
-            'NUMBER_OF_LOGIC_TREE_SAMPLES': '5',
-            'REGION_GRID_SPACING': '0.02',
-            'PERIOD': '1.0',
-            'AGGREGATE_LOSS_CURVE': 'true',
-            'NUMBER_OF_SEISMICITY_HISTORIES': '1',
-            'INCLUDE_FAULT_SOURCE': 'true',
-            'SUBDUCTION_RUPTURE_ASPECT_RATIO': '1.5',
-            'FAULT_SURFACE_DISCRETIZATION': '1.0',
-            'REFERENCE_VS30_VALUE': '760.0',
-            'COMPONENT': 'Average Horizontal',
-            'CONDITIONAL_LOSS_POE': '0.01',
-            'TRUNCATION_LEVEL': '3',
-            'COMPUTE_MEAN_HAZARD_CURVE': 'true',
-            'AREA_SOURCE_DISCRETIZATION': '0.1',
-            'FAULT_RUPTURE_OFFSET': '5.0',
-        }
+        params = self.BASE_EVENT_BASED_PARAMS.copy()
+        params['REGION_VERTEX'] = \
+            '33.88, -118.3, 33.88, -118.06, 33.76, -118.06'
+        params['REGION_GRID_SPACING'] = '0.02'
 
         self.job = prepare_job(params)
         self.assertEquals(params['REGION_VERTEX'],
-                          _toCoordList(self.job.oq_params.region))
+                          _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
             {'job_type': 'event_based',
              'upload': None,
@@ -467,20 +518,53 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'realizations': 5,
              'histories': 1,
              'gm_correlated': False,
+             'damping': 5.0,
+             'gmf_calculation_number': None,
+             'rupture_surface_discretization': None,
+             }, self.job.oq_params)
+
+    def test_prepare_event_based_job_over_sites(self):
+        '''
+        Same as test_prepare_event_based_job, but with geometry specified as
+        a list of sites.
+        '''
+
+        params = self.BASE_EVENT_BASED_PARAMS.copy()
+        params['SITES'] = '33.88, -118.3, 33.88, -118.06, 33.76, -118.06'
+
+        self.job = prepare_job(params)
+        self.assertEquals(params['SITES'],
+                          _to_coord_list(self.job.oq_params.sites))
+        self.assertFieldsEqual(
+            {'job_type': 'event_based',
+             'upload': None,
+             'min_magnitude': 5.0,
+             'investigation_time': 50.0,
+             'component': 'average',
+             'imt': 'sa',
+             'period': 1.0,
+             'truncation_type': 'none',
+             'truncation_level': 3.0,
+             'reference_vs30_value': 760.0,
+             'imls': None,
+             'poes': None,
+             'realizations': 5,
+             'histories': 1,
+             'gm_correlated': False,
              }, self.job.oq_params)
 
 
 class RunJobTestCase(unittest.TestCase):
+
     def setUp(self):
         self.job = None
-        self.session = get_db_session("reslt", "writer")
         self.job_from_file = Job.from_file
 
     def tearDown(self):
         self.job = None
 
     def _job_status(self):
-        return self.job.get_db_job(self.session).status
+        return OqJob.objects.get(id=self.job.job_id).status
 
     def test_successful_job_lifecycle(self):
         with patch('openquake.job.Job.from_file') as from_file:
@@ -502,7 +586,9 @@ class RunJobTestCase(unittest.TestCase):
                 return self.job
 
             from_file.side_effect = patch_job_launch
-            run_job(helpers.get_data_path(CONFIG_FILE), 'db')
+
+            with patch('openquake.job.spawn_job_supervisor'):
+                run_job(helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, self.job.launch.call_count)
         self.assertEquals('succeeded', self._job_status())
@@ -527,36 +613,10 @@ class RunJobTestCase(unittest.TestCase):
                 return self.job
 
             from_file.side_effect = patch_job_launch
-            self.assertRaises(Exception, run_job,
-                              helpers.get_data_path(CONFIG_FILE), 'db')
 
-        self.assertEquals(1, self.job.launch.call_count)
-        self.assertEquals('failed', self._job_status())
-
-    def test_failed_db_job_lifecycle(self):
-        with patch('openquake.job.Job.from_file') as from_file:
-
-            # called in place of Job.launch
-            def test_status_running_and_fail():
-                self.assertEquals('running', self._job_status())
-
-                session = get_db_session("uiapi", "writer")
-
-                session.query(OqJob).filter(OqJob.id == -1).one()
-
-            # replaces Job.launch with a mock
-            def patch_job_launch(*args, **kwargs):
-                self.job = self.job_from_file(*args, **kwargs)
-                self.job.launch = mock.Mock(
-                    side_effect=test_status_running_and_fail)
-
-                self.assertEquals('pending', self._job_status())
-
-                return self.job
-
-            from_file.side_effect = patch_job_launch
-            self.assertRaises(sqlalchemy.exc.SQLAlchemyError, run_job,
-                              helpers.get_data_path(CONFIG_FILE), 'db')
+            with patch('openquake.job.spawn_job_supervisor'):
+                self.assertRaises(Exception, run_job,
+                                helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, self.job.launch.call_count)
         self.assertEquals('failed', self._job_status())
@@ -575,7 +635,141 @@ class RunJobTestCase(unittest.TestCase):
                 return self.job
 
             from_file.side_effect = patch_job_is_valid
-            run_job(helpers.get_data_path(CONFIG_FILE), 'db')
 
-            self.assertEquals(1, self.job.is_valid.call_count)
-            self.assertEquals('failed', self._job_status())
+            with patch('openquake.job.spawn_job_supervisor'):
+                run_job(helpers.get_data_path(CONFIG_FILE), 'db')
+
+        self.assertEquals(1, self.job.is_valid.call_count)
+        self.assertEquals('failed', self._job_status())
+
+    def test_computes_sites_in_region_when_specified(self):
+        """When we have hazard jobs only, and we specify a region,
+        we use the standard algorithm to split the region in sites. In this
+        example, the region has just four sites (the region boundaries).
+        """
+        sections = [config.HAZARD_SECTION, config.GENERAL_SECTION]
+        input_region = "2.0, 1.0, 2.0, 2.0, 1.0, 2.0, 1.0, 1.0"
+
+        params = {config.INPUT_REGION: input_region,
+                config.REGION_GRID_SPACING: 1.0}
+
+        engine = helpers.create_job(params, sections=sections)
+
+        expected_sites = [shapes.Site(1.0, 1.0), shapes.Site(2.0, 1.0),
+                shapes.Site(1.0, 2.0), shapes.Site(2.0, 2.0)]
+
+        self.assertEquals(expected_sites, engine.sites_to_compute())
+
+    def test_computes_specific_sites_when_specified(self):
+        """When we have hazard jobs only, and we specify a list of sites
+        (SITES parameter in the configuration file) we trigger the
+        computation only on those sites.
+        """
+        sections = [config.HAZARD_SECTION, config.GENERAL_SECTION]
+        sites = "1.0, 1.5, 1.5, 2.5, 3.0, 3.0, 4.0, 4.5"
+
+        params = {config.SITES: sites}
+
+        engine = helpers.create_job(params, sections=sections)
+
+        expected_sites = [shapes.Site(1.5, 1.0), shapes.Site(2.5, 1.5),
+                shapes.Site(3.0, 3.0), shapes.Site(4.5, 4.0)]
+
+        self.assertEquals(expected_sites, engine.sites_to_compute())
+
+    def test_computes_sites_in_region_with_risk_jobs(self):
+        """When we have hazard and risk jobs, we always use the region."""
+        sections = [config.HAZARD_SECTION,
+                config.GENERAL_SECTION, config.RISK_SECTION]
+
+        input_region = "2.0, 1.0, 2.0, 2.0, 1.0, 2.0, 1.0, 1.0"
+
+        params = {config.INPUT_REGION: input_region,
+                config.REGION_GRID_SPACING: 1.0}
+
+        engine = helpers.create_job(params, sections=sections)
+
+        expected_sites = [shapes.Site(1.0, 1.0), shapes.Site(2.0, 1.0),
+                shapes.Site(1.0, 2.0), shapes.Site(2.0, 2.0)]
+
+        self.assertEquals(expected_sites, engine.sites_to_compute())
+
+    def test_supervisor_is_spawned(self):
+        with patch('openquake.job.Job.from_file') as from_file:
+
+            # replaces Job.launch with a mock
+            def patch_job_launch(*args, **kwargs):
+                self.job = self.job_from_file(*args, **kwargs)
+                self.job.launch = mock.Mock()
+
+                return self.job
+
+            from_file.side_effect = patch_job_launch
+
+            with patch('openquake.job.spawn_job_supervisor') as mocked_func:
+                run_job(helpers.get_data_path(CONFIG_FILE), 'db')
+
+                self.assertEquals(1, mocked_func.call_count)
+                self.assertEquals(((self.job.job_id, os.getpid()), {}),
+                                  mocked_func.call_args)
+
+    def test_spawn_job_supervisor(self):
+        class FakeProcess(object):
+            pid = 42
+
+        oq_config.Config().cfg['supervisor']['exe'] = '/supervise me'
+        job = helpers.job_from_file(helpers.get_data_path(CONFIG_FILE))
+
+        with patch('subprocess.Popen') as popen:
+            popen.return_value = FakeProcess()
+            spawn_job_supervisor(job_id=job.job_id, pid=54321)
+            self.assertEqual(popen.call_count, 1)
+            self.assertEqual(popen.call_args,
+                             ((['/supervise me', str(job.job_id), '54321'], ),
+                              {'env': os.environ}))
+            job = OqJob.objects.get(pk=job.job_id)
+            self.assertEqual(job.supervisor_pid, 42)
+            self.assertEqual(job.job_pid, 54321)
+
+
+class JobStatsTestCase(unittest.TestCase):
+    '''
+    Tests related to capturing job stats.
+    '''
+
+    def setUp(self):
+        # Test 'event-based' job
+        self.eb_job = helpers.job_from_file('smoketests/simplecase/config.gem')
+
+    def test_record_initial_stats(self):
+        '''
+        Verify that :py:method:`openquake.job.Job._record_initial_stats`
+        reports initial job stats.
+
+        As we add fields to the uiapi.job_stats table, this test will need to
+        be updated to check for this new information.
+        '''
+        self.eb_job._record_initial_stats()
+
+        actual_stats = JobStats.objects.get(oq_job=self.eb_job.job_id)
+
+        self.assertTrue(actual_stats.start_time is not None)
+        self.assertEqual(91, actual_stats.num_sites)
+
+    def test_job_launch_calls_record_initial_stats(self):
+        '''
+        When a job is launched, make sure that
+        :py:method:`openquake.job.Job._record_initial_stats` is called.
+        '''
+        # Mock out pieces of the test job so it doesn't actually run.
+        haz_execute = 'openquake.hazard.opensha.EventBasedMixin.execute'
+        risk_execute = \
+            'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute'
+        record = 'openquake.job.Job._record_initial_stats'
+
+        with patch(haz_execute) as _haz_mock:
+            with patch(risk_execute) as _risk_mock:
+                with patch(record) as record_mock:
+                    self.eb_job.launch()
+
+                    self.assertEqual(1, record_mock.call_count)

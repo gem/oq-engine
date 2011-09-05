@@ -23,7 +23,6 @@ Database related unit tests for hazard computations with the hazard engine.
 
 import unittest
 
-from openquake.hazard import opensha
 from openquake.output import writer as output_writer
 from openquake.output import hazard as hazard_output
 from openquake.output import risk as risk_output
@@ -111,7 +110,7 @@ class CreateGMFWriterTestCase(unittest.TestCase, CreateWriterTestBase):
 
     create_function = staticmethod(hazard_output.create_gmf_writer)
     xml_writer_class = hazard_output.GMFXMLWriter
-    db_writer_class = hazard_output.GMFDBWriter
+    db_writer_class = hazard_output.GmfDBWriter
 
 
 class CreateRiskWriterTest(unittest.TestCase):

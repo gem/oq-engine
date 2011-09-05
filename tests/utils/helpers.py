@@ -36,14 +36,16 @@ import sys
 import guppy
 import mock as mock_module
 
+from django.core import exceptions
+
 from openquake import flags
 from openquake import logs
 from openquake.job import Job
 from openquake import producer
+from openquake import signalling
 from openquake.utils import config
 
-from openquake.db.alchemy.db_utils import get_db_session
-from openquake.db.alchemy.models import OqJob, OqParams, OqUser, Output, Upload
+from openquake.db import models
 
 FLAGS = flags.FLAGS
 
@@ -246,6 +248,50 @@ def assertDictAlmostEqual(test_case, expected, actual):
             test_case.assertEqual(expected[key], actual[key])
 
 
+def assertModelAlmostEqual(test_case, expected, actual):
+    """
+    Assert that two Django models are equal. For values which are numbers,
+    we use :py:meth:`unittest.TestCase.assertAlmostEqual` for number
+    comparisons with a reasonable precision tolerance.
+
+    If the `expected` input value contains nested models, this function
+    will recurse through them and check for equality.
+
+    :param test_case: TestCase object on which we can call all of the basic
+        'assert' methods.
+    :type test_case: :py:class:`unittest.TestCase` object
+    :type expected: dict
+    :type actual: dict
+    """
+
+    from django.contrib.gis.db import models as gis_models
+
+    test_case.assertEqual(type(expected), type(actual))
+
+    def getattr_or_none(model, field):
+        try:
+            return getattr(model, field.name)
+        except exceptions.ObjectDoesNotExist:
+            return None
+
+    for field in expected._meta.fields:
+        if field.name == 'last_update':
+            continue
+
+        exp_val = getattr_or_none(expected, field)
+        act_val = getattr_or_none(actual, field)
+
+        # If it's a number, use assertAlmostEqual to compare
+        # the values with a reasonable tolerance.
+        if isinstance(exp_val, (int, float, long, complex)):
+            test_case.assertAlmostEqual(exp_val, act_val)
+        elif isinstance(exp_val, gis_models.Model):
+            # make a recursive call in case there are nested models
+            assertModelAlmostEqual(test_case, exp_val, act_val)
+        else:
+            test_case.assertEqual(exp_val, act_val)
+
+
 def wait_for_celery_tasks(celery_results,
                           max_wait_loops=MAX_WAIT_LOOPS,
                           wait_time=WAIT_TIME_STEP_FOR_TASK_SECS):
@@ -423,22 +469,24 @@ class DbTestMixin(TestMixin):
     IMLS = [0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527,
             0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778]
 
+    def default_user(self):
+        return models.OqUser.objects.get(user_name="openquake")
+
     def setup_upload(self, dbkey=None):
         """Create an upload with associated inputs.
 
         :param integer dbkey: if set use the upload record with given db key.
-        :returns: a :py:class:`db.alchemy.models.Upload` instance
+        :returns: a :py:class:`db.models.Upload` instance
         """
-        session = get_db_session("uiapi", "writer")
         if dbkey:
-            upload = session.query(Upload).filter(Upload.id == dbkey).one()
-            return upload
+            return models.Upload.objects.get(id=dbkey)
 
-        user = session.query(OqUser).filter(
-            OqUser.user_name == "openquake").one()
-        upload = Upload(owner=user, path=tempfile.mkdtemp())
-        session.add(upload)
-        session.commit()
+        user = models.OqUser.objects.get(user_name="openquake")
+        user.save()
+
+        upload = models.Upload(owner=user, path=tempfile.mkdtemp())
+        upload.save()
+
         return upload
 
     def teardown_upload(self, upload, filesystem_only=True):
@@ -446,7 +494,7 @@ class DbTestMixin(TestMixin):
         Tear down the file system (and potentially db) artefacts for the
         given upload.
 
-        :param upload: the :py:class:`db.alchemy.models.Upload` instance
+        :param upload: the :py:class:`db.models.Upload` instance
             in question
         :param bool filesystem_only: if set the upload/input database records
             will be left intact. This saves time and the test db will be
@@ -456,9 +504,7 @@ class DbTestMixin(TestMixin):
         shutil.rmtree(upload.path, ignore_errors=True)
         if filesystem_only:
             return
-        session = get_db_session("uiapi", "writer")
-        session.delete(upload)
-        session.commit()
+        upload.delete()
 
     def setup_classic_job(self, create_job_path=True, upload_id=None):
         """Create a classic job with associated upload and inputs.
@@ -466,11 +512,10 @@ class DbTestMixin(TestMixin):
         :param integer upload_id: if set use upload record with given db key.
         :param bool create_job_path: if set the path for the job will be
             created and captured in the job record
-        :returns: a :py:class:`db.alchemy.models.OqJob` instance
+        :returns: a :py:class:`db.models.OqJob` instance
         """
-        session = get_db_session("uiapi", "writer")
         upload = self.setup_upload(upload_id)
-        oqp = OqParams()
+        oqp = models.OqParams()
         oqp.job_type = "classical"
         oqp.upload = upload
         oqp.region_grid_spacing = 0.01
@@ -486,16 +531,19 @@ class DbTestMixin(TestMixin):
         oqp.realizations = 1
         oqp.region = (
             "POLYGON((-81.3 37.2, -80.63 38.04, -80.02 37.49, -81.3 37.2))")
-        session.add(oqp)
-        job = OqJob(oq_params=oqp, owner=upload.owner, job_type="classical")
-        session.add(job)
-        session.commit()
+        oqp.save()
+
+        job = models.OqJob(oq_params=oqp, owner=upload.owner,
+                           job_type="classical")
+        job.save()
+
         if create_job_path:
             job.path = os.path.join(upload.path, str(job.id))
-            session.add(job)
-            session.commit()
+            job.save()
+
             os.mkdir(job.path)
             os.chmod(job.path, 0777)
+
         return job
 
     def teardown_job(self, job, filesystem_only=True):
@@ -503,7 +551,7 @@ class DbTestMixin(TestMixin):
         Tear down the file system (and potentially db) artefacts for the
         given job.
 
-        :param job: the :py:class:`db.alchemy.models.OqJob` instance
+        :param job: the :py:class:`db.models.OqJob` instance
             in question
         :param bool filesystem_only: if set the oq_job/oq_param/upload/input
             database records will be left intact. This saves time and the test
@@ -515,31 +563,30 @@ class DbTestMixin(TestMixin):
             self.teardown_upload(oqp.upload, filesystem_only=filesystem_only)
         if filesystem_only:
             return
-        session = get_db_session("uiapi", "writer")
-        session.delete(job)
-        session.delete(oqp)
-        session.commit()
+
+        job.delete()
+        opq.delete()
 
     def setup_output(self, job_to_use=None, output_type="hazard_map",
                      db_backed=True):
         """Create an output object of the given type.
 
         :param job_to_use: if set use the passed
-            :py:class:`db.alchemy.models.OqJob` instance as opposed to
+            :py:class:`db.models.OqJob` instance as opposed to
             creating a new one.
         :param str output_type: map type, one of "hazard_map", "loss_map"
         :param bool db_backed: initialize the property of the newly created
-            :py:class:`db.alchemy.models.Output` instance with this value.
-        :returns: a :py:class:`db.alchemy.models.Output` instance
+            :py:class:`db.models.Output` instance with this value.
+        :returns: a :py:class:`db.models.Output` instance
         """
         job = job_to_use if job_to_use else self.setup_classic_job()
-        output = Output(owner=job.owner, oq_job=job, output_type=output_type,
-                        db_backed=db_backed)
+        output = models.Output(owner=job.owner, oq_job=job,
+                               output_type=output_type,
+                               db_backed=db_backed)
         output.path = self.generate_output_path(job, output_type)
         output.display_name = os.path.basename(output.path)
-        session = get_db_session("uiapi", "writer")
-        session.add(output)
-        session.commit()
+        output.save()
+
         return output
 
     def generate_output_path(self, job, output_type="hazard_map"):
@@ -554,7 +601,7 @@ class DbTestMixin(TestMixin):
         Tear down the file system (and potentially db) artefacts for the
         given output.
 
-        :param output: the :py:class:`db.alchemy.models.Output` instance
+        :param output: the :py:class:`db.models.Output` instance
             in question
         :param bool teardown_job: the associated job and its related artefacts
             shall be torn down as well.
@@ -564,8 +611,24 @@ class DbTestMixin(TestMixin):
         """
         job = output.oq_job
         if not filesystem_only:
-            session = get_db_session("uiapi", "writer")
-            session.delete(output)
-            session.commit()
+            output.delete()
         if teardown_job:
             self.teardown_job(job, filesystem_only=filesystem_only)
+
+
+def declare_signalling_exchange():
+    """
+    Ensure the signalling exchange exists.
+
+    It is safe to call this function multiple times, even if the exchange
+    already exists.
+
+    On the other hand, if rabbitmq has just been restarted, the exchange will
+    not exists and calling this function is required before tests using the
+    amqp logging (for example the hazard_unittest which runs a complete job).
+    """
+    # connecting will implicitly create the exchange if it doesn't exits yet
+    conn, chn = signalling.connect()
+
+    chn.close()
+    conn.close()
