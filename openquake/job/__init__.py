@@ -377,7 +377,13 @@ class Job(object):
 
     @staticmethod
     def get_logger_for(job_id):
-        # TODO: document, unittest
+        """
+        Create and return logger object for using with job with known job id.
+
+        Created logger differs from ``logging.getLogger('oq.job')`` in respect
+        that its logger records will always have ``job_id`` available
+        for formatters.
+        """
         return logging.LoggerAdapter(Job.unknown_job_logger,
                                      {'job_id': job_id})
 
@@ -429,7 +435,9 @@ class Job(object):
 
     @property
     def logger(self):
-        # TODO: document, unittest
+        """
+        Logger object specifically for this job. Uses :meth:`get_logger_for`.
+        """
         if not hasattr(self, '_logger'):
             self._logger = self.get_logger_for(self.job_id)
         return self._logger
