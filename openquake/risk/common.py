@@ -17,9 +17,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
-
-
 """
 This module defines functions that can be applied to loss ratio
 or loss curves.

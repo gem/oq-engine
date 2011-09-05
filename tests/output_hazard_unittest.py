@@ -21,7 +21,6 @@
 import os
 import unittest
 
-from openquake.db.alchemy.db_utils import get_db_session
 from openquake.output.hazard import *
 from openquake.shapes import Site
 from openquake.utils import round_float
@@ -167,12 +166,11 @@ class HazardMapDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def setUp(self):
         self.job = self.setup_classic_job()
-        self.session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
         self.display_name = os.path.basename(output_path)
 
-        self.writer = HazardMapDBWriter(self.session, output_path, self.job.id)
-        self.reader = HazardMapDBReader(self.session)
+        self.writer = HazardMapDBWriter(output_path, self.job.id)
+        self.reader = HazardMapDBReader()
 
 
 class HazardMapDBWriterTestCase(HazardMapDBBaseTestCase):
@@ -189,73 +187,69 @@ class HazardMapDBWriterTestCase(HazardMapDBBaseTestCase):
     def test_insert_output(self):
         """An `uiapi.output` record is inserted correctly."""
         # This job has no outputs before calling the function under test.
-        self.assertEqual(0, len(self.job.output_set))
+        self.assertEqual(0, len(self.job.output_set.all()))
 
         # Call the function under test.
         self.writer.insert_output("hazard_map")
 
-        self.job = self.session.query(
-            OqJob).filter(OqJob.id == self.job.id).one()
+        self.job = models.OqJob.objects.get(id=self.job.id)
         # After calling the function under test we see the expected output.
-        self.assertEqual(1, len(self.job.output_set))
+        self.assertEqual(1, len(self.job.output_set.all()))
 
         # Make sure the inserted output record has the right data.
-        [output] = self.job.output_set
+        output = self.job.output_set.get()
         self.assertTrue(output.db_backed)
         self.assertTrue(output.path is None)
         self.assertEqual(self.display_name, output.display_name)
         self.assertEqual("hazard_map", output.output_type)
-        self.assertTrue(self.job is output.oq_job)
 
     def test_serialize_mean(self):
         """serialize() inserts the output and the hazard_map_data records."""
         # This job has no outputs before calling the function under test.
-        self.assertEqual(0, len(self.job.output_set))
+        self.assertEqual(0, len(self.job.output_set.all()))
 
         # Call the function under test.
         self.writer.serialize(HAZARD_MAP_MEAN_DATA())
 
-        self.job = self.session.query(
-            OqJob).filter(OqJob.id == self.job.id).one()
+        self.job = models.OqJob.objects.get(id=self.job.id)
         # After calling the function under test we see the expected output.
-        self.assertEqual(1, len(self.job.output_set))
+        self.assertEqual(1, len(self.job.output_set.all()))
 
         # After calling the function under test we see the expected map data.
-        [output] = self.job.output_set
-        [hazard_map] = output.hazardmap_set
+        output = self.job.output_set.get()
+        hazard_map = output.hazardmap_set.get()
 
         self.assertEquals(0.01, hazard_map.poe)
         self.assertEquals('mean', hazard_map.statistic_type)
         self.assertEquals(None, hazard_map.quantile)
 
         self.assertEqual(len(HAZARD_MAP_MEAN_DATA()),
-                         len(hazard_map.hazardmapdata_set))
-        self.assertEqual(0, len(output.lossmap_set))
+                         len(hazard_map.hazardmapdata_set.all()))
+        self.assertEqual(0, len(output.lossmap_set.all()))
 
     def test_serialize_quantile(self):
         """serialize() inserts the output and the hazard_map_data records."""
         # This job has no outputs before calling the function under test.
-        self.assertEqual(0, len(self.job.output_set))
+        self.assertEqual(0, len(self.job.output_set.all()))
 
         # Call the function under test.
         self.writer.serialize(HAZARD_MAP_QUANTILE_DATA())
 
-        self.job = self.session.query(
-            OqJob).filter(OqJob.id == self.job.id).one()
+        self.job = models.OqJob.objects.get(id=self.job.id)
         # After calling the function under test we see the expected output.
-        self.assertEqual(1, len(self.job.output_set))
+        self.assertEqual(1, len(self.job.output_set.all()))
 
         # After calling the function under test we see the expected map data.
-        [output] = self.job.output_set
-        [hazard_map] = output.hazardmap_set
+        output = self.job.output_set.get()
+        hazard_map = output.hazardmap_set.get()
 
         self.assertEquals(0.01, hazard_map.poe)
         self.assertEquals('quantile', hazard_map.statistic_type)
         self.assertEquals(0.2, hazard_map.quantile)
 
         self.assertEqual(len(HAZARD_MAP_QUANTILE_DATA()),
-                         len(hazard_map.hazardmapdata_set))
-        self.assertEqual(0, len(output.lossmap_set))
+                         len(hazard_map.hazardmapdata_set.all()))
+        self.assertEqual(0, len(output.lossmap_set.all()))
 
     def test_serialize_sets_min_max_values(self):
         """
@@ -267,7 +261,7 @@ class HazardMapDBWriterTestCase(HazardMapDBBaseTestCase):
         minimum = min(data[1].get("IML") for data in HAZARD_MAP_MEAN_DATA())
         maximum = max(data[1].get("IML") for data in HAZARD_MAP_MEAN_DATA())
         # After calling the function under test we see the expected map data.
-        [output] = self.job.output_set
+        output = self.job.output_set.get()
         self.assertEqual(round_float(minimum), round_float(output.min_value))
         self.assertEqual(round_float(maximum), round_float(output.max_value))
 
@@ -327,13 +321,11 @@ class HazardCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def setUp(self):
         self.job = self.setup_classic_job()
-        self.session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
         self.display_name = os.path.basename(output_path)
 
-        self.writer = HazardCurveDBWriter(self.session, output_path,
-                                          self.job.id)
-        self.reader = HazardCurveDBReader(self.session)
+        self.writer = HazardCurveDBWriter(output_path, self.job.id)
+        self.reader = HazardCurveDBReader()
 
     def sort(self, values):
         def sort_key(v):
@@ -362,28 +354,27 @@ class HazardCurveDBWriterTestCase(HazardCurveDBBaseTestCase):
     def test_serialize(self):
         """serialize() inserts the output and the hazard_map_data records."""
         # This job has no outputs before calling the function under test.
-        self.assertEqual(0, len(self.job.output_set))
+        self.assertEqual(0, len(self.job.output_set.all()))
 
         # Call the function under test.
         self.writer.serialize(HAZARD_CURVE_DATA())
 
         # After calling the function under test we see the expected output.
-        self.job = self.session.query(
-            OqJob).filter(OqJob.id == self.job.id).one()
-        self.assertEqual(1, len(self.job.output_set))
+        self.job = models.OqJob.objects.get(id=self.job.id)
+        self.assertEqual(1, len(self.job.output_set.all()))
 
         # After calling the function under test we see the expected map data.
-        [output] = self.job.output_set
-        self.assertEqual(4, len(output.hazardcurve_set))
-        self.assertEqual(0, len(output.lossmap_set))
+        output = self.job.output_set.get()
+        self.assertEqual(4, len(output.hazardcurve_set.all()))
+        self.assertEqual(0, len(output.lossmap_set.all()))
 
         # read data from the DB and check that it's equal to the original data
         inserted_data = []
 
-        for hc in output.hazardcurve_set:
-            for hcd in hc.hazardcurvedata_set:
-                location = hcd.location.coords(self.session)
-                node = (Site(location[0], location[1]),
+        for hc in output.hazardcurve_set.all():
+            for hcd in hc.hazardcurvedata_set.all():
+                location = hcd.location
+                node = (Site(location.x, location.y),
                         {'PoEValues': hcd.poes})
                 if hc.end_branch_label:
                     node[1]['endBranchLabel'] = hc.end_branch_label
@@ -424,7 +415,7 @@ class HazardCurveDBReaderTestCase(HazardCurveDBBaseTestCase):
                           self.sort(_normalize(data)))
 
 
-class GMFDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
+class GmfDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
     """Common code for ground motion field db reader/writer test"""
     def tearDown(self):
         if hasattr(self, "job") and self.job:
@@ -434,12 +425,11 @@ class GMFDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def setUp(self):
         self.job = self.setup_classic_job()
-        self.session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
         self.display_name = os.path.basename(output_path)
 
-        self.writer = GMFDBWriter(self.session, output_path, self.job.id)
-        self.reader = GMFDBReader(self.session)
+        self.writer = GmfDBWriter(output_path, self.job.id)
+        self.reader = GmfDBReader()
 
     def normalize(self, values):
         def sort_key(v):
@@ -448,46 +438,45 @@ class GMFDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
         return sorted(values, key=sort_key)
 
 
-class GMFDBWriterTestCase(GMFDBBaseTestCase):
+class GmfDBWriterTestCase(GmfDBBaseTestCase):
     """
-    Unit tests for the GMFDBWriter class, which serializes
+    Unit tests for the GmfDBWriter class, which serializes
     ground motion fields to the database.
     """
     def test_serialize(self):
         """serialize() inserts the output and the gmf_data records."""
         # This job has no outputs before calling the function under test.
-        self.assertEqual(0, len(self.job.output_set))
+        self.assertEqual(0, len(self.job.output_set.all()))
 
         # Call the function under test.
         self.writer.serialize(GMF_DATA())
 
         # Reload job row.
-        self.job = self.session.query(
-            OqJob).filter(OqJob.id == self.job.id).one()
+        self.job = models.OqJob.objects.get(id=self.job.id)
         # After calling the function under test we see the expected output.
-        self.assertEqual(1, len(self.job.output_set))
+        self.assertEqual(1, len(self.job.output_set.all()))
 
         # After calling the function under test we see the expected map data.
-        [output] = self.job.output_set
-        self.assertEqual(0, len(output.hazardcurve_set))
-        self.assertEqual(0, len(output.lossmap_set))
-        self.assertEqual(4, len(output.gmfdata_set))
+        output = self.job.output_set.get()
+        self.assertEqual(0, len(output.hazardcurve_set.all()))
+        self.assertEqual(0, len(output.lossmap_set.all()))
+        self.assertEqual(4, len(output.gmfdata_set.all()))
 
         # read data from the DB and check that it's equal to the original data
         inserted_data = []
 
-        for gmfd in output.gmfdata_set:
-            location = gmfd.location.coords(self.session)
-            inserted_data.append((Site(location[0], location[1]),
+        for gmfd in output.gmfdata_set.all():
+            location = gmfd.location
+            inserted_data.append((Site(location.x, location.y),
                                   {'groundMotion': gmfd.ground_motion}))
 
         self.assertEquals(self.normalize(GMF_DATA().items()),
                           self.normalize(inserted_data))
 
 
-class GMFDBReaderTestCase(GMFDBBaseTestCase):
+class GmfDBReaderTestCase(GmfDBBaseTestCase):
     """
-    Unit tests for the GMFDBReader class, which deserializes
+    Unit tests for the GmfDBReader class, which deserializes
     ground motion fields from the database.
     """
     def tearDown(self):

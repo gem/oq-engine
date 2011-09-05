@@ -28,9 +28,7 @@ from collections import defaultdict
 
 from lxml import etree
 
-from openquake.db.alchemy.db_utils import get_db_session
-from openquake.db.alchemy.models import LossCurve, LossCurveData
-from openquake.db.alchemy.models import LossMap, LossMapData
+from openquake.db import models
 
 from openquake import logs
 from openquake import shapes
@@ -39,8 +37,6 @@ from openquake import xml
 
 from openquake.output import nrml
 from openquake.xml import NRML_NS, GML_NS
-
-from sqlalchemy import func as sqlfunc
 
 LOGGER = logs.RISK_LOG
 
@@ -275,31 +271,26 @@ class LossMapDBReader(object):
     produce an XML file.
     """
 
-    def __init__(self, session):
-        self.session = session
-
     def deserialize(self, output_id):
         """
         Read a the given loss map from the database.
 
         The structure of the result is documented in :class:`LossMapDBWriter`.
         """
-        loss_map = self.session.query(LossMap) \
-            .filter(LossMap.output_id == output_id).one()
-        loss_map_data = self.session.query(
-            sqlfunc.ST_X(LossMapData.location),
-            sqlfunc.ST_Y(LossMapData.location),
-            LossMapData) \
-            .filter(LossMapData.loss_map == loss_map).all()
+        loss_map = models.LossMap.objects.get(output=output_id)
+        loss_map_data = loss_map.lossmapdata_set.all()
+
         items = defaultdict(list)
 
-        for lon, lat, datum in loss_map_data:
-            site, loss_asset = self._get_item(loss_map, lon, lat, datum)
+        for datum in loss_map_data:
+            loc = datum.location
+            site, loss_asset = self._get_item(loss_map, loc.x, loc.y, datum)
             items[site].append(loss_asset)
 
         return [self._get_metadata(loss_map)] + items.items()
 
-    def _get_metadata(self, loss_map):  # pylint: disable=R0201
+    @staticmethod
+    def _get_metadata(loss_map):
         """
         Returns the metadata dictionary for this loss map
 
@@ -308,7 +299,8 @@ class LossMapDBReader(object):
         return dict((metadata_key, getattr(loss_map, key))
                         for key, metadata_key in LOSS_MAP_METADATA_KEYS)
 
-    def _get_item(self, loss_map, lon, lat, datum):  # pylint: disable=R0201
+    @staticmethod
+    def _get_item(loss_map, lon, lat, datum):
         """
         Returns the data for a point in the loss map
 
@@ -398,11 +390,11 @@ class LossMapDBWriter(writer.DBWriter):
 
     """
 
-    def __init__(self, *args, **kwargs):
-        super(LossMapDBWriter, self).__init__(*args, **kwargs)
+    def __init__(self, nrml_path, oq_job_id):
+        super(LossMapDBWriter, self).__init__(nrml_path, oq_job_id)
 
         self.metadata = None
-        self.bulk_inserter = writer.BulkInserter(LossMapData)
+        self.bulk_inserter = writer.BulkInserter(models.LossMapData)
 
     def get_output_type(self):
         return 'loss_map'
@@ -464,9 +456,8 @@ class LossMapDBWriter(writer.DBWriter):
         for key, metadata_key in LOSS_MAP_METADATA_KEYS:
             kwargs[key] = metadata.get(metadata_key)
 
-        self.metadata = LossMap(**kwargs)
-        self.session.add(self.metadata)
-        self.session.flush()
+        self.metadata = models.LossMap(**kwargs)
+        self.metadata.save()
 
 
 def create_loss_map_writer(job_id, serialize_to, nrml_path, deterministic):
@@ -489,9 +480,7 @@ def create_loss_map_writer(job_id, serialize_to, nrml_path, deterministic):
     writers = []
 
     if 'db' in serialize_to:
-        writers.append(LossMapDBWriter(get_db_session("reslt", "writer"),
-                                       nrml_path,
-                                       job_id))
+        writers.append(LossMapDBWriter(nrml_path, job_id))
 
     if 'xml' in serialize_to:
         if deterministic:
@@ -628,23 +617,16 @@ class LossCurveDBReader(object):
     produce an XML file.
     """
 
-    def __init__(self, session):
-        self.session = session
-
-    def deserialize(self, output_id):
+    @staticmethod
+    def deserialize(output_id):
         """
         Read a the given loss curve from the database.
 
         The structure of the result is documented in
         :class:`LossCurveDBWriter`.
         """
-        loss_curve = self.session.query(LossCurve) \
-            .filter(LossCurve.output_id == output_id).one()
-        loss_curve_data = self.session.query(
-            sqlfunc.ST_X(LossCurveData.location),
-            sqlfunc.ST_Y(LossCurveData.location),
-            LossCurveData) \
-            .filter(LossCurveData.loss_curve == loss_curve).all()
+        loss_curve = models.LossCurve.objects.get(output=output_id)
+        loss_curve_data = loss_curve.losscurvedata_set.all()
 
         curves = []
         asset = {
@@ -653,13 +635,14 @@ class LossCurveDBReader(object):
             'lossCategory': loss_curve.category,
         }
 
-        for lon, lat, datum in loss_curve_data:
+        for datum in loss_curve_data:
             curve = shapes.Curve(zip(datum.losses, datum.poes))
 
             asset_object = asset.copy()
             asset_object['assetID'] = datum.asset_ref
 
-            curves.append((shapes.Site(lon, lat), (curve, asset_object)))
+            loc = datum.location
+            curves.append((shapes.Site(loc.x, loc.y), (curve, asset_object)))
 
         return curves
 
@@ -687,11 +670,11 @@ class LossCurveDBWriter(writer.DBWriter):
          ]
     """
 
-    def __init__(self, *args, **kwargs):
-        super(LossCurveDBWriter, self).__init__(*args, **kwargs)
+    def __init__(self, nrml_path, oq_job_id):
+        super(LossCurveDBWriter, self).__init__(nrml_path, oq_job_id)
 
         self.curve = None
-        self.bulk_inserter = writer.BulkInserter(LossCurveData)
+        self.bulk_inserter = writer.BulkInserter(models.LossCurveData)
 
     def get_output_type(self):
         return "loss_curve"
@@ -736,15 +719,13 @@ class LossCurveDBWriter(writer.DBWriter):
         """
 
         if self.curve is None:
-            self.curve = LossCurve(output=self.output,
+            self.curve = models.LossCurve(output=self.output,
                 unit=asset_object.get('assetValueUnit'),
                 # The following attributes (endBranchLabel, lossCategory) are
                 # currently not passed in by the calculators
                 end_branch_label=asset_object.get('endBranchLabel'),
                 category=asset_object.get('lossCategory'))
-
-            self.session.add(self.curve)
-            self.session.flush()
+            self.curve.save()
 
         # Note: asset_object has lon and lat attributes that appear to contain
         # the same coordinates as point
@@ -800,9 +781,7 @@ def create_loss_curve_writer(job_id, serialize_to, nrml_path, curve_mode):
         job_id = int(job_id)
 
         if curve_mode == 'loss':
-            writers.append(LossCurveDBWriter(get_db_session("reslt", "writer"),
-                                             nrml_path,
-                                             job_id))
+            writers.append(LossCurveDBWriter(nrml_path, job_id))
         elif curve_mode == 'loss_ratio':
             # We are non interested in storing loss ratios in the db
             pass

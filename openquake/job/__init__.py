@@ -21,21 +21,22 @@
 import multiprocessing
 import os
 import re
-import sqlalchemy
 import subprocess
 import urlparse
 
 from ConfigParser import ConfigParser, RawConfigParser
-
-import geoalchemy as ga
+from datetime import datetime
+from django.db import transaction
+from django.contrib.gis.geos import GEOSGeometry
 
 from openquake import flags
 from openquake import java
 from openquake import kvs
 from openquake import logs
+from openquake import OPENQUAKE_ROOT
 from openquake import shapes
-from openquake.db.alchemy.db_utils import get_db_session
-from openquake.db.alchemy.models import OqJob, OqUser, OqParams
+from openquake.db.models import OqJob, OqParams, OqUser, JobStats
+from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
 from openquake.job.mixins import Mixin
@@ -70,8 +71,53 @@ ENUM_MAP = {
 REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
 
 
+def spawn_job_supervisor(job_id, pid):
+    """
+    Spawn a supervisor process as configured in openquake.cfg.
+
+    :param int job_id: the id of the job to be supervised
+    :param int pid: the process id of the job to be supervised
+    :return: the id of the supervisor process or None if no supervisor was
+             configured
+    :rtype: int or None
+    """
+    exe = oq_config.get('supervisor', 'exe')
+
+    if exe:
+        if oq_config.get('logging', 'backend') != 'amqp':
+            LOG.warn('If you want to run supervised jobs it\'s better '
+                     'to set [logging] backend=amqp in openquake.cfg')
+
+        if not os.path.isabs(exe):
+            exe = os.path.join(OPENQUAKE_ROOT, exe)
+
+        cmd = [exe, str(job_id), str(pid)]
+
+        supervisor_pid = subprocess.Popen(cmd, env=os.environ).pid
+
+        job = OqJob.objects.get(id=job_id)
+        job.supervisor_pid = supervisor_pid
+        job.job_pid = pid
+        job.save()
+
+        # Ensure the supervisor amqp queue exists
+        supervisor.bind_supervisor_queue(job_id)
+
+        return supervisor_pid
+    else:
+        LOG.warn('This job won\'t be supervised, '
+                 'because no supervisor is configured in openquake.cfg')
+
+
 def run_job(job_file, output_type):
-    """Given a job_file, run the job."""
+    """
+    Given a job_file, run the job.
+
+    :param job_file: the path of the configuration file for the job
+    :type job_file: string
+    :param output_type: the desired format for the results, one of 'db', 'xml'
+    :type output_type: string
+    """
 
     a_job = Job.from_file(job_file, output_type)
     is_job_valid = a_job.is_valid()
@@ -79,21 +125,13 @@ def run_job(job_file, output_type):
     if is_job_valid[0]:
         a_job.set_status('running')
 
+        spawn_job_supervisor(a_job.job_id, os.getpid())
+
         try:
             a_job.launch()
-        except sqlalchemy.exc.SQLAlchemyError:
-            # Try to cleanup the session status to have a chance to update the
-            # job record without further errors.
-            session = get_db_session("reslt", "writer")
-            if session.is_active:
-                session.rollback()
-
+        except Exception, ex:
+            LOG.critical("Job failed with exception: '%s'" % str(ex))
             a_job.set_status('failed')
-
-            raise
-        except:
-            a_job.set_status('failed')
-
             raise
         else:
             a_job.set_status('succeeded')
@@ -145,23 +183,46 @@ def guarantee_file(base_path, file_spec):
     return resolve_handler(url, base_path).get()
 
 
+@transaction.commit_on_success(using='job_init')
 def prepare_job(params):
     """
     Create a new OqJob and fill in the related OpParams entry.
 
     Returns the newly created job object.
     """
-    session = get_db_session("reslt", "writer")
+    oqp = OqParams(upload=None)
+
+    # fill in parameters
+    if 'SITES' in params:
+        if 'REGION_VERTEX' in params and 'REGION_GRID_SPACING' in params:
+            raise RuntimeError(
+                "Job config contains both sites and region of interest.")
+
+        ewkt = shapes.multipoint_ewkt_from_coords(params['SITES'])
+        sites = GEOSGeometry(ewkt)
+        oqp.sites = sites
+
+    elif 'REGION_VERTEX' in params and 'REGION_GRID_SPACING' in params:
+        oqp.region_grid_spacing = float(params['REGION_GRID_SPACING'])
+
+        ewkt = shapes.polygon_ewkt_from_coords(params['REGION_VERTEX'])
+        region = GEOSGeometry(ewkt)
+        oqp.region = region
+
+    else:
+        raise RuntimeError(
+            "Job config contains neither sites nor region of interest.")
 
     # TODO specify the owner as a command line parameter
-    owner = session.query(OqUser).filter(OqUser.user_name == 'openquake').one()
-    oqp = OqParams(upload=None)
-    job = OqJob(owner=owner, path=None, oq_params=oqp,
-                job_type=CALCULATION_MODE[params['CALCULATION_MODE']])
+    owner = OqUser.objects.get(user_name='openquake')
+
+    job = OqJob(
+        owner=owner, path=None,
+        job_type=CALCULATION_MODE[params['CALCULATION_MODE']])
+
+    oqp.job_type = job.job_type
 
     # fill-in parameters
-    oqp.job_type = job.job_type
-    oqp.region_grid_spacing = float(params['REGION_GRID_SPACING'])
     oqp.component = ENUM_MAP[params['COMPONENT']]
     oqp.imt = ENUM_MAP[params['INTENSITY_MEASURE_TYPE']]
     oqp.truncation_type = ENUM_MAP[params['GMPE_TRUNCATION_TYPE']]
@@ -170,35 +231,34 @@ def prepare_job(params):
 
     if oqp.imt == 'sa':
         oqp.period = float(params.get('PERIOD', 0.0))
+        oqp.damping = float(params.get('DAMPING', 0.0))
 
-    if oqp.job_type != 'classical':
-        oqp.gm_correlated = (
-            params['GROUND_MOTION_CORRELATION'].lower() != 'false')
-    else:
+    if oqp.job_type == 'classical':
         oqp.imls = [float(v) for v in
                         params['INTENSITY_MEASURE_LEVELS'].split(",")]
         oqp.poes = [float(v) for v in
                         params['POES_HAZARD_MAPS'].split(" ")]
 
-    if oqp.job_type != 'deterministic':
+    if oqp.job_type in ('deterministic', 'event_based'):
+        oqp.gm_correlated = (
+            params['GROUND_MOTION_CORRELATION'].lower() != 'false')
+
+    if oqp.job_type in  ('classical', 'event_based'):
         oqp.investigation_time = float(params.get('INVESTIGATION_TIME', 0.0))
         oqp.min_magnitude = float(params.get('MINIMUM_MAGNITUDE', 0.0))
         oqp.realizations = int(params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
+    else:
+        oqp.gmf_calculation_number = int(
+            params['NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS'])
+        oqp.rupture_surface_discretization = float(
+            params['RUPTURE_SURFACE_DISCRETIZATION'])
 
     if oqp.job_type == 'event_based':
         oqp.histories = int(params['NUMBER_OF_SEISMICITY_HISTORIES'])
 
-    # config lat/lon -> postgis -> lon/lat
-    coords = [float(v) for v in
-                  params['REGION_VERTEX'].split(",")]
-    vertices = ["%f %f" % (coords[i + 1], coords[i])
-                    for i in xrange(0, len(coords), 2)]
-    region = "SRID=4326;POLYGON((%s, %s))" % (", ".join(vertices), vertices[0])
-    oqp.region = ga.WKTSpatialElement(region)
-
-    session.add(oqp)
-    session.add(job)
-    session.commit()
+    oqp.save()
+    job.oq_params = oqp
+    job.save()
 
     return job
 
@@ -318,9 +378,7 @@ class Job(object):
 
         :returns: one of strings 'pending', 'running', 'succeeded', 'failed'.
         """
-        session = get_db_session("reslt", "reader")
-        [status] = session.query(OqJob.status).filter(OqJob.id == job_id).one()
-        return status
+        return OqJob.objects.get(id=job_id).status
 
     @staticmethod
     def is_job_completed(job_id):
@@ -332,13 +390,15 @@ class Job(object):
         status = Job.get_status_from_db(job_id)
         return status == 'succeeded' or status == 'failed'
 
-    def __init__(self, params, job_id, sections=list(), base_path=None):
+    def __init__(self, params, job_id, sections=list(), base_path=None,
+            validator=None):
         """
         :param dict params: Dict of job config params.
         :param int job_id: ID of the corresponding oq_job db record.
         :param list sections: List of config file sections. Example::
             ['HAZARD', 'RISK']
         :param str base_path: base directory containing job input files
+        :param validator: validator(s) used to check the configuration file
         """
         self._job_id = job_id
         mark_job_as_current(job_id)  # enables KVS gc
@@ -350,6 +410,8 @@ class Job(object):
         self.sections = list(set(sections))
         self.serialize_results_to = []
         self.base_path = base_path
+        self.validator = validator
+
         if base_path:
             self.to_kvs()
 
@@ -368,7 +430,11 @@ class Job(object):
             tuple is returned
         """
 
-        return conf.default_validators(self.sections, self.params).is_valid()
+        if self.validator is None:
+            self.validator = conf.default_validators(
+                self.sections, self.params)
+
+        return self.validator.is_valid()
 
     @property
     def job_id(self):
@@ -380,14 +446,6 @@ class Job(object):
         """Returns the kvs key for this job."""
         return kvs.tokens.generate_job_key(self.job_id)
 
-    def get_db_job(self, session):
-        """
-        Get the database record belonging to this job.
-
-        :param session: the SQLAlchemy database session
-        """
-        return session.query(OqJob).filter(OqJob.id == self.job_id).one()
-
     def set_status(self, status):
         """
         Set the status of the database record belonging to this job.
@@ -395,24 +453,19 @@ class Job(object):
         :param status: one of 'pending', 'running', 'succeeded', 'failed'
         :type status: string
         """
-
-        session = get_db_session("reslt", "writer")
-        db_job = self.get_db_job(session)
-        db_job.status = status
-        session.add(db_job)
-        session.commit()
+        job = OqJob.objects.get(id=self.job_id)
+        job.status = status
+        job.save()
 
     @property
     def region(self):
         """Compute valid region with appropriate cell size from config file."""
         if not self.has('REGION_VERTEX'):
             return None
-        # REGION_VERTEX coordinates are defined in the order (lat, lon)
-        verts = [float(x) for x in self['REGION_VERTEX'].split(",")]
 
-        # Flips lon and lat, and builds a list of coord tuples
-        coords = zip(verts[1::2], verts[::2])
-        region = shapes.RegionConstraint.from_coordinates(coords)
+        region = shapes.RegionConstraint.from_coordinates(
+            self._extract_coords('REGION_VERTEX'))
+
         region.cell_size = float(self['REGION_GRID_SPACING'])
         return region
 
@@ -426,6 +479,8 @@ class Job(object):
         """ Based on the behaviour specified in the configuration, mix in the
         correct behaviour for the tasks and then execute them.
         """
+        self._record_initial_stats()
+
         output_dir = os.path.join(self.base_path, self['OUTPUT_DIR'])
         if not os.path.exists(output_dir):
             os.makedirs(output_dir)
@@ -441,22 +496,6 @@ class Job(object):
                 LOG.debug(
                     "Job %s Launching %s for %s" % (self.job_id, mixin, key))
                 self.execute()
-
-        self.cleanup()
-
-    def cleanup(self):
-        """
-        Perform any necessary cleanup steps after the job completes.
-
-        Currently, this method only clears KVS cache data for the job.
-        """
-        LOG.debug("Running KVS garbage collection for job %s" % self.job_id)
-
-        gc_cmd = ['python', 'bin/cache_gc.py', '--job=%s' % self.job_id]
-
-        # run KVS garbage collection aynchronously
-        # stdout goes to /dev/null to silence any output from the GC
-        subprocess.Popen(gc_cmd, env=os.environ, stdout=open('/dev/null', 'w'))
 
     def __getitem__(self, name):
         return self.params[name]
@@ -515,11 +554,35 @@ class Job(object):
         key = kvs.tokens.generate_job_key(self.job_id)
         kvs.set_value_json_encoded(key, self.params)
 
-    def sites_for_region(self):
+    def sites_to_compute(self):
+        """Return the sites used to trigger the computation on the
+        hazard subsystem.
+
+        If the SITES parameter is specified, the computation is triggered
+        only on the sites specified in that parameter, otherwise
+        the region is used."""
+
+        if self.has(conf.SITES):
+            sites = []
+            coords = self._extract_coords(conf.SITES)
+
+            for coord in coords:
+                sites.append(shapes.Site(coord[0], coord[1]))
+
+            return sites
+        else:
+            return self._sites_for_region()
+
+    def _extract_coords(self, config_param):
+        """Extract from a configuration parameter the list of coordinates."""
+        verts = [float(x) for x in self.params[config_param].split(",")]
+        return zip(verts[1::2], verts[::2])
+
+    def _sites_for_region(self):
         """Return the list of sites for the region at hand."""
-        verts = [float(x) for x in self.params['REGION_VERTEX'].split(",")]
-        coords = zip(verts[1::2], verts[::2])
-        region = shapes.Region.from_coordinates(coords)
+        region = shapes.Region.from_coordinates(
+            self._extract_coords('REGION_VERTEX'))
+
         region.cell_size = float(self.params['REGION_GRID_SPACING'])
         return [site for site in region]
 
@@ -554,3 +617,16 @@ class Job(object):
         "Return the intensity measure levels as specified in the config file"
         return self.extract_values_from_config('INTENSITY_MEASURE_LEVELS',
                                                separator=',')
+
+    def _record_initial_stats(self):
+        '''
+        Report initial job stats (such as start time) by adding a
+        uiapi.job_stats record to the db.
+        '''
+        oq_job = OqJob.objects.get(id=self.job_id)
+
+        stats = JobStats(oq_job=oq_job)
+        stats.start_time = datetime.utcnow()
+        stats.num_sites = len(self.sites_to_compute())
+
+        stats.save()

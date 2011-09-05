@@ -60,6 +60,7 @@ HAZARD_MAP_FILENAME_PREFIX = 'hazardmap'
 
 def preload(fn):
     """A decorator for preload steps that must run on the Jobber node"""
+
     def preloader(self, *args, **kwargs):
         """Validate job"""
         self.cache = java.jclass("KVS")(
@@ -399,7 +400,7 @@ class ClassicalMixin(BasePSHAMixin):
         Trigger the calculation and serialization of hazard curves, mean hazard
         curves/maps and quantile curves.
         """
-        sites = self.sites_for_region()
+        sites = self.sites_to_compute()
         realizations = int(self.params["NUMBER_OF_LOGIC_TREE_SAMPLES"])
 
         LOG.info("Going to run classical PSHA hazard for %s realizations "
@@ -463,7 +464,7 @@ class ClassicalMixin(BasePSHAMixin):
             'statistics': 'quantile',
             'quantileValue': quantile}
         nrml_file = self.quantile_hazard_curve_filename(quantile)
-        key_template =\
+        key_template = \
             kvs.tokens.quantile_hazard_curve_key_template(self.job_id,
                                                           str(quantile))
 
@@ -738,7 +739,7 @@ class EventBasedMixin(BasePSHAMixin):
                 self.store_gmpe_map(gmpe_generator.getrandbits(32))
                 pending_tasks.append(
                     tasks.compute_ground_motion_fields.delay(
-                        self.job_id, self.sites_for_region(),
+                        self.job_id, self.sites_to_compute(),
                         i, j, gmf_generator.getrandbits(32)))
 
             for task in pending_tasks:

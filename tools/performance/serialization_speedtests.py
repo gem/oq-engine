@@ -18,9 +18,20 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+# simple non-automated speed tests; run with
+# nosetests -s to see timing for single tests
+#
+# some indicative timings:
+# GMFDBWriterTestCase.test_serialize_small            2.71 sec
+# HazardCurveDBWriterTestCase.test_deserialize_small 24.32 sec
+# HazardCurveDBWriterTestCase.test_serialize_small   17.48 sec
+# HazardMapDBWriterTestCase.test_serialize_small      3.48 sec
+# LossCurveDBWriterTestCase.test_serialize_small     11.24 sec
+# LossMapDBWriterTestCase.test_serialize_small       12.80 sec
+
+
 import unittest
 
-from openquake.db.alchemy.db_utils import get_db_session
 from openquake.output.hazard import *
 from openquake.output.risk import *
 from openquake.shapes import Site, Curve
@@ -128,33 +139,26 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         data = HAZARD_CURVE_DATA(['1_1', '1_2', '2_2', '2'], 20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_db_session("hzrdr", "writer")
         output_path = self.generate_output_path(self.job)
 
         for i in xrange(0, 10):
-            hcw = HazardCurveDBWriter(session, output_path + str(i),
-                                       self.job.id)
+            hcw = HazardCurveDBWriter(output_path + str(i), self.job.id)
 
             # Call the function under test.
             hcw.serialize(data)
-
-        session.commit()
 
     @helpers.timeit
     def test_deserialize_small(self):
         data = HAZARD_CURVE_DATA(['1_1', '1_2', '2_2', '2'], 20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_db_session("reslt", "writer")
         output_path = self.generate_output_path(self.job)
 
-        hcw = HazardCurveDBWriter(session, output_path, self.job.id)
+        hcw = HazardCurveDBWriter(output_path, self.job.id)
         hcw.serialize(data)
 
-        session.commit()
-
         # deserialize
-        hcr = HazardCurveDBReader(session)
+        hcr = HazardCurveDBReader()
 
         for i in xrange(0, 10):
             # Call the function under test.
@@ -173,20 +177,16 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         data = HAZARD_MAP_DATA(20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_db_session("hzrdr", "writer")
         output_path = self.generate_output_path(self.job)
 
         for i in xrange(0, 10):
-            hmw = HazardMapDBWriter(session, output_path + str(i),
-                                    self.job.id)
+            hmw = HazardMapDBWriter(output_path + str(i), self.job.id)
 
             # Call the function under test.
             hmw.serialize(data)
 
-        session.commit()
 
-
-class GMFDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+class GmfDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
@@ -198,16 +198,13 @@ class GMFDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         data = GMF_DATA(20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_db_session("hzrdr", "writer")
         output_path = self.generate_output_path(self.job)
 
         for i in xrange(0, 10):
-            gmfw = GMFDBWriter(session, output_path + str(i), self.job.id)
+            gmfw = GmfDBWriter(output_path + str(i), self.job.id)
 
             # Call the function under test.
             gmfw.serialize(data)
-
-        session.commit()
 
 
 class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
@@ -222,16 +219,13 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         data = LOSS_CURVE_DATA(20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_db_session("hzrdr", "writer")
         output_path = self.generate_output_path(self.job)
 
         for i in xrange(0, 20):
-            lcw = LossCurveDBWriter(session, output_path + str(i), self.job.id)
+            lcw = LossCurveDBWriter(output_path + str(i), self.job.id)
 
             # Call the function under test.
             lcw.serialize(data)
-
-        session.commit()
 
 
 class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
@@ -246,13 +240,10 @@ class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         data = LOSS_MAP_DATA(['a%d' % i for i in range(5)], 20, 4)
 
         self.job = self.setup_classic_job()
-        session = get_db_session("hzrdr", "writer")
         output_path = self.generate_output_path(self.job)
 
         for i in xrange(0, 10):
-            lmw = LossMapDBWriter(session, output_path + str(i), self.job.id)
+            lmw = LossMapDBWriter(output_path + str(i), self.job.id)
 
             # Call the function under test.
             lmw.serialize(data)
-
-        session.commit()

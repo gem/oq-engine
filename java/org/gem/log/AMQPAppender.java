@@ -158,7 +158,7 @@ public class AMQPAppender extends AppenderSkeleton {
     protected void sendMessage(Event event) {
         String routingKey;
         if (routingKeyPattern != null)
-            routingKey = routingKeyPattern.format(event.event);
+            routingKey = routingKeyPattern.format(event.event).toLowerCase();
         else
             routingKey = "";
 

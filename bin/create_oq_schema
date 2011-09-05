@@ -64,14 +64,9 @@ oq_admin
 oq_eqcat_reader
 oq_eqcat_writer
 oq_ged4gem
-oq_hzrdi_reader
-oq_hzrdi_writer
-oq_reslt_reader
+oq_job_init
+oq_job_superv
 oq_reslt_writer
-oq_riski_reader
-oq_riski_writer
-oq_uiapi_reader
-oq_uiapi_writer
 EOF
 
 for i in $*
