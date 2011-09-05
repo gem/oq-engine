@@ -69,6 +69,7 @@ JAVA_CLASSES = {
         "org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface",
     "LocationListFormatter": "org.gem.LocationListFormatter",
     "PythonBridgeAppender": "org.gem.log.PythonBridgeAppender",
+    "MDC": "org.apache.log4j.MDC",
 }
 
 
@@ -141,11 +142,13 @@ class JavaLoggingBridge(object):
         else:
             funcname = '%s.%s' % (classname, methname)
 
+        extra = {'job_id': jclass('MDC').get('job_id')}
+
         # Now do what logging.Logger._log() does:
         # create log record and handle it.
         record = logger.makeRecord(logger.name, level, filename, lineno, msg,
                                    args=(), exc_info=None, func=funcname,
-                                   extra=None)
+                                   extra=extra)
         # these two values are set by LogRecord constructor
         # so we need to overwrite them.
         record.threadName = event.getThreadName()
@@ -167,6 +170,14 @@ def init_logs():
     props.setProperty('log4j.appender.pythonbridge',
                       'org.gem.log.PythonBridgeAppender')
     jpype.JClass("org.apache.log4j.PropertyConfigurator").configure(props)
+
+
+def set_java_logging_job_id(job_id):
+    """
+    Make the job_id available to the java logging context.
+    """
+    mdc = jclass('MDC')
+    mdc.put('job_id', job_id)
 
 
 def jvm(max_mem=None):
