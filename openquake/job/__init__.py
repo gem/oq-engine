@@ -42,7 +42,8 @@ from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
 from openquake.job.mixins import Mixin
-from openquake.job.params import PARAMS, CALCULATION_MODE, ENUM_MAP
+from openquake.job.params import (
+    PARAMS, CALCULATION_MODE, ENUM_MAP, PATH_PARAMS)
 from openquake.kvs import mark_job_as_current
 from openquake.logs import LOG
 from openquake.utils import config as oq_config
@@ -178,7 +179,7 @@ def parse_config_files(config_file, default_configuration_files):
     return params, list(set(sections))
 
 
-def filter_configuration_parameters(params, sections):
+def prepare_configuration_parameters(params, sections):
     """
     Pre-process configuration parameters removing unknown ones.
     """
@@ -199,6 +200,13 @@ def filter_configuration_parameters(params, sections):
             continue
 
         new_params[name] = value
+
+    # make file paths absolute
+    for name in PATH_PARAMS:
+        if name not in new_params:
+            continue
+
+        new_params[name] = os.path.join(params['BASE_PATH'], new_params[name])
 
     return new_params, sections
 
@@ -345,7 +353,7 @@ class Job(object):
 
         params, sections = parse_config_files(
             config_file, Job.default_configs())
-        params, sections = filter_configuration_parameters(params, sections)
+        params, sections = prepare_configuration_parameters(params, sections)
 
         validator = conf.default_validators(sections, params)
         is_valid, errors = validator.is_valid()
