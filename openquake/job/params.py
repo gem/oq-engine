@@ -45,6 +45,22 @@ ENUM_MAP = {
     'None': 'none',
     '1 Sided': 'onesided',
     '2 Sided': 'twosided',
+    'Only along strike ( rupture full DDW)': 'alongstrike',
+    'Along strike and down dip': 'downdip',
+    'Along strike & centered down dip': 'centereddowndip',
+    'Rock': 'rock',
+    'Deep-Soil': 'deepsoil',
+    'Total': 'total',
+    'Inter-Event': 'interevent',
+    'Intra-Event': 'intraevent',
+    'None (zero)': 'zero',
+    'Total (Mag Dependent)': 'total_mag_dependent',
+    'Total (PGA Dependent)': 'total_pga_dependent',
+    'Intra-Event (Mag Dependent)': 'intraevent_mag_dependent',
+    'Point Sources': 'pointsources',
+    'Line Sources (random or given strike)': 'linesources',
+    'Cross Hair Line Sources': 'crosshairsources',
+    '16 Spoked Line Sources': '16spokedsources',
 }
 
 CALCULATION_MODES = set(CALCULATION_MODE.values())
@@ -52,6 +68,7 @@ PARAMS = {}
 
 
 def map_enum(value):
+    """Map enumerated values from configuration to database"""
     return ENUM_MAP[value]
 
 
@@ -135,12 +152,12 @@ define_param('REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM',
 define_param('GMF_RANDOM_SEED', 'gmf_random_seed',
              modes=('event_based', 'deterministic'))
 
-define_param('SADIGH_SITE_TYPE', 'sadigh_site_type')
+define_param('SADIGH_SITE_TYPE', 'sadigh_site_type', to_db=map_enum)
 
 # classical_psha_simple
 define_param('SUBDUCTION_RUPTURE_FLOATING_TYPE',
              'subduction_rupture_floating_type',
-             modes=('classical', 'event_based'))
+             modes=('classical', 'event_based'), to_db=map_enum)
 define_param('INCLUDE_GRID_SOURCES', 'include_grid_sources',
              modes=('classical', 'event_based'))
 define_param('AGGREGATE_LOSS_CURVE', 'aggregate_loss_curve')
@@ -153,7 +170,7 @@ define_param('LOSS_CURVES_OUTPUT_PREFIX', 'loss_curves_output_prefix')
 define_param('INCLUDE_AREA_SOURCES', 'include_area_sources',
              modes=('classical', 'event_based'))
 define_param('TREAT_AREA_SOURCE_AS', 'treat_area_source_as',
-             modes=('classical', 'event_based'))
+             modes=('classical', 'event_based'), to_db=map_enum)
 define_param('MAXIMUM_DISTANCE', 'maximum_distance', modes='classical')
 define_param('QUANTILE_LEVELS', 'quantile_levels', modes='classical')
 define_param('INCLUDE_SUBDUCTION_FAULT_SOURCE',
@@ -162,7 +179,7 @@ define_param('INCLUDE_SUBDUCTION_FAULT_SOURCE',
 define_param('GRID_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP',
              'grid_source_magnitude_scaling_relationship')
 define_param('STANDARD_DEVIATION_TYPE', 'standard_deviation_type',
-             modes=('classical', 'event_based'))
+             modes=('classical', 'event_based'), to_db=map_enum)
 define_param('SUBDUCTION_FAULT_RUPTURE_OFFSET',
              'subduction_fault_rupture_offset',
              modes=('classical', 'event_based'))
@@ -205,4 +222,4 @@ define_param('SUBDUCTION_FAULT_MAGNITUDE_SCALING_RELATIONSHIP',
 define_param('FAULT_RUPTURE_OFFSET', 'fault_rupture_offset',
              modes=('classical', 'event_based'))
 define_param('RUPTURE_FLOATING_TYPE', 'rupture_floating_type',
-             modes=('classical', 'event_based'))
+             modes=('classical', 'event_based'), to_db=map_enum)

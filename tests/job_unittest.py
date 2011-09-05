@@ -496,6 +496,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'damping': None,
              'gmf_calculation_number': None,
              'rupture_surface_discretization': None,
+             'subduction_rupture_floating_type': 'downdip',
              }, self.job.oq_params)
 
     def test_prepare_classical_job_over_sites(self):
