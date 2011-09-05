@@ -140,7 +140,7 @@ def parse_config_file(config_file):
             key = key.upper()
             # Handle includes.
             if RE_INCLUDE.match(key):
-                config_file = "%s/%s" % (os.path.dirname(config_file), value)
+                config_file = os.path.join(os.path.dirname(config_file), value)
                 new_sections, new_params = parse_config_file(config_file)
                 sections.extend(new_sections)
                 params.update(new_params)
