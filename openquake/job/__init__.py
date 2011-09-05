@@ -235,7 +235,9 @@ def prepare_job(params):
         param = PARAMS[name]
         value = value.strip()
 
-        if param.type in (models.BooleanField, models.NullBooleanField):
+        if param.to_db is not None:
+            value = param.to_db(value)
+        elif param.type in (models.BooleanField, models.NullBooleanField):
             value = value.lower() not in ('0', 'false')
         elif param.type == models.PolygonField:
             ewkt = shapes.polygon_ewkt_from_coords(value)
@@ -249,10 +251,6 @@ def prepare_job(params):
             continue
 
         setattr(oqp, param.column, value)
-
-    oqp.component = ENUM_MAP[params['COMPONENT']]
-    oqp.imt = ENUM_MAP[params['INTENSITY_MEASURE_TYPE']]
-    oqp.truncation_type = ENUM_MAP[params['GMPE_TRUNCATION_TYPE']]
 
     if oqp.imt != 'sa':
         oqp.period = None
