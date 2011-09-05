@@ -142,25 +142,6 @@ class AMQPHandler(logging.Handler):  # pylint: disable=R0902
     :param level: logging level
     """
 
-    # mimic Log4j MDC
-    MDC = dict()
-    """
-    A dictionary containing additional values that can be used for log message
-    and routing key formatting.
-
-    After doing::
-
-        AMQPHandler.MDC['job_id'] = some_value
-
-    the value can be interpolated in the log message and the routing key
-    by using the normal `%(job_id)s` Python syntax.
-    """  # pylint: disable=W0105
-
-    LEVELNAMES = {
-        'WARNING': 'WARN',
-        'CRITICAL': 'FATAL',
-    }
-
     # pylint: disable=R0913
     def __init__(self, host="localhost:5672", username="guest",
                  password="guest", virtual_host="/",
@@ -189,39 +170,10 @@ class AMQPHandler(logging.Handler):  # pylint: disable=R0902
 
         return self.channel
 
-    def _update_record(self, record):
-        """
-        If the user set some values in the `AMQPHandler.MDC` attribute,
-        return a new :class:`logging.LogRecord` objects containing the
-        original values plus the values contained in the `MDC`.
-        """
-        if not self.MDC:
-            return record
-
-        new_record = logging.LogRecord(
-            name=record.name, level=record.levelno, pathname=record.pathname,
-            lineno=record.lineno, msg=record.msg, args=record.args,
-            exc_info=record.exc_info, func=record.funcName)
-
-        # create a new LogRecord object containing the custom keys in the
-        # MDC class field
-        #
-        # the documentation says that formatters use .args; in reality
-        # they reach directly into __dict__
-        for key, value in self.MDC.items():
-            if key not in new_record.__dict__:
-                new_record.__dict__[key] = value
-
-        new_record.__dict__['loglevel'] = \
-            self.LEVELNAMES.get(new_record.levelname, new_record.levelname)
-
-        return new_record
-
     def emit(self, record):
         channel = self._connect()
-        full_record = self._update_record(record)
-        msg = amqp.Message(body=self.format(full_record))
-        routing_key = self.routing_key.format(full_record).lower()
+        msg = amqp.Message(body=self.format(record))
+        routing_key = self.routing_key.format(record).lower()
 
         channel.basic_publish(msg, exchange=self.exchange,
                               routing_key=routing_key)
