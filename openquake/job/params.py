@@ -90,16 +90,12 @@ def define_param(name, column, modes=None, default=None, to_db=None):
     assert modes.issubset(CALCULATION_MODES), \
            'unexpected mode(s) %r' % (modes - CALCULATION_MODES)
 
-    def column_type():
-        """Returns the `type` object for the column"""
-        # pylint: disable=W0212
-        return type(OqParams._meta.get_field_by_name(column)[0])
-
     if column == None:
         PARAMS[name] = Param(column=column, type=None, default=default,
                              modes=modes, to_db=None)
     else:
-        PARAMS[name] = Param(column=column, type=column_type(),
+        column_type = type(OqParams._meta.get_field_by_name(column)[0])
+        PARAMS[name] = Param(column=column, type=column_type,
                              default=default, modes=modes, to_db=to_db)
 
 define_param('CALCULATION_MODE', None)
