@@ -18,7 +18,6 @@
 
 """A single hazard/risk job."""
 
-import multiprocessing
 import os
 import re
 import subprocess
@@ -85,8 +84,8 @@ def spawn_job_supervisor(job_id, pid):
     if exe:
         if oq_config.get('logging', 'backend') != 'amqp':
             logger = Job.get_logger_for(job_id)
-            logger.warn('If you want to run supervised jobs it\'s better '
-                        'to set [logging] backend=amqp in openquake.cfg')
+            logger.warning('If you want to run supervised jobs it\'s better '
+                           'to set [logging] backend=amqp in openquake.cfg')
 
         if not os.path.isabs(exe):
             exe = os.path.join(OPENQUAKE_ROOT, exe)
@@ -258,18 +257,6 @@ def prepare_job(params):
     return job
 
 
-def setup_job_logging(job_id):
-    """Make job id and process name available to the Java and Python loggers"""
-    process_name = multiprocessing.current_process().name
-
-    # TODO: Make the job_id available to the java logging context.
-
-    # make the job_id available to the Python logging context
-    logs.AMQPHandler.MDC['job_id'] = job_id
-    # this is only necessary for Python 2.6
-    logs.AMQPHandler.MDC['processName'] = process_name
-
-
 class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
@@ -407,7 +394,7 @@ class Job(object):
         self._job_id = job_id
         mark_job_as_current(job_id)  # enables KVS gc
 
-        setup_job_logging(self.job_id)
+        java.set_java_logging_job_id(job_id)
 
         self.blocks_keys = []
         self.params = params
