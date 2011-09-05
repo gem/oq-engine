@@ -19,10 +19,11 @@
 import unittest
 
 from amqplib import client_0_8 as amqp
+from datetime import datetime
 
 from tests.utils.helpers import patch, job_from_file, get_data_path
 from tests.utils.helpers import DbTestMixin
-from openquake.db.models import OqJob, ErrorMsg
+from openquake.db.models import OqJob, ErrorMsg, JobStats
 
 from openquake.supervising import supervisor
 from openquake.supervising import supersupervisor
@@ -40,6 +41,20 @@ class SupervisorHelpersTestCase(DbTestMixin, unittest.TestCase):
             ErrorMsg.objects.using('job_superv')\
                             .filter(oq_job=self.job.id).delete()
             self.teardown_job(self.job, filesystem_only=True)
+
+    def test_record_job_stop_time(self):
+        """
+        Test that job stop time is recorded properly.
+        """
+        stats = JobStats(
+            oq_job=self.job, start_time=datetime.utcnow(), num_sites=10)
+        stats.save(using='job_superv')
+
+        supervisor.record_job_stop_time(self.job.id)
+
+        # Fetch the stats and check for the stop_time
+        stats = JobStats.objects.get(oq_job=self.job.id)
+        self.assertTrue(stats.stop_time is not None)
 
     def test_cleanup_after_job(self):
         with patch('openquake.kvs.cache_gc') as cache_gc:
@@ -76,6 +91,7 @@ class SupervisorTestCase(unittest.TestCase):
         start_patch('openquake.supervising.is_pid_running')
 
         # Patch the actions taken by the supervisor
+        start_patch('openquake.supervising.supervisor.record_job_stop_time')
         start_patch('openquake.supervising.supervisor.cleanup_after_job')
         start_patch('openquake.supervising.supervisor.terminate_job')
         start_patch('openquake.supervising.supervisor.get_job_status')
@@ -111,6 +127,10 @@ class SupervisorTestCase(unittest.TestCase):
             self.assertEqual(1, self.terminate_job.call_count)
             self.assertEqual(((1,), {}), self.terminate_job.call_args)
 
+            # stop time is recorded
+            self.assertEqual(1, self.record_job_stop_time.call_count)
+            self.assertEqual(((123,), {}), self.record_job_stop_time.call_args)
+
             # the cleanup is triggered
             self.assertEqual(1, self.cleanup_after_job.call_count)
             self.assertEqual(((123,), {}), self.cleanup_after_job.call_args)
@@ -133,6 +153,10 @@ class SupervisorTestCase(unittest.TestCase):
 
         supervisor.supervise(1, 123)
 
+        # stop time is recorded
+        self.assertEqual(1, self.record_job_stop_time.call_count)
+        self.assertEqual(((123,), {}), self.record_job_stop_time.call_args)
+
         # the cleanup is triggered
         self.assertEqual(1, self.cleanup_after_job.call_count)
         self.assertEqual(((123,), {}), self.cleanup_after_job.call_args)
@@ -149,6 +173,10 @@ class SupervisorTestCase(unittest.TestCase):
         self.get_job_status.return_value = 'running'
 
         supervisor.supervise(1, 123)
+
+        # stop time is recorded
+        self.assertEqual(1, self.record_job_stop_time.call_count)
+        self.assertEqual(((123,), {}), self.record_job_stop_time.call_args)
 
         # the cleanup is triggered
         self.assertEqual(1, self.cleanup_after_job.call_count)
