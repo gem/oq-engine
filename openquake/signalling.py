@@ -20,11 +20,17 @@
 """
 Classes dealing with amqp signalling between jobbers, workers and supervisors.
 """
+import logging
 import time
 
 from amqplib import client_0_8 as amqp
 
 from openquake.utils import config
+
+
+_ROUTING_KEY_PREFIX = 'log'
+_ROUTING_KEY_TYPES = ('failed', 'succeeded', 'fatal', 'error', 'warn',
+    'info', 'debug')
 
 
 def generate_routing_key(job_id, type_):
@@ -42,14 +48,40 @@ def generate_routing_key(job_id, type_):
     :return: the routing key
     :rtype: string
     """
-    assert type_ in ('*', 'failed', 'succeeded',
-                     'fatal', 'error', 'warn', 'info', 'debug'), \
+    assert type_ == '*' or type_ in _ROUTING_KEY_TYPES, \
            'invalid routing type %r' % type_
 
     assert isinstance(job_id, (int, long)) or job_id == '*', \
            'invalid job id %r' % job_id
 
-    return 'log.%s.%s' % (type_, job_id)
+    return '%s.%s.%s' % (_ROUTING_KEY_PREFIX, type_, job_id)
+
+
+def parse_routing_key(routing_key):
+    """
+    Extract the job id and routing key type from a routing key.
+
+    Raises a ValueError if the key is malformed.
+
+    :param routing_key: the routing key
+    :type routing_key: string
+    :return: the tuple (job_id, routing_key_type)
+    :rtype: job_id int, routing_key_type string
+    """
+
+    prefix, type_, job_id = routing_key.split('.')
+
+    if prefix != _ROUTING_KEY_PREFIX:
+        raise ValueError('invalid prefix %r for a signalling routing key'
+                            % prefix)
+
+    job_id = int(job_id)
+
+    if type_ not in _ROUTING_KEY_TYPES:
+        raise ValueError('invalid type %r for a signalling routing key'
+                         % type_)
+
+    return job_id, type_
 
 
 def connect():
@@ -218,7 +250,7 @@ class LogMessageConsumer(object):
         Can raise StopIteration to stop the loop inside `run` and let it return
         to the caller.
         """
-        raise NotImplementedError()
+        pass
 
 
 def signal_job_outcome(job_id, outcome):
@@ -239,3 +271,30 @@ def signal_job_outcome(job_id, outcome):
 
     chn.close()
     conn.close()
+
+
+class Collector(LogMessageConsumer):
+    """
+    Log the signalling messages with the supplied logger.
+
+    :param job_id: the id of a job to log only messages of a particular job, or
+                   '*' to log them all, regardless of the job
+    :type job_id: int or the '*' string
+    :param logger: the logger that will receive the messages
+    :type logger: :py:class:`logging.Logger`
+    """
+    def __init__(self, job_id, logger):
+        super(Collector, self).__init__(job_id)
+
+        self.logger = logger
+
+    def message_callback(self, msg):
+        try:
+            # pylint: disable=W0612
+            job_id, level = \
+                parse_routing_key(msg.delivery_info['routing_key'])
+        except ValueError:
+            pass
+        else:
+            if level in ('debug', 'info', 'warn', 'error', 'fatal'):
+                self.logger.log(getattr(logging, level.upper()), msg.body)
