@@ -55,6 +55,9 @@ def milestone_interval(launchpad):
         * returns the first inactive milestone
     """
 
+    # WARNING: be sure to export PYTHONPATH=`pwd` on the git clone'd folder
+    # otherwise if there's python-oq installed the version picked is the
+    # 'system' version
     cur_milestone_ver = '.'.join(
             [str(datum) for datum in __version__[:3]])
 
@@ -127,6 +130,9 @@ def fix_apply(launchpad, commit_lines, status_type):
 
                     for bug in bugs:
                         if bug.bug_tasks[0].status != status_type:
+                            # this assignment triggers a call to the
+                            # launchpadapi that changes the status of the
+                            # bug into status_type
                             bug.bug_tasks[0].status = status_type
                             changed_bugs.append(bug)
             return changed_bugs
