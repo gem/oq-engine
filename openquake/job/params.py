@@ -26,7 +26,7 @@ from collections import namedtuple
 from openquake.db.models import OqParams
 
 # pylint: disable=C0103
-Param = namedtuple('Param', 'column type default modes')
+Param = namedtuple('Param', 'column type default modes to_db')
 
 # TODO unify with utils/oqrunner/config_writer.py
 CALCULATION_MODE = {
@@ -51,7 +51,11 @@ CALCULATION_MODES = set(CALCULATION_MODE.values())
 PARAMS = {}
 
 
-def define_param(name, column, modes=None, default=None):
+def map_enum(value):
+    return ENUM_MAP[value]
+
+
+def define_param(name, column, modes=None, default=None, to_db=None):
     """
     Adds a new parameter definition to the PARAMS dictionary
 
@@ -76,10 +80,10 @@ def define_param(name, column, modes=None, default=None):
 
     if column == None:
         PARAMS[name] = Param(column=column, type=None, default=default,
-                             modes=modes)
+                             modes=modes, to_db=None)
     else:
         PARAMS[name] = Param(column=column, type=column_type(),
-                             default=default, modes=modes)
+                             default=default, modes=modes, to_db=to_db)
 
 define_param('CALCULATION_MODE', None)
 define_param('VULNERABILITY', None)
@@ -94,9 +98,9 @@ define_param('BASE_PATH', None)
 define_param('SITES', 'sites')
 define_param('REGION_GRID_SPACING', 'region_grid_spacing')
 define_param('REGION_VERTEX', 'region')
-define_param('COMPONENT', 'component')
-define_param('INTENSITY_MEASURE_TYPE', 'imt')
-define_param('GMPE_TRUNCATION_TYPE', 'truncation_type')
+define_param('COMPONENT', 'component', to_db=map_enum)
+define_param('INTENSITY_MEASURE_TYPE', 'imt', to_db=map_enum)
+define_param('GMPE_TRUNCATION_TYPE', 'truncation_type', to_db=map_enum)
 define_param('GMPE_MODEL_NAME', 'gmpe_model_name')
 define_param('TRUNCATION_LEVEL', 'truncation_level')
 define_param('REFERENCE_VS30_VALUE', 'reference_vs30_value')
