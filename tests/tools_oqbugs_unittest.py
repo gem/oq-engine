@@ -97,8 +97,8 @@ class OqBugsTestCase(unittest.TestCase):
 
     # interval between two openquake milestones
     def test_commits_output_interval(self):
-        self.assertTrue(len(CommitsOutput.since("2011-07-20T00:00:00",
-            until="2011-08-09T00:00:00")))
+        self.assertEquals(len(CommitsOutput.since("2011-07-20T00:00:00",
+            until="2011-08-09T00:00:00")), 12)
 
     def test_commits_output_reviewers(self):
         for commit in self.correct_commits:
