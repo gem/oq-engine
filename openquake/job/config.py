@@ -215,7 +215,7 @@ class BasicParameterValidator(object):
             param = PARAMS[name]
             value = value.strip()
 
-            if param.type is None:
+            if param.type in (None, models.TextField) and param.to_db is None:
                 continue
 
             invalid = False
@@ -232,22 +232,18 @@ class BasicParameterValidator(object):
                     # check the array contains matching pairs and at least 3
                     # vertices (allow an empty array)
                     length = len(self.to_float_array(value))
-                    if length != 0 and (length % 2 == 1 or length < 6):
-                        raise ValueError()
+                    invalid = length != 0 and (length % 2 == 1 or length < 6)
                 elif param.type is models.MultiPointField:
                     description = 'multi-point value'
                     # just check the array contains matching pairs
                     length = len(self.to_float_array(value))
-                    if length % 2 == 1:
-                        raise ValueError()
+                    invalid = length % 2 == 1
                 elif param.type is FloatArrayField:
                     description = 'floating point array value'
                     value = self.to_float_array(value)
                 elif param.type is models.FloatField:
                     description = 'floating point value'
                     value = float(value)
-                elif param.type is models.TextField:
-                    pass
                 elif param.type is models.IntegerField:
                     description = 'integer value'
                     value = int(value)
@@ -255,9 +251,7 @@ class BasicParameterValidator(object):
                     raise RuntimeError(
                         "Invalid parameter type %s for parameter %s" % (
                             param.type.__name__, name))
-            except KeyError:
-                invalid = True
-            except ValueError:
+            except (KeyError, ValueError):
                 invalid = True
 
             if invalid:
