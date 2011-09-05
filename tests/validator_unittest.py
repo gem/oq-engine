@@ -175,12 +175,6 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
         validator = config.ComputationTypeValidator(params)
         self.assertTrue(validator.is_valid()[0])
 
-    def test_site_geometry(self):
-        '''
-        If REGION_VERTEX is specifi
-        REGION_GRID_SPACING), validation should fail
-        '''
-
     def test_must_specify_only_one_geometry(self):
         '''
         If both SITES and REGION_VERTEX + REGION_GRID_SPACING are specified,
