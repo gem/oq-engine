@@ -30,7 +30,7 @@ from openquake import flags
 from openquake import shapes
 from openquake.utils import config as oq_config
 from openquake.job import Job, LOG, config, prepare_job, run_job
-from openquake.job import parse_config_files, filter_configuration_parameters
+from openquake.job import parse_config_files, prepare_configuration_parameters
 from openquake.job import spawn_job_supervisor
 from openquake.job.mixins import Mixin
 from openquake.db.models import OqJob, JobStats, OqParams
@@ -318,7 +318,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             def_params)
         self.assertEquals(['GENERAL', 'HAZARD'], sorted(def_sections))
 
-    def test_filter_parameters(self):
+    def test_prepare_parameters(self):
         content = '''
             [GENERAL]
             CALCULATION_MODE = Event Based
@@ -333,7 +333,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
         config_path = self.touch(content=textwrap.dedent(content))
 
         params, sections = parse_config_files(config_path, [])
-        params, sections = filter_configuration_parameters(params, sections)
+        params, sections = prepare_configuration_parameters(params, sections)
 
         self.assertEquals(
             {'BASE_PATH': '/tmp',
@@ -341,6 +341,36 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
              'CALCULATION_MODE': 'Event Based'},
             params)
         self.assertEquals(['GENERAL', 'HAZARD'], sorted(sections))
+
+    def test_prepare_path_parameters(self):
+        content = '''
+            [GENERAL]
+            CALCULATION_MODE = Event Based
+            OUTPUT_DIR = output
+
+            [HAZARD]
+            SOURCE_MODEL_LOGIC_TREE_FILE = source-model.xml
+            GMPE_LOGIC_TREE_FILE = gmpe.xml
+
+            [RISK]
+            EXPOSURE = /absolute/exposure.xml
+            VULNERABILITY = vulnerability.xml
+            '''
+        config_path = self.touch(content=textwrap.dedent(content))
+
+        params, sections = parse_config_files(config_path, [])
+        params, sections = prepare_configuration_parameters(params, sections)
+
+        self.assertEquals(
+            {'BASE_PATH': '/tmp',
+             'OUTPUT_DIR': '/tmp/output',
+             'SOURCE_MODEL_LOGIC_TREE_FILE': '/tmp/source-model.xml',
+             'GMPE_LOGIC_TREE_FILE': '/tmp/gmpe.xml',
+             'EXPOSURE': '/absolute/exposure.xml',
+             'VULNERABILITY': '/tmp/vulnerability.xml',
+             'CALCULATION_MODE': 'Event Based'},
+            params)
+        self.assertEquals(['GENERAL', 'HAZARD', 'RISK'], sorted(sections))
 
 
 class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
