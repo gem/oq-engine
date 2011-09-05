@@ -171,7 +171,7 @@ def parse_config_files(config_file, default_configuration_files):
         params.update(new_params)
     params['BASE_PATH'] = base_path
 
-    return params, sections
+    return params, list(set(sections))
 
 
 def filter_configuration_parameters(params, sections):
