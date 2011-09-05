@@ -36,6 +36,7 @@ oqpath.set_oq_path()
 
 from openquake import job
 from openquake import kvs
+from openquake import logs
 from openquake.utils import config
 
 
