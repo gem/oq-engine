@@ -21,6 +21,11 @@ This module contains logic related to the configuration and
 its validation.
 """
 
+import os
+
+from openquake.job.params import PATH_PARAMS
+
+
 EXPOSURE = "EXPOSURE"
 RISK_SECTION = "RISK"
 INPUT_REGION = "REGION_VERTEX"
@@ -165,6 +170,27 @@ class DeterministicComputationValidator(object):
         return (True, [])
 
 
+class FilePathValidator(object):
+    """Validator that checks paths defined in configuration files are valid"""
+
+    def __init__(self, params):
+        self.params = params
+
+    def is_valid(self):
+        """Check all defined paths"""
+        errors = []
+
+        for name in PATH_PARAMS:
+            if name not in self.params:
+                continue
+
+            if not os.path.exists(self.params[name]):
+                errors.append("File '%s' specified by parameter %s not found" %
+                              (self.params[name], name))
+
+        return (len(errors) == 0, errors)
+
+
 def default_validators(sections, params):
     """Create the set of default validators for a job.
 
@@ -182,10 +208,12 @@ def default_validators(sections, params):
     exposure = RiskMandatoryParametersValidator(sections, params)
     deterministic = DeterministicComputationValidator(sections, params)
     hazard_comp_type = ComputationTypeValidator(params)
+    file_path = FilePathValidator(params)
 
     validators = ValidatorSet()
     validators.add(hazard_comp_type)
     validators.add(deterministic)
     validators.add(exposure)
+    validators.add(file_path)
 
     return validators
