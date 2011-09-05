@@ -179,7 +179,7 @@ def parse_config_files(config_file, default_configuration_files):
     return params, list(set(sections))
 
 
-def prepare_configuration_parameters(params, sections):
+def prepare_config_parameters(params, sections):
     """
     Pre-process configuration parameters removing unknown ones.
     """
@@ -353,7 +353,7 @@ class Job(object):
 
         params, sections = parse_config_files(
             config_file, Job.default_configs())
-        params, sections = prepare_configuration_parameters(params, sections)
+        params, sections = prepare_config_parameters(params, sections)
 
         validator = conf.default_validators(sections, params)
         is_valid, errors = validator.is_valid()

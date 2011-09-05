@@ -30,7 +30,7 @@ from openquake import flags
 from openquake import shapes
 from openquake.utils import config as oq_config
 from openquake.job import Job, LOG, config, prepare_job, run_job
-from openquake.job import parse_config_files, prepare_configuration_parameters
+from openquake.job import parse_config_files, prepare_config_parameters
 from openquake.job import spawn_job_supervisor
 from openquake.job.mixins import Mixin
 from openquake.db.models import OqJob, JobStats, OqParams
@@ -333,7 +333,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
         config_path = self.touch(content=textwrap.dedent(content))
 
         params, sections = parse_config_files(config_path, [])
-        params, sections = prepare_configuration_parameters(params, sections)
+        params, sections = prepare_config_parameters(params, sections)
 
         self.assertEquals(
             {'BASE_PATH': '/tmp',
@@ -359,7 +359,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
         config_path = self.touch(content=textwrap.dedent(content))
 
         params, sections = parse_config_files(config_path, [])
-        params, sections = prepare_configuration_parameters(params, sections)
+        params, sections = prepare_config_parameters(params, sections)
 
         self.assertEquals(
             {'BASE_PATH': '/tmp',
