@@ -182,6 +182,16 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(self.job, Job.from_kvs(self.job.job_id))
         helpers.cleanup_loggers()
 
+    def test_get_logger_for(self):
+        logger = Job.get_logger_for(self.job.job_id)
+        self.assertTrue(isinstance(logger, logging.LoggerAdapter))
+        self.assertEqual(logger.extra, {'job_id': self.job.job_id})
+
+    def test_logger(self):
+        logger = self.job.logger
+        self.assertTrue(isinstance(logger, logging.LoggerAdapter))
+        self.assertEqual(logger.extra, {'job_id': self.job.job_id})
+
 
 class JobDbRecordTestCase(unittest.TestCase):
 
