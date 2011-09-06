@@ -71,10 +71,6 @@ NRML_SCHEMA_PATH = os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
 class LogicTreeValidationTestCase(unittest.TestCase):
     """Test XML parsing error handling"""
 
-    def setUp(self):
-        java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
-                                                xml.nrml_schema_file())
-
     def _parse_file(self, path):
         jpype = java.jvm()
         ltr = jpype.JClass('org.gem.engine.LogicTreeReader')(path)
