@@ -27,6 +27,7 @@ import unittest
 from lxml import etree
 
 from openquake import logs
+from openquake import nrml
 from openquake import shapes
 from openquake import xml
 from tests.utils import helpers
@@ -38,8 +39,7 @@ LOG = logs.RISK_LOG
 TEST_LOSS_MAP_XML_OUTPUT_PATH = helpers.get_output_path('test-loss-map.xml')
 EXPECTED_TEST_LOSS_MAP = helpers.get_data_path('expected-test-loss-map.xml')
 
-NRML_SCHEMA_PATH = os.path.join(helpers.SCHEMA_DIR,
-                                 xml.NRML_SCHEMA_FILE)
+NRML_SCHEMA_PATH = nrml.nrml_schema_file()
 
 LOSS_MAP_METADATA = {
     'nrmlID': 'test_nrml_id',
