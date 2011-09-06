@@ -100,50 +100,26 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
 
         params = {}
 
-        engine = helpers.create_job(params, sections=sections)
-        self.assertFalse(engine.is_valid()[0])
+        validator = config.default_validators(sections, params)
+        self.assertFalse(validator.is_valid()[0])
 
         params = {config.EXPOSURE: "/a/path/to/exposure"}
 
-        engine = helpers.create_job(params, sections=sections)
-        self.assertFalse(engine.is_valid()[0])
+        validator = config.default_validators(sections, params)
+        self.assertFalse(validator.is_valid()[0])
 
         params = {config.EXPOSURE: "/a/path/to/exposure",
                 config.REGION_GRID_SPACING: 0.5}
 
-        engine = helpers.create_job(params, sections=sections)
-        self.assertFalse(engine.is_valid()[0])
+        validator = config.default_validators(sections, params)
+        self.assertFalse(validator.is_valid()[0])
 
         params = {config.EXPOSURE: "/a/path/to/exposure",
                 config.INPUT_REGION: "a, polygon",
                 config.REGION_GRID_SPACING: 0.5}
 
-        engine = helpers.create_job(params, sections=sections)
-        self.assertTrue(engine.is_valid()[0])
-
-    def test_hazard_computation_type(self):
-        """Region (REGION_VERTEX) and specific sites (SITES)
-        are not supported at the same time."""
-
-        params = {config.SITES: "some, sites"}
-        validator = config.ComputationTypeValidator(params)
-
-        engine = helpers.create_job(params, validator=validator)
-        self.assertTrue(engine.is_valid()[0])
-
-        params = {config.INPUT_REGION: "a, polygon"}
-        validator = config.ComputationTypeValidator(params)
-
-        engine = helpers.create_job(params, validator=validator)
-        self.assertTrue(engine.is_valid()[0])
-
-        params = {config.SITES: "some, sites",
-                config.INPUT_REGION: "a, polygon"}
-
-        validator = config.ComputationTypeValidator(params)
-
-        engine = helpers.create_job(params, validator=validator)
-        self.assertFalse(engine.is_valid()[0])
+        validator = config.default_validators(sections, params)
+        self.assertTrue(validator.is_valid()[0])
 
     def test_deterministic_is_not_supported_alone(self):
         """When we specify a deterministic computation, we only
@@ -155,11 +131,60 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
         params = {config.CALCULATION_MODE: config.DETERMINISTIC_MODE}
 
         validator = config.DeterministicComputationValidator(sections, params)
-        engine = helpers.create_job(
-            None, sections=sections, validator=validator)
 
-        self.assertTrue(engine.is_valid()[0])
+        self.assertTrue(validator.is_valid()[0])
 
         sections.remove(config.RISK_SECTION)
 
-        self.assertFalse(engine.is_valid()[0])
+        self.assertFalse(validator.is_valid()[0])
+
+    def test_must_specify_geometry(self):
+        '''
+        If no geometry is specified (neither SITES nor REGION_VERTEX +
+        REGION_GRID_SPACING), validation should fail
+        '''
+        # no geometry
+        params = dict()
+
+        validator = config.ComputationTypeValidator(params)
+        self.assertFalse(validator.is_valid()[0])
+
+        # invalid region geometry
+        params = dict()
+        params['REGION_VERTEX'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
+
+        validator = config.ComputationTypeValidator(params)
+        self.assertFalse(validator.is_valid()[0])
+
+    def test_region_geometry(self):
+        '''
+        Either a region or a set of sites has been specified
+        '''
+        # region
+        params = dict()
+        params['REGION_VERTEX'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
+        params['REGION_GRID_SPACING'] = '0.1'
+
+        validator = config.ComputationTypeValidator(params)
+        self.assertTrue(validator.is_valid()[0])
+
+        # sites
+        params = dict()
+        params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
+
+        validator = config.ComputationTypeValidator(params)
+        self.assertTrue(validator.is_valid()[0])
+
+    def test_must_specify_only_one_geometry(self):
+        '''
+        If both SITES and REGION_VERTEX + REGION_GRID_SPACING are specified,
+        validation should fail. A job config can only have one or the
+        other.
+        '''
+        params = dict()
+        params['REGION_VERTEX'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
+        params['REGION_GRID_SPACING'] = '0.1'
+        params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
+
+        validator = config.ComputationTypeValidator(params)
+        self.assertFalse(validator.is_valid()[0])
