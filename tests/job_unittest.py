@@ -30,7 +30,8 @@ from openquake import flags
 from openquake import shapes
 from openquake.utils import config as oq_config
 from openquake.job import Job, LOG, config, prepare_job, run_job
-from openquake.job import parse_config_files, prepare_config_parameters
+from openquake.job import (
+    parse_config_files, prepare_config_parameters, get_source_models)
 from openquake.job import spawn_job_supervisor
 from openquake.job.mixins import Mixin
 from openquake.db.models import OqJob, JobStats, OqParams
@@ -515,6 +516,18 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
                       for i in self.job.oq_params.input_set.input_set.all()]
 
         return sorted(inputs, key=lambda i: i['type'])
+
+    def test_get_source_models(self):
+        def abs_path(path):
+            return os.path.abspath(os.path.join(
+                    'smoketests/classical_psha_simple', path))
+
+        path = abs_path('source_model_logic_tree.xml')
+        models = get_source_models(path)
+        expected_models = [abs_path('source_model1.xml'),
+                           abs_path('source_model2.xml')]
+
+        self.assertEquals(expected_models, models),
 
     def test_prepare_classical_job(self):
         params = self.BASE_CLASSICAL_PARAMS.copy()
