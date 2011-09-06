@@ -227,7 +227,7 @@ def get_source_models(logic_tree):
     base_path = os.path.dirname(os.path.abspath(logic_tree))
     parser = java.jclass('LogicTreeReader')(logic_tree)
     tree_map = parser.read()
-    models = []
+    model_files = []
 
     for tree in tree_map.values():
         for level in tree.getBranchingLevels():
@@ -235,9 +235,9 @@ def get_source_models(logic_tree):
                 model = branch.getNameInputFile()
 
                 if model:
-                    models.append(os.path.join(base_path, model))
+                    model_files.append(os.path.join(base_path, model))
 
-    return models
+    return model_files
 
 
 def guarantee_file(base_path, file_spec):
