@@ -126,8 +126,6 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
 
         self.src_reader = java.jclass('SourceModelReader')(
             TEST_SRC_FILE, db_loader.SourceModelLoader.DEFAULT_MFD_BIN_WIDTH)
-        java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
-                                                xml.nrml_schema_file())
         self.sources = self.src_reader.read()
         self.simple, self.complex, self.area, self.point = self.sources
 
@@ -252,8 +250,6 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         helpers.assertModelAlmostEqual(self, expected[2], simple_data[2])
 
     def _serialize_test_helper(self, test_file, expected_tables):
-        java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
-                                                xml.nrml_schema_file())
         src_loader = db_loader.SourceModelLoader(test_file)
 
         results = src_loader.serialize()
