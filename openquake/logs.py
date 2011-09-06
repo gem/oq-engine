@@ -25,6 +25,7 @@ TODO(jmc): support debug level per logger.
 """
 import logging
 import sys
+import socket
 
 try:
     import simplejson as json
@@ -188,6 +189,7 @@ class AMQPHandler(logging.Handler):  # pylint: disable=R0902
         # what was in args
         data['msg'] = record.getMessage()
         data['args'] = ()
+        data['hostname'] = socket.getfqdn()
         data = json.dumps(data)
 
         channel = self._connect()

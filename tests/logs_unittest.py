@@ -21,6 +21,7 @@ import multiprocessing
 import threading
 import os.path
 import time
+import socket
 
 from amqplib import client_0_8 as amqp
 
@@ -235,7 +236,8 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         thisfile = __file__.rstrip('c')
         self.assertEqual(info['pathname'], thisfile)
         self.assertEqual(info['filename'], os.path.basename(thisfile))
-        self.assertEqual(info['lineno'], 191)
+        self.assertEqual(info['lineno'], 192)
+        self.assertEqual(info['hostname'], socket.getfqdn())
 
         self.assertEqual(info['exc_info'], None)
         self.assertEqual(info['exc_text'], None)
