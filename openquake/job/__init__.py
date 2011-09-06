@@ -27,6 +27,7 @@ import urlparse
 from ConfigParser import ConfigParser, RawConfigParser
 from datetime import datetime
 from django.db import transaction
+from django.contrib.gis.db import models
 from django.contrib.gis.geos import GEOSGeometry
 
 from openquake import flags
@@ -35,11 +36,13 @@ from openquake import kvs
 from openquake import logs
 from openquake import OPENQUAKE_ROOT
 from openquake import shapes
-from openquake.db.models import OqJob, OqParams, OqUser, JobStats
+from openquake.db.models import (
+    OqJob, OqParams, OqUser, JobStats, FloatArrayField)
 from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
 from openquake.job.mixins import Mixin
+from openquake.job.params import PARAMS, CALCULATION_MODE, ENUM_MAP
 from openquake.kvs import mark_job_as_current
 from openquake.logs import LOG
 from openquake.utils import config as oq_config
@@ -48,25 +51,6 @@ RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 
 FLAGS = flags.FLAGS
 flags.DEFINE_boolean('include_defaults', True, "Include default configs")
-
-# TODO unify with utils/oqrunner/config_writer.py
-CALCULATION_MODE = {
-    'Classical': 'classical',
-    'Deterministic': 'deterministic',
-    'Event Based': 'event_based',
-}
-
-ENUM_MAP = {
-    'Average Horizontal': 'average',
-    'Average Horizontal (GMRotI50)': 'gmroti50',
-    'PGA': 'pga',
-    'SA': 'sa',
-    'PGV': 'pgv',
-    'PGD': 'pgd',
-    'None': 'none',
-    '1 Sided': 'onesided',
-    '2 Sided': 'twosided',
-}
 
 REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
 
@@ -120,28 +104,18 @@ def run_job(job_file, output_type):
     """
 
     a_job = Job.from_file(job_file, output_type)
-    is_job_valid = a_job.is_valid()
+    a_job.set_status('running')
 
-    if is_job_valid[0]:
-        a_job.set_status('running')
+    spawn_job_supervisor(a_job.job_id, os.getpid())
 
-        spawn_job_supervisor(a_job.job_id, os.getpid())
-
-        try:
-            a_job.launch()
-        except Exception, ex:
-            LOG.critical("Job failed with exception: '%s'" % str(ex))
-            a_job.set_status('failed')
-            raise
-        else:
-            a_job.set_status('succeeded')
-    else:
+    try:
+        a_job.launch()
+    except Exception, ex:
+        LOG.critical("Job failed with exception: '%s'" % str(ex))
         a_job.set_status('failed')
-
-        LOG.critical("The job configuration is inconsistent:")
-
-        for error_message in is_job_valid[1]:
-            LOG.critical("   >>> %s" % error_message)
+        raise
+    else:
+        a_job.set_status('succeeded')
 
 
 def parse_config_file(config_file):
@@ -175,6 +149,56 @@ def parse_config_file(config_file):
     return sections, params
 
 
+def parse_config_files(config_file, default_configuration_files):
+    """
+    Loads the specified configuration file, using the files in
+    default_configuration_files to provide defaults.
+
+    :param config_file: configuration file
+    :param default_configuration_files: list of configuration files
+    :type default_configuration_files: list
+    """
+
+    config_file = os.path.abspath(config_file)
+    base_path = os.path.abspath(os.path.dirname(config_file))
+
+    params = {}
+    sections = []
+
+    for each_config_file in default_configuration_files + [config_file]:
+        new_sections, new_params = parse_config_file(each_config_file)
+        sections.extend(new_sections)
+        params.update(new_params)
+    params['BASE_PATH'] = base_path
+
+    return params, list(set(sections))
+
+
+def filter_configuration_parameters(params, sections):
+    """
+    Pre-process configuration parameters removing unknown ones.
+    """
+
+    job_type = CALCULATION_MODE[params['CALCULATION_MODE']]
+    new_params = dict()
+
+    for name, value in params.items():
+        try:
+            param = PARAMS[name]
+        except KeyError:
+            print 'Ignoring unknown parameter %r' % name
+            continue
+
+        if job_type not in param.modes:
+            print 'Ignoring', name, 'in', job_type, \
+                ', it\'s meaningful only in', ', '.join(param.modes)
+            continue
+
+        new_params[name] = value
+
+    return new_params, sections
+
+
 def guarantee_file(base_path, file_spec):
     """Resolves a file_spec (http, local relative or absolute path, git url,
     etc.) to an absolute path to a (possibly temporary) file."""
@@ -192,27 +216,6 @@ def prepare_job(params):
     """
     oqp = OqParams(upload=None)
 
-    # fill in parameters
-    if 'SITES' in params:
-        if 'REGION_VERTEX' in params and 'REGION_GRID_SPACING' in params:
-            raise RuntimeError(
-                "Job config contains both sites and region of interest.")
-
-        ewkt = shapes.multipoint_ewkt_from_coords(params['SITES'])
-        sites = GEOSGeometry(ewkt)
-        oqp.sites = sites
-
-    elif 'REGION_VERTEX' in params and 'REGION_GRID_SPACING' in params:
-        oqp.region_grid_spacing = float(params['REGION_GRID_SPACING'])
-
-        ewkt = shapes.polygon_ewkt_from_coords(params['REGION_VERTEX'])
-        region = GEOSGeometry(ewkt)
-        oqp.region = region
-
-    else:
-        raise RuntimeError(
-            "Job config contains neither sites nor region of interest.")
-
     # TODO specify the owner as a command line parameter
     owner = OqUser.objects.get(user_name='openquake')
 
@@ -222,39 +225,36 @@ def prepare_job(params):
 
     oqp.job_type = job.job_type
 
-    # fill-in parameters
-    oqp.component = ENUM_MAP[params['COMPONENT']]
-    oqp.imt = ENUM_MAP[params['INTENSITY_MEASURE_TYPE']]
-    oqp.truncation_type = ENUM_MAP[params['GMPE_TRUNCATION_TYPE']]
-    oqp.truncation_level = float(params['TRUNCATION_LEVEL'])
-    oqp.reference_vs30_value = float(params['REFERENCE_VS30_VALUE'])
+    for name, param in PARAMS.items():
+        if job.job_type in param.modes and param.default is not None:
+            setattr(oqp, param.column, param.default)
 
-    if oqp.imt == 'sa':
-        oqp.period = float(params.get('PERIOD', 0.0))
-        oqp.damping = float(params.get('DAMPING', 0.0))
+    number_re = re.compile('[^0-9.]+')
 
-    if oqp.job_type == 'classical':
-        oqp.imls = [float(v) for v in
-                        params['INTENSITY_MEASURE_LEVELS'].split(",")]
-        oqp.poes = [float(v) for v in
-                        params['POES_HAZARD_MAPS'].split(" ")]
+    for name, value in params.items():
+        param = PARAMS[name]
+        value = value.strip()
 
-    if oqp.job_type in ('deterministic', 'event_based'):
-        oqp.gm_correlated = (
-            params['GROUND_MOTION_CORRELATION'].lower() != 'false')
+        if param.to_db is not None:
+            value = param.to_db(value)
+        elif param.type in (models.BooleanField, models.NullBooleanField):
+            value = value.lower() not in ('0', 'false')
+        elif param.type == models.PolygonField:
+            ewkt = shapes.polygon_ewkt_from_coords(value)
+            value = GEOSGeometry(ewkt)
+        elif param.type == models.MultiPointField:
+            ewkt = shapes.multipoint_ewkt_from_coords(value)
+            value = GEOSGeometry(ewkt)
+        elif param.type == FloatArrayField:
+            value = [float(v) for v in number_re.split(value) if len(v)]
+        elif param.type == None:
+            continue
 
-    if oqp.job_type in  ('classical', 'event_based'):
-        oqp.investigation_time = float(params.get('INVESTIGATION_TIME', 0.0))
-        oqp.min_magnitude = float(params.get('MINIMUM_MAGNITUDE', 0.0))
-        oqp.realizations = int(params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
-    else:
-        oqp.gmf_calculation_number = int(
-            params['NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS'])
-        oqp.rupture_surface_discretization = float(
-            params['RUPTURE_SURFACE_DISCRETIZATION'])
+        setattr(oqp, param.column, value)
 
-    if oqp.job_type == 'event_based':
-        oqp.histories = int(params['NUMBER_OF_SEISMICITY_HISTORIES'])
+    if oqp.imt != 'sa':
+        oqp.period = None
+        oqp.damping = None
 
     oqp.save()
     job.oq_params = oqp
@@ -335,19 +335,15 @@ class Job(object):
         # essentially a detail of our current tests and ci infrastructure.
         assert output_type in ('db', 'xml', 'xml_without_db')
 
-        config_file = os.path.abspath(config_file)
-        LOG.debug("Loading Job from %s" % (config_file))
+        params, sections = parse_config_files(
+            config_file, Job.default_configs())
+        params, sections = filter_configuration_parameters(params, sections)
 
-        base_path = os.path.abspath(os.path.dirname(config_file))
+        validator = conf.default_validators(sections, params)
+        is_valid, errors = validator.is_valid()
 
-        params = {}
-
-        sections = []
-        for each_config_file in Job.default_configs() + [config_file]:
-            new_sections, new_params = parse_config_file(each_config_file)
-            sections.extend(new_sections)
-            params.update(new_params)
-        params['BASE_PATH'] = base_path
+        if not is_valid:
+            raise conf.ValidationException(errors)
 
         if output_type == 'xml_without_db':
             # we are running a test
@@ -366,9 +362,11 @@ class Job(object):
             else:
                 serialize_results_to = ['db', 'xml']
 
+        base_path = params['BASE_PATH']
+
         job = Job(params, job_id, sections=sections, base_path=base_path)
         job.serialize_results_to = serialize_results_to
-        job.config_file = config_file  # pylint: disable=W0201
+
         return job
 
     @staticmethod
@@ -419,22 +417,6 @@ class Job(object):
         """Return true if this job has the given parameter defined
         and specified, false otherwise."""
         return name in self.params and self.params[name]
-
-    def is_valid(self):
-        """Return true if this job is valid and can be
-        processed, false otherwise.
-
-        :returns: the status of this job and the related error messages.
-        :rtype: when valid, a (True, []) tuple is returned. When invalid, a
-            (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
-            tuple is returned
-        """
-
-        if self.validator is None:
-            self.validator = conf.default_validators(
-                self.sections, self.params)
-
-        return self.validator.is_valid()
 
     @property
     def job_id(self):
