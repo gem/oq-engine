@@ -68,8 +68,6 @@ def preload(fn):
                 int(config.get("kvs", "port")))
         self.calc = java.jclass("LogicTreeProcessor")(
                 self.cache, self.key)
-        java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
-                                                xml.nrml_schema_file())
         return fn(self, *args, **kwargs)
     return preloader
 

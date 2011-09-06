@@ -23,12 +23,14 @@ import unittest
 
 from lxml import etree
 
-from tests.utils import helpers
+from openquake import nrml
 from openquake import shapes
 from openquake import xml
 
 from openquake.output import hazard as hazard_output
 from openquake.parser import hazard as hazard_parser
+
+from tests.utils import helpers
 
 TEST_FILE = "hazard-curves.xml"
 TEST_FILE_SINGLE_RESULT = "hazard-curves-single.xml"
@@ -83,7 +85,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
         xml_doc = etree.parse(path)
 
         # test that the doc matches the schema
-        schema_path = os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
+        schema_path = nrml.nrml_schema_file()
         xmlschema = etree.XMLSchema(etree.parse(schema_path))
         xmlschema.assertValid(xml_doc)
 
