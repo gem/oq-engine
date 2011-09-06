@@ -211,6 +211,35 @@ def prepare_config_parameters(params, sections):
     return new_params, sections
 
 
+def get_source_models(logic_tree):
+    """Returns the source models soft-linked by the given logic treee"""
+
+    # TODO remove after merging Java NRML branch
+    from openquake import xml
+
+    java.jvm().java.lang.System.setProperty(
+        "openquake.nrml.schema", xml.nrml_schema_file())
+
+    # can be removed if we don't support .inp files
+    if not logic_tree.endswith('.xml'):
+        return []
+
+    base_path = os.path.dirname(os.path.abspath(logic_tree))
+    parser = java.jclass('LogicTreeReader')(logic_tree)
+    tree_map = parser.read()
+    models = []
+
+    for tree in tree_map.values():
+        for level in tree.getBranchingLevels():
+            for branch in level.getBranchList():
+                model = branch.getNameInputFile()
+
+                if model:
+                    models.append(os.path.join(base_path, model))
+
+    return models
+
+
 def guarantee_file(base_path, file_spec):
     """Resolves a file_spec (http, local relative or absolute path, git url,
     etc.) to an absolute path to a (possibly temporary) file."""
