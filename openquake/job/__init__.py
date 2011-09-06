@@ -274,6 +274,13 @@ def prepare_job(params):
                          input_type=file_type, size=os.path.getsize(path))
         in_model.save()
 
+    # insert soft-linked source models in input table
+    if 'SOURCE_MODEL_LOGIC_TREE_FILE' in params:
+        for path in get_source_models(params['SOURCE_MODEL_LOGIC_TREE_FILE']):
+            in_model = Input(input_set=input_set, path=path,
+                             input_type='source', size=os.path.getsize(path))
+            in_model.save()
+
     oqp = OqParams(input_set=input_set)
     oqp.job_type = job.job_type
 

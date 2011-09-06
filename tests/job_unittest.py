@@ -515,7 +515,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         inputs = [dict(path=i.path, type=i.input_type)
                       for i in self.job.oq_params.input_set.input_set.all()]
 
-        return sorted(inputs, key=lambda i: i['type'])
+        return sorted(inputs, key=lambda i: (i['type'], i['path']))
 
     def test_get_source_models(self):
         def abs_path(path):
@@ -576,6 +576,12 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
                 {'path': 'smoketests/classical_psha_simple/' \
                          'source_model_logic_tree.xml',
                  'type': 'lt_source'},
+                {'path': os.path.abspath(
+                        'smoketests/classical_psha_simple/source_model1.xml'),
+                 'type': 'source'},
+                {'path': os.path.abspath(
+                        'smoketests/classical_psha_simple/source_model2.xml'),
+                 'type': 'source'},
                 {'path': 'smoketests/classical_psha_simple/vulnerability.xml',
                  'type': 'vulnerability'},
                 ], self._get_inputs(self.job))
@@ -727,6 +733,12 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
                  'type': 'lt_gmpe'},
                 {'path': 'smoketests/simplecase/source_model_logic_tree.xml',
                  'type': 'lt_source'},
+                {'path': os.path.abspath(
+                        'smoketests/simplecase/source_model1.xml'),
+                 'type': 'source'},
+                {'path': os.path.abspath(
+                        'smoketests/simplecase/source_model2.xml'),
+                 'type': 'source'},
                 {'path': 'smoketests/simplecase/vulnerability.xml',
                  'type': 'vulnerability'},
                 ], self._get_inputs(self.job))
