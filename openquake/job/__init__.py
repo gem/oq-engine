@@ -248,22 +248,8 @@ def guarantee_file(base_path, file_spec):
     return resolve_handler(url, base_path).get()
 
 
-@transaction.commit_on_success(using='job_init')
-def prepare_job(params):
-    """
-    Create a new OqJob and fill in the related OpParams entry.
-
-    Returns the newly created job object.
-    """
-    # TODO specify the owner as a command line parameter
-    owner = OqUser.objects.get(user_name='openquake')
-
-    input_set = InputSet(upload=None, owner=owner)
-    input_set.save()
-
-    job = OqJob(
-        owner=owner, path=None,
-        job_type=CALCULATION_MODE[params['CALCULATION_MODE']])
+def _insert_input_files(params, input_set):
+    """Create uiapi.input records for all input files"""
 
     # insert input files in input table
     for param_key, file_type in INPUT_FILE_TYPES.items():
@@ -281,11 +267,12 @@ def prepare_job(params):
                              input_type='source', size=os.path.getsize(path))
             in_model.save()
 
-    oqp = OqParams(input_set=input_set)
-    oqp.job_type = job.job_type
+
+def _store_input_parameters(params, job_type, oqp):
+    """Store parameters in uiapi.oq_params columns"""
 
     for name, param in PARAMS.items():
-        if job.job_type in param.modes and param.default is not None:
+        if job_type in param.modes and param.default is not None:
             setattr(oqp, param.column, param.default)
 
     number_re = re.compile('[ ,]+')
@@ -314,6 +301,29 @@ def prepare_job(params):
     if oqp.imt != 'sa':
         oqp.period = None
         oqp.damping = None
+
+
+@transaction.commit_on_success(using='job_init')
+def prepare_job(params):
+    """
+    Create a new OqJob and fill in the related OpParams entry.
+
+    Returns the newly created job object.
+    """
+    # TODO specify the owner as a command line parameter
+    owner = OqUser.objects.get(user_name='openquake')
+
+    input_set = InputSet(upload=None, owner=owner)
+    input_set.save()
+
+    job_type = CALCULATION_MODE[params['CALCULATION_MODE']]
+    job = OqJob(owner=owner, path=None, job_type=job_type)
+
+    oqp = OqParams(input_set=input_set)
+    oqp.job_type = job_type
+
+    _insert_input_files(params, input_set)
+    _store_input_parameters(params, job_type, oqp)
 
     oqp.save()
 
