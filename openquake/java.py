@@ -18,30 +18,16 @@
 """Wrapper around our use of jpype.
 Includes classpath arguments, and heap size."""
 
-from amqplib import client_0_8 as amqp
 import jpype
 import os
 import sys
 import traceback
+import logging
 
 from celery.decorators import task as celery_task
 
 from functools import wraps
 
-from openquake import flags
-from openquake import logs
-from openquake.utils import config
-
-FLAGS = flags.FLAGS
-
-# Settings this flag to true pipes Java stderr and stdout to python stderr and
-# stdout and has a noticeable effect only when python stderr and stdout are
-# redefined.  This happens when running inside celery, where sys.stdout and
-# sys.stderr are redefined to be an instance of celery.log.LoggingProxy.  Then
-# every line printed by java to stdout will be prefixed by a timestamp and some
-# information about the worker.
-flags.DEFINE_boolean('capture_java_debug', True,
-    "Pipe Java stderr and stdout to python stderr and stdout")
 
 JAVA_CLASSES = {
     'LogicTreeProcessor': "org.gem.engine.LogicTreeProcessor",
@@ -82,7 +68,7 @@ JAVA_CLASSES = {
     "ApproxEvenlyGriddedSurface":
         "org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface",
     "LocationListFormatter": "org.gem.LocationListFormatter",
-    "MDC": "org.apache.log4j.MDC",
+    "PythonBridgeAppender": "org.gem.log.PythonBridgeAppender",
 }
 
 
@@ -92,142 +78,95 @@ def jclass(class_key):
     return jpype.JClass(JAVA_CLASSES[class_key])
 
 
-def _setup_java_capture(out, err):
+class JavaLoggingBridge(object):
     """
-    Pipes the java System.out and System.error into python files.
-
-    :param out: python file-like object (must implement the write method)
-    :param err: python file-like objectt (must implement the write method)
+    :class:`JavaLoggingBridge` is responsible for receiving java logging
+    messages and relogging them.
     """
-    mystream = jpype.JProxy("org.gem.IPythonPipe", inst=out)
-    errstream = jpype.JProxy("org.gem.IPythonPipe", inst=err)
-    outputstream = jpype.JClass("org.gem.PythonOutputStream")()
-    err_stream = jpype.JClass("org.gem.PythonOutputStream")()
-    outputstream.setPythonStdout(mystream)
-    err_stream.setPythonStdout(errstream)
+    #: The list of supported levels is used for sanity checks.
+    SUPPORTED_LEVELS = set((logging.DEBUG, logging.INFO, logging.WARNING,
+                            logging.ERROR, logging.CRITICAL))
 
-    ps = jpype.JClass("java.io.PrintStream")
-    jpype.java.lang.System.setOut(ps(outputstream))
-    jpype.java.lang.System.setErr(ps(err_stream))
+    def append(self, event):
+        """
+        Given java ``LogEvent`` object log the message
+        as if it was logged by python logging.
+        """
+        # log4j uses the following numbers for logging levels by default:
+        # 10000 DEBUG, 20000 INFO, 30000 WARNING, 40000 ERROR, 50000 FATAL.
+        # Python logging uses 10, 20, 30, 40 and 50 respectively.
+        # So for mapping of logging levels we need to divide java
+        # log level by 1000.
+        level, _rem = divmod(event.getLevel().toInt(), 1000)
 
+        if event.logger.getParent() is None:
+            # getParent() returns ``None`` only for root logger.
+            # Use the name "java" for it instead of "java.root".
+            logger_name = 'java'
+        else:
+            logger_name = 'java.%s' % event.getLoggerName()
+        logger = logging.getLogger(logger_name)
 
-class AMQPConnection(object):
-    """Implement the Java `org.gem.log.AMQPConnection` interface"""
-    # pylint: disable=C0103
+        if _rem != 0 or level not in self.SUPPORTED_LEVELS:
+            # java side used some custom logging level.
+            # don't try to map it to python level and don't
+            # check if python logger was enabled for it
+            level = event.getLevel().toInt()
+            logger.warning('unrecognised logging level %d was used', level)
+        else:
+            if not logger.isEnabledFor(level):
+                return
 
-    def __init__(self):
-        self.host = None
-        self.port = None
-        self.username = None
-        self.password = None
-        self.virtualhost = None
-        self.connection = None
-        self.channel = None
+        msg = event.getMessage()
 
-    def setHost(self, host):
-        """Set the AMQP host"""
-        self.host = host
+        location_info = event.getLocationInformation()
 
-    def setPort(self, port):
-        """Set the AMQP port"""
-        self.port = port
+        filename = location_info.getFileName()
+        if filename == '?':
+            # mapping of unknown filenames from java "?" to python
+            filename = '(unknown file)'
 
-    def setUsername(self, username):
-        """Set the AMQP user name"""
-        self.username = username
+        lineno = location_info.getLineNumber()
+        if not lineno.isdigit():
+            # java uses "?" for unknown line number, python use 0
+            lineno = 0
+        else:
+            # LocationInformation.getLineNumber() returns string
+            lineno = int(lineno)
 
-    def setPassword(self, password):
-        """Set the AMQP password"""
-        self.password = password
+        classname = location_info.getClassName()
+        methname = location_info.getMethodName()
+        if '?' in (classname, methname):
+            funcname = '(unknown function)'
+        else:
+            funcname = '%s.%s' % (classname, methname)
 
-    def setVirtualHost(self, virtualhost):
-        """Set the AMQP virtualhost"""
-        self.virtualhost = virtualhost
-
-    def close(self):
-        """Close the AMQP connection"""
-        channel = self.channel
-        connection = self.connection
-
-        self.channel = self.connection = None
-
-        if channel:
-            channel.close()
-        if connection:
-            connection.close()
-
-    def publish(self, exchange, routing_key, _timestamp,
-                _level, message):
-        """Send a new message to the queue"""
-        channel = self.getChannel()
-        msg = amqp.Message(body=message)
-
-        channel.basic_publish(msg, exchange=exchange,
-                              routing_key=routing_key)
-
-    def getChannel(self):
-        """Return the existing connection or create a new one"""
-        if self.channel:
-            return self.channel
-
-        host_port = '%s:%d' % (self.host, self.port or 5672)
-        self.connection = amqp.Connection(host=host_port,
-                                          userid=self.username,
-                                          password=self.password,
-                                          virtual_host=self.virtualhost,
-                                          insist=False)
-        self.channel = self.connection.channel()
-
-        return self.channel
+        # Now do what logging.Logger._log() does:
+        # create log record and handle it.
+        record = logger.makeRecord(logger.name, level, filename, lineno, msg,
+                                   args=(), exc_info=None, func=funcname,
+                                   extra=None)
+        # these two values are set by LogRecord constructor
+        # so we need to overwrite them.
+        record.threadName = event.getThreadName()
+        record.processName = 'java'
+        logger.handle(record)
 
 
-class AMQPFactory(object):
-    """Implement the Java org.gem.log.AMQPConnectionFactory interface"""
-    # pylint: disable=C0103
-
-    def getConnection(self):  # pylint: disable=R0201
-        """Return a new `org.gem.log.AMQPConnection` instance"""
-        return jvm().JProxy("org.gem.log.AMQPConnection",
-                            inst=AMQPConnection())
-
-
-def _setup_java_amqp():
-    """Set the connection factory for the Log4j AMQP log appender"""
-    amqpfactory = jpype.JProxy("org.gem.log.AMQPConnectionFactory",
-                               inst=AMQPFactory())
-    amqpappender = jpype.JClass("org.gem.log.AMQPAppender")
-    amqpappender.setConnectionFactory(amqpfactory)
-
-
-def init_logs(log_type='console', level='warn'):
+def init_logs():
     """
     Initialize Java logging.
-
-    The function might be called multiple times with different log levels.
     """
-
-    if log_type == 'console':
-        if FLAGS.capture_java_debug:
-            _setup_java_capture(sys.stdout, sys.stderr)
-
-        properties = logs.LOG4J_STDOUT_SETTINGS.copy()
-    else:
-        _setup_java_amqp()
-
-        properties = logs.LOG4J_AMQP_SETTINGS.copy()
-
-    level = level.upper()
-    if level == 'CRITICAL':
-        level = 'FATAL'
-
-    properties['log4j.rootLogger'] %= dict(level=level)
-
-    log4j_properties = jpype.JClass("java.util.Properties")()
-    for key, value in properties.iteritems():
-        log4j_properties.setProperty(key, value)
-
-    jpype.JClass("org.apache.log4j.PropertyConfigurator").configure(
-        log4j_properties)
+    appender = jclass('PythonBridgeAppender')
+    # ``bridge`` is a static property of PythonBridge class.
+    # So there will be only one JavaLoggingBridge for all loggers.
+    appender.bridge = jpype.JProxy('org.gem.log.PythonBridge',
+                                   inst=JavaLoggingBridge())
+    props = jclass("Properties")()
+    props.setProperty('log4j.rootLogger', 'debug, pythonbridge')
+    props.setProperty('log4j.appender.pythonbridge',
+                      'org.gem.log.PythonBridgeAppender')
+    jpype.JClass("org.apache.log4j.PropertyConfigurator").configure(props)
 
 
 def jvm():
@@ -245,7 +184,7 @@ def jvm():
             "-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=" \
                 "org.apache.xerces.parsers.XIncludeAwareParserConfiguration")
 
-        init_logs(level=FLAGS.debug, log_type=config.get("logging", "backend"))
+        init_logs()
 
     return jpype
 
