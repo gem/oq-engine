@@ -16,8 +16,17 @@
 
 import logging.handlers
 import unittest
+import json
+import multiprocessing
+import threading
+import os.path
+import time
+
+from amqplib import client_0_8 as amqp
 
 from openquake import java
+from openquake import logs
+from openquake.utils import config
 
 
 class JavaLogsTestCase(unittest.TestCase):
@@ -130,3 +139,108 @@ class JavaLogsTestCase(unittest.TestCase):
         self.assertEqual(record.pathname, 'some/file')
         self.assertEqual(record.lineno, 123)
         self.assertEqual(record.funcName, 'someclassname.somemethod')
+
+
+class PythonAMQPLogTestCase(unittest.TestCase):
+    TOPIC = 'oq-unittest.topic'
+    LOGGER_NAME = 'tests.PythonAMQPLogTestCase'
+    ROUTING_KEY = '%s.*' % LOGGER_NAME
+
+    def setUp(self):
+        self.amqp_handler = logs.AMQPHandler(
+            host=config.get("amqp", "host"),
+            username=config.get("amqp", "user"),
+            password=config.get("amqp", "password"),
+            virtual_host=config.get("amqp", "vhost"),
+            exchange='oq-unittest.topic',
+            level=logging.DEBUG)
+
+        self.log = logging.getLogger(self.LOGGER_NAME)
+        self.log.setLevel(logging.DEBUG)
+        self.log.addHandler(self.amqp_handler)
+
+    def tearDown(self):
+        self.log.removeHandler(self.amqp_handler)
+
+    def setup_queue(self):
+        # connect to localhost and bind to a queue
+        conn = amqp.Connection(host=config.get("amqp", "host"),
+                               userid=config.get("amqp", "user"),
+                               password=config.get("amqp", "password"),
+                               virtual_host=config.get("amqp", "vhost"))
+        ch = conn.channel()
+        ch.access_request(config.get("amqp", "vhost"), active=False, read=True)
+        ch.exchange_declare(self.TOPIC, 'topic', auto_delete=True)
+        qname, _, _ = ch.queue_declare()
+        ch.queue_bind(qname, self.TOPIC, routing_key=self.ROUTING_KEY)
+
+        return conn, ch, qname
+
+    def consume_messages(self, conn, ch, qname, callback):
+        ch.basic_consume(qname, callback=callback)
+
+        while ch.callbacks:
+            ch.wait()
+
+        ch.close()
+        conn.close()
+
+    def test_amqp_logging(self):
+        conn, ch, qname = self.setup_queue()
+
+        self.log.getChild('child1').info('Info message %d %r', 42, 'payload')
+        self.log.getChild('child2').warning('Warn message')
+
+        # process the messages
+        messages = []
+
+        def consume(msg):
+            data = json.loads(msg.body)
+            messages.append((msg.delivery_info['routing_key'], data))
+
+            if data['levelname'] == 'WARNING':
+                # stop consuming when receive warning
+                ch.basic_cancel(msg.consumer_tag)
+
+        self.consume_messages(conn, ch, qname, consume)
+
+        self.assertEquals(2, len(messages))
+        (info_key, info), (warning_key, warning) = messages
+
+        self.assertEqual(info_key, 'tests.PythonAMQPLogTestCase.child1')
+        self.assertEqual(warning_key, 'tests.PythonAMQPLogTestCase.child2')
+
+        # checking info message
+        self.assertAlmostEqual(info['created'], time.time(), delta=1)
+        self.assertAlmostEqual(info['msecs'], (info['created'] % 1) * 1000)
+        self.assertAlmostEqual(info['relativeCreated'] / 1000.,
+                               time.time() - logging._startTime, delta=1)
+
+        self.assertEqual(info['process'],
+                         multiprocessing.current_process().ident)
+        self.assertEqual(info['processName'],
+                         multiprocessing.current_process().name)
+        self.assertEqual(info['thread'], threading.current_thread().ident)
+        self.assertEqual(info['threadName'], threading.current_thread().name)
+
+        self.assertEqual(info['args'], [])
+        self.assertEqual(info['msg'], "Info message 42 'payload'")
+
+        self.assertEqual(info['name'], 'tests.PythonAMQPLogTestCase.child1')
+        self.assertEqual(info['levelname'], 'INFO')
+        self.assertEqual(info['levelno'], logging.INFO)
+
+        self.assertEqual(info['module'], "logs_unittest")
+        self.assertEqual(info['funcName'], 'test_amqp_logging')
+        thisfile = __file__.rstrip('c')
+        self.assertEqual(info['pathname'], thisfile)
+        self.assertEqual(info['filename'], os.path.basename(thisfile))
+        self.assertEqual(info['lineno'], 191)
+
+        self.assertEqual(info['exc_info'], None)
+        self.assertEqual(info['exc_text'], None)
+
+        # warning message
+        self.assertEqual(warning['name'], 'tests.PythonAMQPLogTestCase.child2')
+        self.assertEqual(warning['levelname'], 'WARNING')
+        self.assertEqual(warning['levelno'], logging.WARNING)
