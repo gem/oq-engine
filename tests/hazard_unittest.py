@@ -32,6 +32,7 @@ import unittest
 
 from openquake import kvs
 from openquake import logs
+from openquake import nrml
 from openquake import shapes
 from openquake import xml
 from openquake import java
@@ -65,7 +66,7 @@ with open(
     helpers.smoketest_file('simplecase/expected_gmpe_model.json'), 'r') as f:
     TEST_GMPE_MODEL = f.read()
 
-NRML_SCHEMA_PATH = os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
+NRML_SCHEMA_PATH = nrml.nrml_schema_file()
 
 
 class LogicTreeValidationTestCase(unittest.TestCase):
