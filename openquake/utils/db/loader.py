@@ -32,7 +32,7 @@ import datetime
 
 import numpy
 
-from openquake import java, xml
+from openquake import java
 from openquake.db import models
 
 SRC_DATA_PKG = 'org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData'
