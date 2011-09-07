@@ -795,9 +795,16 @@ class GridTestCase(unittest.TestCase):
                               (point.row, point.column))
 
     def test_grid_iterates_all_points(self):
+        # basic grid
         constraint = shapes.RegionConstraint.from_simple(
             (10.0, 10.0), (100.0, 100.0))
         constraint.cell_size = 10.0
+        self._test_expected_points(constraint.grid)
+
+        # rounding (from the NSHMP smoke test)
+        constraint = shapes.RegionConstraint.from_simple(
+            (-118.3, 34.0), (-118.18, 34.12))
+        constraint.cell_size = 0.02
         self._test_expected_points(constraint.grid)
 
 
