@@ -249,8 +249,8 @@ class Grid(object):
 
     def check_gridpoint(self, gridpoint):
         """Confirm that the point is contained by the region"""
-        point = Point(self._column_to_longitude(gridpoint.column),
-                             self._row_to_latitude(gridpoint.row))
+        point = Point(round_float(self._column_to_longitude(gridpoint.column)),
+                      round_float(self._row_to_latitude(gridpoint.row)))
         return self.check_point(point)
 
     def _latitude_to_row(self, latitude):
