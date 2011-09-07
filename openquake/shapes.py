@@ -291,9 +291,8 @@ class Grid(object):
                     self.check_gridpoint(point)
                     yield point
                 except BoundsException:
-                    print "GACK! at col %s row %s" % (col, row)
-                    print "Point at %s %s isnt on grid" % \
-                        (point.site.longitude, point.site.latitude)
+                    print "Point (col %s row %s) at %s %s isnt on grid" % \
+                        (col, row, point.site.longitude, point.site.latitude)
 
 
 def c_mul(val_a, val_b):
