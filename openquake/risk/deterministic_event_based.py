@@ -135,7 +135,7 @@ class SumPerGroundMotionField(object):
         self.lr_calculator = lr_calculator
         self.epsilon_provider = epsilon_provider
 
-        self.losses = None
+        self.losses = numpy.array([])
 
         if lr_calculator is None:
             self.lr_calculator = prob.compute_loss_ratios
@@ -183,10 +183,13 @@ class SumPerGroundMotionField(object):
 
         :param losses: an array of loss values (1 per realization)
         :type losses: 1-dimensional :py:class:`numpy.ndarray`
+
+        The `losses` arrays passed to this function must be empty or
+        all the same lenght.
         """
-        if self.losses is None:
+        if len(self.losses) == 0:
             self.losses = losses
-        else:
+        elif len(losses) > 0:
             self.losses = self.losses + losses
 
     @property
