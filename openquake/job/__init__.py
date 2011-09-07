@@ -276,7 +276,9 @@ class Job(object):
     #: This logger is for messages which are relative to job execution but
     #: don't yet have job_id (job initialization, for instance). For any
     #: other logging purposes job and mixins should use :attr:`logger`.
-    unknown_job_logger = logging.getLogger('oq.job')
+    unknown_job_logger = logging.LoggerAdapter(
+        logging.getLogger('oq.job.none'), extra={'job_id': None}
+    )
 
     @classmethod
     def default_configs(cls):
@@ -387,12 +389,11 @@ class Job(object):
         """
         Create and return logger object for using with job with known job id.
 
-        Created logger differs from ``logging.getLogger('oq.job')`` in respect
-        that its logger records will always have ``job_id`` available
-        for formatters.
+        Created logger has name ``oq.job.42`` where "42" is job id and also
+        has ``job_id`` available for formatters.
         """
-        return logging.LoggerAdapter(Job.unknown_job_logger,
-                                     {'job_id': job_id})
+        logger = logging.getLogger('oq.job.%s' % job_id)
+        return logging.LoggerAdapter(logger, {'job_id': job_id})
 
     def __init__(self, params, job_id, sections=list(), base_path=None,
             validator=None):
