@@ -785,15 +785,20 @@ class FieldTestCase(unittest.TestCase):
 
 
 class GridTestCase(unittest.TestCase):
+    def _test_expected_points(self, grid):
+        for i, point in enumerate(grid):
+            # check point iteration order
+            expected_row = int(i / grid.columns)
+            expected_column = i % grid.columns
+
+            self.assertEquals((expected_row, expected_column),
+                              (point.row, point.column))
 
     def test_grid_iterates_all_points(self):
         constraint = shapes.RegionConstraint.from_simple(
             (10.0, 10.0), (100.0, 100.0))
         constraint.cell_size = 10.0
-        grid = constraint.grid
-        for point in grid:
-            print "Point at %s and %s" % (point.row, point.column)
-            # TODO(JMC): assert the sequence is correct
+        self._test_expected_points(constraint.grid)
 
 
 class RegionTestCase(unittest.TestCase):
