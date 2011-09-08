@@ -206,12 +206,13 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
                     point.column, point.row, asset, gmf_slice, loss_ratios)
 
                 aggregate_curve.append(loss_ratios * asset["assetValue"])
+                conditional_loss_poes = self._conditional_loss_poes()
 
-                if loss_ratio_curve is not None:
+                if loss_ratio_curve is not None and conditional_loss_poes:
                     loss_curve = self.compute_loss_curve(
                         point.column, point.row, loss_ratio_curve, asset)
 
-                    for loss_poe in self._conditional_loss_poes():
+                    for loss_poe in conditional_loss_poes:
                         self.compute_conditional_loss(point.column, point.row,
                                 loss_curve, asset, loss_poe)
 
