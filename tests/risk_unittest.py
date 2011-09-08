@@ -863,7 +863,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.region = shapes.RegionConstraint.from_simple(
                 (0.0, 0.0), (2.0, 2.0))
 
-        self.block_id = kvs.generate_block_id()
+        self.block_id = kvs.tokens.risk_block_key(self.job_id, 7)
         block = Block((SITE, SITE), self.block_id)
         block.to_kvs()
 
