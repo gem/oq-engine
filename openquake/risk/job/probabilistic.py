@@ -78,15 +78,15 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
         specified for this job."""
 
 # TODO (ac): Confirm this works regardless of the method of hazard calc
-        histories = int(self["NUMBER_OF_SEISMICITY_HISTORIES"])
-        realizations = int(self["NUMBER_OF_LOGIC_TREE_SAMPLES"])
+        histories = int(self.params["NUMBER_OF_SEISMICITY_HISTORIES"])
+        realizations = int(self.params["NUMBER_OF_LOGIC_TREE_SAMPLES"])
         num_ses = histories * realizations
 
         return num_ses * self._time_span()
 
     def _time_span(self):
         """Return the time span specified for this job."""
-        return float(self["INVESTIGATION_TIME"])
+        return float(self.params["INVESTIGATION_TIME"])
 
     def _gmf_db_list(self, job_id):  # pylint: disable=R0201
         """Returns a list of the output IDs of all computed GMFs"""
