@@ -41,7 +41,6 @@ from openquake.risk.job import general
 from openquake.db import models
 
 LOGGER = logs.LOG
-DEFAULT_CONDITIONAL_LOSS_POE = 0.01
 
 
 class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
@@ -223,7 +222,7 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
         compute the conditional loss."""
 
         return [float(x) for x in self.params.get(
-            "CONDITIONAL_LOSS_POE", "0.01").split()]
+            "CONDITIONAL_LOSS_POE", "").split()]
 
     def compute_loss_ratios(self, asset, gmf_slice):
         """For a given asset and ground motion field, computes

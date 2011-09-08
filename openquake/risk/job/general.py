@@ -69,7 +69,7 @@ def output(fn):
         """ Write the output of a block to kvs. """
         fn(self, *args, **kwargs)
         conditional_loss_poes = [float(x) for x in self.params.get(
-                    'CONDITIONAL_LOSS_POE', "0.01").split()]
+                    'CONDITIONAL_LOSS_POE', "").split()]
 
         for block_id in self.blocks_keys:
             #pylint: disable=W0212
