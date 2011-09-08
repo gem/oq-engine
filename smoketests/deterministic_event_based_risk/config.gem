@@ -1,0 +1,62 @@
+[general]
+
+CALCULATION_MODE = Deterministic
+
+# NOTE: The order of the vertices is to be kept!!!
+# lat, lon of polygon vertices (in clock or counter-clock wise order)
+REGION_VERTEX = 38.30, 15.48, 38.30, 15.63, 38.01, 15.63, 38.01, 15.48
+# degrees
+REGION_GRID_SPACING = 0.04
+
+[HAZARD]
+
+RUPTURE_SURFACE_DISCRETIZATION = 0.1
+
+# (Average Horizontal, Average Horizontal (GMRotI50), Random Horizontal, Greater of Two Horz., Vertical)
+COMPONENT = Average Horizontal (GMRotI50)
+
+# (PGA (g), PGD (cm), PGV (cm/s), SA (g))
+INTENSITY_MEASURE_TYPE = PGA
+
+# seconds, used only for Spectral Acceleration
+PERIOD = 0.0
+# in percent
+DAMPING = 5.0
+
+# (None, 1 Sided, 2 Sided)
+GMPE_TRUNCATION_TYPE = 2 Sided
+
+# (1,2,3,...)
+TRUNCATION_LEVEL = 1
+
+# if true compute ground motion fields using correlated model of Jayaram and Baker 2009
+GROUND_MOTION_CORRELATION = true
+
+# The depth to where shear-wave velocity = 2.5 km/sec.
+# Cambpell basin depth. Measure is (km)
+REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM = 5.0
+
+# Rock, Deep-Soil
+SADIGH_SITE_TYPE = Rock
+
+# (m/s)
+REFERENCE_VS30_VALUE = 760.0
+
+# output directory - relative to this file
+OUTPUT_DIR = computed_output
+
+GMPE_MODEL_NAME = BA_2008_AttenRel
+
+NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS = 100
+
+GMF_RANDOM_SEED = 3
+
+SINGLE_RUPTURE_MODEL = Messina1908.xml
+
+[RISK]
+
+# file containing the exposure in nrml format
+EXPOSURE = Messina_exposure_model.xml
+
+# file containing the vulnerability functions
+VULNERABILITY = Messina_vulnerability_model.xml
