@@ -295,11 +295,15 @@ class Job(object):
         if not FLAGS.include_defaults:
             return []
 
-        if not any([os.path.exists(cfg) for cfg in cls.__defaults]):
+        existing_defaults = [
+            cfg for cfg in cls.__defaults if os.path.exists(cfg)]
+
+        if len(existing_defaults) == 0:
             LOG.warning("No default configuration! If your job config doesn't "
                         "define all of the expected properties things might "
                         "break.")
-        return cls.__defaults
+
+        return existing_defaults
 
     @staticmethod
     def from_kvs(job_id):
