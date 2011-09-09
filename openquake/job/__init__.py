@@ -166,6 +166,10 @@ def parse_config_files(config_file, default_configuration_files):
     sections = []
 
     for each_config_file in default_configuration_files + [config_file]:
+        if not os.path.exists(each_config_file):
+            raise conf.ValidationException(
+                ["File '%s' not found" % each_config_file])
+
         new_sections, new_params = parse_config_file(each_config_file)
         sections.extend(new_sections)
         params.update(new_params)
@@ -295,11 +299,15 @@ class Job(object):
         if not FLAGS.include_defaults:
             return []
 
-        if not any([os.path.exists(cfg) for cfg in cls.__defaults]):
+        existing_defaults = [
+            cfg for cfg in cls.__defaults if os.path.exists(cfg)]
+
+        if len(existing_defaults) == 0:
             LOG.warning("No default configuration! If your job config doesn't "
                         "define all of the expected properties things might "
                         "break.")
-        return cls.__defaults
+
+        return existing_defaults
 
     @staticmethod
     def from_kvs(job_id):
