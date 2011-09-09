@@ -265,6 +265,19 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             params)
         self.assertEquals(['GENERAL', 'HAZARD'], sorted(sections))
 
+    def test_parse_missing_files(self):
+        content = '''
+            [GENERAL]
+            CALCULATION_MODE = Event Based
+
+            [HAZARD]
+            MINIMUM_MAGNITUDE = 5.0
+            '''
+        config_path = self.touch(content=textwrap.dedent(content))
+
+        self.assertRaises(config.ValidationException, parse_config_files,
+                          config_path, ['/tmp/foo'])
+
     def test_parse_files_defaults(self):
         content = '''
             [GENERAL]
