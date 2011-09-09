@@ -214,12 +214,6 @@ def prepare_config_parameters(params, sections):
 def get_source_models(logic_tree):
     """Returns the source models soft-linked by the given logic treee"""
 
-    # TODO remove after merging Java NRML branch
-    from openquake import xml
-
-    java.jvm().java.lang.System.setProperty(
-        "openquake.nrml.schema", xml.nrml_schema_file())
-
     # can be removed if we don't support .inp files
     if not logic_tree.endswith('.xml'):
         return []
