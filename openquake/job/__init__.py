@@ -335,6 +335,10 @@ class Job(object):
         # essentially a detail of our current tests and ci infrastructure.
         assert output_type in ('db', 'xml', 'xml_without_db')
 
+        if not os.path.exists(config_file):
+            raise conf.ValidationException(
+                ["File '%s' not found" % config_file])
+
         params, sections = parse_config_files(
             config_file, Job.default_configs())
         params, sections = filter_configuration_parameters(params, sections)
