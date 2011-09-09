@@ -76,9 +76,6 @@ EXPOSURE = exposure.xml
 VULNERABILITY = vulnerability.xml
 # HAZARD_CURVES = hazard_curves.xml
 
-# GENERATED OUTPUT
-CONDITIONAL_LOSS_POE = 0.01 0.02 0.05
-
 LOSS_CURVES_OUTPUT_PREFIX = risk
 LOSS_MAP = loss_map.tiff
 LOSS_RATIO_MAP = loss_ratio_map.tiff
