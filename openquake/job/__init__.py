@@ -166,6 +166,10 @@ def parse_config_files(config_file, default_configuration_files):
     sections = []
 
     for each_config_file in default_configuration_files + [config_file]:
+        if not os.path.exists(each_config_file):
+            raise conf.ValidationException(
+                ["File '%s' not found" % each_config_file])
+
         new_sections, new_params = parse_config_file(each_config_file)
         sections.extend(new_sections)
         params.update(new_params)
@@ -338,10 +342,6 @@ class Job(object):
         # This is not documented in the public interface because it is
         # essentially a detail of our current tests and ci infrastructure.
         assert output_type in ('db', 'xml', 'xml_without_db')
-
-        if not os.path.exists(config_file):
-            raise conf.ValidationException(
-                ["File '%s' not found" % config_file])
 
         params, sections = parse_config_files(
             config_file, Job.default_configs())
