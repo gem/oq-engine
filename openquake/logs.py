@@ -34,6 +34,7 @@ except ImportError:
 from amqplib import client_0_8 as amqp
 
 from openquake import flags
+from openquake.signalling import AMQPMessageConsumer
 
 
 FLAGS = flags.FLAGS
@@ -198,3 +199,27 @@ class AMQPHandler(logging.Handler):  # pylint: disable=R0902
 
         channel.basic_publish(msg, exchange=self.exchange,
                               routing_key=routing_key)
+
+
+class AMQPLogSource(AMQPMessageConsumer):
+    """
+    Receiving part of logging-over-AMQP solution.
+
+    Works in pair with :class:`AMQPHandler`: receives its log messages
+    with respect to provided routing key -- logger name. Relogs all received
+    log records.
+    """
+    # TODO: unittest
+    def message_callback(self, msg):
+        """
+        Decode message body from json, create log record and handle it.
+
+        Never stops :meth:`thread's execution
+        <openquake.signalling.AMQPMessageConsumer.run>`.
+        """
+        record_data = json.loads(msg.body)
+        record = object.__new__(logging.LogRecord)
+        record.__dict__.update(record_data)
+        logger = logging.getLogger(record.name)
+        if logger.isEnabledFor(record.levelno):
+            logger.handle(record)
