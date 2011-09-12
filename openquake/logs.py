@@ -196,6 +196,5 @@ class AMQPHandler(logging.Handler):  # pylint: disable=R0902
         msg = amqp.Message(body=data)
         routing_key = self.routing_key_formatter.format(record)
 
-        #import ipdb; ipdb.set_trace()
         channel.basic_publish(msg, exchange=self.exchange,
                               routing_key=routing_key)
