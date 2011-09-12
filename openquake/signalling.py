@@ -23,6 +23,7 @@ import threading
 import socket
 
 import kombu
+import kombu.entity
 
 from openquake.utils import config
 
