@@ -40,6 +40,7 @@ class AMQPMessageConsumer(threading.Thread):
 
         MyConsumer().start()
     """
+    # TODO: unittest
     def __init__(self, routing_key, timeout=None, daemon=True):
         super(AMQPMessageConsumer, self).__init__(daemon=daemon)
 
@@ -88,7 +89,10 @@ class AMQPMessageConsumer(threading.Thread):
         try:
             self.message_callback(msg)
         except StopIteration:
+            self.channel.basic_ack(msg.delivery_tag)
             self.stop()
+        else:
+            self.channel.basic_ack(msg.delivery_tag)
 
     def _timeout_callback(self):
         try:
