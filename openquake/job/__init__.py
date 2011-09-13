@@ -148,7 +148,7 @@ def parse_config_file(config_file):
     return sections, params
 
 
-def parse_config_files(config_file, default_configuration_files):
+def parse_config_files(config_file):
     """
     Loads the specified configuration file, using the files in
     default_configuration_files to provide defaults.
@@ -164,7 +164,7 @@ def parse_config_files(config_file, default_configuration_files):
     params = {}
     sections = []
 
-    for each_config_file in default_configuration_files + [config_file]:
+    for each_config_file in [config_file]:
         if not os.path.exists(each_config_file):
             raise conf.ValidationException(
                 ["File '%s' not found" % each_config_file])
@@ -284,13 +284,6 @@ def setup_job_logging(job_id):
 class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
-    @classmethod
-    def default_configs(cls):
-        """
-         Default job configuration files, writes a warning if they don't exist.
-        """
-        return []
-
     @staticmethod
     def from_kvs(job_id):
         """Return the job in the underlying kvs system with the given id."""
@@ -325,8 +318,7 @@ class Job(object):
         # essentially a detail of our current tests and ci infrastructure.
         assert output_type in ('db', 'xml', 'xml_without_db')
 
-        params, sections = parse_config_files(
-            config_file, Job.default_configs())
+        params, sections = parse_config_files(config_file)
         params, sections = filter_configuration_parameters(params, sections)
 
         validator = conf.default_validators(sections, params)
