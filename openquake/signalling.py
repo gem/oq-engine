@@ -24,6 +24,7 @@ import socket
 
 import kombu
 import kombu.entity
+import kombu.messaging
 
 from openquake.utils import config
 
@@ -39,11 +40,11 @@ class AMQPMessageConsumer(threading.Thread):
                 # do something usefull
                 pass
 
-        MyConsumer().start()
+        MyConsumer('routing.key.#').start()
     """
-    # TODO: unittest
     def __init__(self, routing_key, timeout=None, daemon=True):
-        super(AMQPMessageConsumer, self).__init__(daemon=daemon)
+        super(AMQPMessageConsumer, self).__init__()
+        self.setDaemon(daemon)
 
         if timeout is not None:
             assert type(self).timeout_callback \
@@ -51,34 +52,60 @@ class AMQPMessageConsumer(threading.Thread):
                    "please override timeout_callback() method " \
                    "if you want to handle timeouts"
         self.timeout = timeout
-        cfg = config.get_section("amqp")
-
-        self.connection = kombu.BrokerConnection(hostname=cfg['host'],
-                                                 userid=cfg['user'],
-                                                 password=cfg['password'],
-                                                 virtual_host=cfg['vhost'])
-        self.channel = self.connection.channel()
-        self.exchange = kombu.entity.Exchange(cfg['exchange'], type='topic',
-                                              channel=self.channel)
-        self.queue = kombu.entity.Queue(exchange=self.exchange,
-                                        channel=self.channel,
-                                        routing_key=routing_key)
-        self.queue.declare()
-        self.queue.consume(callback=self._message_callback)
+        self.routing_key = routing_key
+        self._ready = threading.Event()
+        self._ready.clear()
+        self.channel = self.connection = None
         self._stopped = False
 
     def run(self):
         """
         Thread's main function of execution.
         """
+        cfg = config.get_section("amqp")
+
+        self.connection = kombu.BrokerConnection(hostname=cfg['host'],
+                                                 userid=cfg['user'],
+                                                 password=cfg['password'],
+                                                 virtual_host=cfg['vhost'])
         try:
+            self.channel = self.connection.channel()
+            self.exchange = kombu.entity.Exchange(cfg['exchange'],
+                                                  type='topic',
+                                                  channel=self.channel)
+            self.exchange.declare()
+            self.queue = kombu.entity.Queue(exchange=self.exchange,
+                                            channel=self.channel,
+                                            routing_key=self.routing_key,
+                                            exclusive=True)
+            self.queue.queue_declare()
+            self.queue.queue_bind()
+            consumer = kombu.messaging.Consumer(self.channel, self.queue)
+            consumer.register_callback(self._message_callback)
+            consumer.consume()
+
+            self._ready.set()
+
             while not self._stopped:
                 try:
                     self.connection.drain_events(timeout=self.timeout)
                 except socket.timeout:
                     self._timeout_callback()
         finally:
+            if self.channel:
+                self.channel.close()
             self.connection.close()
+            self._ready.set()
+
+    def start(self):
+        """
+        Start thread execution.
+
+        Doesn't return until connection, channel, exchange, queue, binding and
+        consumer are ready.
+        """
+        super(AMQPMessageConsumer, self).start()
+        self._ready.wait()
 
     def stop(self):
         """
@@ -86,14 +113,15 @@ class AMQPMessageConsumer(threading.Thread):
         """
         self._stopped = True
 
-    def _message_callback(self, msg):
+    def _message_callback(self, body, msg):
+        payload = msg.decode()
         try:
-            self.message_callback(msg)
+            self.message_callback(payload, msg)
         except StopIteration:
-            self.channel.basic_ack(msg.delivery_tag)
+            msg.ack()
             self.stop()
         else:
-            self.channel.basic_ack(msg.delivery_tag)
+            msg.ack()
 
     def _timeout_callback(self):
         try:
@@ -101,7 +129,7 @@ class AMQPMessageConsumer(threading.Thread):
         except StopIteration:
             self.stop()
 
-    def message_callback(self, msg):
+    def message_callback(self, payload, msg):
         """
         Called by :meth:`run` when a message is received.
 
