@@ -50,7 +50,6 @@ from openquake.utils import config as oq_config
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 
 FLAGS = flags.FLAGS
-flags.DEFINE_boolean('include_defaults', True, "Include default configs")
 
 REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
 
@@ -286,28 +285,17 @@ class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
     __cwd = os.path.dirname(__file__)
-    __defaults = [os.path.join(__cwd, "../", "default.gem"),  # package
-                    "openquake.gem",        # Sane Defaults
-                    "/etc/openquake.gem",   # Site level configs
-                    "~/.openquake.gem"]     # Are we running as a user?
+#    __defaults = [os.path.join(__cwd, "../", "default.gem"),  # package
+#                    "openquake.gem",        # Sane Defaults
+#                    "/etc/openquake.gem",   # Site level configs
+#                    "~/.openquake.gem"]     # Are we running as a user?
 
     @classmethod
     def default_configs(cls):
         """
          Default job configuration files, writes a warning if they don't exist.
         """
-        if not FLAGS.include_defaults:
-            return []
-
-        existing_defaults = [
-            cfg for cfg in cls.__defaults if os.path.exists(cfg)]
-
-        if len(existing_defaults) == 0:
-            LOG.warning("No default configuration! If your job config doesn't "
-                        "define all of the expected properties things might "
-                        "break.")
-
-        return existing_defaults
+        return []
 
     @staticmethod
     def from_kvs(job_id):
