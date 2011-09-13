@@ -169,6 +169,8 @@ class AMQPHandler(logging.Handler):  # pylint: disable=R0902
         self.channel = self.connection.channel()
         self.exchange = kombu.entity.Exchange(cfg['exchange'], type='topic',
                                               channel=self.channel)
+        self.producer = kombu.messaging.Producer(self.channel, self.exchange,
+                                                 serializer='json')
 
     def emit(self, record):
         # exc_info objects are not easily serializable
@@ -181,12 +183,10 @@ class AMQPHandler(logging.Handler):  # pylint: disable=R0902
         data['msg'] = record.getMessage()
         data['args'] = ()
         data['hostname'] = socket.getfqdn()
-        data = json.dumps(data)
 
         channel = self._connect()
-        msg = self.exchange.Message(data)
         routing_key = self.routing_key_formatter.format(record)
-        self.exchange.publish(msg, routing_key)
+        self.producer.publish(data, routing_key)
 
 
 class AMQPLogSource(AMQPMessageConsumer):
