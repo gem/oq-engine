@@ -16,7 +16,6 @@
 
 import logging.handlers
 import unittest
-import json
 import multiprocessing
 import threading
 import os.path
@@ -170,7 +169,8 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         self.queue.queue_declare()
         self.queue.queue_bind()
         self.consumer = kombu.messaging.Consumer(self.channel, self.queue)
-        self.consumer.consume()
+        self.producer = kombu.messaging.Producer(self.channel, self.exchange,
+                                                 serializer='json')
 
     def tearDown(self):
         self.log.removeHandler(self.amqp_handler)
@@ -179,7 +179,7 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         if self.connection:
             self.connection.close()
 
-    def test_amqp_logging(self):
+    def test_amqp_handler(self):
         messages = []
 
         def consume(data, msg):
@@ -195,6 +195,7 @@ class PythonAMQPLogTestCase(unittest.TestCase):
                 self.connection = None
 
         self.consumer.register_callback(consume)
+        self.consumer.consume()
 
         self.log.getChild('child1').info('Info message %d %r', 42, 'payload')
         self.log.getChild('child2').warning('Warn message')
@@ -229,11 +230,11 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         self.assertEqual(info['levelno'], logging.INFO)
 
         self.assertEqual(info['module'], "logs_unittest")
-        self.assertEqual(info['funcName'], 'test_amqp_logging')
+        self.assertEqual(info['funcName'], 'test_amqp_handler')
         thisfile = __file__.rstrip('c')
         self.assertEqual(info['pathname'], thisfile)
         self.assertEqual(info['filename'], os.path.basename(thisfile))
-        self.assertEqual(info['lineno'], 199)
+        self.assertEqual(info['lineno'], 200)
         self.assertEqual(info['hostname'], socket.getfqdn())
 
         self.assertEqual(info['exc_info'], None)
@@ -243,3 +244,50 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         self.assertEqual(warning['name'], 'tests.PythonAMQPLogTestCase.child2')
         self.assertEqual(warning['levelname'], 'WARNING')
         self.assertEqual(warning['levelno'], logging.WARNING)
+
+    def test_amqp_log_source(self):
+        timeout = threading.Event()
+
+        class _AMQPLogSource(logs.AMQPLogSource):
+            stop_on_timeout = False
+
+            def timeout_callback(self):
+                timeout.set()
+                if self.stop_on_timeout:
+                    raise StopIteration()
+
+        logsource = _AMQPLogSource('oq.testlogger.#', timeout=0.1)
+        logsource.start()
+        handler = logging.handlers.BufferingHandler(float('inf'))
+        logger = logging.getLogger('oq.testlogger')
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+        try:
+            msg = dict(
+                created=12345, msecs=321, relativeCreated=777,
+                process=1, processName='prcs', thread=111, threadName='thrd',
+                msg='message!', args=[],
+                name='oq.testlogger.sublogger',
+                levelname='INFO', levelno=logging.INFO,
+                module='somemodule', funcName='somefunc', pathname='somepath',
+                filename='somefile', lineno=262, hostname='apollo',
+                exc_info=None, exc_text=None
+            )
+            self.producer.publish(msg.copy(),
+                                  routing_key='oq.testlogger.sublogger')
+            timeout.wait()
+            timeout.clear()
+            # raising minimum level to make sure that info message
+            # no longer can sneak in
+            logger.setLevel(logging.WARNING)
+            logsource.stop_on_timeout = True
+            self.producer.publish(msg, routing_key='oq.testlogger.sublogger')
+        finally:
+            logger.removeHandler(handler)
+            logsource.stop()
+            logsource.join()
+        self.assertEqual(len(handler.buffer), 1)
+        [record] = handler.buffer
+        for key in msg:
+            self.assertEqual(msg[key], getattr(record, key))
+
