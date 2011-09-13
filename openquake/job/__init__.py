@@ -100,9 +100,6 @@ def spawn_job_supervisor(job_id, pid):
         job.job_pid = pid
         job.save()
 
-        # Ensure the supervisor amqp queue exists
-        supervisor.bind_supervisor_queue(job_id)
-
         return supervisor_pid
     else:
         logger = Job.get_logger_for(job_id)
