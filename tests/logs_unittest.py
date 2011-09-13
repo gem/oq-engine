@@ -23,7 +23,9 @@ import os.path
 import time
 import socket
 
-from amqplib import client_0_8 as amqp
+import kombu
+import kombu.entity
+import kombu.messaging
 
 from openquake import java
 from openquake import logs
@@ -143,67 +145,62 @@ class JavaLogsTestCase(unittest.TestCase):
 
 
 class PythonAMQPLogTestCase(unittest.TestCase):
-    TOPIC = 'oq-unittest.topic'
     LOGGER_NAME = 'tests.PythonAMQPLogTestCase'
-    ROUTING_KEY = '%s.*' % LOGGER_NAME
+    ROUTING_KEY = '%s.#' % LOGGER_NAME
 
     def setUp(self):
-        self.amqp_handler = logs.AMQPHandler(
-            host=config.get("amqp", "host"),
-            username=config.get("amqp", "user"),
-            password=config.get("amqp", "password"),
-            virtual_host=config.get("amqp", "vhost"),
-            exchange='oq-unittest.topic',
-            level=logging.DEBUG)
+        self.amqp_handler = logs.AMQPHandler(level=logging.DEBUG)
 
         self.log = logging.getLogger(self.LOGGER_NAME)
         self.log.setLevel(logging.DEBUG)
         self.log.addHandler(self.amqp_handler)
 
+        cfg = config.get_section('amqp')
+        self.connection = kombu.BrokerConnection(hostname=cfg.get('host'),
+                                                 userid=cfg['user'],
+                                                 password=cfg['password'],
+                                                 virtual_host=cfg['vhost'])
+        self.channel = self.connection.channel()
+        self.exchange = kombu.entity.Exchange(cfg['exchange'], type='topic',
+                                              channel=self.channel)
+        self.queue = kombu.entity.Queue(exchange=self.exchange,
+                                        channel=self.channel,
+                                        routing_key=self.ROUTING_KEY,
+                                        exclusive=True)
+        self.queue.queue_declare()
+        self.queue.queue_bind()
+        self.consumer = kombu.messaging.Consumer(self.channel, self.queue)
+        self.consumer.consume()
+
     def tearDown(self):
         self.log.removeHandler(self.amqp_handler)
-
-    def setup_queue(self):
-        # connect to localhost and bind to a queue
-        conn = amqp.Connection(host=config.get("amqp", "host"),
-                               userid=config.get("amqp", "user"),
-                               password=config.get("amqp", "password"),
-                               virtual_host=config.get("amqp", "vhost"))
-        ch = conn.channel()
-        ch.access_request(config.get("amqp", "vhost"), active=False, read=True)
-        ch.exchange_declare(self.TOPIC, 'topic', auto_delete=True)
-        qname, _, _ = ch.queue_declare()
-        ch.queue_bind(qname, self.TOPIC, routing_key=self.ROUTING_KEY)
-
-        return conn, ch, qname
-
-    def consume_messages(self, conn, ch, qname, callback):
-        ch.basic_consume(qname, callback=callback)
-
-        while ch.callbacks:
-            ch.wait()
-
-        ch.close()
-        conn.close()
+        if self.channel:
+            self.channel.close()
+        if self.connection:
+            self.connection.close()
 
     def test_amqp_logging(self):
-        conn, ch, qname = self.setup_queue()
-
-        self.log.getChild('child1').info('Info message %d %r', 42, 'payload')
-        self.log.getChild('child2').warning('Warn message')
-
-        # process the messages
         messages = []
 
-        def consume(msg):
-            data = json.loads(msg.body)
+        def consume(data, msg):
+            self.assertEqual(msg.properties['content_type'],
+                             'application/json')
             messages.append((msg.delivery_info['routing_key'], data))
 
             if data['levelname'] == 'WARNING':
                 # stop consuming when receive warning
-                ch.basic_cancel(msg.consumer_tag)
+                self.channel.close()
+                self.channel = None
+                self.connection.close()
+                self.connection = None
 
-        self.consume_messages(conn, ch, qname, consume)
+        self.consumer.register_callback(consume)
+
+        self.log.getChild('child1').info('Info message %d %r', 42, 'payload')
+        self.log.getChild('child2').warning('Warn message')
+
+        while self.connection:
+            self.connection.drain_events()
 
         self.assertEquals(2, len(messages))
         (info_key, info), (warning_key, warning) = messages
@@ -236,7 +233,7 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         thisfile = __file__.rstrip('c')
         self.assertEqual(info['pathname'], thisfile)
         self.assertEqual(info['filename'], os.path.basename(thisfile))
-        self.assertEqual(info['lineno'], 192)
+        self.assertEqual(info['lineno'], 199)
         self.assertEqual(info['hostname'], socket.getfqdn())
 
         self.assertEqual(info['exc_info'], None)
