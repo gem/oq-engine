@@ -150,12 +150,9 @@ def parse_config_file(config_file):
 
 def parse_config_files(config_file):
     """
-    Loads the specified configuration file, using the files in
-    default_configuration_files to provide defaults.
+    Loads the specified configuration file
 
     :param config_file: configuration file
-    :param default_configuration_files: list of configuration files
-    :type default_configuration_files: list
     """
 
     config_file = os.path.abspath(config_file)
