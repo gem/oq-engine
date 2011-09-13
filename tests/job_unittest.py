@@ -254,7 +254,8 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             [HAZARD]
             MINIMUM_MAGNITUDE = 5.0
             '''
-        config_path = self.touch(content=textwrap.dedent(content))
+        config_path = self.touch(
+            dir='/tmp', content=textwrap.dedent(content))
 
         params, sections = parse_config_files(config_path, [])
 
@@ -286,7 +287,8 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             [HAZARD]
             MINIMUM_MAGNITUDE = 5.0
             '''
-        config_path = self.touch(content=textwrap.dedent(content))
+        config_path = self.touch(
+            dir='/tmp', content=textwrap.dedent(content))
 
         params, sections = parse_config_files(config_path, [])
 
@@ -305,7 +307,8 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             [HAZARD]
             MINIMUM_MAGNITUDE = 6.0
             '''
-        default_path = self.touch(content=textwrap.dedent(default_content))
+        default_path = self.touch(
+            dir='/tmp', content=textwrap.dedent(default_content))
 
         def_params, def_sections = parse_config_files(
             config_path, [default_path])
@@ -330,7 +333,8 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             # not used for this job type
             COMPUTE_MEAN_HAZARD_CURVE = true
             '''
-        config_path = self.touch(content=textwrap.dedent(content))
+        config_path = self.touch(
+            dir='/tmp', content=textwrap.dedent(content))
 
         params, sections = parse_config_files(config_path, [])
         params, sections = filter_configuration_parameters(params, sections)
