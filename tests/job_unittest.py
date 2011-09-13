@@ -23,7 +23,6 @@ import unittest
 
 from django.contrib.gis.geos.polygon import Polygon
 from django.contrib.gis.geos.collections import MultiPoint
-from django.core import exceptions
 
 from openquake import kvs
 from openquake import flags
@@ -100,46 +99,21 @@ class JobTestCase(unittest.TestCase):
         kvs.cache_gc('::JOB::1::')
         kvs.cache_gc('::JOB::2::')
 
-    def test_logs_a_warning_if_none_of_the_default_configs_exist(self):
-
-        class call_logger(object):
-
-            def __init__(self, method):
-                self.called = False
-                self.method = method
-
-            def __call__(self, *args, **kwargs):
-                try:
-                    return self.method(*args, **kwargs)
-                finally:
-                    self.called = True
-
-        good_defaults = Job._Job__defaults
-        Job._Job__defaults = ["/tmp/sbfalds"]
-        LOG.warning = call_logger(LOG.warning)
-        self.assertFalse(LOG.warning.called)
-        Job.default_configs()
-        self.assertTrue(LOG.warning.called)
-        Job._Job__defaults = good_defaults
-
     def test_job_has_the_correct_sections(self):
         self.assertEqual(["RISK", "HAZARD", "general"], self.job.sections)
         self.assertEqual(self.job.sections, self.job_with_includes.sections)
 
     def test_job_with_only_hazard_config_only_has_hazard_section(self):
-        FLAGS.include_defaults = False
-        try:
-            job_with_only_hazard = \
-                helpers.job_from_file(helpers.get_data_path(HAZARD_ONLY))
-            self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
-        finally:
-            FLAGS.include_defaults = True
+        job_with_only_hazard = \
+            helpers.job_from_file(helpers.get_data_path(HAZARD_ONLY))
+        self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
 
     def test_job_writes_to_super_config(self):
         for each_job in [self.job, self.job_with_includes]:
             self.assertTrue(os.path.isfile(each_job.super_config_path))
 
     def test_configuration_is_the_same_no_matter_which_way_its_provided(self):
+
         sha_from_file_key = lambda params, key: params[key].split('!')[1]
 
         # A unique job key is prepended to these file hashes
@@ -151,6 +125,7 @@ class JobTestCase(unittest.TestCase):
         job1_src_model_sha = sha_from_file_key(self.job.params, src_model)
         job2_src_model_sha = sha_from_file_key(
             self.job_with_includes.params, src_model)
+
         self.assertEqual(job1_src_model_sha, job2_src_model_sha)
 
         del self.job.params[src_model]
