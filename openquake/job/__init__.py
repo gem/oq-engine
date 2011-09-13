@@ -284,12 +284,6 @@ def setup_job_logging(job_id):
 class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
-    __cwd = os.path.dirname(__file__)
-#    __defaults = [os.path.join(__cwd, "../", "default.gem"),  # package
-#                    "openquake.gem",        # Sane Defaults
-#                    "/etc/openquake.gem",   # Site level configs
-#                    "~/.openquake.gem"]     # Are we running as a user?
-
     @classmethod
     def default_configs(cls):
         """
