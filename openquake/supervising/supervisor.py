@@ -26,19 +26,17 @@ supervise() will:
 
    - ensure a cleanup of the resources used by the job
    - update status of the job record in the database
-   - signal through an amqp exchange the outcome of the job
 """
 
 import logging
 import os
 import signal
-
 from datetime import datetime
 
 from openquake.db.models import OqJob, ErrorMsg, JobStats
-from openquake import signalling
 from openquake import supervising
 from openquake import kvs
+from openquake import logs
 
 
 logging.basicConfig(level=logging.INFO)
@@ -117,56 +115,72 @@ def update_job_status_and_error_msg(job_id, status, error_msg=None):
                         .create(oq_job=job, detailed=error_msg)
 
 
-class SupervisorLogMessageConsumer(signalling.LogMessageConsumer):
+class CallbackLogHandler(logging.Handler):
+    def __init__(self, callback):
+        self.callback = callback
+        super(CallbackLogHandler, self).__init__()
+
+    def emit(self, record):
+        self.callback(record)
+
+
+class SupervisorLogMessageConsumer(logs.AMQPLogSource):
     """
     Supervise an OpenQuake job by:
 
-       - handling its messages
+       - handling its "critical" and "error" messages
        - periodically checking that the job process is still running
     """
-    def __init__(self, job_id, pid, **kwargs):
-        super(SupervisorLogMessageConsumer, self).__init__(job_id, **kwargs)
+    def __init__(self, job_id, job_pid, timeout=1):
+        self.selflogger = logging.getLogger('oq.supervisor.%d' % job_id)
+        self.selflogger.info('Entering supervisor for job %s', job_id)
+        key = 'oq.job.%d' % job_id
+        super(SupervisorLogMessageConsumer, self).__init__(timeout=timeout,
+                                                           routing_key=key)
+        self.job_id = job_id
+        self.job_pid = job_pid
+        self.joblogger = logging.getLogger(key)
+        self.joblogger.setLevel(logging.ERROR)
+        self.jobhandler = CallbackLogHandler(callback=self.log_callback)
+        self.joblogger.addHandler(self.jobhandler)
 
-        self.pid = pid
-
-    def get_queue_name(self):
+    def run(self):
         """
-        The name of the queue that will contain the messages of this consumer.
+        Wrap superclass' method just to add cleanup.
         """
-        return get_supervisor_queue_name(self.job_id)
+        super(SupervisorLogMessageConsumer, self).run()
+        self.selflogger.info('Exiting supervisor for job %s', self.job_id)
+        self.joblogger.removeHandler(self.jobhandler)
 
-    def message_callback(self, msg):
+    def log_callback(self, record):
         """
         Handles messages of severe level from the supervised job.
         """
-        terminate_job(self.pid)
+        terminate_job(self.job_pid)
 
-        signalling.signal_job_outcome(self.job_id, 'failed')
-
-        update_job_status_and_error_msg(self.job_id, 'failed', msg.body)
+        update_job_status_and_error_msg(self.job_id, 'failed',
+                                        record.getMessage())
 
         record_job_stop_time(self.job_id)
 
         cleanup_after_job(self.job_id)
 
-        raise StopIteration
+        self.stop()
 
     def timeout_callback(self):
         """
         On timeout expiration check if the job process is still running, and
         act accordingly if not.
         """
-        if not supervising.is_pid_running(self.pid):
-            logging.info('Process %s not running', self.pid)
+        if not supervising.is_pid_running(self.job_pid):
+            self.selflogger.info('Process %s not running', self.job_pid)
 
             # see what status was left in the database by the exited job
             job_status = get_job_status(self.job_id)
 
-            if job_status == 'succeeded':
-                signalling.signal_job_outcome(self.job_id, 'succeeded')
-            else:
-                signalling.signal_job_outcome(self.job_id, 'failed')
+            self.selflogger.info('job finished with status %r', job_status)
 
+            if job_status != 'succeeded':
                 if job_status == 'running':
                     # The job crashed without having a chance to update the
                     # status in the database.  We do it here.
@@ -180,25 +194,7 @@ class SupervisorLogMessageConsumer(signalling.LogMessageConsumer):
             raise StopIteration
 
 
-def get_supervisor_queue_name(job_id):
-    """
-    Return the name for the message queue of a job supervisor.
-    """
-    return 'supervisor-%s' % job_id
-
-
-def bind_supervisor_queue(job_id):
-    """
-    Declare and bind the message queue used by the job supervisor.
-
-    It is safe to call this function more than once.  If the exchange, queue or
-    bindings already exists, this function won't create them again.
-    """
-    return signalling.declare_and_bind_queue(
-        job_id, ('error', 'fatal'), get_supervisor_queue_name(job_id))
-
-
-def supervise(pid, job_id):
+def supervise(pid, job_id, timeout=1):
     """
     Supervise a job process, entering a loop that ends only when the job
     terminates.
@@ -207,12 +203,9 @@ def supervise(pid, job_id):
     :type pid: int
     :param job_id: the job id
     :type job_id: int
+    :param timeout: timeout value in seconds
+    :type timeout: float
     """
-    logging.info('Entering supervisor for job %s', job_id)
-
-    with SupervisorLogMessageConsumer(
-        job_id, pid, levels=('error', 'fatal'),
-        timeout=0.1) as message_consumer:
-        message_consumer.run()
-
-    logging.info('Exiting supervisor for job %s', job_id)
+    supervisor = SupervisorLogMessageConsumer(job_id, pid, timeout)
+    supervisor.start()
+    supervisor.join()
