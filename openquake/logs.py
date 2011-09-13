@@ -27,12 +27,9 @@ import logging
 import sys
 import socket
 
-try:
-    import simplejson as json
-except ImportError:
-    import json
 import kombu
 import kombu.entity
+import kombu.messaging
 
 from openquake import flags
 from openquake.utils import config
@@ -197,15 +194,13 @@ class AMQPLogSource(AMQPMessageConsumer):
     with respect to provided routing key -- logger name. Relogs all received
     log records.
     """
-    # TODO: unittest
-    def message_callback(self, msg):
+    def message_callback(self, record_data, msg):
         """
-        Decode message body from json, create log record and handle it.
+        Create log record and handle it.
 
         Never stops :meth:`thread's execution
         <openquake.signalling.AMQPMessageConsumer.run>`.
         """
-        record_data = json.loads(msg.body)
         record = object.__new__(logging.LogRecord)
         record.__dict__.update(record_data)
         logger = logging.getLogger(record.name)
