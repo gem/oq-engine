@@ -28,7 +28,7 @@ from openquake import kvs
 from openquake import flags
 from openquake import shapes
 from openquake.utils import config as oq_config
-from openquake.job import Job, LOG, config, prepare_job, run_job
+from openquake.job import Job, config, prepare_job, run_job
 from openquake.job import parse_config_files, filter_configuration_parameters
 from openquake.job import spawn_job_supervisor
 from openquake.job.mixins import Mixin
@@ -231,7 +231,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             '''
         config_path = self.touch(content=textwrap.dedent(content))
 
-        params, sections = parse_config_files(config_path, [])
+        params, sections = parse_config_files(config_path)
 
         self.assertEquals(
             {'BASE_PATH': '/tmp',
@@ -240,58 +240,6 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             params)
         self.assertEquals(['GENERAL', 'HAZARD'], sorted(sections))
 
-    def test_parse_missing_files(self):
-        content = '''
-            [GENERAL]
-            CALCULATION_MODE = Event Based
-
-            [HAZARD]
-            MINIMUM_MAGNITUDE = 5.0
-            '''
-        config_path = self.touch(content=textwrap.dedent(content))
-
-        self.assertRaises(config.ValidationException, parse_config_files,
-                          config_path, ['/tmp/foo'])
-
-    def test_parse_files_defaults(self):
-        content = '''
-            [GENERAL]
-            CALCULATION_MODE = Event Based
-
-            [HAZARD]
-            MINIMUM_MAGNITUDE = 5.0
-            '''
-        config_path = self.touch(content=textwrap.dedent(content))
-
-        params, sections = parse_config_files(config_path, [])
-
-        self.assertEquals(
-            {'BASE_PATH': '/tmp',
-             'MINIMUM_MAGNITUDE': '5.0',
-             'CALCULATION_MODE': 'Event Based'},
-            params)
-        self.assertEquals(['GENERAL', 'HAZARD'], sorted(sections))
-
-        default_content = '''
-            [GENERAL]
-            CALCULATION_MODE = Event Based
-            REGION_GRID_SPACING = 0.1
-
-            [HAZARD]
-            MINIMUM_MAGNITUDE = 6.0
-            '''
-        default_path = self.touch(content=textwrap.dedent(default_content))
-
-        def_params, def_sections = parse_config_files(
-            config_path, [default_path])
-
-        self.assertEquals(
-            {'BASE_PATH': '/tmp',
-             'CALCULATION_MODE': 'Event Based',
-             'REGION_GRID_SPACING': '0.1',
-             'MINIMUM_MAGNITUDE': '5.0'},
-            def_params)
-        self.assertEquals(['GENERAL', 'HAZARD'], sorted(def_sections))
 
     def test_filter_parameters(self):
         content = '''
@@ -307,7 +255,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             '''
         config_path = self.touch(content=textwrap.dedent(content))
 
-        params, sections = parse_config_files(config_path, [])
+        params, sections = parse_config_files(config_path)
         params, sections = filter_configuration_parameters(params, sections)
 
         self.assertEquals(
