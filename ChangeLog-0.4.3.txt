@@ -1,0 +1,470 @@
+Changelog for OpenQuake 0.4.2 and 0.4.3
+
+Fix-committed:  2011-09-02 12:55:21.348097+00:00
+Summary:        Capture job completion time
+Url:            https://bugs.launchpad.net/openquake/+bug/837923
+Reviewed-by:    favalex
+Closed-by:      lars-butler
+
+Fix-committed:  2011-09-02 12:10:50.795695+00:00
+Summary:        Capture job start time and number of sites when a job is launched
+Url:            https://bugs.launchpad.net/openquake/+bug/838841
+Reviewed-by:    favalex
+Closed-by:      lars-butler
+
+Fix-committed:  2011-09-01 16:00:34.122632+00:00
+Summary:        Add job_stats table to db
+Url:            https://bugs.launchpad.net/openquake/+bug/838017
+Reviewed-by:    mbarbon
+Closed-by:      lars-butler
+
+Fix-committed:  2011-09-02 10:04:26.467079+00:00
+Summary:        Out of Memory
+Url:            https://bugs.launchpad.net/openquake/+bug/838042
+Reviewed-by:    larsbutler
+Closed-by:      al-maisan
+
+Fix-committed:  2011-09-01 08:17:59.214472+00:00
+Summary:        Risk exposure Importer from nrml to db needed
+Url:            https://bugs.launchpad.net/openquake/+bug/817475
+Reviewed-by:    favalex
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-09-01 07:51:38.935900+00:00
+Summary:        Complete OQ log records need to be stored in central place
+Url:            https://bugs.launchpad.net/openquake/+bug/809222
+Reviewed-by:    mbarbon
+Closed-by:      favalex
+
+Fix-committed:  2011-08-18 13:30:36.305307+00:00
+Summary:        AMQPLogSetupTestCase.test_log_configuration should *not* test ordering
+Url:            https://bugs.launchpad.net/openquake/+bug/828661
+Reviewed-by:    favalex
+Closed-by:      al-maisan
+
+Fix-committed:  2011-08-31 10:56:26.973039+00:00
+Summary:        aggregate in probabilistic still reads from kvs
+Url:            https://bugs.launchpad.net/openquake/+bug/816961
+Reviewed-by:    mbarbon,angri
+Closed-by:      andreacerisara-b
+
+Fix-committed:  2011-08-31 10:56:26.973039+00:00
+Summary:        aggregate in probabilistic still reads from kvs
+Url:            https://bugs.launchpad.net/openquake/+bug/816961
+Reviewed-by:    favalex,larsbutler
+Closed-by:      andreacerisara-b
+
+Fix-committed:  2011-08-30 10:07:26.430882+00:00
+Summary:        amqp routing keys should be lowercase
+Url:            https://bugs.launchpad.net/openquake/+bug/831788
+Reviewed-by:    mbarbon
+Closed-by:      favalex
+
+Fix-committed:  2011-08-30 10:01:17.522357+00:00
+Summary:        SQLAlchemy final cleanup
+Url:            https://bugs.launchpad.net/openquake/+bug/833672
+Reviewed-by:    angri
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-30 09:27:14.023007+00:00
+Summary:        Re-write test set-up code with Django ORM
+Url:            https://bugs.launchpad.net/openquake/+bug/833654
+Reviewed-by:    al-maisan,favalex
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-30 08:21:08.943562+00:00
+Summary:        Simplify model loaders
+Url:            https://bugs.launchpad.net/openquake/+bug/833794
+Reviewed-by:    larsbutler
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-29 08:42:57.770219+00:00
+Summary:        Supervisors must purge the redis store after a job terminates
+Url:            https://bugs.launchpad.net/openquake/+bug/810987
+Reviewed-by:    angri
+Closed-by:      favalex
+
+Fix-committed:  2011-08-26 15:18:46.719036+00:00
+Summary:        Fix classical PSHA smoke test 
+Url:            https://bugs.launchpad.net/openquake/+bug/834612
+Reviewed-by:    favalex
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-26 14:41:14.455236+00:00
+Summary:        Fix job set-up code and helper methods to use Django ORM
+Url:            https://bugs.launchpad.net/openquake/+bug/833668
+Reviewed-by:    angri,mbarbon
+Closed-by:      al-maisan
+
+Fix-committed:  2011-08-29 06:24:28.061243+00:00
+Summary:        Provide function to initialise RabbitMQ backend for OQ signalling
+Url:            https://bugs.launchpad.net/openquake/+bug/809199
+Reviewed-by:    angri
+Closed-by:      favalex
+
+Fix-committed:  2011-08-29 06:25:07.931508+00:00
+Summary:        Supervisors must detect and document failed OQ jobs
+Url:            https://bugs.launchpad.net/openquake/+bug/809231
+Reviewed-by:    angri
+Closed-by:      favalex
+
+Fix-committed:  2011-08-29 06:25:31.367314+00:00
+Summary:        Supervisors must detect and document succeeded OQ jobs
+Url:            https://bugs.launchpad.net/openquake/+bug/812699
+Reviewed-by:    angri
+Closed-by:      favalex
+
+Fix-committed:  2011-08-26 11:41:50.949831+00:00
+Summary:        Remove SQLAlchemy writer common code
+Url:            https://bugs.launchpad.net/openquake/+bug/833659
+Reviewed-by:    larsbutler
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-25 15:43:38.875722+00:00
+Summary:        Fix risk calculators to use Django ORM
+Url:            https://bugs.launchpad.net/openquake/+bug/833661
+Reviewed-by:    angri
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-25 14:18:00.234143+00:00
+Summary:        Re-write LossMapDBWriter with Django ORM
+Url:            https://bugs.launchpad.net/openquake/+bug/820399
+Reviewed-by:    angri
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-25 14:37:33.846474+00:00
+Summary:        Re-write GMFDBWriter with Django ORM
+Url:            https://bugs.launchpad.net/openquake/+bug/832558
+Reviewed-by:    al-maisan
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-25 14:31:44.708540+00:00
+Summary:        Re-write HazardCurveDBWriter with Django ORM
+Url:            https://bugs.launchpad.net/openquake/+bug/820397
+Reviewed-by:    al-maisan
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-25 14:26:25.291869+00:00
+Summary:        Re-write LossCurveDBWriter with Django ORM
+Url:            https://bugs.launchpad.net/openquake/+bug/820401
+Reviewed-by:    al-maisan
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-25 14:18:00.234143+00:00
+Summary:        Re-write LossMapDBWriter with Django ORM
+Url:            https://bugs.launchpad.net/openquake/+bug/820399
+Reviewed-by:    al-maisan
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-25 14:17:21.454639+00:00
+Summary:        Re-write SourceModelLoader with Django ORM
+Url:            https://bugs.launchpad.net/openquake/+bug/820364
+Reviewed-by:    larsbutler
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-25 14:17:17.218164+00:00
+Summary:        Re-write CsvModelLoader with Django ORM
+Url:            https://bugs.launchpad.net/openquake/+bug/820405
+Reviewed-by:    larsbutler
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-25 14:16:31.378180+00:00
+Summary:        Re-write GMFDBReader with Django ORM
+Url:            https://bugs.launchpad.net/openquake/+bug/832557
+Reviewed-by:    larsbutler
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-25 14:15:52.985235+00:00
+Summary:        Re-write LossCurveDBReader with Django ORM
+Url:            https://bugs.launchpad.net/openquake/+bug/820400
+Reviewed-by:    larsbutler
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-25 14:12:41.329928+00:00
+Summary:        Re-write LossMapDBReader with Django ORM
+Url:            https://bugs.launchpad.net/openquake/+bug/820398
+Reviewed-by:    larsbutler
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-25 12:24:35.910301+00:00
+Summary:        Crashed supervisors must be respawned
+Url:            https://bugs.launchpad.net/openquake/+bug/813910
+Reviewed-by:    al-maisan
+Closed-by:      angri
+
+Fix-committed:  2011-08-25 10:21:41.619539+00:00
+Summary:        Re-write HazardCurveDBReader with Django ORM
+Url:            https://bugs.launchpad.net/openquake/+bug/820396
+Reviewed-by:    larsbutler
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-24 18:18:28.460983+00:00
+Summary:        Revise db users and django/ORM router logic
+Url:            https://bugs.launchpad.net/openquake/+bug/832711
+Reviewed-by:    mbarbon
+Closed-by:      al-maisan
+
+Fix-committed:  2011-08-24 12:39:39.372374+00:00
+Summary:        Each OQ job must start its supervisor process
+Url:            https://bugs.launchpad.net/openquake/+bug/810980
+Reviewed-by:    angri
+Closed-by:      favalex
+
+Fix-committed:  2011-08-24 10:34:39.986498+00:00
+Summary:        Re-write HazardMapDBReader with Django ORM
+Url:            https://bugs.launchpad.net/openquake/+bug/820393
+Reviewed-by:    larsbutler
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-24 09:26:18.872746+00:00
+Summary:        Make the engine capable to collect the correct sites to compute
+Url:            https://bugs.launchpad.net/openquake/+bug/805425
+Reviewed-by:    beatpanic,mbarbon,larsbutler
+Closed-by:      andreacerisara-b
+
+Fix-committed:  2011-08-24 08:52:48.428138+00:00
+Summary:        Implement bulk insert using Django
+Url:            https://bugs.launchpad.net/openquake/+bug/829211
+Reviewed-by:    larsbutler
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-24 08:50:39.715708+00:00
+Summary:        Add Django model class for collapse maps
+Url:            https://bugs.launchpad.net/openquake/+bug/831036
+Reviewed-by:    al-maisan,larsbutler
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-24 05:00:20.641236+00:00
+Summary:        Model the BCR distribution db fragment
+Url:            https://bugs.launchpad.net/openquake/+bug/812300
+Reviewed-by:    larsbutler
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-23 15:52:08.253565+00:00
+Summary:        Implement job supervisor
+Url:            https://bugs.launchpad.net/openquake/+bug/825325
+Reviewed-by:    angri
+Closed-by:      favalex
+
+Fix-committed:  2011-08-22 16:58:22.960326+00:00
+Summary:        Convert existing SQLAlchemy models to Django models
+Url:            https://bugs.launchpad.net/openquake/+bug/820346
+Reviewed-by:    mbarbon
+Closed-by:      lars-butler
+
+Fix-committed:  2011-08-22 16:58:33.015189+00:00
+Summary:        Complete the model code representation of the OQ database
+Url:            https://bugs.launchpad.net/openquake/+bug/820351
+Reviewed-by:    mbarbon
+Closed-by:      lars-butler
+
+Fix-committed:  2011-08-23 08:55:15.515328+00:00
+Summary:        Model the collapse map db fragment
+Url:            https://bugs.launchpad.net/openquake/+bug/812306
+Reviewed-by:    larsbutler
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-23 06:55:16.291188+00:00
+Summary:        A message consumer process code template is needed
+Url:            https://bugs.launchpad.net/openquake/+bug/809203
+Reviewed-by:    angri,larsbutler
+Closed-by:      favalex
+
+Fix-committed:  2011-08-22 16:58:22.960326+00:00
+Summary:        Convert existing SQLAlchemy models to Django models
+Url:            https://bugs.launchpad.net/openquake/+bug/820346
+Reviewed-by:    angri,mbarbon
+Closed-by:      lars-butler
+
+Fix-committed:  2011-08-22 16:58:33.015189+00:00
+Summary:        Complete the model code representation of the OQ database
+Url:            https://bugs.launchpad.net/openquake/+bug/820351
+Reviewed-by:    angri,mbarbon
+Closed-by:      lars-butler
+
+Fix-committed:  2011-08-22 10:06:12.164346+00:00
+Summary:        Provide a celery task init() function
+Url:            https://bugs.launchpad.net/openquake/+bug/827349
+Reviewed-by:    favalex
+Closed-by:      angri
+
+Fix-committed:  2011-08-18 14:40:42.397219+00:00
+Summary:        Make celeryconfig.py read from settings.cfg
+Url:            https://bugs.launchpad.net/openquake/+bug/828738
+Reviewed-by:    angri
+Closed-by:      al-maisan
+
+Fix-committed:  2011-08-18 14:39:06.846133+00:00
+Summary:        Add a 'supervisor_pid' to the 'oq_job' table
+Url:            https://bugs.launchpad.net/openquake/+bug/828616
+Reviewed-by:    angri
+Closed-by:      favalex
+
+Fix-committed:  2011-08-18 13:58:44.749512+00:00
+Summary:        black box test failure in master
+Url:            https://bugs.launchpad.net/openquake/+bug/828722
+Reviewed-by:    trivial
+Closed-by:      al-maisan
+
+Fix-committed:  2011-08-18 13:30:43.691406+00:00
+Summary:        OpenQuake credentials management
+Url:            https://bugs.launchpad.net/openquake/+bug/827366
+Reviewed-by:    mbarbon
+Closed-by:      al-maisan
+
+Fix-committed:  2011-08-18 13:30:36.305307+00:00
+Summary:        AMQPLogSetupTestCase.test_log_configuration should *not* test ordering
+Url:            https://bugs.launchpad.net/openquake/+bug/828661
+Reviewed-by:    mbarbon
+Closed-by:      al-maisan
+
+Fix-committed:  2011-08-18 08:05:54.560092+00:00
+Summary:        Un-skip test_compute_risk_in_the_classical_psha_mixin
+Url:            https://bugs.launchpad.net/openquake/+bug/827908
+Reviewed-by:    favalex
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-17 12:26:04.704501+00:00
+Summary:        Merge 'tests' and 'db_tests'
+Url:            https://bugs.launchpad.net/openquake/+bug/819689
+Reviewed-by:    favalex
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-17 11:42:09.153919+00:00
+Summary:        Fix the KVS keys to use again the job_id marker
+Url:            https://bugs.launchpad.net/openquake/+bug/827256
+Reviewed-by:    mbarbon
+Closed-by:      favalex
+
+Fix-committed:  2011-08-18 08:32:38.849458+00:00
+Summary:        Tests using python-mock are brittle
+Url:            https://bugs.launchpad.net/openquake/+bug/807360
+Reviewed-by:    larsbutler
+Closed-by:      angri
+
+Fix-committed:  2011-08-17 10:13:20.609022+00:00
+Summary:        Add an 'error_msg' table to the schema
+Url:            https://bugs.launchpad.net/openquake/+bug/812698
+Reviewed-by:    al-maisan
+Closed-by:      lars-butler
+
+Fix-committed:  2011-08-17 10:23:39.492839+00:00
+Summary:        Remove stdout log capture
+Url:            https://bugs.launchpad.net/openquake/+bug/802396
+Reviewed-by:    al-maisan
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-17 07:49:10.112233+00:00
+Summary:        Engine shouldn't print output file names which don't exist
+Url:            https://bugs.launchpad.net/openquake/+bug/817081
+Reviewed-by:    favalex
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-16 10:08:29.986128+00:00
+Summary:        All OQ log records must be linked to job in question
+Url:            https://bugs.launchpad.net/openquake/+bug/809217
+Reviewed-by:    larsbutler
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-12 16:38:20.640986+00:00
+Summary:        Make db revision step numbers global
+Url:            https://bugs.launchpad.net/openquake/+bug/822654
+Reviewed-by:    angri
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-11 16:47:59.311094+00:00
+Summary:        Discrepancy in the number of tests runs
+Url:            https://bugs.launchpad.net/openquake/+bug/824388
+Reviewed-by:    angri,favalex
+Closed-by:      lars-butler
+
+Fix-committed:  2011-08-11 16:48:06.969592+00:00
+Summary:        tests/tools_dbmaint_unittest.py test problems
+Url:            https://bugs.launchpad.net/openquake/+bug/824392
+Reviewed-by:    angri,favalex
+Closed-by:      lars-butler
+
+Fix-committed:  2011-08-11 16:48:12.134061+00:00
+Summary:        Bitrot in test suite
+Url:            https://bugs.launchpad.net/openquake/+bug/824419
+Reviewed-by:    angri,favalex
+Closed-by:      lars-butler
+
+Fix-committed:  2011-08-12 16:39:18.471299+00:00
+Summary:        A RabbitMQ backend implementation for python logging is needed
+Url:            https://bugs.launchpad.net/openquake/+bug/809201
+Reviewed-by:    favalex
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-12 16:39:18.471299+00:00
+Summary:        A RabbitMQ backend implementation for python logging is needed
+Url:            https://bugs.launchpad.net/openquake/+bug/809201
+Reviewed-by:    favalex
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-12 15:39:01.042817+00:00
+Summary:        openquake --version info should use UTC time
+Url:            https://bugs.launchpad.net/openquake/+bug/825120
+Reviewed-by:    angri,favalex
+Closed-by:      lars-butler
+
+Fix-committed:  2011-08-11 16:47:59.311094+00:00
+Summary:        Discrepancy in the number of tests runs
+Url:            https://bugs.launchpad.net/openquake/+bug/824388
+Reviewed-by:    mbarbon
+Closed-by:      lars-butler
+
+Fix-committed:  2011-08-11 16:48:06.969592+00:00
+Summary:        tests/tools_dbmaint_unittest.py test problems
+Url:            https://bugs.launchpad.net/openquake/+bug/824392
+Reviewed-by:    mbarbon
+Closed-by:      lars-butler
+
+Fix-committed:  2011-08-11 16:48:12.134061+00:00
+Summary:        Bitrot in test suite
+Url:            https://bugs.launchpad.net/openquake/+bug/824419
+Reviewed-by:    mbarbon
+Closed-by:      lars-butler
+
+Fix-committed:  2011-08-11 14:00:49.677866+00:00
+Summary:        junit test org.gem.log.AMQPAppenderTest fails
+Url:            https://bugs.launchpad.net/openquake/+bug/824360
+Reviewed-by:    favalex
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-11 13:00:47.417188+00:00
+Summary:        Don't store the site in the hazard curves serialized in the KVS
+Url:            https://bugs.launchpad.net/openquake/+bug/820943
+Reviewed-by:    mbarbon
+Closed-by:      favalex
+
+Fix-committed:  2011-08-11 10:46:53.906661+00:00
+Summary:        hzrdr.hazard_curve_data should really be called hzrdr.hazard_curve
+Url:            https://bugs.launchpad.net/openquake/+bug/820869
+Reviewed-by:    favalex
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-11 07:47:56.005160+00:00
+Summary:        A RabbitMQ backend implementation for java logging is needed
+Url:            https://bugs.launchpad.net/openquake/+bug/814051
+Reviewed-by:    larsbutler
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-11 07:47:49.772504+00:00
+Summary:        How do we test the Java RabbitMQ logging backend?
+Url:            https://bugs.launchpad.net/openquake/+bug/814081
+Reviewed-by:    larsbutler
+Closed-by:      mattia.barbon
+
+Fix-committed:  2011-08-10 09:53:01.835064+00:00
+Summary:        Model the aggregate loss curves db fragment
+Url:            https://bugs.launchpad.net/openquake/+bug/813471
+Reviewed-by:    larsbutler
+Closed-by:      favalex
+
+Fix-committed:  2011-08-10 16:23:03.397159+00:00
+Summary:        Make the job id available in the java code base
+Url:            https://bugs.launchpad.net/openquake/+bug/814048
+Reviewed-by:    mbarbon
+Closed-by:      lars-butler
+
