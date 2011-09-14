@@ -101,12 +101,19 @@ class JavaLoggingBridge(object):
         java_level = event.getLevel().toInt()
         level, _rem = divmod(java_level, 1000)
 
+        job_id = jclass('MDC').get('job_id')
+        if job_id:
+            # casting java.lang.Long to python int to assure serializability
+            job_id = job_id.intValue()
+        else:
+            job_id = None
+
         if event.logger.getParent() is None:
             # getParent() returns ``None`` only for root logger.
             # Use the name "java" for it instead of "java.root".
-            logger_name = 'java'
+            logger_name = 'oq.job.%s.java' % job_id
         else:
-            logger_name = 'java.%s' % event.getLoggerName()
+            logger_name = 'oq.job.%s.java.%s' % (job_id, event.getLoggerName())
         logger = logging.getLogger(logger_name)
 
         if _rem != 0 or level not in self.SUPPORTED_LEVELS:
@@ -143,19 +150,11 @@ class JavaLoggingBridge(object):
         else:
             funcname = '%s.%s' % (classname, methname)
 
-        job_id = jclass('MDC').get('job_id')
-        if job_id:
-            # casting java.lang.Long to python int to assure serializability
-            job_id = job_id.intValue()
-        else:
-            job_id = None
-        extra = {'job_id': job_id}
-
         # Now do what logging.Logger._log() does:
         # create log record and handle it.
         record = logger.makeRecord(logger.name, level, filename, lineno, msg,
                                    args=(), exc_info=None, func=funcname,
-                                   extra=extra)
+                                   extra={'job_id': job_id})
         # these two values are set by LogRecord constructor
         # so we need to overwrite them.
         record.threadName = event.getThreadName()
