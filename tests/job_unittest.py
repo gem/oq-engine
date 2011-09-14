@@ -240,7 +240,6 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             params)
         self.assertEquals(['GENERAL', 'HAZARD'], sorted(sections))
 
-
     def test_filter_parameters(self):
         content = '''
             [GENERAL]
