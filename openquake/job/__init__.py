@@ -274,7 +274,7 @@ class Job(object):
     #: don't yet have job_id (job initialization, for instance). For any
     #: other logging purposes job and mixins should use :attr:`logger`.
     unknown_job_logger = logging.LoggerAdapter(
-        logging.getLogger('oq.job.none'), extra={'job_id': None}
+        logging.getLogger('oq.job.None'), extra={'job_id': None}
     )
 
     @classmethod
