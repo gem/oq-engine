@@ -21,6 +21,7 @@ import threading
 import os.path
 import time
 import socket
+import json
 
 import kombu
 import kombu.entity
@@ -46,6 +47,7 @@ class JavaLogsTestCase(unittest.TestCase):
     def tearDown(self):
         self.python_logger.removeHandler(self.handler)
         self.python_logger.setLevel(logging.NOTSET)
+        java.jclass('MDC').clear()
 
     def test_error(self):
         self.root_logger.error('java error msg')
@@ -89,6 +91,23 @@ class JavaLogsTestCase(unittest.TestCase):
         self.assertEqual(record.levelname, 'INFO')
         self.assertEqual(record.name, 'java')
         self.assertEqual(record.msg, 'information message')
+
+    def test_job_id_from_mdc(self):
+        java.jclass('MDC').put('job_id', 1234)
+        self.root_logger.info('whatever')
+        [record] = self.handler.buffer
+        self.assertEqual(record.job_id, 1234)
+        self.assertEqual(type(record.job_id), int)
+
+    def test_record_serializability(self):
+        java.jclass('MDC').put('job_id', 1234)
+        self.root_logger.info('whatever')
+        [record] = self.handler.buffer
+        # original args are tuple which becomes list
+        # being encoded to json and back
+        record.args = list(record.args)
+        self.assertEqual(json.loads(json.dumps(record.__dict__)),
+                         record.__dict__)
 
     def test_custom_level(self):
         # checking that logging with custom levels issues a warning but works
