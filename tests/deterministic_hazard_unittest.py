@@ -32,7 +32,6 @@ from tests.utils.helpers import patch
 
 from openquake import java
 from openquake import kvs
-from openquake import flags
 from openquake import shapes
 
 from openquake.hazard import deterministic as det
@@ -67,8 +66,6 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
     def setUp(self):
         kvs.flush()
 
-        flags.FLAGS.include_defaults = False
-
         self.job = helpers.job_from_file(DETERMINISTIC_SMOKE_TEST)
 
         self.job.params[NUMBER_OF_CALC_KEY] = "1"
@@ -87,8 +84,6 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         # restoring the default java implementation
         det.DeterministicEventBasedMixin.compute_ground_motion_field = \
             self.default
-
-        flags.FLAGS.include_defaults = True
 
         kvs.flush()
 
