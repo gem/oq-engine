@@ -98,7 +98,8 @@ class JavaLoggingBridge(object):
         # Python logging uses 10, 20, 30, 40 and 50 respectively.
         # So for mapping of logging levels we need to divide java
         # log level by 1000.
-        level, _rem = divmod(event.getLevel().toInt(), 1000)
+        java_level = event.getLevel().toInt()
+        level, _rem = divmod(java_level, 1000)
 
         if event.logger.getParent() is None:
             # getParent() returns ``None`` only for root logger.
@@ -112,7 +113,7 @@ class JavaLoggingBridge(object):
             # java side used some custom logging level.
             # don't try to map it to python level and don't
             # check if python logger was enabled for it
-            level = event.getLevel().toInt()
+            level = java_level
             logger.warning('unrecognised logging level %d was used', level)
         else:
             if not logger.isEnabledFor(level):
@@ -142,7 +143,13 @@ class JavaLoggingBridge(object):
         else:
             funcname = '%s.%s' % (classname, methname)
 
-        extra = {'job_id': jclass('MDC').get('job_id')}
+        job_id = jclass('MDC').get('job_id')
+        if job_id:
+            # casting java.lang.Long to python int to assure serializability
+            job_id = job_id.intValue()
+        else:
+            job_id = None
+        extra = {'job_id': job_id}
 
         # Now do what logging.Logger._log() does:
         # create log record and handle it.
