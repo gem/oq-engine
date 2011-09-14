@@ -37,12 +37,13 @@ from openquake import logs
 from openquake import OPENQUAKE_ROOT
 from openquake import shapes
 from openquake.db.models import (
-    OqJob, OqParams, OqUser, JobStats, FloatArrayField)
+    OqJob, OqParams, OqUser, JobStats, InputSet, Input, FloatArrayField)
 from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
 from openquake.job.mixins import Mixin
-from openquake.job.params import PARAMS, CALCULATION_MODE, ENUM_MAP
+from openquake.job.params import (
+    PARAMS, CALCULATION_MODE, ENUM_MAP, PATH_PARAMS, INPUT_FILE_TYPES)
 from openquake.kvs import mark_job_as_current
 from openquake.logs import LOG
 from openquake.utils import config as oq_config
@@ -139,7 +140,7 @@ def parse_config_file(config_file):
             key = key.upper()
             # Handle includes.
             if RE_INCLUDE.match(key):
-                config_file = "%s/%s" % (os.path.dirname(config_file), value)
+                config_file = os.path.join(os.path.dirname(config_file), value)
                 new_sections, new_params = parse_config_file(config_file)
                 sections.extend(new_sections)
                 params.update(new_params)
@@ -178,7 +179,7 @@ def parse_config_files(config_file, default_configuration_files):
     return params, list(set(sections))
 
 
-def filter_configuration_parameters(params, sections):
+def prepare_config_parameters(params, sections):
     """
     Pre-process configuration parameters removing unknown ones.
     """
@@ -200,7 +201,37 @@ def filter_configuration_parameters(params, sections):
 
         new_params[name] = value
 
+    # make file paths absolute
+    for name in PATH_PARAMS:
+        if name not in new_params:
+            continue
+
+        new_params[name] = os.path.join(params['BASE_PATH'], new_params[name])
+
     return new_params, sections
+
+
+def get_source_models(logic_tree):
+    """Returns the source models soft-linked by the given logic treee"""
+
+    # can be removed if we don't support .inp files
+    if not logic_tree.endswith('.xml'):
+        return []
+
+    base_path = os.path.dirname(os.path.abspath(logic_tree))
+    parser = java.jclass('LogicTreeReader')(logic_tree)
+    tree_map = parser.read()
+    model_files = []
+
+    for tree in tree_map.values():
+        for level in tree.getBranchingLevels():
+            for branch in level.getBranchList():
+                model = branch.getNameInputFile()
+
+                if model:
+                    model_files.append(os.path.join(base_path, model))
+
+    return model_files
 
 
 def guarantee_file(base_path, file_spec):
@@ -211,29 +242,34 @@ def guarantee_file(base_path, file_spec):
     return resolve_handler(url, base_path).get()
 
 
-@transaction.commit_on_success(using='job_init')
-def prepare_job(params):
-    """
-    Create a new OqJob and fill in the related OpParams entry.
+def _insert_input_files(params, input_set):
+    """Create uiapi.input records for all input files"""
 
-    Returns the newly created job object.
-    """
-    oqp = OqParams(upload=None)
+    # insert input files in input table
+    for param_key, file_type in INPUT_FILE_TYPES.items():
+        if param_key not in params:
+            continue
+        path = params[param_key]
+        in_model = Input(input_set=input_set, path=path,
+                         input_type=file_type, size=os.path.getsize(path))
+        in_model.save()
 
-    # TODO specify the owner as a command line parameter
-    owner = OqUser.objects.get(user_name='openquake')
+    # insert soft-linked source models in input table
+    if 'SOURCE_MODEL_LOGIC_TREE_FILE' in params:
+        for path in get_source_models(params['SOURCE_MODEL_LOGIC_TREE_FILE']):
+            in_model = Input(input_set=input_set, path=path,
+                             input_type='source', size=os.path.getsize(path))
+            in_model.save()
 
-    job = OqJob(
-        owner=owner, path=None,
-        job_type=CALCULATION_MODE[params['CALCULATION_MODE']])
 
-    oqp.job_type = job.job_type
+def _store_input_parameters(params, job_type, oqp):
+    """Store parameters in uiapi.oq_params columns"""
 
     for name, param in PARAMS.items():
-        if job.job_type in param.modes and param.default is not None:
+        if job_type in param.modes and param.default is not None:
             setattr(oqp, param.column, param.default)
 
-    number_re = re.compile('[^0-9.]+')
+    number_re = re.compile('[ ,]+')
 
     for name, value in params.items():
         param = PARAMS[name]
@@ -260,7 +296,31 @@ def prepare_job(params):
         oqp.period = None
         oqp.damping = None
 
+
+@transaction.commit_on_success(using='job_init')
+def prepare_job(params):
+    """
+    Create a new OqJob and fill in the related OpParams entry.
+
+    Returns the newly created job object.
+    """
+    # TODO specify the owner as a command line parameter
+    owner = OqUser.objects.get(user_name='openquake')
+
+    input_set = InputSet(upload=None, owner=owner)
+    input_set.save()
+
+    job_type = CALCULATION_MODE[params['CALCULATION_MODE']]
+    job = OqJob(owner=owner, path=None, job_type=job_type)
+
+    oqp = OqParams(input_set=input_set)
+    oqp.job_type = job_type
+
+    _insert_input_files(params, input_set)
+    _store_input_parameters(params, job_type, oqp)
+
     oqp.save()
+
     job.oq_params = oqp
     job.save()
 
@@ -345,7 +405,7 @@ class Job(object):
 
         params, sections = parse_config_files(
             config_file, Job.default_configs())
-        params, sections = filter_configuration_parameters(params, sections)
+        params, sections = prepare_config_parameters(params, sections)
 
         validator = conf.default_validators(sections, params)
         is_valid, errors = validator.is_valid()
