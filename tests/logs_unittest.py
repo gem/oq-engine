@@ -36,7 +36,7 @@ class JavaLogsTestCase(unittest.TestCase):
     def setUp(self):
         self.jvm = java.jvm()
         self.handler = logging.handlers.BufferingHandler(capacity=float('inf'))
-        self.python_logger = logging.getLogger('java')
+        self.python_logger = logging.getLogger('oq.job')
         self.python_logger.addHandler(self.handler)
         self.python_logger.setLevel(logging.DEBUG)
 
@@ -54,7 +54,7 @@ class JavaLogsTestCase(unittest.TestCase):
         [record] = self.handler.buffer
         self.assertEqual(record.levelno, logging.ERROR)
         self.assertEqual(record.levelname, 'ERROR')
-        self.assertEqual(record.name, 'java')
+        self.assertEqual(record.name, 'oq.job.None.java')
         self.assertEqual(record.msg, 'java error msg')
         self.assertEqual(record.threadName, 'main')
         self.assertEqual(record.processName, 'java')
@@ -64,7 +64,7 @@ class JavaLogsTestCase(unittest.TestCase):
         [record] = self.handler.buffer
         self.assertEqual(record.levelno, logging.WARNING)
         self.assertEqual(record.levelname, 'WARNING')
-        self.assertEqual(record.name, 'java.other_logger')
+        self.assertEqual(record.name, 'oq.job.None.java.other_logger')
         self.assertEqual(record.msg, 'warning message')
 
     def test_debug(self):
@@ -72,7 +72,7 @@ class JavaLogsTestCase(unittest.TestCase):
         [record] = self.handler.buffer
         self.assertEqual(record.levelno, logging.DEBUG)
         self.assertEqual(record.levelname, 'DEBUG')
-        self.assertEqual(record.name, 'java.other_logger')
+        self.assertEqual(record.name, 'oq.job.None.java.other_logger')
         self.assertEqual(record.msg, 'this is verbose debug info')
 
     def test_fatal(self):
@@ -81,7 +81,7 @@ class JavaLogsTestCase(unittest.TestCase):
         # java "fatal" records are mapped to python "critical" ones
         self.assertEqual(record.levelno, logging.CRITICAL)
         self.assertEqual(record.levelname, 'CRITICAL')
-        self.assertEqual(record.name, 'java')
+        self.assertEqual(record.name, 'oq.job.None.java')
         self.assertEqual(record.msg, 'something bad has happened')
 
     def test_info(self):
@@ -89,15 +89,20 @@ class JavaLogsTestCase(unittest.TestCase):
         [record] = self.handler.buffer
         self.assertEqual(record.levelno, logging.INFO)
         self.assertEqual(record.levelname, 'INFO')
-        self.assertEqual(record.name, 'java')
+        self.assertEqual(record.name, 'oq.job.None.java')
         self.assertEqual(record.msg, 'information message')
 
     def test_job_id_from_mdc(self):
         java.jclass('MDC').put('job_id', 1234)
         self.root_logger.info('whatever')
-        [record] = self.handler.buffer
-        self.assertEqual(record.job_id, 1234)
-        self.assertEqual(type(record.job_id), int)
+        self.other_logger.info('something')
+        [record1, record2] = self.handler.buffer
+        self.assertEqual(record1.job_id, 1234)
+        self.assertEqual(type(record1.job_id), int)
+        self.assertEqual(record1.name, 'oq.job.1234.java')
+        self.assertEqual(record2.job_id, 1234)
+        self.assertEqual(type(record2.job_id), int)
+        self.assertEqual(record2.name, 'oq.job.1234.java.other_logger')
 
     def test_record_serializability(self):
         java.jclass('MDC').put('job_id', 1234)
@@ -149,13 +154,13 @@ class JavaLogsTestCase(unittest.TestCase):
         [warning, record] = self.handler.buffer
 
         self.assertEqual(warning.levelno, logging.WARNING)
-        self.assertEqual(warning.name, 'java')
+        self.assertEqual(warning.name, 'oq.job.None.java')
         self.assertEqual(warning.getMessage(), 'unrecognised logging level ' \
                                                '12345 was used')
 
         self.assertEqual(record.levelno, 12345)
         self.assertEqual(record.levelname, 'Level 12345')
-        self.assertEqual(record.name, 'java')
+        self.assertEqual(record.name, 'oq.job.None.java')
         self.assertEqual(record.msg, 'somemessage')
         self.assertEqual(record.pathname, 'some/file')
         self.assertEqual(record.lineno, 123)
