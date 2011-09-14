@@ -50,7 +50,6 @@ from openquake.utils import config as oq_config
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 
 FLAGS = flags.FLAGS
-flags.DEFINE_boolean('include_defaults', True, "Include default configs")
 
 REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
 
@@ -129,50 +128,32 @@ def parse_config_file(config_file):
     in the ConfigParser format.
     """
 
+    config_file = os.path.abspath(config_file)
+    base_path = os.path.abspath(os.path.dirname(config_file))
+
+    if not os.path.exists(config_file):
+        raise conf.ValidationException(
+            ["File '%s' not found" % config_file])
+
     parser = ConfigParser()
     parser.read(config_file)
 
     params = {}
     sections = []
+
     for section in parser.sections():
         for key, value in parser.items(section):
             key = key.upper()
             # Handle includes.
             if RE_INCLUDE.match(key):
                 config_file = "%s/%s" % (os.path.dirname(config_file), value)
-                new_sections, new_params = parse_config_file(config_file)
+                new_params, new_sections = parse_config_file(config_file)
                 sections.extend(new_sections)
                 params.update(new_params)
             else:
                 sections.append(section)
                 params[key] = value
-    return sections, params
 
-
-def parse_config_files(config_file, default_configuration_files):
-    """
-    Loads the specified configuration file, using the files in
-    default_configuration_files to provide defaults.
-
-    :param config_file: configuration file
-    :param default_configuration_files: list of configuration files
-    :type default_configuration_files: list
-    """
-
-    config_file = os.path.abspath(config_file)
-    base_path = os.path.abspath(os.path.dirname(config_file))
-
-    params = {}
-    sections = []
-
-    for each_config_file in default_configuration_files + [config_file]:
-        if not os.path.exists(each_config_file):
-            raise conf.ValidationException(
-                ["File '%s' not found" % each_config_file])
-
-        new_sections, new_params = parse_config_file(each_config_file)
-        sections.extend(new_sections)
-        params.update(new_params)
     params['BASE_PATH'] = base_path
 
     return params, list(set(sections))
@@ -285,30 +266,6 @@ def setup_job_logging(job_id):
 class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
-    __cwd = os.path.dirname(__file__)
-    __defaults = [os.path.join(__cwd, "../", "default.gem"),  # package
-                    "openquake.gem",        # Sane Defaults
-                    "/etc/openquake.gem",   # Site level configs
-                    "~/.openquake.gem"]     # Are we running as a user?
-
-    @classmethod
-    def default_configs(cls):
-        """
-         Default job configuration files, writes a warning if they don't exist.
-        """
-        if not FLAGS.include_defaults:
-            return []
-
-        existing_defaults = [
-            cfg for cfg in cls.__defaults if os.path.exists(cfg)]
-
-        if len(existing_defaults) == 0:
-            LOG.warning("No default configuration! If your job config doesn't "
-                        "define all of the expected properties things might "
-                        "break.")
-
-        return existing_defaults
-
     @staticmethod
     def from_kvs(job_id):
         """Return the job in the underlying kvs system with the given id."""
@@ -343,8 +300,7 @@ class Job(object):
         # essentially a detail of our current tests and ci infrastructure.
         assert output_type in ('db', 'xml', 'xml_without_db')
 
-        params, sections = parse_config_files(
-            config_file, Job.default_configs())
+        params, sections = parse_config_file(config_file)
         params, sections = filter_configuration_parameters(params, sections)
 
         validator = conf.default_validators(sections, params)
