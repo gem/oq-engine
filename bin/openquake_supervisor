@@ -56,9 +56,6 @@ def main():  # pylint: disable=C0111
     # To avoid premature death of the supervisor we ignore the SIGINT signal.
     signal.signal(signal.SIGINT, lambda _, __: None)
 
-    # Create the supervisor amqp queue
-    supervisor.bind_supervisor_queue(job_id)
-
     supervisor.supervise(pid, job_id)
 
 
