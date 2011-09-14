@@ -229,7 +229,8 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             [HAZARD]
             MINIMUM_MAGNITUDE = 5.0
             '''
-        config_path = self.touch(content=textwrap.dedent(content))
+        config_path = self.touch(
+            dir='/tmp', content=textwrap.dedent(content))
 
         params, sections = parse_config_file(config_path)
 
@@ -252,7 +253,8 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             # not used for this job type
             COMPUTE_MEAN_HAZARD_CURVE = true
             '''
-        config_path = self.touch(content=textwrap.dedent(content))
+        config_path = self.touch(
+            dir='/tmp', content=textwrap.dedent(content))
 
         params, sections = parse_config_file(config_path)
         params, sections = filter_configuration_parameters(params, sections)
