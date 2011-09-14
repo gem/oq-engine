@@ -128,47 +128,32 @@ def parse_config_file(config_file):
     in the ConfigParser format.
     """
 
+    config_file = os.path.abspath(config_file)
+    base_path = os.path.abspath(os.path.dirname(config_file))
+
+    if not os.path.exists(config_file):
+        raise conf.ValidationException(
+            ["File '%s' not found" % config_file])
+
     parser = ConfigParser()
     parser.read(config_file)
 
     params = {}
     sections = []
+
     for section in parser.sections():
         for key, value in parser.items(section):
             key = key.upper()
             # Handle includes.
             if RE_INCLUDE.match(key):
                 config_file = "%s/%s" % (os.path.dirname(config_file), value)
-                new_sections, new_params = parse_config_file(config_file)
+                new_params, new_sections = parse_config_file(config_file)
                 sections.extend(new_sections)
                 params.update(new_params)
             else:
                 sections.append(section)
                 params[key] = value
-    return sections, params
 
-
-def parse_config_files(config_file):
-    """
-    Loads the specified configuration file
-
-    :param config_file: configuration file
-    """
-
-    config_file = os.path.abspath(config_file)
-    base_path = os.path.abspath(os.path.dirname(config_file))
-
-    params = {}
-    sections = []
-
-    for each_config_file in [config_file]:
-        if not os.path.exists(each_config_file):
-            raise conf.ValidationException(
-                ["File '%s' not found" % each_config_file])
-
-        new_sections, new_params = parse_config_file(each_config_file)
-        sections.extend(new_sections)
-        params.update(new_params)
     params['BASE_PATH'] = base_path
 
     return params, list(set(sections))
@@ -315,7 +300,7 @@ class Job(object):
         # essentially a detail of our current tests and ci infrastructure.
         assert output_type in ('db', 'xml', 'xml_without_db')
 
-        params, sections = parse_config_files(config_file)
+        params, sections = parse_config_file(config_file)
         params, sections = filter_configuration_parameters(params, sections)
 
         validator = conf.default_validators(sections, params)
