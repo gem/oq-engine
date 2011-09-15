@@ -30,7 +30,6 @@ from openquake import flags
 from openquake import shapes
 from openquake.utils import config as oq_config
 from openquake.job import Job, config, prepare_job, run_job
-from openquake.job import spawn_job_supervisor
 from openquake.job.mixins import Mixin
 from openquake.db.models import OqJob, JobStats
 from openquake.risk.job import general
@@ -199,7 +198,7 @@ class JobTestCase(unittest.TestCase):
         logger = Job.unknown_job_logger
         self.assertTrue(isinstance(logger, logging.LoggerAdapter))
         self.assertEqual(logger.extra, {'job_id': None})
-        self.assertEqual(logger.logger.name, 'oq.job.none')
+        self.assertEqual(logger.logger.name, 'oq.job.None')
 
 
 class JobDbRecordTestCase(unittest.TestCase):
@@ -577,6 +576,7 @@ class RunJobTestCase(unittest.TestCase):
         return OqJob.objects.get(id=self.job.job_id).status
 
     def test_successful_job_lifecycle(self):
+        assert False
         with patch('openquake.job.Job.from_file') as from_file:
 
             # called in place of Job.launch
@@ -604,6 +604,7 @@ class RunJobTestCase(unittest.TestCase):
         self.assertEquals('succeeded', self._job_status())
 
     def test_failed_job_lifecycle(self):
+        assert False
         with patch('openquake.job.Job.from_file') as from_file:
 
             # called in place of Job.launch
@@ -632,6 +633,7 @@ class RunJobTestCase(unittest.TestCase):
         self.assertEquals('failed', self._job_status())
 
     def test_invalid_job_lifecycle(self):
+        assert False
         with patch('openquake.job.Job.from_file') as from_file:
 
             # replaces Job.is_valid with a mock
@@ -705,6 +707,7 @@ class RunJobTestCase(unittest.TestCase):
         self.assertEquals(expected_sites, engine.sites_to_compute())
 
     def test_supervisor_is_spawned(self):
+        assert False
         with patch('openquake.job.Job.from_file') as from_file:
 
             # replaces Job.launch with a mock
