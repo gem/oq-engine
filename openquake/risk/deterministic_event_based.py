@@ -114,8 +114,7 @@ class SumPerGroundMotionField(object):
     """This class computes the mean and the standard deviation of
     the sum of the losses per ground motion field set."""
 
-    def __init__(self, vuln_model, epsilon_provider,
-                 lr_calculator=None, logger=None):
+    def __init__(self, vuln_model, epsilon_provider, lr_calculator=None):
         """Initialize an instance of this class.
 
         :param vuln_model: the vulnerability model used to lookup the
@@ -141,8 +140,6 @@ class SumPerGroundMotionField(object):
         if lr_calculator is None:
             self.lr_calculator = prob.compute_loss_ratios
 
-        self.logger = logger
-
     def add(self, ground_motion_field_set, asset):
         """Compute the losses for the given ground motion field set, and
         sum those to the current sum of the losses.
@@ -162,12 +159,11 @@ class SumPerGroundMotionField(object):
         """
 
         if asset["vulnerabilityFunctionReference"] not in self.vuln_model:
-            if self.logger:
-                self.logger.debug(
-                    "Unknown vulnerability function %s, asset %s will " \
-                    "not be included in the aggregate computation",
-                    asset["vulnerabilityFunctionReference"], asset["assetID"]
-                )
+            LOG.debug("Unknown vulnerability function %s, asset %s will " \
+                      "not be included in the aggregate computation"
+                      % (asset["vulnerabilityFunctionReference"],
+                      asset["assetID"]))
+
             return
 
         vuln_function = self.vuln_model[
