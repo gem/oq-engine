@@ -36,36 +36,35 @@ class JavaLogsTestCase(unittest.TestCase):
     def setUp(self):
         self.jvm = java.jvm()
         self.handler = logging.handlers.BufferingHandler(capacity=float('inf'))
-        self.python_logger = logging.getLogger('oq.job')
+        self.python_logger = logging.getLogger('java')
         self.python_logger.addHandler(self.handler)
         self.python_logger.setLevel(logging.DEBUG)
 
         jlogger_class = self.jvm.JClass("org.apache.log4j.Logger")
         self.root_logger = jlogger_class.getRootLogger()
         self.other_logger = jlogger_class.getLogger('other_logger')
-        java.jclass('MDC').clear()
 
     def tearDown(self):
         self.python_logger.removeHandler(self.handler)
         self.python_logger.setLevel(logging.NOTSET)
-        java.jclass('MDC').clear()
 
     def test_error(self):
         self.root_logger.error('java error msg')
         [record] = self.handler.buffer
         self.assertEqual(record.levelno, logging.ERROR)
         self.assertEqual(record.levelname, 'ERROR')
-        self.assertEqual(record.name, 'oq.job.None.java')
+        self.assertEqual(record.name, 'java')
         self.assertEqual(record.msg, 'java error msg')
         self.assertEqual(record.threadName, 'main')
-        self.assertEqual(record.processName, 'java')
+        self.assertEqual(record.processName,
+                         multiprocessing.current_process().name)
 
     def test_warning(self):
         self.other_logger.warn('warning message')
         [record] = self.handler.buffer
         self.assertEqual(record.levelno, logging.WARNING)
         self.assertEqual(record.levelname, 'WARNING')
-        self.assertEqual(record.name, 'oq.job.None.java.other_logger')
+        self.assertEqual(record.name, 'java.other_logger')
         self.assertEqual(record.msg, 'warning message')
 
     def test_debug(self):
@@ -73,7 +72,7 @@ class JavaLogsTestCase(unittest.TestCase):
         [record] = self.handler.buffer
         self.assertEqual(record.levelno, logging.DEBUG)
         self.assertEqual(record.levelname, 'DEBUG')
-        self.assertEqual(record.name, 'oq.job.None.java.other_logger')
+        self.assertEqual(record.name, 'java.other_logger')
         self.assertEqual(record.msg, 'this is verbose debug info')
 
     def test_fatal(self):
@@ -82,7 +81,7 @@ class JavaLogsTestCase(unittest.TestCase):
         # java "fatal" records are mapped to python "critical" ones
         self.assertEqual(record.levelno, logging.CRITICAL)
         self.assertEqual(record.levelname, 'CRITICAL')
-        self.assertEqual(record.name, 'oq.job.None.java')
+        self.assertEqual(record.name, 'java')
         self.assertEqual(record.msg, 'something bad has happened')
 
     def test_info(self):
@@ -90,23 +89,10 @@ class JavaLogsTestCase(unittest.TestCase):
         [record] = self.handler.buffer
         self.assertEqual(record.levelno, logging.INFO)
         self.assertEqual(record.levelname, 'INFO')
-        self.assertEqual(record.name, 'oq.job.None.java')
+        self.assertEqual(record.name, 'java')
         self.assertEqual(record.msg, 'information message')
 
-    def test_job_id_from_mdc(self):
-        java.jclass('MDC').put('job_id', 1234)
-        self.root_logger.info('whatever')
-        self.other_logger.info('something')
-        [record1, record2] = self.handler.buffer
-        self.assertEqual(record1.job_id, 1234)
-        self.assertEqual(type(record1.job_id), int)
-        self.assertEqual(record1.name, 'oq.job.1234.java')
-        self.assertEqual(record2.job_id, 1234)
-        self.assertEqual(type(record2.job_id), int)
-        self.assertEqual(record2.name, 'oq.job.1234.java.other_logger')
-
     def test_record_serializability(self):
-        java.jclass('MDC').put('job_id', 1234)
         self.root_logger.info('whatever')
         [record] = self.handler.buffer
         # original args are tuple which becomes list
@@ -155,13 +141,13 @@ class JavaLogsTestCase(unittest.TestCase):
         [warning, record] = self.handler.buffer
 
         self.assertEqual(warning.levelno, logging.WARNING)
-        self.assertEqual(warning.name, 'oq.job.None.java')
+        self.assertEqual(warning.name, 'java')
         self.assertEqual(warning.getMessage(), 'unrecognised logging level ' \
                                                '12345 was used')
 
         self.assertEqual(record.levelno, 12345)
         self.assertEqual(record.levelname, 'Level 12345')
-        self.assertEqual(record.name, 'oq.job.None.java')
+        self.assertEqual(record.name, 'java')
         self.assertEqual(record.msg, 'somemessage')
         self.assertEqual(record.pathname, 'some/file')
         self.assertEqual(record.lineno, 123)
@@ -170,10 +156,11 @@ class JavaLogsTestCase(unittest.TestCase):
 
 class PythonAMQPLogTestCase(unittest.TestCase):
     LOGGER_NAME = 'tests.PythonAMQPLogTestCase'
-    ROUTING_KEY = '%s.#' % LOGGER_NAME
+    ROUTING_KEY = 'oq.job.None.%s.#' % LOGGER_NAME
 
     def setUp(self):
         self.amqp_handler = logs.AMQPHandler(level=logging.DEBUG)
+        self.amqp_handler.set_job_id(None)
 
         self.log = logging.getLogger(self.LOGGER_NAME)
         self.log.setLevel(logging.DEBUG)
@@ -208,6 +195,7 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         messages = []
 
         def consume(data, msg):
+            print data
             self.assertEqual(msg.properties['content_type'],
                              'application/json')
             messages.append((msg.delivery_info['routing_key'], data))
@@ -231,8 +219,10 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         self.assertEquals(2, len(messages))
         (info_key, info), (warning_key, warning) = messages
 
-        self.assertEqual(info_key, 'tests.PythonAMQPLogTestCase.child1')
-        self.assertEqual(warning_key, 'tests.PythonAMQPLogTestCase.child2')
+        self.assertEqual(info_key,
+                         'oq.job.None.tests.PythonAMQPLogTestCase.child1')
+        self.assertEqual(warning_key,
+                         'oq.job.None.tests.PythonAMQPLogTestCase.child2')
 
         # checking info message
         self.assertAlmostEqual(info['created'], time.time(), delta=1)
@@ -259,7 +249,7 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         thisfile = __file__.rstrip('c')
         self.assertEqual(info['pathname'], thisfile)
         self.assertEqual(info['filename'], os.path.basename(thisfile))
-        self.assertEqual(info['lineno'], 225)
+        self.assertEqual(info['lineno'], 213)
         self.assertEqual(info['hostname'], socket.getfqdn())
 
         self.assertEqual(info['exc_info'], None)
