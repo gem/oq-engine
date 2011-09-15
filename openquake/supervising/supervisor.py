@@ -31,18 +31,17 @@ supervise() will:
 import logging
 import os
 import signal
+import socket
 from datetime import datetime
 
+from openquake import flags
 from openquake.db.models import OqJob, ErrorMsg, JobStats
 from openquake import supervising
 from openquake import kvs
 from openquake import logs
 
 
-logging.basicConfig(level=logging.INFO)
-
-
-def terminate_job(pid):
+def terminate_job(pid, logger):
     """
     Terminate an openquake job by killing its process.
 
@@ -50,12 +49,12 @@ def terminate_job(pid):
     :type pid: int
     """
 
-    logging.info('Terminating job process %s', pid)
+    logger.info('Terminating job process %s', pid)
 
     os.kill(pid, signal.SIGKILL)
 
 
-def record_job_stop_time(job_id):
+def record_job_stop_time(job_id, logger):
     """
     Call this when a job concludes (successful or not) to record the
     'stop_time' (using the current UTC time) in the uiapi.job_stats table.
@@ -63,23 +62,23 @@ def record_job_stop_time(job_id):
     :param job_id: the job id
     :type job_id: int
     """
-    logging.info('Recording stop time for job %s to job_stats', job_id)
+    logger.info('Recording stop time for job %s to job_stats', job_id)
 
     job_stats = JobStats.objects.get(oq_job=job_id)
     job_stats.stop_time = datetime.utcnow()
     job_stats.save(using='job_superv')
 
 
-def cleanup_after_job(job_id):
+def cleanup_after_job(job_id, logger):
     """
     Release the resources used by an openquake job.
 
     :param job_id: the job id
     :type job_id: int
     """
-    logging.info('Cleaning up after job %s', job_id)
+    logger.info('Cleaning up after job %s', job_id)
 
-    kvs.cache_gc(job_id)
+    kvs.cache_gc(job_id, logger)
 
 
 def get_job_status(job_id):
@@ -132,15 +131,18 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
        - periodically checking that the job process is still running
     """
     def __init__(self, job_id, job_pid, timeout=1):
-        self.selflogger = logging.getLogger('oq.supervisor.%d' % job_id)
+        self.selflogger = logging.LoggerAdapter(
+            logging.getLogger('oq.supervisor.%d' % job_id),
+            extra={'job_id': job_id, 'hostname': socket.getfqdn()}
+        )
         self.selflogger.info('Entering supervisor for job %s', job_id)
-        key = 'oq.job.%d' % job_id
+        logger_name = 'oq.job.%d' % job_id
+        key = '%s.#' % logger_name
         super(SupervisorLogMessageConsumer, self).__init__(timeout=timeout,
                                                            routing_key=key)
         self.job_id = job_id
         self.job_pid = job_pid
         self.joblogger = logging.getLogger(key)
-        self.joblogger.setLevel(logging.ERROR)
         self.jobhandler = CallbackLogHandler(callback=self.log_callback)
         self.joblogger.addHandler(self.jobhandler)
 
@@ -156,14 +158,17 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
         """
         Handles messages of severe level from the supervised job.
         """
-        terminate_job(self.job_pid)
+        if record.levelno < logging.ERROR:
+            return
+
+        terminate_job(self.job_pid, self.selflogger)
 
         update_job_status_and_error_msg(self.job_id, 'failed',
                                         record.getMessage())
 
-        record_job_stop_time(self.job_id)
+        record_job_stop_time(self.job_id, self.selflogger)
 
-        cleanup_after_job(self.job_id)
+        cleanup_after_job(self.job_id, self.selflogger)
 
         self.stop()
 
@@ -187,11 +192,11 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
                     update_job_status_and_error_msg(self.job_id, 'failed',
                                                     'crash')
 
-            record_job_stop_time(self.job_id)
+            record_job_stop_time(self.job_id, self.selflogger)
 
-            cleanup_after_job(self.job_id)
+            cleanup_after_job(self.job_id, self.selflogger)
 
-            raise StopIteration
+            raise StopIteration()
 
 
 def supervise(pid, job_id, timeout=1):
