@@ -165,8 +165,9 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
                                                            routing_key=key)
         self.job_id = job_id
         self.job_pid = job_pid
-        self.joblogger = logging.getLogger(key)
+        self.joblogger = logging.getLogger(logger_name)
         self.jobhandler = CallbackLogHandler(callback=self.log_callback)
+        self.jobhandler.setLevel(logging.ERROR)
         self.joblogger.addHandler(self.jobhandler)
 
     def run(self):
@@ -185,9 +186,6 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
         """
         Handles messages of severe level from the supervised job.
         """
-        if record.levelno < logging.ERROR:
-            return
-
         terminate_job(self.job_pid)
 
         update_job_status_and_error_msg(self.job_id, 'failed',
