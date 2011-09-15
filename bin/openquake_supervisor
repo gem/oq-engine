@@ -29,14 +29,6 @@ import sys
 import oqpath
 oqpath.set_oq_path()
 
-try:
-    # setproctitle is optional external dependency
-    # apt-get installl python-setproctitle or
-    # http://pypi.python.org/pypi/setproctitle/
-    from setproctitle import setproctitle
-except ImportError:
-    setproctitle = lambda title: None
-
 
 def main():  # pylint: disable=C0111
     os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.settings'
@@ -45,10 +37,6 @@ def main():  # pylint: disable=C0111
 
     job_id = int(sys.argv[1])
     pid = int(sys.argv[2])
-
-    # Set the name of this process (as reported by /bin/ps)
-    setproctitle('openquake supervisor for job_id=%s job_pid=%s'
-                 % (job_id, pid))
 
     # This supervisor will be spawned by bin/openquake and interrupting
     # bin/openquake with Ctrl-C from the shell will propagate the signal to
