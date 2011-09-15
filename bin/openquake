@@ -107,9 +107,6 @@ if __name__ == '__main__':
         print flags.get_flags_help()
         sys.exit(1)
 
-    logs.init_logs(level=FLAGS.debug,
-                   log_type=config.get('logging', 'backend'))
-
     # Collect inputs
     # Determine Processing type
     # Validate input data
