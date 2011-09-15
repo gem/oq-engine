@@ -31,7 +31,6 @@ supervise() will:
 import logging
 import os
 import signal
-import socket
 from datetime import datetime
 
 try:
