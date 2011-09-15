@@ -194,7 +194,8 @@ def check_job_status(job_id):
     job = Job.from_kvs(job_id)
     from openquake.java import set_java_logging_job_id
     from openquake import logs
-    logs.init_logs_amqp_send(level=job.params['debug'])
+    logs.init_logs_amqp_send(level=job.params.get('debug')
+                                   if job and job.params else 'warn')
     set_java_logging_job_id(job_id)
     if Job.is_job_completed(job_id):
         raise JobCompletedError(job_id)
