@@ -49,7 +49,7 @@ from openquake import kvs
 from openquake import logs
 
 
-def terminate_job(pid, logger):
+def terminate_job(pid):
     """
     Terminate an openquake job by killing its process.
 
@@ -57,12 +57,12 @@ def terminate_job(pid, logger):
     :type pid: int
     """
 
-    logger.info('Terminating job process %s', pid)
+    logging.info('Terminating job process %s', pid)
 
     os.kill(pid, signal.SIGKILL)
 
 
-def record_job_stop_time(job_id, logger):
+def record_job_stop_time(job_id):
     """
     Call this when a job concludes (successful or not) to record the
     'stop_time' (using the current UTC time) in the uiapi.job_stats table.
@@ -70,23 +70,23 @@ def record_job_stop_time(job_id, logger):
     :param job_id: the job id
     :type job_id: int
     """
-    logger.info('Recording stop time for job %s to job_stats', job_id)
+    logging.info('Recording stop time for job %s to job_stats', job_id)
 
     job_stats = JobStats.objects.get(oq_job=job_id)
     job_stats.stop_time = datetime.utcnow()
     job_stats.save(using='job_superv')
 
 
-def cleanup_after_job(job_id, logger):
+def cleanup_after_job(job_id):
     """
     Release the resources used by an openquake job.
 
     :param job_id: the job id
     :type job_id: int
     """
-    logger.info('Cleaning up after job %s', job_id)
+    logging.info('Cleaning up after job %s', job_id)
 
-    kvs.cache_gc(job_id, logger)
+    kvs.cache_gc(job_id)
 
 
 def get_job_status(job_id):
@@ -189,14 +189,14 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
         if record.levelno < logging.ERROR:
             return
 
-        terminate_job(self.job_pid, self.selflogger)
+        terminate_job(self.job_pid)
 
         update_job_status_and_error_msg(self.job_id, 'failed',
                                         record.getMessage())
 
-        record_job_stop_time(self.job_id, self.selflogger)
+        record_job_stop_time(self.job_id)
 
-        cleanup_after_job(self.job_id, self.selflogger)
+        cleanup_after_job(self.job_id)
 
         self.stop()
 
@@ -220,9 +220,9 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
                     update_job_status_and_error_msg(self.job_id, 'failed',
                                                     'crash')
 
-            record_job_stop_time(self.job_id, self.selflogger)
+            record_job_stop_time(self.job_id)
 
-            cleanup_after_job(self.job_id, self.selflogger)
+            cleanup_after_job(self.job_id)
 
             raise StopIteration()
 
