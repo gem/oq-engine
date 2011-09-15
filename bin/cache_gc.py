@@ -39,6 +39,7 @@ from openquake import kvs
 from openquake import logs
 from openquake.utils import config
 
+LOG = logs.LOG
 
 SHORT_ARGS = 'hlj:'
 LONG_ARGS = ['help', 'job=', 'list']
@@ -136,15 +137,14 @@ def clear_job_data(job_id):
         print 'Use the --list option to show current jobs.'
         raise
 
-    logger = job.Job.get_logger_for(job_id)
-    logger.info('Attempting to clear cache data...')
+    LOG.info('Attempting to clear cache data for job %s...' % job_id)
 
     result = kvs.cache_gc(job_id)
 
     if result is None:
-        logger.info('Job not found.')
+        LOG.info('Job %s not found.' % job_id)
     else:
-        logger.info('Removed %s keys.', result)
+        LOG.info('Removed %s keys.' % result)
 
 
 def show_help():
