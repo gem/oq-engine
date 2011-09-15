@@ -18,9 +18,12 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+import mock
 import unittest
 
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
+
+from tests.utils.helpers import patch
 
 
 NUMBER_OF_SAMPLES_FROM_CONFIG = "10"
@@ -50,3 +53,41 @@ class SamplesFromConfigTestCase(unittest.TestCase):
     def test_default_value_with_wrong_parameter(self):
         self.mixin.__dict__["PROB_NUM_OF_SAMPLES"] = "this-is-wrong"
         self.assertEqual(None, self.mixin._get_number_of_samples())
+
+
+class LossMapCurveSerialization(unittest.TestCase):
+    def setUp(self):
+        self.mixin = ProbabilisticEventMixin()
+        self.mixin.params = {
+            'NUMBER_OF_SEISMICITY_HISTORIES': 0,
+            'NUMBER_OF_LOGIC_TREE_SAMPLES': 0,
+            'INVESTIGATION_TIME': 0.0,
+            'OUTPUT_DIR': 'foo',
+        }
+        self.mixin.serialize_results_to = ['db', 'xml']
+        self.mixin.job_id = -1
+        self.mixin.base_path = '/tmp'
+        self.mixin.blocks_keys = []
+        self.mixin.store_exposure_assets = lambda: None
+        self.mixin.store_vulnerability_model = lambda: None
+        self.mixin.partition = lambda: None
+
+    def test_loss_map_serialized_if_conditional_loss_poes(self):
+        self.mixin.params['CONDITIONAL_LOSS_POE'] = '0.01 0.02'
+
+        with patch('openquake.risk.job.probabilistic'
+                   '.aggregate_loss_curve.plot_aggregate_curve'):
+            with patch('openquake.output.risk.create_loss_map_writer') as clw:
+                clw.return_value = None
+
+                self.mixin.execute()
+                self.assertTrue(clw.called)
+
+    def test_loss_map_not_serialized_unless_conditional_loss_poes(self):
+        with patch('openquake.risk.job.probabilistic'
+                   '.aggregate_loss_curve.plot_aggregate_curve'):
+            with patch('openquake.output.risk.create_loss_map_writer') as clw:
+                clw.return_value = None
+
+                self.mixin.execute()
+                self.assertFalse(clw.called)
