@@ -136,8 +136,6 @@ def clear_job_data(job_id):
         print 'Use the --list option to show current jobs.'
         raise
 
-    logs.init_logs(level='info', log_type=config.get("logging", "backend"))
-
     logger = job.Job.get_logger_for(job_id)
     logger.info('Attempting to clear cache data...')
 
