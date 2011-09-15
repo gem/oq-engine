@@ -43,6 +43,7 @@ class JavaLogsTestCase(unittest.TestCase):
         jlogger_class = self.jvm.JClass("org.apache.log4j.Logger")
         self.root_logger = jlogger_class.getRootLogger()
         self.other_logger = jlogger_class.getLogger('other_logger')
+        java.jclass('MDC').clear()
 
     def tearDown(self):
         self.python_logger.removeHandler(self.handler)
@@ -258,7 +259,7 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         thisfile = __file__.rstrip('c')
         self.assertEqual(info['pathname'], thisfile)
         self.assertEqual(info['filename'], os.path.basename(thisfile))
-        self.assertEqual(info['lineno'], 200)
+        self.assertEqual(info['lineno'], 225)
         self.assertEqual(info['hostname'], socket.getfqdn())
 
         self.assertEqual(info['exc_info'], None)
@@ -281,7 +282,8 @@ class PythonAMQPLogTestCase(unittest.TestCase):
                     raise StopIteration()
 
         logsource = _AMQPLogSource('oq.testlogger.#', timeout=0.1)
-        logsource.start()
+        logsource_thread = threading.Thread(target=logsource.run)
+        logsource_thread.start()
         handler = logging.handlers.BufferingHandler(float('inf'))
         logger = logging.getLogger('oq.testlogger')
         logger.addHandler(handler)
@@ -309,7 +311,7 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         finally:
             logger.removeHandler(handler)
             logsource.stop()
-            logsource.join()
+            logsource_thread.join()
         self.assertEqual(len(handler.buffer), 1)
         [record] = handler.buffer
         for key in msg:
