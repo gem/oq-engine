@@ -53,10 +53,8 @@ flags.DEFINE_string('logfile', '',
 # TODO: get rid of this
 LOG = logging.getLogger()
 
-LOGGING_AMQP_FORMAT = '%(asctime)s %(loglevel)-5s %(processName)s' \
-    ' [%(name)s] - Job %(job_id)s - %(message)s'
-LOGGING_STDOUT_FORMAT = '%(levelname)-5s %(processName)s' \
-    ' [%(name)s] - %(message)s'
+LOGGING_STDERR_FORMAT = '%(hostname)s [%(asctime)s] %(levelname)s ' \
+                        '%(processName)s/%(process)s [%(name)s] %(message)s'
 
 
 def init_logs_amqp_send(level='warn'):
