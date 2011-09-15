@@ -17,6 +17,7 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 import unittest
+import threading
 
 import kombu
 import kombu.entity
@@ -59,13 +60,14 @@ class AMQPMessageConsumerTestCase(unittest.TestCase):
                 raise StopIteration()
 
         consumer = Consumer(routing_key='ROUTING.KEY.#', timeout=2)
-        consumer.start()
+        consumer_thread = threading.Thread(target=consumer.run)
+        consumer_thread.start()
 
         self.producer.publish(['skip', 'this'], routing_key='ROUTING')
         self.producer.publish(['foo', 'bar'], routing_key='ROUTING.KEY')
         self.producer.publish({'bazquux': 42}, routing_key='ROUTING.KEY.ZZ')
 
-        consumer.join()
+        consumer_thread.join()
         self.assertFalse(timeouts)
         self.assertEqual(len(messages), 2)
         (p1, m1), (p2, m2) = messages
@@ -86,7 +88,6 @@ class AMQPMessageConsumerTestCase(unittest.TestCase):
                     raise StopIteration()
 
         consumer = Consumer(routing_key='', timeout=0.2)
-        consumer.start()
-        consumer.join()
+        consumer.run()
 
         self.assertEqual(len(timeouts), 2)
