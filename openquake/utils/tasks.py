@@ -28,6 +28,7 @@ import time
 from celery.task.sets import TaskSet
 
 from openquake.job import Job
+from openquake import logs
 
 
 class WrongTaskParameters(Exception):
@@ -192,10 +193,7 @@ def check_job_status(job_id):
         for ``job_id``.
     """
     job = Job.from_kvs(job_id)
-    from openquake.java import set_java_logging_job_id
-    from openquake import logs
-    logs.init_logs_amqp_send(level=job.params.get('debug')
-                                   if job and job.params else 'warn')
-    set_java_logging_job_id(job_id)
+    level = job.params.get('debug') if job and job.params else 'warn'
+    logs.init_logs_amqp_send(level=level, job_id=job_id)
     if Job.is_job_completed(job_id):
         raise JobCompletedError(job_id)
