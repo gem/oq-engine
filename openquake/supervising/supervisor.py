@@ -131,6 +131,25 @@ class CallbackLogHandler(logging.Handler):
         self.callback(record)
 
 
+class SupervisorLogHandler(logging.StreamHandler):
+    LOG_FORMAT = '[%(asctime)s %(hostname)s %(levelname)s ' \
+                 '%(processName)s/%(process)s %(name)s#%(job_id)d] %(message)s'
+    def __init__(self, job_id):
+        super(SupervisorLogHandler, self).__init__()
+        self.setFormatter(logging.Formatter(self.LOG_FORMAT))
+        self.job_id = job_id
+
+    def emit(self, record):
+        if not hasattr(record, 'hostname'):
+            record.hostname = '-'
+        if not hasattr(record, 'job_id'):
+            record.job_id = self.job_id
+        logger_name_prefix = 'oq.job.%d' % record.job_id
+        if record.name.startswith(logger_name_prefix):
+            record.name = record.name[len(logger_name_prefix):].lstrip('.')
+        super(SupervisorLogHandler, self).emit(record)
+
+
 class SupervisorLogMessageConsumer(logs.AMQPLogSource):
     """
     Supervise an OpenQuake job by:
@@ -139,10 +158,7 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
        - periodically checking that the job process is still running
     """
     def __init__(self, job_id, job_pid, timeout=1):
-        self.selflogger = logging.LoggerAdapter(
-            logging.getLogger('oq.supervisor.%d' % job_id),
-            extra={'job_id': job_id, 'hostname': socket.getfqdn()}
-        )
+        self.selflogger = logging.getLogger('oq.job.%d.supervisor' % job_id)
         self.selflogger.info('Entering supervisor for job %s', job_id)
         logger_name = 'oq.job.%d' % job_id
         key = '%s.#' % logger_name
@@ -227,7 +243,8 @@ def supervise(pid, job_id, timeout=1):
     setproctitle('openquake supervisor for job_id=%s job_pid=%s'
                  % (job_id, pid))
 
-    logs.init_logs_stderr(flags.FLAGS.debug)
+    logging.root.addHandler(SupervisorLogHandler(job_id))
+    logs.set_logger_level(logging.root, flags.FLAGS.debug)
 
     supervisor = SupervisorLogMessageConsumer(job_id, pid, timeout)
     supervisor.run()
