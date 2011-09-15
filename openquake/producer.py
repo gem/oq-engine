@@ -27,7 +27,7 @@ produce a base codec class that can serialize and deserialize
 the same format.
 """
 
-import logging
+from openquake import logs
 
 
 class AttributeConstraint(object):
@@ -70,8 +70,7 @@ class FileProducer(object):
     OPTIONAL_ATTRIBUTES = ()
 
     def __init__(self, path):
-        logger = logging.getLogger('oq.fileproducer')
-        logger.debug('Found data at %s', path)
+        logs.LOG.debug('Found data at %s', path)
         self.path = path
 
         self.file = open(self.path, 'r')
