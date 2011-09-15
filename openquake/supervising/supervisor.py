@@ -212,5 +212,4 @@ def supervise(pid, job_id, timeout=1):
     :type timeout: float
     """
     supervisor = SupervisorLogMessageConsumer(job_id, pid, timeout)
-    supervisor.start()
-    supervisor.join()
+    supervisor.run()
