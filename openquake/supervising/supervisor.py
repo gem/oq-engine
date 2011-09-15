@@ -34,6 +34,14 @@ import signal
 import socket
 from datetime import datetime
 
+try:
+    # setproctitle is optional external dependency
+    # apt-get installl python-setproctitle or
+    # http://pypi.python.org/pypi/setproctitle/
+    from setproctitle import setproctitle
+except ImportError:
+    setproctitle = lambda title: None
+
 from openquake import flags
 from openquake.db.models import OqJob, ErrorMsg, JobStats
 from openquake import supervising
@@ -211,5 +219,9 @@ def supervise(pid, job_id, timeout=1):
     :param timeout: timeout value in seconds
     :type timeout: float
     """
+    # Set the name of this process (as reported by /bin/ps)
+    setproctitle('openquake supervisor for job_id=%s job_pid=%s'
+                 % (job_id, pid))
+
     supervisor = SupervisorLogMessageConsumer(job_id, pid, timeout)
     supervisor.run()
