@@ -70,43 +70,6 @@ ENUM_MAP = {
 REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
 
 
-def spawn_job_supervisor(job_id, pid):
-    """
-    Spawn a supervisor process as configured in openquake.cfg.
-
-    :param int job_id: the id of the job to be supervised
-    :param int pid: the process id of the job to be supervised
-    :return: the id of the supervisor process or None if no supervisor was
-             configured
-    :rtype: int or None
-    """
-    exe = oq_config.get('supervisor', 'exe')
-
-    if exe:
-        if oq_config.get('logging', 'backend') != 'amqp':
-            logger = Job.get_logger_for(job_id)
-            logger.warning('If you want to run supervised jobs it\'s better '
-                           'to set [logging] backend=amqp in openquake.cfg')
-
-        if not os.path.isabs(exe):
-            exe = os.path.join(OPENQUAKE_ROOT, exe)
-
-        cmd = [exe, str(job_id), str(pid)]
-
-        supervisor_pid = subprocess.Popen(cmd, env=os.environ).pid
-
-        job = OqJob.objects.get(id=job_id)
-        job.supervisor_pid = supervisor_pid
-        job.job_pid = pid
-        job.save()
-
-        return supervisor_pid
-    else:
-        logger = Job.get_logger_for(job_id)
-        logger.warn('This job won\'t be supervised, '
-                    'because no supervisor is configured in openquake.cfg')
-
-
 def run_job(job_file, output_type):
     """
     Given a job_file, run the job.

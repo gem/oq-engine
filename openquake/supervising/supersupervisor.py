@@ -23,10 +23,12 @@
 The OpenQuake job supervisor supervisor process, spawned periodically
 to respawn crashed :mod:`supervisors <openquake.supervising.supervisor>`.
 """
+import multiprocessing
 
 from openquake import job
 from openquake.db.models import OqJob
 from openquake import supervising
+from openquake.supervising.supervisor import supervise
 
 
 def main():
@@ -39,7 +41,10 @@ def main():
                       .values_list('id', 'job_pid', 'supervisor_pid')
     for job_id, job_pid, supervisor_pid in qs:
         if not supervising.is_pid_running(supervisor_pid):
-            job.spawn_job_supervisor(job_id, job_pid)
+            proc = multiprocessing.Process(target=supervise,
+                                           args=(job_id, job_pid))
+            proc.start()
+
 
 if __name__ == '__main__':
     main()
