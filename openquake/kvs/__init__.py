@@ -215,7 +215,7 @@ def current_jobs():
     return sorted([int(x) for x in client.smembers(tokens.CURRENT_JOBS)])
 
 
-def cache_gc(job_id):
+def cache_gc(job_id, logger=None):
     """
     Garbage collection for the KVS. This works by simply removing all keys
     which contain the input job key.
@@ -230,7 +230,8 @@ def cache_gc(job_id):
         exist in CURRENT_JOBS
     """
     client = get_client()
-    logger = logging.getLogger('oq.kvs')
+    if logger is None:
+        logger = logging.getLogger('oq.kvs')
 
     if client.sismember(tokens.CURRENT_JOBS, job_id):
         # matches a current job
