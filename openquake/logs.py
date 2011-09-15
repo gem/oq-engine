@@ -47,11 +47,8 @@ LEVELS = {'debug': logging.DEBUG,
 # TODO: get rid of this
 LOG = logging.getLogger()
 
-LOGGING_STDERR_FORMAT = '%(hostname)s [%(asctime)s] %(levelname)s ' \
-                        '%(processName)s/%(process)s [%(name)s] %(message)s'
 
-
-def init_logs_amqp_send(level='warn'):
+def init_logs_amqp_send(level):
     """
     Initialize logs to send records with level `level` or above from loggers
     'oq.job.*' through AMQP.
@@ -60,20 +57,18 @@ def init_logs_amqp_send(level='warn'):
     """
     logging.getLogger("amqplib").propagate = False
     job_logger = logging.getLogger('oq.job')
-    job_logger.setLevel(LEVELS.get(level, logging.WARNING))
+    set_logger_level(job_logger, level)
     job_logger.addHandler(AMQPHandler())
     job_logger.propagate = False
 
 
-def init_logs_stderr(level='warn'):
+def set_logger_level(logger, level):
     """
-    Initialize logs to print everything with level `level` or above to stderr.
+    Apply symbolic name of level `level` to logger `logger`.
+
+    Uses mapping :const:`LEVELS`.
     """
-    logging.getLogger("amqplib").propagate = False
-    hdlr = logging.StreamHandler()
-    hdlr.setFormatter(logging.Formatter(LOGGING_STDERR_FORMAT))
-    logging.root.addHandler(hdlr)
-    logging.root.setLevel(LEVELS.get(level, logging.WARNING))
+    logger.setLevel(LEVELS.get(level, 'warn'))
 
 
 class AMQPHandler(logging.Handler):  # pylint: disable=R0902
