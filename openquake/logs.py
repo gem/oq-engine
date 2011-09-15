@@ -45,8 +45,8 @@ LEVELS = {'debug': logging.DEBUG,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
 
-# TODO: get rid of this
 LOG = logging.getLogger()
+HAZARD_LOG = logging.getLogger('hazard')
 
 
 def init_logs_amqp_send(level, job_id):
