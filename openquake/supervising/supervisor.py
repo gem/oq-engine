@@ -158,9 +158,13 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
         """
         Wrap superclass' method just to add cleanup.
         """
+        started = datetime.utcnow()
         super(SupervisorLogMessageConsumer, self).run()
-        self.selflogger.info('Exiting supervisor for job %s', self.job_id)
+        stopped = datetime.utcnow()
+        self.selflogger.info('Job %s finished in %s',
+                             self.job_id, stopped - started)
         self.joblogger.removeHandler(self.jobhandler)
+        self.selflogger.info('Exiting supervisor for job %s', self.job_id)
 
     def log_callback(self, record):
         """
