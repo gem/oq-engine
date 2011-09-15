@@ -120,12 +120,32 @@ def run_job(job_file, output_type):
     a_job = Job.from_file(job_file, output_type)
     is_job_valid = a_job.is_valid()
 
+    from django.db import close_connection
+
     if is_job_valid[0]:
         a_job.set_status('running')
 
-        spawn_job_supervisor(a_job.job_id, os.getpid())
+        import os
+        job_pid = os.fork()
+        close_connection()
+        if job_pid:
+            supervisor_pid = os.fork()
+            if supervisor_pid:
+                os.waitpid(job_pid, 0)
+                os.waitpid(supervisor_pid, 0)
+                return
+            supervisor_pid = os.getpid()
+            job = OqJob.objects.get(id=a_job.job_id)
+            job.supervisor_pid = supervisor_pid
+            job.job_pid = job_pid
+            job.save()
+            from openquake.supervising.supervisor import supervise
+            supervise(job_pid, a_job.job_id)
+            return
 
         try:
+            logs.init_logs_amqp_send(level=FLAGS.debug)
+            java.set_java_logging_job_id(a_job.job_id)
             a_job.launch()
         except Exception, ex:
             a_job.logger.critical("Job failed with exception: '%s'" % str(ex))
@@ -295,10 +315,6 @@ class Job(object):
     @staticmethod
     def from_kvs(job_id):
         """Return the job in the underlying kvs system with the given id."""
-
-        logs.init_logs(
-            level=FLAGS.debug, log_type=oq_config.get("logging", "backend"))
-
         params = kvs.get_value_json_decoded(
             kvs.tokens.generate_job_key(job_id))
         job = Job(params, job_id)
@@ -404,8 +420,6 @@ class Job(object):
         """
         self._job_id = job_id
         mark_job_as_current(job_id)  # enables KVS gc
-
-        java.set_java_logging_job_id(job_id)
 
         self.blocks_keys = []
         self.params = params
@@ -564,7 +578,9 @@ class Job(object):
         if write_cfg:
             self._write_super_config()
         key = kvs.tokens.generate_job_key(self.job_id)
-        kvs.set_value_json_encoded(key, self.params)
+        data = self.params.copy()
+        data['debug'] = FLAGS.debug
+        kvs.set_value_json_encoded(key, data)
 
     def sites_to_compute(self):
         """Return the sites used to trigger the computation on the
