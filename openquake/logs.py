@@ -59,73 +59,29 @@ LOGGING_STDOUT_FORMAT = '%(levelname)-5s %(processName)s' \
     ' [%(name)s] - %(message)s'
 
 
-def init_logs(log_type='console', level='warn'):
+def init_logs_amqp_send(level='warn'):
     """
-    Initialize Python logging.
+    Initialize logs to send records with level `level` or above from loggers
+    'oq.job.*' through AMQP.
 
-    The function might be called multiple times with different log levels.
+    Adds handler :class:`AMQPHandler` to logger 'oq.job'.
     """
-
-    if log_type == 'console':
-        init_logs_stdout(level)
-    else:
-        init_logs_amqp(level)
-
-
-def init_logs_stdout(level):
-    """Load logging config, and set log levels based on flags"""
-
-    logging_level = LEVELS.get(level, 'warn')
-
-    # Add the logging handler to the root logger.  This will be a file or
-    # stdout depending on the presence of the logfile parameter.
-    #
-    # Note that what we are doing here is just a simplified version of what the
-    # standard logging.basicConfig is doing.  An important difference is that
-    # we add our handler every time init_logs() is called, whereas basicConfig
-    # does nothing if there is at least one handler (any handler) present.
-    # This allows us to call init_logs multiple times during the unittest, to
-    # reinstall our handler after nose (actually its logcapture plugin) throws
-    # it away.
-    found = False
-    for hdlr in LOG.handlers:
-        if (isinstance(hdlr, logging.FileHandler)
-            or isinstance(hdlr, logging.StreamHandler)):
-            found = True
-
-    if not found:
-        filename = FLAGS.get('logfile', '')
-        if filename:
-            hdlr = logging.FileHandler(filename, 'a')
-        else:
-            hdlr = logging.StreamHandler()
-
-        hdlr.setFormatter(
-            logging.Formatter(LOGGING_STDOUT_FORMAT, None))
-        LOG.addHandler(hdlr)
-
-    LOG.setLevel(logging_level)
+    logging.getLogger("amqplib").propagate = False
+    job_logger = logging.getLogger('oq.job')
+    job_logger.setLevel(LEVELS.get(level, logging.WARNING))
+    job_logger.addHandler(AMQPHandler())
+    job_logger.propagate = False
 
 
-def init_logs_amqp(level):
-    """Init Python and Java logging to log to AMQP"""
-
-    logging_level = LEVELS.get(level, 'warn')
-
-    # loggers are organized in a hierarchy with the root logger at the
-    # top; by default log messages are handled first by the logger
-    # that receives the .info/.warn/etc. call and then in turn by all
-    # its ancestor (up to the root logger)
-    #
-    # setting .propagate to False avoids log messages coming from
-    # amqplib being propagated up the logger chain up to the root
-    # logger, which then tries to use the AMQP appender to log and
-    # (potentially) causes an infinite loop
-    amqp_log = logging.getLogger("amqplib")
-    amqp_log.propagate = False
-
-    # initialize Python logging
-    LOG.setLevel(logging_level)
+def init_logs_stderr(level='warn'):
+    """
+    Initialize logs to print everything with level `level` or above to stderr.
+    """
+    logging.getLogger("amqplib").propagate = False
+    hdlr = logging.StreamHandler()
+    hdlr.setFormatter(logging.Formatter(LOGGING_STDERR_FORMAT))
+    logging.root.addHandler(hdlr)
+    logging.root.setLevel(LEVELS.get(level, logging.WARNING))
 
 
 class AMQPHandler(logging.Handler):  # pylint: disable=R0902

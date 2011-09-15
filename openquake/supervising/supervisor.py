@@ -223,5 +223,7 @@ def supervise(pid, job_id, timeout=1):
     setproctitle('openquake supervisor for job_id=%s job_pid=%s'
                  % (job_id, pid))
 
+    logs.init_logs_stderr(flags.FLAGS.debug)
+
     supervisor = SupervisorLogMessageConsumer(job_id, pid, timeout)
     supervisor.run()
