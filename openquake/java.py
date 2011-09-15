@@ -162,9 +162,11 @@ class JavaLoggingBridge(object):
         logger.handle(record)
 
 
-def init_logs():
+def _init_logs():
     """
     Initialize Java logging.
+
+    Is called by :func:`jvm`.
     """
     appender = jclass('PythonBridgeAppender')
     # ``bridge`` is a static property of PythonBridge class.
@@ -201,7 +203,7 @@ def jvm():
             "-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=" \
                 "org.apache.xerces.parsers.XIncludeAwareParserConfiguration")
 
-        init_logs()
+        _init_logs()
 
     return jpype
 
