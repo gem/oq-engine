@@ -44,12 +44,6 @@ LEVELS = {'debug': logging.DEBUG,
           'error': logging.ERROR,
           'critical': logging.CRITICAL}
 
-# This parameter sets where bin/openquake and the likes will send their
-# logging.  This parameter has not effect on the workers.  To have a similar
-# effect on the workers use the celeryd --logfile parameter.
-flags.DEFINE_string('logfile', '',
-    'Path to the log file. Leave empty to log to stderr.')
-
 # TODO: get rid of this
 LOG = logging.getLogger()
 
