@@ -198,7 +198,7 @@ class AMQPLogSource(AMQPMessageConsumer):
         """
         Create log record and handle it.
 
-        Never stops :meth:`thread's execution
+        Never stops :meth:`consumers's execution
         <openquake.signalling.AMQPMessageConsumer.run>`.
         """
         record = object.__new__(logging.LogRecord)
