@@ -110,7 +110,6 @@ class SupervisorTestCase(unittest.TestCase):
                    'supervisor.SupervisorLogMessageConsumer.run') as run:
 
             def run_(mc):
-                mc._ready.set()
                 record = logging.LogRecord('oq.job.123', logging.CRITICAL,
                                            'path', 42, 'a msg', (), None)
                 mc.log_callback(record)
