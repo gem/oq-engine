@@ -131,8 +131,8 @@ class CallbackLogHandler(logging.Handler):
 
 
 class SupervisorLogHandler(logging.StreamHandler):
-    LOG_FORMAT = '[%(asctime)s %(hostname)s %(levelname)s ' \
-                 '%(processName)s/%(process)s %(name)s#%(job_id)d] %(message)s'
+    LOG_FORMAT = '[%(asctime)s #%(job_id)s %(hostname)s %(levelname)s ' \
+                 '%(processName)s/%(process)s %(name)s] %(message)s'
     def __init__(self, job_id):
         super(SupervisorLogHandler, self).__init__()
         self.setFormatter(logging.Formatter(self.LOG_FORMAT))
@@ -143,9 +143,11 @@ class SupervisorLogHandler(logging.StreamHandler):
             record.hostname = '-'
         if not hasattr(record, 'job_id'):
             record.job_id = self.job_id
-        logger_name_prefix = 'oq.job.%d' % record.job_id
+        logger_name_prefix = 'oq.job.%s' % record.job_id
         if record.name.startswith(logger_name_prefix):
             record.name = record.name[len(logger_name_prefix):].lstrip('.')
+            if not record.name:
+                record.name = 'root'
         super(SupervisorLogHandler, self).emit(record)
 
 
@@ -157,9 +159,9 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
        - periodically checking that the job process is still running
     """
     def __init__(self, job_id, job_pid, timeout=1):
-        self.selflogger = logging.getLogger('oq.job.%d.supervisor' % job_id)
+        self.selflogger = logging.getLogger('oq.job.%s.supervisor' % job_id)
         self.selflogger.info('Entering supervisor for job %s', job_id)
-        logger_name = 'oq.job.%d' % job_id
+        logger_name = 'oq.job.%s' % job_id
         key = '%s.#' % logger_name
         super(SupervisorLogMessageConsumer, self).__init__(timeout=timeout,
                                                            routing_key=key)

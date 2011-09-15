@@ -69,7 +69,6 @@ JAVA_CLASSES = {
         "org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface",
     "LocationListFormatter": "org.gem.LocationListFormatter",
     "PythonBridgeAppender": "org.gem.log.PythonBridgeAppender",
-    "MDC": "org.apache.log4j.MDC",
 }
 
 
@@ -101,19 +100,12 @@ class JavaLoggingBridge(object):
         java_level = event.getLevel().toInt()
         level, _rem = divmod(java_level, 1000)
 
-        job_id = jclass('MDC').get('job_id')
-        if job_id:
-            # casting java.lang.Long to python int to assure serializability
-            job_id = job_id.intValue()
-        else:
-            job_id = None
-
         if event.logger.getParent() is None:
             # getParent() returns ``None`` only for root logger.
             # Use the name "java" for it instead of "java.root".
-            logger_name = 'oq.job.%s.java' % job_id
+            logger_name = 'java'
         else:
-            logger_name = 'oq.job.%s.java.%s' % (job_id, event.getLoggerName())
+            logger_name = 'java.%s' % event.getLoggerName()
         logger = logging.getLogger(logger_name)
 
         if _rem != 0 or level not in self.SUPPORTED_LEVELS:
@@ -154,11 +146,10 @@ class JavaLoggingBridge(object):
         # create log record and handle it.
         record = logger.makeRecord(logger.name, level, filename, lineno, msg,
                                    args=(), exc_info=None, func=funcname,
-                                   extra={'job_id': job_id})
+                                   extra={})
         # these two values are set by LogRecord constructor
         # so we need to overwrite them.
         record.threadName = event.getThreadName()
-        record.processName = 'java'
         logger.handle(record)
 
 
@@ -178,14 +169,6 @@ def _init_logs():
     props.setProperty('log4j.appender.pythonbridge',
                       'org.gem.log.PythonBridgeAppender')
     jpype.JClass("org.apache.log4j.PropertyConfigurator").configure(props)
-
-
-def set_java_logging_job_id(job_id):
-    """
-    Make the job_id available to the java logging context.
-    """
-    mdc = jclass('MDC')
-    mdc.put('job_id', job_id)
 
 
 def jvm():

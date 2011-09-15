@@ -144,8 +144,7 @@ def run_job(job_file, output_type):
             return
 
         try:
-            logs.init_logs_amqp_send(level=FLAGS.debug)
-            java.set_java_logging_job_id(a_job.job_id)
+            logs.init_logs_amqp_send(level=FLAGS.debug, job_id=a_job.job_id)
             a_job.launch()
         except Exception, ex:
             a_job.logger.critical("Job failed with exception: '%s'" % str(ex))
