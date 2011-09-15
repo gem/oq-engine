@@ -68,14 +68,12 @@ def output(fn):
     def output_writer(self, *args, **kwargs):
         """ Write the output of a block to kvs. """
         fn(self, *args, **kwargs)
-        conditional_loss_poes = [float(x) for x in self.params.get(
-                    'CONDITIONAL_LOSS_POE', "").split()]
 
         for block_id in self.blocks_keys:
             #pylint: disable=W0212
             self._write_output_for_block(self.job_id, block_id)
 
-        for loss_poe in conditional_loss_poes:
+        for loss_poe in conditional_loss_poes(self.params):
             path = os.path.join(self.base_path,
                                 self.params['OUTPUT_DIR'],
                                 "losses_at-%s.xml" % loss_poe)
@@ -111,6 +109,14 @@ def _plot(curve_path, result_path, **kwargs):
                                      render_multi=render_multi)
     plotter.plot(autoscale_y=autoscale)
     return plotter.filenames()
+
+
+def conditional_loss_poes(params):
+    """Return the PoE(s) specified in the configuration file used to
+    compute the conditional loss."""
+
+    return [float(x) for x in params.get(
+        "CONDITIONAL_LOSS_POE", "").split()]
 
 
 @task
