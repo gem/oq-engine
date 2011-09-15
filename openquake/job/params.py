@@ -145,6 +145,9 @@ define_param('NUMBER_OF_SEISMICITY_HISTORIES', 'histories',
 
 define_param('REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM',
              'reference_depth_to_2pt5km_per_sec_param')
+
+define_param('GMF_OUTPUT', None,
+             modes=('event_based', 'deterministic'))
 define_param('GMF_RANDOM_SEED', 'gmf_random_seed',
              modes=('event_based', 'deterministic'))
 
