@@ -97,7 +97,7 @@ class AMQPMessageConsumer(object):
         """
         self._stopped = True
 
-    def _message_callback(self, body, msg):
+    def _message_callback(self, body, msg):  # pylint: disable=W0613
         """
         Run :meth:`message_callback` and handle :exc:`StopIteration` raised
         from there doing :meth:`stop`.
