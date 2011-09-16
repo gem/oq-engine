@@ -48,6 +48,17 @@ from openquake import kvs
 from openquake import logs
 
 
+def ignore_sigint():
+    """
+    Setup signal handler on SIGINT in order to ignore it.
+
+    This is needed to avoid premature death of the supervisor and is called
+    from :func:`openquake.job.run_job` for job parent process and from
+    :func:`supervise` for supervisor process.
+    """
+    signal.signal(signal.SIGINT, signal.SIG_IGN)
+
+
 def terminate_job(pid):
     """
     Terminate an openquake job by killing its process.
@@ -241,6 +252,7 @@ def supervise(pid, job_id, timeout=1):
     # Set the name of this process (as reported by /bin/ps)
     setproctitle('openquake supervisor for job_id=%s job_pid=%s'
                  % (job_id, pid))
+    ignore_sigint()
 
     logging.root.addHandler(SupervisorLogHandler(job_id))
     logs.set_logger_level(logging.root, flags.FLAGS.debug)
