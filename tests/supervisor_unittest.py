@@ -202,8 +202,17 @@ class SupersupervisorTestCase(unittest.TestCase):
         self.is_pid_running.stop()
 
     def test_main(self):
-        with patch('openquake.job.spawn_job_supervisor') as spawn:
+        with patch('multiprocessing.Process') as process:
+            expected_args = (self.dead_supervisor_job_id,
+                             self.dead_supervisor_job_pid)
+            class FakeProcess(object):
+                started = False
+                def __init__(fp, target, args):
+                    assert target is supervisor.supervise
+                    assert args == expected_args
+                def start(self):
+                    FakeProcess.started = True
+            process.side_effect = FakeProcess
             supersupervisor.main()
-            self.assertEqual(spawn.call_count, 1)
-            args = (self.dead_supervisor_job_id, self.dead_supervisor_job_pid)
-            self.assertEqual(spawn.call_args, (args, {}))
+            self.assertEqual(process.call_count, 1)
+            self.assertEqual(FakeProcess.started, True)
