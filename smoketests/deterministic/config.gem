@@ -23,6 +23,9 @@ PERIOD = 0.0
 # in percent
 DAMPING = 5.0
 
+# NRML serialization of gmf-* files
+GMF_OUTPUT = false
+
 # (None, 1 Sided, 2 Sided)
 GMPE_TRUNCATION_TYPE = 2 Sided
 
