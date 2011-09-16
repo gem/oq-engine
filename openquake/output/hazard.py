@@ -53,6 +53,10 @@ from openquake.utils import round_float
 from openquake.xml import NSMAP, NRML, GML, NSMAP_WITH_QUAKEML
 
 
+LOGGER = logging.getLogger('hazard-serializer')
+LOGGER.setLevel(logging.DEBUG)
+
+
 NRML_GML_ID = 'n1'
 HAZARDRESULT_GML_ID = 'hr1'
 GMFS_GML_ID = 'gmfs_1'
@@ -643,7 +647,7 @@ class HazardMapDBWriter(writer.DBWriter):
 
         value = value.get("IML")
         if value is None:
-            self.logger.warn(
+            LOGGER.warn(
                 "No IML value for position: [%s, %s]" % (point.x, point.y))
         else:
             self.bulk_inserter.add_entry(
