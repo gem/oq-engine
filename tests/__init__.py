@@ -69,3 +69,7 @@ for path in glob.glob(os.path.join(os.path.dirname(__file__), '*test*.py')):
 
     if module not in sys.modules:
         print >> sys.stderr, "Potential missing import of " + module
+
+import logging
+# this is needed to avoid "no handlers" warning during test run
+logging.getLogger('amqplib').addHandler(logging.NullHandler())
