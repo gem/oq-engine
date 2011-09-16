@@ -123,7 +123,8 @@ def read_sites_from_exposure(a_job):
     reader = exposure.ExposurePortfolioFile(path)
     constraint = a_job.region
 
-    a_job.logger.debug("Constraining exposure parsing to %s", constraint)
+    LOG.debug(
+        "Constraining exposure parsing to %s" % constraint)
 
     for site, _asset_data in reader.filter(constraint):
 
