@@ -21,7 +21,7 @@ import logging
 from datetime import datetime
 
 from tests.utils.helpers import patch, job_from_file, get_data_path
-from tests.utils.helpers import DbTestMixin
+from tests.utils.helpers import DbTestMixin, cleanup_loggers
 
 from openquake.db.models import OqJob, ErrorMsg, JobStats
 from openquake.supervising import supervisor
@@ -101,6 +101,7 @@ class SupervisorTestCase(unittest.TestCase):
         # Stop all the started patches
         for patcher in self.patchers:
             patcher.stop()
+        cleanup_loggers()
 
     def test_actions_after_a_critical_message(self):
         # the job process is running
