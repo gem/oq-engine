@@ -216,7 +216,7 @@ def current_jobs():
     return sorted([int(x) for x in client.smembers(tokens.CURRENT_JOBS)])
 
 
-def cache_gc(job_id, logger=None):
+def cache_gc(job_id):
     """
     Garbage collection for the KVS. This works by simply removing all keys
     which contain the input job key.
