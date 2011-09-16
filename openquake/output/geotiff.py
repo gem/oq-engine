@@ -17,8 +17,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
-
 """
 A trivial implementation of the GeoTiff format,
 using GDAL.
@@ -26,17 +24,15 @@ using GDAL.
 In order to make this run, you'll need GDAL installed.
 """
 
-import numpy
 import os
 
+import numpy
 from osgeo import osr, gdal
 from scipy import interpolate
 
-
-from openquake import logs
 from openquake import writer
-
 from openquake.output import template
+
 
 GDAL_FORMAT = "GTiff"
 GDAL_PIXEL_DATA_TYPE = gdal.GDT_Float32

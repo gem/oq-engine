@@ -206,13 +206,17 @@ class SupersupervisorTestCase(unittest.TestCase):
         with patch('multiprocessing.Process') as process:
             expected_args = (self.dead_supervisor_job_id,
                              self.dead_supervisor_job_pid)
+
             class FakeProcess(object):
                 started = False
+
                 def __init__(fp, target, args):
                     assert target is supervisor.supervise
                     assert args == expected_args
+
                 def start(self):
                     FakeProcess.started = True
+
             process.side_effect = FakeProcess
             supersupervisor.main()
             self.assertEqual(process.call_count, 1)

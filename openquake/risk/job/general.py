@@ -30,7 +30,6 @@ from openquake import logs
 from openquake import shapes
 from openquake.job import config as job_config
 from openquake.job import mixins
-from openquake.output import curve
 from openquake.output import risk as risk_output
 from openquake.parser import exposure
 from openquake.parser import vulnerability
