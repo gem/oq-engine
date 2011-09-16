@@ -176,11 +176,17 @@ class JobTestCase(unittest.TestCase):
                 ProbabilisticEventMixin in self.job.__class__.__bases__)
 
     def test_can_store_and_read_jobs_from_kvs(self):
-        self.job = helpers.job_from_file(
-            os.path.join(helpers.DATA_DIR, CONFIG_FILE))
-        self.generated_files.append(self.job.super_config_path)
-        self.assertEqual(self.job, Job.from_kvs(self.job.job_id))
-        helpers.cleanup_loggers()
+        flags.FLAGS.debug = 'debug'
+        try:
+            self.job = helpers.job_from_file(
+                os.path.join(helpers.DATA_DIR, CONFIG_FILE))
+            self.generated_files.append(self.job.super_config_path)
+            job_from_kvs = Job.from_kvs(self.job.job_id)
+            self.assertEqual(flags.FLAGS.debug, job_from_kvs.params.pop('debug'))
+            self.assertEqual(self.job, job_from_kvs)
+        finally:
+            helpers.cleanup_loggers()
+            flags.FLAGS.debug = None
 
     def test_get_logger_for(self):
         logger = Job.get_logger_for(self.job.job_id)
