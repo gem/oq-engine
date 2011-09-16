@@ -582,7 +582,6 @@ class RunJobTestCase(unittest.TestCase):
         return OqJob.objects.get(id=self.job.job_id).status
 
     def test_successful_job_lifecycle(self):
-        assert False
         with patch('openquake.job.Job.from_file') as from_file:
 
             # called in place of Job.launch
@@ -603,14 +602,14 @@ class RunJobTestCase(unittest.TestCase):
 
             from_file.side_effect = patch_job_launch
 
-            with patch('openquake.job.spawn_job_supervisor'):
+            with patch('os.fork', mocksignature=False) as fork:
+                fork.return_value = 0
                 run_job(helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, self.job.launch.call_count)
         self.assertEquals('succeeded', self._job_status())
 
     def test_failed_job_lifecycle(self):
-        assert False
         with patch('openquake.job.Job.from_file') as from_file:
 
             # called in place of Job.launch
@@ -631,7 +630,8 @@ class RunJobTestCase(unittest.TestCase):
 
             from_file.side_effect = patch_job_launch
 
-            with patch('openquake.job.spawn_job_supervisor'):
+            with patch('os.fork', mocksignature=False) as fork:
+                fork.return_value = 0
                 self.assertRaises(Exception, run_job,
                                 helpers.get_data_path(CONFIG_FILE), 'db')
 
@@ -639,7 +639,6 @@ class RunJobTestCase(unittest.TestCase):
         self.assertEquals('failed', self._job_status())
 
     def test_invalid_job_lifecycle(self):
-        assert False
         with patch('openquake.job.Job.from_file') as from_file:
 
             # replaces Job.is_valid with a mock
@@ -654,8 +653,7 @@ class RunJobTestCase(unittest.TestCase):
 
             from_file.side_effect = patch_job_is_valid
 
-            with patch('openquake.job.spawn_job_supervisor'):
-                run_job(helpers.get_data_path(CONFIG_FILE), 'db')
+            run_job(helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, self.job.is_valid.call_count)
         self.assertEquals('failed', self._job_status())
@@ -713,7 +711,6 @@ class RunJobTestCase(unittest.TestCase):
         self.assertEquals(expected_sites, engine.sites_to_compute())
 
     def test_supervisor_is_spawned(self):
-        assert False
         with patch('openquake.job.Job.from_file') as from_file:
 
             # replaces Job.launch with a mock
@@ -725,12 +722,18 @@ class RunJobTestCase(unittest.TestCase):
 
             from_file.side_effect = patch_job_launch
 
-            with patch('openquake.job.spawn_job_supervisor') as mocked_func:
-                run_job(helpers.get_data_path(CONFIG_FILE), 'db')
+            with patch('os.fork', mocksignature=False) as fork:
+                def fork_side_effect():
+                    fork.side_effect = lambda: 0
+                    return 1234
+                fork.side_effect = fork_side_effect
+                with patch('openquake.supervising.supervisor.supervise') \
+                        as supervise:
+                    run_job(helpers.get_data_path(CONFIG_FILE), 'db')
 
-                self.assertEquals(1, mocked_func.call_count)
-                self.assertEquals(((self.job.job_id, os.getpid()), {}),
-                                  mocked_func.call_args)
+        self.assertEquals(1, supervise.call_count)
+        self.assertEquals(((1234, self.job.job_id), {}),
+                          supervise.call_args)
 
 
 class JobStatsTestCase(unittest.TestCase):

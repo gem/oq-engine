@@ -79,7 +79,6 @@ def run_job(job_file, output_type):
     :param output_type: the desired format for the results, one of 'db', 'xml'
     :type output_type: string
     """
-
     a_job = Job.from_file(job_file, output_type)
     is_job_valid = a_job.is_valid()
 
