@@ -112,12 +112,8 @@ class BlockTestCase(unittest.TestCase):
     def setUp(self):
         self.site = shapes.Site(1.0, 1.0)
 
-    def test_a_block_has_a_unique_id(self):
-        self.assertTrue(general.Block(()).id)
-        self.assertTrue(general.Block(()).id != general.Block(()).id)
-
     def test_can_serialize_a_block_into_kvs(self):
-        block = general.Block((self.site, self.site))
+        block = general.Block((self.site, self.site), 'test_block_id')
         block.to_kvs()
 
         self.assertEqual(block, general.Block.from_kvs(block.id))
@@ -151,29 +147,37 @@ class BlockSplitterTestCase(unittest.TestCase):
             (self.site_1, self.site_1, self.site_1), expected=2, block_size=2)
 
     def test_generates_the_correct_blocks(self):
-        expected = (general.Block(
-            (self.site_1, self.site_2, self.site_3)), )
+        expected = (
+            general.Block((self.site_1, self.site_2, self.site_3), None), )
 
         self._assert_blocks_are(
             expected, (self.site_1, self.site_2, self.site_3), block_size=3)
 
-        expected = (general.Block(
-            (self.site_1, self.site_2)), general.Block((self.site_3, )))
+        expected = (
+            general.Block((self.site_1, self.site_2), None),
+            general.Block((self.site_3, ), None))
 
         self._assert_blocks_are(
             expected, (self.site_1, self.site_2, self.site_3), block_size=2)
 
+    def _check_block_key(self, job_id, block):
+        self.assertTrue(kvs.tokens.generate_job_key(job_id) in block.id,
+                        "Job id %s contained in key %s" % (
+                job_id, block.id))
+
     def _assert_blocks_are(self, expected, sites, block_size):
         for idx, block in enumerate(
-            general.split_into_blocks(sites, block_size)):
+            general.split_into_blocks(123, sites, block_size)):
 
+            self._check_block_key(123, block)
             self.assertEqual(expected[idx], block)
 
     def _assert_number_of_blocks_is(self, sites, expected, block_size):
         counter = 0
 
-        for _ in general.split_into_blocks(sites, block_size):
+        for block in general.split_into_blocks(123, sites, block_size):
             counter += 1
+            self._check_block_key(123, block)
 
         self.assertEqual(expected, counter)
 
@@ -191,10 +195,12 @@ class RiskJobMixinTestCase(unittest.TestCase):
 
         mixin.region = None
         mixin.base_path = "."
+        mixin.job_id = 123
         mixin.partition()
 
-        expected = general.Block((shapes.Site(9.15000, 45.16667),
-            shapes.Site(9.15333, 45.12200), shapes.Site(9.14777, 45.17999)))
+        expected = general.Block(
+            (shapes.Site(9.15000, 45.16667), shapes.Site(9.15333, 45.12200),
+             shapes.Site(9.14777, 45.17999)), None)
 
         self.assertEqual(1, len(mixin.blocks_keys))
 
@@ -219,7 +225,8 @@ class RiskJobMixinTestCase(unittest.TestCase):
         a_job = helpers.create_job(params)
 
         expected_block = general.Block(
-            (shapes.Site(9.15, 45.16667), shapes.Site(9.14777, 45.17999)))
+            (shapes.Site(9.15, 45.16667), shapes.Site(9.14777, 45.17999)),
+            None)
 
         with Mixin(a_job, general.RiskJobMixin):
             a_job.partition()
