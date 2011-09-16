@@ -25,7 +25,6 @@ to respawn crashed :mod:`supervisors <openquake.supervising.supervisor>`.
 """
 import multiprocessing
 
-from openquake import job
 from openquake.db.models import OqJob
 from openquake import supervising
 from openquake.supervising.supervisor import supervise

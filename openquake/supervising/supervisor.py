@@ -132,18 +132,13 @@ def update_job_status_and_error_msg(job_id, status, error_msg=None):
                         .create(oq_job=job, detailed=error_msg)
 
 
-class CallbackLogHandler(logging.Handler):
-    def __init__(self, callback):
-        self.callback = callback
-        super(CallbackLogHandler, self).__init__()
-
-    def emit(self, record):
-        self.callback(record)
-
-
 class SupervisorLogHandler(logging.StreamHandler):
+    """
+    Log handler intended to be used with :class:`SupervisorLogMessageConsumer`.
+    """
     LOG_FORMAT = '[%(asctime)s #%(job_id)s %(hostname)s %(levelname)s ' \
                  '%(processName)s/%(process)s %(name)s] %(message)s'
+
     def __init__(self, job_id):
         super(SupervisorLogHandler, self).__init__()
         self.setFormatter(logging.Formatter(self.LOG_FORMAT))
@@ -179,8 +174,8 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
         self.job_id = job_id
         self.job_pid = job_pid
         self.joblogger = logging.getLogger(logger_name)
-        self.jobhandler = CallbackLogHandler(callback=self.log_callback)
-        self.jobhandler.setLevel(logging.ERROR)
+        self.jobhandler = logging.Handler(logging.ERROR)
+        self.jobhandler.emit = self.log_callback
         self.joblogger.addHandler(self.jobhandler)
 
     def run(self):

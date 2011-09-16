@@ -20,8 +20,6 @@
 
 import hashlib
 
-from openquake import logs
-
 
 _KVS_KEY_SEPARATOR = '!'
 

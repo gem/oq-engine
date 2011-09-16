@@ -77,7 +77,6 @@ class AMQPMessageConsumerTestCase(unittest.TestCase):
         self.assertEqual(m1.delivery_info['routing_key'], 'ROUTING.KEY')
         self.assertEqual(m2.delivery_info['routing_key'], 'ROUTING.KEY.ZZ')
 
-
     def test_timeot_callback(self):
         timeouts = []
 
