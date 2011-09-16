@@ -29,7 +29,7 @@ from openquake import kvs
 from openquake import flags
 from openquake import shapes
 from openquake.utils import config as oq_config
-from openquake.job import Job, config, prepare_job, run_job
+from openquake.job import Job, LOG, config, prepare_job, run_job
 from openquake.job.mixins import Mixin
 from openquake.db.models import OqJob, JobStats
 from openquake.risk.job import general
@@ -100,7 +100,7 @@ class JobTestCase(unittest.TestCase):
 
     def test_logs_a_warning_if_none_of_the_default_configs_exist(self):
         handler = logging.handlers.BufferingHandler(capacity=float('inf'))
-        Job.unknown_job_logger.logger.addHandler(handler)
+        LOG.addHandler(handler)
         good_defaults = Job._Job__defaults
         Job._Job__defaults = ["/tmp/sbfalds"]
         try:
@@ -108,7 +108,7 @@ class JobTestCase(unittest.TestCase):
             self.assertEqual(len(handler.buffer), 1)
             self.assertEqual(handler.buffer[0].levelno, logging.WARNING)
         finally:
-            Job.unknown_job_logger.logger.removeHandler(handler)
+            LOG.removeHandler(handler)
             Job._Job__defaults = good_defaults
 
     def test_job_has_the_correct_sections(self):
@@ -187,24 +187,6 @@ class JobTestCase(unittest.TestCase):
         finally:
             helpers.cleanup_loggers()
             flags.FLAGS.debug = None
-
-    def test_get_logger_for(self):
-        logger = Job.get_logger_for(self.job.job_id)
-        self.assertTrue(isinstance(logger, logging.LoggerAdapter))
-        self.assertEqual(logger.extra, {'job_id': self.job.job_id})
-        self.assertEqual(logger.logger.name, 'oq.job.%d' % self.job.job_id)
-
-    def test_logger(self):
-        logger = self.job.logger
-        self.assertTrue(isinstance(logger, logging.LoggerAdapter))
-        self.assertEqual(logger.extra, {'job_id': self.job.job_id})
-        self.assertEqual(logger.logger.name, 'oq.job.%d' % self.job.job_id)
-
-    def test_unknown_job_logger(self):
-        logger = Job.unknown_job_logger
-        self.assertTrue(isinstance(logger, logging.LoggerAdapter))
-        self.assertEqual(logger.extra, {'job_id': None})
-        self.assertEqual(logger.logger.name, 'oq.job.None')
 
 
 class JobDbRecordTestCase(unittest.TestCase):
