@@ -41,6 +41,7 @@ from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
 from openquake.job.mixins import Mixin
 from openquake.kvs import mark_job_as_current
+from openquake.logs import LOG
 from openquake.utils import config as oq_config
 
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
@@ -88,7 +89,7 @@ def run_job(job_file, output_type):
         msg = ["The job configuration is inconsistent:"]
         msg += ["   >>> %s" % error_message
                 for error_message in is_job_valid[1]]
-        a_job.logger.critical('\n'.join(msg))
+        LOG.critical('\n'.join(msg))
         return
 
     a_job.set_status('running')
@@ -105,7 +106,7 @@ def run_job(job_file, output_type):
             logs.init_logs_amqp_send(level=FLAGS.debug, job_id=a_job.job_id)
             a_job.launch()
         except Exception, ex:
-            a_job.logger.critical("Job failed with exception: '%s'" % str(ex))
+            LOG.critical("Job failed with exception: '%s'" % str(ex))
             a_job.set_status('failed')
             raise
         else:
@@ -261,13 +262,6 @@ class Job(object):
                     "/etc/openquake.gem",   # Site level configs
                     "~/.openquake.gem"]     # Are we running as a user?
 
-    #: This logger is for messages which are relative to job execution but
-    #: don't yet have job_id (job initialization, for instance). For any
-    #: other logging purposes job and mixins should use :attr:`logger`.
-    unknown_job_logger = logging.LoggerAdapter(
-        logging.getLogger('oq.job.None'), extra={'job_id': None}
-    )
-
     @classmethod
     def default_configs(cls):
         """
@@ -277,10 +271,9 @@ class Job(object):
             return []
 
         if not any([os.path.exists(cfg) for cfg in cls.__defaults]):
-            cls.unknown_job_logger.warning(
-                "No default configuration! If your job config doesn't "
-                "define all of the expected properties things might break."
-            )
+            LOG.warning("No default configuration! If your job config doesn't "
+                        "define all of the expected properties things might "
+                        "break.")
         return cls.__defaults
 
     @staticmethod
@@ -314,7 +307,7 @@ class Job(object):
         assert output_type in ('db', 'xml', 'xml_without_db')
 
         config_file = os.path.abspath(config_file)
-        Job.unknown_job_logger.debug("Loading Job from %s", config_file)
+        LOG.debug("Loading Job from %s" % (config_file))
 
         base_path = os.path.abspath(os.path.dirname(config_file))
 
@@ -368,17 +361,6 @@ class Job(object):
         status = Job.get_status_from_db(job_id)
         return status == 'succeeded' or status == 'failed'
 
-    @staticmethod
-    def get_logger_for(job_id):
-        """
-        Create and return logger object for using with job with known job id.
-
-        Created logger has name ``oq.job.42`` where "42" is job id and also
-        has ``job_id`` available for formatters.
-        """
-        logger = logging.getLogger('oq.job.%s' % job_id)
-        return logging.LoggerAdapter(logger, {'job_id': job_id})
-
     def __init__(self, params, job_id, sections=list(), base_path=None,
             validator=None):
         """
@@ -422,15 +404,6 @@ class Job(object):
                 self.sections, self.params)
 
         return self.validator.is_valid()
-
-    @property
-    def logger(self):
-        """
-        Logger object specifically for this job. Uses :meth:`get_logger_for`.
-        """
-        if not hasattr(self, '_logger'):
-            self._logger = self.get_logger_for(self.job_id)
-        return self._logger
 
     @property
     def job_id(self):
@@ -489,7 +462,7 @@ class Job(object):
                 # The mixin defines a preload decorator to handle the needed
                 # data for the tasks and decorates _execute(). the mixin's
                 # _execute() method calls the expected tasks.
-                self.logger.debug(
+                LOG.debug(
                     "Job %s Launching %s for %s" % (self.job_id, mixin, key))
                 self.execute()
 
@@ -529,14 +502,13 @@ class Job(object):
         sha1s."""
         kvs_client = kvs.get_client()
         if self.base_path is None:
-            self.logger.debug("Can't slurp files " \
-                              "without a base path, homie...")
+            LOG.debug("Can't slurp files without a base path, homie...")
             return
         for key, val in self.params.items():
             if key[-5:] == '_FILE':
                 path = os.path.join(self.base_path, val)
                 with open(path) as data_file:
-                    self.logger.debug("Slurping %s", path)
+                    LOG.debug("Slurping %s" % path)
                     blob = data_file.read()
                     file_key = kvs.tokens.generate_blob_key(self.job_id, blob)
                     kvs_client.set(file_key, blob)
