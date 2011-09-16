@@ -20,6 +20,7 @@ import mock
 import os
 import textwrap
 import unittest
+import logging
 
 from django.contrib.gis.geos.polygon import Polygon
 from django.contrib.gis.geos.collections import MultiPoint
@@ -30,7 +31,6 @@ from openquake import shapes
 from openquake.utils import config as oq_config
 from openquake.job import Job, config, prepare_job, run_job
 from openquake.job import parse_config_file, filter_configuration_parameters
-from openquake.job import spawn_job_supervisor
 from openquake.job.mixins import Mixin
 from openquake.db.models import OqJob, JobStats, OqParams
 from openquake.risk.job import general
@@ -155,10 +155,17 @@ class JobTestCase(unittest.TestCase):
                 ProbabilisticEventMixin in self.job.__class__.__bases__)
 
     def test_can_store_and_read_jobs_from_kvs(self):
-        self.job = helpers.job_from_file(
-            os.path.join(helpers.DATA_DIR, CONFIG_FILE))
-        self.assertEqual(self.job, Job.from_kvs(self.job.job_id))
-        helpers.cleanup_loggers()
+        flags.FLAGS.debug = 'debug'
+        try:
+            self.job = helpers.job_from_file(
+                os.path.join(helpers.DATA_DIR, CONFIG_FILE))
+            job_from_kvs = Job.from_kvs(self.job.job_id)
+            self.assertEqual(flags.FLAGS.debug,
+                             job_from_kvs.params.pop('debug'))
+            self.assertEqual(self.job, job_from_kvs)
+        finally:
+            helpers.cleanup_loggers()
+            flags.FLAGS.debug = None
 
 
 class JobDbRecordTestCase(unittest.TestCase):
@@ -611,7 +618,8 @@ class RunJobTestCase(unittest.TestCase):
 
             from_file.side_effect = patch_job_launch
 
-            with patch('openquake.job.spawn_job_supervisor'):
+            with patch('os.fork', mocksignature=False) as fork:
+                fork.return_value = 0
                 run_job(helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, self.job.launch.call_count)
@@ -638,7 +646,8 @@ class RunJobTestCase(unittest.TestCase):
 
             from_file.side_effect = patch_job_launch
 
-            with patch('openquake.job.spawn_job_supervisor'):
+            with patch('os.fork', mocksignature=False) as fork:
+                fork.return_value = 0
                 self.assertRaises(Exception, run_job,
                                 helpers.get_data_path(CONFIG_FILE), 'db')
 
@@ -709,30 +718,18 @@ class RunJobTestCase(unittest.TestCase):
 
             from_file.side_effect = patch_job_launch
 
-            with patch('openquake.job.spawn_job_supervisor') as mocked_func:
-                run_job(helpers.get_data_path(CONFIG_FILE), 'db')
+            with patch('os.fork', mocksignature=False) as fork:
+                def fork_side_effect():
+                    fork.side_effect = lambda: 0
+                    return 1234
+                fork.side_effect = fork_side_effect
+                with patch('openquake.supervising.supervisor.supervise') \
+                        as supervise:
+                    run_job(helpers.get_data_path(CONFIG_FILE), 'db')
 
-                self.assertEquals(1, mocked_func.call_count)
-                self.assertEquals(((self.job.job_id, os.getpid()), {}),
-                                  mocked_func.call_args)
-
-    def test_spawn_job_supervisor(self):
-        class FakeProcess(object):
-            pid = 42
-
-        oq_config.Config().cfg['supervisor']['exe'] = '/supervise me'
-        job = helpers.job_from_file(helpers.get_data_path(CONFIG_FILE))
-
-        with patch('subprocess.Popen') as popen:
-            popen.return_value = FakeProcess()
-            spawn_job_supervisor(job_id=job.job_id, pid=54321)
-            self.assertEqual(popen.call_count, 1)
-            self.assertEqual(popen.call_args,
-                             ((['/supervise me', str(job.job_id), '54321'], ),
-                              {'env': os.environ}))
-            job = OqJob.objects.get(pk=job.job_id)
-            self.assertEqual(job.supervisor_pid, 42)
-            self.assertEqual(job.job_pid, 54321)
+        self.assertEquals(1, supervise.call_count)
+        self.assertEquals(((1234, self.job.job_id), {}),
+                          supervise.call_args)
 
 
 class JobStatsTestCase(unittest.TestCase):
