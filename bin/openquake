@@ -119,4 +119,7 @@ if __name__ == '__main__':
     # Generate output
 
     register_mixins()
-    job.run_job(FLAGS.config_file, FLAGS.output_type)
+    try:
+        job.run_job(FLAGS.config_file, FLAGS.output_type)
+    except job.config.ValidationException as e:
+        print str(e)

@@ -68,16 +68,14 @@ def output(fn):
     def output_writer(self, *args, **kwargs):
         """ Write the output of a block to kvs. """
         fn(self, *args, **kwargs)
-        conditional_loss_poes = [float(x) for x in self.params.get(
-                    'CONDITIONAL_LOSS_POE', "0.01").split()]
 
         for block_id in self.blocks_keys:
             #pylint: disable=W0212
             self._write_output_for_block(self.job_id, block_id)
 
-        for loss_poe in conditional_loss_poes:
+        for loss_poe in conditional_loss_poes(self.params):
             path = os.path.join(self.base_path,
-                                self['OUTPUT_DIR'],
+                                self.params['OUTPUT_DIR'],
                                 "losses_at-%s.xml" % loss_poe)
             writer = risk_output.create_loss_map_writer(
                 self.job_id, self.serialize_results_to, path, False)
@@ -95,6 +93,14 @@ def output(fn):
                         self.grid_assets_iterator(self.region.grid)))
 
     return output_writer
+
+
+def conditional_loss_poes(params):
+    """Return the PoE(s) specified in the configuration file used to
+    compute the conditional loss."""
+
+    return [float(x) for x in params.get(
+        "CONDITIONAL_LOSS_POE", "").split()]
 
 
 @task
@@ -190,15 +196,15 @@ class RiskJobMixin(mixins.Mixin):
 
         if kwargs['curve_mode'] == 'loss_ratio':
             serialize_filename = "%s-block-%s.xml" % (
-                                     self["LOSS_CURVES_OUTPUT_PREFIX"],
+                                     self.params["LOSS_CURVES_OUTPUT_PREFIX"],
                                      block_id)
         elif kwargs['curve_mode'] == 'loss':
             serialize_filename = "%s-loss-block-%s.xml" % (
-                                     self["LOSS_CURVES_OUTPUT_PREFIX"],
+                                     self.params["LOSS_CURVES_OUTPUT_PREFIX"],
                                      block_id)
 
         serialize_path = os.path.join(self.base_path,
-                                      self['OUTPUT_DIR'],
+                                      self.params['OUTPUT_DIR'],
                                       serialize_filename)
 
         LOG.debug("Serializing %s" % kwargs['curve_mode'])

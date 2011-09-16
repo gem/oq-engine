@@ -18,20 +18,21 @@
 
 import mock
 import os
+import textwrap
 import unittest
 import logging
 
 from django.contrib.gis.geos.polygon import Polygon
 from django.contrib.gis.geos.collections import MultiPoint
-from django.core import exceptions
 
 from openquake import kvs
 from openquake import flags
 from openquake import shapes
 from openquake.utils import config as oq_config
-from openquake.job import Job, LOG, config, prepare_job, run_job
+from openquake.job import Job, config, prepare_job, run_job
+from openquake.job import parse_config_file, filter_configuration_parameters
 from openquake.job.mixins import Mixin
-from openquake.db.models import OqJob, JobStats
+from openquake.db.models import OqJob, JobStats, OqParams
 from openquake.risk.job import general
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
@@ -98,37 +99,21 @@ class JobTestCase(unittest.TestCase):
         kvs.cache_gc('::JOB::1::')
         kvs.cache_gc('::JOB::2::')
 
-    def test_logs_a_warning_if_none_of_the_default_configs_exist(self):
-        handler = logging.handlers.BufferingHandler(capacity=float('inf'))
-        LOG.addHandler(handler)
-        good_defaults = Job._Job__defaults
-        Job._Job__defaults = ["/tmp/sbfalds"]
-        try:
-            Job.default_configs()
-            self.assertEqual(len(handler.buffer), 1)
-            self.assertEqual(handler.buffer[0].levelno, logging.WARNING)
-        finally:
-            LOG.removeHandler(handler)
-            Job._Job__defaults = good_defaults
-
     def test_job_has_the_correct_sections(self):
         self.assertEqual(["RISK", "HAZARD", "general"], self.job.sections)
         self.assertEqual(self.job.sections, self.job_with_includes.sections)
 
     def test_job_with_only_hazard_config_only_has_hazard_section(self):
-        FLAGS.include_defaults = False
-        try:
-            job_with_only_hazard = \
-                helpers.job_from_file(helpers.get_data_path(HAZARD_ONLY))
-            self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
-        finally:
-            FLAGS.include_defaults = True
+        job_with_only_hazard = \
+            helpers.job_from_file(helpers.get_data_path(HAZARD_ONLY))
+        self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
 
     def test_job_writes_to_super_config(self):
         for each_job in [self.job, self.job_with_includes]:
             self.assertTrue(os.path.isfile(each_job.super_config_path))
 
     def test_configuration_is_the_same_no_matter_which_way_its_provided(self):
+
         sha_from_file_key = lambda params, key: params[key].split('!')[1]
 
         # A unique job key is prepended to these file hashes
@@ -140,6 +125,7 @@ class JobTestCase(unittest.TestCase):
         job1_src_model_sha = sha_from_file_key(self.job.params, src_model)
         job2_src_model_sha = sha_from_file_key(
             self.job_with_includes.params, src_model)
+
         self.assertEqual(job1_src_model_sha, job2_src_model_sha)
 
         del self.job.params[src_model]
@@ -238,6 +224,55 @@ class JobDbRecordTestCase(unittest.TestCase):
             self.assertEqual(Job.is_job_completed(job_id), is_completed)
 
 
+class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
+    maxDiff = None
+
+    def test_parse_files(self):
+        content = '''
+            [GENERAL]
+            CALCULATION_MODE = Event Based
+
+            [HAZARD]
+            MINIMUM_MAGNITUDE = 5.0
+            '''
+        config_path = self.touch(
+            dir='/tmp', content=textwrap.dedent(content))
+
+        params, sections = parse_config_file(config_path)
+
+        self.assertEquals(
+            {'BASE_PATH': '/tmp',
+             'CALCULATION_MODE': 'Event Based',
+             'MINIMUM_MAGNITUDE': '5.0'},
+            params)
+        self.assertEquals(['GENERAL', 'HAZARD'], sorted(sections))
+
+    def test_filter_parameters(self):
+        content = '''
+            [GENERAL]
+            CALCULATION_MODE = Event Based
+            # unknown parameter
+            FOO = 5
+
+            [HAZARD]
+            MINIMUM_MAGNITUDE = 5.0
+            # not used for this job type
+            COMPUTE_MEAN_HAZARD_CURVE = true
+            '''
+        config_path = self.touch(
+            dir='/tmp', content=textwrap.dedent(content))
+
+        params, sections = parse_config_file(config_path)
+        params, sections = filter_configuration_parameters(params, sections)
+
+        self.assertEquals(
+            {'BASE_PATH': '/tmp',
+             'MINIMUM_MAGNITUDE': '5.0',
+             'CALCULATION_MODE': 'Event Based'},
+            params)
+        self.assertEquals(['GENERAL', 'HAZARD'], sorted(sections))
+
+
 class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
     maxDiff = None
 
@@ -256,12 +291,12 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'INTENSITY_MEASURE_TYPE': 'PGA',
         'MINIMUM_MAGNITUDE': '5.0',
         'INVESTIGATION_TIME': '50.0',
+        'INCLUDE_GRID_SOURCES': 'true',
         'TREAT_GRID_SOURCE_AS': 'Point Sources',
         'INCLUDE_AREA_SOURCES': 'true',
         'TREAT_AREA_SOURCE_AS': 'Point Sources',
         'QUANTILE_LEVELS': '0.25 0.50',
         'INTENSITY_MEASURE_LEVELS': '0.005, 0.007, 0.0098, 0.0137, 0.0192',
-        'GROUND_MOTION_CORRELATION': 'true',
         'GMPE_TRUNCATION_TYPE': '2 Sided',
         'STANDARD_DEVIATION_TYPE': 'Total',
         'MAXIMUM_DISTANCE': '200.0',
@@ -269,15 +304,32 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'PERIOD': '0.0',
         'DAMPING': '5.0',
         'AGGREGATE_LOSS_CURVE': '1',
-        'NUMBER_OF_SEISMICITY_HISTORIES': '1',
         'INCLUDE_FAULT_SOURCE': 'true',
+        'FAULT_RUPTURE_OFFSET': '5.0',
         'FAULT_SURFACE_DISCRETIZATION': '1.0',
+        'FAULT_MAGNITUDE_SCALING_SIGMA': '0.0',
+        'FAULT_MAGNITUDE_SCALING_RELATIONSHIP': 'W&C 1994 Mag-Length Rel.',
         'REFERENCE_VS30_VALUE': '760.0',
+        'REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM': '5.0',
         'COMPONENT': 'Average Horizontal (GMRotI50)',
         'CONDITIONAL_LOSS_POE': '0.01',
         'TRUNCATION_LEVEL': '3',
         'COMPUTE_MEAN_HAZARD_CURVE': 'true',
         'AREA_SOURCE_DISCRETIZATION': '0.1',
+        'AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP':
+            'W&C 1994 Mag-Length Rel.',
+        'WIDTH_OF_MFD_BIN': '0.1',
+        'SADIGH_SITE_TYPE': 'Rock',
+        'INCLUDE_SUBDUCTION_FAULT_SOURCE': 'true',
+        'SUBDUCTION_FAULT_RUPTURE_OFFSET': '10.0',
+        'SUBDUCTION_FAULT_SURFACE_DISCRETIZATION': '10.0',
+        'SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA': '0.0',
+        'SUBDUCTION_RUPTURE_ASPECT_RATIO': '1.5',
+        'SUBDUCTION_RUPTURE_FLOATING_TYPE': 'Along strike and down dip',
+        'SUBDUCTION_FAULT_MAGNITUDE_SCALING_RELATIONSHIP':
+            'W&C 1994 Mag-Length Rel.',
+        'RUPTURE_ASPECT_RATIO': '1.5',
+        'RUPTURE_FLOATING_TYPE': 'Along strike and down dip',
     }
 
     BASE_DETERMINISTIC_PARAMS = {
@@ -298,7 +350,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     BASE_EVENT_BASED_PARAMS = {
         'CALCULATION_MODE': 'Event Based',
-        'POES_HAZARD_MAPS': '0.01 0.10',
         'INTENSITY_MEASURE_TYPE': 'SA',
         'INCLUDE_GRID_SOURCES': 'false',
         'INCLUDE_SUBDUCTION_FAULT_SOURCE': 'false',
@@ -309,65 +360,55 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'TREAT_GRID_SOURCE_AS': 'Point Sources',
         'INCLUDE_AREA_SOURCES': 'true',
         'TREAT_AREA_SOURCE_AS': 'Point Sources',
-        'QUANTILE_LEVELS': '0.25 0.50',
         'INTENSITY_MEASURE_LEVELS': '0.005, 0.007, 0.0098, 0.0137, 0.0192',
         'GROUND_MOTION_CORRELATION': 'false',
         'GMPE_TRUNCATION_TYPE': 'None',
         'STANDARD_DEVIATION_TYPE': 'Total',
         'SUBDUCTION_FAULT_RUPTURE_OFFSET': '10.0',
         'RISK_CELL_SIZE': '0.0005',
-        'MAXIMUM_DISTANCE': '200.0',
         'NUMBER_OF_LOGIC_TREE_SAMPLES': '5',
         'PERIOD': '1.0',
         'DAMPING': '5.0',
         'AGGREGATE_LOSS_CURVE': 'true',
         'NUMBER_OF_SEISMICITY_HISTORIES': '1',
         'INCLUDE_FAULT_SOURCE': 'true',
-        'SUBDUCTION_RUPTURE_ASPECT_RATIO': '1.5',
+        'FAULT_RUPTURE_OFFSET': '5.0',
         'FAULT_SURFACE_DISCRETIZATION': '1.0',
+        'FAULT_MAGNITUDE_SCALING_SIGMA': '0.0',
+        'FAULT_MAGNITUDE_SCALING_RELATIONSHIP': 'W&C 1994 Mag-Length Rel.',
+        'SUBDUCTION_RUPTURE_ASPECT_RATIO': '1.5',
         'REFERENCE_VS30_VALUE': '760.0',
+        'REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM': '5.0',
         'COMPONENT': 'Average Horizontal',
         'CONDITIONAL_LOSS_POE': '0.01',
         'TRUNCATION_LEVEL': '3',
-        'COMPUTE_MEAN_HAZARD_CURVE': 'true',
         'AREA_SOURCE_DISCRETIZATION': '0.1',
-        'FAULT_RUPTURE_OFFSET': '5.0',
+        'AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP':
+            'W&C 1994 Mag-Length Rel.',
+        'WIDTH_OF_MFD_BIN': '0.1',
+        'SADIGH_SITE_TYPE': 'Rock',
+        'SUBDUCTION_FAULT_RUPTURE_OFFSET': '10.0',
+        'SUBDUCTION_FAULT_SURFACE_DISCRETIZATION': '10.0',
+        'SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA': '0.0',
+        'SUBDUCTION_RUPTURE_ASPECT_RATIO': '1.5',
+        'SUBDUCTION_RUPTURE_FLOATING_TYPE': 'Along strike and down dip',
+        'SUBDUCTION_FAULT_MAGNITUDE_SCALING_RELATIONSHIP':
+            'W&C 1994 Mag-Length Rel.',
+        'RUPTURE_ASPECT_RATIO': '1.5',
+        'RUPTURE_FLOATING_TYPE': 'Along strike and down dip',
     }
 
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
 
+    def _reload_params(self):
+        return OqParams.objects.get(id=self.job.oq_params.id)
+
     def assertFieldsEqual(self, expected, params):
         got_params = dict((k, getattr(params, k)) for k in expected.keys())
 
         self.assertEquals(expected, got_params)
-
-    def test_prepare_job_raises_if_no_geometry(self):
-        '''
-        If no geometry is specified (neither SITES nor REGION_VERTEX +
-        REGION_GRID_SPACING), a RuntimeError should be raised.
-
-        Note: The job validator _should_ catch any such error before we hit
-        prepare_job.
-        '''
-        params = self.BASE_CLASSICAL_PARAMS.copy()
-
-        self.assertRaises(RuntimeError, prepare_job, params)
-
-    def test_prepare_job_raises_if_both_geometries_specified(self):
-        '''
-        If both SITES and REGION_VERTEX + REGION_GRID_SPACING are specified, a
-        RuntimeError should be raised. A job config can only have one or the
-        other.
-        '''
-        params = self.BASE_CLASSICAL_PARAMS.copy()
-
-        params['REGION_VERTEX'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
-        params['REGION_GRID_SPACING'] = '0.1'
-        params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
-
-        self.assertRaises(RuntimeError, prepare_job, params)
 
     def test_prepare_classical_job(self):
         params = self.BASE_CLASSICAL_PARAMS.copy()
@@ -375,6 +416,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['REGION_GRID_SPACING'] = '0.1'
 
         self.job = prepare_job(params)
+        self.job.oq_params = self._reload_params()
         self.assertEquals(params['REGION_VERTEX'],
                           _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
@@ -397,6 +439,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'damping': None,
              'gmf_calculation_number': None,
              'rupture_surface_discretization': None,
+             'subduction_rupture_floating_type': 'downdip',
              }, self.job.oq_params)
 
     def test_prepare_classical_job_over_sites(self):
@@ -408,6 +451,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
 
         self.job = prepare_job(params)
+        self.job.oq_params = self._reload_params()
         self.assertEquals(params['SITES'],
                           _to_coord_list(self.job.oq_params.sites))
         self.assertFieldsEqual(
@@ -435,6 +479,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['REGION_GRID_SPACING'] = '0.02'
 
         self.job = prepare_job(params)
+        self.job.oq_params = self._reload_params()
         self.assertEquals(params['REGION_VERTEX'],
                           _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
@@ -469,6 +514,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['SITES'] = '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
 
         self.job = prepare_job(params)
+        self.job.oq_params = self._reload_params()
         self.assertEquals(params['SITES'],
                           _to_coord_list(self.job.oq_params.sites))
         self.assertFieldsEqual(
@@ -496,6 +542,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['REGION_GRID_SPACING'] = '0.02'
 
         self.job = prepare_job(params)
+        self.job.oq_params = self._reload_params()
         self.assertEquals(params['REGION_VERTEX'],
                           _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
@@ -510,7 +557,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'truncation_type': 'none',
              'truncation_level': 3.0,
              'reference_vs30_value': 760.0,
-             'imls': None,
+             'imls': [0.005, 0.007, 0.0098, 0.0137, 0.0192],
              'poes': None,
              'realizations': 5,
              'histories': 1,
@@ -530,6 +577,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['SITES'] = '33.88, -118.3, 33.88, -118.06, 33.76, -118.06'
 
         self.job = prepare_job(params)
+        self.job.oq_params = self._reload_params()
         self.assertEquals(params['SITES'],
                           _to_coord_list(self.job.oq_params.sites))
         self.assertFieldsEqual(
@@ -543,7 +591,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'truncation_type': 'none',
              'truncation_level': 3.0,
              'reference_vs30_value': 760.0,
-             'imls': None,
+             'imls': [0.005, 0.007, 0.0098, 0.0137, 0.0192],
              'poes': None,
              'realizations': 5,
              'histories': 1,
@@ -618,26 +666,6 @@ class RunJobTestCase(unittest.TestCase):
                                 helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, self.job.launch.call_count)
-        self.assertEquals('failed', self._job_status())
-
-    def test_invalid_job_lifecycle(self):
-        with patch('openquake.job.Job.from_file') as from_file:
-
-            # replaces Job.is_valid with a mock
-            def patch_job_is_valid(*args, **kwargs):
-                self.job = self.job_from_file(*args, **kwargs)
-                self.job.is_valid = mock.Mock(
-                    return_value=(False, ["OMG!"]))
-
-                self.assertEquals('pending', self._job_status())
-
-                return self.job
-
-            from_file.side_effect = patch_job_is_valid
-
-            run_job(helpers.get_data_path(CONFIG_FILE), 'db')
-
-        self.assertEquals(1, self.job.is_valid.call_count)
         self.assertEquals('failed', self._job_status())
 
     def test_computes_sites_in_region_when_specified(self):
