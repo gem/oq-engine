@@ -24,7 +24,6 @@ This module tests the risk side of the deterministic event based calculation.
 import json
 import unittest
 
-from openquake import flags
 from openquake import kvs
 from openquake import shapes
 from openquake.risk.job import deterministic as risk_job_det
@@ -41,12 +40,6 @@ class DeterministicRiskTestCase(unittest.TestCase):
     """
     Test case for module-level functions of the deterministic risk job code.
     """
-
-    def setUp(self):
-        flags.FLAGS.include_defaults = False
-
-    def tearDown(self):
-        flags.FLAGS.include_defaults = True
 
     def test_load_gmvs_for_point(self):
         """
