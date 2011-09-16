@@ -115,7 +115,6 @@ class HazardEngineTestCase(unittest.TestCase):
         errors, and should have params loaded from KVS."""
 
         hazengine = helpers.job_from_file(TEST_JOB_FILE)
-        self.generated_files.append(hazengine.super_config_path)
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
             hazengine.execute()
 
