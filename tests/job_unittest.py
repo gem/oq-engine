@@ -726,24 +726,6 @@ class RunJobTestCase(unittest.TestCase):
                 self.assertEquals(((self.job.job_id, os.getpid()), {}),
                                   mocked_func.call_args)
 
-    def test_spawn_job_supervisor(self):
-        class FakeProcess(object):
-            pid = 42
-
-        oq_config.Config().cfg['supervisor']['exe'] = '/supervise me'
-        job = helpers.job_from_file(helpers.get_data_path(CONFIG_FILE))
-
-        with patch('subprocess.Popen') as popen:
-            popen.return_value = FakeProcess()
-            spawn_job_supervisor(job_id=job.job_id, pid=54321)
-            self.assertEqual(popen.call_count, 1)
-            self.assertEqual(popen.call_args,
-                             ((['/supervise me', str(job.job_id), '54321'], ),
-                              {'env': os.environ}))
-            job = OqJob.objects.get(pk=job.job_id)
-            self.assertEqual(job.supervisor_pid, 42)
-            self.assertEqual(job.job_pid, 54321)
-
 
 class JobStatsTestCase(unittest.TestCase):
     '''
