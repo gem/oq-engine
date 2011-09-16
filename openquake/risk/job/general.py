@@ -154,8 +154,8 @@ class RiskJobMixin(mixins.Mixin):
 
             block_count += 1
 
-        self.logger.debug("Job has partitioned %s sites into %s blocks",
-                          len(sites), block_count)
+        LOG.debug("Job has partitioned %s sites into %s blocks" % (
+                len(sites), block_count))
 
     def store_exposure_assets(self):
         """Load exposure assets and write them to KVS."""
@@ -200,7 +200,7 @@ class RiskJobMixin(mixins.Mixin):
                                       self['OUTPUT_DIR'],
                                       serialize_filename)
 
-        self.logger.debug("Serializing %s", kwargs['curve_mode'])
+        LOG.debug("Serializing %s" % kwargs['curve_mode'])
         writer = risk_output.create_loss_curve_writer(self.job_id,
             self.serialize_results_to, serialize_path, kwargs['curve_mode'])
         if writer:
@@ -295,9 +295,8 @@ class RiskJobMixin(mixins.Mixin):
             key = kvs.tokens.loss_key(self.job_id, point.row, point.column,
                     asset["assetID"], loss_poe)
             loss_value = kvs.get(key)
-            self.logger.debug("Loss for asset %s at %s %s is %s",
-                              asset["assetID"], asset['lon'],
-                              asset['lat'], loss_value)
+            LOG.debug("Loss for asset %s at %s %s is %s" %
+                (asset["assetID"], asset['lon'], asset['lat'], loss_value))
             if loss_value:
                 risk_site = shapes.Site(asset['lon'], asset['lat'])
                 loss = {
