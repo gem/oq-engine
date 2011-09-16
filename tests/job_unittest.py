@@ -168,7 +168,8 @@ class JobTestCase(unittest.TestCase):
                 os.path.join(helpers.DATA_DIR, CONFIG_FILE))
             self.generated_files.append(self.job.super_config_path)
             job_from_kvs = Job.from_kvs(self.job.job_id)
-            self.assertEqual(flags.FLAGS.debug, job_from_kvs.params.pop('debug'))
+            self.assertEqual(flags.FLAGS.debug,
+                             job_from_kvs.params.pop('debug'))
             self.assertEqual(self.job, job_from_kvs)
         finally:
             helpers.cleanup_loggers()

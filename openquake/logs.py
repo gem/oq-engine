@@ -24,7 +24,6 @@ TODO(jmc): support debug level per logger.
 
 """
 import logging
-import sys
 import socket
 import threading
 
@@ -33,8 +32,7 @@ import kombu.entity
 import kombu.messaging
 
 from openquake import flags
-from openquake.utils import config
-from openquake.signalling import AMQPMessageConsumer
+from openquake.signalling import AMQPMessageConsumer, amqp_connect
 
 
 FLAGS = flags.FLAGS
@@ -96,23 +94,17 @@ class AMQPHandler(logging.Handler):  # pylint: disable=R0902
         self.connection = None
         self.channel = None
 
-    def _connect(self):
-        """Create a new connection to the AMQP server"""
-        if self.connection and self.channel:
-            return self.channel
-
-        cfg = config.get_section("amqp")
-        self.connection = kombu.BrokerConnection(hostname=cfg['host'],
-                                                 userid=cfg['user'],
-                                                 password=cfg['password'],
-                                                 virtual_host=cfg['vhost'])
-        self.channel = self.connection.channel()
-        self.exchange = kombu.entity.Exchange(cfg['exchange'], type='topic',
-                                              channel=self.channel)
+        self.connection, self.channel, self.exchange = amqp_connect()
         self.producer = kombu.messaging.Producer(self.channel, self.exchange,
                                                  serializer='json')
 
     def set_job_id(self, job_id):
+        """
+        Set the job id for handler.
+
+        Is called from :func:`init_logs_amqp_send`. Provided job id
+        will be added to log records (see :meth:`emit`).
+        """
         self._MDC.job_id = job_id
 
     def emit(self, record):
@@ -128,7 +120,6 @@ class AMQPHandler(logging.Handler):  # pylint: disable=R0902
         data['hostname'] = socket.getfqdn()
         data['job_id'] = getattr(self._MDC, 'job_id', None)
 
-        channel = self._connect()
         routing_key = self.ROUTING_KEY_FORMAT % data
         self.producer.publish(data, routing_key)
 

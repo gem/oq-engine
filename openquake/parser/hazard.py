@@ -26,8 +26,6 @@ NRML instance documents is <HazardResultList>.
 
 from lxml import etree
 
-from openquake import logs
-
 from openquake import producer
 from openquake import shapes
 
