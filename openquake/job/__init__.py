@@ -26,7 +26,7 @@ import logging
 
 from ConfigParser import ConfigParser, RawConfigParser
 from datetime import datetime
-from django.db import transaction
+from django.db import transaction, close_connection
 from django.contrib.gis.geos import GEOSGeometry
 
 from openquake import flags
@@ -83,29 +83,25 @@ def run_job(job_file, output_type):
     a_job = Job.from_file(job_file, output_type)
     is_job_valid = a_job.is_valid()
 
-    from django.db import close_connection
+    if not is_job_valid[0]:
+        a_job.set_status('failed')
 
-    if is_job_valid[0]:
-        a_job.set_status('running')
+        msg = ["The job configuration is inconsistent:"]
+        msg += ["   >>> %s" % error_message
+                for error_message in is_job_valid[1]]
+        a_job.logger.critical('\n'.join(msg))
+        return
 
-        import os
-        job_pid = os.fork()
-        close_connection()
-        if job_pid:
-            supervisor_pid = os.fork()
-            if supervisor_pid:
-                os.waitpid(job_pid, 0)
-                os.waitpid(supervisor_pid, 0)
-                return
-            supervisor_pid = os.getpid()
-            job = OqJob.objects.get(id=a_job.job_id)
-            job.supervisor_pid = supervisor_pid
-            job.job_pid = job_pid
-            job.save()
-            from openquake.supervising.supervisor import supervise
-            supervise(job_pid, a_job.job_id)
-            return
+    a_job.set_status('running')
 
+    # closing all db connections to make sure they're not shared between
+    # supervisor and job executor processes. otherwise if one of them closes
+    # the connection it immediately becomes unavailable for other
+    close_connection()
+
+    job_pid = os.fork()
+    if not job_pid:
+        # job executor process
         try:
             logs.init_logs_amqp_send(level=FLAGS.debug, job_id=a_job.job_id)
             a_job.launch()
@@ -115,13 +111,27 @@ def run_job(job_file, output_type):
             raise
         else:
             a_job.set_status('succeeded')
-    else:
-        a_job.set_status('failed')
+        return
 
-        msg = ["The job configuration is inconsistent:"]
-        msg += ["   >>> %s" % error_message
-                for error_message in is_job_valid[1]]
-        a_job.logger.critical('\n'.join(msg))
+    supervisor_pid = os.fork()
+    if not supervisor_pid:
+        # supervisor process
+        supervisor_pid = os.getpid()
+        job = OqJob.objects.get(id=a_job.job_id)
+        job.supervisor_pid = supervisor_pid
+        job.job_pid = job_pid
+        job.save()
+        supervisor.supervise(job_pid, a_job.job_id)
+        return
+
+    # parent process
+
+    # ignore Ctrl-C as well as supervisor process does. thus only
+    # job executor terminates on SIGINT
+    supervisor.ignore_sigint()
+    # wait till both child processes are done
+    os.waitpid(job_pid, 0)
+    os.waitpid(supervisor_pid, 0)
 
 
 def parse_config_file(config_file):

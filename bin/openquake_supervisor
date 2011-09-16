@@ -23,7 +23,6 @@
 The OpenQuake job supervisor process, spawned by each OpenQuake job.
 """
 import os
-import signal
 import sys
 
 import oqpath
@@ -37,13 +36,6 @@ def main():  # pylint: disable=C0111
 
     job_id = int(sys.argv[1])
     pid = int(sys.argv[2])
-
-    # This supervisor will be spawned by bin/openquake and interrupting
-    # bin/openquake with Ctrl-C from the shell will propagate the signal to
-    # this supervisor, killing it.
-    # To avoid premature death of the supervisor we ignore the SIGINT signal.
-    signal.signal(signal.SIGINT, lambda _, __: None)
-
     supervisor.supervise(pid, job_id)
 
 
