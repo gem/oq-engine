@@ -328,8 +328,9 @@ class Job(object):
 
         base_path = params['BASE_PATH']
 
-        job = Job(params, job_id, sections=sections, base_path=base_path)
-        job.serialize_results_to = serialize_results_to
+        job = Job(params, job_id, sections=sections, base_path=base_path,
+                  serialize_results_to=serialize_results_to)
+        job.to_kvs()
 
         return job
 
@@ -353,14 +354,13 @@ class Job(object):
         return status == 'succeeded' or status == 'failed'
 
     def __init__(self, params, job_id, sections=list(), base_path=None,
-            validator=None):
+                 serialize_results_to=list()):
         """
         :param dict params: Dict of job config params.
         :param int job_id: ID of the corresponding oq_job db record.
         :param list sections: List of config file sections. Example::
             ['HAZARD', 'RISK']
         :param str base_path: base directory containing job input files
-        :param validator: validator(s) used to check the configuration file
         """
         self._job_id = job_id
         mark_job_as_current(job_id)  # enables KVS gc
@@ -372,10 +372,7 @@ class Job(object):
         self.sections = list(set(sections))
         self.serialize_results_to = []
         self.base_path = base_path
-        self.validator = validator
-
-        if base_path:
-            self.to_kvs()
+        self.serialize_results_to = list(serialize_results_to)
 
     def has(self, name):
         """Return true if this job has the given parameter defined
@@ -415,12 +412,6 @@ class Job(object):
         region.cell_size = float(self['REGION_GRID_SPACING'])
         return region
 
-    @property
-    def super_config_path(self):
-        """ Return the path of the super config """
-        filename = "%s-super.gem" % self.job_id
-        return os.path.join(self.base_path or '', "./", filename)
-
     def launch(self):
         """ Based on the behaviour specified in the configuration, mix in the
         correct behaviour for the tasks and then execute them.
@@ -452,28 +443,6 @@ class Job(object):
     def __str__(self):
         return str(self.params)
 
-    def _write_super_config(self):
-        """
-            Take our params and write them out as a 'super' config file.
-            Its name is equal to the job_id, which should be the sha1 of
-            the file in production or a random job in dev.
-        """
-
-        kvs_client = kvs.get_client()
-        config = RawConfigParser()
-
-        section = 'openquake'
-        config.add_section(section)
-
-        for key, val in self.params.items():
-            v = kvs_client.get(val)
-            if v:
-                val = v
-            config.set(section, key, val)
-
-        with open(self.super_config_path, "wb") as configfile:
-            config.write(configfile)
-
     def _slurp_files(self):
         """Read referenced files and write them into kvs, keyed on their
         sha1s."""
@@ -492,11 +461,9 @@ class Job(object):
                     self.params[key] = file_key
                     self.params[key + "_PATH"] = path
 
-    def to_kvs(self, write_cfg=True):
+    def to_kvs(self):
         """Store this job into kvs."""
         self._slurp_files()
-        if write_cfg:
-            self._write_super_config()
         key = kvs.tokens.generate_job_key(self.job_id)
         kvs.set_value_json_encoded(key, self.params)
 
