@@ -69,7 +69,7 @@ def set_logger_level(logger, level):
 
     Uses mapping :const:`LEVELS`.
     """
-    logger.setLevel(LEVELS.get(level, 'warn'))
+    logger.setLevel(LEVELS.get(level, logging.WARNING))
 
 
 class AMQPHandler(logging.Handler):  # pylint: disable=R0902
