@@ -39,7 +39,7 @@ try:
     # http://pypi.python.org/pypi/setproctitle/
     from setproctitle import setproctitle
 except ImportError:
-    setproctitle = lambda title: None
+    setproctitle = lambda title: None # pylint: disable=C0103
 
 from openquake import flags
 from openquake.db.models import OqJob, ErrorMsg, JobStats
@@ -144,7 +144,7 @@ class SupervisorLogHandler(logging.StreamHandler):
         self.setFormatter(logging.Formatter(self.LOG_FORMAT))
         self.job_id = job_id
 
-    def emit(self, record):
+    def emit(self, record): # pylint: disable=E0202
         if not hasattr(record, 'hostname'):
             record.hostname = '-'
         if not hasattr(record, 'job_id'):
