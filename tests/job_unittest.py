@@ -86,9 +86,6 @@ class JobTestCase(unittest.TestCase):
         self.job_with_includes = \
             helpers.job_from_file(helpers.get_data_path(CONFIG_WITH_INCLUDES))
 
-        self.generated_files.append(self.job.super_config_path)
-        self.generated_files.append(self.job_with_includes.super_config_path)
-
     def tearDown(self):
         for cfg in self.generated_files:
             try:
@@ -107,10 +104,6 @@ class JobTestCase(unittest.TestCase):
         job_with_only_hazard = \
             helpers.job_from_file(helpers.get_data_path(HAZARD_ONLY))
         self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
-
-    def test_job_writes_to_super_config(self):
-        for each_job in [self.job, self.job_with_includes]:
-            self.assertTrue(os.path.isfile(each_job.super_config_path))
 
     def test_configuration_is_the_same_no_matter_which_way_its_provided(self):
 
@@ -164,7 +157,6 @@ class JobTestCase(unittest.TestCase):
     def test_can_store_and_read_jobs_from_kvs(self):
         self.job = helpers.job_from_file(
             os.path.join(helpers.DATA_DIR, CONFIG_FILE))
-        self.generated_files.append(self.job.super_config_path)
         self.assertEqual(self.job, Job.from_kvs(self.job.job_id))
         helpers.cleanup_loggers()
 
@@ -173,13 +165,6 @@ class JobDbRecordTestCase(unittest.TestCase):
 
     def setUp(self):
         self.job = None
-
-    def tearDown(self):
-        try:
-            if self.job:
-                os.remove(self.job.super_config_path)
-        except OSError:
-            pass
 
     def test_job_db_record_for_output_type_db(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
