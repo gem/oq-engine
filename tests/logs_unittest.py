@@ -306,4 +306,3 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         [record] = handler.buffer
         for key in msg:
             self.assertEqual(msg[key], getattr(record, key))
-
