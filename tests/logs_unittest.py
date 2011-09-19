@@ -180,7 +180,8 @@ class PythonAMQPLogTestCase(unittest.TestCase):
                                         exclusive=True)
         self.queue.queue_declare()
         self.queue.queue_bind()
-        self.consumer = kombu.messaging.Consumer(self.channel, self.queue)
+        self.consumer = kombu.messaging.Consumer(self.channel, self.queue,
+                                                 no_ack=True)
         self.producer = kombu.messaging.Producer(self.channel, self.exchange,
                                                  serializer='json')
 
@@ -195,7 +196,6 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         messages = []
 
         def consume(data, msg):
-            print data
             self.assertEqual(msg.properties['content_type'],
                              'application/json')
             messages.append((msg.delivery_info['routing_key'], data))
