@@ -18,15 +18,15 @@
 
 """A single hazard/risk job."""
 
-import multiprocessing
 import os
 import re
 import subprocess
 import urlparse
+import logging
 
 from ConfigParser import ConfigParser, RawConfigParser
 from datetime import datetime
-from django.db import transaction
+from django.db import transaction, close_connection
 from django.contrib.gis.db import models
 from django.contrib.gis.geos import GEOSGeometry
 
@@ -54,44 +54,6 @@ FLAGS = flags.FLAGS
 REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
 
 
-def spawn_job_supervisor(job_id, pid):
-    """
-    Spawn a supervisor process as configured in openquake.cfg.
-
-    :param int job_id: the id of the job to be supervised
-    :param int pid: the process id of the job to be supervised
-    :return: the id of the supervisor process or None if no supervisor was
-             configured
-    :rtype: int or None
-    """
-    exe = oq_config.get('supervisor', 'exe')
-
-    if exe:
-        if oq_config.get('logging', 'backend') != 'amqp':
-            LOG.warn('If you want to run supervised jobs it\'s better '
-                     'to set [logging] backend=amqp in openquake.cfg')
-
-        if not os.path.isabs(exe):
-            exe = os.path.join(OPENQUAKE_ROOT, exe)
-
-        cmd = [exe, str(job_id), str(pid)]
-
-        supervisor_pid = subprocess.Popen(cmd, env=os.environ).pid
-
-        job = OqJob.objects.get(id=job_id)
-        job.supervisor_pid = supervisor_pid
-        job.job_pid = pid
-        job.save()
-
-        # Ensure the supervisor amqp queue exists
-        supervisor.bind_supervisor_queue(job_id)
-
-        return supervisor_pid
-    else:
-        LOG.warn('This job won\'t be supervised, '
-                 'because no supervisor is configured in openquake.cfg')
-
-
 def run_job(job_file, output_type):
     """
     Given a job_file, run the job.
@@ -101,20 +63,47 @@ def run_job(job_file, output_type):
     :param output_type: the desired format for the results, one of 'db', 'xml'
     :type output_type: string
     """
-
     a_job = Job.from_file(job_file, output_type)
     a_job.set_status('running')
 
-    spawn_job_supervisor(a_job.job_id, os.getpid())
+    # closing all db connections to make sure they're not shared between
+    # supervisor and job executor processes. otherwise if one of them closes
+    # the connection it immediately becomes unavailable for other
+    close_connection()
 
-    try:
-        a_job.launch()
-    except Exception, ex:
-        LOG.critical("Job failed with exception: '%s'" % str(ex))
-        a_job.set_status('failed')
-        raise
-    else:
-        a_job.set_status('succeeded')
+    job_pid = os.fork()
+    if not job_pid:
+        # job executor process
+        try:
+            logs.init_logs_amqp_send(level=FLAGS.debug, job_id=a_job.job_id)
+            a_job.launch()
+        except Exception, ex:
+            LOG.critical("Job failed with exception: '%s'" % str(ex))
+            a_job.set_status('failed')
+            raise
+        else:
+            a_job.set_status('succeeded')
+        return
+
+    supervisor_pid = os.fork()
+    if not supervisor_pid:
+        # supervisor process
+        supervisor_pid = os.getpid()
+        job = OqJob.objects.get(id=a_job.job_id)
+        job.supervisor_pid = supervisor_pid
+        job.job_pid = job_pid
+        job.save()
+        supervisor.supervise(job_pid, a_job.job_id)
+        return
+
+    # parent process
+
+    # ignore Ctrl-C as well as supervisor process does. thus only
+    # job executor terminates on SIGINT
+    supervisor.ignore_sigint()
+    # wait till both child processes are done
+    os.waitpid(job_pid, 0)
+    os.waitpid(supervisor_pid, 0)
 
 
 def parse_config_file(config_file):
@@ -248,31 +237,12 @@ def prepare_job(params):
     return job
 
 
-def setup_job_logging(job_id):
-    """Make job id and process name available to the Java and Python loggers"""
-    process_name = multiprocessing.current_process().name
-
-    # Make the job_id available to the java logging context.
-    mdc = java.jclass('MDC')
-    mdc.put('job_id', job_id)
-    mdc.put('processName', process_name)
-
-    # make the job_id available to the Python logging context
-    logs.AMQPHandler.MDC['job_id'] = job_id
-    # this is only necessary for Python 2.6
-    logs.AMQPHandler.MDC['processName'] = process_name
-
-
 class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
     @staticmethod
     def from_kvs(job_id):
         """Return the job in the underlying kvs system with the given id."""
-
-        logs.init_logs(
-            level=FLAGS.debug, log_type=oq_config.get("logging", "backend"))
-
         params = kvs.get_value_json_decoded(
             kvs.tokens.generate_job_key(job_id))
         job = Job(params, job_id)
@@ -364,8 +334,6 @@ class Job(object):
         """
         self._job_id = job_id
         mark_job_as_current(job_id)  # enables KVS gc
-
-        setup_job_logging(self.job_id)
 
         self.blocks_keys = []
         self.params = params
@@ -465,7 +433,9 @@ class Job(object):
         """Store this job into kvs."""
         self._slurp_files()
         key = kvs.tokens.generate_job_key(self.job_id)
-        kvs.set_value_json_encoded(key, self.params)
+        data = self.params.copy()
+        data['debug'] = FLAGS.debug
+        kvs.set_value_json_encoded(key, data)
 
     def sites_to_compute(self):
         """Return the sites used to trigger the computation on the
