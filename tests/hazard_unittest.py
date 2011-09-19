@@ -99,10 +99,6 @@ class HazardEngineTestCase(unittest.TestCase):
         self.generated_files = []
         self.kvs_client = kvs.get_client()
 
-        # We will run a full test using amqp logging, as configured in
-        # openquake.cfg
-        helpers.declare_signalling_exchange()
-
     def tearDown(self):
         for cfg in self.generated_files:
             try:
