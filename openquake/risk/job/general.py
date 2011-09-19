@@ -30,7 +30,6 @@ from openquake import logs
 from openquake import shapes
 from openquake.job import config as job_config
 from openquake.job import mixins
-from openquake.output import curve
 from openquake.output import risk as risk_output
 from openquake.parser import exposure
 from openquake.parser import vulnerability
@@ -93,22 +92,6 @@ def output(fn):
                         self.grid_assets_iterator(self.region.grid)))
 
     return output_writer
-
-
-def _plot(curve_path, result_path, **kwargs):
-    """
-    Build a plotter, and then render the plot
-    """
-    LOG.debug("Plotting %s" % kwargs['curve_mode'])
-
-    render_multi = kwargs.get("render_multi")
-    autoscale = False if kwargs['curve_mode'] == 'loss_ratio' else True
-    plotter = curve.RiskCurvePlotter(result_path,
-                                     curve_path,
-                                     mode=kwargs["curve_mode"],
-                                     render_multi=render_multi)
-    plotter.plot(autoscale_y=autoscale)
-    return plotter.filenames()
 
 
 def conditional_loss_poes(params):
