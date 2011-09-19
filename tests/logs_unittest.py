@@ -14,403 +14,295 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
-from amqplib import client_0_8 as amqp
-import logging
-import os
-import multiprocessing
-import sys
+import logging.handlers
 import unittest
+import multiprocessing
+import threading
+import os.path
+import time
+import socket
+import json
 
-import jpype
+import kombu
+import kombu.entity
+import kombu.messaging
 
-from openquake import flags
 from openquake import java
 from openquake import logs
-from openquake import job
-from openquake import signalling
 from openquake.utils import config
 
-from tests.utils.helpers import cleanup_loggers
 
-LOG_FILE_PATH = os.path.join(os.getcwd(), 'test_file_for_the_logs_module.log')
-
-
-class PreserveJavaIO(object):
-    @classmethod
-    def setUpClass(cls):
-        # This is safe to call even if the jvm was already running from a
-        # previous test.
-        # Even better would be to start with a fresh jvm but this is currently
-        # not possible (see
-        # http://jpype.sourceforge.net/doc/user-guide/userguide.html#limitation
-        # )
-        java.jvm()
-
-        # save the java stdout and stderr that will be trashed during this test
-        cls.old_java_out = jpype.java.lang.System.out
-        cls.old_java_err = jpype.java.lang.System.err
-
-    @classmethod
-    def tearDownClass(cls):
-        # restore the java stdout and stderr that were trashed during this test
-        jpype.java.lang.System.setOut(cls.old_java_out)
-        jpype.java.lang.System.setErr(cls.old_java_err)
-
-
-class LogsTestCase(PreserveJavaIO, unittest.TestCase):
-
-    @classmethod
-    def setUpClass(cls):
-        super(LogsTestCase, cls).setUpClass()
-
-        try:
-            os.remove(LOG_FILE_PATH)
-        except OSError:
-            pass
-
-    @classmethod
-    def tearDownClass(cls):
-        super(LogsTestCase, cls).tearDownClass()
-
-        try:
-            os.remove(LOG_FILE_PATH)
-        except OSError:
-            pass
-
+class JavaLogsTestCase(unittest.TestCase):
     def setUp(self):
-        # we init the logs before each test because nosetest redefines
-        # sys.stdout and removes all the handlers from the rootLogger
+        self.jvm = java.jvm()
+        self.handler = logging.handlers.BufferingHandler(capacity=float('inf'))
+        self.python_logger = logging.getLogger('java')
+        self.python_logger.addHandler(self.handler)
+        self.python_logger.setLevel(logging.DEBUG)
 
-        # reset logging config (otherwise will ignore logfile flag)
-        cleanup_loggers()
-
-        flags.FLAGS.debug = 'warn'
-        flags.FLAGS.logfile = LOG_FILE_PATH
-        logs.init_logs(log_type='console', level='warn')
-        java.init_logs(log_type='console', level='warn')
+        jlogger_class = self.jvm.JClass("org.apache.log4j.Logger")
+        self.root_logger = jlogger_class.getRootLogger()
+        self.other_logger = jlogger_class.getLogger('other_logger')
 
     def tearDown(self):
-        # reset logging config
-        cleanup_loggers()
+        self.python_logger.removeHandler(self.handler)
+        self.python_logger.setLevel(logging.NOTSET)
 
-    def _slurp_file(self):
-        # Flush all the logs into the logging file.  This is a little bit
-        # tricky.  sys.stdout has been redefined by init_logs() to be a
-        # celery.log.LoggingProxy. This proxy has a flush() method that does
-        # nothing, but its logger attribute is an instance of the standard
-        # logging.Logger python class.  From there we can reach the handler and
-        # finally flush it.
-        for handler in sys.stdout.logger.handlers:
-            handler.flush()
+    def test_error(self):
+        self.root_logger.error('java error msg')
+        [record] = self.handler.buffer
+        self.assertEqual(record.levelno, logging.ERROR)
+        self.assertEqual(record.levelname, 'ERROR')
+        self.assertEqual(record.name, 'java')
+        self.assertEqual(record.msg, 'java error msg')
+        self.assertEqual(record.threadName, 'main')
+        self.assertEqual(record.processName,
+                         multiprocessing.current_process().name)
 
-        log_file = open(LOG_FILE_PATH, 'r')
+    def test_warning(self):
+        self.other_logger.warn('warning message')
+        [record] = self.handler.buffer
+        self.assertEqual(record.levelno, logging.WARNING)
+        self.assertEqual(record.levelname, 'WARNING')
+        self.assertEqual(record.name, 'java.other_logger')
+        self.assertEqual(record.msg, 'warning message')
 
-        return [line.strip() for line in log_file.readlines()]
+    def test_debug(self):
+        self.other_logger.debug('this is verbose debug info')
+        [record] = self.handler.buffer
+        self.assertEqual(record.levelno, logging.DEBUG)
+        self.assertEqual(record.levelname, 'DEBUG')
+        self.assertEqual(record.name, 'java.other_logger')
+        self.assertEqual(record.msg, 'this is verbose debug info')
 
-    def assert_file_last_line_equal(self, line):
-        msg = None
+    def test_fatal(self):
+        self.root_logger.fatal('something bad has happened')
+        [record] = self.handler.buffer
+        # java "fatal" records are mapped to python "critical" ones
+        self.assertEqual(record.levelno, logging.CRITICAL)
+        self.assertEqual(record.levelname, 'CRITICAL')
+        self.assertEqual(record.name, 'java')
+        self.assertEqual(record.msg, 'something bad has happened')
 
-        log_lines = self._slurp_file()
+    def test_info(self):
+        self.root_logger.info('information message')
+        [record] = self.handler.buffer
+        self.assertEqual(record.levelno, logging.INFO)
+        self.assertEqual(record.levelname, 'INFO')
+        self.assertEqual(record.name, 'java')
+        self.assertEqual(record.msg, 'information message')
 
-        if not log_lines:
-            msg = "Last file line <EMPTY> != %r" % line
-        elif log_lines[-1] != line:
-            msg = "Last file line %r != %r" % (log_lines[-1], line)
+    def test_record_serializability(self):
+        self.root_logger.info('whatever')
+        [record] = self.handler.buffer
+        # original args are tuple which becomes list
+        # being encoded to json and back
+        record.args = list(record.args)
+        self.assertEqual(json.loads(json.dumps(record.__dict__)),
+                         record.__dict__)
 
-        if msg:
-            raise self.failureException(msg)
+    def test_custom_level(self):
+        # checking that logging with custom levels issues a warning but works
 
-    def assert_file_last_line_ends_with(self, line):
-        msg = None
+        # org.apache.log4j.Level doesn't allow to be instantiated directly
+        # and jpype doesn't support subclassing java in python. that's why
+        # in this test we just check JavaLoggingBridge without touching
+        # java objects.
+        class MockMessage(object):
+            def getLevel(self):
+                class Level(object):
+                    def toInt(self):
+                        return 12345
+                return Level()
 
-        log_lines = self._slurp_file()
+            @property
+            def logger(self):
+                class Logger(object):
+                    def getParent(self):
+                        return None
+                return Logger()
 
-        if not log_lines:
-            msg = "Last file line <EMPTY> doesn't end with %r" % line
-        elif not log_lines[-1].endswith(line):
-            msg = "Last file line %r doesn't end with %r"\
-                % (log_lines[-1], line)
+            def getLocationInformation(self):
+                class LocationInformation(object):
+                    getFileName = lambda self: 'some/file'
+                    getLineNumber = lambda self: '123'
+                    getClassName = lambda self: 'someclassname'
+                    getMethodName = lambda self: 'somemethod'
+                return LocationInformation()
 
-        if msg:
-            raise self.failureException(msg)
+            getLoggerName = lambda self: 'root'
+            getMessage = lambda self: 'somemessage'
+            getThreadName = lambda self: 'somethread'
 
-    def test_python_printing(self):
-        msg = 'This is a test print statement'
-        print msg
-        self.assert_file_last_line_equal('WARNING MainProcess [root] - ' + msg)
+        java.JavaLoggingBridge().append(MockMessage())
+        # we expect to have two messages logged in this case:
+        # first is warning about unknown level used,
+        # and second is the actual log message.
+        [warning, record] = self.handler.buffer
 
-    def test_python_logging(self):
-        msg = 'This is a test log entry'
-        logs.LOG.error(msg)
+        self.assertEqual(warning.levelno, logging.WARNING)
+        self.assertEqual(warning.name, 'java')
+        self.assertEqual(warning.getMessage(), 'unrecognised logging level ' \
+                                               '12345 was used')
 
-        self.assert_file_last_line_equal('ERROR MainProcess [root] - ' + msg)
-
-    def test_java_printing(self):
-        msg = 'This is a test java print statement'
-        jpype.java.lang.System.out.println(msg)
-
-        self.assert_file_last_line_ends_with(msg)
-
-    def test_java_logging(self):
-        msg = 'This is a test java log entry'
-        root_logger = jpype.JClass("org.apache.log4j.Logger").getRootLogger()
-        root_logger.error(msg)
-
-        self.assert_file_last_line_ends_with(msg)
-
-
-class AMQPLogTestBase(unittest.TestCase):
-    def setup_queue(self):
-        # connect to localhost and bind to a queue
-        conn = amqp.Connection(host=config.get("amqp", "host"),
-                               userid=config.get("amqp", "user"),
-                               password=config.get("amqp", "password"),
-                               virtual_host=config.get("amqp", "vhost"))
-        ch = conn.channel()
-        ch.access_request(config.get("amqp", "vhost"), active=False, read=True)
-        ch.exchange_declare(self.TOPIC, 'topic', auto_delete=True)
-        qname, _, _ = ch.queue_declare()
-        ch.queue_bind(qname, self.TOPIC, routing_key=self.ROUTING_KEY)
-
-        return conn, ch, qname
-
-    def consume_messages(self, conn, ch, qname, callback):
-        ch.basic_consume(qname, callback=callback)
-
-        while ch.callbacks:
-            ch.wait()
-
-        ch.close()
-        conn.close()
-
-
-class JavaAMQPLogTestCase(AMQPLogTestBase):
-    TOPIC = 'oq-unittest.topic'
-    ROUTING_KEY = 'oq-unittest-log.*'
-
-    def tearDown(self):
-        # reconfigure Log4j with the default settings
-        jvm = java.jvm()
-
-        jvm.JClass("org.apache.log4j.BasicConfigurator").resetConfiguration()
-        java.init_logs(level='warn')
-
-    def setUp(self):
-        jvm = java.jvm()
-
-        props = jvm.JClass("java.util.Properties")()
-        props.setProperty('log4j.rootLogger', 'DEBUG, rabbit')
-
-        for key, value in [
-            ('', 'org.gem.log.AMQPAppender'),
-            ('.host', config.get("amqp", "host")),
-            ('.port', config.get("amqp", "port")),
-            ('.username', config.get("amqp", "user")),
-            ('.password', config.get("amqp", "password")),
-            ('.virtualHost', config.get("amqp", "vhost")),
-            ('.routingKeyPattern', 'oq-unittest-log.%p'),
-            ('.exchange', 'oq-unittest.topic'),
-            ('.layout', 'org.apache.log4j.PatternLayout'),
-            ('.layout.ConversionPattern', '%p - %m')]:
-            props.setProperty('log4j.appender.rabbit' + key, value)
-
-        jvm.JClass("org.apache.log4j.BasicConfigurator").resetConfiguration()
-        jvm.JClass("org.apache.log4j.PropertyConfigurator").configure(props)
-
-    def test_amqp_sanity(self):
-        """We can talk to ourselves from Python using RabbitMQ"""
-        conn, ch, qname = self.setup_queue()
-
-        # now there is a queue, send a test message
-        sender = java.AMQPConnection()
-        sender.setHost(config.get("amqp", "host"))
-        sender.setPort(int(config.get("amqp", "port")))
-        sender.setUsername(config.get("amqp", "user"))
-        sender.setPassword(config.get("amqp", "password"))
-        sender.setVirtualHost(config.get("amqp", "vhost"))
-        sender.publish('oq-unittest.topic', 'oq-unittest-log.FOO', 0, 'WARN',
-                       'Hi there')
-        sender.close()
-
-        # process the messaages
-        messages = []
-
-        def consume(msg):
-            messages.append(msg)
-            ch.basic_cancel(msg.consumer_tag)
-
-        self.consume_messages(conn, ch, qname, consume)
-
-        self.assertEquals(1, len(messages))
-        self.assertEquals('Hi there', messages[0].body)
-
-    def test_amqp_java_logger(self):
-        """We can talk to ourselves from Java using RabbitMQ"""
-        conn, ch, qname = self.setup_queue()
-
-        # now there is a queue, send the log messages
-        root_logger = jpype.JClass("org.apache.log4j.Logger").getRootLogger()
-        root_logger.info('Info message')
-        root_logger.warn('Warn message')
-
-        # process the messages
-        messages = []
-
-        def consume(msg):
-            messages.append(msg)
-
-            if msg.body == 'WARN - Warn message':
-                ch.basic_cancel(msg.consumer_tag)
-
-        self.consume_messages(conn, ch, qname, consume)
-
-        self.assertEquals(2, len(messages))
-
-        self.assertEquals('INFO - Info message', messages[0].body)
-        self.assertEquals('oq-unittest-log.info',
-                          messages[0].delivery_info['routing_key'])
-
-        self.assertEquals('WARN - Warn message', messages[1].body)
-        self.assertEquals('oq-unittest-log.warn',
-                          messages[1].delivery_info['routing_key'])
+        self.assertEqual(record.levelno, 12345)
+        self.assertEqual(record.levelname, 'Level 12345')
+        self.assertEqual(record.name, 'java')
+        self.assertEqual(record.msg, 'somemessage')
+        self.assertEqual(record.pathname, 'some/file')
+        self.assertEqual(record.lineno, 123)
+        self.assertEqual(record.funcName, 'someclassname.somemethod')
 
 
-class PythonAMQPLogTestCase(AMQPLogTestBase):
-    TOPIC = 'oq-unittest.topic'
-    ROUTING_KEY = 'oq-unittest-log.*'
+class PythonAMQPLogTestCase(unittest.TestCase):
+    LOGGER_NAME = 'tests.PythonAMQPLogTestCase'
+    ROUTING_KEY = 'oq.job.None.%s.#' % LOGGER_NAME
 
     def setUp(self):
-        self.amqp = logs.AMQPHandler(
-            host=config.get("amqp", "host"),
-            username=config.get("amqp", "user"),
-            password=config.get("amqp", "password"),
-            virtual_host=config.get("amqp", "vhost"),
-            exchange='oq-unittest.topic',
-            routing_key='oq-unittest-log.%(levelname)s',
-            level=logging.DEBUG)
+        self.amqp_handler = logs.AMQPHandler(level=logging.DEBUG)
+        self.amqp_handler.set_job_id(None)
 
-        self.log = logging.getLogger('tests.PythonAMQPLogTestCase')
+        self.log = logging.getLogger(self.LOGGER_NAME)
         self.log.setLevel(logging.DEBUG)
-        self.log.addHandler(self.amqp)
+        self.log.addHandler(self.amqp_handler)
+
+        cfg = config.get_section('amqp')
+        self.connection = kombu.BrokerConnection(hostname=cfg.get('host'),
+                                                 userid=cfg['user'],
+                                                 password=cfg['password'],
+                                                 virtual_host=cfg['vhost'])
+        self.channel = self.connection.channel()
+        self.exchange = kombu.entity.Exchange(cfg['exchange'], type='topic',
+                                              channel=self.channel)
+        self.queue = kombu.entity.Queue(exchange=self.exchange,
+                                        channel=self.channel,
+                                        routing_key=self.ROUTING_KEY,
+                                        exclusive=True)
+        self.queue.queue_declare()
+        self.queue.queue_bind()
+        self.consumer = kombu.messaging.Consumer(self.channel, self.queue)
+        self.producer = kombu.messaging.Producer(self.channel, self.exchange,
+                                                 serializer='json')
 
     def tearDown(self):
-        self.log.removeHandler(self.amqp)
+        self.log.removeHandler(self.amqp_handler)
+        if self.channel:
+            self.channel.close()
+        if self.connection:
+            self.connection.close()
 
-    def test_amqp_logging(self):
-        """We can talk to ourselves from Python using RabbitMQ"""
-        conn, ch, qname = self.setup_queue()
-
-        self.log.info('Info message')
-        self.log.warn('Warn message')
-
-        # process the messages
+    def test_amqp_handler(self):
         messages = []
 
-        def consume(msg):
-            messages.append(msg)
+        def consume(data, msg):
+            print data
+            self.assertEqual(msg.properties['content_type'],
+                             'application/json')
+            messages.append((msg.delivery_info['routing_key'], data))
 
-            if msg.body == 'Warn message':
-                ch.basic_cancel(msg.consumer_tag)
+            if data['levelname'] == 'WARNING':
+                # stop consuming when receive warning
+                self.channel.close()
+                self.channel = None
+                self.connection.close()
+                self.connection = None
 
-        self.consume_messages(conn, ch, qname, consume)
+        self.consumer.register_callback(consume)
+        self.consumer.consume()
+
+        self.log.getChild('child1').info('Info message %d %r', 42, 'payload')
+        self.log.getChild('child2').warning('Warn message')
+
+        while self.connection:
+            self.connection.drain_events()
 
         self.assertEquals(2, len(messages))
+        (info_key, info), (warning_key, warning) = messages
 
-        self.assertEquals('Info message', messages[0].body)
-        self.assertEquals('oq-unittest-log.info',
-                          messages[0].delivery_info['routing_key'])
+        self.assertEqual(info_key,
+                         'oq.job.None.tests.PythonAMQPLogTestCase.child1')
+        self.assertEqual(warning_key,
+                         'oq.job.None.tests.PythonAMQPLogTestCase.child2')
 
-        self.assertEquals('Warn message', messages[1].body)
-        self.assertEquals('oq-unittest-log.warning',
-                          messages[1].delivery_info['routing_key'])
+        # checking info message
+        self.assertAlmostEqual(info['created'], time.time(), delta=1)
+        self.assertAlmostEqual(info['msecs'], (info['created'] % 1) * 1000)
+        self.assertAlmostEqual(info['relativeCreated'] / 1000.,
+                               time.time() - logging._startTime, delta=1)
 
+        self.assertEqual(info['process'],
+                         multiprocessing.current_process().ident)
+        self.assertEqual(info['processName'],
+                         multiprocessing.current_process().name)
+        self.assertEqual(info['thread'], threading.current_thread().ident)
+        self.assertEqual(info['threadName'], threading.current_thread().name)
 
-class AMQPLogSetupTestCase(PreserveJavaIO, AMQPLogTestBase):
+        self.assertEqual(info['args'], [])
+        self.assertEqual(info['msg'], "Info message 42 'payload'")
 
-    def setUp(self):
-        # save and override process name
-        self.process_name = multiprocessing.current_process().name
-        multiprocessing.current_process().name = '->UnitTestProcess<-'
+        self.assertEqual(info['name'], 'tests.PythonAMQPLogTestCase.child1')
+        self.assertEqual(info['levelname'], 'INFO')
+        self.assertEqual(info['levelno'], logging.INFO)
 
-        # reset Log4j config
-        jvm = java.jvm()
-        jvm.JClass("org.apache.log4j.BasicConfigurator").resetConfiguration()
+        self.assertEqual(info['module'], "logs_unittest")
+        self.assertEqual(info['funcName'], 'test_amqp_handler')
+        thisfile = __file__.rstrip('c')
+        self.assertEqual(info['pathname'], thisfile)
+        self.assertEqual(info['filename'], os.path.basename(thisfile))
+        self.assertEqual(info['lineno'], 213)
+        self.assertEqual(info['hostname'], socket.getfqdn())
 
-        # reset logging config
-        cleanup_loggers()
+        self.assertEqual(info['exc_info'], None)
+        self.assertEqual(info['exc_text'], None)
 
-        # setup AMQP logging
-        logs.init_logs(log_type='amqp', level='debug')
-        java.init_logs(log_type='amqp', level='debug')
-        job.setup_job_logging('123')
+        # warning message
+        self.assertEqual(warning['name'], 'tests.PythonAMQPLogTestCase.child2')
+        self.assertEqual(warning['levelname'], 'WARNING')
+        self.assertEqual(warning['levelno'], logging.WARNING)
 
-    def tearDown(self):
-        # reset Log4j config
-        jvm = java.jvm()
-        jvm.JClass("org.apache.log4j.BasicConfigurator").resetConfiguration()
-        jvm.JClass("org.apache.log4j.BasicConfigurator").configure()
+    def test_amqp_log_source(self):
+        timeout = threading.Event()
 
-        # reset logging config
-        cleanup_loggers()
+        class _AMQPLogSource(logs.AMQPLogSource):
+            stop_on_timeout = False
 
-        # restore process name
-        multiprocessing.current_process().name = self.process_name
+            def timeout_callback(self):
+                timeout.set()
+                if self.stop_on_timeout:
+                    raise StopIteration()
 
-    def test_log_configuration(self):
-        """Test that the AMQP log configuration is consistent"""
-        conn, ch = signalling.connect()
-        # match messages of any level related to any job
-        qname = signalling.declare_and_bind_queue('*', '*')
-
-        # now there is a queue, send the log messages from Java
-        root_logger = jpype.JClass("org.apache.log4j.Logger").getRootLogger()
-        root_logger.debug('Java debug message')
-        root_logger.info('Java info message')
-        root_logger.warn('Java warn message')
-        root_logger.error('Java error message')
-        root_logger.fatal('Java fatal message')
-
-        # and from Python
-        root_log = logging.getLogger()
-        root_log.debug('Python %s message', 'debug')
-        root_log.info('Python %s message', 'info')
-        root_log.warning('Python %s message', 'warn')
-        root_log.error('Python %s message', 'error')
-        root_log.critical('Python %s message', 'fatal')
-
-        # process the messages
-        messages = []
-
-        def consume(msg):
-            messages.append(msg)
-
-            if len(messages) == 10:
-                ch.basic_cancel(msg.consumer_tag)
-
-        self.consume_messages(conn, ch, qname, consume)
-
-        self.assertEquals(10, len(messages))
-
-        # check message order
-        for source in ['Java', 'Python']:
-            for level in ['debug', 'info', 'warn', 'error', 'fatal']:
-                routing_key = 'log.%s.123' % level
-                fragment = '%s %s message' % (source, level)
-                contained = filter(lambda msg: fragment in msg.body, messages)
-
-                self.assertEquals(
-                    1, len(contained),
-                    '"%s" contained in "%s"' % (fragment, contained))
-
-                recv_routing_key = contained[0].delivery_info['routing_key']
-                self.assertEquals(
-                    routing_key, recv_routing_key,
-                    '%s %s routing key: expected %s got %s' % (
-                        source, level, routing_key, recv_routing_key))
-
-        # check process name in messages
-        for i, msg in enumerate(messages):
-            self.assertTrue(' ->UnitTestProcess<- ' in msg.body,
-                            'process name in %d-th log entry "%s"' % (
-                    i, msg.body))
+        logsource = _AMQPLogSource('oq.testlogger.#', timeout=0.1)
+        logsource_thread = threading.Thread(target=logsource.run)
+        logsource_thread.start()
+        handler = logging.handlers.BufferingHandler(float('inf'))
+        logger = logging.getLogger('oq.testlogger')
+        logger.addHandler(handler)
+        logger.setLevel(logging.DEBUG)
+        try:
+            msg = dict(
+                created=12345, msecs=321, relativeCreated=777,
+                process=1, processName='prcs', thread=111, threadName='thrd',
+                msg='message!', args=[],
+                name='oq.testlogger.sublogger',
+                levelname='INFO', levelno=logging.INFO,
+                module='somemodule', funcName='somefunc', pathname='somepath',
+                filename='somefile', lineno=262, hostname='apollo',
+                exc_info=None, exc_text=None
+            )
+            self.producer.publish(msg.copy(),
+                                  routing_key='oq.testlogger.sublogger')
+            timeout.wait()
+            timeout.clear()
+            # raising minimum level to make sure that info message
+            # no longer can sneak in
+            logger.setLevel(logging.WARNING)
+            logsource.stop_on_timeout = True
+            self.producer.publish(msg, routing_key='oq.testlogger.sublogger')
+        finally:
+            logger.removeHandler(handler)
+            logsource.stop()
+            logsource_thread.join()
+        self.assertEqual(len(handler.buffer), 1)
+        [record] = handler.buffer
+        for key in msg:
+            self.assertEqual(msg[key], getattr(record, key))

@@ -26,14 +26,11 @@ NRML instance documents is <HazardResultList>.
 
 from lxml import etree
 
-from openquake import logs
-
 from openquake import producer
 from openquake import shapes
 
 from openquake.xml import NRML_NS, GML_NS, NRML
 
-LOG = logs.LOG
 
 NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
 
