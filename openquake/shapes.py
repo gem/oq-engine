@@ -249,8 +249,8 @@ class Grid(object):
 
     def check_gridpoint(self, gridpoint):
         """Confirm that the point is contained by the region"""
-        point = Point(self._column_to_longitude(gridpoint.column),
-                             self._row_to_latitude(gridpoint.row))
+        point = Point(round_float(self._column_to_longitude(gridpoint.column)),
+                      round_float(self._row_to_latitude(gridpoint.row)))
         return self.check_point(point)
 
     def _latitude_to_row(self, latitude):
@@ -291,9 +291,8 @@ class Grid(object):
                     self.check_gridpoint(point)
                     yield point
                 except BoundsException:
-                    print "GACK! at col %s row %s" % (col, row)
-                    print "Point at %s %s isnt on grid" % \
-                        (point.site.longitude, point.site.latitude)
+                    print "Point (col %s row %s) at %s %s isnt on grid" % \
+                        (col, row, point.site.longitude, point.site.latitude)
 
 
 def c_mul(val_a, val_b):
