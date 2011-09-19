@@ -23,14 +23,10 @@ Constants and helper functions for XML processing,
 including namespaces, and namespace maps.
 """
 
-import os
-
 from lxml import etree
 
 from openquake import shapes
 
-
-NRML_SCHEMA_FILE = 'nrml.xsd'
 
 NRML_NS = 'http://openquake.org/xmlns/nrml/0.2'
 GML_NS = 'http://www.opengis.net/gml'
@@ -122,13 +118,6 @@ class XMLMismatchError(Exception):
 
     def __str__(self):
         return self.message
-
-
-def nrml_schema_file():
-    """Returns the absolute path to the NRML schema file"""
-    return os.path.join(
-        os.path.abspath(os.path.dirname(__file__)), 'nrml',
-        'schema', NRML_SCHEMA_FILE)
 
 
 def validates_against_xml_schema(xml_instance_path, schema_path):
