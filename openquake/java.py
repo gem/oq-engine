@@ -30,6 +30,7 @@ from functools import wraps
 
 from openquake import flags
 from openquake import logs
+from openquake import nrml
 from openquake.utils import config
 
 FLAGS = flags.FLAGS
@@ -240,6 +241,9 @@ def jvm():
     if not jpype.isJVMStarted():
         jpype.startJVM(jpype.getDefaultJVMPath(),
             "-Djava.ext.dirs=%s:%s" % jarpaths,
+            # setting Schema path here is ugly, but it's better than
+            # doing it before all XML parsing calls
+            "-Dopenquake.nrml.schema=%s" % nrml.nrml_schema_file(),
             # force the default Xerces parser configuration, otherwise
             # some random system-installed JAR might override it
             "-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=" \

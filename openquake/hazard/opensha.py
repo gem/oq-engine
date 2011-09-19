@@ -68,8 +68,6 @@ def preload(fn):
                 int(config.get("kvs", "port")))
         self.calc = java.jclass("LogicTreeProcessor")(
                 self.cache, self.key)
-        java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
-                                                xml.nrml_schema_file())
         return fn(self, *args, **kwargs)
     return preloader
 
@@ -765,13 +763,19 @@ class EventBasedMixin(BasePSHAMixin):
 
         LOG.debug("IML: %s" % (iml_list))
         files = []
+
+        nrml_path = ''
+
         for event_set in ses:
             for rupture in ses[event_set]:
 
-                common_path = os.path.join(self.base_path, self['OUTPUT_DIR'],
-                        "gmf-%s-%s" % (str(event_set.replace("!", "_")),
-                                       str(rupture.replace("!", "_"))))
-                nrml_path = "%s.xml" % common_path
+                if self.params['GMF_OUTPUT'].lower() == 'true':
+                    common_path = os.path.join(self.base_path,
+                            self['OUTPUT_DIR'],
+                            "gmf-%s-%s" % (str(event_set.replace("!", "_")),
+                                           str(rupture.replace("!", "_"))))
+                    nrml_path = "%s.xml" % common_path
+
                 gmf_writer = hazard_output.create_gmf_writer(
                     self.job_id, self.serialize_results_to, nrml_path)
                 gmf_data = {}
@@ -783,7 +787,6 @@ class EventBasedMixin(BasePSHAMixin):
 
                 gmf_writer.serialize(gmf_data)
                 files.append(nrml_path)
-
         return files
 
     @preload
