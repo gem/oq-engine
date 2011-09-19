@@ -32,6 +32,7 @@ import unittest
 
 from openquake import kvs
 from openquake import logs
+from openquake import nrml
 from openquake import shapes
 from openquake import xml
 from openquake import java
@@ -65,15 +66,11 @@ with open(
     helpers.smoketest_file('simplecase/expected_gmpe_model.json'), 'r') as f:
     TEST_GMPE_MODEL = f.read()
 
-NRML_SCHEMA_PATH = os.path.join(helpers.SCHEMA_DIR, xml.NRML_SCHEMA_FILE)
+NRML_SCHEMA_PATH = nrml.nrml_schema_file()
 
 
 class LogicTreeValidationTestCase(unittest.TestCase):
     """Test XML parsing error handling"""
-
-    def setUp(self):
-        java.jvm().java.lang.System.setProperty("openquake.nrml.schema",
-                                                xml.nrml_schema_file())
 
     def _parse_file(self, path):
         jpype = java.jvm()
@@ -118,7 +115,6 @@ class HazardEngineTestCase(unittest.TestCase):
         errors, and should have params loaded from KVS."""
 
         hazengine = helpers.job_from_file(TEST_JOB_FILE)
-        self.generated_files.append(hazengine.super_config_path)
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
             hazengine.execute()
 

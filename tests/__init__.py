@@ -23,7 +23,6 @@ from db_loader_unittest import *
 from db_routers_unittest import *
 from deterministic_hazard_unittest import *
 from deterministic_risk_unittest import *
-from geo_unittest import *
 from handlers_unittest import *
 from hazard_classical_unittest import *
 from hazard_nrml_unittest import *
@@ -53,6 +52,7 @@ from shapes_unittest import *
 from signalling_unittest import *
 from supervisor_unittest import *
 from tools_dbmaint_unittest import *
+from tools_oqbugs_unittest import *
 from utils_config_unittest import *
 from utils_general_unittest import *
 from utils_tasks_unittest import *

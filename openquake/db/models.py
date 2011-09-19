@@ -33,7 +33,7 @@ class FloatArrayField(models.Field):  # pylint: disable=R0904
         return 'float[]'
 
     def get_prep_value(self, value):
-        if value:
+        if value is not None:
             return "{" + ', '.join(str(v) for v in value) + "}"
         else:
             return None
@@ -520,7 +520,7 @@ class OqParams(models.Model):
     poes = FloatArrayField(null=True)
     realizations = models.IntegerField(null=True)
     histories = models.IntegerField(null=True)
-    gm_correlated = models.BooleanField(null=True)
+    gm_correlated = models.NullBooleanField(null=True)
     gmf_calculation_number = models.IntegerField(null=True)
     rupture_surface_discretization = models.FloatField(null=True)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
@@ -529,6 +529,74 @@ class OqParams(models.Model):
     region = models.PolygonField(srid=4326, null=True)
     region_grid_spacing = models.FloatField(null=True)
     sites = models.MultiPointField(srid=4326, null=True)
+
+    aggregate_loss_curve = models.NullBooleanField(null=True)  # 1/0 ?
+    area_source_discretization = models.FloatField(null=True)
+    area_source_magnitude_scaling_relationship = models.TextField(null=True)
+    compute_mean_hazard_curve = models.NullBooleanField(null=True)
+    conditional_loss_poe = FloatArrayField(null=True)
+    fault_magnitude_scaling_relationship = models.TextField(null=True)
+    fault_magnitude_scaling_sigma = models.FloatField(null=True)
+    fault_rupture_offset = models.FloatField(null=True)
+    fault_surface_discretization = models.FloatField(null=True)
+    gmf_random_seed = models.IntegerField(null=True)
+    gmpe_lt_random_seed = models.IntegerField(null=True)
+    gmpe_model_name = models.TextField(null=True)
+    grid_source_magnitude_scaling_relationship = models.TextField(null=True)
+    include_area_sources = models.NullBooleanField(null=True)
+    include_fault_source = models.NullBooleanField(null=True)
+    include_grid_sources = models.NullBooleanField(null=True)
+    include_subduction_fault_source = models.NullBooleanField(null=True)
+    loss_curves_output_prefix = models.TextField(null=True)
+    maximum_distance = models.FloatField(null=True)
+    quantile_levels = FloatArrayField(null=True)
+    reference_depth_to_2pt5km_per_sec_param = models.FloatField(null=True)
+    risk_cell_size = models.FloatField(null=True)
+    rupture_aspect_ratio = models.FloatField(null=True)
+    RUPTURE_FLOATING_TYPE_CHOICES = (
+        ('alongstrike', 'Only along strike ( rupture full DDW)'),
+        ('downdip', 'Along strike and down dip'),
+        ('centereddowndip', 'Along strike & centered down dip'),
+    )
+    rupture_floating_type = models.TextField(
+        null=True, choices=RUPTURE_FLOATING_TYPE_CHOICES)
+    SADIGH_SITE_TYPE_CHOICES = (
+        ('rock', 'Rock'),
+        ('deepsoil', 'Deep-Soil'),
+    )
+    sadigh_site_type = models.TextField(
+        null=True, choices=SADIGH_SITE_TYPE_CHOICES)
+    source_model_lt_random_seed = models.IntegerField(null=True)
+    STANDARD_DEVIATION_TYPE_CHOICES = (
+        ('total', 'Total'),
+        ('interevent', 'Inter-Event'),
+        ('intraevent', 'Intra-Event'),
+        ('zero', 'None (zero)'),
+        ('total_mag_dependent', 'Total (Mag Dependent)'),
+        ('total_pga_dependent', 'Total (PGA Dependent)'),
+        ('intraevent_mag_dependent', 'Intra-Event (Mag Dependent)'),
+    )
+    standard_deviation_type = models.TextField(
+        null=True, choices=STANDARD_DEVIATION_TYPE_CHOICES)
+    subduction_fault_magnitude_scaling_relationship = \
+        models.TextField(null=True)
+    subduction_fault_magnitude_scaling_sigma = models.FloatField(null=True)
+    subduction_fault_rupture_offset = models.FloatField(null=True)
+    subduction_fault_surface_discretization = models.FloatField(null=True)
+    subduction_rupture_aspect_ratio = models.FloatField(null=True)
+    subduction_rupture_floating_type = models.TextField(
+        null=True, choices=RUPTURE_FLOATING_TYPE_CHOICES)
+    SOURCE_AS_CHOICES = (
+        ('pointsources', 'Point Sources'),
+        ('linesources', 'Line Sources (random or given strike)'),
+        ('crosshairsources', 'Cross Hair Line Sources'),
+        ('16spokedsources', '16 Spoked Line Sources'),
+    )
+    treat_area_source_as = models.TextField(
+        null=True, choices=SOURCE_AS_CHOICES)
+    treat_grid_source_as = models.TextField(
+        null=True, choices=SOURCE_AS_CHOICES)
+    width_of_mfd_bin = models.FloatField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"oq_params'

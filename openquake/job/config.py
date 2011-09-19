@@ -34,6 +34,20 @@ DETERMINISTIC_MODE = "Deterministic"
 CALCULATION_MODE = "CALCULATION_MODE"
 
 
+class ValidationException(Exception):
+    """Trivial wrapper for configuration validation errors"""
+
+    def __init__(self, errors):
+        super(ValidationException, self).__init__()
+
+        self.errors = errors
+
+    def __str__(self):
+        msg = 'The job configuration contained some errors:\n\n'
+
+        return msg + '\n'.join(self.errors)
+
+
 class ValidatorSet(object):
     """A set of validators."""
 
@@ -112,10 +126,18 @@ class ComputationTypeValidator(object):
         """Return true if the user has specified the region
         or the set of sites, false otherwise.
         """
+        has_input_region = INPUT_REGION in self.params
+        has_sites = SITES in self.params
 
-        if INPUT_REGION in self.params.keys() and SITES in self.params.keys():
+        if has_input_region and has_sites:
             return (False, ["You can specify the input region or "
                     + "a set of sites, not both"])
+        if not has_input_region and not has_sites:
+            return (False, ["You must specify either input region or "
+                    + "a set of sites"])
+        if has_input_region and REGION_GRID_SPACING not in self.params:
+            return (False, ["You must specify region grid spacing together "
+                    + "with the input region"])
 
         return (True, [])
 

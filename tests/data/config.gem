@@ -14,6 +14,7 @@ GMPE_LOGIC_TREE_FILE = GmpeLogicTree.inp
 # output directory
 OUTPUT_DIR = ~/gem_output
 
+SADIGH_SITE_TYPE = Rock
 
 # moment magnitude (Mw)
 MINIMUM_MAGNITUDE = 5.0

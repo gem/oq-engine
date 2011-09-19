@@ -852,7 +852,7 @@ def _create_writer(job_id, serialize_to, nrml_path,
         job_id = int(job_id)
         writers.append(create_db_writer(nrml_path, job_id))
 
-    if 'xml' in serialize_to:
+    if 'xml' in serialize_to and nrml_path:
         writers.append(create_xml_writer(nrml_path))
 
     return writer.compose_writers(writers)
