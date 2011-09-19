@@ -590,9 +590,12 @@ class RunJobTestCase(unittest.TestCase):
     def setUp(self):
         self.job = None
         self.job_from_file = Job.from_file
+        self.init_logs_amqp_send = patch('openquake.logs.init_logs_amqp_send')
+        self.init_logs_amqp_send.start()
 
     def tearDown(self):
         self.job = None
+        self.init_logs_amqp_send.stop()
 
     def _job_status(self):
         return OqJob.objects.get(id=self.job.job_id).status
