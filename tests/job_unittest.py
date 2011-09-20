@@ -718,11 +718,12 @@ class RunJobTestCase(unittest.TestCase):
 
         input_region = "46.0, 9.0, 46.0, 10.0, 45.0, 10.0, 45.0, 9.0"
 
-        exposure = "openquake/nrml/schema/examples/exposure-portfolio.xml"
+        exposure = "exposure-portfolio.xml"
+        exposure_path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, exposure)
 
         params = {config.INPUT_REGION: input_region,
                 config.REGION_GRID_SPACING: 0.1,
-                config.EXPOSURE: exposure,
+                config.EXPOSURE: exposure_path,
                 config.COMPUTE_HAZARD_AT_ASSETS: True}
 
         engine = helpers.create_job(params, sections=sections, base_path=".")
