@@ -36,6 +36,7 @@ from openquake import kvs
 from openquake import logs
 from openquake import OPENQUAKE_ROOT
 from openquake import shapes
+from openquake.parser import exposure
 from openquake.db.models import (
     OqJob, OqParams, OqUser, JobStats, FloatArrayField)
 from openquake.supervising import supervisor
@@ -445,7 +446,11 @@ class Job(object):
         only on the sites specified in that parameter, otherwise
         the region is used."""
 
-        if self.has(conf.SITES):
+        if conf.RISK_SECTION in self.sections \
+                and self.has(conf.COMPUTE_HAZARD_AT_ASSETS):
+
+            return read_sites_from_exposure(self)
+        elif self.has(conf.SITES):
             sites = []
             coords = self._extract_coords(conf.SITES)
 
@@ -513,3 +518,32 @@ class Job(object):
         stats.num_sites = len(self.sites_to_compute())
 
         stats.save()
+
+
+def read_sites_from_exposure(a_job):
+    """
+    Given the exposure model specified in the job config, read all sites which
+    are located within the region of interest.
+
+    :param a_job: a Job object with an EXPOSURE parameter defined
+    :type a_job: :py:class:`openquake.job.Job`
+
+    :returns: a list of :py:class:`openquake.shapes.Site` objects
+    """
+
+    sites = []
+    path = os.path.join(a_job.base_path, a_job.params[conf.EXPOSURE])
+
+    reader = exposure.ExposurePortfolioFile(path)
+    constraint = a_job.region
+
+    LOG.debug(
+        "Constraining exposure parsing to %s" % constraint)
+
+    for site, _asset_data in reader.filter(constraint):
+
+        # we don't want duplicates (bug 812395):
+        if not site in sites:
+            sites.append(site)
+
+    return sites
