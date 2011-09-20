@@ -336,6 +336,7 @@ class Job(object):
         self._job_id = job_id
         mark_job_as_current(job_id)  # enables KVS gc
 
+        self.sites = []
         self.blocks_keys = []
         self.params = params
         self.sections = list(set(sections))
@@ -444,22 +445,36 @@ class Job(object):
 
         If the SITES parameter is specified, the computation is triggered
         only on the sites specified in that parameter, otherwise
-        the region is used."""
+        the region is used.
+
+        If the COMPUTE_HAZARD_AT_ASSETS_LOCATIONS parameter is specified,
+        the hazard computation is triggered only on sites
+        defined in the risk exposure file.
+        """
+
+        if self.sites:
+            return self.sites
 
         if conf.RISK_SECTION in self.sections \
                 and self.has(conf.COMPUTE_HAZARD_AT_ASSETS):
 
-            return read_sites_from_exposure(self)
+            print "COMPUTE_HAZARD_AT_ASSETS_LOCATIONS selected, " \
+                "computing hazard on exposure sites..."
+
+            self.sites = read_sites_from_exposure(self)
         elif self.has(conf.SITES):
-            sites = []
+
             coords = self._extract_coords(conf.SITES)
+            sites = []
 
             for coord in coords:
                 sites.append(shapes.Site(coord[0], coord[1]))
 
-            return sites
+            self.sites = sites
         else:
-            return self._sites_for_region()
+            self.sites = self._sites_for_region()
+
+        return self.sites
 
     def _extract_coords(self, config_param):
         """Extract from a configuration parameter the list of coordinates."""
