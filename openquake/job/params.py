@@ -148,6 +148,9 @@ define_param('REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM',
 
 define_param('GMF_OUTPUT', None,
              modes=('event_based', 'deterministic'))
+define_param('COMPUTE_HAZARD_AT_ASSETS_LOCATIONS', None,
+             modes=('event_based', 'deterministic', 'classical'))
+
 define_param('GMF_RANDOM_SEED', 'gmf_random_seed',
              modes=('event_based', 'deterministic'))
 
