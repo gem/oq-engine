@@ -20,7 +20,6 @@ import mock
 import os
 import textwrap
 import unittest
-import logging
 
 from django.contrib.gis.geos.polygon import Polygon
 from django.contrib.gis.geos.collections import MultiPoint
@@ -28,7 +27,6 @@ from django.contrib.gis.geos.collections import MultiPoint
 from openquake import kvs
 from openquake import flags
 from openquake import shapes
-from openquake.utils import config as oq_config
 from openquake.job import Job, config, prepare_job, run_job
 from openquake.job import parse_config_file, filter_configuration_parameters
 from openquake.job.mixins import Mixin
@@ -706,6 +704,30 @@ class RunJobTestCase(unittest.TestCase):
 
         self.assertEquals(expected_sites, engine.sites_to_compute())
 
+    def test_with_risk_jobs_we_can_trigger_hazard_only_on_exposure_sites(self):
+        """When we have hazard and risk jobs, we can ask to trigger
+        the hazard computation only on the sites specified
+        in the exposure file."""
+
+        sections = [config.HAZARD_SECTION,
+                config.GENERAL_SECTION, config.RISK_SECTION]
+
+        input_region = "46.0, 9.0, 46.0, 10.0, 45.0, 10.0, 45.0, 9.0"
+
+        exposure = "openquake/nrml/schema/examples/exposure-portfolio.xml"
+
+        params = {config.INPUT_REGION: input_region,
+                config.REGION_GRID_SPACING: 0.1,
+                config.EXPOSURE: exposure,
+                config.COMPUTE_HAZARD_AT_ASSETS: True}
+
+        engine = helpers.create_job(params, sections=sections, base_path=".")
+
+        expected_sites = [shapes.Site(9.15000, 45.16667),
+                shapes.Site(9.15333, 45.12200), shapes.Site(9.14777, 45.17999)]
+
+        self.assertEquals(expected_sites, engine.sites_to_compute())
+
     def test_supervisor_is_spawned(self):
         with patch('openquake.job.Job.from_file') as from_file:
 
@@ -719,6 +741,7 @@ class RunJobTestCase(unittest.TestCase):
             from_file.side_effect = patch_job_launch
 
             with patch('os.fork', mocksignature=False) as fork:
+
                 def fork_side_effect():
                     fork.side_effect = lambda: 0
                     return 1234
