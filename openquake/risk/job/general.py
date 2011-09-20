@@ -123,6 +123,7 @@ def read_sites_from_exposure(a_job):
     """
 
     sites = []
+    assets_number = 0
     path = os.path.join(a_job.base_path, a_job.params[job_config.EXPOSURE])
 
     reader = exposure.ExposurePortfolioFile(path)
@@ -132,10 +133,14 @@ def read_sites_from_exposure(a_job):
         "Constraining exposure parsing to %s" % constraint)
 
     for site, _asset_data in reader.filter(constraint):
+        assets_number += 1
 
         # we don't want duplicates (bug 812395):
         if not site in sites:
             sites.append(site)
+
+    LOG.info(
+        "Loaded %s assets from exposure portfolio..." % assets_number)
 
     return sites
 
@@ -160,7 +165,7 @@ class RiskJobMixin(mixins.Mixin):
 
             block_count += 1
 
-        LOG.debug("Job has partitioned %s sites into %s blocks" % (
+        LOG.info("Job has partitioned %s sites into %s blocks" % (
                 len(sites), block_count))
 
     def store_exposure_assets(self):
