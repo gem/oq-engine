@@ -140,7 +140,7 @@ def read_sites_from_exposure(a_job):
             sites.append(site)
 
     LOG.info(
-        "Loaded %s assets from exposure portfolio..." % assets_number)
+        "Loaded %s assets from exposure portfolio...", assets_number)
 
     return sites
 
@@ -165,8 +165,8 @@ class RiskJobMixin(mixins.Mixin):
 
             block_count += 1
 
-        LOG.info("Job has partitioned %s sites into %s blocks" % (
-                len(sites), block_count))
+        LOG.info("Job has partitioned %s sites into %s blocks",
+                len(sites), block_count)
 
     def store_exposure_assets(self):
         """Load exposure assets and write them to KVS."""
