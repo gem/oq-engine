@@ -131,8 +131,8 @@ class RiskJobMixin(mixins.Mixin):
 
             block_count += 1
 
-        LOG.debug("Job has partitioned %s sites into %s blocks" % (
-                len(sites), block_count))
+        LOG.info("Job has partitioned %s sites into %s blocks",
+                len(sites), block_count)
 
     def store_exposure_assets(self):
         """Load exposure assets and write them to KVS."""
