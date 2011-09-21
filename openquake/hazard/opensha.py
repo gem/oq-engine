@@ -110,7 +110,7 @@ class BasePSHAMixin(Mixin):
         except jpype.JavaException, ex:
             unwrap_validation_error(
                 jpype, ex,
-                self.params.get("SOURCE_MODEL_LOGIC_TREE_FILE_PATH"))
+                self.params.get("SOURCE_MODEL_LOGIC_TREE_FILE"))
 
     def store_gmpe_map(self, seed):
         """Generates a hash of tectonic regions and GMPEs, using the logic tree
@@ -122,7 +122,7 @@ class BasePSHAMixin(Mixin):
             self.calc.sampleAndSaveGMPETree(self.cache, key, seed)
         except jpype.JavaException, ex:
             unwrap_validation_error(
-                jpype, ex, self.params.get("GMPE_LOGIC_TREE_FILE_PATH"))
+                jpype, ex, self.params.get("GMPE_LOGIC_TREE_FILE"))
 
     def generate_erf(self):
         """Generate the Earthquake Rupture Forecast from the currently stored
