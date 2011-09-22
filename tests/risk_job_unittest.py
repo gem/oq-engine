@@ -230,26 +230,6 @@ class RiskJobMixinTestCase(unittest.TestCase):
                 expected_block, general.Block.from_kvs(a_job.blocks_keys[0]))
 
 
-class RiskJobGeneralTestCase(unittest.TestCase):
-
-    def test_read_sites_from_exposure(self):
-        """
-        Test reading site data from an exposure file using
-        :py:function:`openquake.risk.job.general.read_sites_from_exposure`.
-        """
-        job_config_file = helpers.smoketest_file('simplecase/config.gem')
-
-        test_job = helpers.job_from_file(job_config_file)
-
-        expected_sites = [
-            shapes.Site(-118.077721, 33.852034),
-            shapes.Site(-118.067592, 33.855398),
-            shapes.Site(-118.186739, 33.779013)]
-
-        self.assertEqual(expected_sites,
-            general.read_sites_from_exposure(test_job))
-
-
 GRID_ASSETS = {
     (0, 0): {'assetID': 'asset_at_0_0', 'lat': 10.0, 'lon': 10.0},
     (0, 1): {'assetID': 'asset_at_0_1', 'lat': 10.0, 'lon': 10.1},
