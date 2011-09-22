@@ -444,7 +444,7 @@ class OqJob(models.Model):
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
         (u'deterministic', u'Deterministic'),
-
+        (u'disaggregation', u'Disaggregation'),
     )
     job_type = models.TextField(choices=JOB_TYPE_CHOICES)
     STATUS_CHOICES = (
@@ -486,6 +486,7 @@ class OqParams(models.Model):
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
         (u'deterministic', u'Deterministic'),
+        (u'disaggregation', u'Disaggregation'),
     )
     job_type = models.TextField(choices=JOB_TYPE_CHOICES)
     upload = models.ForeignKey('Upload', null=True)
