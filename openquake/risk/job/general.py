@@ -111,40 +111,6 @@ def compute_risk(job_id, block_id, **kwargs):
         return mixed.compute_risk(block_id, **kwargs)
 
 
-def read_sites_from_exposure(a_job):
-    """
-    Given the exposure model specified in the job config, read all sites which
-    are located within the region of interest.
-
-    :param a_job: a Job object with an EXPOSURE parameter defined
-    :type a_job: :py:class:`openquake.job.Job`
-
-    :returns: a list of :py:class:`openquake.shapes.Site` objects
-    """
-
-    sites = []
-    assets_number = 0
-    path = os.path.join(a_job.base_path, a_job.params[job_config.EXPOSURE])
-
-    reader = exposure.ExposurePortfolioFile(path)
-    constraint = a_job.region
-
-    LOG.debug(
-        "Constraining exposure parsing to %s" % constraint)
-
-    for site, _asset_data in reader.filter(constraint):
-        assets_number += 1
-
-        # we don't want duplicates (bug 812395):
-        if not site in sites:
-            sites.append(site)
-
-    LOG.info(
-        "Loaded %s assets from exposure portfolio...", assets_number)
-
-    return sites
-
-
 class RiskJobMixin(mixins.Mixin):
     """A mixin proxy for Risk jobs."""
     mixins = {}
@@ -155,7 +121,7 @@ class RiskJobMixin(mixins.Mixin):
 
         sites = []
         self.blocks_keys = []  # pylint: disable=W0201
-        sites = read_sites_from_exposure(self)
+        sites = job.read_sites_from_exposure(self)
 
         block_count = 0
 
