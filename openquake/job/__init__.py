@@ -448,8 +448,8 @@ class Job(object):
         the region is used.
 
         If the COMPUTE_HAZARD_AT_ASSETS_LOCATIONS parameter is specified,
-        the hazard computation is triggered only on sites
-        defined in the risk exposure file.
+        the hazard computation is triggered only on sites defined in the risk
+        exposure file and located inside the region of interest.
         """
 
         if self.sites:
