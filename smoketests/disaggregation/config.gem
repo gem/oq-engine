@@ -4,19 +4,25 @@ CALCULATION_MODE = Disaggregation
 
 # pairs are ordered lat,lon
 REGION_VERTEX = 16.0, 73.0, 18.0, 73.0, 18.0, 75.0, 16.0, 75.0
-REGION_GRID_SPACING =
+REGION_GRID_SPACING = 0.1
+
+# this geometry should give us a total of 441 sites
 
 [HAZARD]
 
+# Disaggregation results are Probability Mass Functions (PMFs)
+# Which are composed of different combinations of the following:
+# Latitude, Longitude, Magnitude, Distance, Epsilon, Tectonic Region Type
 # Choose at least one of the following:
-# TODO
-DISAGGREGATION_RESULTS = MagPMF, FullDisaggMatrix, MagEpsilonPMF
+#   MagPMF, DistPMF, TRTPMF, MagDistPMF, MagDistEpsPMF, LatLonPMF, LatLonMagPMF,
+#   LatLonMagEpsPMF, FullDisaggMatrix
+DISAGGREGATION_RESULTS = MagPMF, MagDistEpsPMF, FullDisaggMatrix
 
-LATITUDE_BIN_LIMITS = 1, 2, 3
-LONGITUDE_BIN_LIMITS =
-MAGNITUDE_BIN_LIMITS =
-EPSILON_BIN_LIMITS =
-DISTANCE_BIN_LIMITS =
+LATITUDE_BIN_LIMITS = 14.0, 16.0, 18.0, 20.0
+LONGITUDE_BIN_LIMITS = 70.0, 72.0, 74.0, 76.0
+MAGNITUDE_BIN_LIMITS = 5, 6, 7, 8
+EPSILON_BIN_LIMITS = 0, 1, 2, 3
+DISTANCE_BIN_LIMITS = 0, 10, 20, 30, 40, 50
 
 POES_TO_DISAGGREGATE = 0.1, 0.02
 
@@ -24,8 +30,8 @@ OUTPUT_DIR = computed_output
 
 NUMBER_OF_LOGIC_TREE_SAMPLES = 2
 
-SOURCE_MODEL_LOGIC_TREE_FILE =
-GMPE_LOGIC_TREE_FILE =
+SOURCE_MODEL_LOGIC_TREE_FILE = source_model_logic_tree.xml
+GMPE_LOGIC_TREE_FILE = gmpe_logic_tree.xml
 
 SOURCE_MODEL_LT_RANDOM_SEED = 17
 GMPE_LT_RANDOM_SEED = 3
