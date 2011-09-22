@@ -36,6 +36,7 @@ from openquake import kvs
 from openquake import logs
 from openquake import OPENQUAKE_ROOT
 from openquake import shapes
+from openquake.parser import exposure
 from openquake.db.models import (
     OqJob, OqParams, OqUser, JobStats, FloatArrayField)
 from openquake.supervising import supervisor
@@ -335,6 +336,7 @@ class Job(object):
         self._job_id = job_id
         mark_job_as_current(job_id)  # enables KVS gc
 
+        self.sites = []
         self.blocks_keys = []
         self.params = params
         self.sections = list(set(sections))
@@ -443,18 +445,36 @@ class Job(object):
 
         If the SITES parameter is specified, the computation is triggered
         only on the sites specified in that parameter, otherwise
-        the region is used."""
+        the region is used.
 
-        if self.has(conf.SITES):
-            sites = []
+        If the COMPUTE_HAZARD_AT_ASSETS_LOCATIONS parameter is specified,
+        the hazard computation is triggered only on sites defined in the risk
+        exposure file and located inside the region of interest.
+        """
+
+        if self.sites:
+            return self.sites
+
+        if conf.RISK_SECTION in self.sections \
+                and self.has(conf.COMPUTE_HAZARD_AT_ASSETS):
+
+            print "COMPUTE_HAZARD_AT_ASSETS_LOCATIONS selected, " \
+                "computing hazard on exposure sites..."
+
+            self.sites = read_sites_from_exposure(self)
+        elif self.has(conf.SITES):
+
             coords = self._extract_coords(conf.SITES)
+            sites = []
 
             for coord in coords:
                 sites.append(shapes.Site(coord[0], coord[1]))
 
-            return sites
+            self.sites = sites
         else:
-            return self._sites_for_region()
+            self.sites = self._sites_for_region()
+
+        return self.sites
 
     def _extract_coords(self, config_param):
         """Extract from a configuration parameter the list of coordinates."""
@@ -513,3 +533,32 @@ class Job(object):
         stats.num_sites = len(self.sites_to_compute())
 
         stats.save()
+
+
+def read_sites_from_exposure(a_job):
+    """
+    Given the exposure model specified in the job config, read all sites which
+    are located within the region of interest.
+
+    :param a_job: a Job object with an EXPOSURE parameter defined
+    :type a_job: :py:class:`openquake.job.Job`
+
+    :returns: a list of :py:class:`openquake.shapes.Site` objects
+    """
+
+    sites = []
+    path = os.path.join(a_job.base_path, a_job.params[conf.EXPOSURE])
+
+    reader = exposure.ExposurePortfolioFile(path)
+    constraint = a_job.region
+
+    LOG.debug(
+        "Constraining exposure parsing to %s" % constraint)
+
+    for site, _asset_data in reader.filter(constraint):
+
+        # we don't want duplicates (bug 812395):
+        if not site in sites:
+            sites.append(site)
+
+    return sites
