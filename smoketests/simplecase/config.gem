@@ -20,7 +20,7 @@ SOURCE_MODEL_LT_RANDOM_SEED = 23
 GMPE_LT_RANDOM_SEED = 5
 
 # NRML serialization of gmf-* files
-GMF_OUTPUT = true
+GMF_OUTPUT = false
 
 
 GMF_RANDOM_SEED = 3
