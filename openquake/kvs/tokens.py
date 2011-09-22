@@ -37,6 +37,7 @@ QUANTILE_HAZARD_MAP_KEY_TOKEN = 'quantile_hazard_map'
 GMFS_KEY_TOKEN = 'GMFS'
 
 # risk tokens
+BLOCK_KEY_TOKEN = "BLOCK"
 CONDITIONAL_LOSS_KEY_TOKEN = 'LOSS_AT'
 EXPOSURE_KEY_TOKEN = 'ASSET'
 GMF_KEY_TOKEN = 'GMF'
@@ -141,6 +142,11 @@ def asset_row_col_from_kvs_key(kvs_key):
     row, col = kvs_key.rsplit(_KVS_KEY_SEPARATOR, 2)[-2:]
 
     return int(row), int(col)
+
+
+def risk_block_key(job_id, block_index):
+    """ Return the key for a risk block """
+    return _generate_key(job_id, BLOCK_KEY_TOKEN, block_index)
 
 
 def loss_ratio_key(job_id, row, col, asset_id):
