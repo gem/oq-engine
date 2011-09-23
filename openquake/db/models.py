@@ -39,6 +39,30 @@ class FloatArrayField(models.Field):  # pylint: disable=R0904
             return None
 
 
+class CharArrayField(models.Field):
+    """This field models a postgres `varchar` array."""
+
+    def db_type(self, _connection):
+        return 'varchar[]'
+
+    def get_prep_value(self, value):
+        """Return data in a format that has been prepared for use as a
+        parameter in a query.
+
+        :param value: sequence of string values to be saved in a varchar[]
+            field
+        :type value: list or tuple
+
+        >>> caf = CharArrayField()
+        >>> caf.get_prep_value(['foo', 'bar', 'baz123'])
+        '{"foo", "bar", "baz123"}'
+        """
+        if value is not None:
+            return '{' + ', '.join('"%s"'% str(v) for v in value) + '}'
+        else:
+            return None
+
+
 ## Tables in the 'admin' schema.
 
 
@@ -599,6 +623,42 @@ class OqParams(models.Model):
         null=True, choices=SOURCE_AS_CHOICES)
     width_of_mfd_bin = models.FloatField(null=True)
 
+    # The following bin limits fields are for the Disaggregation calculator
+    # only:
+    lat_bin_limits = FloatArrayField(null=True)
+    lon_bin_limits = FloatArrayField(null=True)
+    mag_bin_limits = FloatArrayField(null=True)
+    epsilon_bin_limits = FloatArrayField(null=True)
+    distance_bin_limits = FloatArrayField(null=True)
+    # PMF (Probability Mass Function) result choices for the Disaggregation
+    # calculator
+    DISAGG_RESULTS_CHOICES = (
+        ('magpmf', 'Magnitude PMF'),
+        ('distpmf', 'Distance PMF'),
+        ('trtpmf', 'Tectonic Region Type PMF'),
+        ('magdistpmf', 'Magnitude-Distance PMF'),
+        ('magdistepspmf', 'Magnitude-Distance-Epsilon PMF'),
+        ('latlonpmf', 'Latitude-Longitude PMF'),
+        ('latlonmagpmf', 'Latitude-Longitude-Magnitude PMF'),
+        ('latlonmagepspmf', 'Latitude-Longitude-Magnitude-Epsilon PMF'),
+        ('fulldisaggmatrix', 'Full disaggregation matrix (Lat, Lon, Mag, Eps, and TRT)'),
+    )
+    # TODO(LB), Sept. 23, 2011: We should consider implementing some custom
+    # constraint checking for disagg_results. For now, I'm just going to let
+    # the database check the constraints.
+    # The following are the valid options for each element of this array field:
+    #   magpmf (Magnitude Probability Mass Function)
+    #   distpmf (Distance PMF)
+    #   trtpmf (Tectonic Region Type PMF)
+    #   magdistpmf (Magnitude-Distance PMF)
+    #   magdistepspmf (Magnitude-Distance-Epsilon PMF)
+    #   latlonpmf (Latitude-Longitude PMF)
+    #   latlonmagpmf (Latitude-Longitude-Magnitude PMF)
+    #   latlonmagepspmf (Latitude-Longitude-Magnitude-Epsilon PMF)
+    #   fulldisaggmatrix (The full disaggregation matrix; includes
+    #       Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
+    disagg_results = CharArrayField(null=True)
+
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"oq_params'
 
@@ -631,6 +691,7 @@ class Output(models.Model):
     shapefile_path = models.TextField(null=True)
     min_value = models.FloatField(null=True)
     max_value = models.FloatField(null=True)
+
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
