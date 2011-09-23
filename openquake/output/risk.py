@@ -21,7 +21,7 @@
 NRML serialization of risk-related data sets.
 - loss ratio curves
 - loss curves
-- loss map
+- loss maps for Deterministic, Probabilistic and Classical
 """
 
 from collections import defaultdict
@@ -248,6 +248,29 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
                 return node
         return None
 
+class LossMapNonDeterministicXMLWriter(LossMapXMLWriter):
+    """
+    This class serializes loss maps to NRML for Non Deterministic calculators
+
+    Additionally in this loss map we have a timespan and a poe
+
+    timespan is an integer representing time in years
+    poe is a float between 0 and 1 (extremes included)
+
+    """
+    DEFAULT_METADATA = {
+        'nrmlID': 'undefined', 'riskResultID': 'undefined',
+        'lossMapID': 'undefined', 'endBranchLabel': 'undefined',
+        'lossCategory': 'undefined', 'unit': 'undefined',
+        'timespan': 'undefined', 'poe': 'undefined'}
+
+    def write_metadata(self, metadata):
+        super(LossMapNonDeterministicXMLWriter, self).write_metadata(metadata)
+
+        # set the rest of the <lossMap> attributes for non deterministic
+        for key in ('timespan', 'poe'):
+            self.loss_map_node.set(
+                key, str(metadata.get(key, self.DEFAULT_METADATA[key])))
 
 LOSS_MAP_METADATA_KEYS = [
     ('loss_map_ref', 'lossMapID'),
@@ -255,6 +278,8 @@ LOSS_MAP_METADATA_KEYS = [
     ('category', 'lossCategory'),
     ('unit', 'unit'),
     ('deterministic', 'deterministic'),
+    # timespan is for non-deterministic loss maps
+    ('timespan', 'timespan'),
     # poe is for non-deterministic loss maps
     # enforced by a SQL constraint
     ('poe', 'poe'),
@@ -425,11 +450,13 @@ class LossMapDBWriter(writer.DBWriter):
                 ***assetID*** - the assetID
         """
         for loss, asset in values:
+
             kwargs = {
                 'loss_map_id': self.metadata.id,
                 'asset_ref': asset['assetID'],
                 'location': "POINT(%s %s)" % (site.longitude, site.latitude),
             }
+
             if self.metadata.deterministic:
                 kwargs.update({
                     'value': float(loss.get('mean_loss')),
@@ -440,6 +467,7 @@ class LossMapDBWriter(writer.DBWriter):
                     'value': float(loss.get('value')),
                     'std_dev': 0.0,
                 })
+
             self.bulk_inserter.add_entry(**kwargs)
 
     def _insert_metadata(self, metadata):
@@ -483,9 +511,7 @@ def create_loss_map_writer(job_id, serialize_to, nrml_path, deterministic):
         if deterministic:
             writers.append(LossMapXMLWriter(nrml_path))
         else:
-            # No XML schema for non-deterministic maps yet (see bug 805434)
-            pass
-
+            writers.append(LossMapNonDeterministicXMLWriter(nrml_path))
     return writer.compose_writers(writers)
 
 
