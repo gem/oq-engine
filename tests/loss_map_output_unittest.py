@@ -46,6 +46,17 @@ LOSS_MAP_METADATA = {
     'lossCategory': 'economic_loss',
     'unit': 'EUR'}
 
+
+LOSS_MAP_NON_DET_METADATA = {
+    'nrmlID': 'test_nrml_id',
+    'riskResultID': 'test_rr_id',
+    'lossMapID': 'test_lm_id',
+    'endBranchLabel': 'test_ebl',
+    'lossCategory': 'economic_loss',
+    'unit': 'EUR',
+    'timeSpan': 1,
+    'poE': 0.5}
+
 SITE_A = shapes.Site(-117.0, 38.0)
 SITE_A_ASSET_ONE = {'assetID': 'a1711'}
 SITE_A_LOSS_ONE = {'mean_loss': 0, 'stddev_loss': 100}
@@ -62,12 +73,48 @@ SAMPLE_LOSS_MAP_DATA = [
     (SITE_A_LOSS_TWO, SITE_A_ASSET_TWO)]),
     (SITE_B, [(SITE_B_LOSS_ONE, SITE_B_ASSET_ONE)])]
 
+SAMPLE_LOSS_MAP_NON_DET_DATA = [
+    LOSS_MAP_NON_DET_METADATA,
+    (SITE_A, [(SITE_A_LOSS_ONE, SITE_A_ASSET_ONE),
+    (SITE_A_LOSS_TWO, SITE_A_ASSET_TWO)]),
+    (SITE_B, [(SITE_B_LOSS_ONE, SITE_B_ASSET_ONE)])]
+
 GML_ID_KEY = '{%s}id' % xml.GML_NS
 
 DEFAULT_METADATA = risk_output.LossMapXMLWriter.DEFAULT_METADATA
 
-LOSS_MAP_NODE_ATTRS = ('endBranchLabel', 'lossCategory', 'unit')
+NON_DET_METADATA = risk_output.LossMapNonDeterministicXMLWriter.DEFAULT_METADATA
 
+LOSS_MAP_NODE_ATTRS = ('endBranchLabel', 'lossCategory', 'unit')
+LOSS_MAP_NON_DET_NODE_ATTRS = ('endBranchLabel', 'lossCategory', 'unit',
+    'timespan', 'poe')
+
+
+
+class LossMapOutputNonDeterministicTestCase(unittest.TestCase):
+    """Confirm that XML output from risk engine is valid against schema,
+    as well as correct given the inputs."""
+
+    def setUp(self):
+        self.xml_writer = \
+            risk_output.LossMapNonDeterministicXMLWriter(
+                    TEST_LOSS_MAP_XML_OUTPUT_PATH)
+
+    def tearDown(self):
+        self.xml_writer = None
+        #os.remove(TEST_LOSS_MAP_XML_OUTPUT_PATH)
+
+
+    def test_loss_map_output_writes_and_validates(self):
+        xml_writer = \
+            risk_output.LossMapNonDeterministicXMLWriter(
+                    TEST_LOSS_MAP_XML_OUTPUT_PATH)
+        xml_writer.serialize(SAMPLE_LOSS_MAP_NON_DET_DATA)
+        self.assertTrue(
+            xml.validates_against_xml_schema(TEST_LOSS_MAP_XML_OUTPUT_PATH,
+            NRML_SCHEMA_PATH),
+            "NRML instance file %s does not validate against schema" % \
+            TEST_LOSS_MAP_XML_OUTPUT_PATH)
 
 class LossMapOutputTestCase(unittest.TestCase):
     """Confirm that XML output from risk engine is valid against schema,
