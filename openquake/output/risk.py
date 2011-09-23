@@ -262,13 +262,13 @@ class LossMapNonDeterministicXMLWriter(LossMapXMLWriter):
         'nrmlID': 'undefined', 'riskResultID': 'undefined',
         'lossMapID': 'undefined', 'endBranchLabel': 'undefined',
         'lossCategory': 'undefined', 'unit': 'undefined',
-        'timespan': 'undefined', 'poe': 'undefined'}
+        'timeSpan': 'undefined', 'poE': 'undefined'}
 
     def write_metadata(self, metadata):
         super(LossMapNonDeterministicXMLWriter, self).write_metadata(metadata)
 
         # set the rest of the <lossMap> attributes for non deterministic
-        for key in ('timespan', 'poe'):
+        for key in ('timeSpan', 'poE'):
             self.loss_map_node.set(
                 key, str(metadata.get(key, self.DEFAULT_METADATA[key])))
 
@@ -279,10 +279,10 @@ LOSS_MAP_METADATA_KEYS = [
     ('unit', 'unit'),
     ('deterministic', 'deterministic'),
     # timespan is for non-deterministic loss maps
-    ('timespan', 'timespan'),
+    ('timespan', 'timeSpan'),
     # poe is for non-deterministic loss maps
     # enforced by a SQL constraint
-    ('poe', 'poe'),
+    ('poe', 'poE'),
 ]
 
 
