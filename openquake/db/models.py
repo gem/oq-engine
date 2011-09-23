@@ -39,7 +39,7 @@ class FloatArrayField(models.Field):  # pylint: disable=R0904
             return None
 
 
-class CharArrayField(models.Field):
+class CharArrayField(models.Field):  # pylint: disable=R0904
     """This field models a postgres `varchar` array."""
 
     def db_type(self, _connection):
@@ -58,7 +58,7 @@ class CharArrayField(models.Field):
         '{"foo", "bar", "baz123"}'
         """
         if value is not None:
-            return '{' + ', '.join('"%s"'% str(v) for v in value) + '}'
+            return '{' + ', '.join('"%s"' % str(v) for v in value) + '}'
         else:
             return None
 
@@ -641,7 +641,8 @@ class OqParams(models.Model):
         ('latlonpmf', 'Latitude-Longitude PMF'),
         ('latlonmagpmf', 'Latitude-Longitude-Magnitude PMF'),
         ('latlonmagepspmf', 'Latitude-Longitude-Magnitude-Epsilon PMF'),
-        ('fulldisaggmatrix', 'Full disaggregation matrix (Lat, Lon, Mag, Eps, and TRT)'),
+        ('fulldisaggmatrix',
+         'Full disaggregation matrix (Lat, Lon, Mag, Eps, and TRT)'),
     )
     # TODO(LB), Sept. 23, 2011: We should consider implementing some custom
     # constraint checking for disagg_results. For now, I'm just going to let
