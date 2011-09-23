@@ -906,7 +906,60 @@ CREATE TABLE uiapi.oq_params (
             OR
             ((job_type = 'deterministic')
              AND (width_of_mfd_bin IS NULL))),
-
+    lat_bin_limits float[]
+        CONSTRAINT lat_bin_limits_valid
+        CHECK(
+            (((job_type = 'disaggregation')
+            AND (lat_bin_limits IS NOT NULL)
+            AND (-90 <= all(lat_bin_limits))
+            AND (90 >= all(lat_bin_limits))
+            OR
+            ((job_type != 'disaggregation')
+            AND (lat_bin_limits IS NULL))))),
+    lon_bin_limits float[]
+        CONSTRAINT lon_bin_limits_valid
+        CHECK(
+            (((job_type = 'disaggregation')
+            AND (lon_bin_limits IS NOT NULL)
+            AND (-180 <= all(lon_bin_limits))
+            AND (180 >= all(lon_bin_limits))
+            OR
+            ((job_type != 'disaggregation')
+            AND (lon_bin_limits IS NULL))))),
+    mag_bin_limits float[]
+        CONSTRAINT mag_bin_limits_is_set
+        CHECK(
+            ((job_type = 'disaggregation')
+            AND (mag_bin_limits IS NOT NULL))
+            OR
+            ((job_type != 'disaggregation')
+            AND (mag_bin_limits IS NULL))),
+    epsilon_bin_limits float[],
+    distance_bin_limits float[],
+    -- For disaggregation results, choose any (at least 1) of the following:
+    --      magpmf (Magnitude Probability Mass Function)
+    --      distpmf (Distance PMF)
+    --      trtpmf (Tectonic Region Type PMF)
+    --      magdistpmf (Magnitude-Distance PMF)
+    --      magdistepspmf (Magnitude-Distance-Epsilon PMF)
+    --      latlonpmf (Latitude-Longitude PMF)
+    --      latlonmagpmf (Latitude-Longitude-Magnitude PMF)
+    --      latlonmagepspmf (Latitude-Longitude-Magnitude-Epsilon PMF)
+    --      fulldisaggmatrix (The full disaggregation matrix; includes
+    --          Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
+    disagg_results VARCHAR[]
+        CONSTRAINT disagg_results_valid
+        CHECK(
+            (((job_type = 'disaggregation')
+            AND (disagg_results IS NOT NULL)
+            AND (disagg_results <@ ARRAY['magpmf', 'distpmf', 'trtpmf',
+                                         'magdistpmf', 'magdistepspmf',
+                                         'latlonpmf', 'latlonmagpmf',
+                                         'latlonmagepspmf',
+                                         'fulldisaggmatrix']::VARCHAR[]))
+            OR
+            ((job_type != 'disaggregation')
+            AND (disagg_results IS NULL)))),
     -- timestamp
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
