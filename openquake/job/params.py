@@ -123,7 +123,7 @@ define_param('DAMPING', 'damping', default=0.0)
 
 define_param('INTENSITY_MEASURE_LEVELS', 'imls',
              modes=('classical', 'event_based'))
-define_param('POES', 'poes', modes='classical')
+define_param('POES', 'poes', modes=('classical', 'disaggregation'))
 
 define_param('GROUND_MOTION_CORRELATION', 'gm_correlated',
              modes=('deterministic', 'event_based'))
