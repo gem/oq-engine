@@ -19,6 +19,8 @@
 """Logic tree parser, verifier and processor."""
 
 import os
+import sys
+import re
 from decimal import Decimal
 
 from lxml import etree
@@ -28,14 +30,22 @@ class LogicTreeError(Exception):
     pass
 
 class ParsingError(LogicTreeError):
-    pass
+    def __init__(self, filename, msg):
+        super(ParsingError, self).__init__(msg)
+        self.filename = filename
+
+    def __str__(self):
+        return 'file %s: %s' % (self.filename, self.message)
 
 class ValidationError(LogicTreeError):
     def __init__(self, node, msg):
+        super(ValidationError, self).__init__(msg)
         self.lineno = node.sourceline
-        self.orig_msg = msg
-        super(ValidationError, self).__init__('Error in line %d: %s' %
-                                              (self.lineno, msg))
+        self.filename = node.getroottree().docinfo.URL
+
+    def __str__(self):
+        return 'file %s line %s: %s' % (self.filename, self.lineno,
+                                        self.message)
 
 
 class Branch(object):
@@ -91,17 +101,19 @@ class LogicTree(object):
         parser = etree.XMLParser(schema=cls._schema)
         return parser
 
-    def __init__(self, filename):
+    def __init__(self, base_path, filename):
+        self.base_path = base_path
+        filepath = os.path.join(base_path, filename)
         try:
-            tree = etree.parse(filename, parser=self.get_parser())
+            tree = etree.parse(filepath, parser=self.get_parser())
         except etree.XMLSyntaxError as exc:
-            raise ParsingError(str(exc))
+            raise ParsingError(filepath, str(exc))
         [tree] = tree.getroot()
         self.branches = {}
         self.open_ends = set()
-        self.parse(tree)
+        self.parse_tree(tree)
 
-    def parse(self, tree):
+    def parse_tree(self, tree):
         branchinglevels = iter(tree)
         [root_branchset] = next(branchinglevels)
         self.root = self.parse_branchset(root_branchset)
@@ -113,30 +125,38 @@ class LogicTree(object):
             )
         for branchinglevel in branchinglevels:
             for branchset_node in branchinglevel:
-                self.parse_branchset(branchset_node)
+                branchset = self.parse_branchset(branchset_node)
+                if branchset.uncertainty_type == 'sourceModel':
+                    raise ValidationError(
+                        branchset_node,
+                        'uncertainty of type "sourceModel" can be defined ' \
+                        'on first branchset only'
+                    )
 
     def parse_branchset(self, branchset_node):
         branches = []
         weight_sum = 0
+        uncertainty_type = branchset_node.get('uncertaintyType')
         for branchnode in branchset_node:
             weight = branchnode.find('{%s}uncertaintyWeight' % self.NRML).text
             weight = Decimal(weight)
             weight_sum += weight
-            value = branchnode.find('{%s}uncertaintyModel' % self.NRML).text
+            value_node = branchnode.find('{%s}uncertaintyModel' % self.NRML)
+            value = self.validate_uncertainty_value(
+                value_node, uncertainty_type, value_node.text
+            )
             branch_id = branchnode.get('branchID')
             branch = Branch(branch_id, weight, value)
             self.branches[branch_id] = branch
             branches.append(branch)
         if weight_sum != 1.0:
             raise ValidationError(
-                branchnode.find('{%s}uncertaintyWeight' % self.NRML),
-                "branchset weights don't sum up to 1.0"
+                branchset_node, "branchset weights don't sum up to 1.0"
             )
-        uncert_type = branchset_node.get('uncertaintyType')
         filters = dict((filtername, branchset_node.get(filtername))
                        for filtername in self.FILTERS
                        if filtername in branchset_node.attrib)
-        branchset = BranchSet(branches, uncert_type, filters)
+        branchset = BranchSet(branches, uncertainty_type, filters)
         apply_to_branches = branchset_node.get('applyToBranches')
         if apply_to_branches:
             apply_to_branches = apply_to_branches.split()
@@ -162,11 +182,31 @@ class LogicTree(object):
         self.open_ends.update(branches)
         return branchset
 
+    def validate_uncertainty_value(self, node, uncertainty_type, value):
+        _float_re = r'(\+|\-)?(\d+|\d*\.\d+)'
+        if uncertainty_type == 'sourceModel':
+            # file should exist and be readable
+            realpath = os.path.join(self.base_path, value)
+            if not os.path.isfile(realpath):
+                raise ValidationError(node, 'can not open file %r' % realpath)
+            return realpath
+        elif uncertainty_type == 'abGRAbsolute':
+            if not re.match('^%s\s+%s$' % (_float_re, _float_re), value):
+                raise ValidationError(
+                    node, 'expected two float values separated by space'
+                )
+            return tuple(float(val) for val in value.split())
+        else:
+            if not re.match('^%s$' % _float_re, value):
+                raise ValidationError(node, 'expected single float value')
+            return float(value)
+
 
 if __name__ == '__main__':
     import sys
+    base_path, filename = os.path.split(sys.argv[1])
     try:
-        lt = LogicTree(sys.argv[1])
+        lt = LogicTree(base_path, filename)
         print lt.root
     except LogicTreeError as exc:
         sys.exit(str(exc))
