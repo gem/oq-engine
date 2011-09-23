@@ -33,6 +33,7 @@ CALCULATION_MODE = {
     'Classical': 'classical',
     'Deterministic': 'deterministic',
     'Event Based': 'event_based',
+    'Disaggregation': 'disaggregation',
 }
 
 ENUM_MAP = {
