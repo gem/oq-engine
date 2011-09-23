@@ -19,7 +19,9 @@
 
 import os
 import unittest
+import geohash
 
+from openquake.db import models
 from openquake import shapes
 from tests.utils import helpers
 
@@ -29,15 +31,26 @@ TEST_NAME = "PeerTestSet1Case2"
 class ClassicalPSHACalculatorAssuranceTestCase(unittest.TestCase):
 
     def test_peerTestSet1Case2(self):
+# - clean database - raise issue?
         expected_results = self._load_results()
-        self._run_job(helpers.smoketest_file(TEST_NAME + "/config.gem"))
-        # - query database
-        # - check results
-        # - clean database
+        job = self._run_job(helpers.smoketest_file(TEST_NAME + "/config.gem"))
+
+        for site, curve in expected_results.items():
+            gh = geohash.encode(site.latitude, site.longitude, precision=12)
+            job_db = models.OqJob.objects.get(id=job.job_id)
+
+            hc_db = models.HazardCurveData.objects.filter(
+                hazard_curve__output__oq_job=job_db,
+                hazard_curve__statistic_type="mean").extra(
+                where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
+
+            self.assertEqual(curve, zip(job_db.oq_params.imls, hc_db.poes))
 
     def _run_job(self, config_file):
         job = helpers.job_from_file(config_file)
         job.launch()
+
+        return job
 
     def _load_results(self):
         # simply split the x string and get
@@ -56,7 +69,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(unittest.TestCase):
                 lines = hazard_curve.readlines()[0].split()
 
                 coords = lines.pop(0)
-                site = shapes.Site(get(coords, 0), get(coords, 1))
+                site = shapes.Site(get(coords, 1), get(coords, 0))
 
                 results[site] = []
 
