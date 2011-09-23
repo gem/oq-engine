@@ -254,8 +254,8 @@ class LossMapNonDeterministicXMLWriter(LossMapXMLWriter):
 
     Additionally in this loss map we have a timespan and a poe
 
-    timespan is an integer representing time in years
-    poe is a float between 0 and 1 (extremes included)
+    timeSpan is an integer representing time in years
+    poE is a float between 0 and 1 (extremes included)
 
     """
     DEFAULT_METADATA = {
@@ -263,6 +263,16 @@ class LossMapNonDeterministicXMLWriter(LossMapXMLWriter):
         'lossMapID': 'undefined', 'endBranchLabel': 'undefined',
         'lossCategory': 'undefined', 'unit': 'undefined',
         'timeSpan': 'undefined', 'poE': 'undefined'}
+
+    def __init__(self, path):
+        super(LossMapNonDeterministicXMLWriter, self).__init__(path)
+
+        # removes the lossMap tag inherited from LossMapXMLWriter
+        self.loss_map_node.getparent().remove(self.loss_map_node)
+
+        # changes  to <lossMapProbabilistic>
+        self.loss_map_node = etree.SubElement(
+            self.risk_result_node, xml.RISK_LOSS_MAP_NON_DET_CONTAINER_TAG)
 
     def write_metadata(self, metadata):
         super(LossMapNonDeterministicXMLWriter, self).write_metadata(metadata)
