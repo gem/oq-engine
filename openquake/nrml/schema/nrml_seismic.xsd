@@ -399,15 +399,6 @@
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
-    
-    <xs:element name="logicTree" type="LogicTree"/>
-    
-    <xs:element name="logicTreeSet" type="LogicTreeSet"/>
-    <xs:complexType name="LogicTreeSet">
-        <xs:sequence>
-            <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
-            <xs:element name="logicTree" type="LogicTree" minOccurs="1" maxOccurs="unbounded"/>
-        </xs:sequence>
-    </xs:complexType>
 
+    <xs:element name="logicTree" type="LogicTree"/>
 </xs:schema>
