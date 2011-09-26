@@ -934,8 +934,22 @@ CREATE TABLE uiapi.oq_params (
             OR
             ((job_type != 'disaggregation')
             AND (mag_bin_limits IS NULL))),
-    epsilon_bin_limits float[],
-    distance_bin_limits float[],
+    epsilon_bin_limits float[]
+        CONSTRAINT epsilon_bin_limits_is_set
+        CHECK(
+            ((job_type = 'disaggregation')
+            AND (epsilon_bin_limits IS NOT NULL))
+            OR
+            ((job_type != 'disaggregation')
+            AND (epsilon_bin_limits IS NULL))),
+    distance_bin_limits float[]
+        CONSTRAINT distance_bin_limits_is_set
+        CHECK(
+            ((job_type = 'disaggregation')
+            AND (distance_bin_limits IS NOT NULL))
+            OR
+            ((job_type != 'disaggregation')
+            AND (distance_bin_limits IS NULL))),
     -- For disaggregation results, choose any (at least 1) of the following:
     --      magpmf (Magnitude Probability Mass Function)
     --      distpmf (Distance PMF)
