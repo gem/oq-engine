@@ -154,6 +154,10 @@ class LogicTree(object):
             )
             branch_id = branchnode.get('branchID')
             branch = Branch(branch_id, weight, value)
+            if branch_id in self.branches:
+                raise ValidationError(
+                    branchnode, "branchID %r is not unique" % branch_id
+                )
             self.branches[branch_id] = branch
             branches.append(branch)
         if weight_sum != 1.0:
