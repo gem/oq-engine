@@ -30,12 +30,14 @@ class LogicTreeError(Exception):
     pass
 
 class ParsingError(LogicTreeError):
-    def __init__(self, filename, msg):
+    def __init__(self, filename, basepath, msg):
         super(ParsingError, self).__init__(msg)
         self.filename = filename
+        self.basepath = basepath
 
     def __str__(self):
-        return 'file %s: %s' % (self.filename, self.message)
+        filename = os.path.join(self.basepath, self.filename)
+        return 'file %r: %s' % (filename, self.message)
 
 class ValidationError(LogicTreeError):
     def __init__(self, node, msg):
@@ -44,7 +46,7 @@ class ValidationError(LogicTreeError):
         self.filename = node.getroottree().docinfo.URL
 
     def __str__(self):
-        return 'file %s line %s: %s' % (self.filename, self.lineno,
+        return 'file %r line %r: %s' % (self.filename, self.lineno,
                                         self.message)
 
 
@@ -102,14 +104,14 @@ class LogicTree(object):
             cls._xmlschema = etree.XMLSchema(file=cls.SCHEMA_PATH)
         return cls._xmlschema
 
-    def __init__(self, base_path, filename):
-        self.base_path = base_path
-        filepath = os.path.join(base_path, filename)
+    def __init__(self, basepath, filename):
+        self.basepath = basepath
         parser = etree.XMLParser(schema=self.get_xmlschema())
+        filestream = self._open_file(filename)
         try:
-            tree = etree.parse(filepath, parser=parser)
+            tree = etree.parse(self._open_file(filename), parser=parser)
         except etree.XMLSyntaxError as exc:
-            raise ParsingError(filepath, str(exc))
+            raise ParsingError(filename, self.basepath, str(exc))
         [tree] = tree.getroot()
         self.branches = {}
         self.open_ends = set()
@@ -117,6 +119,12 @@ class LogicTree(object):
         self.source_types = {}
         self.tectonic_region_types = {}
         self.parse_tree(tree)
+
+    def _open_file(self, filename):
+        try:
+            return open(os.path.join(self.basepath, filename))
+        except IOError as exc:
+            raise ParsingError(filename, self.basepath, str(exc))
 
     def parse_tree(self, tree):
         branchinglevels = iter(tree)
@@ -197,10 +205,8 @@ class LogicTree(object):
         _float_re = r'(\+|\-)?(\d+|\d*\.\d+)'
         if uncertainty_type == 'sourceModel':
             # file should exist and be readable
-            realpath = os.path.join(self.base_path, value)
-            if not os.path.isfile(realpath):
-                raise ValidationError(node, 'can not open file %r' % realpath)
-            return realpath
+            self._open_file(value).close()
+            return value
         elif uncertainty_type == 'abGRAbsolute':
             if not re.match('^%s\s+%s$' % (_float_re, _float_re), value):
                 raise ValidationError(
@@ -220,7 +226,8 @@ class LogicTree(object):
         source_ids = self.source_ids[filename] = set()
         source_types = self.source_types[filename] = set()
         nsprefix_length = len('{%s}' % self.NRML)
-        eventstream = etree.iterparse(open(filename), tag='{%s}*' % self.NRML,
+        eventstream = etree.iterparse(self._open_file(filename),
+                                      tag='{%s}*' % self.NRML,
                                       schema=self.get_xmlschema())
         while True:
             try:
@@ -250,9 +257,9 @@ class LogicTree(object):
 
 if __name__ == '__main__':
     import sys
-    base_path, filename = os.path.split(sys.argv[1])
+    basepath, filename = os.path.split(sys.argv[1])
     try:
-        lt = LogicTree(base_path, filename)
+        lt = LogicTree(basepath, filename)
         print lt.root
     except LogicTreeError as exc:
         sys.exit(str(exc))
