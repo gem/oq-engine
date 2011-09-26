@@ -87,30 +87,35 @@ class LogicTree(object):
                                '..', 'nrml', 'schema', 'nrml.xsd')
     NRML = 'http://openquake.org/xmlns/nrml/0.2'
 
+    SOURCE_TYPES = ('pointSource', 'areaSource', 'complexFault', 'simpleFault')
+
     FILTERS = ('applyToTectonicRegionType',
                'applyToSource',
                'applyToSources',
                'applyToSourceType')
 
-    _schema = None
+    _xmlschema = None
 
     @classmethod
-    def get_parser(cls):
-        if not cls._schema:
-            cls._schema = etree.XMLSchema(file=cls.SCHEMA_PATH)
-        parser = etree.XMLParser(schema=cls._schema)
-        return parser
+    def get_xmlschema(cls):
+        if not cls._xmlschema:
+            cls._xmlschema = etree.XMLSchema(file=cls.SCHEMA_PATH)
+        return cls._xmlschema
 
     def __init__(self, base_path, filename):
         self.base_path = base_path
         filepath = os.path.join(base_path, filename)
+        parser = etree.XMLParser(schema=self.get_xmlschema())
         try:
-            tree = etree.parse(filepath, parser=self.get_parser())
+            tree = etree.parse(filepath, parser=parser)
         except etree.XMLSyntaxError as exc:
             raise ParsingError(filepath, str(exc))
         [tree] = tree.getroot()
         self.branches = {}
         self.open_ends = set()
+        self.source_ids = {}
+        self.source_types = {}
+        self.tectonic_region_types = {}
         self.parse_tree(tree)
 
     def parse_tree(self, tree):
@@ -123,6 +128,8 @@ class LogicTree(object):
                 'first branchset must define an uncertainty ' \
                 'of type "sourceModel"'
             )
+        for source_model_branch in self.root.branches:
+            self.collect_source_model_data(source_model_branch.value)
         for branchinglevel in branchinglevels:
             for branchset_node in branchinglevel:
                 branchset = self.parse_branchset(branchset_node)
@@ -200,6 +207,41 @@ class LogicTree(object):
             if not re.match('^%s$' % _float_re, value):
                 raise ValidationError(node, 'expected single float value')
             return float(value)
+
+    def collect_source_model_data(self, filename):
+        all_source_types = set('{%s}%s' % (self.NRML, tagname)
+                               for tagname in self.SOURCE_TYPES)
+        tectonic_region_type_tag = '{%s}tectonicRegion' % LogicTree.NRML
+        tectonic_region_types = self.tectonic_region_types[filename] = set()
+        source_ids = self.source_ids[filename] = set()
+        source_types = self.source_types[filename] = set()
+        nsprefix_length = len('{%s}' % self.NRML)
+        eventstream = etree.iterparse(open(filename), tag='{%s}*' % self.NRML,
+                                      schema=self.get_xmlschema())
+        while True:
+            try:
+                event, node = next(eventstream)
+            except StopIteration:
+                break
+            except etree.XMLSyntaxError as exc:
+                raise ParsingError(filename, str(exc))
+            if not node.tag in all_source_types:
+                if node.tag == tectonic_region_type_tag:
+                    tectonic_region_types.add(node.text)
+            else:
+                source_ids.add(
+                    node.attrib['{http://www.opengis.net/gml}id']
+                )
+                source_types.add(node.tag[nsprefix_length:])
+
+                # saving memory by removing already processed nodes.
+                # see http://lxml.de/parsing.html#modifying-the-tree
+                node.clear()
+                parent = node.getparent()
+                prev = node.getprevious()
+                while prev is not None:
+                    parent.remove(prev)
+                    prev = node.getprevious()
 
 
 if __name__ == '__main__':
