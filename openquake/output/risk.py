@@ -264,16 +264,6 @@ class LossMapNonDeterministicXMLWriter(LossMapXMLWriter):
         'lossCategory': 'undefined', 'unit': 'undefined',
         'timeSpan': 'undefined', 'poE': 'undefined'}
 
-    def __init__(self, path):
-        super(LossMapNonDeterministicXMLWriter, self).__init__(path)
-
-        # removes the lossMap tag inherited from LossMapXMLWriter
-        self.loss_map_node.getparent().remove(self.loss_map_node)
-
-        # changes  to <lossMapProbabilistic>
-        self.loss_map_node = etree.SubElement(
-            self.risk_result_node, xml.RISK_LOSS_MAP_NON_DET_CONTAINER_TAG)
-
     def write_metadata(self, metadata):
         super(LossMapNonDeterministicXMLWriter, self).write_metadata(metadata)
 
@@ -399,6 +389,7 @@ class LossMapDBWriter(writer.DBWriter):
           'riskResultID': 'test_rr_id',
           'lossMapID': 'test_lm_id',
           'deterministic': False,
+          'timespan': 1,
           'poe': 0.01,
           'endBranchLabel': 'test_ebl',
           'lossCategory': 'economic_loss',
@@ -492,6 +483,7 @@ class LossMapDBWriter(writer.DBWriter):
             kwargs[key] = metadata.get(metadata_key)
 
         self.metadata = models.LossMap(**kwargs)
+
         self.metadata.save()
 
 
