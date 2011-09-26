@@ -739,6 +739,7 @@ class LossMap(models.Model):
     end_branch_label = models.TextField(null=True)
     category = models.TextField(null=True)
     unit = models.TextField(null=True)
+    timespan = models.IntegerField(null=True)
     poe = models.FloatField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
