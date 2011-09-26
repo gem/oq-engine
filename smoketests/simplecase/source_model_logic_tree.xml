@@ -10,7 +10,7 @@
                     <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
 
-                <logicTreeBranch branchID="b1">
+                <logicTreeBranch branchID="b2">
                     <uncertaintyModel>source_model2.xml</uncertaintyModel>
                     <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
@@ -20,17 +20,17 @@
 
         <logicTreeBranchingLevel branchingLevelID="bl1">
             <logicTreeBranchSet uncertaintyType="maxMagGRRelative" branchSetID="bs1">
-                    <logicTreeBranch branchID="b1">
+                    <logicTreeBranch branchID="b3">
                         <uncertaintyModel>0.2</uncertaintyModel>
                         <uncertaintyWeight>0.2</uncertaintyWeight>
                     </logicTreeBranch>
 
-                    <logicTreeBranch branchID="b1">
+                    <logicTreeBranch branchID="b4">
                         <uncertaintyModel>0.0</uncertaintyModel>
                         <uncertaintyWeight>0.6</uncertaintyWeight>
                     </logicTreeBranch>
 
-                    <logicTreeBranch branchID="b1">
+                    <logicTreeBranch branchID="b5">
                         <uncertaintyModel>-0.2</uncertaintyModel>
                         <uncertaintyWeight>0.2</uncertaintyWeight>
                     </logicTreeBranch>
@@ -39,17 +39,17 @@
 
         <logicTreeBranchingLevel branchingLevelID="bl1">
             <logicTreeBranchSet uncertaintyType="bGRRelative" branchSetID="bs1">
-                    <logicTreeBranch branchID="b1">
+                    <logicTreeBranch branchID="b6">
                         <uncertaintyModel>0.1</uncertaintyModel>
                         <uncertaintyWeight>0.2</uncertaintyWeight>
                     </logicTreeBranch>
 
-                    <logicTreeBranch branchID="b1">
+                    <logicTreeBranch branchID="b7">
                         <uncertaintyModel>0.0</uncertaintyModel>
                         <uncertaintyWeight>0.6</uncertaintyWeight>
                     </logicTreeBranch>
 
-                    <logicTreeBranch branchID="b1">
+                    <logicTreeBranch branchID="b8">
                         <uncertaintyModel>-0.1</uncertaintyModel>
                         <uncertaintyWeight>0.2</uncertaintyWeight>
                     </logicTreeBranch>
