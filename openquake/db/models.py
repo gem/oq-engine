@@ -632,18 +632,6 @@ class OqParams(models.Model):
     distance_bin_limits = FloatArrayField(null=True)
     # PMF (Probability Mass Function) result choices for the Disaggregation
     # calculator
-    DISAGG_RESULTS_CHOICES = (
-        ('magpmf', 'Magnitude PMF'),
-        ('distpmf', 'Distance PMF'),
-        ('trtpmf', 'Tectonic Region Type PMF'),
-        ('magdistpmf', 'Magnitude-Distance PMF'),
-        ('magdistepspmf', 'Magnitude-Distance-Epsilon PMF'),
-        ('latlonpmf', 'Latitude-Longitude PMF'),
-        ('latlonmagpmf', 'Latitude-Longitude-Magnitude PMF'),
-        ('latlonmagepspmf', 'Latitude-Longitude-Magnitude-Epsilon PMF'),
-        ('fulldisaggmatrix',
-         'Full disaggregation matrix (Lat, Lon, Mag, Eps, and TRT)'),
-    )
     # TODO(LB), Sept. 23, 2011: We should consider implementing some custom
     # constraint checking for disagg_results. For now, I'm just going to let
     # the database check the constraints.
