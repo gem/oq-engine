@@ -1053,6 +1053,8 @@ CREATE TABLE riskr.loss_map (
     end_branch_label VARCHAR,
     category VARCHAR,
     unit VARCHAR, -- e.g. USD, EUR
+    timespan NUMERIC CONSTRAINT valid_timespan
+        CHECK (timespan > 0),
     -- poe is significant only for non-deterministic calculations
     poe float CONSTRAINT valid_poe
         CHECK ((NOT deterministic AND (poe >= 0.0) AND (poe <= 1.0))
