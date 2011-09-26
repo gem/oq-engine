@@ -62,6 +62,14 @@ ENUM_MAP = {
     'Line Sources (random or given strike)': 'linesources',
     'Cross Hair Line Sources': 'crosshairsources',
     '16 Spoked Line Sources': '16spokedsources',
+    'MagPMF': 'magpmf',
+    'DistPMF': 'distpmf',
+    'TRTPMF': 'trtpmf',
+    'MagDistPMF': 'magdistpmf',
+    'MagDistEpsPMF': 'magdistepspmf',
+    'LatLonPMF': 'latlonpmf',
+    'LatLonMagEpsPMF': 'latlonmagepspmf',
+    'FullDisaggMatrix': 'fulldisaggmatrix',
 }
 
 CALCULATION_MODES = set(CALCULATION_MODE.values())
@@ -73,12 +81,26 @@ def map_enum(value):
     return ENUM_MAP[value]
 
 
+def map_enum_sequence(seq):
+    """Map a sequence of enumerated values from configuration to database"""
+    return [map_enum(x) for x in seq]
+
+
 def define_param(name, column, modes=None, default=None, to_db=None):
     """
     Adds a new parameter definition to the PARAMS dictionary
 
-    If `column` is `None`, the parameter is only checked but not inserted
-    in the `oq_params` table.
+    :param column: If `column` is `None`, the parameter is only checked but not
+        inserted into the `oq_params` table.
+    :type column: `str`
+    :param modes: The calculation modes to which this parameter applies. (Can
+        either be a single string (for a single mode) or a sequence of strings
+        for multiple modes. If `modes` is `None', this parameter will apply to
+        all calculation modes.
+    :param default: The default value for this parameter if it is not
+        explicitly defined in a job config.
+    :param to_db: A function to transform this parameter for storage in the
+        database. Defaults to `None` if no transformation is required.
     """
 
     if modes is None:
@@ -226,3 +248,14 @@ define_param('FAULT_RUPTURE_OFFSET', 'fault_rupture_offset',
              modes=('classical', 'event_based'))
 define_param('RUPTURE_FLOATING_TYPE', 'rupture_floating_type',
              modes=('classical', 'event_based'), to_db=map_enum)
+
+# Disaggregation parameters:
+define_param('DISAGGREGATION_RESULTS', 'disagg_results',
+             modes='disaggregation', to_db=map_enum_sequence)
+define_param('LATITUDE_BIN_LIMITS', 'lat_bin_limits', modes='disaggregation')
+define_param('LONGITUDE_BIN_LIMITS', 'lon_bin_limits', modes='disaggregation')
+define_param('MAGNITUDE_BIN_LIMITS', 'mag_bin_limits', modes='disaggregation')
+define_param('EPSILON_BIN_LIMITS', 'epsilon_bin_limits',
+             modes='disaggregation')
+define_param('DISTANCE_BIN_LIMITS', 'distance_bin_limits',
+             modes='disaggregation')
