@@ -272,7 +272,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
     """
     BASE_CLASSICAL_PARAMS = {
         'CALCULATION_MODE': 'Classical',
-        'POES_HAZARD_MAPS': '0.01 0.1',
+        'POES': '0.01 0.1',
         'INTENSITY_MEASURE_TYPE': 'PGA',
         'MINIMUM_MAGNITUDE': '5.0',
         'INVESTIGATION_TIME': '50.0',
