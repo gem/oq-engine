@@ -493,3 +493,53 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = arc.exception
         self.assertTrue("is not an element of the set" in exc.message,
                         "wrong exception message: %s" % exc.message)
+
+    def test_referencing_over_level_boundaries(self):
+        lt = self._make_nrml("""\
+            <logicTree logicTreeID="lt1">
+              <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>sm1</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                  </logicTreeBranch>
+                  <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>sm2</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+              <logicTreeBranchingLevel branchingLevelID="bl2">
+                <logicTreeBranchSet uncertaintyType="abGRAbsolute"
+                                    branchSetID="bs1"
+                                    applyToBranches="b1">
+                  <logicTreeBranch branchID="b3">
+                    <uncertaintyModel>1 2</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+              <logicTreeBranchingLevel branchingLevelID="bl3">
+                <logicTreeBranchSet uncertaintyType="abGRAbsolute"
+                                    branchSetID="bs1"
+                                    applyToBranches="b2">
+                  <logicTreeBranch branchID="b4">
+                    <uncertaintyModel>1 2</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+            </logicTree>
+        """)
+        sm = self._whatever_sourcemodel()
+        with self.assertRaises(logictree.ValidationError) as arc:
+            _TesteableLogicTree('lt', {'lt': lt, 'sm1': sm, 'sm2': sm}, 'base')
+        exc = arc.exception
+        self.assertEqual(exc.filename, 'lt')
+        self.assertEqual(exc.basepath, 'base')
+        self.assertEqual(exc.lineno, 28)
+        error = 'applyToBranches must reference only branches ' \
+                'from previous branching level'
+        self.assertEqual(exc.message, error,
+                        "wrong exception message: %s" % exc.message)
