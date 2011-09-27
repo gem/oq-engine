@@ -167,7 +167,7 @@ class LogicTree(object):
             weight_sum += weight
             value_node = branchnode.find('{%s}uncertaintyModel' % self.NRML)
             value = self.validate_uncertainty_value(
-                value_node, uncertainty_type, value_node.text
+                filename, value_node, uncertainty_type, value_node.text
             )
             branch_id = branchnode.get('branchID')
             branch = Branch(branch_id, weight, value)
@@ -212,7 +212,8 @@ class LogicTree(object):
         self.open_ends.update(branches)
         return branchset
 
-    def validate_uncertainty_value(self, node, uncertainty_type, value):
+    def validate_uncertainty_value(self, filename, node,
+                                   uncertainty_type, value):
         _float_re = r'(\+|\-)?(\d+|\d*\.\d+)'
         if uncertainty_type == 'sourceModel':
             # file should exist and be readable
@@ -221,12 +222,16 @@ class LogicTree(object):
         elif uncertainty_type == 'abGRAbsolute':
             if not re.match('^%s\s+%s$' % (_float_re, _float_re), value):
                 raise ValidationError(
-                    node, 'expected two float values separated by space'
+                    node, filename, self.basepath,
+                    'expected two float values separated by space'
                 )
             return tuple(float(val) for val in value.split())
         else:
             if not re.match('^%s$' % _float_re, value):
-                raise ValidationError(node, 'expected single float value')
+                raise ValidationError(
+                    node, filename, self.basepath,
+                    'expected single float value'
+                )
             return float(value)
 
     def collect_source_model_data(self, filename):
@@ -246,7 +251,7 @@ class LogicTree(object):
             except StopIteration:
                 break
             except etree.XMLSyntaxError as exc:
-                raise ParsingError(filename, str(exc))
+                raise ParsingError(filename, self.basepath, str(exc))
             if not node.tag in all_source_types:
                 if node.tag == tectonic_region_type_tag:
                     tectonic_region_types.add(node.text)
