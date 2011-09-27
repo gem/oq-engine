@@ -20,6 +20,7 @@
 import os
 import unittest
 import geohash
+import numpy
 
 from openquake.db import models
 from openquake import shapes
@@ -28,23 +29,27 @@ from tests.utils import helpers
 TEST_NAME = "PeerTestSet1Case2"
 
 
-class ClassicalPSHACalculatorAssuranceTestCase(unittest.TestCase):
+class ClassicalPSHACalculatorAssuranceTestCase(
+    unittest.TestCase, helpers.DbTestMixin):
 
     def test_peerTestSet1Case2(self):
-# - clean database - raise issue?
         expected_results = self._load_results()
         job = self._run_job(helpers.smoketest_file(TEST_NAME + "/config.gem"))
+        job_db = models.OqJob.objects.get(id=job.job_id)
 
         for site, curve in expected_results.items():
             gh = geohash.encode(site.latitude, site.longitude, precision=12)
-            job_db = models.OqJob.objects.get(id=job.job_id)
 
             hc_db = models.HazardCurveData.objects.filter(
                 hazard_curve__output__oq_job=job_db,
                 hazard_curve__statistic_type="mean").extra(
                 where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
 
-            self.assertEqual(curve, zip(job_db.oq_params.imls, hc_db.poes))
+            self.assertTrue(numpy.allclose(numpy.array(curve),
+                    numpy.array(zip(job_db.oq_params.imls, hc_db.poes)),
+                    atol=0.005))
+
+        self.teardown_job(job_db)
 
     def _run_job(self, config_file):
         job = helpers.job_from_file(config_file)
@@ -62,8 +67,8 @@ class ClassicalPSHACalculatorAssuranceTestCase(unittest.TestCase):
 
         results = {}
 
-        for file in results_files:
-            path = os.path.join(results_dir, file)
+        for result_file in results_files:
+            path = os.path.join(results_dir, result_file)
 
             with open(path, "rb") as hazard_curve:
                 lines = hazard_curve.readlines()[0].split()
