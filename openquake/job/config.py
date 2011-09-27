@@ -167,6 +167,91 @@ class DeterministicComputationValidator(object):
         return (True, [])
 
 
+class DisaggregationValidator(object):
+    """Validator for parameters which are specific to the Disaggregation
+    calculator."""
+
+    LAT_BIN_LIMITS = 'LATITUDE_BIN_LIMITS'
+    LON_BIN_LIMITS = 'LONGITUDE_BIN_LIMITS'
+    MAG_BIN_LIMITS = 'MAGNITUDE_BIN_LIMITS'
+    EPS_BIN_LIMITS = 'EPSILON_BIN_LIMITS'
+    DIST_BIN_LIMITS = 'DISTANCE_BIN_LIMITS'
+
+    def __init__(self, params):
+        self.params = params
+
+    @staticmethod
+    def check_bin_limits(limits, bin_min=None, bin_max=None):
+        """Check a sequence of bin limits to ensure the following:
+            - There are at least 2 elements
+            - Elements are in ascending order
+            - There are no duplicates
+            - Limits are within the correct range (if range min and/or max
+              are specified
+
+        If limits are not valid, a ValueError is raised.
+        """
+
+        try:
+            # at least 2 elements:
+            assert len(limits) >= 2, \
+                "Limits should contain at least 2 elements"
+
+            # ascening order:
+            assert all(
+                limits[i] < limits[i + 1] for i in xrange(len(limits) - 1)), \
+                "Limits should be arranged in ascending order"
+
+            # no duplicates:
+            assert sorted(list(set(limits))) == list(limits), \
+                "Limits should not contain duplicates"
+
+            # values are in the correct range:
+            assert bin_min is None or all(x >= bin_min for x in limits), \
+                "Limits must be >= %s" % bin_min
+            assert bin_max is None or all(x <= bin_max for x in limits), \
+                "Limits must be <= %s" % bin_max
+
+        except AssertionError, err:
+            msg = "Invalid bin limits: %s. %s" % (limits, err)
+            raise ValueError(msg)
+
+
+    def is_valid(self):
+        """Check if parameters are valid for a Disaggregation calculation.
+
+        :returns: the status of this validator and the related error messages.
+        :rtype: when valid, a (True, []) tuple is returned. When invalid, a
+            (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
+            tuple is returned
+        """
+
+        valid = True
+
+        checks = (
+            dict(param=self.LAT_BIN_LIMITS, bin_min=-90.0, bin_max=90.0),
+            dict(param=self.LON_BIN_LIMITS, bin_min=-180.0, bin_max=180.0),
+            dict(param=self.MAG_BIN_LIMITS, bin_min=0.0),
+            dict(param=self.EPS_BIN_LIMITS),
+            dict(param=self.DIST_BIN_LIMITS, bin_min=0.0),
+        )
+
+        errors = []
+
+        for check in checks:
+            limits = self.params.get(check.get('param'))
+            bin_min = check.get('bin_min', None)
+            bin_max = check.get('bin_max', None)
+            try:
+                DisaggregationValidator.check_bin_limits(limits, bin_min,
+                                                         bin_max)
+            except ValueError, err:
+                valid = False
+                errors.append(err.message)
+
+        return (valid, errors)
+
+
 def default_validators(sections, params):
     """Create the set of default validators for a job.
 
@@ -189,5 +274,8 @@ def default_validators(sections, params):
     validators.add(hazard_comp_type)
     validators.add(deterministic)
     validators.add(exposure)
+
+    if params.get('CALCULATION_MODE') == 'Disaggregation':
+        validators.add(DisaggregationValidator(params))
 
     return validators
