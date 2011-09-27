@@ -599,7 +599,7 @@ class DbTestMixin(TestMixin):
             return
 
         job.delete()
-        opq.delete()
+        oqp.delete()
 
     def setup_output(self, job_to_use=None, output_type="hazard_map",
                      db_backed=True):
