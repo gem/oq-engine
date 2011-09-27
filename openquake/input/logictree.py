@@ -145,9 +145,11 @@ class LogicTree(object):
                 'first branchset must define an uncertainty ' \
                 'of type "sourceModel"'
             )
+        self.open_ends.update(branch for branch in self.root.branches)
         for source_model_branch in self.root.branches:
             self.collect_source_model_data(source_model_branch.value)
         for branchinglevel in branchinglevels:
+            new_open_ends = set()
             for branchset_node in branchinglevel:
                 branchset = self.parse_branchset(branchset_node, filename)
                 if branchset.uncertainty_type == 'sourceModel':
@@ -156,6 +158,10 @@ class LogicTree(object):
                         'uncertainty of type "sourceModel" can be defined ' \
                         'on first branchset only'
                     )
+                for branch in branchset.branches:
+                    new_open_ends.add(branch)
+            self.open_ends.clear()
+            self.open_ends.update(new_open_ends)
 
     def parse_branchset(self, branchset_node, filename):
         branches = []
@@ -202,14 +208,16 @@ class LogicTree(object):
                         branchset_node, filename, self.basepath,
                         'branch %r already has child branchset' % branch_id
                     )
+                if not branch in self.open_ends:
+                    raise ValidationError(
+                        branchset_node, filename, self.basepath,
+                        'applyToBranches must reference only branches ' \
+                        'from previous branching level'
+                    )
                 branch.child_branchset = branchset
-                self.open_ends.remove(branch)
         else:
             for branch in self.open_ends:
                 branch.child_branchset = branchset
-            self.open_ends.clear()
-
-        self.open_ends.update(branches)
         return branchset
 
     def validate_uncertainty_value(self, filename, node,
