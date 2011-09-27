@@ -27,26 +27,29 @@ from lxml import etree
 
 
 class LogicTreeError(Exception):
-    pass
-
-class ParsingError(LogicTreeError):
     def __init__(self, filename, basepath, msg):
-        super(ParsingError, self).__init__(msg)
+        super(LogicTreeError, self).__init__(msg)
         self.filename = filename
         self.basepath = basepath
 
+    def get_filepath(self):
+        return os.path.join(self.basepath, self.filename)
+
     def __str__(self):
-        filename = os.path.join(self.basepath, self.filename)
-        return 'file %r: %s' % (filename, self.message)
+        return 'file %r: %s' % (self.get_filepath(), self.message)
+
+
+class ParsingError(LogicTreeError):
+    pass
+
 
 class ValidationError(LogicTreeError):
-    def __init__(self, node, msg):
-        super(ValidationError, self).__init__(msg)
+    def __init__(self, node, *args, **kwargs):
+        super(ValidationError, self).__init__(*args, **kwargs)
         self.lineno = node.sourceline
-        self.filename = node.getroottree().docinfo.URL
 
     def __str__(self):
-        return 'file %r line %r: %s' % (self.filename, self.lineno,
+        return 'file %r line %r: %s' % (self.get_filepath(), self.lineno,
                                         self.message)
 
 
@@ -118,7 +121,7 @@ class LogicTree(object):
         self.source_ids = {}
         self.source_types = {}
         self.tectonic_region_types = {}
-        self.parse_tree(tree)
+        self.parse_tree(tree, filename)
 
     def _open_file(self, filename):
         try:
@@ -126,13 +129,19 @@ class LogicTree(object):
         except IOError as exc:
             raise ParsingError(filename, self.basepath, str(exc))
 
-    def parse_tree(self, tree):
+    def parse_tree(self, tree, filename):
         branchinglevels = iter(tree)
-        [root_branchset] = next(branchinglevels)
-        self.root = self.parse_branchset(root_branchset)
+        first_branchinglevel = list(next(branchinglevels))
+        if len(first_branchinglevel) > 1:
+            raise ValidationError(
+                first_branchinglevel[1], filename, self.basepath,
+                'there must be only one branch set on first branching level'
+            )
+        [root_branchset] = first_branchinglevel
+        self.root = self.parse_branchset(root_branchset, filename)
         if self.root.uncertainty_type != 'sourceModel':
             raise ValidationError(
-                root_branchset,
+                root_branchset, filename, self.basepath,
                 'first branchset must define an uncertainty ' \
                 'of type "sourceModel"'
             )
@@ -140,15 +149,15 @@ class LogicTree(object):
             self.collect_source_model_data(source_model_branch.value)
         for branchinglevel in branchinglevels:
             for branchset_node in branchinglevel:
-                branchset = self.parse_branchset(branchset_node)
+                branchset = self.parse_branchset(branchset_node, filename)
                 if branchset.uncertainty_type == 'sourceModel':
                     raise ValidationError(
-                        branchset_node,
+                        branchset_node, filename, self.basepath,
                         'uncertainty of type "sourceModel" can be defined ' \
                         'on first branchset only'
                     )
 
-    def parse_branchset(self, branchset_node):
+    def parse_branchset(self, branchset_node, filename):
         branches = []
         weight_sum = 0
         uncertainty_type = branchset_node.get('uncertaintyType')
@@ -164,13 +173,15 @@ class LogicTree(object):
             branch = Branch(branch_id, weight, value)
             if branch_id in self.branches:
                 raise ValidationError(
-                    branchnode, "branchID %r is not unique" % branch_id
+                    branchnode, filename, self.basepath,
+                    "branchID %r is not unique" % branch_id
                 )
             self.branches[branch_id] = branch
             branches.append(branch)
         if weight_sum != 1.0:
             raise ValidationError(
-                branchset_node, "branchset weights don't sum up to 1.0"
+                branchset_node, filename, self.basepath,
+                "branchset weights don't sum up to 1.0"
             )
         filters = dict((filtername, branchset_node.get(filtername))
                        for filtername in self.FILTERS
@@ -182,14 +193,14 @@ class LogicTree(object):
             for branch_id in apply_to_branches:
                 if not branch_id in self.branches:
                     raise ValidationError(
-                        branchset_node,
-                        'branch %s is not yet defined' % branch_id
+                        branchset_node, filename, self.basepath,
+                        'branch %r is not yet defined' % branch_id
                     )
                 branch = self.branches[branch_id]
                 if branch.child_branchset is not None:
                     raise ValidationError(
-                        branchset_node,
-                        'branch %s already has child branchset' % branch_id
+                        branchset_node, filename, self.basepath,
+                        'branch %r already has child branchset' % branch_id
                     )
                 branch.child_branchset = branchset
                 self.open_ends.remove(branch)
