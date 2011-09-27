@@ -174,23 +174,6 @@ def set(key, encoded_value):  # pylint: disable=W0622
     return True
 
 
-def _prefix_id_generator(prefix):
-    """Generator for IDs with a specific prefix (prefix + sequence number)."""
-
-    counter = 0
-    while(True):
-        counter += 1
-        yield INTERNAL_ID_SEPARATOR.join((str(prefix), str(counter)))
-
-# generator instance used to generate IDs for blocks
-BLOCK_ID_GENERATOR = _prefix_id_generator("BLOCK")
-
-
-def generate_block_id():
-    """Generate a unique id for a block."""
-    return BLOCK_ID_GENERATOR.next()
-
-
 def mark_job_as_current(job_id):
     """
     Add a job to the set of current jobs, to be later garbage collected.
