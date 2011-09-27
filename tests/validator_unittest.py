@@ -188,3 +188,92 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
 
         validator = config.ComputationTypeValidator(params)
         self.assertFalse(validator.is_valid()[0])
+
+
+class DisaggregationValidatorTestCase(unittest.TestCase):
+    """Validator tests for Disaggregation Calculator params"""
+
+    GOOD_PARAMS = {
+        'LATITUDE_BIN_LIMITS': [-90, 0, 90],
+        'LONGITUDE_BIN_LIMITS': [-180, 0, 180],
+        'MAGNITUDE_BIN_LIMITS': [0, 1, 2, 4],
+        'EPSILON_BIN_LIMITS': [-1, 3, 5, 7],
+        'DISTANCE_BIN_LIMITS': [0, 10, 20]
+    }
+    BAD_PARAMS = {
+        'LATITUDE_BIN_LIMITS': [-90.1, 0, 90],
+        'LONGITUDE_BIN_LIMITS': [-180, 0, 180.1],
+        'MAGNITUDE_BIN_LIMITS': [-0.5, 0, 1, 2],
+        'EPSILON_BIN_LIMITS': [-1, 3, 5, 7],
+        'DISTANCE_BIN_LIMITS': [-10, 0, 10]
+    }
+
+
+    @classmethod
+    def setUpClass(cls):
+        cls.dav_cls = config.DisaggregationValidator
+
+    def test_check_good_bin_limits(self):
+        """Check validation for known-good limits"""
+        good_limits = (
+            [5, 6, 7, 8],
+            [5, 6],
+            [-8.6, -7.3, -6.2, -6.1],
+        )
+
+        for limits in good_limits:
+            # if no error is raised, the limits are good
+            self.dav_cls.check_bin_limits(limits)
+
+    def test_check_bad_bin_limits(self):
+        """Check validation for known-bad limits"""
+        bad_limits = (
+            [5],
+            [],
+            [1.3],
+        )
+
+        for limits in bad_limits:
+            self.assertRaises(ValueError, self.dav_cls.check_bin_limits, limits)
+
+    def test_check_good_bin_limits_with_min_max(self):
+        """Check validation for known-good limits, with min/max specified"""
+        bin_min = -90.0
+        bin_max = 90.0
+
+        limits = [-90.0, 42.7, 90.0]
+
+        self.dav_cls.check_bin_limits(limits, bin_min=bin_min, bin_max=bin_max)
+
+    def test_check_bad_limits_with_min_max(self):
+        """Check validation for known-bad limits, with min/max specified"""
+        bin_min = -90.0
+        bin_max = 90.0
+
+        too_low = [-90.1, 42.7, 90.0]
+        too_high = [-90.0, 42.7, 90.1]
+
+        for limits in (too_low, too_high):
+            self.assertRaises(ValueError, self.dav_cls.check_bin_limits, too_low,
+                              bin_min=bin_min, bin_max=bin_max)
+
+    def test_is_valid_good_params(self):
+        """Test the entire validator with a set of known-good parameters"""
+        validator = config.DisaggregationValidator(self.GOOD_PARAMS)
+
+        self.assertEqual((True, []), validator.is_valid())
+
+    def test_is_valid_bad_params(self):
+        """Test the entire validator with a set of known-bad parameters"""
+        validator = config.DisaggregationValidator(self.BAD_PARAMS)
+
+        expected_results = (False,
+            ['Invalid bin limits: [-90.1, 0, 90]. Limits must be >= -90.0',
+             'Invalid bin limits: [-180, 0, 180.1]. Limits must be <= 180.0',
+             'Invalid bin limits: [-0.5, 0, 1, 2]. Limits must be >= 0.0',
+             'Invalid bin limits: [-10, 0, 10]. Limits must be >= 0.0']
+        )
+
+        actual_results =  validator.is_valid()
+
+        self.assertEqual(expected_results, actual_results)
