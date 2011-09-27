@@ -158,7 +158,7 @@ class DoMeansTestCase(helpers.TestMixin, unittest.TestCase):
     def test_map_serializer_not_called_unless_configured(self):
         """
         The mean map serialization function is not called unless the
-        POES_HAZARD_MAPS parameter was specified in the configuration file.
+        POES parameter was specified in the configuration file.
         """
 
         def fake_serializer(kvs_keys):
@@ -178,7 +178,7 @@ class DoMeansTestCase(helpers.TestMixin, unittest.TestCase):
 
     def test_map_serializer_called_when_configured(self):
         """
-        The mean map serialization function is called when the POES_HAZARD_MAPS
+        The mean map serialization function is called when the POES
         parameter is specified in the configuration file.
         """
 
@@ -195,7 +195,7 @@ class DoMeansTestCase(helpers.TestMixin, unittest.TestCase):
 
         key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
-        self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
+        self.mixin.params["POES"] = "0.6 0.8"
         self.mixin.do_means(self.sites, 1,
             curve_serializer=lambda _: True,
             curve_task=test_data_reflector,
@@ -214,7 +214,7 @@ class DoMeansTestCase(helpers.TestMixin, unittest.TestCase):
 
         key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
-        self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
+        self.mixin.params["POES"] = "0.6 0.8"
         self.assertRaises(
             AssertionError, self.mixin.do_means,
             self.sites, 1,
@@ -232,7 +232,7 @@ class DoMeansTestCase(helpers.TestMixin, unittest.TestCase):
 
         key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
-        self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
+        self.mixin.params["POES"] = "0.6 0.8"
         self.assertRaises(
             AssertionError, self.mixin.do_means,
             self.sites, 1,
@@ -285,7 +285,7 @@ class DoQuantilesTestCase(helpers.TestMixin, unittest.TestCase):
     def test_map_serializer_called_when_configured(self):
         """
         The quantile map serialization function is called when the
-        POES_HAZARD_MAPS parameter is specified in the configuration file.
+        POES parameter is specified in the configuration file.
         """
         def fake_serializer(*args):
             """Fake serialization function to be used in this test."""
@@ -301,7 +301,7 @@ class DoQuantilesTestCase(helpers.TestMixin, unittest.TestCase):
 
         key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
-        self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
+        self.mixin.params["POES"] = "0.6 0.8"
         self.mixin.do_quantiles(
             self.sites, 1, [0.2, 0.4],
             curve_serializer=lambda _, __: True,
@@ -314,7 +314,7 @@ class DoQuantilesTestCase(helpers.TestMixin, unittest.TestCase):
     def test_map_serializer_not_called_unless_configured(self):
         """
         The quantile map serialization function is not called unless the
-        POES_HAZARD_MAPS parameter was specified in the configuration file.
+        POES parameter was specified in the configuration file.
         """
 
         def fake_serializer(kvs_keys):
@@ -344,7 +344,7 @@ class DoQuantilesTestCase(helpers.TestMixin, unittest.TestCase):
 
         key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
-        self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
+        self.mixin.params["POES"] = "0.6 0.8"
         self.assertRaises(
             AssertionError, self.mixin.do_quantiles,
             self.sites, 1, [0.5],
@@ -362,7 +362,7 @@ class DoQuantilesTestCase(helpers.TestMixin, unittest.TestCase):
 
         key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
-        self.mixin.params["POES_HAZARD_MAPS"] = "0.6 0.8"
+        self.mixin.params["POES"] = "0.6 0.8"
         self.assertRaises(
             AssertionError, self.mixin.do_quantiles,
             self.sites, 1, [0.5],
