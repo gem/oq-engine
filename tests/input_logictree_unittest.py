@@ -60,12 +60,41 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
                         "wrong exception message: %s" % exc.message)
 
     def _make_nrml(self, content):
-        return """
-<nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.2"
-      gml:id="n1">
-    %s
-</nrml>""" % content
+        return """\
+        <nrml xmlns:gml="http://www.opengis.net/gml"\
+              xmlns="http://openquake.org/xmlns/nrml/0.2"\
+              gml:id="n1">\
+            %s
+        </nrml>""" % content
+
+    def _whatever_sourcemodel(self):
+        return self._make_nrml("""\
+        <sourceModel gml:id="sm1">
+            <config/>
+            <simpleFaultSource gml:id="src01">
+                <gml:name>Mount Diablo Thrust</gml:name>
+                <tectonicRegion>Active Shallow Crust</tectonicRegion>
+                <rake>90.0</rake>
+                <evenlyDiscretizedIncrementalMFD minVal="6.55" binSize="0.1"
+                    type="ML">0.0010614989 8.8291627E-4 7.3437777E-4
+                              6.108288E-4 5.080653E-4
+                </evenlyDiscretizedIncrementalMFD>
+                <simpleFaultGeometry gml:id="sfg_1">
+                    <faultTrace>
+                        <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                            <gml:posList>
+                                -121.82290 37.73010  0.0
+                                -122.03880 37.87710  0.0
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultTrace>
+                    <dip>38</dip>
+                    <upperSeismogenicDepth>8.0</upperSeismogenicDepth>
+                    <lowerSeismogenicDepth>13.0</lowerSeismogenicDepth>
+                </simpleFaultGeometry>
+            </simpleFaultSource>
+        </sourceModel>
+        """)
 
     def test_schema_violation(self):
         source = self._make_nrml("""\
@@ -102,5 +131,230 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
             _TesteableLogicTree('logictree', {'logictree': source}, 'base')
         exc = arc.exception
         error = "[Errno 2] No such file or directory: 'base/source_model1.xml'"
+        self.assertEqual(exc.message, error,
+                        "wrong exception message: %s" % exc.message)
+
+    def test_wrong_uncert_type_on_first_branching_level(self):
+        source = self._make_nrml("""\
+            <logicTree logicTreeID="lt1">
+              <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="bGRRelative"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>+100</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+            </logicTree>
+        """)
+        with self.assertRaises(logictree.ValidationError) as arc:
+            _TesteableLogicTree('logictree', {'logictree': source}, 'base')
+        exc = arc.exception
+        self.assertEqual(exc.filename, 'logictree')
+        self.assertEqual(exc.basepath, 'base')
+        self.assertEqual(exc.lineno, 4)
+        error = 'first branchset must define an uncertainty ' \
+                'of type "sourceModel"'
+        self.assertEqual(exc.message, error,
+                        "wrong exception message: %s" % exc.message)
+
+    def test_source_model_uncert_on_wrong_level(self):
+        lt = self._make_nrml("""\
+            <logicTree logicTreeID="lt1">
+              <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>sm1</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+              <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>sm2</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+            </logicTree>
+        """)
+        sm = self._whatever_sourcemodel()
+        with self.assertRaises(logictree.ValidationError) as arc:
+            _TesteableLogicTree('lt', {'lt': lt, 'sm1': sm, 'sm2': sm}, 'base')
+        exc = arc.exception
+        self.assertEqual(exc.filename, 'lt')
+        self.assertEqual(exc.basepath, 'base')
+        self.assertEqual(exc.lineno, 13)
+        error = 'uncertainty of type "sourceModel" can be defined ' \
+                'on first branchset only'
+        self.assertEqual(exc.message, error,
+                        "wrong exception message: %s" % exc.message)
+
+    def test_two_branchsets_on_first_level(self):
+        lt = self._make_nrml("""\
+            <logicTree logicTreeID="lt1">
+              <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>sm1</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>sm2</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+            </logicTree>
+        """)
+        sm = self._whatever_sourcemodel()
+        with self.assertRaises(logictree.ValidationError) as arc:
+            _TesteableLogicTree('lt', {'lt': lt, 'sm1': sm, 'sm2': sm}, 'base')
+        exc = arc.exception
+        self.assertEqual(exc.filename, 'lt')
+        self.assertEqual(exc.basepath, 'base')
+        self.assertEqual(exc.lineno, 11)
+        error = 'there must be only one branch set on first branching level'
+        self.assertEqual(exc.message, error,
+                        "wrong exception message: %s" % exc.message)
+
+    def test_branch_id_not_unique(self):
+        lt = self._make_nrml("""\
+            <logicTree logicTreeID="lt1">
+              <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>sm1</uncertaintyModel>
+                    <uncertaintyWeight>0.7</uncertaintyWeight>
+                  </logicTreeBranch>
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>sm2</uncertaintyModel>
+                    <uncertaintyWeight>0.3</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+            </logicTree>
+        """)
+        sm = self._whatever_sourcemodel()
+        with self.assertRaises(logictree.ValidationError) as arc:
+            _TesteableLogicTree('lt', {'lt': lt, 'sm1': sm, 'sm2': sm}, '/bz')
+        exc = arc.exception
+        self.assertEqual(exc.filename, 'lt')
+        self.assertEqual(exc.basepath, '/bz')
+        self.assertEqual(exc.lineno, 9)
+        self.assertEqual(exc.message, "branchID 'b1' is not unique",
+                        "wrong exception message: %s" % exc.message)
+
+    def test_branches_weight_wrong_sum(self):
+        lt = self._make_nrml("""\
+            <logicTree logicTreeID="lt1">
+              <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>sm1</uncertaintyModel>
+                    <uncertaintyWeight>0.7</uncertaintyWeight>
+                  </logicTreeBranch>
+                  <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>sm2</uncertaintyModel>
+                    <uncertaintyWeight>0.4</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+            </logicTree>
+        """)
+        sm = self._whatever_sourcemodel()
+        with self.assertRaises(logictree.ValidationError) as arc:
+            _TesteableLogicTree('lo', {'lo': lt, 'sm1': sm, 'sm2': sm}, 'base')
+        exc = arc.exception
+        self.assertEqual(exc.filename, 'lo')
+        self.assertEqual(exc.basepath, 'base')
+        self.assertEqual(exc.lineno, 4)
+        self.assertEqual(exc.message, "branchset weights don't sum up to 1.0",
+                        "wrong exception message: %s" % exc.message)
+
+    def test_apply_to_nonexistent_branch(self):
+        lt = self._make_nrml("""\
+            <logicTree logicTreeID="lt1">
+              <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>sm</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+              <logicTreeBranchingLevel branchingLevelID="bl2">
+                <logicTreeBranchSet uncertaintyType="bGRRelative"
+                                    branchSetID="bs1"
+                                    applyToBranches="mssng">
+                  <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>123</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+            </logicTree>
+        """)
+        sm = self._whatever_sourcemodel()
+        with self.assertRaises(logictree.ValidationError) as arc:
+            _TesteableLogicTree('lt', {'lt': lt, 'sm': sm}, 'base')
+        exc = arc.exception
+        self.assertEqual(exc.filename, 'lt')
+        self.assertEqual(exc.basepath, 'base')
+        self.assertEqual(exc.lineno, 14)
+        self.assertEqual(exc.message, "branch 'mssng' is not yet defined",
+                        "wrong exception message: %s" % exc.message)
+
+    def test_apply_to_occupied_branch(self):
+        lt = self._make_nrml("""\
+            <logicTree logicTreeID="lt1">
+              <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>sm</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+              <logicTreeBranchingLevel branchingLevelID="bl2">
+                <logicTreeBranchSet uncertaintyType="bGRRelative"
+                                    branchSetID="bs1"
+                                    applyToBranches="b1">
+                  <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>123</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+                <logicTreeBranchSet uncertaintyType="bGRRelative"
+                                    branchSetID="bs1"
+                                    applyToBranches="b1">
+                  <logicTreeBranch branchID="b3">
+                    <uncertaintyModel>123</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+            </logicTree>
+        """)
+        sm = self._whatever_sourcemodel()
+        with self.assertRaises(logictree.ValidationError) as arc:
+            _TesteableLogicTree('lt', {'lt': lt, 'sm': sm}, 'base')
+        exc = arc.exception
+        self.assertEqual(exc.filename, 'lt')
+        self.assertEqual(exc.basepath, 'base')
+        self.assertEqual(exc.lineno, 22)
+        error = "branch 'b1' already has child branchset"
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
