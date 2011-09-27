@@ -39,7 +39,7 @@ class _TesteableLogicTree(logictree.LogicTree):
 
 
 class LogicTreeBrokenInputTestCase(unittest.TestCase):
-    def test_nonexisting_logic_tree(self):
+    def test_nonexisting_logictree(self):
         with self.assertRaises(logictree.ParsingError) as arc:
             _TesteableLogicTree('missing_file', {}, 'base')
         exc = arc.exception
@@ -49,7 +49,7 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
 
-    def test_invalid_xml_logic_tree(self):
+    def test_logictree_invalid_xml(self):
         source = """<?xml foo bar baz"""
         with self.assertRaises(logictree.ParsingError) as arc:
             _TesteableLogicTree('broken_xml', {'broken_xml': source}, 'base')
@@ -96,7 +96,7 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
         </sourceModel>
         """)
 
-    def test_schema_violation(self):
+    def test_logictree_schema_violation(self):
         source = self._make_nrml("""\
             <logicTreeSet>
                 <logicTree logicTreeID="lt1"/>
@@ -357,4 +357,139 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.lineno, 22)
         error = "branch 'b1' already has child branchset"
         self.assertEqual(exc.message, error,
+                        "wrong exception message: %s" % exc.message)
+
+    def test_ab_gr_absolute_wrong_format(self):
+        lt = self._make_nrml("""\
+            <logicTree logicTreeID="lt1">
+              <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>sm</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+              <logicTreeBranchingLevel branchingLevelID="bl2">
+                <logicTreeBranchSet uncertaintyType="abGRAbsolute"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>123.45</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+            </logicTree>
+        """)
+        sm = self._whatever_sourcemodel()
+        with self.assertRaises(logictree.ValidationError) as arc:
+            _TesteableLogicTree('lt', {'lt': lt, 'sm': sm}, 'base')
+        exc = arc.exception
+        self.assertEqual(exc.filename, 'lt')
+        self.assertEqual(exc.basepath, 'base')
+        self.assertEqual(exc.lineno, 15)
+        error = 'expected two float values separated by space'
+        self.assertEqual(exc.message, error,
+                        "wrong exception message: %s" % exc.message)
+
+    def test_b_gr_relative_wrong_format(self):
+        lt = self._make_nrml("""\
+            <logicTree logicTreeID="lt1">
+              <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>sm</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+              <logicTreeBranchingLevel branchingLevelID="bl2">
+                <logicTreeBranchSet uncertaintyType="bGRRelative"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>123.45z</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+            </logicTree>
+        """)
+        sm = self._whatever_sourcemodel()
+        with self.assertRaises(logictree.ValidationError) as arc:
+            _TesteableLogicTree('lt', {'lt': lt, 'sm': sm}, 'base')
+        exc = arc.exception
+        self.assertEqual(exc.filename, 'lt')
+        self.assertEqual(exc.basepath, 'base')
+        self.assertEqual(exc.lineno, 15)
+        self.assertEqual(exc.message, 'expected single float value',
+                        "wrong exception message: %s" % exc.message)
+
+    def test_source_model_invalid_xml(self):
+        source = self._make_nrml("""\
+            <logicTree logicTreeID="lt1">
+              <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>sm</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+            </logicTree>
+        """)
+        sm = """ololo"""
+        with self.assertRaises(logictree.ParsingError) as arc:
+            _TesteableLogicTree('lt', {'lt': source, 'sm': sm}, 'base')
+        exc = arc.exception
+        self.assertEqual(exc.message, "Document is empty, line 1, column 1",
+                        "wrong exception message: %s" % exc.message)
+
+    def test_source_model_schema_violation(self):
+        source = self._make_nrml("""\
+            <logicTree logicTreeID="lt1">
+              <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>sm</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+            </logicTree>
+        """)
+        sm = self._make_nrml("""\
+        <sourceModel gml:id="sm1">
+            <config/>
+            <simpleFaultSource gml:id="src01">
+                <gml:name>Mount Diablo Thrust</gml:name>
+                <tectonicRegion>Swamps, lots of them</tectonicRegion>
+                <rake>90.0</rake>
+                <evenlyDiscretizedIncrementalMFD minVal="6.55" binSize="0.1"
+                    type="ML">0.0010614989 8.8291627E-4 7.3437777E-4
+                              6.108288E-4 5.080653E-4
+                </evenlyDiscretizedIncrementalMFD>
+                <simpleFaultGeometry gml:id="sfg_1">
+                    <faultTrace>
+                        <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                            <gml:posList>
+                                -121.82290 37.73010  0.0
+                                -122.03880 37.87710  0.0
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultTrace>
+                    <dip>38</dip>
+                    <upperSeismogenicDepth>8.0</upperSeismogenicDepth>
+                    <lowerSeismogenicDepth>13.0</lowerSeismogenicDepth>
+                </simpleFaultGeometry>
+            </simpleFaultSource>
+        </sourceModel>
+        """)
+        with self.assertRaises(logictree.ParsingError) as arc:
+            _TesteableLogicTree('lt', {'lt': source, 'sm': sm}, 'base')
+        exc = arc.exception
+        self.assertTrue("is not an element of the set" in exc.message,
                         "wrong exception message: %s" % exc.message)
