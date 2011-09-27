@@ -52,6 +52,18 @@ Available Risk Analysis
 
 import sys
 
+
+from openquake.utils import config
+if not config.Config().is_readable():
+    print (
+        "You are not authorized to read any of the OpenQuake configuration\n"
+        "files.\n"
+        "Please contact a system administrator or run the following "
+        "command:\n\n"
+        "       sudo adduser <your-user-name> openquake")
+    sys.exit(2)
+
+
 try:
     import celeryconfig
 except ImportError:
@@ -65,7 +77,6 @@ from openquake import logs
 from openquake import __version__
 
 from openquake import job
-from openquake.utils import config
 from openquake.utils import version as utils_version
 
 FLAGS = flags.FLAGS
