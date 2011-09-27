@@ -22,6 +22,8 @@ import unittest
 import geohash
 import numpy
 
+from nose.plugins.attrib import attr
+
 from openquake.db import models
 from openquake import shapes
 from tests.utils import helpers
@@ -32,6 +34,7 @@ TEST_NAME = "PeerTestSet1Case2"
 class ClassicalPSHACalculatorAssuranceTestCase(
     unittest.TestCase, helpers.DbTestMixin):
 
+    @attr("quality_assurance")
     def test_peerTestSet1Case2(self):
         expected_results = self._load_results()
         job = self._run_job(helpers.smoketest_file(TEST_NAME + "/config.gem"))
