@@ -71,6 +71,14 @@ class Config(object):
         for section in config.sections():
             self.cfg[section] = dict(config.items(section))
 
+    def is_readable(self):
+        """Return `True` if at least one config file is readable."""
+        for path in self._get_paths():
+            if os.access(path, os.R_OK):
+                return True
+        else:
+            return False
+
 
 def get_section(section):
     """A dictionary of key/value pairs for the given `section` or `None`."""
