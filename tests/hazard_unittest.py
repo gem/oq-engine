@@ -99,10 +99,6 @@ class HazardEngineTestCase(unittest.TestCase):
         self.generated_files = []
         self.kvs_client = kvs.get_client()
 
-        # We will run a full test using amqp logging, as configured in
-        # openquake.cfg
-        helpers.declare_signalling_exchange()
-
     def tearDown(self):
         for cfg in self.generated_files:
             try:
@@ -115,7 +111,6 @@ class HazardEngineTestCase(unittest.TestCase):
         errors, and should have params loaded from KVS."""
 
         hazengine = helpers.job_from_file(TEST_JOB_FILE)
-        self.generated_files.append(hazengine.super_config_path)
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
             hazengine.execute()
 

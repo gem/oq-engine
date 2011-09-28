@@ -23,15 +23,15 @@ import unittest
 
 from django.contrib.gis.geos.polygon import Polygon
 from django.contrib.gis.geos.collections import MultiPoint
-from django.core import exceptions
 
+from tempfile import gettempdir
+
+from openquake import job
 from openquake import kvs
 from openquake import flags
 from openquake import shapes
-from openquake.utils import config as oq_config
-from openquake.job import Job, LOG, config, prepare_job, run_job
-from openquake.job import parse_config_files, prepare_config_parameters
-from openquake.job import spawn_job_supervisor
+from openquake.job import parse_config_file, prepare_config_parameters
+from openquake.job import Job, config, prepare_job, run_job
 from openquake.job.mixins import Mixin
 from openquake.db.models import OqJob, JobStats, OqParams
 from openquake.risk.job import general
@@ -87,9 +87,6 @@ class JobTestCase(unittest.TestCase):
         self.job_with_includes = \
             helpers.job_from_file(helpers.get_data_path(CONFIG_WITH_INCLUDES))
 
-        self.generated_files.append(self.job.super_config_path)
-        self.generated_files.append(self.job_with_includes.super_config_path)
-
     def tearDown(self):
         for cfg in self.generated_files:
             try:
@@ -100,70 +97,14 @@ class JobTestCase(unittest.TestCase):
         kvs.cache_gc('::JOB::1::')
         kvs.cache_gc('::JOB::2::')
 
-    def test_logs_a_warning_if_none_of_the_default_configs_exist(self):
-
-        class call_logger(object):
-
-            def __init__(self, method):
-                self.called = False
-                self.method = method
-
-            def __call__(self, *args, **kwargs):
-                try:
-                    return self.method(*args, **kwargs)
-                finally:
-                    self.called = True
-
-        good_defaults = Job._Job__defaults
-        Job._Job__defaults = ["/tmp/sbfalds"]
-        LOG.warning = call_logger(LOG.warning)
-        self.assertFalse(LOG.warning.called)
-        Job.default_configs()
-        self.assertTrue(LOG.warning.called)
-        Job._Job__defaults = good_defaults
-
     def test_job_has_the_correct_sections(self):
         self.assertEqual(["RISK", "HAZARD", "general"], self.job.sections)
         self.assertEqual(self.job.sections, self.job_with_includes.sections)
 
     def test_job_with_only_hazard_config_only_has_hazard_section(self):
-        FLAGS.include_defaults = False
-        try:
-            job_with_only_hazard = \
-                helpers.job_from_file(helpers.get_data_path(HAZARD_ONLY))
-            self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
-        finally:
-            FLAGS.include_defaults = True
-
-    def test_job_writes_to_super_config(self):
-        for each_job in [self.job, self.job_with_includes]:
-            self.assertTrue(os.path.isfile(each_job.super_config_path))
-
-    def test_configuration_is_the_same_no_matter_which_way_its_provided(self):
-        sha_from_file_key = lambda params, key: params[key].split('!')[1]
-
-        # A unique job key is prepended to these file hashes
-        # to enable garabage collection.
-        # Thus, we have to do a little voodoo to make this test work.
-        src_model = 'SOURCE_MODEL_LOGIC_TREE_FILE'
-        gmpe = 'GMPE_LOGIC_TREE_FILE'
-
-        job1_src_model_sha = sha_from_file_key(self.job.params, src_model)
-        job2_src_model_sha = sha_from_file_key(
-            self.job_with_includes.params, src_model)
-        self.assertEqual(job1_src_model_sha, job2_src_model_sha)
-
-        del self.job.params[src_model]
-        del self.job_with_includes.params[src_model]
-
-        job1_gmpe_sha = sha_from_file_key(self.job.params, gmpe)
-        job2_gmpe_sha = sha_from_file_key(self.job_with_includes.params, gmpe)
-        self.assertEqual(job1_gmpe_sha, job2_gmpe_sha)
-
-        del self.job.params[gmpe]
-        del self.job_with_includes.params[gmpe]
-
-        self.assertEqual(self.job.params, self.job_with_includes.params)
+        job_with_only_hazard = \
+            helpers.job_from_file(helpers.get_data_path(HAZARD_ONLY))
+        self.assertEqual(["HAZARD"], job_with_only_hazard.sections)
 
     def test_classical_psha_based_job_mixes_in_properly(self):
         with Mixin(self.job, general.RiskJobMixin):
@@ -187,24 +128,23 @@ class JobTestCase(unittest.TestCase):
                 ProbabilisticEventMixin in self.job.__class__.__bases__)
 
     def test_can_store_and_read_jobs_from_kvs(self):
-        self.job = helpers.job_from_file(
-            os.path.join(helpers.DATA_DIR, CONFIG_FILE))
-        self.generated_files.append(self.job.super_config_path)
-        self.assertEqual(self.job, Job.from_kvs(self.job.job_id))
-        helpers.cleanup_loggers()
+        flags.FLAGS.debug = 'debug'
+        try:
+            self.job = helpers.job_from_file(
+                os.path.join(helpers.DATA_DIR, CONFIG_FILE))
+            job_from_kvs = Job.from_kvs(self.job.job_id)
+            self.assertEqual(flags.FLAGS.debug,
+                             job_from_kvs.params.pop('debug'))
+            self.assertEqual(self.job, job_from_kvs)
+        finally:
+            helpers.cleanup_loggers()
+            flags.FLAGS.debug = None
 
 
 class JobDbRecordTestCase(unittest.TestCase):
 
     def setUp(self):
         self.job = None
-
-    def tearDown(self):
-        try:
-            if self.job:
-                os.remove(self.job.super_config_path)
-        except OSError:
-            pass
 
     def test_job_db_record_for_output_type_db(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
@@ -254,18 +194,22 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             [HAZARD]
             MINIMUM_MAGNITUDE = 5.0
             '''
-        config_path = self.touch(content=textwrap.dedent(content))
+        config_path = self.touch(
+            dir=gettempdir(), content=textwrap.dedent(content))
 
-        params, sections = parse_config_files(config_path, [])
+        params, sections = parse_config_file(config_path)
 
         self.assertEquals(
-            {'BASE_PATH': '/tmp',
+            {'BASE_PATH': gettempdir(),
              'CALCULATION_MODE': 'Event Based',
              'MINIMUM_MAGNITUDE': '5.0'},
             params)
         self.assertEquals(['GENERAL', 'HAZARD'], sorted(sections))
 
-    def test_parse_missing_files(self):
+    def test_parse_missing_file(self):
+        """When parse_config_file is passed an invalid path, a
+        ValidationException should be raised.
+        """
         content = '''
             [GENERAL]
             CALCULATION_MODE = Event Based
@@ -273,10 +217,10 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             [HAZARD]
             MINIMUM_MAGNITUDE = 5.0
             '''
-        config_path = self.touch(content=textwrap.dedent(content))
+        config_path = '/does/not/exist' 
 
-        self.assertRaises(config.ValidationException, parse_config_files,
-                          config_path, ['/tmp/foo'])
+        self.assertRaises(config.ValidationException, parse_config_file,
+                          config_path)
 
     def test_parse_files_defaults(self):
         content = '''
@@ -288,35 +232,14 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             '''
         config_path = self.touch(content=textwrap.dedent(content))
 
-        params, sections = parse_config_files(config_path, [])
+        params, sections = parse_config_file(config_path)
 
         self.assertEquals(
-            {'BASE_PATH': '/tmp',
+            {'BASE_PATH': gettempdir(),
              'MINIMUM_MAGNITUDE': '5.0',
              'CALCULATION_MODE': 'Event Based'},
             params)
         self.assertEquals(['GENERAL', 'HAZARD'], sorted(sections))
-
-        default_content = '''
-            [GENERAL]
-            CALCULATION_MODE = Event Based
-            REGION_GRID_SPACING = 0.1
-
-            [HAZARD]
-            MINIMUM_MAGNITUDE = 6.0
-            '''
-        default_path = self.touch(content=textwrap.dedent(default_content))
-
-        def_params, def_sections = parse_config_files(
-            config_path, [default_path])
-
-        self.assertEquals(
-            {'BASE_PATH': '/tmp',
-             'CALCULATION_MODE': 'Event Based',
-             'REGION_GRID_SPACING': '0.1',
-             'MINIMUM_MAGNITUDE': '5.0'},
-            def_params)
-        self.assertEquals(['GENERAL', 'HAZARD'], sorted(def_sections))
 
     def test_prepare_parameters(self):
         content = '''
@@ -330,13 +253,14 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             # not used for this job type
             COMPUTE_MEAN_HAZARD_CURVE = true
             '''
-        config_path = self.touch(content=textwrap.dedent(content))
+        config_path = self.touch(
+            dir=gettempdir(), content=textwrap.dedent(content))
 
-        params, sections = parse_config_files(config_path, [])
+        params, sections = parse_config_file(config_path)
         params, sections = prepare_config_parameters(params, sections)
 
         self.assertEquals(
-            {'BASE_PATH': '/tmp',
+            {'BASE_PATH': gettempdir(),
              'MINIMUM_MAGNITUDE': '5.0',
              'CALCULATION_MODE': 'Event Based'},
             params)
@@ -358,16 +282,17 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             '''
         config_path = self.touch(content=textwrap.dedent(content))
 
-        params, sections = parse_config_files(config_path, [])
+        params, sections = parse_config_file(config_path)
         params, sections = prepare_config_parameters(params, sections)
 
         self.assertEquals(
-            {'BASE_PATH': '/tmp',
-             'OUTPUT_DIR': '/tmp/output',
-             'SOURCE_MODEL_LOGIC_TREE_FILE': '/tmp/source-model.xml',
-             'GMPE_LOGIC_TREE_FILE': '/tmp/gmpe.xml',
+            {'BASE_PATH': gettempdir(),
+             'OUTPUT_DIR': 'output',
+             'SOURCE_MODEL_LOGIC_TREE_FILE': os.path.join(gettempdir(),
+                                                          'source-model.xml'),
+             'GMPE_LOGIC_TREE_FILE': os.path.join(gettempdir(), 'gmpe.xml'),
              'EXPOSURE': '/absolute/exposure.xml',
-             'VULNERABILITY': '/tmp/vulnerability.xml',
+             'VULNERABILITY': os.path.join(gettempdir(), 'vulnerability.xml'),
              'CALCULATION_MODE': 'Event Based'},
             params)
         self.assertEquals(['GENERAL', 'HAZARD', 'RISK'], sorted(sections))
@@ -387,7 +312,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
     """
     BASE_CLASSICAL_PARAMS = {
         'CALCULATION_MODE': 'Classical',
-        'POES_HAZARD_MAPS': '0.01 0.1',
+        'POES': '0.01 0.1',
         'INTENSITY_MEASURE_TYPE': 'PGA',
         'MINIMUM_MAGNITUDE': '5.0',
         'INVESTIGATION_TIME': '50.0',
@@ -704,9 +629,12 @@ class RunJobTestCase(unittest.TestCase):
     def setUp(self):
         self.job = None
         self.job_from_file = Job.from_file
+        self.init_logs_amqp_send = patch('openquake.logs.init_logs_amqp_send')
+        self.init_logs_amqp_send.start()
 
     def tearDown(self):
         self.job = None
+        self.init_logs_amqp_send.stop()
 
     def _job_status(self):
         return OqJob.objects.get(id=self.job.job_id).status
@@ -732,7 +660,8 @@ class RunJobTestCase(unittest.TestCase):
 
             from_file.side_effect = patch_job_launch
 
-            with patch('openquake.job.spawn_job_supervisor'):
+            with patch('os.fork', mocksignature=False) as fork:
+                fork.return_value = 0
                 run_job(helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, self.job.launch.call_count)
@@ -759,7 +688,8 @@ class RunJobTestCase(unittest.TestCase):
 
             from_file.side_effect = patch_job_launch
 
-            with patch('openquake.job.spawn_job_supervisor'):
+            with patch('os.fork', mocksignature=False) as fork:
+                fork.return_value = 0
                 self.assertRaises(Exception, run_job,
                                 helpers.get_data_path(CONFIG_FILE), 'db')
 
@@ -818,6 +748,48 @@ class RunJobTestCase(unittest.TestCase):
 
         self.assertEquals(expected_sites, engine.sites_to_compute())
 
+    def test_with_risk_jobs_we_can_trigger_hazard_only_on_exposure_sites(self):
+        """When we have hazard and risk jobs, we can ask to trigger
+        the hazard computation only on the sites specified
+        in the exposure file."""
+
+        sections = [config.HAZARD_SECTION,
+                config.GENERAL_SECTION, config.RISK_SECTION]
+
+        input_region = "46.0, 9.0, 46.0, 10.0, 45.0, 10.0, 45.0, 9.0"
+
+        exposure = "exposure-portfolio.xml"
+        exposure_path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, exposure)
+
+        params = {config.INPUT_REGION: input_region,
+                config.REGION_GRID_SPACING: 0.1,
+                config.EXPOSURE: exposure_path,
+                config.COMPUTE_HAZARD_AT_ASSETS: True}
+
+        engine = helpers.create_job(params, sections=sections, base_path=".")
+
+        expected_sites = [shapes.Site(9.15000, 45.16667),
+                shapes.Site(9.15333, 45.12200), shapes.Site(9.14777, 45.17999)]
+
+        self.assertEquals(expected_sites, engine.sites_to_compute())
+
+    def test_read_sites_from_exposure(self):
+        """
+        Test reading site data from an exposure file using
+        :py:function:`openquake.risk.read_sites_from_exposure`.
+        """
+        job_config_file = helpers.smoketest_file('simplecase/config.gem')
+
+        test_job = helpers.job_from_file(job_config_file)
+
+        expected_sites = [
+            shapes.Site(-118.077721, 33.852034),
+            shapes.Site(-118.067592, 33.855398),
+            shapes.Site(-118.186739, 33.779013)]
+
+        self.assertEqual(expected_sites,
+            job.read_sites_from_exposure(test_job))
+
     def test_supervisor_is_spawned(self):
         with patch('openquake.job.Job.from_file') as from_file:
 
@@ -830,30 +802,19 @@ class RunJobTestCase(unittest.TestCase):
 
             from_file.side_effect = patch_job_launch
 
-            with patch('openquake.job.spawn_job_supervisor') as mocked_func:
-                run_job(helpers.get_data_path(CONFIG_FILE), 'db')
+            with patch('os.fork', mocksignature=False) as fork:
 
-                self.assertEquals(1, mocked_func.call_count)
-                self.assertEquals(((self.job.job_id, os.getpid()), {}),
-                                  mocked_func.call_args)
+                def fork_side_effect():
+                    fork.side_effect = lambda: 0
+                    return 1234
+                fork.side_effect = fork_side_effect
+                with patch('openquake.supervising.supervisor.supervise') \
+                        as supervise:
+                    run_job(helpers.get_data_path(CONFIG_FILE), 'db')
 
-    def test_spawn_job_supervisor(self):
-        class FakeProcess(object):
-            pid = 42
-
-        oq_config.Config().cfg['supervisor']['exe'] = '/supervise me'
-        job = helpers.job_from_file(helpers.get_data_path(CONFIG_FILE))
-
-        with patch('subprocess.Popen') as popen:
-            popen.return_value = FakeProcess()
-            spawn_job_supervisor(job_id=job.job_id, pid=54321)
-            self.assertEqual(popen.call_count, 1)
-            self.assertEqual(popen.call_args,
-                             ((['/supervise me', str(job.job_id), '54321'], ),
-                              {'env': os.environ}))
-            job = OqJob.objects.get(pk=job.job_id)
-            self.assertEqual(job.supervisor_pid, 42)
-            self.assertEqual(job.job_pid, 54321)
+        self.assertEquals(1, supervise.call_count)
+        self.assertEquals(((1234, self.job.job_id), {}),
+                          supervise.call_args)
 
 
 class JobStatsTestCase(unittest.TestCase):
