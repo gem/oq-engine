@@ -36,6 +36,14 @@ CALCULATION_MODE = {
     'Disaggregation': 'disaggregation',
 }
 
+INPUT_FILE_TYPES = {
+    'SOURCE_MODEL_LOGIC_TREE_FILE': 'lt_source',
+    'GMPE_LOGIC_TREE_FILE': 'lt_gmpe',
+    'EXPOSURE': 'exposure',
+    'VULNERABILITY': 'vulnerability',
+    'SINGLE_RUPTURE_MODEL': 'rupture',
+}
+
 ENUM_MAP = {
     'Average Horizontal': 'average',
     'Average Horizontal (GMRotI50)': 'gmroti50',
@@ -74,6 +82,8 @@ ENUM_MAP = {
 
 CALCULATION_MODES = set(CALCULATION_MODE.values())
 PARAMS = {}
+PATH_PARAMS = ['VULNERABILITY', 'SINGLE_RUPTURE_MODEL', 'EXPOSURE',
+               'SOURCE_MODEL_LOGIC_TREE_FILE', 'GMPE_LOGIC_TREE_FILE']
 
 
 def map_enum(value):
@@ -251,7 +261,7 @@ define_param('RUPTURE_FLOATING_TYPE', 'rupture_floating_type',
 
 # Disaggregation parameters:
 define_param('DISAGGREGATION_RESULTS', 'disagg_results',
-             modes='disaggregation', to_db=map_enum_sequence)
+             modes='disaggregation', to_db=map_enum)
 define_param('LATITUDE_BIN_LIMITS', 'lat_bin_limits', modes='disaggregation')
 define_param('LONGITUDE_BIN_LIMITS', 'lon_bin_limits', modes='disaggregation')
 define_param('MAGNITUDE_BIN_LIMITS', 'mag_bin_limits', modes='disaggregation')
