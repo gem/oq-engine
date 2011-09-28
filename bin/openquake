@@ -52,6 +52,12 @@ Available Risk Analysis
 
 import sys
 
+from openquake.utils import config
+
+
+config.abort_if_no_config_available()
+
+
 try:
     import celeryconfig
 except ImportError:
@@ -61,11 +67,8 @@ import oqpath
 oqpath.set_oq_path()
 
 from openquake import flags
-from openquake import logs
 from openquake import __version__
 
-from openquake import job
-from openquake.utils import config
 from openquake.utils import version as utils_version
 
 FLAGS = flags.FLAGS
@@ -107,9 +110,6 @@ if __name__ == '__main__':
         print flags.get_flags_help()
         sys.exit(1)
 
-    logs.init_logs(level=FLAGS.debug,
-                   log_type=config.get('logging', 'backend'))
-
     # Collect inputs
     # Determine Processing type
     # Validate input data
@@ -121,6 +121,7 @@ if __name__ == '__main__':
     # Collate results
     # Generate output
 
+    from openquake import job
     register_mixins()
     try:
         job.run_job(FLAGS.config_file, FLAGS.output_type)

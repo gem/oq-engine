@@ -18,6 +18,7 @@
 
 from bulk_insert_unittest import *
 from cache_gc_unittest import *
+from db_fields_unittest import *
 from db_loader_unittest import *
 from db_loader_unittest import *
 from db_routers_unittest import *
@@ -69,3 +70,7 @@ for path in glob.glob(os.path.join(os.path.dirname(__file__), '*test*.py')):
 
     if module not in sys.modules:
         print >> sys.stderr, "Potential missing import of " + module
+
+import logging
+# this is needed to avoid "no handlers" warning during test run
+logging.getLogger('amqplib').addHandler(logging.NullHandler())
