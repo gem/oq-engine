@@ -214,7 +214,7 @@ class JobDbRecordTestCase(unittest.TestCase):
 class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
     maxDiff = None
 
-    def test_parse_files(self):
+    def test_parse_file(self):
         content = '''
             [GENERAL]
             CALCULATION_MODE = Event Based
@@ -249,25 +249,6 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
 
         self.assertRaises(config.ValidationException, parse_config_file,
                           config_path)
-
-    def test_parse_files_defaults(self):
-        content = '''
-            [GENERAL]
-            CALCULATION_MODE = Event Based
-
-            [HAZARD]
-            MINIMUM_MAGNITUDE = 5.0
-            '''
-        config_path = self.touch(content=textwrap.dedent(content))
-
-        params, sections = parse_config_file(config_path)
-
-        self.assertEquals(
-            {'BASE_PATH': gettempdir(),
-             'MINIMUM_MAGNITUDE': '5.0',
-             'CALCULATION_MODE': 'Event Based'},
-            params)
-        self.assertEquals(['GENERAL', 'HAZARD'], sorted(sections))
 
     def test_prepare_parameters(self):
         content = '''
