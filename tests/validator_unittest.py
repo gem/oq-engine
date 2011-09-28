@@ -277,3 +277,17 @@ class DisaggregationValidatorTestCase(unittest.TestCase):
         actual_results =  validator.is_valid()
 
         self.assertEqual(expected_results, actual_results)
+
+
+class DefaultValidatorsTestCase(unittest.TestCase):
+    """Tests :function:`openquake.job.config.default_validators`
+    for correct behavior with various types of job configurations.
+    """
+
+    def test_default_validators_disagg_job(self):
+        da_job_path = helpers.smoketest_file('disaggregation/config.gem')
+        da_job = helpers.job_from_file(da_job_path)
+
+        print dir(da_job)
+        print da_job.params
+        self.assertTrue(False)

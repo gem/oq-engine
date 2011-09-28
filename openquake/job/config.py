@@ -31,6 +31,7 @@ CALCULATION_MODE = "CALCULATION_MODE"
 REGION_GRID_SPACING = "REGION_GRID_SPACING"
 SITES = "SITES"
 DETERMINISTIC_MODE = "Deterministic"
+DISAGGREGATION_MODE = "Disaggregation"
 CALCULATION_MODE = "CALCULATION_MODE"
 BASE_PATH = "BASE_PATH"
 COMPUTE_HAZARD_AT_ASSETS = "COMPUTE_HAZARD_AT_ASSETS_LOCATIONS"
@@ -275,7 +276,7 @@ def default_validators(sections, params):
     validators.add(deterministic)
     validators.add(exposure)
 
-    if params.get('CALCULATION_MODE') == 'Disaggregation':
+    if params.get(CALCULATION_MODE) == DISAGGREGATION_MODE:
         validators.add(DisaggregationValidator(params))
 
     return validators
