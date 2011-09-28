@@ -95,7 +95,6 @@ class LogicTree(object):
     SOURCE_TYPES = ('pointSource', 'areaSource', 'complexFault', 'simpleFault')
 
     FILTERS = ('applyToTectonicRegionType',
-               'applyToSource',
                'applyToSources',
                'applyToSourceType')
 
@@ -117,9 +116,9 @@ class LogicTree(object):
             raise ParsingError(sourcemodel_logictree, self.basepath, str(exc))
         self.branches = {}
         self.open_ends = set()
-        self.source_ids = {}
-        self.source_types = {}
-        self.tectonic_region_types = {}
+        self.source_ids = set()
+        self.source_types = set()
+        self.tectonic_region_types = set()
         [sm_tree] = tree.getroot()
         self.parse_sourcemodel_tree(sm_tree, sourcemodel_logictree)
 
@@ -195,9 +194,8 @@ class LogicTree(object):
                 branchset_node, filename, self.basepath,
                 "branchset weights don't sum up to 1.0"
             )
-        filters = dict((filtername, branchset_node.get(filtername))
-                       for filtername in self.FILTERS
-                       if filtername in branchset_node.attrib)
+        filters = self.validate_branchset_filters(filename, branchset_node,
+                                                  uncertainty_type)
         branchset = BranchSet(branches, uncertainty_type, filters)
         apply_to_branches = branchset_node.get('applyToBranches')
         if apply_to_branches:
@@ -248,13 +246,46 @@ class LogicTree(object):
                 )
             return float(value)
 
+    def validate_branchset_filters(self, filename, branchset_node,
+                                   uncertainty_type):
+        filters = dict((filtername, branchset_node.get(filtername))
+                       for filtername in self.FILTERS
+                       if filtername in branchset_node.attrib)
+        if uncertainty_type == 'sourceModel' and filters:
+            raise ValidationError(
+                branchset_node, filename, self.basepath,
+                'filters are not allowed on source model uncertainty'
+            )
+        if 'applyToSources' in filters:
+            source_ids = filters['applyToSources'].split()
+            nonexistent_source_ids = set(source_ids) - self.source_ids
+            if nonexistent_source_ids:
+                raise ValidationError(
+                    branchset_node, filename, self.basepath,
+                    'source ids %s are not defined in source models' % \
+                    list(nonexistent_source_ids)
+                )
+        if 'applyToTectonicRegionType' in filters:
+            if not filters['applyToTectonicRegionType'] \
+                    in self.tectonic_region_types:
+                raise ValidationError(
+                    branchset_node, filename, self.basepath,
+                    "source models don't define sources of tectonic region " \
+                    "type %r" % filters['applyToTectonicRegionType']
+                )
+        if 'applyToSourceType' in filters:
+            if not filters['applyToSourceType'] in self.source_types:
+                raise ValidationError(
+                    branchset_node, filename, self.basepath,
+                    "source models don't define sources of type %r" % \
+                    filters['applyToSourceType']
+                )
+        return filters
+
     def collect_source_model_data(self, filename):
         all_source_types = set('{%s}%s' % (self.NRML, tagname)
                                for tagname in self.SOURCE_TYPES)
         tectonic_region_type_tag = '{%s}tectonicRegion' % LogicTree.NRML
-        tectonic_region_types = self.tectonic_region_types[filename] = set()
-        source_ids = self.source_ids[filename] = set()
-        source_types = self.source_types[filename] = set()
         nsprefix_length = len('{%s}' % self.NRML)
         eventstream = etree.iterparse(self._open_file(filename),
                                       tag='{%s}*' % self.NRML,
@@ -268,12 +299,12 @@ class LogicTree(object):
                 raise ParsingError(filename, self.basepath, str(exc))
             if not node.tag in all_source_types:
                 if node.tag == tectonic_region_type_tag:
-                    tectonic_region_types.add(node.text)
+                    self.tectonic_region_types.add(node.text)
             else:
-                source_ids.add(
+                self.source_ids.add(
                     node.attrib['{http://www.opengis.net/gml}id']
                 )
-                source_types.add(node.tag[nsprefix_length:])
+                self.source_types.add(node.tag[nsprefix_length:])
 
                 # saving memory by removing already processed nodes.
                 # see http://lxml.de/parsing.html#modifying-the-tree
