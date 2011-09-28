@@ -244,7 +244,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             [HAZARD]
             MINIMUM_MAGNITUDE = 5.0
             '''
-        config_path = '/does/not/exist' 
+        config_path = '/does/not/exist'
 
         self.assertRaises(config.ValidationException, parse_config_file,
                           config_path)
