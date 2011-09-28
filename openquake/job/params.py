@@ -33,6 +33,7 @@ CALCULATION_MODE = {
     'Classical': 'classical',
     'Deterministic': 'deterministic',
     'Event Based': 'event_based',
+    'Disaggregation': 'disaggregation',
 }
 
 ENUM_MAP = {
@@ -66,8 +67,7 @@ ENUM_MAP = {
 CALCULATION_MODES = set(CALCULATION_MODE.values())
 PARAMS = {}
 PATH_PARAMS = ['VULNERABILITY', 'SINGLE_RUPTURE_MODEL', 'EXPOSURE',
-               'SOURCE_MODEL_LOGIC_TREE_FILE', 'GMPE_LOGIC_TREE_FILE',
-               'OUTPUT_DIR']
+               'SOURCE_MODEL_LOGIC_TREE_FILE', 'GMPE_LOGIC_TREE_FILE']
 
 
 def map_enum(value):
@@ -126,7 +126,7 @@ define_param('DAMPING', 'damping', default=0.0)
 
 define_param('INTENSITY_MEASURE_LEVELS', 'imls',
              modes=('classical', 'event_based'))
-define_param('POES_HAZARD_MAPS', 'poes', modes='classical')
+define_param('POES', 'poes', modes=('classical', 'disaggregation'))
 
 define_param('GROUND_MOTION_CORRELATION', 'gm_correlated',
              modes=('deterministic', 'event_based'))
@@ -148,6 +148,12 @@ define_param('NUMBER_OF_SEISMICITY_HISTORIES', 'histories',
 
 define_param('REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM',
              'reference_depth_to_2pt5km_per_sec_param')
+
+define_param('GMF_OUTPUT', None,
+             modes=('event_based', 'deterministic'))
+define_param('COMPUTE_HAZARD_AT_ASSETS_LOCATIONS', None,
+             modes=('event_based', 'deterministic', 'classical'))
+
 define_param('GMF_RANDOM_SEED', 'gmf_random_seed',
              modes=('event_based', 'deterministic'))
 

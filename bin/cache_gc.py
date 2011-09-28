@@ -137,9 +137,6 @@ def clear_job_data(job_id):
         print 'Use the --list option to show current jobs.'
         raise
 
-    logs.init_logs(level='info', log_type=config.get("logging", "backend"))
-    job.setup_job_logging(job_id=job_id)
-
     LOG.info('Attempting to clear cache data for job %s...' % job_id)
 
     result = kvs.cache_gc(job_id)
