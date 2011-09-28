@@ -24,6 +24,8 @@ Various utility functions concerned with configuration.
 
 import ConfigParser
 import os
+import pwd
+import sys
 
 from openquake.utils import general
 
@@ -89,3 +91,17 @@ def get(section, key):
     """The configuration value for the given `section` and `key` or `None`."""
     data = get_section(section)
     return data.get(key) if data else None
+
+
+def abort_if_no_config_available():
+    """Call sys.exit() if no openquake configuration file is readable."""
+    if not Config().is_readable():
+        msg = (
+            "\nYou are not authorized to read any of the OpenQuake "
+            "configuration files.\n"
+            "Please contact a system administrator or run the following "
+            "command:\n\n"
+            "   sudo gpasswd --add %s openquake"
+            % pwd.getpwuid(os.geteuid()).pw_name)
+        print msg
+        sys.exit(2)
