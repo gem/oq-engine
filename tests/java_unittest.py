@@ -40,12 +40,14 @@ class JvmMaxMemTestCase(unittest.TestCase):
         with helpers.patch("jpype.startJVM") as startjvm_mock:
             with helpers.patch("jpype.isJVMStarted") as isjvmstarted_mock:
                 # Make sure that startJVM() gets called.
-                isjvmstarted_mock.side_effect = lambda: False
-                with helpers.patch("openquake.java.init_logs"):
-                    java.jvm()
-                    args, _ = startjvm_mock.call_args
-                    self.assertFalse(
-                        filter(lambda a: a.startswith("-Xmx"), args))
+                def side_effect():
+                    isjvmstarted_mock.side_effect = lambda: True
+                    return False
+                isjvmstarted_mock.side_effect = side_effect
+                java.jvm()
+                args, _ = startjvm_mock.call_args
+                self.assertFalse(
+                    filter(lambda a: a.startswith("-Xmx"), args))
 
 
 class CeleryJavaExceptionTestCase(unittest.TestCase):
