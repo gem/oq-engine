@@ -60,31 +60,12 @@ class Branch(object):
         self.value = value
         self.child_branchset = None
 
-    def __str__(self):
-        ret = '%s: %s' % (self.weight, self.value)
-        if self.child_branchset:
-            ret = '%s\n%s' % (ret, self.child_branchset)
-        return ret
-
 
 class BranchSet(object):
     def __init__(self, branches, uncertainty_type, filters):
         self.branches = branches
         self.uncertainty_type = uncertainty_type
         self.filters = filters
-
-    def __str__(self):
-        if self.filters:
-            filters = ' %s' % ' '.join('%s="%s"' % item
-                                       for item in self.filters.items())
-        else:
-            filters = ''
-        ret = ['%s%s:' % (self.uncertainty_type, filters)]
-        for branch in self.branches:
-            lines = iter(str(branch).split('\n'))
-            ret.append('  - %s' % next(lines))
-            ret.extend('    %s' % line for line in lines)
-        return '\n'.join(ret)
 
 
 class LogicTree(object):
@@ -283,8 +264,9 @@ class LogicTree(object):
         return filters
 
     def collect_source_model_data(self, filename):
-        all_source_types = set('{%s}%s' % (self.NRML, tagname)
+        all_source_types = set('{%s}%sSource' % (self.NRML, tagname)
                                for tagname in self.SOURCE_TYPES)
+        print all_source_types
         tectonic_region_type_tag = '{%s}tectonicRegion' % LogicTree.NRML
         nsprefix_length = len('{%s}' % self.NRML)
         eventstream = etree.iterparse(self._open_file(filename),
@@ -297,6 +279,7 @@ class LogicTree(object):
                 break
             except etree.XMLSyntaxError as exc:
                 raise ParsingError(filename, self.basepath, str(exc))
+            print event, node
             if not node.tag in all_source_types:
                 if node.tag == tectonic_region_type_tag:
                     self.tectonic_region_types.add(node.text)
@@ -314,13 +297,3 @@ class LogicTree(object):
                 while prev is not None:
                     parent.remove(prev)
                     prev = node.getprevious()
-
-
-if __name__ == '__main__':
-    import sys
-    basepath, filename = os.path.split(sys.argv[1])
-    try:
-        lt = LogicTree(basepath, filename)
-        print lt.root
-    except LogicTreeError as exc:
-        sys.exit(str(exc))
