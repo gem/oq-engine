@@ -76,10 +76,8 @@ import oqpath
 oqpath.set_oq_path()
 
 from openquake import flags
-from openquake import logs
 from openquake import __version__
 
-from openquake import job
 from openquake.utils import version as utils_version
 
 FLAGS = flags.FLAGS
@@ -132,6 +130,7 @@ if __name__ == '__main__':
     # Collate results
     # Generate output
 
+    from openquake import job
     register_mixins()
     try:
         job.run_job(FLAGS.config_file, FLAGS.output_type)
