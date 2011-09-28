@@ -1,4 +1,4 @@
-Source model consisting a single fault (PEER test "FAULT 1" model)
+Source model consisting of a single fault (PEER test "FAULT 1" model)
 The original data provided in the PEER Report ("Verification of Probabilistic Seismic Hazard Analysis Computer Programs", 
 Patricia Thomas, Ivan Wong, Norman Abrahamson, Pacific Earthquake Engineering Research Center) are the following:
 b value = -0.9
