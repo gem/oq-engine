@@ -62,7 +62,8 @@ if not config.Config().is_readable():
         "files.\n"
         "Please contact a system administrator or run the following "
         "command:\n\n"
-        "   sudo adduser %s openquake" % pwd.getpwuid(os.geteuid()).pw_name)
+        "   sudo gpasswd --add %s openquake"
+        % pwd.getpwuid(os.geteuid()).pw_name)
     print msg
     sys.exit(2)
 
