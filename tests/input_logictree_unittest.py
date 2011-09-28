@@ -775,3 +775,42 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
 
+    def test_more_than_one_filters_on_one_branchset(self):
+        lt = self._make_nrml("""\
+            <logicTree logicTreeID="lt1">
+              <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>sm</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+              <logicTreeBranchingLevel branchingLevelID="bl2">
+                <logicTreeBranchSet uncertaintyType="maxMagGRRelative"
+                            branchSetID="bs1"
+                            applyToSourceType="simpleFault"
+                            applyToTectonicRegionType="Active Shallow Crust"
+                            applyToSources="src01">
+                  <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>123</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+            </logicTree>
+        """)
+        sm = self._whatever_sourcemodel()
+        gmpe = self._whatever_gmpe_lt()
+        with self.assertRaises(logictree.ValidationError) as arc:
+            _TesteableLogicTree('lt', 'gmpe',
+                                {'lt': lt, 'sm': sm, 'gmpe': gmpe}, 'base')
+        exc = arc.exception
+        self.assertEqual(exc.filename, 'lt')
+        self.assertEqual(exc.basepath, 'base')
+        self.assertEqual(exc.lineno, 16)
+        error = 'only one filter is allowed per branchset'
+        self.assertEqual(exc.message, error,
+                        "wrong exception message: %s" % exc.message)
+

@@ -261,6 +261,11 @@ class LogicTree(object):
                     "source models don't define sources of type %r" % \
                     filters['applyToSourceType']
                 )
+        if len(filters) > 1:
+            raise ValidationError(
+                branchset_node, filename, self.basepath,
+                "only one filter is allowed per branchset"
+            )
         return filters
 
     def collect_source_model_data(self, filename):
@@ -268,7 +273,7 @@ class LogicTree(object):
                                for tagname in self.SOURCE_TYPES)
         print all_source_types
         tectonic_region_type_tag = '{%s}tectonicRegion' % LogicTree.NRML
-        nsprefix_length = len('{%s}' % self.NRML)
+        sourcetype_slice = slice(len('{%s}' % self.NRML), - len('Source'))
         eventstream = etree.iterparse(self._open_file(filename),
                                       tag='{%s}*' % self.NRML,
                                       schema=self.get_xmlschema())
@@ -279,7 +284,6 @@ class LogicTree(object):
                 break
             except etree.XMLSyntaxError as exc:
                 raise ParsingError(filename, self.basepath, str(exc))
-            print event, node
             if not node.tag in all_source_types:
                 if node.tag == tectonic_region_type_tag:
                     self.tectonic_region_types.add(node.text)
@@ -287,7 +291,7 @@ class LogicTree(object):
                 self.source_ids.add(
                     node.attrib['{http://www.opengis.net/gml}id']
                 )
-                self.source_types.add(node.tag[nsprefix_length:])
+                self.source_types.add(node.tag[sourcetype_slice])
 
                 # saving memory by removing already processed nodes.
                 # see http://lxml.de/parsing.html#modifying-the-tree
