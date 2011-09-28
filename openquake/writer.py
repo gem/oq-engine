@@ -31,7 +31,6 @@ from django.contrib.gis.db import models as gis_models
 from openquake.db import models
 
 LOGGER = logging.getLogger('serializer')
-LOGGER.setLevel(logging.DEBUG)
 
 
 class FileWriter(object):
@@ -124,14 +123,12 @@ class DBWriter(object):
 
         assert self.output is None
 
-        LOGGER.info("> insert_output")
         job = models.OqJob.objects.get(id=self.oq_job_id)
         self.output = models.Output(owner=job.owner, oq_job=job,
                                     display_name=basename(self.nrml_path),
                                     output_type=output_type, db_backed=True)
         self.output.save()
-        LOGGER.info("output = '%s'" % self.output)
-        LOGGER.info("< insert_output")
+        LOGGER.info("output = '%s'", self.output)
 
     def get_output_type(self):
         """
@@ -153,12 +150,11 @@ class DBWriter(object):
         An Output record with type get_output_type() will be created, then
         each item of the iterable will be serialized in turn to the database.
         """
-        LOGGER.info("> serialize")
-        LOGGER.info("serializing %s points" % len(iterable))
+        LOGGER.info("serializing %s points", len(iterable))
 
         if not self.output:
             self.insert_output(self.get_output_type())
-        LOGGER.info("output = '%s'" % self.output)
+        LOGGER.info("output = '%s'", self.output)
 
         if isinstance(iterable, dict):
             items = iterable.iteritems()
@@ -171,8 +167,7 @@ class DBWriter(object):
         if self.bulk_inserter:
             self.bulk_inserter.flush()
 
-        LOGGER.info("serialized %s points" % len(iterable))
-        LOGGER.info("< serialize")
+        LOGGER.info("serialized %s points", len(iterable))
 
 
 class CompositeWriter(object):
