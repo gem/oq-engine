@@ -61,7 +61,15 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         return job
 
     def _load_results(self):
-        # simply split the x string and get
+        """Return the expected results readed from the expected_results/ dir.
+
+        :returns: the expected hazard curves.
+        :rtype: :py:class:`dict` where each key is an instance of
+            :py:class:`openquake.shapes.Site` and each value is a list
+            of (IML, PoE) tuples
+        """
+
+        # split the x string and get
         # the value at index y casted to float
         get = lambda x, y: float(x.split(",")[y])
 
@@ -77,12 +85,16 @@ class ClassicalPSHACalculatorAssuranceTestCase(
                 lines = hazard_curve.readlines()[0].split()
 
                 coords = lines.pop(0)
+
+                # the format is latitude,longitude
                 site = shapes.Site(get(coords, 1), get(coords, 0))
 
                 results[site] = []
 
                 while len(lines):
                     pair = lines.pop(0)
+
+                    # the format is IML,PoE
                     results[site].append((get(pair, 0), get(pair, 1)))
 
         return results
