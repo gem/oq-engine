@@ -266,3 +266,39 @@ class GetTestCase(unittest.TestCase):
             self.assertTrue(config.get("arghh", "c") is None)
             self.assertEqual(1, mock.call_count)
             self.assertEqual([("arghh",), {}], mock.call_args)
+
+
+class IsReadableTestCase(TestMixin, unittest.TestCase):
+    """Tests the behaviour of utils.config.Config.is_readable()."""
+
+    def setUp(self):
+        self.orig_env = os.environ.copy()
+        os.environ.clear()
+
+    def tearDown(self):
+        os.environ.clear()
+        os.environ.update(self.orig_env)
+
+    def test_is_readable_no_file_present(self):
+        """When no config file is present is_readable() returns `False`."""
+        os.environ["OQ_SITE_CFG_PATH"] = "/this/does/not/exist.cfg"
+        os.environ["OQ_LOCAL_CFG_PATH"] = "/nor/does/this.cfg"
+        self.assertFalse(config.Config().is_readable())
+
+    def test_is_readable_all_files_lack_permissions(self):
+        """
+        When we miss read permissions for all config files is_readable()
+        returns `False`.
+        """
+        os.environ["OQ_SITE_CFG_PATH"] = "/etc/sudoers"
+        os.environ["OQ_LOCAL_CFG_PATH"] = "/etc/passwd-"
+        self.assertFalse(config.Config().is_readable())
+
+    def test_is_readable_one_plus_files_have_permissions(self):
+        """
+        When at least one config file is present and we have permission to
+        read it is_readable() returns `True`.
+        """
+        os.environ["OQ_SITE_CFG_PATH"] = "/etc/passwd"
+        os.environ["OQ_LOCAL_CFG_PATH"] = "/etc/passwd-"
+        self.assertTrue(config.Config().is_readable())

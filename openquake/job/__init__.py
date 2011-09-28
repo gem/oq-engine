@@ -18,15 +18,15 @@
 
 """A single hazard/risk job."""
 
-import multiprocessing
 import os
 import re
 import subprocess
 import urlparse
+import logging
 
 from ConfigParser import ConfigParser, RawConfigParser
 from datetime import datetime
-from django.db import transaction
+from django.db import transaction, close_connection
 from django.contrib.gis.db import models
 from django.contrib.gis.geos import GEOSGeometry
 
@@ -36,13 +36,15 @@ from openquake import kvs
 from openquake import logs
 from openquake import OPENQUAKE_ROOT
 from openquake import shapes
+from openquake.parser import exposure
 from openquake.db.models import (
     OqJob, OqParams, OqUser, JobStats, FloatArrayField)
 from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
 from openquake.job.mixins import Mixin
-from openquake.job.params import PARAMS, CALCULATION_MODE, ENUM_MAP
+from openquake.job.params import (
+    PARAMS, CALCULATION_MODE, ENUM_MAP, PATH_PARAMS)
 from openquake.kvs import mark_job_as_current
 from openquake.logs import LOG
 from openquake.utils import config as oq_config
@@ -54,44 +56,6 @@ FLAGS = flags.FLAGS
 REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
 
 
-def spawn_job_supervisor(job_id, pid):
-    """
-    Spawn a supervisor process as configured in openquake.cfg.
-
-    :param int job_id: the id of the job to be supervised
-    :param int pid: the process id of the job to be supervised
-    :return: the id of the supervisor process or None if no supervisor was
-             configured
-    :rtype: int or None
-    """
-    exe = oq_config.get('supervisor', 'exe')
-
-    if exe:
-        if oq_config.get('logging', 'backend') != 'amqp':
-            LOG.warn('If you want to run supervised jobs it\'s better '
-                     'to set [logging] backend=amqp in openquake.cfg')
-
-        if not os.path.isabs(exe):
-            exe = os.path.join(OPENQUAKE_ROOT, exe)
-
-        cmd = [exe, str(job_id), str(pid)]
-
-        supervisor_pid = subprocess.Popen(cmd, env=os.environ).pid
-
-        job = OqJob.objects.get(id=job_id)
-        job.supervisor_pid = supervisor_pid
-        job.job_pid = pid
-        job.save()
-
-        # Ensure the supervisor amqp queue exists
-        supervisor.bind_supervisor_queue(job_id)
-
-        return supervisor_pid
-    else:
-        LOG.warn('This job won\'t be supervised, '
-                 'because no supervisor is configured in openquake.cfg')
-
-
 def run_job(job_file, output_type):
     """
     Given a job_file, run the job.
@@ -101,20 +65,47 @@ def run_job(job_file, output_type):
     :param output_type: the desired format for the results, one of 'db', 'xml'
     :type output_type: string
     """
-
     a_job = Job.from_file(job_file, output_type)
     a_job.set_status('running')
 
-    spawn_job_supervisor(a_job.job_id, os.getpid())
+    # closing all db connections to make sure they're not shared between
+    # supervisor and job executor processes. otherwise if one of them closes
+    # the connection it immediately becomes unavailable for other
+    close_connection()
 
-    try:
-        a_job.launch()
-    except Exception, ex:
-        LOG.critical("Job failed with exception: '%s'" % str(ex))
-        a_job.set_status('failed')
-        raise
-    else:
-        a_job.set_status('succeeded')
+    job_pid = os.fork()
+    if not job_pid:
+        # job executor process
+        try:
+            logs.init_logs_amqp_send(level=FLAGS.debug, job_id=a_job.job_id)
+            a_job.launch()
+        except Exception, ex:
+            LOG.critical("Job failed with exception: '%s'" % str(ex))
+            a_job.set_status('failed')
+            raise
+        else:
+            a_job.set_status('succeeded')
+        return
+
+    supervisor_pid = os.fork()
+    if not supervisor_pid:
+        # supervisor process
+        supervisor_pid = os.getpid()
+        job = OqJob.objects.get(id=a_job.job_id)
+        job.supervisor_pid = supervisor_pid
+        job.job_pid = job_pid
+        job.save()
+        supervisor.supervise(job_pid, a_job.job_id)
+        return
+
+    # parent process
+
+    # ignore Ctrl-C as well as supervisor process does. thus only
+    # job executor terminates on SIGINT
+    supervisor.ignore_sigint()
+    # wait till both child processes are done
+    os.waitpid(job_pid, 0)
+    os.waitpid(supervisor_pid, 0)
 
 
 def parse_config_file(config_file):
@@ -146,7 +137,7 @@ def parse_config_file(config_file):
             key = key.upper()
             # Handle includes.
             if RE_INCLUDE.match(key):
-                config_file = "%s/%s" % (os.path.dirname(config_file), value)
+                config_file = os.path.join(os.path.dirname(config_file), value)
                 new_params, new_sections = parse_config_file(config_file)
                 sections.extend(new_sections)
                 params.update(new_params)
@@ -159,7 +150,7 @@ def parse_config_file(config_file):
     return params, list(set(sections))
 
 
-def filter_configuration_parameters(params, sections):
+def prepare_config_parameters(params, sections):
     """
     Pre-process configuration parameters removing unknown ones.
     """
@@ -180,6 +171,13 @@ def filter_configuration_parameters(params, sections):
             continue
 
         new_params[name] = value
+
+    # make file paths absolute
+    for name in PATH_PARAMS:
+        if name not in new_params:
+            continue
+
+        new_params[name] = os.path.join(params['BASE_PATH'], new_params[name])
 
     return new_params, sections
 
@@ -214,7 +212,7 @@ def prepare_job(params):
         if job.job_type in param.modes and param.default is not None:
             setattr(oqp, param.column, param.default)
 
-    number_re = re.compile('[^0-9.]+')
+    number_re = re.compile('[ ,]+')
 
     for name, value in params.items():
         param = PARAMS[name]
@@ -248,31 +246,12 @@ def prepare_job(params):
     return job
 
 
-def setup_job_logging(job_id):
-    """Make job id and process name available to the Java and Python loggers"""
-    process_name = multiprocessing.current_process().name
-
-    # Make the job_id available to the java logging context.
-    mdc = java.jclass('MDC')
-    mdc.put('job_id', job_id)
-    mdc.put('processName', process_name)
-
-    # make the job_id available to the Python logging context
-    logs.AMQPHandler.MDC['job_id'] = job_id
-    # this is only necessary for Python 2.6
-    logs.AMQPHandler.MDC['processName'] = process_name
-
-
 class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
     @staticmethod
     def from_kvs(job_id):
         """Return the job in the underlying kvs system with the given id."""
-
-        logs.init_logs(
-            level=FLAGS.debug, log_type=oq_config.get("logging", "backend"))
-
         params = kvs.get_value_json_decoded(
             kvs.tokens.generate_job_key(job_id))
         job = Job(params, job_id)
@@ -301,7 +280,7 @@ class Job(object):
         assert output_type in ('db', 'xml', 'xml_without_db')
 
         params, sections = parse_config_file(config_file)
-        params, sections = filter_configuration_parameters(params, sections)
+        params, sections = prepare_config_parameters(params, sections)
 
         validator = conf.default_validators(sections, params)
         is_valid, errors = validator.is_valid()
@@ -365,8 +344,7 @@ class Job(object):
         self._job_id = job_id
         mark_job_as_current(job_id)  # enables KVS gc
 
-        setup_job_logging(self.job_id)
-
+        self.sites = []
         self.blocks_keys = []
         self.params = params
         self.sections = list(set(sections))
@@ -465,7 +443,9 @@ class Job(object):
         """Store this job into kvs."""
         self._slurp_files()
         key = kvs.tokens.generate_job_key(self.job_id)
-        kvs.set_value_json_encoded(key, self.params)
+        data = self.params.copy()
+        data['debug'] = FLAGS.debug
+        kvs.set_value_json_encoded(key, data)
 
     def sites_to_compute(self):
         """Return the sites used to trigger the computation on the
@@ -473,18 +453,36 @@ class Job(object):
 
         If the SITES parameter is specified, the computation is triggered
         only on the sites specified in that parameter, otherwise
-        the region is used."""
+        the region is used.
 
-        if self.has(conf.SITES):
-            sites = []
+        If the COMPUTE_HAZARD_AT_ASSETS_LOCATIONS parameter is specified,
+        the hazard computation is triggered only on sites defined in the risk
+        exposure file and located inside the region of interest.
+        """
+
+        if self.sites:
+            return self.sites
+
+        if conf.RISK_SECTION in self.sections \
+                and self.has(conf.COMPUTE_HAZARD_AT_ASSETS):
+
+            print "COMPUTE_HAZARD_AT_ASSETS_LOCATIONS selected, " \
+                "computing hazard on exposure sites..."
+
+            self.sites = read_sites_from_exposure(self)
+        elif self.has(conf.SITES):
+
             coords = self._extract_coords(conf.SITES)
+            sites = []
 
             for coord in coords:
                 sites.append(shapes.Site(coord[0], coord[1]))
 
-            return sites
+            self.sites = sites
         else:
-            return self._sites_for_region()
+            self.sites = self._sites_for_region()
+
+        return self.sites
 
     def _extract_coords(self, config_param):
         """Extract from a configuration parameter the list of coordinates."""
@@ -543,3 +541,32 @@ class Job(object):
         stats.num_sites = len(self.sites_to_compute())
 
         stats.save()
+
+
+def read_sites_from_exposure(a_job):
+    """
+    Given the exposure model specified in the job config, read all sites which
+    are located within the region of interest.
+
+    :param a_job: a Job object with an EXPOSURE parameter defined
+    :type a_job: :py:class:`openquake.job.Job`
+
+    :returns: a list of :py:class:`openquake.shapes.Site` objects
+    """
+
+    sites = []
+    path = os.path.join(a_job.base_path, a_job.params[conf.EXPOSURE])
+
+    reader = exposure.ExposurePortfolioFile(path)
+    constraint = a_job.region
+
+    LOG.debug(
+        "Constraining exposure parsing to %s" % constraint)
+
+    for site, _asset_data in reader.filter(constraint):
+
+        # we don't want duplicates (bug 812395):
+        if not site in sites:
+            sites.append(site)
+
+    return sites
