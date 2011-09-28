@@ -23,6 +23,7 @@ import unittest
 
 from django.contrib.gis.geos.polygon import Polygon
 from django.contrib.gis.geos.collections import MultiPoint
+from tempfile import gettempdir
 
 from openquake import job
 from openquake import kvs
@@ -222,12 +223,12 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             MINIMUM_MAGNITUDE = 5.0
             '''
         config_path = self.touch(
-            dir='/tmp', content=textwrap.dedent(content))
+            dir=gettempdir(), content=textwrap.dedent(content))
 
         params, sections = parse_config_file(config_path)
 
         self.assertEquals(
-            {'BASE_PATH': '/tmp',
+            {'BASE_PATH': gettempdir(),
              'CALCULATION_MODE': 'Event Based',
              'MINIMUM_MAGNITUDE': '5.0'},
             params)
@@ -241,12 +242,12 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             [HAZARD]
             MINIMUM_MAGNITUDE = 5.0
             '''
-        config_path = self.touch(content=textwrap.dedent(content))
+        config_path = '/does/not/exist' 
 
-        self.assertRaises(config.ValidationException, parse_config_files,
-                          config_path, ['/tmp/foo'])
+        self.assertRaises(config.ValidationException, parse_config_file,
+                          config_path)
 
-    def test_parse_files_defaults(self):
+    def test_parse_config_file(self):
         content = '''
             [GENERAL]
             CALCULATION_MODE = Event Based
@@ -256,35 +257,14 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             '''
         config_path = self.touch(content=textwrap.dedent(content))
 
-        params, sections = parse_config_files(config_path, [])
+        params, sections = parse_config_file(config_path)
 
         self.assertEquals(
-            {'BASE_PATH': '/tmp',
+            {'BASE_PATH': gettempdir(),
              'MINIMUM_MAGNITUDE': '5.0',
              'CALCULATION_MODE': 'Event Based'},
             params)
         self.assertEquals(['GENERAL', 'HAZARD'], sorted(sections))
-
-        default_content = '''
-            [GENERAL]
-            CALCULATION_MODE = Event Based
-            REGION_GRID_SPACING = 0.1
-
-            [HAZARD]
-            MINIMUM_MAGNITUDE = 6.0
-            '''
-        default_path = self.touch(content=textwrap.dedent(default_content))
-
-        def_params, def_sections = parse_config_files(
-            config_path, [default_path])
-
-        self.assertEquals(
-            {'BASE_PATH': '/tmp',
-             'CALCULATION_MODE': 'Event Based',
-             'REGION_GRID_SPACING': '0.1',
-             'MINIMUM_MAGNITUDE': '5.0'},
-            def_params)
-        self.assertEquals(['GENERAL', 'HAZARD'], sorted(def_sections))
 
     def test_prepare_parameters(self):
         content = '''
@@ -299,13 +279,13 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             COMPUTE_MEAN_HAZARD_CURVE = true
             '''
         config_path = self.touch(
-            dir='/tmp', content=textwrap.dedent(content))
+            dir=gettempdir(), content=textwrap.dedent(content))
 
         params, sections = parse_config_file(config_path)
         params, sections = prepare_config_parameters(params, sections)
 
         self.assertEquals(
-            {'BASE_PATH': '/tmp',
+            {'BASE_PATH': gettempdir(),
              'MINIMUM_MAGNITUDE': '5.0',
              'CALCULATION_MODE': 'Event Based'},
             params)
@@ -327,16 +307,17 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             '''
         config_path = self.touch(content=textwrap.dedent(content))
 
-        params, sections = parse_config_files(config_path, [])
+        params, sections = parse_config_file(config_path)
         params, sections = prepare_config_parameters(params, sections)
 
         self.assertEquals(
-            {'BASE_PATH': '/tmp',
-             'OUTPUT_DIR': '/tmp/output',
-             'SOURCE_MODEL_LOGIC_TREE_FILE': '/tmp/source-model.xml',
-             'GMPE_LOGIC_TREE_FILE': '/tmp/gmpe.xml',
+            {'BASE_PATH': gettempdir(),
+             'OUTPUT_DIR': 'output',
+             'SOURCE_MODEL_LOGIC_TREE_FILE': os.path.join(gettempdir(),
+                                                          'source-model.xml'),
+             'GMPE_LOGIC_TREE_FILE': os.path.join(gettempdir(), 'gmpe.xml'),
              'EXPOSURE': '/absolute/exposure.xml',
-             'VULNERABILITY': '/tmp/vulnerability.xml',
+             'VULNERABILITY': os.path.join(gettempdir(), 'vulnerability.xml'),
              'CALCULATION_MODE': 'Event Based'},
             params)
         self.assertEquals(['GENERAL', 'HAZARD', 'RISK'], sorted(sections))
