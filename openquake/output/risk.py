@@ -30,15 +30,12 @@ from lxml import etree
 
 from openquake.db import models
 
-from openquake import logs
 from openquake import shapes
 from openquake import writer
 from openquake import xml
 
 from openquake.output import nrml
 from openquake.xml import NRML_NS, GML_NS
-
-LOGGER = logs.RISK_LOG
 
 NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
 

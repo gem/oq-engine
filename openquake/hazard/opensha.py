@@ -110,7 +110,7 @@ class BasePSHAMixin(Mixin):
         except jpype.JavaException, ex:
             unwrap_validation_error(
                 jpype, ex,
-                self.params.get("SOURCE_MODEL_LOGIC_TREE_FILE_PATH"))
+                self.params.get("SOURCE_MODEL_LOGIC_TREE_FILE"))
 
     def store_gmpe_map(self, seed):
         """Generates a hash of tectonic regions and GMPEs, using the logic tree
@@ -122,7 +122,7 @@ class BasePSHAMixin(Mixin):
             self.calc.sampleAndSaveGMPETree(self.cache, key, seed)
         except jpype.JavaException, ex:
             unwrap_validation_error(
-                jpype, ex, self.params.get("GMPE_LOGIC_TREE_FILE_PATH"))
+                jpype, ex, self.params.get("GMPE_LOGIC_TREE_FILE"))
 
     def generate_erf(self):
         """Generate the Earthquake Rupture Forecast from the currently stored
@@ -763,13 +763,19 @@ class EventBasedMixin(BasePSHAMixin):
 
         LOG.debug("IML: %s" % (iml_list))
         files = []
+
+        nrml_path = ''
+
         for event_set in ses:
             for rupture in ses[event_set]:
 
-                common_path = os.path.join(self.base_path, self['OUTPUT_DIR'],
-                        "gmf-%s-%s" % (str(event_set.replace("!", "_")),
-                                       str(rupture.replace("!", "_"))))
-                nrml_path = "%s.xml" % common_path
+                if self.params['GMF_OUTPUT'].lower() == 'true':
+                    common_path = os.path.join(self.base_path,
+                            self['OUTPUT_DIR'],
+                            "gmf-%s-%s" % (str(event_set.replace("!", "_")),
+                                           str(rupture.replace("!", "_"))))
+                    nrml_path = "%s.xml" % common_path
+
                 gmf_writer = hazard_output.create_gmf_writer(
                     self.job_id, self.serialize_results_to, nrml_path)
                 gmf_data = {}
@@ -781,7 +787,6 @@ class EventBasedMixin(BasePSHAMixin):
 
                 gmf_writer.serialize(gmf_data)
                 files.append(nrml_path)
-
         return files
 
     @preload

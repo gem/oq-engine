@@ -41,7 +41,6 @@ from openquake.risk.job import general
 from openquake.db import models
 
 LOGGER = logs.LOG
-DEFAULT_CONDITIONAL_LOSS_POE = 0.01
 
 
 class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
@@ -78,15 +77,15 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
         specified for this job."""
 
 # TODO (ac): Confirm this works regardless of the method of hazard calc
-        histories = int(self["NUMBER_OF_SEISMICITY_HISTORIES"])
-        realizations = int(self["NUMBER_OF_LOGIC_TREE_SAMPLES"])
+        histories = int(self.params["NUMBER_OF_SEISMICITY_HISTORIES"])
+        realizations = int(self.params["NUMBER_OF_LOGIC_TREE_SAMPLES"])
         num_ses = histories * realizations
 
         return num_ses * self._time_span()
 
     def _time_span(self):
         """Return the time span specified for this job."""
-        return float(self["INVESTIGATION_TIME"])
+        return float(self.params["INVESTIGATION_TIME"])
 
     def _gmf_db_list(self, job_id):  # pylint: disable=R0201
         """Returns a list of the output IDs of all computed GMFs"""
@@ -208,22 +207,15 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
 
                 aggregate_curve.append(loss_ratios * asset["assetValue"])
 
-                if loss_ratio_curve is not None:
+                if loss_ratio_curve:
                     loss_curve = self.compute_loss_curve(
                         point.column, point.row, loss_ratio_curve, asset)
 
-                    for loss_poe in self._conditional_loss_poes():
+                    for loss_poe in general.conditional_loss_poes(self.params):
                         self.compute_conditional_loss(point.column, point.row,
                                 loss_curve, asset, loss_poe)
 
         return aggregate_curve.losses
-
-    def _conditional_loss_poes(self):
-        """Return the PoE(s) specified in the configuration file used to
-        compute the conditional loss."""
-
-        return [float(x) for x in self.params.get(
-            "CONDITIONAL_LOSS_POE", "0.01").split()]
 
     def compute_loss_ratios(self, asset, gmf_slice):
         """For a given asset and ground motion field, computes
