@@ -87,21 +87,32 @@ class LogicTree(object):
             cls._xmlschema = etree.XMLSchema(file=cls.SCHEMA_PATH)
         return cls._xmlschema
 
-    def __init__(self, basepath, sourcemodel_logictree, gmpe_logictree):
+    def __init__(self, basepath, sourcemodel_logictree_filename,
+                 gmpe_logictree_filename):
         self.basepath = basepath
         parser = etree.XMLParser(schema=self.get_xmlschema())
-        sm_filestream = self._open_file(sourcemodel_logictree)
-        try:
-            tree = etree.parse(sm_filestream, parser=parser)
-        except etree.XMLSyntaxError as exc:
-            raise ParsingError(sourcemodel_logictree, self.basepath, str(exc))
         self.branches = {}
         self.open_ends = set()
         self.source_ids = set()
         self.source_types = set()
         self.tectonic_region_types = set()
+        sm_filestream = self._open_file(sourcemodel_logictree_filename)
+        try:
+            tree = etree.parse(sm_filestream, parser=parser)
+        except etree.XMLSyntaxError as exc:
+            raise ParsingError(sourcemodel_logictree_filename,
+                               self.basepath, str(exc))
         [sm_tree] = tree.getroot()
-        self.parse_sourcemodel_tree(sm_tree, sourcemodel_logictree)
+        self.parse_sourcemodel_tree(sm_tree, sourcemodel_logictree_filename)
+
+        gmpe_filestream = self._open_file(gmpe_logictree_filename)
+        try:
+            tree = etree.parse(gmpe_filestream, parser=parser)
+        except etree.XMLSyntaxError as exc:
+            raise ParsingError(gmpe_logictree_filename,
+                               self.basepath, str(exc))
+        [gmpe_tree] = tree.getroot()
+        self.parse_gmpe_tree(gmpe_tree, gmpe_logictree_filename)
 
     def _open_file(self, filename):
         try:
