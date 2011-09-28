@@ -25,23 +25,12 @@ eventually.
 """
 
 import os
-import pwd
 import sys
 
 from openquake.utils import config
 
 
-if not config.Config().is_readable():
-    msg = (
-        "\nYou are not authorized to read any of the OpenQuake configuration\n"
-        "files.\n"
-        "Please contact a system administrator or run the following "
-        "command:\n\n"
-        "   sudo gpasswd --add %s openquake"
-        % pwd.getpwuid(os.geteuid()).pw_name)
-    print msg
-    sys.exit(2)
-
+config.abort_if_no_config_available()
 
 sys.path.insert(0, os.path.dirname(__file__))
 
