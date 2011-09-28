@@ -32,7 +32,7 @@ from openquake.logs import LOG
 
 
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
-POES_PARAM_NAME = "POES_HAZARD_MAPS"
+POES_PARAM_NAME = "POES"
 
 
 def compute_mean_curve(curves):
