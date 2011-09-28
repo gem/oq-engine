@@ -107,21 +107,21 @@ class LogicTree(object):
             cls._xmlschema = etree.XMLSchema(file=cls.SCHEMA_PATH)
         return cls._xmlschema
 
-    def __init__(self, basepath, filename):
+    def __init__(self, basepath, sourcemodel_logictree, gmpe_logictree):
         self.basepath = basepath
         parser = etree.XMLParser(schema=self.get_xmlschema())
-        filestream = self._open_file(filename)
+        sm_filestream = self._open_file(sourcemodel_logictree)
         try:
-            tree = etree.parse(self._open_file(filename), parser=parser)
+            tree = etree.parse(sm_filestream, parser=parser)
         except etree.XMLSyntaxError as exc:
-            raise ParsingError(filename, self.basepath, str(exc))
-        [tree] = tree.getroot()
+            raise ParsingError(sourcemodel_logictree, self.basepath, str(exc))
         self.branches = {}
         self.open_ends = set()
         self.source_ids = {}
         self.source_types = {}
         self.tectonic_region_types = {}
-        self.parse_tree(tree, filename)
+        [sm_tree] = tree.getroot()
+        self.parse_sourcemodel_tree(sm_tree, sourcemodel_logictree)
 
     def _open_file(self, filename):
         try:
@@ -129,7 +129,7 @@ class LogicTree(object):
         except IOError as exc:
             raise ParsingError(filename, self.basepath, str(exc))
 
-    def parse_tree(self, tree, filename):
+    def parse_sourcemodel_tree(self, tree, filename):
         branchinglevels = iter(tree)
         first_branchinglevel = list(next(branchinglevels))
         if len(first_branchinglevel) > 1:
@@ -157,6 +157,12 @@ class LogicTree(object):
                         branchset_node, filename, self.basepath,
                         'uncertainty of type "sourceModel" can be defined ' \
                         'on first branchset only'
+                    )
+                if branchset.uncertainty_type == 'gmpeModel':
+                    raise ValidationError(
+                        branchset_node, filename, self.basepath,
+                        'uncertainty of type "gmpeModel" is not allowed ' \
+                        'in source model logic tree'
                     )
                 for branch in branchset.branches:
                     new_open_ends.add(branch)
@@ -223,7 +229,7 @@ class LogicTree(object):
     def validate_uncertainty_value(self, filename, node,
                                    uncertainty_type, value):
         _float_re = r'(\+|\-)?(\d+|\d*\.\d+)'
-        if uncertainty_type == 'sourceModel':
+        if uncertainty_type == 'sourceModel' or uncertainty_type == 'gmpeModel':
             # file should exist and be readable
             self._open_file(value).close()
             return value
