@@ -663,21 +663,3 @@ class DbTestMixin(TestMixin):
             output.delete()
         if teardown_job:
             self.teardown_job(job, filesystem_only=filesystem_only)
-
-
-def declare_signalling_exchange():
-    """
-    Ensure the signalling exchange exists.
-
-    It is safe to call this function multiple times, even if the exchange
-    already exists.
-
-    On the other hand, if rabbitmq has just been restarted, the exchange will
-    not exists and calling this function is required before tests using the
-    amqp logging (for example the hazard_unittest which runs a complete job).
-    """
-    # connecting will implicitly create the exchange if it doesn't exits yet
-    conn, chn = signalling.connect()
-
-    chn.close()
-    conn.close()

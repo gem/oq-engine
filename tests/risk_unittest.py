@@ -863,7 +863,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.region = shapes.RegionConstraint.from_simple(
                 (0.0, 0.0), (2.0, 2.0))
 
-        self.block_id = kvs.generate_block_id()
+        self.block_id = kvs.tokens.risk_block_key(self.job_id, 7)
         block = Block((SITE, SITE), self.block_id)
         block.to_kvs()
 
@@ -1123,7 +1123,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         calculator = det.SumPerGroundMotionField(
             vuln_model, None, lr_calculator=loss_ratios_calculator)
 
-        self.assertEqual(None, calculator.losses)
+        self.assertTrue(numpy.allclose([], calculator.losses))
 
         calculator.add(None, asset)
         asset = {"assetValue": 300, "vulnerabilityFunctionReference": "ID"}
@@ -1135,6 +1135,20 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
                         166.2920523, 84.25372286, 23.10280904]
 
         self.assertTrue(numpy.allclose(expected_sum, calculator.losses))
+
+    def test_handles_empty_losses_correctly(self):
+        calculator = det.SumPerGroundMotionField(None, None)
+        losses = numpy.array([1.0, 2.0])
+
+        self.assertTrue(numpy.allclose([], calculator.losses))
+
+        calculator.sum_losses(numpy.array([]))
+        calculator.sum_losses(losses)
+        calculator.sum_losses(numpy.array([]))
+        calculator.sum_losses(losses)
+        calculator.sum_losses(numpy.array([]))
+
+        self.assertTrue(numpy.allclose([2.0, 4.0], calculator.losses))
 
     def test_computes_the_mean_from_the_current_sum(self):
         calculator = det.SumPerGroundMotionField(None, None)
@@ -1169,9 +1183,9 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
 
         calculator = det.SumPerGroundMotionField(vuln_model, None)
 
-        self.assertEqual(None, calculator.losses)
+        self.assertTrue(numpy.allclose([], calculator.losses))
 
         calculator.add(None, asset)
 
         # still None, no losses are added
-        self.assertEqual(None, calculator.losses)
+        self.assertTrue(numpy.allclose([], calculator.losses))
