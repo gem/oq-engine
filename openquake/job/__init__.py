@@ -43,7 +43,8 @@ from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
 from openquake.job.mixins import Mixin
-from openquake.job.params import PARAMS, CALCULATION_MODE, ENUM_MAP
+from openquake.job.params import (
+    PARAMS, CALCULATION_MODE, ENUM_MAP, PATH_PARAMS)
 from openquake.kvs import mark_job_as_current
 from openquake.logs import LOG
 from openquake.utils import config as oq_config
@@ -136,7 +137,7 @@ def parse_config_file(config_file):
             key = key.upper()
             # Handle includes.
             if RE_INCLUDE.match(key):
-                config_file = "%s/%s" % (os.path.dirname(config_file), value)
+                config_file = os.path.join(os.path.dirname(config_file), value)
                 new_params, new_sections = parse_config_file(config_file)
                 sections.extend(new_sections)
                 params.update(new_params)
@@ -149,7 +150,7 @@ def parse_config_file(config_file):
     return params, list(set(sections))
 
 
-def filter_configuration_parameters(params, sections):
+def prepare_config_parameters(params, sections):
     """
     Pre-process configuration parameters removing unknown ones.
     """
@@ -170,6 +171,13 @@ def filter_configuration_parameters(params, sections):
             continue
 
         new_params[name] = value
+
+    # make file paths absolute
+    for name in PATH_PARAMS:
+        if name not in new_params:
+            continue
+
+        new_params[name] = os.path.join(params['BASE_PATH'], new_params[name])
 
     return new_params, sections
 
@@ -204,7 +212,7 @@ def prepare_job(params):
         if job.job_type in param.modes and param.default is not None:
             setattr(oqp, param.column, param.default)
 
-    number_re = re.compile('[^0-9.]+')
+    number_re = re.compile('[ ,]+')
 
     for name, value in params.items():
         param = PARAMS[name]
@@ -272,7 +280,7 @@ class Job(object):
         assert output_type in ('db', 'xml', 'xml_without_db')
 
         params, sections = parse_config_file(config_file)
-        params, sections = filter_configuration_parameters(params, sections)
+        params, sections = prepare_config_parameters(params, sections)
 
         validator = conf.default_validators(sections, params)
         is_valid, errors = validator.is_valid()
