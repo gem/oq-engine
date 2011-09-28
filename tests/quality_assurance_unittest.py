@@ -61,7 +61,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         return job
 
     def _load_results(self):
-        """Return the expected hazard curves readed from the expected_results/ dir.
+        """Return the expected hazard curves read from the expected_results/ dir.
 
         :returns: the expected hazard curves.
         :rtype: :py:class:`dict` where each key is an instance of
