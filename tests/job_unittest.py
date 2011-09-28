@@ -24,12 +24,14 @@ import unittest
 from django.contrib.gis.geos.polygon import Polygon
 from django.contrib.gis.geos.collections import MultiPoint
 
+from tempfile import gettempdir
+
 from openquake import job
 from openquake import kvs
 from openquake import flags
 from openquake import shapes
+from openquake.job import parse_config_file, prepare_config_parameters
 from openquake.job import Job, config, prepare_job, run_job
-from openquake.job import parse_config_file, filter_configuration_parameters
 from openquake.job.mixins import Mixin
 from openquake.db.models import OqJob, JobStats, OqParams
 from openquake.risk.job import general
@@ -212,7 +214,7 @@ class JobDbRecordTestCase(unittest.TestCase):
 class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
     maxDiff = None
 
-    def test_parse_files(self):
+    def test_parse_file(self):
         content = '''
             [GENERAL]
             CALCULATION_MODE = Event Based
@@ -221,18 +223,34 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             MINIMUM_MAGNITUDE = 5.0
             '''
         config_path = self.touch(
-            dir='/tmp', content=textwrap.dedent(content))
+            dir=gettempdir(), content=textwrap.dedent(content))
 
         params, sections = parse_config_file(config_path)
 
         self.assertEquals(
-            {'BASE_PATH': '/tmp',
+            {'BASE_PATH': gettempdir(),
              'CALCULATION_MODE': 'Event Based',
              'MINIMUM_MAGNITUDE': '5.0'},
             params)
         self.assertEquals(['GENERAL', 'HAZARD'], sorted(sections))
 
-    def test_filter_parameters(self):
+    def test_parse_missing_file(self):
+        """When parse_config_file is passed an invalid path, a
+        ValidationException should be raised.
+        """
+        content = '''
+            [GENERAL]
+            CALCULATION_MODE = Event Based
+
+            [HAZARD]
+            MINIMUM_MAGNITUDE = 5.0
+            '''
+        config_path = '/does/not/exist'
+
+        self.assertRaises(config.ValidationException, parse_config_file,
+                          config_path)
+
+    def test_prepare_parameters(self):
         content = '''
             [GENERAL]
             CALCULATION_MODE = Event Based
@@ -245,17 +263,48 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             COMPUTE_MEAN_HAZARD_CURVE = true
             '''
         config_path = self.touch(
-            dir='/tmp', content=textwrap.dedent(content))
+            dir=gettempdir(), content=textwrap.dedent(content))
 
         params, sections = parse_config_file(config_path)
-        params, sections = filter_configuration_parameters(params, sections)
+        params, sections = prepare_config_parameters(params, sections)
 
         self.assertEquals(
-            {'BASE_PATH': '/tmp',
+            {'BASE_PATH': gettempdir(),
              'MINIMUM_MAGNITUDE': '5.0',
              'CALCULATION_MODE': 'Event Based'},
             params)
         self.assertEquals(['GENERAL', 'HAZARD'], sorted(sections))
+
+    def test_prepare_path_parameters(self):
+        content = '''
+            [GENERAL]
+            CALCULATION_MODE = Event Based
+            OUTPUT_DIR = output
+
+            [HAZARD]
+            SOURCE_MODEL_LOGIC_TREE_FILE = source-model.xml
+            GMPE_LOGIC_TREE_FILE = gmpe.xml
+
+            [RISK]
+            EXPOSURE = /absolute/exposure.xml
+            VULNERABILITY = vulnerability.xml
+            '''
+        config_path = self.touch(content=textwrap.dedent(content))
+
+        params, sections = parse_config_file(config_path)
+        params, sections = prepare_config_parameters(params, sections)
+
+        self.assertEquals(
+            {'BASE_PATH': gettempdir(),
+             'OUTPUT_DIR': 'output',
+             'SOURCE_MODEL_LOGIC_TREE_FILE': os.path.join(gettempdir(),
+                                                          'source-model.xml'),
+             'GMPE_LOGIC_TREE_FILE': os.path.join(gettempdir(), 'gmpe.xml'),
+             'EXPOSURE': '/absolute/exposure.xml',
+             'VULNERABILITY': os.path.join(gettempdir(), 'vulnerability.xml'),
+             'CALCULATION_MODE': 'Event Based'},
+            params)
+        self.assertEquals(['GENERAL', 'HAZARD', 'RISK'], sorted(sections))
 
 
 class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
