@@ -114,7 +114,22 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
         </logicTree>
         """)
 
-    def test_nonexistent_logictree(self):
+    def _whatever_sourcemodel_lt(self, sourcemodel_filename):
+        return self._make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>%s</uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """ % sourcemodel_filename)
+
+    def test_nonexistent_sourcemodel_logictree(self):
         with self.assertRaises(logictree.ParsingError) as arc:
             _TesteableLogicTree('missing_file', 'gmpe',
                                 {'gmpe': self._whatever_gmpe_lt()}, 'base')
@@ -125,7 +140,7 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
 
-    def test_logictree_invalid_xml(self):
+    def test_sourcemodel_logictree_invalid_xml(self):
         source = """<?xml foo bar baz"""
         gmpe = self._whatever_gmpe_lt()
         with self.assertRaises(logictree.ParsingError) as arc:
@@ -137,7 +152,7 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertTrue(exc.message.startswith('Malformed declaration'),
                         "wrong exception message: %s" % exc.message)
 
-    def test_logictree_schema_violation(self):
+    def test_sourcemodel_logictree_schema_violation(self):
         source = self._make_nrml("""\
             <logicTreeSet>
                 <logicTree logicTreeID="lt1"/>
@@ -875,8 +890,47 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
                 exc = arc.exception
                 self.assertEqual(exc.filename, 'lt')
                 self.assertEqual(exc.basepath, 'base')
-                #self.assertEqual(exc.lineno, 4)
+                self.assertEqual(exc.lineno, 13)
                 error = "uncertainty of type %r must define 'applyToSources'" \
                         " with only one source id" % uncertainty
                 self.assertEqual(exc.message, error,
                                 "wrong exception message: %s" % exc.message)
+
+    def test_nonexistent_gmpe_logictree(self):
+        lt = self._whatever_sourcemodel_lt('sm')
+        sm = self._whatever_sourcemodel()
+        with self.assertRaises(logictree.ParsingError) as arc:
+            _TesteableLogicTree('lt', 'missing', {'lt': lt, 'sm': sm}, 'base')
+        exc = arc.exception
+        self.assertEqual(exc.filename, 'missing')
+        self.assertEqual(exc.basepath, 'base')
+        error = "[Errno 2] No such file or directory: 'base/missing'"
+        self.assertEqual(exc.message, error,
+                         "wrong exception message: %s" % exc.message)
+
+    def test_gmpe_logictree_invalid_xml(self):
+        lt = self._whatever_sourcemodel_lt('sm')
+        sm = self._whatever_sourcemodel()
+        gmpe = """zxc<nrml></nrml>"""
+        with self.assertRaises(logictree.ParsingError) as arc:
+            _TesteableLogicTree('lt', 'gmpe',
+                                {'gmpe': gmpe, 'lt': lt, 'sm': sm}, 'base')
+        exc = arc.exception
+        self.assertEqual(exc.filename, 'gmpe')
+        self.assertEqual(exc.basepath, 'base')
+        self.assertTrue(exc.message.startswith('Start tag expected'),
+                        "wrong exception message: %s" % exc.message)
+
+    def test_gmpe_logictree_schema_violation(self):
+        lt = self._whatever_sourcemodel_lt('sm')
+        sm = self._whatever_sourcemodel()
+        gmpe = self._make_nrml("<logicTree></logicTree>")
+        with self.assertRaises(logictree.ParsingError) as arc:
+            _TesteableLogicTree('lt', 'gmpe',
+                                {'lt': lt, 'gmpe': gmpe, 'sm': sm}, 'base')
+        exc = arc.exception
+        self.assertEqual(exc.filename, 'gmpe')
+        self.assertEqual(exc.basepath, 'base')
+        self.assertTrue("attribute 'logicTreeID' is required" in exc.message,
+                        "wrong exception message: %s" % exc.message)
+
