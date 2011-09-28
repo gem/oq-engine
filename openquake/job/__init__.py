@@ -38,7 +38,7 @@ from openquake import OPENQUAKE_ROOT
 from openquake import shapes
 from openquake.parser import exposure
 from openquake.db.models import (
-    OqJob, OqParams, OqUser, JobStats, FloatArrayField)
+    OqJob, OqParams, OqUser, JobStats, FloatArrayField, CharArrayField)
 from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
@@ -222,6 +222,8 @@ def prepare_job(params):
             value = GEOSGeometry(ewkt)
         elif param.type == FloatArrayField:
             value = [float(v) for v in number_re.split(value) if len(v)]
+        elif param.type == CharArrayField:
+            pass  # TODO: implement me
         elif param.type == None:
             continue
 
