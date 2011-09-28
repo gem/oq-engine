@@ -18,6 +18,11 @@ REGION_GRID_SPACING = 0.02
 
 SOURCE_MODEL_LT_RANDOM_SEED = 23
 GMPE_LT_RANDOM_SEED = 5
+
+# NRML serialization of gmf-* files
+GMF_OUTPUT = false
+
+
 GMF_RANDOM_SEED = 3
 
 # file containing erf logic tree structure
@@ -128,7 +133,7 @@ QUANTILE_LEVELS = 0.25 0.50
 COMPUTE_MEAN_HAZARD_CURVE = true
 
 # List of POEs to use for computing hazard maps
-POES_HAZARD_MAPS = 0.01 0.10
+POES = 0.01 0.10
 
 HAZARD_MAP_CPT = seminf-haxby.cpt
 
@@ -156,3 +161,6 @@ RISK_CELL_SIZE = 0.0005
 
 # uncomment this if you want to compute the aggregate loss curve
 AGGREGATE_LOSS_CURVE = true
+
+# uncomment this if you want to compute hazard only on sites defined in the exposure
+# COMPUTE_HAZARD_AT_ASSETS_LOCATIONS = true

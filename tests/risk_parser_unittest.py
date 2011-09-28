@@ -24,7 +24,6 @@ Tests for the NRML parser of loss/loss ratio curves.
 import os
 import unittest
 
-from openquake import logs
 from openquake import shapes
 from openquake import xml
 
@@ -32,7 +31,6 @@ from openquake.parser import risk as risk_parser
 
 from tests.utils import helpers
 
-log = logs.RISK_LOG
 
 EXAMPLE_DIR = os.path.join(helpers.SCHEMA_DIR, 'examples')
 LOSS_CURVE_TEST_FILE = os.path.join(EXAMPLE_DIR, 'loss-curves.xml')
