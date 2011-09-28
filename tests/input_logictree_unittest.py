@@ -73,6 +73,28 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
                     <lowerSeismogenicDepth>13.0</lowerSeismogenicDepth>
                 </simpleFaultGeometry>
             </simpleFaultSource>
+            <simpleFaultSource gml:id="src02">
+                <gml:name>Mount Diablo Thrust</gml:name>
+                <tectonicRegion>Active Shallow Crust</tectonicRegion>
+                <rake>90.0</rake>
+                <evenlyDiscretizedIncrementalMFD minVal="6.55" binSize="0.1"
+                    type="ML">0.0010614989 8.8291627E-4 7.3437777E-4
+                              6.108288E-4 5.080653E-4
+                </evenlyDiscretizedIncrementalMFD>
+                <simpleFaultGeometry gml:id="sfg_1">
+                    <faultTrace>
+                        <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                            <gml:posList>
+                                -121.82290 37.73010  0.0
+                                -122.03880 37.87710  0.0
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultTrace>
+                    <dip>38</dip>
+                    <upperSeismogenicDepth>8.0</upperSeismogenicDepth>
+                    <lowerSeismogenicDepth>13.0</lowerSeismogenicDepth>
+                </simpleFaultGeometry>
+            </simpleFaultSource>
         </sourceModel>
         """)
 
@@ -560,7 +582,7 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl2">
                 <logicTreeBranchSet uncertaintyType="abGRAbsolute"
-                                    branchSetID="bs1"
+                                    branchSetID="bs1" applyToSources="src01"
                                     applyToBranches="b1">
                   <logicTreeBranch branchID="b3">
                     <uncertaintyModel>1 2</uncertaintyModel>
@@ -570,7 +592,7 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl3">
                 <logicTreeBranchSet uncertaintyType="abGRAbsolute"
-                                    branchSetID="bs1"
+                                    branchSetID="bs1" applyToSources="src01"
                                     applyToBranches="b2">
                   <logicTreeBranch branchID="b4">
                     <uncertaintyModel>1 2</uncertaintyModel>
@@ -814,3 +836,47 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
 
+    def test_wrong_filter_on_absolute_uncertainties(self):
+        uncertainties_and_values = [('abGRAbsolute', '123 45'),
+                                    ('maxMagGRAbsolute', '678')]
+        filters = ('applyToSources="src01 src02"',
+                   'applyToTectonicRegionType="Active Shallow Crust"',
+                   'applyToSourceType="simpleFault"')
+        for uncertainty, value in uncertainties_and_values:
+            for filter_ in filters:
+                lt = self._make_nrml("""\
+                    <logicTree logicTreeID="lt1">
+                      <logicTreeBranchingLevel branchingLevelID="bl1">
+                        <logicTreeBranchSet uncertaintyType="sourceModel"
+                                            branchSetID="bs1">
+                          <logicTreeBranch branchID="b1">
+                            <uncertaintyModel>sm</uncertaintyModel>
+                            <uncertaintyWeight>1.0</uncertaintyWeight>
+                          </logicTreeBranch>
+                        </logicTreeBranchSet>
+                      </logicTreeBranchingLevel>
+                      <logicTreeBranchingLevel branchingLevelID="bl2">
+                        <logicTreeBranchSet uncertaintyType="%s"
+                                    branchSetID="bs1" %s>
+                          <logicTreeBranch branchID="b2">
+                            <uncertaintyModel>%s</uncertaintyModel>
+                            <uncertaintyWeight>1.0</uncertaintyWeight>
+                          </logicTreeBranch>
+                        </logicTreeBranchSet>
+                      </logicTreeBranchingLevel>
+                    </logicTree>
+                """ % (uncertainty, filter_, value))
+                sm = self._whatever_sourcemodel()
+                gmpe = self._whatever_gmpe_lt()
+                with self.assertRaises(logictree.ValidationError) as arc:
+                    _TesteableLogicTree('lt', 'gmpe',
+                                        {'lt': lt, 'sm': sm, 'gmpe': gmpe},
+                                        'base')
+                exc = arc.exception
+                self.assertEqual(exc.filename, 'lt')
+                self.assertEqual(exc.basepath, 'base')
+                #self.assertEqual(exc.lineno, 4)
+                error = "uncertainty of type %r must define 'applyToSources'" \
+                        " with only one source id" % uncertainty
+                self.assertEqual(exc.message, error,
+                                "wrong exception message: %s" % exc.message)

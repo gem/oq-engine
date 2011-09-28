@@ -246,6 +246,7 @@ class LogicTree(object):
                     'source ids %s are not defined in source models' % \
                     list(nonexistent_source_ids)
                 )
+            filters['applyToSources'] = source_ids
         if 'applyToTectonicRegionType' in filters:
             if not filters['applyToTectonicRegionType'] \
                     in self.tectonic_region_types:
@@ -266,12 +267,24 @@ class LogicTree(object):
                 branchset_node, filename, self.basepath,
                 "only one filter is allowed per branchset"
             )
+        elif not filters:
+            filter_ = filter_value = None
+        else:
+            [[filter_, filter_value]] = filters.items()
+        if uncertainty_type in ('abGRAbsolute', 'maxMagGRAbsolute'):
+            if not filter_ or not filter_ == 'applyToSources' \
+                    or not len(filter_value) == 1:
+                raise ValidationError(
+                    branchset_node, filename, self.basepath,
+                    "uncertainty of type %r must define 'applyToSources' " \
+                    "with only one source id" % uncertainty_type
+                )
+
         return filters
 
     def collect_source_model_data(self, filename):
         all_source_types = set('{%s}%sSource' % (self.NRML, tagname)
                                for tagname in self.SOURCE_TYPES)
-        print all_source_types
         tectonic_region_type_tag = '{%s}tectonicRegion' % LogicTree.NRML
         sourcetype_slice = slice(len('{%s}' % self.NRML), - len('Source'))
         eventstream = etree.iterparse(self._open_file(filename),
