@@ -91,11 +91,6 @@ def map_enum(value):
     return ENUM_MAP[value]
 
 
-def map_enum_sequence(seq):
-    """Map a sequence of enumerated values from configuration to database"""
-    return [map_enum(x) for x in seq]
-
-
 def define_param(name, column, modes=None, default=None, to_db=None):
     """
     Adds a new parameter definition to the PARAMS dictionary
