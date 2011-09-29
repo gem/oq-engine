@@ -248,6 +248,7 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
                 return node
         return None
 
+
 class LossMapNonDeterministicXMLWriter(LossMapXMLWriter):
     """
     This class serializes loss maps to NRML for Non Deterministic calculators
@@ -503,6 +504,7 @@ def create_loss_map_writer(job_id, serialize_to, nrml_path, deterministic):
     :returns: None or an instance of
         :py:class:`output.risk.LossMapXMLWriter` or
         :py:class:`output.risk.LossMapDBWriter`
+        :py:class:`output.risk.LossMapNonDeterministicXMLWriter`
     """
     writers = []
 
