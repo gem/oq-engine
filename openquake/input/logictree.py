@@ -25,6 +25,8 @@ from decimal import Decimal
 
 from lxml import etree
 
+from openquake.nrml import nrml_schema_file
+
 
 class LogicTreeError(Exception):
     def __init__(self, filename, basepath, msg):
@@ -69,8 +71,6 @@ class BranchSet(object):
 
 
 class BaseLogicTree(object):
-    SCHEMA_PATH = os.path.join(os.path.dirname(__file__),
-                               '..', 'nrml', 'schema', 'nrml.xsd')
     NRML = 'http://openquake.org/xmlns/nrml/0.2'
     FILTERS = ('applyToTectonicRegionType',
                'applyToSources',
@@ -81,7 +81,7 @@ class BaseLogicTree(object):
     @classmethod
     def get_xmlschema(cls):
         if not cls._xmlschema:
-            cls._xmlschema = etree.XMLSchema(file=cls.SCHEMA_PATH)
+            cls._xmlschema = etree.XMLSchema(file=nrml_schema_file())
         return cls._xmlschema
 
     def __init__(self, basepath, filename):
