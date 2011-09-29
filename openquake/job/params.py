@@ -21,10 +21,14 @@ This module contains the data required to map configuration values into
 oq_params columns.
 """
 
+import re
+
 from collections import namedtuple
 
 from openquake.db.models import OqParams
-from openquake.job import config
+
+
+ARRAY_RE = re.compile('[ ,]+')
 
 # pylint: disable=C0103
 Param = namedtuple('Param', 'column type default modes to_db')
@@ -103,7 +107,7 @@ def sequence_map_enum(value):
     'magpmf, magdistpmf'
     """
 
-    return ', '.join(map_enum(v.strip()) for v in config.ARRAY_RE.split(value))
+    return ', '.join(map_enum(v.strip()) for v in ARRAY_RE.split(value))
 
 
 # pylint: disable=W0212
