@@ -86,24 +86,23 @@ class BaseLogicTree(object):
 
     def __init__(self, basepath, filename):
         self.basepath = basepath
+        self.filename = filename
         parser = etree.XMLParser(schema=self.get_xmlschema())
         self.branches = {}
         self.open_ends = set()
-        filestream = self._open_file(filename)
+        filestream = self._open_file(self.filename)
         try:
             tree = etree.parse(filestream, parser=parser)
         except etree.XMLSyntaxError as exc:
-            raise ParsingError(filename, self.basepath, str(exc))
+            raise ParsingError(self.filename, self.basepath, str(exc))
         [tree] = tree.getroot()
         self.root_branchset = None
-        self.parse_tree(tree, filename)
+        self.parse_tree(tree)
 
-    def parse_tree(self, tree, filename):
+    def parse_tree(self, tree):
         for depth, branchinglevel in enumerate(tree):
-            self.parse_branchinglevel(depth, branchinglevel, filename)
-        self.root_branchset = self.validate_tree(
-            self.root_branchset, tree, filename
-        )
+            self.parse_branchinglevel(depth, branchinglevel)
+        self.root_branchset = self.validate_tree(self.root_branchset, tree)
 
     def _open_file(self, filename):
         try:
@@ -111,33 +110,33 @@ class BaseLogicTree(object):
         except IOError as exc:
             raise ParsingError(filename, self.basepath, str(exc))
 
-    def parse_branchinglevel(self, depth, branchinglevel_node, filename):
+    def parse_branchinglevel(self, depth, branchinglevel_node):
         new_open_ends = set()
         for number, branchset_node in enumerate(branchinglevel_node):
-            branchset = self.parse_branchset(branchset_node, filename)
+            branchset = self.parse_branchset(branchset_node)
             branchset = self.validate_branchset(depth, number, branchset,
-                                                branchset_node, filename)
-            self.parse_branches(branchset, branchset_node, filename)
+                                                branchset_node)
+            self.parse_branches(branchset, branchset_node)
             if depth == 0 and number == 0:
                 self.root_branchset = branchset
             else:
-                self.apply_branchset(branchset, branchset_node, filename)
+                self.apply_branchset(branchset, branchset_node)
             for branch in branchset.branches:
                 new_open_ends.add(branch)
         self.open_ends.clear()
         self.open_ends.update(new_open_ends)
 
-    def parse_branchset(self, branchset_node, filename):
+    def parse_branchset(self, branchset_node):
         uncertainty_type = branchset_node.get('uncertaintyType')
         filters = dict((filtername, branchset_node.get(filtername))
                        for filtername in self.FILTERS
                        if filtername in branchset_node.attrib)
-        filters = self.validate_filters(filename, branchset_node,
-                                        uncertainty_type, filters)
+        filters = self.validate_filters(branchset_node, uncertainty_type,
+                                        filters)
         branchset = BranchSet([], uncertainty_type, filters)
         return branchset
 
-    def parse_branches(self, branchset, branchset_node, filename):
+    def parse_branches(self, branchset, branchset_node):
         weight_sum = 0
         for branchnode in branchset_node:
             weight = branchnode.find('{%s}uncertaintyWeight' % self.NRML).text
@@ -145,39 +144,36 @@ class BaseLogicTree(object):
             weight_sum += weight
             value_node = branchnode.find('{%s}uncertaintyModel' % self.NRML)
             value = self.validate_uncertainty_value(
-                filename, value_node, branchset.uncertainty_type,
-                value_node.text
+                value_node, branchset.uncertainty_type, value_node.text
             )
             branch_id = branchnode.get('branchID')
             branch = Branch(branch_id, weight, value)
             if branch_id in self.branches:
                 raise ValidationError(
-                    branchnode, filename, self.basepath,
+                    branchnode, self.filename, self.basepath,
                     "branchID %r is not unique" % branch_id
                 )
             self.branches[branch_id] = branch
             branchset.branches.append(branch)
         if weight_sum != 1.0:
             raise ValidationError(
-                branchset_node, filename, self.basepath,
+                branchset_node, self.filename, self.basepath,
                 "branchset weights don't sum up to 1.0"
             )
 
-    def validate_tree(self, root_branchset, tree_node, filename):
+    def validate_tree(self, root_branchset, tree_node):
         return root_branchset
 
-    def validate_uncertainty_value(self, filename, node,
-                                   uncertainty_type, value):
+    def validate_uncertainty_value(self, node, uncertainty_type, value):
         raise NotImplementedError()
 
-    def validate_filters(self, filename, node, uncertainty_type, filters):
+    def validate_filters(self, node, uncertainty_type, filters):
         raise NotImplementedError()
 
-    def validate_branchset(self, depth, number, branchset,
-                           branchset_node, filename):
+    def validate_branchset(self, depth, number, branchset, branchset_node):
         raise NotImplementedError()
 
-    def apply_branchset(self, branchset, branchset_node, filename):
+    def apply_branchset(self, branchset, branchset_node):
         for branch in self.open_ends:
             branch.child_branchset = branchset
 
@@ -191,8 +187,7 @@ class SourceModelLogicTree(BaseLogicTree):
         self.source_types = set()
         super(SourceModelLogicTree, self).__init__(*args, **kwargs)
 
-    def validate_uncertainty_value(self, filename, node,
-                                   uncertainty_type, value):
+    def validate_uncertainty_value(self, node, uncertainty_type, value):
         _float_re = r'(\+|\-)?(\d+|\d*\.\d+)'
         if uncertainty_type == 'sourceModel':
             self.collect_source_model_data(value)
@@ -200,28 +195,27 @@ class SourceModelLogicTree(BaseLogicTree):
         elif uncertainty_type == 'abGRAbsolute':
             if not re.match('^%s\s+%s$' % (_float_re, _float_re), value):
                 raise ValidationError(
-                    node, filename, self.basepath,
+                    node, self.filename, self.basepath,
                     'expected two float values separated by space'
                 )
             return tuple(float(val) for val in value.split())
         else:
             if not re.match('^%s$' % _float_re, value):
                 raise ValidationError(
-                    node, filename, self.basepath,
+                    node, self.filename, self.basepath,
                     'expected single float value'
                 )
             return float(value)
 
-    def validate_filters(self, filename, branchset_node,
-                         uncertainty_type, filters):
+    def validate_filters(self, branchset_node, uncertainty_type, filters):
         if uncertainty_type == 'sourceModel' and filters:
             raise ValidationError(
-                branchset_node, filename, self.basepath,
+                branchset_node, self.filename, self.basepath,
                 'filters are not allowed on source model uncertainty'
             )
         if len(filters) > 1:
             raise ValidationError(
-                branchset_node, filename, self.basepath,
+                branchset_node, self.filename, self.basepath,
                 "only one filter is allowed per branchset"
             )
         if 'applyToSources' in filters:
@@ -229,7 +223,7 @@ class SourceModelLogicTree(BaseLogicTree):
             nonexistent_source_ids = set(source_ids) - self.source_ids
             if nonexistent_source_ids:
                 raise ValidationError(
-                    branchset_node, filename, self.basepath,
+                    branchset_node, self.filename, self.basepath,
                     'source ids %s are not defined in source models' % \
                     list(nonexistent_source_ids)
                 )
@@ -238,14 +232,14 @@ class SourceModelLogicTree(BaseLogicTree):
             if not filters['applyToTectonicRegionType'] \
                     in self.tectonic_region_types:
                 raise ValidationError(
-                    branchset_node, filename, self.basepath,
+                    branchset_node, self.filename, self.basepath,
                     "source models don't define sources of tectonic region " \
                     "type %r" % filters['applyToTectonicRegionType']
                 )
         if 'applyToSourceType' in filters:
             if not filters['applyToSourceType'] in self.source_types:
                 raise ValidationError(
-                    branchset_node, filename, self.basepath,
+                    branchset_node, self.filename, self.basepath,
                     "source models don't define sources of type %r" % \
                     filters['applyToSourceType']
                 )
@@ -258,69 +252,67 @@ class SourceModelLogicTree(BaseLogicTree):
             if not filter_ or not filter_ == 'applyToSources' \
                     or not len(filter_value) == 1:
                 raise ValidationError(
-                    branchset_node, filename, self.basepath,
+                    branchset_node, self.filename, self.basepath,
                     "uncertainty of type %r must define 'applyToSources' " \
                     "with only one source id" % uncertainty_type
                 )
         return filters
 
-    def validate_branchset(self, depth, number, branchset,
-                           branchset_node, filename):
+    def validate_branchset(self, depth, number, branchset, branchset_node):
         if depth == 0:
             if number > 0:
                 raise ValidationError(
-                    branchset_node, filename, self.basepath,
+                    branchset_node, self.filename, self.basepath,
                     'there must be only one branch set ' \
                     'on first branching level'
                 )
             elif branchset.uncertainty_type != 'sourceModel':
                 raise ValidationError(
-                    branchset_node, filename, self.basepath,
+                    branchset_node, self.filename, self.basepath,
                     'first branchset must define an uncertainty ' \
                     'of type "sourceModel"'
                 )
         else:
             if branchset.uncertainty_type == 'sourceModel':
                 raise ValidationError(
-                    branchset_node, filename, self.basepath,
+                    branchset_node, self.filename, self.basepath,
                     'uncertainty of type "sourceModel" can be defined ' \
                     'on first branchset only'
                 )
             elif branchset.uncertainty_type == 'gmpeModel':
                 raise ValidationError(
-                    branchset_node, filename, self.basepath,
+                    branchset_node, self.filename, self.basepath,
                     'uncertainty of type "gmpeModel" is not allowed ' \
                     'in source model logic tree'
                 )
         return branchset
 
-    def apply_branchset(self, branchset, branchset_node, filename):
+    def apply_branchset(self, branchset, branchset_node):
         apply_to_branches = branchset_node.get('applyToBranches')
         if apply_to_branches:
             apply_to_branches = apply_to_branches.split()
             for branch_id in apply_to_branches:
                 if not branch_id in self.branches:
                     raise ValidationError(
-                        branchset_node, filename, self.basepath,
+                        branchset_node, self.filename, self.basepath,
                         'branch %r is not yet defined' % branch_id
                     )
                 branch = self.branches[branch_id]
                 if branch.child_branchset is not None:
                     raise ValidationError(
-                        branchset_node, filename, self.basepath,
+                        branchset_node, self.filename, self.basepath,
                         'branch %r already has child branchset' % branch_id
                     )
                 if not branch in self.open_ends:
                     raise ValidationError(
-                        branchset_node, filename, self.basepath,
+                        branchset_node, self.filename, self.basepath,
                         'applyToBranches must reference only branches ' \
                         'from previous branching level'
                     )
                 branch.child_branchset = branchset
         else:
-            super(SourceModelLogicTree, self).apply_branchset(
-                branchset, branchset_node, filename
-            )
+            super(SourceModelLogicTree, self).apply_branchset(branchset,
+                                                              branchset_node)
 
     def collect_source_model_data(self, filename):
         all_source_types = set('{%s}%sSource' % (self.NRML, tagname)
@@ -387,63 +379,61 @@ class GMPELogicTree(BaseLogicTree):
         self.defined_tectonic_region_types = set()
         super(GMPELogicTree, self).__init__(*args, **kwargs)
 
-    def validate_uncertainty_value(self, filename, node,
-                                   uncertainty_type, value):
+    def validate_uncertainty_value(self, node, uncertainty_type, value):
         if not value in self.GMPEs:
             raise ValidationError(
-                node, filename, self.basepath,
+                node, self.filename, self.basepath,
                 'gmpe %r is not available' % value
             )
         return value
 
-    def validate_filters(self, filename, node, uncertainty_type, filters):
+    def validate_filters(self, node, uncertainty_type, filters):
         if not filters \
                 or len(filters) > 1 \
                 or filters.keys() != ['applyToTectonicRegionType']:
             raise ValidationError(
-                node, filename, self.basepath,
+                node, self.filename, self.basepath,
                 'branch sets in gmpe logic tree must define only ' \
                 '"applyToTectonicRegionType" filter'
             )
         trt = filters['applyToTectonicRegionType']
         if not trt in self.tectonic_region_types:
             raise ValidationError(
-                node, filename, self.basepath,
+                node, self.filename, self.basepath,
                 "source models don't define sources of tectonic region " \
                 "type %r" % trt
             )
         if trt in self.defined_tectonic_region_types:
             raise ValidationError(
-                node, filename, self.basepath,
+                node, self.filename, self.basepath,
                 'gmpe uncertainty for tectonic region type %r has already ' \
                 'been defined' % trt
             )
         self.defined_tectonic_region_types.add(trt)
         return filters
 
-    def validate_tree(self, root_branchset, tree_node, filename):
+    def validate_tree(self, root_branchset, tree_node):
         missing_trts = self.tectonic_region_types \
                        - self.defined_tectonic_region_types
         if missing_trts:
             raise ValidationError(
-                tree_node, filename, self.basepath,
+                tree_node, self.filename, self.basepath,
                 'the following tectonic region types are defined ' \
                 'in source model logic tree but not in gmpe logic tree: %s' % \
                 list(sorted(missing_trts))
             )
         return root_branchset
 
-    def validate_branchset(self, depth, number, branchset,
-                           branchset_node, filename):
+    def validate_branchset(self, depth, number, branchset, branchset_node):
         if not branchset.uncertainty_type == 'gmpeModel':
             raise ValidationError(
-                branchset_node, filename, self.basepath,
+                branchset_node, self.filename, self.basepath,
                 'only uncertainties of type "gmpeModel" are allowed ' \
                 'in gmpe logic tree'
             )
         if number != 0:
             raise ValidationError(
-                branchset_node, filename, self.basepath,
+                branchset_node, self.filename, self.basepath,
                 'only one branchset on each branching level is allowed ' \
                 'in gmpe logic tree'
             )
