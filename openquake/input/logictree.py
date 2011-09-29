@@ -62,8 +62,8 @@ class Branch(object):
 
 
 class BranchSet(object):
-    def __init__(self, branches, uncertainty_type, filters):
-        self.branches = branches
+    def __init__(self, uncertainty_type, filters):
+        self.branches = []
         self.uncertainty_type = uncertainty_type
         self.filters = filters
 
@@ -99,10 +99,11 @@ class BaseLogicTree(object):
         self.root_branchset = None
         self.parse_tree(tree)
 
-    def parse_tree(self, tree):
-        for depth, branchinglevel in enumerate(tree):
-            self.parse_branchinglevel(depth, branchinglevel)
-        self.root_branchset = self.validate_tree(self.root_branchset, tree)
+    def parse_tree(self, tree_node):
+        for depth, branchinglevel_node in enumerate(tree_node):
+            self.parse_branchinglevel(branchinglevel_node, depth)
+        self.root_branchset = self.validate_tree(tree_node,
+                                                 self.root_branchset)
 
     def _open_file(self, filename):
         try:
@@ -110,17 +111,17 @@ class BaseLogicTree(object):
         except IOError as exc:
             raise ParsingError(filename, self.basepath, str(exc))
 
-    def parse_branchinglevel(self, depth, branchinglevel_node):
+    def parse_branchinglevel(self, branchinglevel_node, depth):
         new_open_ends = set()
         for number, branchset_node in enumerate(branchinglevel_node):
             branchset = self.parse_branchset(branchset_node)
-            branchset = self.validate_branchset(depth, number, branchset,
-                                                branchset_node)
-            self.parse_branches(branchset, branchset_node)
+            branchset = self.validate_branchset(branchset_node, depth, number,
+                                                branchset)
+            self.parse_branches(branchset_node, branchset)
             if depth == 0 and number == 0:
                 self.root_branchset = branchset
             else:
-                self.apply_branchset(branchset, branchset_node)
+                self.apply_branchset(branchset_node, branchset)
             for branch in branchset.branches:
                 new_open_ends.add(branch)
         self.open_ends.clear()
@@ -133,10 +134,10 @@ class BaseLogicTree(object):
                        if filtername in branchset_node.attrib)
         filters = self.validate_filters(branchset_node, uncertainty_type,
                                         filters)
-        branchset = BranchSet([], uncertainty_type, filters)
+        branchset = BranchSet(uncertainty_type, filters)
         return branchset
 
-    def parse_branches(self, branchset, branchset_node):
+    def parse_branches(self, branchset_node, branchset):
         weight_sum = 0
         for branchnode in branchset_node:
             weight = branchnode.find('{%s}uncertaintyWeight' % self.NRML).text
@@ -161,7 +162,7 @@ class BaseLogicTree(object):
                 "branchset weights don't sum up to 1.0"
             )
 
-    def validate_tree(self, root_branchset, tree_node):
+    def validate_tree(self, tree_node, root_branchset):
         return root_branchset
 
     def validate_uncertainty_value(self, node, uncertainty_type, value):
@@ -170,10 +171,10 @@ class BaseLogicTree(object):
     def validate_filters(self, node, uncertainty_type, filters):
         raise NotImplementedError()
 
-    def validate_branchset(self, depth, number, branchset, branchset_node):
+    def validate_branchset(self, branchset_node, depth, number, branchset):
         raise NotImplementedError()
 
-    def apply_branchset(self, branchset, branchset_node):
+    def apply_branchset(self, branchset_node, branchset):
         for branch in self.open_ends:
             branch.child_branchset = branchset
 
@@ -258,7 +259,7 @@ class SourceModelLogicTree(BaseLogicTree):
                 )
         return filters
 
-    def validate_branchset(self, depth, number, branchset, branchset_node):
+    def validate_branchset(self, branchset_node, depth, number, branchset):
         if depth == 0:
             if number > 0:
                 raise ValidationError(
@@ -287,7 +288,7 @@ class SourceModelLogicTree(BaseLogicTree):
                 )
         return branchset
 
-    def apply_branchset(self, branchset, branchset_node):
+    def apply_branchset(self, branchset_node, branchset):
         apply_to_branches = branchset_node.get('applyToBranches')
         if apply_to_branches:
             apply_to_branches = apply_to_branches.split()
@@ -412,7 +413,7 @@ class GMPELogicTree(BaseLogicTree):
         self.defined_tectonic_region_types.add(trt)
         return filters
 
-    def validate_tree(self, root_branchset, tree_node):
+    def validate_tree(self, tree_node, root_branchset):
         missing_trts = self.tectonic_region_types \
                        - self.defined_tectonic_region_types
         if missing_trts:
@@ -424,7 +425,7 @@ class GMPELogicTree(BaseLogicTree):
             )
         return root_branchset
 
-    def validate_branchset(self, depth, number, branchset, branchset_node):
+    def validate_branchset(self, branchset_node, depth, number, branchset):
         if not branchset.uncertainty_type == 'gmpeModel':
             raise ValidationError(
                 branchset_node, self.filename, self.basepath,
