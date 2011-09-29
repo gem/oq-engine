@@ -24,6 +24,7 @@ oq_params columns.
 from collections import namedtuple
 
 from openquake.db.models import OqParams
+from openquake.job import config
 
 # pylint: disable=C0103
 Param = namedtuple('Param', 'column type default modes to_db')
@@ -101,11 +102,11 @@ def sequence_map_enum(value):
     >>> sequence_map_enum('MagPMF MagDistPMF')
     'magpmf, magdistpmf'
     """
-    from openquake.job import config
 
     return ', '.join(map_enum(v.strip()) for v in config.ARRAY_RE.split(value))
 
 
+# pylint: disable=W0212
 def define_param(name, column, modes=None, default=None, to_db=None):
     """
     Adds a new parameter definition to the PARAMS dictionary
@@ -145,7 +146,8 @@ define_param('CALCULATION_MODE', None)
 define_param('VULNERABILITY', None)
 define_param('SINGLE_RUPTURE_MODEL', None, modes=('deterministic'))
 define_param('EXPOSURE', None)
-define_param('GMPE_LOGIC_TREE_FILE', None, modes=('classical', 'event_based', 'disaggregation'))
+define_param('GMPE_LOGIC_TREE_FILE', None,
+             modes=('classical', 'event_based', 'disaggregation'))
 define_param('SOURCE_MODEL_LOGIC_TREE_FILE', None,
              modes=('classical', 'event_based', 'disaggregation'))
 define_param('OUTPUT_DIR', None)

@@ -306,7 +306,7 @@ class BasicParameterValidator(object):
     def __init__(self, params):
         self.params = params
 
-    def is_valid(self):
+    def is_valid(self):  # pylint: disable=R0912
         """Check type for all parameters"""
         errors = []
 
