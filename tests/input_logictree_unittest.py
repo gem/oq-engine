@@ -872,7 +872,8 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
         <logicTree logicTreeID="lt1">
             <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="bGRRelative"
-                                    branchSetID="bs1">
+                                    branchSetID="bs1"
+                                    applyToTectonicRegionType="Volcanic">
                     <logicTreeBranch branchID="b1">
                         <uncertaintyModel>+1</uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
@@ -881,27 +882,30 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
             </logicTreeBranchingLevel>
         </logicTree>
         """)
-        exc = self._assert_logic_tree_error('gmpe', gmpe, 'base', set(),
+        exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
+                                            set(['Volcanic']),
                                             logictree.ValidationError)
         error = 'only uncertainties of type "gmpeModel" are allowed ' \
                 'in gmpe logic tree'
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
-        self.assertEqual(exc.lineno, 4)
+        self.assertEqual(exc.lineno, 5)
 
     def test_two_branchsets_in_one_level(self):
         gmpe = _make_nrml("""\
         <logicTree logicTreeID="lt1">
             <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="gmpeModel"
-                                    branchSetID="bs1">
+                                    branchSetID="bs1"
+                                    applyToTectonicRegionType="Volcanic">
                     <logicTreeBranch branchID="b1">
                         <uncertaintyModel>CL_2002_AttenRel</uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
                 <logicTreeBranchSet uncertaintyType="gmpeModel"
-                                    branchSetID="bs2">
+                            branchSetID="bs2"
+                            applyToTectonicRegionType="Subduction IntraSlab">
                     <logicTreeBranch branchID="b2">
                         <uncertaintyModel>CB_2008_AttenRel</uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
@@ -910,20 +914,23 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
             </logicTreeBranchingLevel>
         </logicTree>
         """)
-        exc = self._assert_logic_tree_error('gmpe', gmpe, 'base', set(),
-                                            logictree.ValidationError)
+        exc = self._assert_logic_tree_error(
+            'gmpe', gmpe, 'base', set(['Volcanic', 'Subduction IntraSlab']),
+            logictree.ValidationError
+        )
         error = 'only one branchset on each branching level is allowed ' \
                 'in gmpe logic tree'
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
-        self.assertEqual(exc.lineno, 11)
+        self.assertEqual(exc.lineno, 13)
 
     def test_unavailable_gmpe(self):
         gmpe = _make_nrml("""\
         <logicTree logicTreeID="lt1">
             <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="gmpeModel"
-                                    branchSetID="bs1">
+                                    branchSetID="bs1"
+                                    applyToTectonicRegionType="Volcanic">
                     <logicTreeBranch branchID="b1">
                         <uncertaintyModel>no-such-gmpe</uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
@@ -932,8 +939,96 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
             </logicTreeBranchingLevel>
         </logicTree>
         """)
-        exc = self._assert_logic_tree_error('gmpe', gmpe, 'base', set(),
+        exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
+                                            set(['Volcanic']),
                                             logictree.ValidationError)
         self.assertEqual(exc.message, "gmpe 'no-such-gmpe' is not available",
                         "wrong exception message: %s" % exc.message)
-        self.assertEqual(exc.lineno, 6)
+        self.assertEqual(exc.lineno, 7)
+
+    def test_wrong_filters(self):
+        filters = ('',
+                   'applyToSources="src01"',
+                   'applyToTectonicRegionType="Volcanic" applyToSources="zz"',
+                   'applyToSourceType="point"')
+        for filter_ in filters:
+            gmpe = _make_nrml("""\
+            <logicTree logicTreeID="lt1">
+              <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                    branchSetID="bs1" %s>
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>SEA_1999_AttenRel</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+            </logicTree>
+            """ % filter_)
+            exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
+                                                set(['Volcanic']),
+                                                logictree.ValidationError)
+            self.assertEqual(exc.lineno, 4)
+            error = 'branch sets in gmpe logic tree must define only ' \
+                    '"applyToTectonicRegionType" filter'
+            self.assertEqual(exc.message, error,
+                            "wrong exception message: %s" % exc.message)
+
+    def test_unused_tectonic_region_type(self):
+        gmpe = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                            branchSetID="bs1"
+                            applyToTectonicRegionType="Subduction Interface">
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>Campbell_1997_AttenRel</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
+                                            set(['Active Shallow Crust']),
+                                            logictree.ValidationError)
+        error = "source models don't define sources of tectonic region " \
+                "type 'Subduction Interface'"
+        self.assertEqual(exc.message, error,
+                        "wrong exception message: %s" % exc.message)
+        self.assertEqual(exc.lineno, 5)
+
+    def test_tectonic_region_type_used_twice(self):
+        gmpe = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                            branchSetID="bs1"
+                            applyToTectonicRegionType="Subduction Interface">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>AS_1997_AttenRel</uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+            <logicTreeBranchingLevel branchingLevelID="bl2">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                            branchSetID="bs2"
+                            applyToTectonicRegionType="Subduction Interface">
+                    <logicTreeBranch branchID="b2">
+                        <uncertaintyModel>BA_2008_AttenRel</uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
+                                            set(['Subduction Interface']),
+                                            logictree.ValidationError)
+        error = "gmpe uncertainty for tectonic region type " \
+                "'Subduction Interface' has already been defined"
+        self.assertEqual(exc.message, error,
+                        "wrong exception message: %s" % exc.message)
+        self.assertEqual(exc.lineno, 15)
+

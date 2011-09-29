@@ -171,7 +171,7 @@ class BaseLogicTree(object):
                            branchset_node, filename):
         raise NotImplementedError()
 
-    def apply_branchset(self, branchset, branchset_node):
+    def apply_branchset(self, branchset, branchset_node, filename):
         for branch in self.open_ends:
             branch.child_branchset = branchset
 
@@ -378,6 +378,7 @@ class GMPELogicTree(BaseLogicTree):
 
     def __init__(self, tectonic_region_types, *args, **kwargs):
         self.tectonic_region_types = frozenset(tectonic_region_types)
+        self.defined_tectonic_region_types = set()
         super(GMPELogicTree, self).__init__(*args, **kwargs)
 
     def validate_uncertainty_value(self, filename, node,
@@ -390,7 +391,28 @@ class GMPELogicTree(BaseLogicTree):
         return value
 
     def validate_filters(self, filename, node, uncertainty_type, filters):
-        # TODO: implement
+        if not filters \
+                or len(filters) > 1 \
+                or filters.keys() != ['applyToTectonicRegionType']:
+            raise ValidationError(
+                node, filename, self.basepath,
+                'branch sets in gmpe logic tree must define only ' \
+                '"applyToTectonicRegionType" filter'
+            )
+        trt = filters['applyToTectonicRegionType']
+        if not trt in self.tectonic_region_types:
+            raise ValidationError(
+                node, filename, self.basepath,
+                "source models don't define sources of tectonic region " \
+                "type %r" % trt
+            )
+        if trt in self.defined_tectonic_region_types:
+            raise ValidationError(
+                node, filename, self.basepath,
+                'gmpe uncertainty for tectonic region type %r has already ' \
+                'been defined' % trt
+            )
+        self.defined_tectonic_region_types.add(trt)
         return filters
 
     def validate_branchset(self, depth, number, branchset,
