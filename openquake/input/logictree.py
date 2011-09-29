@@ -101,6 +101,9 @@ class BaseLogicTree(object):
     def parse_tree(self, tree, filename):
         for depth, branchinglevel in enumerate(tree):
             self.parse_branchinglevel(depth, branchinglevel, filename)
+        self.root_branchset = self.validate_tree(
+            self.root_branchset, tree, filename
+        )
 
     def _open_file(self, filename):
         try:
@@ -159,6 +162,9 @@ class BaseLogicTree(object):
                 branchset_node, filename, self.basepath,
                 "branchset weights don't sum up to 1.0"
             )
+
+    def validate_tree(self, root_branchset, tree_node, filename):
+        return root_branchset
 
     def validate_uncertainty_value(self, filename, node,
                                    uncertainty_type, value):
@@ -414,6 +420,18 @@ class GMPELogicTree(BaseLogicTree):
             )
         self.defined_tectonic_region_types.add(trt)
         return filters
+
+    def validate_tree(self, root_branchset, tree_node, filename):
+        missing_trts = self.tectonic_region_types \
+                       - self.defined_tectonic_region_types
+        if missing_trts:
+            raise ValidationError(
+                tree_node, filename, self.basepath,
+                'the following tectonic region types are defined ' \
+                'in source model logic tree but not in gmpe logic tree: %s' % \
+                list(sorted(missing_trts))
+            )
+        return root_branchset
 
     def validate_branchset(self, depth, number, branchset,
                            branchset_node, filename):
