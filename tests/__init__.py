@@ -60,6 +60,7 @@ from utils_general_unittest import *
 from utils_tasks_unittest import *
 from utils_version_unittest import *
 from validator_unittest import *
+from quality_assurance_unittest import *
 
 import glob
 import os
