@@ -377,7 +377,6 @@ class DisaggregationValidatorTestCase(unittest.TestCase):
         'DISTANCE_BIN_LIMITS': '-10, 0, 10'
     }
 
-
     @classmethod
     def setUpClass(cls):
         cls.dav_cls = config.DisaggregationValidator
@@ -439,12 +438,14 @@ class DisaggregationValidatorTestCase(unittest.TestCase):
 
         expected_results = (False,
             ['Invalid bin limits: [-90.1, 0.0, 90.0]. Limits must be >= -90.0',
-             'Invalid bin limits: [-180.0, 0.0, 180.1]. Limits must be <= 180.0',
-             'Invalid bin limits: [-0.5, 0.0, 1.0, 2.0]. Limits must be >= 0.0',
+             ('Invalid bin limits: [-180.0, 0.0, 180.1].'
+              ' Limits must be <= 180.0'),
+             ('Invalid bin limits: [-0.5, 0.0, 1.0, 2.0].'
+              ' Limits must be >= 0.0'),
              'Invalid bin limits: [-10.0, 0.0, 10.0]. Limits must be >= 0.0']
         )
 
-        actual_results =  validator.is_valid()
+        actual_results = validator.is_valid()
 
         self.assertEqual(expected_results, actual_results)
 
@@ -464,7 +465,8 @@ class DefaultValidatorsTestCase(unittest.TestCase):
         validators = config.default_validators(da_job.sections, da_job.params)
 
         # test that the default validators include a DisaggregationValidator
-        self.assertTrue(any(isinstance(v, DisaggregationValidator) for v in validators))
+        self.assertTrue(any(
+            isinstance(v, DisaggregationValidator) for v in validators))
 
 
 class ValidatorsUtilsTestCase(unittest.TestCase):
