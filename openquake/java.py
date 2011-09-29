@@ -32,6 +32,7 @@ from openquake import nrml
 
 JAVA_CLASSES = {
     'LogicTreeProcessor': "org.gem.engine.LogicTreeProcessor",
+    'LogicTreeReader': "org.gem.engine.LogicTreeReader",
     'KVS': "org.gem.engine.hazard.redis.Cache",
     'JsonSerializer': "org.gem.JsonSerializer",
     "EventSetGen": "org.gem.calc.StochasticEventSetGenerator",
