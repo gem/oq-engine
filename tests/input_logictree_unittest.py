@@ -1032,3 +1032,29 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                         "wrong exception message: %s" % exc.message)
         self.assertEqual(exc.lineno, 15)
 
+    def test_missing_tectonic_region_type(self):
+        gmpe = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                            branchSetID="bs1"
+                            applyToTectonicRegionType="Subduction Interface">
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>Campbell_1997_AttenRel</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        exc = self._assert_logic_tree_error(
+            'gmpe', gmpe, 'base',
+            set(['Subduction Interface', 'Active Shallow Crust', 'Volcanic']),
+            logictree.ValidationError
+        )
+        error = "the following tectonic region types are defined " \
+                "in source model logic tree but not in gmpe logic tree: " \
+                "['Active Shallow Crust', 'Volcanic']"
+        self.assertEqual(exc.message, error,
+                        "wrong exception message: %s" % exc.message)
+        self.assertEqual(exc.lineno, 1)
