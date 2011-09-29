@@ -37,7 +37,10 @@ class ClassicalPSHACalculatorAssuranceTestCase(
     @attr("quality_assurance")
     def test_peerTestSet1Case2(self):
         expected_results = self._load_results()
-        job = self._run_job(helpers.smoketest_file(TEST_NAME + "/config.gem"))
+
+        job = self._run_job(helpers.smoketest_file(
+            os.path.join(TEST_NAME, "config.gem")))
+
         job_db = models.OqJob.objects.get(id=job.job_id)
 
         for site, curve in expected_results.items():
@@ -73,7 +76,9 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         # the value at index y casted to float
         get = lambda x, y: float(x.split(",")[y])
 
-        results_dir = helpers.smoketest_file(TEST_NAME + "/expected_results")
+        results_dir = helpers.smoketest_file(
+            os.path.join(TEST_NAME, "expected_results"))
+
         results_files = os.listdir(results_dir)
 
         results = {}
@@ -91,9 +96,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
                 results[site] = []
 
-                while len(lines):
-                    pair = lines.pop(0)
-
+                for pair in lines:
                     # the format is IML,PoE
                     results[site].append((get(pair, 0), get(pair, 1)))
 
