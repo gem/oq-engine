@@ -33,6 +33,15 @@ CALCULATION_MODE = {
     'Classical': 'classical',
     'Deterministic': 'deterministic',
     'Event Based': 'event_based',
+    'Disaggregation': 'disaggregation',
+}
+
+INPUT_FILE_TYPES = {
+    'SOURCE_MODEL_LOGIC_TREE_FILE': 'lt_source',
+    'GMPE_LOGIC_TREE_FILE': 'lt_gmpe',
+    'EXPOSURE': 'exposure',
+    'VULNERABILITY': 'vulnerability',
+    'SINGLE_RUPTURE_MODEL': 'rupture',
 }
 
 ENUM_MAP = {
@@ -65,6 +74,8 @@ ENUM_MAP = {
 
 CALCULATION_MODES = set(CALCULATION_MODE.values())
 PARAMS = {}
+PATH_PARAMS = ['VULNERABILITY', 'SINGLE_RUPTURE_MODEL', 'EXPOSURE',
+               'SOURCE_MODEL_LOGIC_TREE_FILE', 'GMPE_LOGIC_TREE_FILE']
 
 
 def map_enum(value):
@@ -123,7 +134,7 @@ define_param('DAMPING', 'damping', default=0.0)
 
 define_param('INTENSITY_MEASURE_LEVELS', 'imls',
              modes=('classical', 'event_based'))
-define_param('POES_HAZARD_MAPS', 'poes', modes='classical')
+define_param('POES', 'poes', modes=('classical', 'disaggregation'))
 
 define_param('GROUND_MOTION_CORRELATION', 'gm_correlated',
              modes=('deterministic', 'event_based'))

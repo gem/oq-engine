@@ -1,20 +1,40 @@
-# The '#' character and the ';' are used to start a single line comment
 [general]
 
-CALCULATION_MODE = Event Based
-GROUND_MOTION_CORRELATION = false
-NUMBER_OF_LOGIC_TREE_SAMPLES = 0
+CALCULATION_MODE = Disaggregation
+
+# pairs are ordered lat,lon
+REGION_VERTEX = 16.0, 73.0, 18.0, 73.0, 18.0, 75.0, 16.0, 75.0
+REGION_GRID_SPACING = 0.1
+
+# this geometry should give us a total of 441 sites
 
 [HAZARD]
 
-# file containing erf logic tree structure
-SOURCE_MODEL_LOGIC_TREE_FILE = ErfLogicTree.inp
-# file containing gmpe logic tree structure
-GMPE_LOGIC_TREE_FILE = GmpeLogicTree.inp
-# output directory
-OUTPUT_DIR = gem_output
+# Disaggregation results are Probability Mass Functions (PMFs)
+# Which are composed of different combinations of the following:
+# Latitude, Longitude, Magnitude, Distance, Epsilon, Tectonic Region Type
+# Choose at least one of the following:
+#   MagPMF, DistPMF, TRTPMF, MagDistPMF, MagDistEpsPMF, LatLonPMF, LatLonMagPMF,
+#   LatLonMagEpsPMF, FullDisaggMatrix
+DISAGGREGATION_RESULTS = MagPMF, MagDistEpsPMF, FullDisaggMatrix
 
-SADIGH_SITE_TYPE = Rock
+LATITUDE_BIN_LIMITS = 14.0, 16.0, 18.0, 20.0
+LONGITUDE_BIN_LIMITS = 70.0, 72.0, 74.0, 76.0
+MAGNITUDE_BIN_LIMITS = 5, 6, 7, 8
+EPSILON_BIN_LIMITS = 0, 1, 2, 3
+DISTANCE_BIN_LIMITS = 0, 10, 20, 30, 40, 50
+
+POES = 0.1 0.02
+
+OUTPUT_DIR = computed_output
+
+NUMBER_OF_LOGIC_TREE_SAMPLES = 2
+
+SOURCE_MODEL_LOGIC_TREE_FILE = source_model_logic_tree.xml
+GMPE_LOGIC_TREE_FILE = gmpe_logic_tree.xml
+
+SOURCE_MODEL_LT_RANDOM_SEED = 17
+GMPE_LT_RANDOM_SEED = 3
 
 # moment magnitude (Mw)
 MINIMUM_MAGNITUDE = 5.0
@@ -25,18 +45,16 @@ MAXIMUM_DISTANCE = 200.0
 # bin width of the magnitude frequency distribution
 WIDTH_OF_MFD_BIN = 0.1
 
-
 # (Average Horizontal, Average Horizontal (GMRotI50), Random Horizontal, Greater of Two Horz., Vertical)
 COMPONENT = Average Horizontal (GMRotI50)
-# (PGA (g), PGD (cm), PGV (cm/s), SA (g))
-INTENSITY_MEASURE_TYPE = PGA
 # seconds, used only for Spectral Acceleration
 PERIOD = 0.0
 # in percent
 DAMPING = 5.0
 # (in the same units of the intensity measure type)
-# TODO make it a comma separated list and adapt code (CalculatorConfigHelper.makeArbitrarilyDiscretizedFunc())
-INTENSITY_MEASURE_LEVELS = 0.005, 0.007, 0.098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527, 0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778, 1.09, 1.52, 2.13
+INTENSITY_MEASURE_LEVELS = 0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527, 0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778
+# (PGA (g), PGD (cm), PGV (cm/s), SA (g))
+INTENSITY_MEASURE_TYPE = PGA
 # (None, 1 Sided, 2 Sided)
 GMPE_TRUNCATION_TYPE = 2 Sided
 # (1,2,3,...)
@@ -49,25 +67,34 @@ REFERENCE_VS30_VALUE = 760.0
 # Cambpell basin depth. Measure is (km)
 REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM = 5.0
 
+# Rock, Deep-Soil
+SADIGH_SITE_TYPE = Rock
 
+###############
+# Area sources:
+###############
 # true or false
 INCLUDE_AREA_SOURCES = true
 # (Point Sources, Line Sources (random or given strike), Cross Hair Line Sources, 16 Spoked Line Sources)
-TREAT_AREA_SOURCE_AS = Point Sources
+TREAT_AREA_SOURCE_AS = Line Sources (random or given strike)
 # degrees
 AREA_SOURCE_DISCRETIZATION = 0.1
 # (W&C 1994 Mag-Length Rel.)
 AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP = W&C 1994 Mag-Length Rel.
 
-
+################
+# Point sources:
+################
 # true or false
-INCLUDE_GRID_SOURCES = false
+INCLUDE_GRID_SOURCES = true
 # (Point Sources, Line Sources (random or given strike), Cross Hair Line Sources, 16 Spoked Line Sources)
-TREAT_GRID_SOURCE_AS = Point Sources
+TREAT_GRID_SOURCE_AS = Line Sources (random or given strike)
 # (W&C 1994 Mag-Length Rel.)
 GRID_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP = W&C 1994 Mag-Length Rel.
 
-
+################
+# Simple faults:
+################
 # true or false
 INCLUDE_FAULT_SOURCE = true
 # km
@@ -82,9 +109,11 @@ RUPTURE_ASPECT_RATIO = 1.5
 # (Only along strike ( rupture full DDW), Along strike and down dip, Along strike & centered down dip)
 RUPTURE_FLOATING_TYPE = Along strike and down dip
 
-
+#################
+# Complex faults:
+#################
 # true or false
-INCLUDE_SUBDUCTION_FAULT_SOURCE = false
+INCLUDE_SUBDUCTION_FAULT_SOURCE = true
 # km
 SUBDUCTION_FAULT_RUPTURE_OFFSET = 10.0
 # km
@@ -96,39 +125,3 @@ SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA = 0.0
 SUBDUCTION_RUPTURE_ASPECT_RATIO = 1.5
 # (Only along strike ( rupture full DDW), Along strike and down dip, Along strike & centered down dip)
 SUBDUCTION_RUPTURE_FLOATING_TYPE = Along strike and down dip
-
-
-# NOTE: The order of the vertices is to be kept!!!
-# lat, lon of polygon vertices (in clock or counter-clock wise order)
-REGION_VERTEX = 37.5, -122.5, 37.5, -121.5, 38.5, -121.5, 38.5, -122.5
-# degrees
-REGION_GRID_SPACING = 0.1
-
-
-# (used if Event Based approach is chosen)
-NUMBER_OF_HAZARD_CURVE_CALCULATIONS = 40
-# (used if Event Based probabilistic event based approach is chosen)
-NUMBER_OF_SEISMICITY_HISTORIES = 8
-
-
-NUMBER_OF_PROCESSORS = 1
-
-HAZARD_MAP_CPT = seminf-haxby.cpt
-
-[RISK]
-
-# file containing the exposure in nrml format
-EXPOSURE = exposure.xml
-
-# file containing the vulnerability functions
-VULNERABILITY = vulnerability.xml
-
-# file containing the hazard curves in nrml format
-HAZARD_CURVES = hazard_curves.xml
-
-# name of the loss map file to generate
-LOSS_MAP = loss_map.tiff
-
-# name of the loss ratio map file to generate
-LOSS_RATIO_MAP = loss_ratio_map.tiff
-# The '#' character and the ';' are used to start a single line comment
