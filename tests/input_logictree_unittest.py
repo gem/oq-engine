@@ -648,7 +648,7 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
                 <logicTreeBranchSet uncertaintyType="gmpeModel"
                                     branchSetID="bs1">
                   <logicTreeBranch branchID="b2">
-                    <uncertaintyModel>gmpe</uncertaintyModel>
+                    <uncertaintyModel>CL_2002_AttenRel</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                   </logicTreeBranch>
                 </logicTreeBranchSet>
@@ -932,5 +932,32 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.filename, 'gmpe')
         self.assertEqual(exc.basepath, 'base')
         self.assertTrue("attribute 'logicTreeID' is required" in exc.message,
+                        "wrong exception message: %s" % exc.message)
+
+    def test_gmpe_logictree_wrong_uncertainty_type(self):
+        gmpe = self._make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="bGRRelative"
+                                    branchSetID="bs1">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>+1</uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        lt = self._whatever_sourcemodel_lt('sm')
+        sm = self._whatever_sourcemodel()
+        with self.assertRaises(logictree.ValidationError) as arc:
+            _TesteableLogicTree('lt', 'gmpe',
+                                {'lt': lt, 'gmpe': gmpe, 'sm': sm}, 'base')
+        exc = arc.exception
+        self.assertEqual(exc.filename, 'gmpe')
+        self.assertEqual(exc.basepath, 'base')
+        error = 'branchsets in gmpe logic tree must define uncertainties ' \
+                'of type "gmpeModel"'
+        self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
 
