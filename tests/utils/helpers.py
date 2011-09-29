@@ -17,7 +17,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
 """
 Helper functions for our unit and smoke tests.
 """
@@ -42,7 +41,6 @@ from openquake import flags
 from openquake import logs
 from openquake.job import Job
 from openquake import producer
-from openquake import signalling
 from openquake.utils import config
 
 from openquake.db import models
@@ -142,6 +140,7 @@ def create_job(params, **kwargs):
 class WordProducer(producer.FileProducer):
     """Simple File parser that looks for three
     space-separated values on each line - lat, long and value"""
+
     def _parse(self):
         for line in self.file:
             col, row, value = line.strip().split(' ', 2)
@@ -162,6 +161,7 @@ def guarantee_file(path, url):
 
 def timeit(method):
     """Decorator for timing methods"""
+
     def _timed(*args, **kw):
         """Wrapped function for timed methods"""
         timestart = time.time()
@@ -202,6 +202,7 @@ def skipit(method):
 
 def measureit(method):
     """Decorator that profiles memory usage"""
+
     def _measured(*args, **kw):
         """Decorator that profiles memory usage"""
         result = method(*args, **kw)
@@ -614,7 +615,7 @@ class DbTestMixin(TestMixin):
             return
 
         job.delete()
-        opq.delete()
+        oqp.delete()
 
     def setup_output(self, job_to_use=None, output_type="hazard_map",
                      db_backed=True):
