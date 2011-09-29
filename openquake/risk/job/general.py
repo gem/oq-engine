@@ -137,8 +137,8 @@ class RiskJobMixin(mixins.Mixin):
     def store_exposure_assets(self):
         """Load exposure assets and write them to KVS."""
 
-        exposure_parser = exposure.ExposurePortfolioFile("%s/%s" %
-            (self.base_path, self.params[job_config.EXPOSURE]))
+        exposure_parser = exposure.ExposurePortfolioFile(
+            os.path.join(self.base_path, self.params[job_config.EXPOSURE]))
 
         for site, asset in exposure_parser.filter(self.region):
 # TODO(ac): This is kludgey (?)
@@ -154,7 +154,7 @@ class RiskJobMixin(mixins.Mixin):
     def store_vulnerability_model(self):
         """ load vulnerability and write to kvs """
         vulnerability.load_vulnerability_model(self.job_id,
-            "%s/%s" % (self.base_path, self.params["VULNERABILITY"]))
+            os.path.join(self.base_path, self.params["VULNERABILITY"]))
 
     def _serialize(self, block_id, **kwargs):
         """
