@@ -18,6 +18,7 @@
 
 from bulk_insert_unittest import *
 from cache_gc_unittest import *
+from db_fields_unittest import *
 from db_loader_unittest import *
 from db_loader_unittest import *
 from db_routers_unittest import *

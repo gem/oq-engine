@@ -115,4 +115,4 @@ QUANTILE_LEVELS =
 COMPUTE_MEAN_HAZARD_CURVE = true
 
 # List of POEs to use for computing hazard maps
-POES_HAZARD_MAPS = 0.1 0.02
+POES = 0.1 0.02
