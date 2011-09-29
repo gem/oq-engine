@@ -24,6 +24,9 @@ and its validation.
 
 from openquake.job import config
 from openquake.job.config import to_float_array, to_str_array
+from openquake.job.config import (
+    DisaggregationValidator, RiskMandatoryParametersValidator,
+    DeterministicComputationValidator)
 from tests.utils import helpers
 
 import unittest
@@ -91,6 +94,22 @@ class ValidatorSetTestCase(unittest.TestCase):
 
         error_messages = ["MESSAGE#1", "MESSAGE#2", "MESSAGE#3"]
         self.assertEquals(error_messages, validator.is_valid()[1])
+
+    def test_iter(self):
+        """ValidatorSets are iterable (over the list of validators)."""
+        vset = config.ValidatorSet()
+
+        validators = [
+            RiskMandatoryParametersValidator(None, None),
+            DisaggregationValidator(None),
+            DeterministicComputationValidator(None, None),
+        ]
+
+        for v in validators:
+            vset.add(v)
+
+        for cnt, val in enumerate(vset):
+            self.assertEqual(validators[cnt], val)
 
 
 class ConfigurationConstraintsTestCase(unittest.TestCase, helpers.TestMixin):
@@ -298,7 +317,7 @@ class ConfigurationConstraintsTestCase(unittest.TestCase, helpers.TestMixin):
 
     def test_parameter_type_strarray(self):
         # valid values
-        for v in ('', 'MagPMF', 'MagPMF, MagDistPMF'):
+        for v in ('MagPMF', 'MagPMF, MagDistPMF', 'MagPMF MagDistPMF'):
             params = dict()
             params['DISAGGREGATION_RESULTS'] = v
 
@@ -435,17 +454,21 @@ class DefaultValidatorsTestCase(unittest.TestCase):
     for correct behavior with various types of job configurations.
     """
 
-    #def test_default_validators_disagg_job(self):
-    #    da_job_path = helpers.smoketest_file('disaggregation/config.gem')
-    #    da_job = helpers.job_from_file(da_job_path)
+    def test_default_validators_disagg_job(self):
+        """Test to ensure that a Disaggregation job always includes the
+        :class:`openquake.job.config.DisaggregationValidator`.
+        """
+        da_job_path = helpers.smoketest_file('disaggregation/config.gem')
+        da_job = helpers.job_from_file(da_job_path)
 
-    #    print dir(da_job)
-    #    print da_job.params
-    #    self.assertTrue(False)
+        validators = config.default_validators(da_job.sections, da_job.params)
+
+        # test that the default validators include a DisaggregationValidator
+        self.assertTrue(any(isinstance(v, DisaggregationValidator) for v in validators))
 
 
 class ValidatorsUtilsTestCase(unittest.TestCase):
-    """Test for validator util functions"""
+    """Test for validator utility functions"""
 
     def test_to_float_array(self):
         expected = [-90.0, 0.0, 90.0]
@@ -454,9 +477,23 @@ class ValidatorsUtilsTestCase(unittest.TestCase):
 
         self.assertEqual(expected, to_float_array(test_input))
 
+    def test_to_float_array_no_commas(self):
+        expected = [-90.0, 0.0, 90.0]
+
+        test_input = '-90 0 90'
+
+        self.assertEqual(expected, to_float_array(test_input))
+
     def test_to_str_array(self):
         expected = ['MagPMF', 'MagDistPMF', 'MagDistEpsPMF']
 
         test_input = 'MagPMF, MagDistPMF, MagDistEpsPMF'
+
+        self.assertEqual(expected, to_str_array(test_input))
+
+    def test_to_str_array_no_commas(self):
+        expected = ['MagPMF', 'MagDistPMF', 'MagDistEpsPMF']
+
+        test_input = 'MagPMF MagDistPMF MagDistEpsPMF'
 
         self.assertEqual(expected, to_str_array(test_input))
