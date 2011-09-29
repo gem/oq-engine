@@ -22,12 +22,11 @@ its validation.
 """
 
 import os
-import re
 
 from django.contrib.gis.db import models
 from openquake.db.models import CharArrayField, FloatArrayField
 
-from openquake.job.params import PARAMS, PATH_PARAMS
+from openquake.job.params import PARAMS, PATH_PARAMS, ARRAY_RE
 
 
 EXPOSURE = "EXPOSURE"
@@ -44,9 +43,6 @@ DISAGGREGATION_MODE = "Disaggregation"
 CALCULATION_MODE = "CALCULATION_MODE"
 BASE_PATH = "BASE_PATH"
 COMPUTE_HAZARD_AT_ASSETS = "COMPUTE_HAZARD_AT_ASSETS_LOCATIONS"
-
-
-ARRAY_RE = re.compile('[ ,]+')
 
 
 def to_float_array(value):

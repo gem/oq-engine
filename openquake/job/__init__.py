@@ -45,7 +45,8 @@ from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
 from openquake.job.mixins import Mixin
 from openquake.job.params import (
-    PARAMS, CALCULATION_MODE, ENUM_MAP, PATH_PARAMS, INPUT_FILE_TYPES)
+    PARAMS, CALCULATION_MODE, ENUM_MAP, PATH_PARAMS, INPUT_FILE_TYPES,
+    ARRAY_RE)
 from openquake.kvs import mark_job_as_current
 from openquake.logs import LOG
 from openquake.utils import config as oq_config
@@ -255,11 +256,11 @@ def _store_input_parameters(params, job_type, oqp):
             ewkt = shapes.multipoint_ewkt_from_coords(value)
             value = GEOSGeometry(ewkt)
         elif param.type == FloatArrayField:
-            value = [float(v) for v in conf.ARRAY_RE.split(value) if len(v)]
+            value = [float(v) for v in ARRAY_RE.split(value) if len(v)]
         elif param.type == CharArrayField:
             if param.to_db is not None:
                 value = param.to_db(value)
-            value = [str(v) for v in conf.ARRAY_RE.split(value) if len(v)]
+            value = [str(v) for v in ARRAY_RE.split(value) if len(v)]
         elif param.to_db is not None:
             value = param.to_db(value)
         elif param.type == None:
