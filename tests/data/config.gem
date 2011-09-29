@@ -12,7 +12,7 @@ SOURCE_MODEL_LOGIC_TREE_FILE = ErfLogicTree.inp
 # file containing gmpe logic tree structure
 GMPE_LOGIC_TREE_FILE = GmpeLogicTree.inp
 # output directory
-OUTPUT_DIR = ~/gem_output
+OUTPUT_DIR = gem_output
 
 SADIGH_SITE_TYPE = Rock
 
