@@ -242,15 +242,11 @@ def _store_input_parameters(params, job_type, oqp):
         if job_type in param.modes and param.default is not None:
             setattr(oqp, param.column, param.default)
 
-    number_re = re.compile('[ ,]+')
-
     for name, value in params.items():
         param = PARAMS[name]
         value = value.strip()
 
-        if param.to_db is not None:
-            value = param.to_db(value)
-        elif param.type in (models.BooleanField, models.NullBooleanField):
+        if param.type in (models.BooleanField, models.NullBooleanField):
             value = value.lower() not in ('0', 'false')
         elif param.type == models.PolygonField:
             ewkt = shapes.polygon_ewkt_from_coords(value)
@@ -259,9 +255,13 @@ def _store_input_parameters(params, job_type, oqp):
             ewkt = shapes.multipoint_ewkt_from_coords(value)
             value = GEOSGeometry(ewkt)
         elif param.type == FloatArrayField:
-            value = [float(v) for v in number_re.split(value) if len(v)]
+            value = [float(v) for v in conf.ARRAY_RE.split(value) if len(v)]
         elif param.type == CharArrayField:
-            pass  # TODO: implement me
+            if param.to_db is not None:
+                value = param.to_db(value)
+            value = [str(v) for v in conf.ARRAY_RE.split(value) if len(v)]
+        elif param.to_db is not None:
+            value = param.to_db(value)
         elif param.type == None:
             continue
 
