@@ -16,7 +16,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
 """
 Database related unit tests for hazard computations with the hazard engine.
 """
@@ -29,6 +28,7 @@ from openquake.output import risk as risk_output
 
 
 class ComposeWritersTest(unittest.TestCase):
+
     def test_empty(self):
         self.assertEqual(None, output_writer.compose_writers([]))
 
@@ -36,6 +36,7 @@ class ComposeWritersTest(unittest.TestCase):
         self.assertEqual(None, output_writer.compose_writers([None]))
 
     def test_single_writer(self):
+
         class W:
             pass
 
@@ -43,6 +44,7 @@ class ComposeWritersTest(unittest.TestCase):
         self.assertEqual(w, output_writer.compose_writers([w]))
 
     def test_multiple_writers(self):
+
         class W:
             pass
 
@@ -55,6 +57,7 @@ class ComposeWritersTest(unittest.TestCase):
 
 
 class CreateWriterTestBase(object):
+
     def test_create_writer_with_xml(self):
         """
         A `*XMLWriter` instance is returned when the serialize_to parameter is
@@ -89,10 +92,21 @@ class CreateWriterTestBase(object):
             "/tmp")
 
 
+class SMWrapper(object):
+    """Pretend that the wrapped function is a `CreateWriterTestBase` method."""
+
+    def __init__(self, func):
+        self.func = func
+        self.im_class = CreateWriterTestBase
+
+    def __call__(self, *args, **kwargs):
+        return self.func(*args, **kwargs)
+
+
 class CreateHazardmapWriterTestCase(unittest.TestCase, CreateWriterTestBase):
     """Tests for hazard.opensha.create_hazardmap_writer()."""
 
-    create_function = staticmethod(hazard_output.create_hazardmap_writer)
+    create_function = SMWrapper(hazard_output.create_hazardmap_writer)
     xml_writer_class = hazard_output.HazardMapXMLWriter
     db_writer_class = hazard_output.HazardMapDBWriter
 
@@ -100,7 +114,7 @@ class CreateHazardmapWriterTestCase(unittest.TestCase, CreateWriterTestBase):
 class CreateHazardcurveWriterTestCase(unittest.TestCase, CreateWriterTestBase):
     """Tests for hazard.opensha.create_hazardcurve_writer()."""
 
-    create_function = staticmethod(hazard_output.create_hazardcurve_writer)
+    create_function = SMWrapper(hazard_output.create_hazardcurve_writer)
     xml_writer_class = hazard_output.HazardCurveXMLWriter
     db_writer_class = hazard_output.HazardCurveDBWriter
 
@@ -108,12 +122,13 @@ class CreateHazardcurveWriterTestCase(unittest.TestCase, CreateWriterTestBase):
 class CreateGMFWriterTestCase(unittest.TestCase, CreateWriterTestBase):
     """Tests for hazard.opensha.create_gmf_writer()."""
 
-    create_function = staticmethod(hazard_output.create_gmf_writer)
+    create_function = SMWrapper(hazard_output.create_gmf_writer)
     xml_writer_class = hazard_output.GMFXMLWriter
     db_writer_class = hazard_output.GmfDBWriter
 
 
 class CreateRiskWriterTest(unittest.TestCase):
+
     def test_loss_curve_writer_creation(self):
         # XML writers
         writer = risk_output.create_loss_curve_writer(
