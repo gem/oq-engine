@@ -26,152 +26,170 @@ from StringIO import StringIO
 from openquake.input import logictree
 
 
-class _TesteableLogicTree(logictree.LogicTree):
-    def __init__(self, sm_lt_filename, gmpe_lt_filename, files, basepath):
+class _TesteableSourceModelLogicTree(logictree.SourceModelLogicTree):
+    def __init__(self, filename, files, basepath):
         self.files = files
-        super(_TesteableLogicTree, self).__init__(basepath, sm_lt_filename,
-                                                  gmpe_lt_filename)
+        super(_TesteableSourceModelLogicTree, self).__init__(basepath,
+                                                             filename)
 
     def _open_file(self, filename):
         if not filename in self.files:
-            return super(_TesteableLogicTree, self)._open_file(filename)
+            return super(_TesteableSourceModelLogicTree, self)._open_file(
+                filename
+            )
         return StringIO(self.files[filename])
 
 
-class LogicTreeBrokenInputTestCase(unittest.TestCase):
-    def _make_nrml(self, content):
-        return """\
-        <nrml xmlns:gml="http://www.opengis.net/gml"\
-              xmlns="http://openquake.org/xmlns/nrml/0.2"\
-              gml:id="n1">\
-            %s
-        </nrml>""" % content
+class _TesteableGMPELogicTree(logictree.GMPELogicTree):
+    def __init__(self, filename, content, basepath, tectonic_region_types):
+        self.content = content
+        super(_TesteableGMPELogicTree, self).__init__(
+            tectonic_region_types, basepath=basepath,
+            filename=filename
+        )
 
-    def _whatever_sourcemodel(self):
-        return self._make_nrml("""\
-        <sourceModel gml:id="sm1">
-            <config/>
-            <simpleFaultSource gml:id="src01">
-                <gml:name>Mount Diablo Thrust</gml:name>
-                <tectonicRegion>Active Shallow Crust</tectonicRegion>
-                <rake>90.0</rake>
-                <evenlyDiscretizedIncrementalMFD minVal="6.55" binSize="0.1"
-                    type="ML">0.0010614989 8.8291627E-4 7.3437777E-4
-                              6.108288E-4 5.080653E-4
-                </evenlyDiscretizedIncrementalMFD>
-                <simpleFaultGeometry gml:id="sfg_1">
-                    <faultTrace>
-                        <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
-                            <gml:posList>
-                                -121.82290 37.73010  0.0
-                                -122.03880 37.87710  0.0
-                            </gml:posList>
-                        </gml:LineString>
-                    </faultTrace>
-                    <dip>38</dip>
-                    <upperSeismogenicDepth>8.0</upperSeismogenicDepth>
-                    <lowerSeismogenicDepth>13.0</lowerSeismogenicDepth>
-                </simpleFaultGeometry>
-            </simpleFaultSource>
-            <simpleFaultSource gml:id="src02">
-                <gml:name>Mount Diablo Thrust</gml:name>
-                <tectonicRegion>Active Shallow Crust</tectonicRegion>
-                <rake>90.0</rake>
-                <evenlyDiscretizedIncrementalMFD minVal="6.55" binSize="0.1"
-                    type="ML">0.0010614989 8.8291627E-4 7.3437777E-4
-                              6.108288E-4 5.080653E-4
-                </evenlyDiscretizedIncrementalMFD>
-                <simpleFaultGeometry gml:id="sfg_1">
-                    <faultTrace>
-                        <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
-                            <gml:posList>
-                                -121.82290 37.73010  0.0
-                                -122.03880 37.87710  0.0
-                            </gml:posList>
-                        </gml:LineString>
-                    </faultTrace>
-                    <dip>38</dip>
-                    <upperSeismogenicDepth>8.0</upperSeismogenicDepth>
-                    <lowerSeismogenicDepth>13.0</lowerSeismogenicDepth>
-                </simpleFaultGeometry>
-            </simpleFaultSource>
-        </sourceModel>
-        """)
+    def _open_file(self, filename):
+        if not self.content:
+            return super(_TesteableGMPELogicTree, self)._open_file(
+                filename
+            )
+        return StringIO(self.content)
 
-    def _whatever_gmpe_lt(self):
-        return self._make_nrml("""\
-        <logicTree id="lt1" tectonicRegion="Active Shallow Crust">
-            <logicTreeBranchSet branchingLevel="1" uncertaintyType="gmpeModel">
-                <logicTreeBranch>
-                    <uncertaintyModel>BA_2008_AttenRel</uncertaintyModel>
-                    <uncertaintyWeight>0.5</uncertaintyWeight>
-                </logicTreeBranch>
-                <logicTreeBranch>
-                    <uncertaintyModel>CB_2008_AttenRel</uncertaintyModel>
-                    <uncertaintyWeight>0.5</uncertaintyWeight>
+
+def _make_nrml(content):
+    return """\
+    <nrml xmlns:gml="http://www.opengis.net/gml"\
+          xmlns="http://openquake.org/xmlns/nrml/0.2"\
+          gml:id="n1">\
+        %s
+    </nrml>""" % content
+
+def _whatever_sourcemodel():
+    return _make_nrml("""\
+    <sourceModel gml:id="sm1">
+        <config/>
+        <simpleFaultSource gml:id="src01">
+            <gml:name>Mount Diablo Thrust</gml:name>
+            <tectonicRegion>Active Shallow Crust</tectonicRegion>
+            <rake>90.0</rake>
+            <evenlyDiscretizedIncrementalMFD minVal="6.55" binSize="0.1"
+                type="ML">0.0010614989 8.8291627E-4 7.3437777E-4
+                          6.108288E-4 5.080653E-4
+            </evenlyDiscretizedIncrementalMFD>
+            <simpleFaultGeometry gml:id="sfg_1">
+                <faultTrace>
+                    <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                        <gml:posList>
+                            -121.82290 37.73010  0.0
+                            -122.03880 37.87710  0.0
+                        </gml:posList>
+                    </gml:LineString>
+                </faultTrace>
+                <dip>38</dip>
+                <upperSeismogenicDepth>8.0</upperSeismogenicDepth>
+                <lowerSeismogenicDepth>13.0</lowerSeismogenicDepth>
+            </simpleFaultGeometry>
+        </simpleFaultSource>
+        <simpleFaultSource gml:id="src02">
+            <gml:name>Mount Diablo Thrust</gml:name>
+            <tectonicRegion>Active Shallow Crust</tectonicRegion>
+            <rake>90.0</rake>
+            <evenlyDiscretizedIncrementalMFD minVal="6.55" binSize="0.1"
+                type="ML">0.0010614989 8.8291627E-4 7.3437777E-4
+                          6.108288E-4 5.080653E-4
+            </evenlyDiscretizedIncrementalMFD>
+            <simpleFaultGeometry gml:id="sfg_1">
+                <faultTrace>
+                    <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                        <gml:posList>
+                            -121.82290 37.73010  0.0
+                            -122.03880 37.87710  0.0
+                        </gml:posList>
+                    </gml:LineString>
+                </faultTrace>
+                <dip>38</dip>
+                <upperSeismogenicDepth>8.0</upperSeismogenicDepth>
+                <lowerSeismogenicDepth>13.0</lowerSeismogenicDepth>
+            </simpleFaultGeometry>
+        </simpleFaultSource>
+    </sourceModel>
+    """)
+
+def _whatever_gmpe_lt():
+    return _make_nrml("""\
+    <logicTree id="lt1" tectonicRegion="Active Shallow Crust">
+        <logicTreeBranchSet branchingLevel="1" uncertaintyType="gmpeModel">
+            <logicTreeBranch>
+                <uncertaintyModel>BA_2008_AttenRel</uncertaintyModel>
+                <uncertaintyWeight>0.5</uncertaintyWeight>
+            </logicTreeBranch>
+            <logicTreeBranch>
+                <uncertaintyModel>CB_2008_AttenRel</uncertaintyModel>
+                <uncertaintyWeight>0.5</uncertaintyWeight>
+            </logicTreeBranch>
+        </logicTreeBranchSet>
+    </logicTree>
+    """)
+
+def _whatever_sourcemodel_lt(sourcemodel_filename):
+    return _make_nrml("""\
+    <logicTree logicTreeID="lt1">
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="sourceModel"
+                                branchSetID="bs1">
+                <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>%s</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
-        </logicTree>
-        """)
+        </logicTreeBranchingLevel>
+    </logicTree>
+    """ % sourcemodel_filename)
 
-    def _whatever_sourcemodel_lt(self, sourcemodel_filename):
-        return self._make_nrml("""\
-        <logicTree logicTreeID="lt1">
-            <logicTreeBranchingLevel branchingLevelID="bl1">
-                <logicTreeBranchSet uncertaintyType="sourceModel"
-                                    branchSetID="bs1">
-                    <logicTreeBranch branchID="b1">
-                        <uncertaintyModel>%s</uncertaintyModel>
-                        <uncertaintyWeight>1.0</uncertaintyWeight>
-                    </logicTreeBranch>
-                </logicTreeBranchSet>
-            </logicTreeBranchingLevel>
-        </logicTree>
-        """ % sourcemodel_filename)
 
-    def test_nonexistent_sourcemodel_logictree(self):
-        with self.assertRaises(logictree.ParsingError) as arc:
-            _TesteableLogicTree('missing_file', 'gmpe',
-                                {'gmpe': self._whatever_gmpe_lt()}, 'base')
+class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
+    def _assert_logic_tree_error(self, filename, files, basepath,
+                                 exc_class=logictree.LogicTreeError,
+                                 exc_filename=None):
+        with self.assertRaises(exc_class) as arc:
+            _TesteableSourceModelLogicTree(filename, files, basepath)
         exc = arc.exception
-        self.assertEqual(exc.filename, 'missing_file')
-        self.assertEqual(exc.basepath, 'base')
+        self.assertEqual(exc.filename, exc_filename or filename)
+        self.assertEqual(exc.basepath, basepath)
+        return exc
+
+    def test_nonexistent_logictree(self):
+        exc = self._assert_logic_tree_error('missing_file', {}, 'base',
+                                            logictree.ParsingError)
         error = "[Errno 2] No such file or directory: 'base/missing_file'"
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
 
-    def test_sourcemodel_logictree_invalid_xml(self):
-        source = """<?xml foo bar baz"""
-        gmpe = self._whatever_gmpe_lt()
-        with self.assertRaises(logictree.ParsingError) as arc:
-            _TesteableLogicTree('broken_xml', 'gmpe',
-                                {'gmpe': gmpe, 'broken_xml': source}, 'base')
-        exc = arc.exception
-        self.assertEqual(exc.filename, 'broken_xml')
-        self.assertEqual(exc.basepath, 'base')
+    def test_logictree_invalid_xml(self):
+        exc = self._assert_logic_tree_error(
+            'broken_xml', {'broken_xml': "<?xml foo bar baz"}, 'basepath',
+            logictree.ParsingError
+        )
         self.assertTrue(exc.message.startswith('Malformed declaration'),
                         "wrong exception message: %s" % exc.message)
 
-    def test_sourcemodel_logictree_schema_violation(self):
-        source = self._make_nrml("""\
+    def test_logictree_schema_violation(self):
+        source = _make_nrml("""\
             <logicTreeSet>
                 <logicTree logicTreeID="lt1"/>
             </logicTreeSet>
         """)
-        gmpe = self._whatever_gmpe_lt()
-        with self.assertRaises(logictree.ParsingError) as arc:
-            _TesteableLogicTree('screwed_schm', 'gmpe',
-                                {'screwed_schm': source, 'gmpe': gmpe}, 'base')
-        exc = arc.exception
-        self.assertEqual(exc.filename, 'screwed_schm')
-        self.assertEqual(exc.basepath, 'base')
+        exc = self._assert_logic_tree_error(
+            'screwed_schema', {'screwed_schema': source}, 'base',
+            logictree.ParsingError
+        )
         error = "'{http://openquake.org/xmlns/nrml/0.2}logicTreeSet': " \
                 "This element is not expected."
         self.assertTrue(error in exc.message,
                         "wrong exception message: %s" % exc.message)
 
     def test_missing_source_model_file(self):
-        source = self._make_nrml("""\
+        source = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -184,17 +202,16 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
             </logicTree>
         """)
-        gmpe = self._whatever_gmpe_lt()
-        with self.assertRaises(logictree.ParsingError) as arc:
-            _TesteableLogicTree('logictree', 'gmpe',
-                                {'logictree': source, 'gmpe': gmpe}, 'base')
-        exc = arc.exception
+        exc = self._assert_logic_tree_error(
+            'logictree', {'logictree': source}, 'base',
+            logictree.ParsingError, exc_filename='source_model1.xml'
+        )
         error = "[Errno 2] No such file or directory: 'base/source_model1.xml'"
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
 
     def test_wrong_uncert_type_on_first_branching_level(self):
-        source = self._make_nrml("""\
+        source = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="bGRRelative"
@@ -207,13 +224,10 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
             </logicTree>
         """)
-        gmpe = self._whatever_gmpe_lt()
-        with self.assertRaises(logictree.ValidationError) as arc:
-            _TesteableLogicTree('logictree', 'gmpe',
-                                {'logictree': source, 'gmpe': gmpe}, 'base')
-        exc = arc.exception
-        self.assertEqual(exc.filename, 'logictree')
-        self.assertEqual(exc.basepath, 'base')
+        exc = self._assert_logic_tree_error(
+            'logictree', {'logictree': source}, 'base',
+            logictree.ValidationError
+        )
         self.assertEqual(exc.lineno, 4)
         error = 'first branchset must define an uncertainty ' \
                 'of type "sourceModel"'
@@ -221,7 +235,7 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
                         "wrong exception message: %s" % exc.message)
 
     def test_source_model_uncert_on_wrong_level(self):
-        lt = self._make_nrml("""\
+        lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -243,15 +257,11 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
             </logicTree>
         """)
-        sm = self._whatever_sourcemodel()
-        gmpe = self._whatever_gmpe_lt()
-        with self.assertRaises(logictree.ValidationError) as arc:
-            _TesteableLogicTree('lt', 'gmpe',
-                                {'lt': lt, 'sm1': sm, 'sm2': sm, 'gmpe': gmpe},
-                                'base')
-        exc = arc.exception
-        self.assertEqual(exc.filename, 'lt')
-        self.assertEqual(exc.basepath, 'base')
+        sm = _whatever_sourcemodel()
+        exc = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm1': sm, 'sm2': sm}, 'base',
+            logictree.ValidationError
+        )
         self.assertEqual(exc.lineno, 13)
         error = 'uncertainty of type "sourceModel" can be defined ' \
                 'on first branchset only'
@@ -259,7 +269,7 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
                         "wrong exception message: %s" % exc.message)
 
     def test_two_branchsets_on_first_level(self):
-        lt = self._make_nrml("""\
+        lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -279,22 +289,18 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
             </logicTree>
         """)
-        sm = self._whatever_sourcemodel()
-        gmpe = self._whatever_gmpe_lt()
-        with self.assertRaises(logictree.ValidationError) as arc:
-            _TesteableLogicTree('lt', 'gmpe',
-                                {'lt': lt, 'sm1': sm, 'sm2': sm, 'gmpe': gmpe},
-                                'base')
-        exc = arc.exception
-        self.assertEqual(exc.filename, 'lt')
-        self.assertEqual(exc.basepath, 'base')
+        sm = _whatever_sourcemodel()
+        exc = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm1': sm, 'sm2': sm}, 'base',
+            logictree.ValidationError
+        )
         self.assertEqual(exc.lineno, 11)
         error = 'there must be only one branch set on first branching level'
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
 
     def test_branch_id_not_unique(self):
-        lt = self._make_nrml("""\
+        lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -311,21 +317,17 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
             </logicTree>
         """)
-        sm = self._whatever_sourcemodel()
-        gmpe = self._whatever_gmpe_lt()
-        with self.assertRaises(logictree.ValidationError) as arc:
-            _TesteableLogicTree('lt', 'gmpe',
-                                {'lt': lt, 'sm1': sm, 'sm2': sm, 'gmpe': gmpe},
-                                '/bz')
-        exc = arc.exception
-        self.assertEqual(exc.filename, 'lt')
-        self.assertEqual(exc.basepath, '/bz')
+        sm = _whatever_sourcemodel()
+        exc = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm1': sm, 'sm2': sm}, '/bz',
+            logictree.ValidationError
+        )
         self.assertEqual(exc.lineno, 9)
         self.assertEqual(exc.message, "branchID 'b1' is not unique",
                         "wrong exception message: %s" % exc.message)
 
     def test_branches_weight_wrong_sum(self):
-        lt = self._make_nrml("""\
+        lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -342,21 +344,17 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
             </logicTree>
         """)
-        sm = self._whatever_sourcemodel()
-        gmpe = self._whatever_gmpe_lt()
-        with self.assertRaises(logictree.ValidationError) as arc:
-            _TesteableLogicTree('lo', 'gmpe',
-                                {'lo': lt, 'sm1': sm, 'sm2': sm, 'gmpe': gmpe},
-                                'base')
-        exc = arc.exception
-        self.assertEqual(exc.filename, 'lo')
-        self.assertEqual(exc.basepath, 'base')
+        sm = _whatever_sourcemodel()
+        exc = self._assert_logic_tree_error(
+            'lo', {'lo': lt, 'sm1': sm, 'sm2': sm}, 'base',
+            logictree.ValidationError
+        )
         self.assertEqual(exc.lineno, 4)
         self.assertEqual(exc.message, "branchset weights don't sum up to 1.0",
                         "wrong exception message: %s" % exc.message)
 
     def test_apply_to_nonexistent_branch(self):
-        lt = self._make_nrml("""\
+        lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -379,20 +377,15 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
             </logicTree>
         """)
-        sm = self._whatever_sourcemodel()
-        gmpe = self._whatever_gmpe_lt()
-        with self.assertRaises(logictree.ValidationError) as arc:
-            _TesteableLogicTree('lt', 'gmpe',
-                                {'lt': lt, 'sm': sm, 'gmpe': gmpe}, 'base')
-        exc = arc.exception
-        self.assertEqual(exc.filename, 'lt')
-        self.assertEqual(exc.basepath, 'base')
+        sm = _whatever_sourcemodel()
+        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
+                                            logictree.ValidationError)
         self.assertEqual(exc.lineno, 14)
         self.assertEqual(exc.message, "branch 'mssng' is not yet defined",
                         "wrong exception message: %s" % exc.message)
 
     def test_apply_to_occupied_branch(self):
-        lt = self._make_nrml("""\
+        lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -423,21 +416,16 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
             </logicTree>
         """)
-        sm = self._whatever_sourcemodel()
-        gmpe = self._whatever_gmpe_lt()
-        with self.assertRaises(logictree.ValidationError) as arc:
-            _TesteableLogicTree('lt', 'gmpe',
-                                {'lt': lt, 'sm': sm, 'gmpe': gmpe}, 'base')
-        exc = arc.exception
-        self.assertEqual(exc.filename, 'lt')
-        self.assertEqual(exc.basepath, 'base')
+        sm = _whatever_sourcemodel()
+        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
+                                            logictree.ValidationError)
         self.assertEqual(exc.lineno, 22)
         error = "branch 'b1' already has child branchset"
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
 
     def test_ab_gr_absolute_wrong_format(self):
-        lt = self._make_nrml("""\
+        lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -450,6 +438,7 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
               <logicTreeBranchingLevel branchingLevelID="bl2">
                 <logicTreeBranchSet uncertaintyType="abGRAbsolute"
+                                    applyToSources="src01"
                                     branchSetID="bs1">
                   <logicTreeBranch branchID="b2">
                     <uncertaintyModel>123.45</uncertaintyModel>
@@ -459,21 +448,16 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
             </logicTree>
         """)
-        sm = self._whatever_sourcemodel()
-        gmpe = self._whatever_gmpe_lt()
-        with self.assertRaises(logictree.ValidationError) as arc:
-            _TesteableLogicTree('lt', 'gmpe',
-                                {'lt': lt, 'sm': sm, 'gmpe': gmpe}, 'base')
-        exc = arc.exception
-        self.assertEqual(exc.filename, 'lt')
-        self.assertEqual(exc.basepath, 'base')
-        self.assertEqual(exc.lineno, 15)
+        sm = _whatever_sourcemodel()
+        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
+                                            logictree.ValidationError)
+        self.assertEqual(exc.lineno, 16)
         error = 'expected two float values separated by space'
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
 
     def test_b_gr_relative_wrong_format(self):
-        lt = self._make_nrml("""\
+        lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -495,20 +479,15 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
             </logicTree>
         """)
-        sm = self._whatever_sourcemodel()
-        gmpe = self._whatever_gmpe_lt()
-        with self.assertRaises(logictree.ValidationError) as arc:
-            _TesteableLogicTree('lt', 'gmpe',
-                                {'lt': lt, 'sm': sm, 'gmpe': gmpe}, 'base')
-        exc = arc.exception
-        self.assertEqual(exc.filename, 'lt')
-        self.assertEqual(exc.basepath, 'base')
+        sm = _whatever_sourcemodel()
+        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
+                                            logictree.ValidationError)
         self.assertEqual(exc.lineno, 15)
         self.assertEqual(exc.message, 'expected single float value',
                         "wrong exception message: %s" % exc.message)
 
     def test_source_model_invalid_xml(self):
-        source = self._make_nrml("""\
+        lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -522,16 +501,14 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
             </logicTree>
         """)
         sm = """ololo"""
-        gmpe = self._whatever_gmpe_lt()
-        with self.assertRaises(logictree.ParsingError) as arc:
-            _TesteableLogicTree('lt', 'gmpe',
-                                {'lt': source, 'sm': sm, 'gmpe': gmpe}, 'base')
-        exc = arc.exception
+        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
+                                            logictree.ParsingError,
+                                            exc_filename='sm')
         self.assertEqual(exc.message, "Document is empty, line 1, column 1",
                         "wrong exception message: %s" % exc.message)
 
     def test_source_model_schema_violation(self):
-        source = self._make_nrml("""\
+        lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -544,7 +521,7 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
             </logicTree>
         """)
-        sm = self._make_nrml("""\
+        sm = _make_nrml("""\
         <sourceModel gml:id="sm1">
             <config/>
             <simpleFaultSource gml:id="src01">
@@ -571,16 +548,14 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
             </simpleFaultSource>
         </sourceModel>
         """)
-        gmpe = self._whatever_gmpe_lt()
-        with self.assertRaises(logictree.ParsingError) as arc:
-            _TesteableLogicTree('lt', 'gmpe',
-                                {'lt': source, 'sm': sm, 'gmpe': gmpe}, 'base')
-        exc = arc.exception
+        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, '/x',
+                                            logictree.ParsingError,
+                                            exc_filename='sm')
         self.assertTrue("is not an element of the set" in exc.message,
                         "wrong exception message: %s" % exc.message)
 
     def test_referencing_over_level_boundaries(self):
-        lt = self._make_nrml("""\
+        lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -617,23 +592,19 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
             </logicTree>
         """)
-        sm = self._whatever_sourcemodel()
-        gmpe = self._whatever_gmpe_lt()
-        with self.assertRaises(logictree.ValidationError) as arc:
-            _TesteableLogicTree('lt', 'gmpe',
-                                {'lt': lt, 'sm1': sm, 'sm2': sm, 'gmpe': gmpe},
-                                'base')
-        exc = arc.exception
-        self.assertEqual(exc.filename, 'lt')
-        self.assertEqual(exc.basepath, 'base')
+        sm = _whatever_sourcemodel()
+        exc = self._assert_logic_tree_error(
+            'lt', {'lt': lt, 'sm1': sm, 'sm2': sm}, 'base',
+            logictree.ValidationError
+        )
         self.assertEqual(exc.lineno, 28)
         error = 'applyToBranches must reference only branches ' \
                 'from previous branching level'
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
 
-    def test_gmpe_uncertainty_in_logic_tree(self):
-        lt = self._make_nrml("""\
+    def test_gmpe_uncertainty(self):
+        lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -655,14 +626,9 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
             </logicTree>
         """)
-        sm = self._whatever_sourcemodel()
-        gmpe = self._whatever_gmpe_lt()
-        with self.assertRaises(logictree.ValidationError) as arc:
-            _TesteableLogicTree('lt', 'gmpe',
-                                {'lt': lt, 'sm': sm, 'gmpe': gmpe}, 'base')
-        exc = arc.exception
-        self.assertEqual(exc.filename, 'lt')
-        self.assertEqual(exc.basepath, 'base')
+        sm = _whatever_sourcemodel()
+        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
+                                            logictree.ValidationError)
         self.assertEqual(exc.lineno, 13)
         error = 'uncertainty of type "gmpeModel" is not allowed ' \
                 'in source model logic tree'
@@ -674,7 +640,7 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
                    'applyToTectonicRegionType="Active Shallow Crust"',
                    'applyToSourceType="point"')
         for filter_ in filters:
-            lt = self._make_nrml("""\
+            lt = _make_nrml("""\
                 <logicTree logicTreeID="lt1">
                   <logicTreeBranchingLevel branchingLevelID="bl1">
                     <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -687,21 +653,17 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
                   </logicTreeBranchingLevel>
                 </logicTree>
             """ % filter_)
-            sm = self._whatever_sourcemodel()
-            gmpe = self._whatever_gmpe_lt()
-            with self.assertRaises(logictree.ValidationError) as arc:
-                _TesteableLogicTree('lt', 'gmpe',
-                                    {'lt': lt, 'sm': sm, 'gmpe': gmpe}, 'base')
-            exc = arc.exception
-            self.assertEqual(exc.filename, 'lt')
-            self.assertEqual(exc.basepath, 'base')
+            sm = _whatever_sourcemodel()
+            exc = self._assert_logic_tree_error(
+                'lt', {'lt': lt, 'sm': sm}, 'base', logictree.ValidationError
+            )
             self.assertEqual(exc.lineno, 4)
             error = 'filters are not allowed on source model uncertainty'
             self.assertEqual(exc.message, error,
                             "wrong exception message: %s" % exc.message)
 
     def test_referencing_nonexistent_source(self):
-        lt = self._make_nrml("""\
+        lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -724,21 +686,16 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
             </logicTree>
         """)
-        sm = self._whatever_sourcemodel()
-        gmpe = self._whatever_gmpe_lt()
-        with self.assertRaises(logictree.ValidationError) as arc:
-            _TesteableLogicTree('lt', 'gmpe',
-                                {'lt': lt, 'sm': sm, 'gmpe': gmpe}, 'base')
-        exc = arc.exception
-        self.assertEqual(exc.filename, 'lt')
-        self.assertEqual(exc.basepath, 'base')
+        sm = _whatever_sourcemodel()
+        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
+                                            logictree.ValidationError)
         self.assertEqual(exc.lineno, 14)
         error = "source ids ['bzzz'] are not defined in source models"
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
 
     def test_referencing_nonexistent_tectonic_region_type(self):
-        lt = self._make_nrml("""\
+        lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -761,14 +718,9 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
             </logicTree>
         """)
-        sm = self._whatever_sourcemodel()
-        gmpe = self._whatever_gmpe_lt()
-        with self.assertRaises(logictree.ValidationError) as arc:
-            _TesteableLogicTree('lt', 'gmpe',
-                                {'lt': lt, 'sm': sm, 'gmpe': gmpe}, 'base')
-        exc = arc.exception
-        self.assertEqual(exc.filename, 'lt')
-        self.assertEqual(exc.basepath, 'base')
+        sm = _whatever_sourcemodel()
+        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
+                                            logictree.ValidationError)
         self.assertEqual(exc.lineno, 14)
         error = "source models don't define sources of " \
                 "tectonic region type 'Volcanic'"
@@ -776,7 +728,7 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
                         "wrong exception message: %s" % exc.message)
 
     def test_referencing_nonexistent_source_type(self):
-        lt = self._make_nrml("""\
+        lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -799,21 +751,16 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
             </logicTree>
         """)
-        sm = self._whatever_sourcemodel()
-        gmpe = self._whatever_gmpe_lt()
-        with self.assertRaises(logictree.ValidationError) as arc:
-            _TesteableLogicTree('lt', 'gmpe',
-                                {'lt': lt, 'sm': sm, 'gmpe': gmpe}, 'base')
-        exc = arc.exception
-        self.assertEqual(exc.filename, 'lt')
-        self.assertEqual(exc.basepath, 'base')
+        sm = _whatever_sourcemodel()
+        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
+                                            logictree.ValidationError)
         self.assertEqual(exc.lineno, 14)
         error = "source models don't define sources of type 'complexFault'"
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
 
     def test_more_than_one_filters_on_one_branchset(self):
-        lt = self._make_nrml("""\
+        lt = _make_nrml("""\
             <logicTree logicTreeID="lt1">
               <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -838,14 +785,9 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
               </logicTreeBranchingLevel>
             </logicTree>
         """)
-        sm = self._whatever_sourcemodel()
-        gmpe = self._whatever_gmpe_lt()
-        with self.assertRaises(logictree.ValidationError) as arc:
-            _TesteableLogicTree('lt', 'gmpe',
-                                {'lt': lt, 'sm': sm, 'gmpe': gmpe}, 'base')
-        exc = arc.exception
-        self.assertEqual(exc.filename, 'lt')
-        self.assertEqual(exc.basepath, 'base')
+        sm = _whatever_sourcemodel()
+        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
+                                            logictree.ValidationError)
         self.assertEqual(exc.lineno, 16)
         error = 'only one filter is allowed per branchset'
         self.assertEqual(exc.message, error,
@@ -859,7 +801,7 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
                    'applyToSourceType="simpleFault"')
         for uncertainty, value in uncertainties_and_values:
             for filter_ in filters:
-                lt = self._make_nrml("""\
+                lt = _make_nrml("""\
                     <logicTree logicTreeID="lt1">
                       <logicTreeBranchingLevel branchingLevelID="bl1">
                         <logicTreeBranchSet uncertaintyType="sourceModel"
@@ -881,61 +823,52 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
                       </logicTreeBranchingLevel>
                     </logicTree>
                 """ % (uncertainty, filter_, value))
-                sm = self._whatever_sourcemodel()
-                gmpe = self._whatever_gmpe_lt()
-                with self.assertRaises(logictree.ValidationError) as arc:
-                    _TesteableLogicTree('lt', 'gmpe',
-                                        {'lt': lt, 'sm': sm, 'gmpe': gmpe},
-                                        'base')
-                exc = arc.exception
-                self.assertEqual(exc.filename, 'lt')
-                self.assertEqual(exc.basepath, 'base')
+                sm = _whatever_sourcemodel()
+                exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm},
+                                                    'base',
+                                                    logictree.ValidationError)
                 self.assertEqual(exc.lineno, 13)
                 error = "uncertainty of type %r must define 'applyToSources'" \
                         " with only one source id" % uncertainty
                 self.assertEqual(exc.message, error,
                                 "wrong exception message: %s" % exc.message)
 
-    def test_nonexistent_gmpe_logictree(self):
-        lt = self._whatever_sourcemodel_lt('sm')
-        sm = self._whatever_sourcemodel()
-        with self.assertRaises(logictree.ParsingError) as arc:
-            _TesteableLogicTree('lt', 'missing', {'lt': lt, 'sm': sm}, 'base')
+
+class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
+    def _assert_logic_tree_error(self, filename, content, basepath,
+                                 tectonic_region_types,
+                                 exc_class=logictree.LogicTreeError):
+        with self.assertRaises(exc_class) as arc:
+            _TesteableGMPELogicTree(filename, content, basepath,
+                                    tectonic_region_types)
         exc = arc.exception
-        self.assertEqual(exc.filename, 'missing')
-        self.assertEqual(exc.basepath, 'base')
+        self.assertEqual(exc.filename, filename)
+        self.assertEqual(exc.basepath, basepath)
+        return exc
+
+    def test_nonexistent_file(self):
+        exc = self._assert_logic_tree_error('missing', None, 'base', set(),
+                                            logictree.ParsingError)
         error = "[Errno 2] No such file or directory: 'base/missing'"
         self.assertEqual(exc.message, error,
                          "wrong exception message: %s" % exc.message)
 
-    def test_gmpe_logictree_invalid_xml(self):
-        lt = self._whatever_sourcemodel_lt('sm')
-        sm = self._whatever_sourcemodel()
+    def test_invalid_xml(self):
         gmpe = """zxc<nrml></nrml>"""
-        with self.assertRaises(logictree.ParsingError) as arc:
-            _TesteableLogicTree('lt', 'gmpe',
-                                {'gmpe': gmpe, 'lt': lt, 'sm': sm}, 'base')
-        exc = arc.exception
-        self.assertEqual(exc.filename, 'gmpe')
-        self.assertEqual(exc.basepath, 'base')
+        exc = self._assert_logic_tree_error('gmpe', gmpe, 'base', set(),
+                                            logictree.ParsingError)
         self.assertTrue(exc.message.startswith('Start tag expected'),
                         "wrong exception message: %s" % exc.message)
 
-    def test_gmpe_logictree_schema_violation(self):
-        lt = self._whatever_sourcemodel_lt('sm')
-        sm = self._whatever_sourcemodel()
-        gmpe = self._make_nrml("<logicTree></logicTree>")
-        with self.assertRaises(logictree.ParsingError) as arc:
-            _TesteableLogicTree('lt', 'gmpe',
-                                {'lt': lt, 'gmpe': gmpe, 'sm': sm}, 'base')
-        exc = arc.exception
-        self.assertEqual(exc.filename, 'gmpe')
-        self.assertEqual(exc.basepath, 'base')
+    def test_schema_violation(self):
+        gmpe = _make_nrml("<logicTree></logicTree>")
+        exc = self._assert_logic_tree_error('gmpe', gmpe, '/root', set(),
+                                            logictree.ParsingError)
         self.assertTrue("attribute 'logicTreeID' is required" in exc.message,
                         "wrong exception message: %s" % exc.message)
 
-    def test_gmpe_logictree_wrong_uncertainty_type(self):
-        gmpe = self._make_nrml("""\
+    def test_wrong_uncertainty_type(self):
+        gmpe = _make_nrml("""\
         <logicTree logicTreeID="lt1">
             <logicTreeBranchingLevel branchingLevelID="bl1">
                 <logicTreeBranchSet uncertaintyType="bGRRelative"
@@ -948,16 +881,59 @@ class LogicTreeBrokenInputTestCase(unittest.TestCase):
             </logicTreeBranchingLevel>
         </logicTree>
         """)
-        lt = self._whatever_sourcemodel_lt('sm')
-        sm = self._whatever_sourcemodel()
-        with self.assertRaises(logictree.ValidationError) as arc:
-            _TesteableLogicTree('lt', 'gmpe',
-                                {'lt': lt, 'gmpe': gmpe, 'sm': sm}, 'base')
-        exc = arc.exception
-        self.assertEqual(exc.filename, 'gmpe')
-        self.assertEqual(exc.basepath, 'base')
-        error = 'branchsets in gmpe logic tree must define uncertainties ' \
-                'of type "gmpeModel"'
+        exc = self._assert_logic_tree_error('gmpe', gmpe, 'base', set(),
+                                            logictree.ValidationError)
+        error = 'only uncertainties of type "gmpeModel" are allowed ' \
+                'in gmpe logic tree'
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
+        self.assertEqual(exc.lineno, 4)
 
+    def test_two_branchsets_in_one_level(self):
+        gmpe = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                    branchSetID="bs1">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>CL_2002_AttenRel</uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                    branchSetID="bs2">
+                    <logicTreeBranch branchID="b2">
+                        <uncertaintyModel>CB_2008_AttenRel</uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        exc = self._assert_logic_tree_error('gmpe', gmpe, 'base', set(),
+                                            logictree.ValidationError)
+        error = 'only one branchset on each branching level is allowed ' \
+                'in gmpe logic tree'
+        self.assertEqual(exc.message, error,
+                        "wrong exception message: %s" % exc.message)
+        self.assertEqual(exc.lineno, 11)
+
+    def test_unavailable_gmpe(self):
+        gmpe = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                    branchSetID="bs1">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>no-such-gmpe</uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        exc = self._assert_logic_tree_error('gmpe', gmpe, 'base', set(),
+                                            logictree.ValidationError)
+        self.assertEqual(exc.message, "gmpe 'no-such-gmpe' is not available",
+                        "wrong exception message: %s" % exc.message)
+        self.assertEqual(exc.lineno, 6)
