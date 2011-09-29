@@ -79,6 +79,10 @@ class ValidatorSet(object):
     def __init__(self):
         self.validators = []
 
+    def __iter__(self):
+        for v in self.validators:
+            yield v
+
     def is_valid(self):
         """Return true if all validators defined in this set
         are valid, false otherwise.
@@ -335,13 +339,12 @@ class BasicParameterValidator(object):
                     value = to_float_array(value)
                 elif param.type is CharArrayField:
                     description = 'string array value'
-                    value = to_str_array(value)
 
-                    # if there is a 'to_db' transform,
-                    # apply it to each element in the list
+                    # before converting to an array of strings,
+                    # transform the value to appropriate db input
                     if param.to_db is not None:
-                        value = [param.to_db(v) for v in value]
-
+                        value = param.to_db(value)
+                    value = to_str_array(value)
                 elif param.type is models.FloatField:
                     description = 'floating point value'
                     value = float(value)
@@ -351,7 +354,6 @@ class BasicParameterValidator(object):
                 elif param.to_db is not None:
                     description = 'value'
                     value = param.to_db(value)
-
                 else:
                     raise RuntimeError(
                         "Invalid parameter type %s for parameter %s" % (
@@ -393,7 +395,7 @@ def default_validators(sections, params):
     validators.add(parameter)
     validators.add(file_path)
 
-    #if params.get(CALCULATION_MODE) == DISAGGREGATION_MODE:
-    #    validators.add(DisaggregationValidator(params))
+    if params.get(CALCULATION_MODE) == DISAGGREGATION_MODE:
+        validators.add(DisaggregationValidator(params))
 
     return validators
