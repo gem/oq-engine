@@ -297,6 +297,7 @@ COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
 COMMENT ON COLUMN uiapi.input.path IS 'The full path of the input file on the server';
 COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 
+COMMENT ON TABLE uiapi.input_set IS 'The set of input files for a job';
 
 COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
 COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
