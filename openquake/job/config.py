@@ -243,7 +243,6 @@ class DisaggregationValidator(object):
             msg = "Invalid bin limits: %s. %s" % (limits, err)
             raise ValueError(msg)
 
-
     def is_valid(self):
         """Check if parameters are valid for a Disaggregation calculation.
 
