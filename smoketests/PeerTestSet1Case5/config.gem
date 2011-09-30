@@ -4,9 +4,11 @@ CALCULATION_MODE = Classical
 
 # NOTE: The order of the vertices is to be kept!!!
 # lat, lon of polygon vertices (in clock or counter-clock wise order)
-REGION_VERTEX = 38.113,-122.000, 38.113,-122.000, 38.113,-122.000, 38.113,-122.000
+# REGION_VERTEX = 38.113,-122.000, 38.113,-122.000, 38.113,-122.000, 38.113,-122.000
 # degrees
-REGION_GRID_SPACING = 0.1
+# REGION_GRID_SPACING = 0.1
+
+SITES = 38.113, -122.000, 38.113, -122.114, 38.111, -122.570, 38.000, -122.000, 37.910, -122.000, 38.225, -122.000, 38.113, -121.886
 
 [HAZARD]
 
