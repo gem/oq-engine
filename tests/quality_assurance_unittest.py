@@ -51,6 +51,9 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         self._compare_results_for(job, expected_results)
 
     def _compare_results_for(self, job, expected_results):
+        """Compare the expected results with the results
+        computed by the given job."""
+
         job_db = models.OqJob.objects.get(id=job.job_id)
 
         for site, curve in expected_results.items():
