@@ -201,8 +201,10 @@ def get_source_models(logic_tree):
     uncert_mdl_tag = xml.NRML + 'uncertaintyModel'
 
     for _event, elem in etree.iterparse(logic_tree):
-        if elem.tag == uncert_mdl_tag and elem.text.endswith('.xml'):
-            model_files.append(os.path.join(base_path, elem.text))
+        if elem.tag == uncert_mdl_tag:
+            e_text = elem.text.strip()
+            if e_text.endswith('.xml'):
+                model_files.append(os.path.join(base_path, e_text))
 
     return model_files
 
