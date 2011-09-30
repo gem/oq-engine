@@ -29,6 +29,7 @@ from datetime import datetime
 from django.db import transaction, close_connection
 from django.contrib.gis.db import models
 from django.contrib.gis.geos import GEOSGeometry
+from lxml import etree
 
 from openquake import flags
 from openquake import java
@@ -36,6 +37,7 @@ from openquake import kvs
 from openquake import logs
 from openquake import OPENQUAKE_ROOT
 from openquake import shapes
+from openquake import xml
 from openquake.parser import exposure
 from openquake.db.models import (
     OqJob, OqParams, OqUser, JobStats, InputSet, Input, FloatArrayField)
@@ -183,24 +185,24 @@ def prepare_config_parameters(params, sections):
 
 
 def get_source_models(logic_tree):
-    """Returns the source models soft-linked by the given logic treee"""
+    """Returns the source models soft-linked by the given logic tree.
+
+    :param str logic_tree: path to a source model logic tree file
+    :returns: list of source model file paths
+    """
 
     # can be removed if we don't support .inp files
     if not logic_tree.endswith('.xml'):
         return []
 
     base_path = os.path.dirname(os.path.abspath(logic_tree))
-    parser = java.jclass('LogicTreeReader')(logic_tree)
-    tree_map = parser.read()
     model_files = []
 
-    for tree in tree_map.values():
-        for level in tree.getBranchingLevels():
-            for branch in level.getBranchList():
-                model = branch.getNameInputFile()
+    uncert_mdl_tag = xml.NRML + 'uncertaintyModel'
 
-                if model:
-                    model_files.append(os.path.join(base_path, model))
+    for _event, elem in etree.iterparse(logic_tree):
+        if elem.tag == uncert_mdl_tag and elem.text.endswith('.xml'):
+            model_files.append(os.path.join(base_path, elem.text))
 
     return model_files
 
