@@ -1,0 +1,122 @@
+[general]
+
+CALCULATION_MODE = Classical
+
+# NOTE: The order of the vertices is to be kept!!!
+# lat, lon of polygon vertices (in clock or counter-clock wise order)
+REGION_VERTEX = 38.113,-122.000, 38.113,-122.000, 38.113,-122.000, 38.113,-122.000
+# degrees
+REGION_GRID_SPACING = 0.1
+
+[HAZARD]
+
+SOURCE_MODEL_LT_RANDOM_SEED = 23
+GMPE_LT_RANDOM_SEED = 5
+GMF_RANDOM_SEED = 3
+
+# file containing erf logic tree structure
+SOURCE_MODEL_LOGIC_TREE_FILE = source_model_logic_tree.xml
+# file containing gmpe logic tree structure
+GMPE_LOGIC_TREE_FILE = gmpe_logic_tree.xml
+# output directory - relative to this file
+OUTPUT_DIR = computed_output
+
+
+# moment magnitude (Mw)
+MINIMUM_MAGNITUDE = 5.0
+# years
+INVESTIGATION_TIME = 1.0
+# maximum integration distance (km)
+MAXIMUM_DISTANCE = 200.0
+# bin width of the magnitude frequency distribution
+WIDTH_OF_MFD_BIN = 0.1
+
+
+# (Average Horizontal, Average Horizontal (GMRotI50), Random Horizontal, Greater of Two Horz., Vertical)
+COMPONENT = Average Horizontal
+# (PGA (g), PGD (cm), PGV (cm/s), SA (g))
+INTENSITY_MEASURE_TYPE = PGA
+# seconds, used only for Spectral Acceleration
+PERIOD = 0.0
+# in percent
+DAMPING = 5.0
+# (in the same units of the intensity measure type)
+# TODO make it a comma separated list and adapt code (CalculatorConfigHelper.makeArbitrarilyDiscretizedFunc())
+INTENSITY_MEASURE_LEVELS = 0.001, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.7, 0.8, 0.9, 1.0
+# (None, 1 Sided, 2 Sided)
+GMPE_TRUNCATION_TYPE = 2 Sided
+# (1,2,3,...)
+TRUNCATION_LEVEL = 3
+# (Total, Inter-Event, Intra-Event, None (zero), Total (Mag Dependent), Total (PGA Dependent), Intra-Event (Mag Dependent))
+STANDARD_DEVIATION_TYPE = None (zero)
+# (m/s)
+REFERENCE_VS30_VALUE = 760.0
+# The depth to where shear-wave velocity = 2.5 km/sec.
+# Cambpell basin depth. Measure is (km)
+REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM = 5.0
+
+# Rock, Deep-Soil
+SADIGH_SITE_TYPE = Rock
+# if true compute ground motion fields using correlated model of Jayaram and Baker 2009
+GROUND_MOTION_CORRELATION = true
+
+# true or false
+INCLUDE_AREA_SOURCES = true
+# (Point Sources, Line Sources (random or given strike), Cross Hair Line Sources, 16 Spoked Line Sources)
+TREAT_AREA_SOURCE_AS = Point Sources
+# degrees
+AREA_SOURCE_DISCRETIZATION = 0.1
+# (W&C 1994 Mag-Length Rel.)
+AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP = W&C 1994 Mag-Length Rel.
+
+
+# true or false
+INCLUDE_GRID_SOURCES = true
+# (Point Sources, Line Sources (random or given strike), Cross Hair Line Sources, 16 Spoked Line Sources)
+TREAT_GRID_SOURCE_AS = Point Sources
+# (W&C 1994 Mag-Length Rel.)
+GRID_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP = W&C 1994 Mag-Length Rel.
+
+
+# true or false
+INCLUDE_FAULT_SOURCE = true
+# km
+FAULT_RUPTURE_OFFSET = 1.0
+# km
+FAULT_SURFACE_DISCRETIZATION = 1.0
+# (W&C 1994 Mag-Length Rel.)
+FAULT_MAGNITUDE_SCALING_RELATIONSHIP = PEER Tests Mag-Area Rel.
+FAULT_MAGNITUDE_SCALING_SIGMA = 0.0
+# (rupture length/rupture width)
+RUPTURE_ASPECT_RATIO = 2.0
+# (Only along strike ( rupture full DDW), Along strike and down dip, Along strike & centered down dip)
+RUPTURE_FLOATING_TYPE = Along strike and down dip
+
+
+# true or false
+INCLUDE_SUBDUCTION_FAULT_SOURCE = true
+# km
+SUBDUCTION_FAULT_RUPTURE_OFFSET = 10.0
+# km
+SUBDUCTION_FAULT_SURFACE_DISCRETIZATION = 10.0
+# (W&C 1994 Mag-Length Rel.)
+SUBDUCTION_FAULT_MAGNITUDE_SCALING_RELATIONSHIP = W&C 1994 Mag-Length Rel.
+SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA = 0.0
+# (rupture length/rupture width)
+SUBDUCTION_RUPTURE_ASPECT_RATIO = 1.5
+# (Only along strike ( rupture full DDW), Along strike and down dip, Along strike & centered down dip)
+SUBDUCTION_RUPTURE_FLOATING_TYPE = Along strike and down dip
+
+NUMBER_OF_LOGIC_TREE_SAMPLES = 1
+# (used if probabilistic event based approach is chosen)
+NUMBER_OF_SEISMICITY_HISTORIES = 1
+
+# List of quantiles to compute
+QUANTILE_LEVELS = 
+
+# Compute mean hazard curve
+COMPUTE_MEAN_HAZARD_CURVE = true
+
+# List of POEs to use for computing hazard maps
+POES_HAZARD_MAPS = 
+
