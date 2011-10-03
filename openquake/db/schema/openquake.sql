@@ -505,13 +505,22 @@ CREATE TABLE uiapi.upload (
 ) TABLESPACE uiapi_ts;
 
 
+-- Set of input files for an OpenQuake job
+CREATE TABLE uiapi.input_set (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL,
+    upload_id INTEGER,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE uiapi_ts;
+
+
 -- A single OpenQuake input file uploaded by the user
 CREATE TABLE uiapi.input (
     id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
-    upload_id INTEGER NOT NULL,
+    input_set_id INTEGER NOT NULL,
     -- The full path of the input file on the server
-    path VARCHAR NOT NULL UNIQUE,
+    path VARCHAR NOT NULL,
     -- Input file type, one of:
     --      source model file (source)
     --      source logic tree (lt_source)
@@ -527,6 +536,7 @@ CREATE TABLE uiapi.input (
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
+
 
 -- An OpenQuake engine run started by the user
 CREATE TABLE uiapi.oq_job (
@@ -575,7 +585,7 @@ CREATE TABLE uiapi.oq_params (
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
         CHECK(job_type IN ('classical', 'event_based', 'deterministic',
                            'disaggregation')),
-    upload_id INTEGER,
+    input_set_id INTEGER NOT NULL,
     region_grid_spacing float,
     min_magnitude float CONSTRAINT min_magnitude_set
         CHECK(
@@ -616,8 +626,8 @@ CREATE TABLE uiapi.oq_params (
     -- Probabilities of exceedence
     poes float[] CONSTRAINT poes_are_set
         CHECK(
-            ((job_type = 'classical') AND (poes IS NOT NULL))
-            OR ((job_type != 'classical') AND (poes IS NULL))),
+            ((job_type IN ('classical', 'disaggregation')) AND (poes IS NOT NULL))
+            OR ((job_type IN ('event_based', 'deterministic')) AND (poes IS NULL))),
     -- Number of logic tree samples
     realizations integer CONSTRAINT realizations_is_set
         CHECK(
@@ -631,8 +641,8 @@ CREATE TABLE uiapi.oq_params (
     -- ground motion correlation flag
     gm_correlated boolean CONSTRAINT gm_correlated_is_set
         CHECK(
-            ((job_type = 'classical') AND (gm_correlated IS NULL))
-            OR ((job_type != 'classical') AND (gm_correlated IS NOT NULL))),
+            ((job_type IN ('classical', 'disaggregation')) AND (gm_correlated IS NULL))
+            OR ((job_type IN ('event_based', 'deterministic')) AND (gm_correlated IS NOT NULL))),
     gmf_calculation_number integer CONSTRAINT gmf_calculation_number_is_set
         CHECK(
             ((job_type = 'deterministic')
@@ -674,7 +684,7 @@ CREATE TABLE uiapi.oq_params (
             ((job_type = 'classical')
              AND (compute_mean_hazard_curve IS NOT NULL))
             OR
-            ((job_type IN ('deterministic', 'event_based'))
+            ((job_type IN ('deterministic', 'event_based', 'disaggregation'))
              AND (compute_mean_hazard_curve IS NULL))),
     conditional_loss_poe float[],
     fault_magnitude_scaling_relationship VARCHAR
@@ -714,7 +724,7 @@ CREATE TABLE uiapi.oq_params (
         CHECK(
             (job_type IN ('deterministic', 'event_based'))
             OR
-            ((job_type = 'classical')
+            ((job_type IN ('classical', 'disaggregation'))
              AND (gmf_random_seed IS NULL))),
     gmpe_lt_random_seed integer
         CONSTRAINT gmpe_lt_random_seed_is_set
@@ -906,7 +916,74 @@ CREATE TABLE uiapi.oq_params (
             OR
             ((job_type = 'deterministic')
              AND (width_of_mfd_bin IS NULL))),
-
+    lat_bin_limits float[]
+        CONSTRAINT lat_bin_limits_valid
+        CHECK(
+            (((job_type = 'disaggregation')
+            AND (lat_bin_limits IS NOT NULL)
+            AND (-90 <= all(lat_bin_limits))
+            AND (90 >= all(lat_bin_limits))
+            OR
+            ((job_type != 'disaggregation')
+            AND (lat_bin_limits IS NULL))))),
+    lon_bin_limits float[]
+        CONSTRAINT lon_bin_limits_valid
+        CHECK(
+            (((job_type = 'disaggregation')
+            AND (lon_bin_limits IS NOT NULL)
+            AND (-180 <= all(lon_bin_limits))
+            AND (180 >= all(lon_bin_limits))
+            OR
+            ((job_type != 'disaggregation')
+            AND (lon_bin_limits IS NULL))))),
+    mag_bin_limits float[]
+        CONSTRAINT mag_bin_limits_is_set
+        CHECK(
+            ((job_type = 'disaggregation')
+            AND (mag_bin_limits IS NOT NULL))
+            OR
+            ((job_type != 'disaggregation')
+            AND (mag_bin_limits IS NULL))),
+    epsilon_bin_limits float[]
+        CONSTRAINT epsilon_bin_limits_is_set
+        CHECK(
+            ((job_type = 'disaggregation')
+            AND (epsilon_bin_limits IS NOT NULL))
+            OR
+            ((job_type != 'disaggregation')
+            AND (epsilon_bin_limits IS NULL))),
+    distance_bin_limits float[]
+        CONSTRAINT distance_bin_limits_is_set
+        CHECK(
+            ((job_type = 'disaggregation')
+            AND (distance_bin_limits IS NOT NULL))
+            OR
+            ((job_type != 'disaggregation')
+            AND (distance_bin_limits IS NULL))),
+    -- For disaggregation results, choose any (at least 1) of the following:
+    --      magpmf (Magnitude Probability Mass Function)
+    --      distpmf (Distance PMF)
+    --      trtpmf (Tectonic Region Type PMF)
+    --      magdistpmf (Magnitude-Distance PMF)
+    --      magdistepspmf (Magnitude-Distance-Epsilon PMF)
+    --      latlonpmf (Latitude-Longitude PMF)
+    --      latlonmagpmf (Latitude-Longitude-Magnitude PMF)
+    --      latlonmagepspmf (Latitude-Longitude-Magnitude-Epsilon PMF)
+    --      fulldisaggmatrix (The full disaggregation matrix; includes
+    --          Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
+    disagg_results VARCHAR[]
+        CONSTRAINT disagg_results_valid
+        CHECK(
+            (((job_type = 'disaggregation')
+            AND (disagg_results IS NOT NULL)
+            AND (disagg_results <@ ARRAY['magpmf', 'distpmf', 'trtpmf',
+                                         'magdistpmf', 'magdistepspmf',
+                                         'latlonpmf', 'latlonmagpmf',
+                                         'latlonmagepspmf',
+                                         'fulldisaggmatrix']::VARCHAR[]))
+            OR
+            ((job_type != 'disaggregation')
+            AND (disagg_results IS NULL)))),
     -- timestamp
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
@@ -1346,14 +1423,17 @@ FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 ALTER TABLE uiapi.upload ADD CONSTRAINT uiapi_upload_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.oq_params ADD CONSTRAINT uiapi_oq_params_upload_fk
-FOREIGN KEY (upload_id) REFERENCES uiapi.upload(id) ON DELETE RESTRICT;
+ALTER TABLE uiapi.oq_params ADD CONSTRAINT uiapi_oq_params_input_set_fk
+FOREIGN KEY (input_set_id) REFERENCES uiapi.input_set(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_upload_fk
-FOREIGN KEY (upload_id) REFERENCES uiapi.upload(id) ON DELETE RESTRICT;
+ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_input_set_fk
+FOREIGN KEY (input_set_id) REFERENCES uiapi.input_set(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_owner_fk
+ALTER TABLE uiapi.input_set ADD CONSTRAINT uiapi_input_set_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.input_set ADD CONSTRAINT uiapi_input_set_upload_fk
+FOREIGN KEY (upload_id) REFERENCES uiapi.upload(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;
@@ -1473,3 +1553,5 @@ CREATE TRIGGER oqmif_exposure_data_refresh_last_update_trig BEFORE UPDATE ON oqm
 CREATE TRIGGER riski_vulnerability_function_refresh_last_update_trig BEFORE UPDATE ON riski.vulnerability_function FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
 CREATE TRIGGER riski_vulnerability_model_refresh_last_update_trig BEFORE UPDATE ON riski.vulnerability_model FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER uiapi_input_set_refresh_last_update_trig BEFORE UPDATE ON uiapi.input_set FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
