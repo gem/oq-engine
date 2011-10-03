@@ -41,7 +41,6 @@ class ParamsTestCase(unittest.TestCase):
 
         self.assertEqual(self.EXPECTED, sequence_map_enum(test_input))
 
-
     def test_sequence_map_enum_mixed(self):
         """tests :function:`openquake.job.params.sequence_map_enum`
         with mixed delimiters (spaces and commas)."""
