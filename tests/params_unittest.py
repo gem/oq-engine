@@ -21,7 +21,7 @@ import unittest
 from openquake.job.params import sequence_map_enum
 
 
-def ParamsTestCase(unittest.TestCase):
+class ParamsTestCase(unittest.TestCase):
     """Tests for utilities in :module:`openquake.job.params`."""
 
     EXPECTED = 'magpmf, magdistpmf, magdistepspmf'
