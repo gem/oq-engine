@@ -22,6 +22,7 @@ Tests for python logic tree processor.
 
 import unittest
 from StringIO import StringIO
+from decimal import Decimal
 
 from openquake.input import logictree
 
@@ -1058,3 +1059,195 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
         self.assertEqual(exc.lineno, 1)
+
+
+class SourceModelLogicTreeTestCase(unittest.TestCase):
+    def assert_branch_equal(self, branch, branch_id, weight_str, value,
+                            child_branchset_args=None):
+        self.assertEqual(type(branch), logictree.Branch)
+        self.assertEqual(branch.branch_id, branch_id)
+        self.assertEqual(branch.weight, Decimal(weight_str))
+        self.assertEqual(branch.value, value)
+        if child_branchset_args is None:
+            self.assertEqual(branch.child_branchset, None)
+        else:
+            self.assert_branchset_equal(branch.child_branchset,
+                                        *child_branchset_args)
+
+    def assert_branchset_equal(self, branchset, uncertainty_type, filters,
+                               branches_args):
+        self.assertEqual(type(branchset), logictree.BranchSet)
+        self.assertEqual(branchset.uncertainty_type, uncertainty_type)
+        self.assertEqual(branchset.filters, filters)
+        self.assertEqual(len(branchset.branches), len(branches_args))
+        for branch, args in zip(branchset.branches, branches_args):
+            self.assert_branch_equal(branch, *args)
+
+    def test_only_source_models(self):
+        lt_source = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>sm1</uncertaintyModel>
+                        <uncertaintyWeight>0.6</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b2">
+                        <uncertaintyModel>sm2</uncertaintyModel>
+                        <uncertaintyWeight>0.4</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        sm = _whatever_sourcemodel()
+        lt = _TesteableSourceModelLogicTree(
+            'lt', {'lt': lt_source, 'sm1': sm, 'sm2': sm}, 'basepath'
+        )
+        self.assert_branchset_equal(lt.root_branchset, 'sourceModel', {},
+                                    [('b1', '0.6', 'sm1'),
+                                     ('b2', '0.4', 'sm2')])
+
+    def test_two_levels(self):
+        lt_source = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>sm</uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+            <logicTreeBranchingLevel branchingLevelID="bl2">
+                <logicTreeBranchSet uncertaintyType="maxMagGRRelative"
+                                    branchSetID="bs2">
+                    <logicTreeBranch branchID="b2">
+                        <uncertaintyModel>123</uncertaintyModel>
+                        <uncertaintyWeight>0.6</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b3">
+                        <uncertaintyModel>-123</uncertaintyModel>
+                        <uncertaintyWeight>0.4</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        sm = _whatever_sourcemodel()
+        lt = _TesteableSourceModelLogicTree('lt', {'lt': lt_source, 'sm': sm},
+                                            '/base')
+        self.assert_branchset_equal(lt.root_branchset,
+            'sourceModel', {},
+            [('b1', '1.0', 'sm',
+                ('maxMagGRRelative', {},
+                    [('b2', '0.6', +123),
+                     ('b3', '0.4', -123)])
+            )]
+        )
+
+    def test_filters(self):
+        lt_source = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>sm</uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+            <logicTreeBranchingLevel branchingLevelID="bl2">
+                <logicTreeBranchSet uncertaintyType="abGRAbsolute"
+                                    branchSetID="bs2"
+                                    applyToSources="src01">
+                    <logicTreeBranch branchID="b2">
+                        <uncertaintyModel>100 500</uncertaintyModel>
+                        <uncertaintyWeight>0.9</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b3">
+                        <uncertaintyModel>-1.23 +0.1</uncertaintyModel>
+                        <uncertaintyWeight>0.1</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        sm = _whatever_sourcemodel()
+        lt = _TesteableSourceModelLogicTree('lt', {'lt': lt_source, 'sm': sm},
+                                            '/base')
+        self.assert_branchset_equal(lt.root_branchset,
+            'sourceModel', {},
+            [('b1', '1.0', 'sm',
+                ('abGRAbsolute', {'applyToSources': ['src01']},
+                    [('b2', '0.9', (100, 500)),
+                     ('b3', '0.1', (-1.23, +0.1))])
+            )]
+        )
+
+    def test_apply_to_branches(self):
+        lt_source = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                    <logicTreeBranch branchID="sb1">
+                        <uncertaintyModel>sm1</uncertaintyModel>
+                        <uncertaintyWeight>0.6</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="sb2">
+                        <uncertaintyModel>sm2</uncertaintyModel>
+                        <uncertaintyWeight>0.3</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="sb3">
+                        <uncertaintyModel>sm3</uncertaintyModel>
+                        <uncertaintyWeight>0.1</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+            <logicTreeBranchingLevel branchingLevelID="bl2">
+                <logicTreeBranchSet uncertaintyType="bGRRelative"
+                                    branchSetID="bs2"
+                                    applyToBranches="sb1 sb3">
+                    <logicTreeBranch branchID="b2">
+                        <uncertaintyModel>+1</uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+                <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
+                                    branchSetID="bs2"
+                                    applyToSources="src01"
+                                    applyToBranches="sb2">
+                    <logicTreeBranch branchID="b3">
+                        <uncertaintyModel>-3</uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        sm = _whatever_sourcemodel()
+        lt = _TesteableSourceModelLogicTree(
+            'lt', {'lt': lt_source, 'sm1': sm, 'sm2': sm, 'sm3': sm}, '/base'
+        )
+        self.assert_branchset_equal(lt.root_branchset,
+            'sourceModel', {},
+            [('sb1', '0.6', 'sm1',
+                ('bGRRelative', {},
+                    [('b2', '1.0', +1)]
+                )),
+             ('sb2', '0.3', 'sm2',
+                 ('maxMagGRAbsolute', {'applyToSources': ['src01']},
+                    [('b3', '1.0', -3)]
+                )),
+             ('sb3', '0.1', 'sm3',
+                ('bGRRelative', {},
+                    [('b2', '1.0', +1)]
+                ))
+            ]
+        )
+        sb1, sb2, sb3 = lt.root_branchset.branches
+        self.assertTrue(sb1.child_branchset is sb3.child_branchset)
