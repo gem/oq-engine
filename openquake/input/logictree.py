@@ -141,11 +141,11 @@ class BaseLogicTree(object):
         weight_sum = 0
         for branchnode in branchset_node:
             weight = branchnode.find('{%s}uncertaintyWeight' % self.NRML).text
-            weight = Decimal(weight)
+            weight = Decimal(weight.strip())
             weight_sum += weight
             value_node = branchnode.find('{%s}uncertaintyModel' % self.NRML)
             value = self.validate_uncertainty_value(
-                value_node, branchset.uncertainty_type, value_node.text
+                value_node, branchset.uncertainty_type, value_node.text.strip()
             )
             branch_id = branchnode.get('branchID')
             branch = Branch(branch_id, weight, value)
@@ -350,7 +350,7 @@ class SourceModelLogicTree(BaseLogicTree):
 
 
 class GMPELogicTree(BaseLogicTree):
-    GMPEs = set("""\
+    GMPEs = frozenset("""\
         Abrahamson_2000_AttenRel
         AS_1997_AttenRel
         AS_2008_AttenRel
