@@ -312,8 +312,8 @@ class SourceModelLogicTree(BaseLogicTree):
                     )
                 branch.child_branchset = branchset
         else:
-            super(SourceModelLogicTree, self).apply_branchset(branchset,
-                                                              branchset_node)
+            super(SourceModelLogicTree, self).apply_branchset(branchset_node,
+                                                              branchset)
 
     def collect_source_model_data(self, filename):
         all_source_types = set('{%s}%sSource' % (self.NRML, tagname)
