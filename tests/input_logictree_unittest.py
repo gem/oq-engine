@@ -1251,3 +1251,94 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         )
         sb1, sb2, sb3 = lt.root_branchset.branches
         self.assertTrue(sb1.child_branchset is sb3.child_branchset)
+
+
+class GMPELogicTreeTestCase(unittest.TestCase):
+    def assert_result(self, lt, result):
+        actual_result = {}
+        branchset = lt.root_branchset
+        while branchset is not None:
+            self.assertNotEqual(len(branchset.branches), 0)
+            trt = branchset.filters['applyToTectonicRegionType']
+            actual_result[trt] = [
+                (branch.branch_id, str(branch.weight), branch.value)
+                for branch in branchset.branches
+            ]
+            next_branchset = branchset.branches[0].child_branchset
+            for branch in branchset.branches:
+                self.assertTrue(branch.child_branchset is next_branchset)
+            branchset = next_branchset
+            self.assertTrue(trt in result)
+            self.assertEqual(actual_result[trt], result[trt])
+        self.assertEqual(set(actual_result.keys()), set(result.keys()))
+        self.assertEqual(actual_result, result)
+
+    def test(self):
+        gmpe = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                            branchSetID="bs1"
+                            applyToTectonicRegionType="Subduction Interface">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>AS_1997_AttenRel</uncertaintyModel>
+                        <uncertaintyWeight>0.7</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b2">
+                        <uncertaintyModel>BW_1997_AttenRel</uncertaintyModel>
+                        <uncertaintyWeight>0.3</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+            <logicTreeBranchingLevel branchingLevelID="bl2">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                            branchSetID="bs2"
+                            applyToTectonicRegionType="Active Shallow Crust">
+                    <logicTreeBranch branchID="b3">
+                        <uncertaintyModel>BA_2008_AttenRel</uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+            <logicTreeBranchingLevel branchingLevelID="bl3">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                            branchSetID="bs3"
+                            applyToTectonicRegionType="Volcanic">
+                    <logicTreeBranch branchID="b4">
+                        <uncertaintyModel>
+                            Abrahamson_2000_AttenRel
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.1</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b5">
+                        <uncertaintyModel>
+                            GouletEtAl_2006_AttenRel
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.8</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b6">
+                        <uncertaintyModel>
+                            Field_2000_AttenRel
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.1</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        trts = ['Subduction Interface', 'Active Shallow Crust', 'Volcanic']
+        gmpe_lt = _TesteableGMPELogicTree('gmpe', gmpe, '/base', trts)
+        self.assert_result(gmpe_lt, {
+            'Subduction Interface': [
+                ('b1', '0.7', 'AS_1997_AttenRel'),
+                ('b2', '0.3', 'BW_1997_AttenRel')
+            ],
+            'Active Shallow Crust': [
+                ('b3', '1.0', 'BA_2008_AttenRel')
+            ],
+            'Volcanic': [
+                ('b4', '0.1', 'Abrahamson_2000_AttenRel'),
+                ('b5', '0.8', 'GouletEtAl_2006_AttenRel'),
+                ('b6', '0.1', 'Field_2000_AttenRel')
+            ]
+        })
