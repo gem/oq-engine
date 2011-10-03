@@ -1,25 +1,33 @@
-# The '#' character and the ';' are used to start a single line comment
 [general]
 
-CALCULATION_MODE = Event Based
-GROUND_MOTION_CORRELATION = false
-NUMBER_OF_LOGIC_TREE_SAMPLES = 0
+CALCULATION_MODE = Classical
+
+# NOTE: The order of the vertices is to be kept!!!
+# lat, lon of polygon vertices (in clock or counter-clock wise order)
+# REGION_VERTEX = 38.113,-122.114, 38.113,-122.114, 38.113,-122.114, 38.113,-122.114
+# degrees
+# REGION_GRID_SPACING = 0.5
+
+SITES = 38.113, -122.000, 38.113, -122.114, 38.111, -122.570, 38.000, -122.000, 37.910, -122.000, 38.225, -122.000, 38.113, -121.886
 
 [HAZARD]
 
-# file containing erf logic tree structure
-SOURCE_MODEL_LOGIC_TREE_FILE = ErfLogicTree.inp
-# file containing gmpe logic tree structure
-GMPE_LOGIC_TREE_FILE = GmpeLogicTree.inp
-# output directory
-OUTPUT_DIR = gem_output
+SOURCE_MODEL_LT_RANDOM_SEED = 23
+GMPE_LT_RANDOM_SEED = 5
+GMF_RANDOM_SEED = 3
 
-SADIGH_SITE_TYPE = Rock
+# file containing erf logic tree structure
+SOURCE_MODEL_LOGIC_TREE_FILE = source_model_logic_tree.xml
+# file containing gmpe logic tree structure
+GMPE_LOGIC_TREE_FILE = gmpe_logic_tree.xml
+# output directory - relative to this file
+OUTPUT_DIR = computed_output
+
 
 # moment magnitude (Mw)
 MINIMUM_MAGNITUDE = 5.0
 # years
-INVESTIGATION_TIME = 50.0
+INVESTIGATION_TIME = 1.0
 # maximum integration distance (km)
 MAXIMUM_DISTANCE = 200.0
 # bin width of the magnitude frequency distribution
@@ -27,7 +35,7 @@ WIDTH_OF_MFD_BIN = 0.1
 
 
 # (Average Horizontal, Average Horizontal (GMRotI50), Random Horizontal, Greater of Two Horz., Vertical)
-COMPONENT = Average Horizontal (GMRotI50)
+COMPONENT = Average Horizontal
 # (PGA (g), PGD (cm), PGV (cm/s), SA (g))
 INTENSITY_MEASURE_TYPE = PGA
 # seconds, used only for Spectral Acceleration
@@ -36,19 +44,23 @@ PERIOD = 0.0
 DAMPING = 5.0
 # (in the same units of the intensity measure type)
 # TODO make it a comma separated list and adapt code (CalculatorConfigHelper.makeArbitrarilyDiscretizedFunc())
-INTENSITY_MEASURE_LEVELS = 0.005, 0.007, 0.098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527, 0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778, 1.09, 1.52, 2.13
+INTENSITY_MEASURE_LEVELS = 0.001, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.7, 0.8, 0.9, 1.0
 # (None, 1 Sided, 2 Sided)
 GMPE_TRUNCATION_TYPE = 2 Sided
 # (1,2,3,...)
 TRUNCATION_LEVEL = 3
 # (Total, Inter-Event, Intra-Event, None (zero), Total (Mag Dependent), Total (PGA Dependent), Intra-Event (Mag Dependent))
-STANDARD_DEVIATION_TYPE = Total
+STANDARD_DEVIATION_TYPE = None (zero)
 # (m/s)
 REFERENCE_VS30_VALUE = 760.0
 # The depth to where shear-wave velocity = 2.5 km/sec.
 # Cambpell basin depth. Measure is (km)
 REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM = 5.0
 
+# Rock, Deep-Soil
+SADIGH_SITE_TYPE = Rock
+# if true compute ground motion fields using correlated model of Jayaram and Baker 2009
+GROUND_MOTION_CORRELATION = true
 
 # true or false
 INCLUDE_AREA_SOURCES = true
@@ -61,7 +73,7 @@ AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP = W&C 1994 Mag-Length Rel.
 
 
 # true or false
-INCLUDE_GRID_SOURCES = false
+INCLUDE_GRID_SOURCES = true
 # (Point Sources, Line Sources (random or given strike), Cross Hair Line Sources, 16 Spoked Line Sources)
 TREAT_GRID_SOURCE_AS = Point Sources
 # (W&C 1994 Mag-Length Rel.)
@@ -71,20 +83,20 @@ GRID_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP = W&C 1994 Mag-Length Rel.
 # true or false
 INCLUDE_FAULT_SOURCE = true
 # km
-FAULT_RUPTURE_OFFSET = 5.0
+FAULT_RUPTURE_OFFSET = 1.0
 # km
 FAULT_SURFACE_DISCRETIZATION = 1.0
 # (W&C 1994 Mag-Length Rel.)
-FAULT_MAGNITUDE_SCALING_RELATIONSHIP = W&C 1994 Mag-Length Rel.
+FAULT_MAGNITUDE_SCALING_RELATIONSHIP = PEER Tests Mag-Area Rel.
 FAULT_MAGNITUDE_SCALING_SIGMA = 0.0
 # (rupture length/rupture width)
-RUPTURE_ASPECT_RATIO = 1.5
+RUPTURE_ASPECT_RATIO = 2.0
 # (Only along strike ( rupture full DDW), Along strike and down dip, Along strike & centered down dip)
 RUPTURE_FLOATING_TYPE = Along strike and down dip
 
 
 # true or false
-INCLUDE_SUBDUCTION_FAULT_SOURCE = false
+INCLUDE_SUBDUCTION_FAULT_SOURCE = true
 # km
 SUBDUCTION_FAULT_RUPTURE_OFFSET = 10.0
 # km
@@ -97,38 +109,15 @@ SUBDUCTION_RUPTURE_ASPECT_RATIO = 1.5
 # (Only along strike ( rupture full DDW), Along strike and down dip, Along strike & centered down dip)
 SUBDUCTION_RUPTURE_FLOATING_TYPE = Along strike and down dip
 
+NUMBER_OF_LOGIC_TREE_SAMPLES = 1
+# (used if probabilistic event based approach is chosen)
+NUMBER_OF_SEISMICITY_HISTORIES = 1
 
-# NOTE: The order of the vertices is to be kept!!!
-# lat, lon of polygon vertices (in clock or counter-clock wise order)
-REGION_VERTEX = 37.5, -122.5, 37.5, -121.5, 38.5, -121.5, 38.5, -122.5
-# degrees
-REGION_GRID_SPACING = 0.1
+# List of quantiles to compute
+QUANTILE_LEVELS =
 
+# Compute mean hazard curve
+COMPUTE_MEAN_HAZARD_CURVE = true
 
-# (used if Event Based approach is chosen)
-NUMBER_OF_HAZARD_CURVE_CALCULATIONS = 40
-# (used if Event Based probabilistic event based approach is chosen)
-NUMBER_OF_SEISMICITY_HISTORIES = 8
-
-
-NUMBER_OF_PROCESSORS = 1
-
-HAZARD_MAP_CPT = seminf-haxby.cpt
-
-[RISK]
-
-# file containing the exposure in nrml format
-EXPOSURE = exposure.xml
-
-# file containing the vulnerability functions
-VULNERABILITY = vulnerability.xml
-
-# file containing the hazard curves in nrml format
-HAZARD_CURVES = hazard_curves.xml
-
-# name of the loss map file to generate
-LOSS_MAP = loss_map.tiff
-
-# name of the loss ratio map file to generate
-LOSS_RATIO_MAP = loss_ratio_map.tiff
-# The '#' character and the ';' are used to start a single line comment
+# List of POEs to use for computing hazard maps
+POES =
