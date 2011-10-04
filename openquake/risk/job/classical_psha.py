@@ -58,7 +58,10 @@ class ClassicalPSHABasedMixin:
         for task in celery_tasks:
             try:
                 # TODO(chris): Figure out where to put that timeout.
-                task.wait(timeout=None)
+                task.wait()
+                if not task.successful():
+                    raise Exception(task.result)
+
             except TimeoutError:
                 # TODO(jmc): Cancel and respawn this task
                 return
