@@ -29,6 +29,7 @@ from datetime import datetime
 from django.db import transaction, close_connection
 from django.contrib.gis.db import models
 from django.contrib.gis.geos import GEOSGeometry
+from lxml import etree
 
 from openquake import flags
 from openquake import java
@@ -36,15 +37,18 @@ from openquake import kvs
 from openquake import logs
 from openquake import OPENQUAKE_ROOT
 from openquake import shapes
+from openquake import xml
 from openquake.parser import exposure
 from openquake.db.models import (
-    OqJob, OqParams, OqUser, JobStats, FloatArrayField)
+    OqJob, OqParams, OqUser, JobStats, FloatArrayField, CharArrayField,
+    InputSet, Input)
 from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
 from openquake.job.mixins import Mixin
 from openquake.job.params import (
-    PARAMS, CALCULATION_MODE, ENUM_MAP, PATH_PARAMS)
+    PARAMS, CALCULATION_MODE, ENUM_MAP, PATH_PARAMS, INPUT_FILE_TYPES,
+    ARRAY_RE)
 from openquake.kvs import mark_job_as_current
 from openquake.logs import LOG
 from openquake.utils import config as oq_config
@@ -166,8 +170,9 @@ def prepare_config_parameters(params, sections):
             continue
 
         if job_type not in param.modes:
-            print 'Ignoring', name, 'in', job_type, \
-                ', it\'s meaningful only in', ', '.join(param.modes)
+            msg = "Ignoring %s in %s, it's meaningful only in "
+            msg %= (name, job_type)
+            print msg, ', '.join(param.modes)
             continue
 
         new_params[name] = value
@@ -182,6 +187,31 @@ def prepare_config_parameters(params, sections):
     return new_params, sections
 
 
+def get_source_models(logic_tree):
+    """Returns the source models soft-linked by the given logic tree.
+
+    :param str logic_tree: path to a source model logic tree file
+    :returns: list of source model file paths
+    """
+
+    # can be removed if we don't support .inp files
+    if not logic_tree.endswith('.xml'):
+        return []
+
+    base_path = os.path.dirname(os.path.abspath(logic_tree))
+    model_files = []
+
+    uncert_mdl_tag = xml.NRML + 'uncertaintyModel'
+
+    for _event, elem in etree.iterparse(logic_tree):
+        if elem.tag == uncert_mdl_tag:
+            e_text = elem.text.strip()
+            if e_text.endswith('.xml'):
+                model_files.append(os.path.join(base_path, e_text))
+
+    return model_files
+
+
 def guarantee_file(base_path, file_spec):
     """Resolves a file_spec (http, local relative or absolute path, git url,
     etc.) to an absolute path to a (possibly temporary) file."""
@@ -190,37 +220,38 @@ def guarantee_file(base_path, file_spec):
     return resolve_handler(url, base_path).get()
 
 
-@transaction.commit_on_success(using='job_init')
-def prepare_job(params):
-    """
-    Create a new OqJob and fill in the related OpParams entry.
+def _insert_input_files(params, input_set):
+    """Create uiapi.input records for all input files"""
 
-    Returns the newly created job object.
-    """
-    oqp = OqParams(upload=None)
+    # insert input files in input table
+    for param_key, file_type in INPUT_FILE_TYPES.items():
+        if param_key not in params:
+            continue
+        path = params[param_key]
+        in_model = Input(input_set=input_set, path=path,
+                         input_type=file_type, size=os.path.getsize(path))
+        in_model.save()
 
-    # TODO specify the owner as a command line parameter
-    owner = OqUser.objects.get(user_name='openquake')
+    # insert soft-linked source models in input table
+    if 'SOURCE_MODEL_LOGIC_TREE_FILE' in params:
+        for path in get_source_models(params['SOURCE_MODEL_LOGIC_TREE_FILE']):
+            in_model = Input(input_set=input_set, path=path,
+                             input_type='source', size=os.path.getsize(path))
+            in_model.save()
 
-    job = OqJob(
-        owner=owner, path=None,
-        job_type=CALCULATION_MODE[params['CALCULATION_MODE']])
 
-    oqp.job_type = job.job_type
+def _store_input_parameters(params, job_type, oqp):
+    """Store parameters in uiapi.oq_params columns"""
 
     for name, param in PARAMS.items():
-        if job.job_type in param.modes and param.default is not None:
+        if job_type in param.modes and param.default is not None:
             setattr(oqp, param.column, param.default)
-
-    number_re = re.compile('[ ,]+')
 
     for name, value in params.items():
         param = PARAMS[name]
         value = value.strip()
 
-        if param.to_db is not None:
-            value = param.to_db(value)
-        elif param.type in (models.BooleanField, models.NullBooleanField):
+        if param.type in (models.BooleanField, models.NullBooleanField):
             value = value.lower() not in ('0', 'false')
         elif param.type == models.PolygonField:
             ewkt = shapes.polygon_ewkt_from_coords(value)
@@ -229,7 +260,13 @@ def prepare_job(params):
             ewkt = shapes.multipoint_ewkt_from_coords(value)
             value = GEOSGeometry(ewkt)
         elif param.type == FloatArrayField:
-            value = [float(v) for v in number_re.split(value) if len(v)]
+            value = [float(v) for v in ARRAY_RE.split(value) if len(v)]
+        elif param.type == CharArrayField:
+            if param.to_db is not None:
+                value = param.to_db(value)
+            value = [str(v) for v in ARRAY_RE.split(value) if len(v)]
+        elif param.to_db is not None:
+            value = param.to_db(value)
         elif param.type == None:
             continue
 
@@ -239,7 +276,31 @@ def prepare_job(params):
         oqp.period = None
         oqp.damping = None
 
+
+@transaction.commit_on_success(using='job_init')
+def prepare_job(params):
+    """
+    Create a new OqJob and fill in the related OpParams entry.
+
+    Returns the newly created job object.
+    """
+    # TODO specify the owner as a command line parameter
+    owner = OqUser.objects.get(user_name='openquake')
+
+    input_set = InputSet(upload=None, owner=owner)
+    input_set.save()
+
+    job_type = CALCULATION_MODE[params['CALCULATION_MODE']]
+    job = OqJob(owner=owner, path=None, job_type=job_type)
+
+    oqp = OqParams(input_set=input_set)
+    oqp.job_type = job_type
+
+    _insert_input_files(params, input_set)
+    _store_input_parameters(params, job_type, oqp)
+
     oqp.save()
+
     job.oq_params = oqp
     job.save()
 

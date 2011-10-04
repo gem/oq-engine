@@ -39,6 +39,7 @@ from output_hazard_unittest import *
 from output_risk_unittest import *
 from output_unittest import *
 from output_writers_unittest import *
+from params_unittest import *
 from parser_exposure_portfolio_unittest import *
 from parser_hazard_curve_unittest import *
 from parser_hazard_map_unittest import *
@@ -59,6 +60,7 @@ from utils_general_unittest import *
 from utils_tasks_unittest import *
 from utils_version_unittest import *
 from validator_unittest import *
+from quality_assurance_unittest import *
 
 import glob
 import os
