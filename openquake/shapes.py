@@ -20,6 +20,7 @@
 
 """Collection of base classes for processing spatially-related data."""
 
+import hashlib
 import json
 import math
 import numpy
@@ -342,7 +343,8 @@ class Site(object):
         return self == other
 
     def __hash__(self):
-        return hash((self.longitude, self.latitude))
+        return hash(
+            hashlib.md5(repr((self.longitude, self.latitude))).hexdigest())
 
     def to_java(self):
         """Converts to a Java Site object"""
