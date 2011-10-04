@@ -40,13 +40,15 @@ from openquake import shapes
 from openquake import xml
 from openquake.parser import exposure
 from openquake.db.models import (
-    OqJob, OqParams, OqUser, JobStats, InputSet, Input, FloatArrayField)
+    OqJob, OqParams, OqUser, JobStats, FloatArrayField, CharArrayField,
+    InputSet, Input)
 from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
 from openquake.job.mixins import Mixin
 from openquake.job.params import (
-    PARAMS, CALCULATION_MODE, ENUM_MAP, PATH_PARAMS, INPUT_FILE_TYPES)
+    PARAMS, CALCULATION_MODE, ENUM_MAP, PATH_PARAMS, INPUT_FILE_TYPES,
+    ARRAY_RE)
 from openquake.kvs import mark_job_as_current
 from openquake.logs import LOG
 from openquake.utils import config as oq_config
@@ -168,8 +170,9 @@ def prepare_config_parameters(params, sections):
             continue
 
         if job_type not in param.modes:
-            print 'Ignoring', name, 'in', job_type, \
-                ', it\'s meaningful only in', ', '.join(param.modes)
+            msg = "Ignoring %s in %s, it's meaningful only in "
+            msg %= (name, job_type)
+            print msg, ', '.join(param.modes)
             continue
 
         new_params[name] = value
@@ -244,15 +247,11 @@ def _store_input_parameters(params, job_type, oqp):
         if job_type in param.modes and param.default is not None:
             setattr(oqp, param.column, param.default)
 
-    number_re = re.compile('[ ,]+')
-
     for name, value in params.items():
         param = PARAMS[name]
         value = value.strip()
 
-        if param.to_db is not None:
-            value = param.to_db(value)
-        elif param.type in (models.BooleanField, models.NullBooleanField):
+        if param.type in (models.BooleanField, models.NullBooleanField):
             value = value.lower() not in ('0', 'false')
         elif param.type == models.PolygonField:
             ewkt = shapes.polygon_ewkt_from_coords(value)
@@ -261,7 +260,13 @@ def _store_input_parameters(params, job_type, oqp):
             ewkt = shapes.multipoint_ewkt_from_coords(value)
             value = GEOSGeometry(ewkt)
         elif param.type == FloatArrayField:
-            value = [float(v) for v in number_re.split(value) if len(v)]
+            value = [float(v) for v in ARRAY_RE.split(value) if len(v)]
+        elif param.type == CharArrayField:
+            if param.to_db is not None:
+                value = param.to_db(value)
+            value = [str(v) for v in ARRAY_RE.split(value) if len(v)]
+        elif param.to_db is not None:
+            value = param.to_db(value)
         elif param.type == None:
             continue
 
