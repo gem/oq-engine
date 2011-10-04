@@ -219,6 +219,12 @@ class ShapesTestCase(unittest.TestCase):
         self.assertTrue(allclose(expected_result,
             shapes.range_clip(numpy.array(valid_imls), self.TEST_IMLS)))
 
+    def test_for_hash_collisions(self):
+        """The hash values for similar sites should *not* collide."""
+        s1 = shapes.Site(-0.9, -1.0)
+        s2 = shapes.Site(0.9, 0.0)
+        self.assertNotEqual(hash(s1), hash(s2))
+
 
 class CurveTestCase(unittest.TestCase):
     """
