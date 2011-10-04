@@ -69,12 +69,10 @@ def output(fn):
         fn(self, *args, **kwargs)
 
 
-        LOG.warn('INSIDE!')
         for block_id in self.blocks_keys:
             #pylint: disable=W0212
             self._write_output_for_block(self.job_id, block_id)
 
-        LOG.warn(self.params)
         for loss_poe in conditional_loss_poes(self.params):
             path = os.path.join(self.base_path,
                                 self.params['OUTPUT_DIR'],
@@ -82,11 +80,9 @@ def output(fn):
             writer = risk_output.create_loss_map_writer(
                 self.job_id, self.serialize_results_to, path, False)
 
-            LOG.warn('Writing loss map at %s' % path)
             if writer:
                 metadata = {
                     "deterministic": False,
-                    "timespan": self.params['INVESTIGATION_TIME'],
                     "poe": loss_poe,
                 }
 
