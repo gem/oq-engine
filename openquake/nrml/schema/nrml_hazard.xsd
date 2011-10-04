@@ -224,7 +224,7 @@
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
-                    <xs:element ref="DisaggregationResultNode" minOccurs="1" maxOccurs="unbounded"/>
+                    <xs:element ref="disaggregationResultNode" minOccurs="1" maxOccurs="unbounded"/>
                 </xs:sequence>
                 <xs:attribute name="poE" type="NormalizedDoubleType" use="required"/>
                 <xs:attribute name="IMT" type="IMTType" use="required"/>
@@ -234,7 +234,7 @@
         </xs:complexContent>
     </xs:complexType>
     
-    <xs:element name="DisaggregationResultNode" type="DisaggregationResultNodeType" substitutionGroup="fieldNode"/>
+    <xs:element name="disaggregationResultNode" type="DisaggregationResultNodeType" substitutionGroup="fieldNode"/>
     <xs:complexType name="DisaggregationResultNodeType">
         <xs:complexContent>
             <xs:extension base="FieldNode">
