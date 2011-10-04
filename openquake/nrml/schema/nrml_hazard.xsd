@@ -216,6 +216,77 @@
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
+    
+    <!-- Disaggregation -->
+    
+    <xs:element name="disaggregationResultField" type="DisaggregationResultFieldType" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="DisaggregationResultFieldType">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element ref="DisaggregationResultNode" minOccurs="1" maxOccurs="unbounded"/>
+                </xs:sequence>
+                <xs:attribute name="poE" type="NormalizedDoubleType" use="required"/>
+                <xs:attribute name="IMT" type="IMTType" use="required"/>
+                <xs:attribute name="endBranchLabel" type="xs:string"/>
+                <xs:attributeGroup ref="QuantileGroup"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:element name="DisaggregationResultNode" type="DisaggregationResultNodeType" substitutionGroup="fieldNode"/>
+    <xs:complexType name="DisaggregationResultNodeType">
+        <xs:complexContent>
+            <xs:extension base="FieldNode">
+                <xs:sequence>
+                    <xs:element name="disaggregationMatrixSet" type="DisaggregationMatrixSetType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="DisaggregationMatrixSetType">
+        <xs:sequence>
+            <xs:element name="disaggregationMatrix" type="DisaggregationMatrixType" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="groundMotionValue" type="NonNegativeDoubleType" use="required"/>
+    </xs:complexType>
+    
+    <xs:complexType name="DisaggregationMatrixType">
+        <xs:sequence>
+            <xs:element name="disaggregationMatrixValue" type="DisaggregationMatrixValue" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="disaggregationMatrixType" type="DisaggregationPMFType" use="required"/>
+    </xs:complexType>
+    
+    <xs:simpleType name="DisaggregationPMFType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="MagnitudePMF"/>
+            <xs:enumeration value="DistancePMF"/>
+            <xs:enumeration value="TectonicRegionTypePMF"/>
+            <xs:enumeration value="MagnitudeTectonicRegionTypePMF"/>
+            <xs:enumeration value="MagnitudeDistancePMF"/>
+            <xs:enumeration value="MagnitudeDistanceEpsilonPMF"/>
+            <xs:enumeration value="LatitudeLongitudePMF"/>
+            <xs:enumeration value="LatitudeLongitudeMagnitudePMF"/>
+            <xs:enumeration value="LatitudeLongitudeEpsilonPMF"/>
+            <xs:enumeration value="LatitudeLongitudeMagnitudeEpsilonPMF"/>
+            <xs:enumeration value="LatitudeLongitudeTectonicRegionTypePMF"/>
+            <xs:enumeration value="LatitudeLongitudeMagnitudeEpsilonTectonicRegionTypePMF"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:complexType name="DisaggregationMatrixValue">
+        <xs:sequence>
+            <xs:element name="PMFValue" type="NormalizedDoubleType"/>
+        </xs:sequence>
+        <xs:attribute name="latitudeBin" type="gml:doubleList"></xs:attribute>
+        <xs:attribute name="longitudeBin" type="gml:doubleList"></xs:attribute>
+        <xs:attribute name="magnitudeBin" type="gml:doubleList"></xs:attribute>
+        <xs:attribute name="distanceBin" type="gml:doubleList"></xs:attribute>
+        <xs:attribute name="epsilonBin" type="gml:doubleList"></xs:attribute>
+        <xs:attribute name="tectonicRegionTypeBin" type="TectonicRegion"></xs:attribute>
+    </xs:complexType>
 
     <!-- ============================================================= -->
     <!-- child elements of nrml -->
