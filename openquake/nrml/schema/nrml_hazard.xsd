@@ -303,6 +303,7 @@
                         </xs:sequence>
                         <xs:element ref="groundMotionFieldSet"/>
                         <xs:element ref="hazardMap"/>
+                        <xs:element ref="disaggregationResultField"></xs:element>
                     </xs:choice>
                 </xs:sequence>
             </xs:extension>
