@@ -90,7 +90,11 @@ public class HDF5Util
 		long[] maxDims = dataset.getMaxDims();
 		long[] selectedDims = dataset.getSelectedDims();
 
-		// copy maxDims to selectedDims, then read the data
+		// Copy maxDims to selectedDims, then read the data.
+		// Note: selectedDims is a reference to the dataset's `selectedDims`
+		// member. Changing the content selectedDims will have an affect
+		// on the subsequent dataset.getData() call. If we don't do this,
+		// we'll only extract a subset of the data.
 		for (int i = 0; i < maxDims.length; i++)
 		{
 			selectedDims[i] = maxDims[i];
