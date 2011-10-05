@@ -264,15 +264,15 @@
             <xs:enumeration value="MagnitudePMF"/>
             <xs:enumeration value="DistancePMF"/>
             <xs:enumeration value="TectonicRegionTypePMF"/>
-            <xs:enumeration value="MagnitudeTectonicRegionTypePMF"/>
+            <xs:enumeration value="MagnitudeTectonicRegionTypePMF"/> <!-- Not in db schema -->
             <xs:enumeration value="MagnitudeDistancePMF"/>
             <xs:enumeration value="MagnitudeDistanceEpsilonPMF"/>
             <xs:enumeration value="LatitudeLongitudePMF"/>
             <xs:enumeration value="LatitudeLongitudeMagnitudePMF"/>
             <xs:enumeration value="LatitudeLongitudeEpsilonPMF"/>
             <xs:enumeration value="LatitudeLongitudeMagnitudeEpsilonPMF"/>
-            <xs:enumeration value="LatitudeLongitudeTectonicRegionTypePMF"/>
-            <xs:enumeration value="LatitudeLongitudeMagnitudeEpsilonTectonicRegionTypePMF"/>
+            <xs:enumeration value="LatitudeLongitudeTectonicRegionTypePMF"/> <!-- Not in db schema -->
+            <xs:enumeration value="LatitudeLongitudeMagnitudeEpsilonTectonicRegionTypePMF"/> <!-- In db schema as 'fulldisaggmatrix'-->
         </xs:restriction>
     </xs:simpleType>
     
