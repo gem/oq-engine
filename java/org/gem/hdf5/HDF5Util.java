@@ -47,7 +47,7 @@ public class HDF5Util
 	 * 		1-9; use 0 or a negative value for no compression.
 	 * @throws Exception
 	 */
-	public static void writeMatrix(String path, String matrixDesc,
+	private static void writeMatrix(String path, String matrixDesc,
 			long [] dims, double[][][][][] matrix, int gzipLevel) throws Exception
 	{
 		H5File output = new H5File(path, HDF5Constants.H5F_ACC_RDWR);
