@@ -186,7 +186,7 @@ class BaseLogicTree(object):
             weight_sum += weight
             value_node = branchnode.find('{%s}uncertaintyModel' % self.NRML)
             value = self.validate_uncertainty_value(
-                value_node, branchset.uncertainty_type, value_node.text.strip()
+                value_node, branchset, value_node.text.strip()
             )
             branch_id = branchnode.get('branchID')
             branch = Branch(branch_id, weight, value)
@@ -206,7 +206,7 @@ class BaseLogicTree(object):
     def validate_tree(self, tree_node, root_branchset):
         return root_branchset
 
-    def validate_uncertainty_value(self, node, uncertainty_type, value):
+    def validate_uncertainty_value(self, node, branchset, value):
         raise NotImplementedError()
 
     def validate_filters(self, node, uncertainty_type, filters):
@@ -221,28 +221,47 @@ class BaseLogicTree(object):
 
 
 class SourceModelLogicTree(BaseLogicTree):
-    SOURCE_TYPES = ('pointSource', 'areaSource', 'complexFault', 'simpleFault')
+    SOURCE_TYPES = ('point', 'area', 'complexFault', 'simpleFault')
 
     def __init__(self, *args, **kwargs):
-        self.source_ids = set()
+        self.source_ids_to_num_mfds = {}
         self.tectonic_region_types = set()
         self.source_types = set()
         super(SourceModelLogicTree, self).__init__(*args, **kwargs)
 
-    def validate_uncertainty_value(self, node, uncertainty_type, value):
-        _float_re = r'(\+|\-)?(\d+|\d*\.\d+)'
-        if uncertainty_type == 'sourceModel':
+    def validate_uncertainty_value(self, node, branchset, value):
+        _float_re = re.compile(r'^(\+|\-)?(\d+|\d*\.\d+)$')
+        if branchset.uncertainty_type == 'sourceModel':
             self.collect_source_model_data(value)
             return os.path.join(self.basepath, value)
-        elif uncertainty_type == 'abGRAbsolute':
-            if not re.match('^%s\s+%s$' % (_float_re, _float_re), value):
-                raise ValidationError(
-                    node, self.filename, self.basepath,
-                    'expected two float values separated by space'
-                )
-            return tuple(float(val) for val in value.split())
+        elif branchset.uncertainty_type == 'abGRAbsolute' \
+                or branchset.uncertainty_type == 'maxMagGRAbsolute':
+            [source_id] = branchset.filters['applyToSources']
+            num_numbers_expected = self.source_ids_to_num_mfds[source_id]
+            assert num_numbers_expected != 0
+            if branchset.uncertainty_type == 'abGRAbsolute':
+                num_numbers_expected *= 2
+            values = []
+            for single_number in value.split():
+                if not _float_re.match(single_number):
+                    break
+                values.append(float(single_number))
+                if len(values) > num_numbers_expected:
+                    break
+            else:
+                if len(values) == num_numbers_expected:
+                    if branchset.uncertainty_type == 'abGRAbsolute':
+                        return zip(*((iter(values), ) * 2))
+                    else:
+                        return values
+            raise ValidationError(
+                node, self.filename, self.basepath,
+                'expected list of %d float(s) separated by space, ' \
+                'as source %r has %d MFD(s)' % (num_numbers_expected,
+                source_id, self.source_ids_to_num_mfds[source_id])
+            )
         else:
-            if not re.match('^%s$' % _float_re, value):
+            if not _float_re.match(value):
                 raise ValidationError(
                     node, self.filename, self.basepath,
                     'expected single float value'
@@ -262,7 +281,10 @@ class SourceModelLogicTree(BaseLogicTree):
             )
         if 'applyToSources' in filters:
             source_ids = filters['applyToSources'].split()
-            nonexistent_source_ids = set(source_ids) - self.source_ids
+            nonexistent_source_ids = set(source_ids)
+            nonexistent_source_ids.difference_update(
+                self.source_ids_to_num_mfds
+            )
             if nonexistent_source_ids:
                 raise ValidationError(
                     branchset_node, self.filename, self.basepath,
@@ -375,10 +397,15 @@ class SourceModelLogicTree(BaseLogicTree):
                 if node.tag == tectonic_region_type_tag:
                     self.tectonic_region_types.add(node.text)
             else:
-                self.source_ids.add(
-                    node.attrib['{http://www.opengis.net/gml}id']
-                )
-                self.source_types.add(node.tag[sourcetype_slice])
+                source_id = node.attrib['{http://www.opengis.net/gml}id']
+                source_type = node.tag[sourcetype_slice]
+                if source_type == 'point' or source_type == 'area':
+                    mfds = len(node.find('{%s}ruptureRateModel' % self.NRML))
+                else:
+                    mfds = 1
+                self.source_ids_to_num_mfds[source_id] = mfds
+
+                self.source_types.add(source_type)
 
                 # saving memory by removing already processed nodes.
                 # see http://lxml.de/parsing.html#modifying-the-tree
@@ -421,7 +448,7 @@ class GMPELogicTree(BaseLogicTree):
         self.defined_tectonic_region_types = set()
         super(GMPELogicTree, self).__init__(*args, **kwargs)
 
-    def validate_uncertainty_value(self, node, uncertainty_type, value):
+    def validate_uncertainty_value(self, node, branchset, value):
         if not value in self.GMPEs:
             raise ValidationError(
                 node, self.filename, self.basepath,

@@ -61,6 +61,7 @@ def _make_nrml(content):
     return """\
     <nrml xmlns:gml="http://www.opengis.net/gml"\
           xmlns="http://openquake.org/xmlns/nrml/0.2"\
+          xmlns:qml="http://quakeml.org/xmlns/quakeml/1.1"\
           gml:id="n1">\
         %s
     </nrml>""" % content
@@ -113,6 +114,44 @@ def _whatever_sourcemodel():
                 <lowerSeismogenicDepth>13.0</lowerSeismogenicDepth>
             </simpleFaultGeometry>
         </simpleFaultSource>
+        <pointSource gml:id="doublemfd">
+          <gml:name></gml:name>
+          <tectonicRegion>Active Shallow Crust</tectonicRegion>
+          <location>
+            <gml:Point><gml:pos>-125.4 42.9</gml:pos></gml:Point>
+          </location>
+          <ruptureRateModel>
+            <evenlyDiscretizedIncrementalMFD binSize="0.1"
+                minVal="5.05">1.7E-13</evenlyDiscretizedIncrementalMFD>
+            <focalMechanism publicID="smi:fm1/0">
+              <qml:nodalPlanes>
+                <qml:nodalPlane1>
+                  <qml:strike><qml:value>0.0</qml:value></qml:strike>
+                  <qml:dip><qml:value>90.0</qml:value></qml:dip>
+                  <qml:rake><qml:value>0.0</qml:value></qml:rake>
+                </qml:nodalPlane1>
+              </qml:nodalPlanes>
+            </focalMechanism>
+          </ruptureRateModel>
+          <ruptureRateModel>
+            <evenlyDiscretizedIncrementalMFD binSize="0.1"
+                minVal="5.05">1.8E-13</evenlyDiscretizedIncrementalMFD>
+            <focalMechanism publicID="smi:fm1/1">
+              <qml:nodalPlanes>
+                <qml:nodalPlane1>
+                  <qml:strike><qml:value>0.0</qml:value></qml:strike>
+                  <qml:dip><qml:value>90.0</qml:value></qml:dip>
+                  <qml:rake><qml:value>0.0</qml:value></qml:rake>
+                </qml:nodalPlane1>
+              </qml:nodalPlanes>
+            </focalMechanism>
+          </ruptureRateModel>
+          <ruptureDepthDistribution>
+            <magnitude>6.0 6.5</magnitude>
+            <depth>5.0 1.0</depth>
+          </ruptureDepthDistribution>
+          <hypocentralDepth>5.0</hypocentralDepth>
+        </pointSource>
     </sourceModel>
     """)
 
@@ -453,7 +492,81 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ValidationError)
         self.assertEqual(exc.lineno, 16)
-        error = 'expected two float values separated by space'
+        error = "expected list of 2 float(s) separated by space, " \
+                "as source 'src01' has 1 MFD(s)"
+        self.assertEqual(exc.message, error,
+                        "wrong exception message: %s" % exc.message)
+
+    def test_ab_gr_absolute_wrong_number_of_pairs(self):
+        lt = _make_nrml("""\
+            <logicTree logicTreeID="lt1">
+              <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>sm</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+              <logicTreeBranchingLevel branchingLevelID="bl2">
+                <logicTreeBranchSet uncertaintyType="abGRAbsolute"
+                                    applyToSources="doublemfd"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>
+                        123 321
+                        345 567
+                        142 555
+                    </uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+            </logicTree>
+        """)
+        sm = _whatever_sourcemodel()
+        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
+                                            logictree.ValidationError)
+        self.assertEqual(exc.lineno, 16)
+        error = "expected list of 4 float(s) separated by space, " \
+                "as source 'doublemfd' has 2 MFD(s)"
+        self.assertEqual(exc.message, error,
+                        "wrong exception message: %s" % exc.message)
+
+    def test_max_mag_absolute_wrong_number_of_numbers(self):
+        lt = _make_nrml("""\
+            <logicTree logicTreeID="lt1">
+              <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b1">
+                    <uncertaintyModel>sm</uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+              <logicTreeBranchingLevel branchingLevelID="bl2">
+                <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
+                                    applyToSources="doublemfd"
+                                    branchSetID="bs1">
+                  <logicTreeBranch branchID="b2">
+                    <uncertaintyModel>
+                        345 567
+                        142 555
+                    </uncertaintyModel>
+                    <uncertaintyWeight>1.0</uncertaintyWeight>
+                  </logicTreeBranch>
+                </logicTreeBranchSet>
+              </logicTreeBranchingLevel>
+            </logicTree>
+        """)
+        sm = _whatever_sourcemodel()
+        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
+                                            logictree.ValidationError)
+        self.assertEqual(exc.lineno, 16)
+        error = "expected list of 2 float(s) separated by space, " \
+                "as source 'doublemfd' has 2 MFD(s)"
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
 
@@ -1183,8 +1296,8 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
             'sourceModel', {},
             [('b1', '1.0', '/base/sm',
                 ('abGRAbsolute', {'applyToSources': ['src01']},
-                    [('b2', '0.9', (100, 500)),
-                     ('b3', '0.1', (-1.23, +0.1))])
+                    [('b2', '0.9', [(100, 500)]),
+                     ('b3', '0.1', [(-1.23, +0.1)])])
             )]
         )
 
@@ -1241,7 +1354,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                 )),
              ('sb2', '0.3', '/base/sm2',
                  ('maxMagGRAbsolute', {'applyToSources': ['src01']},
-                    [('b3', '1.0', -3)]
+                    [('b3', '1.0', [-3])]
                 )),
              ('sb3', '0.1', '/base/sm3',
                 ('bGRRelative', {},
