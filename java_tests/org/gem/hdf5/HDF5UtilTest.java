@@ -19,8 +19,6 @@ public class HDF5UtilTest
 {
 
 	public static final String H5_FILE = "test_5d_array.h5";
-	public static final String H5_FILE_COMPRESSED =
-			"test_5d_array_compressed.h5";
 	public static final String INVALID_HDF5_FILE =
 			"java_tests/data/invalid_hdf5_file.h5";
 	public static final long[] SAMPLE_5D_ARRAY_SHAPE = {2, 2, 2, 2, 2};
@@ -54,14 +52,12 @@ public class HDF5UtilTest
 		// If any test files exist from a previous test run,
 		// clear them out so we can write new files in the tests:
 		new File(H5_FILE).delete();
-		new File(H5_FILE_COMPRESSED).delete();
 	}
 
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception
 	{
 		new File(H5_FILE).delete();
-		new File(H5_FILE_COMPRESSED).delete();
 	}
 
 	@Test(expected=HDF5Exception.class)
@@ -112,24 +108,10 @@ public class HDF5UtilTest
 	public void testWriteAndReadMatrix() throws Exception
 	{
 		writeMatrix(H5_FILE, "test description",
-			    SAMPLE_5D_ARRAY_SHAPE, SAMPLE_5D_ARRAY, 0);
+			    SAMPLE_5D_ARRAY_SHAPE, SAMPLE_5D_ARRAY);
 		double[][][][][] expected = SAMPLE_5D_ARRAY;
 
 		assertTrue(Arrays.deepEquals(expected, readMatrix(H5_FILE)));
-	}
-	
-	/**
-	 * Write a matrix to a file (compressed), read it from file, and compare the
-	 * matrix to the original.
-	 */
-	@Test
-	public void testWriteAndReadMatrixCompressed() throws Exception
-	{
-		writeMatrix(H5_FILE_COMPRESSED, "test description",
-			    SAMPLE_5D_ARRAY_SHAPE, SAMPLE_5D_ARRAY, 0);
-		double[][][][][] expected = SAMPLE_5D_ARRAY;
-
-		assertTrue(Arrays.deepEquals(expected, readMatrix(H5_FILE_COMPRESSED)));
 	}
 
 	/**
