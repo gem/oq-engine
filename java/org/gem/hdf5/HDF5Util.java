@@ -139,7 +139,7 @@ public class HDF5Util
 		if (expectedLength != array.length)
 		{
 			throw new HDF5Exception(
-					"array length does not match request shape (or vice versa)");
+					"array length does not match request shape");
 		}
 
 		// now reshape:
