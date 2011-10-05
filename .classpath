@@ -18,10 +18,10 @@
 	<classpathentry kind="lib" path="/usr/share/java/log4j-1.2.jar"/>
 	<classpathentry kind="lib" path="/usr/share/java/commons-io.jar"/>
 	<classpathentry kind="lib" path="/usr/share/java/openshalite.jar"/>
-	<classpathentry kind="lib" path="/opt/local/share/java/jhdf.jar"/>
-	<classpathentry kind="lib" path="/opt/local/share/java/jhdf4obj.jar"/>
-	<classpathentry kind="lib" path="/opt/local/share/java/jhdf5.jar"/>
-	<classpathentry kind="lib" path="/opt/local/share/java/jhdf5obj.jar"/>
-	<classpathentry kind="lib" path="/opt/local/share/java/jhdfobj.jar"/>
+	<classpathentry kind="lib" path="/usr/share/java/jhdf.jar"/>
+	<classpathentry kind="lib" path="/usr/share/java/jhdf4obj.jar"/>
+	<classpathentry kind="lib" path="/usr/share/java/jhdf5.jar"/>
+	<classpathentry kind="lib" path="/usr/share/java/jhdf5obj.jar"/>
+	<classpathentry kind="lib" path="/usr/share/java/jhdfobj.jar"/>
 	<classpathentry kind="output" path="build"/>
 </classpath>
