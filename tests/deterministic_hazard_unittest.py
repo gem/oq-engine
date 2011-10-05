@@ -36,7 +36,7 @@ from openquake import shapes
 
 from openquake.hazard import deterministic as det
 
-DETERMINISTIC_SMOKE_TEST = helpers.smoketest_file("deterministic/config.gem")
+DETERMINISTIC_SMOKE_TEST = helpers.testdata_path("deterministic/config.gem")
 NUMBER_OF_CALC_KEY = "NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"
 
 
