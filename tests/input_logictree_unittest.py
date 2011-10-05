@@ -1106,8 +1106,8 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
             'lt', {'lt': lt_source, 'sm1': sm, 'sm2': sm}, 'basepath'
         )
         self.assert_branchset_equal(lt.root_branchset, 'sourceModel', {},
-                                    [('b1', '0.6', 'sm1'),
-                                     ('b2', '0.4', 'sm2')])
+                                    [('b1', '0.6', 'basepath/sm1'),
+                                     ('b2', '0.4', 'basepath/sm2')])
 
     def test_two_levels(self):
         lt_source = _make_nrml("""\
@@ -1141,7 +1141,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                                             '/base')
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
-            [('b1', '1.0', 'sm',
+            [('b1', '1.0', '/base/sm',
                 ('maxMagGRRelative', {},
                     [('b2', '0.6', +123),
                      ('b3', '0.4', -123)])
@@ -1181,7 +1181,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                                             '/base')
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
-            [('b1', '1.0', 'sm',
+            [('b1', '1.0', '/base/sm',
                 ('abGRAbsolute', {'applyToSources': ['src01']},
                     [('b2', '0.9', (100, 500)),
                      ('b3', '0.1', (-1.23, +0.1))])
@@ -1235,15 +1235,15 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         )
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
-            [('sb1', '0.6', 'sm1',
+            [('sb1', '0.6', '/base/sm1',
                 ('bGRRelative', {},
                     [('b2', '1.0', +1)]
                 )),
-             ('sb2', '0.3', 'sm2',
+             ('sb2', '0.3', '/base/sm2',
                  ('maxMagGRAbsolute', {'applyToSources': ['src01']},
                     [('b3', '1.0', -3)]
                 )),
-             ('sb3', '0.1', 'sm3',
+             ('sb3', '0.1', '/base/sm3',
                 ('bGRRelative', {},
                     [('b2', '1.0', +1)]
                 ))
