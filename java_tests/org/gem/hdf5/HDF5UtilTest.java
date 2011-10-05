@@ -15,7 +15,7 @@ import static org.gem.hdf5.HDF5Util.reshape;
 import static org.gem.hdf5.HDF5Util.readMatrix;
 import static org.gem.hdf5.HDF5Util.writeMatrix;
 
-public class HDF5UtilTest 
+public class HDF5UtilTest
 {
 
 	public static final String H5_FILE = "test_5d_array.h5";
@@ -24,7 +24,7 @@ public class HDF5UtilTest
 	public static final String INVALID_HDF5_FILE =
 			"java_tests/data/invalid_hdf5_file.h5";
 	public static final long[] SAMPLE_5D_ARRAY_SHAPE = {2, 2, 2, 2, 2};
-	public static final double[][][][][] SAMPLE_5D_ARRAY = 
+	public static final double[][][][][] SAMPLE_5D_ARRAY =
 		{
 			{
 				{
@@ -47,7 +47,7 @@ public class HDF5UtilTest
 				}
 			}
 		};
-	
+
 	@BeforeClass
 	public static void setUpBeforeClass() throws Exception
 	{
@@ -83,7 +83,7 @@ public class HDF5UtilTest
 	{
 		long[] shape = {1, 2, 3, 4, 5};
 		double[] data = new double[119];
-		
+
 		// data should have a length == 120
 		reshape(data, shape);
 	}
@@ -114,7 +114,7 @@ public class HDF5UtilTest
 		writeMatrix(H5_FILE, "test description",
 			    SAMPLE_5D_ARRAY_SHAPE, SAMPLE_5D_ARRAY, 0);
 		double[][][][][] expected = SAMPLE_5D_ARRAY;
-		
+
 		assertTrue(Arrays.deepEquals(expected, readMatrix(H5_FILE)));
 	}
 	
@@ -128,7 +128,7 @@ public class HDF5UtilTest
 		writeMatrix(H5_FILE_COMPRESSED, "test description",
 			    SAMPLE_5D_ARRAY_SHAPE, SAMPLE_5D_ARRAY, 0);
 		double[][][][][] expected = SAMPLE_5D_ARRAY;
-		
+
 		assertTrue(Arrays.deepEquals(expected, readMatrix(H5_FILE_COMPRESSED)));
 	}
 
