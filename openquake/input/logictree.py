@@ -21,11 +21,14 @@
 import os
 import sys
 import re
+import random
 from decimal import Decimal
+from itertools import izip
 
 from lxml import etree
 
 from openquake.nrml import nrml_schema_file
+from openquake.java import jvm
 
 
 class LogicTreeError(Exception):
@@ -68,6 +71,44 @@ class BranchSet(object):
         self.branches = []
         self.uncertainty_type = uncertainty_type
         self.filters = filters
+
+    def sample(self, rnd=random):
+        diceroll = rnd.random()
+        acc = 0
+        for branch in self.branches:
+            acc += branch.weight
+            if acc >= diceroll:
+                return branch
+        raise AssertionError('do weights really sum up to 1.0?')
+
+    def apply_uncertainty(self, value, source):
+        PointSource = jvm().JClass('org.opensha.sha.earthquake.'\
+                'rupForecastImpl.GEM1.SourceData.GEMPointSourceData')
+        AreaSource = jvm().JClass('org.opensha.sha.earthquake.'\
+                'rupForecastImpl.GEM1.SourceData.GEMAreaSourceData')
+        # TODO: handle exceptions in java methods and rethrow LogicTreeError
+        if isinstance(source, (PointSource, AreaSource)):
+            if isinstance(source, PointSource):
+                mfdlist = source.getHypoMagFreqDistAtLoc().getMagFreqDistList()
+            else:
+                mfdlist = source.getMagfreqDistFocMech().getMagFreqDistList()
+            for mfd, mfd_value in izip(mfdlist, value):
+                self._apply_uncertainty_to_mfd(mfd, mfd_value)
+        else:
+            self._apply_uncertainty_to_mfd(source.getMfd(), value)
+
+    def _apply_uncertainty_to_mfd(self, mfd, value):
+        if self.uncertainty_type == 'abGRAbsolute':
+            a, b = value
+            mfd.setAB(a, b)
+        elif self.uncertainty_type == 'bGRRelative':
+            mfd.incrementB(value)
+        elif self.uncertainty_type == 'maxMagGRRelative':
+            mfd.incrementMagUpper(value)
+        elif self.apply_uncertainty == 'maxMagGRAbsolute':
+            mfd.setMagUpper(value)
+        else:
+            raise AssertionError('what is %s btw?' % self.uncertainty_type)
 
 
 class BaseLogicTree(object):
@@ -192,7 +233,7 @@ class SourceModelLogicTree(BaseLogicTree):
         _float_re = r'(\+|\-)?(\d+|\d*\.\d+)'
         if uncertainty_type == 'sourceModel':
             self.collect_source_model_data(value)
-            return value
+            return os.path.join(self.basepath, value)
         elif uncertainty_type == 'abGRAbsolute':
             if not re.match('^%s\s+%s$' % (_float_re, _float_re), value):
                 raise ValidationError(
@@ -439,3 +480,34 @@ class GMPELogicTree(BaseLogicTree):
                 'in gmpe logic tree'
             )
         return branchset
+
+
+class LogicTreeProcessor(object):
+    def __init__(self, basepath, source_model_logictree_path,
+                 gmpe_logictree_path):
+        self.source_model_lt = SourceModelLogicTree(
+            basepath, source_model_logictree_path
+        )
+        self.gmpe_lt = GMPELogicTree(basepath, gmpe_logictree_path)
+
+    def sample_and_save_source_model_logictree(self, cache, key, random_seed):
+        sources = self.sample_source_model_logictree(random_seed)
+        serializer = jvm().JClass('org.gem.JsonSerializer')
+        serializer.serializeSourceList(cache, key, sources)
+
+    def sample_source_model_logictree(self, random_seed):
+        rnd = random.Random(random_seed)
+        SourceModelReader = jvm().JClass('org.gem.engine.hazard.' \
+                                         'parsers.SourceModelReader')
+        branch = self.source_model_lt.root_branchset.sample(rnd)
+        sources = SourceModelReader(branch.value).read()
+
+        while True:
+            branchset = branch.child_branchset
+            if branchset is None:
+                break
+            branch = branchset.sample(rnd)
+            for source in sources:
+                branchset.apply_uncertainty(branch.value, source)
+        return sources
+
