@@ -54,16 +54,16 @@ MEAN_GROUND_INTENSITY = (
     '"site":"+35.1000 +35.0000", "intensity": 2.0320e+00,'
     '"site":"+35.1500 +35.0000", "intensity": 2.0594e+00}')
 
-TEST_JOB_FILE = helpers.smoketest_file('simplecase/config.gem')
+TEST_JOB_FILE = helpers.testdata_path('simplecase/config.gem')
 
 TEST_SOURCE_MODEL = ""
 with open(
-    helpers.smoketest_file('simplecase/expected_source_model.json'), 'r') as f:
+    helpers.testdata_path('simplecase/expected_source_model.json'), 'r') as f:
     TEST_SOURCE_MODEL = f.read()
 
 TEST_GMPE_MODEL = ""
 with open(
-    helpers.smoketest_file('simplecase/expected_gmpe_model.json'), 'r') as f:
+    helpers.testdata_path('simplecase/expected_gmpe_model.json'), 'r') as f:
     TEST_GMPE_MODEL = f.read()
 
 NRML_SCHEMA_PATH = nrml.nrml_schema_file()
@@ -326,10 +326,8 @@ class HazardEngineTestCase(unittest.TestCase):
                             "NRML instance file %s does not validate against "\
                             "schema" % nrml_path)
 
-        test_file_path = helpers.smoketest_file(
-            "classical_psha_simple/config.gem")
-
-        hazengine = helpers.job_from_file(test_file_path)
+        hazengine = helpers.job_from_file(
+            helpers.testdata_path("classical_psha_simple/config.gem"))
 
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
             hazengine.execute()
