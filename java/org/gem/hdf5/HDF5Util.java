@@ -9,6 +9,10 @@ import ncsa.hdf.object.Group;
 import ncsa.hdf.object.h5.H5Datatype;
 import ncsa.hdf.object.h5.H5File;
 
+/**
+ * Contains utility functions for reading and writing 5D matrices to HDF5 files.
+ *
+ */
 public class HDF5Util
 {
 
