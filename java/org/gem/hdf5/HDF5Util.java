@@ -17,7 +17,7 @@ public class HDF5Util
 	 */
 	private static Datatype DOUBLE_DT = new H5Datatype(Datatype.CLASS_FLOAT, 8, Datatype.NATIVE, Datatype.NATIVE);
 	private static int DEFAULT_GZIP_COMPRESSION = 0;  // No compression
-	
+
 	/**
 	 * Write a 5D matrix to the specified file path using default compression
 	 * 		(no compression).
@@ -53,7 +53,7 @@ public class HDF5Util
 		H5File output = new H5File(path, HDF5Constants.H5F_ACC_RDWR);
 		output.createNewFile();
 		output.open();
-		
+
 		Group root = getRootGroup(output);
 
 		output.createScalarDS(matrixDesc, root, DOUBLE_DT, dims, null, null, gzipLevel, matrix);
@@ -72,12 +72,12 @@ public class HDF5Util
 		H5File input = new H5File(path, HDF5Constants.H5F_ACC_RDONLY);
 
 		input.open();
-		
+
 		Group root = getRootGroup(input);
-		
+
 		Dataset dataset = (Dataset) root.getMemberList().get(0);
 		dataset.read();
-		
+
 		return readMatrix(dataset);
 	}
 
@@ -85,16 +85,16 @@ public class HDF5Util
 	{
 		long[] maxDims = dataset.getMaxDims();
 		long[] selectedDims = dataset.getSelectedDims();
-		
+
 		// copy maxDims to selectedDims, then read the data
 		for (int i = 0; i < maxDims.length; i++)
 		{
 			selectedDims[i] = maxDims[i];
 		}
-		
+
 		// this gives us the entire matrix flattened into a 1 dimensional array
 		double[] data = (double[])dataset.getData();
-		
+
 		return reshape(data, maxDims);
 	}
 
@@ -131,17 +131,17 @@ public class HDF5Util
 		{
 			expectedLength *= s;
 		}
-		
+
 		if (expectedLength != array.length)
 		{
 			throw new HDF5Exception(
 					"array length does not match request shape (or vice versa)");
 		}
-		
+
 		// now reshape:
 		double[][][][][] reshaped = new double[(int) shape[0]][(int) shape[1]]
 				[(int) shape[2]][(int) shape[3]][(int) shape[4]];
-		
+
 		int arrayIndex = 0;
 
 		for (int i = 0; i < shape[0]; i++)
