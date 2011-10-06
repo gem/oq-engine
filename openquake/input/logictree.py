@@ -22,8 +22,8 @@ import os
 import sys
 import re
 import random
+import itertools
 from decimal import Decimal
-from itertools import izip
 
 from lxml import etree
 
@@ -87,15 +87,21 @@ class BranchSet(object):
         AreaSource = jvm().JClass('org.opensha.sha.earthquake.'\
                 'rupForecastImpl.GEM1.SourceData.GEMAreaSourceData')
         # TODO: handle exceptions in java methods and rethrow LogicTreeError
-        if isinstance(source, (PointSource, AreaSource)):
-            if isinstance(source, PointSource):
-                mfdlist = source.getHypoMagFreqDistAtLoc().getMagFreqDistList()
-            else:
-                mfdlist = source.getMagfreqDistFocMech().getMagFreqDistList()
-            for mfd, mfd_value in izip(mfdlist, value):
-                self._apply_uncertainty_to_mfd(mfd, mfd_value)
+
+        if not isinstance(source, (PointSource, AreaSource)):
+            mfdlist = [source.getMfd()]
+        elif isinstance(source, PointSource):
+            mfdlist = source.getHypoMagFreqDistAtLoc().getMagFreqDistList()
         else:
-            self._apply_uncertainty_to_mfd(source.getMfd(), value)
+            mfdlist = source.getMagfreqDistFocMech().getMagFreqDistList()
+
+        if self.uncertainty_type in ('abGRAbsolute', 'maxMagGRAbsolute'):
+            valuelist = value
+        else:
+            valuelist = itertools.repeat(value)
+
+        for mfd, mfd_value in itertools.izip(mfdlist, valuelist):
+            self._apply_uncertainty_to_mfd(mfd, mfd_value)
 
     def _apply_uncertainty_to_mfd(self, mfd, value):
         if self.uncertainty_type == 'abGRAbsolute':
