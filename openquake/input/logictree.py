@@ -82,6 +82,7 @@ class BranchSet(object):
         raise AssertionError('do weights really sum up to 1.0?')
 
     def apply_uncertainty(self, value, source):
+        # TODO: unittest
         PointSource = jvm().JClass('org.opensha.sha.earthquake.'\
                 'rupForecastImpl.GEM1.SourceData.GEMPointSourceData')
         AreaSource = jvm().JClass('org.opensha.sha.earthquake.'\
@@ -104,6 +105,7 @@ class BranchSet(object):
             self._apply_uncertainty_to_mfd(mfd, mfd_value)
 
     def _apply_uncertainty_to_mfd(self, mfd, value):
+        # TODO: unittest
         if self.uncertainty_type == 'abGRAbsolute':
             a, b = value
             mfd.setAB(a, b)
@@ -516,6 +518,7 @@ class GMPELogicTree(BaseLogicTree):
 
 
 class LogicTreeProcessor(object):
+    # TODO: unittest
     def __init__(self, basepath, source_model_logictree_path,
                  gmpe_logictree_path):
         self.source_model_lt = SourceModelLogicTree(
@@ -524,9 +527,7 @@ class LogicTreeProcessor(object):
         self.gmpe_lt = GMPELogicTree(basepath, gmpe_logictree_path)
 
     def sample_and_save_source_model_logictree(self, cache, key, random_seed):
-        sources = self.sample_source_model_logictree(random_seed)
-        serializer = jvm().JClass('org.gem.JsonSerializer')
-        serializer.serializeSourceList(cache, key, sources)
+        cache.set(key, self.sample_source_model_logictree(random_seed))
 
     def sample_source_model_logictree(self, random_seed):
         rnd = random.Random(random_seed)
@@ -542,5 +543,6 @@ class LogicTreeProcessor(object):
             branch = branchset.sample(rnd)
             for source in sources:
                 branchset.apply_uncertainty(branch.value, source)
-        return sources
 
+        serializer = jvm().JClass('org.gem.JsonSerializer')
+        return serializer.getJsonSourceList(sources)
