@@ -1455,3 +1455,35 @@ class GMPELogicTreeTestCase(unittest.TestCase):
                 ('b6', '0.1', 'Field_2000_AttenRel')
             ]
         })
+
+
+class BranchSetTestCase(unittest.TestCase):
+    class FakeRandom(object):
+        def __init__(self, value):
+            self.value = value
+        def random(self):
+            return self.value
+
+    def test_sample(self):
+        bs = logictree.BranchSet(None, None)
+        bs.branches = [logictree.Branch(i, Decimal('0.1'), i)
+                       for i in xrange(10)]
+        self.assertEqual(type(bs.sample()), logictree.Branch)
+        r = self.FakeRandom
+        self.assertEqual(bs.sample(r(0.05)).value, 0)
+        self.assertEqual(bs.sample(r(0.11)).value, 1)
+        self.assertEqual(bs.sample(r(0.2)).value, 2)
+        self.assertEqual(bs.sample(r(0.88)).value, 8)
+        self.assertEqual(bs.sample(r(0.9999999)).value, 9)
+
+    def test_sample_broken_branch_weights(self):
+        bs = logictree.BranchSet(None, None)
+        bs.branches = [logictree.Branch(0, Decimal('0.1'), 0),
+                       logictree.Branch(1, Decimal('0.2'), 1)]
+        self.assertRaises(AssertionError, bs.sample, self.FakeRandom(0.8))
+
+    def test_sample_one_branch(self):
+        bs = logictree.BranchSet(None, None)
+        bs.branches = [logictree.Branch(0, Decimal('1.0'), 0)]
+        for i in xrange(10):
+            self.assertEqual(bs.sample().branch_id, 0)
