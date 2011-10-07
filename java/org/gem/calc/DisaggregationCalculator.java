@@ -8,6 +8,9 @@ import org.apache.commons.collections.Closure;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
 import org.opensha.sha.earthquake.EqkRupForecastAPI;
+import org.opensha.sha.earthquake.ProbEqkRupture;
+import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
 import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
 import org.opensha.sha.util.TectonicRegionType;
 import static org.apache.commons.collections.CollectionUtils.forAllDo;
@@ -19,12 +22,12 @@ public class DisaggregationCalculator {
 	private final Double[] magBinLims;
 	private final Double[] epsilonBinLims;
 	private final Double[] distanceBinLims;
-	private String[] tectonicRegionTypes; // these are hardcoded: TectonicRegionType.values();
+	private static final TectonicRegionType[] tectonicRegionTypes = TectonicRegionType.values();
 
 	/**
 	 * Used for checking that bin edge lists are not null;
 	 */
-	private static final Closure NOT_NULL = new Closure()
+	private static final Closure notNull = new Closure()
 	{
 
 		public void execute(Object o)
@@ -40,7 +43,7 @@ public class DisaggregationCalculator {
 	 * Used for checking that bin edge lists have a length greater than or equal
 	 * to 2.
 	 */
-	private static final Closure LEN_GE_2 = new Closure()
+	private static final Closure lenGE2 = new Closure()
 	{
 
 		public void execute(Object o)
@@ -51,6 +54,23 @@ public class DisaggregationCalculator {
 				if (oArray.length < 2)
 				{
 					throw new IllegalArgumentException("Bin edge arrays must have a length >= 2");
+				}
+			}
+		}
+	};
+
+	private static final Closure isSorted = new Closure()
+	{
+
+		public void execute(Object o) {
+			if (o instanceof Object[])
+			{
+				Object[] oArray = (Object[]) o;
+				Object[] sorted = Arrays.copyOf(oArray, oArray.length);
+				Arrays.sort(sorted);
+				if (!Arrays.equals(sorted, oArray))
+				{
+					throw new IllegalArgumentException("Bin edge arrays must arranged in ascending order");
 				}
 			}
 		}
@@ -67,8 +87,9 @@ public class DisaggregationCalculator {
 				  epsilonBinEdges, distanceBinEdges);
 
 		// Validation for the bin edges:
-		forAllDo(binEdges, NOT_NULL); // TODO: need constructor test
-		forAllDo(binEdges, LEN_GE_2); // TODO: need constructor test
+		forAllDo(binEdges, notNull);
+		forAllDo(binEdges, lenGE2);
+		forAllDo(binEdges, isSorted);
 
 		this.latBinLims = latBinEdges;
 		this.lonBinLims = lonBinEdges;
@@ -79,49 +100,68 @@ public class DisaggregationCalculator {
 
 	public double[][][][][] computeMatrix(
 			Site site,
-			EqkRupForecastAPI erf,
+			GEM1ERF erf,
 			Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap,
 			double poe,
 			DiscretizedFuncAPI hazardCurve) // or just pass a List<double> of IML values and compute the curve inside here?
 	{
-		/*
-
-		disaggMatrix[][][][][]
-		totalAnnualRate = 0.0
-
-		for source in erf.sources:
-			imr = imrMap.getIMR(source.getTRT())
-			
-			for rupture in source.ruptures:
-				closestLoc = getClosestLoc(site, rupture.getSurfaces())
-				
-				lat = closestLoc.getLat()
-				lon = closestLoc.getLon()
-				mag = rupture.getMag()
-				epsilon = imr.getEpsilon()
-				trt = source.getTRT()
-
-				// if the these values are outside the bin
-				// ranges, 'continue' to the next loop iter
-
-				// get the bin indices from these 5,
-				// given the defined bin limits
-
-				annualRate = totRate * imr.getExceedProb() * rup.getProbability()
-
-				disaggMatrix[binIndices] += annualRate
-
-				totalAnnualRate += annualRate
-
-		// normalize the disagg matrix by the totalAnnualRate
-
-		return disaggMatrix
-
-
-
-
-		 */
+		double disaggMatrix[][][][][] =
+				new double[latBinLims.length - 1]
+						  [lonBinLims.length - 1]
+						  [magBinLims.length - 1]
+						  [epsilonBinLims.length - 1]
+						  [tectonicRegionTypes.length - 1];
 		
+		// value by which to normalize the final matrix
+		double totalAnnualRate = 0.0;
+
+		double minMag = (Double) erf.getParameter(GEM1ERF.MIN_MAG_NAME).getValue();
+		double gmv = 0.0;  // TODO calculate me
+		
+		for (int srcCnt = 0; srcCnt < erf.getNumSources(); srcCnt++)
+		{
+			ProbEqkSource source = erf.getSource(srcCnt);
+
+			double totProb = source.computeTotalProbAbove(minMag);
+			double totRate = -Math.log(1 - totProb);
+
+			TectonicRegionType trt = source.getTectonicRegionType();
+
+			ScalarIntensityMeasureRelationshipAPI imr = imrMap.get(trt);
+			imr.setSite(site);
+			imr.setIntensityMeasureLevel(gmv);
+
+			for(int rupCnt = 0; rupCnt < source.getNumRuptures(); rupCnt++)
+			{
+				ProbEqkRupture rupture = source.getRupture(rupCnt);
+				imr.setEqkRupture(rupture);
+
+				double lat, lon, mag, epsilon;
+				lat = 0.0;  // TODO:
+				lon = 0.0;
+				mag = 0.0;
+				epsilon = 0.0;
+				// TODO: check if it's in range
+				int[] binIndex = getBinIndices(lat, lon, mag, epsilon, trt);
+
+				double annualRate = totRate
+						* imr.getExceedProbability()
+						* rupture.getProbability();
+
+				disaggMatrix[binIndex[0]][binIndex[1]][binIndex[2]][binIndex[3]][binIndex[4]] += annualRate;
+				totalAnnualRate += annualRate;
+			}  // end rupture loop
+		}  // end source loop
+		
+		// TODO: normalize the matrix
+		return disaggMatrix;
+
+	}
+
+	public int [] getBinIndices(
+			double lat, double lon, double mag,
+			double epsilon, TectonicRegionType trt)
+	{
 		
 		
 		return null;
