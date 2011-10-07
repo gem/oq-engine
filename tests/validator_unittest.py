@@ -143,6 +143,24 @@ class ConfigurationConstraintsTestCase(unittest.TestCase, helpers.TestMixin):
         validator = config.default_validators(sections, params)
         self.assertTrue(validator.is_valid()[0])
 
+    def test_hazard_mandatory_parameters(self):
+        sections = [config.HAZARD_SECTION]
+
+        params = {config.CALCULATION_MODE: "CLASSICAL",
+                  config.SITES: "37.9, -121.9",
+                  config.DEPTHTO1PT0KMPERSEC: "33.33"}
+
+        validator = config.default_validators(sections, params)
+        self.assertFalse(validator.is_valid()[0])
+
+        params = {config.CALCULATION_MODE: "CLASSICAL",
+                  config.SITES: "37.9, -121.9",
+                  config.DEPTHTO1PT0KMPERSEC: "33.33",
+                  config.VS30_TYPE: "measured"}
+
+        validator = config.default_validators(sections, params)
+        self.assertTrue(validator.is_valid()[0])
+
     def test_deterministic_is_not_supported_alone(self):
         """When we specify a deterministic computation, we only
         support hazard + risk jobs."""
