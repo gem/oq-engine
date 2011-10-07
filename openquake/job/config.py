@@ -161,7 +161,7 @@ class HazardMandatoryParamsValidator(MandatoryParamsValidator):
         super(
             HazardMandatoryParamsValidator, self).__init__(sections, params)
         self.section_of_interest = HAZARD_SECTION
-        self.mandatory_params = ["DEPTHTO1PT0KMPERSEC", "VS30_TYPE"]
+        self.mandatory_params = [DEPTHTO1PT0KMPERSEC, VS30_TYPE]
 
 
 class ComputationTypeValidator(object):
