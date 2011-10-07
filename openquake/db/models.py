@@ -551,7 +551,8 @@ class OqParams(models.Model):
     # the default is 3.0 and document it. I definitely don't remember why it's
     # 3.0.
     truncation_level = models.FloatField(default=3.0)
-    reference_vs30_value = models.FloatField()
+    reference_vs30_value = models.FloatField(
+        "Average shear-wave velocity in the upper 30 meters of a site")
     imls = FloatArrayField(null=True)
     poes = FloatArrayField(null=True)
     realizations = models.IntegerField(null=True)
@@ -659,8 +660,8 @@ class OqParams(models.Model):
     #       Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
     disagg_results = CharArrayField(null=True)
     VS30_TYPE_CHOICES = (
-       (u'measured', u'Measured vs30 value'),
-       (u'inferred', u'Inferred vs30 value'),
+       (u'measured', u'Value obtained from on-site measurements'),
+       (u'inferred', u'Estimated value'),
     )
     vs30_type = models.TextField(choices=VS30_TYPE_CHOICES)
     depth_to_1pt_0km_per_sec = models.FloatField()
