@@ -25,7 +25,7 @@ and its validation.
 from openquake.job import config
 from openquake.job.config import to_float_array, to_str_array
 from openquake.job.config import (
-    DisaggregationValidator, RiskMandatoryParametersValidator,
+    DisaggregationValidator, RiskMandatoryParamsValidator,
     DeterministicComputationValidator)
 from tests.utils import helpers
 
@@ -100,7 +100,7 @@ class ValidatorSetTestCase(unittest.TestCase):
         vset = config.ValidatorSet()
 
         validators = [
-            RiskMandatoryParametersValidator(None, None),
+            RiskMandatoryParamsValidator(None, None),
             DisaggregationValidator(None),
             DeterministicComputationValidator(None, None),
         ]
