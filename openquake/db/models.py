@@ -658,6 +658,12 @@ class OqParams(models.Model):
     #   fulldisaggmatrix (The full disaggregation matrix; includes
     #       Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
     disagg_results = CharArrayField(null=True)
+    VS30_TYPE_CHOICES = (
+       (u'measured', u'Measured vs30 value'),
+       (u'inferred', u'Inferred vs30 value'),
+    )
+    vs30_type = models.TextField(choices=VS30_TYPE_CHOICES)
+    depth_to_1pt_0km_per_sec = models.FloatField()
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"oq_params'
