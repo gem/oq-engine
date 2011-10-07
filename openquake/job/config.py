@@ -40,9 +40,11 @@ REGION_GRID_SPACING = "REGION_GRID_SPACING"
 SITES = "SITES"
 DETERMINISTIC_MODE = "Deterministic"
 DISAGGREGATION_MODE = "Disaggregation"
-CALCULATION_MODE = "CALCULATION_MODE"
 BASE_PATH = "BASE_PATH"
 COMPUTE_HAZARD_AT_ASSETS = "COMPUTE_HAZARD_AT_ASSETS_LOCATIONS"
+
+DEPTHTO1PT0KMPERSEC="DEPTHTO1PT0KMPERSEC"
+VS30_TYPE="VS30_TYPE"
 
 
 def to_float_array(value):
@@ -129,7 +131,6 @@ class MandatoryParametersValidator(object):
             (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
             tuple is returned
         """
-
         if self.section_of_interest in self.sections:
             for mandatory_param in self.mandatory_params:
                 if mandatory_param not in self.params.keys():
@@ -401,6 +402,7 @@ def default_validators(sections, params):
         :py:class:`openquake.config.ValidatorSet`
     """
 
+    hazard = HazardMandatoryParametersValidator(sections, params)
     exposure = RiskMandatoryParametersValidator(sections, params)
     deterministic = DeterministicComputationValidator(sections, params)
     hazard_comp_type = ComputationTypeValidator(params)
@@ -413,6 +415,7 @@ def default_validators(sections, params):
     validators.add(exposure)
     validators.add(parameter)
     validators.add(file_path)
+    validators.add(hazard)
 
     if params.get(CALCULATION_MODE) == DISAGGREGATION_MODE:
         validators.add(DisaggregationValidator(params))
