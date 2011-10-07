@@ -153,6 +153,8 @@ define_param('REGION_GRID_SPACING', 'region_grid_spacing')
 define_param('REGION_VERTEX', 'region')
 define_param('OUTPUT_DIR', None)
 define_param('BASE_PATH', None)
+define_param('DEPTHTO1PT0KMPERSEC', 'depth_to_1pt_0km_per_sec')
+define_param('VS30_TYPE', 'vs30_type')
 
 
 # input files

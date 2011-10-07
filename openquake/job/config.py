@@ -110,13 +110,15 @@ class ValidatorSet(object):
         self.validators.append(validator)
 
 
-class RiskMandatoryParametersValidator(object):
+class MandatoryParametersValidator(object):
     """Validator that checks if the mandatory parameters
     for risk processing are specified."""
 
     def __init__(self, sections, params):
         self.sections = sections
         self.params = params
+        self.section_of_interest = None
+        self.mandatory_params = []
 
     def is_valid(self):
         """Return true if the mandatory risk parameters are specified,
@@ -128,16 +130,38 @@ class RiskMandatoryParametersValidator(object):
             tuple is returned
         """
 
-        mandatory_params = [EXPOSURE, INPUT_REGION, REGION_GRID_SPACING]
-
-        if RISK_SECTION in self.sections:
-            for mandatory_param in mandatory_params:
+        if self.section_of_interest in self.sections:
+            for mandatory_param in self.mandatory_params:
                 if mandatory_param not in self.params.keys():
-                    return (False, [
-                            "With RISK processing, EXPOSURE, REGION_VERTEX " +
-                            "and REGION_GRID_SPACING must be specified"])
+                    msg = ("Parameter '%s' not supplied in section '%s'" %
+                           (mandatory_param, self.section_of_interest))
+                    return (False, msg)
 
         return (True, [])
+
+
+class RiskMandatoryParametersValidator(MandatoryParametersValidator):
+    """
+    Validator that checks whether the mandatory parameters
+    for risk processing are specified.
+    """
+    def __init__(self, sections, params):
+        super(
+            RiskMandatoryParametersValidator, self).__init__(sections, params)
+        self.section_of_interest = RISK_SECTION
+        self.mandatory_params = [EXPOSURE, INPUT_REGION, REGION_GRID_SPACING]
+
+
+class HazardMandatoryParametersValidator(MandatoryParametersValidator):
+    """
+    Validator that checks whether the mandatory parameters
+    for hazard processing are specified.
+    """
+    def __init__(self, sections, params):
+        super(
+            HazardMandatoryParametersValidator, self).__init__(sections, params)
+        self.section_of_interest = HAZARD_SECTION
+        self.mandatory_params = ["DEPTHTO1PT0KMPERSEC", "VS30_TYPE"]
 
 
 class ComputationTypeValidator(object):
