@@ -115,8 +115,8 @@ class ValidatorSetTestCase(unittest.TestCase):
 class ConfigurationConstraintsTestCase(unittest.TestCase, helpers.TestMixin):
 
     def test_risk_mandatory_parameters(self):
-        sections = [config.RISK_SECTION,
-                config.HAZARD_SECTION, config.GENERAL_SECTION]
+        sections = [
+            config.RISK_SECTION, config.HAZARD_SECTION, config.GENERAL_SECTION]
 
         dummy_exposure = self.touch()
 
