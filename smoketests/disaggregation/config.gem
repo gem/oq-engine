@@ -10,6 +10,8 @@ REGION_GRID_SPACING = 0.1
 
 [HAZARD]
 
+DEPTHTO1PT0KMPERSEC = 100.0
+VS30_TYPE = measured
 # Disaggregation results are Probability Mass Functions (PMFs)
 # Which are composed of different combinations of the following:
 # Latitude, Longitude, Magnitude, Distance, Epsilon, Tectonic Region Type

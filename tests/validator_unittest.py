@@ -25,7 +25,7 @@ and its validation.
 from openquake.job import config
 from openquake.job.config import to_float_array, to_str_array
 from openquake.job.config import (
-    DisaggregationValidator, RiskMandatoryParametersValidator,
+    DisaggregationValidator, RiskMandatoryParamsValidator,
     DeterministicComputationValidator)
 from tests.utils import helpers
 
@@ -100,7 +100,7 @@ class ValidatorSetTestCase(unittest.TestCase):
         vset = config.ValidatorSet()
 
         validators = [
-            RiskMandatoryParametersValidator(None, None),
+            RiskMandatoryParamsValidator(None, None),
             DisaggregationValidator(None),
             DeterministicComputationValidator(None, None),
         ]
@@ -115,8 +115,8 @@ class ValidatorSetTestCase(unittest.TestCase):
 class ConfigurationConstraintsTestCase(unittest.TestCase, helpers.TestMixin):
 
     def test_risk_mandatory_parameters(self):
-        sections = [config.RISK_SECTION,
-                config.HAZARD_SECTION, config.GENERAL_SECTION]
+        sections = [
+            config.RISK_SECTION, config.HAZARD_SECTION, config.GENERAL_SECTION]
 
         dummy_exposure = self.touch()
 
@@ -125,20 +125,44 @@ class ConfigurationConstraintsTestCase(unittest.TestCase, helpers.TestMixin):
         validator = config.default_validators(sections, params)
         self.assertFalse(validator.is_valid()[0])
 
-        params = {config.EXPOSURE: dummy_exposure}
+        params = {config.EXPOSURE: dummy_exposure,
+                  config.DEPTHTO1PT0KMPERSEC: "33.33",
+                  config.VS30_TYPE: "measured"}
 
         validator = config.default_validators(sections, params)
         self.assertFalse(validator.is_valid()[0])
 
         params = {config.EXPOSURE: dummy_exposure,
-                  config.REGION_GRID_SPACING: '0.5'}
+                  config.REGION_GRID_SPACING: '0.5',
+                  config.DEPTHTO1PT0KMPERSEC: "33.33",
+                  config.VS30_TYPE: "measured"}
 
         validator = config.default_validators(sections, params)
         self.assertFalse(validator.is_valid()[0])
 
         params = {config.EXPOSURE: dummy_exposure,
                   config.INPUT_REGION: "1.0, 2.0, 3.0, 4.0, 5.0, 6.0",
-                  config.REGION_GRID_SPACING: '0.5'}
+                  config.REGION_GRID_SPACING: '0.5',
+                  config.DEPTHTO1PT0KMPERSEC: "33.33",
+                  config.VS30_TYPE: "measured"}
+
+        validator = config.default_validators(sections, params)
+        self.assertTrue(validator.is_valid()[0])
+
+    def test_hazard_mandatory_parameters(self):
+        sections = [config.HAZARD_SECTION]
+
+        params = {config.CALCULATION_MODE: "CLASSICAL",
+                  config.SITES: "37.9, -121.9",
+                  config.DEPTHTO1PT0KMPERSEC: "33.33"}
+
+        validator = config.default_validators(sections, params)
+        self.assertFalse(validator.is_valid()[0])
+
+        params = {config.CALCULATION_MODE: "CLASSICAL",
+                  config.SITES: "37.9, -121.9",
+                  config.DEPTHTO1PT0KMPERSEC: "33.33",
+                  config.VS30_TYPE: "measured"}
 
         validator = config.default_validators(sections, params)
         self.assertTrue(validator.is_valid()[0])
