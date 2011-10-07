@@ -473,6 +473,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['GMPE_LOGIC_TREE_FILE'] = abs_path("gmpe_logic_tree.xml")
         params['EXPOSURE'] = abs_path("small_exposure.xml")
         params['VULNERABILITY'] = abs_path("vulnerability.xml")
+        params['DEPTHTO1PT0KMPERSEC'] = "100.0"
+        params['VS30_TYPE'] = "measured"
 
         self.job = prepare_job(params)
         self.job.oq_params = self._reload_params()
@@ -521,6 +523,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         '''
         params = self.BASE_CLASSICAL_PARAMS.copy()
         params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
+        params['DEPTHTO1PT0KMPERSEC'] = "100.0"
+        params['VS30_TYPE'] = "measured"
 
         self.job = prepare_job(params)
         self.job.oq_params = self._reload_params()
@@ -552,6 +556,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['SINGLE_RUPTURE_MODEL'] = abs_path("simple-fault-rupture.xml")
         params['EXPOSURE'] = abs_path("LA_small_portfolio.xml")
         params['VULNERABILITY'] = abs_path("vulnerability.xml")
+        params['DEPTHTO1PT0KMPERSEC'] = "100.0"
+        params['VS30_TYPE'] = "measured"
 
         self.job = prepare_job(params)
         self.job.oq_params = self._reload_params()
@@ -593,6 +599,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         '''
         params = self.BASE_DETERMINISTIC_PARAMS.copy()
         params['SITES'] = '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
+        params['DEPTHTO1PT0KMPERSEC'] = "100.0"
+        params['VS30_TYPE'] = "measured"
 
         self.job = prepare_job(params)
         self.job.oq_params = self._reload_params()
@@ -626,6 +634,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['GMPE_LOGIC_TREE_FILE'] = abs_path("gmpe_logic_tree.xml")
         params['EXPOSURE'] = abs_path("small_exposure.xml")
         params['VULNERABILITY'] = abs_path("vulnerability.xml")
+        params['DEPTHTO1PT0KMPERSEC'] = "100.0"
+        params['VS30_TYPE'] = "measured"
 
         self.job = prepare_job(params)
         self.job.oq_params = self._reload_params()
@@ -674,6 +684,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         params = self.BASE_EVENT_BASED_PARAMS.copy()
         params['SITES'] = '33.88, -118.3, 33.88, -118.06, 33.76, -118.06'
+        params['DEPTHTO1PT0KMPERSEC'] = "100.0"
+        params['VS30_TYPE'] = "measured"
 
         self.job = prepare_job(params)
         self.job.oq_params = self._reload_params()
