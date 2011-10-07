@@ -67,7 +67,6 @@ class ValidationException(Exception):
 
     def __str__(self):
         msg = 'The job configuration contained some errors:\n\n'
-
         return msg + '\n'.join(self.errors)
 
 
@@ -136,7 +135,7 @@ class MandatoryParametersValidator(object):
                 if mandatory_param not in self.params.keys():
                     msg = ("Parameter '%s' not supplied in section '%s'" %
                            (mandatory_param, self.section_of_interest))
-                    return (False, msg)
+                    return (False, [msg])
 
         return (True, [])
 
