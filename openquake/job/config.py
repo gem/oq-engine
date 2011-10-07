@@ -43,8 +43,8 @@ DISAGGREGATION_MODE = "Disaggregation"
 BASE_PATH = "BASE_PATH"
 COMPUTE_HAZARD_AT_ASSETS = "COMPUTE_HAZARD_AT_ASSETS_LOCATIONS"
 
-DEPTHTO1PT0KMPERSEC="DEPTHTO1PT0KMPERSEC"
-VS30_TYPE="VS30_TYPE"
+DEPTHTO1PT0KMPERSEC = "DEPTHTO1PT0KMPERSEC"
+VS30_TYPE = "VS30_TYPE"
 
 
 def to_float_array(value):
@@ -111,7 +111,7 @@ class ValidatorSet(object):
         self.validators.append(validator)
 
 
-class MandatoryParametersValidator(object):
+class MandatoryParamsValidator(object):
     """Validator that checks if the mandatory parameters
     for risk processing are specified."""
 
@@ -140,26 +140,26 @@ class MandatoryParametersValidator(object):
         return (True, [])
 
 
-class RiskMandatoryParametersValidator(MandatoryParametersValidator):
+class RiskMandatoryParamsValidator(MandatoryParamsValidator):
     """
     Validator that checks whether the mandatory parameters
     for risk processing are specified.
     """
     def __init__(self, sections, params):
         super(
-            RiskMandatoryParametersValidator, self).__init__(sections, params)
+            RiskMandatoryParamsValidator, self).__init__(sections, params)
         self.section_of_interest = RISK_SECTION
         self.mandatory_params = [EXPOSURE, INPUT_REGION, REGION_GRID_SPACING]
 
 
-class HazardMandatoryParametersValidator(MandatoryParametersValidator):
+class HazardMandatoryParamsValidator(MandatoryParamsValidator):
     """
     Validator that checks whether the mandatory parameters
     for hazard processing are specified.
     """
     def __init__(self, sections, params):
         super(
-            HazardMandatoryParametersValidator, self).__init__(sections, params)
+            HazardMandatoryParamsValidator, self).__init__(sections, params)
         self.section_of_interest = HAZARD_SECTION
         self.mandatory_params = ["DEPTHTO1PT0KMPERSEC", "VS30_TYPE"]
 
@@ -401,8 +401,8 @@ def default_validators(sections, params):
         :py:class:`openquake.config.ValidatorSet`
     """
 
-    hazard = HazardMandatoryParametersValidator(sections, params)
-    exposure = RiskMandatoryParametersValidator(sections, params)
+    hazard = HazardMandatoryParamsValidator(sections, params)
+    exposure = RiskMandatoryParamsValidator(sections, params)
     deterministic = DeterministicComputationValidator(sections, params)
     hazard_comp_type = ComputationTypeValidator(params)
     file_path = FilePathValidator(params)
