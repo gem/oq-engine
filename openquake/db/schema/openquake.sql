@@ -984,6 +984,11 @@ CREATE TABLE uiapi.oq_params (
             OR
             ((job_type != 'disaggregation')
             AND (disagg_results IS NULL)))),
+    depth_to_1pt_0km_per_sec float NOT NULL DEFAULT 100.0
+        CONSTRAINT depth_to_1pt_0km_per_sec_above_zero
+        CHECK(depth_to_1pt_0km_per_sec > 0.0),
+    vs30_type VARCHAR NOT NULL DEFAULT 'measured' CONSTRAINT vs30_type_value
+        CHECK(vs30_type IN ('measured', 'inferred')),
     -- timestamp
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
