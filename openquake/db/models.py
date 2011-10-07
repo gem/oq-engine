@@ -17,6 +17,7 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
+# pylint: disable=C0302
 
 '''
 Model representations of the OpenQuake DB tables.
@@ -551,7 +552,8 @@ class OqParams(models.Model):
     # the default is 3.0 and document it. I definitely don't remember why it's
     # 3.0.
     truncation_level = models.FloatField(default=3.0)
-    reference_vs30_value = models.FloatField()
+    reference_vs30_value = models.FloatField(
+        "Average shear-wave velocity in the upper 30 meters of a site")
     imls = FloatArrayField(null=True)
     poes = FloatArrayField(null=True)
     realizations = models.IntegerField(null=True)
@@ -658,6 +660,12 @@ class OqParams(models.Model):
     #   fulldisaggmatrix (The full disaggregation matrix; includes
     #       Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
     disagg_results = CharArrayField(null=True)
+    VS30_TYPE_CHOICES = (
+       (u'measured', u'Value obtained from on-site measurements'),
+       (u'inferred', u'Estimated value'),
+    )
+    vs30_type = models.TextField(choices=VS30_TYPE_CHOICES)
+    depth_to_1pt_0km_per_sec = models.FloatField()
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"oq_params'
