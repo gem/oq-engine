@@ -591,6 +591,8 @@ class DbTestMixin(TestMixin):
         oqp.sadigh_site_type = 'rock'
         oqp.region = (
             "POLYGON((-81.3 37.2, -80.63 38.04, -80.02 37.49, -81.3 37.2))")
+        oqp.depth_to_1pt_0km_per_sec = 100.0
+        oqp.vs30_type = "measured"
         oqp.save()
 
         job = models.OqJob(oq_params=oqp, owner=owner,

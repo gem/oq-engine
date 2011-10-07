@@ -125,20 +125,26 @@ class ConfigurationConstraintsTestCase(unittest.TestCase, helpers.TestMixin):
         validator = config.default_validators(sections, params)
         self.assertFalse(validator.is_valid()[0])
 
-        params = {config.EXPOSURE: dummy_exposure}
+        params = {config.EXPOSURE: dummy_exposure,
+                  config.DEPTHTO1PT0KMPERSEC: "33.33",
+                  config.VS30_TYPE: "measured"}
 
         validator = config.default_validators(sections, params)
         self.assertFalse(validator.is_valid()[0])
 
         params = {config.EXPOSURE: dummy_exposure,
-                  config.REGION_GRID_SPACING: '0.5'}
+                  config.REGION_GRID_SPACING: '0.5',
+                  config.DEPTHTO1PT0KMPERSEC: "33.33",
+                  config.VS30_TYPE: "measured"}
 
         validator = config.default_validators(sections, params)
         self.assertFalse(validator.is_valid()[0])
 
         params = {config.EXPOSURE: dummy_exposure,
                   config.INPUT_REGION: "1.0, 2.0, 3.0, 4.0, 5.0, 6.0",
-                  config.REGION_GRID_SPACING: '0.5'}
+                  config.REGION_GRID_SPACING: '0.5',
+                  config.DEPTHTO1PT0KMPERSEC: "33.33",
+                  config.VS30_TYPE: "measured"}
 
         validator = config.default_validators(sections, params)
         self.assertTrue(validator.is_valid()[0])
