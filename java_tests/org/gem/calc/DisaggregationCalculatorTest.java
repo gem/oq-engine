@@ -2,15 +2,14 @@ package org.gem.calc;
 
 import static org.junit.Assert.*;
 
+import java.util.Arrays;
+
 import org.junit.Test;
+
+import static org.gem.calc.DisaggregationTestHelper.*;
 
 public class DisaggregationCalculatorTest
 {
-	public static final Double[] LAT_BIN_LIMS = {-0.6, -0.3, -0.1, 0.1, 0.3, 0.6};
-	public static final Double[] LON_BIN_LIMS = {-0.6, -0.3, -0.1, 0.1, 0.3, 0.6};
-	public static final Double[] MAG_BIN_LIMS = {5.0, 6.0, 7.0, 8.0, 9.0};
-	public static final Double[] EPS_BIN_LIMS = {-3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5};
-	public static final Double[] DIST_BIN_LIMS = {0.0, 20.0, 40.0, 60.0};
 
 	/**
 	 * If any of the bin edges passed to the constructor are null,
@@ -54,5 +53,46 @@ public class DisaggregationCalculatorTest
 		new DisaggregationCalculator(
 				new Double[1], new Double[1], new Double[1],
 				new Double[1], new Double[1]);
+	}
+
+	@Test(expected=IllegalArgumentException.class)
+	public void testConstructorUnsortedBinEdges()
+	{
+		Double[] unsorted = {1.1, 1.0};
+		new DisaggregationCalculator(
+				LAT_BIN_LIMS, LON_BIN_LIMS, unsorted,
+				EPS_BIN_LIMS, DIST_BIN_LIMS);
+	}
+
+	/**
+	 * Test constructor with known-good input.
+	 * (No errors should be thrown.)
+	 */
+	@Test
+	public void testConstructorGoodInput()
+	{
+		new DisaggregationCalculator(
+				LAT_BIN_LIMS, LON_BIN_LIMS, MAG_BIN_LIMS,
+				EPS_BIN_LIMS, DIST_BIN_LIMS);
+	}
+
+	@Test
+	public void testComputeMatrix()
+	{
+		DisaggregationCalculator disCalc = new DisaggregationCalculator(
+				LAT_BIN_LIMS, LON_BIN_LIMS, MAG_BIN_LIMS,
+				EPS_BIN_LIMS, DIST_BIN_LIMS);
+		
+		double[][][][][] result = disCalc.computeMatrix(
+				SITE, ERF, IMR_MAP, POE, HAZARD_CURVE);
+				
+		
+		assertTrue(Arrays.deepEquals(EXPECTED, result));
+	}
+
+	@Test
+	public void testGetBinIndices()
+	{
+		
 	}
 }
