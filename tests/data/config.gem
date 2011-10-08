@@ -7,6 +7,8 @@ NUMBER_OF_LOGIC_TREE_SAMPLES = 0
 
 [HAZARD]
 
+DEPTHTO1PT0KMPERSEC = 100.0
+VS30_TYPE = measured
 # file containing erf logic tree structure
 SOURCE_MODEL_LOGIC_TREE_FILE = ErfLogicTree.inp
 # file containing gmpe logic tree structure
