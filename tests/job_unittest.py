@@ -16,16 +16,16 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
+
+from functools import partial
 import mock
 import os
+from tempfile import gettempdir
 import textwrap
 import unittest
 
 from django.contrib.gis.geos.polygon import Polygon
 from django.contrib.gis.geos.collections import MultiPoint
-from tempfile import gettempdir
-
-from tempfile import gettempdir
 
 from openquake import job
 from openquake import kvs
@@ -306,6 +306,10 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
         self.assertEquals(['GENERAL', 'HAZARD', 'RISK'], sorted(sections))
 
 
+def datapath(test, path):
+    return helpers.testdata_path("%s/%s" % (test, path))
+
+
 class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
     maxDiff = None
 
@@ -450,9 +454,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         return sorted(inputs, key=lambda i: (i['type'], i['path']))
 
     def test_get_source_models(self):
-        def abs_path(path):
-            return os.path.abspath(os.path.join(
-                    'smoketests/classical_psha_simple', path))
+        abs_path = partial(datapath, "classical_psha_simple")
 
         path = abs_path('source_model_logic_tree.xml')
         models = get_source_models(path)
@@ -462,17 +464,17 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals(expected_models, models),
 
     def test_prepare_classical_job(self):
+        abs_path = partial(datapath, "classical_psha_simple")
         params = self.BASE_CLASSICAL_PARAMS.copy()
         params['REGION_VERTEX'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
         params['REGION_GRID_SPACING'] = '0.1'
-        params['SOURCE_MODEL_LOGIC_TREE_FILE'] = \
-            'smoketests/classical_psha_simple/source_model_logic_tree.xml'
-        params['GMPE_LOGIC_TREE_FILE'] = \
-            'smoketests/classical_psha_simple/gmpe_logic_tree.xml'
-        params['EXPOSURE'] = \
-            'smoketests/classical_psha_simple/small_exposure.xml'
-        params['VULNERABILITY'] = \
-            'smoketests/classical_psha_simple/vulnerability.xml'
+        params['SOURCE_MODEL_LOGIC_TREE_FILE'] = abs_path(
+            "source_model_logic_tree.xml")
+        params['GMPE_LOGIC_TREE_FILE'] = abs_path("gmpe_logic_tree.xml")
+        params['EXPOSURE'] = abs_path("small_exposure.xml")
+        params['VULNERABILITY'] = abs_path("vulnerability.xml")
+        params['DEPTHTO1PT0KMPERSEC'] = "100.0"
+        params['VS30_TYPE'] = "measured"
 
         self.job = prepare_job(params)
         self.job.oq_params = self._reload_params()
@@ -500,21 +502,17 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'subduction_rupture_floating_type': 'downdip',
              }, self.job.oq_params)
         self.assertEqual([
-                {'path': 'smoketests/classical_psha_simple/small_exposure.xml',
+                {'path': abs_path("small_exposure.xml"),
                  'type': 'exposure'},
-                {'path': 'smoketests/classical_psha_simple/' \
-                         'gmpe_logic_tree.xml',
+                {'path': abs_path("gmpe_logic_tree.xml"),
                  'type': 'lt_gmpe'},
-                {'path': 'smoketests/classical_psha_simple/' \
-                         'source_model_logic_tree.xml',
+                {'path': abs_path("source_model_logic_tree.xml"),
                  'type': 'lt_source'},
-                {'path': os.path.abspath(
-                        'smoketests/classical_psha_simple/source_model1.xml'),
+                {'path': abs_path("source_model1.xml"),
                  'type': 'source'},
-                {'path': os.path.abspath(
-                        'smoketests/classical_psha_simple/source_model2.xml'),
+                {'path': abs_path("source_model2.xml"),
                  'type': 'source'},
-                {'path': 'smoketests/classical_psha_simple/vulnerability.xml',
+                {'path': abs_path("vulnerability.xml"),
                  'type': 'vulnerability'},
                 ], self._get_inputs(self.job))
 
@@ -525,6 +523,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         '''
         params = self.BASE_CLASSICAL_PARAMS.copy()
         params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
+        params['DEPTHTO1PT0KMPERSEC'] = "100.0"
+        params['VS30_TYPE'] = "measured"
 
         self.job = prepare_job(params)
         self.job.oq_params = self._reload_params()
@@ -548,15 +548,16 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              }, self.job.oq_params)
 
     def test_prepare_deterministic_job(self):
+        abs_path = partial(datapath, "deterministic")
         params = self.BASE_DETERMINISTIC_PARAMS.copy()
         params['REGION_VERTEX'] = \
             '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
         params['REGION_GRID_SPACING'] = '0.02'
-        params['SINGLE_RUPTURE_MODEL'] = \
-            'smoketests/deterministic/simple-fault-rupture.xml'
-        params['EXPOSURE'] = 'smoketests/deterministic/LA_small_portfolio.xml'
-        params['VULNERABILITY'] = \
-            'smoketests/deterministic/vulnerability.xml'
+        params['SINGLE_RUPTURE_MODEL'] = abs_path("simple-fault-rupture.xml")
+        params['EXPOSURE'] = abs_path("LA_small_portfolio.xml")
+        params['VULNERABILITY'] = abs_path("vulnerability.xml")
+        params['DEPTHTO1PT0KMPERSEC'] = "100.0"
+        params['VS30_TYPE'] = "measured"
 
         self.job = prepare_job(params)
         self.job.oq_params = self._reload_params()
@@ -583,11 +584,11 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'rupture_surface_discretization': 0.1,
              }, self.job.oq_params)
         self.assertEqual([
-                {'path': 'smoketests/deterministic/LA_small_portfolio.xml',
+                {'path': abs_path("LA_small_portfolio.xml"),
                  'type': 'exposure'},
-                {'path': 'smoketests/deterministic/simple-fault-rupture.xml',
+                {'path': abs_path("simple-fault-rupture.xml"),
                  'type': 'rupture'},
-                {'path': 'smoketests/deterministic/vulnerability.xml',
+                {'path': abs_path("vulnerability.xml"),
                  'type': 'vulnerability'},
                 ], self._get_inputs(self.job))
 
@@ -596,9 +597,10 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         Same as test_prepare_deterministic_job, but with geometry specified as
         a list of sites.
         '''
-
         params = self.BASE_DETERMINISTIC_PARAMS.copy()
         params['SITES'] = '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
+        params['DEPTHTO1PT0KMPERSEC'] = "100.0"
+        params['VS30_TYPE'] = "measured"
 
         self.job = prepare_job(params)
         self.job.oq_params = self._reload_params()
@@ -622,17 +624,18 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              }, self.job.oq_params)
 
     def test_prepare_event_based_job(self):
+        abs_path = partial(datapath, "simplecase")
         params = self.BASE_EVENT_BASED_PARAMS.copy()
         params['REGION_VERTEX'] = \
             '33.88, -118.3, 33.88, -118.06, 33.76, -118.06'
         params['REGION_GRID_SPACING'] = '0.02'
-        params['SOURCE_MODEL_LOGIC_TREE_FILE'] = \
-            'smoketests/simplecase/source_model_logic_tree.xml'
-        params['GMPE_LOGIC_TREE_FILE'] = \
-            'smoketests/simplecase/gmpe_logic_tree.xml'
-        params['EXPOSURE'] = 'smoketests/simplecase/small_exposure.xml'
-        params['VULNERABILITY'] = \
-            'smoketests/simplecase/vulnerability.xml'
+        params['SOURCE_MODEL_LOGIC_TREE_FILE'] = abs_path(
+            "source_model_logic_tree.xml")
+        params['GMPE_LOGIC_TREE_FILE'] = abs_path("gmpe_logic_tree.xml")
+        params['EXPOSURE'] = abs_path("small_exposure.xml")
+        params['VULNERABILITY'] = abs_path("vulnerability.xml")
+        params['DEPTHTO1PT0KMPERSEC'] = "100.0"
+        params['VS30_TYPE'] = "measured"
 
         self.job = prepare_job(params)
         self.job.oq_params = self._reload_params()
@@ -659,19 +662,17 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'rupture_surface_discretization': None,
              }, self.job.oq_params)
         self.assertEqual([
-                {'path': 'smoketests/simplecase/small_exposure.xml',
+                {'path': abs_path("small_exposure.xml"),
                  'type': 'exposure'},
-                {'path': 'smoketests/simplecase/gmpe_logic_tree.xml',
+                {'path': abs_path("gmpe_logic_tree.xml"),
                  'type': 'lt_gmpe'},
-                {'path': 'smoketests/simplecase/source_model_logic_tree.xml',
+                {'path': abs_path("source_model_logic_tree.xml"),
                  'type': 'lt_source'},
-                {'path': os.path.abspath(
-                        'smoketests/simplecase/source_model1.xml'),
+                {'path': abs_path("source_model1.xml"),
                  'type': 'source'},
-                {'path': os.path.abspath(
-                        'smoketests/simplecase/source_model2.xml'),
+                {'path': abs_path("source_model2.xml"),
                  'type': 'source'},
-                {'path': 'smoketests/simplecase/vulnerability.xml',
+                {'path': abs_path("vulnerability.xml"),
                  'type': 'vulnerability'},
                 ], self._get_inputs(self.job))
 
@@ -683,6 +684,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         params = self.BASE_EVENT_BASED_PARAMS.copy()
         params['SITES'] = '33.88, -118.3, 33.88, -118.06, 33.76, -118.06'
+        params['DEPTHTO1PT0KMPERSEC'] = "100.0"
+        params['VS30_TYPE'] = "measured"
 
         self.job = prepare_job(params)
         self.job.oq_params = self._reload_params()
@@ -860,7 +863,7 @@ class RunJobTestCase(unittest.TestCase):
         Test reading site data from an exposure file using
         :py:function:`openquake.risk.read_sites_from_exposure`.
         """
-        job_config_file = helpers.smoketest_file('simplecase/config.gem')
+        job_config_file = helpers.testdata_path('simplecase/config.gem')
 
         test_job = helpers.job_from_file(job_config_file)
 
@@ -906,7 +909,8 @@ class JobStatsTestCase(unittest.TestCase):
 
     def setUp(self):
         # Test 'event-based' job
-        self.eb_job = helpers.job_from_file('smoketests/simplecase/config.gem')
+        self.eb_job = helpers.job_from_file(
+            helpers.testdata_path("simplecase/config.gem"))
 
     def test_record_initial_stats(self):
         '''

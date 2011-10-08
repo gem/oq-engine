@@ -33,7 +33,7 @@ from tests.utils.helpers import patch
 
 TEST_JOB_ID = "1234"
 TEST_REGION = shapes.Region.from_simple((0.1, 0.1), (0.2, 0.2))
-TEST_JOB_FILE = helpers.smoketest_file('deterministic/config.gem')
+TEST_JOB_FILE = helpers.testdata_path('deterministic/config.gem')
 
 
 class DeterministicRiskTestCase(unittest.TestCase):

@@ -37,6 +37,7 @@
                         <xs:element ref="riskResult"/>
                         <xs:element ref="exposurePortfolio"/>
                         <xs:element ref="vulnerabilityModel"/>
+                        <xs:element ref="disaggregationResultField"/>
                     </xs:choice>
                 </xs:sequence>
             </xs:extension>
