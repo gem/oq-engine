@@ -110,10 +110,21 @@ def get_output_path(file_name):
 
 
 def smoketest_file(file_name):
-    """ Take a file name and return the full path to the file in the smoketests
-    directory """
+    """
+    Take a file name and return the full path to the file in the smoketests
+    directory.
+    """
     return os.path.join(
         os.path.dirname(__file__), "../../smoketests", file_name)
+
+
+def testdata_path(file_name):
+    """
+    Take a file name and return the full path to the file in the
+    tests/data/smoketests directory
+    """
+    return os.path.normpath(os.path.join(
+        os.path.dirname(__file__), "../data/smoketests", file_name))
 
 
 def job_from_file(config_file_path):
@@ -580,6 +591,8 @@ class DbTestMixin(TestMixin):
         oqp.sadigh_site_type = 'rock'
         oqp.region = (
             "POLYGON((-81.3 37.2, -80.63 38.04, -80.02 37.49, -81.3 37.2))")
+        oqp.depth_to_1pt_0km_per_sec = 100.0
+        oqp.vs30_type = "measured"
         oqp.save()
 
         job = models.OqJob(oq_params=oqp, owner=owner,

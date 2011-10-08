@@ -40,9 +40,11 @@ REGION_GRID_SPACING = "REGION_GRID_SPACING"
 SITES = "SITES"
 DETERMINISTIC_MODE = "Deterministic"
 DISAGGREGATION_MODE = "Disaggregation"
-CALCULATION_MODE = "CALCULATION_MODE"
 BASE_PATH = "BASE_PATH"
 COMPUTE_HAZARD_AT_ASSETS = "COMPUTE_HAZARD_AT_ASSETS_LOCATIONS"
+
+DEPTHTO1PT0KMPERSEC = "DEPTHTO1PT0KMPERSEC"
+VS30_TYPE = "VS30_TYPE"
 
 
 def to_float_array(value):
@@ -65,7 +67,6 @@ class ValidationException(Exception):
 
     def __str__(self):
         msg = 'The job configuration contained some errors:\n\n'
-
         return msg + '\n'.join(self.errors)
 
 
@@ -110,13 +111,15 @@ class ValidatorSet(object):
         self.validators.append(validator)
 
 
-class RiskMandatoryParametersValidator(object):
+class MandatoryParamsValidator(object):
     """Validator that checks if the mandatory parameters
     for risk processing are specified."""
 
     def __init__(self, sections, params):
         self.sections = sections
         self.params = params
+        self.section_of_interest = None
+        self.mandatory_params = []
 
     def is_valid(self):
         """Return true if the mandatory risk parameters are specified,
@@ -127,17 +130,38 @@ class RiskMandatoryParametersValidator(object):
             (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
             tuple is returned
         """
-
-        mandatory_params = [EXPOSURE, INPUT_REGION, REGION_GRID_SPACING]
-
-        if RISK_SECTION in self.sections:
-            for mandatory_param in mandatory_params:
+        if self.section_of_interest in self.sections:
+            for mandatory_param in self.mandatory_params:
                 if mandatory_param not in self.params.keys():
-                    return (False, [
-                            "With RISK processing, EXPOSURE, REGION_VERTEX " +
-                            "and REGION_GRID_SPACING must be specified"])
+                    msg = ("Parameter '%s' not supplied in section '%s'" %
+                           (mandatory_param, self.section_of_interest))
+                    return (False, [msg])
 
         return (True, [])
+
+
+class RiskMandatoryParamsValidator(MandatoryParamsValidator):
+    """
+    Validator that checks whether the mandatory parameters
+    for risk processing are specified.
+    """
+    def __init__(self, sections, params):
+        super(
+            RiskMandatoryParamsValidator, self).__init__(sections, params)
+        self.section_of_interest = RISK_SECTION
+        self.mandatory_params = [EXPOSURE, INPUT_REGION, REGION_GRID_SPACING]
+
+
+class HazardMandatoryParamsValidator(MandatoryParamsValidator):
+    """
+    Validator that checks whether the mandatory parameters
+    for hazard processing are specified.
+    """
+    def __init__(self, sections, params):
+        super(
+            HazardMandatoryParamsValidator, self).__init__(sections, params)
+        self.section_of_interest = HAZARD_SECTION
+        self.mandatory_params = [DEPTHTO1PT0KMPERSEC, VS30_TYPE]
 
 
 class ComputationTypeValidator(object):
@@ -377,7 +401,8 @@ def default_validators(sections, params):
         :py:class:`openquake.config.ValidatorSet`
     """
 
-    exposure = RiskMandatoryParametersValidator(sections, params)
+    hazard = HazardMandatoryParamsValidator(sections, params)
+    exposure = RiskMandatoryParamsValidator(sections, params)
     deterministic = DeterministicComputationValidator(sections, params)
     hazard_comp_type = ComputationTypeValidator(params)
     file_path = FilePathValidator(params)
@@ -389,6 +414,7 @@ def default_validators(sections, params):
     validators.add(exposure)
     validators.add(parameter)
     validators.add(file_path)
+    validators.add(hazard)
 
     if params.get(CALCULATION_MODE) == DISAGGREGATION_MODE:
         validators.add(DisaggregationValidator(params))
