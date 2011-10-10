@@ -38,6 +38,8 @@ from openquake import xml
 from openquake import java
 
 from openquake.job import mixins
+from openquake.job.config import HazardMandatoryParamsValidator
+from openquake.job.config import PARAMS
 from openquake.kvs import tokens
 from openquake.hazard import tasks
 from openquake.hazard import classical_psha
@@ -928,3 +930,44 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
     def _has_computed_IML_for_site(self, site, poe):
         self.assertTrue(kvs.get(kvs.tokens.mean_hazard_map_key(
             self.job_id, site, poe)))
+
+
+class ParameterizeSitesTestCase(helpers.TestMixin, unittest.TestCase):
+    """Tests relating to BasePSHAMixin.parameterize_sites()."""
+
+    def setUp(self):
+        self.params = {
+            "CALCULATION_MODE": "Hazard",
+            "REFERENCE_VS30_VALUE": 500,
+            "SADIGH_SITE_TYPE": "Rock",
+            "REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM": "5.0",
+            "DEPTHTO1PT0KMPERSEC": "33.33",
+            "VS30_TYPE": "measured"}
+
+        self.job = self.create_job_with_mixin(
+            self.params, opensha.ClassicalMixin)
+        self.job_id = self.job.job_id
+
+    def tearDown(self):
+        self.unload_job_mixin()
+
+    def test_all_mandatory_params_covered(self):
+        """Make sure we add defaults for all mandatory hazard parameters."""
+        # The mandatory parameters below must be set on each Java site object.
+        hmps = HazardMandatoryParamsValidator.MANDATORY_PARAMS
+        mandatory_params = set([PARAMS[p].java_name for p in hmps])
+
+        # Parameterise a single site and see what we got.
+        params_handled = set()
+        [jsite] = self.job.parameterize_sites([shapes.Site(3.0, 3.0)])
+        param_name_iter = jsite.getParameterNamesIterator()
+        while True:
+            try:
+                params_handled.add(param_name_iter.next())
+            except StopIteration:
+                break
+
+        self.assertTrue(
+            mandatory_params.issubset(params_handled),
+            "The following parameters have no defaults: %s" % (
+                mandatory_params - params_handled))
