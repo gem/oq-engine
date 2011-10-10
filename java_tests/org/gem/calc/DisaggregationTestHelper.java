@@ -760,15 +760,17 @@ public class DisaggregationTestHelper
 	public static final DiscretizedFuncAPI HAZARD_CURVE = makeHazardCurve();
 
 	/**
-	 * Map the Math.log() method to each element in the input list.
+	 * Map the Math.log() method to each element in the input list
+	 * to create a new list.
 	 */
-	private static Double[] mapLog(Double [] list)
+	private static Double[] mapLog(Double[] list)
 	{
+		Double[] result = new Double[list.length];
 		for (int i = 0; i < list.length; i++)
 		{
-			list[i] = Math.log(list[i]);
+			result[i] = Math.log(list[i]);
 		}
-		return list;
+		return result;
 	}
 	
 	private static Site makeTestSite()
