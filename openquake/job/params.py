@@ -31,7 +31,7 @@ from openquake.db.models import OqParams
 ARRAY_RE = re.compile('[ ,]+')
 
 # pylint: disable=C0103
-Param = namedtuple('Param', 'column type default modes to_db')
+Param = namedtuple('Param', 'column type default modes to_db java_name')
 
 # TODO unify with utils/oqrunner/config_writer.py
 CALCULATION_MODE = {
@@ -111,7 +111,8 @@ def sequence_map_enum(value):
 
 
 # pylint: disable=W0212
-def define_param(name, column, modes=None, default=None, to_db=None):
+def define_param(name, column, modes=None, default=None, to_db=None,
+                 java_name=None):
     """
     Adds a new parameter definition to the PARAMS dictionary
 
@@ -126,6 +127,7 @@ def define_param(name, column, modes=None, default=None, to_db=None):
         explicitly defined in a job config.
     :param to_db: A function to transform this parameter for storage in the
         database. Defaults to `None` if no transformation is required.
+    :param str java_name: the name of the parameter in the Java domain.
     """
 
     if modes is None:
@@ -140,11 +142,13 @@ def define_param(name, column, modes=None, default=None, to_db=None):
 
     if column == None:
         PARAMS[name] = Param(column=column, type=None, default=default,
-                             modes=modes, to_db=None)
+                             modes=modes, to_db=None, java_name=java_name)
     else:
         column_type = type(OqParams._meta.get_field_by_name(column)[0])
         PARAMS[name] = Param(column=column, type=column_type,
-                             default=default, modes=modes, to_db=to_db)
+                             default=default, modes=modes, to_db=to_db,
+                             java_name=java_name)
+
 
 # general params
 define_param('CALCULATION_MODE', None)
@@ -153,9 +157,10 @@ define_param('REGION_GRID_SPACING', 'region_grid_spacing')
 define_param('REGION_VERTEX', 'region')
 define_param('OUTPUT_DIR', None)
 define_param('BASE_PATH', None)
-define_param('DEPTHTO1PT0KMPERSEC', 'depth_to_1pt_0km_per_sec')
-define_param('VS30_TYPE', 'vs30_type')
-
+define_param("DEPTHTO1PT0KMPERSEC", "depth_to_1pt_0km_per_sec",
+             default=100.0, java_name="Depth 1.0 km/sec")
+define_param("VS30_TYPE", "vs30_type", default="measured",
+             java_name="Vs30 Type")
 
 # input files
 define_param('VULNERABILITY', None)
@@ -279,13 +284,15 @@ define_param('NUMBER_OF_SEISMICITY_HISTORIES', 'histories',
 define_param('PERIOD', 'period', default=0.0)
 define_param('POES', 'poes', modes=('classical', 'disaggregation'))
 define_param('QUANTILE_LEVELS', 'quantile_levels', modes='classical')
-define_param('REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM',
-             'reference_depth_to_2pt5km_per_sec_param')
-define_param('REFERENCE_VS30_VALUE', 'reference_vs30_value')
+define_param("REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM",
+             "reference_depth_to_2pt5km_per_sec_param",
+             java_name="Depth 2.5 km/sec")
+define_param("REFERENCE_VS30_VALUE", "reference_vs30_value", java_name="Vs30")
 define_param('RISK_CELL_SIZE', 'risk_cell_size')
 define_param('RUPTURE_SURFACE_DISCRETIZATION',
              'rupture_surface_discretization', modes='deterministic')
-define_param('SADIGH_SITE_TYPE', 'sadigh_site_type', to_db=map_enum)
+define_param("SADIGH_SITE_TYPE", "sadigh_site_type", to_db=map_enum,
+             java_name="Sadigh Site Type")
 define_param('SOURCE_MODEL_LT_RANDOM_SEED', 'source_model_lt_random_seed',
              modes=('classical', 'event_based', 'disaggregation'))
 define_param('STANDARD_DEVIATION_TYPE', 'standard_deviation_type',
