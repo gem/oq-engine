@@ -940,7 +940,9 @@ class ParameterizeSitesTestCase(helpers.TestMixin, unittest.TestCase):
             "CALCULATION_MODE": "Hazard",
             "REFERENCE_VS30_VALUE": 500,
             "SADIGH_SITE_TYPE": "Rock",
-            "REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM": "5.0"}
+            "REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM": "5.0",
+            "DEPTHTO1PT0KMPERSEC": "33.33",
+            "VS30_TYPE": "measured"}
 
         self.job = self.create_job_with_mixin(
             self.params, opensha.ClassicalMixin)
