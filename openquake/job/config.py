@@ -122,7 +122,7 @@ class MandatoryParamsValidator(object):
     def is_valid(self):
         """
         Return `True` if the mandatory parameters are specified, `False`
-        otherwise. In the latter case also return a list of error messages.
+        otherwise.
 
         :returns: the status of this validator and the related error messages.
         :rtype: when valid, a (True, []) tuple is returned. When invalid, a
@@ -167,7 +167,7 @@ class HazardMandatoryParamsValidator(MandatoryParamsValidator):
     def is_valid(self):
         """
         Return `True` if the mandatory parameters are specified, `False`
-        otherwise. In the latter case also return a list of error messages.
+        otherwise.
 
         :returns: the status of this validator and the related error messages.
         :rtype: when valid, a (True, []) tuple is returned. When invalid, a
