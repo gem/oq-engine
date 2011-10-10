@@ -12,7 +12,7 @@
             <tectonicRegion>Active Shallow Crust</tectonicRegion>
             <rake>0.0</rake>
             
-	    <truncatedGutenbergRichter>
+	        <truncatedGutenbergRichter>
                 <aValueCumulative>3.1292</aValueCumulative>
                 <bValue>0.9</bValue>
                 <minMagnitude>5.0</minMagnitude>
