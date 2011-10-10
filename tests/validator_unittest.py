@@ -23,10 +23,10 @@ and its validation.
 """
 
 from openquake.job import config
-from openquake.job.config import to_float_array, to_str_array
 from openquake.job.config import (
-    DisaggregationValidator, RiskMandatoryParamsValidator,
-    DeterministicComputationValidator)
+    DisaggregationValidator, HazardMandatoryParamsValidator,
+    RiskMandatoryParamsValidator, DeterministicComputationValidator, PARAMS,
+    to_float_array, to_str_array)
 from tests.utils import helpers
 
 import unittest
@@ -166,6 +166,34 @@ class ConfigurationConstraintsTestCase(unittest.TestCase, helpers.TestMixin):
 
         validator = config.default_validators(sections, params)
         self.assertTrue(validator.is_valid()[0])
+
+    def test_mandatory_hazard_params_without_java_names(self):
+        """
+        All mandatory hazard parameters must have the 'java_name' property
+        set.
+        """
+        sections = [config.HAZARD_SECTION]
+
+        params = {config.CALCULATION_MODE: "CLASSICAL",
+                  config.BASE_PATH: "/a/b/c",
+                  config.SITES: "37.9, -121.9",
+                  config.DEPTHTO1PT0KMPERSEC: "33.33",
+                  config.VS30_TYPE: "measured"}
+
+        # Add a paramer *without* a 'java_name' property to the mandatory
+        # hazard parameters list in order to provoke the error.
+        HazardMandatoryParamsValidator.MANDATORY_PARAMS.append("BASE_PATH")
+
+        # Now validate ..
+        validator = config.default_validators(sections, params)
+        result, msgs = validator.is_valid()
+
+        # .. and check that the validation blew up due to the lack of the
+        # 'java_name' property.
+        self.assertFalse(result)
+        self.assertEqual(
+            ["The following mandatory hazard parameter(s) lack a 'java_name' "
+             "property: BASE_PATH"], msgs)
 
     def test_deterministic_is_not_supported_alone(self):
         """When we specify a deterministic computation, we only
