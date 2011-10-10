@@ -195,6 +195,9 @@ class ConfigurationConstraintsTestCase(unittest.TestCase, helpers.TestMixin):
             ["The following mandatory hazard parameter(s) lack a 'java_name' "
              "property: BASE_PATH"], msgs)
 
+        # Restore the list with the mandatory hazard parameters.
+        HazardMandatoryParamsValidator.MANDATORY_PARAMS.pop()
+
     def test_deterministic_is_not_supported_alone(self):
         """When we specify a deterministic computation, we only
         support hazard + risk jobs."""
