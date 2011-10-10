@@ -187,9 +187,19 @@ class BasePSHAMixin(Mixin):
                     self.params['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']))
             sadigh = java.jclass("StringParameter")("Sadigh Site Type")
             sadigh.setValue(self.params['SADIGH_SITE_TYPE'])
+
+            depth1km = java.jclass("DoubleParameter")(jpype.JString(
+                "Depth 1.0 km/sec"))
+            depth1km.setValue(float(self.params['DEPTHTO1PT0KMPERSEC']))
+            vs30_type = java.jclass("StringParameter")("Vs30 Type")
+            # Enum values must be capitalized in the Java domain!
+            vs30_type.setValue(self.params['VS30_TYPE'].capitalize())
+
             site.addParameter(vs30)
             site.addParameter(depth25)
             site.addParameter(sadigh)
+            site.addParameter(depth1km)
+            site.addParameter(vs30_type)
             jsite_list.add(site)
         return jsite_list
 
