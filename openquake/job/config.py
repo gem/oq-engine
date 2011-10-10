@@ -81,8 +81,8 @@ class ValidatorSet(object):
             yield v
 
     def is_valid(self):
-        """Return true if all validators defined in this set
-        are valid, false otherwise.
+        """Return `True` if all validators defined in this set
+        are valid, `False` otherwise.
 
         :returns: the status of this set and the related error messages.
         :rtype: when valid, a (True, []) tuple is returned. When invalid, a
@@ -121,8 +121,8 @@ class MandatoryParamsValidator(object):
 
     def is_valid(self):
         """
-        Return true if the mandatory parameters are specified, false
-        otherwise. In the latter case also return the error messages.
+        Return `True` if the mandatory parameters are specified, `False`
+        otherwise. In the latter case also return a list of error messages.
 
         :returns: the status of this validator and the related error messages.
         :rtype: when valid, a (True, []) tuple is returned. When invalid, a
@@ -166,8 +166,8 @@ class HazardMandatoryParamsValidator(MandatoryParamsValidator):
 
     def is_valid(self):
         """
-        Return true if the mandatory parameters are specified, false
-        otherwise. In the latter case also return the error messages.
+        Return `True` if the mandatory parameters are specified, `False`
+        otherwise. In the latter case also return a list of error messages.
 
         :returns: the status of this validator and the related error messages.
         :rtype: when valid, a (True, []) tuple is returned. When invalid, a
@@ -200,8 +200,8 @@ class ComputationTypeValidator(object):
         self.params = params
 
     def is_valid(self):
-        """Return true if the user has specified the region
-        or the set of sites, false otherwise.
+        """Return `True` if the user has specified the region
+        or the set of sites, `False` otherwise.
         """
         has_input_region = INPUT_REGION in self.params
         has_sites = SITES in self.params
@@ -230,8 +230,8 @@ class DeterministicComputationValidator(object):
         self.sections = sections
 
     def is_valid(self):
-        """Return true if the deterministic calculation mode
-        specified is for an hazard + risk job, false otherwise."""
+        """Return `True` if the deterministic calculation mode
+        specified is for an hazard + risk job, `False` otherwise."""
 
         if RISK_SECTION not in self.sections \
                 and self.params[CALCULATION_MODE] == DETERMINISTIC_MODE:
