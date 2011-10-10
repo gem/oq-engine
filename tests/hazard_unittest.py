@@ -38,6 +38,8 @@ from openquake import xml
 from openquake import java
 
 from openquake.job import mixins
+from openquake.job.config import HazardMandatoryParamsValidator
+from openquake.job.config import PARAMS
 from openquake.kvs import tokens
 from openquake.hazard import tasks
 from openquake.hazard import classical_psha
@@ -54,16 +56,16 @@ MEAN_GROUND_INTENSITY = (
     '"site":"+35.1000 +35.0000", "intensity": 2.0320e+00,'
     '"site":"+35.1500 +35.0000", "intensity": 2.0594e+00}')
 
-TEST_JOB_FILE = helpers.smoketest_file('simplecase/config.gem')
+TEST_JOB_FILE = helpers.testdata_path('simplecase/config.gem')
 
 TEST_SOURCE_MODEL = ""
 with open(
-    helpers.smoketest_file('simplecase/expected_source_model.json'), 'r') as f:
+    helpers.testdata_path('simplecase/expected_source_model.json'), 'r') as f:
     TEST_SOURCE_MODEL = f.read()
 
 TEST_GMPE_MODEL = ""
 with open(
-    helpers.smoketest_file('simplecase/expected_gmpe_model.json'), 'r') as f:
+    helpers.testdata_path('simplecase/expected_gmpe_model.json'), 'r') as f:
     TEST_GMPE_MODEL = f.read()
 
 NRML_SCHEMA_PATH = nrml.nrml_schema_file()
@@ -326,10 +328,8 @@ class HazardEngineTestCase(unittest.TestCase):
                             "NRML instance file %s does not validate against "\
                             "schema" % nrml_path)
 
-        test_file_path = helpers.smoketest_file(
-            "classical_psha_simple/config.gem")
-
-        hazengine = helpers.job_from_file(test_file_path)
+        hazengine = helpers.job_from_file(
+            helpers.testdata_path("classical_psha_simple/config.gem"))
 
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
             hazengine.execute()
@@ -930,3 +930,44 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
     def _has_computed_IML_for_site(self, site, poe):
         self.assertTrue(kvs.get(kvs.tokens.mean_hazard_map_key(
             self.job_id, site, poe)))
+
+
+class ParameterizeSitesTestCase(helpers.TestMixin, unittest.TestCase):
+    """Tests relating to BasePSHAMixin.parameterize_sites()."""
+
+    def setUp(self):
+        self.params = {
+            "CALCULATION_MODE": "Hazard",
+            "REFERENCE_VS30_VALUE": 500,
+            "SADIGH_SITE_TYPE": "Rock",
+            "REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM": "5.0",
+            "DEPTHTO1PT0KMPERSEC": "33.33",
+            "VS30_TYPE": "measured"}
+
+        self.job = self.create_job_with_mixin(
+            self.params, opensha.ClassicalMixin)
+        self.job_id = self.job.job_id
+
+    def tearDown(self):
+        self.unload_job_mixin()
+
+    def test_all_mandatory_params_covered(self):
+        """Make sure we add defaults for all mandatory hazard parameters."""
+        # The mandatory parameters below must be set on each Java site object.
+        hmps = HazardMandatoryParamsValidator.MANDATORY_PARAMS
+        mandatory_params = set([PARAMS[p].java_name for p in hmps])
+
+        # Parameterise a single site and see what we got.
+        params_handled = set()
+        [jsite] = self.job.parameterize_sites([shapes.Site(3.0, 3.0)])
+        param_name_iter = jsite.getParameterNamesIterator()
+        while True:
+            try:
+                params_handled.add(param_name_iter.next())
+            except StopIteration:
+                break
+
+        self.assertTrue(
+            mandatory_params.issubset(params_handled),
+            "The following parameters have no defaults: %s" % (
+                mandatory_params - params_handled))
