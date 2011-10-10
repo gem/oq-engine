@@ -626,8 +626,8 @@ CREATE TABLE uiapi.oq_params (
     -- Probabilities of exceedence
     poes float[] CONSTRAINT poes_are_set
         CHECK(
-            ((job_type = 'classical') AND (poes IS NOT NULL))
-            OR ((job_type != 'classical') AND (poes IS NULL))),
+            ((job_type IN ('classical', 'disaggregation')) AND (poes IS NOT NULL))
+            OR ((job_type IN ('event_based', 'deterministic')) AND (poes IS NULL))),
     -- Number of logic tree samples
     realizations integer CONSTRAINT realizations_is_set
         CHECK(
@@ -641,8 +641,8 @@ CREATE TABLE uiapi.oq_params (
     -- ground motion correlation flag
     gm_correlated boolean CONSTRAINT gm_correlated_is_set
         CHECK(
-            ((job_type = 'classical') AND (gm_correlated IS NULL))
-            OR ((job_type != 'classical') AND (gm_correlated IS NOT NULL))),
+            ((job_type IN ('classical', 'disaggregation')) AND (gm_correlated IS NULL))
+            OR ((job_type IN ('event_based', 'deterministic')) AND (gm_correlated IS NOT NULL))),
     gmf_calculation_number integer CONSTRAINT gmf_calculation_number_is_set
         CHECK(
             ((job_type = 'deterministic')
@@ -684,7 +684,7 @@ CREATE TABLE uiapi.oq_params (
             ((job_type = 'classical')
              AND (compute_mean_hazard_curve IS NOT NULL))
             OR
-            ((job_type IN ('deterministic', 'event_based'))
+            ((job_type IN ('deterministic', 'event_based', 'disaggregation'))
              AND (compute_mean_hazard_curve IS NULL))),
     conditional_loss_poe float[],
     fault_magnitude_scaling_relationship VARCHAR
@@ -724,7 +724,7 @@ CREATE TABLE uiapi.oq_params (
         CHECK(
             (job_type IN ('deterministic', 'event_based'))
             OR
-            ((job_type = 'classical')
+            ((job_type IN ('classical', 'disaggregation'))
              AND (gmf_random_seed IS NULL))),
     gmpe_lt_random_seed integer
         CONSTRAINT gmpe_lt_random_seed_is_set
@@ -984,6 +984,11 @@ CREATE TABLE uiapi.oq_params (
             OR
             ((job_type != 'disaggregation')
             AND (disagg_results IS NULL)))),
+    depth_to_1pt_0km_per_sec float NOT NULL DEFAULT 100.0
+        CONSTRAINT depth_to_1pt_0km_per_sec_above_zero
+        CHECK(depth_to_1pt_0km_per_sec > 0.0),
+    vs30_type VARCHAR NOT NULL DEFAULT 'measured' CONSTRAINT vs30_type_value
+        CHECK(vs30_type IN ('measured', 'inferred')),
     -- timestamp
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
