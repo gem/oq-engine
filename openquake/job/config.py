@@ -169,6 +169,9 @@ class HazardMandatoryParamsValidator(MandatoryParamsValidator):
         Return `True` if the mandatory parameters are specified, `False`
         otherwise.
 
+        This will additionally check that all mandatory hazard parameters have
+        the "java_name" property set.
+
         :returns: the status of this validator and the related error messages.
         :rtype: when valid, a (True, []) tuple is returned. When invalid, a
             (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
