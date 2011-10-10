@@ -792,20 +792,19 @@ public class DisaggregationTestHelper
 	private static ScalarIntensityMeasureRelationshipAPI getTestIMRActiveShallow()
 	{
 		ScalarIntensityMeasureRelationshipAPI imr = new BA_2008_AttenRel(null);
-		imr.setIntensityMeasure(PGA_Param.NAME);
-		imr.getParameter(StdDevTypeParam.NAME).setValue(
-				StdDevTypeParam.STD_DEV_TYPE_TOTAL);
-		imr.getParameter(SigmaTruncTypeParam.NAME).setValue(
-				SigmaTruncTypeParam.SIGMA_TRUNC_TYPE_2SIDED);
-		imr.getParameter(SigmaTruncLevelParam.NAME).setValue(3.0);
-		imr.getParameter(ComponentParam.NAME).setValue(
-				ComponentParam.COMPONENT_GMRotI50);
+		setDefaultImrParams(imr);
 		return imr;
 	}
 
 	private static ScalarIntensityMeasureRelationshipAPI getTestIMRStableContinental()
 	{
 		ScalarIntensityMeasureRelationshipAPI imr = new CB_2008_AttenRel(null);
+		setDefaultImrParams(imr);
+		return imr;
+	}
+
+	private static void setDefaultImrParams(ScalarIntensityMeasureRelationshipAPI imr)
+	{
 		imr.setIntensityMeasure(PGA_Param.NAME);
 		imr.getParameter(StdDevTypeParam.NAME).setValue(
 				StdDevTypeParam.STD_DEV_TYPE_TOTAL);
@@ -814,7 +813,6 @@ public class DisaggregationTestHelper
 		imr.getParameter(SigmaTruncLevelParam.NAME).setValue(3.0);
 		imr.getParameter(ComponentParam.NAME).setValue(
 				ComponentParam.COMPONENT_GMRotI50);
-		return imr;
 	}
 
 	private static GEM1ERF makeTestERF() 
@@ -831,12 +829,14 @@ public class DisaggregationTestHelper
 		String id = "src1";
 		String name = "testSource";
 		TectonicRegionType tectReg = TectonicRegionType.ACTIVE_SHALLOW;
+
 		LocationList border = new LocationList();
 		border.add(new Location(-0.5, -0.5));
 		border.add(new Location(0.5, -0.5));
 		border.add(new Location(0.5, 0.5));
 		border.add(new Location(-0.5, 0.5));
 		Region reg = new Region(border, BorderType.GREAT_CIRCLE);
+
 		double bValue = 1.0;
 		double totCumRate = 0.2;
 		double min = 5.05;
@@ -844,17 +844,21 @@ public class DisaggregationTestHelper
 		int num = 41;
 		GutenbergRichterMagFreqDist magDist = new GutenbergRichterMagFreqDist(
 				bValue, totCumRate, min, max, num);
+
 		double strike = 0.0;
 		double dip = 90.0;
 		double rake = 0.0;
 		FocalMechanism focalMechanism = new FocalMechanism(strike, dip, rake);
+
 		MagFreqDistsForFocalMechs magfreqDistFocMech = new MagFreqDistsForFocalMechs(
 				magDist, focalMechanism);
+
 		ArbitrarilyDiscretizedFunc aveRupTopVsMag = new ArbitrarilyDiscretizedFunc();
 		double magThreshold = 6.5;
 		double topOfRuptureDepth = 0.0;
 		aveRupTopVsMag.set(magThreshold, topOfRuptureDepth);
 		double aveHypoDepth = 5.0;
+
 		GEMSourceData srcData = new GEMAreaSourceData(id, name, tectReg, reg,
 				magfreqDistFocMech, aveRupTopVsMag, aveHypoDepth);
 		return srcData;
@@ -865,12 +869,14 @@ public class DisaggregationTestHelper
 		String id = "src1";
 		String name = "testSource";
 		TectonicRegionType tectReg = TectonicRegionType.STABLE_SHALLOW;
+
 		LocationList border = new LocationList();
 		border.add(new Location(-0.5, 0.5));
 		border.add(new Location(0.5, 0.5));
 		border.add(new Location(0.5, 1.5));
 		border.add(new Location(-0.5, 1.5));
 		Region reg = new Region(border, BorderType.GREAT_CIRCLE);
+
 		double bValue = 1.0;
 		double totCumRate = 0.2;
 		double min = 5.05;
@@ -878,17 +884,21 @@ public class DisaggregationTestHelper
 		int num = 41;
 		GutenbergRichterMagFreqDist magDist = new GutenbergRichterMagFreqDist(
 				bValue, totCumRate, min, max, num);
+
 		double strike = 0.0;
 		double dip = 90.0;
 		double rake = 0.0;
 		FocalMechanism focalMechanism = new FocalMechanism(strike, dip, rake);
+
 		MagFreqDistsForFocalMechs magfreqDistFocMech = new MagFreqDistsForFocalMechs(
 				magDist, focalMechanism);
+
 		ArbitrarilyDiscretizedFunc aveRupTopVsMag = new ArbitrarilyDiscretizedFunc();
 		double magThreshold = 6.5;
 		double topOfRuptureDepth = 0.0;
 		aveRupTopVsMag.set(magThreshold, topOfRuptureDepth);
 		double aveHypoDepth = 5.0;
+
 		GEMSourceData srcData = new GEMAreaSourceData(id, name, tectReg, reg,
 				magfreqDistFocMech, aveRupTopVsMag, aveHypoDepth);
 		return srcData;
@@ -899,7 +909,7 @@ public class DisaggregationTestHelper
 		DiscretizedFuncAPI hazardCurve = new ArbitrarilyDiscretizedFunc();
 		// initialize the curve our defined list of IMLs,
 		// set the corrsponding PoEs to 0.0
-		for (Double d : IMLS)
+		for (double d : IMLS)
 		{
 			hazardCurve.set(d, 0.0);
 		}
