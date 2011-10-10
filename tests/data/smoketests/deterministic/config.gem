@@ -10,6 +10,8 @@ REGION_GRID_SPACING = 0.01
 
 [HAZARD]
 
+DEPTHTO1PT0KMPERSEC = 100.0
+VS30_TYPE = measured
 RUPTURE_SURFACE_DISCRETIZATION = 0.1
 
 # (Average Horizontal, Average Horizontal (GMRotI50), Random Horizontal, Greater of Two Horz., Vertical)

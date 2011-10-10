@@ -40,9 +40,11 @@ REGION_GRID_SPACING = "REGION_GRID_SPACING"
 SITES = "SITES"
 DETERMINISTIC_MODE = "Deterministic"
 DISAGGREGATION_MODE = "Disaggregation"
-CALCULATION_MODE = "CALCULATION_MODE"
 BASE_PATH = "BASE_PATH"
 COMPUTE_HAZARD_AT_ASSETS = "COMPUTE_HAZARD_AT_ASSETS_LOCATIONS"
+
+DEPTHTO1PT0KMPERSEC = "DEPTHTO1PT0KMPERSEC"
+VS30_TYPE = "VS30_TYPE"
 
 
 def to_float_array(value):
@@ -65,7 +67,6 @@ class ValidationException(Exception):
 
     def __str__(self):
         msg = 'The job configuration contained some errors:\n\n'
-
         return msg + '\n'.join(self.errors)
 
 
@@ -80,8 +81,8 @@ class ValidatorSet(object):
             yield v
 
     def is_valid(self):
-        """Return true if all validators defined in this set
-        are valid, false otherwise.
+        """Return `True` if all validators defined in this set
+        are valid, `False` otherwise.
 
         :returns: the status of this set and the related error messages.
         :rtype: when valid, a (True, []) tuple is returned. When invalid, a
@@ -110,7 +111,7 @@ class ValidatorSet(object):
         self.validators.append(validator)
 
 
-class RiskMandatoryParametersValidator(object):
+class MandatoryParamsValidator(object):
     """Validator that checks if the mandatory parameters
     for risk processing are specified."""
 
@@ -119,25 +120,79 @@ class RiskMandatoryParametersValidator(object):
         self.params = params
 
     def is_valid(self):
-        """Return true if the mandatory risk parameters are specified,
-        false otherwise. When invalid returns also the error messages.
+        """
+        Return `True` if the mandatory parameters are specified, `False`
+        otherwise.
 
         :returns: the status of this validator and the related error messages.
         :rtype: when valid, a (True, []) tuple is returned. When invalid, a
             (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
             tuple is returned
         """
-
-        mandatory_params = [EXPOSURE, INPUT_REGION, REGION_GRID_SPACING]
-
-        if RISK_SECTION in self.sections:
-            for mandatory_param in mandatory_params:
+        if self.SECTION_OF_INTEREST in self.sections:
+            for mandatory_param in self.MANDATORY_PARAMS:
                 if mandatory_param not in self.params.keys():
-                    return (False, [
-                            "With RISK processing, EXPOSURE, REGION_VERTEX " +
-                            "and REGION_GRID_SPACING must be specified"])
+                    msg = ("Parameter '%s' not supplied in section '%s'" %
+                           (mandatory_param, self.SECTION_OF_INTEREST))
+                    return (False, [msg])
 
         return (True, [])
+
+
+class RiskMandatoryParamsValidator(MandatoryParamsValidator):
+    """
+    Validator that checks whether the mandatory parameters
+    for risk processing are specified.
+    """
+    SECTION_OF_INTEREST = RISK_SECTION
+    MANDATORY_PARAMS = [EXPOSURE, INPUT_REGION, REGION_GRID_SPACING]
+
+    def __init__(self, sections, params):
+        super(
+            RiskMandatoryParamsValidator, self).__init__(sections, params)
+
+
+class HazardMandatoryParamsValidator(MandatoryParamsValidator):
+    """
+    Validator that checks whether the mandatory parameters
+    for hazard processing are specified.
+    """
+    SECTION_OF_INTEREST = HAZARD_SECTION
+    MANDATORY_PARAMS = [DEPTHTO1PT0KMPERSEC, VS30_TYPE]
+
+    def __init__(self, sections, params):
+        super(
+            HazardMandatoryParamsValidator, self).__init__(sections, params)
+
+    def is_valid(self):
+        """
+        Return `True` if the mandatory parameters are specified, `False`
+        otherwise.
+
+        This will additionally check that all mandatory hazard parameters have
+        the "java_name" property set.
+
+        :returns: the status of this validator and the related error messages.
+        :rtype: when valid, a (True, []) tuple is returned. When invalid, a
+            (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
+            tuple is returned
+        """
+        result, msgs = super(HazardMandatoryParamsValidator, self).is_valid()
+        # The check failed in the base class already, just return.
+        if not result:
+            return (result, msgs)
+        # The check in the base class succeeded. Now -- in addition -- make
+        # sure that we have a 'java_name' set for each mandatory hazard
+        # parameter.
+        params_lacking_java_name = [p for p in self.MANDATORY_PARAMS
+                                    if PARAMS[p].java_name is None]
+        if params_lacking_java_name:
+            msg = ("The following mandatory hazard parameter(s) lack "
+                   "a 'java_name' property: %s"
+                   % ", ".join(params_lacking_java_name))
+            return(False, [msg])
+        else:
+            return (result, msgs)
 
 
 class ComputationTypeValidator(object):
@@ -148,8 +203,8 @@ class ComputationTypeValidator(object):
         self.params = params
 
     def is_valid(self):
-        """Return true if the user has specified the region
-        or the set of sites, false otherwise.
+        """Return `True` if the user has specified the region
+        or the set of sites, `False` otherwise.
         """
         has_input_region = INPUT_REGION in self.params
         has_sites = SITES in self.params
@@ -178,8 +233,8 @@ class DeterministicComputationValidator(object):
         self.sections = sections
 
     def is_valid(self):
-        """Return true if the deterministic calculation mode
-        specified is for an hazard + risk job, false otherwise."""
+        """Return `True` if the deterministic calculation mode
+        specified is for an hazard + risk job, `False` otherwise."""
 
         if RISK_SECTION not in self.sections \
                 and self.params[CALCULATION_MODE] == DETERMINISTIC_MODE:
@@ -377,7 +432,8 @@ def default_validators(sections, params):
         :py:class:`openquake.config.ValidatorSet`
     """
 
-    exposure = RiskMandatoryParametersValidator(sections, params)
+    hazard = HazardMandatoryParamsValidator(sections, params)
+    exposure = RiskMandatoryParamsValidator(sections, params)
     deterministic = DeterministicComputationValidator(sections, params)
     hazard_comp_type = ComputationTypeValidator(params)
     file_path = FilePathValidator(params)
@@ -389,6 +445,7 @@ def default_validators(sections, params):
     validators.add(exposure)
     validators.add(parameter)
     validators.add(file_path)
+    validators.add(hazard)
 
     if params.get(CALCULATION_MODE) == DISAGGREGATION_MODE:
         validators.add(DisaggregationValidator(params))
