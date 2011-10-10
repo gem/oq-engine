@@ -21,6 +21,7 @@ import os
 import unittest
 import geohash
 import numpy
+import subprocess
 
 from nose.plugins.attrib import attr
 
@@ -36,25 +37,25 @@ class ClassicalPSHACalculatorAssuranceTestCase(
     def test_peerTestSet1Case2(self):
         expected_results = self._load_results("PeerTestSet1Case2")
 
-        job = self._run_job(helpers.smoketest_file(
+        self._run_job(helpers.smoketest_file(
             os.path.join("PeerTestSet1Case2", "config.gem")))
 
-        self._compare_results_for(job, expected_results)
+        self._assert_results_are(expected_results)
 
     @attr("quality_assurance")
     def test_peerTestSet1Case5(self):
         expected_results = self._load_results("PeerTestSet1Case5")
 
-        job = self._run_job(helpers.smoketest_file(
+        self._run_job(helpers.smoketest_file(
             os.path.join("PeerTestSet1Case5", "config.gem")))
 
-        self._compare_results_for(job, expected_results)
+        self._assert_results_are(expected_results)
 
-    def _compare_results_for(self, job, expected_results):
+    def _assert_results_are(self, expected_results):
         """Compare the expected results with the results
         computed by the given job."""
 
-        job_db = models.OqJob.objects.get(id=job.job_id)
+        job_db = models.OqJob.objects.latest("id")
 
         for site, curve in expected_results.items():
             gh = geohash.encode(site.latitude, site.longitude, precision=12)
@@ -76,10 +77,10 @@ class ClassicalPSHACalculatorAssuranceTestCase(
                 % (expected, tolerance, actual))
 
     def _run_job(self, config_file):
-        job = helpers.job_from_file(config_file)
-        job.launch()
+        sp = subprocess.Popen(
+            ["bin/openquake", "--config_file=" + config_file])
 
-        return job
+        sp.wait()
 
     def _load_results(self, test_name):
         """Return the hazard curves read from the expected_results/ dir.
