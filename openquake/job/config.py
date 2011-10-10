@@ -184,8 +184,8 @@ class HazardMandatoryParamsValidator(MandatoryParamsValidator):
         # The check in the base class succeeded. Now -- in addition -- make
         # sure that we have a 'java_name' set for each mandatory hazard
         # parameter.
-        params_lacking_java_name = filter(
-            lambda p: PARAMS[p].java_name is None, self.MANDATORY_PARAMS)
+        params_lacking_java_name = [p for p in self.MANDATORY_PARAMS
+                                    if PARAMS[p].java_name is None]
         if params_lacking_java_name:
             msg = ("The following mandatory hazard parameter(s) lack "
                    "a 'java_name' property: %s"
