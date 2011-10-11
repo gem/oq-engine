@@ -60,6 +60,15 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
         self._assert_results_are(expected_results)
 
+    @attr("quality_assurance")
+    def test_peerTestSet1Case10(self):
+        expected_results = self._load_results("PeerTestSet1Case10")
+
+        self._run_job(helpers.smoketest_file(
+            os.path.join("PeerTestSet1Case10", "config.gem")))
+
+        self._assert_results_are(expected_results)
+
     def _assert_results_are(self, expected_results):
         """Compare the expected results with the results
         computed by the given job."""
@@ -114,7 +123,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         for result_file in results_files:
             path = os.path.join(results_dir, result_file)
 
-            with open(path, "rb") as hazard_curve:
+            with open(path) as hazard_curve:
                 lines = hazard_curve.readlines()
                 coords = lines.pop(0)
 
