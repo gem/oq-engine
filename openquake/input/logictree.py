@@ -81,22 +81,82 @@ class BranchSet(object):
                 return branch
         raise AssertionError('do weights really sum up to 1.0?')
 
-    def apply_uncertainty(self, value, source):
-        PointSource = jvm().JClass('org.opensha.sha.earthquake.'\
-                'rupForecastImpl.GEM1.SourceData.GEMPointSourceData')
-        AreaSource = jvm().JClass('org.opensha.sha.earthquake.'\
-                'rupForecastImpl.GEM1.SourceData.GEMAreaSourceData')
-        # TODO: handle exceptions in java methods and rethrow LogicTreeError
+    @classmethod
+    def _is_point(cls, source):
+        if not hasattr(cls, '_PointSource'):
+            cls._PointSource = jvm().JClass(
+                'org.opensha.sha.earthquake.' \
+                'rupForecastImpl.GEM1.SourceData.GEMPointSourceData'
+            )
+        return isinstance(source, cls._PointSource)
 
-        if not isinstance(source, (PointSource, AreaSource)):
+    @classmethod
+    def _is_simplefault(cls, source):
+        if not hasattr(cls, '_SimpleFaultSource'):
+            cls._SimpleFaultSource = jvm().JClass(
+                'org.opensha.sha.earthquake.' \
+                'rupForecastImpl.GEM1.SourceData.GEMFaultSourceData'
+            )
+        return isinstance(source, cls._SimpleFaultSource)
+
+    @classmethod
+    def _is_complexfault(cls, source):
+        if not hasattr(cls, '_ComplexFaultSource'):
+            cls._ComplexFaultSource = jvm().JClass(
+                'org.opensha.sha.earthquake.' \
+                'rupForecastImpl.GEM1.SourceData.GEMSubductionFaultSourceData'
+            )
+        return isinstance(source, cls._ComplexFaultSource)
+
+    @classmethod
+    def _is_area(cls, source):
+        if not hasattr(cls, '_GEMAreaSource'):
+            cls._AreaSource = jvm().JClass(
+                'org.opensha.sha.earthquake.' \
+                'rupForecastImpl.GEM1.SourceData.GEMAreaSourceData'
+            )
+        return isinstance(source, cls._AreaSource)
+
+    def filter_source(self, source):
+        for key, value in self.filters.items():
+            if key == 'applyToTectonicRegionType':
+                if value != source.tectReg.name:
+                    return False
+            elif key == 'applyToSourceType':
+                if value == 'area':
+                    if not self._is_area(source):
+                        return False
+                elif value == 'point':
+                    if not self._is_point(source):
+                        return False
+                elif value == 'simpleFault':
+                    if not self._is_simplefault(source):
+                        return False
+                elif value == 'complexFault':
+                    if not self._is_complexfault(source):
+                        return False
+                else:
+                    raise AssertionError('unknown source type %r' % value)
+            else:
+                raise AssertionError('unknown filter %r' % key)
+        return True
+
+    def apply_uncertainty(self, value, source):
+        if not self.filter_source(source):
+            return
+
+        # TODO: handle exceptions in java methods and rethrow LogicTreeError
+        if self._is_complexfault(source) or self._is_simplefault(source):
             # simple fault or complex fault - only one mfd always
             mfdlist = [source.getMfd()]
-        elif isinstance(source, PointSource):
+        elif self._is_point(source):
             # point
             mfdlist = source.getHypoMagFreqDistAtLoc().getMagFreqDistList()
-        else:
+        elif self._is_area(source):
             # area
             mfdlist = source.getMagfreqDistFocMech().getMagFreqDistList()
+        else:
+            raise AssertionError('type of source %r is unknown' % source)
 
         if self.uncertainty_type in ('abGRAbsolute', 'maxMagGRAbsolute'):
             valuelist = value
