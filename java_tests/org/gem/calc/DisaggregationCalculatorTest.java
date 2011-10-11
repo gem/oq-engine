@@ -32,7 +32,7 @@ public class DisaggregationCalculatorTest
 	{
 		new DisaggregationCalculator(
 				new Double[10], new Double[10], null,
-				new Double[10], new Double[5]);
+				new Double[10]);
 	}
 
 	/**
@@ -41,7 +41,7 @@ public class DisaggregationCalculatorTest
 	@Test(expected=IllegalArgumentException.class)
 	public void testConstructorManyNull()
 	{
-		new DisaggregationCalculator(null, null, null, null, null);
+		new DisaggregationCalculator(null, null, null, null);
 	}
 
 	/**
@@ -53,7 +53,7 @@ public class DisaggregationCalculatorTest
 	{
 		new DisaggregationCalculator(
 				new Double[2], new Double[2], new Double[1],
-				new Double[2], new Double[2]);
+				new Double[2]);
 	}
 
 	/**
@@ -64,7 +64,7 @@ public class DisaggregationCalculatorTest
 	{
 		new DisaggregationCalculator(
 				new Double[1], new Double[1], new Double[1],
-				new Double[1], new Double[1]);
+				new Double[1]);
 	}
 
 	@Test(expected=IllegalArgumentException.class)
@@ -73,7 +73,7 @@ public class DisaggregationCalculatorTest
 		Double[] unsorted = {1.1, 1.0};
 		new DisaggregationCalculator(
 				LAT_BIN_LIMS, LON_BIN_LIMS, unsorted,
-				EPS_BIN_LIMS, DIST_BIN_LIMS);
+				EPS_BIN_LIMS);
 	}
 
 	/**
@@ -85,7 +85,7 @@ public class DisaggregationCalculatorTest
 	{
 		new DisaggregationCalculator(
 				LAT_BIN_LIMS, LON_BIN_LIMS, MAG_BIN_LIMS,
-				EPS_BIN_LIMS, DIST_BIN_LIMS);
+				EPS_BIN_LIMS);
 	}
 
 	@Test
@@ -93,7 +93,7 @@ public class DisaggregationCalculatorTest
 	{
 		DisaggregationCalculator disCalc = new DisaggregationCalculator(
 				LAT_BIN_LIMS, LON_BIN_LIMS, MAG_BIN_LIMS,
-				EPS_BIN_LIMS, DIST_BIN_LIMS);
+				EPS_BIN_LIMS);
 
 		GEM1ERF erf = makeTestERF();
 
@@ -154,7 +154,7 @@ public class DisaggregationCalculatorTest
 	{
 		DisaggregationCalculator disCalc = new DisaggregationCalculator(
 				LAT_BIN_LIMS, LON_BIN_LIMS, MAG_BIN_LIMS,
-				EPS_BIN_LIMS, DIST_BIN_LIMS);
+				EPS_BIN_LIMS);
 
 		int[] expected = {0, 2, 1, 6, 3};
 		double lat, lon, mag, epsilon;
@@ -174,7 +174,7 @@ public class DisaggregationCalculatorTest
 	{
 		DisaggregationCalculator disCalc = new DisaggregationCalculator(
 				LAT_BIN_LIMS, LON_BIN_LIMS, MAG_BIN_LIMS,
-				EPS_BIN_LIMS, DIST_BIN_LIMS);
+				EPS_BIN_LIMS);
 
 		double lat, lon, mag, epsilon;
 		lat = -0.6;
