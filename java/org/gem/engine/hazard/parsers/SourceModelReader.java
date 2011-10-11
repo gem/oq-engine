@@ -25,7 +25,6 @@ import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSubductionFaultSourceData;
 import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
-import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 import org.gem.engine.XMLMismatchError;
 import org.gem.engine.XMLValidationError;
@@ -254,7 +253,7 @@ public class SourceModelReader {
                         .element(FAULT_BOTTOM_EDGE).element(LINE_STRING)
                         .element(POS_LIST));
         double rake = Double.valueOf((String) elem.element(RAKE).getData());
-        IncrementalMagFreqDist magFreqDist = getMagFreqDist(deltaMFD, elem);
+        GutenbergRichterMagFreqDist magFreqDist = getMagFreqDist(deltaMFD, elem);
 
         return new GEMSubductionFaultSourceData(extractIDFrom(elem),
                 extractNameFrom(elem), extractTectonicRegionFrom(elem),
@@ -281,7 +280,7 @@ public class SourceModelReader {
                         LOWER_SEISMOGENIC_DEPTH).getData());
         double rake = Double.valueOf((String) elem.element(RAKE).getData());
 
-        IncrementalMagFreqDist magFreqDist = getMagFreqDist(deltaMFD, elem);
+        GutenbergRichterMagFreqDist magFreqDist = getMagFreqDist(deltaMFD, elem);
 
         return new GEMFaultSourceData(extractIDFrom(elem),
                 extractNameFrom(elem), extractTectonicRegionFrom(elem),
@@ -307,19 +306,19 @@ public class SourceModelReader {
     @SuppressWarnings("unchecked")
     private MagFreqDistsForFocalMechs getMagFreqDistsForFocalMechs(
             double deltaMFD, Element elem) {
-        List<IncrementalMagFreqDist> mfdList =
-                new ArrayList<IncrementalMagFreqDist>();
+        List<GutenbergRichterMagFreqDist> mfdList =
+                new ArrayList<GutenbergRichterMagFreqDist>();
         List<FocalMechanism> focMechList = new ArrayList<FocalMechanism>();
         for (Iterator j = elem.elementIterator(RUPTURE_RATE_MODEL); j.hasNext();) {
             Element e = (Element) j.next();
-            IncrementalMagFreqDist magFreqDist = getMagFreqDist(deltaMFD, e);
+            GutenbergRichterMagFreqDist magFreqDist = getMagFreqDist(deltaMFD, e);
             mfdList.add(magFreqDist);
             FocalMechanism focMech =
                     getFocalMechanism(e.element(FOCAL_MECHANISM));
             focMechList.add(focMech);
         }
-        IncrementalMagFreqDist[] mfdArray =
-                new IncrementalMagFreqDist[mfdList.size()];
+        GutenbergRichterMagFreqDist[] mfdArray =
+                new GutenbergRichterMagFreqDist[mfdList.size()];
         FocalMechanism[] fmArray = new FocalMechanism[focMechList.size()];
         for (int ii = 0; ii < mfdList.size(); ii++) {
             mfdArray[ii] = mfdList.get(ii);
@@ -331,10 +330,10 @@ public class SourceModelReader {
     /**
      * Reads magnitude frequency distribution data (truncated Gutenberg-Richter
      * or incremental evenly discretized) and returns
-     * {@link IncrementalMagFreqDist}
+     * {@link GutenbergRichterMagFreqDist}
      */
-    private IncrementalMagFreqDist getMagFreqDist(double deltaMFD, Element elem) {
-        IncrementalMagFreqDist magFreqDist = null;
+    private GutenbergRichterMagFreqDist getMagFreqDist(double deltaMFD, Element elem) {
+        GutenbergRichterMagFreqDist magFreqDist = null;
         if (elem.element(TRUNCATED_GUTENBERG_RICHTER) != null) {
             magFreqDist =
                     getGutenbergRichterMagFreqDist(deltaMFD, elem
@@ -349,11 +348,11 @@ public class SourceModelReader {
 
     /**
      * Reads incremental evenly discretized magnitude frequency distribution
-     * data and returns {@link IncrementalMagFreqDist}
+     * data and returns {@link GutenbergRichterMagFreqDist}
      */
-    private IncrementalMagFreqDist getEvenlyDiscretizedMagFreqDist(
+    private GutenbergRichterMagFreqDist getEvenlyDiscretizedMagFreqDist(
             Element evenlyDiscretizedMagFreqDist) {
-        IncrementalMagFreqDist magFreqDist;
+        GutenbergRichterMagFreqDist magFreqDist;
         double binSize =
                 Double.valueOf(evenlyDiscretizedMagFreqDist
                         .attributeValue(BIN_SIZE));
@@ -366,7 +365,7 @@ public class SourceModelReader {
                         .getData());
 
         magFreqDist =
-                new IncrementalMagFreqDist(minVal, st.countTokens(), binSize);
+                new GutenbergRichterMagFreqDist(minVal, st.countTokens(), binSize);
 
         int index = 0;
 
