@@ -103,10 +103,11 @@ public class DisaggregationCalculator {
 
 	public double[][][][][] computeMatrix(
 			Site site,
-			GEM1ERF erf,
+			EqkRupForecastAPI erf,
 			Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap,
 			double poe,
-			DiscretizedFuncAPI hazardCurve) // or just pass a List<double> of IML values and compute the curve inside here?
+			DiscretizedFuncAPI hazardCurve,
+			double minMag) // or just pass a List<double> of IML values and compute the curve inside here?
 	{
 		double disaggMatrix[][][][][] =
 				new double[latBinLims.length - 1]
@@ -118,8 +119,7 @@ public class DisaggregationCalculator {
 		// value by which to normalize the final matrix
 		double totalAnnualRate = 0.0;
 
-		double minMag = (Double) erf.getParameter(GEM1ERF.MIN_MAG_NAME).getValue();
-		double gmv = 0.0;  // TODO calculate me
+		double gmv = getGMV(hazardCurve, poe);
 		
 		for (int srcCnt = 0; srcCnt < erf.getNumSources(); srcCnt++)
 		{
@@ -151,21 +151,22 @@ public class DisaggregationCalculator {
 				{
 					// one or more of the parameters is out of range;
 					// skip this rupture
+					System.out.println("skipping rupture: " + rupture.getInfo());
 					continue;
 				}
 
-				int[] binIndex = getBinIndices(lat, lon, mag, epsilon, trt);
+				int[] binIndices = getBinIndices(lat, lon, mag, epsilon, trt);
 
 				double annualRate = totRate
 						* imr.getExceedProbability()
 						* rupture.getProbability();
 
-				disaggMatrix[binIndex[0]][binIndex[1]][binIndex[2]][binIndex[3]][binIndex[4]] += annualRate;
+				disaggMatrix[binIndices[0]][binIndices[1]][binIndices[2]][binIndices[3]][binIndices[4]] += annualRate;
 				totalAnnualRate += annualRate;
 			}  // end rupture loop
 		}  // end source loop
 		
-		// TODO: normalize the matrix
+		disaggMatrix = normalize(disaggMatrix, totalAnnualRate);
 		return disaggMatrix;
 
 	}
@@ -173,7 +174,6 @@ public class DisaggregationCalculator {
 	public boolean allInRange(
 			double lat, double lon, double mag, double epsilon)
 	{
-		
 		return inRange(this.latBinLims, lat)
 				&& inRange(this.lonBinLims, lon)
 				&& inRange(this.magBinLims, mag)
@@ -249,7 +249,43 @@ public class DisaggregationCalculator {
 		return closest;
 	}
 
-	public static void normalize(double[][][][][] matrix, double normFactor)
+	/**
+	 * Extract a GMV (Ground Motion Value) for a given curve and PoE
+	 * (Probability of Exceedance) value.
+	 * 
+	 * IML (Intensity Measure Level) values make up the X-axis of the curve.
+	 * IMLs are arranged in ascending order. The lower the IML value, the
+	 * higher the PoE value (Y value) on the curve. Thus, it is assumed that
+	 * hazard curves will always have a negative slope.
+	 * 
+	 * If the input poe value is > the max Y value in the curve, extrapolate
+	 * and return the X value corresponding to the max Y value (the first Y
+	 * value).
+	 * If the input poe value is < the min Y value in the curve, extrapolate
+	 * and return the X value corresponding to the min Y value (the last Y
+	 * value).
+	 * Otherwise, interpolate an X value in the curve given the input PoE.
+	 * @param hazardCurve
+	 * @param poe Probability of Exceedance value
+	 * @return GMV corresponding to the input poe
+	 */
+	public static Double getGMV(DiscretizedFuncAPI hazardCurve, double poe)
+	{
+		if (poe > hazardCurve.getY(0))
+		{
+			return hazardCurve.getX(0);
+		}
+		else if (poe < hazardCurve.getY(hazardCurve.getNum() - 1))
+		{
+			return hazardCurve.getX(hazardCurve.getNum() - 1);
+		}
+		else
+		{
+			return hazardCurve.getFirstInterpolatedX(poe);
+		}
+	}
+
+	public static double[][][][][] normalize(double[][][][][] matrix, double normFactor)
 	{
 		for (int i = 0; i < matrix.length; i++)
 		{
@@ -267,5 +303,6 @@ public class DisaggregationCalculator {
 				}
 			}
 		}
+		return matrix;
 	}
 }
