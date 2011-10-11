@@ -44,7 +44,6 @@ public class DisaggregationTestHelper
 	public static final Double[] LON_BIN_LIMS = {-0.6, -0.3, -0.1, 0.1, 0.3, 0.6};
 	public static final Double[] MAG_BIN_LIMS = {5.0, 6.0, 7.0, 8.0, 9.0};
 	public static final Double[] EPS_BIN_LIMS = {-3.5, -2.5, -1.5, -0.5, 0.5, 1.5, 2.5, 3.5};
-	public static final Double[] DIST_BIN_LIMS = {0.0, 20.0, 40.0, 60.0};
 	public static final double POE = 0.1;
 	public static final List<Double> IMLS = 
 			Arrays.asList(mapLog(new Double[] {
