@@ -81,8 +81,8 @@ class ValidatorSet(object):
             yield v
 
     def is_valid(self):
-        """Return true if all validators defined in this set
-        are valid, false otherwise.
+        """Return `True` if all validators defined in this set
+        are valid, `False` otherwise.
 
         :returns: the status of this set and the related error messages.
         :rtype: when valid, a (True, []) tuple is returned. When invalid, a
@@ -118,23 +118,22 @@ class MandatoryParamsValidator(object):
     def __init__(self, sections, params):
         self.sections = sections
         self.params = params
-        self.section_of_interest = None
-        self.mandatory_params = []
 
     def is_valid(self):
-        """Return true if the mandatory risk parameters are specified,
-        false otherwise. When invalid returns also the error messages.
+        """
+        Return `True` if the mandatory parameters are specified, `False`
+        otherwise.
 
         :returns: the status of this validator and the related error messages.
         :rtype: when valid, a (True, []) tuple is returned. When invalid, a
             (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
             tuple is returned
         """
-        if self.section_of_interest in self.sections:
-            for mandatory_param in self.mandatory_params:
+        if self.SECTION_OF_INTEREST in self.sections:
+            for mandatory_param in self.MANDATORY_PARAMS:
                 if mandatory_param not in self.params.keys():
                     msg = ("Parameter '%s' not supplied in section '%s'" %
-                           (mandatory_param, self.section_of_interest))
+                           (mandatory_param, self.SECTION_OF_INTEREST))
                     return (False, [msg])
 
         return (True, [])
@@ -145,11 +144,12 @@ class RiskMandatoryParamsValidator(MandatoryParamsValidator):
     Validator that checks whether the mandatory parameters
     for risk processing are specified.
     """
+    SECTION_OF_INTEREST = RISK_SECTION
+    MANDATORY_PARAMS = [EXPOSURE, INPUT_REGION, REGION_GRID_SPACING]
+
     def __init__(self, sections, params):
         super(
             RiskMandatoryParamsValidator, self).__init__(sections, params)
-        self.section_of_interest = RISK_SECTION
-        self.mandatory_params = [EXPOSURE, INPUT_REGION, REGION_GRID_SPACING]
 
 
 class HazardMandatoryParamsValidator(MandatoryParamsValidator):
@@ -157,11 +157,42 @@ class HazardMandatoryParamsValidator(MandatoryParamsValidator):
     Validator that checks whether the mandatory parameters
     for hazard processing are specified.
     """
+    SECTION_OF_INTEREST = HAZARD_SECTION
+    MANDATORY_PARAMS = [DEPTHTO1PT0KMPERSEC, VS30_TYPE]
+
     def __init__(self, sections, params):
         super(
             HazardMandatoryParamsValidator, self).__init__(sections, params)
-        self.section_of_interest = HAZARD_SECTION
-        self.mandatory_params = [DEPTHTO1PT0KMPERSEC, VS30_TYPE]
+
+    def is_valid(self):
+        """
+        Return `True` if the mandatory parameters are specified, `False`
+        otherwise.
+
+        This will additionally check that all mandatory hazard parameters have
+        the "java_name" property set.
+
+        :returns: the status of this validator and the related error messages.
+        :rtype: when valid, a (True, []) tuple is returned. When invalid, a
+            (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
+            tuple is returned
+        """
+        result, msgs = super(HazardMandatoryParamsValidator, self).is_valid()
+        # The check failed in the base class already, just return.
+        if not result:
+            return (result, msgs)
+        # The check in the base class succeeded. Now -- in addition -- make
+        # sure that we have a 'java_name' set for each mandatory hazard
+        # parameter.
+        params_lacking_java_name = [p for p in self.MANDATORY_PARAMS
+                                    if PARAMS[p].java_name is None]
+        if params_lacking_java_name:
+            msg = ("The following mandatory hazard parameter(s) lack "
+                   "a 'java_name' property: %s"
+                   % ", ".join(params_lacking_java_name))
+            return(False, [msg])
+        else:
+            return (result, msgs)
 
 
 class ComputationTypeValidator(object):
@@ -172,8 +203,8 @@ class ComputationTypeValidator(object):
         self.params = params
 
     def is_valid(self):
-        """Return true if the user has specified the region
-        or the set of sites, false otherwise.
+        """Return `True` if the user has specified the region
+        or the set of sites, `False` otherwise.
         """
         has_input_region = INPUT_REGION in self.params
         has_sites = SITES in self.params
@@ -202,8 +233,8 @@ class DeterministicComputationValidator(object):
         self.sections = sections
 
     def is_valid(self):
-        """Return true if the deterministic calculation mode
-        specified is for an hazard + risk job, false otherwise."""
+        """Return `True` if the deterministic calculation mode
+        specified is for an hazard + risk job, `False` otherwise."""
 
         if RISK_SECTION not in self.sections \
                 and self.params[CALCULATION_MODE] == DETERMINISTIC_MODE:
