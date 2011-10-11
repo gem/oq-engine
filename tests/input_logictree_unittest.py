@@ -21,10 +21,15 @@ Tests for python logic tree processor.
 """
 
 import unittest
+import os
 from StringIO import StringIO
 from decimal import Decimal
 
+from mock import Mock
+
+from openquake.java import jvm, jexception
 from openquake.input import logictree
+from tests.utils.helpers import patch
 
 
 class _TesteableSourceModelLogicTree(logictree.SourceModelLogicTree):
@@ -1457,7 +1462,7 @@ class GMPELogicTreeTestCase(unittest.TestCase):
         })
 
 
-class BranchSetTestCase(unittest.TestCase):
+class BranchSetSampleTestCase(unittest.TestCase):
     class FakeRandom(object):
         def __init__(self, value):
             self.value = value
@@ -1487,3 +1492,125 @@ class BranchSetTestCase(unittest.TestCase):
         bs.branches = [logictree.Branch(0, Decimal('1.0'), 0)]
         for i in xrange(10):
             self.assertEqual(bs.sample().branch_id, 0)
+
+
+class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
+    def test_apply_uncertainty_ab_absolute(self):
+        mfd = Mock()
+        bs = logictree.BranchSet('abGRAbsolute', {})
+        bs._apply_uncertainty_to_mfd(mfd, (0.1, 33.4))
+        self.assertEqual(mfd.method_calls, [('setAB', (0.1, 33.4), {})])
+
+    def test_apply_uncertainty_b_relative(self):
+        mfd = Mock()
+        bs = logictree.BranchSet('bGRRelative', {})
+        bs._apply_uncertainty_to_mfd(mfd, -1.6)
+        self.assertEqual(mfd.method_calls, [('incrementB', (-1.6, ), {})])
+
+    def test_apply_uncertainty_mmax_relative(self):
+        mfd = Mock()
+        bs = logictree.BranchSet('maxMagGRRelative', {})
+        bs._apply_uncertainty_to_mfd(mfd, 32.1)
+        self.assertEqual(mfd.method_calls,
+                         [('incrementMagUpper', (32.1, ), {})])
+
+    def test_apply_uncertainty_mmax_absolute(self):
+        mfd = Mock()
+        bs = logictree.BranchSet('maxMagGRAbsolute', {})
+        bs._apply_uncertainty_to_mfd(mfd, 55)
+        self.assertEqual(mfd.method_calls, [('setMagUpper', (55, ), {})])
+
+    def test_apply_uncertainty_unknown_uncertainty_type(self):
+        bs = logictree.BranchSet('makeMeFeelGood', {})
+        self.assertRaises(AssertionError,
+                          bs._apply_uncertainty_to_mfd, None, None)
+
+
+class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
+    def setUp(self):
+        super(BranchSetApplyUncertaintyTestCase, self).setUp()
+        self.MFD = jvm().JClass(
+            'org.opensha.sha.magdist.GutenbergRichterMagFreqDist'
+        )
+        SourceModelReader = jvm().JClass('org.gem.engine.hazard.' \
+                                         'parsers.SourceModelReader')
+        srcfile = os.path.join(os.path.dirname(__file__), 'data',
+                                  'example-source-model.xml')
+        self.single_mfd_sources = list(SourceModelReader(srcfile, 0.1).read())
+        srcfile = os.path.join(os.path.dirname(__file__), 'data',
+                               'example-source-model-double-mfds.xml')
+        self.double_mfd_sources = list(SourceModelReader(srcfile, 0.1).read())
+        _apply_uncertainty = logictree.BranchSet._apply_uncertainty_to_mfd
+        self.mock = patch('openquake.input.logictree.' \
+                          'BranchSet._apply_uncertainty_to_mfd').start()
+        self.mock.side_effect = _apply_uncertainty
+
+    def tearDown(self):
+        super(BranchSetApplyUncertaintyTestCase, self).tearDown()
+        self.mock.stop()
+
+    def test_relative_uncertainty_single_mfd(self):
+        uncertainties = [('maxMagGRRelative', +1),
+                         ('bGRRelative', -0.2)]
+        for uncertainty, value in uncertainties:
+            branchset = logictree.BranchSet(uncertainty, {})
+            for source in self.single_mfd_sources:
+                branchset.apply_uncertainty(value, source)
+                self.assertEqual(self.mock.call_count, 1)
+                [(bs, mfd, call_value), kwargs] = self.mock.call_args
+                self.assertEqual(kwargs, {})
+                self.assertEqual(type(mfd), self.MFD)
+                self.assertEqual(value, call_value)
+                self.mock.reset_mock()
+
+    def test_relative_uncertainty_double_mfd(self):
+        uncertainties = [('maxMagGRRelative', -1.1),
+                         ('bGRRelative', +2)]
+        for uncertainty, value in uncertainties:
+            branchset = logictree.BranchSet(uncertainty, {})
+            for source in self.double_mfd_sources:
+                branchset.apply_uncertainty(value, source)
+                self.assertEqual(self.mock.call_count, 2)
+                [((bs, mfd, call_value), kwargs),
+                 ((bs, mfd2, call_value2), kwargs2)] = self.mock.call_args_list
+                self.assertEqual(kwargs, {})
+                self.assertEqual(kwargs2, {})
+                self.assertEqual(type(mfd), self.MFD)
+                self.assertEqual(type(mfd2), self.MFD)
+                self.assertTrue(mfd2 is not mfd)
+                self.assertEqual(value, call_value)
+                self.assertEqual(value, call_value2)
+                self.mock.reset_mock()
+
+    def test_absolute_uncertainty_single_mfd(self):
+        uncertainties = [('maxMagGRAbsolute', [9]),
+                         ('abGRAbsolute', [(-1, -0.2)])]
+        for uncertainty, value in uncertainties:
+            branchset = logictree.BranchSet(uncertainty, {})
+            for source in self.single_mfd_sources:
+                branchset.apply_uncertainty(value, source)
+                self.assertEqual(self.mock.call_count, 1)
+                [(bs, mfd, call_value), kwargs] = self.mock.call_args
+                self.assertEqual(kwargs, {})
+                self.assertEqual(type(mfd), self.MFD)
+                self.assertEqual(value, [call_value])
+                self.mock.reset_mock()
+
+    def test_absolute_uncertainty_double_mfd(self):
+        uncertainties = [('maxMagGRAbsolute', [10, 11.1]),
+                         ('abGRAbsolute', [(-1, -0.2), (+1, +2)])]
+        for uncertainty, value in uncertainties:
+            branchset = logictree.BranchSet(uncertainty, {})
+            for source in self.double_mfd_sources:
+                branchset.apply_uncertainty(value, source)
+                self.assertEqual(self.mock.call_count, 2)
+                [((bs, mfd, call_value), kwargs),
+                 ((bs, mfd2, call_value2), kwargs2)] = self.mock.call_args_list
+                self.assertEqual(kwargs, {})
+                self.assertEqual(kwargs2, {})
+                self.assertEqual(type(mfd), self.MFD)
+                self.assertEqual(type(mfd2), self.MFD)
+                self.assertTrue(mfd2 is not mfd)
+                self.assertEqual(value[0], call_value)
+                self.assertEqual(value[1], call_value2)
+                self.mock.reset_mock()
