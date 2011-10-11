@@ -1630,6 +1630,10 @@ class BranchSetFilterTestCase(unittest.TestCase):
         self.simple_fault, self.complex_fault, self.area, self.point \
                 = SourceModelReader(srcfile, 0.1).read()
 
+    def test_unknown_filter(self):
+        bs = logictree.BranchSet(None, {'applyToSources': [1], 'foo': 'bar'})
+        self.assertRaises(AssertionError, bs.filter_source, None)
+
     def test_source_type(self):
         bs = logictree.BranchSet(None, {'applyToSourceType': 'area'})
         for source in (self.simple_fault, self.complex_fault, self.point):
@@ -1688,3 +1692,18 @@ class BranchSetFilterTestCase(unittest.TestCase):
         for wrong_trt in (sic, vlc, ssc, sif):
             self.assertEqual(test(wrong_trt, source), False)
         self.assertEqual(test(asc, source), True)
+
+    def test_sources(self):
+        test = lambda sources, source, expected_result: self.assertEqual(
+            logictree.BranchSet(None,
+                                {'applyToSources': [s.id for s in sources]}) \
+                     .filter_source(source),
+            expected_result
+        )
+
+        test([self.simple_fault, self.area], self.point, False)
+        test([self.simple_fault, self.area], self.area, True)
+        test([self.complex_fault, self.simple_fault], self.area, False)
+        test([self.area], self.area, True)
+        test([self.point, self.simple_fault], self.simple_fault, True)
+        test([self.point, self.complex_fault], self.simple_fault, False)
