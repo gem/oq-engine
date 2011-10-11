@@ -34,7 +34,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
     unittest.TestCase, helpers.DbTestMixin):
 
     @attr("quality_assurance")
-    def test_peerTestSet1Case2(self):
+    def test_peer_test_set_1_case_2(self):
         expected_results = self._load_results("PeerTestSet1Case2")
 
         self._run_job(helpers.smoketest_file(
@@ -43,7 +43,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         self._assert_results_are(expected_results)
 
     @attr("quality_assurance")
-    def test_peerTestSet1Case5(self):
+    def test_peer_test_set_1_case_5(self):
         expected_results = self._load_results("PeerTestSet1Case5")
 
         self._run_job(helpers.smoketest_file(
@@ -52,7 +52,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         self._assert_results_are(expected_results)
 
     @attr("quality_assurance")
-    def test_peerTestSet1Case8a(self):
+    def test_peer_test_set_1_case_8a(self):
         expected_results = self._load_results("PeerTestSet1Case8a")
 
         self._run_job(helpers.smoketest_file(
@@ -61,13 +61,51 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         self._assert_results_are(expected_results)
 
     @attr("quality_assurance")
-    def test_peerTestSet1Case10(self):
+    def test_peer_test_set_1_case_10(self):
         expected_results = self._load_results("PeerTestSet1Case10")
 
         self._run_job(helpers.smoketest_file(
             os.path.join("PeerTestSet1Case10", "config.gem")))
 
         self._assert_results_are(expected_results)
+
+    @attr("quality_assurance")
+    def test_hazard_map_test(self):
+        expected_map = {}
+
+        def load_expected_map():
+            """Load the expected hazard map."""
+
+            path = helpers.smoketest_file(os.path.join("HazardMapTest",
+                "expected_results", "meanHazardMap0.1.dat"))
+
+            with open(path) as maps:
+                lines = maps.readlines()
+
+                for line in lines:
+                    values = line.split()
+                    site = shapes.Site(values[0], values[1])
+                    expected_map[site] = float(values[2])
+
+        self._run_job(helpers.smoketest_file(
+            os.path.join("HazardMapTest", "config.gem")))
+
+        load_expected_map()
+        job_db = models.OqJob.objects.latest("id")
+
+        for site, value in expected_map.items():
+            gh = geohash.encode(site.latitude, site.longitude, precision=12)
+
+            hm_db = models.HazardMapData.objects.filter(
+                hazard_map__output__oq_job=job_db,
+                hazard_map__statistic_type="mean",
+                hazard_map__poe=0.1).extra(
+                where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
+
+            self.assertTrue(numpy.allclose(numpy.array(value),
+                    numpy.array(hm_db.value)))
+
+        self.teardown_job(job_db)
 
     def _assert_results_are(self, expected_results):
         """Compare the expected results with the results
