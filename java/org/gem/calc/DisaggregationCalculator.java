@@ -24,7 +24,6 @@ public class DisaggregationCalculator {
 	private final Double[] lonBinLims;
 	private final Double[] magBinLims;
 	private final Double[] epsilonBinLims;
-	private final Double[] distanceBinLims;
 	private static final TectonicRegionType[] tectonicRegionTypes = TectonicRegionType.values();
 
 	/**
@@ -83,11 +82,10 @@ public class DisaggregationCalculator {
 			Double[] latBinEdges,
 			Double[] lonBinEdges,
 			Double[] magBinEdges,
-			Double[] epsilonBinEdges,
-			Double[] distanceBinEdges)
+			Double[] epsilonBinEdges)
 	{
 		List binEdges = Arrays.asList(latBinEdges, lonBinEdges, magBinEdges,
-				  epsilonBinEdges, distanceBinEdges);
+				  epsilonBinEdges);
 
 		// Validation for the bin edges:
 		forAllDo(binEdges, notNull);
@@ -98,7 +96,6 @@ public class DisaggregationCalculator {
 		this.lonBinLims = lonBinEdges;
 		this.magBinLims = magBinEdges;
 		this.epsilonBinLims = epsilonBinEdges;
-		this.distanceBinLims = distanceBinEdges;
 	}
 
 	public double[][][][][] computeMatrix(
