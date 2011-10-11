@@ -661,11 +661,11 @@ class OqParams(models.Model):
     #       Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
     disagg_results = CharArrayField(null=True)
     VS30_TYPE_CHOICES = (
-       (u'measured', u'Value obtained from on-site measurements'),
-       (u'inferred', u'Estimated value'),
+       (u"measured", u"Value obtained from on-site measurements"),
+       (u"inferred", u"Estimated value"),
     )
-    vs30_type = models.TextField(choices=VS30_TYPE_CHOICES)
-    depth_to_1pt_0km_per_sec = models.FloatField()
+    vs30_type = models.TextField(choices=VS30_TYPE_CHOICES, default="measured")
+    depth_to_1pt_0km_per_sec = models.FloatField(default=100.0)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"oq_params'
