@@ -137,6 +137,9 @@ class BranchSet(object):
                         return False
                 else:
                     raise AssertionError('unknown source type %r' % value)
+            elif key == 'applyToSources':
+                if source.id not in value:
+                    return False
             else:
                 raise AssertionError('unknown filter %r' % key)
         return True
