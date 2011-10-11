@@ -17,6 +17,8 @@ import static org.gem.calc.DisaggregationCalculator.closestLocation;
 import static org.gem.calc.DisaggregationCalculator.inRange;
 import static org.gem.calc.DisaggregationCalculator.getGMV;
 import static org.gem.calc.DisaggregationCalculator.normalize;
+import static org.gem.calc.DisaggregationCalculator.assertPoissonian;
+import static org.gem.calc.DisaggregationCalculator.assertNonZeroStdDev;
 
 public class DisaggregationCalculatorTest
 {
@@ -294,5 +296,30 @@ public class DisaggregationCalculatorTest
 			};
 
 		assertTrue(Arrays.deepEquals(expected, normalize(input, normFactor)));
+	}
+
+	@Test
+	public void testAssertPoissonian()
+	{
+		// This should succeed without any errors.
+		assertPoissonian(makeTestERF());
+	}
+
+	@Test(expected=RuntimeException.class)
+	public void testAssertPoissonianBadData()
+	{
+		assertPoissonian(new NonPoissonianERF());
+	}
+
+	@Test
+	public void testAssertNonZeroStdDev()
+	{
+		assertNonZeroStdDev(makeTestImrMap());
+	}
+
+	@Test(expected=RuntimeException.class)
+	public void testAssertNonZeroStdDevBadData()
+	{
+		assertNonZeroStdDev(makeTestImrMapZeroStdDev());
 	}
 }
