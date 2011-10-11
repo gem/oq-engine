@@ -82,7 +82,6 @@ class BranchSet(object):
         raise AssertionError('do weights really sum up to 1.0?')
 
     def apply_uncertainty(self, value, source):
-        # TODO: unittest
         PointSource = jvm().JClass('org.opensha.sha.earthquake.'\
                 'rupForecastImpl.GEM1.SourceData.GEMPointSourceData')
         AreaSource = jvm().JClass('org.opensha.sha.earthquake.'\
@@ -90,10 +89,13 @@ class BranchSet(object):
         # TODO: handle exceptions in java methods and rethrow LogicTreeError
 
         if not isinstance(source, (PointSource, AreaSource)):
+            # simple fault or complex fault - only one mfd always
             mfdlist = [source.getMfd()]
         elif isinstance(source, PointSource):
+            # point
             mfdlist = source.getHypoMagFreqDistAtLoc().getMagFreqDistList()
         else:
+            # area
             mfdlist = source.getMagfreqDistFocMech().getMagFreqDistList()
 
         if self.uncertainty_type in ('abGRAbsolute', 'maxMagGRAbsolute'):
@@ -105,16 +107,15 @@ class BranchSet(object):
             self._apply_uncertainty_to_mfd(mfd, mfd_value)
 
     def _apply_uncertainty_to_mfd(self, mfd, value):
-        # TODO: unittest
         if self.uncertainty_type == 'abGRAbsolute':
             a, b = value
-            mfd.setAB(a, b)
+            mfd.setAB(float(a), float(b))
         elif self.uncertainty_type == 'bGRRelative':
-            mfd.incrementB(value)
+            mfd.incrementB(float(value))
         elif self.uncertainty_type == 'maxMagGRRelative':
-            mfd.incrementMagUpper(value)
-        elif self.apply_uncertainty == 'maxMagGRAbsolute':
-            mfd.setMagUpper(value)
+            mfd.incrementMagUpper(float(value))
+        elif self.uncertainty_type == 'maxMagGRAbsolute':
+            mfd.setMagUpper(float(value))
         else:
             raise AssertionError('what is %s btw?' % self.uncertainty_type)
 
