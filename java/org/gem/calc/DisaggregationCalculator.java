@@ -13,8 +13,8 @@ import org.opensha.commons.geo.LocationUtils;
 import org.opensha.sha.earthquake.EqkRupForecastAPI;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
-import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
 import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
+import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
 import org.opensha.sha.util.TectonicRegionType;
 import static org.apache.commons.collections.CollectionUtils.forAllDo;
 
@@ -109,6 +109,9 @@ public class DisaggregationCalculator {
 			DiscretizedFuncAPI hazardCurve,
 			double minMag) // or just pass a List<double> of IML values and compute the curve inside here?
 	{
+		assertPoissonian(erf);
+		assertNonZeroStdDev(imrMap);
+
 		double disaggMatrix[][][][][] =
 				new double[latBinLims.length - 1]
 						  [lonBinLims.length - 1]
@@ -151,7 +154,6 @@ public class DisaggregationCalculator {
 				{
 					// one or more of the parameters is out of range;
 					// skip this rupture
-					System.out.println("skipping rupture: " + rupture.getInfo());
 					continue;
 				}
 
@@ -178,6 +180,33 @@ public class DisaggregationCalculator {
 				&& inRange(this.lonBinLims, lon)
 				&& inRange(this.magBinLims, mag)
 				&& inRange(this.epsilonBinLims, epsilon);
+	}
+
+	public static void assertPoissonian(EqkRupForecastAPI erf)
+	{
+		for (int i = 0; i < erf.getSourceList().size(); i++)
+		{
+			ProbEqkSource source = erf.getSource(i);
+			if (!source.isPoissonianSource()) {
+				throw new RuntimeException(
+						"Sources must be Poissonian. (Non-Poissonian source are not currently supported.)");
+			}
+		}
+	}
+
+	public static void assertNonZeroStdDev(
+			Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap)
+	{
+		for (ScalarIntensityMeasureRelationshipAPI imr : imrMap.values())
+		{
+			String stdDevType =
+					(String) imr.getParameter(StdDevTypeParam.NAME).getValue();
+			if (stdDevType.equalsIgnoreCase(StdDevTypeParam.STD_DEV_TYPE_NONE))
+			{
+				throw new RuntimeException(
+						"Attenuation relationship must have a non-zero standard deviation.");
+			}
+		}
 	}
 
 	public static boolean inRange(Double[] bins, Double value)
@@ -285,6 +314,11 @@ public class DisaggregationCalculator {
 		}
 	}
 
+	/**
+	 * Normalize a 5D matrix by the given value.
+	 * @param matrix
+	 * @param normFactor
+	 */
 	public static double[][][][][] normalize(double[][][][][] matrix, double normFactor)
 	{
 		for (int i = 0; i < matrix.length; i++)
