@@ -2,6 +2,8 @@ package org.gem.calc;
 
 import java.util.ArrayList;
 
+import org.junit.Ignore;
+
 import org.opensha.commons.data.Site;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.sha.earthquake.EqkRupForecast;
@@ -9,6 +11,7 @@ import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.faultSurface.EvenlyGriddedSurfaceAPI;
 
+@Ignore
 public class NonPoissonianERF extends EqkRupForecast
 {
 	public class NonPoissonianEqkSource extends ProbEqkSource
