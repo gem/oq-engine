@@ -1549,6 +1549,11 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         super(BranchSetApplyUncertaintyTestCase, self).tearDown()
         self.mock.stop()
 
+    def test_unknown_source_type(self):
+        bs = logictree.BranchSet('maxMagGRRelative', {})
+        self.assertRaises(AssertionError, bs.apply_uncertainty,
+                          -1, None)
+
     def test_relative_uncertainty_single_mfd(self):
         uncertainties = [('maxMagGRRelative', +1),
                          ('bGRRelative', -0.2)]
@@ -1614,3 +1619,72 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
                 self.assertEqual(value[0], call_value)
                 self.assertEqual(value[1], call_value2)
                 self.mock.reset_mock()
+
+class BranchSetFilterTestCase(unittest.TestCase):
+    def setUp(self):
+        super(BranchSetFilterTestCase, self).setUp()
+        SourceModelReader = jvm().JClass('org.gem.engine.hazard.' \
+                                         'parsers.SourceModelReader')
+        srcfile = os.path.join(os.path.dirname(__file__), 'data',
+                                  'example-source-model.xml')
+        self.simple_fault, self.complex_fault, self.area, self.point \
+                = SourceModelReader(srcfile, 0.1).read()
+
+    def test_source_type(self):
+        bs = logictree.BranchSet(None, {'applyToSourceType': 'area'})
+        for source in (self.simple_fault, self.complex_fault, self.point):
+            self.assertEqual(bs.filter_source(source), False)
+        self.assertEqual(bs.filter_source(self.area), True)
+
+        bs = logictree.BranchSet(None, {'applyToSourceType': 'point'})
+        for source in (self.simple_fault, self.complex_fault, self.area):
+            self.assertEqual(bs.filter_source(source), False)
+        self.assertEqual(bs.filter_source(self.point), True)
+
+        bs = logictree.BranchSet(None, {'applyToSourceType': 'simpleFault'})
+        for source in (self.complex_fault, self.point, self.area):
+            self.assertEqual(bs.filter_source(source), False)
+        self.assertEqual(bs.filter_source(self.simple_fault), True)
+
+        bs = logictree.BranchSet(None, {'applyToSourceType': 'complexFault'})
+        for source in (self.simple_fault, self.point, self.area):
+            self.assertEqual(bs.filter_source(source), False)
+        self.assertEqual(bs.filter_source(self.complex_fault), True)
+
+    def test_tectonic_region_type(self):
+        test = lambda trt, source: \
+            logictree.BranchSet(None, {'applyToTectonicRegionType': trt}) \
+                     .filter_source(source)
+
+        asc = 'Active Shallow Crust'
+        vlc = 'Volcanic'
+        ssc = 'Stable Shallow Crust'
+        sif = 'Subduction Interface'
+        sic = 'Subduction IntraSlab'
+
+        source = self.simple_fault
+
+        source.tectReg.name = sic
+        for wrong_trt in (asc, vlc, ssc, sif):
+            self.assertEqual(test(wrong_trt, source), False)
+        self.assertEqual(test(sic, source), True)
+
+        source.tectReg.name = vlc
+        for wrong_trt in (asc, sic, ssc, sif):
+            self.assertEqual(test(wrong_trt, source), False)
+        self.assertEqual(test(vlc, source), True)
+
+        source.tectReg.name = sif
+        for wrong_trt in (asc, vlc, ssc, sic):
+            self.assertEqual(test(wrong_trt, source), False)
+        self.assertEqual(test(sif, source), True)
+
+        source.tectReg.name = ssc
+        for wrong_trt in (asc, vlc, sic, sif):
+            self.assertEqual(test(wrong_trt, source), False)
+        self.assertEqual(test(ssc, source), True)
+
+        source.tectReg.name = asc
+        for wrong_trt in (sic, vlc, ssc, sif):
+            self.assertEqual(test(wrong_trt, source), False)
+        self.assertEqual(test(asc, source), True)
