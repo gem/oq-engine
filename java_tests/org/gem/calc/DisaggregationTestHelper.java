@@ -16,11 +16,15 @@ import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.param.DoubleParameter;
 import org.opensha.sha.calc.HazardCurveCalculator;
+import org.opensha.sha.earthquake.EqkRupForecast;
 import org.opensha.sha.earthquake.FocalMechanism;
+import org.opensha.sha.earthquake.ProbEqkRupture;
+import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.griddedForecast.MagFreqDistsForFocalMechs;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMAreaSourceData;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.SourceData.GEMSourceData;
+import org.opensha.sha.faultSurface.EvenlyGriddedSurfaceAPI;
 import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
 import org.opensha.sha.imr.attenRelImpl.BA_2008_AttenRel;
 import org.opensha.sha.imr.attenRelImpl.CB_2008_AttenRel;
@@ -949,6 +953,16 @@ public class DisaggregationTestHelper
 		return imrMap;
 	}
 
+	public static Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> makeTestImrMapZeroStdDev()
+	{
+		Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap = new HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>();
+		ScalarIntensityMeasureRelationshipAPI imr = new BA_2008_AttenRel(null);
+		imr.getParameter(StdDevTypeParam.NAME).setValue(
+				StdDevTypeParam.STD_DEV_TYPE_NONE);
+		imrMap.put(TectonicRegionType.ACTIVE_SHALLOW, imr);
+		return imrMap;
+	}
+
 	private static ScalarIntensityMeasureRelationshipAPI getTestIMRActiveShallow()
 	{
 		ScalarIntensityMeasureRelationshipAPI imr = new BA_2008_AttenRel(null);
@@ -980,6 +994,7 @@ public class DisaggregationTestHelper
 		ArrayList<GEMSourceData> srcList = new ArrayList<GEMSourceData>();
 		srcList.add(makeTestSourceDataActiveShallow());
 		srcList.add(makeTestSourceDataStableCrust());
+
 		double timeSpan = 50.0;
 		return GEM1ERF.getGEM1ERF(srcList, timeSpan);
 	}
