@@ -129,6 +129,118 @@ def compute_quantile_curves(job_id, sites, realizations, quantiles):
         realizations, quantiles)
 
 
+class BasePSHAMixin(mixins.Mixin):
+    """Contains common functionality for PSHA Mixins."""
+
+    def store_source_model(self, seed):
+        """Generates an Earthquake Rupture Forecast, using the source zones and
+        logic trees specified in the job config file. Note that this has to be
+        done currently using the file itself, since it has nested references to
+        other files."""
+
+        LOG.info("Storing source model from job config")
+        key = kvs.tokens.source_model_key(self.job_id)
+        print "source model key is", key
+        jpype = java.jvm()
+        try:
+            self.calc.sampleAndSaveERFTree(self.cache, key, seed)
+        except jpype.JavaException, ex:
+            unwrap_validation_error(
+                jpype, ex,
+                self.params.get("SOURCE_MODEL_LOGIC_TREE_FILE"))
+
+    def store_gmpe_map(self, seed):
+        """Generates a hash of tectonic regions and GMPEs, using the logic tree
+        specified in the job config file."""
+        key = kvs.tokens.gmpe_key(self.job_id)
+        print "GMPE map key is", key
+        jpype = java.jvm()
+        try:
+            self.calc.sampleAndSaveGMPETree(self.cache, key, seed)
+        except jpype.JavaException, ex:
+            unwrap_validation_error(
+                jpype, ex, self.params.get("GMPE_LOGIC_TREE_FILE"))
+
+    def generate_erf(self):
+        """Generate the Earthquake Rupture Forecast from the currently stored
+        source model logic tree."""
+        key = kvs.tokens.source_model_key(self.job_id)
+        sources = java.jclass("JsonSerializer").getSourceListFromCache(
+                    self.cache, key)
+        erf = java.jclass("GEM1ERF")(sources)
+        self.calc.setGEM1ERFParams(erf)
+        return erf
+
+    def set_gmpe_params(self, gmpe_map):
+        """Push parameters from configuration file into the GMPE objects"""
+        jpype = java.jvm()
+        gmpe_lt_data = self.calc.createGmpeLogicTreeData()
+        for tect_region in gmpe_map.keySet():
+            gmpe = gmpe_map.get(tect_region)
+            gmpe_lt_data.setGmpeParams(self.params['COMPONENT'],
+                self.params['INTENSITY_MEASURE_TYPE'],
+                jpype.JDouble(float(self.params['PERIOD'])),
+                jpype.JDouble(float(self.params['DAMPING'])),
+                self.params['GMPE_TRUNCATION_TYPE'],
+                jpype.JDouble(float(self.params['TRUNCATION_LEVEL'])),
+                self.params['STANDARD_DEVIATION_TYPE'],
+                jpype.JDouble(float(self.params['REFERENCE_VS30_VALUE'])),
+                jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
+            gmpe_map.put(tect_region, gmpe)
+
+    def generate_gmpe_map(self):
+        """Generate the GMPE map from the stored GMPE logic tree."""
+        key = kvs.tokens.gmpe_key(self.job_id)
+        gmpe_map = java.jclass(
+            "JsonSerializer").getGmpeMapFromCache(self.cache, key)
+        self.set_gmpe_params(gmpe_map)
+        return gmpe_map
+
+    def get_iml_list(self):
+        """Build the appropriate Arbitrary Discretized Func from the IMLs,
+        based on the IMT"""
+
+        iml_list = java.jclass("ArrayList")()
+        for val in self.imls:
+            iml_list.add(
+                IML_SCALING[self.params['INTENSITY_MEASURE_TYPE']](
+                val))
+        return iml_list
+
+    def parameterize_sites(self, site_list):
+        """Convert python Sites to Java Sites, and add default parameters."""
+        # TODO(JMC): There's Java code for this already, sets each site to have
+        # the same default parameters
+
+        jpype = java.jvm()
+        jsite_list = java.jclass("ArrayList")()
+        for x in site_list:
+            site = x.to_java()
+
+            vs30 = java.jclass("DoubleParameter")(jpype.JString("Vs30"))
+            vs30.setValue(float(self.params['REFERENCE_VS30_VALUE']))
+            depth25 = java.jclass("DoubleParameter")("Depth 2.5 km/sec")
+            depth25.setValue(float(
+                    self.params['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']))
+            sadigh = java.jclass("StringParameter")("Sadigh Site Type")
+            sadigh.setValue(self.params['SADIGH_SITE_TYPE'])
+
+            depth1km = java.jclass("DoubleParameter")(jpype.JString(
+                "Depth 1.0 km/sec"))
+            depth1km.setValue(float(self.params['DEPTHTO1PT0KMPERSEC']))
+            vs30_type = java.jclass("StringParameter")("Vs30 Type")
+            # Enum values must be capitalized in the Java domain!
+            vs30_type.setValue(self.params['VS30_TYPE'].capitalize())
+
+            site.addParameter(vs30)
+            site.addParameter(depth25)
+            site.addParameter(sadigh)
+            site.addParameter(depth1km)
+            site.addParameter(vs30_type)
+            jsite_list.add(site)
+        return jsite_list
+
+
 class HazJobMixin(mixins.Mixin):
     """ Proxy mixin for mixing in hazard job behaviour """
     mixins = {}
