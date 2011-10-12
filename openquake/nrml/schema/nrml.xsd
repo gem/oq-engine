@@ -6,7 +6,7 @@
            xmlns:gml="http://www.opengis.net/gml"
            targetNamespace="http://openquake.org/xmlns/nrml/0.2"
            elementFormDefault="qualified"
-           xml:lang="en"> 
+           xml:lang="en">
 
     <xs:import namespace="http://www.opengis.net/gmlsf" schemaLocation="./gmlsfLevels.xsd"/>
     <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gmlsf.xsd"/>
@@ -37,6 +37,7 @@
                         <xs:element ref="exposurePortfolio"/>
                         <xs:element ref="vulnerabilityModel"/>
                         <xs:element ref="logicTree"/>
+                        <xs:element ref="disaggregationResultField"/>
                     </xs:choice>
                 </xs:sequence>
             </xs:extension>

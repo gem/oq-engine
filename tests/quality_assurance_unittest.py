@@ -38,8 +38,8 @@ class ClassicalPSHACalculatorAssuranceTestCase(
     def test_peerTestSet1Case2(self):
         expected_results = self._load_results()
 
-        job = self._run_job(helpers.smoketest_file(
-            os.path.join(TEST_NAME, "config.gem")))
+        job = self._run_job(
+            helpers.smoketest_file(os.path.join(TEST_NAME, "config.gem")))
 
         job_db = models.OqJob.objects.get(id=job.job_id)
 

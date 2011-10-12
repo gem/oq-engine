@@ -110,10 +110,21 @@ def get_output_path(file_name):
 
 
 def smoketest_file(file_name):
-    """ Take a file name and return the full path to the file in the smoketests
-    directory """
+    """
+    Take a file name and return the full path to the file in the smoketests
+    directory.
+    """
     return os.path.join(
         os.path.dirname(__file__), "../../smoketests", file_name)
+
+
+def testdata_path(file_name):
+    """
+    Take a file name and return the full path to the file in the
+    tests/data/smoketests directory
+    """
+    return os.path.normpath(os.path.join(
+        os.path.dirname(__file__), "../data/smoketests", file_name))
 
 
 def job_from_file(config_file_path):
