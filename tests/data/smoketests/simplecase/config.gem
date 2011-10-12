@@ -1,22 +1,30 @@
 [general]
 
-CALCULATION_MODE = Classical
+CALCULATION_MODE = Event Based
 
 # NOTE: The order of the vertices is to be kept!!!
 # lat, lon of polygon vertices (in clock or counter-clock wise order)
 #REGION_VERTEX = 37.5, -122.5, 37.5, -121.5, 38.5, -121.5, 38.5, -122.5
 #
-#REGION_VERTEX = 33.88, -118.30, 33.88, -118.06, 33.76, -118.06, 33.76, -118.30
-REGION_VERTEX = 37.9, -121.90, 37.9, -121.6, 37.5, -121.6, 37.5, -121.90
-#REGION_VERTEX = 38.0, -122.2, 38.0, -121.7, 37.5, -121.7, 37.5, -122.2
+REGION_VERTEX = 33.88, -118.30, 33.88, -118.06, 33.76, -118.06, 33.76, -118.30
 # degrees
 #REGION_GRID_SPACING = 0.1
-REGION_GRID_SPACING = 0.1
+REGION_GRID_SPACING = 0.02
+
+# list of sites to compute in the format lat1, lon1, lat2, lon2, ...
+# SITES = 33.88, -118.30, 33.88, -118.06, 33.76, -118.06, 33.76, -118.30
 
 [HAZARD]
 
+DEPTHTO1PT0KMPERSEC = 100.0
+VS30_TYPE = measured
 SOURCE_MODEL_LT_RANDOM_SEED = 23
 GMPE_LT_RANDOM_SEED = 5
+
+# NRML serialization of gmf-* files
+GMF_OUTPUT = false
+
+
 GMF_RANDOM_SEED = 3
 
 # file containing erf logic tree structure
@@ -115,7 +123,7 @@ SUBDUCTION_RUPTURE_FLOATING_TYPE = Along strike and down dip
 
 # (used if Event Based approach is chosen)
 #NUMBER_OF_LOGIC_TREE_SAMPLES = 40
-NUMBER_OF_LOGIC_TREE_SAMPLES = 2
+NUMBER_OF_LOGIC_TREE_SAMPLES = 1
 # (used if probabilistic event based approach is chosen)
 #NUMBER_OF_SEISMICITY_HISTORIES = 8
 NUMBER_OF_SEISMICITY_HISTORIES = 1
@@ -127,7 +135,9 @@ QUANTILE_LEVELS = 0.25 0.50
 COMPUTE_MEAN_HAZARD_CURVE = true
 
 # List of POEs to use for computing hazard maps
-POES = 0.01 0.1
+POES = 0.01 0.10
+
+HAZARD_MAP_CPT = seminf-haxby.cpt
 
 [RISK]
 
@@ -152,4 +162,7 @@ LOSS_RATIO_MAP = loss_ratio_map.tiff
 RISK_CELL_SIZE = 0.0005
 
 # uncomment this if you want to compute the aggregate loss curve
-AGGREGATE_LOSS_CURVE = 1
+AGGREGATE_LOSS_CURVE = true
+
+# uncomment this if you want to compute hazard only on sites defined in the exposure
+# COMPUTE_HAZARD_AT_ASSETS_LOCATIONS = true
