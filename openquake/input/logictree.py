@@ -24,6 +24,10 @@ import re
 import random
 import itertools
 from decimal import Decimal
+try:
+    import simplejson as json
+except ImportError:
+    import json
 
 from lxml import etree
 
@@ -588,18 +592,21 @@ class LogicTreeProcessor(object):
         self.source_model_lt = SourceModelLogicTree(
             basepath, source_model_logictree_path
         )
-        self.gmpe_lt = GMPELogicTree(basepath, gmpe_logictree_path)
+        trts = self.source_model_lt.tectonic_region_types
+        self.gmpe_lt = GMPELogicTree(trts, basepath, gmpe_logictree_path)
 
-    def sample_and_save_source_model_logictree(self, cache, key, random_seed):
-        cache.set(key, self.sample_source_model_logictree(random_seed))
+    def sample_and_save_source_model_logictree(self, cache, key, random_seed,
+                                               mfd_bin_width):
+        json_result = self.sample_source_model_logictree(random_seed,
+                                                         mfd_bin_width)
+        cache.set(key, json_result)
 
-    def sample_source_model_logictree(self, random_seed):
+    def sample_source_model_logictree(self, random_seed, mfd_bin_width):
         rnd = random.Random(random_seed)
         SourceModelReader = jvm().JClass('org.gem.engine.hazard.' \
                                          'parsers.SourceModelReader')
         branch = self.source_model_lt.root_branchset.sample(rnd)
-        sources = SourceModelReader(branch.value).read()
-
+        sources = SourceModelReader(branch.value, float(mfd_bin_width)).read()
         while True:
             branchset = branch.child_branchset
             if branchset is None:
@@ -610,3 +617,19 @@ class LogicTreeProcessor(object):
 
         serializer = jvm().JClass('org.gem.JsonSerializer')
         return serializer.getJsonSourceList(sources)
+
+    def sample_and_save_gmpe_logictree(self, cache, key, random_seed):
+        cache.set(key, self.sample_gmpe_logictree(random_seed))
+
+    def sample_gmpe_logictree(self, random_seed):
+        rnd = random.Random(random_seed)
+        value_prefix = 'org.opensha.sha.imr.attenRelImpl.'
+        result = {}
+        branchset = self.gmpe_lt.root_branchset
+        while branchset:
+            branch = branchset.sample(rnd)
+            trt = branchset.filters['applyToTectonicRegionType']
+            assert trt not in result
+            result[trt] = value_prefix + branch.value
+            branchset = branch.child_branchset
+        return json.dumps(result)
