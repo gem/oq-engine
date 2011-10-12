@@ -43,32 +43,8 @@ from openquake.utils import tasks as utils_tasks
 
 LOG = logs.LOG
 
-# NOTE: this refers to how the values are stored in KVS. In the config
-# file, values are stored untransformed (i.e., the list of IMLs is
-# not stored as logarithms).
-IML_SCALING = {'PGA': numpy.log,
-               'MMI': lambda iml: iml,
-               'PGV': numpy.log,
-               'PGD': numpy.log,
-               'SA': numpy.log,
-              }
-
 HAZARD_CURVE_FILENAME_PREFIX = 'hazardcurve'
 HAZARD_MAP_FILENAME_PREFIX = 'hazardmap'
-
-
-def preload(fn):
-    """A decorator for preload steps that must run on the Jobber node"""
-
-    def preloader(self, *args, **kwargs):
-        """Validate job"""
-        self.cache = java.jclass("KVS")(
-                config.get("kvs", "host"),
-                int(config.get("kvs", "port")))
-        self.calc = java.jclass("LogicTreeProcessor")(
-                self.cache, self.key)
-        return fn(self, *args, **kwargs)
-    return preloader
 
 
 def unwrap_validation_error(jpype, runtime_exception, path=None):
@@ -289,7 +265,7 @@ class ClassicalMixin(general.BasePSHAMixin):
                 map_serializer(sites, self.poes_hazard_maps, quantile)
 
     @java.jexception
-    @preload
+    @general.preload
     def execute(self):
         """
         Trigger the calculation and serialization of hazard curves, mean hazard
@@ -500,7 +476,7 @@ class ClassicalMixin(general.BasePSHAMixin):
 
         return nrml_path
 
-    @preload
+    @general.preload
     def compute_hazard_curve(self, sites, realization):
         """ Compute hazard curves, write them to KVS as JSON,
         and return a list of the KVS keys for each curve. """

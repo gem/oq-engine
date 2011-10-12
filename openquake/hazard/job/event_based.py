@@ -17,9 +17,22 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-from openquake.hazard.job import general
+import math
+import os
+import random
 
+from openquake import java
+from openquake import kvs
+from openquake import logs
+from openquake import shapes
+
+from openquake.output import hazard as hazard_output
+
+from openquake.hazard.job import general
 from openquake.job.mixins import Mixin
+
+
+LOG = logs.LOG
 
 
 class EventBasedMixin(general.BasePSHAMixin):
@@ -33,7 +46,7 @@ class EventBasedMixin(general.BasePSHAMixin):
     params loaded from the Job configuration file."""
 
     @java.jexception
-    @preload
+    @general.preload
     def execute(self):
         """Main hazard processing block.
 
@@ -114,7 +127,7 @@ class EventBasedMixin(general.BasePSHAMixin):
                 files.append(nrml_path)
         return files
 
-    @preload
+    @general.preload
     def compute_ground_motion_fields(self, site_list, history, realization,
                                      seed):
         """Ground motion field calculation, runs on the workers."""

@@ -104,7 +104,7 @@ class SMWrapper(object):
 
 
 class CreateHazardmapWriterTestCase(unittest.TestCase, CreateWriterTestBase):
-    """Tests for hazard.opensha.create_hazardmap_writer()."""
+    """Tests for openquake.output.hazard.create_hazardmap_writer()."""
 
     create_function = SMWrapper(hazard_output.create_hazardmap_writer)
     xml_writer_class = hazard_output.HazardMapXMLWriter
@@ -112,7 +112,7 @@ class CreateHazardmapWriterTestCase(unittest.TestCase, CreateWriterTestBase):
 
 
 class CreateHazardcurveWriterTestCase(unittest.TestCase, CreateWriterTestBase):
-    """Tests for hazard.opensha.create_hazardcurve_writer()."""
+    """Tests for openquake.output.hazard.create_hazardcurve_writer()."""
 
     create_function = SMWrapper(hazard_output.create_hazardcurve_writer)
     xml_writer_class = hazard_output.HazardCurveXMLWriter
@@ -120,7 +120,7 @@ class CreateHazardcurveWriterTestCase(unittest.TestCase, CreateWriterTestBase):
 
 
 class CreateGMFWriterTestCase(unittest.TestCase, CreateWriterTestBase):
-    """Tests for hazard.opensha.create_gmf_writer()."""
+    """Tests for openquake.output.hazard.create_gmf_writer()."""
 
     create_function = SMWrapper(hazard_output.create_gmf_writer)
     xml_writer_class = hazard_output.GMFXMLWriter

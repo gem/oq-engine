@@ -22,17 +22,48 @@ The following tasks are defined in the hazard engine:
 """
 
 import json
+import numpy
 
 from celery.task.sets import subtask
 
+from openquake import java
 from openquake import job
 from openquake import kvs
-
+from openquake import logs
 from openquake.hazard import classical_psha
 from openquake.java import jtask as task
 from openquake.job import mixins
 from openquake.logs import HAZARD_LOG
+from openquake.utils import config
 from openquake.utils.tasks import check_job_status
+
+LOG = logs.LOG
+
+# NOTE: this refers to how the values are stored in KVS. In the config
+# file, values are stored untransformed (i.e., the list of IMLs is
+# not stored as logarithms).
+IML_SCALING = {
+    'PGA': numpy.log,
+    'MMI': lambda iml: iml,
+    'PGV': numpy.log,
+    'PGD': numpy.log,
+    'SA': numpy.log,
+}
+
+
+
+def preload(fn):
+    """A decorator for preload steps that must run on the Jobber node"""
+
+    def preloader(self, *args, **kwargs):
+        """Validate job"""
+        self.cache = java.jclass("KVS")(
+                config.get("kvs", "host"),
+                int(config.get("kvs", "port")))
+        self.calc = java.jclass("LogicTreeProcessor")(
+                self.cache, self.key)
+        return fn(self, *args, **kwargs)
+    return preloader
 
 
 @task

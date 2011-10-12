@@ -43,7 +43,7 @@ from openquake.job.config import PARAMS
 from openquake.kvs import tokens
 from openquake.hazard import classical_psha
 from openquake.hazard.job import general
-from openquake.hazard.job import opensha
+from openquake.hazard.job import classical
 
 import openquake.hazard.job
 
@@ -81,7 +81,7 @@ class LogicTreeValidationTestCase(unittest.TestCase):
         try:
             ltr.read()
         except jpype.JavaException, ex:
-            opensha.unwrap_validation_error(
+            classical.unwrap_validation_error(
                 jpype, ex, path)
 
     def test_invalid_xml(self):
@@ -561,7 +561,7 @@ class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
     def setUp(self):
         self.params = {'CALCULATION_MODE': 'Hazard'}
         self.job = self.create_job_with_mixin(self.params,
-                                              opensha.ClassicalMixin)
+                                              classical.ClassicalMixin)
         self.job_id = self.job.job_id
 
         self.expected_curve = numpy.array([9.9178000e-01, 9.8892000e-01,
@@ -766,7 +766,7 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
                 1.5200e+00, 2.1300e+00]
 
         self.job = self.create_job_with_mixin(self.params,
-                                              opensha.ClassicalMixin)
+                                              classical.ClassicalMixin)
         self.job_id = self.job.job_id
 
         self.empty_mean_curve = []
@@ -946,7 +946,7 @@ class ParameterizeSitesTestCase(helpers.TestMixin, unittest.TestCase):
             "VS30_TYPE": "measured"}
 
         self.job = self.create_job_with_mixin(
-            self.params, opensha.ClassicalMixin)
+            self.params, classical.ClassicalMixin)
         self.job_id = self.job.job_id
 
     def tearDown(self):

@@ -18,5 +18,6 @@
 
 """ The hazard job mixin proxy. """
 
-import opensha
+import classical
+import event_based
 import deterministic
