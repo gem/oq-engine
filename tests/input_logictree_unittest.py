@@ -79,10 +79,12 @@ def _whatever_sourcemodel():
             <gml:name>Mount Diablo Thrust</gml:name>
             <tectonicRegion>Active Shallow Crust</tectonicRegion>
             <rake>90.0</rake>
-            <evenlyDiscretizedIncrementalMFD minVal="6.55" binSize="0.1"
-                type="ML">0.0010614989 8.8291627E-4 7.3437777E-4
-                          6.108288E-4 5.080653E-4
-            </evenlyDiscretizedIncrementalMFD>
+            <truncatedGutenbergRichter>
+                <aValueCumulative>3.6786313049897035</aValueCumulative>
+                <bValue>1.0</bValue>
+                <minMagnitude>5.0</minMagnitude>
+                <maxMagnitude>7.0</maxMagnitude>
+            </truncatedGutenbergRichter>
             <simpleFaultGeometry gml:id="sfg_1">
                 <faultTrace>
                     <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
@@ -101,10 +103,12 @@ def _whatever_sourcemodel():
             <gml:name>Mount Diablo Thrust</gml:name>
             <tectonicRegion>Active Shallow Crust</tectonicRegion>
             <rake>90.0</rake>
-            <evenlyDiscretizedIncrementalMFD minVal="6.55" binSize="0.1"
-                type="ML">0.0010614989 8.8291627E-4 7.3437777E-4
-                          6.108288E-4 5.080653E-4
-            </evenlyDiscretizedIncrementalMFD>
+            <truncatedGutenbergRichter>
+                <aValueCumulative>3.6786313049897035</aValueCumulative>
+                <bValue>1.0</bValue>
+                <minMagnitude>5.0</minMagnitude>
+                <maxMagnitude>7.0</maxMagnitude>
+            </truncatedGutenbergRichter>
             <simpleFaultGeometry gml:id="sfg_1">
                 <faultTrace>
                     <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
@@ -126,8 +130,12 @@ def _whatever_sourcemodel():
             <gml:Point><gml:pos>-125.4 42.9</gml:pos></gml:Point>
           </location>
           <ruptureRateModel>
-            <evenlyDiscretizedIncrementalMFD binSize="0.1"
-                minVal="5.05">1.7E-13</evenlyDiscretizedIncrementalMFD>
+            <truncatedGutenbergRichter>
+                <aValueCumulative>3.6786313049897035</aValueCumulative>
+                <bValue>1.0</bValue>
+                <minMagnitude>5.0</minMagnitude>
+                <maxMagnitude>7.0</maxMagnitude>
+            </truncatedGutenbergRichter>
             <focalMechanism publicID="smi:fm1/0">
               <qml:nodalPlanes>
                 <qml:nodalPlane1>
@@ -139,8 +147,12 @@ def _whatever_sourcemodel():
             </focalMechanism>
           </ruptureRateModel>
           <ruptureRateModel>
-            <evenlyDiscretizedIncrementalMFD binSize="0.1"
-                minVal="5.05">1.8E-13</evenlyDiscretizedIncrementalMFD>
+            <truncatedGutenbergRichter>
+                <aValueCumulative>3.6786313049897035</aValueCumulative>
+                <bValue>1.0</bValue>
+                <minMagnitude>5.0</minMagnitude>
+                <maxMagnitude>7.0</maxMagnitude>
+            </truncatedGutenbergRichter>
             <focalMechanism publicID="smi:fm1/1">
               <qml:nodalPlanes>
                 <qml:nodalPlane1>
@@ -498,7 +510,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                                             logictree.ValidationError)
         self.assertEqual(exc.lineno, 16)
         error = "expected list of 2 float(s) separated by space, " \
-                "as source 'src01' has 1 MFD(s)"
+                "as source 'src01' has 1 GR MFD(s)"
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
 
@@ -535,7 +547,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                                             logictree.ValidationError)
         self.assertEqual(exc.lineno, 16)
         error = "expected list of 4 float(s) separated by space, " \
-                "as source 'doublemfd' has 2 MFD(s)"
+                "as source 'doublemfd' has 2 GR MFD(s)"
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
 
@@ -571,7 +583,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                                             logictree.ValidationError)
         self.assertEqual(exc.lineno, 16)
         error = "expected list of 2 float(s) separated by space, " \
-                "as source 'doublemfd' has 2 MFD(s)"
+                "as source 'doublemfd' has 2 GR MFD(s)"
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
 
