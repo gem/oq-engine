@@ -86,6 +86,14 @@ class BranchSet(object):
         raise AssertionError('do weights really sum up to 1.0?')
 
     @classmethod
+    def _is_gr_mfd(cls, mfd):
+        if not hasattr(cls, '_GRMFD'):
+            cls._GRMFD = jvm().JClass(
+                'org.opensha.sha.magdist.GutenbergRichterMagFreqDist'
+            )
+        return isinstance(mfd, cls._GRMFD)
+
+    @classmethod
     def _is_point(cls, source):
         if not hasattr(cls, '_PointSource'):
             cls._PointSource = jvm().JClass(
@@ -166,12 +174,14 @@ class BranchSet(object):
             raise AssertionError('type of source %r is unknown' % source)
 
         if self.uncertainty_type in ('abGRAbsolute', 'maxMagGRAbsolute'):
-            valuelist = value
+            valuelist = iter(value)
         else:
             valuelist = itertools.repeat(value)
 
-        for mfd, mfd_value in itertools.izip(mfdlist, valuelist):
-            self._apply_uncertainty_to_mfd(mfd, mfd_value)
+        for mfd in mfdlist:
+            if self._is_gr_mfd(mfd):
+                mfd_value = next(valuelist)
+                self._apply_uncertainty_to_mfd(mfd, mfd_value)
 
     def _apply_uncertainty_to_mfd(self, mfd, value):
         if self.uncertainty_type == 'abGRAbsolute':
@@ -300,7 +310,7 @@ class SourceModelLogicTree(BaseLogicTree):
     SOURCE_TYPES = ('point', 'area', 'complexFault', 'simpleFault')
 
     def __init__(self, *args, **kwargs):
-        self.source_ids_to_num_mfds = {}
+        self.source_ids_to_num_gr_mfds = {}
         self.tectonic_region_types = set()
         self.source_types = set()
         super(SourceModelLogicTree, self).__init__(*args, **kwargs)
@@ -313,7 +323,7 @@ class SourceModelLogicTree(BaseLogicTree):
         elif branchset.uncertainty_type == 'abGRAbsolute' \
                 or branchset.uncertainty_type == 'maxMagGRAbsolute':
             [source_id] = branchset.filters['applyToSources']
-            num_numbers_expected = self.source_ids_to_num_mfds[source_id]
+            num_numbers_expected = self.source_ids_to_num_gr_mfds[source_id]
             assert num_numbers_expected != 0
             if branchset.uncertainty_type == 'abGRAbsolute':
                 num_numbers_expected *= 2
@@ -333,8 +343,8 @@ class SourceModelLogicTree(BaseLogicTree):
             raise ValidationError(
                 node, self.filename, self.basepath,
                 'expected list of %d float(s) separated by space, ' \
-                'as source %r has %d MFD(s)' % (num_numbers_expected,
-                source_id, self.source_ids_to_num_mfds[source_id])
+                'as source %r has %d GR MFD(s)' % (num_numbers_expected,
+                source_id, self.source_ids_to_num_gr_mfds[source_id])
             )
         else:
             if not _float_re.match(value):
@@ -359,7 +369,7 @@ class SourceModelLogicTree(BaseLogicTree):
             source_ids = filters['applyToSources'].split()
             nonexistent_source_ids = set(source_ids)
             nonexistent_source_ids.difference_update(
-                self.source_ids_to_num_mfds
+                self.source_ids_to_num_gr_mfds
             )
             if nonexistent_source_ids:
                 raise ValidationError(
@@ -476,10 +486,13 @@ class SourceModelLogicTree(BaseLogicTree):
                 source_id = node.attrib['{http://www.opengis.net/gml}id']
                 source_type = node.tag[sourcetype_slice]
                 if source_type == 'point' or source_type == 'area':
-                    mfds = len(node.find('{%s}ruptureRateModel' % self.NRML))
+                    mfds = len(node.findall(
+                        '{%s}ruptureRateModel/{%s}truncatedGutenbergRichter' %
+                        (self.NRML, self.NRML)
+                    ))
                 else:
                     mfds = 1
-                self.source_ids_to_num_mfds[source_id] = mfds
+                self.source_ids_to_num_gr_mfds[source_id] = mfds
 
                 self.source_types.add(source_type)
 
