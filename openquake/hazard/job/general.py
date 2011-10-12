@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2010-2011, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify
@@ -17,7 +14,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
 """
 The following tasks are defined in the hazard engine:
     * generate_erf
@@ -32,7 +28,6 @@ from celery.task.sets import subtask
 from openquake import job
 from openquake import kvs
 
-from openquake.hazard import job as hazjob
 from openquake.hazard import classical_psha
 from openquake.java import jtask as task
 from openquake.job import mixins
@@ -67,7 +62,7 @@ def compute_ground_motion_fields(job_id, site_list, history, realization,
     # TODO(JMC): Use a block_id instead of a site_list
     check_job_status(job_id)
     hazengine = job.Job.from_kvs(job_id)
-    with mixins.Mixin(hazengine, hazjob.HazJobMixin):
+    with mixins.Mixin(hazengine, HazJobMixin):
         hazengine.compute_ground_motion_fields(site_list, history, realization,
                                                seed)
 
@@ -77,7 +72,7 @@ def compute_hazard_curve(job_id, site_list, realization, callback=None):
     """ Generate hazard curve for a given site list. """
     check_job_status(job_id)
     hazengine = job.Job.from_kvs(job_id)
-    with mixins.Mixin(hazengine, hazjob.HazJobMixin):
+    with mixins.Mixin(hazengine, HazJobMixin):
         keys = hazengine.compute_hazard_curve(site_list, realization)
 
         if callback:
@@ -132,3 +127,11 @@ def compute_quantile_curves(job_id, sites, realizations, quantiles):
 
     return classical_psha.compute_quantile_hazard_curves(job_id, sites,
         realizations, quantiles)
+
+
+class HazJobMixin(mixins.Mixin):
+    """ Proxy mixin for mixing in hazard job behaviour """
+    mixins = {}
+
+
+mixins.Mixin.register("Hazard", HazJobMixin, order=1)

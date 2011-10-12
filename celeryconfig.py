@@ -46,6 +46,6 @@ CELERY_RESULT_BACKEND = "amqp"
 
 
 CELERY_IMPORTS = (
-    "openquake.risk.job", "openquake.hazard.tasks", "tests.utils.tasks")
+    "openquake.risk.job", "openquake.hazard.job", "tests.utils.tasks")
 
 os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.settings"

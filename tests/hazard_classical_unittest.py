@@ -27,7 +27,7 @@ import unittest
 from openquake import logs
 from openquake import shapes
 
-from openquake.hazard import opensha
+from openquake.hazard.job import opensha
 
 from tests.utils import helpers
 from tests.utils.tasks import test_compute_hazard_curve, test_data_reflector

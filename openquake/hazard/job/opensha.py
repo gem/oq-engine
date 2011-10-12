@@ -35,8 +35,7 @@ from openquake import shapes
 from openquake import xml
 
 from openquake.hazard import classical_psha
-from openquake.hazard import job
-from openquake.hazard import tasks
+from openquake.hazard.job import general
 from openquake.job.mixins import Mixin
 from openquake.output import hazard as hazard_output
 from openquake.utils import config
@@ -223,7 +222,7 @@ class ClassicalMixin(BasePSHAMixin):
 
     def do_curves(self, sites, realizations,
                   serializer=None,
-                  the_task=tasks.compute_hazard_curve):
+                  the_task=general.compute_hazard_curve):
         """Trigger the calculation of hazard curves, serialize as requested.
 
         The calculated curves will only be serialized if the `serializer`
@@ -282,7 +281,7 @@ class ClassicalMixin(BasePSHAMixin):
     # pylint: disable=R0913
     def do_means(self, sites, realizations,
                  curve_serializer=None,
-                 curve_task=tasks.compute_mean_curves,
+                 curve_task=general.compute_mean_curves,
                  map_func=None,
                  map_serializer=None):
         """Trigger the calculation of mean curves/maps, serialize as requested.
@@ -338,7 +337,7 @@ class ClassicalMixin(BasePSHAMixin):
     # pylint: disable=R0913
     def do_quantiles(self, sites, realizations, quantiles,
                      curve_serializer=None,
-                     curve_task=tasks.compute_quantile_curves,
+                     curve_task=general.compute_quantile_curves,
                      map_func=None,
                      map_serializer=None):
         """Trigger the calculation/serialization of quantile curves/maps.
@@ -746,7 +745,7 @@ class EventBasedMixin(BasePSHAMixin):
                 self.store_source_model(source_model_generator.getrandbits(32))
                 self.store_gmpe_map(gmpe_generator.getrandbits(32))
                 pending_tasks.append(
-                    tasks.compute_ground_motion_fields.delay(
+                    general.compute_ground_motion_fields.delay(
                         self.job_id, self.sites_to_compute(),
                         i, j, gmf_generator.getrandbits(32)))
 
@@ -818,5 +817,5 @@ class EventBasedMixin(BasePSHAMixin):
                 jpype.JBoolean(correlate))
 
 
-job.HazJobMixin.register("Event Based", EventBasedMixin, order=0)
-job.HazJobMixin.register("Classical", ClassicalMixin, order=1)
+general.HazJobMixin.register("Event Based", EventBasedMixin, order=0)
+general.HazJobMixin.register("Classical", ClassicalMixin, order=1)

@@ -921,7 +921,7 @@ class JobStatsTestCase(unittest.TestCase):
         :py:method:`openquake.job.Job._record_initial_stats` is called.
         '''
         # Mock out pieces of the test job so it doesn't actually run.
-        haz_execute = 'openquake.hazard.opensha.EventBasedMixin.execute'
+        haz_execute = 'openquake.hazard.job.opensha.EventBasedMixin.execute'
         risk_execute = \
             'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute'
         record = 'openquake.job.Job._record_initial_stats'
