@@ -82,6 +82,8 @@ ENUM_MAP = {
     'MagDistEpsPMF': 'magdistepspmf',
     'LatLonPMF': 'latlonpmf',
     'LatLonMagEpsPMF': 'latlonmagepspmf',
+    'MagTRTPMF': 'magtrtpmf',
+    'LatLonTRTPMF': 'latlontrtpmf',
     'FullDisaggMatrix': 'fulldisaggmatrix',
 }
 
