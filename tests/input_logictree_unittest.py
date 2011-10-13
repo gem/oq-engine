@@ -1382,6 +1382,106 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         sb1, sb2, sb3 = lt.root_branchset.branches
         self.assertTrue(sb1.child_branchset is sb3.child_branchset)
 
+    def test_mixed_mfd_types_absolute_uncertainties(self):
+        lt = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>sm</uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+            <logicTreeBranchingLevel branchingLevelID="bl2">
+                <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
+                                    branchSetID="bs2"
+                                    applyToSources="triplemfd">
+                    <logicTreeBranch branchID="b2">
+                        <uncertaintyModel>10 11</uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        # source model has three mfds, from which
+        # only first and third are GR.
+        sm = _make_nrml("""\
+        <sourceModel gml:id="sm1">
+            <config/>
+            <pointSource gml:id="triplemfd">
+              <gml:name></gml:name>
+              <tectonicRegion>Active Shallow Crust</tectonicRegion>
+              <location>
+                <gml:Point><gml:pos>-125.4 42.9</gml:pos></gml:Point>
+              </location>
+
+              <ruptureRateModel>
+                <truncatedGutenbergRichter>
+                    <aValueCumulative>3.6786313049897035</aValueCumulative>
+                    <bValue>1.0</bValue>
+                    <minMagnitude>5.0</minMagnitude>
+                    <maxMagnitude>7.0</maxMagnitude>
+                </truncatedGutenbergRichter>
+                <focalMechanism publicID="smi:fm1/0">
+                  <qml:nodalPlanes>
+                    <qml:nodalPlane1>
+                      <qml:strike><qml:value>0.0</qml:value></qml:strike>
+                      <qml:dip><qml:value>90.0</qml:value></qml:dip>
+                      <qml:rake><qml:value>0.0</qml:value></qml:rake>
+                    </qml:nodalPlane1>
+                  </qml:nodalPlanes>
+                </focalMechanism>
+              </ruptureRateModel>
+
+              <ruptureRateModel>
+                <evenlyDiscretizedIncrementalMFD minVal="6.55" binSize="0.1"
+                    type="ML">
+                    0.0010614989 8.8291627E-4 7.3437777E-4
+                    6.108288E-4 5.080653E-4
+                </evenlyDiscretizedIncrementalMFD>
+                <focalMechanism publicID="smi:fm1/1">
+                  <qml:nodalPlanes>
+                    <qml:nodalPlane1>
+                      <qml:strike><qml:value>0.0</qml:value></qml:strike>
+                      <qml:dip><qml:value>90.0</qml:value></qml:dip>
+                      <qml:rake><qml:value>0.0</qml:value></qml:rake>
+                    </qml:nodalPlane1>
+                  </qml:nodalPlanes>
+                </focalMechanism>
+              </ruptureRateModel>
+
+              <ruptureRateModel>
+                <truncatedGutenbergRichter>
+                    <aValueCumulative>3.6786313049897035</aValueCumulative>
+                    <bValue>1.0</bValue>
+                    <minMagnitude>5.0</minMagnitude>
+                    <maxMagnitude>7.0</maxMagnitude>
+                </truncatedGutenbergRichter>
+                <focalMechanism publicID="smi:fm1/1">
+                  <qml:nodalPlanes>
+                    <qml:nodalPlane1>
+                      <qml:strike><qml:value>0.0</qml:value></qml:strike>
+                      <qml:dip><qml:value>90.0</qml:value></qml:dip>
+                      <qml:rake><qml:value>0.0</qml:value></qml:rake>
+                    </qml:nodalPlane1>
+                  </qml:nodalPlanes>
+                </focalMechanism>
+              </ruptureRateModel>
+
+              <ruptureDepthDistribution>
+                <magnitude>6.0 6.5</magnitude>
+                <depth>5.0 1.0</depth>
+              </ruptureDepthDistribution>
+              <hypocentralDepth>5.0</hypocentralDepth>
+            </pointSource>
+        </sourceModel>
+        """)
+        # check that source and logic tree are valid
+        _TesteableSourceModelLogicTree('lt', {'lt': lt, 'sm': sm}, '')
+
 
 class GMPELogicTreeTestCase(unittest.TestCase):
     def assert_result(self, lt, result):
@@ -1549,6 +1649,7 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         srcfile = os.path.join(os.path.dirname(__file__), 'data',
                                   'example-source-model.xml')
         self.single_mfd_sources = list(SourceModelReader(srcfile, 0.1).read())
+        self.non_gr_mfd_source = self.single_mfd_sources[0]
         # filtering out first source (has non-gr mfd)
         self.single_mfd_sources = self.single_mfd_sources[1:]
         srcfile = os.path.join(os.path.dirname(__file__), 'data',
@@ -1633,6 +1734,15 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
                 self.assertEqual(value[0], call_value)
                 self.assertEqual(value[1], call_value2)
                 self.mock.reset_mock()
+
+    def test_ignore_non_gr_mfd(self):
+        uncertainties = [('maxMagGRAbsolute', [10, 11.1]),
+                         ('abGRAbsolute', [(-1, -0.2), (+1, +2)])]
+        for uncertainty, value in uncertainties:
+            branchset = logictree.BranchSet(uncertainty, {})
+            branchset.apply_uncertainty(value, self.non_gr_mfd_source)
+            self.assertEqual(self.mock.call_count, 0)
+
 
 class BranchSetFilterTestCase(unittest.TestCase):
     def setUp(self):
