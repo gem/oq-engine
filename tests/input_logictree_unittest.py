@@ -1549,6 +1549,8 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         srcfile = os.path.join(os.path.dirname(__file__), 'data',
                                   'example-source-model.xml')
         self.single_mfd_sources = list(SourceModelReader(srcfile, 0.1).read())
+        # filtering out first source (has non-gr mfd)
+        self.single_mfd_sources = self.single_mfd_sources[1:]
         srcfile = os.path.join(os.path.dirname(__file__), 'data',
                                'example-source-model-double-mfds.xml')
         self.double_mfd_sources = list(SourceModelReader(srcfile, 0.1).read())
@@ -1639,7 +1641,7 @@ class BranchSetFilterTestCase(unittest.TestCase):
                                          'parsers.SourceModelReader')
         srcfile = os.path.join(os.path.dirname(__file__), 'data',
                                   'example-source-model.xml')
-        self.simple_fault, self.complex_fault, self.area, self.point \
+        self.simple_fault, self.complex_fault, self.area, self.point, _ \
                 = SourceModelReader(srcfile, 0.1).read()
 
     def test_unknown_filter(self):
