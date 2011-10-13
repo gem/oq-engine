@@ -1864,3 +1864,32 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
                 u'org.opensha.sha.imr.attenRelImpl.McVerryetal_2000_AttenRel'
         }
         self.assertEqual(expected, result)
+
+    def test_sample_and_save_source_model_logictree(self):
+        mockcache = Mock(spec=['set'])
+        key = 'zxczxc'
+        random_seed = 12345
+        mfd_bin_width = 0.123
+        json_result = 'asd'
+        with patch('openquake.input.logictree.LogicTreeProcessor.' \
+                   'sample_source_model_logictree') as samplemock:
+            samplemock.return_value = json_result
+            self.proc.sample_and_save_source_model_logictree(
+                mockcache, key, random_seed, mfd_bin_width
+            )
+            samplemock.assert_called_once_with(self.proc, random_seed,
+                                               mfd_bin_width)
+            mockcache.set.assert_called_once_with(key, json_result)
+
+    def test_sample_and_save_gmpe_logictree(self):
+        mockcache = Mock(spec=['set'])
+        key = 'sdasda'
+        random_seed = 124112
+        json_result = 'jsnrslt'
+        with patch('openquake.input.logictree.LogicTreeProcessor.' \
+                   'sample_gmpe_logictree') as samplemock:
+            samplemock.return_value = json_result
+            self.proc.sample_and_save_gmpe_logictree(mockcache, key,
+                                                     random_seed)
+            samplemock.assert_called_once_with(self.proc, random_seed)
+            mockcache.set.assert_called_once_with(key, json_result)
