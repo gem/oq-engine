@@ -24,12 +24,13 @@ import unittest
 import os
 from StringIO import StringIO
 from decimal import Decimal
+import json
 
 from mock import Mock
 
 from openquake.java import jvm, jexception
 from openquake.input import logictree
-from tests.utils.helpers import patch
+from tests.utils.helpers import patch, get_data_path, assertDeepAlmostEqual
 
 
 class _TesteableSourceModelLogicTree(logictree.SourceModelLogicTree):
@@ -170,22 +171,6 @@ def _whatever_sourcemodel():
           <hypocentralDepth>5.0</hypocentralDepth>
         </pointSource>
     </sourceModel>
-    """)
-
-def _whatever_gmpe_lt():
-    return _make_nrml("""\
-    <logicTree id="lt1" tectonicRegion="Active Shallow Crust">
-        <logicTreeBranchSet branchingLevel="1" uncertaintyType="gmpeModel">
-            <logicTreeBranch>
-                <uncertaintyModel>BA_2008_AttenRel</uncertaintyModel>
-                <uncertaintyWeight>0.5</uncertaintyWeight>
-            </logicTreeBranch>
-            <logicTreeBranch>
-                <uncertaintyModel>CB_2008_AttenRel</uncertaintyModel>
-                <uncertaintyWeight>0.5</uncertaintyWeight>
-            </logicTreeBranch>
-        </logicTreeBranchSet>
-    </logicTree>
     """)
 
 def _whatever_sourcemodel_lt(sourcemodel_filename):
@@ -1646,14 +1631,12 @@ class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
         )
         SourceModelReader = jvm().JClass('org.gem.engine.hazard.' \
                                          'parsers.SourceModelReader')
-        srcfile = os.path.join(os.path.dirname(__file__), 'data',
-                                  'example-source-model.xml')
+        srcfile = get_data_path('example-source-model.xml')
         self.single_mfd_sources = list(SourceModelReader(srcfile, 0.1).read())
         self.non_gr_mfd_source = self.single_mfd_sources[0]
         # filtering out first source (has non-gr mfd)
         self.single_mfd_sources = self.single_mfd_sources[1:]
-        srcfile = os.path.join(os.path.dirname(__file__), 'data',
-                               'example-source-model-double-mfds.xml')
+        srcfile = get_data_path('example-source-model-double-mfds.xml')
         self.double_mfd_sources = list(SourceModelReader(srcfile, 0.1).read())
         _apply_uncertainty = logictree.BranchSet._apply_uncertainty_to_mfd
         self.mock = patch('openquake.input.logictree.' \
@@ -1749,8 +1732,7 @@ class BranchSetFilterTestCase(unittest.TestCase):
         super(BranchSetFilterTestCase, self).setUp()
         SourceModelReader = jvm().JClass('org.gem.engine.hazard.' \
                                          'parsers.SourceModelReader')
-        srcfile = os.path.join(os.path.dirname(__file__), 'data',
-                                  'example-source-model.xml')
+        srcfile = get_data_path('example-source-model.xml')
         self.simple_fault, self.complex_fault, self.area, self.point, _ \
                 = SourceModelReader(srcfile, 0.1).read()
 
@@ -1831,3 +1813,54 @@ class BranchSetFilterTestCase(unittest.TestCase):
         test([self.area], self.area, True)
         test([self.point, self.simple_fault], self.simple_fault, True)
         test([self.point, self.complex_fault], self.simple_fault, False)
+
+
+class LogicTreeProcessorTestCase(unittest.TestCase):
+    BASE_PATH = get_data_path('')
+    SOURCE_MODEL_LT = get_data_path('example-source-model-logictree.xml')
+    GMPE_LT = get_data_path('example-gmpe-logictree.xml')
+
+    def setUp(self):
+        self.proc = logictree.LogicTreeProcessor(
+            self.BASE_PATH, self.SOURCE_MODEL_LT, self.GMPE_LT
+        )
+
+    def test_sample_source_model(self):
+        result = self.proc.sample_source_model_logictree(random_seed=42,
+                                                         mfd_bin_width=0.1)
+        result = json.loads(result)
+        first_source = {
+            'dip': 38.0,
+            'floatRuptureFlag': True,
+            'id': 'src01',
+            'mfd': {
+                'D': False,
+                'delta': 0.1,
+                'first': True,
+                'info': '',
+                'maxX': 6.95,
+                'minX': 6.55,
+                'name': u'',
+                'num': 5,
+                'points': [0.001062, 0.000883, 0.000734, 0.000611, 0.000508],
+                'tolerance': 1e-07
+            },
+            'name': 'Mount Diablo Thrust',
+            'rake': 90.0,
+            'seismDepthLow': 13.0,
+            'seismDepthUpp': 8.0,
+            'tectReg': 'ACTIVE_SHALLOW',
+            'trace': [{'depth': 0.0, 'lat': 0.658514, 'lon': -2.126210},
+                      {'depth': 0.0, 'lat': 0.661080, 'lon': -2.129978}]
+        }
+        assertDeepAlmostEqual(self, first_source, result[0], delta=1e-5)
+
+    def test_sample_gmpe(self):
+        result = json.loads(self.proc.sample_gmpe_logictree(random_seed=123))
+        expected = {
+            u'Active Shallow Crust': \
+                u'org.opensha.sha.imr.attenRelImpl.BA_2008_AttenRel',
+            u'Subduction Interface': \
+                u'org.opensha.sha.imr.attenRelImpl.McVerryetal_2000_AttenRel'
+        }
+        self.assertEqual(expected, result)
