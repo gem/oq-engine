@@ -153,19 +153,19 @@ COMMENT ON COLUMN hzrdi.source.tectonic_region IS 'Tectonic region type i.e. one
 
 
 -- hzrdr schema tables ------------------------------------------
-COMMENT ON TABLE hzrdr.hazard_curve_data IS 'Holds data for hazard curves associated with a branch label';
-COMMENT ON COLUMN hzrdr.hazard_curve_data.output_id IS 'The foreign key to the output record that represents the corresponding hazard curve.';
-COMMENT ON COLUMN hzrdr.hazard_curve_data.end_branch_label IS 'End branch label for this curve.';
-COMMENT ON COLUMN hzrdr.hazard_curve_data.statistic_type IS 'Statistic type, one of:
+COMMENT ON TABLE hzrdr.hazard_curve IS 'Holds data for hazard curves associated with a branch label';
+COMMENT ON COLUMN hzrdr.hazard_curve.output_id IS 'The foreign key to the output record that represents the corresponding hazard curve.';
+COMMENT ON COLUMN hzrdr.hazard_curve.end_branch_label IS 'End branch label for this curve.';
+COMMENT ON COLUMN hzrdr.hazard_curve.statistic_type IS 'Statistic type, one of:
     - Mean     (mean)
     - Median   (median)
     - Quantile (quantile)';
-COMMENT ON COLUMN hzrdr.hazard_curve_data.quantile IS 'The quantile for quantile statistical data.';
+COMMENT ON COLUMN hzrdr.hazard_curve.quantile IS 'The quantile for quantile statistical data.';
 
 
-COMMENT ON TABLE hzrdr.hazard_curve_node_data IS 'Holds location/POE data for hazard curves';
-COMMENT ON COLUMN hzrdr.hazard_curve_node_data.hazard_curve_data_id IS 'The foreign key to the hazard curve record for this node.';
-COMMENT ON COLUMN hzrdr.hazard_curve_node_data.poes IS 'Probabilities of exceedence.';
+COMMENT ON TABLE hzrdr.hazard_curve_data IS 'Holds location/POE data for hazard curves';
+COMMENT ON COLUMN hzrdr.hazard_curve_data.hazard_curve_id IS 'The foreign key to the hazard curve record for this node.';
+COMMENT ON COLUMN hzrdr.hazard_curve_data.poes IS 'Probabilities of exceedence.';
 
 
 COMMENT ON TABLE hzrdr.gmf_data IS 'Holds data for the ground motion field';
@@ -201,6 +201,8 @@ COMMENT ON COLUMN oqmif.exposure_data.last_update IS 'Date/time of the last chan
 
 
 COMMENT ON TABLE oqmif.exposure_model IS 'A risk exposure model';
+COMMENT ON COLUMN oqmif.exposure_model.owner_id IS 'The foreign key to the user who owns the exposure model in question';
+COMMENT ON COLUMN oqmif.exposure_model.name IS 'The exposure model name';
 COMMENT ON COLUMN oqmif.exposure_model.description IS 'An optional description of the risk exposure model at hand';
 COMMENT ON COLUMN oqmif.exposure_model.category IS 'The risk category modelled';
 COMMENT ON COLUMN oqmif.exposure_model.unit IS 'The unit of measurement for the exposure data in the model at hand';
@@ -209,12 +211,12 @@ COMMENT ON COLUMN oqmif.exposure_model.last_update IS 'Date/time of the last cha
 
 
 -- riski schema tables ------------------------------------------
-COMMENT ON TABLE riski.vulnerability_data IS 'A risk vulnerability function';
-COMMENT ON COLUMN riski.vulnerability_data.vulnerability_model_id IS 'A reference to the vulnerability model this function belongs to';
-COMMENT ON COLUMN riski.vulnerability_data.vf_ref IS 'The vulnerability function reference, unique within the vulnerability model.';
-COMMENT ON COLUMN riski.vulnerability_data.loss_ratios IS 'Loss ratio values, one per IML value in the vulnerability model.';
-COMMENT ON COLUMN riski.vulnerability_data.covs IS 'Coefficient of variation values, one per IML value in the vulnerability model.';
-COMMENT ON COLUMN riski.vulnerability_data.last_update IS 'Date/time of the last change of the data at hand';
+COMMENT ON TABLE riski.vulnerability_function IS 'A risk vulnerability function';
+COMMENT ON COLUMN riski.vulnerability_function.vulnerability_model_id IS 'A reference to the vulnerability model this function belongs to';
+COMMENT ON COLUMN riski.vulnerability_function.vf_ref IS 'The vulnerability function reference, unique within the vulnerability model.';
+COMMENT ON COLUMN riski.vulnerability_function.loss_ratios IS 'Loss ratio values, one per IML value in the vulnerability model.';
+COMMENT ON COLUMN riski.vulnerability_function.covs IS 'Coefficient of variation values, one per IML value in the vulnerability model.';
+COMMENT ON COLUMN riski.vulnerability_function.last_update IS 'Date/time of the last change of the data at hand';
 
 
 COMMENT ON TABLE riski.vulnerability_model IS 'A risk vulnerability model';
@@ -245,6 +247,7 @@ COMMENT ON COLUMN riskr.loss_map_data.std_dev IS 'The standard deviation of the 
 
 COMMENT ON TABLE riskr.loss_curve IS 'Holds the parameters common to a set of loss curves.';
 COMMENT ON COLUMN riskr.loss_curve.output_id IS 'The foreign key to the output record that represents the corresponding loss curve.';
+COMMENT ON COLUMN riskr.loss_curve.aggregate IS 'Is the curve an aggregate curve?';
 COMMENT ON COLUMN riskr.loss_curve.end_branch_label IS 'End branch label';
 COMMENT ON COLUMN riskr.loss_curve.category IS 'The category of the losses';
 COMMENT ON COLUMN riskr.loss_curve.unit IS 'Unit for the losses (e.g. currency)';
@@ -258,6 +261,29 @@ COMMENT ON COLUMN riskr.loss_curve_data.losses IS 'Losses';
 COMMENT ON COLUMN riskr.loss_curve_data.poes IS 'Probabilities of exceedence';
 
 
+COMMENT ON TABLE riskr.aggregate_loss_curve_data IS 'Holds the probabilities of exceedance for the whole exposure model.';
+COMMENT ON COLUMN riskr.aggregate_loss_curve_data.loss_curve_id IS 'The foreign key to the curve record to which the loss curve data belongs';
+COMMENT ON COLUMN riskr.aggregate_loss_curve_data.losses IS 'Losses';
+COMMENT ON COLUMN riskr.aggregate_loss_curve_data.poes IS 'Probabilities of exceedence';
+
+COMMENT ON TABLE riskr.collapse_map IS 'Holds metadata for the collapse map';
+COMMENT ON COLUMN riskr.collapse_map.output_id IS 'The foreign key to the output record that represents the corresponding collapse map.';
+COMMENT ON COLUMN riskr.collapse_map.exposure_model_id IS 'The foreign key to the exposure model for this collapse map.';
+
+COMMENT ON TABLE riskr.collapse_map_data IS 'Holds the actual data for the collapse map';
+COMMENT ON COLUMN riskr.collapse_map_data.collapse_map_id IS 'The foreign key to the map record to which the collapse map data belongs';
+COMMENT ON COLUMN riskr.collapse_map_data.asset_ref IS 'The asset id';
+COMMENT ON COLUMN riskr.collapse_map_data.value IS 'The collapse amount';
+COMMENT ON COLUMN riskr.collapse_map_data.std_dev IS 'The standard deviation of the collapse amount';
+
+COMMENT ON TABLE riskr.bcr_distribution IS 'Holds metadata for the benefit-cost ratio distribution';
+COMMENT ON COLUMN riskr.bcr_distribution.output_id IS 'The foreign key to the output record that represents the corresponding BCR distribution.';
+COMMENT ON COLUMN riskr.bcr_distribution.exposure_model_id IS 'The foreign key to the exposure model for this BCR distribution.';
+
+COMMENT ON TABLE riskr.bcr_distribution_data IS 'Holds the actual data for the BCR distribution';
+COMMENT ON COLUMN riskr.bcr_distribution_data.bcr_distribution_id IS 'The foreign key to the record to which the BCR distribution data belongs';
+COMMENT ON COLUMN riskr.bcr_distribution_data.asset_ref IS 'The asset id';
+COMMENT ON COLUMN riskr.bcr_distribution_data.bcr IS 'The actual benefit-cost ratio';
 
 -- uiapi schema tables ------------------------------------------
 COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';
@@ -266,21 +292,28 @@ COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
     - source logic tree (lt_source)
     - GMPE logic tree (lt_gmpe)
     - exposure file (exposure)
-    - vulnerability file (vulnerability)';
+    - vulnerability file (vulnerability)
+    - rupture file (rupture)';
 COMMENT ON COLUMN uiapi.input.path IS 'The full path of the input file on the server';
 COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 
+COMMENT ON TABLE uiapi.input_set IS 'The set of input files for a job';
 
 COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
 COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
-COMMENT ON COLUMN uiapi.upload.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
-COMMENT ON COLUMN uiapi.oq_job.job_type IS 'One of: classical, event_based or deterministic.';
+COMMENT ON COLUMN uiapi.oq_job.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
+COMMENT ON COLUMN uiapi.oq_job.supervisor_pid IS 'The process id (PID) of the supervisor for this OpenQuake job';
+COMMENT ON COLUMN uiapi.oq_job.job_type IS 'One of: classical, event_based, deterministic, or disaggregation.';
 COMMENT ON COLUMN uiapi.oq_job.status IS 'One of: pending, running, failed or succeeded.';
 COMMENT ON COLUMN uiapi.oq_job.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
 
 
+COMMENT ON TABLE uiapi.job_stats IS 'Tracks various job statistics';
+COMMENT ON COLUMN uiapi.job_stats.num_sites IS 'The number of total sites in the calculation';
+
+
 COMMENT ON TABLE uiapi.oq_params IS 'Holds the parameters needed to invoke the OpenQuake engine.';
-COMMENT ON COLUMN uiapi.oq_params.job_type IS 'One of: classical, event_based or deterministic.';
+COMMENT ON COLUMN uiapi.oq_params.job_type IS 'One of: classical, event_based, deterministic, or disaggregation.';
 COMMENT ON COLUMN uiapi.oq_params.histories IS 'Number of seismicity histories';
 COMMENT ON COLUMN uiapi.oq_params.imls IS 'Intensity measure levels';
 COMMENT ON COLUMN uiapi.oq_params.imt IS 'Intensity measure type, one of:
@@ -289,6 +322,9 @@ COMMENT ON COLUMN uiapi.oq_params.imt IS 'Intensity measure type, one of:
     - peak ground velocity (pgv)
     - peak ground displacement (pgd)';
 COMMENT ON COLUMN uiapi.oq_params.poes IS 'Probabilities of exceedence';
+COMMENT ON COLUMN uiapi.oq_params.region IS 'Region of interest for the calculation (Polygon)';
+COMMENT ON COLUMN uiapi.oq_params.region_grid_spacing IS 'Desired cell size (in degrees), used when splitting up the region of interest. This effectively defines the resolution of the calculation. (Smaller grid spacing means more sites and thus more calculations.)';
+COMMENT ON COLUMN uiapi.oq_params.sites IS 'Sites of interest for the calculation (MultiPoint)';
 
 
 COMMENT ON TABLE uiapi.output IS 'A single OpenQuake calculation engine output. The data may reside in a file or in the database.';
@@ -301,7 +337,9 @@ COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
     - hazard_map
     - gmf
     - loss_curve
-    - loss_map';
+    - loss_map
+    - collapse_map
+    - bcr_distribution';
 COMMENT ON COLUMN uiapi.output.shapefile_path IS 'The full path of the shapefile generated for a hazard or loss map (optional).';
 
 
@@ -309,3 +347,9 @@ COMMENT ON TABLE uiapi.upload IS 'A batch of OpenQuake input files uploaded by t
 COMMENT ON COLUMN uiapi.upload.job_pid IS 'The process id (PID) of the NRML loader process';
 COMMENT ON COLUMN uiapi.upload.path IS 'The directory where the input files belonging to a batch live on the server';
 COMMENT ON COLUMN uiapi.upload.status IS 'One of: pending, running, failed or succeeded.';
+
+
+-- uiapi.error_msg
+COMMENT ON TABLE uiapi.error_msg IS 'A place to store error information in the case of a job failure.';
+COMMENT ON COLUMN uiapi.error_msg.brief IS 'Summary of the error message.';
+COMMENT ON COLUMN uiapi.error_msg.detailed IS 'The full error message.';

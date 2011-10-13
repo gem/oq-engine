@@ -19,14 +19,14 @@
 
 """ Mixin for Classical PSHA Risk Calculation """
 
+import geohash
+
 from celery.exceptions import TimeoutError
 
 from openquake import kvs
 from openquake import logs
 
-from openquake.db.alchemy.db_utils import get_db_session
-from openquake.db.alchemy import models
-from sqlalchemy import func as sqlfunc
+from openquake.db import models
 
 from openquake.parser import vulnerability
 from openquake.risk import classical_psha_based as cpsha_based
@@ -50,7 +50,8 @@ class ClassicalPSHABasedMixin:
         for block_id in self.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s"
                         % (block_id, len(self.blocks_keys)))
-            celery_tasks.append(general.compute_risk.delay(self.id, block_id))
+            celery_tasks.append(
+                general.compute_risk.delay(self.job_id, block_id))
 
         # task compute_risk has return value 'True' (writes its results to
         # kvs).
@@ -60,29 +61,18 @@ class ClassicalPSHABasedMixin:
                 task.wait(timeout=None)
             except TimeoutError:
                 # TODO(jmc): Cancel and respawn this task
-                return []
-        return True
+                return
 
     def _get_db_curve(self, site):
         """Read hazard curve data from the DB"""
-        session = get_db_session("reslt", "reader")
-        job_id = int(self.params["OPENQUAKE_JOB_ID"])
+        gh = geohash.encode(site.latitude, site.longitude, precision=12)
+        job = models.OqJob.objects.get(id=self.job_id)
+        hc = models.HazardCurveData.objects.filter(
+            hazard_curve__output__oq_job=job,
+            hazard_curve__statistic_type='mean').extra(
+            where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
 
-        iml_query = session.query(models.OqParams.imls) \
-            .join(models.OqJob) \
-            .filter(models.OqJob.id == job_id)
-        curve_query = session.query(models.HazardCurveNodeData.poes) \
-            .join(models.HazardCurveData) \
-            .join(models.Output) \
-            .filter(models.Output.oq_job_id == job_id) \
-            .filter(models.HazardCurveData.statistic_type == 'mean') \
-            .filter(sqlfunc.ST_GeoHash(models.HazardCurveNodeData.location, 12)
-                        == site.hash())
-
-        hc = curve_query.one()
-        pms = iml_query.one()
-
-        return Curve(zip(pms.imls, hc.poes))
+        return Curve(zip(job.oq_params.imls, hc.poes))
 
     def compute_risk(self, block_id, **kwargs):  # pylint: disable=W0613
         """This task computes risk for a block of sites. It requires to have
@@ -102,7 +92,7 @@ class ClassicalPSHABasedMixin:
         for point in block.grid(self.region):
             hazard_curve = self._get_db_curve(point.site)
 
-            asset_key = kvs.tokens.asset_key(self.id,
+            asset_key = kvs.tokens.asset_key(self.job_id,
                             point.row, point.column)
             for asset in kvs.get_list_json_decoded(asset_key):
                 LOGGER.debug("processing asset %s" % (asset))

@@ -28,7 +28,7 @@ from tests.utils import helpers
 
 
 TEST_FILE = 'exposure-portfolio.xml'
-INVALID_TEST_FILE = "tests/data/invalid/small_exposure.xml"
+INVALID_TEST_FILE = helpers.get_data_path("invalid/small_exposure.xml")
 MISMATCHED_TEST_FILE = "examples/source-model.xml"
 
 
@@ -86,6 +86,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
              'assetID': 'asset_02',
              'assetDescription': 'Moment-resisting non-ductile concrete ' \
                                  'frame high rise',
+             'assetCategory': 'buildings',
              'vulnerabilityFunctionReference': 'RC/DMRF-D/LR',
              'structureCategory': 'RC-HR-PC',
              'assetValue': 250000.0,

@@ -29,15 +29,15 @@ data.
 """
 
 import getopt
-import re
 import sys
 
 import oqpath
 oqpath.set_oq_path()
 
+from openquake import job
 from openquake import kvs
 from openquake import logs
-from openquake.kvs import tokens
+from openquake.utils import config
 
 LOG = logs.LOG
 
@@ -95,18 +95,9 @@ def _get_current_job_ids():
 
     :returns: list of ints
     """
-    jobs = tokens.current_jobs()
+    jobs = [int(x) for x in kvs.current_jobs()]
 
-    # parse out the job IDs
-    job_ids = []
-    job_re = re.compile(r'^::JOB::(\d+)::$')
-
-    for job in jobs:
-        match = job_re.match(job)
-        if match:
-            job_ids.append(int(match.group(1)))
-
-    return sorted(job_ids)
+    return sorted(jobs)
 
 
 def list_cached_jobs():
@@ -138,6 +129,7 @@ def clear_job_data(job_id):
 
     :param job_id: job ID as an integer
     """
+
     try:
         job_id = int(job_id)
     except ValueError:
@@ -145,14 +137,14 @@ def clear_job_data(job_id):
         print 'Use the --list option to show current jobs.'
         raise
 
-    print 'Attempting to clear cache data for job %s...' % job_id
+    LOG.info('Attempting to clear cache data for job %s...' % job_id)
 
-    result = kvs.cache_gc(tokens.JOB_KEY_FMT % job_id)
+    result = kvs.cache_gc(job_id)
 
     if result is None:
-        print 'Job %s not found.' % job_id
+        LOG.info('Job %s not found.' % job_id)
     else:
-        print 'Removed %s keys.' % result
+        LOG.info('Removed %s keys.' % result)
 
 
 def show_help():
