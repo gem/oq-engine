@@ -18,37 +18,26 @@
 """Wrapper around our use of jpype.
 Includes classpath arguments, and heap size."""
 
-import logging
+import jpype
 import os
 import sys
-import jpype
 import traceback
+import logging
 
 from celery.decorators import task as celery_task
 
 from functools import wraps
 
-from openquake.logs import LOG
-from openquake import flags
-
-FLAGS = flags.FLAGS
-
-# Settings this flag to true pipes Java stderr and stdout to python stderr and
-# stdout and has a noticeable effect only when python stderr and stdout are
-# redefined.  This happens when running inside celery, where sys.stdout and
-# sys.stderr are redefined to be an instance of celery.log.LoggingProxy.  Then
-# every line printed by java to stdout will be prefixed by a timestamp and some
-# information about the worker.
-flags.DEFINE_boolean('capture_java_debug', True,
-    "Pipe Java stderr and stdout to python stderr and stdout")
+from openquake import nrml
 
 JAVA_CLASSES = {
     'LogicTreeProcessor': "org.gem.engine.LogicTreeProcessor",
+    'LogicTreeReader': "org.gem.engine.LogicTreeReader",
     'KVS': "org.gem.engine.hazard.redis.Cache",
     'JsonSerializer': "org.gem.JsonSerializer",
     "EventSetGen": "org.gem.calc.StochasticEventSetGenerator",
     "Random": "java.util.Random",
-    "GEM1ERF": "org.gem.engine.hazard.GEM1ERF",
+    "GEM1ERF": "org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF",
     "HazardCalculator": "org.gem.calc.HazardCalculator",
     "Properties": "java.util.Properties",
     "CalculatorConfigHelper": "org.gem.engine.CalculatorConfigHelper",
@@ -81,9 +70,8 @@ JAVA_CLASSES = {
     "ApproxEvenlyGriddedSurface":
         "org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface",
     "LocationListFormatter": "org.gem.LocationListFormatter",
+    "PythonBridgeAppender": "org.gem.log.PythonBridgeAppender",
 }
-
-logging.getLogger('jpype').setLevel(logging.ERROR)
 
 
 def jclass(class_key):
@@ -92,98 +80,120 @@ def jclass(class_key):
     return jpype.JClass(JAVA_CLASSES[class_key])
 
 
-def _set_java_log_level(level):
-    """Sets the log level of the java logger.
-
-    :param level: a string, one of the logging levels defined in
-    :file:`logs.py`
+class JavaLoggingBridge(object):
     """
-
-    if level == 'CRITICAL':
-        level = 'FATAL'
-
-    root_logger = jpype.JClass("org.apache.log4j.Logger").getRootLogger()
-    jlevel = jpype.JClass("org.apache.log4j.Level").toLevel(level)
-    root_logger.setLevel(jlevel)
-
-
-def _setup_java_capture(out, err):
+    :class:`JavaLoggingBridge` is responsible for receiving java logging
+    messages and relogging them.
     """
-    Pipes the java System.out and System.error into python files.
+    #: The list of supported levels is used for sanity checks.
+    SUPPORTED_LEVELS = set((logging.DEBUG, logging.INFO, logging.WARNING,
+                            logging.ERROR, logging.CRITICAL))
 
-    :param out: python file-like object (must implement the write method)
-    :param err: python file-like objectt (must implement the write method)
+    def append(self, event):
+        """
+        Given java ``LogEvent`` object log the message
+        as if it was logged by python logging.
+        """
+        # log4j uses the following numbers for logging levels by default:
+        # 10000 DEBUG, 20000 INFO, 30000 WARNING, 40000 ERROR, 50000 FATAL.
+        # Python logging uses 10, 20, 30, 40 and 50 respectively.
+        # So for mapping of logging levels we need to divide java
+        # log level by 1000.
+        java_level = event.getLevel().toInt()
+        level, _rem = divmod(java_level, 1000)
+
+        if event.logger.getParent() is None:
+            # getParent() returns ``None`` only for root logger.
+            # Use the name "java" for it instead of "java.root".
+            logger_name = 'java'
+        else:
+            logger_name = 'java.%s' % event.getLoggerName()
+        logger = logging.getLogger(logger_name)
+
+        if _rem != 0 or level not in self.SUPPORTED_LEVELS:
+            # java side used some custom logging level.
+            # don't try to map it to python level and don't
+            # check if python logger was enabled for it
+            level = java_level
+            logger.warning('unrecognised logging level %d was used', level)
+        else:
+            if not logger.isEnabledFor(level):
+                return
+
+        msg = event.getMessage()
+
+        location_info = event.getLocationInformation()
+
+        filename = location_info.getFileName()
+        if filename == '?':
+            # mapping of unknown filenames from java "?" to python
+            filename = '(unknown file)'
+
+        lineno = location_info.getLineNumber()
+        if not lineno.isdigit():
+            # java uses "?" for unknown line number, python use 0
+            lineno = 0
+        else:
+            # LocationInformation.getLineNumber() returns string
+            lineno = int(lineno)
+
+        classname = location_info.getClassName()
+        methname = location_info.getMethodName()
+        if '?' in (classname, methname):
+            funcname = '(unknown function)'
+        else:
+            funcname = '%s.%s' % (classname, methname)
+
+        # Now do what logging.Logger._log() does:
+        # create log record and handle it.
+        record = logger.makeRecord(logger.name, level, filename, lineno, msg,
+                                   args=(), exc_info=None, func=funcname,
+                                   extra={})
+        # these two values are set by LogRecord constructor
+        # so we need to overwrite them.
+        record.threadName = event.getThreadName()
+        logger.handle(record)
+
+
+def _init_logs():
     """
-    mystream = jpype.JProxy("org.gem.IPythonPipe", inst=out)
-    errstream = jpype.JProxy("org.gem.IPythonPipe", inst=err)
-    outputstream = jpype.JClass("org.gem.PythonOutputStream")()
-    err_stream = jpype.JClass("org.gem.PythonOutputStream")()
-    outputstream.setPythonStdout(mystream)
-    err_stream.setPythonStdout(errstream)
+    Initialize Java logging.
 
-    ps = jpype.JClass("java.io.PrintStream")
-    jpype.java.lang.System.setOut(ps(outputstream))
-    jpype.java.lang.System.setErr(ps(err_stream))
+    Is called by :func:`jvm`.
+    """
+    appender = jclass('PythonBridgeAppender')
+    # ``bridge`` is a static property of PythonBridge class.
+    # So there will be only one JavaLoggingBridge for all loggers.
+    appender.bridge = jpype.JProxy('org.gem.log.PythonBridge',
+                                   inst=JavaLoggingBridge())
+    props = jclass("Properties")()
+    props.setProperty('log4j.rootLogger', 'debug, pythonbridge')
+    props.setProperty('log4j.appender.pythonbridge',
+                      'org.gem.log.PythonBridgeAppender')
+    jpype.JClass("org.apache.log4j.PropertyConfigurator").configure(props)
 
 
-def jvm(max_mem=None):
+def jvm():
     """Return the jpype module, after guaranteeing the JVM is running and
     the classpath has been loaded properly."""
     jarpaths = (os.path.abspath(
                     os.path.join(os.path.dirname(__file__), "../dist")),
                 '/usr/share/java')
-    log4j_properties_path = os.path.abspath(
-                                os.path.join(os.path.dirname(__file__),
-                                "config/log4j.properties"))
+
     if not jpype.isJVMStarted():
-        max_mem = get_jvm_max_mem(max_mem)
-        LOG.debug("Default JVM path is %s" % jpype.getDefaultJVMPath())
         jpype.startJVM(jpype.getDefaultJVMPath(),
             "-Djava.ext.dirs=%s:%s" % jarpaths,
+            # setting Schema path here is ugly, but it's better than
+            # doing it before all XML parsing calls
+            "-Dopenquake.nrml.schema=%s" % nrml.nrml_schema_file(),
             # force the default Xerces parser configuration, otherwise
             # some random system-installed JAR might override it
             "-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=" \
-                "org.apache.xerces.parsers.XIncludeAwareParserConfiguration",
-            # "-Dlog4j.debug", # turn on log4j internal debugging
-            "-Dlog4j.configuration=file://%s" % log4j_properties_path,
-            "-Xmx%sM" % max_mem)
+                "org.apache.xerces.parsers.XIncludeAwareParserConfiguration")
 
-        # override the log level set in log4j configuration file this can't be
-        # done on the JVM command line (i.e. -Dlog4j.rootLogger= is not
-        # supported by log4j)
-        _set_java_log_level(FLAGS.debug.upper())
-
-        if FLAGS.capture_java_debug:
-            _setup_java_capture(sys.stdout, sys.stderr)
+        _init_logs()
 
     return jpype
-
-
-# The default JVM max. memory size to be used in the absence of any other
-# setting or configuration.
-DEFAULT_JVM_MAX_MEM = 4000
-
-
-def get_jvm_max_mem(max_mem):
-    """
-    Determine what the JVM maximum memory size should be.
-
-    :param max_mem: the `max_mem` parameter value actually passed to the
-        caller.
-    :type max_mem: integer or None
-
-    :returns: the maximum JVM memory size considering the possible sources in
-        the following order
-        * the actual value passed
-        * TODO: the value in the config file
-        * the value of the `OQ_JVM_MAX_MEM` environment variable
-        * a fixed default (`4000`).
-    """
-    if max_mem:
-        return max_mem
-    if os.environ.get("OQ_JVM_MAXMEM"):
-        return int(os.environ.get("OQ_JVM_MAXMEM"))
-    return DEFAULT_JVM_MAX_MEM
 
 
 def _unpickle_javaexception(message, trace):

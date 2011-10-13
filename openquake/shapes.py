@@ -20,7 +20,7 @@
 
 """Collection of base classes for processing spatially-related data."""
 
-import geohash
+import hashlib
 import json
 import math
 import numpy
@@ -250,8 +250,8 @@ class Grid(object):
 
     def check_gridpoint(self, gridpoint):
         """Confirm that the point is contained by the region"""
-        point = Point(self._column_to_longitude(gridpoint.column),
-                             self._row_to_latitude(gridpoint.row))
+        point = Point(round_float(self._column_to_longitude(gridpoint.column)),
+                      round_float(self._row_to_latitude(gridpoint.row)))
         return self.check_point(point)
 
     def _latitude_to_row(self, latitude):
@@ -292,9 +292,8 @@ class Grid(object):
                     self.check_gridpoint(point)
                     yield point
                 except BoundsException:
-                    print "GACK! at col %s row %s" % (col, row)
-                    print "Point at %s %s isnt on grid" % \
-                        (point.site.longitude, point.site.latitude)
+                    print "Point (col %s row %s) at %s %s isnt on grid" % \
+                        (col, row, point.site.longitude, point.site.latitude)
 
 
 def c_mul(val_a, val_b):
@@ -343,13 +342,9 @@ class Site(object):
         """Verbose wrapper around =="""
         return self == other
 
-    def hash(self):
-        """Ugly geohashing function, get rid of this!
-        TODO(jmc): Dont use sites as dict keys"""
-        return self._geohash()
-
     def __hash__(self):
-        return hash((self.longitude, self.latitude))
+        return hash(
+            hashlib.md5(repr((self.longitude, self.latitude))).hexdigest())
 
     def to_java(self):
         """Converts to a Java Site object"""
@@ -358,10 +353,6 @@ class Site(object):
         site_class = jpype.JClass("org.opensha.commons.data.Site")
         # TODO(JMC): Support named sites?
         return site_class(loc_class(self.latitude, self.longitude))
-
-    def _geohash(self):
-        """A geohash-encoded string for dict keys"""
-        return geohash.encode(self.point.y, self.point.x, precision=12)
 
     def __cmp__(self, other):
         return self.hash() == other.hash()
@@ -829,3 +820,59 @@ class VulnerabilityFunction(object):
 
 EMPTY_CURVE = Curve(())
 EMPTY_VULN_FUNCTION = VulnerabilityFunction([], [], [])
+
+
+def multipoint_ewkt_from_coords(coords):
+    '''
+    Convert a string list of coordinates to SRS 4326 MULTIPOINT EWKT.
+
+    For more information about EWKT, see:
+    http://en.wikipedia.org/wiki/Well-known_text
+
+    NOTE: Input coordinates are expected in the order (lat, lon). The ordering
+    for SRS 4326 is (lon, lat).
+
+    NOTE 2: All coordinate values will be rounded using
+    :py:function:`openquake.utils.round_float`
+
+    >>> multipoint_ewkt_from_coords("38.113, -122.0, 38.113, -122.114")
+    'SRID=4326;MULTIPOINT((-122.0 38.113), (-122.114 38.113))'
+    '''
+    coord_list = [round_float(x) for x in coords.split(",")]
+    points = ['(%s %s)' % (coord_list[i + 1], coord_list[i]) for i in
+              xrange(0, len(coord_list), 2)]
+
+    ewkt = 'SRID=4326;MULTIPOINT(%s)'
+    ewkt %= ', '.join(points)
+
+    return ewkt
+
+
+def polygon_ewkt_from_coords(coords):
+    '''
+    Convert a string list of coordinates to SRS 4326 POLYGON EWKT.
+
+    For more information about EWKT, see:
+    http://en.wikipedia.org/wiki/Well-known_text
+
+    NOTE: Input coordinates are expected in the order (lat, lon). The ordering
+    for SRS 4326 is (lon, lat).
+
+    NOTE 2: All coordinate values will be rounded using
+    :py:function:`openquake.utils.round_float`
+
+    >>> polygon_ewkt_from_coords(
+    ...     "38.113, -122.0, 38.113, -122.114, 38.111, -122.57")
+    'SRID=4326;POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, \
+-122.0 38.113))'
+    '''
+    coord_list = [round_float(x) for x in coords.split(",")]
+    vertices = ['%s %s' % (coord_list[i + 1], coord_list[i]) for i in
+                xrange(0, len(coord_list), 2)]
+
+    ewkt = 'SRID=4326;POLYGON((%s, %s))'
+    # The polygon needs to form a closed loop, so the first & last coord must
+    # be the same:
+    ewkt %= (', '.join(vertices), vertices[0])
+
+    return ewkt

@@ -68,9 +68,13 @@ public class JsonSerializer {
         GsonBuilder gson = new GsonBuilder();
         gson.registerTypeAdapter(GEMSourceData.class,
                 new SourceDataDeserializer());
-        Type listType = new TypeToken<List<GEMSourceData>>() {
+        Type listType = new TypeToken<ArrayList<GEMSourceData>>() {
         }.getType();
-        return gson.create().fromJson((String) cache.get(key), listType);
+        // At least up to gson 1.6 what we get is a LinkedList<GEMSourceData>
+        // while GEM1ERF.GEM1ERF is expecting ArrayList<GEMSourceData>.
+        List<GEMSourceData> result =
+            gson.create().fromJson((String) cache.get(key), listType);
+        return new ArrayList<GEMSourceData>(result);
     }
 
     public static HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> getGmpeMapFromCache(
@@ -113,23 +117,12 @@ public class JsonSerializer {
      */
     public static List<String> hazardCurvesToJson(
             Map<Site, DiscretizedFuncAPI> hazCurves, List<Site> siteList) {
-        List<String> json = new ArrayList<String>();
+        List<String> result = new ArrayList<String>();
         Gson gson = new Gson();
         for (Site site : siteList) {
-            Double lon = site.getLocation().getLongitude();
-            Double lat = site.getLocation().getLatitude();
-            Map<String, String> siteMap = new HashMap<String, String>();
-            siteMap.put(SITE_LON, lon.toString());
-            siteMap.put(SITE_LAT, lat.toString());
-
-            JsonObject hazardCurve =
-                    gson.toJsonTree(siteMap, SITE_TYPE).getAsJsonObject();
-            JsonElement curveElement =
-                    ordinatesToJsonElement(hazCurves.get(site), gson);
-            hazardCurve.add(POES, curveElement);
-            json.add(hazardCurve.toString());
+            result.add(ordinatesToJsonElement(hazCurves.get(site), gson).toString());
         }
-        return json;
+        return result;
     }
 
     /**

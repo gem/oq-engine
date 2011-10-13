@@ -48,7 +48,7 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
             "Random")(int(self.params["GMF_RANDOM_SEED"]))
 
         encoder = json.JSONEncoder()
-        kvs_client = kvs.get_client(binary=False)
+        kvs_client = kvs.get_client()
 
         grid = self.region.grid
 
@@ -65,8 +65,6 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
                     self.job_id, point)
 
                 kvs_client.rpush(key, encoder.encode(gmv))
-
-        return [True]
 
     def _number_of_calculations(self):
         """Return the number of calculations to trigger.
@@ -96,7 +94,7 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
             around an instance of java.util.Map.
         """
 
-        calculator = self.gmf_calculator(self.sites_for_region())
+        calculator = self.gmf_calculator(self.sites_to_compute())
 
         if self.params["GROUND_MOTION_CORRELATION"].lower() == "true":
             return calculator.getCorrelatedGroundMotionField_JB2009(

@@ -22,32 +22,24 @@ This module tests the risk side of the deterministic event based calculation.
 """
 
 import json
-import mock
 import unittest
 
-from openquake import flags
-from openquake import job
 from openquake import kvs
 from openquake import shapes
 from openquake.risk.job import deterministic as risk_job_det
 
 from tests.utils import helpers
+from tests.utils.helpers import patch
 
 TEST_JOB_ID = "1234"
 TEST_REGION = shapes.Region.from_simple((0.1, 0.1), (0.2, 0.2))
-TEST_JOB_FILE = helpers.smoketest_file('deterministic/config.gem')
+TEST_JOB_FILE = helpers.testdata_path('deterministic/config.gem')
 
 
 class DeterministicRiskTestCase(unittest.TestCase):
     """
     Test case for module-level functions of the deterministic risk job code.
     """
-
-    def setUp(self):
-        flags.FLAGS.include_defaults = False
-
-    def tearDown(self):
-        flags.FLAGS.include_defaults = True
 
     def test_load_gmvs_for_point(self):
         """
@@ -148,10 +140,6 @@ class DeterministicRiskTestCase(unittest.TestCase):
 
         # KVS garbage collection is going to be called asynchronously by the
         # job. We don't actually want that to happen.
-        with mock.patch('subprocess.Popen'):
+        with patch('subprocess.Popen'):
 
-            results = risk_job.launch()
-
-            # for results, we should a list of True values
-            # one for hazard, one for risk
-            self.assertEqual([True, True], results)
+            risk_job.launch()
