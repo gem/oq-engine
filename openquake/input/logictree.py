@@ -122,7 +122,7 @@ class BranchSet(object):
 
     @classmethod
     def _is_area(cls, source):
-        if not hasattr(cls, '_GEMAreaSource'):
+        if not hasattr(cls, '_AreaSource'):
             cls._AreaSource = jvm().JClass(
                 'org.opensha.sha.earthquake.' \
                 'rupForecastImpl.GEM1.SourceData.GEMAreaSourceData'
