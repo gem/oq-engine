@@ -2,16 +2,21 @@
 [general]
 
 CALCULATION_MODE = Event Based
+GROUND_MOTION_CORRELATION = false
+NUMBER_OF_LOGIC_TREE_SAMPLES = 0
 
 [HAZARD]
 
+DEPTHTO1PT0KMPERSEC = 100.0
+VS30_TYPE = measured
 # file containing erf logic tree structure
 SOURCE_MODEL_LOGIC_TREE_FILE = ErfLogicTree.inp
 # file containing gmpe logic tree structure
 GMPE_LOGIC_TREE_FILE = GmpeLogicTree.inp
 # output directory
-OUTPUT_DIR = ~/gem_output
+OUTPUT_DIR = gem_output
 
+SADIGH_SITE_TYPE = Rock
 
 # moment magnitude (Mw)
 MINIMUM_MAGNITUDE = 5.0

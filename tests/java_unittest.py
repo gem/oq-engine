@@ -24,68 +24,30 @@ Tests for the Python-Java code layer.
 
 import cPickle
 import os
-import traceback
 import unittest
 
 from openquake import java
 
+from tests.utils import helpers
 from tests.utils.tasks import jtask_task, failing_jtask_task
 
 
 class JvmMaxMemTestCase(unittest.TestCase):
     """Tests related to the JVM's maximum memory setting"""
 
-    def setUp(self):
-        self.orig_env = os.environ.copy()
-        # Make sure all tests start with a clean environment
-        os.environ.pop("OQ_JVM_MAXMEM", None)
-
-    def tearDown(self):
-        os.environ.clear()
-        os.environ.update(self.orig_env)
-
-    def test_jvm_maxmem_with_no_environ_var_and_no_param(self):
-        """
-        If the OQ_JVM_MAXMEM environment variable is not set and the `max_mem`
-        parameter is not passed the default value should be used to determine
-        the maximum.
-        """
-        self.assertTrue(os.environ.get("OQ_JVM_MAXMEM") is None)
-        self.assertEqual(java.DEFAULT_JVM_MAX_MEM, java.get_jvm_max_mem(None))
-
-    def test_jvm_maxmem_without_maxmem_environ_var_but_with_param(self):
-        """
-        If the OQ_JVM_MAXMEM environment variable is not set and the `max_mem`
-        parameter is passed its value should be used to determine the maximum.
-        """
-        self.assertTrue(os.environ.get("OQ_JVM_MAXMEM") is None)
-        self.assertEqual(1111, java.get_jvm_max_mem(1111))
-
-    def test_jvm_maxmem_environ_var_honoured_without_param(self):
-        """
-        The value of the OQ_JVM_MAXMEM environment variable is honoured
-        when no `max_mem` parameter is passed.
-        """
-        os.environ["OQ_JVM_MAXMEM"] = "2222"
-        self.assertEqual("2222", os.environ.get("OQ_JVM_MAXMEM"))
-        self.assertEqual(2222, java.get_jvm_max_mem(None))
-
-    def test_jvm_maxmem_passed_param_trumps_environ_var(self):
-        """
-        If both the OQ_JVM_MAXMEM environment variable as well as the `max_mem`
-        parameter are present the latter wins.
-        """
-        os.environ["OQ_JVM_MAXMEM"] = "2222"
-        self.assertEqual("2222", os.environ.get("OQ_JVM_MAXMEM"))
-        self.assertEqual(1111, java.get_jvm_max_mem(1111))
-
-    def test_jvm_maxmem_invalid_environ_var(self):
-        """
-        If the OQ_JVM_MAXMEM environment variable has an invalid/non-numeric
-        value a :class:`ValueError` will be raised.
-        """
-        os.environ["OQ_JVM_MAXMEM"] = "I hate numbers!"
-        self.assertRaises(ValueError, java.get_jvm_max_mem, None)
+    def test_jvm_memmax_setting_is_not_passed(self):
+        """Do not pass -Xmx to the jvm."""
+        with helpers.patch("jpype.startJVM") as startjvm_mock:
+            with helpers.patch("jpype.isJVMStarted") as isjvmstarted_mock:
+                # Make sure that startJVM() gets called.
+                def side_effect():
+                    isjvmstarted_mock.side_effect = lambda: True
+                    return False
+                isjvmstarted_mock.side_effect = side_effect
+                java.jvm()
+                args, _ = startjvm_mock.call_args
+                self.assertFalse(
+                    filter(lambda a: a.startswith("-Xmx"), args))
 
 
 class CeleryJavaExceptionTestCase(unittest.TestCase):

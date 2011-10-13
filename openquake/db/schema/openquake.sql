@@ -464,6 +464,7 @@ CREATE TABLE hzrdi.r_rate_mdl (
 ) TABLESPACE hzrdi_ts;
 
 
+-- Holds strike, dip and rake values with the respective constraints.
 CREATE TABLE hzrdi.focal_mechanism (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
@@ -504,27 +505,38 @@ CREATE TABLE uiapi.upload (
 ) TABLESPACE uiapi_ts;
 
 
+-- Set of input files for an OpenQuake job
+CREATE TABLE uiapi.input_set (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL,
+    upload_id INTEGER,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE uiapi_ts;
+
+
 -- A single OpenQuake input file uploaded by the user
 CREATE TABLE uiapi.input (
     id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
-    upload_id INTEGER NOT NULL,
+    input_set_id INTEGER NOT NULL,
     -- The full path of the input file on the server
-    path VARCHAR NOT NULL UNIQUE,
+    path VARCHAR NOT NULL,
     -- Input file type, one of:
     --      source model file (source)
     --      source logic tree (lt_source)
     --      GMPE logic tree (lt_gmpe)
     --      exposure file (exposure)
     --      vulnerability file (vulnerability)
+    --      rupture file (rupture)
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
         CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gmpe',
-                             'exposure', 'vulnerability')),
+                             'exposure', 'vulnerability', 'rupture')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
+
 
 -- An OpenQuake engine run started by the user
 CREATE TABLE uiapi.oq_job (
@@ -539,17 +551,31 @@ CREATE TABLE uiapi.oq_job (
     --      classical (Classical PSHA)
     --      event_based (Probabilistic event based)
     --      deterministic (Deterministic)
+    --      disaggregation (Hazard only)
     -- Note: 'classical' and 'event_based' are both probabilistic methods
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
-        CHECK(job_type IN ('classical', 'event_based', 'deterministic')),
+        CHECK(job_type IN ('classical', 'event_based', 'deterministic',
+                           'disaggregation')),
     -- One of: pending, running, failed, succeeded
     status VARCHAR NOT NULL DEFAULT 'pending' CONSTRAINT job_status_value
         CHECK(status IN ('pending', 'running', 'failed', 'succeeded')),
     duration INTEGER NOT NULL DEFAULT 0,
     job_pid INTEGER NOT NULL DEFAULT 0,
+    supervisor_pid INTEGER NOT NULL DEFAULT 0,
     oq_params_id INTEGER NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE uiapi_ts;
+
+
+-- Tracks various job statistics
+CREATE TABLE uiapi.job_stats (
+    id SERIAL PRIMARY KEY,
+    oq_job_id INTEGER NOT NULL,
+    start_time timestamp with time zone,
+    stop_time timestamp with time zone,
+    -- The number of total sites in the calculation
+    num_sites INTEGER NOT NULL
 ) TABLESPACE uiapi_ts;
 
 
@@ -557,9 +583,10 @@ CREATE TABLE uiapi.oq_job (
 CREATE TABLE uiapi.oq_params (
     id SERIAL PRIMARY KEY,
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
-        CHECK(job_type IN ('classical', 'event_based', 'deterministic')),
-    upload_id INTEGER,
-    region_grid_spacing float NOT NULL,
+        CHECK(job_type IN ('classical', 'event_based', 'deterministic',
+                           'disaggregation')),
+    input_set_id INTEGER NOT NULL,
+    region_grid_spacing float,
     min_magnitude float CONSTRAINT min_magnitude_set
         CHECK(
             ((job_type = 'deterministic') AND (min_magnitude IS NULL))
@@ -583,6 +610,9 @@ CREATE TABLE uiapi.oq_params (
     period float CONSTRAINT period_is_set
         CHECK(((imt = 'sa') AND (period IS NOT NULL))
               OR ((imt != 'sa') AND (period IS NULL))),
+    damping float CONSTRAINT damping_is_set
+        CHECK(((imt = 'sa') AND (damping IS NOT NULL))
+              OR ((imt != 'sa') AND (damping IS NULL))),
     truncation_type VARCHAR NOT NULL CONSTRAINT truncation_type_value
         CHECK(truncation_type IN ('none', 'onesided', 'twosided')),
     truncation_level float NOT NULL DEFAULT 3.0,
@@ -590,13 +620,14 @@ CREATE TABLE uiapi.oq_params (
     -- Intensity measure levels
     imls float[] CONSTRAINT imls_are_set
         CHECK(
-            ((job_type = 'classical') AND (imls IS NOT NULL))
-            OR ((job_type != 'classical') AND (imls IS NULL))),
+            ((job_type in ('classical', 'event_based', 'disaggregation'))
+            AND (imls IS NOT NULL))
+            OR ((job_type = 'deterministic') AND (imls IS NULL))),
     -- Probabilities of exceedence
     poes float[] CONSTRAINT poes_are_set
         CHECK(
-            ((job_type = 'classical') AND (poes IS NOT NULL))
-            OR ((job_type != 'classical') AND (poes IS NULL))),
+            ((job_type IN ('classical', 'disaggregation')) AND (poes IS NOT NULL))
+            OR ((job_type IN ('event_based', 'deterministic')) AND (poes IS NULL))),
     -- Number of logic tree samples
     realizations integer CONSTRAINT realizations_is_set
         CHECK(
@@ -610,13 +641,367 @@ CREATE TABLE uiapi.oq_params (
     -- ground motion correlation flag
     gm_correlated boolean CONSTRAINT gm_correlated_is_set
         CHECK(
-            ((job_type = 'classical') AND (gm_correlated IS NULL))
-            OR ((job_type != 'classical') AND (gm_correlated IS NOT NULL))),
+            ((job_type IN ('classical', 'disaggregation')) AND (gm_correlated IS NULL))
+            OR ((job_type IN ('event_based', 'deterministic')) AND (gm_correlated IS NOT NULL))),
+    gmf_calculation_number integer CONSTRAINT gmf_calculation_number_is_set
+        CHECK(
+            ((job_type = 'deterministic')
+             AND (gmf_calculation_number IS NOT NULL)
+             AND (realizations > 0))
+            OR
+            ((job_type != 'deterministic')
+             AND (gmf_calculation_number IS NULL))),
+    rupture_surface_discretization float
+        CONSTRAINT rupture_surface_discretization_is_set
+        CHECK(
+            ((job_type = 'deterministic')
+             AND (rupture_surface_discretization IS NOT NULL)
+             AND (rupture_surface_discretization > 0))
+            OR
+            ((job_type != 'deterministic')
+             AND (rupture_surface_discretization IS NULL))),
+
+    aggregate_loss_curve boolean,
+    area_source_discretization float
+        CONSTRAINT area_source_discretization_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (area_source_discretization IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (area_source_discretization IS NULL))),
+    area_source_magnitude_scaling_relationship VARCHAR
+        CONSTRAINT area_source_magnitude_scaling_relationship_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (area_source_magnitude_scaling_relationship IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (area_source_magnitude_scaling_relationship IS NULL))),
+    compute_mean_hazard_curve boolean
+        CONSTRAINT compute_mean_hazard_curve_is_set
+        CHECK(
+            ((job_type = 'classical')
+             AND (compute_mean_hazard_curve IS NOT NULL))
+            OR
+            ((job_type IN ('deterministic', 'event_based', 'disaggregation'))
+             AND (compute_mean_hazard_curve IS NULL))),
+    conditional_loss_poe float[],
+    fault_magnitude_scaling_relationship VARCHAR
+        CONSTRAINT fault_magnitude_scaling_relationship_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (fault_magnitude_scaling_relationship IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (fault_magnitude_scaling_relationship IS NULL))),
+    fault_magnitude_scaling_sigma float
+        CONSTRAINT fault_magnitude_scaling_sigma_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (fault_magnitude_scaling_sigma IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (fault_magnitude_scaling_sigma IS NULL))),
+    fault_rupture_offset float
+        CONSTRAINT fault_rupture_offset_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (fault_rupture_offset IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (fault_rupture_offset IS NULL))),
+    fault_surface_discretization float
+        CONSTRAINT fault_surface_discretization_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (fault_surface_discretization IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (fault_surface_discretization IS NULL))),
+    gmf_random_seed integer
+        CONSTRAINT gmf_random_seed_is_set
+        CHECK(
+            (job_type IN ('deterministic', 'event_based'))
+            OR
+            ((job_type IN ('classical', 'disaggregation'))
+             AND (gmf_random_seed IS NULL))),
+    gmpe_lt_random_seed integer
+        CONSTRAINT gmpe_lt_random_seed_is_set
+        CHECK(
+            (job_type IN ('classical', 'event_based', 'disaggregation'))
+            OR
+            ((job_type = 'deterministic')
+             AND (gmpe_lt_random_seed IS NULL))),
+    gmpe_model_name VARCHAR,
+    grid_source_magnitude_scaling_relationship VARCHAR,
+    include_area_sources boolean
+        CONSTRAINT include_area_sources_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (include_area_sources IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (include_area_sources IS NULL))),
+    include_fault_source boolean
+        CONSTRAINT include_fault_source_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (include_fault_source IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (include_fault_source IS NULL))),
+    include_grid_sources boolean
+        CONSTRAINT include_grid_sources_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (include_grid_sources IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (include_grid_sources IS NULL))),
+    include_subduction_fault_source boolean
+        CONSTRAINT include_subduction_fault_source_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (include_subduction_fault_source IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (include_subduction_fault_source IS NULL))),
+    loss_curves_output_prefix VARCHAR,
+    maximum_distance VARCHAR
+        CONSTRAINT maximum_distance_is_set
+        CHECK(
+            ((job_type IN ('classical', 'disaggregation'))
+             AND (maximum_distance IS NOT NULL))
+            OR
+            ((job_type IN ('deterministic', 'event_based'))
+             AND (maximum_distance IS NULL))),
+    quantile_levels float[]
+        CONSTRAINT quantile_levels_is_set
+        CHECK(
+            ((job_type = 'classical')
+             AND (quantile_levels IS NOT NULL))
+            OR
+            ((job_type IN ('deterministic', 'event_based', 'disaggregation'))
+             AND (quantile_levels IS NULL))),
+    reference_depth_to_2pt5km_per_sec_param float,
+    risk_cell_size float,
+    rupture_aspect_ratio float
+        CONSTRAINT rupture_aspect_ratio_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (rupture_aspect_ratio IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (rupture_aspect_ratio IS NULL))),
+    -- Rupture floating type, one of:
+    --     Only along strike ( rupture full DDW) (alongstrike)
+    --     Along strike and down dip (downdip)
+    --     Along strike & centered down dip (centereddowndip)
+    rupture_floating_type VARCHAR
+        CONSTRAINT rupture_floating_type_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (rupture_floating_type IN ('alongstrike', 'downdip', 'centereddowndip')))
+            OR
+            ((job_type = 'deterministic')
+             AND (rupture_floating_type IS NULL))),
+    -- Sadigh site type, one of:
+    --     Rock (rock)
+    --     Deep-Soil (deepsoil)
+    sadigh_site_type VARCHAR CONSTRAINT sadigh_site_type_value
+        CHECK(sadigh_site_type IS NULL
+              OR sadigh_site_type IN ('rock', 'deepsoil')),
+    source_model_lt_random_seed integer
+        CONSTRAINT source_model_lt_random_seed_is_set
+        CHECK(
+            (job_type IN ('classical', 'event_based', 'disaggregation'))
+            OR
+            ((job_type = 'deterministic')
+             AND (source_model_lt_random_seed IS NULL))),
+    -- Standard deviation, one of:
+    --     Total (total)
+    --     Inter-Event (interevent)
+    --     Intra-Event (intraevent)
+    --     None (zero) (zero)
+    --     Total (Mag Dependent) (total_mag_dependent)
+    --     Total (PGA Dependent) (total_pga_dependent)
+    --     Intra-Event (Mag Dependent) (intraevent_mag_dependent)
+    standard_deviation_type VARCHAR
+        CONSTRAINT standard_deviation_type_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (standard_deviation_type IN ('total', 'interevent', 'intraevent', 'zero', 'total_mag_dependent', 'total_pga_dependent', 'intraevent_mag_dependent')))
+            OR
+            ((job_type = 'deterministic')
+             AND (standard_deviation_type IS NULL))),
+    subduction_fault_magnitude_scaling_relationship VARCHAR
+        CONSTRAINT subduction_fault_magnitude_scaling_relationship_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (subduction_fault_magnitude_scaling_relationship IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (subduction_fault_magnitude_scaling_relationship IS NULL))),
+    subduction_fault_magnitude_scaling_sigma float
+        CONSTRAINT subduction_fault_magnitude_scaling_sigma_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (subduction_fault_magnitude_scaling_sigma IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (subduction_fault_magnitude_scaling_sigma IS NULL))),
+    subduction_fault_rupture_offset float
+        CONSTRAINT subduction_fault_rupture_offset_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (subduction_fault_rupture_offset IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (subduction_fault_rupture_offset IS NULL))),
+    subduction_fault_surface_discretization float
+        CONSTRAINT subduction_fault_surface_discretization_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (subduction_fault_surface_discretization IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (subduction_fault_surface_discretization IS NULL))),
+    subduction_rupture_aspect_ratio float
+        CONSTRAINT subduction_rupture_aspect_ratio_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (subduction_rupture_aspect_ratio IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (subduction_rupture_aspect_ratio IS NULL))),
+    -- Rupture floating type, one of:
+    --     Only along strike ( rupture full DDW) (alongstrike)
+    --     Along strike and down dip (downdip)
+    --     Along strike & centered down dip (centereddowndip)
+    subduction_rupture_floating_type VARCHAR
+        CONSTRAINT subduction_rupture_floating_type_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (subduction_rupture_floating_type IN ('alongstrike', 'downdip', 'centereddowndip')))
+            OR
+            ((job_type = 'deterministic')
+             AND (subduction_rupture_floating_type IS NULL))),
+    -- Source as, one of:
+    --     Point Sources (pointsources)
+    --     Line Sources (random or given strike) (linesources)
+    --     Cross Hair Line Sources (crosshairsources)
+    --     16 Spoked Line Sources (16spokedsources)
+    treat_area_source_as VARCHAR
+        CONSTRAINT treat_area_source_as_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (treat_area_source_as IN ('pointsources', 'linesources', 'crosshairsources', '16spokedsources')))
+            OR
+            ((job_type = 'deterministic')
+             AND (treat_area_source_as IS NULL))),
+    treat_grid_source_as VARCHAR
+        CONSTRAINT treat_grid_source_as_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (treat_grid_source_as IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (treat_grid_source_as IS NULL))),
+    width_of_mfd_bin float
+        CONSTRAINT width_of_mfd_bin_is_set
+        CHECK(
+            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+             AND (width_of_mfd_bin IS NOT NULL))
+            OR
+            ((job_type = 'deterministic')
+             AND (width_of_mfd_bin IS NULL))),
+    lat_bin_limits float[]
+        CONSTRAINT lat_bin_limits_valid
+        CHECK(
+            (((job_type = 'disaggregation')
+            AND (lat_bin_limits IS NOT NULL)
+            AND (-90 <= all(lat_bin_limits))
+            AND (90 >= all(lat_bin_limits))
+            OR
+            ((job_type != 'disaggregation')
+            AND (lat_bin_limits IS NULL))))),
+    lon_bin_limits float[]
+        CONSTRAINT lon_bin_limits_valid
+        CHECK(
+            (((job_type = 'disaggregation')
+            AND (lon_bin_limits IS NOT NULL)
+            AND (-180 <= all(lon_bin_limits))
+            AND (180 >= all(lon_bin_limits))
+            OR
+            ((job_type != 'disaggregation')
+            AND (lon_bin_limits IS NULL))))),
+    mag_bin_limits float[]
+        CONSTRAINT mag_bin_limits_is_set
+        CHECK(
+            ((job_type = 'disaggregation')
+            AND (mag_bin_limits IS NOT NULL))
+            OR
+            ((job_type != 'disaggregation')
+            AND (mag_bin_limits IS NULL))),
+    epsilon_bin_limits float[]
+        CONSTRAINT epsilon_bin_limits_is_set
+        CHECK(
+            ((job_type = 'disaggregation')
+            AND (epsilon_bin_limits IS NOT NULL))
+            OR
+            ((job_type != 'disaggregation')
+            AND (epsilon_bin_limits IS NULL))),
+    distance_bin_limits float[]
+        CONSTRAINT distance_bin_limits_is_set
+        CHECK(
+            ((job_type = 'disaggregation')
+            AND (distance_bin_limits IS NOT NULL))
+            OR
+            ((job_type != 'disaggregation')
+            AND (distance_bin_limits IS NULL))),
+    -- For disaggregation results, choose any (at least 1) of the following:
+    --      magpmf (Magnitude Probability Mass Function)
+    --      distpmf (Distance PMF)
+    --      trtpmf (Tectonic Region Type PMF)
+    --      magdistpmf (Magnitude-Distance PMF)
+    --      magdistepspmf (Magnitude-Distance-Epsilon PMF)
+    --      latlonpmf (Latitude-Longitude PMF)
+    --      latlonmagpmf (Latitude-Longitude-Magnitude PMF)
+    --      latlonmagepspmf (Latitude-Longitude-Magnitude-Epsilon PMF)
+    --      fulldisaggmatrix (The full disaggregation matrix; includes
+    --          Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
+    disagg_results VARCHAR[]
+        CONSTRAINT disagg_results_valid
+        CHECK(
+            (((job_type = 'disaggregation')
+            AND (disagg_results IS NOT NULL)
+            AND (disagg_results <@ ARRAY['magpmf', 'distpmf', 'trtpmf',
+                                         'magdistpmf', 'magdistepspmf',
+                                         'latlonpmf', 'latlonmagpmf',
+                                         'latlonmagepspmf',
+                                         'fulldisaggmatrix']::VARCHAR[]))
+            OR
+            ((job_type != 'disaggregation')
+            AND (disagg_results IS NULL)))),
+    depth_to_1pt_0km_per_sec float NOT NULL DEFAULT 100.0
+        CONSTRAINT depth_to_1pt_0km_per_sec_above_zero
+        CHECK(depth_to_1pt_0km_per_sec > 0.0),
+    vs30_type VARCHAR NOT NULL DEFAULT 'measured' CONSTRAINT vs30_type_value
+        CHECK(vs30_type IN ('measured', 'inferred')),
+    -- timestamp
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'oq_params', 'region', 4326, 'POLYGON', 2);
-ALTER TABLE uiapi.oq_params ALTER COLUMN region SET NOT NULL;
+SELECT AddGeometryColumn('uiapi', 'oq_params', 'sites', 4326, 'MULTIPOINT', 2);
+-- Params can either contain a site list ('sites') or
+-- region + region_grid_spacing, but not both.
+ALTER TABLE uiapi.oq_params ADD CONSTRAINT oq_params_geometry CHECK(
+    ((region IS NOT NULL) AND (region_grid_spacing IS NOT NULL)
+        AND (sites IS NULL))
+    OR ((region IS NULL) AND (region_grid_spacing IS NULL)
+        AND (sites IS NOT NULL)));
 
 
 -- A single OpenQuake calculation engine output. The data may reside in a file
@@ -638,9 +1023,12 @@ CREATE TABLE uiapi.output (
     --      gmf
     --      loss_curve
     --      loss_map
+    --      collapse_map
+    --      bcr_distribution
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
         CHECK(output_type IN ('unknown', 'hazard_curve', 'hazard_map',
-            'gmf', 'loss_curve', 'loss_map')),
+            'gmf', 'loss_curve', 'loss_map', 'collapse_map',
+            'bcr_distribution')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
     -- The full path of the shapefile generated for a hazard or loss map
@@ -652,6 +1040,17 @@ CREATE TABLE uiapi.output (
     max_value float,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE uiapi_ts;
+
+
+-- A place to store error information in the case of a job failure.
+CREATE TABLE uiapi.error_msg (
+    id SERIAL PRIMARY KEY,
+    oq_job_id INTEGER NOT NULL,
+    -- Summary of the error message.
+    brief VARCHAR NOT NULL,
+    -- The full error message.
+    detailed VARCHAR NOT NULL
 ) TABLESPACE uiapi_ts;
 
 
@@ -684,7 +1083,7 @@ ALTER TABLE hzrdr.hazard_map_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Hazard curve data.
-CREATE TABLE hzrdr.hazard_curve_data (
+CREATE TABLE hzrdr.hazard_curve (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
     -- Realization reference string
@@ -708,14 +1107,14 @@ CREATE TABLE hzrdr.hazard_curve_data (
 
 
 -- Hazard curve node data.
-CREATE TABLE hzrdr.hazard_curve_node_data (
+CREATE TABLE hzrdr.hazard_curve_data (
     id SERIAL PRIMARY KEY,
-    hazard_curve_data_id INTEGER NOT NULL,
+    hazard_curve_id INTEGER NOT NULL,
     -- Probabilities of exceedence
     poes float[] NOT NULL
 ) TABLESPACE hzrdr_ts;
-SELECT AddGeometryColumn('hzrdr', 'hazard_curve_node_data', 'location', 4326, 'POINT', 2);
-ALTER TABLE hzrdr.hazard_curve_node_data ALTER COLUMN location SET NOT NULL;
+SELECT AddGeometryColumn('hzrdr', 'hazard_curve_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE hzrdr.hazard_curve_data ALTER COLUMN location SET NOT NULL;
 
 
 -- GMF data.
@@ -761,6 +1160,7 @@ ALTER TABLE riskr.loss_map_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE riskr.loss_curve (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
+    aggregate BOOLEAN NOT NULL DEFAULT false,
 
     end_branch_label VARCHAR,
     category VARCHAR,
@@ -783,6 +1183,55 @@ CREATE TABLE riskr.loss_curve_data (
 SELECT AddGeometryColumn('riskr', 'loss_curve_data', 'location', 4326, 'POINT',
                          2);
 ALTER TABLE riskr.loss_curve_data ALTER COLUMN location SET NOT NULL;
+
+
+-- Aggregate loss curve data.  Holds the probability of exceedence of certain
+-- levels of losses for the whole exposure model.
+CREATE TABLE riskr.aggregate_loss_curve_data (
+    id SERIAL PRIMARY KEY,
+    loss_curve_id INTEGER NOT NULL,
+
+    losses float[] NOT NULL CONSTRAINT non_negative_losses
+        CHECK (0 <= ALL(losses)),
+    -- Probabilities of exceedence
+    poes float[] NOT NULL
+) TABLESPACE riskr_ts;
+
+
+-- Collapse map data.
+CREATE TABLE riskr.collapse_map (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL, -- FK to output.id
+    exposure_model_id INTEGER NOT NULL -- FK to exposure_model.id
+) TABLESPACE riskr_ts;
+
+CREATE TABLE riskr.collapse_map_data (
+    id SERIAL PRIMARY KEY,
+    collapse_map_id INTEGER NOT NULL, -- FK to collapse_map.id
+    asset_ref VARCHAR NOT NULL,
+    value float NOT NULL,
+    std_dev float NOT NULL
+) TABLESPACE riskr_ts;
+SELECT AddGeometryColumn('riskr', 'collapse_map_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE riskr.collapse_map_data ALTER COLUMN location SET NOT NULL;
+
+
+-- Benefit-cost ratio distribution
+CREATE TABLE riskr.bcr_distribution (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL, -- FK to output.id
+    exposure_model_id INTEGER NOT NULL -- FK to exposure_model.id
+) TABLESPACE riskr_ts;
+
+CREATE TABLE riskr.bcr_distribution_data (
+    id SERIAL PRIMARY KEY,
+    bcr_distribution_id INTEGER NOT NULL, -- FK to bcr_distribution.id
+    asset_ref VARCHAR NOT NULL,
+    bcr float NOT NULL CONSTRAINT bcr_value
+        CHECK (bcr >= 0.0)
+) TABLESPACE riskr_ts;
+SELECT AddGeometryColumn('riskr', 'bcr_distribution_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE riskr.bcr_distribution_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Exposure model
@@ -836,7 +1285,7 @@ CREATE TABLE riski.vulnerability_model (
 
 
 -- Vulnerability function
-CREATE TABLE riski.vulnerability_data (
+CREATE TABLE riski.vulnerability_function (
     id SERIAL PRIMARY KEY,
     vulnerability_model_id INTEGER NOT NULL,
     -- The vulnerability function reference is unique within an vulnerability
@@ -973,23 +1422,32 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_oq_params_fk
 FOREIGN KEY (oq_params_id) REFERENCES uiapi.oq_params(id) ON DELETE RESTRICT;
 
+ALTER TABLE uiapi.job_stats ADD CONSTRAINT  uiapi_job_stats_oq_job_fk
+FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
+
 ALTER TABLE uiapi.upload ADD CONSTRAINT uiapi_upload_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.oq_params ADD CONSTRAINT uiapi_oq_params_upload_fk
-FOREIGN KEY (upload_id) REFERENCES uiapi.upload(id) ON DELETE RESTRICT;
+ALTER TABLE uiapi.oq_params ADD CONSTRAINT uiapi_oq_params_input_set_fk
+FOREIGN KEY (input_set_id) REFERENCES uiapi.input_set(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_upload_fk
-FOREIGN KEY (upload_id) REFERENCES uiapi.upload(id) ON DELETE RESTRICT;
+ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_input_set_fk
+FOREIGN KEY (input_set_id) REFERENCES uiapi.input_set(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_owner_fk
+ALTER TABLE uiapi.input_set ADD CONSTRAINT uiapi_input_set_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.input_set ADD CONSTRAINT uiapi_input_set_upload_fk
+FOREIGN KEY (upload_id) REFERENCES uiapi.upload(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.error_msg ADD CONSTRAINT uiapi_error_msg_oq_job_fk
+FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
 ALTER TABLE oqmif.exposure_model ADD CONSTRAINT oqmif_exposure_model_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
@@ -1006,13 +1464,13 @@ ALTER TABLE hzrdr.hazard_map_data
 ADD CONSTRAINT hzrdr_hazard_map_data_hazard_map_fk
 FOREIGN KEY (hazard_map_id) REFERENCES hzrdr.hazard_map(id) ON DELETE CASCADE;
 
-ALTER TABLE hzrdr.hazard_curve_data
-ADD CONSTRAINT hzrdr_hazard_curve_data_output_fk
+ALTER TABLE hzrdr.hazard_curve
+ADD CONSTRAINT hzrdr_hazard_curve_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
-ALTER TABLE hzrdr.hazard_curve_node_data
-ADD CONSTRAINT hzrdr_hazard_curve_node_data_output_fk
-FOREIGN KEY (hazard_curve_data_id) REFERENCES hzrdr.hazard_curve_data(id) ON DELETE CASCADE;
+ALTER TABLE hzrdr.hazard_curve_data
+ADD CONSTRAINT hzrdr_hazard_curve_data_hazard_curve_fk
+FOREIGN KEY (hazard_curve_id) REFERENCES hzrdr.hazard_curve(id) ON DELETE CASCADE;
 
 ALTER TABLE hzrdr.gmf_data
 ADD CONSTRAINT hzrdr_gmf_data_output_fk
@@ -1026,20 +1484,48 @@ ALTER TABLE riskr.loss_curve
 ADD CONSTRAINT riskr_loss_curve_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 
+ALTER TABLE riskr.collapse_map
+ADD CONSTRAINT riskr_collapse_map_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.collapse_map
+ADD CONSTRAINT riskr_collapse_map_exposure_model_fk
+FOREIGN KEY (exposure_model_id) REFERENCES oqmif.exposure_model(id) ON DELETE RESTRICT;
+
+ALTER TABLE riskr.bcr_distribution
+ADD CONSTRAINT riskr_bcr_distribution_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.bcr_distribution
+ADD CONSTRAINT riskr_bcr_distribution_exposure_model_fk
+FOREIGN KEY (exposure_model_id) REFERENCES oqmif.exposure_model(id) ON DELETE RESTRICT;
+
 ALTER TABLE riskr.loss_curve_data
 ADD CONSTRAINT riskr_loss_curve_data_loss_curve_fk
+FOREIGN KEY (loss_curve_id) REFERENCES riskr.loss_curve(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.aggregate_loss_curve_data
+ADD CONSTRAINT riskr_aggregate_loss_curve_data_loss_curve_fk
 FOREIGN KEY (loss_curve_id) REFERENCES riskr.loss_curve(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.loss_map_data
 ADD CONSTRAINT riskr_loss_map_data_loss_map_fk
 FOREIGN KEY (loss_map_id) REFERENCES riskr.loss_map(id) ON DELETE CASCADE;
 
+ALTER TABLE riskr.collapse_map_data
+ADD CONSTRAINT riskr_collapse_map_data_collapse_map_fk
+FOREIGN KEY (collapse_map_id) REFERENCES riskr.collapse_map(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.bcr_distribution_data
+ADD CONSTRAINT riskr_bcr_distribution_data_bcr_distribution_fk
+FOREIGN KEY (bcr_distribution_id) REFERENCES riskr.bcr_distribution(id) ON DELETE CASCADE;
+
 ALTER TABLE oqmif.exposure_data ADD CONSTRAINT
 oqmif_exposure_data_exposure_model_fk FOREIGN KEY (exposure_model_id)
 REFERENCES oqmif.exposure_model(id) ON DELETE CASCADE;
 
-ALTER TABLE riski.vulnerability_data ADD CONSTRAINT
-riski_vulnerability_data_vulnerability_model_fk FOREIGN KEY
+ALTER TABLE riski.vulnerability_function ADD CONSTRAINT
+riski_vulnerability_function_vulnerability_model_fk FOREIGN KEY
 (vulnerability_model_id) REFERENCES riski.vulnerability_model(id) ON DELETE
 CASCADE;
 
@@ -1069,6 +1555,8 @@ CREATE TRIGGER oqmif_exposure_model_refresh_last_update_trig BEFORE UPDATE ON oq
 
 CREATE TRIGGER oqmif_exposure_data_refresh_last_update_trig BEFORE UPDATE ON oqmif.exposure_data FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
-CREATE TRIGGER riski_vulnerability_data_refresh_last_update_trig BEFORE UPDATE ON riski.vulnerability_data FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+CREATE TRIGGER riski_vulnerability_function_refresh_last_update_trig BEFORE UPDATE ON riski.vulnerability_function FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
 CREATE TRIGGER riski_vulnerability_model_refresh_last_update_trig BEFORE UPDATE ON riski.vulnerability_model FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER uiapi_input_set_refresh_last_update_trig BEFORE UPDATE ON uiapi.input_set FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();

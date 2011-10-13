@@ -68,7 +68,7 @@ class DeterministicEventBasedMixin:
             LOGGER.debug("Dispatching task for block %s of %s"
                 % (block_id, len(self.blocks_keys)))
             a_task = general.compute_risk.delay(
-                self.id, block_id, vuln_model=vuln_model,
+                self.job_id, block_id, vuln_model=vuln_model,
                 epsilon_provider=epsilon_provider)
             tasks.append(a_task)
 
@@ -97,10 +97,9 @@ class DeterministicEventBasedMixin:
         loss_map_path = os.path.join(
             self['BASE_PATH'],
             self['OUTPUT_DIR'],
-            'loss-map-%s.xml' % self.id)
-        loss_map_writer = risk_output.create_loss_map_writer(True,
-                                                             loss_map_path,
-                                                             self.params)
+            'loss-map-%s.xml' % self.job_id)
+        loss_map_writer = risk_output.create_loss_map_writer(
+            self.job_id, self.serialize_results_to, loss_map_path, True)
 
         if loss_map_writer:
             LOGGER.debug("Starting serialization of the loss map...")
@@ -115,7 +114,6 @@ class DeterministicEventBasedMixin:
         # These are not debug statements; please don't remove them!
         print "Mean region loss value: %s" % sum_per_gmf.mean
         print "Standard deviation region loss value: %s" % sum_per_gmf.stddev
-        return [True]
 
     def compute_risk(self, block_id, **kwargs):
         """
@@ -211,8 +209,8 @@ class DeterministicEventBasedMixin:
         """
         sum_per_gmf = det.SumPerGroundMotionField(vuln_model, epsilon_provider)
         for point in block.grid(self.region):
-            gmvs = load_gmvs_for_point(self.id, point)
-            assets = load_assets_for_point(self.id, point)
+            gmvs = load_gmvs_for_point(self.job_id, point)
+            assets = load_assets_for_point(self.job_id, point)
             for asset in assets:
                 # the SumPerGroundMotionField add() method expects a dict
                 # with a single key ('IMLs') and value set to the sequence of
@@ -265,8 +263,8 @@ class DeterministicEventBasedMixin:
             # the mean and stddev calculation functions used below
             # require the gmvs to be wrapped in a dict with a single key:
             # 'IMLs'
-            gmvs = {'IMLs': load_gmvs_for_point(self.id, point)}
-            assets = load_assets_for_point(self.id, point)
+            gmvs = {'IMLs': load_gmvs_for_point(self.job_id, point)}
+            assets = load_assets_for_point(self.job_id, point)
             for asset in assets:
                 vuln_function = \
                     vuln_model[asset['vulnerabilityFunctionReference']]

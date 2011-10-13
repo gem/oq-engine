@@ -2,12 +2,18 @@
 
 [HAZARD]
 
+DEPTHTO1PT0KMPERSEC = 100.0
+VS30_TYPE = measured
+CALCULATION_MODE = Event Based
+GROUND_MOTION_CORRELATION = false
+NUMBER_OF_LOGIC_TREE_SAMPLES = 0
+
 # file containing erf logic tree structure
 SOURCE_MODEL_LOGIC_TREE_FILE = ErfLogicTree.inp
 # file containing gmpe logic tree structure
 GMPE_LOGIC_TREE_FILE = GmpeLogicTree.inp
 # output directory
-OUTPUT_DIR = ~/gem_output
+OUTPUT_DIR = gem_output
 
 
 # moment magnitude (Mw)
@@ -42,6 +48,7 @@ REFERENCE_VS30_VALUE = 760.0
 # The depth to where shear-wave velocity = 2.5 km/sec.
 # Cambpell basin depth. Measure is (km)
 REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM = 5.0
+SADIGH_SITE_TYPE = Rock
 
 
 # true or false
