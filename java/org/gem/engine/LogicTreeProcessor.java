@@ -12,6 +12,10 @@ import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
 import com.google.gson.Gson;
 
 public class LogicTreeProcessor {
+    /**
+     * WARNING, this file is deprecated in favor of python implementation!
+     * See openquake/input/logictree.py
+     */
 
     private final Configuration config;
 
