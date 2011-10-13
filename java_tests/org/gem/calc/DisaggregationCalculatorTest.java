@@ -236,7 +236,7 @@ public class DisaggregationCalculatorTest
 
 		DiscretizedFuncAPI hazardCurve = makeHazardCurve();
 
-		double delta = 0.00001;
+		double delta = 0.0001;
 		// boundary tests:
 		assertEquals(minIml, getGMV(hazardCurve, highPoe), delta);
 		assertEquals(maxIml, getGMV(hazardCurve, lowPoe), delta);
