@@ -599,7 +599,6 @@ class GMPELogicTree(BaseLogicTree):
 
 
 class LogicTreeProcessor(object):
-    # TODO: unittest
     def __init__(self, basepath, source_model_logictree_path,
                  gmpe_logictree_path):
         self.source_model_lt = SourceModelLogicTree(
