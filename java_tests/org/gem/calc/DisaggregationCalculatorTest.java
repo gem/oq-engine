@@ -236,10 +236,13 @@ public class DisaggregationCalculatorTest
 
 		DiscretizedFuncAPI hazardCurve = makeHazardCurve();
 
+		double delta = 0.00001;
 		// boundary tests:
-		assertEquals(minIml, getGMV(hazardCurve, highPoe));
-		assertEquals(maxIml, getGMV(hazardCurve, lowPoe));
-		assertEquals(imlForPoe0_5, getGMV(hazardCurve, 0.5));
+		assertEquals(minIml, getGMV(hazardCurve, highPoe), delta);
+		assertEquals(maxIml, getGMV(hazardCurve, lowPoe), delta);
+
+		// interpolation test:
+		assertEquals(imlForPoe0_5, getGMV(hazardCurve, 0.5), delta);
 		
 	}
 
