@@ -48,11 +48,17 @@ Copyright (c) 2010, GEM Foundation.
     You should have received a copy of the GNU Lesser General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+
+import os
+
 # Please note: the release date should always have a value of 0 (zero) in the
 # master branch. It will only be set to a meaningful value in *packaged* and
 # released OpenQuake code.
 __version__ = (
     0,  # major
     4,  # minor
-    2,  # sprint number
+    5,  # sprint number
     0)  # release date (seconds since the "Epoch"), do *not* set in master!
+
+# The path to the OpenQuake root directory
+OPENQUAKE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))

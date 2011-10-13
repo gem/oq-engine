@@ -23,11 +23,12 @@ Unit tests for the tools/dbmaint.py tool.
 """
 
 from distutils import version
-import mock
 import os
 import shutil
+import sys
 import tempfile
 import unittest
+from tests.utils.helpers import patch
 from tools.dbmaint import (
     error_occurred, find_scripts, psql, run_cmd, run_scripts, scripts_to_run,
     version_key, script_sort_key)
@@ -58,23 +59,39 @@ class RunCmdTestCase(unittest.TestCase):
 
     def test_run_cmd_with_errors(self):
         """Invoke a command with errors."""
+        # The expected error message varies between Linux and OSX.
+        if sys.platform == 'darwin':
+            expected_error = ('ls terminated with exit code: 1\nls: '
+                '/this/does/not/exist: No such file or directory\n')
+        else:
+            expected_error = ('ls terminated with exit code: 2\nls: cannot '
+                'access /this/does/not/exist: No such file or directory\n')
+
         try:
             code, out, err = run_cmd(["ls", "-AF", "/this/does/not/exist"])
         except Exception, e:
-            self.assertEqual(
-                "ls terminated with exit code: 2\nls: cannot access "
-                "/this/does/not/exist: No such file or directory\n", e.args[0])
+            self.assertEqual(expected_error, e.args[0])
         else:
             self.fail("exception not raised")
 
     def test_run_cmd_with_errors_and_ignore_exit_code(self):
         """Invoke a command with errors but ignore the exit code."""
+        # Both the expected exit code and error message vary between Linux and
+        # OSX.
+        if sys.platform == 'darwin':
+            expected_code = 1
+            expected_error = ("ls: /this/does/not/exist: No such file or "
+                "directory\n")
+        else:
+            expected_code = 2
+            expected_error = ("ls: cannot access /this/does/not/exist: No such"
+                " file or directory\n")
+
         code, out, err = run_cmd(
             ["ls", "-AF", "/this/does/not/exist"], ignore_exit_code=True)
-        self.assertEqual(2, code)
+        self.assertEqual(expected_code, code)
         self.assertEqual("", out)
-        self.assertEqual("ls: cannot access /this/does/not/exist: No such "
-                         "file or directory\n", err)
+        self.assertEqual(expected_error, err)
 
 
 class PsqlTestCase(unittest.TestCase):
@@ -360,7 +377,7 @@ class RunScriptsTestCase(unittest.TestCase):
                   "db": "openquake", "user": "postgres"}
         scripts = ["0.3.9-1/3/01-c.sql", "0.3.9-1/3/02-d.sql",
                    "0.4.2/2/01-a.sql"]
-        with mock.patch('tools.dbmaint.psql') as mock_psql:
+        with patch('tools.dbmaint.psql') as mock_psql:
             # Make all the calls pass.
             mock_psql.return_value = (0, "", "")
 
@@ -402,7 +419,7 @@ class RunScriptsTestCase(unittest.TestCase):
                   "db": "openquake", "user": "postgres"}
         scripts = ["0.3.9-1/3/01-c.sql", "0.3.9-1/3/02-d.sql",
                    "0.4.2/1/01-a.sql"]
-        with mock.patch('tools.dbmaint.psql') as mock_psql:
+        with patch('tools.dbmaint.psql') as mock_psql:
             # Make all the calls pass.
             mock_psql.side_effect = fail_on_first_even_script
 

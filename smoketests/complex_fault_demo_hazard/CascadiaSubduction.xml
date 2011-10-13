@@ -1,0 +1,407 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.2" xmlns:gml="http://www.opengis.net/gml" xmlns:qml="http://quakeml.org/xmlns/quakeml/1.1" gml:id="n1">
+  <sourceModel gml:id="sm1">
+    <config/>
+    <complexFaultSource gml:id="src_cascadia.mid.8387z.in">
+      <gml:name>Cascadia Megathrust</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <evenlyDiscretizedIncrementalMFD binSize="0.1" minVal="8.3">8.056204131504448E-5 6.828805796045152E-5 5.788407026299047E-5 4.906517611250961E-5</evenlyDiscretizedIncrementalMFD>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-124.0415 40.347 15.55 -124.33 41.214000000000006 13.46 -124.474 42.1095 13.44 -124.5375 42.9775 13.32 -124.51500000000001 43.861 14.19 -124.4955 44.737 14.89 -124.43400000000001 45.487 16.57 -124.28950000000002 46.361 19.0 -124.169 46.7745 20.0 -124.051 47.2145 20.35 -124.09550000000002 47.669 20.1 -124.5975 48.0865 19.47 -125.19899999999998 48.416 19.09 -125.7345 48.723 18.9 -126.354 49.111 18.46 -127.084 49.5945 17.37</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+    <complexFaultSource gml:id="src_cascadia.top.9z.in">
+      <gml:name>Cascadia Megathrust</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <evenlyDiscretizedIncrementalMFD binSize="0.0" minVal="9.0">7.981049259875516E-5</evenlyDiscretizedIncrementalMFD>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-124.25399999999999 40.347 10.7059 -124.523 41.21 9.50935 -124.69599999999998 42.104 9.35968 -124.762 42.971 9.35382 -124.767 43.854 9.81181 -124.778 44.734 10.0061 -124.76900000000002 45.48 10.8309 -124.72600000000001 46.353 12.2492 -124.69399999999999 46.738 12.8762 -124.679 47.129 13.0829 -124.751 47.546 12.686 -125.12 47.952000000000005 12.9094 -125.625 48.272 12.4463 -126.06 48.573 12.3499 -126.591 48.97800000000001 12.2004 -127.25700000000002 49.502 11.9891</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+    <complexFaultSource gml:id="src_cascadia.bot.8387z.in">
+      <gml:name>Cascadia Megathrust</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <evenlyDiscretizedIncrementalMFD binSize="0.1" minVal="8.3">8.056204131504448E-5 6.828805796045152E-5 5.788407026299047E-5 4.906517611250961E-5</evenlyDiscretizedIncrementalMFD>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-123.829 40.347 20.3849 -124.13700000000001 41.218 17.4139 -124.252 42.115 17.5274 -124.313 42.984 17.2919 -124.263 43.868 18.562 -124.213 44.74 19.7781 -124.099 45.49400000000001 22.3032 -123.85299999999998 46.369 25.7586 -123.644 46.811 27.1149 -123.42300000000002 47.3 27.6173 -123.44000000000001 47.79200000000001 27.5093 -124.07500000000002 48.221000000000004 26.0216 -124.77300000000001 48.56 25.7287 -125.409 48.873 25.4471 -126.11700000000002 49.244 24.7134 -126.911 49.687 22.7577</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+    <complexFaultSource gml:id="src_cascadia.mid.88z.in">
+      <gml:name>Cascadia Megathrust</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <evenlyDiscretizedIncrementalMFD binSize="0.0" minVal="8.8">5.333631606310519E-5</evenlyDiscretizedIncrementalMFD>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-124.0415 40.347 15.55 -124.33 41.214000000000006 13.46 -124.474 42.1095 13.44 -124.5375 42.9775 13.32 -124.51500000000001 43.861 14.19 -124.4955 44.737 14.89 -124.43400000000001 45.487 16.57 -124.28950000000002 46.361 19.0 -124.169 46.7745 20.0 -124.051 47.2145 20.35 -124.09550000000002 47.669 20.1 -124.5975 48.0865 19.47 -125.19899999999998 48.416 19.09 -125.7345 48.723 18.9 -126.354 49.111 18.46 -127.084 49.5945 17.37</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+    <complexFaultSource gml:id="src_cascadia.mid.8082z.in">
+      <gml:name>Cascadia Megathrust</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <evenlyDiscretizedIncrementalMFD binSize="0.1" minVal="8.0">6.613254928518655E-5 5.605696286913583E-5</evenlyDiscretizedIncrementalMFD>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-124.0415 40.347 15.55 -124.33 41.214000000000006 13.46 -124.474 42.1095 13.44 -124.5375 42.9775 13.32 -124.51500000000001 43.861 14.19 -124.4955 44.737 14.89 -124.43400000000001 45.487 16.57 -124.28950000000002 46.361 19.0 -124.169 46.7745 20.0 -124.051 47.2145 20.35 -124.09550000000002 47.669 20.1 -124.5975 48.0865 19.47 -125.19899999999998 48.416 19.09 -125.7345 48.723 18.9 -126.354 49.111 18.46 -127.084 49.5945 17.37</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+    <complexFaultSource gml:id="src_cascadia.older2.8082z.in">
+      <gml:name>Cascadia Megathrust</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <evenlyDiscretizedIncrementalMFD binSize="0.1" minVal="8.0">1.6533781511334481E-4 1.401478676212001E-4</evenlyDiscretizedIncrementalMFD>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-123.80000000000001 40.347 20.0 -123.80000000000001 41.214000000000006 20.0 -123.80000000000001 42.1095 20.0 -123.80000000000001 42.9775 20.0 -123.80000000000001 43.861 20.0 -123.80000000000001 44.737 20.0 -123.80000000000001 45.487 20.0 -123.80000000000001 46.361 20.0 -123.80000000000001 46.7745 20.0 -123.80000000000001 47.2145 20.0 -123.80000000000001 47.669 20.0 -124.29749999999999 48.0865 20.0 -124.899 48.416 20.0 -125.43449999999999 48.723 20.0 -126.05400000000002 49.111 20.0 -126.78400000000002 49.5945 20.0</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+    <complexFaultSource gml:id="src_cascadia.bot.8082z.in">
+      <gml:name>Cascadia Megathrust</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <evenlyDiscretizedIncrementalMFD binSize="0.1" minVal="8.0">6.613254928518655E-5 5.605696286913583E-5</evenlyDiscretizedIncrementalMFD>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-123.829 40.347 20.3849 -124.13700000000001 41.218 17.4139 -124.252 42.115 17.5274 -124.313 42.984 17.2919 -124.263 43.868 18.562 -124.213 44.74 19.7781 -124.099 45.49400000000001 22.3032 -123.85299999999998 46.369 25.7586 -123.644 46.811 27.1149 -123.42300000000002 47.3 27.6173 -123.44000000000001 47.79200000000001 27.5093 -124.07500000000002 48.221000000000004 26.0216 -124.77300000000001 48.56 25.7287 -125.409 48.873 25.4471 -126.11700000000002 49.244 24.7134 -126.911 49.687 22.7577</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+    <complexFaultSource gml:id="src_cascadia.top.8387z.in">
+      <gml:name>Cascadia subd less than megathrust</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <evenlyDiscretizedIncrementalMFD binSize="0.1" minVal="8.3">4.027968671897899E-5 3.414289827312015E-5 2.8941076692618767E-5 2.4531775639780752E-5</evenlyDiscretizedIncrementalMFD>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-124.25399999999999 40.347 10.7059 -124.523 41.21 9.50935 -124.69599999999998 42.104 9.35968 -124.762 42.971 9.35382 -124.767 43.854 9.81181 -124.778 44.734 10.0061 -124.76900000000002 45.48 10.8309 -124.72600000000001 46.353 12.2492 -124.69399999999999 46.738 12.8762 -124.679 47.129 13.0829 -124.751 47.546 12.686 -125.12 47.952000000000005 12.9094 -125.625 48.272 12.4463 -126.06 48.573 12.3499 -126.591 48.97800000000001 12.2004 -127.25700000000002 49.502 11.9891</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+    <complexFaultSource gml:id="src_cascadia.bot.88z.in">
+      <gml:name>Cascadia Megathrust</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <evenlyDiscretizedIncrementalMFD binSize="0.0" minVal="8.8">5.333631606310519E-5</evenlyDiscretizedIncrementalMFD>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-123.829 40.347 20.3849 -124.13700000000001 41.218 17.4139 -124.252 42.115 17.5274 -124.313 42.984 17.2919 -124.263 43.868 18.562 -124.213 44.74 19.7781 -124.099 45.49400000000001 22.3032 -123.85299999999998 46.369 25.7586 -123.644 46.811 27.1149 -123.42300000000002 47.3 27.6173 -123.44000000000001 47.79200000000001 27.5093 -124.07500000000002 48.221000000000004 26.0216 -124.77300000000001 48.56 25.7287 -125.409 48.873 25.4471 -126.11700000000002 49.244 24.7134 -126.911 49.687 22.7577</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+    <complexFaultSource gml:id="src_cascadia.top.88z.in">
+      <gml:name>Cascadia Megathrust</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <evenlyDiscretizedIncrementalMFD binSize="0.0" minVal="8.8">2.666415830781333E-5</evenlyDiscretizedIncrementalMFD>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-124.25399999999999 40.347 10.7059 -124.523 41.21 9.50935 -124.69599999999998 42.104 9.35968 -124.762 42.971 9.35382 -124.767 43.854 9.81181 -124.778 44.734 10.0061 -124.76900000000002 45.48 10.8309 -124.72600000000001 46.353 12.2492 -124.69399999999999 46.738 12.8762 -124.679 47.129 13.0829 -124.751 47.546 12.686 -125.12 47.952000000000005 12.9094 -125.625 48.272 12.4463 -126.06 48.573 12.3499 -126.591 48.97800000000001 12.2004 -127.25700000000002 49.502 11.9891</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+    <complexFaultSource gml:id="src_cascadia.top.8082z.in">
+      <gml:name>Cascadia subd less than megathrust</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <evenlyDiscretizedIncrementalMFD binSize="0.1" minVal="8.0">3.306885140274465E-5 2.803066561391212E-5</evenlyDiscretizedIncrementalMFD>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-124.25399999999999 40.347 10.7059 -124.523 41.21 9.50935 -124.69599999999998 42.104 9.35968 -124.762 42.971 9.35382 -124.767 43.854 9.81181 -124.778 44.734 10.0061 -124.76900000000002 45.48 10.8309 -124.72600000000001 46.353 12.2492 -124.69399999999999 46.738 12.8762 -124.679 47.129 13.0829 -124.751 47.546 12.686 -125.12 47.952000000000005 12.9094 -125.625 48.272 12.4463 -126.06 48.573 12.3499 -126.591 48.97800000000001 12.2004 -127.25700000000002 49.502 11.9891</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+    <complexFaultSource gml:id="src_cascadia.older2.9z.in">
+      <gml:name>Cascadia Megathrust</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <evenlyDiscretizedIncrementalMFD binSize="0.0" minVal="9.0">3.990524629937758E-4</evenlyDiscretizedIncrementalMFD>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-123.80000000000001 40.347 20.0 -123.80000000000001 41.214000000000006 20.0 -123.80000000000001 42.1095 20.0 -123.80000000000001 42.9775 20.0 -123.80000000000001 43.861 20.0 -123.80000000000001 44.737 20.0 -123.80000000000001 45.487 20.0 -123.80000000000001 46.361 20.0 -123.80000000000001 46.7745 20.0 -123.80000000000001 47.2145 20.0 -123.80000000000001 47.669 20.0 -124.29749999999999 48.0865 20.0 -124.899 48.416 20.0 -125.43449999999999 48.723 20.0 -126.05400000000002 49.111 20.0 -126.78400000000002 49.5945 20.0</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+    <complexFaultSource gml:id="src_cascadia.older2.88z.in">
+      <gml:name>Cascadia Megathrust</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <evenlyDiscretizedIncrementalMFD binSize="0.0" minVal="8.8">1.333907867045038E-4</evenlyDiscretizedIncrementalMFD>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-123.80000000000001 40.347 20.0 -123.80000000000001 41.214000000000006 20.0 -123.80000000000001 42.1095 20.0 -123.80000000000001 42.9775 20.0 -123.80000000000001 43.861 20.0 -123.80000000000001 44.737 20.0 -123.80000000000001 45.487 20.0 -123.80000000000001 46.361 20.0 -123.80000000000001 46.7745 20.0 -123.80000000000001 47.2145 20.0 -123.80000000000001 47.669 20.0 -124.29749999999999 48.0865 20.0 -124.899 48.416 20.0 -125.43449999999999 48.723 20.0 -126.05400000000002 49.111 20.0 -126.78400000000002 49.5945 20.0</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+    <complexFaultSource gml:id="src_cascadia.bot.92z.in">
+      <gml:name>Cascadia Megathrust</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <evenlyDiscretizedIncrementalMFD binSize="0.0" minVal="9.2">5.3336316063105415E-5</evenlyDiscretizedIncrementalMFD>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-123.829 40.347 20.3849 -124.13700000000001 41.218 17.4139 -124.252 42.115 17.5274 -124.313 42.984 17.2919 -124.263 43.868 18.562 -124.213 44.74 19.7781 -124.099 45.49400000000001 22.3032 -123.85299999999998 46.369 25.7586 -123.644 46.811 27.1149 -123.42300000000002 47.3 27.6173 -123.44000000000001 47.79200000000001 27.5093 -124.07500000000002 48.221000000000004 26.0216 -124.77300000000001 48.56 25.7287 -125.409 48.873 25.4471 -126.11700000000002 49.244 24.7134 -126.911 49.687 22.7577</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+    <complexFaultSource gml:id="src_cascadia.older2.92z.in">
+      <gml:name>Cascadia Megathrust</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <evenlyDiscretizedIncrementalMFD binSize="0.0" minVal="9.2">1.3339078670450435E-4</evenlyDiscretizedIncrementalMFD>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-123.80000000000001 40.347 20.0 -123.80000000000001 41.214000000000006 20.0 -123.80000000000001 42.1095 20.0 -123.80000000000001 42.9775 20.0 -123.80000000000001 43.861 20.0 -123.80000000000001 44.737 20.0 -123.80000000000001 45.487 20.0 -123.80000000000001 46.361 20.0 -123.80000000000001 46.7745 20.0 -123.80000000000001 47.2145 20.0 -123.80000000000001 47.669 20.0 -124.29749999999999 48.0865 20.0 -124.899 48.416 20.0 -125.43449999999999 48.723 20.0 -126.05400000000002 49.111 20.0 -126.78400000000002 49.5945 20.0</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+    <complexFaultSource gml:id="src_cascadia.mid.9z.in">
+      <gml:name>Cascadia Megathrust</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <evenlyDiscretizedIncrementalMFD binSize="0.0" minVal="9.0">1.5962098519751032E-4</evenlyDiscretizedIncrementalMFD>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-124.0415 40.347 15.55 -124.33 41.214000000000006 13.46 -124.474 42.1095 13.44 -124.5375 42.9775 13.32 -124.51500000000001 43.861 14.19 -124.4955 44.737 14.89 -124.43400000000001 45.487 16.57 -124.28950000000002 46.361 19.0 -124.169 46.7745 20.0 -124.051 47.2145 20.35 -124.09550000000002 47.669 20.1 -124.5975 48.0865 19.47 -125.19899999999998 48.416 19.09 -125.7345 48.723 18.9 -126.354 49.111 18.46 -127.084 49.5945 17.37</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+    <complexFaultSource gml:id="src_cascadia.older2.8387z.in">
+      <gml:name>Cascadia Megathrust</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <evenlyDiscretizedIncrementalMFD binSize="0.1" minVal="8.3">2.0140117993895458E-4 1.7071681929199466E-4 1.447073567196042E-4 1.2266055082105621E-4</evenlyDiscretizedIncrementalMFD>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-123.80000000000001 40.347 20.0 -123.80000000000001 41.214000000000006 20.0 -123.80000000000001 42.1095 20.0 -123.80000000000001 42.9775 20.0 -123.80000000000001 43.861 20.0 -123.80000000000001 44.737 20.0 -123.80000000000001 45.487 20.0 -123.80000000000001 46.361 20.0 -123.80000000000001 46.7745 20.0 -123.80000000000001 47.2145 20.0 -123.80000000000001 47.669 20.0 -124.29749999999999 48.0865 20.0 -124.899 48.416 20.0 -125.43449999999999 48.723 20.0 -126.05400000000002 49.111 20.0 -126.78400000000002 49.5945 20.0</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+    <complexFaultSource gml:id="src_cascadia.bot.9z.in">
+      <gml:name>Cascadia Megathrust</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <evenlyDiscretizedIncrementalMFD binSize="0.0" minVal="9.0">1.5962098519751032E-4</evenlyDiscretizedIncrementalMFD>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-123.829 40.347 20.3849 -124.13700000000001 41.218 17.4139 -124.252 42.115 17.5274 -124.313 42.984 17.2919 -124.263 43.868 18.562 -124.213 44.74 19.7781 -124.099 45.49400000000001 22.3032 -123.85299999999998 46.369 25.7586 -123.644 46.811 27.1149 -123.42300000000002 47.3 27.6173 -123.44000000000001 47.79200000000001 27.5093 -124.07500000000002 48.221000000000004 26.0216 -124.77300000000001 48.56 25.7287 -125.409 48.873 25.4471 -126.11700000000002 49.244 24.7134 -126.911 49.687 22.7577</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+    <complexFaultSource gml:id="src_cascadia.mid.92z.in">
+      <gml:name>Cascadia Megathrust</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <evenlyDiscretizedIncrementalMFD binSize="0.0" minVal="9.2">5.3336316063105415E-5</evenlyDiscretizedIncrementalMFD>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-124.0415 40.347 15.55 -124.33 41.214000000000006 13.46 -124.474 42.1095 13.44 -124.5375 42.9775 13.32 -124.51500000000001 43.861 14.19 -124.4955 44.737 14.89 -124.43400000000001 45.487 16.57 -124.28950000000002 46.361 19.0 -124.169 46.7745 20.0 -124.051 47.2145 20.35 -124.09550000000002 47.669 20.1 -124.5975 48.0865 19.47 -125.19899999999998 48.416 19.09 -125.7345 48.723 18.9 -126.354 49.111 18.46 -127.084 49.5945 17.37</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+    <complexFaultSource gml:id="src_cascadia.top.92z.in">
+      <gml:name>Cascadia Megathrust</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <evenlyDiscretizedIncrementalMFD binSize="0.0" minVal="9.2">2.6658158722204543E-5</evenlyDiscretizedIncrementalMFD>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-124.25399999999999 40.347 10.7059 -124.523 41.21 9.50935 -124.69599999999998 42.104 9.35968 -124.762 42.971 9.35382 -124.767 43.854 9.81181 -124.778 44.734 10.0061 -124.76900000000002 45.48 10.8309 -124.72600000000001 46.353 12.2492 -124.69399999999999 46.738 12.8762 -124.679 47.129 13.0829 -124.751 47.546 12.686 -125.12 47.952000000000005 12.9094 -125.625 48.272 12.4463 -126.06 48.573 12.3499 -126.591 48.97800000000001 12.2004 -127.25700000000002 49.502 11.9891</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+  </sourceModel>
+</nrml>
