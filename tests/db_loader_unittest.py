@@ -127,7 +127,9 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         self.src_reader = java.jclass('SourceModelReader')(
             TEST_SRC_FILE, db_loader.SourceModelLoader.DEFAULT_MFD_BIN_WIDTH)
         self.sources = self.src_reader.read()
-        self.simple, self.complex, self.area, self.point = self.sources
+        # the last source in the file is also simple fault,
+        # just with different mfd, skipping it
+        self.simple, self.complex, self.area, self.point, _ = self.sources
 
     def test_get_simple_fault_surface(self):
         surface = db_loader.get_fault_surface(self.simple)
@@ -254,8 +256,7 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
 
         results = src_loader.serialize()
 
-        # we should get a 3 item list of results
-        self.assertEquals(3, len(results))
+        self.assertEquals(len(expected_tables), len(results))
 
         # We expect there to have been 3 inserts.
         # The results are a list of dicts with a single key.
@@ -290,7 +291,8 @@ class NrmlModelLoaderTestCase(unittest.TestCase):
         Evenly-Discretized MFD.
         """
         expected_tables = \
-            ['hzrdi.mfd_evd', 'hzrdi.simple_fault', 'hzrdi.source']
+            ['hzrdi.mfd_evd', 'hzrdi.simple_fault', 'hzrdi.source',
+             'hzrdi.mfd_tgr', 'hzrdi.simple_fault', 'hzrdi.source']
         self._serialize_test_helper(TEST_SRC_FILE, expected_tables)
 
     def test_serialize_with_tgr_mfd(self):
