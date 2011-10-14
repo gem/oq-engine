@@ -22,7 +22,6 @@ at https://blueprints.launchpad.net/openquake/+spec/openquake-logic-tree-module
 """
 
 import os
-import sys
 import re
 import random
 import itertools
@@ -753,7 +752,8 @@ class SourceModelLogicTree(BaseLogicTree):
 
         * First branching level must contain exactly one branchset, which
           must be of type "sourceModel".
-        * All other branchsets must not be of type "sourceModel" or "gmpeModel".
+        * All other branchsets must not be of type "sourceModel"
+          or "gmpeModel".
         """
         if depth == 0:
             if number > 0:
@@ -837,7 +837,7 @@ class SourceModelLogicTree(BaseLogicTree):
                                       schema=self.get_xmlschema())
         while True:
             try:
-                event, node = next(eventstream)
+                _, node = next(eventstream)
             except StopIteration:
                 break
             except etree.XMLSyntaxError as exc:
@@ -1043,10 +1043,10 @@ class LogicTreeProcessor(object):
             the java class ``org.gem.JsonSerializer`` is used.
         """
         rnd = random.Random(random_seed)
-        SourceModelReader = jvm().JClass('org.gem.engine.hazard.' \
-                                         'parsers.SourceModelReader')
+        sm_reader = jvm().JClass('org.gem.engine.hazard.' \
+                                 'parsers.SourceModelReader')
         branch = self.source_model_lt.root_branchset.sample(rnd)
-        sources = SourceModelReader(branch.value, float(mfd_bin_width)).read()
+        sources = sm_reader(branch.value, float(mfd_bin_width)).read()
         while True:
             branchset = branch.child_branchset
             if branchset is None:
