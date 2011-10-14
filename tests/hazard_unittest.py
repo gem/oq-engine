@@ -181,7 +181,7 @@ class HazardEngineTestCase(unittest.TestCase):
             for realization in xrange(0, realizations):
 
                 nrml_path = os.path.join(
-                    "smoketests/classical_psha_simple/computed_output",
+                    "demos/classical_psha_simple/computed_output",
                     hazengine.hazard_curve_filename(realization))
 
                 LOG.debug("validating NRML file %s" % nrml_path)
@@ -199,7 +199,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
             if hazengine.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
                 nrml_path = os.path.join(
-                    "smoketests/classical_psha_simple/computed_output",
+                    "demos/classical_psha_simple/computed_output",
                     hazengine.mean_hazard_curve_filename())
 
                 LOG.debug("validating NRML file %s" % nrml_path)
@@ -220,7 +220,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
                 for poe in hazengine.poes_hazard_maps:
                     nrml_path = os.path.join(
-                        "smoketests/classical_psha_simple/computed_output",
+                        "demos/classical_psha_simple/computed_output",
                         hazengine.mean_hazard_map_filename(poe))
 
                     LOG.debug("validating NRML file for mean hazard map %s" \
@@ -240,7 +240,7 @@ class HazardEngineTestCase(unittest.TestCase):
             for quantile in hazengine.quantile_levels:
 
                 nrml_path = os.path.join(
-                    "smoketests/classical_psha_simple/computed_output",
+                    "demos/classical_psha_simple/computed_output",
                     hazengine.quantile_hazard_curve_filename(quantile))
 
                 LOG.debug("validating NRML file for quantile hazard curve: "\
@@ -265,7 +265,7 @@ class HazardEngineTestCase(unittest.TestCase):
                 for poe in hazengine.poes_hazard_maps:
                     for quantile in quantiles:
                         nrml_path = os.path.join(
-                            "smoketests/classical_psha_simple/computed_output",
+                            "demos/classical_psha_simple/computed_output",
                             hazengine.quantile_hazard_map_filename(quantile,
                                                                    poe))
 

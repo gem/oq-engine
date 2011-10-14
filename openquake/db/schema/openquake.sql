@@ -969,6 +969,8 @@ CREATE TABLE uiapi.oq_params (
     --      latlonpmf (Latitude-Longitude PMF)
     --      latlonmagpmf (Latitude-Longitude-Magnitude PMF)
     --      latlonmagepspmf (Latitude-Longitude-Magnitude-Epsilon PMF)
+    --      magtrtpmf (Magnitude-Tectonic Region Type PMF)
+    --      latlontrtpmf (Latitude-Longitude-Tectonic Region Type PMF)
     --      fulldisaggmatrix (The full disaggregation matrix; includes
     --          Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
     disagg_results VARCHAR[]
@@ -980,6 +982,7 @@ CREATE TABLE uiapi.oq_params (
                                          'magdistpmf', 'magdistepspmf',
                                          'latlonpmf', 'latlonmagpmf',
                                          'latlonmagepspmf',
+                                         'magtrtpmf', 'latlontrtpmf',
                                          'fulldisaggmatrix']::VARCHAR[]))
             OR
             ((job_type != 'disaggregation')
