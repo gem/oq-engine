@@ -870,7 +870,16 @@ class SourceModelLogicTree(BaseLogicTree):
 
 
 class GMPELogicTree(BaseLogicTree):
-    # TODO: document
+    """
+    GMPE logic tree parser.
+
+    :param tectonic_region_types:
+        Set of all tectonic region type names that are used in corresponding
+        source models. Used to check that there are GMPEs for each, but
+        no unattended ones.
+    """
+    #: The list of supported GMPEs. List items refer to class names in package
+    #: ``org.opensha.sha.imr.attenRelImpl``.
     GMPEs = frozenset("""\
         Abrahamson_2000_AttenRel
         AS_1997_AttenRel
@@ -902,6 +911,11 @@ class GMPELogicTree(BaseLogicTree):
         super(GMPELogicTree, self).__init__(*args, **kwargs)
 
     def validate_uncertainty_value(self, node, branchset, value):
+        """
+        See superclass' method for description and signature specification.
+
+        Checks that the value is one of :attr:`GMPEs`.
+        """
         if not value in self.GMPEs:
             raise ValidationError(
                 node, self.filename, self.basepath,
@@ -910,6 +924,13 @@ class GMPELogicTree(BaseLogicTree):
         return value
 
     def validate_filters(self, node, uncertainty_type, filters):
+        """
+        See superclass' method for description and signature specification.
+
+        Checks that there is only one filter -- "applyToTectonicRegionType",
+        its value is used only once and appears in the set of types, provided
+        to constructor.
+        """
         if not filters \
                 or len(filters) > 1 \
                 or filters.keys() != ['applyToTectonicRegionType']:
@@ -935,6 +956,12 @@ class GMPELogicTree(BaseLogicTree):
         return filters
 
     def validate_tree(self, tree_node, root_branchset):
+        """
+        See superclass' method for description and signature specification.
+
+        Checks that for all tectonic region types that are defined in source
+        models there is a branchset defined.
+        """
         missing_trts = self.tectonic_region_types \
                        - self.defined_tectonic_region_types
         if missing_trts:
@@ -947,6 +974,12 @@ class GMPELogicTree(BaseLogicTree):
         return root_branchset
 
     def validate_branchset(self, branchset_node, depth, number, branchset):
+        """
+        See superclass' method for description and signature specification.
+
+        Checks that uncertainty type is "gmpeModel" (only those are allowed)
+        and that there is only one branchset in each branching level.
+        """
         if not branchset.uncertainty_type == 'gmpeModel':
             raise ValidationError(
                 branchset_node, self.filename, self.basepath,
@@ -963,7 +996,16 @@ class GMPELogicTree(BaseLogicTree):
 
 
 class LogicTreeProcessor(object):
-    # TODO: document
+    """
+    Logic tree processor. High-level interface to dealing with logic trees.
+
+    :param basepath:
+        Base path for both logic tree files.
+    :param source_model_logictree_path:
+        Source model logic tree's filename, relative to ``basepath``.
+    :param gmpe_logictree_path:
+        GMPE logic tree's filename, relative to ``basepath``.
+    """
     def __init__(self, basepath, source_model_logictree_path,
                  gmpe_logictree_path):
         self.source_model_lt = SourceModelLogicTree(
@@ -974,11 +1016,32 @@ class LogicTreeProcessor(object):
 
     def sample_and_save_source_model_logictree(self, cache, key, random_seed,
                                                mfd_bin_width):
+        """
+        Call :meth:`sample_source_model_logictree` and save the result
+        in the cache.
+
+        :param cache:
+            A cache object. Supposed to have method ``set(key, data)``.
+        :param key:
+            A cache key to save the serialized source model logic tree.
+        """
         json_result = self.sample_source_model_logictree(random_seed,
                                                          mfd_bin_width)
         cache.set(key, json_result)
 
     def sample_source_model_logictree(self, random_seed, mfd_bin_width):
+        """
+        Perform a Monte-Carlo sampling of source model logic tree.
+
+        :param random_seed:
+            An integer random seed value to initialize random generator
+            before doing random sampling.
+        :param mfd_bin_width:
+            Float, the width of sources' MFD histograms bins.
+        :return:
+            String, json-serialized source model sample. For serialization
+            the java class ``org.gem.JsonSerializer`` is used.
+        """
         rnd = random.Random(random_seed)
         SourceModelReader = jvm().JClass('org.gem.engine.hazard.' \
                                          'parsers.SourceModelReader')
@@ -996,9 +1059,20 @@ class LogicTreeProcessor(object):
         return serializer.getJsonSourceList(sources)
 
     def sample_and_save_gmpe_logictree(self, cache, key, random_seed):
+        """
+        Same as :meth:`sample_and_save_source_model_logictree`, but for GMPE
+        logic trees.
+        """
         cache.set(key, self.sample_gmpe_logictree(random_seed))
 
     def sample_gmpe_logictree(self, random_seed):
+        """
+        Same as :meth:`sample_source_model_logictree`, but for GMPE logic tree.
+
+        :return:
+            Json dictionary, with keys equal to tectonic region types
+            and values representing fully qualified java GMPE class names.
+        """
         rnd = random.Random(random_seed)
         value_prefix = 'org.opensha.sha.imr.attenRelImpl.'
         result = {}
