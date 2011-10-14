@@ -17,7 +17,7 @@ VS30_TYPE = measured
 # Latitude, Longitude, Magnitude, Distance, Epsilon, Tectonic Region Type
 # Choose at least one of the following:
 #   MagPMF, DistPMF, TRTPMF, MagDistPMF, MagDistEpsPMF, LatLonPMF, LatLonMagPMF,
-#   LatLonMagEpsPMF, FullDisaggMatrix
+#   LatLonMagEpsPMF, MagTRTPMF, LatLonTRTPMF, FullDisaggMatrix
 DISAGGREGATION_RESULTS = MagPMF, MagDistEpsPMF, FullDisaggMatrix
 
 LATITUDE_BIN_LIMITS = 14.0, 16.0, 18.0, 20.0
