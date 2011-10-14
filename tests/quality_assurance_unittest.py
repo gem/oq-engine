@@ -33,7 +33,7 @@ from tests.utils import helpers
 class ClassicalPSHACalculatorAssuranceTestCase(
     unittest.TestCase, helpers.DbTestMixin):
 
-    @attr("quality_assurance")
+    @attr("qa")
     def test_peerTestSet1Case2(self):
         expected_results = self._load_results("PeerTestSet1Case2")
 
@@ -42,7 +42,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
         self._assert_results_are(expected_results)
 
-    @attr("quality_assurance")
+    @attr("qa")
     def test_peerTestSet1Case5(self):
         expected_results = self._load_results("PeerTestSet1Case5")
 
