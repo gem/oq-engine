@@ -1,2 +1,2 @@
 #!/bin/bash
-(export DJANGO_SETTINGS_MODULE="openquake.settings"; nosetests -a "!quality_assurance" "$@" tests/*_unittest.py 2>&1 | tee last_test_run.log)
+(export DJANGO_SETTINGS_MODULE="openquake.settings"; nosetests "$@" tests/*_unittest.py 2>&1 | tee last_test_run.log)
