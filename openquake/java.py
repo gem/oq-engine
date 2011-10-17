@@ -173,15 +173,47 @@ def _init_logs():
     jpype.JClass("org.apache.log4j.PropertyConfigurator").configure(props)
 
 
-def jvm():
-    """Return the jpype module, after guaranteeing the JVM is running and
-    the classpath has been loaded properly."""
+# The default JVM max. memory size (in MB) to be used (per celery worker
+# process!)
+DEFAULT_JVM_MAX_MEM = 768
+
+
+def get_jvm_max_mem(max_mem):
+    """
+    Determine what the JVM maximum memory size should be.
+
+    :param max_mem: the `max_mem` parameter value passed
+    :type max_mem: integer or None
+
+    :returns: the maximum JVM memory size considering the possible sources in
+        the following order
+        * the actual value passed
+        * the setting in the config file
+        * a fixed default (`768` MB).
+    """
+    if max_mem:
+        return max_mem
+    if os.environ.get("OQ_JVM_MAXMEM"):
+        return int(os.environ.get("OQ_JVM_MAXMEM"))
+    return DEFAULT_JVM_MAX_MEM
+def jvm(max_mem=None):
+    """
+    Return the jpype module, after guaranteeing the JVM is running and
+    the classpath has been loaded properly.
+
+    :param int max_mem: The maximum RAM (in MB) that should be used per JVM.
+        Please note that *every* celery worker process will have its own JVM
+        i.e. on the gemsun boxes with 32 cores/celery worker processes the
+        JVMs *alone* will consume 24GB of RAM with the default setting above.
+    """
     jarpaths = (os.path.abspath(
                     os.path.join(os.path.dirname(__file__), "../dist")),
                 '/usr/share/java')
 
     if not jpype.isJVMStarted():
+        max_mem = get_jvm_max_mem(max_mem)
         jpype.startJVM(jpype.getDefaultJVMPath(),
+            "-Xmx%sM" % max_mem,
             "-Djava.ext.dirs=%s:%s" % jarpaths,
             # setting Schema path here is ugly, but it's better than
             # doing it before all XML parsing calls
