@@ -24,9 +24,12 @@ Tests for the Python-Java code layer.
 
 import cPickle
 import os
+import shutil
+import textwrap
 import unittest
 
 from openquake import java
+from openquake.utils import config
 
 from tests.utils import helpers
 from tests.utils.tasks import jtask_task, failing_jtask_task
@@ -155,3 +158,59 @@ class JavaExceptionTestCase(unittest.TestCase):
             self.assertTrue(e.message.startswith(
                     'java.lang.NumberFormatException'))
             self.assertTrue(len(e.trace) > 2)
+
+
+class GetJvmMaxMemTestcase(helpers.TestMixin, unittest.TestCase):
+    """Tests related to the get_jvm_max_mem()."""
+
+    def setUp(self):
+        self.orig_env = os.environ.copy()
+        os.environ.clear()
+        # Move the local configuration file out of the way if it exists.
+        # Otherwise the tests that follow will break.
+        local_path = "%s/openquake.cfg" % os.path.abspath(os.getcwd())
+        if os.path.isfile(local_path):
+            shutil.move(local_path, "%s.test_bakk" % local_path)
+
+    def tearDown(self):
+        os.environ.clear()
+        os.environ.update(self.orig_env)
+        # Move the local configuration file back into place if it was stashed
+        # away.
+        local_path = "%s/openquake.cfg" % os.path.abspath(os.getcwd())
+        if os.path.isfile("%s.test_bakk" % local_path):
+            shutil.move("%s.test_bakk" % local_path, local_path)
+        config.Config().cfg.clear()
+        config.Config()._load_from_file()
+
+    def _prepare_config(self, max_mem):
+        """Set up a configuration with the given `max_mem` value."""
+        content = '''
+            [java]
+            max_mem=%s''' % max_mem
+        site_path = self.touch(content=textwrap.dedent(content))
+        os.environ["OQ_SITE_CFG_PATH"] = site_path
+        config.Config().cfg.clear()
+        config.Config()._load_from_file()
+
+    def test_passed_value_trumps_all(self):
+        """
+        The value passed to get_jvm_max_mem() overrides all other `max_mem`
+        sources.
+        """
+        value_passed = 432
+        self._prepare_config(value_passed - 100)
+        self.assertEqual(value_passed, java.get_jvm_max_mem(value_passed))
+
+    def test_config_file_is_used(self):
+        """get_jvm_max_mem() will make use of the config file when needed."""
+        max_mem = 321
+        self._prepare_config(max_mem)
+        self.assertEqual(max_mem, java.get_jvm_max_mem(None))
+
+    def test_default_value(self):
+        """
+        In the absence of any other `max_mem` source get_jvm_max_mem() will
+        return a default value (768 MB).
+        """
+        self.assertEqual(java.DEFAULT_JVM_MAX_MEM, java.get_jvm_max_mem(None))
