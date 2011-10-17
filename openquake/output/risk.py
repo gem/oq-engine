@@ -197,27 +197,8 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
             self.loss_map_node.set(
                 key, metadata.get(key, self.DEFAULT_METADATA[key]))
 
-    def write(self, site, values, new_loss_node=new_loss_deterministic_node):
-        """Writes an asset element with loss map ratio information.
-        This method assumes that `riskResult` and `lossMap` element
-        data has already been written.
-
-        :param site: the region location of the data being written
-        :type site: :py:class:`openquake.shapes.Site`
-
-        :param values: contains a list of pairs in the form
-            (loss dict, asset dict) with all the data
-            to be written related to the given site
-        :type values: tuple with the following members
-            :py:class:`dict` (loss dict) with the following keys:
-                ***mean_loss*** - the Mean Loss for a certain Node/Site
-                ***stddev_loss*** - the Standard Deviation for a certain
-                    Node/Site
-
-            :py:class:`dict` (asset dict)
-                ***assetID*** - the assetID
-        """
-
+    def _generate_lmnode(self, site):
+        """ convenience method to generate a new lmnode """
         # Generate an id for the new LMNode
         # Note: ids are created start at '1'
         self.lmnode_counter += 1
@@ -240,11 +221,36 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
         pos_el = etree.SubElement(point_el, xml.GML_POS_TAG)
         pos_el.text = "%s %s" % (site.longitude, site.latitude)
 
+        return lmnode_el
+
+    def write(self, site, values):
+        """Writes an asset element with loss map ratio information.
+        This method assumes that `riskResult` and `lossMap` element
+        data has already been written.
+
+        :param site: the region location of the data being written
+        :type site: :py:class:`openquake.shapes.Site`
+
+        :param values: contains a list of pairs in the form
+            (loss dict, asset dict) with all the data
+            to be written related to the given site
+        :type values: tuple with the following members
+            :py:class:`dict` (loss dict) with the following keys:
+                ***mean_loss*** - the Mean Loss for a certain Node/Site
+                ***stddev_loss*** - the Standard Deviation for a certain
+                    Node/Site
+
+            :py:class:`dict` (asset dict)
+                ***assetID*** - the assetID
+        """
+
+        lmnode_el = self._generate_lmnode(site)
+
         # now add the loss nodes as a child of the LMNode
         # we have loss data in first position, asset data in second position
         # ({'stddev_loss': 100, 'mean_loss': 0}, {'assetID': 'a1711'})
         for value in values:
-            new_loss_node(lmnode_el, value[0], value[1])
+            new_loss_deterministic_node(lmnode_el, value[0], value[1])
 
     def _get_site_elem_for_site(self, site):
         """
@@ -289,10 +295,11 @@ class LossMapNonDeterministicXMLWriter(LossMapXMLWriter):
             self.loss_map_node.set(
                 key, str(metadata.get(key, self.DEFAULT_METADATA[key])))
 
-    def write(self, site, values, new_loss_node=new_loss_nondeterministic_node):
-        super(LossMapNonDeterministicXMLWriter, self).write(site, values,
-                new_loss_node=new_loss_nondeterministic_node)
+    def write(self, site, values):
+        lmnode_el = self._generate_lmnode(site)
 
+        for value in values:
+            new_loss_nondeterministic_node(lmnode_el, value[0], value[1])
 
 LOSS_MAP_METADATA_KEYS = [
     ('loss_map_ref', 'lossMapID'),
