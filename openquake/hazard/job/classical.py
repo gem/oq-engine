@@ -35,8 +35,7 @@ from openquake import shapes
 from openquake import xml
 
 from openquake.hazard import classical_psha
-from openquake.hazard import job
-from openquake.hazard import tasks
+from openquake.hazard.job import general
 from openquake.job.mixins import Mixin
 from openquake.output import hazard as hazard_output
 from openquake.utils import config
@@ -44,32 +43,8 @@ from openquake.utils import tasks as utils_tasks
 
 LOG = logs.LOG
 
-# NOTE: this refers to how the values are stored in KVS. In the config
-# file, values are stored untransformed (i.e., the list of IMLs is
-# not stored as logarithms).
-IML_SCALING = {'PGA': numpy.log,
-               'MMI': lambda iml: iml,
-               'PGV': numpy.log,
-               'PGD': numpy.log,
-               'SA': numpy.log,
-              }
-
 HAZARD_CURVE_FILENAME_PREFIX = 'hazardcurve'
 HAZARD_MAP_FILENAME_PREFIX = 'hazardmap'
-
-
-def preload(fn):
-    """A decorator for preload steps that must run on the Jobber node"""
-
-    def preloader(self, *args, **kwargs):
-        """Validate job"""
-        self.cache = java.jclass("KVS")(
-                config.get("kvs", "host"),
-                int(config.get("kvs", "port")))
-        self.calc = java.jclass("LogicTreeProcessor")(
-                self.cache, self.key)
-        return fn(self, *args, **kwargs)
-    return preloader
 
 
 def unwrap_validation_error(jpype, runtime_exception, path=None):
@@ -92,120 +67,8 @@ def unwrap_validation_error(jpype, runtime_exception, path=None):
     raise runtime_exception
 
 
-class BasePSHAMixin(Mixin):
-    """Contains common functionality for PSHA Mixins."""
-
-    def store_source_model(self, seed):
-        """Generates an Earthquake Rupture Forecast, using the source zones and
-        logic trees specified in the job config file. Note that this has to be
-        done currently using the file itself, since it has nested references to
-        other files."""
-
-        LOG.info("Storing source model from job config")
-        key = kvs.tokens.source_model_key(self.job_id)
-        print "source model key is", key
-        jpype = java.jvm()
-        try:
-            self.calc.sampleAndSaveERFTree(self.cache, key, seed)
-        except jpype.JavaException, ex:
-            unwrap_validation_error(
-                jpype, ex,
-                self.params.get("SOURCE_MODEL_LOGIC_TREE_FILE"))
-
-    def store_gmpe_map(self, seed):
-        """Generates a hash of tectonic regions and GMPEs, using the logic tree
-        specified in the job config file."""
-        key = kvs.tokens.gmpe_key(self.job_id)
-        print "GMPE map key is", key
-        jpype = java.jvm()
-        try:
-            self.calc.sampleAndSaveGMPETree(self.cache, key, seed)
-        except jpype.JavaException, ex:
-            unwrap_validation_error(
-                jpype, ex, self.params.get("GMPE_LOGIC_TREE_FILE"))
-
-    def generate_erf(self):
-        """Generate the Earthquake Rupture Forecast from the currently stored
-        source model logic tree."""
-        key = kvs.tokens.source_model_key(self.job_id)
-        sources = java.jclass("JsonSerializer").getSourceListFromCache(
-                    self.cache, key)
-        erf = java.jclass("GEM1ERF")(sources)
-        self.calc.setGEM1ERFParams(erf)
-        return erf
-
-    def set_gmpe_params(self, gmpe_map):
-        """Push parameters from configuration file into the GMPE objects"""
-        jpype = java.jvm()
-        gmpe_lt_data = self.calc.createGmpeLogicTreeData()
-        for tect_region in gmpe_map.keySet():
-            gmpe = gmpe_map.get(tect_region)
-            gmpe_lt_data.setGmpeParams(self.params['COMPONENT'],
-                self.params['INTENSITY_MEASURE_TYPE'],
-                jpype.JDouble(float(self.params['PERIOD'])),
-                jpype.JDouble(float(self.params['DAMPING'])),
-                self.params['GMPE_TRUNCATION_TYPE'],
-                jpype.JDouble(float(self.params['TRUNCATION_LEVEL'])),
-                self.params['STANDARD_DEVIATION_TYPE'],
-                jpype.JDouble(float(self.params['REFERENCE_VS30_VALUE'])),
-                jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
-            gmpe_map.put(tect_region, gmpe)
-
-    def generate_gmpe_map(self):
-        """Generate the GMPE map from the stored GMPE logic tree."""
-        key = kvs.tokens.gmpe_key(self.job_id)
-        gmpe_map = java.jclass(
-            "JsonSerializer").getGmpeMapFromCache(self.cache, key)
-        self.set_gmpe_params(gmpe_map)
-        return gmpe_map
-
-    def get_iml_list(self):
-        """Build the appropriate Arbitrary Discretized Func from the IMLs,
-        based on the IMT"""
-
-        iml_list = java.jclass("ArrayList")()
-        for val in self.imls:
-            iml_list.add(
-                IML_SCALING[self.params['INTENSITY_MEASURE_TYPE']](
-                val))
-        return iml_list
-
-    def parameterize_sites(self, site_list):
-        """Convert python Sites to Java Sites, and add default parameters."""
-        # TODO(JMC): There's Java code for this already, sets each site to have
-        # the same default parameters
-
-        jpype = java.jvm()
-        jsite_list = java.jclass("ArrayList")()
-        for x in site_list:
-            site = x.to_java()
-
-            vs30 = java.jclass("DoubleParameter")(jpype.JString("Vs30"))
-            vs30.setValue(float(self.params['REFERENCE_VS30_VALUE']))
-            depth25 = java.jclass("DoubleParameter")("Depth 2.5 km/sec")
-            depth25.setValue(float(
-                    self.params['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']))
-            sadigh = java.jclass("StringParameter")("Sadigh Site Type")
-            sadigh.setValue(self.params['SADIGH_SITE_TYPE'])
-
-            depth1km = java.jclass("DoubleParameter")(jpype.JString(
-                "Depth 1.0 km/sec"))
-            depth1km.setValue(float(self.params['DEPTHTO1PT0KMPERSEC']))
-            vs30_type = java.jclass("StringParameter")("Vs30 Type")
-            # Enum values must be capitalized in the Java domain!
-            vs30_type.setValue(self.params['VS30_TYPE'].capitalize())
-
-            site.addParameter(vs30)
-            site.addParameter(depth25)
-            site.addParameter(sadigh)
-            site.addParameter(depth1km)
-            site.addParameter(vs30_type)
-            jsite_list.add(site)
-        return jsite_list
-
-
 # pylint: disable=R0904
-class ClassicalMixin(BasePSHAMixin):
+class ClassicalMixin(general.BasePSHAMixin):
     """Classical PSHA method for performing Hazard calculations.
 
     Implements the JobMixin, which has a primary entry point of execute().
@@ -223,7 +86,7 @@ class ClassicalMixin(BasePSHAMixin):
 
     def do_curves(self, sites, realizations,
                   serializer=None,
-                  the_task=tasks.compute_hazard_curve):
+                  the_task=general.compute_hazard_curve):
         """Trigger the calculation of hazard curves, serialize as requested.
 
         The calculated curves will only be serialized if the `serializer`
@@ -282,7 +145,7 @@ class ClassicalMixin(BasePSHAMixin):
     # pylint: disable=R0913
     def do_means(self, sites, realizations,
                  curve_serializer=None,
-                 curve_task=tasks.compute_mean_curves,
+                 curve_task=general.compute_mean_curves,
                  map_func=None,
                  map_serializer=None):
         """Trigger the calculation of mean curves/maps, serialize as requested.
@@ -338,7 +201,7 @@ class ClassicalMixin(BasePSHAMixin):
     # pylint: disable=R0913
     def do_quantiles(self, sites, realizations, quantiles,
                      curve_serializer=None,
-                     curve_task=tasks.compute_quantile_curves,
+                     curve_task=general.compute_quantile_curves,
                      map_func=None,
                      map_serializer=None):
         """Trigger the calculation/serialization of quantile curves/maps.
@@ -402,7 +265,7 @@ class ClassicalMixin(BasePSHAMixin):
                 map_serializer(sites, self.poes_hazard_maps, quantile)
 
     @java.jexception
-    @preload
+    @general.preload
     def execute(self):
         """
         Trigger the calculation and serialization of hazard curves, mean hazard
@@ -613,7 +476,7 @@ class ClassicalMixin(BasePSHAMixin):
 
         return nrml_path
 
-    @preload
+    @general.preload
     def compute_hazard_curve(self, sites, realization):
         """ Compute hazard curves, write them to KVS as JSON,
         and return a list of the KVS keys for each curve. """
@@ -707,116 +570,4 @@ class ClassicalMixin(BasePSHAMixin):
             check_value=lambda v: v >= 0.0 and v <= 1.0)
 
 
-class EventBasedMixin(BasePSHAMixin):
-    """Probabilistic Event Based method for performing Hazard calculations.
-
-    Implements the JobMixin, which has a primary entry point of execute().
-    Execute is responsible for dispatching celery tasks.
-
-    Note that this Mixin, during execution, will always be an instance of the
-    Job class, and thus has access to the self.params dict, full of config
-    params loaded from the Job configuration file."""
-
-    @java.jexception
-    @preload
-    def execute(self):
-        """Main hazard processing block.
-
-        Loops through various random realizations, spawning tasks to compute
-        GMFs."""
-        source_model_generator = random.Random()
-        source_model_generator.seed(
-                self.params.get('SOURCE_MODEL_LT_RANDOM_SEED', None))
-
-        gmpe_generator = random.Random()
-        gmpe_generator.seed(self.params.get('GMPE_LT_RANDOM_SEED', None))
-
-        gmf_generator = random.Random()
-        gmf_generator.seed(self.params.get('GMF_RANDOM_SEED', None))
-
-        histories = int(self.params['NUMBER_OF_SEISMICITY_HISTORIES'])
-        realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
-        LOG.info(
-            "Going to run hazard for %s histories of %s realizations each."
-            % (histories, realizations))
-
-        for i in range(0, histories):
-            pending_tasks = []
-            for j in range(0, realizations):
-                self.store_source_model(source_model_generator.getrandbits(32))
-                self.store_gmpe_map(gmpe_generator.getrandbits(32))
-                pending_tasks.append(
-                    tasks.compute_ground_motion_fields.delay(
-                        self.job_id, self.sites_to_compute(),
-                        i, j, gmf_generator.getrandbits(32)))
-
-            for task in pending_tasks:
-                task.wait()
-                if task.status != 'SUCCESS':
-                    raise Exception(task.result)
-
-            for j in range(0, realizations):
-                stochastic_set_key = kvs.tokens.stochastic_set_key(self.job_id,
-                                                                   i, j)
-                print "Writing output for ses %s" % stochastic_set_key
-                ses = kvs.get_value_json_decoded(stochastic_set_key)
-                if ses:
-                    self.serialize_gmf(ses)
-
-    def serialize_gmf(self, ses):
-        """
-        Write each GMF to an NRML file or to DB depending on job configuration.
-        """
-        iml_list = [float(param)
-                    for param
-                    in self.params['INTENSITY_MEASURE_LEVELS'].split(",")]
-
-        LOG.debug("IML: %s" % (iml_list))
-        files = []
-
-        nrml_path = ''
-
-        for event_set in ses:
-            for rupture in ses[event_set]:
-
-                if self.params['GMF_OUTPUT'].lower() == 'true':
-                    common_path = os.path.join(self.base_path,
-                            self['OUTPUT_DIR'],
-                            "gmf-%s-%s" % (str(event_set.replace("!", "_")),
-                                           str(rupture.replace("!", "_"))))
-                    nrml_path = "%s.xml" % common_path
-
-                gmf_writer = hazard_output.create_gmf_writer(
-                    self.job_id, self.serialize_results_to, nrml_path)
-                gmf_data = {}
-                for site_key in ses[event_set][rupture]:
-                    site = ses[event_set][rupture][site_key]
-                    site_obj = shapes.Site(site['lon'], site['lat'])
-                    gmf_data[site_obj] = \
-                        {'groundMotion': math.exp(float(site['mag']))}
-
-                gmf_writer.serialize(gmf_data)
-                files.append(nrml_path)
-        return files
-
-    @preload
-    def compute_ground_motion_fields(self, site_list, history, realization,
-                                     seed):
-        """Ground motion field calculation, runs on the workers."""
-        jpype = java.jvm()
-
-        jsite_list = self.parameterize_sites(site_list)
-        key = kvs.tokens.stochastic_set_key(self.job_id, history, realization)
-        gmc = self.params['GROUND_MOTION_CORRELATION']
-        correlate = (gmc == "true" and True or False)
-        stochastic_set_id = "%s!%s" % (history, realization)
-        java.jclass("HazardCalculator").generateAndSaveGMFs(
-                self.cache, key, stochastic_set_id, jsite_list,
-                self.generate_erf(),
-                self.generate_gmpe_map(),
-                java.jclass("Random")(seed),
-                jpype.JBoolean(correlate))
-
-
-job.HazJobMixin.register("Event Based", EventBasedMixin, order=0)
-job.HazJobMixin.register("Classical", ClassicalMixin, order=1)
+general.HazJobMixin.register("Classical", ClassicalMixin, order=1)
