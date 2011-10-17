@@ -195,24 +195,15 @@ class GetJvmMaxMemTestcase(helpers.TestMixin, unittest.TestCase):
         config.Config().cfg.clear()
         config.Config()._load_from_file()
 
-    def test_passed_value_trumps_all(self):
-        """
-        The value passed to get_jvm_max_mem() overrides all other `max_mem`
-        sources.
-        """
-        value_passed = 432
-        self._prepare_config(value_passed - 100)
-        self.assertEqual(value_passed, java.get_jvm_max_mem(value_passed))
-
     def test_config_file_is_used(self):
         """get_jvm_max_mem() will make use of the config file when needed."""
         max_mem = 321
         self._prepare_config(max_mem)
-        self.assertEqual(max_mem, java.get_jvm_max_mem(None))
+        self.assertEqual(max_mem, java.get_jvm_max_mem())
 
     def test_default_value(self):
         """
         In the absence of any other `max_mem` source get_jvm_max_mem() will
         return a default value (768 MB).
         """
-        self.assertEqual(java.DEFAULT_JVM_MAX_MEM, java.get_jvm_max_mem(None))
+        self.assertEqual(java.DEFAULT_JVM_MAX_MEM, java.get_jvm_max_mem())
