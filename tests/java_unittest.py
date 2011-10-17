@@ -39,7 +39,7 @@ class JvmMaxMemTestCase(unittest.TestCase):
     """Tests related to the JVM's maximum memory setting"""
 
     def test_jvm_memmax_setting_is_enforced(self):
-        """The `-Xmx` is passed to the JVM."""
+        """The `-Xmx` property is passed to the JVM."""
         with helpers.patch("jpype.startJVM") as startjvm_mock:
             with helpers.patch("jpype.isJVMStarted") as isjvmstarted_mock:
                 # Make sure that startJVM() gets called.
