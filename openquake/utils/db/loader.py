@@ -27,9 +27,6 @@ and serializing the data to the OpenQuake eqcat database.
 """
 
 
-import csv
-import datetime
-
 import numpy
 
 from openquake import java
@@ -406,96 +403,3 @@ class SourceModelLoader(object):
                       input_id=self.input_id))
 
         return results
-
-
-class CsvModelLoader(object):
-    """
-        Csv Model Loader which gets data from a particular CSV source and
-        "serializes" the data to the database
-    """
-    def __init__(self, src_model_path):
-        """
-            :param src_model_path: path to a source model file
-            :type src_model_path: str
-        """
-
-        self.src_model_path = src_model_path
-        self.csv_reader = None
-        self.csv_fd = open(self.src_model_path, 'r')
-
-    def _read_model(self):
-        """
-            Just initializes the csv DictReader
-        """
-        self.csv_reader = csv.DictReader(self.csv_fd, delimiter=',')
-
-    def serialize(self):
-        """
-            Reads the model
-            Writes to the db
-        """
-        self._read_model()
-        self._write_to_db(self.csv_reader)
-
-    # pylint: disable=R0201
-    def _date_to_timestamp(self, *args):
-        """
-            Quick helper function to have a timestamp for the
-            openquake postgres database
-        """
-
-        catalog_date = datetime.datetime(*args)
-        return catalog_date.strftime('%Y-%m-%d %H:%M:%S')
-
-    def _write_to_db(self, csv_reader):
-        """
-            :param csv_reader: DictReader instance
-            :type csv_reader: DictReader object `csv.DictReader`
-        """
-
-        mags = ['mb_val', 'mb_val_error',
-            'ml_val', 'ml_val_error',
-            'ms_val', 'ms_val_error',
-            'mw_val', 'mw_val_error']
-
-        for row in csv_reader:
-
-            timestamp = self._date_to_timestamp(int(row['year']),
-                int(row['month']), int(row['day']), int(row['hour']),
-                int(row['minute']), int(row['second']))
-
-            surface = models.Surface(semi_minor=row['semi_minor'],
-                semi_major=row['semi_major'],
-                strike=row['strike'])
-            surface.save()
-
-            for mag in mags:
-                row[mag] = row[mag].strip()
-
-                # if m*val* are empty or a series of blank spaces, we assume
-                # that the val is -999 for convention (ask Graeme if we want to
-                # change this)
-                if len(row[mag]) == 0:
-                    row[mag] = None
-                else:
-                    row[mag] = float(row[mag])
-
-            magnitude = models.Magnitude(mb_val=row['mb_val'],
-                                mb_val_error=row['mb_val_error'],
-                                ml_val=row['ml_val'],
-                                ml_val_error=row['ml_val_error'],
-                                ms_val=row['ms_val'],
-                                ms_val_error=row['ms_val_error'],
-                                mw_val=row['mw_val'],
-                                mw_val_error=row['mw_val_error'])
-            magnitude.save()
-
-            wkt = 'SRID=4326;POINT(%s %s)' % (
-                row['longitude'], row['latitude'])
-            catalog = models.Catalog(owner_id=1, time=timestamp,
-                surface=surface, eventid=row['eventid'],
-                agency=row['agency'], identifier=row['identifier'],
-                time_error=row['time_error'], depth=row['depth'],
-                depth_error=row['depth_error'], magnitude=magnitude,
-                point=wkt)
-            catalog.save()
