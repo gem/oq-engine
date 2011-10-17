@@ -195,6 +195,16 @@ class GetJvmMaxMemTestcase(helpers.TestMixin, unittest.TestCase):
         config.Config().cfg.clear()
         config.Config()._load_from_file()
 
+    def test_environment_var_overrides_config(self):
+        """
+        The value of the `OQ_JVM_MAXMEM` environment variable (if set)
+        overrides the configuration file setting.
+        """
+        max_mem = 654
+        os.environ["OQ_JVM_MAXMEM"] = str(max_mem)
+        self._prepare_config(max_mem - 99)
+        self.assertEqual(max_mem, java.get_jvm_max_mem())
+
     def test_config_file_is_used(self):
         """get_jvm_max_mem() will make use of the config file when needed."""
         max_mem = 321
