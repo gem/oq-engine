@@ -72,6 +72,7 @@ def _make_nrml(content):
         %s
     </nrml>""" % content
 
+
 def _whatever_sourcemodel():
     return _make_nrml("""\
     <sourceModel gml:id="sm1">
@@ -172,6 +173,7 @@ def _whatever_sourcemodel():
         </pointSource>
     </sourceModel>
     """)
+
 
 def _whatever_sourcemodel_lt(sourcemodel_filename):
     return _make_nrml("""\
@@ -1563,6 +1565,7 @@ class BranchSetSampleTestCase(unittest.TestCase):
     class FakeRandom(object):
         def __init__(self, value):
             self.value = value
+
         def random(self):
             return self.value
 
