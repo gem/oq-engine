@@ -38,8 +38,8 @@ from tests.utils.tasks import jtask_task, failing_jtask_task
 class JvmMaxMemTestCase(unittest.TestCase):
     """Tests related to the JVM's maximum memory setting"""
 
-    def test_jvm_memmax_setting_is_not_passed(self):
-        """Do not pass -Xmx to the jvm."""
+    def test_jvm_memmax_setting_is_enforced(self):
+        """The `-Xmx` is passed to the JVM."""
         with helpers.patch("jpype.startJVM") as startjvm_mock:
             with helpers.patch("jpype.isJVMStarted") as isjvmstarted_mock:
                 # Make sure that startJVM() gets called.
@@ -49,7 +49,7 @@ class JvmMaxMemTestCase(unittest.TestCase):
                 isjvmstarted_mock.side_effect = side_effect
                 java.jvm()
                 args, _ = startjvm_mock.call_args
-                self.assertFalse(
+                self.assertTrue(
                     filter(lambda a: a.startswith("-Xmx"), args))
 
 
