@@ -163,7 +163,7 @@ class JavaExceptionTestCase(unittest.TestCase):
 
 
 class GetJvmMaxMemTestcase(helpers.TestMixin, unittest.TestCase):
-    """Tests related to the get_jvm_max_mem()."""
+    """Tests related to the get_jvm_max_mem() function."""
 
     def setUp(self):
         self.orig_env = os.environ.copy()
