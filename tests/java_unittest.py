@@ -24,9 +24,12 @@ Tests for the Python-Java code layer.
 
 import cPickle
 import os
+import shutil
+import textwrap
 import unittest
 
 from openquake import java
+from openquake.utils import config
 
 from tests.utils import helpers
 from tests.utils.tasks import jtask_task, failing_jtask_task
@@ -35,18 +38,20 @@ from tests.utils.tasks import jtask_task, failing_jtask_task
 class JvmMaxMemTestCase(unittest.TestCase):
     """Tests related to the JVM's maximum memory setting"""
 
-    def test_jvm_memmax_setting_is_not_passed(self):
-        """Do not pass -Xmx to the jvm."""
+    def test_jvm_memmax_setting_is_enforced(self):
+        """The `-Xmx` property is passed to the JVM."""
         with helpers.patch("jpype.startJVM") as startjvm_mock:
             with helpers.patch("jpype.isJVMStarted") as isjvmstarted_mock:
                 # Make sure that startJVM() gets called.
+
                 def side_effect():
                     isjvmstarted_mock.side_effect = lambda: True
                     return False
+
                 isjvmstarted_mock.side_effect = side_effect
                 java.jvm()
                 args, _ = startjvm_mock.call_args
-                self.assertFalse(
+                self.assertTrue(
                     filter(lambda a: a.startswith("-Xmx"), args))
 
 
@@ -155,3 +160,60 @@ class JavaExceptionTestCase(unittest.TestCase):
             self.assertTrue(e.message.startswith(
                     'java.lang.NumberFormatException'))
             self.assertTrue(len(e.trace) > 2)
+
+
+class GetJvmMaxMemTestcase(helpers.TestMixin, unittest.TestCase):
+    """Tests related to the get_jvm_max_mem() function."""
+
+    def setUp(self):
+        self.orig_env = os.environ.copy()
+        os.environ.clear()
+        # Move the local configuration file out of the way if it exists.
+        # Otherwise the tests that follow will break.
+        local_path = "%s/openquake.cfg" % os.path.abspath(os.getcwd())
+        if os.path.isfile(local_path):
+            shutil.move(local_path, "%s.test_bakk" % local_path)
+
+    def tearDown(self):
+        os.environ.clear()
+        os.environ.update(self.orig_env)
+        # Move the local configuration file back into place if it was stashed
+        # away.
+        local_path = "%s/openquake.cfg" % os.path.abspath(os.getcwd())
+        if os.path.isfile("%s.test_bakk" % local_path):
+            shutil.move("%s.test_bakk" % local_path, local_path)
+        config.Config().cfg.clear()
+        config.Config()._load_from_file()
+
+    def _prepare_config(self, max_mem):
+        """Set up a configuration with the given `max_mem` value."""
+        content = '''
+            [java]
+            max_mem=%s''' % max_mem
+        site_path = self.touch(content=textwrap.dedent(content))
+        os.environ["OQ_SITE_CFG_PATH"] = site_path
+        config.Config().cfg.clear()
+        config.Config()._load_from_file()
+
+    def test_environment_var_overrides_config(self):
+        """
+        The value of the `OQ_JVM_MAXMEM` environment variable (if set)
+        overrides the configuration file setting.
+        """
+        max_mem = 654
+        os.environ["OQ_JVM_MAXMEM"] = str(max_mem)
+        self._prepare_config(max_mem - 99)
+        self.assertEqual(max_mem, java.get_jvm_max_mem())
+
+    def test_config_file_is_used(self):
+        """get_jvm_max_mem() will make use of the config file when needed."""
+        max_mem = 321
+        self._prepare_config(max_mem)
+        self.assertEqual(max_mem, java.get_jvm_max_mem())
+
+    def test_default_value(self):
+        """
+        In the absence of any other `max_mem` source get_jvm_max_mem() will
+        return a default value (768 MB).
+        """
+        self.assertEqual(java.DEFAULT_JVM_MAX_MEM, java.get_jvm_max_mem())
