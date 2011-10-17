@@ -43,9 +43,11 @@ class JvmMaxMemTestCase(unittest.TestCase):
         with helpers.patch("jpype.startJVM") as startjvm_mock:
             with helpers.patch("jpype.isJVMStarted") as isjvmstarted_mock:
                 # Make sure that startJVM() gets called.
+
                 def side_effect():
                     isjvmstarted_mock.side_effect = lambda: True
                     return False
+
                 isjvmstarted_mock.side_effect = side_effect
                 java.jvm()
                 args, _ = startjvm_mock.call_args
