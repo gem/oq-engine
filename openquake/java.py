@@ -185,10 +185,15 @@ def get_jvm_max_mem():
 
     :returns: the maximum JVM memory size considering the possible sources in
         the following order
+        * the value of the `OQ_JVM_MAXMEM` environment variable
         * the setting in the config file
         * a fixed default (`768` MB).
     """
     cfg = config.get_section("java")
+
+    if os.environ.get("OQ_JVM_MAXMEM"):
+        return int(os.environ.get("OQ_JVM_MAXMEM"))
+
     return int(cfg["max_mem"]) if cfg["max_mem"] else DEFAULT_JVM_MAX_MEM
 
 
