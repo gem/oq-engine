@@ -27,9 +27,6 @@ and serializing the data to the OpenQuake eqcat database.
 """
 
 
-import csv
-import datetime
-
 import numpy
 
 from openquake import java
