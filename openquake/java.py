@@ -29,6 +29,12 @@ from celery.decorators import task as celery_task
 from functools import wraps
 
 from openquake import nrml
+from openquake.utils import config
+
+
+# JVM max. memory size (in MB) to be used (per celery worker process!)
+DEFAULT_JVM_MAX_MEM = 768
+
 
 JAVA_CLASSES = {
     'LogicTreeProcessor': "org.gem.engine.LogicTreeProcessor",
@@ -173,11 +179,6 @@ def _init_logs():
     jpype.JClass("org.apache.log4j.PropertyConfigurator").configure(props)
 
 
-# The default JVM max. memory size (in MB) to be used (per celery worker
-# process!)
-DEFAULT_JVM_MAX_MEM = 768
-
-
 def get_jvm_max_mem(max_mem):
     """
     Determine what the JVM maximum memory size should be.
@@ -193,9 +194,10 @@ def get_jvm_max_mem(max_mem):
     """
     if max_mem:
         return max_mem
-    if os.environ.get("OQ_JVM_MAXMEM"):
-        return int(os.environ.get("OQ_JVM_MAXMEM"))
-    return DEFAULT_JVM_MAX_MEM
+    cfg = config.get_section("java")
+    return int(cfg["mem_max"]) if cfg["mem_max"] else DEFAULT_JVM_MAX_MEM
+
+
 def jvm(max_mem=None):
     """
     Return the jpype module, after guaranteeing the JVM is running and
