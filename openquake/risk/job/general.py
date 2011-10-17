@@ -68,7 +68,6 @@ def output(fn):
         """ Write the output of a block to kvs. """
         fn(self, *args, **kwargs)
 
-
         for block_id in self.blocks_keys:
             #pylint: disable=W0212
             self._write_output_for_block(self.job_id, block_id)
@@ -83,6 +82,7 @@ def output(fn):
             if writer:
                 metadata = {
                     "deterministic": False,
+                    "timespan": self.params["INVESTIGATION_TIME"],
                     "poe": loss_poe,
                 }
 
@@ -272,9 +272,11 @@ class RiskJobMixin(mixins.Mixin):
         for point, asset in assets_iterator:
             key = kvs.tokens.loss_key(self.job_id, point.row, point.column,
                     asset["assetID"], loss_poe)
+
             loss_value = kvs.get(key)
             LOG.debug("Loss for asset %s at %s %s is %s" %
                 (asset["assetID"], asset['lon'], asset['lat'], loss_value))
+
             if loss_value:
                 risk_site = shapes.Site(asset['lon'], asset['lat'])
                 loss = {

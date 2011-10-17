@@ -40,6 +40,37 @@ from openquake.xml import NRML_NS, GML_NS
 NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
 
 
+def new_loss_deterministic_node(lmnode_el, loss_dict, asset_dict):
+    """
+    Create a new asset loss node under a pre-existing parent LMNode.
+    """
+    loss_el = etree.SubElement(lmnode_el,
+                            xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
+
+    loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_ATTR,
+                str(asset_dict['assetID']))
+    mean_loss = etree.SubElement(
+        loss_el, xml.RISK_LOSS_MAP_MEAN_LOSS_TAG)
+    mean_loss.text = "%s" % loss_dict['mean_loss']
+    stddev = etree.SubElement(loss_el,
+                    xml.RISK_LOSS_MAP_STANDARD_DEVIATION_TAG)
+    stddev.text = "%s" % loss_dict['stddev_loss']
+
+
+def new_loss_nondeterministic_node(lmnode_el, loss_dict, asset_dict):
+    """
+    Create a new asset loss node under a pre-existing parent LMNode.
+    """
+    loss_el = etree.SubElement(lmnode_el,
+                            xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
+
+    loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_ATTR,
+                str(asset_dict['assetID']))
+    value = etree.SubElement(
+        loss_el, xml.RISK_LOSS_MAP_VALUE)
+    value.text = "%s" % loss_dict['value']
+
+
 class BaseXMLWriter(nrml.TreeNRMLWriter):
     """
     This is the base class which prepares the XML document (for risk) to be
@@ -166,7 +197,7 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
             self.loss_map_node.set(
                 key, metadata.get(key, self.DEFAULT_METADATA[key]))
 
-    def write(self, site, values):
+    def write(self, site, values, new_loss_node=new_loss_deterministic_node):
         """Writes an asset element with loss map ratio information.
         This method assumes that `riskResult` and `lossMap` element
         data has already been written.
@@ -186,21 +217,6 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
             :py:class:`dict` (asset dict)
                 ***assetID*** - the assetID
         """
-        def new_loss_node(lmnode_el, loss_dict, asset_dict):
-            """
-            Create a new asset loss node under a pre-existing parent LMNode.
-            """
-            loss_el = etree.SubElement(lmnode_el,
-                                    xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
-
-            loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_ATTR,
-                        str(asset_dict['assetID']))
-            mean_loss = etree.SubElement(
-                loss_el, xml.RISK_LOSS_MAP_MEAN_LOSS_TAG)
-            mean_loss.text = "%s" % loss_dict['mean_loss']
-            stddev = etree.SubElement(loss_el,
-                            xml.RISK_LOSS_MAP_STANDARD_DEVIATION_TAG)
-            stddev.text = "%s" % loss_dict['stddev_loss']
 
         # Generate an id for the new LMNode
         # Note: ids are created start at '1'
@@ -272,6 +288,11 @@ class LossMapNonDeterministicXMLWriter(LossMapXMLWriter):
         for key in ('timeSpan', 'poE'):
             self.loss_map_node.set(
                 key, str(metadata.get(key, self.DEFAULT_METADATA[key])))
+
+    def write(self, site, values, new_loss_node=new_loss_nondeterministic_node):
+        super(LossMapNonDeterministicXMLWriter, self).write(site, values,
+                new_loss_node=new_loss_nondeterministic_node)
+
 
 LOSS_MAP_METADATA_KEYS = [
     ('loss_map_ref', 'lossMapID'),
