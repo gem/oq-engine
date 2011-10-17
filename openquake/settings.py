@@ -23,6 +23,9 @@
 from openquake.utils import config
 
 
+DB_SECTION = config.get_section('database')
+
+
 def _db_cfg(db_name):
     """
     Helper method to create db config items for the various roles and schemas.
@@ -42,34 +45,34 @@ def _db_cfg(db_name):
 
 
     """
-    db_section = config.get_section('database')
 
     return dict(
         ENGINE='django.contrib.gis.db.backends.postgis',
-        NAME=db_section.get('name', 'openquake'),
-        USER=db_section.get('%s_user' % db_name, 'openquake'),
-        PASSWORD=db_section.get('%s_password' % db_name, ''),
-        HOST=db_section.get('host', ''),
-        PORT=db_section.get('port', ''),
+        NAME=DB_SECTION.get('name', 'openquake'),
+        USER=DB_SECTION.get('%s_user' % db_name, 'openquake'),
+        PASSWORD=DB_SECTION.get('%s_password' % db_name, ''),
+        HOST=DB_SECTION.get('host', ''),
+        PORT=DB_SECTION.get('port', ''),
     )
 
 
 _DB_NAMES = (
     'admin',
-    'eqcat_read',
-    'eqcat_write',
     'job_init',
     'job_superv',
     'oqmif',
     'reslt_writer',
 )
+
 DATABASES = dict((db, _db_cfg(db)) for db in _DB_NAMES)
+
+DEFAULT_USER = 'admin'
 # We need a 'default' database to make Django happy:
 DATABASES['default'] = {
     'ENGINE': 'django.db.backends.postgresql_psycopg2',
     'NAME': 'openquake',
-    'USER': 'openquake',
-    'PASSWORD': '',
+    'USER': DB_SECTION.get('%s_user' % DEFAULT_USER, 'oq_admin'),
+    'PASSWORD': DB_SECTION.get('%s_password' % DEFAULT_USER, 'openquake'),
     'HOST': '',
     'PORT': '',
 }
