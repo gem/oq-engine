@@ -195,7 +195,7 @@ def get_jvm_max_mem(max_mem):
     if max_mem:
         return max_mem
     cfg = config.get_section("java")
-    return int(cfg["mem_max"]) if cfg["mem_max"] else DEFAULT_JVM_MAX_MEM
+    return int(cfg["max_mem"]) if cfg["max_mem"] else DEFAULT_JVM_MAX_MEM
 
 
 def jvm(max_mem=None):
