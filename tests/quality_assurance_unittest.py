@@ -33,7 +33,7 @@ from tests.utils import helpers
 class ClassicalPSHACalculatorAssuranceTestCase(
     unittest.TestCase, helpers.DbTestMixin):
 
-    @attr("quality_assurance")
+    @attr("qa")
     def test_peer_test_set_1_case_2(self):
         expected_results = self._load_results("PeerTestSet1Case2")
 
@@ -42,7 +42,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
         self._assert_results_are(expected_results)
 
-    @attr("quality_assurance")
+    @attr("qa")
     def test_peer_test_set_1_case_5(self):
         expected_results = self._load_results("PeerTestSet1Case5")
 
@@ -51,7 +51,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
         self._assert_results_are(expected_results)
 
-    @attr("quality_assurance")
+    @attr("qa")
     def test_peer_test_set_1_case_8a(self):
         expected_results = self._load_results("PeerTestSet1Case8a")
 
@@ -60,7 +60,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
         self._assert_results_are(expected_results)
 
-    @attr("quality_assurance")
+    @attr("qa")
     def test_peer_test_set_1_case_10(self):
         expected_results = self._load_results("PeerTestSet1Case10")
 
@@ -69,7 +69,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
         self._assert_results_are(expected_results)
 
-    @attr("quality_assurance")
+    @attr("qa")
     def test_hazard_map_test(self):
         expected_map = {}
 
