@@ -22,7 +22,9 @@
 
 from openquake.utils import config
 
+
 DB_SECTION = config.get_section('database')
+
 
 def _db_cfg(db_name):
     """
