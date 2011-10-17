@@ -58,6 +58,7 @@ _DB_NAMES = (
     'admin',
     'job_init',
     'job_superv',
+    'oqmif',
     'reslt_writer',
 )
 
