@@ -52,3 +52,10 @@ class MemoizeMutable:
             self.memo[key] = self.fun(*args, **kwds)
 
         return self.memo[key]
+
+
+def unique(seq, fun=repr):
+    """ extracts unique values from a sequence """
+    seen = {}
+    return [seen.setdefault(fun(e), e) for e in seq if fun(e) not in
+                seen]

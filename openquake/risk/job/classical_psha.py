@@ -29,12 +29,14 @@ from openquake import logs
 from openquake.db import models
 
 from openquake.parser import vulnerability
+from openquake.risk import common
 from openquake.risk import classical_psha_based as cpsha_based
 from openquake.shapes import Curve
 
 from openquake.risk.common import  compute_loss_curve
 from openquake.risk.job import general
 
+from openquake.utils.general import unique
 
 LOGGER = logs.LOG
 
@@ -99,12 +101,39 @@ class ClassicalPSHABasedMixin:
                             point.row, point.column)
             for asset in kvs.get_list_json_decoded(asset_key):
                 LOGGER.debug("processing asset %s" % (asset))
+
                 loss_ratio_curve = self.compute_loss_ratio_curve(
                     point, asset, hazard_curve)
 
-                self.compute_loss_curve(point, loss_ratio_curve, asset)
+                if loss_ratio_curve:
+                    loss_curve = self.compute_loss_curve(point,
+                            loss_ratio_curve, asset)
+
+                    for loss_poe in general.conditional_loss_poes(self.params):
+                        self.compute_conditional_loss(point.column, point.row,
+                                loss_curve, asset, loss_poe)
 
         return True
+
+
+    def compute_conditional_loss(self, col, row, loss_curve, asset, loss_poe):
+        """Compute the conditional loss for a loss curve and Probability of
+        Exceedance (PoE)."""
+
+        # dups in the curve have to be skipped
+        loss_curve_without_dups = Curve(zip(unique(loss_curve.abscissae),
+            unique(loss_curve.ordinates)))
+
+        loss_conditional = common.compute_conditional_loss(
+            loss_curve_without_dups, loss_poe)
+
+        key = kvs.tokens.loss_key(
+                self.job_id, row, col, asset["assetID"], loss_poe)
+
+        LOGGER.debug("Conditional loss is %s, write to key %s" %
+                (loss_conditional, key))
+
+        kvs.set(key, loss_conditional)
 
     def compute_loss_curve(self, point, loss_ratio_curve, asset):
         """
@@ -128,6 +157,8 @@ class ClassicalPSHABasedMixin:
             point.column, asset['assetID'])
 
         kvs.set(loss_key, loss_curve.to_json())
+
+        return loss_curve
 
     def compute_loss_ratio_curve(self, point, asset, hazard_curve):
         """ Computes the loss ratio curve and stores in kvs
