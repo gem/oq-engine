@@ -24,7 +24,6 @@
 import unittest
 
 from openquake import java
-from openquake import xml
 from openquake.db import models
 from openquake.utils.db import loader as db_loader
 
