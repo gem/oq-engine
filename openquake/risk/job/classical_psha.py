@@ -107,8 +107,9 @@ class ClassicalPSHABasedMixin:
                             loss_ratio_curve, asset)
 
                     for loss_poe in general.conditional_loss_poes(self.params):
-                        general.compute_conditional_loss(point.column,
-                                point.row, loss_curve, asset, loss_poe)
+                        general.compute_conditional_loss(self.job_id,
+                                point.column, point.row, loss_curve, asset,
+                                loss_poe)
 
         return True
 
