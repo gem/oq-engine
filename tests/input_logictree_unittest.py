@@ -21,14 +21,13 @@ Tests for python logic tree processor.
 """
 
 import unittest
-import os
 from StringIO import StringIO
 from decimal import Decimal
 import json
 
 from mock import Mock
 
-from openquake.java import jvm, jexception
+from openquake.java import jvm
 from openquake.input import logictree
 from tests.utils.helpers import patch, get_data_path, assertDeepAlmostEqual
 

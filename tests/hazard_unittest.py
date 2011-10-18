@@ -35,7 +35,6 @@ from openquake import logs
 from openquake import nrml
 from openquake import shapes
 from openquake import xml
-from openquake import java
 
 from openquake.job import mixins
 from openquake.job.config import HazardMandatoryParamsValidator
