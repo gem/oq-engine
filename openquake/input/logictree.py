@@ -20,6 +20,7 @@
 Logic tree parser, verifier and processor. See specs
 at https://blueprints.launchpad.net/openquake/+spec/openquake-logic-tree-module
 """
+# pylint: disable=C0302
 
 import os
 import re
@@ -243,6 +244,7 @@ class BranchSet(object):
         return isinstance(source, cls._AreaSource)
 
     def filter_source(self, source):
+        # pylint: disable=R0911,R0912
         """
         Apply filters to ``source`` and return ``True`` if uncertainty should
         be applied to it.
@@ -511,6 +513,7 @@ class BaseLogicTree(object):
             )
 
     def apply_branchset(self, branchset_node, branchset):
+        # pylint: disable=W0613
         """
         Apply ``branchset`` to all "open end" branches.
         See :meth:`parse_branchinglevel`.
