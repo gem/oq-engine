@@ -887,7 +887,7 @@ def hdistance(site1, site2):
     :type site1: :py:class:`shapes.Site`
     :param site2: second point
     :type site2: :py:class:`shapes.Site`
-    :returns: the distance between the two points
+    :returns: the distance between the two points in km
     :rtype: float
     """
 
