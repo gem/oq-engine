@@ -17,6 +17,7 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
+import numpy
 import os
 import unittest
 
@@ -298,7 +299,8 @@ class RiskMixinTestCase(unittest.TestCase):
         loss_key = kvs.tokens.loss_key(job_id, row, col,
                 asset["assetID"], loss_poe)
 
-        self.assertAlmostEqual(expected_result, float(kvs.get(loss_key)), 4)
+        self.assertTrue(numpy.allclose(expected_result,
+            float(kvs.get(loss_key)), atol=4))
 
     def test_asset_losses_per_site(self):
         with patch('openquake.kvs.get') as get_mock:
