@@ -89,7 +89,7 @@ def register_mixins():
     from openquake.parser import vulnerability
 
     from openquake.hazard import job as hazjob
-    from openquake.hazard import opensha
+    from openquake.hazard.job import classical, event_based
     from openquake.risk.job import general
     from openquake.risk.job import probabilistic
 
