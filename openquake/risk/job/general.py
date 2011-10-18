@@ -104,7 +104,7 @@ def conditional_loss_poes(params):
         "CONDITIONAL_LOSS_POE", "").split()]
 
 
-def compute_conditional_loss(self, col, row, loss_curve, asset, loss_poe):
+def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
     """Compute the conditional loss for a loss curve and Probability of
     Exceedance (PoE)."""
 
@@ -113,7 +113,7 @@ def compute_conditional_loss(self, col, row, loss_curve, asset, loss_poe):
         loss_curve, loss_poe)
 
     key = kvs.tokens.loss_key(
-            self.job_id, row, col, asset["assetID"], loss_poe)
+            job_id, row, col, asset["assetID"], loss_poe)
 
     LOG.debug("Conditional loss is %s, write to key %s" %
             (loss_conditional, key))
