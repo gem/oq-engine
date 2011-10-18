@@ -698,7 +698,7 @@ class SourceModelLogicTree(BaseLogicTree):
             if nonexistent_source_ids:
                 raise ValidationError(
                     branchset_node, self.filename, self.basepath,
-                    'source ids %s are not defined in source models' % \
+                    'source ids %s are not defined in source models' %
                     list(nonexistent_source_ids)
                 )
             filters['applyToSources'] = source_ids
@@ -714,7 +714,7 @@ class SourceModelLogicTree(BaseLogicTree):
             if not filters['applyToSourceType'] in self.source_types:
                 raise ValidationError(
                     branchset_node, self.filename, self.basepath,
-                    "source models don't define sources of type %r" % \
+                    "source models don't define sources of type %r" %
                     filters['applyToSourceType']
                 )
 
@@ -747,26 +747,26 @@ class SourceModelLogicTree(BaseLogicTree):
             if number > 0:
                 raise ValidationError(
                     branchset_node, self.filename, self.basepath,
-                    'there must be only one branch set ' \
+                    'there must be only one branch set '
                     'on first branching level'
                 )
             elif branchset.uncertainty_type != 'sourceModel':
                 raise ValidationError(
                     branchset_node, self.filename, self.basepath,
-                    'first branchset must define an uncertainty ' \
+                    'first branchset must define an uncertainty '
                     'of type "sourceModel"'
                 )
         else:
             if branchset.uncertainty_type == 'sourceModel':
                 raise ValidationError(
                     branchset_node, self.filename, self.basepath,
-                    'uncertainty of type "sourceModel" can be defined ' \
+                    'uncertainty of type "sourceModel" can be defined '
                     'on first branchset only'
                 )
             elif branchset.uncertainty_type == 'gmpeModel':
                 raise ValidationError(
                     branchset_node, self.filename, self.basepath,
-                    'uncertainty of type "gmpeModel" is not allowed ' \
+                    'uncertainty of type "gmpeModel" is not allowed '
                     'in source model logic tree'
                 )
         return branchset
@@ -801,7 +801,7 @@ class SourceModelLogicTree(BaseLogicTree):
                 if not branch in self.open_ends:
                     raise ValidationError(
                         branchset_node, self.filename, self.basepath,
-                        'applyToBranches must reference only branches ' \
+                        'applyToBranches must reference only branches '
                         'from previous branching level'
                     )
                 branch.child_branchset = branchset
@@ -924,20 +924,20 @@ class GMPELogicTree(BaseLogicTree):
                 or filters.keys() != ['applyToTectonicRegionType']:
             raise ValidationError(
                 node, self.filename, self.basepath,
-                'branch sets in gmpe logic tree must define only ' \
+                'branch sets in gmpe logic tree must define only '
                 '"applyToTectonicRegionType" filter'
             )
         trt = filters['applyToTectonicRegionType']
         if not trt in self.tectonic_region_types:
             raise ValidationError(
                 node, self.filename, self.basepath,
-                "source models don't define sources of tectonic region " \
+                "source models don't define sources of tectonic region "
                 "type %r" % trt
             )
         if trt in self.defined_tectonic_region_types:
             raise ValidationError(
                 node, self.filename, self.basepath,
-                'gmpe uncertainty for tectonic region type %r has already ' \
+                'gmpe uncertainty for tectonic region type %r has already '
                 'been defined' % trt
             )
         self.defined_tectonic_region_types.add(trt)
@@ -955,8 +955,8 @@ class GMPELogicTree(BaseLogicTree):
         if missing_trts:
             raise ValidationError(
                 tree_node, self.filename, self.basepath,
-                'the following tectonic region types are defined ' \
-                'in source model logic tree but not in gmpe logic tree: %s' % \
+                'the following tectonic region types are defined '
+                'in source model logic tree but not in gmpe logic tree: %s' %
                 list(sorted(missing_trts))
             )
         return root_branchset
@@ -971,13 +971,13 @@ class GMPELogicTree(BaseLogicTree):
         if not branchset.uncertainty_type == 'gmpeModel':
             raise ValidationError(
                 branchset_node, self.filename, self.basepath,
-                'only uncertainties of type "gmpeModel" are allowed ' \
+                'only uncertainties of type "gmpeModel" are allowed '
                 'in gmpe logic tree'
             )
         if number != 0:
             raise ValidationError(
                 branchset_node, self.filename, self.basepath,
-                'only one branchset on each branching level is allowed ' \
+                'only one branchset on each branching level is allowed '
                 'in gmpe logic tree'
             )
         return branchset
@@ -1031,7 +1031,7 @@ class LogicTreeProcessor(object):
             the java class ``org.gem.JsonSerializer`` is used.
         """
         rnd = random.Random(random_seed)
-        sm_reader = jvm().JClass('org.gem.engine.hazard.' \
+        sm_reader = jvm().JClass('org.gem.engine.hazard.'
                                  'parsers.SourceModelReader')
         branch = self.source_model_lt.root_branchset.sample(rnd)
         sources = sm_reader(branch.value, float(mfd_bin_width)).read()
