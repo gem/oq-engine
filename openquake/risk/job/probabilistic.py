@@ -212,8 +212,8 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
                         point.column, point.row, loss_ratio_curve, asset)
 
                     for loss_poe in general.conditional_loss_poes(self.params):
-                        self.compute_conditional_loss(point.column, point.row,
-                                loss_curve, asset, loss_poe)
+                        general.compute_conditional_loss(point.column,
+                                point.row, loss_curve, asset, loss_poe)
 
         return aggregate_curve.losses
 
@@ -236,21 +236,6 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
 
         return prob.compute_loss_ratios(
             vuln_function, gmf_slice, epsilon_provider, asset)
-
-    def compute_conditional_loss(self, col, row, loss_curve, asset, loss_poe):
-        """Compute the conditional loss for a loss curve and Probability of
-        Exceedance (PoE)."""
-
-        loss_conditional = common.compute_conditional_loss(
-            loss_curve, loss_poe)
-
-        key = kvs.tokens.loss_key(
-                self.job_id, row, col, asset["assetID"], loss_poe)
-
-        LOGGER.debug("Conditional loss is %s, write to key %s" %
-                (loss_conditional, key))
-
-        kvs.set(key, loss_conditional)
 
     def compute_loss_ratio_curve(
             self, col, row, asset, gmf_slice, loss_ratios):
