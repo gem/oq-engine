@@ -33,6 +33,7 @@ from openquake.job import mixins
 from openquake.output import risk as risk_output
 from openquake.parser import exposure
 from openquake.parser import vulnerability
+from openquake.risk import common
 from openquake.utils.tasks import check_job_status
 
 from celery.decorators import task
@@ -82,8 +83,8 @@ def output(fn):
             if writer:
                 metadata = {
                     "deterministic": False,
-                    "timespan": self.params["INVESTIGATION_TIME"],
-                    "poe": loss_poe,
+                    "timeSpan": self.params["INVESTIGATION_TIME"],
+                    "poE": loss_poe,
                 }
 
                 writer.serialize(
@@ -101,6 +102,23 @@ def conditional_loss_poes(params):
 
     return [float(x) for x in params.get(
         "CONDITIONAL_LOSS_POE", "").split()]
+
+
+def compute_conditional_loss(self, col, row, loss_curve, asset, loss_poe):
+    """Compute the conditional loss for a loss curve and Probability of
+    Exceedance (PoE)."""
+
+
+    loss_conditional = common.compute_conditional_loss(
+        loss_curve, loss_poe)
+
+    key = kvs.tokens.loss_key(
+            self.job_id, row, col, asset["assetID"], loss_poe)
+
+    LOG.debug("Conditional loss is %s, write to key %s" %
+            (loss_conditional, key))
+
+    kvs.set(key, loss_conditional)
 
 
 @task
