@@ -115,7 +115,7 @@ class BranchSet(object):
     Branchset object, represents a ``<logicTreeBranchSet />`` element.
 
     :param uncertainty_type:
-        String value. According to specs can be one of:
+        String value. According to the spec one of:
 
         gmpeModel
             Branches contain references to different GMPEs. Values are parsed
@@ -172,9 +172,9 @@ class BranchSet(object):
         :return:
             :class:`Branch` object, one of branches in the branchet's list.
         """
-        # Take a random number once, then loop through branches,
-        # accumulating their weights. When accumulated value exceeds
-        # sampled random value, return that branch.
+        # Draw a random number and iterate through the branches in the set
+        # (adding up their weights) until the random value falls into
+        # the interval occupied by a branch. Return the latter.
         diceroll = rnd.random()
         acc = 0
         for branch in self.branches:
@@ -189,59 +189,44 @@ class BranchSet(object):
         Return ``True`` if ``mfd`` is opensha GR MFD object
         (and in particular not evenly discretized function).
         """
-        if not hasattr(cls, '_GRMFD'):
-            cls._GRMFD = jvm().JClass(
-                'org.opensha.sha.magdist.GutenbergRichterMagFreqDist'
-            )
-        return isinstance(mfd, cls._GRMFD)
+        classname = 'org.opensha.sha.magdist.GutenbergRichterMagFreqDist'
+        return isinstance(mfd, jvm().JClass(classname))
 
     @classmethod
     def _is_point(cls, source):
         """
         Return ``True`` if ``source`` is opensha source of point type.
         """
-        if not hasattr(cls, '_PointSource'):
-            cls._PointSource = jvm().JClass(
-                'org.opensha.sha.earthquake.' \
-                'rupForecastImpl.GEM1.SourceData.GEMPointSourceData'
-            )
-        return isinstance(source, cls._PointSource)
+        classname = 'org.opensha.sha.earthquake.rupForecastImpl.' \
+                    'GEM1.SourceData.GEMPointSourceData'
+        return isinstance(source, jvm().JClass(classname))
 
     @classmethod
     def _is_simplefault(cls, source):
         """
         Return ``True`` if ``source`` is opensha source of simple fault type.
         """
-        if not hasattr(cls, '_SimpleFaultSource'):
-            cls._SimpleFaultSource = jvm().JClass(
-                'org.opensha.sha.earthquake.' \
-                'rupForecastImpl.GEM1.SourceData.GEMFaultSourceData'
-            )
-        return isinstance(source, cls._SimpleFaultSource)
+        classname = 'org.opensha.sha.earthquake.rupForecastImpl.' \
+                    'GEM1.SourceData.GEMFaultSourceData'
+        return isinstance(source, jvm().JClass(classname))
 
     @classmethod
     def _is_complexfault(cls, source):
         """
         Return ``True`` if ``source`` is opensha source of complex fault type.
         """
-        if not hasattr(cls, '_ComplexFaultSource'):
-            cls._ComplexFaultSource = jvm().JClass(
-                'org.opensha.sha.earthquake.' \
-                'rupForecastImpl.GEM1.SourceData.GEMSubductionFaultSourceData'
-            )
-        return isinstance(source, cls._ComplexFaultSource)
+        classname = 'org.opensha.sha.earthquake.rupForecastImpl.' \
+                    'GEM1.SourceData.GEMSubductionFaultSourceData'
+        return isinstance(source, jvm().JClass(classname))
 
     @classmethod
     def _is_area(cls, source):
         """
         Return ``True`` if ``source`` is opensha source of area type.
         """
-        if not hasattr(cls, '_AreaSource'):
-            cls._AreaSource = jvm().JClass(
-                'org.opensha.sha.earthquake.' \
-                'rupForecastImpl.GEM1.SourceData.GEMAreaSourceData'
-            )
-        return isinstance(source, cls._AreaSource)
+        classname = 'org.opensha.sha.earthquake.rupForecastImpl.' \
+                    'GEM1.SourceData.GEMAreaSourceData'
+        return isinstance(source, jvm().JClass(classname))
 
     def filter_source(self, source):
         # pylint: disable=R0911,R0912
