@@ -106,7 +106,7 @@ class LossMapOutputNonDeterministicTestCase(unittest.TestCase):
 
     def tearDown(self):
         self.xml_writer = None
-        #os.remove(TEST_LOSS_MAP_XML_OUTPUT_PATH)
+        os.remove(TEST_LOSS_MAP_XML_OUTPUT_PATH)
 
 
     def test_loss_map_output_writes_and_validates(self):
