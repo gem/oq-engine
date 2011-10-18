@@ -31,7 +31,6 @@ from openquake import kvs
 from openquake import logs
 from openquake import shapes
 
-from openquake.risk import common
 from openquake.risk import probabilistic_event_based as prob
 from openquake.parser import vulnerability
 
@@ -212,8 +211,9 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
                         point.column, point.row, loss_ratio_curve, asset)
 
                     for loss_poe in general.conditional_loss_poes(self.params):
-                        general.compute_conditional_loss(point.column,
-                                point.row, loss_curve, asset, loss_poe)
+                        general.compute_conditional_loss(self.job_id,
+                                point.column, point.row, loss_curve, asset,
+                                loss_poe)
 
         return aggregate_curve.losses
 
