@@ -25,7 +25,7 @@ or loss curves.
 from numpy import mean
 
 from openquake import shapes
-from openquake.utils.general import unique
+from openquake.utils.general import unique_curve
 
 
 def compute_conditional_loss(curve, probability):
@@ -39,8 +39,7 @@ def compute_conditional_loss(curve, probability):
     highest PoE defined.
     """
     # dups in the curve have to be skipped
-    loss_curve_without_dups = shapes.Curve(zip(unique(curve.abscissae),
-        unique(curve.ordinates)))
+    loss_curve_without_dups = shapes.Curve(unique_curve(curve))
 
     if loss_curve_without_dups.ordinate_out_of_bounds(probability):
         if probability < loss_curve_without_dups.y_values[-1]:
