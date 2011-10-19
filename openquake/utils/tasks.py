@@ -158,23 +158,16 @@ def _handle_subtasks(subtasks, flatten_results):
     """
     result = TaskSet(tasks=subtasks).apply_async()
 
-    def instantiate_exception(eclass, exc):
-        """Only pass the *original* exception message string if present."""
-        if exc.args:
-            return eclass(exc.args[0])
-        else:
-            return eclass()
-
     # Wait for all subtasks to complete.
     while not result.ready():
         time.sleep(0.25)
     try:
         the_results = result.join()
     except TypeError, exc:
-        raise instantiate_exception(WrongTaskParameters, exc)
+        raise WrongTaskParameters(str(exc))
     except Exception, exc:
         # At least one subtask failed.
-        raise instantiate_exception(TaskFailed, exc)
+        raise TaskFailed(str(exc))
 
     if flatten_results:
         if the_results:
