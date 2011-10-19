@@ -189,12 +189,31 @@ def get_jvm_max_mem():
         * the setting in the config file
         * a fixed default (`768` MB).
     """
-    cfg = config.get_section("java")
 
-    if os.environ.get("OQ_JVM_MAXMEM"):
-        return int(os.environ.get("OQ_JVM_MAXMEM"))
+    def str2int(a_dict, key):
+        """Return `False` unless int(a_dict[key]) yields a valid integer."""
+        if not a_dict:
+            return False
+        val = a_dict.get(key)
+        if val is None:
+            return False
+        val = val.strip()
+        try:
+            val = int(val)
+        except ValueError:
+            return False
+        else:
+            return val
 
-    return int(cfg["max_mem"]) if cfg["max_mem"] else DEFAULT_JVM_MAX_MEM
+    result = str2int(os.environ, "OQ_JVM_MAXMEM")
+    if result:
+        return result
+
+    result = str2int(config.get_section("java"), "max_mem")
+    if result:
+        return result
+
+    return DEFAULT_JVM_MAX_MEM
 
 
 def jvm():
