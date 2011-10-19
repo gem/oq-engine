@@ -17,7 +17,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
 """Collection of base classes for processing spatially-related data."""
 
 import hashlib
@@ -882,7 +881,7 @@ def polygon_ewkt_from_coords(coords):
 def hdistance(site1, site2):
     """Compute the great circle surface distance between two points
     using the Haversine formula.
-    
+
     :param site1: first point
     :type site1: :py:class:`shapes.Site`
     :param site2: second point
@@ -902,6 +901,6 @@ def hdistance(site1, site2):
 
     a = (sin(dlat / 2)) ** 2 + cos(lat1) * cos(lat2) * (sin(dlon / 2.0)) ** 2
     c = 2.0 * arctan2(sqrt(a), sqrt(1.0 - a))
-    
+
     # earth's mean radius
     return 6371.0072 * c
