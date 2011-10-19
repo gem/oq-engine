@@ -165,9 +165,10 @@ class DistributeTestCase(unittest.TestCase):
         Exceptions without error messages should not result in another
         exception when being reraised.
         """
+        from celery.result import TaskSetResult
         try:
             with patch('celery.task.sets.TaskSet.apply_async') as m2:
-                m2.return_value = mock.Mock()
+                m2.return_value = mock.Mock(spec=TaskSetResult)
                 m2.return_value.join.side_effect = TypeError
                 tasks.distribute(2, single_arg_called_a, ("a", range(5)))
         except tasks.WrongTaskParameters, exc:
