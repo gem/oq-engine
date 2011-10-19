@@ -224,8 +224,8 @@ class GetJvmMaxMemTestcase(helpers.TestMixin, unittest.TestCase):
 
     def test_config_file_with_invalid_java_max_mem_setting(self):
         """
-        In the absence of the java.max_mem setting in the config file the
-        default value is used.
+        An invalid (i.e. non-integer) java.max_mem setting in the config file
+        is ignored.
         """
         self._prepare_config("NO MEMORY FOR *!#*&(^ JAVA")
         self.assertEqual(java.DEFAULT_JVM_MAX_MEM, java.get_jvm_max_mem())
