@@ -1468,6 +1468,39 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         # check that source and logic tree are valid
         _TesteableSourceModelLogicTree('lt', {'lt': lt, 'sm': sm}, '')
 
+    def test_comments(self):
+        lt_source = _make_nrml("""\
+        <!-- comment -->
+        <logicTree logicTreeID="lt1">
+            <!-- comment -->
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <!-- comment -->
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                    <!-- comment -->
+                    <logicTreeBranch branchID="b1">
+                        <!-- comment -->
+                        <uncertaintyModel>sm</uncertaintyModel>
+                        <!-- comment -->
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                        <!-- comment -->
+                    </logicTreeBranch>
+                    <!-- comment -->
+                </logicTreeBranchSet>
+                <!-- comment -->
+            </logicTreeBranchingLevel>
+        <!-- comment -->
+        </logicTree>
+        <!-- comment -->
+        """)
+        sm = _whatever_sourcemodel()
+        lt = _TesteableSourceModelLogicTree('lt', {'lt': lt_source, 'sm': sm},
+                                            '/base')
+        self.assert_branchset_equal(lt.root_branchset,
+            'sourceModel', {},
+            [('b1', '1.0', '/base/sm')]
+        )
+
 
 class GMPELogicTreeTestCase(unittest.TestCase):
     def assert_result(self, lt, result):
