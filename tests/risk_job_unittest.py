@@ -285,7 +285,7 @@ class RiskMixinTestCase(unittest.TestCase):
     def test_that_conditional_loss_is_in_kvs(self):
         asset = {"assetID": 1}
         loss_poe = 0.1
-        job_id  = "1"
+        job_id = "1"
         col = 1
         row = 2
         loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
