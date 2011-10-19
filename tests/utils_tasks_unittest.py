@@ -172,7 +172,7 @@ class DistributeTestCase(unittest.TestCase):
                 m2.return_value.join.side_effect = TypeError
                 tasks.distribute(2, single_arg_called_a, ("a", range(5)))
         except tasks.WrongTaskParameters, exc:
-            self.assertFalse(exc.args)
+            self.assertEqual(("",), exc.args)
         else:
             raise Exception("Exception not raised.")
 
