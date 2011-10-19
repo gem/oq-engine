@@ -20,6 +20,7 @@
 Tests for python logic tree processor.
 """
 
+import os
 import unittest
 from StringIO import StringIO
 from decimal import Decimal
@@ -1928,3 +1929,84 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
                                                      random_seed)
             samplemock.assert_called_once_with(self.proc, random_seed)
             mockcache.set.assert_called_once_with(key, json_result)
+
+
+class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
+    GMPE_LT = get_data_path('example-gmpe-logictree.xml')
+    MFD_BIN_WIDTH = 1e-3
+
+    def setUp(self):
+        with patch('openquake.input.logictree.GMPELogicTree') as mock:
+            self.proc = logictree.LogicTreeProcessor(
+                self.BASE_PATH, self.SOURCE_MODEL_LT, self.GMPE_LT
+            )
+        mock.assert_called_once_with(self.TECTONIC_REGION_TYPES,
+                                     self.BASE_PATH, self.GMPE_LT)
+
+    def _do_test(self, path, expected_result):
+        [branch] = self.proc.source_model_lt.root_branchset.branches
+        all_branches = self.proc.source_model_lt.branches
+        path = iter(path)
+        while branch.child_branchset is not None:
+            nextbranch = all_branches[next(path)]
+            branch.child_branchset.sample = (
+                lambda nextbranch: lambda rnd: nextbranch)(nextbranch)
+            branch = nextbranch
+        assert list(path) == []
+
+        result = json.loads(self.proc.sample_source_model_logictree(
+            0, self.MFD_BIN_WIDTH
+        ))
+
+        sm_reader = jvm().JClass('org.gem.engine.hazard.'
+                                 'parsers.SourceModelReader')
+        sources = sm_reader(os.path.join(self.BASE_PATH, expected_result),
+                            self.MFD_BIN_WIDTH).read()
+        serializer = jvm().JClass('org.gem.JsonSerializer')
+        expected_result = json.loads(serializer.getJsonSourceList(sources))
+        assertDeepAlmostEqual(self, expected_result, result, delta=1e-1)
+
+
+class RelSMLTBBTestCase(_BaseSourceModelLogicTreeBlackboxTestCase):
+    BASE_PATH = get_data_path('LogicTreeRelativeUncertaintiesTest')
+    SOURCE_MODEL_LT = 'logic_tree.xml'
+    TECTONIC_REGION_TYPES = set([
+        'Subduction IntraSlab', 'Subduction Interface', 'Stable Shallow Crust',
+        'Active Shallow Crust'
+    ])
+
+    def test_b4(self):
+        self._do_test(['b2', 'b4'], 'result_b4.xml')
+
+    def test_b5(self):
+        self._do_test(['b2', 'b5'], 'result_b5.xml')
+
+    def test_b6(self):
+        self._do_test(['b3', 'b6'], 'result_b6.xml')
+
+    def test_b7(self):
+        self._do_test(['b3', 'b7'], 'result_b7.xml')
+
+
+class AbsSMLTBBTestCase(_BaseSourceModelLogicTreeBlackboxTestCase):
+    BASE_PATH = get_data_path('LogicTreeAbsoluteUncertaintiesTest')
+    SOURCE_MODEL_LT = 'logic_tree.xml'
+    TECTONIC_REGION_TYPES = set([
+        'Subduction IntraSlab', 'Subduction Interface', 'Stable Shallow Crust',
+        'Active Shallow Crust'
+    ])
+
+    def test_b4(self):
+        self._do_test(['b2', 'b4'], 'result_b4.xml')
+
+    def test_b5(self):
+        self._do_test(['b2', 'b5'], 'result_b5.xml')
+
+    def test_b7(self):
+        self._do_test(['b3', 'b7'], 'result_b7.xml')
+
+    def test_b8(self):
+        self._do_test(['b3', 'b6', 'b8'], 'result_b8.xml')
+
+    def test_b9(self):
+        self._do_test(['b3', 'b6', 'b9'], 'result_b9.xml')
