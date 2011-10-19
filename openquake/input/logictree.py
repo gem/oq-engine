@@ -377,7 +377,7 @@ class BaseLogicTree(object):
         except etree.XMLSyntaxError as exc:
             # Wrap etree parsing exception to :exc:`ParsingError`.
             raise ParsingError(self.filename, self.basepath, str(exc))
-        [tree] = tree.getroot()
+        [tree] = tree.getroot().findall('{%s}logicTree' % self.NRML)
         self.root_branchset = None
         self.parse_tree(tree)
 
@@ -386,7 +386,8 @@ class BaseLogicTree(object):
         Parse the whole tree and point ``root_branchset`` attribute
         to the tree's root. Calls :meth:`validate_tree` when done.
         """
-        for depth, branchinglevel_node in enumerate(tree_node):
+        levels = tree_node.findall('{%s}logicTreeBranchingLevel' % self.NRML)
+        for depth, branchinglevel_node in enumerate(levels):
             self.parse_branchinglevel(branchinglevel_node, depth)
         self.root_branchset = self.validate_tree(tree_node,
                                                  self.root_branchset)
@@ -425,7 +426,9 @@ class BaseLogicTree(object):
         can have child branchsets (if there is one on the next level).
         """
         new_open_ends = set()
-        for number, branchset_node in enumerate(branchinglevel_node):
+        branchsets = branchinglevel_node.findall('{%s}logicTreeBranchSet' %
+                                                self.NRML)
+        for number, branchset_node in enumerate(branchsets):
             branchset = self.parse_branchset(branchset_node)
             branchset = self.validate_branchset(branchset_node, depth, number,
                                                 branchset)
@@ -474,7 +477,8 @@ class BaseLogicTree(object):
             ``None``, all branches are attached to provided branchset.
         """
         weight_sum = 0
-        for branchnode in branchset_node:
+        branches = branchset_node.findall('{%s}logicTreeBranch' % self.NRML)
+        for branchnode in branches:
             weight = branchnode.find('{%s}uncertaintyWeight' % self.NRML).text
             weight = Decimal(weight.strip())
             weight_sum += weight
