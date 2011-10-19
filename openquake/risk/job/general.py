@@ -108,7 +108,6 @@ def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
     """Compute the conditional loss for a loss curve and Probability of
     Exceedance (PoE)."""
 
-
     loss_conditional = common.compute_conditional_loss(
         loss_curve, loss_poe)
 
