@@ -31,14 +31,6 @@ from openquake.job import Job
 from openquake import logs
 
 
-class WrongTaskParameters(Exception):
-    """The user specified wrong paramaters for the celery task function."""
-
-
-class TaskFailed(Exception):
-    """At least on (sub)task failed."""
-
-
 def distribute(cardinality, the_task, (name, data), other_args=None,
                flatten_results=False):
     """Runs `the_task` in a task set with the given `cardinality`.
@@ -161,18 +153,12 @@ def _handle_subtasks(subtasks, flatten_results):
     # Wait for all subtasks to complete.
     while not result.ready():
         time.sleep(0.25)
-    try:
-        the_results = result.join()
-    except TypeError, exc:
-        raise WrongTaskParameters(exc.args[0])
-    except Exception, exc:
-        # At least one subtask failed.
-        raise TaskFailed(exc.args[0])
 
-    if flatten_results:
-        if the_results:
-            if isinstance(the_results, list) or isinstance(the_results, tuple):
-                the_results = list(itertools.chain(*the_results))
+    the_results = result.join()
+
+    if flatten_results and the_results:
+        if isinstance(the_results, list) or isinstance(the_results, tuple):
+            the_results = list(itertools.chain(*the_results))
 
     return the_results
 
