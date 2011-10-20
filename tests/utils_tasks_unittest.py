@@ -22,6 +22,7 @@
 Unit tests for the utils.tasks module.
 """
 
+import mock
 import unittest
 
 from openquake.utils import tasks
@@ -156,6 +157,22 @@ class DistributeTestCase(unittest.TestCase):
                 "single_arg_called_a() got an unexpected keyword argument "
                 "'data'",
                 exc.args[0])
+        else:
+            raise Exception("Exception not raised.")
+
+    def test_distribute_with_type_error_and_no_exception_msg(self):
+        """
+        Exceptions without error messages should not result in another
+        exception when being reraised.
+        """
+        from celery.result import TaskSetResult
+        try:
+            with patch('celery.task.sets.TaskSet.apply_async') as m2:
+                m2.return_value = mock.Mock(spec=TaskSetResult)
+                m2.return_value.join.side_effect = TypeError
+                tasks.distribute(2, single_arg_called_a, ("a", range(5)))
+        except tasks.WrongTaskParameters, exc:
+            self.assertEqual(("",), exc.args)
         else:
             raise Exception("Exception not raised.")
 
