@@ -92,6 +92,7 @@ def output(fn):
                     + self.asset_losses_per_site(
                         loss_poe,
                         self.grid_assets_iterator(self.region.grid)))
+                LOG.info('Loss Map is at: %s' % path)
 
     return output_writer
 
