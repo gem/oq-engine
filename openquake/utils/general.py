@@ -23,7 +23,7 @@ Utility functions of general interest.
 """
 
 import cPickle
-from collections import OrderedDict
+
 
 def singleton(cls):
     """This class decorator facilitates the definition of singletons."""
@@ -52,13 +52,3 @@ class MemoizeMutable:
             self.memo[key] = self.fun(*args, **kwds)
 
         return self.memo[key]
-
-
-def unique_curve(curve):
-    """ extracts unique values from a curve """
-    seen = OrderedDict()
-
-    for ordinate, abscissa in zip(curve.ordinates, curve.abscissae):
-        seen[ordinate] = abscissa
-
-    return zip(seen.values(), seen.keys())
