@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.2" xmlns:gml="http://www.opengis.net/gml" xmlns:qml="http://quakeml.org/xmlns/quakeml/1.1" gml:id="n1">
+  <sourceModel gml:id="sm1">
+
+    <areaSource gml:id="Src1">
+      <gml:name>PEER test "AREA 1" model</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <areaBoundary>
+        <gml:Polygon>
+          <gml:exterior>
+            <gml:LinearRing>
+              <gml:posList>
+				-122.000 38.901 
+				-121.920 38.899 
+				-121.840 38.892 
+				-121.760 38.881 
+				-121.682 38.866
+				-121.606 38.846 
+				-121.532 38.822 
+				-121.460 38.794 
+				-121.390 38.762 
+				-121.324 38.727 
+				-121.261 38.688 
+				-121.202 38.645 
+				-121.147 38.600 
+				-121.096 38.551 
+				-121.050 38.500 
+				-121.008 38.446 
+				-120.971 38.390 
+				-120.940 38.333 
+				-120.913 38.273 
+				-120.892 38.213 
+				-120.876 38.151 
+				-120.866 38.089 
+				-120.862 38.026 
+				-120.863 37.963 
+				-120.869 37.900 
+				-120.881 37.838 
+				-120.899 37.777 
+				-120.921 37.717 
+				-120.949 37.658 
+				-120.982 37.601 
+				-121.020 37.545 
+				-121.063 37.492 
+				-121.110 37.442 
+				-121.161 37.394 
+				-121.216 37.349 
+				-121.275 37.308 
+				-121.337 37.269 
+				-121.403 37.234 
+				-121.471 37.203 
+				-121.542 37.176 
+				-121.615 37.153 
+				-121.690 37.133 
+				-121.766 37.118 
+				-121.843 37.108 
+				-121.922 37.101 
+				-122.000 37.099 
+				-122.078 37.101 
+				-122.157 37.108 
+				-122.234 37.118 
+				-122.310 37.133 
+				-122.385 37.153 
+				-122.458 37.176 
+				-122.529 37.203 
+				-122.597 37.234 
+				-122.663 37.269 
+				-122.725 37.308 
+				-122.784 37.349 
+				-122.839 37.394 
+				-122.890 37.442 
+				-122.937 37.492 
+				-122.980 37.545 
+				-123.018 37.601 
+				-123.051 37.658 
+				-123.079 37.717 
+				-123.101 37.777 
+				-123.119 37.838 
+				-123.131 37.900 
+				-123.137 37.963 
+				-123.138 38.026 
+				-123.134 38.089 
+				-123.124 38.151 
+				-123.108 38.213 
+				-123.087 38.273 
+				-123.060 38.333 
+				-123.029 38.390 
+				-122.992 38.446 
+				-122.950 38.500 
+				-122.904 38.551 
+				-122.853 38.600 
+				-122.798 38.645 
+				-122.739 38.688 
+				-122.676 38.727 
+				-122.610 38.762 
+				-122.540 38.794 
+				-122.468 38.822 
+				-122.394 38.846 
+				-122.318 38.866 
+				-122.240 38.881 
+				-122.160 38.892 
+				-122.080 38.899 
+			  </gml:posList>
+            </gml:LinearRing>
+          </gml:exterior>
+        </gml:Polygon>
+      </areaBoundary>
+      <ruptureRateModel>
+        <truncatedGutenbergRichter>
+          <aValueCumulative>3.097</aValueCumulative>
+          <bValue>0.9</bValue>
+          <minMagnitude>5.0</minMagnitude>
+          <maxMagnitude>6.5</maxMagnitude>
+        </truncatedGutenbergRichter>
+        <focalMechanism publicID="smi:f01/11">
+          <qml:nodalPlanes>
+            <qml:nodalPlane1>
+              <qml:strike>
+                <qml:value>0.0</qml:value>
+              </qml:strike>
+              <qml:dip>
+                <qml:value>90.0</qml:value>
+              </qml:dip>
+              <qml:rake>
+                <qml:value>0.0</qml:value>
+              </qml:rake>
+            </qml:nodalPlane1>
+          </qml:nodalPlanes>
+        </focalMechanism>
+      </ruptureRateModel>
+      <ruptureDepthDistribution>
+        <magnitude>6.5</magnitude>
+        <depth>5.0</depth>
+      </ruptureDepthDistribution>
+      <hypocentralDepth>5.0</hypocentralDepth>
+    </areaSource>
+  </sourceModel>
+</nrml>
