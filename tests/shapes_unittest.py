@@ -771,6 +771,47 @@ class ShapesUtilsTestCase(unittest.TestCase):
 
         self.assertEqual(expected_ewkt, actual_ewkt)
 
+    def test_hdistance(self):
+        """Expected values are taken from OpenSHA,
+        org.opensha.commons.geo.LocationUtilsTest.testHorzDistance."""
+
+        site1 = shapes.Site(0.0, 90.0)
+        site2 = shapes.Site(20.4, 32.6)
+        site3 = shapes.Site(20.0, 32.4)
+        site4 = shapes.Site(0.0, -90.0)
+        site5 = shapes.Site(20.2, 32.0)
+        site6 = shapes.Site(20.6, 32.2)
+
+        self.assertTrue(
+            numpy.allclose(6382.596, shapes.hdistance(site1, site2)))
+
+        self.assertTrue(
+            numpy.allclose(6404.835, shapes.hdistance(site3, site1)))
+
+        self.assertTrue(
+            numpy.allclose(13565.796, shapes.hdistance(site5, site4)))
+
+        self.assertTrue(
+            numpy.allclose(13588.035, shapes.hdistance(site4, site6)))
+
+        self.assertTrue(
+            numpy.allclose(43.6090311, shapes.hdistance(site2, site3)))
+
+        self.assertTrue(
+            numpy.allclose(48.2790582, shapes.hdistance(site2, site6)))
+
+        self.assertTrue(
+            numpy.allclose(69.3145862, shapes.hdistance(site2, site5)))
+
+        self.assertTrue(
+            numpy.allclose(60.6198752, shapes.hdistance(site3, site6)))
+
+        self.assertTrue(
+            numpy.allclose(48.2952067, shapes.hdistance(site5, site3)))
+
+        self.assertTrue(
+            numpy.allclose(43.7518411, shapes.hdistance(site5, site6)))
+
 
 class FieldTestCase(unittest.TestCase):
 
