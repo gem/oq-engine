@@ -185,11 +185,14 @@ class GetJvmMaxMemTestcase(helpers.TestMixin, unittest.TestCase):
         config.Config().cfg.clear()
         config.Config()._load_from_file()
 
-    def _prepare_config(self, max_mem):
+    def _prepare_config(self, max_mem=None):
         """Set up a configuration with the given `max_mem` value."""
-        content = '''
-            [java]
-            max_mem=%s''' % max_mem
+        if max_mem is not None:
+            content = """
+                [java]
+                max_mem=%s""" % max_mem
+        else:
+            content = ""
         site_path = self.touch(content=textwrap.dedent(content))
         os.environ["OQ_SITE_CFG_PATH"] = site_path
         config.Config().cfg.clear()
@@ -210,6 +213,22 @@ class GetJvmMaxMemTestcase(helpers.TestMixin, unittest.TestCase):
         max_mem = 321
         self._prepare_config(max_mem)
         self.assertEqual(max_mem, java.get_jvm_max_mem())
+
+    def test_config_file_but_no_java_max_mem_setting(self):
+        """
+        In the absence of the java.max_mem setting in the config file the
+        default value is used.
+        """
+        self._prepare_config()
+        self.assertEqual(java.DEFAULT_JVM_MAX_MEM, java.get_jvm_max_mem())
+
+    def test_config_file_with_invalid_java_max_mem_setting(self):
+        """
+        An invalid (i.e. non-integer) java.max_mem setting in the config file
+        is ignored.
+        """
+        self._prepare_config("NO MEMORY FOR *!#*&(^ JAVA")
+        self.assertEqual(java.DEFAULT_JVM_MAX_MEM, java.get_jvm_max_mem())
 
     def test_default_value(self):
         """
