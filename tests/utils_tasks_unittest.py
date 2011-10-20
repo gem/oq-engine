@@ -22,6 +22,7 @@
 Unit tests for the utils.tasks module.
 """
 
+import mock
 import unittest
 
 from openquake.utils import tasks
@@ -151,7 +152,7 @@ class DistributeTestCase(unittest.TestCase):
         """
         try:
             tasks.distribute(2, single_arg_called_a, ("data", range(5)))
-        except tasks.WrongTaskParameters, exc:
+        except Exception, exc:
             self.assertEqual(
                 "single_arg_called_a() got an unexpected keyword argument "
                 "'data'",
@@ -159,11 +160,27 @@ class DistributeTestCase(unittest.TestCase):
         else:
             raise Exception("Exception not raised.")
 
+    def test_distribute_with_type_error_and_no_exception_msg(self):
+        """
+        Exceptions without error messages should not result in another
+        exception when being reraised.
+        """
+        from celery.result import TaskSetResult
+        try:
+            with patch('celery.task.sets.TaskSet.apply_async') as m2:
+                m2.return_value = mock.Mock(spec=TaskSetResult)
+                m2.return_value.join.side_effect = TypeError
+                tasks.distribute(2, single_arg_called_a, ("a", range(5)))
+        except Exception, exc:
+            self.assertEqual((), exc.args)
+        else:
+            raise Exception("Exception not raised.")
+
     def test_distribute_with_failing_subtask(self):
         """At least one subtask failed, a `TaskFailed` exception is raised."""
         try:
             tasks.distribute(1, failing_task, ("data", range(5)))
-        except tasks.TaskFailed, exc:
+        except Exception, exc:
             self.assertEqual(range(5), exc.args[0])
         else:
             raise Exception("Exception not raised.")
@@ -234,7 +251,7 @@ class ParallelizeTestCase(unittest.TestCase):
         try:
             tasks.parallelize(2, single_arg_called_a, dict(data=range(5)),
             index_tasks=False)
-        except tasks.WrongTaskParameters, exc:
+        except Exception, exc:
             self.assertEqual(
                 "single_arg_called_a() got an unexpected keyword argument "
                 "'data'",
@@ -247,7 +264,7 @@ class ParallelizeTestCase(unittest.TestCase):
         try:
             tasks.parallelize(1, failing_task, dict(data=range(5)),
             index_tasks=False)
-        except tasks.TaskFailed, exc:
+        except Exception, exc:
             self.assertEqual(range(5), exc.args[0])
         else:
             raise Exception("Exception not raised.")
@@ -324,5 +341,5 @@ class CheckJobStatusTestCase(unittest.TestCase):
             except tasks.JobCompletedError as exc:
                 self.assertEqual(exc.message, 31)
             else:
-                self.fail('JobCompletedError wasn\'t raised')
+                self.fail("JobCompletedError wasn't raised")
             self.assertEqual(mock.call_args_list, [((31, ), {})])
