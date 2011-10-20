@@ -164,10 +164,10 @@ def _handle_subtasks(subtasks, flatten_results):
     try:
         the_results = result.join()
     except TypeError, exc:
-        raise WrongTaskParameters(exc.args[0])
+        raise WrongTaskParameters(str(exc))
     except Exception, exc:
         # At least one subtask failed.
-        raise TaskFailed(exc.args[0])
+        raise TaskFailed(str(exc))
 
     if flatten_results:
         if the_results:
