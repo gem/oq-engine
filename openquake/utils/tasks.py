@@ -73,7 +73,11 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
 
     subtasks = []
 
+    logs.HAZARD_LOG.info("cardinality: %s" % cardinality)
+
     data_length = len(data)
+    logs.HAZARD_LOG.info("data_length: %s" % data_length)
+
     start = 0
     end = chunk_size = int(data_length / float(cardinality))
     if chunk_size == 0:
@@ -81,6 +85,8 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
         # Spawn at least on subtask even if the data to be processed is empty.
         cardinality = data_length if data_length > 0 else 1
         end = chunk_size = 1
+
+    logs.HAZARD_LOG.info("chunk_size: %s" % chunk_size)
 
     for _ in xrange(cardinality - 1):
         data_portion = data[start:end]
@@ -92,6 +98,8 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
     data_portion = data[start:]
     subtask = the_task.subtask(**kwargs(data_portion))
     subtasks.append(subtask)
+
+    logs.HAZARD_LOG.info("#subtasks: %s" % len(subtasks))
 
     # At this point we have created all the subtasks and each one got a
     # portion of the data that is to be processed. Now we will create and run
@@ -121,6 +129,8 @@ def parallelize(
         know.
     :raises TaskFailed: When at least one subtask fails (raises an exception).
     """
+    logs.HAZARD_LOG.info("cardinality: %s" % cardinality)
+
     assert isinstance(kwargs, dict), "Parameters must be passed in a dict."
     subtasks = []
     for tidx in xrange(cardinality):
@@ -129,6 +139,8 @@ def parallelize(
             task_args["task_index"] = tidx
         subtask = the_task.subtask(**task_args)
         subtasks.append(subtask)
+
+    logs.HAZARD_LOG.info("#subtasks: %s" % len(subtasks))
 
     # At this point we have created all the subtasks.
     the_results = _handle_subtasks(subtasks, flatten_results)
