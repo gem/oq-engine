@@ -22,10 +22,10 @@ This module defines functions that can be applied to loss ratio
 or loss curves.
 """
 
+from collections import OrderedDict
 from numpy import mean
 
 from openquake import shapes
-from openquake.utils.general import unique_curve
 
 
 def compute_conditional_loss(curve, probability):
@@ -39,15 +39,15 @@ def compute_conditional_loss(curve, probability):
     highest PoE defined.
     """
     # dups in the curve have to be skipped
-    loss_curve_without_dups = shapes.Curve(unique_curve(curve))
+    loss_curve = shapes.Curve(unique_curve(curve))
 
-    if loss_curve_without_dups.ordinate_out_of_bounds(probability):
-        if probability < loss_curve_without_dups.y_values[-1]:
-            return loss_curve_without_dups.x_values[-1]
+    if loss_curve.ordinate_out_of_bounds(probability):
+        if probability < loss_curve.y_values[-1]:
+            return loss_curve.x_values[-1]
         else:
             return 0.0
 
-    return loss_curve_without_dups.abscissa_for(probability)
+    return loss_curve.abscissa_for(probability)
 
 
 def compute_loss_curve(loss_ratio_curve, asset):
@@ -110,3 +110,13 @@ def collect(iterator):
         data.append(element)
 
     return data
+
+
+def unique_curve(curve):
+    """ extracts unique values from a curve """
+    seen = OrderedDict()
+
+    for ordinate, abscissa in zip(curve.ordinates, curve.abscissae):
+        seen[ordinate] = abscissa
+
+    return zip(seen.values(), seen.keys())
