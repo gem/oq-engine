@@ -96,6 +96,28 @@ def unwrap_validation_error(jpype, runtime_exception, path=None):
     raise runtime_exception
 
 
+def generate_erf(job_id, cache):
+    """ Generate the Earthquake Rupture Forecast from the source model data
+    stored in the KVS.
+
+    :param int job_id: id of the job
+    :param cache: jpype instance of `org.gem.engine.hazard.redis.Cache`
+
+    """
+    src_key = kvs.tokens.source_model_key(job_id)
+    job_key = kvs.tokens.generate_job_key(job_id)
+
+    sources = java.jclass("JsonSerializer").getSourceListFromCache(
+        cache, src_key)
+
+    erf = java.jclass("GEM1ERF")(sources)
+
+    calc = java.jclass("LogicTreeProcessor")(cache, job_key)
+    calc.setGEM1ERFParams(erf)
+
+    return erf
+
+
 class BasePSHAMixin(Mixin):
     """Contains common functionality for PSHA Mixins."""
 
@@ -118,13 +140,7 @@ class BasePSHAMixin(Mixin):
     def generate_erf(self):
         """Generate the Earthquake Rupture Forecast from the currently stored
         source model logic tree."""
-        key = kvs.tokens.source_model_key(self.job_id)
-        sources = java.jclass("JsonSerializer").getSourceListFromCache(
-                    self.cache, key)
-        erf = java.jclass("GEM1ERF")(sources)
-        calc = java.jclass("LogicTreeProcessor")(self.cache, self.key)
-        calc.setGEM1ERFParams(erf)
-        return erf
+        return generate_erf(self.job_id, self.cache)
 
     def set_gmpe_params(self, gmpe_map):
         """Push parameters from configuration file into the GMPE objects"""
