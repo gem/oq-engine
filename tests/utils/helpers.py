@@ -109,7 +109,7 @@ def get_output_path(file_name):
     return os.path.join(OUTPUT_DIR, file_name)
 
 
-def smoketest_file(file_name):
+def demo_file(file_name):
     """
     Take a file name and return the full path to the file in the demos
     directory.

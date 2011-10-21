@@ -77,6 +77,7 @@ JAVA_CLASSES = {
         "org.opensha.sha.faultSurface.ApproxEvenlyGriddedSurface",
     "LocationListFormatter": "org.gem.LocationListFormatter",
     "PythonBridgeAppender": "org.gem.log.PythonBridgeAppender",
+    "DisaggregationCalculator": "org.gem.calc.DisaggregationCalculator",
 }
 
 
