@@ -82,13 +82,16 @@ public class HazardCalculator {
         try {
             curveCalculator = new HazardCurveCalculator();
             curveCalculator.setMaxSourceDistance(integrationDistance);
+            int site_num = 1;
             for (Site site : siteList) {
                 DiscretizedFuncAPI hazardCurve =
                         new ArbitrarilyDiscretizedFunc();
                 for (double val : imlVals)
                     hazardCurve.set(val, 1.0);
                 curveCalculator.getHazardCurve(hazardCurve, site, gmpeMap, erf);
+                logger.info("Computed hazard curve for site #" + site_num + " of " + siteList.size());
                 results.put(site, hazardCurve);
+                site_num += 1;
             }
         } catch (RemoteException e) {
             logger.error(e);
