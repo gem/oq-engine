@@ -103,7 +103,7 @@ class XMLMismatchError(Exception):
         self.expected_tag = expected_tag
 
     _HUMANIZE_FILE = {
-        'logicTreeSet': 'logic tree',
+        'logicTree': 'logic tree',
         'sourceModel': 'source model',
         'exposurePortfolio': 'exposure portfolio',
         'vulnerabilityModel': 'vulnerability model',

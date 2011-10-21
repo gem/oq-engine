@@ -49,10 +49,11 @@ class DoCurvesTestCase(helpers.TestMixin, unittest.TestCase):
         Fake logic tree processor class. This test will not manipulate any
         logic trees.
         """
-        def sampleAndSaveERFTree(self, cache, key, seed):
+        def sample_and_save_source_model_logictree(self, cache, key, seed,
+                                                   bin_width):
             """Do nothing."""
 
-        def sampleAndSaveGMPETree(self, cache, key, seed):
+        def sample_and_save_gmpe_logictree(self, cache, key, seed):
             """Do nothing."""
 
     mock_results = [
@@ -76,7 +77,8 @@ class DoCurvesTestCase(helpers.TestMixin, unittest.TestCase):
             self.keys.append(key)
         LOG.debug("keys = '%s'" % self.keys)
         # Initialize the mixin instance.
-        self.mixin.params = dict(NUMBER_OF_LOGIC_TREE_SAMPLES=2)
+        self.mixin.params = dict(NUMBER_OF_LOGIC_TREE_SAMPLES=2,
+                                 WIDTH_OF_MFD_BIN=1)
         self.mixin.calc = self.FakeLogicTreeProcessor()
         self.mixin.cache = dict()
 
