@@ -163,11 +163,11 @@ define_param("DEPTHTO1PT0KMPERSEC", "depth_to_1pt_0km_per_sec",
              default=100.0, java_name="Depth 1.0 km/sec")
 define_param("VS30_TYPE", "vs30_type", default="measured",
              java_name="Vs30 Type")
-define_param("HAZARD_TASKS", None, modes=("classical"))
+define_param("HAZARD_TASKS", None, modes=("classical",))
 
 # input files
 define_param('VULNERABILITY', None)
-define_param('SINGLE_RUPTURE_MODEL', None, modes=('deterministic'))
+define_param("SINGLE_RUPTURE_MODEL", None, modes=("deterministic",))
 define_param('EXPOSURE', None)
 define_param('GMPE_LOGIC_TREE_FILE', None,
              modes=('classical', 'event_based', 'disaggregation'))
