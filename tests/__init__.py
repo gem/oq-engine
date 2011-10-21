@@ -28,6 +28,7 @@ from handlers_unittest import *
 from hazard_classical_unittest import *
 from hazard_nrml_unittest import *
 from hazard_unittest import *
+from input_logictree_unittest import *
 from input_risk_unittest import *
 from java_unittest import *
 from job_unittest import *
@@ -60,7 +61,6 @@ from utils_general_unittest import *
 from utils_tasks_unittest import *
 from utils_version_unittest import *
 from validator_unittest import *
-from quality_assurance_unittest import *
 
 import glob
 import os

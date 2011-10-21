@@ -17,7 +17,6 @@ import junit.framework.Assert;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-import org.gem.engine.GmpeLogicTreeData;
 import org.gem.engine.hazard.redis.Cache;
 import org.junit.After;
 import org.junit.Before;
@@ -65,8 +64,6 @@ public class HazardCalculatorTest {
     private static final int PORT = 6379;
     private static final String LOCALHOST = "localhost";
     private Cache cache;
-
-    private static Log logger = LogFactory.getLog(GmpeLogicTreeData.class);
 
     @Before
     public void setUp() throws IOException {
