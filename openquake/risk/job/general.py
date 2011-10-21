@@ -82,6 +82,7 @@ def output(fn):
 
             if writer:
                 metadata = {
+                    "deterministic": False,
                     "timeSpan": self.params["INVESTIGATION_TIME"],
                     "poE": loss_poe,
                 }
