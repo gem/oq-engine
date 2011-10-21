@@ -45,6 +45,7 @@ COMPUTE_HAZARD_AT_ASSETS = "COMPUTE_HAZARD_AT_ASSETS_LOCATIONS"
 
 DEPTHTO1PT0KMPERSEC = "DEPTHTO1PT0KMPERSEC"
 VS30_TYPE = "VS30_TYPE"
+HAZARD_TASKS = "HAZARD_TASKS"
 
 
 def to_float_array(value):
@@ -361,61 +362,78 @@ class BasicParameterValidator(object):
         errors = []
 
         for name, value in self.params.items():
-            param = PARAMS[name]
-            value = value.strip()
-
-            if param.type in (None, models.TextField) and param.to_db is None:
-                continue
-
-            invalid = False
-            try:
-                if param.type in (models.BooleanField,
-                                    models.NullBooleanField):
-                    description = 'true/false value'
-                    invalid = value.lower() not in ('0', '1', 'true', 'false')
-                elif param.type is models.PolygonField:
-                    description = 'polygon value'
-                    # check the array contains matching pairs and at least 3
-                    # vertices (allow an empty array)
-                    length = len(to_float_array(value))
-                    invalid = length != 0 and (length % 2 == 1 or length < 6)
-                elif param.type is models.MultiPointField:
-                    description = 'multi-point value'
-                    # just check the array contains matching pairs
-                    length = len(to_float_array(value))
-                    invalid = length % 2 == 1
-                elif param.type is FloatArrayField:
-                    description = 'floating point array value'
-                    value = to_float_array(value)
-                elif param.type is CharArrayField:
-                    description = 'string array value'
-
-                    # before converting to an array of strings,
-                    # transform the value to appropriate db input
-                    if param.to_db is not None:
-                        value = param.to_db(value)
-                    value = to_str_array(value)
-                elif param.type is models.FloatField:
-                    description = 'floating point value'
-                    value = float(value)
-                elif param.type is models.IntegerField:
-                    description = 'integer value'
-                    value = int(value)
-                elif param.to_db is not None:
-                    description = 'value'
-                    value = param.to_db(value)
-                else:
-                    raise RuntimeError(
-                        "Invalid parameter type %s for parameter %s" % (
-                            param.type.__name__, name))
-            except (KeyError, ValueError):
-                invalid = True
-
-            if invalid:
-                errors.append("Value '%s' is not a valid %s for parameter %s" %
-                              (value, description, name))
+            param = PARAMS.get(name)
+            if param is None:
+                errors.append("Unknown parameter: '%s'" % name)
+            else:
+                if (param.type in (None, models.TextField)
+                    and param.to_db is None):
+                    continue
+                self._validate_param(param, name, value, errors)
 
         return (len(errors) == 0, errors)
+
+    def _validate_param(self, param, name, value, errors):
+        """Validates a single parameter.
+
+        :param param: the parameter to be validated
+        :type param: a `namedtuple` with parameter data. See
+            py:class:`openquake.job.params.Param`
+        :param str name: parameter name
+        :param str value: parameter value
+        :param list errors: string list with parameter validation errors.
+            Another error will be appended to it if the parameter at hand
+            fails to validate.
+        """
+        invalid = False
+        description = ""
+        value = value.strip()
+        try:
+            if param.type in (models.BooleanField,
+                                models.NullBooleanField):
+                description = 'true/false value'
+                invalid = value.lower() not in ('0', '1', 'true', 'false')
+            elif param.type is models.PolygonField:
+                description = 'polygon value'
+                # check the array contains matching pairs and at least 3
+                # vertices (allow an empty array)
+                length = len(to_float_array(value))
+                invalid = length != 0 and (length % 2 == 1 or length < 6)
+            elif param.type is models.MultiPointField:
+                description = 'multi-point value'
+                # just check the array contains matching pairs
+                length = len(to_float_array(value))
+                invalid = length % 2 == 1
+            elif param.type is FloatArrayField:
+                description = 'floating point array value'
+                value = to_float_array(value)
+            elif param.type is CharArrayField:
+                description = 'string array value'
+
+                # before converting to an array of strings,
+                # transform the value to appropriate db input
+                if param.to_db is not None:
+                    value = param.to_db(value)
+                value = to_str_array(value)
+            elif param.type is models.FloatField:
+                description = 'floating point value'
+                value = float(value)
+            elif param.type is models.IntegerField:
+                description = 'integer value'
+                value = int(value)
+            elif param.to_db is not None:
+                description = 'value'
+                value = param.to_db(value)
+            else:
+                raise RuntimeError(
+                    "Invalid parameter type %s for parameter %s" % (
+                        param.type.__name__, name))
+        except (KeyError, ValueError):
+            invalid = True
+
+        if invalid:
+            errors.append("Value '%s' is not a valid %s for parameter %s" %
+                          (value, description, name))
 
 
 def default_validators(sections, params):
