@@ -121,7 +121,7 @@ public class SourceModelReaderTest {
         }
         catch (XMLMismatchError e) {
             threw = true;
-            assertEquals("logicTreeSet", e.getActualTag());
+            assertEquals("logicTree", e.getActualTag());
             assertEquals("sourceModel", e.getExpectedTag());
         }
 

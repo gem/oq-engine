@@ -38,6 +38,7 @@ from openquake.hazard import classical_psha
 from openquake.hazard import job
 from openquake.hazard import tasks
 from openquake.job.mixins import Mixin
+from openquake.input import logictree
 from openquake.output import hazard as hazard_output
 from openquake.utils import config
 from openquake.utils import tasks as utils_tasks
@@ -66,8 +67,11 @@ def preload(fn):
         self.cache = java.jclass("KVS")(
                 config.get("kvs", "host"),
                 int(config.get("kvs", "port")))
-        self.calc = java.jclass("LogicTreeProcessor")(
-                self.cache, self.key)
+        source_model_lt = self.params.get('SOURCE_MODEL_LOGIC_TREE_FILE_PATH')
+        gmpe_lt = self.params.get('GMPE_LOGIC_TREE_FILE_PATH')
+        basepath = self.params.get('BASE_PATH')
+        self.calc = logictree.LogicTreeProcessor(basepath, source_model_lt,
+                                                 gmpe_lt)
         return fn(self, *args, **kwargs)
     return preloader
 
@@ -96,33 +100,20 @@ class BasePSHAMixin(Mixin):
     """Contains common functionality for PSHA Mixins."""
 
     def store_source_model(self, seed):
-        """Generates an Earthquake Rupture Forecast, using the source zones and
-        logic trees specified in the job config file. Note that this has to be
-        done currently using the file itself, since it has nested references to
-        other files."""
-
+        """Generates a source model from the source model logic tree."""
         LOG.info("Storing source model from job config")
         key = kvs.tokens.source_model_key(self.job_id)
         print "source model key is", key
-        jpype = java.jvm()
-        try:
-            self.calc.sampleAndSaveERFTree(self.cache, key, seed)
-        except jpype.JavaException, ex:
-            unwrap_validation_error(
-                jpype, ex,
-                self.params.get("SOURCE_MODEL_LOGIC_TREE_FILE"))
+        mfd_bin_width = float(self.params.get('WIDTH_OF_MFD_BIN'))
+        self.calc.sample_and_save_source_model_logictree(kvs, key, seed,
+                                                         mfd_bin_width)
 
     def store_gmpe_map(self, seed):
         """Generates a hash of tectonic regions and GMPEs, using the logic tree
         specified in the job config file."""
         key = kvs.tokens.gmpe_key(self.job_id)
         print "GMPE map key is", key
-        jpype = java.jvm()
-        try:
-            self.calc.sampleAndSaveGMPETree(self.cache, key, seed)
-        except jpype.JavaException, ex:
-            unwrap_validation_error(
-                jpype, ex, self.params.get("GMPE_LOGIC_TREE_FILE"))
+        self.calc.sample_and_save_gmpe_logictree(kvs, key, seed)
 
     def generate_erf(self):
         """Generate the Earthquake Rupture Forecast from the currently stored
@@ -131,16 +122,17 @@ class BasePSHAMixin(Mixin):
         sources = java.jclass("JsonSerializer").getSourceListFromCache(
                     self.cache, key)
         erf = java.jclass("GEM1ERF")(sources)
-        self.calc.setGEM1ERFParams(erf)
+        calc = java.jclass("LogicTreeProcessor")(self.cache, self.key)
+        calc.setGEM1ERFParams(erf)
         return erf
 
     def set_gmpe_params(self, gmpe_map):
         """Push parameters from configuration file into the GMPE objects"""
         jpype = java.jvm()
-        gmpe_lt_data = self.calc.createGmpeLogicTreeData()
+        set_gmpe_params = java.jclass("GmpeLogicTreeData").setGmpeParams
         for tect_region in gmpe_map.keySet():
             gmpe = gmpe_map.get(tect_region)
-            gmpe_lt_data.setGmpeParams(self.params['COMPONENT'],
+            set_gmpe_params(self.params['COMPONENT'],
                 self.params['INTENSITY_MEASURE_TYPE'],
                 jpype.JDouble(float(self.params['PERIOD'])),
                 jpype.JDouble(float(self.params['DAMPING'])),

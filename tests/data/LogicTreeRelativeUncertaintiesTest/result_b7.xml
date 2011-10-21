@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Source model corresponding to b1-b3-b7 path.-->
+
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.2" xmlns:gml="http://www.opengis.net/gml" xmlns:qml="http://quakeml.org/xmlns/quakeml/1.1" gml:id="n1">
+  <sourceModel gml:id="sm1">
+    <config/>
+    <areaSource gml:id="src_1">
+      <gml:name>Example Area Source</gml:name>
+      <tectonicRegion>Stable Shallow Crust</tectonicRegion>
+      <areaBoundary>
+        <gml:Polygon>
+          <gml:exterior>
+            <gml:LinearRing>
+              <gml:posList>132.93 42.85 134.86 41.82 129.73 38.38 128.15 40.35</gml:posList>
+            </gml:LinearRing>
+          </gml:exterior>
+        </gml:Polygon>
+      </areaBoundary>
+      <ruptureRateModel>
+        <truncatedGutenbergRichter>
+          <aValueCumulative>3.2549</aValueCumulative>
+          <bValue>0.2</bValue>
+          <minMagnitude>5.0</minMagnitude>
+          <maxMagnitude>8.0</maxMagnitude>
+        </truncatedGutenbergRichter>
+        <focalMechanism publicID="smi:fm1/0">
+          <qml:nodalPlanes>
+            <qml:nodalPlane1>
+              <qml:strike>
+                <qml:value>0.0</qml:value>
+              </qml:strike>
+              <qml:dip>
+                <qml:value>90.0</qml:value>
+              </qml:dip>
+              <qml:rake>
+                <qml:value>0.0</qml:value>
+              </qml:rake>
+            </qml:nodalPlane1>
+          </qml:nodalPlanes>
+        </focalMechanism>
+      </ruptureRateModel>
+      <ruptureDepthDistribution>
+        <magnitude>5.0</magnitude>
+        <depth>15.0</depth>
+      </ruptureDepthDistribution>
+      <hypocentralDepth>15.0</hypocentralDepth>
+    </areaSource>
+	<simpleFaultSource gml:id="src_2">
+      <gml:name>Example Fault Source</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.6</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>7.0</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_0">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>19.5417 40.0925 1.0 19.4654 40.1496 1.0 19.3891 40.2067 1.0 19.297200000000004 40.2833 1.0 19.2052 40.3599 1.0 19.1299 40.4443 1.0 19.0545 40.5286 1.0 18.9921 40.629 1.0 18.9296 40.7293 1.0 18.884 40.8269 1.0 18.8385 40.9245 1.0 18.8033 41.0104 1.0 18.7681 41.09620000000001 1.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>37.5</dip>
+        <upperSeismogenicDepth>1.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>12.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+	<complexFaultSource gml:id="src_3">
+      <gml:name>Example Complex Fault</gml:name>
+      <tectonicRegion>Subduction Interface</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>3.6</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>9.0</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <complexFaultGeometry>
+        <faultEdges>
+          <faultTopEdge>
+            <gml:LineString>
+              <gml:posList>-124.704 40.363 5.49326 -124.977 41.214000000000006 4.98856 -125.14 42.096 4.89734 -125.21899999999998 42.965 4.84761 -125.25700000000002 43.852 4.87128 -125.313 44.718 4.78242 -125.416 45.458 4.41088 -125.623 46.33700000000001 4.02817 -125.746 46.642 3.7974 -125.874 46.965 3.64988 -126.015 47.289 3.65067 -126.23999999999998 47.661 3.67516 -126.422 47.994 3.90795 -126.66000000000001 48.287 4.12516 -127.037 48.711 4.58367 -127.605 49.279 4.76158</gml:posList>
+            </gml:LineString>
+          </faultTopEdge>
+          <faultBottomEdge>
+            <gml:LineString>
+              <gml:posList>-124.0415 40.347 15.55 -124.33 41.214000000000006 13.46 -124.474 42.1095 13.44 -124.5375 42.9775 13.32 -124.51500000000001 43.861 14.19 -124.4955 44.737 14.89 -124.43400000000001 45.487 16.57 -124.28950000000002 46.361 19.0 -124.169 46.7745 20.0 -124.051 47.2145 20.35 -124.09550000000002 47.669 20.1 -124.5975 48.0865 19.47 -125.19899999999998 48.416 19.09 -125.7345 48.723 18.9 -126.354 49.111 18.46 -127.084 49.5945 17.37</gml:posList>
+            </gml:LineString>
+          </faultBottomEdge>
+        </faultEdges>
+      </complexFaultGeometry>
+    </complexFaultSource>
+	<pointSource gml:id="src_4">
+      <gml:name></gml:name>
+      <tectonicRegion>Subduction IntraSlab</tectonicRegion>
+      <location>
+        <gml:Point>
+          <gml:pos>-125.4 42.9</gml:pos>
+        </gml:Point>
+      </location>
+      <ruptureRateModel>
+	  <truncatedGutenbergRichter>
+        <aValueCumulative>0.5761</aValueCumulative>
+        <bValue>1.1</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.0</maxMagnitude>
+      </truncatedGutenbergRichter>
+        <focalMechanism publicID="smi:fm1/0">
+          <qml:nodalPlanes>
+            <qml:nodalPlane1>
+              <qml:strike>
+                <qml:value>0.0</qml:value>
+              </qml:strike>
+              <qml:dip>
+                <qml:value>90.0</qml:value>
+              </qml:dip>
+              <qml:rake>
+                <qml:value>0.0</qml:value>
+              </qml:rake>
+            </qml:nodalPlane1>
+          </qml:nodalPlanes>
+        </focalMechanism>
+      </ruptureRateModel>
+	  <ruptureRateModel>
+        <evenlyDiscretizedIncrementalMFD binSize="0.1" minVal="5.05">1.6837554986665087E-13 1.4004868231857133E-13 1.1648742014325482E-13 9.689001586437486E-14 8.058960497755006E-14</evenlyDiscretizedIncrementalMFD>
+        <focalMechanism publicID="smi:fm1/0">
+          <qml:nodalPlanes>
+            <qml:nodalPlane1>
+              <qml:strike>
+                <qml:value>0.0</qml:value>
+              </qml:strike>
+              <qml:dip>
+                <qml:value>90.0</qml:value>
+              </qml:dip>
+              <qml:rake>
+                <qml:value>0.0</qml:value>
+              </qml:rake>
+            </qml:nodalPlane1>
+          </qml:nodalPlanes>
+        </focalMechanism>
+      </ruptureRateModel>
+      <ruptureRateModel>
+	  <truncatedGutenbergRichter>
+        <aValueCumulative>0.6413</aValueCumulative>
+        <bValue>0.8</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>6.3</maxMagnitude>
+      </truncatedGutenbergRichter>
+        <focalMechanism publicID="smi:fm1/1">
+          <qml:nodalPlanes>
+            <qml:nodalPlane1>
+              <qml:strike>
+                <qml:value>0.0</qml:value>
+              </qml:strike>
+              <qml:dip>
+                <qml:value>50.0</qml:value>
+              </qml:dip>
+              <qml:rake>
+                <qml:value>90.0</qml:value>
+              </qml:rake>
+            </qml:nodalPlane1>
+          </qml:nodalPlanes>
+        </focalMechanism>
+      </ruptureRateModel>
+      <ruptureDepthDistribution>
+        <magnitude>6.0 6.5</magnitude>
+        <depth>5.0 1.0</depth>
+      </ruptureDepthDistribution>
+      <hypocentralDepth>5.0</hypocentralDepth>
+    </pointSource>
+	</sourceModel>
+</nrml>
