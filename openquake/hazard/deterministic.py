@@ -160,7 +160,7 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
         gmpe = deserializer.deserialize(
             java.jclass("JsonPrimitive")(fqn), None, None)
 
-        tree_data = java.jclass("GmpeLogicTreeData")()
+        tree_data = java.jclass("GmpeLogicTreeData")
 
         tree_data.setGmpeParams(
             self.params["COMPONENT"],

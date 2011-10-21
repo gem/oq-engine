@@ -35,7 +35,6 @@ from openquake import logs
 from openquake import nrml
 from openquake import shapes
 from openquake import xml
-from openquake import java
 
 from openquake.job import mixins
 from openquake.job.config import HazardMandatoryParamsValidator
@@ -58,39 +57,7 @@ MEAN_GROUND_INTENSITY = (
 
 TEST_JOB_FILE = helpers.testdata_path('simplecase/config.gem')
 
-TEST_SOURCE_MODEL = ""
-with open(
-    helpers.testdata_path('simplecase/expected_source_model.json'), 'r') as f:
-    TEST_SOURCE_MODEL = f.read()
-
-TEST_GMPE_MODEL = ""
-with open(
-    helpers.testdata_path('simplecase/expected_gmpe_model.json'), 'r') as f:
-    TEST_GMPE_MODEL = f.read()
-
 NRML_SCHEMA_PATH = nrml.nrml_schema_file()
-
-
-class LogicTreeValidationTestCase(unittest.TestCase):
-    """Test XML parsing error handling"""
-
-    def _parse_file(self, path):
-        jpype = java.jvm()
-        ltr = jpype.JClass('org.gem.engine.LogicTreeReader')(path)
-        try:
-            ltr.read()
-        except jpype.JavaException, ex:
-            opensha.unwrap_validation_error(
-                jpype, ex, path)
-
-    def test_invalid_xml(self):
-        self.assertRaises(xml.XMLValidationError, self._parse_file,
-                          helpers.get_data_path('invalid/gmpe_logic_tree.xml'))
-
-    def test_mismatched_xml(self):
-        self.assertRaises(xml.XMLMismatchError, self._parse_file,
-                          os.path.join(helpers.SCHEMA_EXAMPLES_DIR,
-                                       'source-model.xml'))
 
 
 class HazardEngineTestCase(unittest.TestCase):
@@ -107,25 +74,6 @@ class HazardEngineTestCase(unittest.TestCase):
                 os.remove(cfg)
             except OSError:
                 pass
-
-    def test_hazard_engine_jobber_runs(self):
-        """Construction of LogicTreeProcessor in Java should not throw
-        errors, and should have params loaded from KVS."""
-
-        hazengine = helpers.job_from_file(TEST_JOB_FILE)
-        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
-            hazengine.execute()
-
-            source_model_key = tokens.source_model_key(hazengine.job_id)
-            self.kvs_client.get(source_model_key)
-            # We have the random seed in the config, so this is guaranteed
-            # TODO(JMC): Add this back in
-            # self.assertEqual(source_model, TEST_SOURCE_MODEL)
-
-            gmpe_key = tokens.gmpe_key(hazengine.job_id)
-            self.kvs_client.get(gmpe_key)
-            # TODO(JMC): Add this back in
-            # self.assertEqual(gmpe_model, TEST_GMPE_MODEL)
 
     def test_generate_hazard_curves_using_classical_psha(self):
 

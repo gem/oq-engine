@@ -227,37 +227,45 @@ def measureit(method):
     return _measured
 
 
-def assertDictAlmostEqual(test_case, expected, actual):
+def assertDeepAlmostEqual(test_case, expected, actual, *args, **kwargs):
     """
-    Assert that two dicts are equal. For dict values which are numbers,
-    we use :py:meth:`unittest.TestCase.assertAlmostEqual` for number
-    comparisons with a reasonable precision tolerance.
+    Assert that two complex structures have almost equal contents.
 
-    If the `expected` input value contains nested dictionaries, this function
-    will recurse through the dicts and check for equality.
+    Compares lists, dicts and tuples recursively. Checks numeric values
+    using test_case's :py:meth:`unittest.TestCase.assertAlmostEqual` and
+    checks all other values with :py:meth:`unittest.TestCase.assertEqual`.
+    Accepts additional positional and keyword arguments and pass those
+    intact to assertAlmostEqual() (that's how you specify comparison
+    precision).
 
     :param test_case: TestCase object on which we can call all of the basic
         'assert' methods.
     :type test_case: :py:class:`unittest.TestCase` object
-    :type expected: dict
-    :type actual: dict
     """
-
-    test_case.assertEqual(set(expected.keys()), set(actual.keys()))
-
-    for key in expected.keys():
-        exp_val = expected[key]
-        act_val = actual[key]
-
-        # If it's a number, use assertAlmostEqual to compare
-        # the values with a reasonable tolerance.
-        if isinstance(exp_val, (int, float, long, complex)):
-            test_case.assertAlmostEqual(exp_val, act_val)
-        elif isinstance(exp_val, dict):
-            # make a recursive call in case there are nested dicts
-            assertDictAlmostEqual(test_case, exp_val, act_val)
+    is_root = not '__trace' in kwargs
+    trace = kwargs.pop('__trace', 'ROOT')
+    try:
+        if isinstance(expected, (int, float, long, complex)):
+            test_case.assertAlmostEqual(expected, actual, *args, **kwargs)
+        elif isinstance(expected, (list, tuple)):
+            test_case.assertEqual(len(expected), len(actual))
+            for index in xrange(len(expected)):
+                v1, v2 = expected[index], actual[index]
+                assertDeepAlmostEqual(test_case, v1, v2,
+                                      __trace=repr(index), *args, **kwargs)
+        elif isinstance(expected, dict):
+            test_case.assertEqual(set(expected), set(actual))
+            for key in expected:
+                assertDeepAlmostEqual(test_case, expected[key], actual[key],
+                                      __trace=repr(key), *args, **kwargs)
         else:
-            test_case.assertEqual(expected[key], actual[key])
+            test_case.assertEqual(expected, actual)
+    except AssertionError as exc:
+        exc.__dict__.setdefault('traces', []).append(trace)
+        if is_root:
+            trace = ' -> '.join(reversed(exc.traces))
+            exc = AssertionError("%s\nTRACE: %s" % (exc.message, trace))
+        raise exc
 
 
 def assertModelAlmostEqual(test_case, expected, actual):
