@@ -25,7 +25,7 @@ and its validation.
 from openquake.job import config
 from openquake.job.config import (
     DisaggregationValidator, HazardMandatoryParamsValidator,
-    RiskMandatoryParamsValidator, DeterministicComputationValidator, PARAMS,
+    RiskMandatoryParamsValidator, DeterministicComputationValidator,
     to_float_array, to_str_array)
 from tests.utils import helpers
 
@@ -163,6 +163,22 @@ class ConfigurationConstraintsTestCase(unittest.TestCase, helpers.TestMixin):
                   config.SITES: "37.9, -121.9",
                   config.DEPTHTO1PT0KMPERSEC: "33.33",
                   config.VS30_TYPE: "measured"}
+
+        validator = config.default_validators(sections, params)
+        self.assertTrue(validator.is_valid()[0])
+
+    def test_hazard_tasks(self):
+        """
+        The `HAZARD_TASKS` parameter is not ignored for classical PSHA
+        calculations.
+        """
+        sections = [config.HAZARD_SECTION]
+
+        params = {config.CALCULATION_MODE: "CLASSICAL",
+                  config.SITES: "37.9, -121.9",
+                  config.DEPTHTO1PT0KMPERSEC: "33.33",
+                  config.VS30_TYPE: "measured",
+                  config.HAZARD_TASKS: "96"}
 
         validator = config.default_validators(sections, params)
         self.assertTrue(validator.is_valid()[0])
