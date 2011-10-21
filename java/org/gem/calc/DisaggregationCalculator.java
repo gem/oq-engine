@@ -1,16 +1,19 @@
 package org.gem.calc;
 
+import java.rmi.RemoteException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.collections.Closure;
 import org.opensha.commons.data.Site;
+import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.param.DoubleParameter;
+import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.earthquake.EqkRupForecastAPI;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
@@ -120,9 +123,22 @@ public class DisaggregationCalculator {
 		site.addParameter(new DoubleParameter(Vs30_Param.NAME, vs30Value));
 		site.addParameter(new DoubleParameter(DepthTo2pt5kmPerSecParam.NAME, depthTo2pt5KMPS));
 
+		DiscretizedFuncAPI hazardCurve = new ArbitrarilyDiscretizedFunc();
+		// initialize the hazard curve with the number of points == the number of IMLs
+		for (double d : imls)
+		{
+			hazardCurve.set(d, 0.0);
+		}
+
+		try {
+			HazardCurveCalculator hcc = new HazardCurveCalculator();
+			hcc.getHazardCurve(hazardCurve, site, imrMap, erf);
+		} catch (RemoteException e) {
+			throw new RuntimeException(e);
+		}
 		double minMag = (Double) erf.getParameter(GEM1ERF.MIN_MAG_NAME).getValue();
 
-		return computeMatrix(site, erf, imrMap, poe, null, minMag);
+		return computeMatrix(site, erf, imrMap, poe, hazardCurve, minMag);
 	}
 
 	public double[][][][][] computeMatrix(
