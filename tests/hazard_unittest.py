@@ -41,9 +41,10 @@ from openquake.job import mixins
 from openquake.job.config import HazardMandatoryParamsValidator
 from openquake.job.config import PARAMS
 from openquake.kvs import tokens
-from openquake.hazard import tasks
 from openquake.hazard import classical_psha
-from openquake.hazard import opensha
+from openquake.hazard.job import general
+from openquake.hazard.job import classical
+
 import openquake.hazard.job
 
 from tests.utils import helpers
@@ -80,7 +81,7 @@ class LogicTreeValidationTestCase(unittest.TestCase):
         try:
             ltr.read()
         except jpype.JavaException, ex:
-            opensha.unwrap_validation_error(
+            classical.unwrap_validation_error(
                 jpype, ex, path)
 
     def test_invalid_xml(self):
@@ -113,7 +114,7 @@ class HazardEngineTestCase(unittest.TestCase):
         errors, and should have params loaded from KVS."""
 
         hazengine = helpers.job_from_file(TEST_JOB_FILE)
-        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
+        with mixins.Mixin(hazengine, general.HazJobMixin):
             hazengine.execute()
 
             source_model_key = tokens.source_model_key(hazengine.job_id)
@@ -331,7 +332,7 @@ class HazardEngineTestCase(unittest.TestCase):
         hazengine = helpers.job_from_file(
             helpers.testdata_path("classical_psha_simple/config.gem"))
 
-        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
+        with mixins.Mixin(hazengine, general.HazJobMixin):
             hazengine.execute()
 
             verify_realization_haz_curves_stored_to_kvs(hazengine)
@@ -354,7 +355,7 @@ class HazardEngineTestCase(unittest.TestCase):
     def test_basic_generate_erf_keeps_order(self):
         job_ids = [helpers.job_from_file(TEST_JOB_FILE).job_id
                    for _ in xrange(4)]
-        results = map(tasks.generate_erf.delay, job_ids)
+        results = map(general.generate_erf.delay, job_ids)
         self.assertEqual(job_ids, [result.get() for result in results])
 
     def test_generate_erf_returns_erf_via_kvs(self):
@@ -374,7 +375,7 @@ class HazardEngineTestCase(unittest.TestCase):
             result_keys.append(erf_key)
 
             # Spawn our tasks.
-            results.append(tasks.generate_erf.apply_async(args=[job_id]))
+            results.append(general.generate_erf.apply_async(args=[job_id]))
 
         helpers.wait_for_celery_tasks(results)
 
@@ -395,7 +396,7 @@ class HazardEngineTestCase(unittest.TestCase):
             mgm_key = tokens.mgm_key(job_id, block_id, site)
             self.kvs_client.set(mgm_key, MEAN_GROUND_INTENSITY)
 
-            results.append(tasks.compute_mgm_intensity.apply_async(
+            results.append(general.compute_mgm_intensity.apply_async(
                 args=[job_id, block_id, site]))
 
         helpers.wait_for_celery_tasks(results)
@@ -560,7 +561,7 @@ class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
     def setUp(self):
         self.params = {'CALCULATION_MODE': 'Hazard'}
         self.job = self.create_job_with_mixin(self.params,
-                                              opensha.ClassicalMixin)
+                                              classical.ClassicalMixin)
         self.job_id = self.job.job_id
 
         self.expected_curve = numpy.array([9.9178000e-01, 9.8892000e-01,
@@ -765,7 +766,7 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
                 1.5200e+00, 2.1300e+00]
 
         self.job = self.create_job_with_mixin(self.params,
-                                              opensha.ClassicalMixin)
+                                              classical.ClassicalMixin)
         self.job_id = self.job.job_id
 
         self.empty_mean_curve = []
@@ -945,7 +946,7 @@ class ParameterizeSitesTestCase(helpers.TestMixin, unittest.TestCase):
             "VS30_TYPE": "measured"}
 
         self.job = self.create_job_with_mixin(
-            self.params, opensha.ClassicalMixin)
+            self.params, classical.ClassicalMixin)
         self.job_id = self.job.job_id
 
     def tearDown(self):

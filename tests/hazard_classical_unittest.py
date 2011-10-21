@@ -27,7 +27,7 @@ import unittest
 from openquake import logs
 from openquake import shapes
 
-from openquake.hazard import opensha
+from openquake.hazard.job import classical
 
 from tests.utils import helpers
 from tests.utils.tasks import test_compute_hazard_curve, test_data_reflector
@@ -67,7 +67,7 @@ class DoCurvesTestCase(helpers.TestMixin, unittest.TestCase):
 
     def setUp(self):
         self.mixin = self.create_job_with_mixin({'CALCULATION_MODE': 'Hazard'},
-                                                opensha.ClassicalMixin)
+                                                classical.ClassicalMixin)
         # Store the canned result data in the KVS.
         key = self.mixin.job_id
         for realization in xrange(2):
@@ -127,7 +127,8 @@ class DoMeansTestCase(helpers.TestMixin, unittest.TestCase):
             'COMPUTE_MEAN_HAZARD_CURVE': 'True',
         }
 
-        self.mixin = self.create_job_with_mixin(params, opensha.ClassicalMixin)
+        self.mixin = self.create_job_with_mixin(
+            params, classical.ClassicalMixin)
 
     def tearDown(self):
         # Remove the canned result data from the KVS.
@@ -257,7 +258,7 @@ class DoQuantilesTestCase(helpers.TestMixin, unittest.TestCase):
 
     def setUp(self):
         self.mixin = self.create_job_with_mixin({'CALCULATION_MODE': 'Hazard'},
-                                                opensha.ClassicalMixin)
+                                                classical.ClassicalMixin)
 
     def tearDown(self):
         # Remove the canned result data from the KVS.
@@ -377,7 +378,8 @@ class NumberOfTasksTestCase(helpers.TestMixin, unittest.TestCase):
     def setUp(self):
         params = {'CALCULATION_MODE': 'Hazard'}
 
-        self.mixin = self.create_job_with_mixin(params, opensha.ClassicalMixin)
+        self.mixin = self.create_job_with_mixin(
+            params, classical.ClassicalMixin)
 
     def tearDown(self):
         self.unload_job_mixin()

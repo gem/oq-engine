@@ -34,7 +34,7 @@ from openquake import java
 from openquake import kvs
 from openquake import shapes
 
-from openquake.hazard import deterministic as det
+from openquake.hazard.job import deterministic as det
 
 DETERMINISTIC_SMOKE_TEST = helpers.testdata_path("deterministic/config.gem")
 NUMBER_OF_CALC_KEY = "NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"

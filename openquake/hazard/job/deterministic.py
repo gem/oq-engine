@@ -29,11 +29,10 @@ import json
 from openquake import java
 from openquake import kvs
 from openquake import shapes
-from openquake.hazard import job
-from openquake.hazard.opensha import BasePSHAMixin
+from openquake.hazard.job import general
 
 
-class DeterministicEventBasedMixin(BasePSHAMixin):
+class DeterministicEventBasedMixin(general.BasePSHAMixin):
     """Deterministic Event Based method for performing hazard calculations.
 
     Note that this mixin, during execution, will always be an instance of the
@@ -213,5 +212,5 @@ def gmf_to_dict(hashmap, intensity_measure_type):
         yield gmv
 
 
-job.HazJobMixin.register(
+general.HazJobMixin.register(
     "Deterministic", DeterministicEventBasedMixin, order=2)
