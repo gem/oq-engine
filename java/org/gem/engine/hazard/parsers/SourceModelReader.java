@@ -501,9 +501,8 @@ public class SourceModelReader {
     private GutenbergRichterMagFreqDist createGrMfd(double aVal, double bVal,
             double mMin, double mMax, double deltaMFD) {
         GutenbergRichterMagFreqDist mfd = null;
-        // round mMin and mMax with respect to delta bin
-        mMin = Math.round(mMin / deltaMFD) * deltaMFD;
-        mMax = Math.round(mMax / deltaMFD) * deltaMFD;
+        // round gap between mMax and mMin with respect to delta bin
+        mMax = Math.round((mMax - mMin) / deltaMFD) * deltaMFD + mMin;
         // compute total cumulative rate between minimum and maximum magnitude
         double totCumRate = Double.NaN;
         if (mMin != mMax) {
