@@ -51,6 +51,12 @@ def compute_disagg_matrix(job_id, site, realization, poe):
     disagg_calc = java.jclass('DisaggregationCalculator')(
         jd(lat_bin_lims), jd(lon_bin_lims),
         jd(mag_bin_lims), jd(eps_bin_lims))
+
+    erf = None
+    gmpe_map = None
+
+    disagg_calc.computeMatrix(
+        site.latitude, site.longitude, erf, gmpe_map, poe)
     return disagg_calc
 
 def list_to_jdouble_array(float_list):

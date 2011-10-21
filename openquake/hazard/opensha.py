@@ -102,7 +102,8 @@ def generate_erf(job_id, cache):
 
     :param int job_id: id of the job
     :param cache: jpype instance of `org.gem.engine.hazard.redis.Cache`
-
+    :returns: jpype instance of
+        `org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF`
     """
     src_key = kvs.tokens.source_model_key(job_id)
     job_key = kvs.tokens.generate_job_key(job_id)
@@ -116,6 +117,21 @@ def generate_erf(job_id, cache):
     calc.setGEM1ERFParams(erf)
 
     return erf
+
+
+def generate_gmpe_map(job_id, cache):
+    """ Generate the GMPE map from the GMPE data stored in the KVS.
+
+    :param int job_id: id of the job
+    :param cache: jpype instance of `org.gem.engine.hazard.redis.Cache`
+    :returns: jpype instace of
+        `HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>`
+    """
+    gmpe_key = kvs.tokens.gmpe_key(job_id)
+
+    gmpe_map = java.jclass(
+        "JsonSerializer").getGmpeMapFromCache(cache, gmpe_key)
+    return gmpe_map
 
 
 class BasePSHAMixin(Mixin):
@@ -161,9 +177,7 @@ class BasePSHAMixin(Mixin):
 
     def generate_gmpe_map(self):
         """Generate the GMPE map from the stored GMPE logic tree."""
-        key = kvs.tokens.gmpe_key(self.job_id)
-        gmpe_map = java.jclass(
-            "JsonSerializer").getGmpeMapFromCache(self.cache, key)
+        gmpe_map = generate_gmpe_map(self.job_id, self.cache)
         self.set_gmpe_params(gmpe_map)
         return gmpe_map
 
