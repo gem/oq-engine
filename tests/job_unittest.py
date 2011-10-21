@@ -31,9 +31,9 @@ from openquake import job
 from openquake import kvs
 from openquake import flags
 from openquake import shapes
-from openquake.job import Job, config, prepare_job, run_job
 from openquake.job import (
-    parse_config_file, prepare_config_parameters, get_source_models)
+    Job, config, prepare_job, run_job, config_text_to_list, parse_config_file,
+    prepare_config_parameters, get_source_models)
 from openquake.job.mixins import Mixin
 from openquake.db.models import OqJob, JobStats, OqParams
 from openquake.risk.job import general
@@ -932,3 +932,37 @@ class JobStatsTestCase(unittest.TestCase):
                     self.eb_job.launch()
 
                     self.assertEqual(1, record_mock.call_count)
+
+
+class JobUtilsTestCase(unittest.TestCase):
+    """Tests for utility functions in the job module."""
+
+    def test_config_text_to_list(self):
+        """Exercise :function:`openquake.job.config_text_to_list`."""
+        expected = ['magdistpmf', 'magdistepspmf', 'fulldisaggmatrix']
+
+        # the input mixes spaces and commas for robustness testing:
+        test_input = 'magdistpmf,magdistepspmf fulldisaggmatrix'
+
+        self.assertEqual(expected, config_text_to_list(test_input))
+
+    def test_config_text_to_list_with_transform(self):
+        """Exercise :function:`openquake.job.config_text_to_list` with a
+        transform specified.
+        """
+        expected = [0.01, 0.02, 0.03, 0.04]
+
+        # again, mix spaces and commas
+        test_input = '0.01,0.02, 0.03 0.04'
+
+        self.assertEqual(expected, config_text_to_list(test_input, float))
+
+    def test_config_text_to_list_all_whitespace_input(self):
+        """Exercise :function:`openquake.job.config_text_to_list` with an
+        input of only spaces. """
+
+        expected = []
+
+        test_input = '     '
+
+        self.assertEqual(expected, config_text_to_list(test_input))

@@ -631,3 +631,25 @@ def read_sites_from_exposure(a_job):
             sites.append(site)
 
     return sites
+
+
+def config_text_to_list(text, transform=lambda x: x):
+    """ Convert a config file list (as a comma or space delimited list) to a
+    list of values, with the option to transform each item. An example of such
+    a transformation would be a `float` cast, but you can specify virtually
+    any function which accepts and returns a single value.
+
+    :param text: a comma or space delimited list of config values (such as a
+        list of PoE levels)
+    :type text: `str`
+    :param transform: specify a transform to be applied to each element
+        (optional)
+    :type transform: a function which accepts and returns a single value,
+        a type (such as `float` or `int`), or equivalent
+
+    >>> config_text_to_list('magdistpmf magdistepspmf')
+    ['magdistpmf', 'magdistepspmf']
+    >>> config_text_to_list('0.01, 0.02, 0.03', float)
+    [0.01, 0.02, 0.03]
+    """
+    return [transform(val.strip()) for val in ARRAY_RE.split(text) if len(val)]

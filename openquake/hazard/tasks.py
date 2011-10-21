@@ -34,6 +34,7 @@ from openquake import kvs
 
 from openquake.hazard import job as hazjob
 from openquake.hazard import classical_psha
+from openquake.hazard import disaggregation as disagg
 from openquake.java import jtask as task
 from openquake.job import mixins
 from openquake.logs import HAZARD_LOG
@@ -132,3 +133,18 @@ def compute_quantile_curves(job_id, sites, realizations, quantiles):
 
     return classical_psha.compute_quantile_hazard_curves(job_id, sites,
         realizations, quantiles)
+
+
+@task
+def compute_disagg_matrix(job_id, site, realization, poe):
+    """ """
+
+    check_job_status(job_id)
+
+    log_msg = (
+        "Computing full disaggregation matrix for job_id=%s, site=%s, "
+        "realization=%s, PoE=%s")
+    log_msg %= (job_id, site, realization, poe)
+    HAZARD_LOG.info(log_msg)
+
+    return disagg.compute_disagg_matrix(job_id, site_realization, poe)

@@ -514,7 +514,7 @@ class DefaultValidatorsTestCase(unittest.TestCase):
         """Test to ensure that a Disaggregation job always includes the
         :class:`openquake.job.config.DisaggregationValidator`.
         """
-        da_job_path = helpers.smoketest_file('disaggregation/config.gem')
+        da_job_path = helpers.demo_file('disaggregation/config.gem')
         da_job = helpers.job_from_file(da_job_path)
 
         validators = config.default_validators(da_job.sections, da_job.params)
