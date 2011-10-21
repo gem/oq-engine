@@ -200,8 +200,11 @@ SAMPLE_DETERMINISTIC_LOSS_MAP_DATA = [
 
 NONDETERMINISTIC_LOSS_MAP_METADATA = LOSS_MAP_METADATA.copy()
 NONDETERMINISTIC_LOSS_MAP_METADATA.update({
-    'poe': 0.6,
-    'deterministic': False})
+    'poE': 0.6,
+    'deterministic': False,
+    'timeSpan': 1,
+    })
+
 
 SITE_A_NONDETERMINISTIC_LOSS_ONE = {'value': 12}
 SITE_A_NONDETERMINISTIC_LOSS_TWO = {'value': 66}
@@ -304,6 +307,7 @@ class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
 
         # Call the function under test.
         data = SAMPLE_NONDETERMINISTIC_LOSS_MAP_DATA
+
         self.writer.serialize(data)
 
         # Output record
@@ -316,6 +320,7 @@ class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
 
         # LossMap record
         self.assertEqual(1, len(output.lossmap_set.all()))
+
         metadata = output.lossmap_set.get()
         self.assertEqual(NONDETERMINISTIC_LOSS_MAP_METADATA['deterministic'],
                          metadata.deterministic)
@@ -325,7 +330,9 @@ class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
                          metadata.category)
         self.assertEqual(NONDETERMINISTIC_LOSS_MAP_METADATA['unit'],
                          metadata.unit)
-        self.assertEqual(NONDETERMINISTIC_LOSS_MAP_METADATA['poe'],
+        self.assertEqual(NONDETERMINISTIC_LOSS_MAP_METADATA['timeSpan'],
+                         metadata.timespan)
+        self.assertEqual(NONDETERMINISTIC_LOSS_MAP_METADATA['poE'],
                          metadata.poe)
 
         # LossMapData records
