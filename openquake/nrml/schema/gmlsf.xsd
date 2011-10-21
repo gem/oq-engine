@@ -18,7 +18,7 @@
    <!-- ============================================================= -->
    <!-- === includes and imports                                  === -->
    <!-- ============================================================= -->
-   <import namespace="http://www.w3.org/1999/xlink" schemaLocation="http://schemas.opengis.net/xlink/1.0.0/xlinks.xsd"/>
+   <import namespace="http://www.w3.org/1999/xlink" schemaLocation="./xlinks.xsd"/>
    <!-- =========================================================== -->
    <!-- === Subset of geometryAggregates.xsd for this profile ===== -->
    <!-- =========================================================== -->
