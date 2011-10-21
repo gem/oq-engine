@@ -10,11 +10,15 @@ import org.opensha.commons.data.function.DiscretizedFuncAPI;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
+import org.opensha.commons.param.DoubleParameter;
 import org.opensha.sha.earthquake.EqkRupForecastAPI;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
 import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
 import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
+import org.opensha.sha.imr.param.SiteParams.DepthTo2pt5kmPerSecParam;
+import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.util.TectonicRegionType;
 import static org.apache.commons.collections.CollectionUtils.forAllDo;
 
@@ -96,6 +100,28 @@ public class DisaggregationCalculator {
 		this.lonBinLims = lonBinEdges;
 		this.magBinLims = magBinEdges;
 		this.epsilonBinLims = epsilonBinEdges;
+	}
+
+	/**
+	 * Simplified computeMatrix method for convenient calls from the Python
+	 * code.
+	 */
+	public double[][][][][] computeMatrix(
+			double lat,
+			double lon,
+			GEM1ERF erf,
+			Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap,
+			double poe,
+			double vs30Value,
+			double depthTo2pt5KMPS)
+	{
+		Site site = new Site(new Location(lat, lon));
+		site.addParameter(new DoubleParameter(Vs30_Param.NAME, vs30Value));
+		site.addParameter(new DoubleParameter(DepthTo2pt5kmPerSecParam.NAME, depthTo2pt5KMPS));
+
+		double minMag = (Double) erf.getParameter(GEM1ERF.MIN_MAG_NAME).getValue();
+
+		return computeMatrix(site, erf, imrMap, poe, null, minMag);
 	}
 
 	public double[][][][][] computeMatrix(
