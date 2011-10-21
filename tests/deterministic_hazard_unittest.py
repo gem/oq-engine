@@ -247,13 +247,6 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         self.assertEqual("org.opensha.sha.earthquake.EqkRupture",
                          calculator.rupture_model.__class__.__name__)
 
-    def test_loads_the_gmpe(self):
-        calculator = det.DeterministicEventBasedMixin(None, None)
-        calculator.params = self.job.params
-
-        self.assertTrue("org.opensha.sha.imr.attenRelImpl.BA_2008_AttenRel",
-                        calculator.gmpe.__class__.__name__)
-
     def test_the_same_calculator_is_used_between_multiple_invocations(self):
         calculator = det.DeterministicEventBasedMixin(None, None)
         calculator.params = self.job.params

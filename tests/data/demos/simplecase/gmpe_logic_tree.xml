@@ -3,22 +3,39 @@
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.2"
       gml:id="n1">
-    <logicTreeSet>
-        <logicTree id="lt1" tectonicRegion="Active Shallow Crust">
-            <logicTreeBranchSet branchingLevel="1" uncertaintyType="gmpeModel">
+    <logicTree logicTreeID='lt1'>
+        <logicTreeBranchingLevel branchingLevelID="bl1">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
+                    applyToTectonicRegionType="Active Shallow Crust">
 
-                <logicTreeBranch>
+                <logicTreeBranch branchID="b1">
                     <uncertaintyModel>BA_2008_AttenRel</uncertaintyModel>
                     <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
 
-                <logicTreeBranch>
+                <logicTreeBranch branchID="b2">
                     <uncertaintyModel>CB_2008_AttenRel</uncertaintyModel>
                     <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
 
             </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
 
-        </logicTree>
-    </logicTreeSet>
+        <logicTreeBranchingLevel branchingLevelID="bl2">
+            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs2"
+                    applyToTectonicRegionType="Subduction Interface">
+
+                <logicTreeBranch branchID="b3">
+                    <uncertaintyModel>BA_2008_AttenRel</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+
+                <logicTreeBranch branchID="b4">
+                    <uncertaintyModel>CB_2008_AttenRel</uncertaintyModel>
+                    <uncertaintyWeight>0.5</uncertaintyWeight>
+                </logicTreeBranch>
+
+            </logicTreeBranchSet>
+        </logicTreeBranchingLevel>
+    </logicTree>
 </nrml>
