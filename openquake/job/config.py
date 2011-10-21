@@ -364,7 +364,8 @@ class BasicParameterValidator(object):
         for name, value in self.params.items():
             param = PARAMS.get(name)
             if param is None:
-                errors.append("Unknown parameter: '%s'" % name)
+                # Ignore unknown parameters.
+                continue
             else:
                 if (param.type in (None, models.TextField)
                     and param.to_db is None):
