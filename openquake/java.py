@@ -29,6 +29,12 @@ from celery.decorators import task as celery_task
 from functools import wraps
 
 from openquake import nrml
+from openquake.utils import config
+
+
+# JVM max. memory size (in MB) to be used (per celery worker process!)
+DEFAULT_JVM_MAX_MEM = 768
+
 
 JAVA_CLASSES = {
     'LogicTreeProcessor': "org.gem.engine.LogicTreeProcessor",
@@ -173,15 +179,56 @@ def _init_logs():
     jpype.JClass("org.apache.log4j.PropertyConfigurator").configure(props)
 
 
+def get_jvm_max_mem():
+    """
+    Determine what the JVM maximum memory size should be.
+
+    :returns: the maximum JVM memory size considering the possible sources in
+        the following order
+        * the value of the `OQ_JVM_MAXMEM` environment variable
+        * the setting in the config file
+        * a fixed default (`768` MB).
+    """
+
+    def str2int(a_dict, key):
+        """Return `False` unless int(a_dict[key]) yields a valid integer."""
+        if not a_dict:
+            return False
+        val = a_dict.get(key)
+        if val is None:
+            return False
+        val = val.strip()
+        try:
+            val = int(val)
+        except ValueError:
+            return False
+        else:
+            return val
+
+    result = str2int(os.environ, "OQ_JVM_MAXMEM")
+    if result:
+        return result
+
+    result = str2int(config.get_section("java"), "max_mem")
+    if result:
+        return result
+
+    return DEFAULT_JVM_MAX_MEM
+
+
 def jvm():
-    """Return the jpype module, after guaranteeing the JVM is running and
-    the classpath has been loaded properly."""
+    """
+    Return the jpype module, after guaranteeing the JVM is running and
+    the classpath has been loaded properly.
+    """
     jarpaths = (os.path.abspath(
                     os.path.join(os.path.dirname(__file__), "../dist")),
                 '/usr/share/java')
 
     if not jpype.isJVMStarted():
+        max_mem = get_jvm_max_mem()
         jpype.startJVM(jpype.getDefaultJVMPath(),
+            "-Xmx%sM" % max_mem,
             "-Djava.ext.dirs=%s:%s" % jarpaths,
             # setting Schema path here is ugly, but it's better than
             # doing it before all XML parsing calls
