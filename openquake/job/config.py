@@ -46,6 +46,14 @@ COMPUTE_HAZARD_AT_ASSETS = "COMPUTE_HAZARD_AT_ASSETS_LOCATIONS"
 DEPTHTO1PT0KMPERSEC = "DEPTHTO1PT0KMPERSEC"
 VS30_TYPE = "VS30_TYPE"
 
+LAT_BIN_LIMITS = 'LATITUDE_BIN_LIMITS'
+LON_BIN_LIMITS = 'LONGITUDE_BIN_LIMITS'
+MAG_BIN_LIMITS = 'MAGNITUDE_BIN_LIMITS'
+EPS_BIN_LIMITS = 'EPSILON_BIN_LIMITS'
+DIST_BIN_LIMITS = 'DISTANCE_BIN_LIMITS'
+
+
+
 
 def to_float_array(value):
     """Convert string value to floating point value array"""
@@ -249,12 +257,6 @@ class DisaggregationValidator(object):
     """Validator for parameters which are specific to the Disaggregation
     calculator."""
 
-    LAT_BIN_LIMITS = 'LATITUDE_BIN_LIMITS'
-    LON_BIN_LIMITS = 'LONGITUDE_BIN_LIMITS'
-    MAG_BIN_LIMITS = 'MAGNITUDE_BIN_LIMITS'
-    EPS_BIN_LIMITS = 'EPSILON_BIN_LIMITS'
-    DIST_BIN_LIMITS = 'DISTANCE_BIN_LIMITS'
-
     def __init__(self, params):
         self.params = params
 
@@ -306,11 +308,11 @@ class DisaggregationValidator(object):
         valid = True
 
         checks = (
-            dict(param=self.LAT_BIN_LIMITS, bin_min=-90.0, bin_max=90.0),
-            dict(param=self.LON_BIN_LIMITS, bin_min=-180.0, bin_max=180.0),
-            dict(param=self.MAG_BIN_LIMITS, bin_min=0.0),
-            dict(param=self.EPS_BIN_LIMITS),
-            dict(param=self.DIST_BIN_LIMITS, bin_min=0.0),
+            dict(param=LAT_BIN_LIMITS, bin_min=-90.0, bin_max=90.0),
+            dict(param=LON_BIN_LIMITS, bin_min=-180.0, bin_max=180.0),
+            dict(param=MAG_BIN_LIMITS, bin_min=0.0),
+            dict(param=EPS_BIN_LIMITS),
+            dict(param=DIST_BIN_LIMITS, bin_min=0.0),
         )
 
         errors = []
