@@ -161,9 +161,12 @@ class CreateRiskWriterTest(unittest.TestCase):
         # XML writer
         writer = risk_output.create_loss_map_writer(
             None, ['xml'], "fakepath.xml", False)
-        self.assertEqual(writer, None)
+        self.assertEqual(type(writer),
+                risk_output.LossMapNonDeterministicXMLWriter)
 
-        # database writer
+        # database writer is the same for deterministic and non-deterministic
         writer = risk_output.create_loss_map_writer(
             1, ['db'], "fakepath.xml", False)
-        self.assertEqual(type(writer), risk_output.LossMapDBWriter)
+
+        self.assertEqual(type(writer),
+                risk_output.LossMapDBWriter)
