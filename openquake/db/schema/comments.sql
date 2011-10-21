@@ -234,6 +234,7 @@ COMMENT ON COLUMN riskr.loss_map.loss_map_ref IS 'A simple identifier';
 COMMENT ON COLUMN riskr.loss_map.end_branch_label IS 'End branch label';
 COMMENT ON COLUMN riskr.loss_map.category IS 'Loss category (e.g. economic_loss).';
 COMMENT ON COLUMN riskr.loss_map.unit IS 'Unit of measurement';
+COMMENT ON COLUMN riskr.loss_map.timespan IS 'timespan of years (for non deterministic loss maps, i.e. classical/probabilistic)';
 COMMENT ON COLUMN riskr.loss_map.poe IS 'Probability of exceedance (for probabilistic loss maps)';
 
 
