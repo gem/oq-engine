@@ -25,6 +25,8 @@ import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.util.TectonicRegionType;
 import static org.apache.commons.collections.CollectionUtils.forAllDo;
 
+import org.gem.calc.DisaggregationResult;
+
 public class DisaggregationCalculator {
 
 	private final Double[] latBinLims;
@@ -130,10 +132,13 @@ public class DisaggregationCalculator {
 			hazardCurve.set(d, 0.0);
 		}
 
-		try {
+		try
+        {
 			HazardCurveCalculator hcc = new HazardCurveCalculator();
 			hcc.getHazardCurve(hazardCurve, site, imrMap, erf);
-		} catch (RemoteException e) {
+		} 
+        catch (RemoteException e)
+        {
 			throw new RuntimeException(e);
 		}
 		double minMag = (Double) erf.getParameter(GEM1ERF.MIN_MAG_NAME).getValue();
@@ -141,7 +146,7 @@ public class DisaggregationCalculator {
 		return computeMatrix(site, erf, imrMap, poe, hazardCurve, minMag);
 	}
 
-	public double[][][][][] computeMatrix(
+	public DisaggregationResult computeMatrix(
 			Site site,
 			EqkRupForecastAPI erf,
 			Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap,
@@ -149,6 +154,7 @@ public class DisaggregationCalculator {
 			DiscretizedFuncAPI hazardCurve,
 			double minMag) // or just pass a List<double> of IML values and compute the curve inside here?
 	{
+
 		assertPoissonian(erf);
 		assertNonZeroStdDev(imrMap);
 
@@ -163,6 +169,7 @@ public class DisaggregationCalculator {
 		double totalAnnualRate = 0.0;
 
 		double gmv = getGMV(hazardCurve, poe);
+        daResult.setGMV(gmv);
 		
 		for (int srcCnt = 0; srcCnt < erf.getNumSources(); srcCnt++)
 		{
@@ -209,8 +216,13 @@ public class DisaggregationCalculator {
 		}  // end source loop
 		
 		disaggMatrix = normalize(disaggMatrix, totalAnnualRate);
-		return disaggMatrix;
 
+        DisaggregationResult daResult = new DisaggregationResult();
+
+        daResult.setGMV(gmv);
+        daResult.setMatrix(disaggMatrix);
+
+		return daResult;
 	}
 
 	public boolean allInRange(
