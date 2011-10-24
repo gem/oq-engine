@@ -32,6 +32,10 @@ import org.gem.hdf5.HDF5Util;
 
 public class DisaggregationCalculator {
 
+	/**
+	 * Dataset for the full disagg matrix (for HDF5 ouput).
+	 */
+	public static final String FULLDISAGGMATRIX = "fulldisaggmatrix";
 	private final Double[] latBinLims;
 	private final Double[] lonBinLims;
 	private final Double[] magBinLims;
@@ -147,7 +151,7 @@ public class DisaggregationCalculator {
 		String fileName = UUID.randomUUID().toString() + ".h5";
 		String fullPath = new File(path, fileName).getAbsolutePath();
 
-		HDF5Util.writeMatrix(fullPath, "", dims, daResult.getMatrix());
+		HDF5Util.writeMatrix(fullPath, FULLDISAGGMATRIX, dims, daResult.getMatrix());
 
 		daResult.setMatrixPath(fullPath);
 
