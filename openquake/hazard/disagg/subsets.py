@@ -38,10 +38,9 @@ def pmf(func):
     return func
 
 @pmf
-def magpmf(site, full_matrix, distance_bin_edges,
-           nlat, nlon, nmag, neps, ntrt,
-           target_file):
-    ds_name = 'magpmf'
+def magpmf(site, full_matrix,
+           lat_bin_edges, lon_bin_edges, distance_bin_edges,
+           nlat, nlon, nmag, neps, ntrt):
     shape = [nmag - 1]
     ds = numpy.ndarray(shape, DATA_TYPE)
     for i in xrange(nmag - 1):
@@ -50,20 +49,37 @@ def magpmf(site, full_matrix, distance_bin_edges,
                     for k in xrange(nlon - 1)
                     for l in xrange(neps - 1)
                     for m in xrange(ntrt))
-    target_file.create_dataset(ds_name, data=ds)
+    return ds
 
 @pmf
-def distpmf(site, full_matrix, distance_bin_edges,
-            nlat, nlon, nmag, neps, ntrt,
-            target_file):
-    # TODO: implement
-    pass
+def distpmf(site, full_matrix,
+            lat_bin_edges, lon_bin_edges, distance_bin_edges,
+            nlat, nlon, nmag, neps, ntrt):
+    # TODO: test
+    shape = [len(distance_bin_edges) - 1]
+    ds = numpy.ndarray(shape, DATA_TYPE)
+    slat, slon = site
+    for i in xrange(nlat - 1):
+        for j in xrange(nlon - 1):
+            for k in xrange(nmag - 1):
+                for l in xrange(neps - 1):
+                    for m in xrange(ntrt):
+                        meanlat = (lat_bin_edges[i] + lat_bin_edges[i + 1]) / 2
+                        meanlon = (lon_bin_edges[j] + lon_bin_edges[j + 1]) / 2
+                        dist = hdistance(meanlat, meanlon, slat, slon)
+                        if dist < distance_bin_edges[0] \
+                                or dist > distance_bin_edges[-1]:
+                            continue
+                        for ii in xrange(distance_bin_edges - 1):
+                            if dist >= distance_bin_edges[ii + 1]:
+                                break
+                        ds[ii] += full_matrix[i][j][k][l][m]
+    return ds
 
 @pmf
-def trtpmf(site, full_matrix, distance_bin_edges,
-           nlat, nlon, nmag, neps, ntrt,
-           target_file):
-    ds_name = 'trtpmf'
+def trtpmf(site, full_matrix,
+           lat_bin_edges, lon_bin_edges, distance_bin_edges,
+           nlat, nlon, nmag, neps, ntrt):
     shape = [ntrt]
     ds = numpy.ndarray(shape, DATA_TYPE)
     for i in xrange(ntrt):
@@ -72,27 +88,62 @@ def trtpmf(site, full_matrix, distance_bin_edges,
                     for k in xrange(nlon - 1)
                     for l in xrange(nmag - 1)
                     for m in xrange(neps - 1))
-    target_file.create_dataset(ds_name, data=ds)
+    return ds
 
 @pmf
-def magdistpmf(site, full_matrix, distance_bin_edges,
-               nlat, nlon, nmag, neps, ntrt,
-               target_file):
-    # TODO: implement
-    pass
+def magdistpmf(site, full_matrix,
+               lat_bin_edges, lon_bin_edges, distance_bin_edges,
+               nlat, nlon, nmag, neps, ntrt):
+    # TODO: test
+    shape = [nmag - 1, len(distance_bin_edges) - 1]
+    ds = numpy.ndarray(shape, DATA_TYPE)
+    slat, slon = site
+    for i in xrange(nlat - 1):
+        for j in xrange(nlon - 1):
+            for k in xrange(nmag - 1):
+                for l in xrange(neps - 1):
+                    for m in xrange(ntrt):
+                        meanlat = (lat_bin_edges[i] + lat_bin_edges[i + 1]) / 2
+                        meanlon = (lon_bin_edges[j] + lon_bin_edges[j + 1]) / 2
+                        dist = hdistance(meanlat, meanlon, slat, slon)
+                        if dist < distance_bin_edges[0] \
+                                or dist > distance_bin_edges[-1]:
+                            continue
+                        for ii in xrange(distance_bin_edges - 1):
+                            if dist >= distance_bin_edges[ii + 1]:
+                                break
+                        ds[k][ii] += full_matrix[i][j][k][l][m]
+    return ds
 
 @pmf
-def magdistepspmf(site, full_matrix, distance_bin_edges,
-                  nlat, nlon, nmag, neps, ntrt,
-                  target_file):
-    # TODO: implement
-    pass
+def magdistepspmf(site, full_matrix,
+                  lat_bin_edges, lon_bin_edges, distance_bin_edges,
+                  nlat, nlon, nmag, neps, ntrt):
+    # TODO: test
+    shape = [nmag - 1, len(distance_bin_edges) - 1, ntrt - 1]
+    ds = numpy.ndarray(shape, DATA_TYPE)
+    slat, slon = site
+    for i in xrange(nlat - 1):
+        for j in xrange(nlon - 1):
+            for k in xrange(nmag - 1):
+                for l in xrange(neps - 1):
+                    for m in xrange(ntrt):
+                        meanlat = (lat_bin_edges[i] + lat_bin_edges[i + 1]) / 2
+                        meanlon = (lon_bin_edges[j] + lon_bin_edges[j + 1]) / 2
+                        dist = hdistance(meanlat, meanlon, slat, slon)
+                        if dist < distance_bin_edges[0] \
+                                or dist > distance_bin_edges[-1]:
+                            continue
+                        for ii in xrange(distance_bin_edges - 1):
+                            if dist >= distance_bin_edges[ii + 1]:
+                                break
+                        ds[k][ii][l] += full_matrix[i][j][k][l][m]
+    return ds
 
 @pmf
-def latlonpmf(site, full_matrix, distance_bin_edges,
-              nlat, nlon, nmag, neps, ntrt,
-              target_file):
-    ds_name = 'latlonpmf'
+def latlonpmf(site, full_matrix,
+              lat_bin_edges, lon_bin_edges, distance_bin_edges,
+              nlat, nlon, nmag, neps, ntrt):
     shape = [nlat - 1, nlon - 1]
     ds = numpy.ndarray(shape, DATA_TYPE)
     for i in xrange(nlat - 1):
@@ -101,13 +152,12 @@ def latlonpmf(site, full_matrix, distance_bin_edges,
                            for k in xrange(nmag - 1)
                            for l in xrange(neps - 1)
                            for m in xrange(ntrt))
-    target_file.create_dataset(ds_name, data=ds)
+    return ds
 
 @pmf
-def latlonmagpmf(site, full_matrix, distance_bin_edges,
-                 nlat, nlon, nmag, neps, ntrt,
-                 target_file):
-    ds_name = 'latlonmagpmf'
+def latlonmagpmf(site, full_matrix,
+                 lat_bin_edges, lon_bin_edges, distance_bin_edges,
+                 nlat, nlon, nmag, neps, ntrt):
     shape = [nlat - 1, nlon - 1, nmag - 1]
     ds = numpy.ndarray(shape, DATA_TYPE)
     for i in xrange(nlat - 1):
@@ -116,13 +166,12 @@ def latlonmagpmf(site, full_matrix, distance_bin_edges,
                 ds[i][j][k] = sum(full_matrix[i][j][k][l][m]
                                   for l in xrange(neps - 1)
                                   for m in xrange(ntrt))
-    target_file.create_dataset(ds_name, data=ds)
+    return ds
 
 @pmf
-def latlonmagepspmf(site, full_matrix, distance_bin_edges,
-                    nlat, nlon, nmag, neps, ntrt,
-                    target_file):
-    ds_name = 'latlonmagepspmf'
+def latlonmagepspmf(site, full_matrix,
+                    lat_bin_edges, lon_bin_edges, distance_bin_edges,
+                    nlat, nlon, nmag, neps, ntrt):
     shape = [nlat - 1, nlon - 1, nmag - 1, neps - 1]
     ds = numpy.ndarray(shape, DATA_TYPE)
     for i in xrange(nlat - 1):
@@ -131,13 +180,12 @@ def latlonmagepspmf(site, full_matrix, distance_bin_edges,
                 for l in xrange(neps - 1):
                     ds[i][j][k][l] = sum(full_matrix[i][j][k][l][m]
                                          for m in xrange(ntrt))
-    target_file.create_dataset(ds_name, data=ds)
+    return ds
 
 @pmf
-def magtrtpmf(site, full_matrix, distance_bin_edges,
-              nlat, nlon, nmag, neps, ntrt,
-              target_file):
-    ds_name = 'magtrtpmf'
+def magtrtpmf(site, full_matrix,
+              lat_bin_edges, lon_bin_edges, distance_bin_edges,
+              nlat, nlon, nmag, neps, ntrt):
     shape = [nmag - 1, ntrt]
     ds = numpy.ndarray(shape, DATA_TYPE)
     for i in xrange(nmag - 1):
@@ -146,13 +194,12 @@ def magtrtpmf(site, full_matrix, distance_bin_edges,
                            for k in xrange(nlat - 1)
                            for l in xrange(nlon - 1)
                            for m in xrange(neps - 1))
-    target_file.create_dataset(ds_name, data=ds)
+    return ds
 
 @pmf
-def latlontrtpmf(site, full_matrix, distance_bin_edges,
-                 nlat, nlon, nmag, neps, ntrt,
-                 target_file):
-    ds_name = 'latlontrtpmf'
+def latlontrtpmf(site, full_matrix,
+                 lat_bin_edges, lon_bin_edges, distance_bin_edges,
+                 nlat, nlon, nmag, neps, ntrt):
     shape = [nlat - 1, nlon - 1, ntrt]
     ds = numpy.ndarray(shape, DATA_TYPE)
     for i in xrange(nlat - 1):
@@ -161,11 +208,12 @@ def latlontrtpmf(site, full_matrix, distance_bin_edges,
                 ds[i][j][k] = sum(full_matrix[i][j][l][m][k]
                                   for l in xrange(nmag - 1)
                                   for m in xrange(neps - 1))
-    target_file.create_dataset(ds_name, data=ds)
+    return ds
 
 
 @task
-def extract_subsets(site, full_matrix_path, dims, distance_bin_edges,
+def extract_subsets(site, full_matrix_path, dims,
+                    lat_bin_edges, lon_bin_edges, distance_bin_edges,
                     target_path, subsets):
     assert len(dims) == 5
     subsets = set(subsets)
@@ -178,5 +226,9 @@ def extract_subsets(site, full_matrix_path, dims, distance_bin_edges,
         with h5py.File(target_path, 'a') as target:
             for subset_type in subsets:
                 extractor = SUBSET_EXTRACTORS[subset_type]
-                extractor(site, full_matrix, distance_bin_edges,
-                          *dims, target_file=target)
+                dataset = extractor(
+                    site, full_matrix,
+                    lat_bin_edges, lon_bin_edges, distance_bin_edges,
+                    *dims
+                )
+                target.create_dataset(subset_type, data=dataset)
