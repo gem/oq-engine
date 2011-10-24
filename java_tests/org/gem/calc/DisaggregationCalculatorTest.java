@@ -21,11 +21,6 @@ import static org.gem.calc.DisaggregationCalculator.normalize;
 import static org.gem.calc.DisaggregationCalculator.assertPoissonian;
 import static org.gem.calc.DisaggregationCalculator.assertNonZeroStdDev;
 
-import static org.gem.hdf5.HDF5Util.writeMatrix;
-import static org.gem.hdf5.HDF5UtilTest.SAMPLE_5D_ARRAY;
-import static org.gem.hdf5.HDF5UtilTest.SAMPLE_5D_ARRAY_SHAPE;
-import static org.gem.hdf5.HDF5UtilTest.H5_FILE;
-
 public class DisaggregationCalculatorTest
 {
 
