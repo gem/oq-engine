@@ -1,9 +1,11 @@
 package org.gem.calc;
 
+import java.io.File;
 import java.rmi.RemoteException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 import org.apache.commons.collections.Closure;
 import org.opensha.commons.data.Site;
@@ -26,6 +28,7 @@ import org.opensha.sha.util.TectonicRegionType;
 import static org.apache.commons.collections.CollectionUtils.forAllDo;
 
 import org.gem.calc.DisaggregationResult;
+import org.gem.hdf5.HDF5Util;
 
 public class DisaggregationCalculator {
 
@@ -34,6 +37,11 @@ public class DisaggregationCalculator {
 	private final Double[] magBinLims;
 	private final Double[] epsilonBinLims;
 	private static final TectonicRegionType[] tectonicRegionTypes = TectonicRegionType.values();
+	/**
+	 * Dimensions for matrices produced by this calculator, based on the length
+	 * of the bin limits passed to the constructor.
+	 */
+	private final long[] dims;
 
 	/**
 	 * Used for checking that bin edge lists are not null;
@@ -105,13 +113,52 @@ public class DisaggregationCalculator {
 		this.lonBinLims = lonBinEdges;
 		this.magBinLims = magBinEdges;
 		this.epsilonBinLims = epsilonBinEdges;
+
+		this.dims = new long[5];
+		this.dims[0] = this.latBinLims.length - 1;
+		this.dims[1] = this.lonBinLims.length - 1;
+		this.dims[2] = this.magBinLims.length - 1;
+		this.dims[3] = this.epsilonBinLims.length - 1;
+		this.dims[4] = tectonicRegionTypes.length;
+	}
+
+	/**
+	 * Compute the full disaggregation matrix and write it to an HDF5 file.
+	 * 
+	 * The result is a DisaggregationResult object, containing the GMV, the full
+	 * 5D matrix, and the absolute path the HDF5 file.
+	 * 
+	 * @param path directory where the matrix should be written to
+	 * @throws Exception */
+	public DisaggregationResult computeAndWriteMatrix(
+			double lat,
+			double lon,
+			GEM1ERF erf,
+			Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap,
+			double poe,
+			List<Double> imls,
+			double vs30Value,
+			double depthTo2pt5KMPS,
+			String path) throws Exception
+	{
+		DisaggregationResult daResult = computeMatrix(lat, lon, erf, imrMap,
+				poe, imls, vs30Value, depthTo2pt5KMPS);
+
+		String fileName = UUID.randomUUID().toString() + ".h5";
+		String fullPath = new File(path, fileName).getAbsolutePath();
+
+		HDF5Util.writeMatrix(fullPath, "", dims, daResult.getMatrix());
+
+		daResult.setMatrixPath(fullPath);
+
+		return daResult;
 	}
 
 	/**
 	 * Simplified computeMatrix method for convenient calls from the Python
 	 * code.
 	 */
-	public double[][][][][] computeMatrix(
+	public DisaggregationResult computeMatrix(
 			double lat,
 			double lon,
 			GEM1ERF erf,
@@ -159,17 +206,16 @@ public class DisaggregationCalculator {
 		assertNonZeroStdDev(imrMap);
 
 		double disaggMatrix[][][][][] =
-				new double[latBinLims.length - 1]
-						  [lonBinLims.length - 1]
-						  [magBinLims.length - 1]
-						  [epsilonBinLims.length - 1]
-						  [tectonicRegionTypes.length];
+				new double[(int) dims[0]]
+						  [(int) dims[1]]
+						  [(int) dims[2]]
+						  [(int) dims[3]]
+						  [(int) dims[4]];
 		
 		// value by which to normalize the final matrix
 		double totalAnnualRate = 0.0;
 
 		double gmv = getGMV(hazardCurve, poe);
-        daResult.setGMV(gmv);
 		
 		for (int srcCnt = 0; srcCnt < erf.getNumSources(); srcCnt++)
 		{
@@ -218,10 +264,8 @@ public class DisaggregationCalculator {
 		disaggMatrix = normalize(disaggMatrix, totalAnnualRate);
 
         DisaggregationResult daResult = new DisaggregationResult();
-
         daResult.setGMV(gmv);
         daResult.setMatrix(disaggMatrix);
-
 		return daResult;
 	}
 
