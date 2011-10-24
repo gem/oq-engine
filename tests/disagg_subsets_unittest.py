@@ -72,11 +72,13 @@ class SubsetExtractionTestCase(unittest.TestCase):
         assert len(list(numbers)) == 0
 
     def _test_pmf(self, name, datafile, result_shape,
-                  site=None, distance_bin_edges=None):
+                  site=None, lat_bin_edges=None,
+                  lon_bin_edges=None, distance_bin_edges=None):
         target_path = os.path.join(self.tempdir, '%s.hdf5' % name)
         disagg_subsets.extract_subsets(
             site, self.full_matrix_path, self.FULL_MATRIX_SHAPE,
-            distance_bin_edges, target_path, [name]
+            lat_bin_edges, lon_bin_edges, distance_bin_edges,
+            target_path, [name]
         )
         expected_result = numpy.ndarray(result_shape)
         self.read_data_file(datafile, expected_result)
