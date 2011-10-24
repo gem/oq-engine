@@ -34,7 +34,6 @@ SUBSET_EXTRACTORS = {}
 
 
 def pmf(func):
-    @functools.wraps(func)
     SUBSET_EXTRACTORS[func.func_name] = func
     return func
 
