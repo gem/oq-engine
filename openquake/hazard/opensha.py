@@ -25,6 +25,7 @@ import os
 import multiprocessing
 import numpy
 import random
+import functools
 
 from itertools import izip
 
@@ -59,14 +60,24 @@ HAZARD_CURVE_FILENAME_PREFIX = 'hazardcurve'
 HAZARD_MAP_FILENAME_PREFIX = 'hazardmap'
 
 
-def preload(fn):
-    """A decorator for preload steps that must run on the Jobber node"""
+def create_java_cache(fn):
+    """A decorator for creating java cache object"""
 
-    def preloader(self, *args, **kwargs):
-        """Validate job"""
+    @functools.wraps(fn)
+    def decorated(self, *args, **kwargs):  # pylint: disable=C0111
         self.cache = java.jclass("KVS")(
                 config.get("kvs", "host"),
                 int(config.get("kvs", "port")))
+        return fn(self, *args, **kwargs)
+
+    return decorated
+
+
+def preload(fn):
+    """A decorator for preload steps that must run on the Jobber node"""
+
+    @functools.wraps(fn)
+    def preloader(self, *args, **kwargs):  # pylint: disable=C0111
         source_model_lt = self.params.get('SOURCE_MODEL_LOGIC_TREE_FILE_PATH')
         gmpe_lt = self.params.get('GMPE_LOGIC_TREE_FILE_PATH')
         basepath = self.params.get('BASE_PATH')
@@ -395,6 +406,7 @@ class ClassicalMixin(BasePSHAMixin):
 
     @java.jexception
     @preload
+    @create_java_cache
     def execute(self):
         """
         Trigger the calculation and serialization of hazard curves, mean hazard
@@ -605,7 +617,7 @@ class ClassicalMixin(BasePSHAMixin):
 
         return nrml_path
 
-    @preload
+    @create_java_cache
     def compute_hazard_curve(self, sites, realization):
         """ Compute hazard curves, write them to KVS as JSON,
         and return a list of the KVS keys for each curve. """
@@ -711,6 +723,7 @@ class EventBasedMixin(BasePSHAMixin):
 
     @java.jexception
     @preload
+    @create_java_cache
     def execute(self):
         """Main hazard processing block.
 
@@ -791,7 +804,7 @@ class EventBasedMixin(BasePSHAMixin):
                 files.append(nrml_path)
         return files
 
-    @preload
+    @create_java_cache
     def compute_ground_motion_fields(self, site_list, history, realization,
                                      seed):
         """Ground motion field calculation, runs on the workers."""
