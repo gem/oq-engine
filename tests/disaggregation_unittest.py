@@ -45,9 +45,13 @@ class DisaggregationFuncsTestCase(unittest.TestCase):
         self.assertEqual(len(test_input), len(jdouble_a))
         self.assertEqual(test_input, [x.doubleValue() for x in jdouble_a])
 
+
+class DisaggregationTaskTestCase(unittest.TestCase):
+    """ """
+
     @helpers.skipit
     def test_compute_disagg_matrix(self):
-        """ """
+        """Test the core function of the main disaggregation task."""
 
         the_job = helpers.job_from_file(DISAGG_DEMO_CONFIG_FILE)
         da_calc = disagg.compute_disagg_matrix(

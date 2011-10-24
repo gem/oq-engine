@@ -21,6 +21,8 @@ from openquake import job
 
 from openquake.job import config as job_cfg
 from openquake.job import config_text_to_list
+from openquake.utils import config
+from openquake.hazard.opensha import generate_erf, generate_gmpe_map
 
 
 def compute_disagg_matrix(job_id, site, realization, poe):
@@ -52,12 +54,20 @@ def compute_disagg_matrix(job_id, site, realization, poe):
         jd(lat_bin_lims), jd(lon_bin_lims),
         jd(mag_bin_lims), jd(eps_bin_lims))
 
-    erf = None
-    gmpe_map = None
+    cache = java.jclass('KVS')(
+        config.get('kvs', 'host'),
+        int(config.get('kvs', 'port')))
 
-    disagg_calc.computeMatrix(
-        site.latitude, site.longitude, erf, gmpe_map, poe)
-    return disagg_calc
+    erf = generate_erf(job_id, cache)
+    gmpe_map = generate_gmpe_map(job_id, cache)
+    imls = job.config_text_to_list(the_job['INTENSITY_MEASURE_LEVELS'], float)
+    vs30_value = float(the_job['REFERENCE_VS30_VALUE'])
+    depth_to_2pt5 = float(the_job['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM'])
+
+    matrix_5d = disagg_calc.computeMatrix(
+        site.latitude, site.longitude, erf, gmpe_map, poe, imls, vs30_value,
+        depth_to_2pt5)
+    return matrix_5d  # TODO: no, don't actually return this
 
 def list_to_jdouble_array(float_list):
     """Convert a 1D list of floats to a 1D Java Double[] (as a jpype object).
