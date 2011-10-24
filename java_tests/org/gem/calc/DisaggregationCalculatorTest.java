@@ -177,8 +177,8 @@ public class DisaggregationCalculatorTest
 		// this is not the primary test of this test case
 		assertArrayEquals(EXPECTED, result.getMatrix(), 0.00001);
 
-		// primary test: read the matrix from the hdf5 file
-		// and check it against the expected results
+		// primary test: read the matrix from the hdf5 file (from the path given
+		// in the results) and check it against the expected results
 		double[][][][][] fromFile = HDF5Util.readMatrix(result.getMatrixPath());
 
 		assertArrayEquals(EXPECTED, fromFile, 0.00001);
