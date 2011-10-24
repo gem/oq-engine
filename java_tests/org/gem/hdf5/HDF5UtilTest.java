@@ -14,6 +14,7 @@ import org.junit.BeforeClass;
 import static org.gem.hdf5.HDF5Util.reshape;
 import static org.gem.hdf5.HDF5Util.readMatrix;
 import static org.gem.hdf5.HDF5Util.writeMatrix;
+import static org.gem.calc.DisaggregationTestHelper.EXPECTED;
 
 public class HDF5UtilTest
 {
