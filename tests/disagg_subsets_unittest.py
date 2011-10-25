@@ -31,14 +31,19 @@ class SubsetExtractionTestCase(unittest.TestCase):
     FULL_MATRIX_DATA = \
         'latitudeLongitudeMagnitudeEpsilonTectonicRegionTypePMF.dat'
 
-    #                        lat lon mag eps trt
-    FULL_MATRIX_SHAPE      = (6,  6,  5,  5,  5)
-    NLAT, NLON, NMAG, NEPS, NTRT = FULL_MATRIX_SHAPE
-
     LATITUDE_BIN_LIMITS = [-0.6, -0.3, -0.1, 0.1, 0.3, 0.6]
     LONGITUDE_BIN_LIMITS = LATITUDE_BIN_LIMITS
-    DISTANCE_BIN_LIMITS =  [0.0, 20.0, 40.0, 60.0]
+    DISTANCE_BIN_LIMITS = [0.0, 20.0, 40.0, 60.0]
+    MAGNITUDE_BIN_LIMITS = [5.0, 6.0, 7.0, 8.0, 9.0]
+    EPSILON_BIN_LIMITS = [-0.5, +0.5, +1.5, +2.5, +3.5]
+
     NDIST = len(DISTANCE_BIN_LIMITS)
+    NLAT = len(LATITUDE_BIN_LIMITS)
+    NLON = len(LONGITUDE_BIN_LIMITS)
+    NMAG = len(MAGNITUDE_BIN_LIMITS)
+    NEPS = len(EPSILON_BIN_LIMITS)
+    NTRT = 5
+    FULL_MATRIX_SHAPE = (NLAT, NLON, NMAG, NEPS, NTRT)
 
     SITE = (0.0, 0.0)
 
@@ -82,8 +87,9 @@ class SubsetExtractionTestCase(unittest.TestCase):
     def _test_pmf(self, name, datafile, result_shape):
         target_path = os.path.join(self.tempdir, '%s.hdf5' % name)
         disagg_subsets.extract_subsets(
-            self.SITE, self.full_matrix_path, self.FULL_MATRIX_SHAPE,
+            self.SITE, self.full_matrix_path,
             self.LATITUDE_BIN_LIMITS, self.LONGITUDE_BIN_LIMITS,
+            self.MAGNITUDE_BIN_LIMITS, self.EPSILON_BIN_LIMITS,
             self.DISTANCE_BIN_LIMITS,
             target_path, [name]
         )
