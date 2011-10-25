@@ -64,7 +64,7 @@ class SubsetExtractionTestCase(unittest.TestCase):
 
     @classmethod
     def read_data_file(cls, data_filename, target_dataset):
-        data = open(helpers.get_data_path('DisaggSubsets/%s' % data_filename))
+        data = open(helpers.get_data_path('disagg/result/%s' % data_filename))
         numbers = (float(line.split()[-1]) for line in data)
         if len(target_dataset.shape) == 1:
             for i, number in enumerate(numbers):
