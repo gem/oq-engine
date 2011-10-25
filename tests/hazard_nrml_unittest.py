@@ -429,7 +429,7 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
     def test_close_with_at_least_one_set(self):
         self.assertRaises(RuntimeError, self.writer.close)
 
-    def test_the_set_must_have_at_least_on_element(self):
+    def test_the_set_must_have_at_least_one_element(self):
         self.values["mset"] = []
 
         self.assertRaises(RuntimeError, self.writer.write,
