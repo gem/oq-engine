@@ -219,7 +219,7 @@ public class DisaggregationCalculator {
 		// value by which to normalize the final matrix
 		double totalAnnualRate = 0.0;
 
-		double gmv = getGMV(hazardCurve, poe);
+		double logGMV = getGMV(hazardCurve, poe);
 		
 		for (int srcCnt = 0; srcCnt < erf.getNumSources(); srcCnt++)
 		{
@@ -232,7 +232,7 @@ public class DisaggregationCalculator {
 
 			ScalarIntensityMeasureRelationshipAPI imr = imrMap.get(trt);
 			imr.setSite(site);
-			imr.setIntensityMeasureLevel(gmv);
+			imr.setIntensityMeasureLevel(logGMV);
 
 			for(int rupCnt = 0; rupCnt < source.getNumRuptures(); rupCnt++)
 			{
@@ -268,7 +268,7 @@ public class DisaggregationCalculator {
 		disaggMatrix = normalize(disaggMatrix, totalAnnualRate);
 
         DisaggregationResult daResult = new DisaggregationResult();
-        daResult.setGMV(gmv);
+        daResult.setGMV(Math.exp(logGMV));
         daResult.setMatrix(disaggMatrix);
 		return daResult;
 	}
