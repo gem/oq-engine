@@ -137,3 +137,36 @@ class SubsetExtractionTestCase(unittest.TestCase):
         self._test_pmf('latlontrtpmf',
                        'latitudeLongitudeTectonicRegionTypePMF.dat',
                        [self.NLAT - 1, self.NLON - 1, self.NTRT])
+
+    def test_full_matrix(self):
+        self._test_pmf(disagg_subsets.FULL_MATRIX_DS_NAME,
+                       self.FULL_MATRIX_DATA,
+                       [self.NLAT - 1, self.NLON - 1, self.NMAG - 1,
+                        self.NEPS - 1, self.NTRT])
+
+    def test_multiple_matrices(self):
+        target_path = os.path.join(self.tempdir, 'multiple.hdf5')
+        pmfs = {
+            'magdistepspmf': ('magnitudeDistanceEpsilonPMF.dat',
+                              [self.NMAG - 1, self.NDIST - 1, self.NEPS - 1]),
+            'latlonpmf': ('latitudeLongitudePMF.dat',
+                          [self.NLAT - 1, self.NLON - 1]),
+            disagg_subsets.FULL_MATRIX_DS_NAME: (
+                self.FULL_MATRIX_DATA,
+                [self.NLAT - 1, self.NLON - 1, self.NMAG - 1,
+                 self.NEPS - 1, self.NTRT]
+            )
+        }
+        disagg_subsets.extract_subsets(
+            self.SITE, self.full_matrix_path,
+            self.LATITUDE_BIN_LIMITS, self.LONGITUDE_BIN_LIMITS,
+            self.MAGNITUDE_BIN_LIMITS, self.EPSILON_BIN_LIMITS,
+            self.DISTANCE_BIN_LIMITS,
+            target_path,
+            pmfs.keys()
+        )
+        result = h5py.File(target_path, 'r')
+        for name, (datafile, shape) in pmfs.items():
+            expected_result = numpy.ndarray(shape)
+            self.read_data_file(datafile, expected_result)
+            helpers.assertDeepAlmostEqual(self, expected_result, result[name])
