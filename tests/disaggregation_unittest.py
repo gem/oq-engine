@@ -62,7 +62,7 @@ class DisaggregationTaskTestCase(unittest.TestCase):
 
         # for the given test input data, we expect the calculator to return
         # this gmv:
-        expected_gmv = -1.351982551305087
+        expected_gmv = 0.22617014437661012
 
         the_job = helpers.job_from_file(DISAGG_DEMO_CONFIG_FILE)
 
@@ -82,7 +82,7 @@ class DisaggregationTaskTestCase(unittest.TestCase):
 
         site = shapes.Site(0.0, 0.0)
         realization = 1
-        poe = 0.02
+        poe = 0.1
         result_dir = tempfile.tempdir
 
         gmv, matrix_path = disagg.compute_disagg_matrix(
