@@ -37,6 +37,12 @@ def pmf(func):
     SUBSET_EXTRACTORS[func.func_name] = func
     return func
 
+
+@pmf
+def fulldisaggmatrix(site, full_matrix, *args, **kwargs):
+    return full_matrix
+
+
 @pmf
 def magpmf(site, full_matrix,
            lat_bin_edges, lon_bin_edges, distance_bin_edges,
@@ -211,16 +217,14 @@ def extract_subsets(site, full_matrix_path,
     subsets = set(subsets)
     assert subsets
     assert not subsets - set(SUBSET_EXTRACTORS)
-    if FULL_MATRIX_DS_NAME in subsets:
-        shutil.copyfile(full_matrix_path, target_path)
     with h5py.File(full_matrix_path, 'r') as source:
-        full_matrix = source[FULL_MATRIX_DS_NAME]
-        with h5py.File(target_path, 'a') as target:
-            for subset_type in subsets:
-                extractor = SUBSET_EXTRACTORS[subset_type]
-                dataset = extractor(
-                    site, full_matrix,
-                    lat_bin_edges, lon_bin_edges, distance_bin_edges,
-                    nlat, nlon, nmag, neps, ntrt, ndist
-                )
-                target.create_dataset(subset_type, data=dataset)
+        full_matrix = source[FULL_MATRIX_DS_NAME].value
+    with h5py.File(target_path, 'w') as target:
+        for subset_type in subsets:
+            extractor = SUBSET_EXTRACTORS[subset_type]
+            dataset = extractor(
+                site, full_matrix,
+                lat_bin_edges, lon_bin_edges, distance_bin_edges,
+                nlat, nlon, nmag, neps, ntrt, ndist
+            )
+            target.create_dataset(subset_type, data=dataset)
