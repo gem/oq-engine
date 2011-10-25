@@ -42,7 +42,7 @@ def magpmf(site, full_matrix,
            lat_bin_edges, lon_bin_edges, distance_bin_edges,
            nlat, nlon, nmag, neps, ntrt):
     shape = [nmag - 1]
-    ds = numpy.ndarray(shape, DATA_TYPE)
+    ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(nmag - 1):
         ds[i] = sum(full_matrix[j][k][i][l][m]
                     for j in xrange(nlat - 1)
@@ -55,9 +55,9 @@ def magpmf(site, full_matrix,
 def distpmf(site, full_matrix,
             lat_bin_edges, lon_bin_edges, distance_bin_edges,
             nlat, nlon, nmag, neps, ntrt):
-    # TODO: test
-    shape = [len(distance_bin_edges) - 1]
-    ds = numpy.ndarray(shape, DATA_TYPE)
+    ndist = len(distance_bin_edges)
+    shape = [ndist - 1]
+    ds = numpy.zeros(shape, DATA_TYPE)
     slat, slon = site
     for i in xrange(nlat - 1):
         for j in xrange(nlon - 1):
@@ -70,8 +70,9 @@ def distpmf(site, full_matrix,
                         if dist < distance_bin_edges[0] \
                                 or dist > distance_bin_edges[-1]:
                             continue
-                        for ii in xrange(distance_bin_edges - 1):
-                            if dist >= distance_bin_edges[ii + 1]:
+                        for ii in xrange(ndist - 1):
+                            if dist >= distance_bin_edges[ii] \
+                                    and dist < distance_bin_edges[ii + 1]:
                                 break
                         ds[ii] += full_matrix[i][j][k][l][m]
     return ds
@@ -81,7 +82,7 @@ def trtpmf(site, full_matrix,
            lat_bin_edges, lon_bin_edges, distance_bin_edges,
            nlat, nlon, nmag, neps, ntrt):
     shape = [ntrt]
-    ds = numpy.ndarray(shape, DATA_TYPE)
+    ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(ntrt):
         ds[i] = sum(full_matrix[j][k][l][m][i]
                     for j in xrange(nlat - 1)
@@ -94,9 +95,9 @@ def trtpmf(site, full_matrix,
 def magdistpmf(site, full_matrix,
                lat_bin_edges, lon_bin_edges, distance_bin_edges,
                nlat, nlon, nmag, neps, ntrt):
-    # TODO: test
-    shape = [nmag - 1, len(distance_bin_edges) - 1]
-    ds = numpy.ndarray(shape, DATA_TYPE)
+    ndist = len(distance_bin_edges)
+    shape = [nmag - 1, ndist - 1]
+    ds = numpy.zeros(shape, DATA_TYPE)
     slat, slon = site
     for i in xrange(nlat - 1):
         for j in xrange(nlon - 1):
@@ -109,8 +110,9 @@ def magdistpmf(site, full_matrix,
                         if dist < distance_bin_edges[0] \
                                 or dist > distance_bin_edges[-1]:
                             continue
-                        for ii in xrange(distance_bin_edges - 1):
-                            if dist >= distance_bin_edges[ii + 1]:
+                        for ii in xrange(ndist - 1):
+                            if dist >= distance_bin_edges[ii] \
+                                    and dist < distance_bin_edges[ii + 1]:
                                 break
                         ds[k][ii] += full_matrix[i][j][k][l][m]
     return ds
@@ -119,9 +121,9 @@ def magdistpmf(site, full_matrix,
 def magdistepspmf(site, full_matrix,
                   lat_bin_edges, lon_bin_edges, distance_bin_edges,
                   nlat, nlon, nmag, neps, ntrt):
-    # TODO: test
-    shape = [nmag - 1, len(distance_bin_edges) - 1, ntrt - 1]
-    ds = numpy.ndarray(shape, DATA_TYPE)
+    ndist = len(distance_bin_edges)
+    shape = [nmag - 1, ndist - 1, ntrt - 1]
+    ds = numpy.zeros(shape, DATA_TYPE)
     slat, slon = site
     for i in xrange(nlat - 1):
         for j in xrange(nlon - 1):
@@ -134,8 +136,9 @@ def magdistepspmf(site, full_matrix,
                         if dist < distance_bin_edges[0] \
                                 or dist > distance_bin_edges[-1]:
                             continue
-                        for ii in xrange(distance_bin_edges - 1):
-                            if dist >= distance_bin_edges[ii + 1]:
+                        for ii in xrange(ndist - 1):
+                            if dist >= distance_bin_edges[ii] \
+                                    and dist < distance_bin_edges[ii + 1]:
                                 break
                         ds[k][ii][l] += full_matrix[i][j][k][l][m]
     return ds
@@ -145,7 +148,7 @@ def latlonpmf(site, full_matrix,
               lat_bin_edges, lon_bin_edges, distance_bin_edges,
               nlat, nlon, nmag, neps, ntrt):
     shape = [nlat - 1, nlon - 1]
-    ds = numpy.ndarray(shape, DATA_TYPE)
+    ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(nlat - 1):
         for j in xrange(nlon - 1):
             ds[i][j] = sum(full_matrix[i][j][k][l][m]
@@ -159,7 +162,7 @@ def latlonmagpmf(site, full_matrix,
                  lat_bin_edges, lon_bin_edges, distance_bin_edges,
                  nlat, nlon, nmag, neps, ntrt):
     shape = [nlat - 1, nlon - 1, nmag - 1]
-    ds = numpy.ndarray(shape, DATA_TYPE)
+    ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(nlat - 1):
         for j in xrange(nlon - 1):
             for k in xrange(nmag - 1):
@@ -173,7 +176,7 @@ def latlonmagepspmf(site, full_matrix,
                     lat_bin_edges, lon_bin_edges, distance_bin_edges,
                     nlat, nlon, nmag, neps, ntrt):
     shape = [nlat - 1, nlon - 1, nmag - 1, neps - 1]
-    ds = numpy.ndarray(shape, DATA_TYPE)
+    ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(nlat - 1):
         for j in xrange(nlon - 1):
             for k in xrange(nmag - 1):
@@ -187,7 +190,7 @@ def magtrtpmf(site, full_matrix,
               lat_bin_edges, lon_bin_edges, distance_bin_edges,
               nlat, nlon, nmag, neps, ntrt):
     shape = [nmag - 1, ntrt]
-    ds = numpy.ndarray(shape, DATA_TYPE)
+    ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(nmag - 1):
         for j in xrange(ntrt):
             ds[i][j] = sum(full_matrix[k][l][i][m][j]
@@ -201,7 +204,7 @@ def latlontrtpmf(site, full_matrix,
                  lat_bin_edges, lon_bin_edges, distance_bin_edges,
                  nlat, nlon, nmag, neps, ntrt):
     shape = [nlat - 1, nlon - 1, ntrt]
-    ds = numpy.ndarray(shape, DATA_TYPE)
+    ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(nlat - 1):
         for j in xrange(nlon - 1):
             for k in xrange(ntrt):
