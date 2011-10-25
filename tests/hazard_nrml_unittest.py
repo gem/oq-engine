@@ -308,7 +308,6 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
         # double to check there's only one element
         self.writer.write(shapes.Site(1.0, 2.0), self.values)        
         self.writer.write(shapes.Site(1.0, 2.0), self.values)
-
         self.writer.close()
 
         doc = etree.parse(self.FILENAME)
@@ -320,7 +319,6 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
         # double to check there's only one element
         self.writer.write(shapes.Site(1.0, 2.0), self.values)
         self.writer.write(shapes.Site(1.0, 2.0), self.values)
-        
         self.writer.close()
         
         doc = etree.parse(self.FILENAME)
@@ -336,7 +334,6 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
                 "statistics": "mean", "quantileValue": 0.1})
 
         self.writer.write(shapes.Site(1.0, 2.0), self.values)
-
         self.writer.close()
         
         doc = etree.parse(self.FILENAME)
@@ -349,7 +346,6 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
 
     def test_writes_the_disagg_result_node(self):
         self.writer.write(shapes.Site(1.0, 2.0), self.values)
-
         self.writer.close()
         
         doc = etree.parse(self.FILENAME)
@@ -368,7 +364,6 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
         self.writer.write(shapes.Site(1.0, 2.0), self.values)
         self.writer.write(shapes.Site(2.0, 3.0), self.values)
         self.writer.write(shapes.Site(3.0, 4.0), self.values)
-
         self.writer.close()
 
         doc = etree.parse(self.FILENAME)
@@ -387,7 +382,6 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
 
     def test_writes_the_disagg_matrix_set(self):
         self.writer.write(shapes.Site(1.0, 2.0), self.values)
-
         self.writer.close()
 
         doc = etree.parse(self.FILENAME)
