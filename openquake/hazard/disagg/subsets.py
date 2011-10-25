@@ -14,17 +14,20 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
+
 """
 Celery tasks for extracting subset data from 5D result matrices.
 """
-
-import shutil
 
 import numpy
 from celery.task import task
 import h5py
 
 from openquake.shapes import hdistance
+
+# Disabling pylint checks: too many local vars, too many arguments,
+# unused argument.
+# pylint: disable=W0613,R0913,R0914
 
 
 #: The full matrix object name as it appears inside full hdf5 result file.
@@ -93,11 +96,13 @@ def _distgen(site, lat_bin_edges, lon_bin_edges, distance_bin_edges,
         if dist < distance_bin_edges[0] \
                 or dist > distance_bin_edges[-1]:
             continue
+        ii = 0
         for ii in xrange(ndist - 1):
             if dist >= distance_bin_edges[ii] \
                     and dist < distance_bin_edges[ii + 1]:
                 break
         yield i, j, k, l, m, ii
+
 
 @pmf
 def distpmf(site, full_matrix,
@@ -113,6 +118,7 @@ def distpmf(site, full_matrix,
     for i, j, k, l, m, ii in distgen:
         ds[ii] += full_matrix[i][j][k][l][m]
     return ds
+
 
 @pmf
 def trtpmf(site, full_matrix,
@@ -131,6 +137,7 @@ def trtpmf(site, full_matrix,
                     for m in xrange(neps - 1))
     return ds
 
+
 @pmf
 def magdistpmf(site, full_matrix,
                lat_bin_edges, lon_bin_edges, distance_bin_edges,
@@ -147,6 +154,7 @@ def magdistpmf(site, full_matrix,
         ds[k][ii] += full_matrix[i][j][k][l][m]
     return ds
 
+
 @pmf
 def magdistepspmf(site, full_matrix,
                   lat_bin_edges, lon_bin_edges, distance_bin_edges,
@@ -161,6 +169,7 @@ def magdistepspmf(site, full_matrix,
     for i, j, k, l, m, ii in distgen:
         ds[k][ii][l] += full_matrix[i][j][k][l][m]
     return ds
+
 
 @pmf
 def latlonpmf(site, full_matrix,
@@ -179,6 +188,7 @@ def latlonpmf(site, full_matrix,
                            for m in xrange(ntrt))
     return ds
 
+
 @pmf
 def latlonmagpmf(site, full_matrix,
                  lat_bin_edges, lon_bin_edges, distance_bin_edges,
@@ -195,6 +205,7 @@ def latlonmagpmf(site, full_matrix,
                                   for l in xrange(neps - 1)
                                   for m in xrange(ntrt))
     return ds
+
 
 @pmf
 def latlonmagepspmf(site, full_matrix,
@@ -213,6 +224,7 @@ def latlonmagepspmf(site, full_matrix,
                                          for m in xrange(ntrt))
     return ds
 
+
 @pmf
 def magtrtpmf(site, full_matrix,
               lat_bin_edges, lon_bin_edges, distance_bin_edges,
@@ -229,6 +241,7 @@ def magtrtpmf(site, full_matrix,
                            for l in xrange(nlon - 1)
                            for m in xrange(neps - 1))
     return ds
+
 
 @pmf
 def latlontrtpmf(site, full_matrix,
