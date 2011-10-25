@@ -40,7 +40,7 @@ def pmf(func):
 @pmf
 def magpmf(site, full_matrix,
            lat_bin_edges, lon_bin_edges, distance_bin_edges,
-           nlat, nlon, nmag, neps, ntrt):
+           nlat, nlon, nmag, neps, ntrt, ndist):
     shape = [nmag - 1]
     ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(nmag - 1):
@@ -54,7 +54,7 @@ def magpmf(site, full_matrix,
 @pmf
 def distpmf(site, full_matrix,
             lat_bin_edges, lon_bin_edges, distance_bin_edges,
-            nlat, nlon, nmag, neps, ntrt):
+            nlat, nlon, nmag, neps, ntrt, ndist):
     ndist = len(distance_bin_edges)
     shape = [ndist - 1]
     ds = numpy.zeros(shape, DATA_TYPE)
@@ -80,7 +80,7 @@ def distpmf(site, full_matrix,
 @pmf
 def trtpmf(site, full_matrix,
            lat_bin_edges, lon_bin_edges, distance_bin_edges,
-           nlat, nlon, nmag, neps, ntrt):
+           nlat, nlon, nmag, neps, ntrt, ndist):
     shape = [ntrt]
     ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(ntrt):
@@ -94,7 +94,7 @@ def trtpmf(site, full_matrix,
 @pmf
 def magdistpmf(site, full_matrix,
                lat_bin_edges, lon_bin_edges, distance_bin_edges,
-               nlat, nlon, nmag, neps, ntrt):
+               nlat, nlon, nmag, neps, ntrt, ndist):
     ndist = len(distance_bin_edges)
     shape = [nmag - 1, ndist - 1]
     ds = numpy.zeros(shape, DATA_TYPE)
@@ -120,8 +120,7 @@ def magdistpmf(site, full_matrix,
 @pmf
 def magdistepspmf(site, full_matrix,
                   lat_bin_edges, lon_bin_edges, distance_bin_edges,
-                  nlat, nlon, nmag, neps, ntrt):
-    ndist = len(distance_bin_edges)
+                  nlat, nlon, nmag, neps, ntrt, ndist):
     shape = [nmag - 1, ndist - 1, ntrt - 1]
     ds = numpy.zeros(shape, DATA_TYPE)
     slat, slon = site
@@ -146,7 +145,7 @@ def magdistepspmf(site, full_matrix,
 @pmf
 def latlonpmf(site, full_matrix,
               lat_bin_edges, lon_bin_edges, distance_bin_edges,
-              nlat, nlon, nmag, neps, ntrt):
+              nlat, nlon, nmag, neps, ntrt, ndist):
     shape = [nlat - 1, nlon - 1]
     ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(nlat - 1):
@@ -160,7 +159,7 @@ def latlonpmf(site, full_matrix,
 @pmf
 def latlonmagpmf(site, full_matrix,
                  lat_bin_edges, lon_bin_edges, distance_bin_edges,
-                 nlat, nlon, nmag, neps, ntrt):
+                 nlat, nlon, nmag, neps, ntrt, ndist):
     shape = [nlat - 1, nlon - 1, nmag - 1]
     ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(nlat - 1):
@@ -174,7 +173,7 @@ def latlonmagpmf(site, full_matrix,
 @pmf
 def latlonmagepspmf(site, full_matrix,
                     lat_bin_edges, lon_bin_edges, distance_bin_edges,
-                    nlat, nlon, nmag, neps, ntrt):
+                    nlat, nlon, nmag, neps, ntrt, ndist):
     shape = [nlat - 1, nlon - 1, nmag - 1, neps - 1]
     ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(nlat - 1):
@@ -188,7 +187,7 @@ def latlonmagepspmf(site, full_matrix,
 @pmf
 def magtrtpmf(site, full_matrix,
               lat_bin_edges, lon_bin_edges, distance_bin_edges,
-              nlat, nlon, nmag, neps, ntrt):
+              nlat, nlon, nmag, neps, ntrt, ndist):
     shape = [nmag - 1, ntrt]
     ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(nmag - 1):
@@ -202,7 +201,7 @@ def magtrtpmf(site, full_matrix,
 @pmf
 def latlontrtpmf(site, full_matrix,
                  lat_bin_edges, lon_bin_edges, distance_bin_edges,
-                 nlat, nlon, nmag, neps, ntrt):
+                 nlat, nlon, nmag, neps, ntrt, ndist):
     shape = [nlat - 1, nlon - 1, ntrt]
     ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(nlat - 1):
@@ -215,10 +214,17 @@ def latlontrtpmf(site, full_matrix,
 
 
 @task
-def extract_subsets(site, full_matrix_path, dims,
-                    lat_bin_edges, lon_bin_edges, distance_bin_edges,
+def extract_subsets(site, full_matrix_path,
+                    lat_bin_edges, lon_bin_edges,
+                    mag_bin_edges, eps_bin_edges,
+                    distance_bin_edges,
                     target_path, subsets):
-    assert len(dims) == 5
+    nlat = len(lat_bin_edges)
+    nlon = len(lon_bin_edges)
+    nmag = len(mag_bin_edges)
+    neps = len(eps_bin_edges)
+    ntrt = 5
+    ndist = len(distance_bin_edges)
     subsets = set(subsets)
     assert subsets
     assert not subsets - set(SUBSET_EXTRACTORS)
@@ -232,6 +238,6 @@ def extract_subsets(site, full_matrix_path, dims,
                 dataset = extractor(
                     site, full_matrix,
                     lat_bin_edges, lon_bin_edges, distance_bin_edges,
-                    *dims
+                    nlat, nlon, nmag, neps, ntrt, ndist
                 )
                 target.create_dataset(subset_type, data=dataset)
