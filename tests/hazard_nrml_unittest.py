@@ -300,8 +300,9 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
         self.writer = hazard_output.DisaggregationBinaryMatrixXMLWriter(
             self.FILENAME)
 
-        self.values = {"poE": 0.1, "IMT": "PGA",
-                "groundMotionValue": 0.25, "mset": {}}
+        self.values = {"poE": 0.1, "IMT": "PGA", "groundMotionValue": 0.25,
+                "mset": [{"disaggregationPMFType": "MagnitudePMF",
+                "path": "filea"}]}
 
     def test_writes_the_nrml_definition(self):
         # double to check there's only one element
@@ -416,4 +417,30 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
 
         self.assertEquals(3, len(disagg_matrices))
         self.assertEquals(1, len(disagg_matrix_sets))
-        self.assertEquals("0.25", disagg_matrix_sets[0].attrib["groundMotionValue"])
+        
+        self.assertEquals("MagnitudePMF",
+                disagg_matrices[0].attrib["disaggregationPMFType"])
+
+        self.assertEquals("filea", disagg_matrices[0].attrib["path"])
+
+        self.assertEquals("MagnitudeDistancePMF",
+                disagg_matrices[1].attrib["disaggregationPMFType"])
+
+        self.assertEquals("fileb", disagg_matrices[1].attrib["path"])
+
+        self.assertEquals("LatitudeLongitudeMagnitudeEpsilonPMF",
+                disagg_matrices[2].attrib["disaggregationPMFType"])
+
+        self.assertEquals("filec", disagg_matrices[2].attrib["path"])
+
+        self.assertEquals("0.25",
+                disagg_matrix_sets[0].attrib["groundMotionValue"])
+
+    def test_close_with_at_least_one_set(self):
+        self.assertRaises(RuntimeError, self.writer.close)
+
+    def test_the_set_must_have_at_least_on_element(self):
+        self.values["mset"] = []
+
+        self.assertRaises(RuntimeError, self.writer.write,
+                shapes.Site(1.0, 2.0), self.values)

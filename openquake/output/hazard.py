@@ -939,12 +939,17 @@ class DisaggregationBinaryMatrixXMLWriter(writer.FileWriter):
 
         disagg_matrix_tag = "%sdisaggregationMatrixBinaryFile" % NRML
 
+        if not values["mset"]:
+            raise RuntimeError(
+                "You need at least one matrix to produce a valid output!")
+
         for disagg_matrix in values["mset"]:
             disagg_matrix_el = etree.SubElement(
                 disagg_matrix_set_el, disagg_matrix_tag, nsmap=NSMAP)
 
             disagg_matrix_el.set("path", disagg_matrix["path"])
-            disagg_matrix_el.set("disaggregationPMFType", disagg_matrix["disaggregationPMFType"])
+            disagg_matrix_el.set("disaggregationPMFType",
+                    disagg_matrix["disaggregationPMFType"])
 
     def _append_site(self, disagg_result_node_el, site):
         point_el = etree.SubElement(etree.SubElement(
@@ -978,8 +983,11 @@ class DisaggregationBinaryMatrixXMLWriter(writer.FileWriter):
                     optional_param, str(values[optional_param]))
 
     def close(self):
+        if self.nrml_el is None:
+            raise RuntimeError(
+                "You need at least one set to produce a valid output!")
+
         self.file.write(etree.tostring(self.nrml_el, pretty_print=True,
                 xml_declaration=True, encoding="UTF-8"))
         
         self.file.close()
-
