@@ -300,10 +300,13 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
         self.writer = hazard_output.DisaggregationBinaryMatrixXMLWriter(
             self.FILENAME)
 
+        self.values = {"poE": 0.1, "IMT": "PGA",
+                "groundMotionValue": 0.25, "mset": {}}
+
     def test_writes_the_nrml_definition(self):
         # double to check there's only one element
-        self.writer.write(shapes.Site(1.0, 2.0), {"poE": 0.1, "IMT": "PGA", "groundMotionValue": 0.25, "mset": {}})        
-        self.writer.write(shapes.Site(1.0, 2.0), {"poE": 0.1, "IMT": "PGA", "groundMotionValue": 0.25, "mset": {}})
+        self.writer.write(shapes.Site(1.0, 2.0), self.values)        
+        self.writer.write(shapes.Site(1.0, 2.0), self.values)
 
         self.writer.close()
 
@@ -314,8 +317,8 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
 
     def test_writes_the_disagg_result_field(self):
         # double to check there's only one element
-        self.writer.write(shapes.Site(1.0, 2.0), {"poE": 0.1, "IMT": "PGA", "groundMotionValue": 0.25, "mset": {}})
-        self.writer.write(shapes.Site(1.0, 2.0), {"poE": 0.1, "IMT": "PGA", "groundMotionValue": 0.25, "mset": {}})
+        self.writer.write(shapes.Site(1.0, 2.0), self.values)
+        self.writer.write(shapes.Site(1.0, 2.0), self.values)
         
         self.writer.close()
         
@@ -328,23 +331,24 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
         self.assertEquals("PGA", disagg_fields[0].attrib["IMT"])
 
     def test_writes_the_disagg_result_field_with_optional_attributes(self):
-        self.writer.write(shapes.Site(1.0, 2.0),
-                {"poE": 0.1, "IMT": "PGA", "groundMotionValue": 0.25, "endBranchLabel": 1,
-                "statistics": "mean", "quantileValue": 0.1, "mset": {}})
-        
+        self.values.update({"endBranchLabel": 1,
+                "statistics": "mean", "quantileValue": 0.1})
+
+        self.writer.write(shapes.Site(1.0, 2.0), self.values)
+
         self.writer.close()
         
         doc = etree.parse(self.FILENAME)
         disagg_fields = doc.xpath("/nrml:nrml/nrml:disaggregationResultField",
                 namespaces=self.NAMESPACES)
 
-        self.assertEquals("1", disagg_fields[0].attrib["endBranchLabel"])
         self.assertEquals("mean", disagg_fields[0].attrib["statistics"])
+        self.assertEquals("1", disagg_fields[0].attrib["endBranchLabel"])
         self.assertEquals("0.1", disagg_fields[0].attrib["quantileValue"])
 
     def test_writes_the_disagg_result_node(self):
-        self.writer.write(shapes.Site(1.0, 2.0), {"poE": 0.1, "IMT": "PGA", "groundMotionValue": 0.25, "mset": {}})
-        
+        self.writer.write(shapes.Site(1.0, 2.0), self.values)
+
         self.writer.close()
         
         doc = etree.parse(self.FILENAME)
@@ -360,9 +364,9 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
         self.assertEquals("1.0 2.0", site_nodes[0].text)
 
     def test_writes_multiple_result_nodes(self):
-        self.writer.write(shapes.Site(1.0, 2.0), {"poE": 0.1, "IMT": "PGA", "groundMotionValue": 0.25, "mset": {}})
-        self.writer.write(shapes.Site(2.0, 3.0), {"poE": 0.1, "IMT": "PGA", "groundMotionValue": 0.25, "mset": {}})
-        self.writer.write(shapes.Site(3.0, 4.0), {"poE": 0.1, "IMT": "PGA", "groundMotionValue": 0.25, "mset": {}})
+        self.writer.write(shapes.Site(1.0, 2.0), self.values)
+        self.writer.write(shapes.Site(2.0, 3.0), self.values)
+        self.writer.write(shapes.Site(3.0, 4.0), self.values)
 
         self.writer.close()
 
@@ -381,8 +385,7 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
         self.assertEquals("3.0 4.0", site_nodes[2].text)
 
     def test_writes_the_disagg_matrix_set(self):
-        self.writer.write(shapes.Site(1.0, 2.0),
-                {"poE": 0.1, "IMT": "PGA", "groundMotionValue": 0.25, "mset": {}})
+        self.writer.write(shapes.Site(1.0, 2.0), self.values)
 
         self.writer.close()
 
@@ -395,12 +398,12 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
         self.assertEquals("0.25", disagg_matrix_sets[0].attrib["groundMotionValue"])
 
     def test_writes_the_disagg_matrices(self):
-        self.writer.write(shapes.Site(1.0, 2.0),
-                {"poE": 0.1, "IMT": "PGA", "groundMotionValue": 0.25, "mset": [
-                {"disaggregationPMFType": "MagnitudePMF", "path": "filea"},
-                {"disaggregationPMFType": "MagnitudeDistancePMF", "path": "fileb"},
-                {"disaggregationPMFType": "LatitudeLongitudeMagnitudeEpsilonPMF", "path": "filec"}]})
+        self.values["mset"] = [
+            {"disaggregationPMFType": "MagnitudePMF", "path": "filea"},
+            {"disaggregationPMFType": "MagnitudeDistancePMF", "path": "fileb"},
+            {"disaggregationPMFType": "LatitudeLongitudeMagnitudeEpsilonPMF", "path": "filec"}]
 
+        self.writer.write(shapes.Site(1.0, 2.0), self.values)
         self.writer.close()
 
         doc = etree.parse(self.FILENAME)
@@ -408,9 +411,9 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
 "/nrml:nrml/nrml:disaggregationResultField/nrml:disaggregationResultNode/nrml:disaggregationMatrixSet",
                 namespaces=self.NAMESPACES)
 
-        disagg_matrices = disagg_matrix_sets[0].xpath("nrml:disaggregationMatrixBinaryFile", namespaces=self.NAMESPACES)
-
-        self.assertEquals(1, len(disagg_matrix_sets))
-        self.assertEquals("0.25", disagg_matrix_sets[0].attrib["groundMotionValue"])
+        disagg_matrices = disagg_matrix_sets[0].xpath(
+            "nrml:disaggregationMatrixBinaryFile", namespaces=self.NAMESPACES)
 
         self.assertEquals(3, len(disagg_matrices))
+        self.assertEquals(1, len(disagg_matrix_sets))
+        self.assertEquals("0.25", disagg_matrix_sets[0].attrib["groundMotionValue"])
