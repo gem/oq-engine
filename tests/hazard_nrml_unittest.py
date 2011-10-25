@@ -410,7 +410,6 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
             "nrml:disaggregationMatrixBinaryFile", namespaces=self.NAMESPACES)
 
         self.assertEquals(3, len(disagg_matrices))
-        self.assertEquals(1, len(disagg_matrix_sets))
         
         self.assertEquals("MagnitudePMF",
                 disagg_matrices[0].attrib["disaggregationPMFType"])
@@ -426,9 +425,6 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
                 disagg_matrices[2].attrib["disaggregationPMFType"])
 
         self.assertEquals("filec", disagg_matrices[2].attrib["path"])
-
-        self.assertEquals("0.25",
-                disagg_matrix_sets[0].attrib["groundMotionValue"])
 
     def test_close_with_at_least_one_set(self):
         self.assertRaises(RuntimeError, self.writer.close)
