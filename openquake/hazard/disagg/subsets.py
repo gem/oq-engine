@@ -51,30 +51,39 @@ def magpmf(site, full_matrix,
                     for m in xrange(ntrt))
     return ds
 
+
+def _distgen(site, lat_bin_edges, lon_bin_edges, distance_bin_edges,
+             nlat, nlon, nmag, neps, ntrt, ndist):
+    slat, slon = site
+    enumeration = ((i, j, k, l, m)
+                   for i in xrange(nlat - 1)
+                   for j in xrange(nlon - 1)
+                   for k in xrange(nmag - 1)
+                   for l in xrange(neps - 1)
+                   for m in xrange(ntrt))
+    for i, j, k, l, m in enumeration:
+        meanlat = (lat_bin_edges[i] + lat_bin_edges[i + 1]) / 2
+        meanlon = (lon_bin_edges[j] + lon_bin_edges[j + 1]) / 2
+        dist = hdistance(meanlat, meanlon, slat, slon)
+        if dist < distance_bin_edges[0] \
+                or dist > distance_bin_edges[-1]:
+            continue
+        for ii in xrange(ndist - 1):
+            if dist >= distance_bin_edges[ii] \
+                    and dist < distance_bin_edges[ii + 1]:
+                break
+        yield i, j, k, l, m, ii
+
 @pmf
 def distpmf(site, full_matrix,
             lat_bin_edges, lon_bin_edges, distance_bin_edges,
             nlat, nlon, nmag, neps, ntrt, ndist):
-    ndist = len(distance_bin_edges)
     shape = [ndist - 1]
     ds = numpy.zeros(shape, DATA_TYPE)
-    slat, slon = site
-    for i in xrange(nlat - 1):
-        for j in xrange(nlon - 1):
-            for k in xrange(nmag - 1):
-                for l in xrange(neps - 1):
-                    for m in xrange(ntrt):
-                        meanlat = (lat_bin_edges[i] + lat_bin_edges[i + 1]) / 2
-                        meanlon = (lon_bin_edges[j] + lon_bin_edges[j + 1]) / 2
-                        dist = hdistance(meanlat, meanlon, slat, slon)
-                        if dist < distance_bin_edges[0] \
-                                or dist > distance_bin_edges[-1]:
-                            continue
-                        for ii in xrange(ndist - 1):
-                            if dist >= distance_bin_edges[ii] \
-                                    and dist < distance_bin_edges[ii + 1]:
-                                break
-                        ds[ii] += full_matrix[i][j][k][l][m]
+    distgen = _distgen(site, lat_bin_edges, lon_bin_edges, distance_bin_edges,
+                       nlat, nlon, nmag, neps, ntrt, ndist)
+    for i, j, k, l, m, ii in distgen:
+        ds[ii] += full_matrix[i][j][k][l][m]
     return ds
 
 @pmf
@@ -98,23 +107,10 @@ def magdistpmf(site, full_matrix,
     ndist = len(distance_bin_edges)
     shape = [nmag - 1, ndist - 1]
     ds = numpy.zeros(shape, DATA_TYPE)
-    slat, slon = site
-    for i in xrange(nlat - 1):
-        for j in xrange(nlon - 1):
-            for k in xrange(nmag - 1):
-                for l in xrange(neps - 1):
-                    for m in xrange(ntrt):
-                        meanlat = (lat_bin_edges[i] + lat_bin_edges[i + 1]) / 2
-                        meanlon = (lon_bin_edges[j] + lon_bin_edges[j + 1]) / 2
-                        dist = hdistance(meanlat, meanlon, slat, slon)
-                        if dist < distance_bin_edges[0] \
-                                or dist > distance_bin_edges[-1]:
-                            continue
-                        for ii in xrange(ndist - 1):
-                            if dist >= distance_bin_edges[ii] \
-                                    and dist < distance_bin_edges[ii + 1]:
-                                break
-                        ds[k][ii] += full_matrix[i][j][k][l][m]
+    distgen = _distgen(site, lat_bin_edges, lon_bin_edges, distance_bin_edges,
+                       nlat, nlon, nmag, neps, ntrt, ndist)
+    for i, j, k, l, m, ii in distgen:
+        ds[k][ii] += full_matrix[i][j][k][l][m]
     return ds
 
 @pmf
@@ -123,23 +119,10 @@ def magdistepspmf(site, full_matrix,
                   nlat, nlon, nmag, neps, ntrt, ndist):
     shape = [nmag - 1, ndist - 1, ntrt - 1]
     ds = numpy.zeros(shape, DATA_TYPE)
-    slat, slon = site
-    for i in xrange(nlat - 1):
-        for j in xrange(nlon - 1):
-            for k in xrange(nmag - 1):
-                for l in xrange(neps - 1):
-                    for m in xrange(ntrt):
-                        meanlat = (lat_bin_edges[i] + lat_bin_edges[i + 1]) / 2
-                        meanlon = (lon_bin_edges[j] + lon_bin_edges[j + 1]) / 2
-                        dist = hdistance(meanlat, meanlon, slat, slon)
-                        if dist < distance_bin_edges[0] \
-                                or dist > distance_bin_edges[-1]:
-                            continue
-                        for ii in xrange(ndist - 1):
-                            if dist >= distance_bin_edges[ii] \
-                                    and dist < distance_bin_edges[ii + 1]:
-                                break
-                        ds[k][ii][l] += full_matrix[i][j][k][l][m]
+    distgen = _distgen(site, lat_bin_edges, lon_bin_edges, distance_bin_edges,
+                       nlat, nlon, nmag, neps, ntrt, ndist)
+    for i, j, k, l, m, ii in distgen:
+        ds[k][ii][l] += full_matrix[i][j][k][l][m]
     return ds
 
 @pmf
