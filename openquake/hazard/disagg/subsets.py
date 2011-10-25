@@ -27,19 +27,32 @@ import h5py
 from openquake.shapes import hdistance
 
 
+#: The full matrix object name as it appears inside full hdf5 result file.
 FULL_MATRIX_DS_NAME = 'fulldisaggmatrix'
+#: Data type used for matrices is double precision float with "native"
+#: byte order. The same is used by java side.
 DATA_TYPE = numpy.float64
 
+#: Mapping "extractor name -- extractor function".
+#: Used by :func:`extract_subsets`.
 SUBSET_EXTRACTORS = {}
 
 
 def pmf(func):
+    """
+    Decorator for extractor functions. Saves decorated functions
+    in :data:`SUBSET_EXTRACTORS` by their names. Returns decorated
+    function unchanged.
+    """
     SUBSET_EXTRACTORS[func.func_name] = func
     return func
 
 
 @pmf
 def fulldisaggmatrix(site, full_matrix, *args, **kwargs):
+    """
+    Full matrix: returns ``full_matrix`` argument (5D).
+    """
     return full_matrix
 
 
@@ -47,6 +60,9 @@ def fulldisaggmatrix(site, full_matrix, *args, **kwargs):
 def magpmf(site, full_matrix,
            lat_bin_edges, lon_bin_edges, distance_bin_edges,
            nlat, nlon, nmag, neps, ntrt, ndist):
+    """
+    Magnitude PMF extractor (1D).
+    """
     shape = [nmag - 1]
     ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(nmag - 1):
@@ -60,6 +76,9 @@ def magpmf(site, full_matrix,
 
 def _distgen(site, lat_bin_edges, lon_bin_edges, distance_bin_edges,
              nlat, nlon, nmag, neps, ntrt, ndist):
+    """
+    Common part of the code for all extractors that compute distances.
+    """
     slat, slon = site
     enumeration = ((i, j, k, l, m)
                    for i in xrange(nlat - 1)
@@ -84,6 +103,9 @@ def _distgen(site, lat_bin_edges, lon_bin_edges, distance_bin_edges,
 def distpmf(site, full_matrix,
             lat_bin_edges, lon_bin_edges, distance_bin_edges,
             nlat, nlon, nmag, neps, ntrt, ndist):
+    """
+    Distance PMF extractor (1D).
+    """
     shape = [ndist - 1]
     ds = numpy.zeros(shape, DATA_TYPE)
     distgen = _distgen(site, lat_bin_edges, lon_bin_edges, distance_bin_edges,
@@ -96,6 +118,9 @@ def distpmf(site, full_matrix,
 def trtpmf(site, full_matrix,
            lat_bin_edges, lon_bin_edges, distance_bin_edges,
            nlat, nlon, nmag, neps, ntrt, ndist):
+    """
+    Tectonic region type PMF extractor (1D).
+    """
     shape = [ntrt]
     ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(ntrt):
@@ -110,6 +135,9 @@ def trtpmf(site, full_matrix,
 def magdistpmf(site, full_matrix,
                lat_bin_edges, lon_bin_edges, distance_bin_edges,
                nlat, nlon, nmag, neps, ntrt, ndist):
+    """
+    Magnitude-distance PMF extractor (2D).
+    """
     ndist = len(distance_bin_edges)
     shape = [nmag - 1, ndist - 1]
     ds = numpy.zeros(shape, DATA_TYPE)
@@ -123,6 +151,9 @@ def magdistpmf(site, full_matrix,
 def magdistepspmf(site, full_matrix,
                   lat_bin_edges, lon_bin_edges, distance_bin_edges,
                   nlat, nlon, nmag, neps, ntrt, ndist):
+    """
+    Magnitude-distance-epsilon PMF extractor (3D).
+    """
     shape = [nmag - 1, ndist - 1, ntrt - 1]
     ds = numpy.zeros(shape, DATA_TYPE)
     distgen = _distgen(site, lat_bin_edges, lon_bin_edges, distance_bin_edges,
@@ -135,6 +166,9 @@ def magdistepspmf(site, full_matrix,
 def latlonpmf(site, full_matrix,
               lat_bin_edges, lon_bin_edges, distance_bin_edges,
               nlat, nlon, nmag, neps, ntrt, ndist):
+    """
+    Latitude-longitude PMF extractor (2D).
+    """
     shape = [nlat - 1, nlon - 1]
     ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(nlat - 1):
@@ -149,6 +183,9 @@ def latlonpmf(site, full_matrix,
 def latlonmagpmf(site, full_matrix,
                  lat_bin_edges, lon_bin_edges, distance_bin_edges,
                  nlat, nlon, nmag, neps, ntrt, ndist):
+    """
+    Latitude-longitude-magnitude PMF extractor (3D).
+    """
     shape = [nlat - 1, nlon - 1, nmag - 1]
     ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(nlat - 1):
@@ -163,6 +200,9 @@ def latlonmagpmf(site, full_matrix,
 def latlonmagepspmf(site, full_matrix,
                     lat_bin_edges, lon_bin_edges, distance_bin_edges,
                     nlat, nlon, nmag, neps, ntrt, ndist):
+    """
+    Latitude-longitude-magnitude-epsilon PMF extractor (4D).
+    """
     shape = [nlat - 1, nlon - 1, nmag - 1, neps - 1]
     ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(nlat - 1):
@@ -177,6 +217,9 @@ def latlonmagepspmf(site, full_matrix,
 def magtrtpmf(site, full_matrix,
               lat_bin_edges, lon_bin_edges, distance_bin_edges,
               nlat, nlon, nmag, neps, ntrt, ndist):
+    """
+    Magnitude -- tectonic region type PMF extractor (2D).
+    """
     shape = [nmag - 1, ntrt]
     ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(nmag - 1):
@@ -191,6 +234,9 @@ def magtrtpmf(site, full_matrix,
 def latlontrtpmf(site, full_matrix,
                  lat_bin_edges, lon_bin_edges, distance_bin_edges,
                  nlat, nlon, nmag, neps, ntrt, ndist):
+    """
+    Latitude -- longitude -- tectonic region type PMF extractor (3D).
+    """
     shape = [nlat - 1, nlon - 1, ntrt]
     ds = numpy.zeros(shape, DATA_TYPE)
     for i in xrange(nlat - 1):
@@ -208,6 +254,32 @@ def extract_subsets(site, full_matrix_path,
                     mag_bin_edges, eps_bin_edges,
                     distance_bin_edges,
                     target_path, subsets):
+    """
+    Celery task for extracting subsets from full disaggregation matrix.
+
+    All subsets are saved in one file with dataset name equal
+    to the extractor name.
+
+    :param site:
+        Pair of floats: latitude and longitude of the Site that the matrix
+        was produced for.
+    :param full_matrix_path:
+        Path to the full matrix file in hdf5 format.
+    :param lat_bin_edges:
+        Corresponds to ``LATITUDE_BIN_LIMITS`` job parameter.
+    :param lon_bin_edges:
+        Corresponds to ``LONGITUDE_BIN_LIMITS`` job parameter.
+    :param mag_bin_edges:
+        Corresponds to ``MAGNITUDE_BIN_LIMITS`` job parameter.
+    :param eps_bin_edges:
+        Corresponds to ``EPSILON_BIN_LIMITS`` job parameter.
+    :param distance_bin_edges:
+        Corresponds to ``DISTANCE_BIN_LIMITS`` job parameter.
+    :param target_path:
+        Path to the file where the result should be saved.
+    :param subsets:
+        A list of PMF extractor names.
+    """
     nlat = len(lat_bin_edges)
     nlon = len(lon_bin_edges)
     nmag = len(mag_bin_edges)
