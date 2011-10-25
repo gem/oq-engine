@@ -907,3 +907,79 @@ def create_gmf_writer(job_id, serialize_to, nrml_path):
     return _create_writer(job_id, serialize_to, nrml_path,
                           GMFXMLWriter,
                           GmfDBWriter)
+
+
+class DisaggregationBinaryMatrixXMLWriter(writer.FileWriter):
+
+    OPTIONAL_PARAMS = ("endBranchLabel", "statistics", "quantileValue")
+
+    def __init__(self, path):
+        writer.FileWriter.__init__(self, path)
+
+        self.nrml_el = None
+        self.disagg_result_field_el = None
+
+    def write(self, site, values):
+        if self.nrml_el is None:
+            self._append_root_elements(values)
+
+        disagg_result_node_el = self._append_disagg_result_node()
+
+        self._append_site(disagg_result_node_el, site)
+        self._append_matrix_set(disagg_result_node_el, values)
+
+    def _append_matrix_set(self, disagg_result_node_el, values):
+        disagg_matrix_set_tag = "%sdisaggregationMatrixSet" % NRML
+
+        disagg_matrix_set_el = etree.SubElement(
+            disagg_result_node_el, disagg_matrix_set_tag, nsmap=NSMAP)
+
+        disagg_matrix_set_el.set(
+            "groundMotionValue", str(values["groundMotionValue"]))
+
+        disagg_matrix_tag = "%sdisaggregationMatrixBinaryFile" % NRML
+
+        for disagg_matrix in values["mset"]:
+            disagg_matrix_el = etree.SubElement(
+                disagg_matrix_set_el, disagg_matrix_tag, nsmap=NSMAP)
+
+            disagg_matrix_el.set("path", disagg_matrix["path"])
+            disagg_matrix_el.set("disaggregationPMFType", disagg_matrix["disaggregationPMFType"])
+
+    def _append_site(self, disagg_result_node_el, site):
+        point_el = etree.SubElement(etree.SubElement(
+                disagg_result_node_el, "%ssite" % NRML), "%sPoint" % GML)
+
+        pos_el = etree.SubElement(point_el, "%spos" % GML)
+        pos_el.text = "%s %s" % (site.longitude, site.latitude)
+
+    def _append_disagg_result_node(self):
+        disagg_result_node_tag = "%sdisaggregationResultNode" % NRML
+
+        disagg_result_node_el = etree.SubElement(
+            self.disagg_result_field_el, disagg_result_node_tag, nsmap=NSMAP)
+
+        return disagg_result_node_el
+
+    def _append_root_elements(self, values):
+        self.nrml_el = etree.Element("%snrml" % NRML, nsmap=NSMAP)
+
+        disagg_result_field_tag = "%sdisaggregationResultField" % NRML
+
+        self.disagg_result_field_el = etree.SubElement(
+            self.nrml_el, disagg_result_field_tag, nsmap=NSMAP)
+
+        self.disagg_result_field_el.set("poE", str(values["poE"]))
+        self.disagg_result_field_el.set("IMT", str(values["IMT"]))
+
+        for optional_param in self.OPTIONAL_PARAMS:
+            if optional_param in values:
+                self.disagg_result_field_el.set(
+                    optional_param, str(values[optional_param]))
+
+    def close(self):
+        self.file.write(etree.tostring(self.nrml_el, pretty_print=True,
+                xml_declaration=True, encoding="UTF-8"))
+        
+        self.file.close()
+
