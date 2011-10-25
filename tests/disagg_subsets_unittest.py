@@ -30,9 +30,17 @@ from openquake.hazard.disagg import subsets as disagg_subsets
 class SubsetExtractionTestCase(unittest.TestCase):
     FULL_MATRIX_DATA = \
         'latitudeLongitudeMagnitudeEpsilonTectonicRegionTypePMF.dat'
+
     #                        lat lon mag eps trt
     FULL_MATRIX_SHAPE      = (6,  6,  5,  5,  5)
     NLAT, NLON, NMAG, NEPS, NTRT = FULL_MATRIX_SHAPE
+
+    LATITUDE_BIN_LIMITS = [-0.6, -0.3, -0.1, 0.1, 0.3, 0.6]
+    LONGITUDE_BIN_LIMITS = LATITUDE_BIN_LIMITS
+    DISTANCE_BIN_LIMITS =  [0.0, 20.0, 40.0, 60.0]
+    NDIST = len(DISTANCE_BIN_LIMITS)
+
+    SITE = (0.0, 0.0)
 
     @classmethod
     def setUpClass(cls):
@@ -71,13 +79,12 @@ class SubsetExtractionTestCase(unittest.TestCase):
                 stack.append(iter(arr))
         assert len(list(numbers)) == 0
 
-    def _test_pmf(self, name, datafile, result_shape,
-                  site=None, lat_bin_edges=None,
-                  lon_bin_edges=None, distance_bin_edges=None):
+    def _test_pmf(self, name, datafile, result_shape):
         target_path = os.path.join(self.tempdir, '%s.hdf5' % name)
         disagg_subsets.extract_subsets(
-            site, self.full_matrix_path, self.FULL_MATRIX_SHAPE,
-            lat_bin_edges, lon_bin_edges, distance_bin_edges,
+            self.SITE, self.full_matrix_path, self.FULL_MATRIX_SHAPE,
+            self.LATITUDE_BIN_LIMITS, self.LONGITUDE_BIN_LIMITS,
+            self.DISTANCE_BIN_LIMITS,
             target_path, [name]
         )
         expected_result = numpy.ndarray(result_shape)
@@ -89,20 +96,18 @@ class SubsetExtractionTestCase(unittest.TestCase):
         self._test_pmf('magpmf', 'magnitudePMF.dat', [self.NMAG - 1])
 
     def test_distpmf(self):
-        #self._test_pmf('distpmf', 'distancePMF.dat', [?])
-        pass
+        self._test_pmf('distpmf', 'distancePMF.dat', [self.NDIST - 1])
 
     def test_trtpmf(self):
         self._test_pmf('trtpmf', 'tectonicRegionTypePMF.dat', [self.NTRT])
 
     def test_magdistpmf(self):
-        #self._test_pmf('magdistpmf', 'magnitudeDistancePMF.dat', [?])
-        pass
+        self._test_pmf('magdistpmf', 'magnitudeDistancePMF.dat',
+                       [self.NMAG - 1, self.NDIST - 1])
 
     def test_magdistepspmf(self):
-        #self._test_pmf('magdistepspmf', 'magnitudeDistanceEpsilonPMF.dat',
-        #               [?])
-        pass
+        self._test_pmf('magdistepspmf', 'magnitudeDistanceEpsilonPMF.dat',
+                       [self.NMAG - 1, self.NDIST - 1, self.NEPS - 1])
 
     def test_latlonpmf(self):
         self._test_pmf('latlonpmf', 'latitudeLongitudePMF.dat',
