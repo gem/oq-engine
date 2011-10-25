@@ -16,10 +16,17 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+import os
+import tempfile
 import unittest
 
+from nose.plugins.attrib import attr
+
 from openquake import java
+from openquake import shapes
 from openquake.hazard import disaggregation as disagg
+from openquake.hazard.general import store_source_model, store_gmpe_map
+from openquake.input.logictree import LogicTreeProcessor
 
 from tests.utils import helpers
 
@@ -49,12 +56,42 @@ class DisaggregationFuncsTestCase(unittest.TestCase):
 class DisaggregationTaskTestCase(unittest.TestCase):
     """ """
 
-    @helpers.skipit
+    @attr('slow')
     def test_compute_disagg_matrix(self):
         """Test the core function of the main disaggregation task."""
 
+        # for the given test input data, we expect the calculator to return
+        # this gmv:
+        expected_gmv = -1.351982551305087
+
         the_job = helpers.job_from_file(DISAGG_DEMO_CONFIG_FILE)
-        da_calc = disagg.compute_disagg_matrix(
-            the_job.job_id, None, None, None)
-        print da_calc
-        self.assertTrue(False)
+
+        # We need to store the source model and gmpe model in the KVS for this
+        # test.
+        lt_proc = LogicTreeProcessor(
+            the_job.params['BASE_PATH'],
+            the_job.params['SOURCE_MODEL_LOGIC_TREE_FILE_PATH'],
+            the_job.params['GMPE_LOGIC_TREE_FILE_PATH'])
+
+        src_model_seed = int(the_job.params.get('SOURCE_MODEL_LT_RANDOM_SEED'))
+        gmpe_seed = int(the_job.params.get('GMPE_LT_RANDOM_SEED'))
+
+        store_source_model(the_job.job_id, src_model_seed, the_job.params,
+                           lt_proc)
+        store_gmpe_map(the_job.job_id, gmpe_seed, lt_proc)
+
+        site = shapes.Site(0.0, 0.0)
+        realization = 1
+        poe = 0.02
+        result_dir = tempfile.tempdir
+
+        gmv, matrix_path = disagg.compute_disagg_matrix(
+            the_job.job_id, site, realization, poe, result_dir)
+
+        # Now test the following:
+        # 1) The matrix file exists
+        # 2) The matrix file has a size > 0
+        # 3) Check that the returned GMV is what we expect
+        self.assertTrue(os.path.exists(matrix_path))
+        self.assertTrue(os.path.getsize(matrix_path) > 0)
+        self.assertEqual(expected_gmv, gmv)
