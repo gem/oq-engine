@@ -52,12 +52,3 @@ class MemoizeMutable:
             self.memo[key] = self.fun(*args, **kwds)
 
         return self.memo[key]
-
-
-def str2int(text):
-    """Raise `ValueError` unless int(text) yields a valid integer."""
-    if text:
-        text = text.strip()
-        if text:
-            return int(text)
-    raise ValueError
