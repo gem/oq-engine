@@ -410,6 +410,20 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
 
         self.assertEquals("filec", disagg_matrices[2].attrib["path"])
 
+    def test_serialize(self):
+        data = [(shapes.Site(1.0, 1.0), {"poE": 0.1, "IMT": "PGA",
+                "groundMotionValue": 0.25, "endBranchLabel": 1,
+                "mset": [{"disaggregationPMFType": "MagnitudePMF",
+                "path": "filea"}]}),
+                (shapes.Site(1.0, 2.0), {"poE": 0.1, "IMT": "PGA",
+                "groundMotionValue": 0.35, "endBranchLabel": 1,
+                "mset": [{"disaggregationPMFType": "MagnitudePMF",
+                "path": "fileb"}, {"disaggregationPMFType":
+                "MagnitudeDistancePMF", "path": "filec"}]})]
+
+        self.writer.serialize(data)
+        self.assertTrue(xml.validates_against_xml_schema(self.FILENAME))
+
     def _xpath(self, exp):
         doc = etree.parse(self.FILENAME)
         return doc.xpath(exp, namespaces=self.NAMESPACES)
