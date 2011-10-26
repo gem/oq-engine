@@ -65,11 +65,10 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
     """
     logs.HAZARD_LOG.info("cardinality: %s" % cardinality)
 
-    block_size = BLOCK_SIZE
     try:
         block_size = general.str2int(config.get("tasks", "block_size"))
     except ValueError:
-        pass
+        block_size = BLOCK_SIZE
 
     logs.HAZARD_LOG.info("block_size: %s" % block_size)
 
