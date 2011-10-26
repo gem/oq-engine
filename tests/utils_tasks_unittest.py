@@ -22,13 +22,9 @@
 Unit tests for the utils.tasks module.
 """
 
-import os
 import mock
-import shutil
-import textwrap
 import unittest
 
-from openquake.utils import config
 from openquake.utils import tasks
 
 from tests.utils.helpers import patch, ConfigTestMixin
