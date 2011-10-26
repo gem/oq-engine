@@ -203,5 +203,3 @@ class BasePSHAMixin(Mixin):
             site.addParameter(vs30_type)
             jsite_list.add(site)
         return jsite_list
-
-
