@@ -34,6 +34,7 @@ import sys
 
 import guppy
 import mock as mock_module
+import numpy
 
 from django.core import exceptions
 
@@ -247,7 +248,7 @@ def assertDeepAlmostEqual(test_case, expected, actual, *args, **kwargs):
     try:
         if isinstance(expected, (int, float, long, complex)):
             test_case.assertAlmostEqual(expected, actual, *args, **kwargs)
-        elif isinstance(expected, (list, tuple)):
+        elif isinstance(expected, (list, tuple, numpy.ndarray)):
             test_case.assertEqual(len(expected), len(actual))
             for index in xrange(len(expected)):
                 v1, v2 = expected[index], actual[index]

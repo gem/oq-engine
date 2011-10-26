@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.2" xmlns:gml="http://www.opengis.net/gml" xmlns:qml="http://quakeml.org/xmlns/quakeml/1.1" gml:id="n1">
+  <sourceModel gml:id="sm1">
+    <config/>
+    <areaSource gml:id="src_1">
+      <gml:name>Square Area Source</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <areaBoundary>
+        <gml:Polygon>
+          <gml:exterior>
+            <gml:LinearRing>
+              <gml:posList>-0.5 -0.5 -0.5 0.5 0.5 0.5 0.5 -0.5</gml:posList>
+            </gml:LinearRing>
+          </gml:exterior>
+        </gml:Polygon>
+      </areaBoundary>
+      <ruptureRateModel>
+        <truncatedGutenbergRichter>
+          <aValueCumulative>4.30</aValueCumulative>
+          <bValue>1.0</bValue>
+          <minMagnitude>5.0</minMagnitude>
+          <maxMagnitude>9.0</maxMagnitude>
+        </truncatedGutenbergRichter>
+        <focalMechanism publicID="smi:fm1/0">
+          <qml:nodalPlanes>
+            <qml:nodalPlane1>
+              <qml:strike>
+                <qml:value>0.0</qml:value>
+              </qml:strike>
+              <qml:dip>
+                <qml:value>90.0</qml:value>
+              </qml:dip>
+              <qml:rake>
+                <qml:value>0.0</qml:value>
+              </qml:rake>
+            </qml:nodalPlane1>
+          </qml:nodalPlanes>
+        </focalMechanism>
+      </ruptureRateModel>
+      <ruptureDepthDistribution>
+        <magnitude>6.5</magnitude>
+        <depth>0.0</depth>
+      </ruptureDepthDistribution>
+      <hypocentralDepth>5.0</hypocentralDepth>
+    </areaSource>
+  </sourceModel>
+</nrml>
