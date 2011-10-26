@@ -76,15 +76,16 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
     data_length = len(data)
     logs.HAZARD_LOG.info("data_length: %s" % data_length)
 
-    num_of_blocks = float(data_length)/block_size
+    num_of_blocks = float(data_length) / block_size
     num_of_blocks = 1 if num_of_blocks < 1.0 else int(math.ceil(num_of_blocks))
     logs.HAZARD_LOG.info("num_of_blocks: %s" % num_of_blocks)
 
     results = []
 
     for block in xrange(num_of_blocks):
-        current_block = data[block*block_size:(block+1)*block_size]
-        iresults = _distribute(cardinality, the_task, name, current_block,
+        start = block * block_size
+        end = start + block_size
+        iresults = _distribute(cardinality, the_task, name, data[start:end],
                                other_args, flatten_results)
         results.extend(iresults)
 
