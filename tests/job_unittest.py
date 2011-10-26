@@ -914,6 +914,7 @@ class JobStatsTestCase(unittest.TestCase):
 
         self.assertTrue(actual_stats.start_time is not None)
         self.assertEqual(91, actual_stats.num_sites)
+        self.assertEqual(1, actual_stats.realizations)
 
     def test_job_launch_calls_record_initial_stats(self):
         '''
