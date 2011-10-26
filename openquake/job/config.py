@@ -54,8 +54,6 @@ EPS_BIN_LIMITS = 'EPSILON_BIN_LIMITS'
 DIST_BIN_LIMITS = 'DISTANCE_BIN_LIMITS'
 
 
-
-
 def to_float_array(value):
     """Convert string value to floating point value array"""
     return [float(v) for v in ARRAY_RE.split(value) if len(v)]
