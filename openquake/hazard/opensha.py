@@ -96,7 +96,6 @@ def unwrap_validation_error(jpype, runtime_exception, path=None):
     raise runtime_exception
 
 
-
 # pylint: disable=R0904
 class ClassicalMixin(BasePSHAMixin):
     """Classical PSHA method for performing Hazard calculations.
