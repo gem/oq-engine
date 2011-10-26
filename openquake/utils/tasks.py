@@ -23,12 +23,20 @@ Utility functions related to splitting work into tasks.
 """
 
 import itertools
+import math
 import time
 
 from celery.task.sets import TaskSet
 
 from openquake.job import Job
 from openquake import logs
+from openquake.utils import config
+from openquake.utils import general
+
+
+# Do not create batches of more than BLOCK_SIZE celery subtasks.
+# Celery cannot cope with these and dies.
+BLOCK_SIZE = 4096
 
 
 def distribute(cardinality, the_task, (name, data), other_args=None,
@@ -54,11 +62,59 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
         single list (as opposed to [[results1], [results2], ..]).
     :returns: A list where each element is a result returned by a subtask.
         The result order is the same as the subtask order.
-    :raises WrongTaskParameters: When a task receives a parameter it does not
-        know.
-    :raises TaskFailed: When at least one subtask fails (raises an exception).
     """
-    # Too many local variables (18/15)
+    logs.HAZARD_LOG.info("cardinality: %s" % cardinality)
+
+    block_size = BLOCK_SIZE
+    try:
+        block_size = general.str2int(config.get("tasks", "block_size"))
+    except ValueError:
+        pass
+
+    logs.HAZARD_LOG.info("block_size: %s" % block_size)
+
+    data_length = len(data)
+    logs.HAZARD_LOG.info("data_length: %s" % data_length)
+
+    num_of_blocks = float(data_length)/block_size
+    num_of_blocks = 1 if num_of_blocks < 1.0 else int(math.ceil(num_of_blocks))
+    logs.HAZARD_LOG.info("num_of_blocks: %s" % num_of_blocks)
+
+    results = []
+
+    for block in xrange(num_of_blocks):
+        current_block = data[block*block_size:(block+1)*block_size]
+        iresults = _distribute(cardinality, the_task, name, current_block,
+                               other_args, flatten_results)
+        results.extend(iresults)
+
+    return results
+
+
+def _distribute(cardinality, a_task, name, data, other_args, flatten_results):
+    """Runs `a_task` in a task set with the given `cardinality`.
+
+    The given `data` is portioned across the subtasks in the task set.
+    The results returned by the subtasks are returned in a list e.g.:
+        [result1, result2, ..]
+    If each subtask returns a list that will result in list of lists. Please
+    set `flatten_results` to `True` if you want the results to be returned in a
+    single list.
+
+    :param int cardinality: The size of the task set.
+    :param a_task: A `celery` task callable.
+    :param str name: The parameter name under which the portioned `data` is to
+        be passed to `a_task`.
+    :param data: The `data` that is to be portioned and passed to the subtasks
+        for processing.
+    :param dict other_args: The remaining (keyword) parameters that are to be
+        passed to the subtasks.
+    :param bool flatten_results: If set, the results will be returned as a
+        single list (as opposed to [[results1], [results2], ..]).
+    :returns: A list where each element is a result returned by a subtask.
+        The result order is the same as the subtask order.
+    """
+    # Too many local variables
     # pylint: disable=R0914
 
     def kwargs(data_portion):
@@ -71,18 +127,16 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
             params.update(other_args)
         return params
 
-    subtasks = []
-
-    logs.HAZARD_LOG.info("cardinality: %s" % cardinality)
-
     data_length = len(data)
     logs.HAZARD_LOG.info("data_length: %s" % data_length)
 
+    subtasks = []
     start = 0
     end = chunk_size = int(data_length / float(cardinality))
     if chunk_size == 0:
-        # We were given less data items than the number of subtasks specified.
-        # Spawn at least on subtask even if the data to be processed is empty.
+        # We were given less data items than the number of subtasks
+        # specified.  Spawn at least on subtask even if the data to be
+        # processed is empty.
         cardinality = data_length if data_length > 0 else 1
         end = chunk_size = 1
 
@@ -90,20 +144,18 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
 
     for _ in xrange(cardinality - 1):
         data_portion = data[start:end]
-        subtask = the_task.subtask(**kwargs(data_portion))
+        subtask = a_task.subtask(**kwargs(data_portion))
         subtasks.append(subtask)
         start = end
         end += chunk_size
     # The last subtask takes the rest of the data.
     data_portion = data[start:]
-    subtask = the_task.subtask(**kwargs(data_portion))
+    subtask = a_task.subtask(**kwargs(data_portion))
     subtasks.append(subtask)
 
-    logs.HAZARD_LOG.info("#subtasks: %s" % len(subtasks))
-
-    # At this point we have created all the subtasks and each one got a
-    # portion of the data that is to be processed. Now we will create and run
-    # the task set.
+    # At this point we have created all the subtasks and each one got
+    # a portion of the data that is to be processed. Now we will create
+    # and run the task set.
     the_results = _handle_subtasks(subtasks, flatten_results)
     return the_results
 
