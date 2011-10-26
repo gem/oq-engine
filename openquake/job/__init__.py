@@ -601,6 +601,13 @@ class Job(object):
         stats.start_time = datetime.utcnow()
         stats.num_sites = len(self.sites_to_compute())
 
+        job_type = CALCULATION_MODE[self.params['CALCULATION_MODE']]
+        if conf.HAZARD_SECTION in self.sections:
+            if job_type != 'deterministic':
+                stats.realizations = int(
+                    self.params["NUMBER_OF_LOGIC_TREE_SAMPLES"]
+                )
+
         stats.save()
 
 

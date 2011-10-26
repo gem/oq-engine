@@ -25,6 +25,7 @@ from db_routers_unittest import *
 from deterministic_hazard_unittest import *
 from deterministic_risk_unittest import *
 from disaggregation_unittest import *
+from disagg_subsets_unittest import *
 from handlers_unittest import *
 from hazard_classical_unittest import *
 from hazard_nrml_unittest import *
