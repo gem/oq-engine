@@ -429,9 +429,13 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
         return doc.xpath(exp, namespaces=self.NAMESPACES)
 
     def test_close_with_at_least_one_set(self):
+        """In order to produce a valid output file, at least
+        one disaggregation node must be written."""
         self.assertRaises(RuntimeError, self.writer.close)
 
     def test_the_set_must_have_at_least_one_element(self):
+        """In order to produce a valid output file, at least
+        one disaggregation matrix must be written in the set."""
         self.values["mset"] = []
 
         self.assertRaises(RuntimeError, self.writer.write,
