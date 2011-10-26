@@ -81,12 +81,11 @@ class DisaggregationTaskTestCase(unittest.TestCase):
         store_gmpe_map(the_job.job_id, gmpe_seed, lt_proc)
 
         site = shapes.Site(0.0, 0.0)
-        realization = 1
         poe = 0.1
         result_dir = tempfile.tempdir
 
         gmv, matrix_path = disagg.compute_disagg_matrix(
-            the_job.job_id, site, realization, poe, result_dir)
+            the_job.job_id, site, poe, result_dir)
 
         # Now test the following:
         # 1) The matrix file exists
