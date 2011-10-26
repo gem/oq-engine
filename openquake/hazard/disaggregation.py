@@ -49,7 +49,7 @@ def compute_disagg_matrix(job_id, site, realization, poe, result_dir):
     :returns: 2-tuple of (ground_motion_value, path_to_h5_matrix_file)
     """
     def make_disagg_calc(a_job):
-        """Inner function to encapsulate DisaggregationCalculator creation.
+        """Encapsulates DisaggregationCalculator creation.
 
         :param a_job: a job
         :type a_job: :class:`openquake.job.Job` instance
@@ -72,7 +72,6 @@ def compute_disagg_matrix(job_id, site, realization, poe, result_dir):
             jd(mag_bin_lims), jd(eps_bin_lims))
 
         return disagg_calc
-
 
     the_job = job.Job.from_kvs(job_id)
 
