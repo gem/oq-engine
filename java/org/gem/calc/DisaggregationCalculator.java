@@ -221,12 +221,12 @@ public class DisaggregationCalculator {
                           [(int) dims[2]]
                           [(int) dims[3]]
                           [(int) dims[4]];
-        
+
         // value by which to normalize the final matrix
         double totalAnnualRate = 0.0;
 
         double logGMV = getGMV(hazardCurve, poe);
-        
+
         for (int srcCnt = 0; srcCnt < erf.getNumSources(); srcCnt++)
         {
             ProbEqkSource source = erf.getSource(srcCnt);
@@ -270,7 +270,7 @@ public class DisaggregationCalculator {
                 totalAnnualRate += annualRate;
             }  // end rupture loop
         }  // end source loop
-        
+
         disaggMatrix = normalize(disaggMatrix, totalAnnualRate);
 
         DisaggregationResult daResult = new DisaggregationResult();
@@ -387,12 +387,12 @@ public class DisaggregationCalculator {
     /**
      * Extract a GMV (Ground Motion Value) for a given curve and PoE
      * (Probability of Exceedance) value.
-     * 
+     *
      * IML (Intensity Measure Level) values make up the X-axis of the curve.
      * IMLs are arranged in ascending order. The lower the IML value, the
      * higher the PoE value (Y value) on the curve. Thus, it is assumed that
      * hazard curves will always have a negative slope.
-     * 
+     *
      * If the input poe value is > the max Y value in the curve, extrapolate
      * and return the X value corresponding to the max Y value (the first Y
      * value).
