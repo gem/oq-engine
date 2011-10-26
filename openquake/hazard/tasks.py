@@ -23,6 +23,7 @@ The following tasks are defined in the hazard engine:
     * generate_erf
     * compute_hazard_curve
     * compute_mgm_intensity
+    * compute_disagg_matrix
 """
 
 import json
@@ -136,15 +137,34 @@ def compute_quantile_curves(job_id, sites, realizations, quantiles):
 
 
 @task
-def compute_disagg_matrix(job_id, site, realization, poe):
-    """ """
+def compute_disagg_matrix(job_id, site, realization, poe, result_dir):
+    """ Compute a complete 5D Disaggregation matrix. This task leans heavily
+    on the DisaggregationCalculator (in the OpenQuake Java lib) to handle this
+    computation.
 
+    :param job_id: id of the job record in the KVS
+    :type job_id: `str`
+    :param site: a single site of interest
+    :type site: :class:`openquake.shapes.Site` instance`
+    :param int realization: logic tree sample iteration number
+    :param poe: Probability of Exceedence
+    :type poe: `float`
+    :param result_dir: location for the Java code to write the matrix in an
+        HDF5 file (in a distributed environment, this should be the path of a
+        mounted NFS)
+
+    :returns: 2-tuple of (ground_motion_value, path_to_h5_matrix_file)
+    """
+    # check and see if the job is still valid (i.e., not complete or failed)
     check_job_status(job_id)
 
     log_msg = (
         "Computing full disaggregation matrix for job_id=%s, site=%s, "
-        "realization=%s, PoE=%s")
-    log_msg %= (job_id, site, realization, poe)
+        "realization=%s, PoE=%s. Matrix results will be serialized to `%s`.")
+    log_msg %= (job_id, site, realization, poe, result_dir)
     HAZARD_LOG.info(log_msg)
 
-    return disagg.compute_disagg_matrix(job_id, site_realization, poe)
+    # NOTE(LB): We don't need to pass the realization, but we will need to
+    # keep track of it somehow when we reduce the final disagg results.
+    # When we write the disagg mixin, this should become more clear.
+    return disagg.compute_disagg_matrix(job_id, site, poe, result_dir)
