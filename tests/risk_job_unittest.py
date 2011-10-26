@@ -17,6 +17,7 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
+import numpy
 import os
 import unittest
 
@@ -280,6 +281,23 @@ class RiskMixinTestCase(unittest.TestCase):
                              key=row_col)
 
                 self.assertEqual(sorted(self.grid_assets, key=row_col), got)
+
+    def test_that_conditional_loss_is_in_kvs(self):
+        asset = {"assetID": 1}
+        loss_poe = 0.1
+        job_id = "1"
+        col = 1
+        row = 2
+        loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
+                (0.27, 0.089), (0.30, 0.066)])
+
+        # should set in kvs the conditional loss
+        general.compute_conditional_loss(job_id, col, row, loss_curve, asset,
+                loss_poe)
+        loss_key = kvs.tokens.loss_key(job_id, row, col,
+                asset["assetID"], loss_poe)
+
+        self.assertTrue(kvs.get(loss_key))
 
     def test_asset_losses_per_site(self):
         with patch('openquake.kvs.get') as get_mock:

@@ -35,7 +35,6 @@ from openquake.shapes import Curve
 from openquake.risk.common import  compute_loss_curve
 from openquake.risk.job import general
 
-
 LOGGER = logs.LOG
 
 
@@ -58,7 +57,10 @@ class ClassicalPSHABasedMixin:
         for task in celery_tasks:
             try:
                 # TODO(chris): Figure out where to put that timeout.
-                task.wait(timeout=None)
+                task.wait()
+                if not task.successful():
+                    raise Exception(task.result)
+
             except TimeoutError:
                 # TODO(jmc): Cancel and respawn this task
                 return
@@ -96,10 +98,18 @@ class ClassicalPSHABasedMixin:
                             point.row, point.column)
             for asset in kvs.get_list_json_decoded(asset_key):
                 LOGGER.debug("processing asset %s" % (asset))
+
                 loss_ratio_curve = self.compute_loss_ratio_curve(
                     point, asset, hazard_curve)
 
-                self.compute_loss_curve(point, loss_ratio_curve, asset)
+                if loss_ratio_curve:
+                    loss_curve = self.compute_loss_curve(point,
+                            loss_ratio_curve, asset)
+
+                    for loss_poe in general.conditional_loss_poes(self.params):
+                        general.compute_conditional_loss(self.job_id,
+                                point.column, point.row, loss_curve, asset,
+                                loss_poe)
 
         return True
 
@@ -125,6 +135,8 @@ class ClassicalPSHABasedMixin:
             point.column, asset['assetID'])
 
         kvs.set(loss_key, loss_curve.to_json())
+
+        return loss_curve
 
     def compute_loss_ratio_curve(self, point, asset, hazard_curve):
         """ Computes the loss ratio curve and stores in kvs

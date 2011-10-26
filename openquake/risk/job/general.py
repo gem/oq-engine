@@ -33,6 +33,7 @@ from openquake.job import mixins
 from openquake.output import risk as risk_output
 from openquake.parser import exposure
 from openquake.parser import vulnerability
+from openquake.risk import common
 from openquake.utils.tasks import check_job_status
 
 from celery.decorators import task
@@ -82,7 +83,8 @@ def output(fn):
             if writer:
                 metadata = {
                     "deterministic": False,
-                    "poe": loss_poe,
+                    "timeSpan": self.params["INVESTIGATION_TIME"],
+                    "poE": loss_poe,
                 }
 
                 writer.serialize(
@@ -90,6 +92,7 @@ def output(fn):
                     + self.asset_losses_per_site(
                         loss_poe,
                         self.grid_assets_iterator(self.region.grid)))
+                LOG.info('Loss Map is at: %s' % path)
 
     return output_writer
 
@@ -100,6 +103,22 @@ def conditional_loss_poes(params):
 
     return [float(x) for x in params.get(
         "CONDITIONAL_LOSS_POE", "").split()]
+
+
+def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
+    """Compute the conditional loss for a loss curve and Probability of
+    Exceedance (PoE)."""
+
+    loss_conditional = common.compute_conditional_loss(
+        loss_curve, loss_poe)
+
+    key = kvs.tokens.loss_key(
+            job_id, row, col, asset["assetID"], loss_poe)
+
+    LOG.debug("Conditional loss is %s, write to key %s" %
+            (loss_conditional, key))
+
+    kvs.set(key, loss_conditional)
 
 
 @task
@@ -271,9 +290,11 @@ class RiskJobMixin(mixins.Mixin):
         for point, asset in assets_iterator:
             key = kvs.tokens.loss_key(self.job_id, point.row, point.column,
                     asset["assetID"], loss_poe)
+
             loss_value = kvs.get(key)
             LOG.debug("Loss for asset %s at %s %s is %s" %
                 (asset["assetID"], asset['lon'], asset['lat'], loss_value))
+
             if loss_value:
                 risk_site = shapes.Site(asset['lon'], asset['lat'])
                 loss = {
