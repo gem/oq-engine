@@ -17,7 +17,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
 """
 Constants and helper functions for XML processing,
 including namespaces, and namespace maps.
@@ -25,6 +24,7 @@ including namespaces, and namespace maps.
 
 from lxml import etree
 
+from openquake import nrml
 from openquake import shapes
 
 
@@ -121,7 +121,8 @@ class XMLMismatchError(Exception):
         return self.message
 
 
-def validates_against_xml_schema(xml_instance_path, schema_path):
+def validates_against_xml_schema(xml_instance_path,
+        schema_path=nrml.nrml_schema_file()):
     """
     Checks whether an XML file validates against an XML Schema
 
