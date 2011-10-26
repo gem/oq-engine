@@ -998,6 +998,21 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEqual(0.30,
                 common.compute_conditional_loss(loss_curve, 0.050))
 
+    def test_conditional_loss_duplicates(self):
+        # we feed compute_conditional_loss with some duplicated data to see if
+        # it's handled correctly
+
+        closs1 = common.compute_conditional_loss(shapes.Curve([(0.21, 0.131),
+        (0.24, 0.108), (0.27, 0.089), (0.30, 0.066)]), 0.100)
+
+        # duplicated y values, different x values, (0.19, 0.131), (0.20, 0.131)
+        #should be skipped
+        closs2 = common.compute_conditional_loss(shapes.Curve([(0.19, 0.131),
+            (0.20, 0.131), (0.21, 0.131), (0.24, 0.108), (0.27, 0.089),
+            (0.30, 0.066)]), 0.100)
+
+        self.assertEquals(closs1, closs2)
+
     def test_conditional_loss_computation(self):
         loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
                 (0.27, 0.089), (0.30, 0.066)])

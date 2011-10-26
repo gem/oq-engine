@@ -21,7 +21,7 @@
 NRML serialization of risk-related data sets.
 - loss ratio curves
 - loss curves
-- loss map
+- loss maps for Deterministic, Probabilistic and Classical
 """
 
 from collections import defaultdict
@@ -38,6 +38,37 @@ from openquake.output import nrml
 from openquake.xml import NRML_NS, GML_NS
 
 NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
+
+
+def new_loss_deterministic_node(lmnode_el, loss_dict, asset_dict):
+    """
+    Create a new asset loss node under a pre-existing parent LMNode.
+    """
+    loss_el = etree.SubElement(lmnode_el,
+                            xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
+
+    loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_ATTR,
+                str(asset_dict['assetID']))
+    mean_loss = etree.SubElement(
+        loss_el, xml.RISK_LOSS_MAP_MEAN_LOSS_TAG)
+    mean_loss.text = "%s" % loss_dict['mean_loss']
+    stddev = etree.SubElement(loss_el,
+                    xml.RISK_LOSS_MAP_STANDARD_DEVIATION_TAG)
+    stddev.text = "%s" % loss_dict['stddev_loss']
+
+
+def new_loss_nondeterministic_node(lmnode_el, loss_dict, asset_dict):
+    """
+    Create a new asset loss node under a pre-existing parent LMNode.
+    """
+    loss_el = etree.SubElement(lmnode_el,
+                            xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
+
+    loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_ATTR,
+                str(asset_dict['assetID']))
+    value = etree.SubElement(
+        loss_el, xml.RISK_LOSS_MAP_VALUE)
+    value.text = "%s" % loss_dict['value']
 
 
 class BaseXMLWriter(nrml.TreeNRMLWriter):
@@ -166,42 +197,8 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
             self.loss_map_node.set(
                 key, metadata.get(key, self.DEFAULT_METADATA[key]))
 
-    def write(self, site, values):
-        """Writes an asset element with loss map ratio information.
-        This method assumes that `riskResult` and `lossMap` element
-        data has already been written.
-
-        :param site: the region location of the data being written
-        :type site: :py:class:`openquake.shapes.Site`
-
-        :param values: contains a list of pairs in the form
-            (loss dict, asset dict) with all the data
-            to be written related to the given site
-        :type values: tuple with the following members
-            :py:class:`dict` (loss dict) with the following keys:
-                ***mean_loss*** - the Mean Loss for a certain Node/Site
-                ***stddev_loss*** - the Standard Deviation for a certain
-                    Node/Site
-
-            :py:class:`dict` (asset dict)
-                ***assetID*** - the assetID
-        """
-        def new_loss_node(lmnode_el, loss_dict, asset_dict):
-            """
-            Create a new asset loss node under a pre-existing parent LMNode.
-            """
-            loss_el = etree.SubElement(lmnode_el,
-                                    xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
-
-            loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_ATTR,
-                        str(asset_dict['assetID']))
-            mean_loss = etree.SubElement(
-                loss_el, xml.RISK_LOSS_MAP_MEAN_LOSS_TAG)
-            mean_loss.text = "%s" % loss_dict['mean_loss']
-            stddev = etree.SubElement(loss_el,
-                            xml.RISK_LOSS_MAP_STANDARD_DEVIATION_TAG)
-            stddev.text = "%s" % loss_dict['stddev_loss']
-
+    def _generate_lmnode(self, site):
+        """ convenience method to generate a new lmnode """
         # Generate an id for the new LMNode
         # Note: ids are created start at '1'
         self.lmnode_counter += 1
@@ -224,11 +221,36 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
         pos_el = etree.SubElement(point_el, xml.GML_POS_TAG)
         pos_el.text = "%s %s" % (site.longitude, site.latitude)
 
+        return lmnode_el
+
+    def write(self, site, values):
+        """Writes an asset element with loss map ratio information.
+        This method assumes that `riskResult` and `lossMap` element
+        data has already been written.
+
+        :param site: the region location of the data being written
+        :type site: :py:class:`openquake.shapes.Site`
+
+        :param values: contains a list of pairs in the form
+            (loss dict, asset dict) with all the data
+            to be written related to the given site
+        :type values: tuple with the following members
+            :py:class:`dict` (loss dict) with the following keys:
+                ***mean_loss*** - the Mean Loss for a certain Node/Site
+                ***stddev_loss*** - the Standard Deviation for a certain
+                    Node/Site
+
+            :py:class:`dict` (asset dict)
+                ***assetID*** - the assetID
+        """
+
+        lmnode_el = self._generate_lmnode(site)
+
         # now add the loss nodes as a child of the LMNode
         # we have loss data in first position, asset data in second position
         # ({'stddev_loss': 100, 'mean_loss': 0}, {'assetID': 'a1711'})
         for value in values:
-            new_loss_node(lmnode_el, value[0], value[1])
+            new_loss_deterministic_node(lmnode_el, value[0], value[1])
 
     def _get_site_elem_for_site(self, site):
         """
@@ -249,15 +271,47 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
         return None
 
 
+class LossMapNonDeterministicXMLWriter(LossMapXMLWriter):
+    """
+    This class serializes loss maps to NRML for Non Deterministic calculators
+
+    Additionally in this loss map we have a timespan and a poe
+
+    timeSpan is an integer representing time in years
+    poE is a float between 0 and 1 (extremes included)
+
+    """
+    DEFAULT_METADATA = {
+        'nrmlID': 'undefined', 'riskResultID': 'undefined',
+        'lossMapID': 'undefined', 'endBranchLabel': 'undefined',
+        'lossCategory': 'undefined', 'unit': 'undefined',
+        'timeSpan': 'undefined', 'poE': 'undefined'}
+
+    def write_metadata(self, metadata):
+        super(LossMapNonDeterministicXMLWriter, self).write_metadata(metadata)
+
+        # set the rest of the <lossMap> attributes for non deterministic
+        for key in ('timeSpan', 'poE'):
+            self.loss_map_node.set(
+                key, str(metadata.get(key, self.DEFAULT_METADATA[key])))
+
+    def write(self, site, values):
+        lmnode_el = self._generate_lmnode(site)
+
+        for value in values:
+            new_loss_nondeterministic_node(lmnode_el, value[0], value[1])
+
 LOSS_MAP_METADATA_KEYS = [
     ('loss_map_ref', 'lossMapID'),
     ('end_branch_label', 'endBranchLabel'),
     ('category', 'lossCategory'),
     ('unit', 'unit'),
     ('deterministic', 'deterministic'),
+    # timespan is for non-deterministic loss maps
+    ('timespan', 'timeSpan'),
     # poe is for non-deterministic loss maps
     # enforced by a SQL constraint
-    ('poe', 'poe'),
+    ('poe', 'poE'),
 ]
 
 
@@ -364,6 +418,7 @@ class LossMapDBWriter(writer.DBWriter):
           'riskResultID': 'test_rr_id',
           'lossMapID': 'test_lm_id',
           'deterministic': False,
+          'timespan': 1,
           'poe': 0.01,
           'endBranchLabel': 'test_ebl',
           'lossCategory': 'economic_loss',
@@ -425,11 +480,13 @@ class LossMapDBWriter(writer.DBWriter):
                 ***assetID*** - the assetID
         """
         for loss, asset in values:
+
             kwargs = {
                 'loss_map_id': self.metadata.id,
                 'asset_ref': asset['assetID'],
                 'location': "POINT(%s %s)" % (site.longitude, site.latitude),
             }
+
             if self.metadata.deterministic:
                 kwargs.update({
                     'value': float(loss.get('mean_loss')),
@@ -440,6 +497,7 @@ class LossMapDBWriter(writer.DBWriter):
                     'value': float(loss.get('value')),
                     'std_dev': 0.0,
                 })
+
             self.bulk_inserter.add_entry(**kwargs)
 
     def _insert_metadata(self, metadata):
@@ -454,6 +512,7 @@ class LossMapDBWriter(writer.DBWriter):
             kwargs[key] = metadata.get(metadata_key)
 
         self.metadata = models.LossMap(**kwargs)
+
         self.metadata.save()
 
 
@@ -473,6 +532,7 @@ def create_loss_map_writer(job_id, serialize_to, nrml_path, deterministic):
     :returns: None or an instance of
         :py:class:`output.risk.LossMapXMLWriter` or
         :py:class:`output.risk.LossMapDBWriter`
+        :py:class:`output.risk.LossMapNonDeterministicXMLWriter`
     """
     writers = []
 
@@ -483,9 +543,7 @@ def create_loss_map_writer(job_id, serialize_to, nrml_path, deterministic):
         if deterministic:
             writers.append(LossMapXMLWriter(nrml_path))
         else:
-            # No XML schema for non-deterministic maps yet (see bug 805434)
-            pass
-
+            writers.append(LossMapNonDeterministicXMLWriter(nrml_path))
     return writer.compose_writers(writers)
 
 
