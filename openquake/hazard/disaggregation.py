@@ -28,6 +28,7 @@ from openquake.utils import config
 from openquake.hazard.general import (
     generate_erf, generate_gmpe_map, set_gmpe_params)
 
+
 # pylint: disable=R0914
 @java.jexception
 def compute_disagg_matrix(job_id, site, poe, result_dir):
@@ -87,6 +88,7 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
         vs30_value, depth_to_2pt5, result_dir)
 
     return (matrix_result.getGMV(), matrix_result.getMatrixPath())
+
 
 def list_to_jdouble_array(float_list):
     """Convert a 1D list of floats to a 1D Java Double[] (as a jpype object).
