@@ -17,6 +17,7 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
+"""Common code for the hazard calculators."""
 
 import numpy
 
@@ -117,10 +118,10 @@ def set_gmpe_params(gmpe_map, params):
     :param dict params: job config params
     """
     jpype = java.jvm()
-    set_gmpe_params = java.jclass("GmpeLogicTreeData").setGmpeParams
+    j_set_gmpe_params = java.jclass("GmpeLogicTreeData").setGmpeParams
     for tect_region in gmpe_map.keySet():
         gmpe = gmpe_map.get(tect_region)
-        set_gmpe_params(params['COMPONENT'],
+        j_set_gmpe_params(params['COMPONENT'],
             params['INTENSITY_MEASURE_TYPE'],
             jpype.JDouble(float(params['PERIOD'])),
             jpype.JDouble(float(params['DAMPING'])),
