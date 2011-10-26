@@ -43,7 +43,7 @@ class SubsetExtractionTestCase(unittest.TestCase):
     NMAG = len(MAGNITUDE_BIN_LIMITS)
     NEPS = len(EPSILON_BIN_LIMITS)
     NTRT = 5
-    FULL_MATRIX_SHAPE = (NLAT, NLON, NMAG, NEPS, NTRT)
+    FULL_MATRIX_SHAPE = (NLAT - 1, NLON - 1, NMAG - 1, NEPS - 1, NTRT)
 
     SITE = (0.0, 0.0)
 
@@ -52,10 +52,7 @@ class SubsetExtractionTestCase(unittest.TestCase):
         cls.tempdir = tempfile.mkdtemp()
         cls.full_matrix_path = os.path.join(cls.tempdir, 'full-matrix.hdf5')
         full_matrix = h5py.File(cls.full_matrix_path, 'w')
-        ds = numpy.ndarray([cls.NLAT - 1, cls.NLON - 1, cls.NMAG - 1,
-                            cls.NEPS - 1, cls.NTRT],
-                           disagg_subsets.DATA_TYPE)
-        cls.read_data_file(cls.FULL_MATRIX_DATA, ds)
+        ds = cls.read_data_file(cls.FULL_MATRIX_DATA, cls.FULL_MATRIX_SHAPE)
         full_matrix.create_dataset(disagg_subsets.FULL_MATRIX_DS_NAME, data=ds)
 
     @classmethod
@@ -63,26 +60,10 @@ class SubsetExtractionTestCase(unittest.TestCase):
         shutil.rmtree(cls.tempdir)
 
     @classmethod
-    def read_data_file(cls, data_filename, target_dataset):
+    def read_data_file(cls, data_filename, result_shape):
         data = open(helpers.get_data_path('disagg/result/%s' % data_filename))
-        numbers = (float(line.split()[-1]) for line in data)
-        if len(target_dataset.shape) == 1:
-            for i, number in enumerate(numbers):
-                target_dataset[i] = number
-            return
-        stack = [iter(target_dataset)]
-        while stack:
-            try:
-                arr = next(stack[-1])
-            except StopIteration:
-                stack.pop()
-                continue
-            if len(arr.shape) == 1:
-                for i in xrange(len(arr)):
-                    arr[i] = next(numbers)
-            else:
-                stack.append(iter(arr))
-        assert len(list(numbers)) == 0
+        numbers = [float(line.split()[-1]) for line in data]
+        return numpy.reshape(numbers, result_shape)
 
     def _test_pmf(self, name, datafile, result_shape):
         target_path = os.path.join(self.tempdir, '%s.hdf5' % name)
@@ -93,8 +74,7 @@ class SubsetExtractionTestCase(unittest.TestCase):
             self.DISTANCE_BIN_LIMITS,
             target_path, [name]
         )
-        expected_result = numpy.ndarray(result_shape)
-        self.read_data_file(datafile, expected_result)
+        expected_result = self.read_data_file(datafile, result_shape)
         result = h5py.File(target_path, 'r')[name].value
         helpers.assertDeepAlmostEqual(self, expected_result, result)
 
@@ -151,11 +131,8 @@ class SubsetExtractionTestCase(unittest.TestCase):
                               [self.NMAG - 1, self.NDIST - 1, self.NEPS - 1]),
             'latlonpmf': ('latitudeLongitudePMF.dat',
                           [self.NLAT - 1, self.NLON - 1]),
-            disagg_subsets.FULL_MATRIX_DS_NAME: (
-                self.FULL_MATRIX_DATA,
-                [self.NLAT - 1, self.NLON - 1, self.NMAG - 1,
-                 self.NEPS - 1, self.NTRT]
-            )
+            disagg_subsets.FULL_MATRIX_DS_NAME: (self.FULL_MATRIX_DATA,
+                                                 self.FULL_MATRIX_SHAPE)
         }
         disagg_subsets.extract_subsets(
             self.SITE, self.full_matrix_path,
@@ -167,6 +144,5 @@ class SubsetExtractionTestCase(unittest.TestCase):
         )
         result = h5py.File(target_path, 'r')
         for name, (datafile, shape) in pmfs.items():
-            expected_result = numpy.ndarray(shape)
-            self.read_data_file(datafile, expected_result)
+            expected_result = self.read_data_file(datafile, shape)
             helpers.assertDeepAlmostEqual(self, expected_result, result[name])
