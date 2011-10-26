@@ -8,6 +8,8 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.apache.commons.collections.Closure;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
@@ -32,411 +34,415 @@ import org.gem.hdf5.HDF5Util;
 
 public class DisaggregationCalculator {
 
-	/**
-	 * Dataset for the full disagg matrix (for HDF5 ouput).
-	 */
-	public static final String FULLDISAGGMATRIX = "fulldisaggmatrix";
-	private final Double[] latBinLims;
-	private final Double[] lonBinLims;
-	private final Double[] magBinLims;
-	private final Double[] epsilonBinLims;
-	private static final TectonicRegionType[] tectonicRegionTypes = TectonicRegionType.values();
-	/**
-	 * Dimensions for matrices produced by this calculator, based on the length
-	 * of the bin limits passed to the constructor.
-	 */
-	private final long[] dims;
+    private static Log logger = LogFactory.getLog(DisaggregationCalculator.class);
+    /**
+     * Dataset for the full disagg matrix (for HDF5 ouput).
+     */
+    public static final String FULLDISAGGMATRIX = "fulldisaggmatrix";
+    private final Double[] latBinLims;
+    private final Double[] lonBinLims;
+    private final Double[] magBinLims;
+    private final Double[] epsilonBinLims;
+    private static final TectonicRegionType[] tectonicRegionTypes = TectonicRegionType.values();
+    /**
+     * Dimensions for matrices produced by this calculator, based on the length
+     * of the bin limits passed to the constructor.
+     */
+    private final long[] dims;
 
-	/**
-	 * Used for checking that bin edge lists are not null;
-	 */
-	private static final Closure notNull = new Closure()
-	{
+    /**
+     * Used for checking that bin edge lists are not null;
+     */
+    private static final Closure notNull = new Closure()
+    {
 
-		public void execute(Object o)
-		{
-			if (o == null)
-			{
-				throw new IllegalArgumentException("Bin edges should not be null");
-			}
-		}
-	};
-
-	/**
-	 * Used for checking that bin edge lists have a length greater than or equal
-	 * to 2.
-	 */
-	private static final Closure lenGE2 = new Closure()
-	{
-
-		public void execute(Object o)
-		{
-			if (o instanceof Object[])
-			{
-				Object[] oArray = (Object[]) o;
-				if (oArray.length < 2)
-				{
-					throw new IllegalArgumentException("Bin edge arrays must have a length >= 2");
-				}
-			}
-		}
-	};
-
-	private static final Closure isSorted = new Closure()
-	{
-
-		public void execute(Object o) {
-			if (o instanceof Object[])
-			{
-				Object[] oArray = (Object[]) o;
-				Object[] sorted = Arrays.copyOf(oArray, oArray.length);
-				Arrays.sort(sorted);
-				if (!Arrays.equals(sorted, oArray))
-				{
-					throw new IllegalArgumentException("Bin edge arrays must arranged in ascending order");
-				}
-			}
-		}
-	};
-
-	public DisaggregationCalculator(
-			Double[] latBinEdges,
-			Double[] lonBinEdges,
-			Double[] magBinEdges,
-			Double[] epsilonBinEdges)
-	{
-		List binEdges = Arrays.asList(latBinEdges, lonBinEdges, magBinEdges,
-				  epsilonBinEdges);
-
-		// Validation for the bin edges:
-		forAllDo(binEdges, notNull);
-		forAllDo(binEdges, lenGE2);
-		forAllDo(binEdges, isSorted);
-
-		this.latBinLims = latBinEdges;
-		this.lonBinLims = lonBinEdges;
-		this.magBinLims = magBinEdges;
-		this.epsilonBinLims = epsilonBinEdges;
-
-		this.dims = new long[5];
-		this.dims[0] = this.latBinLims.length - 1;
-		this.dims[1] = this.lonBinLims.length - 1;
-		this.dims[2] = this.magBinLims.length - 1;
-		this.dims[3] = this.epsilonBinLims.length - 1;
-		this.dims[4] = tectonicRegionTypes.length;
-	}
-
-	/**
-	 * Compute the full disaggregation matrix and write it to an HDF5 file.
-	 * 
-	 * The result is a DisaggregationResult object, containing the GMV, the full
-	 * 5D matrix, and the absolute path the HDF5 file.
-	 * 
-	 * @param path directory where the matrix should be written to
-	 * @throws Exception */
-	public DisaggregationResult computeAndWriteMatrix(
-			double lat,
-			double lon,
-			GEM1ERF erf,
-			Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap,
-			double poe,
-			List<Double> imls,
-			double vs30Value,
-			double depthTo2pt5KMPS,
-			String path) throws Exception
-	{
-		DisaggregationResult daResult = computeMatrix(lat, lon, erf, imrMap,
-				poe, imls, vs30Value, depthTo2pt5KMPS);
-
-		String fileName = UUID.randomUUID().toString() + ".h5";
-		String fullPath = new File(path, fileName).getAbsolutePath();
-
-		HDF5Util.writeMatrix(fullPath, FULLDISAGGMATRIX, dims, daResult.getMatrix());
-
-		daResult.setMatrixPath(fullPath);
-
-		return daResult;
-	}
-
-	/**
-	 * Simplified computeMatrix method for convenient calls from the Python
-	 * code.
-	 */
-	public DisaggregationResult computeMatrix(
-			double lat,
-			double lon,
-			GEM1ERF erf,
-			Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap,
-			double poe,
-			List<Double> imls,
-			double vs30Value,
-			double depthTo2pt5KMPS)
-	{
-		Site site = new Site(new Location(lat, lon));
-		site.addParameter(new DoubleParameter(Vs30_Param.NAME, vs30Value));
-		site.addParameter(new DoubleParameter(DepthTo2pt5kmPerSecParam.NAME, depthTo2pt5KMPS));
-
-		DiscretizedFuncAPI hazardCurve = new ArbitrarilyDiscretizedFunc();
-		// initialize the hazard curve with the number of points == the number of IMLs
-		for (double d : imls)
-		{
-			hazardCurve.set(d, 0.0);
-		}
-
-		try
+        public void execute(Object o)
         {
-			HazardCurveCalculator hcc = new HazardCurveCalculator();
-			hcc.getHazardCurve(hazardCurve, site, imrMap, erf);
-		} 
+            if (o == null)
+            {
+                throw new IllegalArgumentException("Bin edges should not be null");
+            }
+        }
+    };
+
+    /**
+     * Used for checking that bin edge lists have a length greater than or equal
+     * to 2.
+     */
+    private static final Closure lenGE2 = new Closure()
+    {
+
+        public void execute(Object o)
+        {
+            if (o instanceof Object[])
+            {
+                Object[] oArray = (Object[]) o;
+                if (oArray.length < 2)
+                {
+                    throw new IllegalArgumentException("Bin edge arrays must have a length >= 2");
+                }
+            }
+        }
+    };
+
+    private static final Closure isSorted = new Closure()
+    {
+
+        public void execute(Object o) {
+            if (o instanceof Object[])
+            {
+                Object[] oArray = (Object[]) o;
+                Object[] sorted = Arrays.copyOf(oArray, oArray.length);
+                Arrays.sort(sorted);
+                if (!Arrays.equals(sorted, oArray))
+                {
+                    throw new IllegalArgumentException("Bin edge arrays must arranged in ascending order");
+                }
+            }
+        }
+    };
+
+    public DisaggregationCalculator(
+            Double[] latBinEdges,
+            Double[] lonBinEdges,
+            Double[] magBinEdges,
+            Double[] epsilonBinEdges)
+    {
+        List binEdges = Arrays.asList(latBinEdges, lonBinEdges, magBinEdges,
+                  epsilonBinEdges);
+
+        // Validation for the bin edges:
+        forAllDo(binEdges, notNull);
+        forAllDo(binEdges, lenGE2);
+        forAllDo(binEdges, isSorted);
+
+        this.latBinLims = latBinEdges;
+        this.lonBinLims = lonBinEdges;
+        this.magBinLims = magBinEdges;
+        this.epsilonBinLims = epsilonBinEdges;
+
+        this.dims = new long[5];
+        this.dims[0] = this.latBinLims.length - 1;
+        this.dims[1] = this.lonBinLims.length - 1;
+        this.dims[2] = this.magBinLims.length - 1;
+        this.dims[3] = this.epsilonBinLims.length - 1;
+        this.dims[4] = tectonicRegionTypes.length;
+    }
+
+    /**
+     * Compute the full disaggregation matrix and write it to an HDF5 file.
+     * 
+     * The result is a DisaggregationResult object, containing the GMV, the full
+     * 5D matrix, and the absolute path the HDF5 file.
+     * 
+     * @param path directory where the matrix should be written to
+     * @throws Exception */
+    public DisaggregationResult computeAndWriteMatrix(
+            double lat,
+            double lon,
+            GEM1ERF erf,
+            Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap,
+            double poe,
+            List<Double> imls,
+            double vs30Value,
+            double depthTo2pt5KMPS,
+            String path) throws Exception
+    {
+        DisaggregationResult daResult = computeMatrix(lat, lon, erf, imrMap,
+                poe, imls, vs30Value, depthTo2pt5KMPS);
+
+        String fileName = UUID.randomUUID().toString() + ".h5";
+        String fullPath = new File(path, fileName).getAbsolutePath();
+
+        HDF5Util.writeMatrix(fullPath, FULLDISAGGMATRIX, dims, daResult.getMatrix());
+
+        daResult.setMatrixPath(fullPath);
+
+        return daResult;
+    }
+
+    /**
+     * Simplified computeMatrix method for convenient calls from the Python
+     * code.
+     */
+    public DisaggregationResult computeMatrix(
+            double lat,
+            double lon,
+            GEM1ERF erf,
+            Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap,
+            double poe,
+            List<Double> imls,
+            double vs30Value,
+            double depthTo2pt5KMPS)
+    {
+        Site site = new Site(new Location(lat, lon));
+        site.addParameter(new DoubleParameter(Vs30_Param.NAME, vs30Value));
+        site.addParameter(new DoubleParameter(DepthTo2pt5kmPerSecParam.NAME, depthTo2pt5KMPS));
+
+        DiscretizedFuncAPI hazardCurve = new ArbitrarilyDiscretizedFunc();
+        // initialize the hazard curve with the number of points == the number of IMLs
+        for (double d : imls)
+        {
+            hazardCurve.set(d, 1.0);
+        }
+
+        try
+        {
+            HazardCurveCalculator hcc = new HazardCurveCalculator();
+            hcc.getHazardCurve(hazardCurve, site, imrMap, erf);
+        } 
         catch (RemoteException e)
         {
-			throw new RuntimeException(e);
-		}
-		double minMag = (Double) erf.getParameter(GEM1ERF.MIN_MAG_NAME).getValue();
+            throw new RuntimeException(e);
+        }
 
-		return computeMatrix(site, erf, imrMap, poe, hazardCurve, minMag);
-	}
+        logger.debug("Hazard Curve is: " + hazardCurve.toString());
 
-	public DisaggregationResult computeMatrix(
-			Site site,
-			EqkRupForecastAPI erf,
-			Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap,
-			double poe,
-			DiscretizedFuncAPI hazardCurve,
-			double minMag) // or just pass a List<double> of IML values and compute the curve inside here?
-	{
+        double minMag = (Double) erf.getParameter(GEM1ERF.MIN_MAG_NAME).getValue();
 
-		assertPoissonian(erf);
-		assertNonZeroStdDev(imrMap);
+        return computeMatrix(site, erf, imrMap, poe, hazardCurve, minMag);
+    }
 
-		double disaggMatrix[][][][][] =
-				new double[(int) dims[0]]
-						  [(int) dims[1]]
-						  [(int) dims[2]]
-						  [(int) dims[3]]
-						  [(int) dims[4]];
-		
-		// value by which to normalize the final matrix
-		double totalAnnualRate = 0.0;
+    public DisaggregationResult computeMatrix(
+            Site site,
+            EqkRupForecastAPI erf,
+            Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap,
+            double poe,
+            DiscretizedFuncAPI hazardCurve,
+            double minMag) // or just pass a List<double> of IML values and compute the curve inside here?
+    {
 
-		double logGMV = getGMV(hazardCurve, poe);
-		
-		for (int srcCnt = 0; srcCnt < erf.getNumSources(); srcCnt++)
-		{
-			ProbEqkSource source = erf.getSource(srcCnt);
+        assertPoissonian(erf);
+        assertNonZeroStdDev(imrMap);
 
-			double totProb = source.computeTotalProbAbove(minMag);
-			double totRate = -Math.log(1 - totProb);
+        double disaggMatrix[][][][][] =
+                new double[(int) dims[0]]
+                          [(int) dims[1]]
+                          [(int) dims[2]]
+                          [(int) dims[3]]
+                          [(int) dims[4]];
+        
+        // value by which to normalize the final matrix
+        double totalAnnualRate = 0.0;
 
-			TectonicRegionType trt = source.getTectonicRegionType();
+        double logGMV = getGMV(hazardCurve, poe);
+        
+        for (int srcCnt = 0; srcCnt < erf.getNumSources(); srcCnt++)
+        {
+            ProbEqkSource source = erf.getSource(srcCnt);
 
-			ScalarIntensityMeasureRelationshipAPI imr = imrMap.get(trt);
-			imr.setSite(site);
-			imr.setIntensityMeasureLevel(logGMV);
+            double totProb = source.computeTotalProbAbove(minMag);
+            double totRate = -Math.log(1 - totProb);
 
-			for(int rupCnt = 0; rupCnt < source.getNumRuptures(); rupCnt++)
-			{
-				ProbEqkRupture rupture = source.getRupture(rupCnt);
-				imr.setEqkRupture(rupture);
+            TectonicRegionType trt = source.getTectonicRegionType();
 
-				Location location = closestLocation(rupture.getRuptureSurface().getLocationList(), site.getLocation());
+            ScalarIntensityMeasureRelationshipAPI imr = imrMap.get(trt);
+            imr.setSite(site);
+            imr.setIntensityMeasureLevel(logGMV);
 
-				double lat, lon, mag, epsilon;
-				lat = location.getLatitude();
-				lon = location.getLongitude();
-				mag = rupture.getMag();
-				epsilon = imr.getEpsilon();
+            for(int rupCnt = 0; rupCnt < source.getNumRuptures(); rupCnt++)
+            {
+                ProbEqkRupture rupture = source.getRupture(rupCnt);
+                imr.setEqkRupture(rupture);
 
-				if (!allInRange(lat, lon, mag, epsilon))
-				{
-					// one or more of the parameters is out of range;
-					// skip this rupture
-					continue;
-				}
+                Location location = closestLocation(rupture.getRuptureSurface().getLocationList(), site.getLocation());
 
-				int[] binIndices = getBinIndices(lat, lon, mag, epsilon, trt);
+                double lat, lon, mag, epsilon;
+                lat = location.getLatitude();
+                lon = location.getLongitude();
+                mag = rupture.getMag();
+                epsilon = imr.getEpsilon();
 
-				double annualRate = totRate
-						* imr.getExceedProbability()
-						* rupture.getProbability();
+                if (!allInRange(lat, lon, mag, epsilon))
+                {
+                    // one or more of the parameters is out of range;
+                    // skip this rupture
+                    continue;
+                }
 
-				disaggMatrix[binIndices[0]][binIndices[1]][binIndices[2]][binIndices[3]][binIndices[4]] += annualRate;
-				totalAnnualRate += annualRate;
-			}  // end rupture loop
-		}  // end source loop
-		
-		disaggMatrix = normalize(disaggMatrix, totalAnnualRate);
+                int[] binIndices = getBinIndices(lat, lon, mag, epsilon, trt);
+
+                double annualRate = totRate
+                        * imr.getExceedProbability()
+                        * rupture.getProbability();
+
+                disaggMatrix[binIndices[0]][binIndices[1]][binIndices[2]][binIndices[3]][binIndices[4]] += annualRate;
+                totalAnnualRate += annualRate;
+            }  // end rupture loop
+        }  // end source loop
+        
+        disaggMatrix = normalize(disaggMatrix, totalAnnualRate);
 
         DisaggregationResult daResult = new DisaggregationResult();
         daResult.setGMV(Math.exp(logGMV));
         daResult.setMatrix(disaggMatrix);
-		return daResult;
-	}
+        return daResult;
+    }
 
-	public boolean allInRange(
-			double lat, double lon, double mag, double epsilon)
-	{
-		return inRange(this.latBinLims, lat)
-				&& inRange(this.lonBinLims, lon)
-				&& inRange(this.magBinLims, mag)
-				&& inRange(this.epsilonBinLims, epsilon);
-	}
+    public boolean allInRange(
+            double lat, double lon, double mag, double epsilon)
+    {
+        return inRange(this.latBinLims, lat)
+                && inRange(this.lonBinLims, lon)
+                && inRange(this.magBinLims, mag)
+                && inRange(this.epsilonBinLims, epsilon);
+    }
 
-	public static void assertPoissonian(EqkRupForecastAPI erf)
-	{
-		for (int i = 0; i < erf.getSourceList().size(); i++)
-		{
-			ProbEqkSource source = erf.getSource(i);
-			if (!source.isPoissonianSource()) {
-				throw new RuntimeException(
-						"Sources must be Poissonian. (Non-Poissonian source are not currently supported.)");
-			}
-		}
-	}
+    public static void assertPoissonian(EqkRupForecastAPI erf)
+    {
+        for (int i = 0; i < erf.getSourceList().size(); i++)
+        {
+            ProbEqkSource source = erf.getSource(i);
+            if (!source.isPoissonianSource()) {
+                throw new RuntimeException(
+                        "Sources must be Poissonian. (Non-Poissonian source are not currently supported.)");
+            }
+        }
+    }
 
-	public static void assertNonZeroStdDev(
-			Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap)
-	{
-		for (ScalarIntensityMeasureRelationshipAPI imr : imrMap.values())
-		{
-			String stdDevType =
-					(String) imr.getParameter(StdDevTypeParam.NAME).getValue();
-			if (stdDevType.equalsIgnoreCase(StdDevTypeParam.STD_DEV_TYPE_NONE))
-			{
-				throw new RuntimeException(
-						"Attenuation relationship must have a non-zero standard deviation.");
-			}
-		}
-	}
+    public static void assertNonZeroStdDev(
+            Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap)
+    {
+        for (ScalarIntensityMeasureRelationshipAPI imr : imrMap.values())
+        {
+            String stdDevType =
+                    (String) imr.getParameter(StdDevTypeParam.NAME).getValue();
+            if (stdDevType.equalsIgnoreCase(StdDevTypeParam.STD_DEV_TYPE_NONE))
+            {
+                throw new RuntimeException(
+                        "Attenuation relationship must have a non-zero standard deviation.");
+            }
+        }
+    }
 
-	public static boolean inRange(Double[] bins, Double value)
-	{
-		return value >= bins[0] && value < bins[bins.length - 1];
-	}
+    public static boolean inRange(Double[] bins, Double value)
+    {
+        return value >= bins[0] && value < bins[bins.length - 1];
+    }
 
-	/**
-	 * Figure out which bins each input parameter fits into. The returned array
-	 * of indices represent the 5 dimensional coordinates in the disaggregation
-	 * matrix.
-	 * @param lat
-	 * @param lon
-	 * @param mag
-	 * @param epsilon
-	 * @param trt
-	 */
-	public int[] getBinIndices(
-			double lat, double lon, double mag,
-			double epsilon, TectonicRegionType trt)
-	{
-		int[] result = new int[5];
-		result[0] = digitize(this.latBinLims, lat);
-		result[1] = digitize(this.lonBinLims, lon);
-		result[2] = digitize(this.magBinLims, mag);
-		result[3] = digitize(this.epsilonBinLims, epsilon);
-		result[4] = Arrays.asList(TectonicRegionType.values()).indexOf(trt);
+    /**
+     * Figure out which bins each input parameter fits into. The returned array
+     * of indices represent the 5 dimensional coordinates in the disaggregation
+     * matrix.
+     * @param lat
+     * @param lon
+     * @param mag
+     * @param epsilon
+     * @param trt
+     */
+    public int[] getBinIndices(
+            double lat, double lon, double mag,
+            double epsilon, TectonicRegionType trt)
+    {
+        int[] result = new int[5];
+        result[0] = digitize(this.latBinLims, lat);
+        result[1] = digitize(this.lonBinLims, lon);
+        result[2] = digitize(this.magBinLims, mag);
+        result[3] = digitize(this.epsilonBinLims, epsilon);
+        result[4] = Arrays.asList(TectonicRegionType.values()).indexOf(trt);
 
-		return result;
-	}
+        return result;
+    }
 
-	public static int digitize(Double[] bins, Double value)
-	{
-		for (int i = 0; i < bins.length - 1; i++)
-		{
-			if (value >= bins[i] && value < bins[i + 1])
-			{
-				return i;
-			}
-		}
-		throw new IllegalArgumentException(
-				"Value '" + value + "' is outside the expected range");
-	}
+    public static int digitize(Double[] bins, Double value)
+    {
+        for (int i = 0; i < bins.length - 1; i++)
+        {
+            if (value >= bins[i] && value < bins[i + 1])
+            {
+                return i;
+            }
+        }
+        throw new IllegalArgumentException(
+                "Value '" + value + "' is outside the expected range");
+    }
 
-	/**
-	 * Given a LocationList and a Location target, get the Location in the
-	 * LocationList which is closest to the target Location.
-	 * @param list
-	 * @param target
-	 * @return closest Location (in the input ListLocation) to the target
-	 */
-	public static Location closestLocation(LocationList list, Location target)
-	{
-		Location closest = null;
+    /**
+     * Given a LocationList and a Location target, get the Location in the
+     * LocationList which is closest to the target Location.
+     * @param list
+     * @param target
+     * @return closest Location (in the input ListLocation) to the target
+     */
+    public static Location closestLocation(LocationList list, Location target)
+    {
+        Location closest = null;
 
-		double minDistance = Double.MAX_VALUE;
+        double minDistance = Double.MAX_VALUE;
 
-		for (Location loc : list)
-		{
-			double horzDist = LocationUtils.horzDistance(loc, target);
-			double vertDist = LocationUtils.vertDistance(loc, target);
-			double distance = Math.sqrt(Math.pow(horzDist, 2) + Math.pow(vertDist, 2));
-			if (distance < minDistance)
-			{
-				minDistance = distance;
-				closest = loc;
-			}
-		}
-		return closest;
-	}
+        for (Location loc : list)
+        {
+            double horzDist = LocationUtils.horzDistance(loc, target);
+            double vertDist = LocationUtils.vertDistance(loc, target);
+            double distance = Math.sqrt(Math.pow(horzDist, 2) + Math.pow(vertDist, 2));
+            if (distance < minDistance)
+            {
+                minDistance = distance;
+                closest = loc;
+            }
+        }
+        return closest;
+    }
 
-	/**
-	 * Extract a GMV (Ground Motion Value) for a given curve and PoE
-	 * (Probability of Exceedance) value.
-	 * 
-	 * IML (Intensity Measure Level) values make up the X-axis of the curve.
-	 * IMLs are arranged in ascending order. The lower the IML value, the
-	 * higher the PoE value (Y value) on the curve. Thus, it is assumed that
-	 * hazard curves will always have a negative slope.
-	 * 
-	 * If the input poe value is > the max Y value in the curve, extrapolate
-	 * and return the X value corresponding to the max Y value (the first Y
-	 * value).
-	 * If the input poe value is < the min Y value in the curve, extrapolate
-	 * and return the X value corresponding to the min Y value (the last Y
-	 * value).
-	 * Otherwise, interpolate an X value in the curve given the input PoE.
-	 * @param hazardCurve
-	 * @param poe Probability of Exceedance value
-	 * @return GMV corresponding to the input poe
-	 */
-	public static Double getGMV(DiscretizedFuncAPI hazardCurve, double poe)
-	{
-		if (poe > hazardCurve.getY(0))
-		{
-			return hazardCurve.getX(0);
-		}
-		else if (poe < hazardCurve.getY(hazardCurve.getNum() - 1))
-		{
-			return hazardCurve.getX(hazardCurve.getNum() - 1);
-		}
-		else
-		{
-			return hazardCurve.getFirstInterpolatedX(poe);
-		}
-	}
+    /**
+     * Extract a GMV (Ground Motion Value) for a given curve and PoE
+     * (Probability of Exceedance) value.
+     * 
+     * IML (Intensity Measure Level) values make up the X-axis of the curve.
+     * IMLs are arranged in ascending order. The lower the IML value, the
+     * higher the PoE value (Y value) on the curve. Thus, it is assumed that
+     * hazard curves will always have a negative slope.
+     * 
+     * If the input poe value is > the max Y value in the curve, extrapolate
+     * and return the X value corresponding to the max Y value (the first Y
+     * value).
+     * If the input poe value is < the min Y value in the curve, extrapolate
+     * and return the X value corresponding to the min Y value (the last Y
+     * value).
+     * Otherwise, interpolate an X value in the curve given the input PoE.
+     * @param hazardCurve
+     * @param poe Probability of Exceedance value
+     * @return GMV corresponding to the input poe
+     */
+    public static Double getGMV(DiscretizedFuncAPI hazardCurve, double poe)
+    {
+        if (poe > hazardCurve.getY(0))
+        {
+            return hazardCurve.getX(0);
+        }
+        else if (poe < hazardCurve.getY(hazardCurve.getNum() - 1))
+        {
+            return hazardCurve.getX(hazardCurve.getNum() - 1);
+        }
+        else
+        {
+            return hazardCurve.getFirstInterpolatedX(poe);
+        }
+    }
 
-	/**
-	 * Normalize a 5D matrix by the given value.
-	 * @param matrix
-	 * @param normFactor
-	 */
-	public static double[][][][][] normalize(double[][][][][] matrix, double normFactor)
-	{
-		for (int i = 0; i < matrix.length; i++)
-		{
-			for (int j = 0; j < matrix[i].length; j++)
-			{
-				for (int k = 0; k < matrix[i][j].length; k++)
-				{
-					for (int l = 0; l < matrix[i][j][k].length; l++)
-					{
-						for (int m = 0; m < matrix[i][j][k][l].length; m++)
-						{
-							matrix[i][j][k][l][m] /= normFactor;
-						}
-					}
-				}
-			}
-		}
-		return matrix;
-	}
+    /**
+     * Normalize a 5D matrix by the given value.
+     * @param matrix
+     * @param normFactor
+     */
+    public static double[][][][][] normalize(double[][][][][] matrix, double normFactor)
+    {
+        for (int i = 0; i < matrix.length; i++)
+        {
+            for (int j = 0; j < matrix[i].length; j++)
+            {
+                for (int k = 0; k < matrix[i][j].length; k++)
+                {
+                    for (int l = 0; l < matrix[i][j][k].length; l++)
+                    {
+                        for (int m = 0; m < matrix[i][j][k][l].length; m++)
+                        {
+                            matrix[i][j][k][l][m] /= normFactor;
+                        }
+                    }
+                }
+            }
+        }
+        return matrix;
+    }
 }
