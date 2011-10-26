@@ -53,8 +53,6 @@ def generate_erf(job_id, cache):
     src_key = kvs.tokens.source_model_key(job_id)
     job_key = kvs.tokens.generate_job_key(job_id)
 
-    print cache
-    print src_key
     sources = java.jclass("JsonSerializer").getSourceListFromCache(
         cache, src_key)
 
