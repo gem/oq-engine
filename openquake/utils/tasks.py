@@ -31,7 +31,6 @@ from celery.task.sets import TaskSet
 from openquake.job import Job
 from openquake import logs
 from openquake.utils import config
-from openquake.utils import general
 
 
 # Do not create batches of more than BLOCK_SIZE celery subtasks.
@@ -65,10 +64,8 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
     """
     logs.HAZARD_LOG.info("cardinality: %s" % cardinality)
 
-    try:
-        block_size = general.str2int(config.get("tasks", "block_size"))
-    except ValueError:
-        block_size = BLOCK_SIZE
+    block_size = config.get("tasks", "block_size")
+    block_size = int(block_size) if block_size else BLOCK_SIZE
 
     logs.HAZARD_LOG.info("block_size: %s" % block_size)
 
