@@ -15,6 +15,7 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
+"""Core functionality for the Disaggregation Hazard calculator."""
 
 from math import log
 
@@ -27,9 +28,9 @@ from openquake.utils import config
 from openquake.hazard.general import (
     generate_erf, generate_gmpe_map, set_gmpe_params)
 
-
+# pylint: disable=R0914
 @java.jexception
-def compute_disagg_matrix(job_id, site, realization, poe, result_dir):
+def compute_disagg_matrix(job_id, site, poe, result_dir):
     """ Compute a complete 5D Disaggregation matrix. This task leans heavily
     on the DisaggregationCalculator (in the OpenQuake Java lib) to handle this
     computation.
@@ -38,8 +39,6 @@ def compute_disagg_matrix(job_id, site, realization, poe, result_dir):
     :type job_id: `str`
     :param site: a single site of interest
     :type site: :class:`openquake.shapes.Site` instance`
-    :param realization: the logic tree sample iteration number
-    :type realization: `int`
     :param poe: Probability of Exceedence
     :type poe: `float`
     :param result_dir: location for the Java code to write the matrix in an
@@ -48,34 +47,22 @@ def compute_disagg_matrix(job_id, site, realization, poe, result_dir):
 
     :returns: 2-tuple of (ground_motion_value, path_to_h5_matrix_file)
     """
-    def make_disagg_calc(a_job):
-        """Encapsulates DisaggregationCalculator creation.
-
-        :param a_job: a job
-        :type a_job: :class:`openquake.job.Job` instance
-        :returns: jpype instance of `org.gem.calc.DisaggregationCalculator`
-        """
-
-        lat_bin_lims = config_text_to_list(
-            a_job[job_cfg.LAT_BIN_LIMITS], float)
-        lon_bin_lims = config_text_to_list(
-            a_job[job_cfg.LON_BIN_LIMITS], float)
-        mag_bin_lims = config_text_to_list(
-            a_job[job_cfg.MAG_BIN_LIMITS], float)
-        eps_bin_lims = config_text_to_list(
-            a_job[job_cfg.EPS_BIN_LIMITS], float)
-
-        jd = list_to_jdouble_array
-
-        disagg_calc = java.jclass('DisaggregationCalculator')(
-            jd(lat_bin_lims), jd(lon_bin_lims),
-            jd(mag_bin_lims), jd(eps_bin_lims))
-
-        return disagg_calc
-
     the_job = job.Job.from_kvs(job_id)
 
-    disagg_calc = make_disagg_calc(the_job)
+    lat_bin_lims = config_text_to_list(
+        the_job[job_cfg.LAT_BIN_LIMITS], float)
+    lon_bin_lims = config_text_to_list(
+        the_job[job_cfg.LON_BIN_LIMITS], float)
+    mag_bin_lims = config_text_to_list(
+        the_job[job_cfg.MAG_BIN_LIMITS], float)
+    eps_bin_lims = config_text_to_list(
+        the_job[job_cfg.EPS_BIN_LIMITS], float)
+
+    jd = list_to_jdouble_array
+
+    disagg_calc = java.jclass('DisaggregationCalculator')(
+        jd(lat_bin_lims), jd(lon_bin_lims),
+        jd(mag_bin_lims), jd(eps_bin_lims))
 
     cache = java.jclass('KVS')(
         config.get('kvs', 'host'),
