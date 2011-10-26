@@ -24,12 +24,9 @@ Tests for the Python-Java code layer.
 
 import cPickle
 import os
-import shutil
-import textwrap
 import unittest
 
 from openquake import java
-from openquake.utils import config
 
 from tests.utils import helpers
 from tests.utils.tasks import jtask_task, failing_jtask_task
