@@ -31,7 +31,7 @@ import unittest
 from openquake.utils import config
 from openquake.utils import tasks
 
-from tests.utils.helpers import patch, TestMixin
+from tests.utils.helpers import patch, ConfigTestMixin
 from tests.utils.tasks import (
     failing_task, just_say_hello, reflect_args, reflect_data_to_be_processed,
     single_arg_called_a, reflect_data_with_task_index)
@@ -349,44 +349,17 @@ class CheckJobStatusTestCase(unittest.TestCase):
             self.assertEqual(mock.call_args_list, [((31, ), {})])
 
 
-class DistributeBlockingTestCase(TestMixin, unittest.TestCase):
+class DistributeBlockingTestCase(ConfigTestMixin, unittest.TestCase):
     """
     Make sure that the partitioning of data into blocks as performed
     by utils.tasks.distribute() works
     """
 
     def setUp(self):
-        self.orig_env = os.environ.copy()
-        os.environ.clear()
-        # Move the local configuration file out of the way if it exists.
-        # Otherwise the tests that follow will break.
-        local_path = "%s/openquake.cfg" % os.path.abspath(os.getcwd())
-        if os.path.isfile(local_path):
-            shutil.move(local_path, "%s.test_bakk" % local_path)
+        self.setup_config()
 
     def tearDown(self):
-        os.environ.clear()
-        os.environ.update(self.orig_env)
-        # Move the local configuration file back into place if it was stashed
-        # away.
-        local_path = "%s/openquake.cfg" % os.path.abspath(os.getcwd())
-        if os.path.isfile("%s.test_bakk" % local_path):
-            shutil.move("%s.test_bakk" % local_path, local_path)
-        config.Config().cfg.clear()
-        config.Config()._load_from_file()
-
-    def _prepare_config(self, block_size=None):
-        """Set up a configuration with the given `block_size` value."""
-        if block_size is not None:
-            content = """
-                [tasks]
-                block_size=%s""" % block_size
-        else:
-            content = ""
-        site_path = self.touch(content=textwrap.dedent(content))
-        os.environ["OQ_SITE_CFG_PATH"] = site_path
-        config.Config().cfg.clear()
-        config.Config()._load_from_file()
+        self.teardown_config()
 
     def test_multiple_blocks(self):
         """
@@ -394,7 +367,7 @@ class DistributeBlockingTestCase(TestMixin, unittest.TestCase):
         into multiple blocks.
         """
         # The block size is 2 i.e. distribute() will use 4 blocks.
-        self._prepare_config(2)
+        self.prepare_config("tasks", {"block_size": 2})
         expected = range(7)
         result = tasks.distribute(
             3, reflect_data_to_be_processed, ("data", range(7)),
