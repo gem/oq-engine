@@ -90,31 +90,3 @@ class MemoizerTestCase(unittest.TestCase):
 
         # should be called only one time
         self.assertEqual(self.counter, 1)
-
-
-class Str2intTestCase(unittest.TestCase):
-    """Tests the behaviour of utils.general.str2int()"""
-
-    def test_with_none(self):
-        """str2int() raises `ValueError` when called with `None`."""
-        self.assertRaises(ValueError, general.str2int, None)
-
-    def test_with_empty_string(self):
-        """str2int() raises `ValueError` when called with an empty string."""
-        self.assertRaises(ValueError, general.str2int, "")
-
-    def test_with_whitespace(self):
-        """str2int() raises `ValueError` when called with whitespace only."""
-        self.assertRaises(ValueError, general.str2int, " 	")
-
-    def test_with_non_number(self):
-        """str2int() raises `ValueError` when called with non-numeric text."""
-        self.assertRaises(ValueError, general.str2int, "hello!")
-
-    def test_with_whitespace_and_number(self):
-        """str2int() tolerates whitespace-wrapped numbers."""
-        self.assertEqual(331, general.str2int("  331  "))
-
-    def test_with_number(self):
-        """str2int() returns the number contained in the string."""
-        self.assertEqual(-11, general.str2int("-11"))
