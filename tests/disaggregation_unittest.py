@@ -54,7 +54,7 @@ class DisaggregationFuncsTestCase(unittest.TestCase):
 
 
 class DisaggregationTaskTestCase(unittest.TestCase):
-    """ """
+    """Tests for the disaggregation matrix computation task."""
 
     @attr('slow')
     def test_compute_disagg_matrix(self):
@@ -62,7 +62,7 @@ class DisaggregationTaskTestCase(unittest.TestCase):
 
         # for the given test input data, we expect the calculator to return
         # this gmv:
-        expected_gmv = 0.22617014437661012
+        expected_gmv = 0.225743641602613
 
         the_job = helpers.job_from_file(DISAGG_DEMO_CONFIG_FILE)
 
@@ -91,6 +91,11 @@ class DisaggregationTaskTestCase(unittest.TestCase):
         # 1) The matrix file exists
         # 2) The matrix file has a size > 0
         # 3) Check that the returned GMV is what we expect
+        # Here we don't test the actual matrix contents or the hdf5 file;
+        # there are already tests for this on the Java side.
         self.assertTrue(os.path.exists(matrix_path))
         self.assertTrue(os.path.getsize(matrix_path) > 0)
         self.assertEqual(expected_gmv, gmv)
+
+        # For clean up, delete the hdf5 we generated.
+        os.unlink(matrix_path)
