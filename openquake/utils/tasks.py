@@ -33,9 +33,9 @@ from openquake import logs
 from openquake.utils import config
 
 
-# Do not create batches of more than BLOCK_SIZE celery subtasks.
+# Do not create batches of more than DEFAULT_BLOCK_SIZE celery subtasks.
 # Celery cannot cope with these and dies.
-BLOCK_SIZE = 4096
+DEFAULT_BLOCK_SIZE = 4096
 
 
 def distribute(cardinality, the_task, (name, data), other_args=None,
@@ -65,7 +65,7 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
     logs.HAZARD_LOG.info("cardinality: %s" % cardinality)
 
     block_size = config.get("tasks", "block_size")
-    block_size = int(block_size) if block_size else BLOCK_SIZE
+    block_size = int(block_size) if block_size else DEFAULT_BLOCK_SIZE
 
     logs.HAZARD_LOG.info("block_size: %s" % block_size)
 
@@ -78,8 +78,7 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
 
     results = []
 
-    for block in xrange(num_of_blocks):
-        start = block * block_size
+    for start in xrange(0, data_length, block_size):
         end = start + block_size
         iresults = _distribute(cardinality, the_task, name, data[start:end],
                                other_args, flatten_results)
