@@ -17,13 +17,11 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
 import os
 import unittest
 
 from lxml import etree
 
-from openquake import nrml
 from openquake import shapes
 from openquake import xml
 
@@ -73,21 +71,13 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
 
     def setUp(self):
         self.writer = None
-        self.readed_curves = None
+        self.read_curves = None
 
     def _initialize_writer(self, path):
         if os.path.isfile(path):
             os.remove(path)
 
         self.writer = hazard_output.HazardCurveXMLWriter(path)
-
-    def _is_xml_valid(self, path):
-        xml_doc = etree.parse(path)
-
-        # test that the doc matches the schema
-        schema_path = nrml.nrml_schema_file()
-        xmlschema = etree.XMLSchema(etree.parse(schema_path))
-        xmlschema.assertValid(xml_doc)
 
     def test_raises_an_error_if_no_curve_is_serialized(self):
         path = helpers.get_output_path(TEST_FILE)
@@ -114,14 +104,14 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
                 2.0244e-03, 4.8605e-04, 8.1752e-05, 7.3425e-06]})]
 
         path = helpers.get_output_path(TEST_FILE_SINGLE_RESULT)
+
         self._initialize_writer(path)
-
         self.writer.serialize(data)
-        self._is_xml_valid(path)
 
+        self.assertTrue(xml.validates_against_xml_schema(path))
         self.assertTrue(XML_METADATA in self._result_as_string(path))
 
-        self.readed_curves = self._read_curves(
+        self.read_curves = self._read_curves(
                 (-123.0, 38.0), (-122.0, 35.0),
                 TEST_FILE_SINGLE_RESULT)
 
@@ -166,11 +156,11 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
 
         path = helpers.get_output_path(TEST_FILE_MULTIPLE_ONE_BRANCH)
         self._initialize_writer(path)
-
         self.writer.serialize(data)
-        self._is_xml_valid(path)
 
-        self.readed_curves = self._read_curves(
+        self.assertTrue(xml.validates_against_xml_schema(path))
+
+        self.read_curves = self._read_curves(
                 (-123.0, 38.0), (-120.0, 35.0),
                 TEST_FILE_MULTIPLE_ONE_BRANCH)
 
@@ -201,7 +191,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
         self._initialize_writer(path)
 
         self.writer.serialize(data)
-        self._is_xml_valid(path)
+        self.assertTrue(xml.validates_against_xml_schema(path))
 
     def test_writes_multiple_results_with_different_branch_levels(self):
         data = [(shapes.Site(-122.5000, 37.5000),
@@ -236,11 +226,11 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
                 TEST_FILE_MULTIPLE_DIFFERENT_BRANCHES)
 
         self._initialize_writer(path)
-
         self.writer.serialize(data)
-        self._is_xml_valid(path)
 
-        self.readed_curves = self._read_curves(
+        self.assertTrue(xml.validates_against_xml_schema(path))
+
+        self.read_curves = self._read_curves(
                 (-123.0, 38.0), (-120.0, 35.0),
                 TEST_FILE_MULTIPLE_DIFFERENT_BRANCHES)
 
@@ -256,7 +246,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
     def _assert_number_of_curves_is(self, expected_number):
         number_of_curves = 0
 
-        for nrml_point, nrml_values in self.readed_curves:
+        for nrml_point, nrml_values in self.read_curves:
             number_of_curves += 1
 
         self.assertEqual(expected_number, number_of_curves)
@@ -265,7 +255,7 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
         expected_sites = [site_and_curve[0] for site_and_curve in curves]
         expected_curves = [site_and_curve[1] for site_and_curve in curves]
 
-        for nrml_point, nrml_values in self.readed_curves:
+        for nrml_point, nrml_values in self.read_curves:
             self.assertTrue(nrml_point in expected_sites)
             self.assertTrue(nrml_values in expected_curves)
 
@@ -284,3 +274,169 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
             return result.read()
         finally:
             result.close()
+
+
+class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
+
+    NAMESPACES = {"nrml": xml.NRML_NS, "gml": xml.GML_NS}
+    FILENAME = "dbinary.xml"
+
+    def setUp(self):
+        try:
+            os.remove(self.FILENAME)
+        except OSError:
+            pass
+
+        self.writer = hazard_output.DisaggregationBinaryMatrixXMLWriter(
+            self.FILENAME)
+
+        # mandatory values to produce a valid nrml file
+        self.values = {"poE": 0.1, "IMT": "PGA", "groundMotionValue": 0.25,
+                "mset": [{"disaggregationPMFType": "MagnitudePMF",
+                "path": "filea"}]}
+
+    def test_writes_the_nrml_definition(self):
+        # double to check there's only one element
+        self.writer.write(shapes.Site(1.0, 2.0), self.values)
+        self.writer.write(shapes.Site(1.0, 2.0), self.values)
+        self.writer.close()
+
+        self.assertTrue(xml.validates_against_xml_schema(self.FILENAME))
+        self.assertEquals(1, len(self._xpath("/nrml:nrml")))
+
+    def test_writes_the_disagg_result_field(self):
+        # double to check there's only one element
+        self.writer.write(shapes.Site(1.0, 2.0), self.values)
+        self.writer.write(shapes.Site(1.0, 2.0), self.values)
+        self.writer.close()
+
+        disagg_fields = self._xpath(
+            "/nrml:nrml/nrml:disaggregationResultField")
+
+        self.assertEquals(1, len(disagg_fields))
+        self.assertEquals("0.1", disagg_fields[0].attrib["poE"])
+        self.assertEquals("PGA", disagg_fields[0].attrib["IMT"])
+
+    def test_writes_the_disagg_result_field_opt_attribs(self):
+        self.values.update({"endBranchLabel": 1,
+                "statistics": "mean", "quantileValue": 0.1})
+
+        self.writer.write(shapes.Site(1.0, 2.0), self.values)
+        self.writer.close()
+
+        disagg_fields = self._xpath(
+            "/nrml:nrml/nrml:disaggregationResultField")
+
+        self.assertTrue(xml.validates_against_xml_schema(self.FILENAME))
+        self.assertEquals("mean", disagg_fields[0].attrib["statistics"])
+        self.assertEquals("1", disagg_fields[0].attrib["endBranchLabel"])
+        self.assertEquals("0.1", disagg_fields[0].attrib["quantileValue"])
+
+    def test_writes_the_disagg_result_node(self):
+        self.writer.write(shapes.Site(1.0, 2.0), self.values)
+        self.writer.close()
+
+        disagg_nodes = self._xpath("/nrml:nrml/nrml:disaggregationResultField"
+                "/nrml:disaggregationResultNode")
+
+        site_nodes = disagg_nodes[0].xpath(
+            "nrml:site/gml:Point/gml:pos", namespaces=self.NAMESPACES)
+
+        self.assertEquals(1, len(site_nodes))
+        self.assertEquals(1, len(disagg_nodes))
+        self.assertEquals("1.0 2.0", site_nodes[0].text)
+
+    def test_writes_multiple_result_nodes(self):
+        self.writer.write(shapes.Site(1.0, 2.0), self.values)
+        self.writer.write(shapes.Site(2.0, 3.0), self.values)
+        self.writer.write(shapes.Site(3.0, 4.0), self.values)
+        self.writer.close()
+
+        site_nodes = self._xpath("//gml:pos")
+        disagg_nodes = self._xpath("//nrml:disaggregationResultNode")
+
+        self.assertEquals(3, len(site_nodes))
+        self.assertEquals(3, len(disagg_nodes))
+
+        self.assertEquals("1.0 2.0", site_nodes[0].text)
+        self.assertEquals("2.0 3.0", site_nodes[1].text)
+        self.assertEquals("3.0 4.0", site_nodes[2].text)
+
+    def test_writes_the_disagg_matrix_set(self):
+        self.writer.write(shapes.Site(1.0, 2.0), self.values)
+        self.writer.close()
+
+        disagg_matrix_sets = self._xpath(
+                "/nrml:nrml/nrml:disaggregationResultField"
+                "/nrml:disaggregationResultNode/nrml:disaggregationMatrixSet")
+
+        self.assertEquals(1, len(disagg_matrix_sets))
+
+        self.assertEquals("0.25",
+                disagg_matrix_sets[0].attrib["groundMotionValue"])
+
+    def test_writes_the_disagg_matrices(self):
+        self.values["mset"] = [
+            {"disaggregationPMFType": "MagnitudePMF", "path": "filea"},
+            {"disaggregationPMFType": "MagnitudeDistancePMF", "path": "fileb"},
+            {"disaggregationPMFType": "LatitudeLongitudeMagnitudeEpsilonPMF",
+            "path": "filec"}]
+
+        self.writer.write(shapes.Site(1.0, 2.0), self.values)
+        self.writer.close()
+
+        disagg_matrix_sets = self._xpath(
+                "/nrml:nrml/nrml:disaggregationResultField"
+                "/nrml:disaggregationResultNode/nrml:disaggregationMatrixSet")
+
+        disagg_matrices = disagg_matrix_sets[0].xpath(
+            "nrml:disaggregationMatrixBinaryFile", namespaces=self.NAMESPACES)
+
+        self.assertEquals(3, len(disagg_matrices))
+        self.assertTrue(xml.validates_against_xml_schema(self.FILENAME))
+
+        self.assertEquals("MagnitudePMF",
+                disagg_matrices[0].attrib["disaggregationPMFType"])
+
+        self.assertEquals("filea", disagg_matrices[0].attrib["path"])
+
+        self.assertEquals("MagnitudeDistancePMF",
+                disagg_matrices[1].attrib["disaggregationPMFType"])
+
+        self.assertEquals("fileb", disagg_matrices[1].attrib["path"])
+
+        self.assertEquals("LatitudeLongitudeMagnitudeEpsilonPMF",
+                disagg_matrices[2].attrib["disaggregationPMFType"])
+
+        self.assertEquals("filec", disagg_matrices[2].attrib["path"])
+
+    def test_serialize(self):
+        data = [(shapes.Site(1.0, 1.0), {"poE": 0.1, "IMT": "PGA",
+                "groundMotionValue": 0.25, "endBranchLabel": 1,
+                "mset": [{"disaggregationPMFType": "MagnitudePMF",
+                "path": "filea"}]}),
+                (shapes.Site(1.0, 2.0), {"poE": 0.1, "IMT": "PGA",
+                "groundMotionValue": 0.35, "endBranchLabel": 1,
+                "mset": [{"disaggregationPMFType": "MagnitudePMF",
+                "path": "fileb"}, {"disaggregationPMFType":
+                "MagnitudeDistancePMF", "path": "filec"}]})]
+
+        self.writer.serialize(data)
+        self.assertTrue(xml.validates_against_xml_schema(self.FILENAME))
+
+    def _xpath(self, exp):
+        doc = etree.parse(self.FILENAME)
+        return doc.xpath(exp, namespaces=self.NAMESPACES)
+
+    def test_close_with_at_least_one_set(self):
+        """In order to produce a valid output file, at least
+        one disaggregation node must be written."""
+        self.assertRaises(RuntimeError, self.writer.close)
+
+    def test_the_set_must_have_at_least_one_element(self):
+        """In order to produce a valid output file, at least
+        one disaggregation matrix must be written in the set."""
+        self.values["mset"] = []
+
+        self.assertRaises(RuntimeError, self.writer.write,
+                shapes.Site(1.0, 2.0), self.values)
