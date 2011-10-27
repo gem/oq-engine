@@ -29,6 +29,7 @@ import redis
 import shutil
 import subprocess
 import tempfile
+import textwrap
 import time
 import sys
 
@@ -684,3 +685,43 @@ class DbTestMixin(TestMixin):
             output.delete()
         if teardown_job:
             self.teardown_job(job, filesystem_only=filesystem_only)
+
+
+class ConfigTestMixin(TestMixin):
+    """
+    Mixin class for tests that require/manipulate the environment
+    and the configuration.
+    """
+    def setup_config(self):
+        self.orig_env = os.environ.copy()
+        os.environ.clear()
+        # Move the local configuration file out of the way if it exists.
+        # Otherwise the tests that follow will break.
+        local_path = "%s/openquake.cfg" % os.path.abspath(os.getcwd())
+        if os.path.isfile(local_path):
+            shutil.move(local_path, "%s.test_bakk" % local_path)
+
+    def teardown_config(self):
+        os.environ.clear()
+        os.environ.update(self.orig_env)
+        # Move the local configuration file back into place if it was stashed
+        # away.
+        local_path = "%s/openquake.cfg" % os.path.abspath(os.getcwd())
+        if os.path.isfile("%s.test_bakk" % local_path):
+            shutil.move("%s.test_bakk" % local_path, local_path)
+        config.Config().cfg.clear()
+        config.Config()._load_from_file()
+
+    def prepare_config(self, section, data=None):
+        """Set up a configuration with the given `max_mem` value."""
+        if data is not None:
+            data = '\n'.join(["%s=%s" % item for item in data.iteritems()])
+            content = """
+                [%s]
+                %s""" % (section, data)
+        else:
+            content = ""
+        site_path = self.touch(content=textwrap.dedent(content))
+        os.environ["OQ_SITE_CFG_PATH"] = site_path
+        config.Config().cfg.clear()
+        config.Config()._load_from_file()
