@@ -106,13 +106,6 @@ class DistributeTestCase(unittest.TestCase):
             actual.append((args, actual_kwargs(kwargs)))
         self.assertEqual(expected, actual)
 
-    def test_distribute_with_empty_data_and_cardinality_one(self):
-        """A *single* subtask will be spawned even with an empty data set."""
-        expected = ((), {"data_to_process": []})
-        [(args, kwargs)] = tasks.distribute(
-            1, reflect_args, ("data_to_process", []))
-        self.assertEqual(expected, (args, actual_kwargs(kwargs)))
-
     def test_distribute_with_non_empty_data_and_cardinality_one(self):
         """A single subtask will receive all the data to be processed."""
         expected = ((), {"data_to_process": range(5)})
