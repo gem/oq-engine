@@ -36,6 +36,9 @@ from scipy.interpolate import interp1d
 from openquake import flags
 from openquake import java
 from openquake.utils import round_float
+from openquake import logs
+
+LOGGER = logs.LOG
 
 FLAGS = flags.FLAGS
 
@@ -237,7 +240,15 @@ class Grid(object):
 
     def check_site(self, site):
         """Confirm that the site is contained by the region"""
-        return self.check_point(site.point)
+        check = False
+
+        try:
+            check = self.check_point(site.point)
+        except BoundsException:
+            LOGGER.debug("Site %s %s isn't on region" %
+                (site.point.site.longitude, site.point.site.latitude))
+
+        return check
 
     def check_point(self, point):
         """ Confirm that the point is within the polygon
@@ -292,8 +303,9 @@ class Grid(object):
                     self.check_gridpoint(point)
                     yield point
                 except BoundsException:
-                    print "Point (col %s row %s) at %s %s isnt on grid" % \
-                        (col, row, point.site.longitude, point.site.latitude)
+                    LOGGER.debug("Point (col %s row %s) at %s %s isn't on grid"
+                            % (col, row, point.site.longitude,
+                                point.site.latitude))
 
 
 def c_mul(val_a, val_b):
