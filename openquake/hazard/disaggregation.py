@@ -17,6 +17,11 @@
 
 """Core functionality for the Disaggregation Hazard calculator."""
 
+import h5py
+import numpy
+import os
+import uuid
+
 from math import log
 
 from openquake import java
@@ -29,12 +34,18 @@ from openquake.hazard.general import (
     generate_erf, generate_gmpe_map, set_gmpe_params)
 
 
+FULL_DISAGG_MATRIX = 'fulldisaggmatrix'
+
+
 # pylint: disable=R0914
 @java.jexception
 def compute_disagg_matrix(job_id, site, poe, result_dir):
     """ Compute a complete 5D Disaggregation matrix. This task leans heavily
     on the DisaggregationCalculator (in the OpenQuake Java lib) to handle this
     computation.
+
+    The 5D matrix returned from the java calculator will be saved to a file in
+    HDF5 format.
 
     :param job_id: id of the job record in the KVS
     :type job_id: `str`
@@ -83,11 +94,35 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
     vs30_value = float(the_job['REFERENCE_VS30_VALUE'])
     depth_to_2pt5 = float(the_job['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM'])
 
-    matrix_result = disagg_calc.computeAndWriteMatrix(
+    matrix_result = disagg_calc.computeMatrix(
         site.latitude, site.longitude, erf, gmpe_map, poe, iml_arraylist,
-        vs30_value, depth_to_2pt5, result_dir)
+        vs30_value, depth_to_2pt5)
 
-    return (matrix_result.getGMV(), matrix_result.getMatrixPath())
+    matrix_path = save_5d_matrix_to_h5(result_dir,
+                                       numpy.array(matrix_result.getMatrix()))
+
+    return (matrix_result.getGMV(), matrix_path)
+
+
+def save_5d_matrix_to_h5(directory, matrix):
+    """Save a full disaggregation matrix to the specified directory with a
+    random unique filename (using uuid).
+
+    NOTE: For a distributed computation environment, the specified directory
+    should be the location of a mounted network file system.
+
+    :param str directory: directory where the hdf5 file shall be saved
+    :param matrix: 5-dimensional :class:`numpy.ndarray`
+
+    :returns: full path (including filename) where the hdf5 file was saved
+    """
+    file_name = '%s.h5' % str(uuid.uuid4())
+    file_path = os.path.join(directory, file_name)
+
+    with h5py.File(file_path, 'w') as target:
+        target.create_dataset(FULL_DISAGG_MATRIX, data=matrix)
+
+    return file_path
 
 
 def list_to_jdouble_array(float_list):
