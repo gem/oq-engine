@@ -171,8 +171,9 @@ class DisaggMixin(object):
             for rlz in xrange(1, realizations + 1):
                 for poe in poes:
                     # TODO: again, need the result dir
-                    tasks.compute_disagg_matrix.delay(
+                    a_task = tasks.compute_disagg_matrix.delay(
                         the_job.job_id, site, rlz, poe, None)
+                    full_disagg_tasks.append(a_task)
 
 
 haz_job.HazJobMixin.register("Disaggregation", DisaggMixin, order=2)
