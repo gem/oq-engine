@@ -16,6 +16,8 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+import h5py
+import numpy
 import os
 import tempfile
 import unittest
@@ -52,11 +54,37 @@ class DisaggregationFuncsTestCase(unittest.TestCase):
         self.assertEqual(len(test_input), len(jdouble_a))
         self.assertEqual(test_input, [x.doubleValue() for x in jdouble_a])
 
+    def test_save_5d_matrix_to_h5(self):
+        """Save a 5D matrix (as a numpy array of float64s) to a file, then read
+        the file and make sure the data is save properly."""
+
+        # 2x2x2x2x2 matrix
+        data = numpy.array([
+            [[[[0.0, 1.0], [2.0, 3.0]], [[4.0, 5.0], [6.0, 7.0]]],
+            [[[8.0, 9.0], [10.0, 11.0]], [[12.0, 13.0], [14.0, 15.0]]]],
+            [[[[16.0, 17.0], [18.0, 19.0]], [[20.0, 21.0], [22.0, 23.0]]],
+            [[[24.0, 25.0], [26.0, 27.0]], [[28.0, 29.0], [30.0, 31.0]]]]
+        ], numpy.float64)
+
+        file_path = disagg.save_5d_matrix_to_h5(tempfile.tempdir, data)
+
+        # sanity check: does the file exist?
+        self.assertTrue(os.path.exists(file_path))
+
+        # Okay, read the file and make sure the data was written properly:
+        with h5py.File(file_path, 'r') as read_hdf:
+            actual_data = read_hdf[disagg.FULL_DISAGG_MATRIX].value
+
+        # the data should be the same as it was written:
+        self.assertTrue((data == actual_data).all())
+
+        # For clean up, delete the hdf5 we generated.
+        os.unlink(file_path)
+
 
 class DisaggregationTaskTestCase(unittest.TestCase):
     """Tests for the disaggregation matrix computation task."""
 
-    @attr('slow')
     def test_compute_disagg_matrix(self):
         """Test the core function of the main disaggregation task."""
 
@@ -92,7 +120,9 @@ class DisaggregationTaskTestCase(unittest.TestCase):
         # 2) The matrix file has a size > 0
         # 3) Check that the returned GMV is what we expect
         # Here we don't test the actual matrix contents or the hdf5 file;
-        # there are already tests for this on the Java side.
+        # there are tests on the Java side with verify the actual data in the
+        # matrix, plus other tests on the Python side which deal with saving
+        # the matrix.
         self.assertTrue(os.path.exists(matrix_path))
         self.assertTrue(os.path.getsize(matrix_path) > 0)
         self.assertEqual(expected_gmv, gmv)
