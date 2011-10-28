@@ -30,12 +30,9 @@ import threading
 import kombu
 import kombu.entity
 import kombu.messaging
-
-from openquake import flags
 from openquake.signalling import AMQPMessageConsumer, amqp_connect
 
-
-FLAGS = flags.FLAGS
+logging.basicConfig()
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
