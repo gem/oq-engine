@@ -30,7 +30,6 @@ import org.opensha.sha.util.TectonicRegionType;
 import static org.apache.commons.collections.CollectionUtils.forAllDo;
 
 import org.gem.calc.DisaggregationResult;
-import org.gem.hdf5.HDF5Util;
 
 public class DisaggregationCalculator {
 
@@ -127,38 +126,6 @@ public class DisaggregationCalculator {
         this.dims[2] = this.magBinLims.length - 1;
         this.dims[3] = this.epsilonBinLims.length - 1;
         this.dims[4] = tectonicRegionTypes.length;
-    }
-
-    /**
-     * Compute the full disaggregation matrix and write it to an HDF5 file.
-     * 
-     * The result is a DisaggregationResult object, containing the GMV, the full
-     * 5D matrix, and the absolute path the HDF5 file.
-     * 
-     * @param path directory where the matrix should be written to
-     * @throws Exception */
-    public DisaggregationResult computeAndWriteMatrix(
-            double lat,
-            double lon,
-            GEM1ERF erf,
-            Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap,
-            double poe,
-            List<Double> imls,
-            double vs30Value,
-            double depthTo2pt5KMPS,
-            String path) throws Exception
-    {
-        DisaggregationResult daResult = computeMatrix(lat, lon, erf, imrMap,
-                poe, imls, vs30Value, depthTo2pt5KMPS);
-
-        String fileName = UUID.randomUUID().toString() + ".h5";
-        String fullPath = new File(path, fileName).getAbsolutePath();
-
-        HDF5Util.writeMatrix(fullPath, FULLDISAGGMATRIX, dims, daResult.getMatrix());
-
-        daResult.setMatrixPath(fullPath);
-
-        return daResult;
     }
 
     /**
