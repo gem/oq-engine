@@ -26,7 +26,7 @@ from nose.plugins.attrib import attr
 
 from openquake import java
 from openquake import shapes
-from openquake.hazard import disaggregation as disagg
+from openquake.hazard.disagg import core as disagg
 from openquake.hazard.general import store_source_model, store_gmpe_map
 from openquake.input.logictree import LogicTreeProcessor
 
