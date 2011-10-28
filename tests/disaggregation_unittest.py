@@ -120,7 +120,7 @@ class DisaggregationTaskTestCase(unittest.TestCase):
         # 2) The matrix file has a size > 0
         # 3) Check that the returned GMV is what we expect
         # Here we don't test the actual matrix contents or the hdf5 file;
-        # there are tests on the Java side with verify the actual data in the
+        # there are tests on the Java side which verify the actual data in the
         # matrix, plus other tests on the Python side which deal with saving
         # the matrix.
         self.assertTrue(os.path.exists(matrix_path))
