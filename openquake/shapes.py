@@ -33,14 +33,13 @@ from numpy import sin, cos, arctan2, sqrt, radians
 from shapely import geometry
 from scipy.interpolate import interp1d
 
-from openquake import flags
 from openquake import java
 from openquake.utils import round_float
 from openquake import logs
 
 LOGGER = logs.LOG
 
-FLAGS = flags.FLAGS
+logs.set_logger_level(LOGGER, logs.LEVELS.get('debug'))
 
 LineString = geometry.LineString  # pylint: disable=C0103
 Point = geometry.Point            # pylint: disable=C0103
@@ -303,7 +302,8 @@ class Grid(object):
                     self.check_gridpoint(point)
                     yield point
                 except BoundsException:
-                    LOGGER.debug("Point (col %s row %s) at %s %s isn't on grid"
+                    LOGGER.debug(
+                            "Point (col %s row %s) at %s %s isn't on grid"
                             % (col, row, point.site.longitude,
                                 point.site.latitude))
 
