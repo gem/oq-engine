@@ -26,7 +26,10 @@ from math import log
 
 from openquake import java
 from openquake import job
+from openquake import logs
 
+from openquake.hazard import job as haz_job
+from openquake.hazard import tasks
 from openquake.job import config as job_cfg
 from openquake.job import config_text_to_list
 from openquake.utils import config
@@ -35,6 +38,7 @@ from openquake.hazard.general import (
 
 
 FULL_DISAGG_MATRIX = 'fulldisaggmatrix'
+LOG = logs.LOG
 
 
 # pylint: disable=R0914
@@ -134,3 +138,41 @@ def list_to_jdouble_array(float_list):
         jdouble[i] = java.jvm().JClass('java.lang.Double')(val)
 
     return jdouble
+
+
+class DisaggMixin(object):
+    """ """
+
+    def execute(self):
+        """ """
+        sites = self.sites_to_compute()
+        realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
+        poes = job.config_text_to_list(self.params['POES'], float)
+
+        log_msg = ("Computing disaggregation for job_id=%s,  %s sites, "
+            "%s realizations, and PoEs=%s")
+        log_msg %= (self.job_id, len(sites), realizations, poes)
+        LOG.info(log_msg)
+
+        full_disagg_results = DisaggMixin.distribute_disagg(
+            self, sites, realizations, poes)
+
+        # TODO: do subset extraction here
+        # TODO: then do xml serialization (disagg binary form)
+
+    # TODO: make this static?
+    @staticmethod
+    def distribute_disagg(the_job, sites, realizations, poes):
+        # TODO: what's the result dir?
+
+        full_disagg_tasks = []
+
+        for site in sites:
+            for rlz in xrange(1, realizations + 1):
+                for poe in poes:
+                    # TODO: again, need the result dir
+                    tasks.compute_disagg_matrix.delay(
+                        the_job.job_id, site, rlz, poe, None)
+
+
+haz_job.HazJobMixin.register("Disaggregation", DisaggMixin, order=2)
