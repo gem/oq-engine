@@ -17,6 +17,6 @@
 	<classpathentry kind="lib" path="/usr/share/java/commons-configuration.jar"/>
 	<classpathentry kind="lib" path="/usr/share/java/log4j-1.2.jar"/>
 	<classpathentry kind="lib" path="/usr/share/java/commons-io.jar"/>
-	<classpathentry kind="lib" path="/usr/share/java/openshalite.jar" sourcepath="/OpenSHA"/>
+	<classpathentry kind="lib" path="/usr/share/java/openshalite.jar"/>
 	<classpathentry kind="output" path="build"/>
 </classpath>
