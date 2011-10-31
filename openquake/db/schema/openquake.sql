@@ -989,6 +989,15 @@ CREATE TABLE uiapi.oq_params (
             OR
             ((job_type != 'disaggregation')
             AND (disagg_results IS NULL)))),
+    -- Path where intermediate and final disaggregation matrix results
+    -- should be saved. In a distributed environment this would be the path to an
+    -- NFS mount.
+    disagg_results_dir VARCHAR
+        CONSTRAINT disagg_result_dir_is_set
+        CHECK(
+            (((job_type = 'disaggregation') AND (disagg_results_dir IS NOT NULL))
+            OR
+            ((job_type != 'disaggregation') AND (disagg_results_dir IS NULL)))),
     depth_to_1pt_0km_per_sec float NOT NULL DEFAULT 100.0
         CONSTRAINT depth_to_1pt_0km_per_sec_above_zero
         CHECK(depth_to_1pt_0km_per_sec > 0.0),

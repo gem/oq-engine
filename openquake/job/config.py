@@ -276,7 +276,7 @@ class DisaggregationValidator(object):
             assert len(limits) >= 2, \
                 "Limits should contain at least 2 elements"
 
-            # ascening order:
+            # ascending order:
             assert all(
                 limits[i] < limits[i + 1] for i in xrange(len(limits) - 1)), \
                 "Limits should be arranged in ascending order"
