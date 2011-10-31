@@ -715,7 +715,6 @@ class LossCurveDBWriter(writer.DBWriter):
            'listDescription': 'Collection of exposure values for ...',
            'structureCategory': 'RM1L',
            'lon': -118.077721,
-           'assetDescription': 'LA building',
            'taxonomy': 'HAZUS_RM1L_LC',
            'listID': 'LA01',
            'assetValueUnit': 'EUR',
