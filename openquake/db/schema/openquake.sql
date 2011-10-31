@@ -995,9 +995,9 @@ CREATE TABLE uiapi.oq_params (
     disagg_results_dir VARCHAR
         CONSTRAINT disagg_result_dir_is_set
         CHECK(
-            (((job_type = 'disaggregation') AND (disagg_result_dir IS NOT NULL))
+            (((job_type = 'disaggregation') AND (disagg_results_dir IS NOT NULL))
             OR
-            ((job_type != 'disaggregation') AND (disagg_result_dir IS NULL)))),
+            ((job_type != 'disaggregation') AND (disagg_results_dir IS NULL)))),
     depth_to_1pt_0km_per_sec float NOT NULL DEFAULT 100.0
         CONSTRAINT depth_to_1pt_0km_per_sec_above_zero
         CHECK(depth_to_1pt_0km_per_sec > 0.0),
