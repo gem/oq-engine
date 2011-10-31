@@ -2,35 +2,24 @@
 
 CALCULATION_MODE = Disaggregation
 
-# pairs are ordered lat,lon
-REGION_VERTEX = 16.0, 73.0, 18.0, 73.0, 18.0, 75.0, 16.0, 75.0
-REGION_GRID_SPACING = 0.1
-
-# this geometry should give us a total of 441 sites
+SITES = 0.0, 0.0
 
 [HAZARD]
 
-DEPTHTO1PT0KMPERSEC = 100.0
-VS30_TYPE = measured
-# Disaggregation results are Probability Mass Functions (PMFs)
-# Which are composed of different combinations of the following:
-# Latitude, Longitude, Magnitude, Distance, Epsilon, Tectonic Region Type
-# Choose at least one of the following:
-#   MagPMF, DistPMF, TRTPMF, MagDistPMF, MagDistEpsPMF, LatLonPMF, LatLonMagPMF,
-#   LatLonMagEpsPMF, MagTRTPMF, LatLonTRTPMF, FullDisaggMatrix
-DISAGGREGATION_RESULTS = MagPMF, MagDistEpsPMF, FullDisaggMatrix
 
-LATITUDE_BIN_LIMITS = 14.0, 16.0, 18.0, 20.0
-LONGITUDE_BIN_LIMITS = 70.0, 72.0, 74.0, 76.0
-MAGNITUDE_BIN_LIMITS = 5, 6, 7, 8
-EPSILON_BIN_LIMITS = 0, 1, 2, 3
-DISTANCE_BIN_LIMITS = 0, 10, 20, 30, 40, 50
+DISAGGREGATION_RESULTS = MagPMF, DistPMF, TRTPMF, MagDistPMF, MagDistEpsPMF, LatLonPMF, LatLonMagPMF, LatLonMagEpsPMF, MagTRTPMF, LatLonTRTPMF, FullDisaggMatrix
 
-POES = 0.1 0.02
+LATITUDE_BIN_LIMITS =  -0.6, -0.3, -0.1, 0.1, 0.3, 0.6 
+LONGITUDE_BIN_LIMITS =  -0.6, -0.3, -0.1, 0.1, 0.3, 0.6 
+MAGNITUDE_BIN_LIMITS =  5.0, 6.0, 7.0, 8.0, 9.0 
+EPSILON_BIN_LIMITS =  -0.5, +0.5, +1.5, +2.5, +3.5 
+DISTANCE_BIN_LIMITS =  0, 20, 40, 60 
+
+POES = 0.1
 
 OUTPUT_DIR = computed_output
 
-NUMBER_OF_LOGIC_TREE_SAMPLES = 2
+NUMBER_OF_LOGIC_TREE_SAMPLES = 1
 
 SOURCE_MODEL_LOGIC_TREE_FILE = source_model_logic_tree.xml
 GMPE_LOGIC_TREE_FILE = gmpe_logic_tree.xml
@@ -54,7 +43,7 @@ PERIOD = 0.0
 # in percent
 DAMPING = 5.0
 # (in the same units of the intensity measure type)
-INTENSITY_MEASURE_LEVELS = 0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527, 0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778
+INTENSITY_MEASURE_LEVELS = 0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527, 0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778, 1.09, 1.52, 2.13
 # (PGA (g), PGD (cm), PGV (cm/s), SA (g))
 INTENSITY_MEASURE_TYPE = PGA
 # (None, 1 Sided, 2 Sided)
@@ -67,7 +56,9 @@ STANDARD_DEVIATION_TYPE = Total
 REFERENCE_VS30_VALUE = 760.0
 # The depth to where shear-wave velocity = 2.5 km/sec.
 # Cambpell basin depth. Measure is (km)
-REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM = 5.0
+REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM = 1.0
+DEPTHTO1PT0KMPERSEC = 100.0
+VS30_TYPE = measured
 
 # Rock, Deep-Soil
 SADIGH_SITE_TYPE = Rock
@@ -78,9 +69,9 @@ SADIGH_SITE_TYPE = Rock
 # true or false
 INCLUDE_AREA_SOURCES = true
 # (Point Sources, Line Sources (random or given strike), Cross Hair Line Sources, 16 Spoked Line Sources)
-TREAT_AREA_SOURCE_AS = Line Sources (random or given strike)
+TREAT_AREA_SOURCE_AS = Point Sources
 # degrees
-AREA_SOURCE_DISCRETIZATION = 0.1
+AREA_SOURCE_DISCRETIZATION = 0.01
 # (W&C 1994 Mag-Length Rel.)
 AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP = W&C 1994 Mag-Length Rel.
 

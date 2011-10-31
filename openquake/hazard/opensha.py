@@ -23,7 +23,6 @@ Wrapper around the OpenSHA-lite java library.
 import math
 import os
 import multiprocessing
-import numpy
 import random
 import functools
 
@@ -38,23 +37,13 @@ from openquake import xml
 from openquake.hazard import classical_psha
 from openquake.hazard import job
 from openquake.hazard import tasks
-from openquake.job.mixins import Mixin
+from openquake.hazard.general import BasePSHAMixin
 from openquake.input import logictree
 from openquake.output import hazard as hazard_output
 from openquake.utils import config
 from openquake.utils import tasks as utils_tasks
 
 LOG = logs.LOG
-
-# NOTE: this refers to how the values are stored in KVS. In the config
-# file, values are stored untransformed (i.e., the list of IMLs is
-# not stored as logarithms).
-IML_SCALING = {'PGA': numpy.log,
-               'MMI': lambda iml: iml,
-               'PGV': numpy.log,
-               'PGD': numpy.log,
-               'SA': numpy.log,
-              }
 
 HAZARD_CURVE_FILENAME_PREFIX = 'hazardcurve'
 HAZARD_MAP_FILENAME_PREFIX = 'hazardmap'
@@ -105,106 +94,6 @@ def unwrap_validation_error(jpype, runtime_exception, path=None):
         raise xml.XMLValidationError(ex.getCause().getMessage(), path)
 
     raise runtime_exception
-
-
-class BasePSHAMixin(Mixin):
-    """Contains common functionality for PSHA Mixins."""
-
-    def store_source_model(self, seed):
-        """Generates a source model from the source model logic tree."""
-        LOG.info("Storing source model from job config")
-        key = kvs.tokens.source_model_key(self.job_id)
-        print "source model key is", key
-        mfd_bin_width = float(self.params.get('WIDTH_OF_MFD_BIN'))
-        self.calc.sample_and_save_source_model_logictree(kvs, key, seed,
-                                                         mfd_bin_width)
-
-    def store_gmpe_map(self, seed):
-        """Generates a hash of tectonic regions and GMPEs, using the logic tree
-        specified in the job config file."""
-        key = kvs.tokens.gmpe_key(self.job_id)
-        print "GMPE map key is", key
-        self.calc.sample_and_save_gmpe_logictree(kvs, key, seed)
-
-    def generate_erf(self):
-        """Generate the Earthquake Rupture Forecast from the currently stored
-        source model logic tree."""
-        key = kvs.tokens.source_model_key(self.job_id)
-        sources = java.jclass("JsonSerializer").getSourceListFromCache(
-                    self.cache, key)
-        erf = java.jclass("GEM1ERF")(sources)
-        calc = java.jclass("LogicTreeProcessor")(self.cache, self.key)
-        calc.setGEM1ERFParams(erf)
-        return erf
-
-    def set_gmpe_params(self, gmpe_map):
-        """Push parameters from configuration file into the GMPE objects"""
-        jpype = java.jvm()
-        set_gmpe_params = java.jclass("GmpeLogicTreeData").setGmpeParams
-        for tect_region in gmpe_map.keySet():
-            gmpe = gmpe_map.get(tect_region)
-            set_gmpe_params(self.params['COMPONENT'],
-                self.params['INTENSITY_MEASURE_TYPE'],
-                jpype.JDouble(float(self.params['PERIOD'])),
-                jpype.JDouble(float(self.params['DAMPING'])),
-                self.params['GMPE_TRUNCATION_TYPE'],
-                jpype.JDouble(float(self.params['TRUNCATION_LEVEL'])),
-                self.params['STANDARD_DEVIATION_TYPE'],
-                jpype.JDouble(float(self.params['REFERENCE_VS30_VALUE'])),
-                jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
-            gmpe_map.put(tect_region, gmpe)
-
-    def generate_gmpe_map(self):
-        """Generate the GMPE map from the stored GMPE logic tree."""
-        key = kvs.tokens.gmpe_key(self.job_id)
-        gmpe_map = java.jclass(
-            "JsonSerializer").getGmpeMapFromCache(self.cache, key)
-        self.set_gmpe_params(gmpe_map)
-        return gmpe_map
-
-    def get_iml_list(self):
-        """Build the appropriate Arbitrary Discretized Func from the IMLs,
-        based on the IMT"""
-
-        iml_list = java.jclass("ArrayList")()
-        for val in self.imls:
-            iml_list.add(
-                IML_SCALING[self.params['INTENSITY_MEASURE_TYPE']](
-                val))
-        return iml_list
-
-    def parameterize_sites(self, site_list):
-        """Convert python Sites to Java Sites, and add default parameters."""
-        # TODO(JMC): There's Java code for this already, sets each site to have
-        # the same default parameters
-
-        jpype = java.jvm()
-        jsite_list = java.jclass("ArrayList")()
-        for x in site_list:
-            site = x.to_java()
-
-            vs30 = java.jclass("DoubleParameter")(jpype.JString("Vs30"))
-            vs30.setValue(float(self.params['REFERENCE_VS30_VALUE']))
-            depth25 = java.jclass("DoubleParameter")("Depth 2.5 km/sec")
-            depth25.setValue(float(
-                    self.params['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']))
-            sadigh = java.jclass("StringParameter")("Sadigh Site Type")
-            sadigh.setValue(self.params['SADIGH_SITE_TYPE'])
-
-            depth1km = java.jclass("DoubleParameter")(jpype.JString(
-                "Depth 1.0 km/sec"))
-            depth1km.setValue(float(self.params['DEPTHTO1PT0KMPERSEC']))
-            vs30_type = java.jclass("StringParameter")("Vs30 Type")
-            # Enum values must be capitalized in the Java domain!
-            vs30_type.setValue(self.params['VS30_TYPE'].capitalize())
-
-            site.addParameter(vs30)
-            site.addParameter(depth25)
-            site.addParameter(sadigh)
-            site.addParameter(depth1km)
-            site.addParameter(vs30_type)
-            jsite_list.add(site)
-        return jsite_list
 
 
 # pylint: disable=R0904

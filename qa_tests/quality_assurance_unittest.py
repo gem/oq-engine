@@ -37,7 +37,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
     def test_peer_test_set_1_case_2(self):
         expected_results = self._load_results("PeerTestSet1Case2")
 
-        self._run_job(helpers.smoketest_file(
+        self._run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case2", "config.gem")))
 
         self._assert_results_are(expected_results)
@@ -46,7 +46,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
     def test_peer_test_set_1_case_5(self):
         expected_results = self._load_results("PeerTestSet1Case5")
 
-        self._run_job(helpers.smoketest_file(
+        self._run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case5", "config.gem")))
 
         self._assert_results_are(expected_results)
@@ -55,7 +55,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
     def test_peer_test_set_1_case_8a(self):
         expected_results = self._load_results("PeerTestSet1Case8a")
 
-        self._run_job(helpers.smoketest_file(
+        self._run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case8a", "config.gem")))
 
         self._assert_results_are(expected_results)
@@ -64,7 +64,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
     def test_peer_test_set_1_case_10(self):
         expected_results = self._load_results("PeerTestSet1Case10")
 
-        self._run_job(helpers.smoketest_file(
+        self._run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case10", "config.gem")))
 
         self._assert_results_are(expected_results)
@@ -76,7 +76,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         def load_expected_map():
             """Load the expected hazard map."""
 
-            path = helpers.smoketest_file(os.path.join("HazardMapTest",
+            path = helpers.demo_file(os.path.join("HazardMapTest",
                 "expected_results", "meanHazardMap0.1.dat"))
 
             with open(path) as maps:
@@ -87,7 +87,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
                     site = shapes.Site(values[0], values[1])
                     expected_map[site] = float(values[2])
 
-        self._run_job(helpers.smoketest_file(
+        self._run_job(helpers.demo_file(
             os.path.join("HazardMapTest", "config.gem")))
 
         load_expected_map()
@@ -151,7 +151,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         # the value at index y casted to float
         get = lambda x, y: float(x.split(",")[y])
 
-        results_dir = helpers.smoketest_file(
+        results_dir = helpers.demo_file(
             os.path.join(test_name, "expected_results"))
 
         results_files = os.listdir(results_dir)
