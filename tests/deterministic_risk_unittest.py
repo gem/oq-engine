@@ -94,7 +94,7 @@ class DeterministicRiskTestCase(unittest.TestCase):
              'structureCategory': 'S4L_MC',
              'lon': 0.11,
              'assetDescription': 'LA building',
-             'vulnerabilityFunctionReference': 'HAZUS_S4L_MC',
+             'taxonomy': 'HAZUS_S4L_MC',
              'listID': 'LA01',
              'assetValueUnit': 'EUR',
              'lat': 0.11},
@@ -104,7 +104,7 @@ class DeterministicRiskTestCase(unittest.TestCase):
              'structureCategory': 'S4L_MC',
              'lon': 0.11,
              'assetDescription': 'LA building',
-             'vulnerabilityFunctionReference': 'HAZUS_S4L_MC',
+             'taxonomy': 'HAZUS_S4L_MC',
              'listID': 'LA02',
              'assetValueUnit': 'EUR',
              'lat': 0.12}]
