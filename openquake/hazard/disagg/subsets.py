@@ -23,15 +23,13 @@ import numpy
 from celery.task import task
 import h5py
 
+from openquake.hazard.disagg import core as disagg_core
 from openquake.shapes import hdistance
 
 # Disabling pylint checks: too many local vars, too many arguments,
 # unused argument.
 # pylint: disable=W0613,R0913,R0914
 
-
-#: The full matrix object name as it appears inside full hdf5 result file.
-FULL_MATRIX_DS_NAME = 'fulldisaggmatrix'
 #: Data type used for matrices is double precision float with "native"
 #: byte order. The same is used by java side.
 DATA_TYPE = numpy.float64
@@ -303,7 +301,7 @@ def extract_subsets(site, full_matrix_path,
     assert subsets
     assert not subsets - set(SUBSET_EXTRACTORS)
     with h5py.File(full_matrix_path, 'r') as source:
-        full_matrix = source[FULL_MATRIX_DS_NAME].value
+        full_matrix = source[disagg_core.FULL_DISAGG_MATRIX].value
     with h5py.File(target_path, 'w') as target:
         for subset_type in subsets:
             extractor = SUBSET_EXTRACTORS[subset_type]
