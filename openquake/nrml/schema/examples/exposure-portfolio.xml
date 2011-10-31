@@ -22,7 +22,6 @@
                     </gml:Point>
                 </site>
                 
-                <assetDescription>Moment-resisting non-ductile concrete frame low rise</assetDescription>
                 <taxonomy>RC/DMRF-D/LR</taxonomy>
                 <structureCategory>RC-LR-PC</structureCategory>
                 <assetValue unit="EUR">150000</assetValue>
@@ -35,7 +34,6 @@
                     </gml:Point>
                 </site>
                 
-                <assetDescription>Moment-resisting non-ductile concrete frame high rise</assetDescription>
                 <taxonomy>RC/DMRF-D/LR</taxonomy>
                 <structureCategory>RC-HR-PC</structureCategory>
                 <assetValue unit="EUR">250000</assetValue>
@@ -48,7 +46,6 @@
                     </gml:Point>
                 </site>
                 
-                <assetDescription>Moment-resisting non-ductile concrete frame low rise</assetDescription>
                 <taxonomy>RC/DMRF-D/LR</taxonomy>
                 <structureCategory>RC-LR-PC</structureCategory>
                 <assetValue unit="EUR">500000</assetValue>

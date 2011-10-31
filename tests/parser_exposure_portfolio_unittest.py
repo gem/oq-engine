@@ -84,8 +84,6 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
              'listDescription': 'Collection of existing building in ' \
                                 'downtown Pavia',
              'assetID': 'asset_02',
-             'assetDescription': 'Moment-resisting non-ductile concrete ' \
-                                 'frame high rise',
              'assetCategory': 'buildings',
              'taxonomy': 'RC/DMRF-D/LR',
              'structureCategory': 'RC-HR-PC',
