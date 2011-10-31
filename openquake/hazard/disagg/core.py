@@ -145,6 +145,10 @@ class DisaggMixin(object):
 
     def execute(self):
         """ """
+
+        result_dir = DisaggMixin.create_result_dir(
+            self.params['DISAGGREGATION_RESULTS_DIR'], self.job_id)
+
         sites = self.sites_to_compute()
         realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
         poes = job.config_text_to_list(self.params['POES'], float)
@@ -155,25 +159,67 @@ class DisaggMixin(object):
         LOG.info(log_msg)
 
         full_disagg_results = DisaggMixin.distribute_disagg(
-            self, sites, realizations, poes)
+            self, sites, realizations, poes, result_dir)
 
         # TODO: do subset extraction here
         # TODO: then do xml serialization (disagg binary form)
 
-    # TODO: make this static?
     @staticmethod
-    def distribute_disagg(the_job, sites, realizations, poes):
-        # TODO: what's the result dir?
+    def create_result_dir(base_path, job_id):
+        """Create the directory to store intermediate and final disaggregation
+        results and return the new directory path. The full storage path is
+        constructed like so: <base_path>/disagg-results/job-<job_id>.
 
-        full_disagg_tasks = []
+        For example:
+        >>> DisaggMixin.create_result_dir('/var/lib/openquake', '2847')
+        '/var/lib/openquake/disagg-results/job-2847'
 
-        for site in sites:
-            for rlz in xrange(1, realizations + 1):
-                for poe in poes:
-                    # TODO: again, need the result dir
+        :param base_path: base result storage directory (a path to an NFS
+            mount, for example)
+        :param int job_id: numeric job id
+        :returns: full path to the newly created result dir
+        """
+        output_path = os.path.join(
+            base_path, 'disagg-results', 'job-%s' % job_id)
+        os.makedirs(output_path)
+        return output_path
+
+    @staticmethod
+    def distribute_disagg(the_job, sites, realizations, poes, result_dir):
+        task_data = []
+        full_da_results = []
+
+        for rlz in xrange(1, realizations + 1):  # 1 to N, inclusive
+            for poe in poes:
+                for site in sites:
                     a_task = tasks.compute_disagg_matrix.delay(
-                        the_job.job_id, site, rlz, poe, None)
-                    full_disagg_tasks.append(a_task)
+                        the_job.job_id, site, rlz, poe, result_dir)
+                    task_data.append((a_task, rlz, poe, site))
+
+        for task, rlz, poe, site in task_data:
+            task.wait()
+            if not task.successful():
+                msg = ("Task with id=%s, realization=%s, PoE=%s, site=%s"
+                    "has failed with the following error: %s")
+                msg %= (task.request.id, rlz, poe, site, task.result)
+                LOG.critical(msg)
+                raise RuntimeError(msg)
+            else:
+                # task was successful
+                gmv, matrix_path = task.result
+                full_da_results.append((rlz, poe, site, gmv, matrix_path))
+
+        return full_da_results
+
+
+    @staticmethod
+    def distribute_subsets(the_job, site, full_matrix_path, target_path):
+        pass
+
+    @staticmethod
+    def serialize_nrml(the_job, poe, gmv, realization, data):
+        pass
+        # data = list of (site, h5_path_to_subsets_file)
 
 
 haz_job.HazJobMixin.register("Disaggregation", DisaggMixin, order=2)
