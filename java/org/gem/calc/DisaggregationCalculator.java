@@ -95,7 +95,7 @@ public class DisaggregationCalculator {
                 Arrays.sort(sorted);
                 if (!Arrays.equals(sorted, oArray))
                 {
-                    throw new IllegalArgumentException("Bin edge arrays must arranged in ascending order");
+                    throw new IllegalArgumentException("Bin edge arrays must be arranged in ascending order");
                 }
             }
         }
