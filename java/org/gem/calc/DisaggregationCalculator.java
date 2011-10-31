@@ -176,7 +176,7 @@ public class DisaggregationCalculator {
             Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap,
             double poe,
             DiscretizedFuncAPI hazardCurve,
-            double minMag) // or just pass a List<double> of IML values and compute the curve inside here?
+            double minMag)
     {
 
         assertPoissonian(erf);
