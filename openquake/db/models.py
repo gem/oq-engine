@@ -665,6 +665,9 @@ class OqParams(models.Model):
     #   fulldisaggmatrix (The full disaggregation matrix; includes
     #       Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
     disagg_results = CharArrayField(null=True)
+    # Path where intermediate and final disaggregation results should be saved.
+    # In a distributed environment this would be the path to an NFS mount.
+    disagg_results_dir = models.TextField(null=True)
     VS30_TYPE_CHOICES = (
        (u"measured", u"Value obtained from on-site measurements"),
        (u"inferred", u"Estimated value"),
