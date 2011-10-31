@@ -158,16 +158,16 @@ class SumPerGroundMotionField(object):
             :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
         """
 
-        if asset["vulnerabilityFunctionReference"] not in self.vuln_model:
+        if asset["taxonomy"] not in self.vuln_model:
             LOG.debug("Unknown vulnerability function %s, asset %s will " \
                       "not be included in the aggregate computation"
-                      % (asset["vulnerabilityFunctionReference"],
+                      % (asset["taxonomy"],
                       asset["assetID"]))
 
             return
 
         vuln_function = self.vuln_model[
-            asset["vulnerabilityFunctionReference"]]
+            asset["taxonomy"]]
 
         loss_ratios = self.lr_calculator(
             vuln_function, ground_motion_field_set,
