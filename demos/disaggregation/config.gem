@@ -8,6 +8,7 @@ SITES = 0.0, 0.0
 
 
 DISAGGREGATION_RESULTS = MagPMF, DistPMF, TRTPMF, MagDistPMF, MagDistEpsPMF, LatLonPMF, LatLonMagPMF, LatLonMagEpsPMF, MagTRTPMF, LatLonTRTPMF, FullDisaggMatrix
+DISAGGREGATION_RESULTS_DIR = /var/lib/openquake
 
 LATITUDE_BIN_LIMITS =  -0.6, -0.3, -0.1, 0.1, 0.3, 0.6 
 LONGITUDE_BIN_LIMITS =  -0.6, -0.3, -0.1, 0.1, 0.3, 0.6 
