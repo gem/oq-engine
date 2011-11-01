@@ -67,7 +67,8 @@ class DisaggregationFuncsTestCase(unittest.TestCase):
             [[[24.0, 25.0], [26.0, 27.0]], [[28.0, 29.0], [30.0, 31.0]]]]
         ], numpy.float64)
 
-        file_path = disagg_core.save_5d_matrix_to_h5(tempfile.tempdir, data)
+        file_path = disagg_core.save_5d_matrix_to_h5(
+            tempfile.gettempdir(), data)
 
         # sanity check: does the file exist?
         self.assertTrue(os.path.exists(file_path))
@@ -111,7 +112,7 @@ class DisaggregationTaskTestCase(unittest.TestCase):
 
         site = shapes.Site(0.0, 0.0)
         poe = 0.1
-        result_dir = tempfile.tempdir
+        result_dir = tempfile.gettempdir()
 
         gmv, matrix_path = disagg_core.compute_disagg_matrix(
             the_job.job_id, site, poe, result_dir)
@@ -130,3 +131,26 @@ class DisaggregationTaskTestCase(unittest.TestCase):
 
         # For clean up, delete the hdf5 we generated.
         os.unlink(matrix_path)
+
+
+class DisaggMixinTestCase(unittest.TestCase):
+    """Test for the :class:`openquake.hazard.disagg.core.DisaggMixin`."""
+
+    def test_create_result_dir(self):
+        """Test creation of the result_dir, the path for which is constructed
+        from a config param (DISAGGREGATION_RESULTS_DIR) and the job id."""
+        base_path = tempfile.gettempdir()
+        job_id = 1234
+
+        expected_dir = os.path.join(
+            tempfile.gettempdir(), 'disagg-results', 'job-%s' % job_id)
+
+        result_dir = disagg_core.DisaggMixin.create_result_dir(base_path,
+                                                               job_id)
+
+        self.assertEqual(expected_dir, result_dir)
+        self.assertTrue(os.path.exists(result_dir))
+        self.assertTrue(os.path.isdir(result_dir))
+
+        # clean up: delete the result_dir containing the job info
+        os.rmdir(result_dir)
