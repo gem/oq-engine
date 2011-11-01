@@ -34,9 +34,13 @@ from openquake.java import jtask as task
 from openquake.job import config as job_cfg
 from openquake.job import config_text_to_list
 from openquake.utils import config
-from openquake.hazard.general import (
-    generate_erf, generate_gmpe_map, set_gmpe_params)
+
 from openquake.hazard.disagg import subsets
+from openquake.hazard.general import (
+    preload, generate_erf, generate_gmpe_map, set_gmpe_params,
+    store_source_model, store_gmpe_map)
+from openquake.job.mixins import Mixin
+from openquake.utils.tasks import check_job_status
 
 
 LOG = logs.LOG
@@ -84,6 +88,9 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
     cache = java.jclass('KVS')(
         config.get('kvs', 'host'),
         int(config.get('kvs', 'port')))
+
+    LOG.debug("cache is: %s" % cache)
+    
 
     erf = generate_erf(job_id, cache)
     gmpe_map = generate_gmpe_map(job_id, cache)
@@ -167,15 +174,15 @@ def compute_disagg_matrix_task(job_id, site, realization, poe, result_dir):
         "Computing full disaggregation matrix for job_id=%s, site=%s, "
         "realization=%s, PoE=%s. Matrix results will be serialized to `%s`.")
     log_msg %= (job_id, site, realization, poe, result_dir)
-    HAZARD_LOG.info(log_msg)
+    LOG.info(log_msg)
 
     # NOTE(LB): We don't need to pass the realization, but we will need to
     # keep track of it somehow when we reduce the final disagg results.
     # When we write the disagg mixin, this should become more clear.
-    return disagg.compute_disagg_matrix(job_id, site, poe, result_dir)
+    return compute_disagg_matrix(job_id, site, poe, result_dir)
 
 
-class DisaggMixin(object):
+class DisaggMixin(Mixin):
     """The Python part of the Disaggregation calculator. This calculator
     computes disaggregation matrix results in the following manner:
 
@@ -191,15 +198,24 @@ class DisaggMixin(object):
         the final output.
     """
 
+    @preload
     def execute(self):
         """ """
+        # cache the source model and gmpe model in the KVS
+        # so the Java code can access it
+        src_model_seed = int(self.params.get('SOURCE_MODEL_LT_RANDOM_SEED'))
+        gmpe_seed = int(self.params.get('GMPE_LT_RANDOM_SEED'))
 
+        store_source_model(self.job_id, src_model_seed, self.params, self.calc)
+        store_gmpe_map(self.job_id, gmpe_seed, self.calc)
+
+        # matrix results for this job will go here:
         result_dir = DisaggMixin.create_result_dir(
             self.params['DISAGGREGATION_RESULTS_DIR'], self.job_id)
 
-        sites = self.sites_to_compute()
         realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
         poes = job.config_text_to_list(self.params['POES'], float)
+        sites = self.sites_to_compute()
 
         log_msg = ("Computing disaggregation for job_id=%s,  %s sites, "
             "%s realizations, and PoEs=%s")
@@ -209,9 +225,13 @@ class DisaggMixin(object):
         full_disagg_results = DisaggMixin.distribute_disagg(
             self, sites, realizations, poes, result_dir)
 
-        print full_disagg_results
-        # subset_results = DisaggMixin.distribute_subsets(
-        #     self, full_disagg_results, result_dir)
+        LOG.debug("here are the full results:")
+        LOG.debug(full_disagg_results)
+        subset_results = DisaggMixin.distribute_subsets(
+            self, full_disagg_results, result_dir)
+
+        LOG.debug("here are the subset results:")
+        LOG.debug(subset_results)
 
         # TODO: then do xml serialization (disagg binary form)
 
@@ -268,6 +288,13 @@ class DisaggMixin(object):
                    (site_2, gmv_2, matrix_path_N)]
                  ),
                 ]
+
+            A single matrix result in this form looks like this::
+                [(1, 0.1,
+                  [(Site(0.0, 0.0), 0.225743641602613,
+                    '/var/lib/openquake/disagg-results/job-372/some_guid.h5'),]
+                 ),
+                ]
         """
         # accumulates the final results of this method
         full_da_results = []
@@ -293,9 +320,13 @@ class DisaggMixin(object):
             for task, site in task_site_pairs:
                 task.wait()
                 if not task.successful():
-                    msg = ("Task with id=%s, realization=%s, PoE=%s, site=%s"
-                        "has failed with the following error: %s")
-                    msg %= (task.request.id, rlz, poe, site, task.result)
+                    msg = (
+                        "Full Disaggregation matrix computation task"
+                        " for job %s with task_id=%s, realization=%s, PoE=%s,"
+                        " site=%s has failed with the following error: %s")
+                    msg %= (
+                        the_job.job_id, task.task_id, rlz, poe, site,
+                        task.result)
                     LOG.critical(msg)
                     raise RuntimeError(msg)
                 else:
@@ -309,8 +340,10 @@ class DisaggMixin(object):
 
     @staticmethod
     def distribute_subsets(the_job, full_disagg_results, target_dir):
-        subsets_data = []
-        subset_results = []
+        """Blah blah blah
+
+        :returns: Subset result data in the following form::
+        """
 
         lat_bin_lims = config_text_to_list(
             the_job[job_cfg.LAT_BIN_LIMITS], float)
@@ -323,41 +356,51 @@ class DisaggMixin(object):
         dist_bin_lims = config_text_to_list(
             the_job[job_cfg.DIST_BIN_LIMITS], float)
 
-        subsets = config_text_to_list(
+        subset_types = config_text_to_list(
             the_job['DISAGGREGATION_RESULTS'])
 
-        imt = the_job['INTENSITY_MEASURE_TYPE']
+        # imt = the_job['INTENSITY_MEASURE_TYPE']
+        rlz_poe_task_data = []
 
-        for rlz, poe, site, gmv, matrix_path in full_disagg_results:
-            subset_file = 'disagg-results-gmv:%s-lat:%s-lon:%s.h5'
-            subset_file %= (gmv, site.latitude, site.longitude)
-            target_file = os.path.join(target_path, subset_file)
+        for rlz, poe, data_list in full_disagg_results:
+            task_data = []
+            for site, gmv, matrix_path in data_list:
 
-            a_task = subsets.extract_subsets.delay(
-                site, matrix_path, lat_bin_lims, lon_bin_lims, mag_bin_lims,
-                eps_bin_lims, dist_bin_lims, target_file,
-                [x.lower() for x in subsets])
+                subset_file = (
+                    'disagg-results-sample:%s-gmv:%s-lat:%s-lon:%s.h5')
+                subset_file %= (rlz, gmv, site.latitude, site.longitude)
+                target_file = os.path.join(target_dir, subset_file)
+
+                a_task = subsets.extract_subsets.delay(
+                    site, matrix_path, lat_bin_lims, lon_bin_lims,
+                    mag_bin_lims, eps_bin_lims, dist_bin_lims, target_file,
+                    [x.lower() for x in subset_types])
                 # the subset types need to be all lower case for extraction
 
-            subsets_data.append((a_task, rlz, poe, gmv, site, target_file))
+                task_data.append((a_task, site, gmv, target_file))
 
-        for task, rlz, poe, gmv, site, target_file in subset_tasks:
-            task.wait()
-            if not task.successful():
-                msg = ""
-                LOG.critical(msg)
-                raise RuntimeError(msg)
-            else:
-                result = dict(
-                    poE=poe, IMT=imt, groundMotionValue=gmv)
-                # for now, all of the results for a single site go into the one
-                # file
-                result['mset'] = [
-                    dict(disaggregationPMFType=s,
-                         path=target_file) for s in subsets]
-                subset_results.append((site, result))
+            rlz_poe_task_data.append((rlz, poe, task_data))
 
-        return subset_results
+        final_results = []
+
+        for rlz, poe, task_data in rlz_poe_task_data:
+            rlz_poe_results = []  # list of data/results per (rlz, poe) pair
+            for task, site, gmv, target_file in task_data:
+
+                task.wait()
+                if not task.successful():
+                    msg = (
+                        "Matrix subset extraction task for job %s with"
+                        " task_id=%s, realization=%s, PoE=%s, target_file=%s")
+                    msg %= (the_job.job_id, task.task_id, poe, target_file)
+                    LOG.critical(msg)
+                    raise RuntimeError(msg)
+                else:
+                    rlz_poe_results.append((site, gmv, target_file))
+
+            final_results.append((rlz, poe, rlz_poe_results))
+
+        return final_results
 
     @staticmethod
     def serialize_nrml(the_job, poe, gmv, realization, data):
@@ -365,4 +408,4 @@ class DisaggMixin(object):
         # data = list of (site, h5_path_to_subsets_file)
 
 
-haz_job.HazJobMixin.register("Disaggregation", DisaggMixin, order=2)
+haz_job.HazJobMixin.register("Disaggregation", DisaggMixin)

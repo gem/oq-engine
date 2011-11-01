@@ -25,6 +25,8 @@ import numpy
 from tests.utils import helpers
 
 from openquake.hazard import disagg
+from openquake.shapes import Site
+
 from openquake.hazard.disagg import subsets as disagg_subsets
 
 
@@ -46,7 +48,7 @@ class SubsetExtractionTestCase(unittest.TestCase):
     NTRT = 5
     FULL_MATRIX_SHAPE = (NLAT - 1, NLON - 1, NMAG - 1, NEPS - 1, NTRT)
 
-    SITE = (0.0, 0.0)
+    SITE = Site(0.0, 0.0)
 
     @classmethod
     def setUpClass(cls):
