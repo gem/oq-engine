@@ -26,7 +26,8 @@ from nose.plugins.attrib import attr
 
 from openquake import java
 from openquake import shapes
-from openquake.hazard.disagg import core as disagg
+from openquake.hazard import disagg
+from openquake.hazard.disagg import core as disagg_core
 from openquake.hazard.general import store_source_model, store_gmpe_map
 from openquake.input.logictree import LogicTreeProcessor
 
@@ -45,7 +46,7 @@ class DisaggregationFuncsTestCase(unittest.TestCase):
 
         # Make the (Java) Double[] array (the input is copied as a simple way
         # to avoid false positives).
-        jdouble_a = disagg.list_to_jdouble_array(list(test_input))
+        jdouble_a = disagg_core.list_to_jdouble_array(list(test_input))
 
         # It should be a jpype Double[] type:
         self.assertEqual('java.lang.Double[]', jdouble_a.__class__.__name__)
@@ -66,7 +67,7 @@ class DisaggregationFuncsTestCase(unittest.TestCase):
             [[[24.0, 25.0], [26.0, 27.0]], [[28.0, 29.0], [30.0, 31.0]]]]
         ], numpy.float64)
 
-        file_path = disagg.save_5d_matrix_to_h5(tempfile.tempdir, data)
+        file_path = disagg_core.save_5d_matrix_to_h5(tempfile.tempdir, data)
 
         # sanity check: does the file exist?
         self.assertTrue(os.path.exists(file_path))
@@ -112,7 +113,7 @@ class DisaggregationTaskTestCase(unittest.TestCase):
         poe = 0.1
         result_dir = tempfile.tempdir
 
-        gmv, matrix_path = disagg.compute_disagg_matrix(
+        gmv, matrix_path = disagg_core.compute_disagg_matrix(
             the_job.job_id, site, poe, result_dir)
 
         # Now test the following:
