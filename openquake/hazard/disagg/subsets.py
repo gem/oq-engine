@@ -80,7 +80,8 @@ def _distgen(site, lat_bin_edges, lon_bin_edges, distance_bin_edges,
     """
     Common part of the code for all extractors that compute distances.
     """
-    slat, slon = site
+    slat = site.latitude
+    slon = site.longitude
     enumeration = ((i, j, k, l, m)
                    for i in xrange(nlat - 1)
                    for j in xrange(nlon - 1)
@@ -272,8 +273,7 @@ def extract_subsets(site, full_matrix_path,
     to the extractor name.
 
     :param site:
-        Pair of floats: latitude and longitude of the Site that the matrix
-        was produced for.
+        :class:`openquake.shapes.Site` instance.
     :param full_matrix_path:
         Path to the full matrix file in hdf5 format.
     :param lat_bin_edges:
