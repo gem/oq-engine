@@ -928,7 +928,7 @@ class DisaggregationBinaryMatrixXMLWriter(writer.FileWriter):
         :param site: site related to the disaggregation result
         :type site: :class:`openquake.shapes.Site`
         :param values: data to write
-        :type values: dict in the following format:
+        :type values: dict in the following format::
             {"poE": 0.1,
              "IMT": "PGA",
              "groundMotionValue": 0.25,
