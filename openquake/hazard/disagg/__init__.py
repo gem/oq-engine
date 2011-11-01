@@ -17,3 +17,6 @@
 """
 Disaggregation hazard calculator.
 """
+
+
+FULL_DISAGG_MATRIX = 'fulldisaggmatrix'

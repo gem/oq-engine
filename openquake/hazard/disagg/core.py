@@ -29,15 +29,16 @@ from openquake import job
 from openquake import logs
 
 from openquake.hazard import job as haz_job
-from openquake.hazard import tasks
+from openquake.hazard import disagg
+from openquake.java import jtask as task
 from openquake.job import config as job_cfg
 from openquake.job import config_text_to_list
 from openquake.utils import config
 from openquake.hazard.general import (
     generate_erf, generate_gmpe_map, set_gmpe_params)
+from openquake.hazard.disagg import subsets
 
 
-FULL_DISAGG_MATRIX = 'fulldisaggmatrix'
 LOG = logs.LOG
 
 
@@ -124,7 +125,7 @@ def save_5d_matrix_to_h5(directory, matrix):
     file_path = os.path.join(directory, file_name)
 
     with h5py.File(file_path, 'w') as target:
-        target.create_dataset(FULL_DISAGG_MATRIX, data=matrix)
+        target.create_dataset(disagg.FULL_DISAGG_MATRIX, data=matrix)
 
     return file_path
 
@@ -140,8 +141,55 @@ def list_to_jdouble_array(float_list):
     return jdouble
 
 
+@task
+def compute_disagg_matrix_task(job_id, site, realization, poe, result_dir):
+    """ Compute a complete 5D Disaggregation matrix. This task leans heavily
+    on the DisaggregationCalculator (in the OpenQuake Java lib) to handle this
+    computation.
+
+    :param job_id: id of the job record in the KVS
+    :type job_id: `str`
+    :param site: a single site of interest
+    :type site: :class:`openquake.shapes.Site` instance`
+    :param int realization: logic tree sample iteration number
+    :param poe: Probability of Exceedence
+    :type poe: `float`
+    :param result_dir: location for the Java code to write the matrix in an
+        HDF5 file (in a distributed environment, this should be the path of a
+        mounted NFS)
+
+    :returns: 2-tuple of (ground_motion_value, path_to_h5_matrix_file)
+    """
+    # check and see if the job is still valid (i.e., not complete or failed)
+    check_job_status(job_id)
+
+    log_msg = (
+        "Computing full disaggregation matrix for job_id=%s, site=%s, "
+        "realization=%s, PoE=%s. Matrix results will be serialized to `%s`.")
+    log_msg %= (job_id, site, realization, poe, result_dir)
+    HAZARD_LOG.info(log_msg)
+
+    # NOTE(LB): We don't need to pass the realization, but we will need to
+    # keep track of it somehow when we reduce the final disagg results.
+    # When we write the disagg mixin, this should become more clear.
+    return disagg.compute_disagg_matrix(job_id, site, poe, result_dir)
+
+
 class DisaggMixin(object):
-    """ """
+    """The Python part of the Disaggregation calculator. This calculator
+    computes disaggregation matrix results in the following manner:
+
+    1) Compute full disaggregation matrix results asynchronously. One task is
+        created per site per realization per PoE value. Each task serializes
+        the resulting matrix to an HDF5 file. (Note: In a distributed
+        environment, it is assumed that all HDF5 files are serialized to a
+        directory on an NFS (Network File System).
+    2) Next, tasks are distributed to extract the matrix subsets (requested in
+        the job config) and serialize them to HDF5.
+    3) Finally, the jobber collects the calculation results (including paths to
+        matrix subset files) and serializes a set of NRML files to represent
+        the final output.
+    """
 
     def execute(self):
         """ """
@@ -161,7 +209,10 @@ class DisaggMixin(object):
         full_disagg_results = DisaggMixin.distribute_disagg(
             self, sites, realizations, poes, result_dir)
 
-        # TODO: do subset extraction here
+        print full_disagg_results
+        # subset_results = DisaggMixin.distribute_subsets(
+        #     self, full_disagg_results, result_dir)
+
         # TODO: then do xml serialization (disagg binary form)
 
     @staticmethod
@@ -186,35 +237,127 @@ class DisaggMixin(object):
 
     @staticmethod
     def distribute_disagg(the_job, sites, realizations, poes, result_dir):
-        task_data = []
+        """Compute disaggregation by splitting up the calculation over sites,
+        realizations, and PoE values.
+
+        :param the_job:
+            Job definition
+        :type the_job:
+            :class:`openquake.job.Job` instance
+        :param sites:
+            List of :class:`openquake.shapes.Site` objects
+        :param poes:
+            Probability of Exceedence levels for the calculation
+        :type poes:
+            List of floats
+        :param result_dir:
+            Path where full disaggregation results should be stored
+        :returns:
+            Result data in the following form::
+                [(realization_1, poe_1,
+                  [(site_1, gmv_1, matrix_path_1),
+                   (site_2, gmv_2, matrix_path_2)]
+                 ),
+                 (realization_1, poe_2,
+                  [(site_1, gmv_1, matrix_path_3),
+                   (site_2, gmv_2, matrix_path_4)]
+                 ),
+                 ...
+                 (realization_N, poe_N,
+                  [(site_1, gmv_1, matrix_path_N-1),
+                   (site_2, gmv_2, matrix_path_N)]
+                 ),
+                ]
+        """
+        # accumulates the final results of this method
         full_da_results = []
+
+        # accumulates task data across the realization and poe loops
+        task_data = []
 
         for rlz in xrange(1, realizations + 1):  # 1 to N, inclusive
             for poe in poes:
+                task_site_pairs = []
                 for site in sites:
-                    a_task = tasks.compute_disagg_matrix.delay(
+                    a_task = compute_disagg_matrix_task.delay(
                         the_job.job_id, site, rlz, poe, result_dir)
-                    task_data.append((a_task, rlz, poe, site))
 
-        for task, rlz, poe, site in task_data:
-            task.wait()
-            if not task.successful():
-                msg = ("Task with id=%s, realization=%s, PoE=%s, site=%s"
-                    "has failed with the following error: %s")
-                msg %= (task.request.id, rlz, poe, site, task.result)
-                LOG.critical(msg)
-                raise RuntimeError(msg)
-            else:
-                # task was successful
-                gmv, matrix_path = task.result
-                full_da_results.append((rlz, poe, site, gmv, matrix_path))
+                    task_site_pairs.append((a_task, site))
+
+                task_data.append((rlz, poe, task_site_pairs))
+
+        for rlz, poe, task_site_pairs in task_data:
+
+            # accumulates all data for a given (realization, poe) pair
+            rlz_poe_data = []
+            for task, site in task_site_pairs:
+                task.wait()
+                if not task.successful():
+                    msg = ("Task with id=%s, realization=%s, PoE=%s, site=%s"
+                        "has failed with the following error: %s")
+                    msg %= (task.request.id, rlz, poe, site, task.result)
+                    LOG.critical(msg)
+                    raise RuntimeError(msg)
+                else:
+                    gmv, matrix_path = task.result
+                    rlz_poe_data.append((site, gmv, matrix_path))
+
+            full_da_results.append((rlz, poe, rlz_poe_data))
 
         return full_da_results
 
 
     @staticmethod
-    def distribute_subsets(the_job, site, full_matrix_path, target_path):
-        pass
+    def distribute_subsets(the_job, full_disagg_results, target_dir):
+        subsets_data = []
+        subset_results = []
+
+        lat_bin_lims = config_text_to_list(
+            the_job[job_cfg.LAT_BIN_LIMITS], float)
+        lon_bin_lims = config_text_to_list(
+            the_job[job_cfg.LON_BIN_LIMITS], float)
+        mag_bin_lims = config_text_to_list(
+            the_job[job_cfg.MAG_BIN_LIMITS], float)
+        eps_bin_lims = config_text_to_list(
+            the_job[job_cfg.EPS_BIN_LIMITS], float)
+        dist_bin_lims = config_text_to_list(
+            the_job[job_cfg.DIST_BIN_LIMITS], float)
+
+        subsets = config_text_to_list(
+            the_job['DISAGGREGATION_RESULTS'])
+
+        imt = the_job['INTENSITY_MEASURE_TYPE']
+
+        for rlz, poe, site, gmv, matrix_path in full_disagg_results:
+            subset_file = 'disagg-results-gmv:%s-lat:%s-lon:%s.h5'
+            subset_file %= (gmv, site.latitude, site.longitude)
+            target_file = os.path.join(target_path, subset_file)
+
+            a_task = subsets.extract_subsets.delay(
+                site, matrix_path, lat_bin_lims, lon_bin_lims, mag_bin_lims,
+                eps_bin_lims, dist_bin_lims, target_file,
+                [x.lower() for x in subsets])
+                # the subset types need to be all lower case for extraction
+
+            subsets_data.append((a_task, rlz, poe, gmv, site, target_file))
+
+        for task, rlz, poe, gmv, site, target_file in subset_tasks:
+            task.wait()
+            if not task.successful():
+                msg = ""
+                LOG.critical(msg)
+                raise RuntimeError(msg)
+            else:
+                result = dict(
+                    poE=poe, IMT=imt, groundMotionValue=gmv)
+                # for now, all of the results for a single site go into the one
+                # file
+                result['mset'] = [
+                    dict(disaggregationPMFType=s,
+                         path=target_file) for s in subsets]
+                subset_results.append((site, result))
+
+        return subset_results
 
     @staticmethod
     def serialize_nrml(the_job, poe, gmv, realization, data):
