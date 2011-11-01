@@ -37,7 +37,7 @@ from openquake import xml
 from openquake.hazard import classical_psha
 from openquake.hazard import job
 from openquake.hazard import tasks
-from openquake.hazard.general import BasePSHAMixin
+from openquake.hazard.general import BasePSHAMixin, preload
 from openquake.input import logictree
 from openquake.output import hazard as hazard_output
 from openquake.utils import config
@@ -60,20 +60,6 @@ def create_java_cache(fn):
         return fn(self, *args, **kwargs)
 
     return decorated
-
-
-def preload(fn):
-    """A decorator for preload steps that must run on the Jobber node"""
-
-    @functools.wraps(fn)
-    def preloader(self, *args, **kwargs):  # pylint: disable=C0111
-        source_model_lt = self.params.get('SOURCE_MODEL_LOGIC_TREE_FILE_PATH')
-        gmpe_lt = self.params.get('GMPE_LOGIC_TREE_FILE_PATH')
-        basepath = self.params.get('BASE_PATH')
-        self.calc = logictree.LogicTreeProcessor(basepath, source_model_lt,
-                                                 gmpe_lt)
-        return fn(self, *args, **kwargs)
-    return preloader
 
 
 def unwrap_validation_error(jpype, runtime_exception, path=None):
@@ -712,5 +698,5 @@ class EventBasedMixin(BasePSHAMixin):
                 jpype.JBoolean(correlate))
 
 
-job.HazJobMixin.register("Event Based", EventBasedMixin, order=0)
-job.HazJobMixin.register("Classical", ClassicalMixin, order=1)
+job.HazJobMixin.register("Event Based", EventBasedMixin)
+job.HazJobMixin.register("Classical", ClassicalMixin)
