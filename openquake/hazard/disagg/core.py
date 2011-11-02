@@ -399,7 +399,7 @@ class DisaggMixin(Mixin):
             for site, gmv, matrix_path in data_list:
 
                 subset_file = (
-                    'disagg-results-sample:%s-gmv:%s-lat:%s-lon:%s.h5')
+                    'disagg-results-sample:%s-gmv:%.7f-lat:%.7f-lon:%.7f.h5')
                 subset_file %= (rlz, gmv, site.latitude, site.longitude)
                 target_file = os.path.join(target_dir, subset_file)
 
