@@ -138,7 +138,8 @@ class DisaggMixinTestCase(unittest.TestCase):
 
     def test_create_result_dir(self):
         """Test creation of the result_dir, the path for which is constructed
-        from a config param (DISAGGREGATION_RESULTS_DIR) and the job id."""
+        from a the nfs base_dir (defined in the openquake.cfg) and the job id.
+        """
         base_path = tempfile.gettempdir()
         job_id = 1234
 
