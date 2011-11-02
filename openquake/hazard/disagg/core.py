@@ -33,6 +33,7 @@ from openquake.hazard import disagg
 from openquake.java import jtask as task
 from openquake.job import config as job_cfg
 from openquake.job import config_text_to_list
+from openquake.output import hazard as hazard_output
 from openquake.utils import config
 
 from openquake.hazard.disagg import subsets
@@ -176,9 +177,6 @@ def compute_disagg_matrix_task(job_id, site, realization, poe, result_dir):
     log_msg %= (job_id, site, realization, poe, result_dir)
     LOG.info(log_msg)
 
-    # NOTE(LB): We don't need to pass the realization, but we will need to
-    # keep track of it somehow when we reduce the final disagg results.
-    # When we write the disagg mixin, this should become more clear.
     return compute_disagg_matrix(job_id, site, poe, result_dir)
 
 
@@ -200,7 +198,17 @@ class DisaggMixin(Mixin):
 
     @preload
     def execute(self):
-        """ """
+        """Main execution point for the Disaggregation calculator.
+
+        The workflow is structured like so:
+        1) Store source and GMPE models in the KVS (so the workers can rapidly
+            access that data).
+        2) Create a result dir (on the NFS) for storing matrices.
+        3) Distribute full disaggregation matrix computation to workers.
+        4) Distribute matrix subset extraction (using full disagg. results as
+            input.
+        5) Finally, write an NRML/XML wrapper around the disagg. results.
+        """
         # cache the source model and gmpe model in the KVS
         # so the Java code can access it
         src_model_seed = int(self.params.get('SOURCE_MODEL_LT_RANDOM_SEED'))
@@ -225,15 +233,10 @@ class DisaggMixin(Mixin):
         full_disagg_results = DisaggMixin.distribute_disagg(
             self, sites, realizations, poes, result_dir)
 
-        LOG.debug("here are the full results:")
-        LOG.debug(full_disagg_results)
         subset_results = DisaggMixin.distribute_subsets(
             self, full_disagg_results, result_dir)
 
-        LOG.debug("here are the subset results:")
-        LOG.debug(subset_results)
-
-        # TODO: then do xml serialization (disagg binary form)
+        DisaggMixin.serialize_nrml(self, subset_results)
 
     @staticmethod
     def create_result_dir(base_path, job_id):
@@ -291,7 +294,7 @@ class DisaggMixin(Mixin):
 
             A single matrix result in this form looks like this::
                 [(1, 0.1,
-                  [(Site(0.0, 0.0), 0.225743641602613,
+                  [(Site(0.0, 0.0), 0.2257,
                     '/var/lib/openquake/disagg-results/job-372/some_guid.h5'),]
                  ),
                 ]
@@ -337,14 +340,44 @@ class DisaggMixin(Mixin):
 
         return full_da_results
 
-
     @staticmethod
     def distribute_subsets(the_job, full_disagg_results, target_dir):
-        """Blah blah blah
+        """Given the results of the first phase of the disaggregation
+        calculation, extract the matrix subsets (as requested in the job
+        configuration).
 
-        :returns: Subset result data in the following form::
+        :param the_job: job configuration
+        :type the_job: :class:`openquake.job.Job` instance
+        :param full_disagg_results:
+            Results of :method:`DisaggMixin.distribute_disagg`.
+        :param target_dir:
+            Directory where subset matrix results should be stored (a directory
+            connected to an NFS, for example).
+
+        :returns:
+            Subset result data in the following form::
+                [(realization_1, poe_1,
+                  [(site_1, gmv_1, matrix_path_1),
+                   (site_2, gmv_2, matrix_path_2)]
+                 ),
+                 (realization_1, poe_2,
+                  [(site_1, gmv_1, matrix_path_3),
+                   (site_2, gmv_2, matrix_path_4)]
+                 ),
+                 ...
+                 (realization_N, poe_N,
+                  [(site_1, gmv_1, matrix_path_N-1),
+                   (site_2, gmv_2, matrix_path_N)]
+                 ),
+                ]
+
+            A single matrix result in this form looks like this::
+                [(1, 0.1,
+                  [(Site(0.0, 0.0), 0.2257,
+                   'disagg-results-sample:1-gmv:0.2257-lat:0.0-lon:0.0.h5'),]
+                 ),
+                ]
         """
-
         lat_bin_lims = config_text_to_list(
             the_job[job_cfg.LAT_BIN_LIMITS], float)
         lon_bin_lims = config_text_to_list(
@@ -391,8 +424,10 @@ class DisaggMixin(Mixin):
                 if not task.successful():
                     msg = (
                         "Matrix subset extraction task for job %s with"
-                        " task_id=%s, realization=%s, PoE=%s, target_file=%s")
-                    msg %= (the_job.job_id, task.task_id, poe, target_file)
+                        " task_id=%s, realization=%s, PoE=%s, target_file=%s"
+                        " has failed with the following error: %s")
+                    msg %= (the_job.job_id, task.task_id, poe, target_file,
+                            task.result)
                     LOG.critical(msg)
                     raise RuntimeError(msg)
                 else:
@@ -403,9 +438,35 @@ class DisaggMixin(Mixin):
         return final_results
 
     @staticmethod
-    def serialize_nrml(the_job, poe, gmv, realization, data):
-        pass
-        # data = list of (site, h5_path_to_subsets_file)
+    def serialize_nrml(the_job, subsets_data):
+        """Write a NRML/XML wrapper around the disaggregation subset results.
+
+        :param the_job: job configuration
+        :type the_job: :class:`openquake.job.Job` instance
+        :param subsets_data:
+            Results of :method:`DisaggMixin.distribute_subsets`.
+        """
+        imt = the_job['INTENSITY_MEASURE_TYPE']
+        result_types = config_text_to_list(the_job['DISAGGREGATION_RESULTS'])
+
+        for rlz, poe, data in subsets_data:
+
+            file_name = 'disagg-results-sample:%s-PoE:%s.xml'
+            file_name %= (rlz, poe)
+            path = os.path.join(the_job['BASE_PATH'], the_job['OUTPUT_DIR'],
+                                file_name)
+            writer = hazard_output.DisaggregationBinaryMatrixXMLWriter(
+                path)
+
+            for site, gmv, matrix_path in data:
+                node_data = dict(
+                    poE=poe, IMT=imt, groundMotionValue=gmv,
+                    endBranchLabel=rlz,
+                    mset=[dict(disaggregationPMFType=r,
+                               path=matrix_path) for r in result_types])
+                writer.write(site, node_data)
+
+            writer.close()
 
 
 haz_job.HazJobMixin.register("Disaggregation", DisaggMixin)
