@@ -90,9 +90,6 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
         config.get('kvs', 'host'),
         int(config.get('kvs', 'port')))
 
-    LOG.debug("cache is: %s" % cache)
-    
-
     erf = generate_erf(job_id, cache)
     gmpe_map = generate_gmpe_map(job_id, cache)
     set_gmpe_params(gmpe_map, the_job.params)
@@ -320,20 +317,20 @@ class DisaggMixin(Mixin):
 
             # accumulates all data for a given (realization, poe) pair
             rlz_poe_data = []
-            for task, site in task_site_pairs:
-                task.wait()
-                if not task.successful():
+            for a_task, site in task_site_pairs:
+                a_task.wait()
+                if not a_task.successful():
                     msg = (
                         "Full Disaggregation matrix computation task"
                         " for job %s with task_id=%s, realization=%s, PoE=%s,"
                         " site=%s has failed with the following error: %s")
                     msg %= (
-                        the_job.job_id, task.task_id, rlz, poe, site,
-                        task.result)
+                        the_job.job_id, a_task.task_id, rlz, poe, site,
+                        a_task.result)
                     LOG.critical(msg)
                     raise RuntimeError(msg)
                 else:
-                    gmv, matrix_path = task.result
+                    gmv, matrix_path = a_task.result
                     rlz_poe_data.append((site, gmv, matrix_path))
 
             full_da_results.append((rlz, poe, rlz_poe_data))
@@ -418,16 +415,16 @@ class DisaggMixin(Mixin):
 
         for rlz, poe, task_data in rlz_poe_task_data:
             rlz_poe_results = []  # list of data/results per (rlz, poe) pair
-            for task, site, gmv, target_file in task_data:
+            for a_task, site, gmv, target_file in task_data:
 
-                task.wait()
-                if not task.successful():
+                a_task.wait()
+                if not a_task.successful():
                     msg = (
                         "Matrix subset extraction task for job %s with"
                         " task_id=%s, realization=%s, PoE=%s, target_file=%s"
                         " has failed with the following error: %s")
-                    msg %= (the_job.job_id, task.task_id, poe, target_file,
-                            task.result)
+                    msg %= (the_job.job_id, a_task.task_id, poe, target_file,
+                            a_task.result)
                     LOG.critical(msg)
                     raise RuntimeError(msg)
                 else:
