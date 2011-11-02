@@ -914,6 +914,9 @@ class DisaggregationBinaryMatrixXMLWriter(writer.FileWriter):
     OPTIONAL_PARAMS = ("endBranchLabel", "statistics", "quantileValue")
 
     def __init__(self, path):
+        """
+        :param path: path to the resulting XML file (including file name)
+        """
         writer.FileWriter.__init__(self, path)
 
         self.id_counter = 0
