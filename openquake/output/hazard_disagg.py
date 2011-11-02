@@ -23,6 +23,7 @@ from lxml import etree
 
 from openquake import writer
 from openquake.xml import NSMAP, NRML, GML
+from openquake.output.hazard import _set_gml_id
 
 
 class DisaggregationBinaryMatrixXMLWriter(writer.FileWriter):
