@@ -607,8 +607,10 @@ CREATE TABLE uiapi.oq_params (
     --      spectral acceleration (sa)
     --      peak ground velocity (pgv)
     --      peak ground displacement (pgd)
+    --      Arias Intensity (ia)
+    --      relative significant duration (rsd)
     imt VARCHAR NOT NULL CONSTRAINT imt_value
-        CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd')),
+        CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd')),
     period float CONSTRAINT period_is_set
         CHECK(((imt = 'sa') AND (period IS NOT NULL))
               OR ((imt != 'sa') AND (period IS NULL))),
