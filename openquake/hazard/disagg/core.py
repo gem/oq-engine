@@ -216,7 +216,7 @@ class DisaggMixin(Mixin):
 
         # matrix results for this job will go here:
         result_dir = DisaggMixin.create_result_dir(
-            self.params['DISAGGREGATION_RESULTS_DIR'], self.job_id)
+            config.get('nfs', 'base_dir'), self.job_id)
 
         realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
         poes = job.config_text_to_list(self.params['POES'], float)
@@ -386,8 +386,10 @@ class DisaggMixin(Mixin):
         dist_bin_lims = config_text_to_list(
             the_job[job_cfg.DIST_BIN_LIMITS], float)
 
+    
+        # the subset types need to be all lower case for extraction
         subset_types = config_text_to_list(
-            the_job['DISAGGREGATION_RESULTS'])
+            the_job['DISAGGREGATION_RESULTS'], lambda x: x.lower())
 
         # imt = the_job['INTENSITY_MEASURE_TYPE']
         rlz_poe_task_data = []
@@ -404,8 +406,7 @@ class DisaggMixin(Mixin):
                 a_task = subsets.extract_subsets.delay(
                     site, matrix_path, lat_bin_lims, lon_bin_lims,
                     mag_bin_lims, eps_bin_lims, dist_bin_lims, target_file,
-                    [x.lower() for x in subset_types])
-                # the subset types need to be all lower case for extraction
+                    subset_types)
 
                 task_data.append((a_task, site, gmv, target_file))
 

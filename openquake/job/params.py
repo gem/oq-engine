@@ -178,8 +178,6 @@ define_param('SOURCE_MODEL_LOGIC_TREE_FILE', None,
 # Disaggregation parameters:
 define_param('DISAGGREGATION_RESULTS', 'disagg_results',
              modes='disaggregation', to_db=sequence_map_enum)
-define_param('DISAGGREGATION_RESULTS_DIR', 'disagg_results_dir',
-             modes='disaggregation')
 define_param('LATITUDE_BIN_LIMITS', 'lat_bin_limits', modes='disaggregation')
 define_param('LONGITUDE_BIN_LIMITS', 'lon_bin_limits', modes='disaggregation')
 define_param('MAGNITUDE_BIN_LIMITS', 'mag_bin_limits', modes='disaggregation')
