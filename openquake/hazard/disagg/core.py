@@ -242,7 +242,7 @@ class DisaggMixin(Mixin):
         constructed like so: <base_path>/disagg-results/job-<job_id>.
 
         For example:
-        >>> DisaggMixin.create_result_dir('/var/lib/openquake', '2847')
+        >>> DisaggMixin.create_result_dir('/var/lib/openquake', 2847)
         '/var/lib/openquake/disagg-results/job-2847'
 
         :param base_path: base result storage directory (a path to an NFS
