@@ -38,7 +38,6 @@ from openquake.hazard import classical_psha
 from openquake.hazard import job
 from openquake.hazard import tasks
 from openquake.hazard.general import BasePSHAMixin, preload
-from openquake.input import logictree
 from openquake.output import hazard as hazard_output
 from openquake.utils import config
 from openquake.utils import tasks as utils_tasks

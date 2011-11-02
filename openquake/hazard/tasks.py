@@ -35,7 +35,6 @@ from openquake import kvs
 
 from openquake.hazard import job as hazjob
 from openquake.hazard import classical_psha
-from openquake.hazard.disagg import core as disagg
 from openquake.java import jtask as task
 from openquake.job import mixins
 from openquake.logs import HAZARD_LOG
