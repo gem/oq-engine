@@ -31,10 +31,7 @@
     </xs:simpleType>
     
     <xs:simpleType name="AssetValueUnit">
-        <xs:restriction base="xs:string">
-            <xs:enumeration value="USD"/>
-            <xs:enumeration value="EUR"/>
-        </xs:restriction>
+        <xs:restriction base="xs:string" />
     </xs:simpleType>
     
     <xs:simpleType name="PoE">
