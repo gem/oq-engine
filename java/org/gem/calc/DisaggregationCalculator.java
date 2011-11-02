@@ -92,7 +92,7 @@ public class DisaggregationCalculator {
                 Arrays.sort(sorted);
                 if (!Arrays.equals(sorted, oArray))
                 {
-                    throw new IllegalArgumentException("Bin edge arrays must arranged in ascending order");
+                    throw new IllegalArgumentException("Bin edge arrays must be arranged in ascending order");
                 }
             }
         }
@@ -171,7 +171,7 @@ public class DisaggregationCalculator {
             Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap,
             double poe,
             DiscretizedFuncAPI hazardCurve,
-            double minMag) // or just pass a List<double> of IML values and compute the curve inside here?
+            double minMag)
     {
 
         assertPoissonian(erf);
