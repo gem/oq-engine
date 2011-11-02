@@ -33,7 +33,7 @@ from openquake.hazard import disagg
 from openquake.java import jtask as task
 from openquake.job import config as job_cfg
 from openquake.job import config_text_to_list
-from openquake.output import hazard as hazard_output
+from openquake.output import hazard_disagg as hazard_output
 from openquake.utils import config
 
 from openquake.hazard.disagg import subsets
