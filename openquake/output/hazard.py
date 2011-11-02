@@ -51,6 +51,9 @@ from openquake import writer
 from openquake.utils import round_float
 from openquake.xml import NSMAP, NRML, GML, NSMAP_WITH_QUAKEML
 
+# Disabling pylint checks: Too many lines in module
+# pylint: disable=C0302
+
 
 LOGGER = logging.getLogger('hazard-serializer')
 LOGGER.setLevel(logging.DEBUG)
