@@ -1284,7 +1284,7 @@ CREATE TABLE riski.vulnerability_model (
     name VARCHAR NOT NULL,
     description VARCHAR,
     imt VARCHAR NOT NULL CONSTRAINT imt_value
-        CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd')),
+        CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd')),
     imls float[] NOT NULL,
     -- e.g. "buildings", "bridges" etc.
     category VARCHAR NOT NULL,
