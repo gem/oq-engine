@@ -17,7 +17,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
 """
 This module provides classes that serialize hazard-related objects
 to NRML format.
@@ -218,7 +217,7 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
     iml_tag = "%sIML" % NRML
 
     PROCESSING_ATTRIBUTES_TO_CHECK = (
-        {'name': 'investigationTimeSpan', 'required': False},)
+        {'name': 'investigationTimeSpan', 'required': False}, )
 
     MAP_ATTRIBUTES_TO_CHECK = (
         {'name': 'poE', 'required': True},
