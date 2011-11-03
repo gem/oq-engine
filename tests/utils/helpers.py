@@ -29,11 +29,13 @@ import redis
 import shutil
 import subprocess
 import tempfile
+import textwrap
 import time
 import sys
 
 import guppy
 import mock as mock_module
+import numpy
 
 from django.core import exceptions
 
@@ -109,7 +111,7 @@ def get_output_path(file_name):
     return os.path.join(OUTPUT_DIR, file_name)
 
 
-def smoketest_file(file_name):
+def demo_file(file_name):
     """
     Take a file name and return the full path to the file in the demos
     directory.
@@ -247,7 +249,7 @@ def assertDeepAlmostEqual(test_case, expected, actual, *args, **kwargs):
     try:
         if isinstance(expected, (int, float, long, complex)):
             test_case.assertAlmostEqual(expected, actual, *args, **kwargs)
-        elif isinstance(expected, (list, tuple)):
+        elif isinstance(expected, (list, tuple, numpy.ndarray)):
             test_case.assertEqual(len(expected), len(actual))
             for index in xrange(len(expected)):
                 v1, v2 = expected[index], actual[index]
@@ -683,3 +685,43 @@ class DbTestMixin(TestMixin):
             output.delete()
         if teardown_job:
             self.teardown_job(job, filesystem_only=filesystem_only)
+
+
+class ConfigTestMixin(TestMixin):
+    """
+    Mixin class for tests that require/manipulate the environment
+    and the configuration.
+    """
+    def setup_config(self):
+        self.orig_env = os.environ.copy()
+        os.environ.clear()
+        # Move the local configuration file out of the way if it exists.
+        # Otherwise the tests that follow will break.
+        local_path = "%s/openquake.cfg" % os.path.abspath(os.getcwd())
+        if os.path.isfile(local_path):
+            shutil.move(local_path, "%s.test_bakk" % local_path)
+
+    def teardown_config(self):
+        os.environ.clear()
+        os.environ.update(self.orig_env)
+        # Move the local configuration file back into place if it was stashed
+        # away.
+        local_path = "%s/openquake.cfg" % os.path.abspath(os.getcwd())
+        if os.path.isfile("%s.test_bakk" % local_path):
+            shutil.move("%s.test_bakk" % local_path, local_path)
+        config.Config().cfg.clear()
+        config.Config()._load_from_file()
+
+    def prepare_config(self, section, data=None):
+        """Set up a configuration with the given `max_mem` value."""
+        if data is not None:
+            data = '\n'.join(["%s=%s" % item for item in data.iteritems()])
+            content = """
+                [%s]
+                %s""" % (section, data)
+        else:
+            content = ""
+        site_path = self.touch(content=textwrap.dedent(content))
+        os.environ["OQ_SITE_CFG_PATH"] = site_path
+        config.Config().cfg.clear()
+        config.Config()._load_from_file()

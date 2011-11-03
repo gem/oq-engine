@@ -782,35 +782,21 @@ class ShapesUtilsTestCase(unittest.TestCase):
         site5 = shapes.Site(20.2, 32.0)
         site6 = shapes.Site(20.6, 32.2)
 
-        self.assertTrue(
-            numpy.allclose(6382.596, shapes.hdistance(site1, site2)))
-
-        self.assertTrue(
-            numpy.allclose(6404.835, shapes.hdistance(site3, site1)))
-
-        self.assertTrue(
-            numpy.allclose(13565.796, shapes.hdistance(site5, site4)))
-
-        self.assertTrue(
-            numpy.allclose(13588.035, shapes.hdistance(site4, site6)))
-
-        self.assertTrue(
-            numpy.allclose(43.6090311, shapes.hdistance(site2, site3)))
-
-        self.assertTrue(
-            numpy.allclose(48.2790582, shapes.hdistance(site2, site6)))
-
-        self.assertTrue(
-            numpy.allclose(69.3145862, shapes.hdistance(site2, site5)))
-
-        self.assertTrue(
-            numpy.allclose(60.6198752, shapes.hdistance(site3, site6)))
-
-        self.assertTrue(
-            numpy.allclose(48.2952067, shapes.hdistance(site5, site3)))
-
-        self.assertTrue(
-            numpy.allclose(43.7518411, shapes.hdistance(site5, site6)))
+        test = lambda result, site1, site2: self.assertAlmostEqual(
+            result, shapes.hdistance(site1.latitude, site1.longitude,
+                                     site2.latitude, site2.longitude),
+            places=6
+        )
+        test(6382.5960025, site1, site2)
+        test(6404.835013, site3, site1)
+        test(13565.796382, site5, site4)
+        test(13588.035392, site4, site6)
+        test(43.6090311, site2, site3)
+        test(48.2790582, site2, site6)
+        test(69.3145862, site2, site5)
+        test(60.6198752, site3, site6)
+        test(48.2952067, site5, site3)
+        test(43.7518411, site5, site6)
 
 
 class FieldTestCase(unittest.TestCase):
