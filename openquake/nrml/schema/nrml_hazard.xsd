@@ -224,6 +224,7 @@
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
+                    <xs:element ref="disaggregationResultTypes" minOccurs="1" maxOccurs="1"/>
                     <xs:element ref="disaggregationResultNode" minOccurs="1" maxOccurs="unbounded"/>
                 </xs:sequence>
                 <xs:attribute name="poE" type="NormalizedDoubleType" use="required"/>
@@ -233,33 +234,41 @@
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
-    
+
+    <!-- List of disaggregation result types for a disaggregationResultField. -->
+    <xs:element name="disaggregationResultTypes" type="DisaggregationResultTypesType"/>
+    <xs:simpleType name="DisaggregationResultTypesType">
+        <xs:list itemType="DisaggregationPMFType"/>
+    </xs:simpleType>
+
     <xs:element name="disaggregationResultNode" type="DisaggregationResultNodeType" substitutionGroup="fieldNode"/>
     <xs:complexType name="DisaggregationResultNodeType">
         <xs:complexContent>
             <xs:extension base="FieldNode">
-                <xs:sequence>
-                    <xs:element name="disaggregationMatrixSet" type="DisaggregationMatrixSetType"/>
-                </xs:sequence>
+                <xs:choice>
+                    <xs:sequence>
+                        <xs:element name="disaggregationMatrixSet" type="DisaggregationMatrixSetType"/>
+                    </xs:sequence>
+                    <xs:sequence>
+                        <xs:element name="disaggregationResult" type="DisaggregationResultType"/>
+                    </xs:sequence>
+                </xs:choice>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
     
     <xs:complexType name="DisaggregationMatrixSetType">
-        <xs:choice>
-            <xs:sequence>
-                <xs:element name="disaggregationMatrixBinaryFile" type="DisaggregationMatrixBinaryFileType" maxOccurs="unbounded"/>
-            </xs:sequence>
-            <xs:sequence>
-                <xs:element name="disaggregationMatrix" type="DisaggregationMatrixType" maxOccurs="unbounded"/>
-            </xs:sequence>
-        </xs:choice>
+        <xs:sequence>
+            <xs:element name="disaggregationMatrix" type="DisaggregationMatrixType" maxOccurs="unbounded"/>
+        </xs:sequence>
         <xs:attribute name="groundMotionValue" type="NonNegativeDoubleType" use="required"/>
     </xs:complexType>
 
-    <xs:complexType name="DisaggregationMatrixBinaryFileType">
+    <!-- For binary disaggregation results.
+         Indicates the GMV and a path to the file containing all of the disagg. results for this node. -->
+    <xs:complexType name="DisaggregationResultType">
+        <xs:attribute name="groundMotionValue" type="NonNegativeDoubleType" use="required"/>
         <xs:attribute name="path" type="xs:string" use="required"/>
-        <xs:attribute name="disaggregationPMFType" type="DisaggregationPMFType" use="required"/>
     </xs:complexType>
 
     <xs:complexType name="DisaggregationMatrixType">

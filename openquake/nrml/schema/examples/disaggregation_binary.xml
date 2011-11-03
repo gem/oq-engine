@@ -3,19 +3,20 @@
       xmlns="http://openquake.org/xmlns/nrml/0.2"
       gml:id="IDXXX">
     <disaggregationResultField poE="0.1" IMT="PGA" endBranchLabel="1" gml:id="ID000">
-            <disaggregationResultNode gml:id="ID001">
-                    <site>
-                        <gml:Point gml:id="ID002">
-                                <gml:pos>0.0 0.0</gml:pos>
-                        </gml:Point>
-                    </site>
-                    <disaggregationMatrixSet groundMotionValue="0.25">
-                        <disaggregationMatrixBinaryFile disaggregationPMFType="MagnitudePMF" path="/path"/>
-                        <disaggregationMatrixBinaryFile disaggregationPMFType="MagnitudeDistancePMF" path="/path"/>
-                        <disaggregationMatrixBinaryFile disaggregationPMFType="MagnitudeDistanceEpsilonPMF" path="/path"/>
-                        <disaggregationMatrixBinaryFile disaggregationPMFType="LatitudeLongitudeMagnitudeEpsilonPMF" path="/path"/>
-                        <disaggregationMatrixBinaryFile disaggregationPMFType="LatitudeLongitudeMagnitudeEpsilonTectonicRegionTypePMF" path="/path"/>
-                    </disaggregationMatrixSet>
-            </disaggregationResultNode>
+        <disaggregationResultTypes><!-- List PMF subsets contained in the referenced binary files.-->
+            MagnitudePMF
+            MagnitudeDistancePMF
+            MagnitudeDistanceEpsilonPMF
+            LatitudeLongitudeMagnitudeEpsilonPMF
+            LatitudeLongitudeMagnitudeEpsilonTectonicRegionTypePMF
+        </disaggregationResultTypes>
+        <disaggregationResultNode gml:id="ID001">
+            <site>
+                <gml:Point gml:id="ID002">
+                        <gml:pos>0.0 0.0</gml:pos>
+                </gml:Point>
+            </site>
+            <disaggregationResult groundMotionValue="0.25" path="/path"/>
+        </disaggregationResultNode>
     </disaggregationResultField>
 </nrml>
