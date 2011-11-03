@@ -150,7 +150,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.1705, 0.8453, 0.6355, 0.0721, 0.2475, 0.1601, 0.3544,
                 0.1756), "TSES": 200, "TimeSpan": 50}
 
-        self.asset_1 = {"vulnerabilityFunctionReference": "ID",
+        self.asset_1 = {"taxonomy": "ID",
                 "assetValue": 22.61}
 
         self.gmfs_2 = {"IMLs": (0.1507, 0.2656, 0.5422, 0.3685, 0.3172,
@@ -158,7 +158,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.2179, 1.2939, 0.6042, 0.1418, 0.3637, 0.222, 0.3613,
                 0.113), "TSES": 200, "TimeSpan": 50}
 
-        self.asset_2 = {"vulnerabilityFunctionReference": "ID",
+        self.asset_2 = {"taxonomy": "ID",
                 "assetValue": 124.27}
 
         self.gmfs_3 = {"IMLs": (0.156, 0.3158, 0.3968, 0.2827, 0.1915, 0.5862,
@@ -166,7 +166,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 1.0754, 0.3533, 0.1461, 0.347, 0.2665, 0.2977, 0.2925),
                 "TSES": 200, "TimeSpan": 50}
 
-        self.asset_3 = {"vulnerabilityFunctionReference": "ID",
+        self.asset_3 = {"taxonomy": "ID",
                 "assetValue": 42.93}
 
         self.gmfs_4 = {"IMLs": (0.1311, 0.3566, 0.4895, 0.3647, 0.2313,
@@ -174,7 +174,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.1097, 1.1875, 0.4752, 0.1575, 0.4009, 0.2519, 0.2653,
                 0.1394), "TSES": 200, "TimeSpan": 50}
 
-        self.asset_4 = {"vulnerabilityFunctionReference": "ID",
+        self.asset_4 = {"taxonomy": "ID",
                 "assetValue": 29.37}
 
         self.gmfs_5 = {"IMLs": (0.0879, 0.2895, 0.465, 0.2463, 0.1862, 0.763,
@@ -182,7 +182,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.3035, 0.1118, 0.2981, 0.3492, 0.2406, 0.1043),
                 "TSES": 200, "TimeSpan": 50}
 
-        self.asset_5 = {"vulnerabilityFunctionReference": "ID",
+        self.asset_5 = {"taxonomy": "ID",
                 "assetValue": 40.68}
 
         self.gmfs_6 = {"IMLs": (0.0872, 0.2288, 0.5655, 0.2118, 0.2, 0.6633,
@@ -190,7 +190,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.3726, 0.0845, 0.1942, 0.4629, 0.1354, 0.1109),
                 "TSES": 200, "TimeSpan": 50}
 
-        self.asset_6 = {"vulnerabilityFunctionReference": "ID",
+        self.asset_6 = {"taxonomy": "ID",
                 "assetValue": 178.47}
 
         # deleting keys in kvs
@@ -820,7 +820,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         mixin.vuln_curves = {}
 
         # "empty" asset
-        asset = {"vulnerabilityFunctionReference": "ID", "assetID": 1}
+        asset = {"taxonomy": "ID", "assetID": 1}
 
         self.assertEqual(None, mixin.compute_loss_ratio_curve(
                          None, asset, None))
@@ -857,7 +857,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         self.job_id = self.job.id
 
-        self.asset_1 = {"vulnerabilityFunctionReference": "ID",
+        self.asset_1 = {"taxonomy": "ID",
                 "assetValue": 124.27}
 
         self.region = shapes.RegionConstraint.from_simple(
@@ -891,7 +891,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         block = Block.from_kvs(self.block_id)
 
-        asset = {"vulnerabilityFunctionReference": "ID",
+        asset = {"taxonomy": "ID",
                  "assetID": 22.61, "assetValue": 1}
 
         self._store_asset(asset, 10, 10)
@@ -936,7 +936,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         mixin.job_id = 1234
         mixin.vuln_curves = {"ID": vuln_function}
 
-        asset = {"vulnerabilityFunctionReference": "ID", "assetID": 1}
+        asset = {"taxonomy": "ID", "assetID": 1}
 
         self.assertTrue(mixin.compute_loss_ratio_curve(
                         shapes.GridPoint(None, 10, 20),
@@ -1104,7 +1104,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         gmfs = {"IMLs": ()}
         epsilon_provider = object()
         vuln_model = {"ID": self.vuln_function}
-        asset = {"assetValue": 10, "vulnerabilityFunctionReference": "ID"}
+        asset = {"assetValue": 10, "taxonomy": "ID"}
 
         def loss_ratios_calculator(
             vuln_function, ground_motion_field_set, epsilon_provider, asset):
@@ -1133,7 +1133,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
             return loss_ratios.pop(0)
 
         vuln_model = {"ID": self.vuln_function}
-        asset = {"assetValue": 100, "vulnerabilityFunctionReference": "ID"}
+        asset = {"assetValue": 100, "taxonomy": "ID"}
 
         calculator = det.SumPerGroundMotionField(
             vuln_model, None, lr_calculator=loss_ratios_calculator)
@@ -1141,9 +1141,9 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose([], calculator.losses))
 
         calculator.add(None, asset)
-        asset = {"assetValue": 300, "vulnerabilityFunctionReference": "ID"}
+        asset = {"assetValue": 300, "taxonomy": "ID"}
         calculator.add(None, asset)
-        asset = {"assetValue": 200, "vulnerabilityFunctionReference": "ID"}
+        asset = {"assetValue": 200, "taxonomy": "ID"}
         calculator.add(None, asset)
 
         expected_sum = [62.63191284, 98.16576808,
@@ -1189,12 +1189,12 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         """The asset refers to an unknown vulnerability function.
 
         In case the asset defines an unknown vulnerability function
-        (key 'vulnerabilityFunctionReference') the given ground
+        (key 'taxonomy') the given ground
         motion field set is ignored.
         """
         vuln_model = {"ID": self.vuln_function}
         asset = {"assetValue": 100, "assetID": "ID",
-                 "vulnerabilityFunctionReference": "XX"}
+                 "taxonomy": "XX"}
 
         calculator = det.SumPerGroundMotionField(vuln_model, None)
 
