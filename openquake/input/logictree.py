@@ -872,6 +872,8 @@ class GMPELogicTree(BaseLogicTree):
     """
     #: Java package to look for GMPE classes.
     GMPE_PACKAGE = 'org.opensha.sha.imr.attenRelImpl'
+    #: Base GMPE java class (all valid GMPEs must extend it).
+    BASE_GMPE = 'org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI'
 
     def __init__(self, tectonic_region_types, *args, **kwargs):
         self.tectonic_region_types = frozenset(tectonic_region_types)
@@ -883,13 +885,10 @@ class GMPELogicTree(BaseLogicTree):
         See superclass' method for description and signature specification.
 
         Checks that the value is the name of the class inside java package
-        :attr:`GMPE_PACKAGE` which implements interface
-        ``org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI``.
+        :attr:`GMPE_PACKAGE` which implements interface :attr:`BASE_GMPE`.
+        ````.
         """
-        # All GMPEs must implement that interface:
-        base_gmpe = jvm().JClass(
-            'org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI'
-        )
+        base_gmpe = jvm().JClass(self.BASE_GMPE)
         try:
             gmpe = jvm().JClass('%s.%s' % (self.GMPE_PACKAGE, value))
         except jvm().JavaException:
