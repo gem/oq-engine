@@ -14,16 +14,9 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
-""" The hazard job mixin proxy. """
-
-
-from openquake.job.mixins import Mixin
+"""
+Disaggregation hazard calculator.
+"""
 
 
-class HazJobMixin(Mixin):
-    """ Proxy mixin for mixing in hazard job behaviour """
-    mixins = {}
-
-
-Mixin.register("Hazard", HazJobMixin, order=1)
+FULL_DISAGG_MATRIX = 'fulldisaggmatrix'

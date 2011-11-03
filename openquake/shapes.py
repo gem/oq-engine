@@ -878,23 +878,20 @@ def polygon_ewkt_from_coords(coords):
     return ewkt
 
 
-def hdistance(site1, site2):
+def hdistance(lat1, lon1, lat2, lon2):
     """Compute the great circle surface distance between two points
     using the Haversine formula.
 
-    :param site1: first point
-    :type site1: :py:class:`shapes.Site`
-    :param site2: second point
-    :type site2: :py:class:`shapes.Site`
-    :returns: the distance between the two points in km
+    :param lat1, lon1: first point coordinates
+    :param lat2, lon2: second point coordinates
     :rtype: float
     """
 
-    lat1 = radians(site1.latitude)
-    lat2 = radians(site2.latitude)
+    lat1 = radians(lat1)
+    lat2 = radians(lat2)
 
-    lon1 = radians(site1.longitude)
-    lon2 = radians(site2.longitude)
+    lon1 = radians(lon1)
+    lon2 = radians(lon2)
 
     dlon = lon2 - lon1
     dlat = lat2 - lat1

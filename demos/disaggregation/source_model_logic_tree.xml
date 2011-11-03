@@ -5,9 +5,9 @@
     <logicTree logicTreeID="lt1">
         <logicTreeBranchingLevel branchingLevelID="bl1">
             <logicTreeBranchSet uncertaintyType="sourceModel"
-                                branchSetID="bs1">
+                    branchSetID="bs1">
                 <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>SEAsiaGSHAP.xml</uncertaintyModel>
+                    <uncertaintyModel>singleSquareAreaSource.xml</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
             </logicTreeBranchSet>
