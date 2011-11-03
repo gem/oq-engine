@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.2" xmlns:gml="http://www.opengis.net/gml" gml:id="anrml">
 <exposurePortfolio gml:id="aep">
-<exposureList gml:id="aIstanbul" assetCategory="buildings" lossCategory="buildings count">
+<exposureList gml:id="aIstanbul" assetCategory="buildings">
 <gml:description>Collection of existing building in the region of Messina, Turkey</gml:description>
 	<assetDefinition gml:id="a1">
 		<site>
