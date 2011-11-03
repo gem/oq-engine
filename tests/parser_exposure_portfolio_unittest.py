@@ -87,7 +87,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
              'assetDescription': 'Moment-resisting non-ductile concrete ' \
                                  'frame high rise',
              'assetCategory': 'buildings',
-             'vulnerabilityFunctionReference': 'RC/DMRF-D/LR',
+             'taxonomy': 'RC/DMRF-D/LR',
              'structureCategory': 'RC-HR-PC',
              'assetValue': 250000.0,
              'assetValueUnit': 'EUR',
