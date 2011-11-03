@@ -81,7 +81,7 @@ class ExposurePortfolioFile(producer.FileProducer):
          'assetDescription': 'Moment-resisting non-ductile concrete ' \
                              'frame low rise',
          'assetCategory': 'buildings',
-         'vulnerabilityFunctionReference': 'RC/DMRF-D/LR',
+         'taxonomy': 'RC/DMRF-D/LR',
          'structureCategory': 'RC-LR-PC',
          'assetValue': 250000.0,
          'assetValueUnit': 'EUR'}
@@ -155,7 +155,7 @@ class ExposurePortfolioFile(producer.FileProducer):
 
         # all of these attributes are in the NRML namespace
         for (required_attr, attr_type) in (('assetDescription', str),
-                                   ('vulnerabilityFunctionReference', str),
+                                   ('taxonomy', str),
                                    ('structureCategory', str)):
             attr_value = element.find('%s%s' % (NRML, required_attr)).text
             if attr_value is not None:

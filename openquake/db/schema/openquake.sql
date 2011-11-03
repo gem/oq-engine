@@ -1264,7 +1264,7 @@ CREATE TABLE oqmif.exposure_data (
     asset_ref VARCHAR NOT NULL,
     value float NOT NULL,
     -- Vulnerability function reference
-    vf_ref VARCHAR NOT NULL,
+    taxonomy VARCHAR NOT NULL,
     structure_type VARCHAR,
     retrofitting_cost float,
     last_update timestamp without time zone
@@ -1297,7 +1297,7 @@ CREATE TABLE riski.vulnerability_function (
     vulnerability_model_id INTEGER NOT NULL,
     -- The vulnerability function reference is unique within an vulnerability
     -- model.
-    vf_ref VARCHAR NOT NULL,
+    taxonomy VARCHAR NOT NULL,
     -- Please note: there must be one loss ratio and coefficient of variation
     -- per IML value defined in the referenced vulnerability model.
     loss_ratios float[] NOT NULL CONSTRAINT loss_ratio_values
@@ -1306,7 +1306,7 @@ CREATE TABLE riski.vulnerability_function (
     covs float[] NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL,
-    UNIQUE (vulnerability_model_id, vf_ref)
+    UNIQUE (vulnerability_model_id, taxonomy)
 ) TABLESPACE riski_ts;
 
 
