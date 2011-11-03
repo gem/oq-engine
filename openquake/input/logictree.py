@@ -870,6 +870,9 @@ class GMPELogicTree(BaseLogicTree):
         source models. Used to check that there are GMPEs for each, but
         no unattended ones.
     """
+    #: Java package to look for GMPE classes.
+    GMPE_PACKAGE = 'org.opensha.sha.imr.attenRelImpl'
+
     def __init__(self, tectonic_region_types, *args, **kwargs):
         self.tectonic_region_types = frozenset(tectonic_region_types)
         self.defined_tectonic_region_types = set()
@@ -883,15 +886,23 @@ class GMPELogicTree(BaseLogicTree):
         ``org.opensha.sha.imr.attenRelImpl`` which is subclass of
         ``org.opensha.sha.imr.AttenuationRelationship``.
         """
-        base_gmpe = jvm().JClass('org.opensha.sha.imr.AttenuationRelationship')
-        gmpe_package = jvm().JPackage('org.opensha.sha.imr.attenRelImpl')
-        gmpe = getattr(gmpe_package, value)
-        if not isinstance(gmpe, type) or not issubclass(gmpe, base_gmpe):
-            raise ValidationError(
-                node, self.filename, self.basepath,
-                'gmpe %r is not available' % value
-            )
-        return value
+        # All GMPEs must implement that interface:
+        base_gmpe = jvm().JClass(
+            'org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI'
+        )
+        try:
+            gmpe = jvm().JClass('%s.%s' % (self.GMPE_PACKAGE, value))
+        except jvm().JavaException:
+            # Class not found
+            pass
+        else:
+            if issubclass(gmpe, base_gmpe):
+                # Class exists and implements the proper interface.
+                return value
+        raise ValidationError(
+            node, self.filename, self.basepath,
+            'gmpe %r is not available' % value
+        )
 
     def validate_filters(self, node, uncertainty_type, filters):
         """
