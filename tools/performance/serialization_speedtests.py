@@ -104,7 +104,7 @@ def LOSS_CURVE_DATA(r1, r2):
                            'structureCategory': 'RM1L',
                            'lon': -118.077721,
                            'assetDescription': 'LA building',
-                           'vulnerabilityFunctionReference': 'HAZUS_RM1L_LC',
+                           'taxonomy': 'HAZUS_RM1L_LC',
                            'listID': 'LA01',
                            'assetValueUnit': 'EUR',
                            'lat': 33.852034})))
