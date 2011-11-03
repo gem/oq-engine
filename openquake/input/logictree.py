@@ -886,7 +886,6 @@ class GMPELogicTree(BaseLogicTree):
 
         Checks that the value is the name of the class inside java package
         :attr:`GMPE_PACKAGE` which implements interface :attr:`BASE_GMPE`.
-        ````.
         """
         base_gmpe = jvm().JClass(self.BASE_GMPE)
         try:
