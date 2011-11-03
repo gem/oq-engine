@@ -27,7 +27,7 @@ import unittest
 
 from openquake.utils import tasks
 
-from tests.utils.helpers import patch
+from tests.utils.helpers import patch, ConfigTestMixin
 from tests.utils.tasks import (
     failing_task, just_say_hello, reflect_args, reflect_data_to_be_processed,
     single_arg_called_a, reflect_data_with_task_index)
@@ -105,13 +105,6 @@ class DistributeTestCase(unittest.TestCase):
         for args, kwargs in result:
             actual.append((args, actual_kwargs(kwargs)))
         self.assertEqual(expected, actual)
-
-    def test_distribute_with_empty_data_and_cardinality_one(self):
-        """A *single* subtask will be spawned even with an empty data set."""
-        expected = ((), {"data_to_process": []})
-        [(args, kwargs)] = tasks.distribute(
-            1, reflect_args, ("data_to_process", []))
-        self.assertEqual(expected, (args, actual_kwargs(kwargs)))
 
     def test_distribute_with_non_empty_data_and_cardinality_one(self):
         """A single subtask will receive all the data to be processed."""
@@ -343,3 +336,29 @@ class CheckJobStatusTestCase(unittest.TestCase):
             else:
                 self.fail("JobCompletedError wasn't raised")
             self.assertEqual(mock.call_args_list, [((31, ), {})])
+
+
+class DistributeBlockingTestCase(ConfigTestMixin, unittest.TestCase):
+    """
+    Make sure that the partitioning of data into blocks as performed
+    by utils.tasks.distribute() works
+    """
+
+    def setUp(self):
+        self.setup_config()
+
+    def tearDown(self):
+        self.teardown_config()
+
+    def test_multiple_blocks(self):
+        """
+        The results passed back are correct when the data is partitioned
+        into multiple blocks.
+        """
+        # The block size is 2 i.e. distribute() will use 4 blocks.
+        self.prepare_config("tasks", {"block_size": 2})
+        expected = range(7)
+        result = tasks.distribute(
+            3, reflect_data_to_be_processed, ("data", range(7)),
+            flatten_results=True)
+        self.assertEqual(expected, result)
