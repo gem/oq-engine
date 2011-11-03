@@ -509,6 +509,9 @@ class JobStats(models.Model):
     stop_time = models.DateTimeField(editable=False)
     # The number of total sites in job
     num_sites = models.IntegerField()
+    # The number of logic tree samples
+    # (for hazard jobs of all types except deterministic)
+    realizations = models.IntegerField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"job_stats'

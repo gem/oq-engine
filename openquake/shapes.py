@@ -33,11 +33,13 @@ from numpy import sin, cos, arctan2, sqrt, radians
 from shapely import geometry
 from scipy.interpolate import interp1d
 
-from openquake import flags
 from openquake import java
 from openquake.utils import round_float
+from openquake import logs
 
-FLAGS = flags.FLAGS
+LOGGER = logs.LOG
+
+logs.set_logger_level(LOGGER, logs.LEVELS.get('debug'))
 
 LineString = geometry.LineString  # pylint: disable=C0103
 Point = geometry.Point            # pylint: disable=C0103
@@ -237,7 +239,15 @@ class Grid(object):
 
     def check_site(self, site):
         """Confirm that the site is contained by the region"""
-        return self.check_point(site.point)
+        check = False
+
+        try:
+            check = self.check_point(site.point)
+        except BoundsException:
+            LOGGER.debug("Site %s %s isn't on region" %
+                (site.point.site.longitude, site.point.site.latitude))
+
+        return check
 
     def check_point(self, point):
         """ Confirm that the point is within the polygon
@@ -292,8 +302,10 @@ class Grid(object):
                     self.check_gridpoint(point)
                     yield point
                 except BoundsException:
-                    print "Point (col %s row %s) at %s %s isnt on grid" % \
-                        (col, row, point.site.longitude, point.site.latitude)
+                    LOGGER.debug(
+                            "Point (col %s row %s) at %s %s isn't on grid"
+                            % (col, row, point.site.longitude,
+                                point.site.latitude))
 
 
 def c_mul(val_a, val_b):
@@ -878,23 +890,20 @@ def polygon_ewkt_from_coords(coords):
     return ewkt
 
 
-def hdistance(site1, site2):
+def hdistance(lat1, lon1, lat2, lon2):
     """Compute the great circle surface distance between two points
     using the Haversine formula.
 
-    :param site1: first point
-    :type site1: :py:class:`shapes.Site`
-    :param site2: second point
-    :type site2: :py:class:`shapes.Site`
-    :returns: the distance between the two points in km
+    :param lat1, lon1: first point coordinates
+    :param lat2, lon2: second point coordinates
     :rtype: float
     """
 
-    lat1 = radians(site1.latitude)
-    lat2 = radians(site2.latitude)
+    lat1 = radians(lat1)
+    lat2 = radians(lat2)
 
-    lon1 = radians(site1.longitude)
-    lon2 = radians(site2.longitude)
+    lon1 = radians(lon1)
+    lon2 = radians(lon2)
 
     dlon = lon2 - lon1
     dlat = lat2 - lat1

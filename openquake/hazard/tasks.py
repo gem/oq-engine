@@ -23,6 +23,7 @@ The following tasks are defined in the hazard engine:
     * generate_erf
     * compute_hazard_curve
     * compute_mgm_intensity
+    * compute_disagg_matrix
 """
 
 import json
