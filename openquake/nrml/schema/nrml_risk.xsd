@@ -187,7 +187,7 @@
             <xs:extension base="FieldNode">
                 <xs:sequence>
                     <xs:element name="assetDescription" type="xs:string" minOccurs="0" maxOccurs="1"/>
-                    <xs:element name="vulnerabilityFunctionReference" type="xs:string"/>
+                    <xs:element name="taxonomy" type="xs:string"/>
                     <xs:element name="structureCategory" type="xs:string"/>
                     <xs:element name="assetValue" type="AssetValue"/>
                 </xs:sequence>
