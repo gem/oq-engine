@@ -154,14 +154,14 @@ class ClassicalPSHABasedMixin:
 
         # we get the vulnerability function related to the asset
 
-        vuln_function_reference = asset["vulnerabilityFunctionReference"]
+        vuln_function_reference = asset["taxonomy"]
         vuln_function = self.vuln_curves.get(
             vuln_function_reference, None)
 
         if not vuln_function:
             LOGGER.error(
                 "Unknown vulnerability function %s for asset %s"
-                % (asset["vulnerabilityFunctionReference"],
+                % (asset["taxonomy"],
                 asset["assetID"]))
 
             return None
