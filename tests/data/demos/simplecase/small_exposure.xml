@@ -10,7 +10,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_HC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>18.02</assetValue>
       </assetDefinition>
@@ -21,7 +21,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_LC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>5.07</assetValue>
       </assetDefinition>
@@ -32,7 +32,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_MC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>16.33</assetValue>
       </assetDefinition>
@@ -43,7 +43,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S3_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S3_MC</taxonomy>
         <structureCategory>S3</structureCategory>
         <assetValue>12.52</assetValue>
       </assetDefinition>
@@ -54,7 +54,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S4L_MC</taxonomy>
         <structureCategory>S4L</structureCategory>
         <assetValue>18.78</assetValue>
       </assetDefinition>
@@ -65,7 +65,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LC</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>5.63</assetValue>
       </assetDefinition>
@@ -76,7 +76,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LS</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>11.26</assetValue>
       </assetDefinition>
@@ -87,7 +87,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_MC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>312.49</assetValue>
       </assetDefinition>
@@ -98,7 +98,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_MC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>2787.71</assetValue>
       </assetDefinition>
@@ -109,7 +109,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_PC2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_PC2L_MC</taxonomy>
         <structureCategory>PC2L</structureCategory>
         <assetValue>5.50</assetValue>
       </assetDefinition>
@@ -120,7 +120,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_HC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>175.78</assetValue>
       </assetDefinition>
@@ -131,7 +131,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_MC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>182148.97</assetValue>
       </assetDefinition>
@@ -142,7 +142,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C3L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C3L_MC</taxonomy>
         <structureCategory>C3L</structureCategory>
         <assetValue>5.50</assetValue>
       </assetDefinition>
@@ -153,7 +153,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_HC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>93834.31</assetValue>
       </assetDefinition>
@@ -164,7 +164,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_MH_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_MH_HC</taxonomy>
         <structureCategory>MH</structureCategory>
         <assetValue>87.72</assetValue>
       </assetDefinition>
@@ -175,7 +175,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_MH_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_MH_LC</taxonomy>
         <structureCategory>MH</structureCategory>
         <assetValue>33.54</assetValue>
       </assetDefinition>
@@ -186,7 +186,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_MH_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_MH_MC</taxonomy>
         <structureCategory>MH</structureCategory>
         <assetValue>113.52</assetValue>
       </assetDefinition>
@@ -197,7 +197,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_MH_PC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_MH_PC</taxonomy>
         <structureCategory>MH</structureCategory>
         <assetValue>23.22</assetValue>
       </assetDefinition>
@@ -208,7 +208,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_HC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>17.02</assetValue>
       </assetDefinition>
@@ -219,7 +219,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_LC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>5.50</assetValue>
       </assetDefinition>
@@ -230,7 +230,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_MC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>16.52</assetValue>
       </assetDefinition>
@@ -241,7 +241,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S4L_MC</taxonomy>
         <structureCategory>S4L</structureCategory>
         <assetValue>29.45</assetValue>
       </assetDefinition>
@@ -252,7 +252,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_MC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>171.84</assetValue>
       </assetDefinition>
@@ -263,7 +263,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C1L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C1L_HC</taxonomy>
         <structureCategory>C1L</structureCategory>
         <assetValue>40.68</assetValue>
       </assetDefinition>
@@ -274,7 +274,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C1L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C1L_MC</taxonomy>
         <structureCategory>C1L</structureCategory>
         <assetValue>20.34</assetValue>
       </assetDefinition>
@@ -285,7 +285,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_HC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>130.76</assetValue>
       </assetDefinition>
@@ -296,7 +296,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_MC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>90.07</assetValue>
       </assetDefinition>
@@ -307,7 +307,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_PC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_PC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>8.71</assetValue>
       </assetDefinition>
@@ -318,7 +318,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_HC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>110.22</assetValue>
       </assetDefinition>
@@ -329,7 +329,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_MC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>313.99</assetValue>
       </assetDefinition>
@@ -340,7 +340,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_MC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>59.51</assetValue>
       </assetDefinition>
@@ -351,7 +351,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_LC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>19.83</assetValue>
       </assetDefinition>
@@ -362,7 +362,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S1L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S1L_MC</taxonomy>
         <structureCategory>S1L</structureCategory>
         <assetValue>29.45</assetValue>
       </assetDefinition>
@@ -373,7 +373,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_HC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>176.62</assetValue>
       </assetDefinition>
@@ -384,7 +384,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S4L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S4L_HC</taxonomy>
         <structureCategory>S4L</structureCategory>
         <assetValue>40.68</assetValue>
       </assetDefinition>
@@ -395,7 +395,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S4L_PC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S4L_PC</taxonomy>
         <structureCategory>S4L</structureCategory>
         <assetValue>11.22</assetValue>
       </assetDefinition>
@@ -406,7 +406,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LS</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>11.02</assetValue>
       </assetDefinition>
@@ -417,7 +417,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_HC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>178.85</assetValue>
       </assetDefinition>
@@ -428,7 +428,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S2L_MC</taxonomy>
         <structureCategory>S2L</structureCategory>
         <assetValue>29.45</assetValue>
       </assetDefinition>
@@ -439,7 +439,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_MH_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_MH_HC</taxonomy>
         <structureCategory>MH</structureCategory>
         <assetValue>91.46</assetValue>
       </assetDefinition>
@@ -450,7 +450,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LS</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>11.32</assetValue>
       </assetDefinition>
@@ -461,7 +461,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM2L_MC</taxonomy>
         <structureCategory>RM2L</structureCategory>
         <assetValue>19.83</assetValue>
       </assetDefinition>
@@ -472,7 +472,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_MC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>3073.01</assetValue>
       </assetDefinition>
@@ -483,7 +483,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_MC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>200790.47</assetValue>
       </assetDefinition>
@@ -494,7 +494,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_MH_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_MH_LC</taxonomy>
         <structureCategory>MH</structureCategory>
         <assetValue>34.97</assetValue>
       </assetDefinition>
@@ -505,7 +505,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_MH_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_MH_MC</taxonomy>
         <structureCategory>MH</structureCategory>
         <assetValue>118.36</assetValue>
       </assetDefinition>
@@ -516,7 +516,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_MH_PC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_MH_PC</taxonomy>
         <structureCategory>MH</structureCategory>
         <assetValue>24.21</assetValue>
       </assetDefinition>
@@ -527,7 +527,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_HC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>17.10</assetValue>
       </assetDefinition>
@@ -538,7 +538,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_LC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>5.53</assetValue>
       </assetDefinition>
@@ -549,7 +549,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LC</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>5.66</assetValue>
       </assetDefinition>
@@ -560,7 +560,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C3L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C3L_MC</taxonomy>
         <structureCategory>C3L</structureCategory>
         <assetValue>5.53</assetValue>
       </assetDefinition>
@@ -571,7 +571,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_PC2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_PC2L_MC</taxonomy>
         <structureCategory>PC2L</structureCategory>
         <assetValue>5.53</assetValue>
       </assetDefinition>
@@ -582,7 +582,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_HC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>18.11</assetValue>
       </assetDefinition>
@@ -593,7 +593,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_LC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>5.09</assetValue>
       </assetDefinition>
@@ -604,7 +604,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_MC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>16.41</assetValue>
       </assetDefinition>
@@ -615,7 +615,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S3_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S3_MC</taxonomy>
         <structureCategory>S3</structureCategory>
         <assetValue>12.58</assetValue>
       </assetDefinition>
@@ -626,7 +626,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S4L_MC</taxonomy>
         <structureCategory>S4L</structureCategory>
         <assetValue>18.87</assetValue>
       </assetDefinition>
@@ -637,7 +637,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_MC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>16.60</assetValue>
       </assetDefinition>
@@ -648,7 +648,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_HC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>103437.51</assetValue>
       </assetDefinition>
@@ -659,7 +659,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_LC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>109.13</assetValue>
       </assetDefinition>
@@ -670,7 +670,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S3_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S3_MC</taxonomy>
         <structureCategory>S3</structureCategory>
         <assetValue>269.46</assetValue>
       </assetDefinition>
@@ -681,7 +681,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S4L_MC</taxonomy>
         <structureCategory>S4L</structureCategory>
         <assetValue>404.19</assetValue>
       </assetDefinition>
@@ -692,7 +692,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LC</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>121.25</assetValue>
       </assetDefinition>
@@ -703,7 +703,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LS</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>242.51</assetValue>
       </assetDefinition>
@@ -714,7 +714,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_HC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>3783.21</assetValue>
       </assetDefinition>
@@ -725,7 +725,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_HC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>992.44</assetValue>
       </assetDefinition>
@@ -736,7 +736,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_LC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>321.08</assetValue>
       </assetDefinition>
@@ -747,7 +747,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_MC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>963.25</assetValue>
       </assetDefinition>
@@ -758,7 +758,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C3L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C3L_MC</taxonomy>
         <structureCategory>C3L</structureCategory>
         <assetValue>321.08</assetValue>
       </assetDefinition>
@@ -769,7 +769,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_PC2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_PC2L_MC</taxonomy>
         <structureCategory>PC2L</structureCategory>
         <assetValue>321.08</assetValue>
       </assetDefinition>
@@ -780,7 +780,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LS</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>656.76</assetValue>
       </assetDefinition>
@@ -791,7 +791,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_HC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>1050.82</assetValue>
       </assetDefinition>
@@ -802,7 +802,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_MC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>952.31</assetValue>
       </assetDefinition>
@@ -813,7 +813,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LC</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>328.38</assetValue>
       </assetDefinition>
@@ -824,7 +824,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_MC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>15692.35</assetValue>
       </assetDefinition>
@@ -835,7 +835,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S4L_MC</taxonomy>
         <structureCategory>S4L</structureCategory>
         <assetValue>1094.61</assetValue>
       </assetDefinition>
@@ -846,7 +846,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_HC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>905.32</assetValue>
       </assetDefinition>
@@ -857,7 +857,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_LC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>295.54</assetValue>
       </assetDefinition>
@@ -868,7 +868,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_HC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>8826.94</assetValue>
       </assetDefinition>
@@ -879,7 +879,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LS</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>565.83</assetValue>
       </assetDefinition>
@@ -890,7 +890,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LC</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>282.91</assetValue>
       </assetDefinition>
@@ -901,7 +901,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S4L_MC</taxonomy>
         <structureCategory>S4L</structureCategory>
         <assetValue>943.05</assetValue>
       </assetDefinition>
@@ -912,7 +912,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S3_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S3_MC</taxonomy>
         <structureCategory>S3</structureCategory>
         <assetValue>628.70</assetValue>
       </assetDefinition>
@@ -923,7 +923,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_HC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>855.03</assetValue>
       </assetDefinition>
@@ -934,7 +934,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_LC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>254.62</assetValue>
       </assetDefinition>
@@ -945,7 +945,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_PC2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_PC2L_MC</taxonomy>
         <structureCategory>PC2L</structureCategory>
         <assetValue>276.62</assetValue>
       </assetDefinition>
@@ -956,7 +956,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C3L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C3L_MC</taxonomy>
         <structureCategory>C3L</structureCategory>
         <assetValue>276.62</assetValue>
       </assetDefinition>
@@ -967,7 +967,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_MC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>829.88</assetValue>
       </assetDefinition>
@@ -978,7 +978,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_LC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>276.62</assetValue>
       </assetDefinition>
@@ -989,7 +989,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_MC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>39870.10</assetValue>
       </assetDefinition>
@@ -1000,7 +1000,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_HC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>10245.54</assetValue>
       </assetDefinition>
@@ -1011,7 +1011,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_HC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>22426.93</assetValue>
       </assetDefinition>
@@ -1022,7 +1022,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_MC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>820.45</assetValue>
       </assetDefinition>
@@ -1033,7 +1033,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S4L_PC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S4L_PC</taxonomy>
         <structureCategory>S4L</structureCategory>
         <assetValue>304.14</assetValue>
       </assetDefinition>
@@ -1044,7 +1044,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_MC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>771.61</assetValue>
       </assetDefinition>
@@ -1055,7 +1055,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LS</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>1437.62</assetValue>
       </assetDefinition>
@@ -1066,7 +1066,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_MC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>1664.62</assetValue>
       </assetDefinition>
@@ -1077,7 +1077,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LS</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>42.71</assetValue>
       </assetDefinition>
@@ -1088,7 +1088,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_MC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>281.91</assetValue>
       </assetDefinition>
@@ -1099,7 +1099,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_LC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>205.02</assetValue>
       </assetDefinition>
@@ -1110,7 +1110,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_HS</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_HS</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>324.62</assetValue>
       </assetDefinition>
@@ -1121,7 +1121,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_PC1_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_PC1_MC</taxonomy>
         <structureCategory>PC1</structureCategory>
         <assetValue>121.63</assetValue>
       </assetDefinition>
@@ -1132,7 +1132,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_PC1_HS</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_PC1_HS</taxonomy>
         <structureCategory>PC1</structureCategory>
         <assetValue>121.63</assetValue>
       </assetDefinition>
@@ -1143,7 +1143,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_PC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_PC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>42.30</assetValue>
       </assetDefinition>
@@ -1154,7 +1154,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_MC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>79.32</assetValue>
       </assetDefinition>
@@ -1165,7 +1165,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_HC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>163.94</assetValue>
       </assetDefinition>
@@ -1176,7 +1176,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_MC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>4657.25</assetValue>
       </assetDefinition>
@@ -1187,7 +1187,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_HC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>1020.25</assetValue>
       </assetDefinition>
@@ -1198,7 +1198,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_MC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>1613.06</assetValue>
       </assetDefinition>
@@ -1209,7 +1209,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C1L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C1L_HC</taxonomy>
         <structureCategory>C1L</structureCategory>
         <assetValue>1102.53</assetValue>
       </assetDefinition>
@@ -1220,7 +1220,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C1L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C1L_MC</taxonomy>
         <structureCategory>C1L</structureCategory>
         <assetValue>551.26</assetValue>
       </assetDefinition>
@@ -1231,7 +1231,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_HC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>3543.85</assetValue>
       </assetDefinition>
@@ -1242,7 +1242,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_MC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>2441.32</assetValue>
       </assetDefinition>
@@ -1253,7 +1253,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_PC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_PC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>236.25</assetValue>
       </assetDefinition>
@@ -1264,7 +1264,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_HC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>4847.34</assetValue>
       </assetDefinition>
@@ -1275,7 +1275,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_LC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>537.68</assetValue>
       </assetDefinition>
@@ -1286,7 +1286,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LS</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>298.71</assetValue>
       </assetDefinition>
@@ -1297,7 +1297,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM2L_MC</taxonomy>
         <structureCategory>RM2L</structureCategory>
         <assetValue>537.68</assetValue>
       </assetDefinition>
@@ -1308,7 +1308,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S1L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S1L_MC</taxonomy>
         <structureCategory>S1L</structureCategory>
         <assetValue>798.38</assetValue>
       </assetDefinition>
@@ -1319,7 +1319,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S2L_MC</taxonomy>
         <structureCategory>S2L</structureCategory>
         <assetValue>798.38</assetValue>
       </assetDefinition>
@@ -1330,7 +1330,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S4L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S4L_HC</taxonomy>
         <structureCategory>S4L</structureCategory>
         <assetValue>1102.53</assetValue>
       </assetDefinition>
@@ -1341,7 +1341,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S4L_MC</taxonomy>
         <structureCategory>S4L</structureCategory>
         <assetValue>798.38</assetValue>
       </assetDefinition>
@@ -1352,7 +1352,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_MC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>18214.31</assetValue>
       </assetDefinition>
@@ -1363,7 +1363,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_HC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>2987.16</assetValue>
       </assetDefinition>
@@ -1374,7 +1374,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_MC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>762.85</assetValue>
       </assetDefinition>
@@ -1385,7 +1385,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_MC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>690.31</assetValue>
       </assetDefinition>
@@ -1396,7 +1396,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_LC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>214.23</assetValue>
       </assetDefinition>
@@ -1407,7 +1407,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_HC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>761.73</assetValue>
       </assetDefinition>
@@ -1418,7 +1418,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_PC2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_PC2L_MC</taxonomy>
         <structureCategory>PC2L</structureCategory>
         <assetValue>232.75</assetValue>
       </assetDefinition>
@@ -1429,7 +1429,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C3L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C3L_MC</taxonomy>
         <structureCategory>C3L</structureCategory>
         <assetValue>232.75</assetValue>
       </assetDefinition>
@@ -1440,7 +1440,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_MC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>698.25</assetValue>
       </assetDefinition>
@@ -1451,7 +1451,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_LC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>232.75</assetValue>
       </assetDefinition>
@@ -1462,7 +1462,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_HC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>719.41</assetValue>
       </assetDefinition>
@@ -1473,7 +1473,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_MC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>14590.61</assetValue>
       </assetDefinition>
@@ -1484,7 +1484,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_HC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>8207.22</assetValue>
       </assetDefinition>
@@ -1495,7 +1495,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LS</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>526.10</assetValue>
       </assetDefinition>
@@ -1506,7 +1506,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LC</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>263.05</assetValue>
       </assetDefinition>
@@ -1517,7 +1517,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S3_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S3_MC</taxonomy>
         <structureCategory>S3</structureCategory>
         <assetValue>528.98</assetValue>
       </assetDefinition>
@@ -1528,7 +1528,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S3_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S3_MC</taxonomy>
         <structureCategory>S3</structureCategory>
         <assetValue>584.56</assetValue>
       </assetDefinition>
@@ -1539,7 +1539,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_HC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>795.00</assetValue>
       </assetDefinition>
@@ -1550,7 +1550,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_LC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>236.74</assetValue>
       </assetDefinition>
@@ -1561,7 +1561,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_HC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>841.76</assetValue>
       </assetDefinition>
@@ -1572,7 +1572,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C3L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C3L_MC</taxonomy>
         <structureCategory>C3L</structureCategory>
         <assetValue>257.20</assetValue>
       </assetDefinition>
@@ -1583,7 +1583,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_LC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>257.20</assetValue>
       </assetDefinition>
@@ -1594,7 +1594,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LC</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>718.81</assetValue>
       </assetDefinition>
@@ -1605,7 +1605,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_MH_PC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_MH_PC</taxonomy>
         <structureCategory>MH</structureCategory>
         <assetValue>24.84</assetValue>
       </assetDefinition>
@@ -1616,7 +1616,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_PC2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_PC2L_MC</taxonomy>
         <structureCategory>PC2L</structureCategory>
         <assetValue>257.20</assetValue>
       </assetDefinition>
@@ -1627,7 +1627,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_MH_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_MH_LC</taxonomy>
         <structureCategory>MH</structureCategory>
         <assetValue>35.88</assetValue>
       </assetDefinition>
@@ -1638,7 +1638,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_MH_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_MH_HC</taxonomy>
         <structureCategory>MH</structureCategory>
         <assetValue>93.84</assetValue>
       </assetDefinition>
@@ -1649,7 +1649,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_MC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>31900.29</assetValue>
       </assetDefinition>
@@ -1660,7 +1660,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_HC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>16433.48</assetValue>
       </assetDefinition>
@@ -1671,7 +1671,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_MC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>488.22</assetValue>
       </assetDefinition>
@@ -1682,7 +1682,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S4L_MC</taxonomy>
         <structureCategory>S4L</structureCategory>
         <assetValue>876.84</assetValue>
       </assetDefinition>
@@ -1693,7 +1693,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_PC2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_PC2L_MC</taxonomy>
         <structureCategory>PC2L</structureCategory>
         <assetValue>702.83</assetValue>
       </assetDefinition>
@@ -1704,7 +1704,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_MH_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_MH_MC</taxonomy>
         <structureCategory>MH</structureCategory>
         <assetValue>121.44</assetValue>
       </assetDefinition>
@@ -1715,7 +1715,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S4L_MC</taxonomy>
         <structureCategory>S4L</structureCategory>
         <assetValue>793.47</assetValue>
       </assetDefinition>
@@ -1726,7 +1726,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S4L_MC</taxonomy>
         <structureCategory>S4L</structureCategory>
         <assetValue>2396.04</assetValue>
       </assetDefinition>
@@ -1737,7 +1737,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S3_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S3_MC</taxonomy>
         <structureCategory>S3</structureCategory>
         <assetValue>1597.36</assetValue>
       </assetDefinition>
@@ -1748,7 +1748,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_MC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>2084.55</assetValue>
       </assetDefinition>
@@ -1759,7 +1759,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_HC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>2300.19</assetValue>
       </assetDefinition>
@@ -1770,7 +1770,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C3L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C3L_MC</taxonomy>
         <structureCategory>C3L</structureCategory>
         <assetValue>702.83</assetValue>
       </assetDefinition>
@@ -1781,7 +1781,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_MC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>2108.51</assetValue>
       </assetDefinition>
@@ -1792,7 +1792,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_LC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>702.83</assetValue>
       </assetDefinition>
@@ -1803,7 +1803,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_HC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>2172.40</assetValue>
       </assetDefinition>
@@ -1814,7 +1814,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_MC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>33137.39</assetValue>
       </assetDefinition>
@@ -1825,7 +1825,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_HC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>18639.78</assetValue>
       </assetDefinition>
@@ -1836,7 +1836,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LS</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>1194.85</assetValue>
       </assetDefinition>
@@ -1847,7 +1847,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LC</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>597.42</assetValue>
       </assetDefinition>
@@ -1858,7 +1858,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_HC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>1805.56</assetValue>
       </assetDefinition>
@@ -1869,7 +1869,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LC</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>238.04</assetValue>
       </assetDefinition>
@@ -1880,7 +1880,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_URML_LS</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_URML_LS</taxonomy>
         <structureCategory>URML</structureCategory>
         <assetValue>476.08</assetValue>
       </assetDefinition>
@@ -1891,7 +1891,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_LC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>646.93</assetValue>
       </assetDefinition>
@@ -1902,7 +1902,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S4L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S4L_MC</taxonomy>
         <structureCategory>S4L</structureCategory>
         <assetValue>1991.43</assetValue>
       </assetDefinition>
@@ -1913,7 +1913,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_HC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>7426.87</assetValue>
       </assetDefinition>
@@ -1924,7 +1924,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_W1_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_W1_MC</taxonomy>
         <structureCategory>W1</structureCategory>
         <assetValue>13203.34</assetValue>
       </assetDefinition>
@@ -1935,7 +1935,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_LC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>584.15</assetValue>
       </assetDefinition>
@@ -1946,7 +1946,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C2L_MC</taxonomy>
         <structureCategory>C2L</structureCategory>
         <assetValue>1752.45</assetValue>
       </assetDefinition>
@@ -1957,7 +1957,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_S3_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_S3_MC</taxonomy>
         <structureCategory>S3</structureCategory>
         <assetValue>1327.62</assetValue>
       </assetDefinition>
@@ -1968,7 +1968,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_PC2L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_PC2L_MC</taxonomy>
         <structureCategory>PC2L</structureCategory>
         <assetValue>584.15</assetValue>
       </assetDefinition>
@@ -1979,7 +1979,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_MC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>1732.54</assetValue>
       </assetDefinition>
@@ -1990,7 +1990,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_HC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>1911.77</assetValue>
       </assetDefinition>
@@ -2001,7 +2001,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_C3L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_C3L_MC</taxonomy>
         <structureCategory>C3L</structureCategory>
         <assetValue>584.15</assetValue>
       </assetDefinition>
@@ -2012,7 +2012,7 @@
           </gml:Point>
         </site>
         <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_LC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>537.68</assetValue>
       </assetDefinition>

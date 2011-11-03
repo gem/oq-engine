@@ -267,7 +267,7 @@ class DeterministicEventBasedMixin:
             assets = load_assets_for_point(self.job_id, point)
             for asset in assets:
                 vuln_function = \
-                    vuln_model[asset['vulnerabilityFunctionReference']]
+                    vuln_model[asset['taxonomy']]
 
                 asset_mean_loss = det.compute_mean_loss(
                     vuln_function, gmvs, epsilon_provider, asset)
@@ -313,7 +313,7 @@ def load_assets_for_point(job_id, point):
 
     :returns: List of asset dicts at the given location (point) in the
         following form::
-            {u'assetValue': 124.27, u'vulnerabilityFunctionReference': u'ID'}
+            {u'assetValue': 124.27, u'taxonomy': u'ID'}
     """
     assets_key = kvs.tokens.asset_key(job_id, point.row, point.column)
     return kvs.get_list_json_decoded(assets_key)
