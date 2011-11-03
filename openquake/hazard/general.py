@@ -19,11 +19,15 @@
 
 """Common code for the hazard calculators."""
 
+import functools
 import numpy
 
 from openquake import java
 from openquake import kvs
 from openquake import logs
+
+from openquake.input import logictree
+
 from openquake.job.mixins import Mixin
 
 
@@ -39,6 +43,20 @@ IML_SCALING = {
     'PGD': numpy.log,
     'SA': numpy.log,
 }
+
+
+def preload(fn):
+    """A decorator for preload steps that must run on the Jobber node"""
+
+    @functools.wraps(fn)
+    def preloader(self, *args, **kwargs):  # pylint: disable=C0111
+        source_model_lt = self.params.get('SOURCE_MODEL_LOGIC_TREE_FILE_PATH')
+        gmpe_lt = self.params.get('GMPE_LOGIC_TREE_FILE_PATH')
+        basepath = self.params.get('BASE_PATH')
+        self.calc = logictree.LogicTreeProcessor(basepath, source_model_lt,
+                                                 gmpe_lt)
+        return fn(self, *args, **kwargs)
+    return preloader
 
 
 @java.jexception
