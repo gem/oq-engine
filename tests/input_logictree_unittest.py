@@ -1042,7 +1042,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                         "wrong exception message: %s" % exc.message)
         self.assertEqual(exc.lineno, 13)
 
-    def test_unavailable_gmpe(self):
+    def test_unavailable_gmpe_no_such_class(self):
         gmpe = _make_nrml("""\
         <logicTree logicTreeID="lt1">
             <logicTreeBranchingLevel branchingLevelID="bl1">
@@ -1050,7 +1050,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                                     branchSetID="bs1"
                                     applyToTectonicRegionType="Volcanic">
                     <logicTreeBranch branchID="b1">
-                        <uncertaintyModel>no-such-gmpe</uncertaintyModel>
+                        <uncertaintyModel>no_such_gmpe</uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
@@ -1060,7 +1060,32 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
                                             set(['Volcanic']),
                                             logictree.ValidationError)
-        self.assertEqual(exc.message, "gmpe 'no-such-gmpe' is not available",
+        self.assertEqual(exc.message, "gmpe 'no_such_gmpe' is not available",
+                        "wrong exception message: %s" % exc.message)
+        self.assertEqual(exc.lineno, 7)
+
+    def test_unavailable_gmpe_wrong_class(self):
+        gmpe = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                    branchSetID="bs1"
+                                    applyToTectonicRegionType="Volcanic">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>
+                            constants.AkB2010Constants
+                        </uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
+                                            set(['Volcanic']),
+                                            logictree.ValidationError)
+        error = "gmpe 'constants.AkB2010Constants' is not available"
+        self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
         self.assertEqual(exc.lineno, 7)
 
