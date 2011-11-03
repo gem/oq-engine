@@ -20,6 +20,7 @@
 
 import os
 import re
+import sys
 import subprocess
 import urlparse
 import logging
@@ -108,8 +109,10 @@ def run_job(job_file, output_type):
     # job executor terminates on SIGINT
     supervisor.ignore_sigint()
     # wait till both child processes are done
-    os.waitpid(job_pid, 0)
-    os.waitpid(supervisor_pid, 0)
+    _, job_exitcode = os.waitpid(job_pid, 0)
+    _, supervisor_exitcode = os.waitpid(supervisor_pid, 0)
+    # Return exit code 1 if any of subprocesses failed
+    sys.exit(bool(job_exitcode) or bool(supervisor_exitcode))
 
 
 def parse_config_file(config_file):
