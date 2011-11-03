@@ -870,32 +870,10 @@ class GMPELogicTree(BaseLogicTree):
         source models. Used to check that there are GMPEs for each, but
         no unattended ones.
     """
-    #: The list of supported GMPEs. List items refer to class names in package
-    #: ``org.opensha.sha.imr.attenRelImpl``.
-    GMPEs = frozenset("""\
-        Abrahamson_2000_AttenRel
-        AS_1997_AttenRel
-        AS_2008_AttenRel
-        AW_2010_AttenRel
-        BA_2008_AttenRel
-        BC_2004_AttenRel
-        BJF_1997_AttenRel
-        BS_2003_AttenRel
-        BW_1997_AttenRel
-        Campbell_1997_AttenRel
-        CB_2003_AttenRel
-        CB_2008_AttenRel
-        CL_2002_AttenRel
-        CS_2005_AttenRel
-        CY_2008_AttenRel
-        DahleEtAl_1995_AttenRel
-        Field_2000_AttenRel
-        GouletEtAl_2006_AttenRel
-        McVerryetal_2000_AttenRel
-        SadighEtAl_1997_AttenRel
-        SEA_1999_AttenRel
-        WC94_DisplMagRel""".split()
-    )
+    #: Java package to look for GMPE classes.
+    GMPE_PACKAGE = 'org.opensha.sha.imr.attenRelImpl'
+    #: Base GMPE java class (all valid GMPEs must extend it).
+    BASE_GMPE = 'org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI'
 
     def __init__(self, tectonic_region_types, *args, **kwargs):
         self.tectonic_region_types = frozenset(tectonic_region_types)
@@ -906,14 +884,23 @@ class GMPELogicTree(BaseLogicTree):
         """
         See superclass' method for description and signature specification.
 
-        Checks that the value is one of :attr:`GMPEs`.
+        Checks that the value is the name of the class inside java package
+        :attr:`GMPE_PACKAGE` which implements interface :attr:`BASE_GMPE`.
         """
-        if not value in self.GMPEs:
-            raise ValidationError(
-                node, self.filename, self.basepath,
-                'gmpe %r is not available' % value
-            )
-        return value
+        base_gmpe = jvm().JClass(self.BASE_GMPE)
+        try:
+            gmpe = jvm().JClass('%s.%s' % (self.GMPE_PACKAGE, value))
+        except jvm().JavaException:
+            # Class not found
+            pass
+        else:
+            if issubclass(gmpe, base_gmpe):
+                # Class exists and implements the proper interface.
+                return value
+        raise ValidationError(
+            node, self.filename, self.basepath,
+            'gmpe %r is not available' % value
+        )
 
     def validate_filters(self, node, uncertainty_type, filters):
         """
