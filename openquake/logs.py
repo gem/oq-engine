@@ -28,8 +28,6 @@ import socket
 import threading
 
 import kombu
-import kombu.entity
-import kombu.messaging
 from openquake.signalling import AMQPMessageConsumer, amqp_connect
 
 logging.basicConfig()
