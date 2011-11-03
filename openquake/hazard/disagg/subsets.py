@@ -23,7 +23,7 @@ import numpy
 from celery.task import task
 import h5py
 
-from openquake.hazard.disagg import core as disagg_core
+from openquake.hazard import disagg
 from openquake.shapes import hdistance
 
 # Disabling pylint checks: too many local vars, too many arguments,
@@ -80,7 +80,8 @@ def _distgen(site, lat_bin_edges, lon_bin_edges, distance_bin_edges,
     """
     Common part of the code for all extractors that compute distances.
     """
-    slat, slon = site
+    slat = site.latitude
+    slon = site.longitude
     enumeration = ((i, j, k, l, m)
                    for i in xrange(nlat - 1)
                    for j in xrange(nlon - 1)
@@ -272,8 +273,7 @@ def extract_subsets(site, full_matrix_path,
     to the extractor name.
 
     :param site:
-        Pair of floats: latitude and longitude of the Site that the matrix
-        was produced for.
+        :class:`openquake.shapes.Site` instance.
     :param full_matrix_path:
         Path to the full matrix file in hdf5 format.
     :param lat_bin_edges:
@@ -301,7 +301,7 @@ def extract_subsets(site, full_matrix_path,
     assert subsets
     assert not subsets - set(SUBSET_EXTRACTORS)
     with h5py.File(full_matrix_path, 'r') as source:
-        full_matrix = source[disagg_core.FULL_DISAGG_MATRIX].value
+        full_matrix = source[disagg.FULL_DISAGG_MATRIX].value
     with h5py.File(target_path, 'w') as target:
         for subset_type in subsets:
             extractor = SUBSET_EXTRACTORS[subset_type]
