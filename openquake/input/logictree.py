@@ -883,8 +883,8 @@ class GMPELogicTree(BaseLogicTree):
         See superclass' method for description and signature specification.
 
         Checks that the value is the name of the class inside java package
-        ``org.opensha.sha.imr.attenRelImpl`` which is subclass of
-        ``org.opensha.sha.imr.AttenuationRelationship``.
+        :attr:`GMPE_PACKAGE` which implements interface
+        ``org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI``.
         """
         # All GMPEs must implement that interface:
         base_gmpe = jvm().JClass(
