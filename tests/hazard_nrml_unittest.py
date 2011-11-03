@@ -25,6 +25,7 @@ from lxml import etree
 from openquake import shapes
 from openquake import xml
 
+from openquake.output import hazard_disagg
 from openquake.output import hazard as hazard_output
 from openquake.parser import hazard as hazard_parser
 
@@ -287,7 +288,7 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
         except OSError:
             pass
 
-        self.writer = hazard_output.DisaggregationBinaryMatrixXMLWriter(
+        self.writer = hazard_disagg.DisaggregationBinaryMatrixXMLWriter(
             self.FILENAME)
 
         # mandatory values to produce a valid nrml file

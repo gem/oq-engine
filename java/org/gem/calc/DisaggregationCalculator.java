@@ -8,8 +8,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.apache.commons.collections.Closure;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
@@ -33,7 +31,6 @@ import org.gem.calc.DisaggregationResult;
 
 public class DisaggregationCalculator {
 
-    private static Log logger = LogFactory.getLog(DisaggregationCalculator.class);
     /**
      * Dataset for the full disagg matrix (for HDF5 ouput).
      */
@@ -162,8 +159,6 @@ public class DisaggregationCalculator {
         {
             throw new RuntimeException(e);
         }
-
-        logger.debug("Hazard Curve is: " + hazardCurve.toString());
 
         double minMag = (Double) erf.getParameter(GEM1ERF.MIN_MAG_NAME).getValue();
 
