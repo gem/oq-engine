@@ -88,7 +88,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
              'taxonomy': 'RC/DMRF-D/LR',
              'structureCategory': 'RC-HR-PC',
              'assetValue': 250000.0,
-             'assetValueUnit': 'EUR',
+             'unit': 'EUR',
             })]
 
         ctr = None
