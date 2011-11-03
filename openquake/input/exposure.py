@@ -70,7 +70,7 @@ class ExposureDBWriter(object):
         data = models.ExposureData(
             exposure_model=self.model, asset_ref=values['assetID'],
             value=values['assetValue'],
-            vf_ref=values['vulnerabilityFunctionReference'],
+            taxonomy=values['taxonomy'],
             structure_type=values['structureCategory'],
             site="POINT(%s %s)" % (point.point.x, point.point.y),
             retrofitting_cost=None)

@@ -960,7 +960,7 @@ class ExposureData(models.Model):
     exposure_model = models.ForeignKey("ExposureModel")
     asset_ref = models.TextField()
     value = models.FloatField()
-    vf_ref = models.TextField()
+    taxonomy = models.TextField()
     structure_type = models.TextField(null=True)
     retrofitting_cost = models.FloatField(null=True)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
@@ -1002,7 +1002,7 @@ class VulnerabilityFunction(models.Model):
     '''
 
     vulnerability_model = models.ForeignKey("VulnerabilityModel")
-    vf_ref = models.TextField()
+    taxonomy = models.TextField()
     loss_ratios = FloatArrayField()
     covs = FloatArrayField()
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
