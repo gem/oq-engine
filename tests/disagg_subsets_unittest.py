@@ -24,7 +24,9 @@ import numpy
 
 from tests.utils import helpers
 
-from openquake.hazard.disagg import core as disagg_core
+from openquake.hazard import disagg
+from openquake.shapes import Site
+
 from openquake.hazard.disagg import subsets as disagg_subsets
 
 
@@ -46,7 +48,7 @@ class SubsetExtractionTestCase(unittest.TestCase):
     NTRT = 5
     FULL_MATRIX_SHAPE = (NLAT - 1, NLON - 1, NMAG - 1, NEPS - 1, NTRT)
 
-    SITE = (0.0, 0.0)
+    SITE = Site(0.0, 0.0)
 
     @classmethod
     def setUpClass(cls):
@@ -54,7 +56,7 @@ class SubsetExtractionTestCase(unittest.TestCase):
         cls.full_matrix_path = os.path.join(cls.tempdir, 'full-matrix.hdf5')
         full_matrix = h5py.File(cls.full_matrix_path, 'w')
         ds = cls.read_data_file(cls.FULL_MATRIX_DATA, cls.FULL_MATRIX_SHAPE)
-        full_matrix.create_dataset(disagg_core.FULL_DISAGG_MATRIX, data=ds)
+        full_matrix.create_dataset(disagg.FULL_DISAGG_MATRIX, data=ds)
 
     @classmethod
     def tearDownClass(cls):
@@ -120,7 +122,7 @@ class SubsetExtractionTestCase(unittest.TestCase):
                        [self.NLAT - 1, self.NLON - 1, self.NTRT])
 
     def test_full_matrix(self):
-        self._test_pmf(disagg_core.FULL_DISAGG_MATRIX,
+        self._test_pmf(disagg.FULL_DISAGG_MATRIX,
                        self.FULL_MATRIX_DATA,
                        [self.NLAT - 1, self.NLON - 1, self.NMAG - 1,
                         self.NEPS - 1, self.NTRT])
@@ -132,7 +134,7 @@ class SubsetExtractionTestCase(unittest.TestCase):
                               [self.NMAG - 1, self.NDIST - 1, self.NEPS - 1]),
             'latlonpmf': ('latitudeLongitudePMF.dat',
                           [self.NLAT - 1, self.NLON - 1]),
-            disagg_core.FULL_DISAGG_MATRIX: (self.FULL_MATRIX_DATA,
+            disagg.FULL_DISAGG_MATRIX: (self.FULL_MATRIX_DATA,
                                                  self.FULL_MATRIX_SHAPE)
         }
         disagg_subsets.extract_subsets(
