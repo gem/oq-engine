@@ -29,13 +29,29 @@ from openquake.output.hazard import _set_gml_id
 class DisaggregationBinaryMatrixXMLWriter(writer.FileWriter):
     """Write a file for a single disaggregation field in NRML format."""
 
-    def __init__(self, path, poe, imt, end_branch_label=None, statistics=None,
-                 quantile_value=None):
-        # TODO: The "endBranchLabel", "statistics" and "quantileValue" values are optional
+    def __init__(self, path, poe, imt, subsets, end_branch_label=None,
+                 statistics=None, quantile_value=None):
+        """
+        :param path:
+            Path to the resulting XML file.
+        :param float poe:
+            Probability of Exceedence value associated with the entire result
+            file.`
+        :param imt:
+            Intensity Measure Type. One of PGA, SA, PGV, PGD, IA, or RSD.
+        :param subsets:
+            List of Disaggregation subset types contained in this file. For
+            example::
+                ['MagnitudePMF', 'MagnitudeDistancePMF']
+        :param end_branch_label: optional
+        :param statistics: optional
+        :param quantile_value: optional
+        """
         writer.FileWriter.__init__(self, path)
 
         self.poe = poe
         self.imt = imt
+        self.subsets = subsets
         self.end_branch_label = end_branch_label
         self.statistics = statistics
         self.quantile_value = quantile_value
@@ -84,6 +100,13 @@ class DisaggregationBinaryMatrixXMLWriter(writer.FileWriter):
             if value:
                 self.disagg_result_field_el.set(attr, str(value))
 
+        disagg_result_types_el = etree.SubElement(
+            self.disagg_result_field_el,
+            "%sdisaggregationResultTypes" % NRML,
+            nsmap=NSMAP)
+
+        disagg_result_types_el.text = " ".join(self.subsets)
+
     def _write_disagg_result_node(self, site, value):
         """Write a <disaggregationResult/> for a given site.
 
@@ -129,7 +152,7 @@ class DisaggregationBinaryMatrixXMLWriter(writer.FileWriter):
         disagg_result_tag = "%sdisaggregationResult" % NRML
 
         disagg_result_el = etree.SubElement(
-            self.disagg_result_node_el, disagg_result_tag, nsmap=NSMAP)
+            disagg_result_node_el, disagg_result_tag, nsmap=NSMAP)
 
         # set the groundMotionValue and Path
         for attr in ("groundMotionValue", "path"):
@@ -143,11 +166,6 @@ class DisaggregationBinaryMatrixXMLWriter(writer.FileWriter):
 
     def close(self):
         """Write the instance document and close the file."""
-
-        if self.nrml_el is None:  # TODO: this is wrong
-            raise RuntimeError(
-                "You need at least one set to produce a valid output!")
-
         self.file.write(etree.tostring(self.nrml_el, pretty_print=True,
                 xml_declaration=True, encoding="UTF-8"))
 
