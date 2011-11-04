@@ -42,7 +42,7 @@ class DisaggregationBinaryMatrixXMLWriter(writer.FileWriter):
         :param subsets:
             List of Disaggregation subset types contained in this file. For
             example::
-                ['MagnitudePMF', 'MagnitudeDistancePMF']
+                ['MagPMF', 'MagDistPMF']
         :param end_branch_label: optional
         :param statistics: optional
         :param quantile_value: optional

@@ -287,18 +287,18 @@
     
     <xs:simpleType name="DisaggregationPMFType">
         <xs:restriction base="xs:string">
-            <xs:enumeration value="MagnitudePMF"/>
-            <xs:enumeration value="DistancePMF"/>
-            <xs:enumeration value="TectonicRegionTypePMF"/>
-            <xs:enumeration value="MagnitudeTectonicRegionTypePMF"/>
-            <xs:enumeration value="MagnitudeDistancePMF"/>
-            <xs:enumeration value="MagnitudeDistanceEpsilonPMF"/>
-            <xs:enumeration value="LatitudeLongitudePMF"/>
-            <xs:enumeration value="LatitudeLongitudeMagnitudePMF"/>
-            <xs:enumeration value="LatitudeLongitudeEpsilonPMF"/>
-            <xs:enumeration value="LatitudeLongitudeMagnitudeEpsilonPMF"/>
-            <xs:enumeration value="LatitudeLongitudeTectonicRegionTypePMF"/>
-            <xs:enumeration value="LatitudeLongitudeMagnitudeEpsilonTectonicRegionTypePMF"/> <!-- In db schema as 'fulldisaggmatrix'-->
+            <xs:enumeration value="MagPMF"/>
+            <xs:enumeration value="DistPMF"/>
+            <xs:enumeration value="TRTPMF"/>
+            <xs:enumeration value="MagTRTPMF"/>
+            <xs:enumeration value="MagDistPMF"/>
+            <xs:enumeration value="MagDistEpsPMF"/>
+            <xs:enumeration value="LatLonPMF"/>
+            <xs:enumeration value="LatLonMagPMF"/>
+            <xs:enumeration value="LatLonEpsPMF"/>
+            <xs:enumeration value="LatLonMagEpsPMF"/>
+            <xs:enumeration value="LatLonTRTPMF"/>
+            <xs:enumeration value="FullDisaggMatrix"/>
         </xs:restriction>
     </xs:simpleType>
     
