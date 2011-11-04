@@ -4,7 +4,7 @@
       gml:id="IDXXX">
     <disaggregationResultField poE="0.1" IMT="PGA" endBranchLabel="1" gml:id="ID000">
         <!-- List PMF subsets contained in the referenced binary files.-->
-        <disaggregationResultTypes>MagnitudePMF MagnitudeDistancePMF MagnitudeDistanceEpsilonPMF LatitudeLongitudeMagnitudeEpsilonPMF LatitudeLongitudeMagnitudeEpsilonTectonicRegionTyp</disaggregationResultTypes>
+        <disaggregationResultTypes>MagnitudePMF MagnitudeDistancePMF MagnitudeDistanceEpsilonPMF LatitudeLongitudeMagnitudeEpsilonPMF LatitudeLongitudeMagnitudeEpsilonTectonicRegionTypePMF</disaggregationResultTypes>
         <disaggregationResultNode gml:id="ID001">
             <site>
                 <gml:Point gml:id="ID002">
