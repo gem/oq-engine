@@ -281,6 +281,18 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
 
     NAMESPACES = {"nrml": xml.NRML_NS, "gml": xml.GML_NS}
     FILENAME = "dbinary.xml"
+    POE = 0.1
+    IMT = "PGA"
+    SUBSETS = [
+        'MagnitudePMF',
+        'MagnitudeDistancePMF',
+        'MagnitudeDistanceEpsilonPMF',
+        'LatitudeLongitudeMagnitudeEpsilonPMF',
+        'LatitudeLongitudeMagnitudeEpsilonTectonicRegionTypePMF',
+    ]
+    END_BRANCH_LABEL = "1"
+    STATISTICS = "mean"
+    QUANTILE_VALUE = 0.1
 
     def setUp(self):
         try:
@@ -289,115 +301,92 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
             pass
 
         self.writer = hazard_disagg.DisaggregationBinaryMatrixXMLWriter(
-            self.FILENAME)
+            self.FILENAME, self.POE, self.IMT, self.SUBSETS,
+            self.END_BRANCH_LABEL, self.STATISTICS, self.QUANTILE_VALUE)
 
-        # mandatory values to produce a valid nrml file
-        self.values = {
-            "poE": 0.1,
-            "IMT": "PGA",
-            "groundMotionValue": 0.25,
-            "path": "filea",
-        }
-
-    def test_writes_the_nrml_definition(self):
-        # double to check there's only one element
-        self.writer.write(shapes.Site(1.0, 2.0), self.values)
-        self.writer.write(shapes.Site(1.0, 2.0), self.values)
+    def test_result_field_attrs(self):
+        """Test that the various disaggregationResultField attrs are written
+        correctly (including all of the optional attributes)."""
+        # write a single node just to create a valid document
+        self.writer.write(shapes.Site(0.0, 0.0),
+                          {"groundMotionValue": 0.25, "path": "filea"})
         self.writer.close()
 
-        self.assertTrue(xml.validates_against_xml_schema(self.FILENAME))
-        self.assertEquals(1, len(self._xpath("/nrml:nrml")))
-
-    def test_writes_the_disagg_result_field(self):
-        # double to check there's only one element
-        self.writer.write(shapes.Site(1.0, 2.0), self.values)
-        self.writer.write(shapes.Site(1.0, 2.0), self.values)
-        self.writer.close()
-
-        disagg_fields = self._xpath(
+        [disagg_field] = self._xpath(
             "/nrml:nrml/nrml:disaggregationResultField")
 
-        self.assertEquals(1, len(disagg_fields))
-        self.assertEquals("0.1", disagg_fields[0].attrib["poE"])
-        self.assertEquals("PGA", disagg_fields[0].attrib["IMT"])
+        attrib = disagg_field.attrib
 
-    def test_writes_the_disagg_result_field_opt_attribs(self):
-        self.values.update({"endBranchLabel": 1,
-                "statistics": "mean", "quantileValue": 0.1})
-
-        self.writer.write(shapes.Site(1.0, 2.0), self.values)
-        self.writer.close()
-
-        disagg_fields = self._xpath(
-            "/nrml:nrml/nrml:disaggregationResultField")
+        self.assertEquals(str(self.POE), attrib['poE'])
+        self.assertEquals(self.IMT, attrib['IMT'])
+        self.assertEquals(self.END_BRANCH_LABEL, attrib['endBranchLabel'])
+        self.assertEquals(self.STATISTICS, attrib['statistics'])
+        self.assertEquals(str(self.QUANTILE_VALUE), attrib['quantileValue'])
 
         self.assertTrue(xml.validates_against_xml_schema(self.FILENAME))
-        self.assertEquals("mean", disagg_fields[0].attrib["statistics"])
-        self.assertEquals("1", disagg_fields[0].attrib["endBranchLabel"])
-        self.assertEquals("0.1", disagg_fields[0].attrib["quantileValue"])
 
-    def test_writes_the_disagg_result_node(self):
-        self.writer.write(shapes.Site(1.0, 2.0), self.values)
+    def test_write_single_result_node(self):
+        result_data = dict(groundMotionValue=0.25, path="filea")
+        expected_result_attrib = dict(groundMotionValue="0.25", path="filea")
+
+        self.writer.write(shapes.Site(1.0, 2.0), result_data)
         self.writer.close()
 
-        disagg_nodes = self._xpath("/nrml:nrml/nrml:disaggregationResultField"
-                "/nrml:disaggregationResultNode")
+        [site_node]= self._xpath("//gml:pos")
+        disagg_nodes = self._xpath("//nrml:disaggregationResultNode")
+        [result] = self._xpath("//nrml:disaggregationResult")
 
-        site_nodes = disagg_nodes[0].xpath(
-            "nrml:site/gml:Point/gml:pos", namespaces=self.NAMESPACES)
-
-        self.assertEquals(1, len(site_nodes))
+        self.assertEquals("1.0 2.0", site_node.text)
         self.assertEquals(1, len(disagg_nodes))
-        self.assertEquals("1.0 2.0", site_nodes[0].text)
+        self.assertEquals(expected_result_attrib, result.attrib)
 
-    def test_writes_multiple_result_nodes(self):
-        self.writer.write(shapes.Site(1.0, 2.0), self.values)
-        self.writer.write(shapes.Site(2.0, 3.0), self.values)
-        self.writer.write(shapes.Site(3.0, 4.0), self.values)
+        self.assertTrue(xml.validates_against_xml_schema(self.FILENAME))
+
+    def test_write_multiple_result_nodes(self):
+        result_data = [
+            dict(groundMotionValue=0.25, path="filea"),
+            dict(groundMotionValue=0.76, path="fileb"),
+            dict(groundMotionValue=0.11, path="filec"),
+        ]
+
+        expected_result_attrib = [
+            dict(groundMotionValue="0.25", path="filea"),
+            dict(groundMotionValue="0.76", path="fileb"),
+            dict(groundMotionValue="0.11", path="filec"),
+        ]
+
+        self.writer.write(shapes.Site(1.0, 2.0), result_data[0])
+        self.writer.write(shapes.Site(2.0, 3.0), result_data[1])
+        self.writer.write(shapes.Site(3.0, 4.0), result_data[2])
         self.writer.close()
 
         site_nodes = self._xpath("//gml:pos")
         disagg_nodes = self._xpath("//nrml:disaggregationResultNode")
+        results = self._xpath("//nrml:disaggregationResult")
 
         self.assertEquals(3, len(site_nodes))
         self.assertEquals(3, len(disagg_nodes))
+        self.assertEquals(3, len(results))
 
         self.assertEquals("1.0 2.0", site_nodes[0].text)
         self.assertEquals("2.0 3.0", site_nodes[1].text)
         self.assertEquals("3.0 4.0", site_nodes[2].text)
 
-    def test_writes_the_disagg_matrix_set(self):
-        self.writer.write(shapes.Site(1.0, 2.0), self.values)
-        self.writer.close()
+        for i, res in enumerate(results):
+            self.assertEquals(expected_result_attrib[i], res.attrib)
 
-        disagg_matrix_sets = self._xpath(
-                "/nrml:nrml/nrml:disaggregationResultField"
-                "/nrml:disaggregationResultNode/nrml:disaggregationResult")
-
-        self.assertEquals(1, len(disagg_matrix_sets))
-
-        self.assertEquals("0.25",
-                disagg_matrix_sets[0].attrib["groundMotionValue"])
-        self.assertEquals("filea",
-                disagg_matrix_sets[0].attrib["path"])
+        self.assertTrue(xml.validates_against_xml_schema(self.FILENAME))
 
     def test_serialize(self):
-        data = [(shapes.Site(1.0, 1.0), {"poE": 0.1, "IMT": "PGA",
-                "groundMotionValue": 0.25, "endBranchLabel": 1,
-                "path": "filea"}),
-                (shapes.Site(1.0, 2.0), {"poE": 0.1, "IMT": "PGA",
-                "groundMotionValue": 0.35, "endBranchLabel": 1,
-                "path": "fileb"})]
+        data = [(shapes.Site(1.0, 1.0),
+                {"groundMotionValue": 0.25, "path": "filea"}),
+                (shapes.Site(1.0, 2.0),
+                {"groundMotionValue": 0.35, "path": "fileb"})]
 
         self.writer.serialize(data)
-        import nose; nose.tools.set_trace()
+
         self.assertTrue(xml.validates_against_xml_schema(self.FILENAME))
 
     def _xpath(self, exp):
         doc = etree.parse(self.FILENAME)
         return doc.xpath(exp, namespaces=self.NAMESPACES)
-
-    def test_close_with_at_least_one_set(self):
-        """In order to produce a valid output file, at least
-        one disaggregation node must be written."""
-        self.assertRaises(RuntimeError, self.writer.close)
