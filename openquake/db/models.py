@@ -652,17 +652,17 @@ class OqParams(models.Model):
     # constraint checking for disagg_results. For now, I'm just going to let
     # the database check the constraints.
     # The following are the valid options for each element of this array field:
-    #   magpmf (Magnitude Probability Mass Function)
-    #   distpmf (Distance PMF)
-    #   trtpmf (Tectonic Region Type PMF)
-    #   magdistpmf (Magnitude-Distance PMF)
-    #   magdistepspmf (Magnitude-Distance-Epsilon PMF)
-    #   latlonpmf (Latitude-Longitude PMF)
-    #   latlonmagpmf (Latitude-Longitude-Magnitude PMF)
-    #   latlonmagepspmf (Latitude-Longitude-Magnitude-Epsilon PMF)
-    #   magtrtpmf (Magnitude-Tectonic Region Type PMF)
-    #   latlontrtpmf (Latitude-Longitude-Tectonic Region Type PMF)
-    #   fulldisaggmatrix (The full disaggregation matrix; includes
+    #   MagPMF (Magnitude Probability Mass Function)
+    #   DistPMF (Distance PMF)
+    #   TRTPMF (Tectonic Region Type PMF)
+    #   MagDistPMF (Magnitude-Distance PMF)
+    #   MagDistEpsPMF (Magnitude-Distance-Epsilon PMF)
+    #   LatLonPMF (Latitude-Longitude PMF)
+    #   LatLonMagPMF (Latitude-Longitude-Magnitude PMF)
+    #   LatLonMagEpsPMF (Latitude-Longitude-Magnitude-Epsilon PMF)
+    #   MagTRTPMF (Magnitude-Tectonic Region Type PMF)
+    #   LatLonTRTPMF (Latitude-Longitude-Tectonic Region Type PMF)
+    #   FullDisaggMatrix (The full disaggregation matrix; includes
     #       Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
     disagg_results = CharArrayField(null=True)
     VS30_TYPE_CHOICES = (
