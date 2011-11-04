@@ -119,6 +119,9 @@ class ExposurePortfolioFile(producer.FileProducer):
                 asset_category = str(element.get('assetCategory'))
                 self._current_meta['assetCategory'] = asset_category
 
+                unit = str(element.get('unit'))
+                self._current_meta['unit'] = unit
+
             elif event == 'start' and level < 2:
                 # check that the first child of the root element is an
                 # exposure portfolio
@@ -148,7 +151,6 @@ class ExposurePortfolioFile(producer.FileProducer):
         except Exception:
             error_str = 'element assetDefinition: no valid assetValue'
             raise ValueError(error_str)
-        site_attributes['assetValueUnit'] = asset_value.get('unit')
 
         # all of these attributes are in the NRML namespace
         for (required_attr, attr_type) in (('taxonomy', str),
