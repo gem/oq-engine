@@ -390,7 +390,6 @@ class DisaggMixin(Mixin):
         subset_types = config_text_to_list(
             the_job['DISAGGREGATION_RESULTS'], lambda x: x.lower())
 
-        # imt = the_job['INTENSITY_MEASURE_TYPE']
         rlz_poe_task_data = []
 
         for rlz, poe, data_list in full_disagg_results:
