@@ -407,7 +407,7 @@ class DisaggMixin(Mixin):
                     mag_bin_lims, eps_bin_lims, dist_bin_lims, target_file,
                     subset_types)
 
-                task_data.append((a_task, site, gmv, target_file))
+                task_data.append((a_task, site, gmv, matrix_path, target_file))
 
             rlz_poe_task_data.append((rlz, poe, task_data))
 
@@ -415,7 +415,7 @@ class DisaggMixin(Mixin):
 
         for rlz, poe, task_data in rlz_poe_task_data:
             rlz_poe_results = []  # list of data/results per (rlz, poe) pair
-            for a_task, site, gmv, target_file in task_data:
+            for a_task, site, gmv, matrix_path, target_file in task_data:
 
                 a_task.wait()
                 if not a_task.successful():
@@ -429,6 +429,9 @@ class DisaggMixin(Mixin):
                     raise RuntimeError(msg)
                 else:
                     rlz_poe_results.append((site, gmv, target_file))
+
+                # We don't need the full matrix file anymore.
+                os.unlink(matrix_path)
 
             final_results.append((rlz, poe, rlz_poe_results))
 
