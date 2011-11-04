@@ -290,6 +290,7 @@ def extract_subsets(site, full_matrix_path,
     ntrt = 5
     ndist = len(distance_bin_edges)
     subsets = set(subsets)
+    assert not subsets - set(SUBSET_EXTRACTORS)
     assert subsets
     with h5py.File(full_matrix_path, 'r') as source:
         full_matrix = source[disagg.FULL_DISAGG_MATRIX].value
