@@ -78,15 +78,12 @@ class ExposurePortfolioFile(producer.FileProducer):
          'listDescription': 'Collection of existing building in ' \
                             'downtown Pavia',
          'assetID': 'asset_02',
-         'assetDescription': 'Moment-resisting non-ductile concrete ' \
-                             'frame low rise',
          'assetCategory': 'buildings',
          'taxonomy': 'RC/DMRF-D/LR',
          'structureCategory': 'RC-LR-PC',
          'assetValue': 250000.0,
          'assetValueUnit': 'EUR'}
 
-    Note: assetDescription is optional.
     """
 
     def __init__(self, path):
@@ -154,8 +151,7 @@ class ExposurePortfolioFile(producer.FileProducer):
         site_attributes['assetValueUnit'] = asset_value.get('unit')
 
         # all of these attributes are in the NRML namespace
-        for (required_attr, attr_type) in (('assetDescription', str),
-                                   ('taxonomy', str),
+        for (required_attr, attr_type) in (('taxonomy', str),
                                    ('structureCategory', str)):
             attr_value = element.find('%s%s' % (NRML, required_attr)).text
             if attr_value is not None:
