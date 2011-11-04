@@ -230,7 +230,8 @@ class DisaggMixin(Mixin):
         full_disagg_results = DisaggMixin.distribute_disagg(
             self, sites, realizations, poes, result_dir)
 
-        subset_types = config_text_to_list(the_job['DISAGGREGATION_RESULTS'])
+        subset_types = config_text_to_list(
+            self.params['DISAGGREGATION_RESULTS'])
 
         subset_results = DisaggMixin.distribute_subsets(
             self, full_disagg_results, subset_types, result_dir)
