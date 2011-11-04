@@ -34,22 +34,7 @@ from openquake.shapes import hdistance
 #: byte order. The same is used by java side.
 DATA_TYPE = numpy.float64
 
-#: Mapping "extractor name -- extractor function".
-#: Used by :func:`extract_subsets`.
-SUBSET_EXTRACTORS = {}
 
-
-def pmf(func):
-    """
-    Decorator for extractor functions. Saves decorated functions
-    in :data:`SUBSET_EXTRACTORS` by their names. Returns decorated
-    function unchanged.
-    """
-    SUBSET_EXTRACTORS[func.func_name] = func
-    return func
-
-
-@pmf
 def fulldisaggmatrix(site, full_matrix, *args, **kwargs):
     """
     Full matrix: returns ``full_matrix`` argument (5D).
@@ -57,7 +42,6 @@ def fulldisaggmatrix(site, full_matrix, *args, **kwargs):
     return full_matrix
 
 
-@pmf
 def magpmf(site, full_matrix,
            lat_bin_edges, lon_bin_edges, distance_bin_edges,
            nlat, nlon, nmag, neps, ntrt, ndist):
@@ -103,7 +87,6 @@ def _distgen(site, lat_bin_edges, lon_bin_edges, distance_bin_edges,
         yield i, j, k, l, m, ii
 
 
-@pmf
 def distpmf(site, full_matrix,
             lat_bin_edges, lon_bin_edges, distance_bin_edges,
             nlat, nlon, nmag, neps, ntrt, ndist):
@@ -119,7 +102,6 @@ def distpmf(site, full_matrix,
     return ds
 
 
-@pmf
 def trtpmf(site, full_matrix,
            lat_bin_edges, lon_bin_edges, distance_bin_edges,
            nlat, nlon, nmag, neps, ntrt, ndist):
@@ -137,7 +119,6 @@ def trtpmf(site, full_matrix,
     return ds
 
 
-@pmf
 def magdistpmf(site, full_matrix,
                lat_bin_edges, lon_bin_edges, distance_bin_edges,
                nlat, nlon, nmag, neps, ntrt, ndist):
@@ -154,7 +135,6 @@ def magdistpmf(site, full_matrix,
     return ds
 
 
-@pmf
 def magdistepspmf(site, full_matrix,
                   lat_bin_edges, lon_bin_edges, distance_bin_edges,
                   nlat, nlon, nmag, neps, ntrt, ndist):
@@ -170,7 +150,6 @@ def magdistepspmf(site, full_matrix,
     return ds
 
 
-@pmf
 def latlonpmf(site, full_matrix,
               lat_bin_edges, lon_bin_edges, distance_bin_edges,
               nlat, nlon, nmag, neps, ntrt, ndist):
@@ -188,7 +167,6 @@ def latlonpmf(site, full_matrix,
     return ds
 
 
-@pmf
 def latlonmagpmf(site, full_matrix,
                  lat_bin_edges, lon_bin_edges, distance_bin_edges,
                  nlat, nlon, nmag, neps, ntrt, ndist):
@@ -206,7 +184,6 @@ def latlonmagpmf(site, full_matrix,
     return ds
 
 
-@pmf
 def latlonmagepspmf(site, full_matrix,
                     lat_bin_edges, lon_bin_edges, distance_bin_edges,
                     nlat, nlon, nmag, neps, ntrt, ndist):
@@ -224,7 +201,6 @@ def latlonmagepspmf(site, full_matrix,
     return ds
 
 
-@pmf
 def magtrtpmf(site, full_matrix,
               lat_bin_edges, lon_bin_edges, distance_bin_edges,
               nlat, nlon, nmag, neps, ntrt, ndist):
@@ -242,7 +218,6 @@ def magtrtpmf(site, full_matrix,
     return ds
 
 
-@pmf
 def latlontrtpmf(site, full_matrix,
                  lat_bin_edges, lon_bin_edges, distance_bin_edges,
                  nlat, nlon, nmag, neps, ntrt, ndist):
@@ -258,6 +233,23 @@ def latlontrtpmf(site, full_matrix,
                                   for l in xrange(nmag - 1)
                                   for m in xrange(neps - 1))
     return ds
+
+
+#: Mapping "extractor name -- extractor function".
+#: Used by :func:`extract_subsets`.
+SUBSET_EXTRACTORS = {
+    "MagPMF": magpmf,
+    "DistPMF": distpmf,
+    "TRTPMF": trtpmf,
+    "MagDistPMF": magdistpmf,
+    "MagDistEpsPMF": magdistepspmf,
+    "LatLonPMF": latlonpmf,
+    "LatLonMagPMF": latlonmagpmf,
+    "LatLonMagEpsPMF": latlonmagepspmf,
+    "MagTRTPMF": magtrtpmf,
+    "LatLonTRTPMF": latlontrtpmf,
+    "FullDisaggMatrix": fulldisaggmatrix,
+}
 
 
 @task
@@ -299,7 +291,6 @@ def extract_subsets(site, full_matrix_path,
     ndist = len(distance_bin_edges)
     subsets = set(subsets)
     assert subsets
-    assert not subsets - set(SUBSET_EXTRACTORS)
     with h5py.File(full_matrix_path, 'r') as source:
         full_matrix = source[disagg.FULL_DISAGG_MATRIX].value
     with h5py.File(target_path, 'w') as target:
