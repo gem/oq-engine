@@ -10,7 +10,6 @@
 			<gml:pos>-118.229726 34.050622</gml:pos>
 			</gml:Point>
 		</site>
-		<assetDescription>LA building</assetDescription>
 		<taxonomy>HAZUS_C2L_MC</taxonomy>
 		<structureCategory>C2L_MC</structureCategory>
 		<assetValue unit="EUR">22.86</assetValue>
@@ -21,7 +20,6 @@
 			<gml:pos>-118.229726 34.050622</gml:pos>
 			</gml:Point>
 		</site>
-		<assetDescription>LA building</assetDescription>
 		<taxonomy>HAZUS_RM1L_LC</taxonomy>
 		<structureCategory>RM1L_LC</structureCategory>
 		<assetValue unit="EUR">41.51</assetValue>
@@ -32,7 +30,6 @@
 			<gml:pos>-118.229726 34.050622</gml:pos>
 			</gml:Point>
 		</site>
-		<assetDescription>LA building</assetDescription>
 		<taxonomy>HAZUS_C2L_HC</taxonomy>
 		<structureCategory>C2L_HC</structureCategory>
 		<assetValue unit="EUR">23.55</assetValue>
@@ -43,7 +40,6 @@
 			<gml:pos>-118.241243 34.061557</gml:pos>
 			</gml:Point>
 		</site>
-		<assetDescription>LA building</assetDescription>
 		<taxonomy>HAZUS_S4L_MC</taxonomy>
 		<structureCategory>S4L_MC</structureCategory>
 		<assetValue unit="EUR">2129.55</assetValue>
@@ -54,7 +50,6 @@
 			<gml:pos>-118.241243 34.061557</gml:pos>
 			</gml:Point>
 		</site>
-		<assetDescription>LA building</assetDescription>
 		<taxonomy>HAZUS_C2L_LC</taxonomy>
 		<structureCategory>C2L_LC</structureCategory>
 		<assetValue unit="EUR">624.66</assetValue>
@@ -65,7 +60,6 @@
 			<gml:pos>-118.241243 34.061557</gml:pos>
 			</gml:Point>
 		</site>
-		<assetDescription>LA building</assetDescription>
 		<taxonomy>HAZUS_C2L_MC</taxonomy>
 		<structureCategory>C2L_MC</structureCategory>
 		<assetValue unit="EUR">1874</assetValue>
@@ -76,7 +70,6 @@
 			<gml:pos>-118.245388 34.055984</gml:pos>
 			</gml:Point>
 		</site>
-		<assetDescription>LA building</assetDescription>
 		<taxonomy>HAZUS_RM2L_MC</taxonomy>
 		<structureCategory>RM2L_MC</structureCategory>
 		<assetValue unit="EUR">663.02</assetValue>
@@ -87,7 +80,6 @@
 			<gml:pos>-118.245388 34.055984</gml:pos>
 			</gml:Point>
 		</site>
-		<assetDescription>LA building</assetDescription>
 		<taxonomy>HAZUS_S1L_MC</taxonomy>
 		<structureCategory>S1L_MC</structureCategory>
 		<assetValue unit="EUR">984.48</assetValue>
@@ -98,7 +90,6 @@
 			<gml:pos>-118.245388 34.055984</gml:pos>
 			</gml:Point>
 		</site>
-		<assetDescription>LA building</assetDescription>
 		<taxonomy>HAZUS_S2L_MC</taxonomy>
 		<structureCategory>S2L_MC</structureCategory>
 		<assetValue unit="EUR">984.48</assetValue>
