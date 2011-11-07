@@ -552,7 +552,7 @@ class Job(object):
 
     def _extract_coords(self, config_param):
         """Extract from a configuration parameter the list of coordinates."""
-        verts = [float(x) for x in self.params[config_param].split(",")]
+        verts = self[config_param]
         return zip(verts[1::2], verts[::2])
 
     def _sites_for_region(self):
@@ -560,7 +560,7 @@ class Job(object):
         region = shapes.Region.from_coordinates(
             self._extract_coords('REGION_VERTEX'))
 
-        region.cell_size = float(self.params['REGION_GRID_SPACING'])
+        region.cell_size = self['REGION_GRID_SPACING']
         return [site for site in region]
 
     def build_nrml_path(self, nrml_file):
@@ -592,8 +592,9 @@ class Job(object):
     @property
     def imls(self):
         "Return the intensity measure levels as specified in the config file"
-        return self.extract_values_from_config('INTENSITY_MEASURE_LEVELS',
-                                               separator=',')
+        if self.has('INTENSITY_MEASURE_LEVELS'):
+            return self['INTENSITY_MEASURE_LEVELS']
+        return None
 
     def _record_initial_stats(self):
         '''
@@ -606,12 +607,10 @@ class Job(object):
         stats.start_time = datetime.utcnow()
         stats.num_sites = len(self.sites_to_compute())
 
-        job_type = CALCULATION_MODE[self.params['CALCULATION_MODE']]
+        job_type = CALCULATION_MODE[self['CALCULATION_MODE']]
         if conf.HAZARD_SECTION in self.sections:
             if job_type != 'deterministic':
-                stats.realizations = int(
-                    self.params["NUMBER_OF_LOGIC_TREE_SAMPLES"]
-                )
+                stats.realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
 
         stats.save()
 
