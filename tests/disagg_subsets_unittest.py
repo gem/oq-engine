@@ -82,42 +82,42 @@ class SubsetExtractionTestCase(unittest.TestCase):
         helpers.assertDeepAlmostEqual(self, expected_result, result)
 
     def test_magpmf(self):
-        self._test_pmf('magpmf', 'magnitudePMF.dat', [self.NMAG - 1])
+        self._test_pmf('MagPMF', 'magnitudePMF.dat', [self.NMAG - 1])
 
     def test_distpmf(self):
-        self._test_pmf('distpmf', 'distancePMF.dat', [self.NDIST - 1])
+        self._test_pmf('DistPMF', 'distancePMF.dat', [self.NDIST - 1])
 
     def test_trtpmf(self):
-        self._test_pmf('trtpmf', 'tectonicRegionTypePMF.dat', [self.NTRT])
+        self._test_pmf('TRTPMF', 'tectonicRegionTypePMF.dat', [self.NTRT])
 
     def test_magdistpmf(self):
-        self._test_pmf('magdistpmf', 'magnitudeDistancePMF.dat',
+        self._test_pmf('MagDistPMF', 'magnitudeDistancePMF.dat',
                        [self.NMAG - 1, self.NDIST - 1])
 
     def test_magdistepspmf(self):
-        self._test_pmf('magdistepspmf', 'magnitudeDistanceEpsilonPMF.dat',
+        self._test_pmf('MagDistEpsPMF', 'magnitudeDistanceEpsilonPMF.dat',
                        [self.NMAG - 1, self.NDIST - 1, self.NEPS - 1])
 
     def test_latlonpmf(self):
-        self._test_pmf('latlonpmf', 'latitudeLongitudePMF.dat',
+        self._test_pmf('LatLonPMF', 'latitudeLongitudePMF.dat',
                        [self.NLAT - 1, self.NLON - 1])
 
     def test_latlonmagpmf(self):
-        self._test_pmf('latlonmagpmf', 'latitudeLongitudeMagnitudePMF.dat',
+        self._test_pmf('LatLonMagPMF', 'latitudeLongitudeMagnitudePMF.dat',
                        [self.NLAT - 1, self.NLON - 1, self.NMAG - 1])
 
     def test_latlonmagepspmf(self):
-        self._test_pmf('latlonmagepspmf',
+        self._test_pmf('LatLonMagEpsPMF',
                        'latitudeLongitudeMagnitudeEpsilonPMF.dat',
                        [self.NLAT - 1, self.NLON - 1,
                         self.NMAG - 1, self.NEPS - 1])
 
     def test_magtrtpmf(self):
-        self._test_pmf('magtrtpmf', 'magnitudeTectonicRegionTypePMF.dat',
+        self._test_pmf('MagTRTPMF', 'magnitudeTectonicRegionTypePMF.dat',
                        [self.NMAG - 1, self.NTRT])
 
     def test_latlontrtpmf(self):
-        self._test_pmf('latlontrtpmf',
+        self._test_pmf('LatLonTRTPMF',
                        'latitudeLongitudeTectonicRegionTypePMF.dat',
                        [self.NLAT - 1, self.NLON - 1, self.NTRT])
 
@@ -130,9 +130,9 @@ class SubsetExtractionTestCase(unittest.TestCase):
     def test_multiple_matrices(self):
         target_path = os.path.join(self.tempdir, 'multiple.hdf5')
         pmfs = {
-            'magdistepspmf': ('magnitudeDistanceEpsilonPMF.dat',
+            'MagDistEpsPMF': ('magnitudeDistanceEpsilonPMF.dat',
                               [self.NMAG - 1, self.NDIST - 1, self.NEPS - 1]),
-            'latlonpmf': ('latitudeLongitudePMF.dat',
+            'LatLonPMF': ('latitudeLongitudePMF.dat',
                           [self.NLAT - 1, self.NLON - 1]),
             disagg.FULL_DISAGG_MATRIX: (self.FULL_MATRIX_DATA,
                                                  self.FULL_MATRIX_SHAPE)

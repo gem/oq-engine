@@ -965,29 +965,29 @@ CREATE TABLE uiapi.oq_params (
             ((job_type != 'disaggregation')
             AND (distance_bin_limits IS NULL))),
     -- For disaggregation results, choose any (at least 1) of the following:
-    --      magpmf (Magnitude Probability Mass Function)
-    --      distpmf (Distance PMF)
-    --      trtpmf (Tectonic Region Type PMF)
-    --      magdistpmf (Magnitude-Distance PMF)
-    --      magdistepspmf (Magnitude-Distance-Epsilon PMF)
-    --      latlonpmf (Latitude-Longitude PMF)
-    --      latlonmagpmf (Latitude-Longitude-Magnitude PMF)
-    --      latlonmagepspmf (Latitude-Longitude-Magnitude-Epsilon PMF)
-    --      magtrtpmf (Magnitude-Tectonic Region Type PMF)
-    --      latlontrtpmf (Latitude-Longitude-Tectonic Region Type PMF)
-    --      fulldisaggmatrix (The full disaggregation matrix; includes
+    --      MagPMF (Magnitude Probability Mass Function)
+    --      DistPMF (Distance PMF)
+    --      TRTPMF (Tectonic Region Type PMF)
+    --      MagDistPMF (Magnitude-Distance PMF)
+    --      MagDistEpsPMF (Magnitude-Distance-Epsilon PMF)
+    --      LatLonPMF (Latitude-Longitude PMF)
+    --      LatLonMagPMF (Latitude-Longitude-Magnitude PMF)
+    --      LatLonMagEpsPMF (Latitude-Longitude-Magnitude-Epsilon PMF)
+    --      MagTRTPMF (Magnitude-Tectonic Region Type PMF)
+    --      LatLonTRTPMF (Latitude-Longitude-Tectonic Region Type PMF)
+    --      FullDisaggMatrix (The full disaggregation matrix; includes
     --          Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
     disagg_results VARCHAR[]
         CONSTRAINT disagg_results_valid
         CHECK(
             (((job_type = 'disaggregation')
             AND (disagg_results IS NOT NULL)
-            AND (disagg_results <@ ARRAY['magpmf', 'distpmf', 'trtpmf',
-                                         'magdistpmf', 'magdistepspmf',
-                                         'latlonpmf', 'latlonmagpmf',
-                                         'latlonmagepspmf',
-                                         'magtrtpmf', 'latlontrtpmf',
-                                         'fulldisaggmatrix']::VARCHAR[]))
+            AND (disagg_results <@ ARRAY['MagPMF', 'DistPMF', 'TRTPMF',
+                                         'MagDistPMF', 'MagDistEpsPMF',
+                                         'LatLonPMF', 'LatLonMagPMF',
+                                         'LatLonMagEpsPMF',
+                                         'MagTRTPMF', 'LatLonTRTPMF',
+                                         'FullDisaggMatrix']::VARCHAR[]))
             OR
             ((job_type != 'disaggregation')
             AND (disagg_results IS NULL)))),

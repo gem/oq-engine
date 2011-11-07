@@ -940,10 +940,10 @@ class JobUtilsTestCase(unittest.TestCase):
 
     def test_config_text_to_list(self):
         """Exercise :function:`openquake.job.config_text_to_list`."""
-        expected = ['magdistpmf', 'magdistepspmf', 'fulldisaggmatrix']
+        expected = ['MagDistPMF', 'MagDistEpsPMF', 'FullDisaggMatrix']
 
         # the input mixes spaces and commas for robustness testing:
-        test_input = 'magdistpmf,magdistepspmf fulldisaggmatrix'
+        test_input = 'MagDistPMF,MagDistEpsPMF FullDisaggMatrix'
 
         self.assertEqual(expected, config_text_to_list(test_input))
 
