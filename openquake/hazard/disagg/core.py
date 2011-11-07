@@ -202,8 +202,8 @@ class DisaggMixin(Mixin):
         """
         # cache the source model and gmpe model in the KVS
         # so the Java code can access it
-        src_model_seed = int(self.params.get('SOURCE_MODEL_LT_RANDOM_SEED'))
-        gmpe_seed = int(self.params.get('GMPE_LT_RANDOM_SEED'))
+        src_model_seed = self['SOURCE_MODEL_LT_RANDOM_SEED']
+        gmpe_seed = self['GMPE_LT_RANDOM_SEED']
 
         store_source_model(self.job_id, src_model_seed, self.params, self.calc)
         store_gmpe_map(self.job_id, gmpe_seed, self.calc)
@@ -212,8 +212,8 @@ class DisaggMixin(Mixin):
         result_dir = DisaggMixin.create_result_dir(
             config.get('nfs', 'base_dir'), self.job_id)
 
-        realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
-        poes = self.params['POES']
+        realizations = self['NUMBER_OF_LOGIC_TREE_SAMPLES']
+        poes = self['POES']
         sites = self.sites_to_compute()
 
         log_msg = ("Computing disaggregation for job_id=%s,  %s sites, "
@@ -224,7 +224,7 @@ class DisaggMixin(Mixin):
         full_disagg_results = DisaggMixin.distribute_disagg(
             self, sites, realizations, poes, result_dir)
 
-        subset_types = self.params['DISAGGREGATION_RESULTS']
+        subset_types = self['DISAGGREGATION_RESULTS']
 
         subset_results = DisaggMixin.distribute_subsets(
             self, full_disagg_results, subset_types, result_dir)
