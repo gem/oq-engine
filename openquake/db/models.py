@@ -541,6 +541,8 @@ class OqParams(models.Model):
        (u'sa', u'Spectral Acceleration'),
        (u'pgv', u'Peak Ground Velocity'),
        (u'pgd', u'Peak Ground Displacement'),
+       (u'ia', u'Arias Intensity'),
+       (u'rsd', u'Relative Significant Duration'),
     )
     imt = models.TextField(choices=IMT_CHOICES)
     period = models.FloatField(null=True)
@@ -652,17 +654,17 @@ class OqParams(models.Model):
     # constraint checking for disagg_results. For now, I'm just going to let
     # the database check the constraints.
     # The following are the valid options for each element of this array field:
-    #   magpmf (Magnitude Probability Mass Function)
-    #   distpmf (Distance PMF)
-    #   trtpmf (Tectonic Region Type PMF)
-    #   magdistpmf (Magnitude-Distance PMF)
-    #   magdistepspmf (Magnitude-Distance-Epsilon PMF)
-    #   latlonpmf (Latitude-Longitude PMF)
-    #   latlonmagpmf (Latitude-Longitude-Magnitude PMF)
-    #   latlonmagepspmf (Latitude-Longitude-Magnitude-Epsilon PMF)
-    #   magtrtpmf (Magnitude-Tectonic Region Type PMF)
-    #   latlontrtpmf (Latitude-Longitude-Tectonic Region Type PMF)
-    #   fulldisaggmatrix (The full disaggregation matrix; includes
+    #   MagPMF (Magnitude Probability Mass Function)
+    #   DistPMF (Distance PMF)
+    #   TRTPMF (Tectonic Region Type PMF)
+    #   MagDistPMF (Magnitude-Distance PMF)
+    #   MagDistEpsPMF (Magnitude-Distance-Epsilon PMF)
+    #   LatLonPMF (Latitude-Longitude PMF)
+    #   LatLonMagPMF (Latitude-Longitude-Magnitude PMF)
+    #   LatLonMagEpsPMF (Latitude-Longitude-Magnitude-Epsilon PMF)
+    #   MagTRTPMF (Magnitude-Tectonic Region Type PMF)
+    #   LatLonTRTPMF (Latitude-Longitude-Tectonic Region Type PMF)
+    #   FullDisaggMatrix (The full disaggregation matrix; includes
     #       Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
     disagg_results = CharArrayField(null=True)
     VS30_TYPE_CHOICES = (
@@ -960,7 +962,7 @@ class ExposureData(models.Model):
     exposure_model = models.ForeignKey("ExposureModel")
     asset_ref = models.TextField()
     value = models.FloatField()
-    vf_ref = models.TextField()
+    taxonomy = models.TextField()
     structure_type = models.TextField(null=True)
     retrofitting_cost = models.FloatField(null=True)
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
@@ -986,6 +988,8 @@ class VulnerabilityModel(models.Model):
         ('sa', 'Spectral Acceleration'),
         ('pgv', 'Peak Ground Velocity'),
         ('pgd', 'Peak Ground Displacement'),
+        ('ia', 'Arias Intensity'),
+        ('rsd', 'Relative Significant Duration'),
     )
     imt = models.TextField(choices=IMT_CHOICES)
     imls = FloatArrayField()
@@ -1002,7 +1006,7 @@ class VulnerabilityFunction(models.Model):
     '''
 
     vulnerability_model = models.ForeignKey("VulnerabilityModel")
-    vf_ref = models.TextField()
+    taxonomy = models.TextField()
     loss_ratios = FloatArrayField()
     covs = FloatArrayField()
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)

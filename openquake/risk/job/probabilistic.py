@@ -225,12 +225,12 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
         epsilon_provider = general.EpsilonProvider(self.params)
 
         vuln_function = self.vuln_curves.get(
-            asset["vulnerabilityFunctionReference"], None)
+            asset["taxonomy"], None)
 
         if not vuln_function:
             LOGGER.error(
                 "Unknown vulnerability function %s for asset %s"
-                % (asset["vulnerabilityFunctionReference"], asset["assetID"]))
+                % (asset["taxonomy"], asset["assetID"]))
 
             return None
 
@@ -242,12 +242,12 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
         """Compute the loss ratio curve for a single asset."""
 
         vuln_function = self.vuln_curves.get(
-            asset["vulnerabilityFunctionReference"], None)
+            asset["taxonomy"], None)
 
         if not vuln_function:
             LOGGER.error(
                 "Unknown vulnerability function %s for asset %s"
-                % (asset["vulnerabilityFunctionReference"], asset["assetID"]))
+                % (asset["taxonomy"], asset["assetID"]))
 
             return None
 
