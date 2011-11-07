@@ -59,12 +59,13 @@ class ExposureDBWriter(object):
         it also inserts the main exposure model entry if not already
         present,
         """
+
         if not self.model:
             self.model = models.ExposureModel(
                 owner=self.owner,
                 description=values.get('listDescription'),
                 category=values['assetCategory'],
-                unit=values['assetValueUnit'])
+                unit=values['unit'])
             self.model.save()
 
         data = models.ExposureData(

@@ -541,6 +541,8 @@ class OqParams(models.Model):
        (u'sa', u'Spectral Acceleration'),
        (u'pgv', u'Peak Ground Velocity'),
        (u'pgd', u'Peak Ground Displacement'),
+       (u'ia', u'Arias Intensity'),
+       (u'rsd', u'Relative Significant Duration'),
     )
     imt = models.TextField(choices=IMT_CHOICES)
     period = models.FloatField(null=True)
@@ -986,6 +988,8 @@ class VulnerabilityModel(models.Model):
         ('sa', 'Spectral Acceleration'),
         ('pgv', 'Peak Ground Velocity'),
         ('pgd', 'Peak Ground Displacement'),
+        ('ia', 'Arias Intensity'),
+        ('rsd', 'Relative Significant Duration'),
     )
     imt = models.TextField(choices=IMT_CHOICES)
     imls = FloatArrayField()

@@ -10,7 +10,7 @@
         <!-- for attributes assetType and lossType, classification from the
              Taxonomy and Ontology working group is needed -->
         <!-- exposureList is a gml:Feature -->
-        <exposureList gml:id="PAV01" assetCategory="buildings" lossCategory="economic_loss">
+        <exposureList gml:id="PAV01" assetCategory="buildings" lossCategory="economic_loss" unit="EUR">
             
             <gml:description>Collection of existing building in downtown Pavia</gml:description>
             
@@ -22,10 +22,9 @@
                     </gml:Point>
                 </site>
                 
-                <assetDescription>Moment-resisting non-ductile concrete frame low rise</assetDescription>
                 <taxonomy>RC/DMRF-D/LR</taxonomy>
                 <structureCategory>RC-LR-PC</structureCategory>
-                <assetValue unit="EUR">150000</assetValue>
+                <assetValue>150000</assetValue>
             </assetDefinition>
             
             <assetDefinition gml:id="asset_02">
@@ -35,10 +34,9 @@
                     </gml:Point>
                 </site>
                 
-                <assetDescription>Moment-resisting non-ductile concrete frame high rise</assetDescription>
                 <taxonomy>RC/DMRF-D/LR</taxonomy>
                 <structureCategory>RC-HR-PC</structureCategory>
-                <assetValue unit="EUR">250000</assetValue>
+                <assetValue>250000</assetValue>
             </assetDefinition>
             
             <assetDefinition gml:id="asset_03">
@@ -48,10 +46,9 @@
                     </gml:Point>
                 </site>
                 
-                <assetDescription>Moment-resisting non-ductile concrete frame low rise</assetDescription>
                 <taxonomy>RC/DMRF-D/LR</taxonomy>
                 <structureCategory>RC-LR-PC</structureCategory>
-                <assetValue unit="EUR">500000</assetValue>
+                <assetValue>500000</assetValue>
             </assetDefinition>
 
         </exposureList>
