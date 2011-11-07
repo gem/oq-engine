@@ -40,7 +40,6 @@ from openquake.hazard.general import (
     preload, generate_erf, generate_gmpe_map, set_gmpe_params,
     store_source_model, store_gmpe_map)
 from openquake.job.mixins import Mixin
-from openquake.job.params import config_text_to_list
 from openquake.utils.tasks import check_job_status
 
 
@@ -71,14 +70,10 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
     """
     the_job = job.Job.from_kvs(job_id)
 
-    lat_bin_lims = config_text_to_list(
-        the_job[job_cfg.LAT_BIN_LIMITS], float)
-    lon_bin_lims = config_text_to_list(
-        the_job[job_cfg.LON_BIN_LIMITS], float)
-    mag_bin_lims = config_text_to_list(
-        the_job[job_cfg.MAG_BIN_LIMITS], float)
-    eps_bin_lims = config_text_to_list(
-        the_job[job_cfg.EPS_BIN_LIMITS], float)
+    lat_bin_lims = the_job[job_cfg.LAT_BIN_LIMITS]
+    lon_bin_lims = the_job[job_cfg.LON_BIN_LIMITS]
+    mag_bin_lims = the_job[job_cfg.MAG_BIN_LIMITS]
+    eps_bin_lims = the_job[job_cfg.EPS_BIN_LIMITS]
 
     jd = list_to_jdouble_array
 
@@ -95,8 +90,7 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
     set_gmpe_params(gmpe_map, the_job.params)
 
     iml_arraylist = java.jclass('ArrayList')()
-    iml_vals = config_text_to_list(
-        the_job['INTENSITY_MEASURE_LEVELS'], float)
+    iml_vals = the_job['INTENSITY_MEASURE_LEVELS']
     # Map `log` (natural log) to each IML value before passing to the
     # calculator.
     iml_vals = [log(x) for x in iml_vals]
@@ -219,7 +213,7 @@ class DisaggMixin(Mixin):
             config.get('nfs', 'base_dir'), self.job_id)
 
         realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
-        poes = config_text_to_list(self.params['POES'], float)
+        poes = self.params['POES']
         sites = self.sites_to_compute()
 
         log_msg = ("Computing disaggregation for job_id=%s,  %s sites, "
@@ -230,8 +224,7 @@ class DisaggMixin(Mixin):
         full_disagg_results = DisaggMixin.distribute_disagg(
             self, sites, realizations, poes, result_dir)
 
-        subset_types = config_text_to_list(
-            self.params['DISAGGREGATION_RESULTS'])
+        subset_types = self.params['DISAGGREGATION_RESULTS']
 
         subset_results = DisaggMixin.distribute_subsets(
             self, full_disagg_results, subset_types, result_dir)
@@ -381,16 +374,11 @@ class DisaggMixin(Mixin):
                  ),
                 ]
         """
-        lat_bin_lims = config_text_to_list(
-            the_job[job_cfg.LAT_BIN_LIMITS], float)
-        lon_bin_lims = config_text_to_list(
-            the_job[job_cfg.LON_BIN_LIMITS], float)
-        mag_bin_lims = config_text_to_list(
-            the_job[job_cfg.MAG_BIN_LIMITS], float)
-        eps_bin_lims = config_text_to_list(
-            the_job[job_cfg.EPS_BIN_LIMITS], float)
-        dist_bin_lims = config_text_to_list(
-            the_job[job_cfg.DIST_BIN_LIMITS], float)
+        lat_bin_lims = the_job[job_cfg.LAT_BIN_LIMITS]
+        lon_bin_lims = the_job[job_cfg.LON_BIN_LIMITS]
+        mag_bin_lims = the_job[job_cfg.MAG_BIN_LIMITS]
+        eps_bin_lims = the_job[job_cfg.EPS_BIN_LIMITS]
+        dist_bin_lims = the_job[job_cfg.DIST_BIN_LIMITS]
 
         # imt = the_job['INTENSITY_MEASURE_TYPE']
         rlz_poe_task_data = []
