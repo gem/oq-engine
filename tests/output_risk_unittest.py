@@ -40,8 +40,7 @@ RISK_LOSS_CURVE_DATA = [
       {u'assetValue': 5.07, u'assetID': u'a5625',
        u'listDescription': u'Collection of exposure values for ...',
        u'structureCategory': u'RM1L', u'lon': -118.077721,
-       u'assetDescription': u'LA building',
-       u'vulnerabilityFunctionReference': u'HAZUS_RM1L_LC',
+       u'taxonomy': u'HAZUS_RM1L_LC',
        u'listID': u'LA01', u'assetValueUnit': 'EUR', u'lat': 33.852034})),
 
     (Site(-118.077721, 33.852034),
@@ -50,8 +49,8 @@ RISK_LOSS_CURVE_DATA = [
      {u'assetValue': 5.63, u'assetID': u'a5629',
       u'listDescription': u'Collection of exposure values for ...',
       u'structureCategory': u'URML',
-      u'lon': -118.077721, u'assetDescription': u'LA building',
-      u'vulnerabilityFunctionReference': u'HAZUS_URML_LC',
+      u'lon': -118.077721,
+      u'taxonomy': u'HAZUS_URML_LC',
       u'listID': u'LA01', u'assetValueUnit': 'EUR', u'lat': 33.852034})),
 
     (Site(-118.077721, 33.852034),
@@ -60,8 +59,7 @@ RISK_LOSS_CURVE_DATA = [
      {u'assetValue': 11.26, u'assetID': u'a5630',
       u'listDescription': u'Collection of exposure values for ...',
       u'structureCategory': u'URML', u'lon': -118.077721,
-      u'assetDescription': u'LA building',
-      u'vulnerabilityFunctionReference': u'HAZUS_URML_LS',
+      u'taxonomy': u'HAZUS_URML_LS',
       u'listID': u'LA01', u'assetValueUnit': 'EUR', u'lat': 33.852034})),
 
     (Site(-118.077721, 33.852034),
@@ -70,8 +68,7 @@ RISK_LOSS_CURVE_DATA = [
      {u'assetValue': 5.5, u'assetID': u'a5636',
       u'listDescription': u'Collection of exposure values for ...',
       u'structureCategory': u'C3L', u'lon': -118.077721,
-      u'assetDescription': u'LA building',
-      u'vulnerabilityFunctionReference': u'HAZUS_C3L_MC',
+      u'taxonomy': u'HAZUS_C3L_MC',
       u'listID': u'LA01', u'assetValueUnit': 'EUR', u'lat': 33.852034})),
 ]
 
