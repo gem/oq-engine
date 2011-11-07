@@ -332,7 +332,7 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
         self.writer.write(shapes.Site(1.0, 2.0), result_data)
         self.writer.close()
 
-        [site_node]= self._xpath("//gml:pos")
+        [site_node] = self._xpath("//gml:pos")
         disagg_nodes = self._xpath("//nrml:disaggregationResultNode")
         [result] = self._xpath("//nrml:disaggregationResult")
 
