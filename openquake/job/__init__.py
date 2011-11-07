@@ -45,6 +45,7 @@ from openquake.db.models import (
 from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
+from openquake.job import params as job_params
 from openquake.job.mixins import Mixin
 from openquake.job.params import (
     PARAMS, CALCULATION_MODE, ENUM_MAP, PATH_PARAMS, INPUT_FILE_TYPES,
@@ -474,7 +475,11 @@ class Job(object):
                 self.execute()
 
     def __getitem__(self, name):
-        return self.params[name]
+        defined_param = job_params.PARAMS.get(name)
+        if defined_param.to_job is not None:
+            return defined_param.to_job(self.params.get(name))
+        else:
+            return self.params.get(name)
 
     def __eq__(self, other):
         return self.params == other.params
