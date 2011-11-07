@@ -607,8 +607,10 @@ CREATE TABLE uiapi.oq_params (
     --      spectral acceleration (sa)
     --      peak ground velocity (pgv)
     --      peak ground displacement (pgd)
+    --      Arias Intensity (ia)
+    --      relative significant duration (rsd)
     imt VARCHAR NOT NULL CONSTRAINT imt_value
-        CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd')),
+        CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd')),
     period float CONSTRAINT period_is_set
         CHECK(((imt = 'sa') AND (period IS NOT NULL))
               OR ((imt != 'sa') AND (period IS NULL))),
@@ -963,29 +965,29 @@ CREATE TABLE uiapi.oq_params (
             ((job_type != 'disaggregation')
             AND (distance_bin_limits IS NULL))),
     -- For disaggregation results, choose any (at least 1) of the following:
-    --      magpmf (Magnitude Probability Mass Function)
-    --      distpmf (Distance PMF)
-    --      trtpmf (Tectonic Region Type PMF)
-    --      magdistpmf (Magnitude-Distance PMF)
-    --      magdistepspmf (Magnitude-Distance-Epsilon PMF)
-    --      latlonpmf (Latitude-Longitude PMF)
-    --      latlonmagpmf (Latitude-Longitude-Magnitude PMF)
-    --      latlonmagepspmf (Latitude-Longitude-Magnitude-Epsilon PMF)
-    --      magtrtpmf (Magnitude-Tectonic Region Type PMF)
-    --      latlontrtpmf (Latitude-Longitude-Tectonic Region Type PMF)
-    --      fulldisaggmatrix (The full disaggregation matrix; includes
+    --      MagPMF (Magnitude Probability Mass Function)
+    --      DistPMF (Distance PMF)
+    --      TRTPMF (Tectonic Region Type PMF)
+    --      MagDistPMF (Magnitude-Distance PMF)
+    --      MagDistEpsPMF (Magnitude-Distance-Epsilon PMF)
+    --      LatLonPMF (Latitude-Longitude PMF)
+    --      LatLonMagPMF (Latitude-Longitude-Magnitude PMF)
+    --      LatLonMagEpsPMF (Latitude-Longitude-Magnitude-Epsilon PMF)
+    --      MagTRTPMF (Magnitude-Tectonic Region Type PMF)
+    --      LatLonTRTPMF (Latitude-Longitude-Tectonic Region Type PMF)
+    --      FullDisaggMatrix (The full disaggregation matrix; includes
     --          Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
     disagg_results VARCHAR[]
         CONSTRAINT disagg_results_valid
         CHECK(
             (((job_type = 'disaggregation')
             AND (disagg_results IS NOT NULL)
-            AND (disagg_results <@ ARRAY['magpmf', 'distpmf', 'trtpmf',
-                                         'magdistpmf', 'magdistepspmf',
-                                         'latlonpmf', 'latlonmagpmf',
-                                         'latlonmagepspmf',
-                                         'magtrtpmf', 'latlontrtpmf',
-                                         'fulldisaggmatrix']::VARCHAR[]))
+            AND (disagg_results <@ ARRAY['MagPMF', 'DistPMF', 'TRTPMF',
+                                         'MagDistPMF', 'MagDistEpsPMF',
+                                         'LatLonPMF', 'LatLonMagPMF',
+                                         'LatLonMagEpsPMF',
+                                         'MagTRTPMF', 'LatLonTRTPMF',
+                                         'FullDisaggMatrix']::VARCHAR[]))
             OR
             ((job_type != 'disaggregation')
             AND (disagg_results IS NULL)))),
@@ -1264,7 +1266,7 @@ CREATE TABLE oqmif.exposure_data (
     asset_ref VARCHAR NOT NULL,
     value float NOT NULL,
     -- Vulnerability function reference
-    vf_ref VARCHAR NOT NULL,
+    taxonomy VARCHAR NOT NULL,
     structure_type VARCHAR,
     retrofitting_cost float,
     last_update timestamp without time zone
@@ -1282,7 +1284,7 @@ CREATE TABLE riski.vulnerability_model (
     name VARCHAR NOT NULL,
     description VARCHAR,
     imt VARCHAR NOT NULL CONSTRAINT imt_value
-        CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd')),
+        CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd')),
     imls float[] NOT NULL,
     -- e.g. "buildings", "bridges" etc.
     category VARCHAR NOT NULL,
@@ -1297,7 +1299,7 @@ CREATE TABLE riski.vulnerability_function (
     vulnerability_model_id INTEGER NOT NULL,
     -- The vulnerability function reference is unique within an vulnerability
     -- model.
-    vf_ref VARCHAR NOT NULL,
+    taxonomy VARCHAR NOT NULL,
     -- Please note: there must be one loss ratio and coefficient of variation
     -- per IML value defined in the referenced vulnerability model.
     loss_ratios float[] NOT NULL CONSTRAINT loss_ratio_values
@@ -1306,7 +1308,7 @@ CREATE TABLE riski.vulnerability_function (
     covs float[] NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL,
-    UNIQUE (vulnerability_model_id, vf_ref)
+    UNIQUE (vulnerability_model_id, taxonomy)
 ) TABLESPACE riski_ts;
 
 

@@ -14,9 +14,7 @@
     
     <xs:complexType name="AssetValue">
         <xs:simpleContent>
-            <xs:extension base="NonNegativeDoubleType">
-                <xs:attribute name="unit" type="AssetValueUnit"/>
-            </xs:extension>
+            <xs:extension base="NonNegativeDoubleType" />
         </xs:simpleContent>
     </xs:complexType>
 
@@ -31,10 +29,7 @@
     </xs:simpleType>
     
     <xs:simpleType name="AssetValueUnit">
-        <xs:restriction base="xs:string">
-            <xs:enumeration value="USD"/>
-            <xs:enumeration value="EUR"/>
-        </xs:restriction>
+        <xs:restriction base="xs:string" />
     </xs:simpleType>
     
     <xs:simpleType name="PoE">
@@ -106,6 +101,7 @@
                 </xs:sequence>
                 <xs:attribute name="assetCategory" type="AssetCategory" use="required"/>
                 <xs:attribute name="lossCategory" type="LossCategory" use="required"/>
+                <xs:attribute name="unit" type="AssetValueUnit"/>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
@@ -186,8 +182,7 @@
         <xs:complexContent>
             <xs:extension base="FieldNode">
                 <xs:sequence>
-                    <xs:element name="assetDescription" type="xs:string" minOccurs="0" maxOccurs="1"/>
-                    <xs:element name="vulnerabilityFunctionReference" type="xs:string"/>
+                    <xs:element name="taxonomy" type="xs:string"/>
                     <xs:element name="structureCategory" type="xs:string"/>
                     <xs:element name="assetValue" type="AssetValue"/>
                 </xs:sequence>

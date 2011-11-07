@@ -10,8 +10,7 @@
             <gml:pos>-118.077721 33.852034</gml:pos>
           </gml:Point>
         </site>
-        <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_HC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_HC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>18.02</assetValue>
       </assetDefinition>
@@ -21,8 +20,7 @@
             <gml:pos>-118.077721 33.852034</gml:pos>
           </gml:Point>
         </site>
-        <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_LC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_LC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>5.07</assetValue>
       </assetDefinition>
@@ -32,8 +30,7 @@
             <gml:pos>-118.077721 33.852034</gml:pos>
           </gml:Point>
         </site>
-        <assetDescription>LA building</assetDescription>
-        <vulnerabilityFunctionReference>HAZUS_RM1L_MC</vulnerabilityFunctionReference>
+        <taxonomy>HAZUS_RM1L_MC</taxonomy>
         <structureCategory>RM1L</structureCategory>
         <assetValue>16.33</assetValue>
       </assetDefinition>

@@ -230,7 +230,7 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals('asset_01', assets[0].asset_ref)
         self.assertEquals(150000, assets[0].value)
         self.assertEquals('RC/DMRF-D/LR',
-                          assets[0].vf_ref)
+                          assets[0].taxonomy)
         self.assertEquals('RC-LR-PC', assets[0].structure_type)
         self.assertEquals(shapes.Site(9.15000, 45.16667),
                           _to_site(assets[0].site))
@@ -238,7 +238,7 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals('asset_02', assets[1].asset_ref)
         self.assertEquals(250000, assets[1].value)
         self.assertEquals('RC/DMRF-D/LR',
-                          assets[1].vf_ref)
+                          assets[1].taxonomy)
         self.assertEquals('RC-HR-PC', assets[1].structure_type)
         self.assertEquals(shapes.Site(9.15333, 45.12200),
                           _to_site(assets[1].site))
@@ -246,7 +246,7 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals('asset_03', assets[2].asset_ref)
         self.assertEquals(500000, assets[2].value)
         self.assertEquals('RC/DMRF-D/LR',
-                          assets[2].vf_ref)
+                          assets[2].taxonomy)
         self.assertEquals('RC-LR-PC', assets[2].structure_type)
         self.assertEquals(shapes.Site(9.14777, 45.17999),
                           _to_site(assets[2].site))
