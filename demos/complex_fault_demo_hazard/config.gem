@@ -37,7 +37,7 @@ WIDTH_OF_MFD_BIN = 0.1
 
 # (Average Horizontal, Average Horizontal (GMRotI50), Random Horizontal, Greater of Two Horz., Vertical)
 COMPONENT = Average Horizontal (GMRotI50)
-# (PGA (g), PGD (cm), PGV (cm/s), SA (g))
+# (PGA (g), PGD (cm), PGV (cm/s), SA (g), IA (m/s), RSD (s))
 INTENSITY_MEASURE_TYPE = PGA
 # seconds, used only for Spectral Acceleration
 PERIOD = 0.0
