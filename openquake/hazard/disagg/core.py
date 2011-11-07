@@ -32,7 +32,6 @@ from openquake.hazard import job as haz_job
 from openquake.hazard import disagg
 from openquake.java import jtask as task
 from openquake.job import config as job_cfg
-from openquake.job import config_text_to_list
 from openquake.output import hazard_disagg as hazard_output
 from openquake.utils import config
 
@@ -41,6 +40,7 @@ from openquake.hazard.general import (
     preload, generate_erf, generate_gmpe_map, set_gmpe_params,
     store_source_model, store_gmpe_map)
 from openquake.job.mixins import Mixin
+from openquake.job.params import config_text_to_list
 from openquake.utils.tasks import check_job_status
 
 
@@ -95,7 +95,7 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
     set_gmpe_params(gmpe_map, the_job.params)
 
     iml_arraylist = java.jclass('ArrayList')()
-    iml_vals = job.config_text_to_list(
+    iml_vals = config_text_to_list(
         the_job['INTENSITY_MEASURE_LEVELS'], float)
     # Map `log` (natural log) to each IML value before passing to the
     # calculator.
@@ -219,7 +219,7 @@ class DisaggMixin(Mixin):
             config.get('nfs', 'base_dir'), self.job_id)
 
         realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
-        poes = job.config_text_to_list(self.params['POES'], float)
+        poes = config_text_to_list(self.params['POES'], float)
         sites = self.sites_to_compute()
 
         log_msg = ("Computing disaggregation for job_id=%s,  %s sites, "
