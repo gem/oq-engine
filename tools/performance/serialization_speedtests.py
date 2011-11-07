@@ -103,7 +103,6 @@ def LOSS_CURVE_DATA(r1, r2):
                            'listDescription': 'Collection of exposure values',
                            'structureCategory': 'RM1L',
                            'lon': -118.077721,
-                           'assetDescription': 'LA building',
                            'taxonomy': 'HAZUS_RM1L_LC',
                            'listID': 'LA01',
                            'assetValueUnit': 'EUR',

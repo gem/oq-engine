@@ -450,7 +450,6 @@ class DisaggMixin(Mixin):
             Results of :method:`DisaggMixin.distribute_subsets`.
         """
         imt = the_job['INTENSITY_MEASURE_TYPE']
-        result_types = config_text_to_list(the_job['DISAGGREGATION_RESULTS'])
 
         for rlz, poe, data in subsets_data:
 
