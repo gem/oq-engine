@@ -77,17 +77,6 @@ ENUM_MAP = {
     'Line Sources (random or given strike)': 'linesources',
     'Cross Hair Line Sources': 'crosshairsources',
     '16 Spoked Line Sources': '16spokedsources',
-    'MagPMF': 'magpmf',
-    'DistPMF': 'distpmf',
-    'TRTPMF': 'trtpmf',
-    'MagDistPMF': 'magdistpmf',
-    'MagDistEpsPMF': 'magdistepspmf',
-    'LatLonPMF': 'latlonpmf',
-    'LatLonMagPMF': 'latlonmagpmf',
-    'LatLonMagEpsPMF': 'latlonmagepspmf',
-    'MagTRTPMF': 'magtrtpmf',
-    'LatLonTRTPMF': 'latlontrtpmf',
-    'FullDisaggMatrix': 'fulldisaggmatrix',
 }
 
 CALCULATION_MODES = set(CALCULATION_MODE.values())
@@ -99,20 +88,6 @@ PATH_PARAMS = ['VULNERABILITY', 'SINGLE_RUPTURE_MODEL', 'EXPOSURE',
 def map_enum(value):
     """Map enumerated values from configuration to database"""
     return ENUM_MAP[value]
-
-
-def sequence_map_enum(value):
-    """Accepts a list of values (as a string), maps each value to its db value,
-    and returns a comma separated string.
-    >>> sequence_map_enum('MagPMF, MagDistPMF')
-    'magpmf, magdistpmf'
-
-    This works on space-delimited lists as well:
-    >>> sequence_map_enum('MagPMF MagDistPMF')
-    'magpmf, magdistpmf'
-    """
-
-    return ', '.join(map_enum(v.strip()) for v in ARRAY_RE.split(value))
 
 
 # pylint: disable=W0212
@@ -179,7 +154,7 @@ define_param('SOURCE_MODEL_LOGIC_TREE_FILE', None,
 
 # Disaggregation parameters:
 define_param('DISAGGREGATION_RESULTS', 'disagg_results',
-             modes='disaggregation', to_db=sequence_map_enum)
+             modes='disaggregation')
 define_param('LATITUDE_BIN_LIMITS', 'lat_bin_limits', modes='disaggregation')
 define_param('LONGITUDE_BIN_LIMITS', 'lon_bin_limits', modes='disaggregation')
 define_param('MAGNITUDE_BIN_LIMITS', 'mag_bin_limits', modes='disaggregation')

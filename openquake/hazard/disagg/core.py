@@ -392,9 +392,6 @@ class DisaggMixin(Mixin):
         dist_bin_lims = config_text_to_list(
             the_job[job_cfg.DIST_BIN_LIMITS], float)
 
-        # the subset types need to be all lower case for extraction
-        subset_types = [x.lower() for x in subset_types]
-
         rlz_poe_task_data = []
 
         for rlz, poe, data_list in full_disagg_results:
