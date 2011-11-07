@@ -94,8 +94,7 @@ class ClassicalMixin(BasePSHAMixin):
 
     def number_of_tasks(self):
         """How many `celery` tasks should be used for the calculations?"""
-        value = self.params.get("HAZARD_TASKS")
-        value = value.strip() if value else None
+        value = self["HAZARD_TASKS"]
         return 2 * multiprocessing.cpu_count() if value is None else int(value)
 
     def do_curves(self, sites, realizations,
@@ -124,11 +123,10 @@ class ClassicalMixin(BasePSHAMixin):
         :rtype: list of string
         """
         source_model_generator = random.Random()
-        source_model_generator.seed(
-                self.params.get("SOURCE_MODEL_LT_RANDOM_SEED", None))
+        source_model_generator.seed(self["SOURCE_MODEL_LT_RANDOM_SEED"])
 
         gmpe_generator = random.Random()
-        gmpe_generator.seed(self.params.get("GMPE_LT_RANDOM_SEED", None))
+        gmpe_generator.seed(self["GMPE_LT_RANDOM_SEED"])
 
         for realization in xrange(0, realizations):
             LOG.info("Calculating hazard curves for realization %s"
@@ -153,8 +151,7 @@ class ClassicalMixin(BasePSHAMixin):
             otherwise.
         :rtype: bool
         """
-        value = self.params.get(name)
-        return value is not None and value.strip()
+        return self.has(name)
 
     # pylint: disable=R0913
     def do_means(self, sites, realizations,
@@ -287,7 +284,7 @@ class ClassicalMixin(BasePSHAMixin):
         curves/maps and quantile curves.
         """
         sites = self.sites_to_compute()
-        realizations = int(self.params["NUMBER_OF_LOGIC_TREE_SAMPLES"])
+        realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
 
         LOG.info("Going to run classical PSHA hazard for %s realizations "
                  "and %s sites" % (realizations, len(sites)))
@@ -478,9 +475,9 @@ class ClassicalMixin(BasePSHAMixin):
         for site in sites:
             # use hazard map IML values from KVS
             hm_attrib = {
-                'investigationTimeSpan': self.params['INVESTIGATION_TIME'],
-                'IMT': self.params['INTENSITY_MEASURE_TYPE'],
-                'vs30': self.params['REFERENCE_VS30_VALUE'],
+                'investigationTimeSpan': self['INVESTIGATION_TIME'],
+                'IMT': self['INTENSITY_MEASURE_TYPE'],
+                'vs30': self['REFERENCE_VS30_VALUE'],
                 'IML': kvs.get_value_json_decoded(key_template % hash(site)),
                 'poE': poe}
 
@@ -503,7 +500,7 @@ class ClassicalMixin(BasePSHAMixin):
                 self.generate_erf(),
                 self.generate_gmpe_map(),
                 self.get_iml_list(),
-                float(self.params['MAXIMUM_DISTANCE']))
+                self['MAXIMUM_DISTANCE'])
         except jpype.JavaException, ex:
             unwrap_validation_error(jpype, ex)
 
@@ -604,17 +601,16 @@ class EventBasedMixin(BasePSHAMixin):
         Loops through various random realizations, spawning tasks to compute
         GMFs."""
         source_model_generator = random.Random()
-        source_model_generator.seed(
-                self.params.get('SOURCE_MODEL_LT_RANDOM_SEED', None))
+        source_model_generator.seed(self['SOURCE_MODEL_LT_RANDOM_SEED'])
 
         gmpe_generator = random.Random()
-        gmpe_generator.seed(self.params.get('GMPE_LT_RANDOM_SEED', None))
+        gmpe_generator.seed(self['GMPE_LT_RANDOM_SEED'])
 
         gmf_generator = random.Random()
-        gmf_generator.seed(self.params.get('GMF_RANDOM_SEED', None))
+        gmf_generator.seed(self['GMF_RANDOM_SEED'])
 
-        histories = int(self.params['NUMBER_OF_SEISMICITY_HISTORIES'])
-        realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
+        histories = self['NUMBER_OF_SEISMICITY_HISTORIES']
+        realizations = self['NUMBER_OF_LOGIC_TREE_SAMPLES']
         LOG.info(
             "Going to run hazard for %s histories of %s realizations each."
             % (histories, realizations))
@@ -646,9 +642,7 @@ class EventBasedMixin(BasePSHAMixin):
         """
         Write each GMF to an NRML file or to DB depending on job configuration.
         """
-        iml_list = [float(param)
-                    for param
-                    in self.params['INTENSITY_MEASURE_LEVELS'].split(",")]
+        iml_list = self['INTENSITY_MEASURE_LEVELS']
 
         LOG.debug("IML: %s" % (iml_list))
         files = []
@@ -658,7 +652,7 @@ class EventBasedMixin(BasePSHAMixin):
         for event_set in ses:
             for rupture in ses[event_set]:
 
-                if self.params['GMF_OUTPUT'].lower() == 'true':
+                if self['GMF_OUTPUT']:
                     common_path = os.path.join(self.base_path,
                             self['OUTPUT_DIR'],
                             "gmf-%s-%s" % (str(event_set.replace("!", "_")),
@@ -686,8 +680,7 @@ class EventBasedMixin(BasePSHAMixin):
 
         jsite_list = self.parameterize_sites(site_list)
         key = kvs.tokens.stochastic_set_key(self.job_id, history, realization)
-        gmc = self.params['GROUND_MOTION_CORRELATION']
-        correlate = (gmc == "true" and True or False)
+        correlate = self['GROUND_MOTION_CORRELATION']
         stochastic_set_id = "%s!%s" % (history, realization)
         java.jclass("HazardCalculator").generateAndSaveGMFs(
                 self.cache, key, stochastic_set_id, jsite_list,

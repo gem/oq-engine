@@ -477,9 +477,9 @@ class Job(object):
     def __getitem__(self, name):
         defined_param = job_params.PARAMS.get(name)
         if defined_param.to_job is not None:
-            return defined_param.to_job(self.params.get(name))
-        else:
-            return self.params.get(name)
+            if self.params.get(name) is not None:
+                return defined_param.to_job(self.params.get(name))
+        return self.params.get(name)
 
     def __eq__(self, other):
         return self.params == other.params
