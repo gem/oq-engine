@@ -56,6 +56,8 @@ ENUM_MAP = {
     'SA': 'sa',
     'PGV': 'pgv',
     'PGD': 'pgd',
+    'IA': 'ia',
+    'RSD': 'rsd',
     'None': 'none',
     '1 Sided': 'onesided',
     '2 Sided': 'twosided',

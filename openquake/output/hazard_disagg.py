@@ -26,6 +26,8 @@ from openquake.xml import NSMAP, NRML, GML
 from openquake.output.hazard import _set_gml_id
 
 
+# Disabling pylint for 'too many instance attributes' and 'too many arguments'
+# pylint: disable=R0902,R0913
 class DisaggregationBinaryMatrixXMLWriter(writer.FileWriter):
     """Write a file for a single disaggregation field in NRML format."""
 
