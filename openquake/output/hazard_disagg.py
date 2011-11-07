@@ -26,117 +26,139 @@ from openquake.xml import NSMAP, NRML, GML
 from openquake.output.hazard import _set_gml_id
 
 
+# Disabling pylint for 'too many instance attributes' and 'too many arguments'
+# pylint: disable=R0902,R0913
 class DisaggregationBinaryMatrixXMLWriter(writer.FileWriter):
-    """Write a disaggregation field in NRML format."""
+    """Write a file for a single disaggregation field in NRML format."""
 
-    OPTIONAL_PARAMS = ("endBranchLabel", "statistics", "quantileValue")
-
-    def __init__(self, path):
+    def __init__(self, path, poe, imt, subsets, end_branch_label=None,
+                 statistics=None, quantile_value=None):
+        """
+        :param path:
+            Path to the resulting XML file.
+        :param float poe:
+            Probability of Exceedence value associated with the entire result
+            file.`
+        :param imt:
+            Intensity Measure Type. One of PGA, SA, PGV, PGD, IA, or RSD.
+        :param subsets:
+            List of Disaggregation subset types contained in this file. For
+            example::
+                ['MagnitudePMF', 'MagnitudeDistancePMF']
+        :param end_branch_label: optional
+        :param statistics: optional
+        :param quantile_value: optional
+        """
         writer.FileWriter.__init__(self, path)
+
+        self.poe = poe
+        self.imt = imt
+        self.subsets = subsets
+        self.end_branch_label = end_branch_label
+        self.statistics = statistics
+        self.quantile_value = quantile_value
 
         self.id_counter = 0
 
         self.nrml_el = None
-        self.disagg_result_node_el = None
         self.disagg_result_field_el = None
 
-    def write(self, site, values):
+        self._write_root_elements()
+
+    def write(self, site, value):
         """Write the disaggregation result for the given site.
 
         :param site: site related to the disaggregation result
         :type site: :class:`openquake.shapes.Site`
-        :param values: data to write
-        :type values: dict in the following format:
-            {"poE": 0.1,
-             "IMT": "PGA",
-             "groundMotionValue": 0.25,
-             "endBranchLabel": 1,
-             "statistics": "mean",
-             "quantileValue": 0.1,
-             "mset": [
-             {"disaggregationPMFType": "MagnitudePMF", "path": "filea"},
-             {"disaggregationPMFType": "MagnitudePMF", "path": "fileb"}]}
-
-        The "endBranchLabel", "statistics" and "quantileValue" keys are
-        optional and are written only if specified. The other keys
-        are considered mandatory.
+        :param value: data to write
+        :type value: dict in the following format::
+            {"groundMotionValue": 0.25,
+             "path": "/path/to/file"}
         """
+        self._write_disagg_result_node(site, value)
 
-        if self.nrml_el is None:
-            self._append_root_elements(values)
-
-        self._append_disagg_result_node()
-        self._append_site(site)
-        self._append_matrix_set(values)
-
-    def _append_matrix_set(self, values):
-        """Append the <disaggregationMatrixSet/> element under the
-        current <disaggregationResultNode/> node."""
-
-        disagg_matrix_set_tag = "%sdisaggregationMatrixSet" % NRML
-
-        disagg_matrix_set_el = etree.SubElement(
-            self.disagg_result_node_el, disagg_matrix_set_tag, nsmap=NSMAP)
-
-        disagg_matrix_set_el.set(
-            "groundMotionValue", str(values["groundMotionValue"]))
-
-        disagg_matrix_tag = "%sdisaggregationMatrixBinaryFile" % NRML
-
-        if not values["mset"]:
-            raise RuntimeError(
-                "You need at least one matrix to produce a valid output!")
-
-        for disagg_matrix in values["mset"]:
-            disagg_matrix_el = etree.SubElement(
-                disagg_matrix_set_el, disagg_matrix_tag, nsmap=NSMAP)
-
-            disagg_matrix_el.set("path", disagg_matrix["path"])
-            disagg_matrix_el.set("disaggregationPMFType",
-                    disagg_matrix["disaggregationPMFType"])
-
-    def _append_site(self, site):
-        """Append the <gml:Point/> element under the current
-        <disaggregationResultNode/> node."""
-
-        point_el = etree.SubElement(etree.SubElement(
-                self.disagg_result_node_el, "%ssite" % NRML), "%sPoint" % GML)
-
-        pos_el = etree.SubElement(point_el, "%spos" % GML)
-        pos_el.text = "%s %s" % (site.longitude, site.latitude)
-
-    def _append_disagg_result_node(self):
-        """Append the <disaggregationResultNode/> element under
-        the current instance document."""
-
-        disagg_result_node_tag = "%sdisaggregationResultNode" % NRML
-
-        disagg_result_node_el = etree.SubElement(
-            self.disagg_result_field_el, disagg_result_node_tag, nsmap=NSMAP)
-
-        self._set_id(disagg_result_node_el)
-        self.disagg_result_node_el = disagg_result_node_el
-
-    def _append_root_elements(self, values):
+    def _write_root_elements(self):
         """Append the <nrml/> and <disaggregationResultField/> element under
         the current instance document."""
 
+        # root <nrml> element:
         self.nrml_el = etree.Element("%snrml" % NRML, nsmap=NSMAP)
         self._set_id(self.nrml_el)
 
+        # root <disaggregationResultField> element:
         disagg_result_field_tag = "%sdisaggregationResultField" % NRML
 
         self.disagg_result_field_el = etree.SubElement(
             self.nrml_el, disagg_result_field_tag, nsmap=NSMAP)
 
         self._set_id(self.disagg_result_field_el)
-        self.disagg_result_field_el.set("poE", str(values["poE"]))
-        self.disagg_result_field_el.set("IMT", str(values["IMT"]))
 
-        for optional_param in self.OPTIONAL_PARAMS:
-            if optional_param in values:
-                self.disagg_result_field_el.set(
-                    optional_param, str(values[optional_param]))
+        self.disagg_result_field_el.set("poE", str(self.poe))
+        self.disagg_result_field_el.set("IMT", str(self.imt))
+
+        for attr, value in (("endBranchLabel", self.end_branch_label),
+                            ("statistics", self.statistics),
+                            ("quantileValue", self.quantile_value)):
+            if value:
+                self.disagg_result_field_el.set(attr, str(value))
+
+        disagg_result_types_el = etree.SubElement(
+            self.disagg_result_field_el,
+            "%sdisaggregationResultTypes" % NRML,
+            nsmap=NSMAP)
+
+        disagg_result_types_el.text = " ".join(self.subsets)
+
+    def _write_disagg_result_node(self, site, value):
+        """Write a <disaggregationResult/> for a given site.
+
+        :param site: site related to the disaggregation result
+        :type site: :class:`openquake.shapes.Site`
+        :param value: data to write
+        :type value: dict in the following format::
+            {"groundMotionValue": 0.25,
+             "path": "/path/to/file"}
+             "path": "/path/to/file"}
+
+        Given an input `site` of Site(1.0, 1.0) and `value` of::
+            {"groundMotionValue": 0.25,
+             "path": "filea"}
+
+        the following elements will be written to the XML tree:
+            <disaggregationResultNode gml:id="IDxxx">
+                <site>
+                    <gml:Point>
+                        <gml:pos>1.0 1.0</gml:pos>
+                    </gml:Point>
+                </site>
+                <disaggregationResult groundMotionValue="0.25" path="filea"/>
+            </disaggregationResultNode>
+        """
+        # disaggregationResultNode:
+        disagg_result_node_tag = "%sdisaggregationResultNode" % NRML
+
+        disagg_result_node_el = etree.SubElement(
+            self.disagg_result_field_el, disagg_result_node_tag, nsmap=NSMAP)
+
+        self._set_id(disagg_result_node_el)
+
+        # site:
+        site_el = etree.SubElement(disagg_result_node_el, "%ssite" % NRML)
+
+        point_el = etree.SubElement(site_el, "%sPoint" % GML)
+
+        pos_el = etree.SubElement(point_el, "%spos" % GML)
+        pos_el.text = "%s %s" % (site.longitude, site.latitude)
+
+        # disaggregationResult:
+        disagg_result_tag = "%sdisaggregationResult" % NRML
+
+        disagg_result_el = etree.SubElement(
+            disagg_result_node_el, disagg_result_tag, nsmap=NSMAP)
+
+        # set the groundMotionValue and Path
+        for attr in ("groundMotionValue", "path"):
+            disagg_result_el.set(attr, str(value[attr]))
 
     def _set_id(self, elem):
         """Set the gml:id attribute to the given element."""
@@ -146,11 +168,6 @@ class DisaggregationBinaryMatrixXMLWriter(writer.FileWriter):
 
     def close(self):
         """Write the instance document and close the file."""
-
-        if self.nrml_el is None:
-            raise RuntimeError(
-                "You need at least one set to produce a valid output!")
-
         self.file.write(etree.tostring(self.nrml_el, pretty_print=True,
                 xml_declaration=True, encoding="UTF-8"))
 
