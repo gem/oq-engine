@@ -43,9 +43,9 @@ class CharArrayFieldTestCase(unittest.TestCase):
     def test_get_prep_value(self):
         """Test the proper behavior of
         :py:method:`openquake.db.models.CharArrayField.get_prep_value`."""
-        expected = '{"magpmf", "magdistpmf", "latlonpmf"}'
+        expected = '{"MagPMF", "MagDistPMF", "LatLonPMF"}'
 
         caf = CharArrayField()
-        actual = caf.get_prep_value(['magpmf', 'magdistpmf', 'latlonpmf'])
+        actual = caf.get_prep_value(['MagPMF', 'MagDistPMF', 'LatLonPMF'])
 
         self.assertEqual(expected, actual)
