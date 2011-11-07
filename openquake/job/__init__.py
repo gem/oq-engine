@@ -657,8 +657,8 @@ def config_text_to_list(text, transform=lambda x: x):
     :type transform: a function which accepts and returns a single value,
         a type (such as `float` or `int`), or equivalent
 
-    >>> config_text_to_list('magdistpmf magdistepspmf')
-    ['magdistpmf', 'magdistepspmf']
+    >>> config_text_to_list('MagDistPMF MagDistEpsPMF')
+    ['MagDistPMF', 'MagDistEpsPMF']
     >>> config_text_to_list('0.01, 0.02, 0.03', float)
     [0.01, 0.02, 0.03]
     """

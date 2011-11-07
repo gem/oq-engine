@@ -230,10 +230,13 @@ class DisaggMixin(Mixin):
         full_disagg_results = DisaggMixin.distribute_disagg(
             self, sites, realizations, poes, result_dir)
 
-        subset_results = DisaggMixin.distribute_subsets(
-            self, full_disagg_results, result_dir)
+        subset_types = config_text_to_list(
+            self.params['DISAGGREGATION_RESULTS'])
 
-        DisaggMixin.serialize_nrml(self, subset_results)
+        subset_results = DisaggMixin.distribute_subsets(
+            self, full_disagg_results, subset_types, result_dir)
+
+        DisaggMixin.serialize_nrml(self, subset_types, subset_results)
 
     @staticmethod
     def create_result_dir(base_path, job_id):
@@ -338,7 +341,8 @@ class DisaggMixin(Mixin):
         return full_da_results
 
     @staticmethod
-    def distribute_subsets(the_job, full_disagg_results, target_dir):
+    def distribute_subsets(the_job, full_disagg_results, subset_types,
+                           target_dir):
         """Given the results of the first phase of the disaggregation
         calculation, extract the matrix subsets (as requested in the job
         configuration).
@@ -347,6 +351,8 @@ class DisaggMixin(Mixin):
         :type the_job: :class:`openquake.job.Job` instance
         :param full_disagg_results:
             Results of :method:`DisaggMixin.distribute_disagg`.
+        :param subset_types:
+            The matrix subset results requested in the job config.
         :param target_dir:
             Directory where subset matrix results should be stored (a directory
             connected to an NFS, for example).
@@ -386,12 +392,6 @@ class DisaggMixin(Mixin):
         dist_bin_lims = config_text_to_list(
             the_job[job_cfg.DIST_BIN_LIMITS], float)
 
-    
-        # the subset types need to be all lower case for extraction
-        subset_types = config_text_to_list(
-            the_job['DISAGGREGATION_RESULTS'], lambda x: x.lower())
-
-        # imt = the_job['INTENSITY_MEASURE_TYPE']
         rlz_poe_task_data = []
 
         for rlz, poe, data_list in full_disagg_results:
@@ -408,7 +408,7 @@ class DisaggMixin(Mixin):
                     mag_bin_lims, eps_bin_lims, dist_bin_lims, target_file,
                     subset_types)
 
-                task_data.append((a_task, site, gmv, target_file))
+                task_data.append((a_task, site, gmv, matrix_path, target_file))
 
             rlz_poe_task_data.append((rlz, poe, task_data))
 
@@ -416,7 +416,7 @@ class DisaggMixin(Mixin):
 
         for rlz, poe, task_data in rlz_poe_task_data:
             rlz_poe_results = []  # list of data/results per (rlz, poe) pair
-            for a_task, site, gmv, target_file in task_data:
+            for a_task, site, gmv, matrix_path, target_file in task_data:
 
                 a_task.wait()
                 if not a_task.successful():
@@ -431,21 +431,27 @@ class DisaggMixin(Mixin):
                 else:
                     rlz_poe_results.append((site, gmv, target_file))
 
+                # We don't need the full matrix file anymore.
+                os.unlink(matrix_path)
+
             final_results.append((rlz, poe, rlz_poe_results))
 
         return final_results
 
     @staticmethod
-    def serialize_nrml(the_job, subsets_data):
+    def serialize_nrml(the_job, subset_types, subsets_data):
         """Write a NRML/XML wrapper around the disaggregation subset results.
 
-        :param the_job: job configuration
-        :type the_job: :class:`openquake.job.Job` instance
+        :param the_job:
+            The job configuration.
+        :type the_job:
+            :class:`openquake.job.Job` instance
+        :param subset_types:
+            The matrix subset results requested in the job config.
         :param subsets_data:
             Results of :method:`DisaggMixin.distribute_subsets`.
         """
         imt = the_job['INTENSITY_MEASURE_TYPE']
-        result_types = config_text_to_list(the_job['DISAGGREGATION_RESULTS'])
 
         for rlz, poe, data in subsets_data:
 
@@ -454,14 +460,10 @@ class DisaggMixin(Mixin):
             path = os.path.join(the_job['BASE_PATH'], the_job['OUTPUT_DIR'],
                                 file_name)
             writer = hazard_output.DisaggregationBinaryMatrixXMLWriter(
-                path)
+                path, poe, imt, subset_types, end_branch_label=rlz)
 
             for site, gmv, matrix_path in data:
-                node_data = dict(
-                    poE=poe, IMT=imt, groundMotionValue=gmv,
-                    endBranchLabel=rlz,
-                    mset=[dict(disaggregationPMFType=r,
-                               path=matrix_path) for r in result_types])
+                node_data = dict(groundMotionValue=gmv, path=matrix_path)
                 writer.write(site, node_data)
 
             writer.close()
