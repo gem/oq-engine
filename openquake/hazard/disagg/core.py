@@ -32,7 +32,6 @@ from openquake.hazard import job as haz_job
 from openquake.hazard import disagg
 from openquake.java import jtask as task
 from openquake.job import config as job_cfg
-from openquake.job import config_text_to_list
 from openquake.output import hazard_disagg as hazard_output
 from openquake.utils import config
 
@@ -71,14 +70,10 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
     """
     the_job = job.Job.from_kvs(job_id)
 
-    lat_bin_lims = config_text_to_list(
-        the_job[job_cfg.LAT_BIN_LIMITS], float)
-    lon_bin_lims = config_text_to_list(
-        the_job[job_cfg.LON_BIN_LIMITS], float)
-    mag_bin_lims = config_text_to_list(
-        the_job[job_cfg.MAG_BIN_LIMITS], float)
-    eps_bin_lims = config_text_to_list(
-        the_job[job_cfg.EPS_BIN_LIMITS], float)
+    lat_bin_lims = the_job[job_cfg.LAT_BIN_LIMITS]
+    lon_bin_lims = the_job[job_cfg.LON_BIN_LIMITS]
+    mag_bin_lims = the_job[job_cfg.MAG_BIN_LIMITS]
+    eps_bin_lims = the_job[job_cfg.EPS_BIN_LIMITS]
 
     jd = list_to_jdouble_array
 
@@ -95,8 +90,7 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
     set_gmpe_params(gmpe_map, the_job.params)
 
     iml_arraylist = java.jclass('ArrayList')()
-    iml_vals = job.config_text_to_list(
-        the_job['INTENSITY_MEASURE_LEVELS'], float)
+    iml_vals = the_job['INTENSITY_MEASURE_LEVELS']
     # Map `log` (natural log) to each IML value before passing to the
     # calculator.
     iml_vals = [log(x) for x in iml_vals]
@@ -208,8 +202,8 @@ class DisaggMixin(Mixin):
         """
         # cache the source model and gmpe model in the KVS
         # so the Java code can access it
-        src_model_seed = int(self.params.get('SOURCE_MODEL_LT_RANDOM_SEED'))
-        gmpe_seed = int(self.params.get('GMPE_LT_RANDOM_SEED'))
+        src_model_seed = self['SOURCE_MODEL_LT_RANDOM_SEED']
+        gmpe_seed = self['GMPE_LT_RANDOM_SEED']
 
         store_source_model(self.job_id, src_model_seed, self.params, self.calc)
         store_gmpe_map(self.job_id, gmpe_seed, self.calc)
@@ -218,8 +212,8 @@ class DisaggMixin(Mixin):
         result_dir = DisaggMixin.create_result_dir(
             config.get('nfs', 'base_dir'), self.job_id)
 
-        realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
-        poes = job.config_text_to_list(self.params['POES'], float)
+        realizations = self['NUMBER_OF_LOGIC_TREE_SAMPLES']
+        poes = self['POES']
         sites = self.sites_to_compute()
 
         log_msg = ("Computing disaggregation for job_id=%s,  %s sites, "
@@ -230,8 +224,7 @@ class DisaggMixin(Mixin):
         full_disagg_results = DisaggMixin.distribute_disagg(
             self, sites, realizations, poes, result_dir)
 
-        subset_types = config_text_to_list(
-            self.params['DISAGGREGATION_RESULTS'])
+        subset_types = self['DISAGGREGATION_RESULTS']
 
         subset_results = DisaggMixin.distribute_subsets(
             self, full_disagg_results, subset_types, result_dir)
@@ -381,16 +374,11 @@ class DisaggMixin(Mixin):
                  ),
                 ]
         """
-        lat_bin_lims = config_text_to_list(
-            the_job[job_cfg.LAT_BIN_LIMITS], float)
-        lon_bin_lims = config_text_to_list(
-            the_job[job_cfg.LON_BIN_LIMITS], float)
-        mag_bin_lims = config_text_to_list(
-            the_job[job_cfg.MAG_BIN_LIMITS], float)
-        eps_bin_lims = config_text_to_list(
-            the_job[job_cfg.EPS_BIN_LIMITS], float)
-        dist_bin_lims = config_text_to_list(
-            the_job[job_cfg.DIST_BIN_LIMITS], float)
+        lat_bin_lims = the_job[job_cfg.LAT_BIN_LIMITS]
+        lon_bin_lims = the_job[job_cfg.LON_BIN_LIMITS]
+        mag_bin_lims = the_job[job_cfg.MAG_BIN_LIMITS]
+        eps_bin_lims = the_job[job_cfg.EPS_BIN_LIMITS]
+        dist_bin_lims = the_job[job_cfg.DIST_BIN_LIMITS]
 
         rlz_poe_task_data = []
 
