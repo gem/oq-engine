@@ -534,7 +534,6 @@ public class DisaggregationTestHelper
 		erf.getParameter(GEM1ERF.AREA_SRC_DISCR_PARAM_NAME).setValue(0.01);
 		erf.updateForecast();
 		return erf;
-//		return GEM1ERF.getGEM1ERF(srcList, timeSpan);
 	}
 
 	private static GEMSourceData makeTestSourceDataActiveShallow()
