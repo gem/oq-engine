@@ -25,6 +25,9 @@ from nose.plugins.attrib import attr
 from tests.utils import helpers
 
 
+DISAGG_DEMO_CONFIG = helpers.demo_file('disaggregation/config.gem')
+
+
 class DisaggCalcQATestCase(unittest.TestCase, helpers.ConfigTestMixin):
     def setUp(self):
         super(DisaggCalcQATestCase, self).setUp()
@@ -38,14 +41,15 @@ class DisaggCalcQATestCase(unittest.TestCase, helpers.ConfigTestMixin):
     def tearDown(self):
         super(DisaggCalcQATestCase, self).tearDown()
         self.teardown_config()
-        shutil.rmtree(helpers.get_data_path('disagg/computed_output'))
+        shutil.rmtree(os.path.join(os.path.dirname(DISAGG_DEMO_CONFIG),
+                                   'computed_output'))
 
     @attr('qa')
     def test(self):
         import openquake
         exepath = os.path.join(os.path.dirname(openquake.__file__), '..',
                                'bin', 'openquake')
-        configpath = helpers.get_data_path('disagg/config.gem')
-        exitcode = subprocess.call([exepath, '--config_file=%s' % configpath])
-        self.assertEqual(exitcode, 0)
+        exitcode = subprocess.call(
+            [exepath, '--config_file=%s' % DISAGG_DEMO_CONFIG])
+        self.assertEqual(0, exitcode)
         # TODO: verify the output
