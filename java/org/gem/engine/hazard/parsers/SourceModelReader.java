@@ -6,6 +6,8 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.StringTokenizer;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
@@ -27,6 +29,7 @@ import org.opensha.sha.faultSurface.FaultTrace;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.magdist.IncrementalMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
+import org.gem.calc.GroundMotionFieldCalculator;
 import org.gem.engine.XMLMismatchError;
 import org.gem.engine.XMLValidationError;
 
@@ -36,6 +39,9 @@ import org.gem.engine.XMLValidationError;
  *
  */
 public class SourceModelReader {
+
+    private static Log logger = LogFactory
+            .getLog(SourceModelReader.class);
 
     private final List<GEMSourceData> sourceList;
 
@@ -398,6 +404,7 @@ public class SourceModelReader {
                 Double.valueOf((String) gutenbergRichter.element(MAX_MAGNITUDE)
                         .getData());
         magFreqDist = createGrMfd(aVal, bVal, minMag, maxMag, deltaMFD);
+        logger.debug(magFreqDist);
         return magFreqDist;
     }
 
