@@ -16,12 +16,49 @@
         </gml:Polygon>
       </areaBoundary>
       <ruptureRateModel>
-        <truncatedGutenbergRichter>
-          <aValueCumulative>4.30</aValueCumulative>
-          <bValue>1.0</bValue>
-          <minMagnitude>5.0</minMagnitude>
-          <maxMagnitude>9.0</maxMagnitude>
-        </truncatedGutenbergRichter>
+        <evenlyDiscretizedIncrementalMFD binSize="0.1" minVal="5.05">
+            0.040221255
+            0.032133322
+            0.02567176
+            0.020509526
+            0.016385347
+            0.013090482
+            0.010458169
+            0.008355177
+            0.0066750674
+            0.0053328043
+            0.0042604515
+            0.0034037342
+            0.0027192908
+            0.0021724792
+            0.0017356239
+            0.0013866142
+            0.0011077854
+            8.850252E-4
+            7.07059E-4
+            5.648793E-4
+            4.5128993E-4
+            3.605418E-4
+            2.880419E-4
+            2.3012067E-4
+            1.8384661E-4
+            1.4687762E-4
+            1.17342584E-4
+            9.3746625E-5
+            7.4895484E-5
+            5.983505E-5
+            4.7803052E-5
+            3.8190527E-5
+            3.0510944E-5
+             2.4375619E-5
+            1.947402E-5
+            1.5558067E-5
+            1.2429557E-5
+            9.930146E-6
+            7.933332E-6
+            6.33805E-6
+            5.0635563E-6
+        </evenlyDiscretizedIncrementalMFD>
         <focalMechanism publicID="smi:fm1/0">
           <qml:nodalPlanes>
             <qml:nodalPlane1>
