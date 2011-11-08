@@ -439,14 +439,22 @@ class DisaggMixin(Mixin):
         :param subsets_data:
             Results of :method:`DisaggMixin.distribute_subsets`.
         """
+        LOG.info("Serializing XML results for job=%s" % the_job.job_id)
         imt = the_job['INTENSITY_MEASURE_TYPE']
+
+        base_output_dir = os.path.join(the_job['BASE_PATH'],
+                                       the_job['OUTPUT_DIR'])
+
+        if not os.path.exists(base_output_dir):
+            LOG.info("Creating output directory `%s`" % base_output_dir)
+            os.makedirs(base_output_dir)
 
         for rlz, poe, data in subsets_data:
 
             file_name = 'disagg-results-sample:%s-PoE:%s.xml'
             file_name %= (rlz, poe)
-            path = os.path.join(the_job['BASE_PATH'], the_job['OUTPUT_DIR'],
-                                file_name)
+            path = os.path.join(base_output_dir, file_name)
+            LOG.info("Serializing XML results to %s" % path)
             writer = hazard_output.DisaggregationBinaryMatrixXMLWriter(
                 path, poe, imt, subset_types, end_branch_label=rlz)
 
