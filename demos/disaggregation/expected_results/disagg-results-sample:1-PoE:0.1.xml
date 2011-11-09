@@ -8,7 +8,7 @@
           <gml:pos>0.0 0.0</gml:pos>
         </gml:Point>
       </site>
-      <disaggregationResult groundMotionValue="0.225743641603" path="/tmp/disagg-results/job-%(job_id)s/disagg-results-sample:1-gmv:0.2257436-lat:0.0000000-lon:0.0000000.h5"/>
+      <disaggregationResult groundMotionValue="0.225743641603" path="/tmp/disagg-results/job-%(job_id)s/disagg-results-sample:1-gmv:0.2259803-lat:0.0000000-lon:0.0000000.h5"/>
     </disaggregationResultNode>
   </disaggregationResultField>
 </nrml>
