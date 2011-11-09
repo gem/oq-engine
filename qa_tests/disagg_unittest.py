@@ -73,6 +73,7 @@ def subset_shape(subset_type, nlat, nlon, nmag, ndist, neps):
     }
     return subset_shapes[subset_type]
 
+
 class DisaggCalcQATestCase(unittest.TestCase, helpers.ConfigTestMixin):
     def setUp(self):
         super(DisaggCalcQATestCase, self).setUp()
