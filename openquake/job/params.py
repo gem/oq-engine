@@ -112,7 +112,9 @@ def map_enum(value):
     return ENUM_MAP[value]
 
 
-# pylint: disable=W0212
++# disabling pylint for 'Access to a protected member %s of a client class'
++# and 'Too many arguments'
++# pylint: disable=W0212,R0913
 def define_param(name, column, modes=None, default=None, to_db=None,
                  to_job=lambda x: x, java_name=None):
     """
