@@ -17,12 +17,12 @@
       </areaBoundary>
       <ruptureRateModel>
         <truncatedGutenbergRichter>
-            <aValueCumulative>4.301073427</aValueCumulative>
-            <bValue>1.0</bValue>
-            <minMagnitude>5.0</minMagnitude>
-            <maxMagnitude>9.0</maxMagnitude>
+          <aValueCumulative>4.301073427</aValueCumulative>
+          <bValue>1.0</bValue>
+          <minMagnitude>5.0</minMagnitude>
+          <maxMagnitude>9.0</maxMagnitude>
         </truncatedGutenbergRichter>
-      <focalMechanism publicID="smi:fm1/0">
+        <focalMechanism publicID="smi:fm1/0">
           <qml:nodalPlanes>
             <qml:nodalPlane1>
               <qml:strike>
