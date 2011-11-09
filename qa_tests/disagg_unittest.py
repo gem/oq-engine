@@ -42,7 +42,8 @@ XML_OUTPUT_FILE = os.path.join(XML_OUTPUT_DIR,
 H5_OUTPUT_DIR = os.path.join(NFS_BASE_DIR, 'disagg-results', 'job-%s')
 H5_OUTPUT_FILE = os.path.join(
     H5_OUTPUT_DIR,
-    'disagg-results-sample:1-gmv:0.2305436-lat:0.0000000-lon:0.0000000.h5')
+    'disagg-results-sample:1-gmv:0.2259803-lat:0.0000000-lon:0.0000000.h5')
+#    'disagg-results-sample:1-gmv:0.2305436-lat:0.0000000-lon:0.0000000.h5')
 #    'disagg-results-sample:1-gmv:0.2257436-lat:0.0000000-lon:0.0000000.h5')
 
 # number of tectonic region types
@@ -109,8 +110,6 @@ class DisaggCalcQATestCase(unittest.TestCase, helpers.ConfigTestMixin):
         self.assertTrue(os.path.exists(h5_file))
         self._verify_h5(h5_file, job_record.oq_params)
 
-        self.assertTrue(False)
-
     def _verify_xml_output(self, expected, actual, job_id):
         """Read both `expected` and `actual` file and check for exact equality.
         """
@@ -130,9 +129,8 @@ class DisaggCalcQATestCase(unittest.TestCase, helpers.ConfigTestMixin):
 
         for i, line in enumerate(expected_text):
             if '%(job_id)s' in line:
-                pass
-                #self.assertEqual(line % job_id_mapping,
-                #                 actual_text[i] % job_id_mapping)
+                self.assertEqual(line % job_id_mapping,
+                                 actual_text[i] % job_id_mapping)
             else:
                 self.assertEqual(line, actual_text[i])
 
@@ -162,9 +160,4 @@ class DisaggCalcQATestCase(unittest.TestCase, helpers.ConfigTestMixin):
                 shape = subset_shape(subset, nlat, nlon, nmag, ndist, neps)
                 expected_matrix = numpy.reshape(data, shape)
                 actual_matrix = h5[subset].value  # numpy.ndarray
-                print subset
-                print type(expected_matrix)
-                print expected_matrix
-                print type(actual_matrix)
-                print actual_matrix
                 self.assertTrue(numpy.allclose(expected_matrix, actual_matrix))
