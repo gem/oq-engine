@@ -43,8 +43,6 @@ H5_OUTPUT_DIR = os.path.join(NFS_BASE_DIR, 'disagg-results', 'job-%s')
 H5_OUTPUT_FILE = os.path.join(
     H5_OUTPUT_DIR,
     'disagg-results-sample:1-gmv:0.2259803-lat:0.0000000-lon:0.0000000.h5')
-#    'disagg-results-sample:1-gmv:0.2305436-lat:0.0000000-lon:0.0000000.h5')
-#    'disagg-results-sample:1-gmv:0.2257436-lat:0.0000000-lon:0.0000000.h5')
 
 # number of tectonic region types
 NTRT = 5
@@ -95,8 +93,7 @@ class DisaggCalcQATestCase(unittest.TestCase, helpers.ConfigTestMixin):
         import openquake
         exepath = os.path.join(os.path.dirname(openquake.__file__), '..',
                                'bin', 'openquake')
-        args = [exepath, '--config_file=%s' % DISAGG_DEMO_CONFIG,
-                '--debug=debug']
+        args = [exepath, '--config_file=%s' % DISAGG_DEMO_CONFIG]
         subprocess.call(args)
 
         job_record = OqJob.objects.latest("id")
