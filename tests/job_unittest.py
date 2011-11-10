@@ -32,9 +32,10 @@ from openquake import kvs
 from openquake import flags
 from openquake import shapes
 from openquake.job import (
-    Job, config, prepare_job, run_job, config_text_to_list, parse_config_file,
+    Job, config, prepare_job, run_job, parse_config_file,
     prepare_config_parameters, get_source_models)
 from openquake.job.mixins import Mixin
+from openquake.job.params import config_text_to_list
 from openquake.db.models import OqJob, JobStats, OqParams
 from openquake.risk.job import general
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
@@ -939,7 +940,7 @@ class JobUtilsTestCase(unittest.TestCase):
     """Tests for utility functions in the job module."""
 
     def test_config_text_to_list(self):
-        """Exercise :function:`openquake.job.config_text_to_list`."""
+        """Exercise :function:`openquake.job.params.config_text_to_list`."""
         expected = ['MagDistPMF', 'MagDistEpsPMF', 'FullDisaggMatrix']
 
         # the input mixes spaces and commas for robustness testing:
@@ -948,7 +949,7 @@ class JobUtilsTestCase(unittest.TestCase):
         self.assertEqual(expected, config_text_to_list(test_input))
 
     def test_config_text_to_list_with_transform(self):
-        """Exercise :function:`openquake.job.config_text_to_list` with a
+        """Exercise :function:`openquake.job.params.config_text_to_list` with a
         transform specified.
         """
         expected = [0.01, 0.02, 0.03, 0.04]
@@ -959,8 +960,8 @@ class JobUtilsTestCase(unittest.TestCase):
         self.assertEqual(expected, config_text_to_list(test_input, float))
 
     def test_config_text_to_list_all_whitespace_input(self):
-        """Exercise :function:`openquake.job.config_text_to_list` with an
-        input of only spaces. """
+        """Exercise :function:`openquake.job.params.config_text_to_list` with
+        an input of only spaces. """
 
         expected = []
 
