@@ -552,10 +552,11 @@ CREATE TABLE uiapi.oq_job (
     --      event_based (Probabilistic event based)
     --      deterministic (Deterministic)
     --      disaggregation (Hazard only)
+    --      uhs (Uniform Hazard Spectra; Hazard only)
     -- Note: 'classical' and 'event_based' are both probabilistic methods
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
         CHECK(job_type IN ('classical', 'event_based', 'deterministic',
-                           'disaggregation')),
+                           'disaggregation', 'uhs')),
     -- One of: pending, running, failed, succeeded
     status VARCHAR NOT NULL DEFAULT 'pending' CONSTRAINT job_status_value
         CHECK(status IN ('pending', 'running', 'failed', 'succeeded')),
@@ -586,7 +587,7 @@ CREATE TABLE uiapi.oq_params (
     id SERIAL PRIMARY KEY,
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
         CHECK(job_type IN ('classical', 'event_based', 'deterministic',
-                           'disaggregation')),
+                           'disaggregation', 'uhs')),
     input_set_id INTEGER NOT NULL,
     region_grid_spacing float,
     min_magnitude float CONSTRAINT min_magnitude_set
@@ -609,8 +610,10 @@ CREATE TABLE uiapi.oq_params (
     --      peak ground displacement (pgd)
     --      Arias Intensity (ia)
     --      relative significant duration (rsd)
+    -- For UHS calculations, IMT should always be 'sa'.
     imt VARCHAR NOT NULL CONSTRAINT imt_value
-        CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd')),
+        CHECK(((job_type = 'uhs') AND (imt = 'sa'))
+            OR (imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd'))),
     period float CONSTRAINT period_is_set
         CHECK(((imt = 'sa') AND (period IS NOT NULL))
               OR ((imt != 'sa') AND (period IS NULL))),
@@ -624,13 +627,12 @@ CREATE TABLE uiapi.oq_params (
     -- Intensity measure levels
     imls float[] CONSTRAINT imls_are_set
         CHECK(
-            ((job_type in ('classical', 'event_based', 'disaggregation'))
-            AND (imls IS NOT NULL))
+            ((job_type != 'deterministic') AND (imls IS NOT NULL))
             OR ((job_type = 'deterministic') AND (imls IS NULL))),
     -- Probabilities of exceedence
     poes float[] CONSTRAINT poes_are_set
         CHECK(
-            ((job_type IN ('classical', 'disaggregation')) AND (poes IS NOT NULL))
+            ((job_type IN ('classical', 'disaggregation', 'uhs')) AND (poes IS NOT NULL))
             OR ((job_type IN ('event_based', 'deterministic')) AND (poes IS NULL))),
     -- Number of logic tree samples
     realizations integer CONSTRAINT realizations_is_set
@@ -645,7 +647,7 @@ CREATE TABLE uiapi.oq_params (
     -- ground motion correlation flag
     gm_correlated boolean CONSTRAINT gm_correlated_is_set
         CHECK(
-            ((job_type IN ('classical', 'disaggregation')) AND (gm_correlated IS NULL))
+            ((job_type IN ('classical', 'disaggregation', 'uhs')) AND (gm_correlated IS NULL))
             OR ((job_type IN ('event_based', 'deterministic')) AND (gm_correlated IS NOT NULL))),
     gmf_calculation_number integer CONSTRAINT gmf_calculation_number_is_set
         CHECK(
@@ -669,15 +671,14 @@ CREATE TABLE uiapi.oq_params (
     area_source_discretization float
         CONSTRAINT area_source_discretization_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
-             AND (area_source_discretization IS NOT NULL))
+            ((job_type != 'deterministic') AND (area_source_discretization IS NOT NULL))
             OR
             ((job_type = 'deterministic')
              AND (area_source_discretization IS NULL))),
     area_source_magnitude_scaling_relationship VARCHAR
         CONSTRAINT area_source_magnitude_scaling_relationship_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
              AND (area_source_magnitude_scaling_relationship IS NOT NULL))
             OR
             ((job_type = 'deterministic')
@@ -694,7 +695,7 @@ CREATE TABLE uiapi.oq_params (
     fault_magnitude_scaling_relationship VARCHAR
         CONSTRAINT fault_magnitude_scaling_relationship_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
              AND (fault_magnitude_scaling_relationship IS NOT NULL))
             OR
             ((job_type = 'deterministic')
@@ -733,7 +734,8 @@ CREATE TABLE uiapi.oq_params (
     gmpe_lt_random_seed integer
         CONSTRAINT gmpe_lt_random_seed_is_set
         CHECK(
-            (job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
+             AND (gmpe_lt_random_seed IS NOT NULL))
             OR
             ((job_type = 'deterministic')
              AND (gmpe_lt_random_seed IS NULL))),
@@ -742,7 +744,7 @@ CREATE TABLE uiapi.oq_params (
     include_area_sources boolean
         CONSTRAINT include_area_sources_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
              AND (include_area_sources IS NOT NULL))
             OR
             ((job_type = 'deterministic')
@@ -750,7 +752,7 @@ CREATE TABLE uiapi.oq_params (
     include_fault_source boolean
         CONSTRAINT include_fault_source_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
              AND (include_fault_source IS NOT NULL))
             OR
             ((job_type = 'deterministic')
@@ -758,7 +760,7 @@ CREATE TABLE uiapi.oq_params (
     include_grid_sources boolean
         CONSTRAINT include_grid_sources_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
              AND (include_grid_sources IS NOT NULL))
             OR
             ((job_type = 'deterministic')
@@ -766,7 +768,7 @@ CREATE TABLE uiapi.oq_params (
     include_subduction_fault_source boolean
         CONSTRAINT include_subduction_fault_source_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
              AND (include_subduction_fault_source IS NOT NULL))
             OR
             ((job_type = 'deterministic')
@@ -775,7 +777,7 @@ CREATE TABLE uiapi.oq_params (
     maximum_distance VARCHAR
         CONSTRAINT maximum_distance_is_set
         CHECK(
-            ((job_type IN ('classical', 'disaggregation'))
+            ((job_type IN ('classical', 'disaggregation', 'uhs'))
              AND (maximum_distance IS NOT NULL))
             OR
             ((job_type IN ('deterministic', 'event_based'))
@@ -819,7 +821,8 @@ CREATE TABLE uiapi.oq_params (
     source_model_lt_random_seed integer
         CONSTRAINT source_model_lt_random_seed_is_set
         CHECK(
-            (job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
+             AND (source_model_lt_random_seed IS NOT NULL))
             OR
             ((job_type = 'deterministic')
              AND (source_model_lt_random_seed IS NULL))),
@@ -834,7 +837,7 @@ CREATE TABLE uiapi.oq_params (
     standard_deviation_type VARCHAR
         CONSTRAINT standard_deviation_type_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
              AND (standard_deviation_type IN ('total', 'interevent', 'intraevent', 'zero', 'total_mag_dependent', 'total_pga_dependent', 'intraevent_mag_dependent')))
             OR
             ((job_type = 'deterministic')
@@ -899,7 +902,7 @@ CREATE TABLE uiapi.oq_params (
     treat_area_source_as VARCHAR
         CONSTRAINT treat_area_source_as_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
              AND (treat_area_source_as IN ('pointsources', 'linesources', 'crosshairsources', '16spokedsources')))
             OR
             ((job_type = 'deterministic')
@@ -907,7 +910,7 @@ CREATE TABLE uiapi.oq_params (
     treat_grid_source_as VARCHAR
         CONSTRAINT treat_grid_source_as_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
              AND (treat_grid_source_as IS NOT NULL))
             OR
             ((job_type = 'deterministic')
@@ -915,7 +918,7 @@ CREATE TABLE uiapi.oq_params (
     width_of_mfd_bin float
         CONSTRAINT width_of_mfd_bin_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
              AND (width_of_mfd_bin IS NOT NULL))
             OR
             ((job_type = 'deterministic')
