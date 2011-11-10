@@ -993,6 +993,13 @@ CREATE TABLE uiapi.oq_params (
             OR
             ((job_type != 'disaggregation')
             AND (disagg_results IS NULL)))),
+    uhs_periods float[]
+        CONSTRAINT uhs_periods_is_set
+        CHECK(
+            -- If job type is UHS, uhs_periods must be not null and contain at least 1 element
+            ((job_type = 'uhs') AND (uhs_periods IS NOT NULL) AND (array_length(uhs_periods, 1) > 0))
+            OR
+            ((job_type != 'uhs') AND (uhs_periods IS NULL))),
     depth_to_1pt_0km_per_sec float NOT NULL DEFAULT 100.0
         CONSTRAINT depth_to_1pt_0km_per_sec_above_zero
         CHECK(depth_to_1pt_0km_per_sec > 0.0),
