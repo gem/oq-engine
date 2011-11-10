@@ -673,8 +673,7 @@ CREATE TABLE uiapi.oq_params (
         CHECK(
             ((job_type != 'deterministic') AND (area_source_discretization IS NOT NULL))
             OR
-            ((job_type = 'deterministic')
-             AND (area_source_discretization IS NULL))),
+            ((job_type = 'deterministic') AND (area_source_discretization IS NULL))),
     area_source_magnitude_scaling_relationship VARCHAR
         CONSTRAINT area_source_magnitude_scaling_relationship_is_set
         CHECK(
@@ -689,7 +688,7 @@ CREATE TABLE uiapi.oq_params (
             ((job_type = 'classical')
              AND (compute_mean_hazard_curve IS NOT NULL))
             OR
-            ((job_type IN ('deterministic', 'event_based', 'disaggregation'))
+            ((job_type != 'classical')
              AND (compute_mean_hazard_curve IS NULL))),
     conditional_loss_poe float[],
     fault_magnitude_scaling_relationship VARCHAR
@@ -703,7 +702,7 @@ CREATE TABLE uiapi.oq_params (
     fault_magnitude_scaling_sigma float
         CONSTRAINT fault_magnitude_scaling_sigma_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
              AND (fault_magnitude_scaling_sigma IS NOT NULL))
             OR
             ((job_type = 'deterministic')
@@ -711,7 +710,7 @@ CREATE TABLE uiapi.oq_params (
     fault_rupture_offset float
         CONSTRAINT fault_rupture_offset_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
              AND (fault_rupture_offset IS NOT NULL))
             OR
             ((job_type = 'deterministic')
@@ -719,7 +718,7 @@ CREATE TABLE uiapi.oq_params (
     fault_surface_discretization float
         CONSTRAINT fault_surface_discretization_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
              AND (fault_surface_discretization IS NOT NULL))
             OR
             ((job_type = 'deterministic')
@@ -795,7 +794,7 @@ CREATE TABLE uiapi.oq_params (
     rupture_aspect_ratio float
         CONSTRAINT rupture_aspect_ratio_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
              AND (rupture_aspect_ratio IS NOT NULL))
             OR
             ((job_type = 'deterministic')
@@ -845,7 +844,7 @@ CREATE TABLE uiapi.oq_params (
     subduction_fault_magnitude_scaling_relationship VARCHAR
         CONSTRAINT subduction_fault_magnitude_scaling_relationship_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
              AND (subduction_fault_magnitude_scaling_relationship IS NOT NULL))
             OR
             ((job_type = 'deterministic')
@@ -853,7 +852,7 @@ CREATE TABLE uiapi.oq_params (
     subduction_fault_magnitude_scaling_sigma float
         CONSTRAINT subduction_fault_magnitude_scaling_sigma_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
              AND (subduction_fault_magnitude_scaling_sigma IS NOT NULL))
             OR
             ((job_type = 'deterministic')
@@ -861,7 +860,7 @@ CREATE TABLE uiapi.oq_params (
     subduction_fault_rupture_offset float
         CONSTRAINT subduction_fault_rupture_offset_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
              AND (subduction_fault_rupture_offset IS NOT NULL))
             OR
             ((job_type = 'deterministic')
@@ -869,7 +868,7 @@ CREATE TABLE uiapi.oq_params (
     subduction_fault_surface_discretization float
         CONSTRAINT subduction_fault_surface_discretization_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
              AND (subduction_fault_surface_discretization IS NOT NULL))
             OR
             ((job_type = 'deterministic')
@@ -877,7 +876,7 @@ CREATE TABLE uiapi.oq_params (
     subduction_rupture_aspect_ratio float
         CONSTRAINT subduction_rupture_aspect_ratio_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
              AND (subduction_rupture_aspect_ratio IS NOT NULL))
             OR
             ((job_type = 'deterministic')
@@ -889,7 +888,7 @@ CREATE TABLE uiapi.oq_params (
     subduction_rupture_floating_type VARCHAR
         CONSTRAINT subduction_rupture_floating_type_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type != 'deterministic')
              AND (subduction_rupture_floating_type IN ('alongstrike', 'downdip', 'centereddowndip')))
             OR
             ((job_type = 'deterministic')
