@@ -39,6 +39,7 @@ CALCULATION_MODE = {
     'Deterministic': 'deterministic',
     'Event Based': 'event_based',
     'Disaggregation': 'disaggregation',
+    'UHS': 'uhs',
 }
 
 INPUT_FILE_TYPES = {
@@ -200,6 +201,9 @@ define_param('EPSILON_BIN_LIMITS', 'epsilon_bin_limits',
              modes='disaggregation', to_job=cttfl)
 define_param('DISTANCE_BIN_LIMITS', 'distance_bin_limits',
              modes='disaggregation', to_job=cttfl)
+
+# Uniform Hazard Spectra parameters:
+define_param('UHS_PERIODS', 'uhs_periods', modes='uhs', to_job=cttfl)
 
 # area sources
 define_param('INCLUDE_AREA_SOURCES', 'include_area_sources',
