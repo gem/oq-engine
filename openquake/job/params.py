@@ -28,10 +28,10 @@ from collections import namedtuple
 from openquake.db.models import OqParams
 
 
-ARRAY_RE = re.compile('[ ,]+')
+ARRAY_RE = re.compile('[\s,]+')
 
 # pylint: disable=C0103
-Param = namedtuple('Param', 'column type default modes to_db java_name')
+Param = namedtuple('Param', 'column type default modes to_db to_job java_name')
 
 # TODO unify with utils/oqrunner/config_writer.py
 CALCULATION_MODE = {
@@ -85,14 +85,38 @@ PATH_PARAMS = ['VULNERABILITY', 'SINGLE_RUPTURE_MODEL', 'EXPOSURE',
                'SOURCE_MODEL_LOGIC_TREE_FILE', 'GMPE_LOGIC_TREE_FILE']
 
 
+def config_text_to_list(text, transform=lambda x: x):
+    """ Convert a config file list (as a comma or space delimited list) to a
+    list of values, with the option to transform each item. An example of such
+    a transformation would be a `float` cast, but you can specify virtually
+    any function which accepts and returns a single value.
+
+    :param text: a comma or whitespace delimited list of config values (such as
+        a list of PoE levels)
+    :type text: `str`
+    :param transform: specify a transform to be applied to each element
+        (optional)
+    :type transform: a function which accepts and returns a single value,
+        a type (such as `float` or `int`), or equivalent
+
+    >>> config_text_to_list('MagDistPMF MagDistEpsPMF')
+    ['MagDistPMF', 'MagDistEpsPMF']
+    >>> config_text_to_list('0.01, 0.02, 0.03', float)
+    [0.01, 0.02, 0.03]
+    """
+    return [transform(val.strip()) for val in ARRAY_RE.split(text) if len(val)]
+
+
 def map_enum(value):
     """Map enumerated values from configuration to database"""
     return ENUM_MAP[value]
 
 
-# pylint: disable=W0212
+# disabling pylint for 'Access to a protected member %s of a client class'
+# and 'Too many arguments'
+# pylint: disable=W0212,R0913
 def define_param(name, column, modes=None, default=None, to_db=None,
-                 java_name=None):
+                 to_job=lambda x: x, java_name=None):
     """
     Adds a new parameter definition to the PARAMS dictionary
 
@@ -107,6 +131,9 @@ def define_param(name, column, modes=None, default=None, to_db=None,
         explicitly defined in a job config.
     :param to_db: A function to transform this parameter for storage in the
         database. Defaults to `None` if no transformation is required.
+    :param to_job: A function to transform the value of this parameter when
+        reading from a job config file. For example, INTENSITY_MEASURE_LEVELS
+        are interpreted as a list of floats.
     :param str java_name: the name of the parameter in the Java domain.
     """
 
@@ -122,26 +149,34 @@ def define_param(name, column, modes=None, default=None, to_db=None,
 
     if column == None:
         PARAMS[name] = Param(column=column, type=None, default=default,
-                             modes=modes, to_db=None, java_name=java_name)
+                             modes=modes, to_db=None, to_job=to_job,
+                             java_name=java_name)
     else:
         column_type = type(OqParams._meta.get_field_by_name(column)[0])
         PARAMS[name] = Param(column=column, type=column_type,
                              default=default, modes=modes, to_db=to_db,
-                             java_name=java_name)
+                             to_job=to_job, java_name=java_name)
+
+
+# A few helper functions for transforming job config params when they are read
+# from the config file into a Job. Shortened names for the sake of brevity.
+cttl = config_text_to_list
+cttfl = lambda x: cttl(x, float)  # config text to float list
+str2bool = lambda x: x.lower() in ("true", "yes", "t", "1")
 
 
 # general params
 define_param('CALCULATION_MODE', None)
-define_param('SITES', 'sites')
-define_param('REGION_GRID_SPACING', 'region_grid_spacing')
-define_param('REGION_VERTEX', 'region')
+define_param('SITES', 'sites', to_job=cttfl)
+define_param('REGION_GRID_SPACING', 'region_grid_spacing', to_job=float)
+define_param('REGION_VERTEX', 'region', to_job=cttfl)
 define_param('OUTPUT_DIR', None)
 define_param('BASE_PATH', None)
 define_param("DEPTHTO1PT0KMPERSEC", "depth_to_1pt_0km_per_sec",
-             default=100.0, java_name="Depth 1.0 km/sec")
+             default=100.0, java_name="Depth 1.0 km/sec", to_job=float)
 define_param("VS30_TYPE", "vs30_type", default="measured",
              java_name="Vs30 Type")
-define_param("HAZARD_TASKS", None, modes=("classical",))
+define_param("HAZARD_TASKS", None, modes="classical", to_job=int)
 
 # input files
 define_param('VULNERABILITY', None)
@@ -154,31 +189,37 @@ define_param('SOURCE_MODEL_LOGIC_TREE_FILE', None,
 
 # Disaggregation parameters:
 define_param('DISAGGREGATION_RESULTS', 'disagg_results',
-             modes='disaggregation')
-define_param('LATITUDE_BIN_LIMITS', 'lat_bin_limits', modes='disaggregation')
-define_param('LONGITUDE_BIN_LIMITS', 'lon_bin_limits', modes='disaggregation')
-define_param('MAGNITUDE_BIN_LIMITS', 'mag_bin_limits', modes='disaggregation')
+             modes='disaggregation', to_job=cttl)
+define_param('LATITUDE_BIN_LIMITS', 'lat_bin_limits', modes='disaggregation',
+             to_job=cttfl)
+define_param('LONGITUDE_BIN_LIMITS', 'lon_bin_limits', modes='disaggregation',
+             to_job=cttfl)
+define_param('MAGNITUDE_BIN_LIMITS', 'mag_bin_limits', modes='disaggregation',
+             to_job=cttfl)
 define_param('EPSILON_BIN_LIMITS', 'epsilon_bin_limits',
-             modes='disaggregation')
+             modes='disaggregation', to_job=cttfl)
 define_param('DISTANCE_BIN_LIMITS', 'distance_bin_limits',
-             modes='disaggregation')
+             modes='disaggregation', to_job=cttfl)
 
 # area sources
 define_param('INCLUDE_AREA_SOURCES', 'include_area_sources',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation'),
+             to_job=str2bool)
 define_param('TREAT_AREA_SOURCE_AS', 'treat_area_source_as',
              modes=('classical', 'event_based', 'disaggregation'),
              to_db=map_enum)
 define_param('AREA_SOURCE_DISCRETIZATION',
              'area_source_discretization',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation'),
+             to_job=float)
 define_param('AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP',
              'area_source_magnitude_scaling_relationship',
              modes=('classical', 'event_based', 'disaggregation'))
 
 # grid/point sources
 define_param('INCLUDE_GRID_SOURCES', 'include_grid_sources',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation'),
+             to_job=str2bool)
 define_param('TREAT_GRID_SOURCE_AS', 'treat_grid_source_as',
              modes=('classical', 'event_based', 'disaggregation'))
 define_param('GRID_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP',
@@ -186,19 +227,24 @@ define_param('GRID_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP',
 
 # simple faults
 define_param('INCLUDE_FAULT_SOURCE', 'include_fault_source',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation'),
+             to_job=str2bool)
 define_param('FAULT_RUPTURE_OFFSET', 'fault_rupture_offset',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation'),
+             to_job=float)
 define_param('FAULT_SURFACE_DISCRETIZATION', 'fault_surface_discretization',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation'),
+             to_job=float)
 define_param('FAULT_MAGNITUDE_SCALING_RELATIONSHIP',
              'fault_magnitude_scaling_relationship',
              modes=('classical', 'event_based', 'disaggregation'))
 define_param('FAULT_MAGNITUDE_SCALING_SIGMA',
              'fault_magnitude_scaling_sigma',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation'),
+             to_job=float)
 define_param('RUPTURE_ASPECT_RATIO', 'rupture_aspect_ratio',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation'),
+             to_job=float)
 define_param('RUPTURE_FLOATING_TYPE', 'rupture_floating_type',
              modes=('classical', 'event_based', 'disaggregation'),
              to_db=map_enum)
@@ -206,19 +252,23 @@ define_param('RUPTURE_FLOATING_TYPE', 'rupture_floating_type',
 # complex faults
 define_param('INCLUDE_SUBDUCTION_FAULT_SOURCE',
              'include_subduction_fault_source',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation'),
+             to_job=str2bool)
 define_param('SUBDUCTION_FAULT_RUPTURE_OFFSET',
              'subduction_fault_rupture_offset',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation'),
+             to_job=float)
 define_param('SUBDUCTION_FAULT_SURFACE_DISCRETIZATION',
              'subduction_fault_surface_discretization',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation'),
+             to_job=float)
 define_param('SUBDUCTION_FAULT_MAGNITUDE_SCALING_RELATIONSHIP',
              'subduction_fault_magnitude_scaling_relationship',
              modes=('classical', 'event_based', 'disaggregation'))
 define_param('SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA',
              'subduction_fault_magnitude_scaling_sigma',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation'),
+             to_job=float)
 define_param('SUBDUCTION_RUPTURE_ASPECT_RATIO',
              'subduction_rupture_aspect_ratio',
              modes=('classical', 'event_based', 'disaggregation'))
@@ -228,57 +278,66 @@ define_param('SUBDUCTION_RUPTURE_FLOATING_TYPE',
              to_db=map_enum)
 
 # Everything else; please maintain alphabetical ordering.
-define_param('AGGREGATE_LOSS_CURVE', 'aggregate_loss_curve')
+define_param('AGGREGATE_LOSS_CURVE', 'aggregate_loss_curve', to_job=str2bool)
 define_param('COMPONENT', 'component', to_db=map_enum)
 define_param('COMPUTE_HAZARD_AT_ASSETS_LOCATIONS', None,
-             modes=('event_based', 'deterministic', 'classical'))
+             modes=('event_based', 'deterministic', 'classical'),
+             to_job=str2bool)
 define_param('COMPUTE_MEAN_HAZARD_CURVE', 'compute_mean_hazard_curve',
-             modes='classical')
-define_param('CONDITIONAL_LOSS_POE', 'conditional_loss_poe')
-define_param('DAMPING', 'damping', default=0.0)
+             modes='classical', to_job=str2bool)
+define_param('CONDITIONAL_LOSS_POE', 'conditional_loss_poe', to_job=cttfl)
+define_param('DAMPING', 'damping', default=0.0, to_job=float)
 define_param('GMF_OUTPUT', None,
-             modes=('event_based', 'deterministic'))
+             modes=('event_based', 'deterministic'), to_job=str2bool)
 define_param('GMF_RANDOM_SEED', 'gmf_random_seed',
-             modes=('event_based', 'deterministic'))
+             modes=('event_based', 'deterministic'), to_job=int)
 define_param('GMPE_LT_RANDOM_SEED', 'gmpe_lt_random_seed',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation'), to_job=int)
 define_param('GMPE_MODEL_NAME', 'gmpe_model_name')
 define_param('GMPE_TRUNCATION_TYPE', 'truncation_type', to_db=map_enum)
 define_param('GROUND_MOTION_CORRELATION', 'gm_correlated',
-             modes=('deterministic', 'event_based'))
+             modes=('deterministic', 'event_based'), to_job=str2bool)
 define_param('INTENSITY_MEASURE_LEVELS', 'imls',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation'),
+             to_job=cttfl)
 define_param('INTENSITY_MEASURE_TYPE', 'imt', to_db=map_enum)
 define_param('INVESTIGATION_TIME', 'investigation_time', default=0.0,
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation'),
+             to_job=float)
 define_param('LOSS_CURVES_OUTPUT_PREFIX', 'loss_curves_output_prefix')
 define_param('MAXIMUM_DISTANCE', 'maximum_distance',
-             modes=('classical', 'disaggregation'))
+             modes=('classical', 'disaggregation'), to_job=float)
 define_param('MINIMUM_MAGNITUDE', 'min_magnitude', default=0.0,
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation'),
+             to_job=float)
 define_param('NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS',
-             'gmf_calculation_number', modes='deterministic')
+             'gmf_calculation_number', modes='deterministic', to_job=int)
 define_param('NUMBER_OF_LOGIC_TREE_SAMPLES', 'realizations',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation'), to_job=int)
 define_param('NUMBER_OF_SEISMICITY_HISTORIES', 'histories',
-             modes='event_based')
-define_param('PERIOD', 'period', default=0.0)
-define_param('POES', 'poes', modes=('classical', 'disaggregation'))
-define_param('QUANTILE_LEVELS', 'quantile_levels', modes='classical')
+             modes='event_based', to_job=int)
+define_param('PERIOD', 'period', default=0.0, to_job=float)
+define_param('POES', 'poes', modes=('classical', 'disaggregation'),
+             to_job=cttfl)
+define_param('QUANTILE_LEVELS', 'quantile_levels', modes='classical',
+             to_job=cttfl)
 define_param("REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM",
              "reference_depth_to_2pt5km_per_sec_param",
-             java_name="Depth 2.5 km/sec")
-define_param("REFERENCE_VS30_VALUE", "reference_vs30_value", java_name="Vs30")
-define_param('RISK_CELL_SIZE', 'risk_cell_size')
+             java_name="Depth 2.5 km/sec", to_job=float)
+define_param("REFERENCE_VS30_VALUE", "reference_vs30_value", java_name="Vs30",
+             to_job=float)
+define_param('RISK_CELL_SIZE', 'risk_cell_size', to_job=float)
 define_param('RUPTURE_SURFACE_DISCRETIZATION',
-             'rupture_surface_discretization', modes='deterministic')
+             'rupture_surface_discretization', modes='deterministic',
+             to_job=float)
 define_param("SADIGH_SITE_TYPE", "sadigh_site_type", to_db=map_enum,
              java_name="Sadigh Site Type")
 define_param('SOURCE_MODEL_LT_RANDOM_SEED', 'source_model_lt_random_seed',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation'), to_job=int)
 define_param('STANDARD_DEVIATION_TYPE', 'standard_deviation_type',
              modes=('classical', 'event_based', 'disaggregation'),
              to_db=map_enum)
-define_param('TRUNCATION_LEVEL', 'truncation_level')
+define_param('TRUNCATION_LEVEL', 'truncation_level', to_job=int)
 define_param('WIDTH_OF_MFD_BIN', 'width_of_mfd_bin',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation'),
+             to_job=float)
