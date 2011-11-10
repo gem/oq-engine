@@ -45,6 +45,7 @@ from openquake.db.models import (
 from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
+from openquake.job import params as job_params
 from openquake.job.mixins import Mixin
 from openquake.job.params import (
     PARAMS, CALCULATION_MODE, ENUM_MAP, PATH_PARAMS, INPUT_FILE_TYPES,
@@ -474,7 +475,11 @@ class Job(object):
                 self.execute()
 
     def __getitem__(self, name):
-        return self.params[name]
+        defined_param = job_params.PARAMS.get(name)
+        if defined_param.to_job is not None:
+            if self.params.get(name) is not None:
+                return defined_param.to_job(self.params.get(name))
+        return self.params.get(name)
 
     def __eq__(self, other):
         return self.params == other.params
@@ -547,7 +552,7 @@ class Job(object):
 
     def _extract_coords(self, config_param):
         """Extract from a configuration parameter the list of coordinates."""
-        verts = [float(x) for x in self.params[config_param].split(",")]
+        verts = self[config_param]
         return zip(verts[1::2], verts[::2])
 
     def _sites_for_region(self):
@@ -555,7 +560,7 @@ class Job(object):
         region = shapes.Region.from_coordinates(
             self._extract_coords('REGION_VERTEX'))
 
-        region.cell_size = float(self.params['REGION_GRID_SPACING'])
+        region.cell_size = self['REGION_GRID_SPACING']
         return [site for site in region]
 
     def build_nrml_path(self, nrml_file):
@@ -587,8 +592,9 @@ class Job(object):
     @property
     def imls(self):
         "Return the intensity measure levels as specified in the config file"
-        return self.extract_values_from_config('INTENSITY_MEASURE_LEVELS',
-                                               separator=',')
+        if self.has('INTENSITY_MEASURE_LEVELS'):
+            return self['INTENSITY_MEASURE_LEVELS']
+        return None
 
     def _record_initial_stats(self):
         '''
@@ -601,12 +607,10 @@ class Job(object):
         stats.start_time = datetime.utcnow()
         stats.num_sites = len(self.sites_to_compute())
 
-        job_type = CALCULATION_MODE[self.params['CALCULATION_MODE']]
+        job_type = CALCULATION_MODE[self['CALCULATION_MODE']]
         if conf.HAZARD_SECTION in self.sections:
             if job_type != 'deterministic':
-                stats.realizations = int(
-                    self.params["NUMBER_OF_LOGIC_TREE_SAMPLES"]
-                )
+                stats.realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
 
         stats.save()
 
@@ -638,25 +642,3 @@ def read_sites_from_exposure(a_job):
             sites.append(site)
 
     return sites
-
-
-def config_text_to_list(text, transform=lambda x: x):
-    """ Convert a config file list (as a comma or space delimited list) to a
-    list of values, with the option to transform each item. An example of such
-    a transformation would be a `float` cast, but you can specify virtually
-    any function which accepts and returns a single value.
-
-    :param text: a comma or space delimited list of config values (such as a
-        list of PoE levels)
-    :type text: `str`
-    :param transform: specify a transform to be applied to each element
-        (optional)
-    :type transform: a function which accepts and returns a single value,
-        a type (such as `float` or `int`), or equivalent
-
-    >>> config_text_to_list('MagDistPMF MagDistEpsPMF')
-    ['MagDistPMF', 'MagDistEpsPMF']
-    >>> config_text_to_list('0.01, 0.02, 0.03', float)
-    [0.01, 0.02, 0.03]
-    """
-    return [transform(val.strip()) for val in ARRAY_RE.split(text) if len(val)]
