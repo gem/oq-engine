@@ -315,7 +315,7 @@ COMMENT ON COLUMN uiapi.job_stats.realizations IS 'The number of logic tree samp
 
 
 COMMENT ON TABLE uiapi.oq_params IS 'Holds the parameters needed to invoke the OpenQuake engine.';
-COMMENT ON COLUMN uiapi.oq_params.job_type IS 'One of: classical, event_based, deterministic, or disaggregation.';
+COMMENT ON COLUMN uiapi.oq_params.job_type IS 'One of: classical, event_based, deterministic, disaggregation, or uhs.';
 COMMENT ON COLUMN uiapi.oq_params.histories IS 'Number of seismicity histories';
 COMMENT ON COLUMN uiapi.oq_params.imls IS 'Intensity measure levels';
 COMMENT ON COLUMN uiapi.oq_params.imt IS 'Intensity measure type, one of:
