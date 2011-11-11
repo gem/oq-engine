@@ -26,7 +26,7 @@ from openquake.job import config
 from openquake.job.config import (
     DisaggregationValidator, HazardMandatoryParamsValidator,
     RiskMandatoryParamsValidator, DeterministicComputationValidator,
-    to_float_array, to_str_array)
+    to_float_array, to_str_array, validate_numeric_sequence)
 from tests.utils import helpers
 
 import unittest
@@ -515,7 +515,7 @@ class NumericSequenceValidationTestCase(unittest.TestCase):
 
     # This test sequence can be used to trigger errors with any of the
     # individual checks.
-    TEST_VALUES = [-91.0, -91.0 -92.0]
+    TEST_VALUES = [-91.0, -91.0, -92.0]
 
     def test_no_checks(self):
         """If no checks are specified, no errors should be raised."""
