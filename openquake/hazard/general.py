@@ -211,8 +211,7 @@ class BasePSHAMixin(Mixin):
                 "Depth 1.0 km/sec"))
             depth1km.setValue(float(self.params['DEPTHTO1PT0KMPERSEC']))
             vs30_type = java.jclass("StringParameter")("Vs30 Type")
-            # Enum values must be capitalized in the Java domain!
-            vs30_type.setValue(self.params['VS30_TYPE'].capitalize())
+            vs30_type.setValue(self['VS30_TYPE'])
 
             site.addParameter(vs30)
             site.addParameter(depth25)
