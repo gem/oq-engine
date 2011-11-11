@@ -374,11 +374,9 @@ class UHSValidator(object):
         else:
             vals = to_float_array(uhs_periods)
             try:
-                assert len(vals) > 0, \
-                    "UHS_PERIODS must contain at least 1 element"
-
-                # TODO: factor out the limits checks in the DA validator
-            except AssertionError, err:
+                validate_numeric_sequence(vals, min_length=1, min_val=0.0,
+                                          check_sorted=True, check_dupes=True)
+            except ValueError, err:
                 valid = False
                 errors.append(err.message)
 
