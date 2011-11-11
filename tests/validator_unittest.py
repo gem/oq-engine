@@ -448,77 +448,13 @@ class DisaggregationValidatorTestCase(unittest.TestCase):
         'DISTANCE_BIN_LIMITS': '-10, 0, 10'
     }
 
-    @classmethod
-    def setUpClass(cls):
-        cls.dav_cls = config.DisaggregationValidator
-
-    def test_check_good_bin_limits(self):
-        """Check validation for known-good limits"""
-        good_limits = (
-            [5, 6, 7, 8],
-            [5, 6],
-            [-8.6, -7.3, -6.2, -6.1],
-        )
-
-        for limits in good_limits:
-            # if no error is raised, the limits are good
-            self.dav_cls.check_bin_limits(limits)
-
-    def test_check_bad_bin_limits(self):
-        """Check validation for known-bad limits"""
-        bad_limits = (
-            [5],
-            [],
-            [1.3],
-        )
-
-        for limits in bad_limits:
-            self.assertRaises(ValueError, self.dav_cls.check_bin_limits,
-                              limits)
-
-    def test_check_good_bin_limits_with_min_max(self):
-        """Check validation for known-good limits, with min/max specified"""
-        bin_min = -90.0
-        bin_max = 90.0
-
-        limits = [-90.0, 42.7, 90.0]
-
-        self.dav_cls.check_bin_limits(limits, bin_min=bin_min, bin_max=bin_max)
-
-    def test_check_bad_limits_with_min_max(self):
-        """Check validation for known-bad limits, with min/max specified"""
-        bin_min = -90.0
-        bin_max = 90.0
-
-        too_low = [-90.1, 42.7, 90.0]
-        too_high = [-90.0, 42.7, 90.1]
-
-        for limits in (too_low, too_high):
-            self.assertRaises(ValueError, self.dav_cls.check_bin_limits,
-                              too_low, bin_min=bin_min, bin_max=bin_max)
-
-    def test_is_valid_good_params(self):
-        """Test the entire validator with a set of known-good parameters"""
+    def test_good_params(self):
         validator = config.DisaggregationValidator(self.GOOD_PARAMS)
+        self.assertTrue(validator.is_valid()[0])
 
-        self.assertEqual((True, []), validator.is_valid())
-
-    def test_is_valid_bad_params(self):
-        """Test the entire validator with a set of known-bad parameters"""
+    def test_bad_params(self):
         validator = config.DisaggregationValidator(self.BAD_PARAMS)
-
-        expected_results = (False,
-            ['Invalid bin limits: [-90.1, 0.0, 90.0]. Limits must be >= -90.0',
-             ('Invalid bin limits: [-180.0, 0.0, 180.1].'
-              ' Limits must be <= 180.0'),
-             ('Invalid bin limits: [-0.5, 0.0, 1.0, 2.0].'
-              ' Limits must be >= 0.0'),
-             'Invalid bin limits: [-10.0, 0.0, 10.0]. Limits must be >= 0.0']
-        )
-
-        actual_results = validator.is_valid()
-
-        self.assertEqual(expected_results, actual_results)
+        self.assertFalse(validator.is_valid()[0])
 
 
 class DefaultValidatorsTestCase(unittest.TestCase):
@@ -570,3 +506,41 @@ class ValidatorsUtilsTestCase(unittest.TestCase):
         test_input = 'MagPMF MagDistPMF MagDistEpsPMF'
 
         self.assertEqual(expected, to_str_array(test_input))
+
+
+class NumericSequenceValidationTestCase(unittest.TestCase):
+    """Test cases for
+    :function:`openquake.job.config.validate_numeric_sequence`
+    """
+
+    # This test sequence can be used to trigger errors with any of the
+    # individual checks.
+    TEST_VALUES = [-91.0, -91.0 -92.0]
+
+    def test_no_checks(self):
+        """If no checks are specified, no errors should be raised."""
+        validate_numeric_sequence(self.TEST_VALUES)
+
+    def test_min_length(self):
+        self.assertRaises(ValueError, validate_numeric_sequence,
+                          self.TEST_VALUES, min_length=4)
+
+    def test_max_length(self):
+         self.assertRaises(ValueError, validate_numeric_sequence,
+                          self.TEST_VALUES, max_length=2)
+
+    def test_min_val(self):
+            self.assertRaises(ValueError, validate_numeric_sequence,
+                          self.TEST_VALUES, min_val=-90.0)
+
+    def test_max_val(self):
+        self.assertRaises(ValueError, validate_numeric_sequence,
+                          self.TEST_VALUES, max_val=-93.0)
+
+    def test_check_sorted(self):
+        self.assertRaises(ValueError, validate_numeric_sequence,
+                          self.TEST_VALUES, check_sorted=True)
+
+    def test_check_dupes(self):
+        self.assertRaises(ValueError, validate_numeric_sequence,
+                          self.TEST_VALUES, check_dupes=True)
