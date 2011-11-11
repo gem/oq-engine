@@ -26,7 +26,7 @@ from openquake.job import config
 from openquake.job.config import (
     DisaggregationValidator, HazardMandatoryParamsValidator,
     RiskMandatoryParamsValidator, DeterministicComputationValidator,
-    to_float_array, to_str_array, validate_numeric_sequence)
+    UHSValidator, to_float_array, to_str_array, validate_numeric_sequence)
 from tests.utils import helpers
 
 import unittest
@@ -544,3 +544,41 @@ class NumericSequenceValidationTestCase(unittest.TestCase):
     def test_check_dupes(self):
         self.assertRaises(ValueError, validate_numeric_sequence,
                           self.TEST_VALUES, check_dupes=True)
+
+
+class UHSValidatorTestCase(unittest.TestCase):
+    """Tests for :class:`openquake.job.config.UHSValidator`"""
+
+    # Parameters for success cases:
+    GOOD_PARAMS_SHORT = {'UHS_PERIODS': '0.0'}
+    GOOD_PARAMS_LONG = {'UHS_PERIODS': '0.0, 0.5, 1.0, 1.5'}
+
+    # Parameters for fail cases:
+    MIN_LENGTH = {'UHS_PERIODS': ''}
+    MIN_VAL = {'UHS_PERIODS': '1.0, 0.0, 1.0'}
+    CHECK_SORTED = {'UHS_PERIODS': '0.5, 0.0, 1.0, 1.5'}
+    CHECK_DUPES = {'UHS_PERIODS': '0.0, 0.5, 0.5, 1.0'}
+
+    def test_good_params_short(self):
+        validator = UHSValidator(self.GOOD_PARAMS_SHORT)
+        self.assertTrue(validator.is_valid()[0])
+
+    def test_good_params_long(self):
+        validator = UHSValidator(self.GOOD_PARAMS_LONG)
+        self.assertTrue(validator.is_valid()[0])
+
+    def test_invalid_min_length(self):
+        validator = UHSValidator(self.MIN_LENGTH)
+        self.assertFalse(validator.is_valid()[0])
+
+    def test_invalid_min_val(self):
+        validator = UHSValidator(self.MIN_VAL)
+        self.assertFalse(validator.is_valid()[0])
+
+    def test_invalid_check_sorted(self):
+        validator = UHSValidator(self.CHECK_SORTED)
+        self.assertFalse(validator.is_valid()[0])
+
+    def test_invalid_check_dupes(self):
+        validator = UHSValidator(self.CHECK_DUPES)
+        self.assertFalse(validator.is_valid()[0])
