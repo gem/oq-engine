@@ -481,7 +481,6 @@ class OqJob(models.Model):
         (u'event_based', u'Probabilistic Event-Based'),
         (u'deterministic', u'Deterministic'),
         (u'disaggregation', u'Disaggregation'),
-        (u'uhs', u'UHS'),  # Uniform Hazard Spectra
     )
     job_type = models.TextField(choices=JOB_TYPE_CHOICES)
     STATUS_CHOICES = (
@@ -527,7 +526,6 @@ class OqParams(models.Model):
         (u'event_based', u'Probabilistic Event-Based'),
         (u'deterministic', u'Deterministic'),
         (u'disaggregation', u'Disaggregation'),
-        (u'uhs', u'UHS'),  # Uniform Hazard Spectra
     )
     job_type = models.TextField(choices=JOB_TYPE_CHOICES)
     input_set = models.ForeignKey('InputSet')
@@ -669,7 +667,6 @@ class OqParams(models.Model):
     #   FullDisaggMatrix (The full disaggregation matrix; includes
     #       Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
     disagg_results = CharArrayField(null=True)
-    uhs_periods = FloatArrayField(null=True)
     VS30_TYPE_CHOICES = (
        (u"measured", u"Value obtained from on-site measurements"),
        (u"inferred", u"Estimated value"),
