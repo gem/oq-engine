@@ -1,11 +1,9 @@
 package org.gem.calc;
 
-import java.io.File;
 import java.rmi.RemoteException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.UUID;
 
 import org.apache.commons.collections.Closure;
 import org.opensha.commons.data.Site;
@@ -15,6 +13,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.LocationUtils;
 import org.opensha.commons.param.DoubleParameter;
+import org.opensha.commons.param.StringParameter;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.earthquake.EqkRupForecastAPI;
 import org.opensha.sha.earthquake.ProbEqkRupture;
@@ -22,8 +21,11 @@ import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.earthquake.rupForecastImpl.GEM1.GEM1ERF;
 import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
 import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
+import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.DepthTo2pt5kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
+import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam;
+import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam.Vs30Type;
 import org.opensha.sha.util.TectonicRegionType;
 import static org.apache.commons.collections.CollectionUtils.forAllDo;
 
@@ -136,11 +138,16 @@ public class DisaggregationCalculator {
             Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap,
             double poe,
             List<Double> imls,
+            String vs30Type,
             double vs30Value,
+            double depthTo1pt0KMPS,
             double depthTo2pt5KMPS)
     {
+        assertVs30TypeIsValid(vs30Type);
         Site site = new Site(new Location(lat, lon));
+        site.addParameter(new StringParameter(Vs30_TypeParam.NAME, vs30Type));
         site.addParameter(new DoubleParameter(Vs30_Param.NAME, vs30Value));
+        site.addParameter(new DoubleParameter(DepthTo1pt0kmPerSecParam.NAME, depthTo1pt0KMPS));
         site.addParameter(new DoubleParameter(DepthTo2pt5kmPerSecParam.NAME, depthTo2pt5KMPS));
 
         DiscretizedFuncAPI hazardCurve = new ArbitrarilyDiscretizedFunc();
@@ -274,6 +281,15 @@ public class DisaggregationCalculator {
                 throw new RuntimeException(
                         "Attenuation relationship must have a non-zero standard deviation.");
             }
+        }
+    }
+
+    public static void assertVs30TypeIsValid(String vs30Type) {
+        try {
+            Vs30Type.valueOf(vs30Type);
+        }
+        catch (IllegalArgumentException e) {
+            throw new RuntimeException(e);
         }
     }
 
