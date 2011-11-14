@@ -255,6 +255,7 @@ class DeterministicComputationValidator(object):
         return (True, [])
 
 
+# pylint: disable=R0913
 def validate_numeric_sequence(values, min_length=None, max_length=None,
                               min_val=None, max_val=None,
                               check_sorted=False, check_dupes=False):
