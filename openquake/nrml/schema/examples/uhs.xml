@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.2"
+      gml:id="IDXXX">
+    <uhsResultField gml:id="ID000">
+        <uhsPeriods>  <!-- X-axis values for all curves in this result set -->
+            0.0 0.1 0.5
+        </uhsPeriods>
+        <uhsResultNode gml:id="ID001">
+            <site>
+                <gml:Point gml:id="ID002">
+                    <gml:pos>0.0 0.0</gml:pos>
+                <gml:Point>
+            </site>
+            <uhsResult path="some/file"/>
+        </uhsResultNode>
+        <uhsResultNode gml:id="ID003">
+            <site>
+                <gml:Point gml:id="ID004">
+                    <gml:pos>1.0 0.0</gml:pos>
+                <gml:Point>
+            </site>
+            <uhsResult path="some/file"/>
+        </uhsResultNode>
+        <uhsResultNode gml:id="ID005">
+            <site>
+                <gml:Point gml:id="ID006">
+                    <gml:pos>0.0 1.0</gml:pos>
+                <gml:Point>
+            </site>
+            <uhsResult path="some/file"/>
+        </uhsResultNode>
+    </uhsResultField>
+</nrml>
