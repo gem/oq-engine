@@ -326,6 +326,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
     BASE_CLASSICAL_PARAMS = {
         'CALCULATION_MODE': 'Classical',
         'POES': '0.01 0.1',
+        'SOURCE_MODEL_LT_RANDOM_SEED': '23',
+        'GMPE_LT_RANDOM_SEED': '5',
         'INTENSITY_MEASURE_TYPE': 'PGA',
         'MINIMUM_MAGNITUDE': '5.0',
         'INVESTIGATION_TIME': '50.0',
@@ -388,6 +390,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     BASE_EVENT_BASED_PARAMS = {
         'CALCULATION_MODE': 'Event Based',
+        'SOURCE_MODEL_LT_RANDOM_SEED': '23',
+        'GMPE_LT_RANDOM_SEED': '5',
         'INTENSITY_MEASURE_TYPE': 'SA',
         'INCLUDE_GRID_SOURCES': 'false',
         'INCLUDE_SUBDUCTION_FAULT_SOURCE': 'false',
@@ -474,6 +478,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['GMPE_LOGIC_TREE_FILE'] = abs_path("gmpe_logic_tree.xml")
         params['EXPOSURE'] = abs_path("small_exposure.xml")
         params['VULNERABILITY'] = abs_path("vulnerability.xml")
+        params['SOURCE_MODEL_LT_RANDOM_SEED'] = '23'
+        params['GMPE_LT_RANDOM_SEED'] = '5'
 
         self.job = prepare_job(params)
         self.job.oq_params = self._reload_params()
