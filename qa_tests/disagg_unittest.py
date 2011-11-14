@@ -108,6 +108,9 @@ class DisaggCalcQATestCase(unittest.TestCase, helpers.ConfigTestMixin):
         self.assertTrue(os.path.exists(h5_file))
         self._verify_h5(h5_file, job_record.oq_params)
 
+        # clean up the job hdf5 results dir:
+        shutil.rmtree(H5_OUTPUT_DIR % job_record.id)
+
     def _verify_xml_output(self, expected, actual, job_id):
         """Read both `expected` and `actual` file and check for exact equality.
         """
