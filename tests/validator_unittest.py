@@ -438,14 +438,14 @@ class DisaggregationValidatorTestCase(unittest.TestCase):
         'LONGITUDE_BIN_LIMITS': '-180, 0, 180',
         'MAGNITUDE_BIN_LIMITS': '0, 1, 2, 4',
         'EPSILON_BIN_LIMITS': '-1, 3, 5, 7',
-        'DISTANCE_BIN_LIMITS': '0, 10, 20'
+        'DISTANCE_BIN_LIMITS': '0, 10, 20',
     }
     BAD_PARAMS = {
         'LATITUDE_BIN_LIMITS': '-90.1, 0, 90',
         'LONGITUDE_BIN_LIMITS': '-180, 0, 180.1',
         'MAGNITUDE_BIN_LIMITS': '-0.5, 0, 1, 2',
         'EPSILON_BIN_LIMITS': '-1, 3, 5, 7',
-        'DISTANCE_BIN_LIMITS': '-10, 0, 10'
+        'DISTANCE_BIN_LIMITS': '-10, 0, 10',
     }
 
     def test_good_params(self):
