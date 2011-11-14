@@ -20,6 +20,7 @@
 import h5py
 import numpy
 import os
+import random
 import uuid
 
 from math import log
@@ -200,14 +201,6 @@ class DisaggMixin(Mixin):
             input.
         5) Finally, write an NRML/XML wrapper around the disagg. results.
         """
-        # cache the source model and gmpe model in the KVS
-        # so the Java code can access it
-        src_model_seed = self['SOURCE_MODEL_LT_RANDOM_SEED']
-        gmpe_seed = self['GMPE_LT_RANDOM_SEED']
-
-        store_source_model(self.job_id, src_model_seed, self.params, self.calc)
-        store_gmpe_map(self.job_id, gmpe_seed, self.calc)
-
         # matrix results for this job will go here:
         result_dir = DisaggMixin.create_result_dir(
             config.get('nfs', 'base_dir'), self.job_id)
@@ -298,7 +291,20 @@ class DisaggMixin(Mixin):
         # accumulates task data across the realization and poe loops
         task_data = []
 
+        src_model_rnd = random.Random()
+        src_model_rnd.seed(the_job['SOURCE_MODEL_LT_RANDOM_SEED'])
+        gmpe_rnd = random.Random()
+        gmpe_rnd.seed(the_job['GMPE_LT_RANDOM_SEED'])
+
         for rlz in xrange(1, realizations + 1):  # 1 to N, inclusive
+            # cache the source model and gmpe model in the KVS
+            # so the Java code can access it
+
+            store_source_model(the_job.job_id, src_model_rnd.getrandbits(32),
+                               the_job.params, the_job.calc)
+            store_gmpe_map(the_job.job_id, gmpe_rnd.getrandbits(32),
+                           the_job.calc)
+
             for poe in poes:
                 task_site_pairs = []
                 for site in sites:
