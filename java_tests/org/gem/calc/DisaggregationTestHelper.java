@@ -15,6 +15,7 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.geo.Region;
 import org.opensha.commons.param.DoubleParameter;
+import org.opensha.commons.param.StringParameter;
 import org.opensha.sha.calc.HazardCurveCalculator;
 import org.opensha.sha.earthquake.EqkRupForecast;
 import org.opensha.sha.earthquake.FocalMechanism;
@@ -33,8 +34,11 @@ import org.opensha.sha.imr.param.OtherParams.ComponentParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncLevelParam;
 import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
 import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
+import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.DepthTo2pt5kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
+import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam;
+import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam.Vs30Type;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 
@@ -476,7 +480,9 @@ public class DisaggregationTestHelper
 	public static Site makeTestSite()
 	{
 		Site site = new Site(new Location(0.0, 0.0));
+		site.addParameter(new StringParameter(Vs30_TypeParam.NAME, Vs30Type.Measured.toString()));
 		site.addParameter(new DoubleParameter(Vs30_Param.NAME, 760.0));
+		site.addParameter(new DoubleParameter(DepthTo1pt0kmPerSecParam.NAME, 100.0));
 		site.addParameter(new DoubleParameter(DepthTo2pt5kmPerSecParam.NAME, 1.0));
 		return site;
 	}
