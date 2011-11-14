@@ -526,11 +526,11 @@ class NumericSequenceValidationTestCase(unittest.TestCase):
                           self.TEST_VALUES, min_length=4)
 
     def test_max_length(self):
-         self.assertRaises(ValueError, validate_numeric_sequence,
+        self.assertRaises(ValueError, validate_numeric_sequence,
                           self.TEST_VALUES, max_length=2)
 
     def test_min_val(self):
-            self.assertRaises(ValueError, validate_numeric_sequence,
+        self.assertRaises(ValueError, validate_numeric_sequence,
                           self.TEST_VALUES, min_val=-90.0)
 
     def test_max_val(self):
