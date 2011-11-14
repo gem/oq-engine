@@ -96,12 +96,14 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
     # calculator.
     iml_vals = [log(x) for x in iml_vals]
     iml_arraylist.addAll(iml_vals)
-    vs30_value = float(the_job['REFERENCE_VS30_VALUE'])
-    depth_to_2pt5 = float(the_job['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM'])
+    vs30_type = the_job['VS30_TYPE']
+    vs30_value = the_job['REFERENCE_VS30_VALUE']
+    depth_to_1pt0 = the_job['DEPTHTO1PT0KMPERSEC']
+    depth_to_2pt5 = the_job['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']
 
     matrix_result = disagg_calc.computeMatrix(
         site.latitude, site.longitude, erf, gmpe_map, poe, iml_arraylist,
-        vs30_value, depth_to_2pt5)
+        vs30_type, vs30_value, depth_to_1pt0, depth_to_2pt5)
 
     matrix_path = save_5d_matrix_to_h5(result_dir,
                                        numpy.array(matrix_result.getMatrix()))
