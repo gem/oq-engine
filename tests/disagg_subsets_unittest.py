@@ -32,7 +32,7 @@ from openquake.hazard.disagg import subsets as disagg_subsets
 
 class SubsetExtractionTestCase(unittest.TestCase):
     FULL_MATRIX_DATA = \
-        'latitudeLongitudeMagnitudeEpsilonTectonicRegionTypePMF.dat'
+        'FullDisaggMatrix.dat'
 
     LATITUDE_BIN_LIMITS = [-0.6, -0.3, -0.1, 0.1, 0.3, 0.6]
     LONGITUDE_BIN_LIMITS = LATITUDE_BIN_LIMITS
@@ -64,11 +64,12 @@ class SubsetExtractionTestCase(unittest.TestCase):
 
     @classmethod
     def read_data_file(cls, data_filename, result_shape):
-        data = open(helpers.get_data_path('disagg/result/%s' % data_filename))
+        data = open(helpers.demo_file('disaggregation/expected_results/%s'
+                                      % data_filename))
         numbers = [float(line.split()[-1]) for line in data]
         return numpy.reshape(numbers, result_shape)
 
-    def _test_pmf(self, name, datafile, result_shape):
+    def _test_pmf(self, name, result_shape):
         target_path = os.path.join(self.tempdir, '%s.hdf5' % name)
         disagg_subsets.extract_subsets(
             self.SITE, self.full_matrix_path,
@@ -77,62 +78,57 @@ class SubsetExtractionTestCase(unittest.TestCase):
             self.DISTANCE_BIN_LIMITS,
             target_path, [name]
         )
-        expected_result = self.read_data_file(datafile, result_shape)
+        expected_result = self.read_data_file('%s.dat' % name, result_shape)
         result = h5py.File(target_path, 'r')[name].value
         helpers.assertDeepAlmostEqual(self, expected_result, result)
 
     def test_magpmf(self):
-        self._test_pmf('MagPMF', 'magnitudePMF.dat', [self.NMAG - 1])
+        self._test_pmf('MagPMF', [self.NMAG - 1])
 
     def test_distpmf(self):
-        self._test_pmf('DistPMF', 'distancePMF.dat', [self.NDIST - 1])
+        self._test_pmf('DistPMF', [self.NDIST - 1])
 
     def test_trtpmf(self):
-        self._test_pmf('TRTPMF', 'tectonicRegionTypePMF.dat', [self.NTRT])
+        self._test_pmf('TRTPMF', [self.NTRT])
 
     def test_magdistpmf(self):
-        self._test_pmf('MagDistPMF', 'magnitudeDistancePMF.dat',
+        self._test_pmf('MagDistPMF',
                        [self.NMAG - 1, self.NDIST - 1])
 
     def test_magdistepspmf(self):
-        self._test_pmf('MagDistEpsPMF', 'magnitudeDistanceEpsilonPMF.dat',
+        self._test_pmf('MagDistEpsPMF',
                        [self.NMAG - 1, self.NDIST - 1, self.NEPS - 1])
 
     def test_latlonpmf(self):
-        self._test_pmf('LatLonPMF', 'latitudeLongitudePMF.dat',
-                       [self.NLAT - 1, self.NLON - 1])
+        self._test_pmf('LatLonPMF', [self.NLAT - 1, self.NLON - 1])
 
     def test_latlonmagpmf(self):
-        self._test_pmf('LatLonMagPMF', 'latitudeLongitudeMagnitudePMF.dat',
+        self._test_pmf('LatLonMagPMF',
                        [self.NLAT - 1, self.NLON - 1, self.NMAG - 1])
 
     def test_latlonmagepspmf(self):
         self._test_pmf('LatLonMagEpsPMF',
-                       'latitudeLongitudeMagnitudeEpsilonPMF.dat',
                        [self.NLAT - 1, self.NLON - 1,
                         self.NMAG - 1, self.NEPS - 1])
 
     def test_magtrtpmf(self):
-        self._test_pmf('MagTRTPMF', 'magnitudeTectonicRegionTypePMF.dat',
-                       [self.NMAG - 1, self.NTRT])
+        self._test_pmf('MagTRTPMF', [self.NMAG - 1, self.NTRT])
 
     def test_latlontrtpmf(self):
         self._test_pmf('LatLonTRTPMF',
-                       'latitudeLongitudeTectonicRegionTypePMF.dat',
                        [self.NLAT - 1, self.NLON - 1, self.NTRT])
 
     def test_full_matrix(self):
         self._test_pmf(disagg.FULL_DISAGG_MATRIX,
-                       self.FULL_MATRIX_DATA,
                        [self.NLAT - 1, self.NLON - 1, self.NMAG - 1,
                         self.NEPS - 1, self.NTRT])
 
     def test_multiple_matrices(self):
         target_path = os.path.join(self.tempdir, 'multiple.hdf5')
         pmfs = {
-            'MagDistEpsPMF': ('magnitudeDistanceEpsilonPMF.dat',
+            'MagDistEpsPMF': ('MagDistEpsPMF.dat',
                               [self.NMAG - 1, self.NDIST - 1, self.NEPS - 1]),
-            'LatLonPMF': ('latitudeLongitudePMF.dat',
+            'LatLonPMF': ('LatLonPMF.dat',
                           [self.NLAT - 1, self.NLON - 1]),
             disagg.FULL_DISAGG_MATRIX: (self.FULL_MATRIX_DATA,
                                                  self.FULL_MATRIX_SHAPE)
