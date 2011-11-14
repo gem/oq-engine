@@ -601,6 +601,8 @@ class DbTestMixin(TestMixin):
         oqp.sadigh_site_type = 'rock'
         oqp.region = (
             "POLYGON((-81.3 37.2, -80.63 38.04, -80.02 37.49, -81.3 37.2))")
+        oqp.source_model_lt_random_seed = 23
+        oqp.gmpe_lt_random_seed = 5
         oqp.save()
 
         job = models.OqJob(oq_params=oqp, owner=owner,
