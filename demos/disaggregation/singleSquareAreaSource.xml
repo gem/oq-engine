@@ -17,7 +17,7 @@
       </areaBoundary>
       <ruptureRateModel>
         <truncatedGutenbergRichter>
-          <aValueCumulative>4.30</aValueCumulative>
+          <aValueCumulative>4.301073427</aValueCumulative>
           <bValue>1.0</bValue>
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>9.0</maxMagnitude>
