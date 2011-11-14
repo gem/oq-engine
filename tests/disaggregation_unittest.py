@@ -92,7 +92,7 @@ class DisaggregationTaskTestCase(unittest.TestCase):
 
         # for the given test input data, we expect the calculator to return
         # this gmv:
-        expected_gmv = 0.225743641602613
+        expected_gmv = 0.2259803374787534
 
         the_job = helpers.job_from_file(DISAGG_DEMO_CONFIG_FILE)
 
