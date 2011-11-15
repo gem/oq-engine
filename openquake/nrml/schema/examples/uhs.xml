@@ -6,29 +6,11 @@
         <uhsPeriods>  <!-- X-axis values for all curves in this result set -->
             0.0 0.1 0.5
         </uhsPeriods>
-        <uhsResultNode gml:id="ID001">
-            <site>
-                <gml:Point gml:id="ID002">
-                    <gml:pos>0.0 0.0</gml:pos>
-                <gml:Point>
-            </site>
-            <uhsResult path="some/file"/>
-        </uhsResultNode>
-        <uhsResultNode gml:id="ID003">
-            <site>
-                <gml:Point gml:id="ID004">
-                    <gml:pos>1.0 0.0</gml:pos>
-                <gml:Point>
-            </site>
-            <uhsResult path="some/file"/>
-        </uhsResultNode>
-        <uhsResultNode gml:id="ID005">
-            <site>
-                <gml:Point gml:id="ID006">
-                    <gml:pos>0.0 1.0</gml:pos>
-                <gml:Point>
-            </site>
-            <uhsResult path="some/file"/>
-        </uhsResultNode>
+        <!-- 1 result node per Probability of Exceedance -->
+        <!-- Each file (indicated by 'path') is an HDF5 file containing data
+             for all sites and all logic tree samples.  -->
+        <uhsResultNode gml:id="ID001" poE="0.02" path="some/filea"/>
+        <uhsResultNode gml:id="ID001" poE="0.1" path="some/fileb"/>
+        <uhsResultNode gml:id="ID001" poE="0.2" path="some/filec"/>
     </uhsResultField>
 </nrml>
