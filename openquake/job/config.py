@@ -296,7 +296,7 @@ def validate_numeric_sequence(values, min_length=None, max_length=None,
             "Sequence is not sorted.")
         assert ((not check_dupes)
                 or
-                (sorted(list(set(values))) == sorted(list(values)))), (
+                (len(set(values)) == len(values))), (
             "Sequence contains duplicates.")
 
     except AssertionError, err:
