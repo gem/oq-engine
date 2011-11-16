@@ -23,7 +23,6 @@ Utility functions related to splitting work into tasks.
 """
 
 import itertools
-import math
 import time
 
 from celery.task.sets import TaskSet
@@ -148,6 +147,7 @@ def _distribute(cardinality, a_task, name, data, other_args, flatten_results):
     # At this point we have created all the subtasks and each one got
     # a portion of the data that is to be processed. Now we will create
     # and run the task set.
+    logs.HAZARD_LOG.info("#subtasks: %s" % len(subtasks))
     the_results = _handle_subtasks(subtasks, flatten_results)
     return the_results
 

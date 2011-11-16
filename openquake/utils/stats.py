@@ -39,9 +39,9 @@ def _redis():
     return redis.Redis(**args)
 
 
-def key_name(job_id, func, counter_type="i"):
+def key_name(job_id, func, area="h", counter_type="i"):
     """Return the redis key name for the given job/function."""
-    return "oqs:%s:%s:%s" % (job_id, counter_type, func.__name__)
+    return "oqs:%s:%s:%s:%s" % (job_id, area, counter_type, func)
 
 
 def progress_indicator(f):
@@ -49,7 +49,7 @@ def progress_indicator(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         # The first argument is always the job_id
-        key = key_name(args[0], f)
+        key = key_name(args[0], f.__name__)
         conn = _redis()
         try:
             f(*args, **kwargs)
@@ -62,3 +62,17 @@ def progress_indicator(f):
             conn.incr(key)
 
     return wrapper
+
+
+def set_total(job_id, key, value):
+    """Set a total value for the given key."""
+    key = key_name(job_id, key, counter_type="t")
+    conn = _redis()
+    conn.set(key, value)
+
+
+def incr_counter(job_id, key):
+    """Increment the counter for the given key."""
+    key = key_name(job_id, key)
+    conn = _redis()
+    conn.incr(key)
