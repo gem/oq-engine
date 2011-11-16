@@ -75,6 +75,7 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
 
     for start in xrange(0, data_length, block_size):
         end = start + block_size
+        logs.HAZARD_LOG.info("data[%s:%s]" % (start, end))
         iresults = _distribute(cardinality, the_task, name, data[start:end],
                                other_args, flatten_results)
         results.extend(iresults)
@@ -119,7 +120,7 @@ def _distribute(cardinality, a_task, name, data, other_args, flatten_results):
         return params
 
     data_length = len(data)
-    logs.HAZARD_LOG.info("data_length: %s" % data_length)
+    logs.HAZARD_LOG.info("-data_length: %s" % data_length)
 
     subtasks = []
     start = 0
@@ -131,9 +132,10 @@ def _distribute(cardinality, a_task, name, data, other_args, flatten_results):
         cardinality = data_length if data_length > 0 else 1
         end = chunk_size = 1
 
-    logs.HAZARD_LOG.info("chunk_size: %s" % chunk_size)
+    logs.HAZARD_LOG.info("-chunk_size: %s" % chunk_size)
 
     for _ in xrange(cardinality - 1):
+        logs.HAZARD_LOG.info("-data[%s:%s]" % (start, end))
         data_portion = data[start:end]
         subtask = a_task.subtask(**kwargs(data_portion))
         subtasks.append(subtask)
@@ -147,7 +149,7 @@ def _distribute(cardinality, a_task, name, data, other_args, flatten_results):
     # At this point we have created all the subtasks and each one got
     # a portion of the data that is to be processed. Now we will create
     # and run the task set.
-    logs.HAZARD_LOG.info("#subtasks: %s" % len(subtasks))
+    logs.HAZARD_LOG.info("-#subtasks: %s" % len(subtasks))
     the_results = _handle_subtasks(subtasks, flatten_results)
     return the_results
 

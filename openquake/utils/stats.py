@@ -46,10 +46,19 @@ def key_name(job_id, func, area="h", counter_type="i"):
 
 def progress_indicator(f):
     """Count successful/failed invocations of the wrapped function."""
+
+    def find_job_id(*args, **kwargs):
+        """Find and return the job_id."""
+        if len(args) > 0:
+            return args[0]
+        else:
+            return kwargs.get("job_id", -1)
+
     @wraps(f)
     def wrapper(*args, **kwargs):
         # The first argument is always the job_id
-        key = key_name(args[0], f.__name__)
+        job_id = find_job_id(*args, **kwargs)
+        key = key_name(job_id, f.__name__)
         conn = _redis()
         try:
             f(*args, **kwargs)
