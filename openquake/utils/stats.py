@@ -22,8 +22,9 @@
 Utility functions related to keeping job progress information and statistics.
 """
 
-
+from functools import wraps
 import redis
+
 from openquake.utils import config
 
 
@@ -37,21 +38,26 @@ def _redis():
     return redis.Redis(**args)
 
 
+def key_name(job_id, func, counter_type="i"):
+    """Return the redis key name for the given job/function."""
+    return "oqs:%s:%s:%s" % (job_id, counter_type, func.__name__)
+
+
 def progress_indicator(f):
     """Count successful/failed inviocations of the wrapped function."""
-    template = "oqs:i:%%s:%s" % f.__name__
+    @wraps(f)
     def wrapper(*args, **kwargs):
         # The first argument is always the job_id
-        key = template % args[0]
-        with _redis() as conn:
-            try:
-                f(*args, **args)
-            except:
-                # Count failure
-                conn.incr(key + ":f")
-                raise
-            else:
-                # Count success
-                conn.incr(key + ":s")
+        key = key_name(args[0], f)
+        conn = _redis()
+        try:
+            f(*args, **kwargs)
+        except:
+            # Count failure
+            conn.incr(key + ":f")
+            raise
+        else:
+            # Count success
+            conn.incr(key)
 
     return wrapper
