@@ -40,6 +40,7 @@ from openquake.hazard import tasks
 from openquake.hazard.general import BasePSHAMixin, preload
 from openquake.output import hazard as hazard_output
 from openquake.utils import config
+from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
 
 LOG = logs.LOG
@@ -129,6 +130,7 @@ class ClassicalMixin(BasePSHAMixin):
         gmpe_generator.seed(self["GMPE_LT_RANDOM_SEED"])
 
         for realization in xrange(0, realizations):
+            stats.incr_counter(self.job_id, "classical:do_curves:realization")
             LOG.info("Calculating hazard curves for realization %s"
                      % realization)
             self.store_source_model(source_model_generator.getrandbits(32))
@@ -288,6 +290,10 @@ class ClassicalMixin(BasePSHAMixin):
 
         LOG.info("Going to run classical PSHA hazard for %s realizations "
                  "and %s sites" % (realizations, len(sites)))
+
+        stats.set_total(self.job_id, "classical:execute:sites", len(sites))
+        stats.set_total(
+            self.job_id, "classical:execute:realizations", realizations)
 
         self.do_curves(sites, realizations,
             serializer=self.serialize_hazard_curve_of_realization)
