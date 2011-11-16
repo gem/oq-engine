@@ -50,14 +50,14 @@ class ProgressIndicatorTestCase(unittest.TestCase):
 
         @stats.progress_indicator
         def no_exception(job_id):
-            pass
+            return 999
 
         key = stats.key_name(11, no_exception.__name__)
         previous_value = self.redis.get(key)
         previous_value = int(previous_value) if previous_value else 0
 
         # Call the wrapped function.
-        no_exception(11)
+        self.assertEqual(999, no_exception(11))
 
         value = int(self.redis.get(key))
         self.assertEqual(1, (value - previous_value))
