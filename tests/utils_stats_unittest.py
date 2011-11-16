@@ -122,9 +122,10 @@ class IncrCounterTestCase(unittest.TestCase):
         """
         The counter is incremented for the given key
         """
-        key = stats.key_name(44, "d/x/z")
+        args = (44, "d/x/z")
+        key = stats.key_name(*args)
         previous_value = self.redis.get(key)
         previous_value = int(previous_value) if previous_value else 0
-        stats.incr_counter(44, "d/x/z")
+        stats.incr_counter(*args)
         value = int(self.redis.get(key))
         self.assertEqual(1, (value - previous_value))
