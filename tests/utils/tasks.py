@@ -23,11 +23,11 @@ Task functions for our unit tests.
 """
 
 
-from celery.decorators import task
-
-from tests.utils import helpers
+from celery.task import task
 
 from openquake import java
+
+from tests.utils import helpers
 
 
 @task
@@ -85,6 +85,7 @@ def failing_task(data):
     raise NotImplementedError(data)
 
 
+@task
 @java.jtask
 def jtask_task(data):
     """
@@ -93,6 +94,7 @@ def jtask_task(data):
     return str(java.jvm().java.lang.Integer(data))
 
 
+@task
 @java.jtask
 def failing_jtask_task(data):
     """
