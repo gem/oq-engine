@@ -61,14 +61,13 @@ def progress_indicator(f):
         key = key_name(job_id, f.__name__)
         conn = _redis()
         try:
-            f(*args, **kwargs)
+            result = f(*args, **kwargs)
+            conn.incr(key)
+            return result
         except:
             # Count failure
             conn.incr(key + ":f")
             raise
-        else:
-            # Count success
-            conn.incr(key)
 
     return wrapper
 
