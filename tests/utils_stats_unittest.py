@@ -28,6 +28,7 @@ import unittest
 from openquake.utils import config
 from openquake.utils import stats
 
+
 class ProgressIndicatorTestCase(unittest.TestCase):
     """Tests the behaviour of utils.stats.progress_indicator()."""
 
@@ -78,5 +79,52 @@ class ProgressIndicatorTestCase(unittest.TestCase):
         # Call the wrapped function.
         self.assertRaises(NotImplementedError, raise_exception, 22)
 
+        value = int(self.redis.get(key))
+        self.assertEqual(1, (value - previous_value))
+
+
+class SetTotalTestCase(unittest.TestCase):
+    """Tests the behaviour of utils.stats.set_total()."""
+
+    def __init__(self, *args, **kwargs):
+        super(SetTotalTestCase, self).__init__(*args, **kwargs)
+        host = config.get("kvs", "host")
+        port = config.get("kvs", "port")
+        port = int(port) if port else 6379
+        stats_db = config.get("kvs", "stats_db")
+        stats_db = int(stats_db) if stats_db else 15
+        args = {"host": host, "port": port, "db": stats_db}
+        self.redis = redis.Redis(**args)
+
+    def test_set_total(self):
+        """
+        The total value is set for the given key
+        """
+        key = stats.key_name(33, "a/b/c", counter_type="t")
+        stats.set_total(33, "a/b/c", 123)
+        self.assertEqual("123", self.redis.get(key))
+
+
+class IncrCounterTestCase(unittest.TestCase):
+    """Tests the behaviour of utils.stats.incr_counter()."""
+
+    def __init__(self, *args, **kwargs):
+        super(IncrCounterTestCase, self).__init__(*args, **kwargs)
+        host = config.get("kvs", "host")
+        port = config.get("kvs", "port")
+        port = int(port) if port else 6379
+        stats_db = config.get("kvs", "stats_db")
+        stats_db = int(stats_db) if stats_db else 15
+        args = {"host": host, "port": port, "db": stats_db}
+        self.redis = redis.Redis(**args)
+
+    def test_incr_counter(self):
+        """
+        The counter is incremented for the given key
+        """
+        key = stats.key_name(44, "d/x/z")
+        previous_value = self.redis.get(key)
+        previous_value = int(previous_value) if previous_value else 0
+        stats.incr_counter(44, "d/x/z")
         value = int(self.redis.get(key))
         self.assertEqual(1, (value - previous_value))
