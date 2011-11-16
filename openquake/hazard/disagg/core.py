@@ -32,7 +32,6 @@ from openquake import logs
 
 from openquake.hazard import job as haz_job
 from openquake.hazard import disagg
-from openquake.java import jtask
 from openquake.job import config as job_cfg
 from openquake.output import hazard_disagg as hazard_output
 from openquake.utils import config
@@ -145,7 +144,7 @@ def list_to_jdouble_array(float_list):
 
 
 @task
-@jtask
+@java.unpack_exception
 def compute_disagg_matrix_task(job_id, site, realization, poe, result_dir):
     """ Compute a complete 5D Disaggregation matrix. This task leans heavily
     on the DisaggregationCalculator (in the OpenQuake Java lib) to handle this
