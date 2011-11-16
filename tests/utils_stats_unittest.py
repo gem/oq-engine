@@ -51,13 +51,14 @@ class ProgressIndicatorTestCase(unittest.TestCase):
         def no_exception(job_id):
             pass
 
-        previous_value = self.redis.get(stats.key_name(11, no_exception))
+        key = stats.key_name(11, no_exception.__name__)
+        previous_value = self.redis.get(key)
         previous_value = int(previous_value) if previous_value else 0
 
         # Call the wrapped function.
         no_exception(11)
 
-        value = int(self.redis.get(stats.key_name(11, no_exception)))
+        value = int(self.redis.get(key))
         self.assertEqual(1, (value - previous_value))
 
     def test_failure_stats(self):
@@ -70,7 +71,7 @@ class ProgressIndicatorTestCase(unittest.TestCase):
         def raise_exception(job_id):
             raise NotImplementedError
 
-        key = stats.key_name(22, raise_exception) + ":f"
+        key = stats.key_name(22, raise_exception.__name__) + ":f"
         previous_value = self.redis.get(key)
         previous_value = int(previous_value) if previous_value else 0
 
