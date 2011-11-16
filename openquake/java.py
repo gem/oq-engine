@@ -362,7 +362,8 @@ def unpack_exception(func):
     Re-throws the exception as a pickleable :class:`JavaException` object.
     """
     @wraps(func)
-    def call_task(*args, **kwargs):
+    def wrapper(*args, **kwargs):
+        """The actual decorator."""
         jvm_instance = jvm()
 
         try:
@@ -371,4 +372,4 @@ def unpack_exception(func):
             trace = sys.exc_info()[2]
             raise JavaException(e), None, trace
 
-    return call_task
+    return wrapper

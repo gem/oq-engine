@@ -44,7 +44,7 @@ def key_name(job_id, func, area="h", counter_type="i"):
     return "oqs:%s:%s:%s:%s" % (job_id, area, counter_type, func)
 
 
-def progress_indicator(f):
+def progress_indicator(func):
     """Count successful/failed invocations of the wrapped function."""
 
     def find_job_id(*args, **kwargs):
@@ -54,14 +54,15 @@ def progress_indicator(f):
         else:
             return kwargs.get("job_id", -1)
 
-    @wraps(f)
+    @wraps(func)
     def wrapper(*args, **kwargs):
+        """The actual decorator."""
         # The first argument is always the job_id
         job_id = find_job_id(*args, **kwargs)
-        key = key_name(job_id, f.__name__)
+        key = key_name(job_id, func.__name__)
         conn = _redis()
         try:
-            result = f(*args, **kwargs)
+            result = func(*args, **kwargs)
             conn.incr(key)
             return result
         except:
