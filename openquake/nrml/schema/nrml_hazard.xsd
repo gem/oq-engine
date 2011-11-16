@@ -314,6 +314,36 @@
         <xs:attribute name="tectonicRegionTypeBin" type="TectonicRegion"></xs:attribute>
     </xs:complexType>
 
+
+    <!-- Uniform Hazard Spectra -->
+
+    <!-- UHS Result Field: the top-level element for UHS results -->
+    <xs:element name="uhsResultField" type="UHSResultFieldType"/>
+    <xs:complexType name="UHSResultFieldType">
+        <xs:sequence>
+            <xs:element ref="uhsPeriods" minOccurs="1" maxOccurs="1"/>
+            <xs:element ref="uhsResultNode" minOccurs="1" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- List of UHS periods for a uhsResultField (float values) -->
+    <xs:element name="uhsPeriods">
+        <xs:simpleType>
+            <xs:restriction base="gml:doubleList">
+                <xs:minLength value="1"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:element>
+
+    <!-- UHS result node -->
+    <xs:element name="uhsResultNode"> 
+        <xs:complexType>
+            <xs:attribute name="poE" type="NonNegativeDoubleType" use="required"/>
+            <xs:attribute name="path" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+    
+
     <!-- ============================================================= -->
     <!-- child elements of nrml -->
     
@@ -329,7 +359,6 @@
                         </xs:sequence>
                         <xs:element ref="groundMotionFieldSet"/>
                         <xs:element ref="hazardMap"/>
-                        <xs:element ref="disaggregationResultField" maxOccurs="1"/>
                     </xs:choice>
                 </xs:sequence>
             </xs:extension>
