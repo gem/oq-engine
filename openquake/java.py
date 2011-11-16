@@ -24,8 +24,6 @@ import sys
 import traceback
 import logging
 
-from celery.decorators import task as celery_task
-
 from functools import wraps
 
 from openquake import nrml
@@ -357,7 +355,7 @@ def jexception(func):
 
 
 # Java-exception-aware task decorator for celery
-def jtask(func):
+def unpack_exception(func):
     """
     Java-exception aware task decorator for Celery.
 
