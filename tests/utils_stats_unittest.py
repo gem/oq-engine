@@ -54,7 +54,28 @@ class ProgressIndicatorTestCase(unittest.TestCase):
         previous_value = self.redis.get(stats.key_name(11, no_exception))
         previous_value = int(previous_value) if previous_value else 0
 
+        # Call the wrapped function.
         no_exception(11)
 
         value = int(self.redis.get(stats.key_name(11, no_exception)))
+        self.assertEqual(1, (value - previous_value))
+
+    def test_failure_stats(self):
+        """
+        The failure counter is incremented when the wrapped function
+        terminates raises an exception.
+        """
+
+        @stats.progress_indicator
+        def raise_exception(job_id):
+            raise NotImplementedError
+
+        key = stats.key_name(22, raise_exception) + ":f"
+        previous_value = self.redis.get(key)
+        previous_value = int(previous_value) if previous_value else 0
+
+        # Call the wrapped function.
+        self.assertRaises(NotImplementedError, raise_exception, 22)
+
+        value = int(self.redis.get(key))
         self.assertEqual(1, (value - previous_value))

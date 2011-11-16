@@ -29,6 +29,7 @@ from openquake.utils import config
 
 
 def _redis():
+    """Return a connection to the redis store."""
     host = config.get("kvs", "host")
     port = config.get("kvs", "port")
     port = int(port) if port else 6379
@@ -44,7 +45,7 @@ def key_name(job_id, func, counter_type="i"):
 
 
 def progress_indicator(f):
-    """Count successful/failed inviocations of the wrapped function."""
+    """Count successful/failed invocations of the wrapped function."""
     @wraps(f)
     def wrapper(*args, **kwargs):
         # The first argument is always the job_id
