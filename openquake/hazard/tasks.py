@@ -28,6 +28,7 @@ The following tasks are defined in the hazard engine:
 
 import json
 
+from celery.task import task
 from celery.task.sets import subtask
 
 from openquake import job
@@ -35,7 +36,7 @@ from openquake import kvs
 
 from openquake.hazard import job as hazjob
 from openquake.hazard import classical_psha
-from openquake.java import jtask as task
+from openquake.java import jtask
 from openquake.job import mixins
 from openquake.logs import HAZARD_LOG
 from openquake.utils import stats
@@ -43,6 +44,7 @@ from openquake.utils.tasks import check_job_status
 
 
 @task
+@jtask
 def generate_erf(job_id):
     """
     Stubbed ERF generator
@@ -63,6 +65,7 @@ def generate_erf(job_id):
 
 
 @task
+@jtask
 @stats.progress_indicator
 def compute_ground_motion_fields(job_id, site_list, history, realization,
                                  seed):
@@ -76,6 +79,7 @@ def compute_ground_motion_fields(job_id, site_list, history, realization,
 
 
 @task
+@jtask
 @stats.progress_indicator
 def compute_hazard_curve(job_id, site_list, realization, callback=None):
     """ Generate hazard curve for a given site list. """
@@ -91,6 +95,7 @@ def compute_hazard_curve(job_id, site_list, realization, callback=None):
 
 
 @task
+@jtask
 @stats.progress_indicator
 def compute_mgm_intensity(job_id, block_id, site_id):
     """
@@ -116,6 +121,7 @@ def compute_mgm_intensity(job_id, block_id, site_id):
 
 
 @task
+@jtask
 @stats.progress_indicator
 def compute_mean_curves(job_id, sites, realizations):
     """Compute the mean hazard curve for each site given."""
@@ -129,6 +135,7 @@ def compute_mean_curves(job_id, sites, realizations):
 
 
 @task
+@jtask
 @stats.progress_indicator
 def compute_quantile_curves(job_id, sites, realizations, quantiles):
     """Compute the quantile hazard curve for each site given."""

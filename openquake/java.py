@@ -357,30 +357,20 @@ def jexception(func):
 
 
 # Java-exception-aware task decorator for celery
-def jtask(func, *args, **kwargs):
+def jtask(func):
     """
     Java-exception aware task decorator for Celery.
 
     Re-throws the exception as a pickleable :class:`JavaException` object.
     """
-    task = celery_task(func, *args, **kwargs)
-    run = task.run
-
-    @wraps(run)
-    def call_task(*targs, **tkwargs):  # pylint: disable=C0111
+    @wraps(func)
+    def call_task(*args, **kwargs):
         jvm_instance = jvm()
 
         try:
-            return run(*targs, **tkwargs)
+            return func(*args, **kwargs)
         except jvm_instance.JavaException, e:
             trace = sys.exc_info()[2]
-
             raise JavaException(e), None, trace
 
-    # overwrite the run method of the instance with our wrapper; we
-    # can't just pass call_task to celery_task because it does not
-    # have the right signature (we would need the decorator module as
-    # in the example below)
-    task.run = call_task
-
-    return task
+    return call_task
