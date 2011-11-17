@@ -317,16 +317,17 @@
 
     <!-- Uniform Hazard Spectra -->
 
-    <!-- UHS Result Field: the top-level element for UHS results -->
-    <xs:element name="uhsResultField" type="UHSResultFieldType"/>
-    <xs:complexType name="UHSResultFieldType">
+    <!-- UHS Result Set: the top-level element for UHS results -->
+    <xs:element name="uhsResultSet" type="UHSResultSetType"/>
+    <xs:complexType name="UHSResultSetType">
         <xs:sequence>
             <xs:element ref="uhsPeriods" minOccurs="1" maxOccurs="1"/>
-            <xs:element ref="uhsResultNode" minOccurs="1" maxOccurs="unbounded"/>
+            <xs:element ref="timeSpan" minOccurs="1" maxOccurs="1"/>
+            <xs:element ref="uhsResult" minOccurs="1" maxOccurs="unbounded"/>
         </xs:sequence>
     </xs:complexType>
 
-    <!-- List of UHS periods for a uhsResultField (float values) -->
+    <!-- List of UHS periods for a uhsResultSet (float values) -->
     <xs:element name="uhsPeriods">
         <xs:simpleType>
             <xs:restriction base="gml:doubleList">
@@ -335,8 +336,10 @@
         </xs:simpleType>
     </xs:element>
 
+    <xs:element name="timeSpan" type="NonNegativeDoubleType"/>
+
     <!-- UHS result node -->
-    <xs:element name="uhsResultNode"> 
+    <xs:element name="uhsResult"> 
         <xs:complexType>
             <xs:attribute name="poE" type="NonNegativeDoubleType" use="required"/>
             <xs:attribute name="path" type="xs:string" use="required"/>
