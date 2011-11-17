@@ -72,7 +72,7 @@ class SubsetExtractionTestCase(unittest.TestCase):
     def _test_pmf(self, name, result_shape):
         target_path = os.path.join(self.tempdir, '%s.hdf5' % name)
         disagg_subsets.extract_subsets(
-            self.SITE, self.full_matrix_path,
+            111, self.SITE, self.full_matrix_path,
             self.LATITUDE_BIN_LIMITS, self.LONGITUDE_BIN_LIMITS,
             self.MAGNITUDE_BIN_LIMITS, self.EPSILON_BIN_LIMITS,
             self.DISTANCE_BIN_LIMITS,
@@ -134,7 +134,7 @@ class SubsetExtractionTestCase(unittest.TestCase):
                                                  self.FULL_MATRIX_SHAPE)
         }
         disagg_subsets.extract_subsets(
-            self.SITE, self.full_matrix_path,
+            112, self.SITE, self.full_matrix_path,
             self.LATITUDE_BIN_LIMITS, self.LONGITUDE_BIN_LIMITS,
             self.MAGNITUDE_BIN_LIMITS, self.EPSILON_BIN_LIMITS,
             self.DISTANCE_BIN_LIMITS,

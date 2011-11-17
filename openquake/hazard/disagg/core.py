@@ -401,9 +401,9 @@ class DisaggMixin(Mixin):
                 target_file = os.path.join(target_dir, subset_file)
 
                 a_task = subsets.extract_subsets.delay(
-                    site, matrix_path, lat_bin_lims, lon_bin_lims,
-                    mag_bin_lims, eps_bin_lims, dist_bin_lims, target_file,
-                    subset_types)
+                    the_job.job_id, site, matrix_path, lat_bin_lims,
+                    lon_bin_lims, mag_bin_lims, eps_bin_lims, dist_bin_lims,
+                    target_file, subset_types)
 
                 task_data.append((a_task, site, gmv, matrix_path, target_file))
 
