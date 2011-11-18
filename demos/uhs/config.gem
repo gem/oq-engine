@@ -7,7 +7,7 @@ SITES = 0.0, 0.0
 [HAZARD]
 
 # parameters for UHS calculations
-UHS_PERIODS = 0.025, 0.45, 2.5 
+UHS_PERIODS = 0.025, 0.45, 2.5
 POES = 0.1, 0.02
 
 OUTPUT_DIR = computed_output
