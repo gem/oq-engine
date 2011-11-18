@@ -47,6 +47,7 @@ INPUT_FILE_TYPES = {
     'GMPE_LOGIC_TREE_FILE': 'lt_gmpe',
     'EXPOSURE': 'exposure',
     'VULNERABILITY': 'vulnerability',
+    'VULNERABILITY_RETROFITTED': 'vulnerability_retrofitted',
     'SINGLE_RUPTURE_MODEL': 'rupture',
 }
 
@@ -82,7 +83,8 @@ ENUM_MAP = {
 
 CALCULATION_MODES = set(CALCULATION_MODE.values())
 PARAMS = {}
-PATH_PARAMS = ['VULNERABILITY', 'SINGLE_RUPTURE_MODEL', 'EXPOSURE',
+PATH_PARAMS = ['VULNERABILITY', 'VULNERABILITY_RETROFITTED',
+               'SINGLE_RUPTURE_MODEL', 'EXPOSURE',
                'SOURCE_MODEL_LOGIC_TREE_FILE', 'GMPE_LOGIC_TREE_FILE']
 
 
@@ -181,6 +183,7 @@ define_param("HAZARD_TASKS", None, modes="classical", to_job=int)
 
 # input files
 define_param('VULNERABILITY', None)
+define_param('VULNERABILITY_RETROFITTED', None)
 define_param("SINGLE_RUPTURE_MODEL", None, modes=("deterministic",))
 define_param('EXPOSURE', None)
 define_param('GMPE_LOGIC_TREE_FILE', None,
@@ -283,6 +286,7 @@ define_param('SUBDUCTION_RUPTURE_FLOATING_TYPE',
 
 # Everything else; please maintain alphabetical ordering.
 define_param('AGGREGATE_LOSS_CURVE', 'aggregate_loss_curve', to_job=str2bool)
+define_param('ASSET_LIFE_EXPECTANCY', 'asset_life_expectancy', to_job=float)
 define_param('COMPONENT', 'component', to_db=map_enum)
 define_param('COMPUTE_HAZARD_AT_ASSETS_LOCATIONS', None,
              modes=('event_based', 'deterministic', 'classical'),
@@ -305,6 +309,7 @@ define_param('INTENSITY_MEASURE_LEVELS', 'imls',
              modes=('classical', 'event_based', 'disaggregation'),
              to_job=cttfl)
 define_param('INTENSITY_MEASURE_TYPE', 'imt', to_db=map_enum)
+define_param('INTEREST_RATE', 'interest_rate', to_job=float)
 define_param('INVESTIGATION_TIME', 'investigation_time', default=0.0,
              modes=('classical', 'event_based', 'disaggregation'),
              to_job=float)
