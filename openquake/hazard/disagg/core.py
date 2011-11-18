@@ -17,6 +17,7 @@
 
 """Core functionality for the Disaggregation Hazard calculator."""
 
+from celery.task import task
 import h5py
 import numpy
 import os
@@ -31,7 +32,6 @@ from openquake import logs
 
 from openquake.hazard import job as haz_job
 from openquake.hazard import disagg
-from openquake.java import jtask as task
 from openquake.job import config as job_cfg
 from openquake.output import hazard_disagg as hazard_output
 from openquake.utils import config
@@ -144,6 +144,7 @@ def list_to_jdouble_array(float_list):
 
 
 @task
+@java.unpack_exception
 def compute_disagg_matrix_task(job_id, site, realization, poe, result_dir):
     """ Compute a complete 5D Disaggregation matrix. This task leans heavily
     on the DisaggregationCalculator (in the OpenQuake Java lib) to handle this
@@ -400,9 +401,9 @@ class DisaggMixin(Mixin):
                 target_file = os.path.join(target_dir, subset_file)
 
                 a_task = subsets.extract_subsets.delay(
-                    site, matrix_path, lat_bin_lims, lon_bin_lims,
-                    mag_bin_lims, eps_bin_lims, dist_bin_lims, target_file,
-                    subset_types)
+                    the_job.job_id, site, matrix_path, lat_bin_lims,
+                    lon_bin_lims, mag_bin_lims, eps_bin_lims, dist_bin_lims,
+                    target_file, subset_types)
 
                 task_data.append((a_task, site, gmv, matrix_path, target_file))
 
