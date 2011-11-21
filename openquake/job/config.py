@@ -384,6 +384,33 @@ class UHSValidator(object):
         return (valid, errors)
 
 
+class BCRValidator(object):
+    """
+    Validator for both classical- and probabilistic-based BCR calculators
+    """
+
+    def __init__(self, params):
+        self.params = params
+
+    def is_valid(self):
+        """
+        Checks the following conditions:
+
+        * INVESTIGATION_TIME is set to 1.0
+        * INTEREST_RATE is positive
+        * ASSET_LIFE_EXPECTANCY is positive
+        """
+        errors = []
+        if self.params.get('INVESTIGATION_TIME') != 1.0:
+            errors.append("Parameter 'INVESTIGATION_TIME' must be set to 1.0 "
+                          "for BCR calculations.")
+        if self.params.get('INTEREST_RATE') <= 0:
+            errors.append("Parameter 'INTEREST_RATE' must be positive")
+        if self.params.get('ASSET_LIFE_EXPECTANCY') <= 0:
+            errors.append("Parameter 'ASSET_LIFE_EXPECTANCY' must be positive")
+        return (not bool(errors), errors)
+
+
 class FilePathValidator(object):
     """Validator that checks paths defined in configuration files are valid"""
 
