@@ -688,13 +688,13 @@ CREATE TABLE uiapi.oq_params (
             ((job_type = 'deterministic')
              AND (area_source_magnitude_scaling_relationship IS NULL))),
     asset_life_expectancy float
-        CONSTRAINT interest_rate_is_set
+        CONSTRAINT asset_life_expectancy_is_set
         CHECK (
             ((job_type IN ('classical_bcr', 'event_based_bcr'))
              AND asset_life_expectancy IS NOT NULL)
             OR
             ((job_type NOT IN ('classical_bcr', 'event_based_bcr'))
-             AND asset_life_expectancy IS NULL)
+             AND asset_life_expectancy IS NULL)),
     compute_mean_hazard_curve boolean
         CONSTRAINT compute_mean_hazard_curve_is_set
         CHECK(
@@ -792,7 +792,7 @@ CREATE TABLE uiapi.oq_params (
              AND interest_rate IS NOT NULL)
             OR
             ((job_type NOT IN ('classical_bcr', 'event_based_bcr'))
-             AND interest_rate IS NULL)
+             AND interest_rate IS NULL)),
     loss_curves_output_prefix VARCHAR,
     maximum_distance VARCHAR
         CONSTRAINT maximum_distance_is_set
