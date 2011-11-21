@@ -40,6 +40,8 @@ CALCULATION_MODE = {
     'Event Based': 'event_based',
     'Disaggregation': 'disaggregation',
     'UHS': 'uhs',
+    'Classical BCR': 'classical_bcr',
+    'Event Based BCR': 'event_based_bcr',
 }
 
 INPUT_FILE_TYPES = {
