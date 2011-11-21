@@ -553,10 +553,13 @@ CREATE TABLE uiapi.oq_job (
     --      deterministic (Deterministic)
     --      disaggregation (Hazard only)
     --      uhs (Uniform Hazard Spectra; Hazard only)
+    --      classical_bcr (Benefit-cost ratio calc based on Classical PSHA)
+    --      event_based_bcr (BCR calc based on Probabilistic event-based)
     -- Note: 'classical' and 'event_based' are both probabilistic methods
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
         CHECK(job_type IN ('classical', 'event_based', 'deterministic',
-                           'disaggregation', 'uhs')),
+                           'disaggregation', 'uhs',
+                           'classical_bcr', 'event_based_bcr')),
     -- One of: pending, running, failed, succeeded
     status VARCHAR NOT NULL DEFAULT 'pending' CONSTRAINT job_status_value
         CHECK(status IN ('pending', 'running', 'failed', 'succeeded')),
@@ -633,7 +636,8 @@ CREATE TABLE uiapi.oq_params (
     poes float[] CONSTRAINT poes_are_set
         CHECK(
             ((job_type IN ('classical', 'disaggregation', 'uhs')) AND (poes IS NOT NULL))
-            OR ((job_type IN ('event_based', 'deterministic')) AND (poes IS NULL))),
+            OR ((job_type IN ('event_based', 'deterministic',
+                              'classical_bcr', 'event_based_bcr')) AND (poes IS NULL))),
     -- Number of logic tree samples
     realizations integer CONSTRAINT realizations_is_set
         CHECK(
@@ -647,7 +651,8 @@ CREATE TABLE uiapi.oq_params (
     -- ground motion correlation flag
     gm_correlated boolean CONSTRAINT gm_correlated_is_set
         CHECK(
-            ((job_type IN ('classical', 'disaggregation', 'uhs')) AND (gm_correlated IS NULL))
+            ((job_type IN ('classical', 'disaggregation', 'uhs',
+                           'classical_bcr', 'event_based_bcr')) AND (gm_correlated IS NULL))
             OR ((job_type IN ('event_based', 'deterministic')) AND (gm_correlated IS NOT NULL))),
     gmf_calculation_number integer CONSTRAINT gmf_calculation_number_is_set
         CHECK(
@@ -682,6 +687,14 @@ CREATE TABLE uiapi.oq_params (
             OR
             ((job_type = 'deterministic')
              AND (area_source_magnitude_scaling_relationship IS NULL))),
+    asset_life_expectancy float
+        CONSTRAINT interest_rate_is_set
+        CHECK (
+            ((job_type IN ('classical_bcr', 'event_based_bcr'))
+             AND asset_life_expectancy IS NOT NULL)
+            OR
+            ((job_type NOT IN ('classical_bcr', 'event_based_bcr'))
+             AND asset_life_expectancy IS NULL)
     compute_mean_hazard_curve boolean
         CONSTRAINT compute_mean_hazard_curve_is_set
         CHECK(
@@ -772,11 +785,20 @@ CREATE TABLE uiapi.oq_params (
             OR
             ((job_type = 'deterministic')
              AND (include_subduction_fault_source IS NULL))),
+    interest_rate float
+        CONSTRAINT interest_rate_is_set
+        CHECK (
+            ((job_type IN ('classical_bcr', 'event_based_bcr'))
+             AND interest_rate IS NOT NULL)
+            OR
+            ((job_type NOT IN ('classical_bcr', 'event_based_bcr'))
+             AND interest_rate IS NULL)
     loss_curves_output_prefix VARCHAR,
     maximum_distance VARCHAR
         CONSTRAINT maximum_distance_is_set
         CHECK(
-            ((job_type IN ('classical', 'disaggregation', 'uhs'))
+            ((job_type IN ('classical', 'disaggregation', 'uhs',
+                           'classical_bcr', 'event_based_bcr'))
              AND (maximum_distance IS NOT NULL))
             OR
             ((job_type IN ('deterministic', 'event_based'))
