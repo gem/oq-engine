@@ -530,7 +530,8 @@ CREATE TABLE uiapi.input (
     --      rupture file (rupture)
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
         CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gmpe',
-                             'exposure', 'vulnerability', 'rupture')),
+                             'exposure', 'rupture',
+                             'vulnerability', 'vulnerability_retrofitted')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
     last_update timestamp without time zone
@@ -590,7 +591,8 @@ CREATE TABLE uiapi.oq_params (
     id SERIAL PRIMARY KEY,
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
         CHECK(job_type IN ('classical', 'event_based', 'deterministic',
-                           'disaggregation', 'uhs')),
+                           'disaggregation', 'uhs',
+                           'classical_bcr', 'event_based_bcr')),
     input_set_id INTEGER NOT NULL,
     region_grid_spacing float,
     min_magnitude float CONSTRAINT min_magnitude_set
@@ -741,7 +743,7 @@ CREATE TABLE uiapi.oq_params (
         CHECK(
             (job_type IN ('deterministic', 'event_based'))
             OR
-            ((job_type IN ('classical', 'disaggregation'))
+            ((job_type NOT IN ('deterministic', 'event_based'))
              AND (gmf_random_seed IS NULL))),
     gmpe_lt_random_seed integer
         CONSTRAINT gmpe_lt_random_seed_is_set
@@ -809,7 +811,7 @@ CREATE TABLE uiapi.oq_params (
             ((job_type = 'classical')
              AND (quantile_levels IS NOT NULL))
             OR
-            ((job_type IN ('deterministic', 'event_based', 'disaggregation'))
+            ((job_type != 'classical')
              AND (quantile_levels IS NULL))),
     reference_depth_to_2pt5km_per_sec_param float,
     risk_cell_size float,
@@ -828,7 +830,8 @@ CREATE TABLE uiapi.oq_params (
     rupture_floating_type VARCHAR
         CONSTRAINT rupture_floating_type_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type IN ('classical', 'event_based', 'disaggregation',
+                           'classical_bcr', 'event_based_bcr'))
              AND (rupture_floating_type IN ('alongstrike', 'downdip', 'centereddowndip')))
             OR
             ((job_type = 'deterministic')
