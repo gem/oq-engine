@@ -183,7 +183,8 @@ define_param("HAZARD_TASKS", None, modes="classical", to_job=int)
 
 # input files
 define_param('VULNERABILITY', None)
-define_param('VULNERABILITY_RETROFITTED', None)
+define_param('VULNERABILITY_RETROFITTED', None,
+             modes=("classical_bcr", "event_based_bcr"))
 define_param("SINGLE_RUPTURE_MODEL", None, modes=("deterministic",))
 define_param('EXPOSURE', None)
 define_param('GMPE_LOGIC_TREE_FILE', None,
@@ -286,7 +287,8 @@ define_param('SUBDUCTION_RUPTURE_FLOATING_TYPE',
 
 # Everything else; please maintain alphabetical ordering.
 define_param('AGGREGATE_LOSS_CURVE', 'aggregate_loss_curve', to_job=str2bool)
-define_param('ASSET_LIFE_EXPECTANCY', 'asset_life_expectancy', to_job=float)
+define_param('ASSET_LIFE_EXPECTANCY', 'asset_life_expectancy', to_job=float,
+             modes=("classical_bcr", "event_based_bcr"))
 define_param('COMPONENT', 'component', to_db=map_enum)
 define_param('COMPUTE_HAZARD_AT_ASSETS_LOCATIONS', None,
              modes=('event_based', 'deterministic', 'classical'),
@@ -309,13 +311,15 @@ define_param('INTENSITY_MEASURE_LEVELS', 'imls',
              modes=('classical', 'event_based', 'disaggregation'),
              to_job=cttfl)
 define_param('INTENSITY_MEASURE_TYPE', 'imt', to_db=map_enum)
-define_param('INTEREST_RATE', 'interest_rate', to_job=float)
+define_param('INTEREST_RATE', 'interest_rate', to_job=float,
+             modes=("classical_bcr", "event_based_bcr"))
 define_param('INVESTIGATION_TIME', 'investigation_time', default=0.0,
              modes=('classical', 'event_based', 'disaggregation'),
              to_job=float)
 define_param('LOSS_CURVES_OUTPUT_PREFIX', 'loss_curves_output_prefix')
-define_param('MAXIMUM_DISTANCE', 'maximum_distance',
-             modes=('classical', 'disaggregation'), to_job=float)
+define_param('MAXIMUM_DISTANCE', 'maximum_distance', to_job=float,
+             modes=('classical', 'disaggregation',
+                    'classical_bcr', 'event_based_bcr'))
 define_param('MINIMUM_MAGNITUDE', 'min_magnitude', default=0.0,
              modes=('classical', 'event_based', 'disaggregation'),
              to_job=float)
