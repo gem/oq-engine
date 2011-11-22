@@ -42,6 +42,8 @@ IML_SCALING = {
     'PGV': numpy.log,
     'PGD': numpy.log,
     'SA': numpy.log,
+    'IA': numpy.log,
+    'RSD': numpy.log,
 }
 
 
