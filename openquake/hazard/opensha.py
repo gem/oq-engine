@@ -37,7 +37,7 @@ from openquake import xml
 from openquake.hazard import classical_psha
 from openquake.hazard import job
 from openquake.hazard import tasks
-from openquake.hazard.general import BasePSHAMixin, preload
+from openquake.hazard.general import BasePSHAMixin, preload, get_iml_list
 from openquake.output import hazard as hazard_output
 from openquake.utils import config
 from openquake.utils import stats
@@ -505,7 +505,7 @@ class ClassicalMixin(BasePSHAMixin):
                 self.parameterize_sites(sites),
                 self.generate_erf(),
                 self.generate_gmpe_map(),
-                self.get_iml_list(),
+                get_iml_list(self.imls, self.params['INTENSITY_MEASURE_TYPE']),
                 self['MAXIMUM_DISTANCE'])
         except jpype.JavaException, ex:
             unwrap_validation_error(jpype, ex)
