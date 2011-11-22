@@ -919,3 +919,25 @@ class ParameterizeSitesTestCase(helpers.TestMixin, unittest.TestCase):
             mandatory_params.issubset(params_handled),
             "The following parameters have no defaults: %s" % (
                 mandatory_params - params_handled))
+
+
+class IMLTestCase(unittest.TestCase):
+    """
+    Tests that every Intensity Measure Type
+    declared in ``openquake.db.models.OqParams.IMT_CHOICES``
+    has a corresponding (logarithmic) function
+    in ``openquake.hazard.general.IML_SCALING`` mapping.
+    """
+    def test_scaling_definitions(self):
+        from openquake.db.models import OqParams
+        from openquake.job.params import ENUM_MAP
+        from openquake.hazard.general import IML_SCALING
+        from openquake.hazard.general import get_iml_list
+        enum_map_reversed = dict((val, key) for (key, val) in ENUM_MAP.items())
+        imt_config_names = [enum_map_reversed[imt]
+                            for (imt, imt_verbose) in OqParams.IMT_CHOICES]
+        self.assertEqual(set(imt_config_names) - set(IML_SCALING), set())
+        for imt in imt_config_names:
+            self.assertEqual(IML_SCALING[imt], numpy.log)
+            self.assertEqual(list(get_iml_list([1.2, 3.4, 5.6], imt)),
+                             map(numpy.log, [1.2, 3.4, 5.6]))
