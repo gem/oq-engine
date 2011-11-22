@@ -698,3 +698,4 @@ class EventBasedMixin(BasePSHAMixin):
 
 job.HazJobMixin.register("Event Based", EventBasedMixin)
 job.HazJobMixin.register("Classical", ClassicalMixin)
+job.HazJobMixin.register("Classical BCR", ClassicalMixin)

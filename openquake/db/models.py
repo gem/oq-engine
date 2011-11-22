@@ -458,6 +458,7 @@ class Input(models.Model):
         (u'lt_gmpe', u'GMPE Logic Tree'),
         (u'exposure', u'Exposure'),
         (u'vulnerability', u'Vulnerability'),
+        (u'vulnerability_retrofitted', u'Vulnerability Retroffited'),
         (u'rupture', u'Rupture'),
     )
     input_type = models.TextField(choices=INPUT_TYPE_CHOICES)
@@ -482,6 +483,10 @@ class OqJob(models.Model):
         (u'deterministic', u'Deterministic'),
         (u'disaggregation', u'Disaggregation'),
         (u'uhs', u'UHS'),  # Uniform Hazard Spectra
+        # Benefit-cost ratio calculator based on Classical PSHA risk calc
+        (u'classical_bcr', u'Classical BCR'),
+        # Benefit-cost ratio calculator based on Event Based risk calc
+        (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
     job_type = models.TextField(choices=JOB_TYPE_CHOICES)
     STATUS_CHOICES = (
@@ -522,14 +527,7 @@ class OqParams(models.Model):
     '''
     Parameters needed to run an OpenQuake job
     '''
-    JOB_TYPE_CHOICES = (
-        (u'classical', u'Classical PSHA'),
-        (u'event_based', u'Probabilistic Event-Based'),
-        (u'deterministic', u'Deterministic'),
-        (u'disaggregation', u'Disaggregation'),
-        (u'uhs', u'UHS'),  # Uniform Hazard Spectra
-    )
-    job_type = models.TextField(choices=JOB_TYPE_CHOICES)
+    job_type = models.TextField(choices=OqJob.JOB_TYPE_CHOICES)
     input_set = models.ForeignKey('InputSet')
     min_magnitude = models.FloatField(null=True)
     investigation_time = models.FloatField(null=True)
@@ -676,6 +674,8 @@ class OqParams(models.Model):
     )
     vs30_type = models.TextField(choices=VS30_TYPE_CHOICES, default="measured")
     depth_to_1pt_0km_per_sec = models.FloatField(default=100.0)
+    asset_life_expectancy = models.FloatField(null=True)
+    interest_rate = models.FloatField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"oq_params'
