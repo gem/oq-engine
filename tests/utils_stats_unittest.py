@@ -116,3 +116,33 @@ class IncrCounterTestCase(RedisMixin, unittest.TestCase):
         stats.incr_counter(*args)
         value = int(kvs.get(key))
         self.assertEqual(1, (value - previous_value))
+
+
+class ResetCountersTestCase(RedisMixin, unittest.TestCase):
+    """Tests the behaviour of utils.stats.reset_counters()."""
+
+    def test_reset_counters_deletes_counters_for_job(self):
+        """
+        The progress indication counters for a given job are deleted.
+        """
+        kvs = self.connect()
+        args = [(55, "a/b/c"), (55, "d/e/f")]
+        for key in args:
+            stats.incr_counter(*key)
+        stats.reset_counters(55)
+        self.assertEqual(0, len(kvs.keys("oqs:55:*")))
+
+    def test_reset_counters_resets_counters(self):
+        """
+        The progress indication counters for a given job are deleted.
+        """
+        kvs = self.connect()
+        args = [(66, "g/h/i"), (66, "j/k/l")]
+        for key in args:
+            stats.incr_counter(*key)
+        stats.reset_counters(55)
+        # The counters have been reset, after incrementing we expect them all
+        # to have a value of "1".
+        for key in args:
+            stats.incr_counter(*key)
+            self.assertEqual("1", kvs.get(stats.key_name(*key)))
