@@ -13,7 +13,6 @@ import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam.Vs30Type;
 import org.opensha.sha.util.TectonicRegionType;
 
 import static org.gem.calc.DisaggregationTestHelper.*;
-import static org.gem.calc.DisaggregationCalculator.digitize;
 import static org.gem.calc.DisaggregationCalculator.closestLocation;
 import static org.gem.calc.DisaggregationCalculator.inRange;
 import static org.gem.calc.DisaggregationCalculator.getGMV;
@@ -177,22 +176,6 @@ public class DisaggregationCalculatorTest
                 }
             }
         }
-    }
-
-    @Test
-    public void testDigitize()
-    {
-        int expected = 3;
-
-        int actual = digitize(MAG_BIN_LIMS, 8.9);
-
-        assertEquals(expected, actual);
-    }
-
-    @Test(expected=IllegalArgumentException.class)
-    public void testDigitizeOutOfRange()
-    {
-        digitize(MAG_BIN_LIMS, 4.9);
     }
 
     @Test

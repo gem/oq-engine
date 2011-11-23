@@ -27,6 +27,7 @@ import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam.Vs30Type;
 import org.opensha.sha.util.TectonicRegionType;
+import static org.gem.Utils.digitize;
 import static org.apache.commons.collections.CollectionUtils.forAllDo;
 
 import org.gem.calc.DisaggregationResult;
@@ -320,19 +321,6 @@ public class DisaggregationCalculator {
         result[4] = Arrays.asList(TectonicRegionType.values()).indexOf(trt);
 
         return result;
-    }
-
-    public static int digitize(Double[] bins, Double value)
-    {
-        for (int i = 0; i < bins.length - 1; i++)
-        {
-            if (value >= bins[i] && value < bins[i + 1])
-            {
-                return i;
-            }
-        }
-        throw new IllegalArgumentException(
-                "Value '" + value + "' is outside the expected range");
     }
 
     /**
