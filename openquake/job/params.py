@@ -59,6 +59,7 @@ ENUM_MAP = {
     'PGD': 'pgd',
     'IA': 'ia',
     'RSD': 'rsd',
+    'MMI': 'mmi',
     'None': 'none',
     '1 Sided': 'onesided',
     '2 Sided': 'twosided',

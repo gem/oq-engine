@@ -613,7 +613,7 @@ CREATE TABLE uiapi.oq_params (
     -- For UHS calculations, IMT should always be 'sa'.
     imt VARCHAR NOT NULL CONSTRAINT imt_value
         CHECK(((job_type = 'uhs') AND (imt = 'sa'))
-            OR (imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd'))),
+            OR (imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd', 'mmi'))),
     period float CONSTRAINT period_is_set
         CHECK(((imt = 'sa') AND (period IS NOT NULL))
               OR ((imt != 'sa') AND (period IS NULL))),
@@ -1293,7 +1293,7 @@ CREATE TABLE riski.vulnerability_model (
     name VARCHAR NOT NULL,
     description VARCHAR,
     imt VARCHAR NOT NULL CONSTRAINT imt_value
-        CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd')),
+        CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd', 'mmi')),
     imls float[] NOT NULL,
     -- e.g. "buildings", "bridges" etc.
     category VARCHAR NOT NULL,
