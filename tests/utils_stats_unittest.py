@@ -122,7 +122,7 @@ class IncrCounterTestCase(RedisMixin, unittest.TestCase):
 class DeleteJobCountersTestCase(RedisMixin, unittest.TestCase):
     """Tests the behaviour of utils.stats.delete_job_counters()."""
 
-    def test_reset_counters_deletes_counters_for_job(self):
+    def test_delete_job_counters_deletes_counters_for_job(self):
         """
         The progress indication counters for a given job are deleted.
         """
@@ -133,7 +133,7 @@ class DeleteJobCountersTestCase(RedisMixin, unittest.TestCase):
         stats.delete_job_counters(55)
         self.assertEqual(0, len(kvs.keys("oqs:55:*")))
 
-    def test_reset_counters_resets_counters(self):
+    def test_delete_job_counters_resets_counters(self):
         """
         The progress indication counters for a given job are reset.
         """
@@ -148,7 +148,7 @@ class DeleteJobCountersTestCase(RedisMixin, unittest.TestCase):
             stats.incr_counter(*data)
             self.assertEqual("1", kvs.get(stats.key_name(*data)))
 
-    def test_reset_counters_copes_with_nonexistent_counters(self):
+    def test_delete_job_counters_copes_with_nonexistent_counters(self):
         """
         stats.delete_job_counters() copes with jobs without progress indication
         counters.
