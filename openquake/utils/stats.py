@@ -40,7 +40,12 @@ def _redis():
 
 
 def key_name(job_id, func, area="h", counter_type="i"):
-    """Return the redis key name for the given job/function."""
+    """Return the redis key name for the given job/function.
+
+    The areas in use are 'h' (for hazard) and 'r' (for risk).
+    The counter types in use are 'i' (for incremental counters) and
+    't' (for totals).
+    """
     return "oqs:%s:%s:%s:%s" % (job_id, area, counter_type, func)
 
 
@@ -85,3 +90,11 @@ def incr_counter(job_id, key):
     key = key_name(job_id, key)
     conn = _redis()
     conn.incr(key)
+
+
+def delete_job_counters(job):
+    """Delete the progress indication counters for the given job."""
+    conn = _redis()
+    keys = conn.keys("oqs:%s*" % job)
+    if keys:
+        conn.delete(*keys)
