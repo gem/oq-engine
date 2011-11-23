@@ -302,7 +302,7 @@ def prepare_job(params):
     job.save()
 
     # reset all progress indication keys
-
+    stats.reset_counters(job.id)
 
     return job
 

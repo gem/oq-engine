@@ -23,6 +23,7 @@ Unit tests for the utils.stats module.
 """
 
 import redis
+import sys
 import unittest
 
 from openquake.utils import config
@@ -134,7 +135,7 @@ class ResetCountersTestCase(RedisMixin, unittest.TestCase):
 
     def test_reset_counters_resets_counters(self):
         """
-        The progress indication counters for a given job are deleted.
+        The progress indication counters for a given job are reset.
         """
         kvs = self.connect()
         args = [(66, "g/h/i"), (66, "j/k/l")]
@@ -146,3 +147,10 @@ class ResetCountersTestCase(RedisMixin, unittest.TestCase):
         for data in args:
             stats.incr_counter(*data)
             self.assertEqual("1", kvs.get(stats.key_name(*data)))
+
+    def test_reset_counters_copes_with_nonexistent_counters(self):
+        """
+        stats.reset_counters() copes with jobs without progress indication
+        counters.
+        """
+        stats.reset_counters(sys.maxint)
