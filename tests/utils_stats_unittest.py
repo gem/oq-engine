@@ -127,8 +127,8 @@ class ResetCountersTestCase(RedisMixin, unittest.TestCase):
         """
         kvs = self.connect()
         args = [(55, "a/b/c"), (55, "d/e/f")]
-        for key in args:
-            stats.incr_counter(*key)
+        for data in args:
+            stats.incr_counter(*data)
         stats.reset_counters(55)
         self.assertEqual(0, len(kvs.keys("oqs:55:*")))
 
@@ -138,11 +138,11 @@ class ResetCountersTestCase(RedisMixin, unittest.TestCase):
         """
         kvs = self.connect()
         args = [(66, "g/h/i"), (66, "j/k/l")]
-        for key in args:
-            stats.incr_counter(*key)
-        stats.reset_counters(55)
+        for data in args:
+            stats.incr_counter(*data)
+        stats.reset_counters(66)
         # The counters have been reset, after incrementing we expect them all
         # to have a value of "1".
-        for key in args:
-            stats.incr_counter(*key)
-            self.assertEqual("1", kvs.get(stats.key_name(*key)))
+        for data in args:
+            stats.incr_counter(*data)
+            self.assertEqual("1", kvs.get(stats.key_name(*data)))
