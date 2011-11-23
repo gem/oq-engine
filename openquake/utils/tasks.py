@@ -207,11 +207,7 @@ def _handle_subtasks(subtasks, flatten_results):
     """
     result = TaskSet(tasks=subtasks).apply_async()
 
-    # Wait for all subtasks to complete.
-    while not result.ready():
-        time.sleep(0.25)
-
-    the_results = result.join()
+    the_results = result.join(interval=0.25)
 
     if flatten_results and the_results:
         if isinstance(the_results, list) or isinstance(the_results, tuple):
