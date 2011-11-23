@@ -119,8 +119,8 @@ class IncrCounterTestCase(RedisMixin, unittest.TestCase):
         self.assertEqual(1, (value - previous_value))
 
 
-class ResetCountersTestCase(RedisMixin, unittest.TestCase):
-    """Tests the behaviour of utils.stats.reset_counters()."""
+class DeleteJobCountersTestCase(RedisMixin, unittest.TestCase):
+    """Tests the behaviour of utils.stats.delete_job_counters()."""
 
     def test_reset_counters_deletes_counters_for_job(self):
         """
@@ -130,7 +130,7 @@ class ResetCountersTestCase(RedisMixin, unittest.TestCase):
         args = [(55, "a/b/c"), (55, "d/e/f")]
         for data in args:
             stats.incr_counter(*data)
-        stats.reset_counters(55)
+        stats.delete_job_counters(55)
         self.assertEqual(0, len(kvs.keys("oqs:55:*")))
 
     def test_reset_counters_resets_counters(self):
@@ -141,7 +141,7 @@ class ResetCountersTestCase(RedisMixin, unittest.TestCase):
         args = [(66, "g/h/i"), (66, "j/k/l")]
         for data in args:
             stats.incr_counter(*data)
-        stats.reset_counters(66)
+        stats.delete_job_counters(66)
         # The counters have been reset, after incrementing we expect them all
         # to have a value of "1".
         for data in args:
@@ -150,7 +150,7 @@ class ResetCountersTestCase(RedisMixin, unittest.TestCase):
 
     def test_reset_counters_copes_with_nonexistent_counters(self):
         """
-        stats.reset_counters() copes with jobs without progress indication
+        stats.delete_job_counters() copes with jobs without progress indication
         counters.
         """
-        stats.reset_counters(sys.maxint)
+        stats.delete_job_counters(sys.maxint)
