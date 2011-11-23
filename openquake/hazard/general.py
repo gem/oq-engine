@@ -42,7 +42,19 @@ IML_SCALING = {
     'PGV': numpy.log,
     'PGD': numpy.log,
     'SA': numpy.log,
+    'IA': numpy.log,
+    'RSD': numpy.log,
 }
+
+
+def get_iml_list(imls, intensity_measure_type):
+    """Build the appropriate Arbitrary Discretized Func from the IMLs,
+    based on the IMT"""
+
+    iml_list = java.jclass("ArrayList")()
+    for val in imls:
+        iml_list.add(IML_SCALING[intensity_measure_type](val))
+    return iml_list
 
 
 def preload(fn):
@@ -177,17 +189,6 @@ class BasePSHAMixin(Mixin):
         gmpe_map = generate_gmpe_map(self.job_id, self.cache)
         self.set_gmpe_params(gmpe_map)
         return gmpe_map
-
-    def get_iml_list(self):
-        """Build the appropriate Arbitrary Discretized Func from the IMLs,
-        based on the IMT"""
-
-        iml_list = java.jclass("ArrayList")()
-        for val in self.imls:
-            iml_list.add(
-                IML_SCALING[self.params['INTENSITY_MEASURE_TYPE']](
-                val))
-        return iml_list
 
     def parameterize_sites(self, site_list):
         """Convert python Sites to Java Sites, and add default parameters."""
