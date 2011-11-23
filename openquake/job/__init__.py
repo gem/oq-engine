@@ -602,16 +602,16 @@ class Job(object):
         '''
         oq_job = OqJob.objects.get(id=self.job_id)
 
-        stats = JobStats(oq_job=oq_job)
-        stats.start_time = datetime.utcnow()
-        stats.num_sites = len(self.sites_to_compute())
+        job_stats = JobStats(oq_job=oq_job)
+        job_stats.start_time = datetime.utcnow()
+        job_stats.num_sites = len(self.sites_to_compute())
 
         job_type = CALCULATION_MODE[self['CALCULATION_MODE']]
         if conf.HAZARD_SECTION in self.sections:
             if job_type != 'deterministic':
-                stats.realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
+                job_stats.realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
 
-        stats.save()
+        job_stats.save()
 
 
 def read_sites_from_exposure(a_job):
