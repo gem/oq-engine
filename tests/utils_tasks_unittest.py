@@ -162,7 +162,7 @@ class DistributeTestCase(unittest.TestCase):
         try:
             with patch('celery.task.sets.TaskSet.apply_async') as m2:
                 m2.return_value = mock.Mock(spec=TaskSetResult)
-                m2.return_value.join.side_effect = TypeError
+                m2.return_value.join_native.side_effect = TypeError
                 tasks.distribute(2, single_arg_called_a, ("a", range(5)))
         except Exception, exc:
             self.assertEqual((), exc.args)
