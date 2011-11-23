@@ -180,8 +180,8 @@ class PythonAMQPLogTestCase(unittest.TestCase):
                                         exclusive=True)
         self.queue.queue_declare()
         self.queue.queue_bind()
-        self.consumer = kombu.messaging.Consumer(self.channel, self.queue,
-                                                 no_ack=True)
+        self.consumer = kombu.messaging.Consumer(
+            self.channel, self.queue, no_ack=True, auto_declare=False)
         self.producer = kombu.messaging.Producer(self.channel, self.exchange,
                                                  serializer='json')
 
