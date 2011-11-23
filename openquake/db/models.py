@@ -545,6 +545,7 @@ class OqParams(models.Model):
        (u'pgd', u'Peak Ground Displacement'),
        (u'ia', u'Arias Intensity'),
        (u'rsd', u'Relative Significant Duration'),
+       (u'mmi', u'Modified Mercalli Intensity'),
     )
     imt = models.TextField(choices=IMT_CHOICES)
     period = models.FloatField(null=True)
@@ -986,15 +987,7 @@ class VulnerabilityModel(models.Model):
     owner = models.ForeignKey("OqUser")
     name = models.TextField()
     description = models.TextField(null=True)
-    IMT_CHOICES = (
-        ('pga', 'Peak Ground Acceleration'),
-        ('sa', 'Spectral Acceleration'),
-        ('pgv', 'Peak Ground Velocity'),
-        ('pgd', 'Peak Ground Displacement'),
-        ('ia', 'Arias Intensity'),
-        ('rsd', 'Relative Significant Duration'),
-    )
-    imt = models.TextField(choices=IMT_CHOICES)
+    imt = models.TextField(choices=OqParams.IMT_CHOICES)
     imls = FloatArrayField()
     category = models.TextField()
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
