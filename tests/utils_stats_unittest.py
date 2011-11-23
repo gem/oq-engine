@@ -97,6 +97,7 @@ class SetTotalTestCase(RedisMixin, unittest.TestCase):
         The total value is set for the given key
         """
         kvs = self.connect()
+        # Specify a 'totals' counter type.
         key = stats.key_name(33, "a/b/c", counter_type="t")
         stats.set_total(33, "a/b/c", 123)
         self.assertEqual("123", kvs.get(key))
