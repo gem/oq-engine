@@ -16,6 +16,7 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PeriodParam;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.util.TectonicRegionType;
+import static org.gem.Utils.digitize;
 
 public class UHSCalculator
 {
@@ -145,11 +146,11 @@ public class UHSCalculator
                     else if (period > 0.0 && period < imrPeriodList.get(0))
                     {
                         // between PGA and the first SA
-                        updateHazCurveBetweenPGAandSA(hazardCurve, imr, rupProb, period);
+                        updateHazCurveBetweenPGAandSA(hazardCurve, imr, imrPeriodList, rupProb, period);
                     }
                     else
                     {
-                        updateHazCurveForInterpolatedPeriod(hazardCurve, imr, rupProb, period);
+                        updateHazCurveForInterpolatedPeriod(hazardCurve, imr, imrPeriodList, rupProb, period);
                     }
                 }
             }
@@ -171,6 +172,37 @@ public class UHSCalculator
             hazCurve.set(iml, 1.0);
         }
         return hazCurve;
+    }
+
+    /**
+     * Interpolate a PoE value given a pair of periods and a pair
+     * of PoEs.
+     * 
+     * This is a simple linear interpolation between a pair of x values (periods)
+     * and a pair of y values (poes).
+     * @param period1
+     * @param period2
+     * @param poe1
+     * @param poe2
+     * @param period The value for which we want to interpolate a PoE value
+     */
+    public static double interpolatePoe(
+            double period1,
+            double period2,
+            double poe1,
+            double poe2,
+            double period) {
+        // interpolate
+        // compute interpolation coefficients. Follow
+        // equations
+        // 3.3.1 and 3.3.2, pag. 107 in "Numerical Recipes
+        // in
+        // Fortran 77"
+        double a, b;
+
+        a = (period2 - period) / (period2 - period1);
+        b = 1 - a;
+        return a * poe1 + b * poe2;
     }
 
     private static void updateHazCurve(
@@ -217,31 +249,57 @@ public class UHSCalculator
     private void updateHazCurveBetweenPGAandSA(
             DiscretizedFuncAPI hazCurve,
             ScalarIntensityMeasureRelationshipAPI imr,
+            List<Double> periodList,
             double rupProb,
             double period)
     {
-        double period1 = 0.0;
-        double period2 = -1;
+        double periodPGA = 0.0;  // PGA
+        double periodSA = periodList.get(0);  // First SA period
         
         for (double iml : imls)
         {
+            double poePGA, poeSA, poe;
             imr.setIntensityMeasureLevel(iml);
             
             imr.setIntensityMeasure(PGA_Param.NAME);
-            double poePGA = imr.getExceedProbability();
+            poePGA = imr.getExceedProbability();
             
             imr.setIntensityMeasure(SA_Param.NAME);
-            imr.getParameter(PeriodParam.NAME).setValue(period2);
-            double poeSA = imr.getExceedProbability();
+            imr.getParameter(PeriodParam.NAME).setValue(periodSA);
+            poeSA = imr.getExceedProbability();
+
+            poe = interpolatePoe(periodPGA, periodSA, poePGA, poeSA, period);
+            updateHazCurve(hazCurve, rupProb, iml, poe);
         }
     }
 
     private void updateHazCurveForInterpolatedPeriod(
             DiscretizedFuncAPI hazCurve,
             ScalarIntensityMeasureRelationshipAPI imr,
+            List<Double> periodList,
             double rupProb,
             double period)
     {
-        
+        int periodBinIndex = digitize(null, period);
+
+        double period1 = periodList.get(periodBinIndex);
+        double period2 = periodList.get(periodBinIndex + 1);
+
+        imr.setIntensityMeasure(SA_Param.NAME);
+
+        for (double iml : imls)
+        {
+            double poe1, poe2, poe;
+            imr.setIntensityMeasureLevel(iml);
+
+            imr.getParameter(PeriodParam.NAME).setValue(period1);
+            poe1 = imr.getExceedProbability();
+
+            imr.getParameter(PeriodParam.NAME).setValue(period2);
+            poe2 = imr.getExceedProbability();
+
+            poe = interpolatePoe(period1, period2, poe1, poe2, period);
+            updateHazCurve(hazCurve, rupProb, iml, poe);
+        }
     }
 }
