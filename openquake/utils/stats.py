@@ -85,3 +85,8 @@ def incr_counter(job_id, key):
     key = key_name(job_id, key)
     conn = _redis()
     conn.incr(key)
+
+
+def reset_counters(job):
+    """Reset the progress indication counters for the given job."""
+    pass
