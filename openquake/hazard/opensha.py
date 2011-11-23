@@ -187,7 +187,7 @@ class ClassicalMixin(BasePSHAMixin):
         :type map_func: function(:py:class:`openquake.job.Job`)
         :returns: `None`
         """
-        if not self.param_set("COMPUTE_MEAN_HAZARD_CURVE"):
+        if not self["COMPUTE_MEAN_HAZARD_CURVE"]:
             return
 
         # Compute and serialize the mean curves.
