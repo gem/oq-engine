@@ -20,11 +20,9 @@
 
 import os
 import re
-import subprocess
 import urlparse
-import logging
 
-from ConfigParser import ConfigParser, RawConfigParser
+from ConfigParser import ConfigParser
 from datetime import datetime
 from django.db import transaction, close_connection
 from django.contrib.gis.db import models
@@ -32,10 +30,8 @@ from django.contrib.gis.geos import GEOSGeometry
 from lxml import etree
 
 from openquake import flags
-from openquake import java
 from openquake import kvs
 from openquake import logs
-from openquake import OPENQUAKE_ROOT
 from openquake import shapes
 from openquake import xml
 from openquake.parser import exposure
@@ -52,7 +48,7 @@ from openquake.job.params import (
     ARRAY_RE)
 from openquake.kvs import mark_job_as_current
 from openquake.logs import LOG
-from openquake.utils import config as oq_config
+from openquake.utils import stats
 
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 
@@ -304,6 +300,9 @@ def prepare_job(params):
 
     job.oq_params = oqp
     job.save()
+
+    # Reset all progress indication counters for the job at hand.
+    stats.delete_job_counters(job.id)
 
     return job
 
@@ -603,16 +602,16 @@ class Job(object):
         '''
         oq_job = OqJob.objects.get(id=self.job_id)
 
-        stats = JobStats(oq_job=oq_job)
-        stats.start_time = datetime.utcnow()
-        stats.num_sites = len(self.sites_to_compute())
+        job_stats = JobStats(oq_job=oq_job)
+        job_stats.start_time = datetime.utcnow()
+        job_stats.num_sites = len(self.sites_to_compute())
 
         job_type = CALCULATION_MODE[self['CALCULATION_MODE']]
         if conf.HAZARD_SECTION in self.sections:
             if job_type != 'deterministic':
-                stats.realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
+                job_stats.realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
 
-        stats.save()
+        job_stats.save()
 
 
 def read_sites_from_exposure(a_job):
