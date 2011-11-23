@@ -301,8 +301,8 @@ def prepare_job(params):
     job.oq_params = oqp
     job.save()
 
-    # reset all progress indication counters for the job at hand.
-    stats.reset_counters(job.id)
+    # Reset all progress indication counters for the job at hand.
+    stats.delete_job_counters(job.id)
 
     return job
 
