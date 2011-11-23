@@ -40,7 +40,12 @@ def _redis():
 
 
 def key_name(job_id, func, area="h", counter_type="i"):
-    """Return the redis key name for the given job/function."""
+    """Return the redis key name for the given job/function.
+
+    The areas in use are 'h' (for hazard) and 'r' (for risk).
+    The counter types in use are 'i' (for incremental counters) and
+    't' (for totals).
+    """
     return "oqs:%s:%s:%s:%s" % (job_id, area, counter_type, func)
 
 
