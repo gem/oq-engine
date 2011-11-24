@@ -23,7 +23,6 @@ Utility functions related to splitting work into tasks.
 """
 
 import itertools
-import time
 
 from celery.task.sets import TaskSet
 
@@ -192,6 +191,13 @@ def parallelize(
     return the_results
 
 
+def _check_exception(results):
+    """If any of the results is an exception, raise it."""
+    for result in results:
+        if isinstance(result, Exception):
+            raise result
+
+
 def _handle_subtasks(subtasks, flatten_results):
     """Start a `TaskSet` with the given `subtasks` and wait for it to finish.
 
@@ -207,11 +213,8 @@ def _handle_subtasks(subtasks, flatten_results):
     """
     result = TaskSet(tasks=subtasks).apply_async()
 
-    # Wait for all subtasks to complete.
-    while not result.ready():
-        time.sleep(0.25)
-
-    the_results = result.join()
+    the_results = result.join_native()
+    _check_exception(the_results)
 
     if flatten_results and the_results:
         if isinstance(the_results, list) or isinstance(the_results, tuple):
