@@ -37,7 +37,7 @@ from openquake import xml
 from openquake.hazard import classical_psha
 from openquake.hazard import job
 from openquake.hazard import tasks
-from openquake.hazard.general import BasePSHAMixin, preload
+from openquake.hazard.general import BasePSHAMixin, preload, get_iml_list
 from openquake.output import hazard as hazard_output
 from openquake.utils import config
 from openquake.utils import stats
@@ -144,17 +144,6 @@ class ClassicalMixin(BasePSHAMixin):
             if serializer:
                 serializer(sites, realization)
 
-    def param_set(self, name):
-        """Is the parameter with the given `name` set and non-empty?
-
-        :param name: The name of the parameter that should be set and
-            non-empty.
-        :return: `True` if the parameter in question set and non-empty, `False`
-            otherwise.
-        :rtype: bool
-        """
-        return self.has(name)
-
     # pylint: disable=R0913
     def do_means(self, sites, realizations,
                  curve_serializer=None,
@@ -187,7 +176,7 @@ class ClassicalMixin(BasePSHAMixin):
         :type map_func: function(:py:class:`openquake.job.Job`)
         :returns: `None`
         """
-        if not self.param_set("COMPUTE_MEAN_HAZARD_CURVE"):
+        if not self["COMPUTE_MEAN_HAZARD_CURVE"]:
             return
 
         # Compute and serialize the mean curves.
@@ -505,7 +494,7 @@ class ClassicalMixin(BasePSHAMixin):
                 self.parameterize_sites(sites),
                 self.generate_erf(),
                 self.generate_gmpe_map(),
-                self.get_iml_list(),
+                get_iml_list(self.imls, self.params['INTENSITY_MEASURE_TYPE']),
                 self['MAXIMUM_DISTANCE'])
         except jpype.JavaException, ex:
             unwrap_validation_error(jpype, ex)
