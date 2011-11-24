@@ -17,6 +17,7 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.PeriodParam;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.util.TectonicRegionType;
 import static org.gem.Utils.digitize;
+import static org.gem.calc.CalcUtils.getGMV;
 
 public class UHSCalculator
 {
@@ -68,6 +69,7 @@ public class UHSCalculator
         {
             hazCurveMap.put(period, initHazCurve(this.imls));
         }
+        // TODO: validate input
     }
     /**
      * Compute a list of UHS results (1 per PoE). Each result is 1D array
@@ -80,6 +82,7 @@ public class UHSCalculator
      */
     public List<Double[]> computeUHS(Site site)
     {
+        // TODO: validate input
         // Final results of the calculation
         List<Double[]> uhsResults = new ArrayList<Double[]>();
 
@@ -157,8 +160,25 @@ public class UHSCalculator
         }
         
 
-        // TODO: finalize hazard curve calculations
-        // TODO: for each period, extract UHS from hazard curves
+        // TODO: what does this do exactly?
+        for (DiscretizedFuncAPI hazCurve : hazCurveMap.values())
+        {
+            for (int i = 0; i < hazCurve.getNum(); i++)
+            {
+                hazCurve.set(i, 1 - hazCurve.getY(i));
+            }
+        }
+
+        for (double poe : poes)
+        {
+            Double [] uhs = new Double[periods.length];
+            for (int i = 0; i < periods.length; i++)
+            {
+                DiscretizedFuncAPI hazCurve = hazCurveMap.get(periods[i]);
+                uhs[i] = getGMV(hazCurve, poe);
+            }
+            uhsResults.add(uhs);
+        }
 
         return uhsResults;
     }
