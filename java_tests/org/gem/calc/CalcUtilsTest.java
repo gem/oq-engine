@@ -1,14 +1,23 @@
 package org.gem.calc;
 
-import static org.gem.calc.DisaggregationTestHelper.makeHazardCurve;
+import static org.gem.calc.CalcTestHelper.makeHazardCurve;
 import static org.gem.calc.CalcUtils.getGMV;
+import static org.gem.calc.CalcUtils.assertPoissonian;
 import static org.junit.Assert.*;
 
 import org.junit.Test;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
+import org.opensha.commons.geo.BorderType;
+
+import static org.gem.calc.CalcTestHelper.LOG_IMLS;
+import static org.gem.calc.CalcTestHelper.makeTestERF;
 
 public class CalcUtilsTest
 {
+
+    public static final double AREA_SRC_DISCRETIZATION = 0.01;
+    public static final int NUM_MFD_PTS = 41;
+    public static final BorderType BORDER_TYPE = BorderType.MERCATOR_LINEAR;
 
     @Test
     public void testGetGMV()
@@ -25,7 +34,7 @@ public class CalcUtilsTest
         // expected interpolated value for poe = 0.5
         Double imlForPoe0_5 = -2.298526833020888;
 
-        DiscretizedFuncAPI hazardCurve = makeHazardCurve();
+        DiscretizedFuncAPI hazardCurve = makeHazardCurve(LOG_IMLS, 0.01, makeTestERF(0.01, 41, BorderType.MERCATOR_LINEAR));
 
         double delta = 0.00000009;
         // boundary tests:
@@ -34,6 +43,19 @@ public class CalcUtilsTest
 
         // interpolation test:
         assertEquals(imlForPoe0_5, getGMV(hazardCurve, 0.5), delta);
+    }
+
+    @Test
+    public void testAssertPoissonian()
+    {
+        // This should succeed without any errors.
+        assertPoissonian(makeTestERF(AREA_SRC_DISCRETIZATION, NUM_MFD_PTS, BORDER_TYPE));
+    }
+
+    @Test(expected=RuntimeException.class)
+    public void testAssertPoissonianBadData()
+    {
+        assertPoissonian(new NonPoissonianERF());
     }
 
 }
