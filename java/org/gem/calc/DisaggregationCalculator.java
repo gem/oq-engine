@@ -28,7 +28,11 @@ import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam.Vs30Type;
 import org.opensha.sha.util.TectonicRegionType;
 import static org.gem.Utils.digitize;
+import static org.gem.calc.CalcUtils.assertPoissonian;
 import static org.gem.calc.CalcUtils.getGMV;
+import static org.gem.calc.CalcUtils.notNull;
+import static org.gem.calc.CalcUtils.isSorted;
+import static org.gem.calc.CalcUtils.lenGE;
 import static org.apache.commons.collections.CollectionUtils.forAllDo;
 
 import org.gem.calc.DisaggregationResult;
@@ -50,58 +54,6 @@ public class DisaggregationCalculator {
      */
     private final long[] dims;
 
-    /**
-     * Used for checking that bin edge lists are not null;
-     */
-    private static final Closure notNull = new Closure()
-    {
-
-        public void execute(Object o)
-        {
-            if (o == null)
-            {
-                throw new IllegalArgumentException("Bin edges should not be null");
-            }
-        }
-    };
-
-    /**
-     * Used for checking that bin edge lists have a length greater than or equal
-     * to 2.
-     */
-    private static final Closure lenGE2 = new Closure()
-    {
-
-        public void execute(Object o)
-        {
-            if (o instanceof Object[])
-            {
-                Object[] oArray = (Object[]) o;
-                if (oArray.length < 2)
-                {
-                    throw new IllegalArgumentException("Bin edge arrays must have a length >= 2");
-                }
-            }
-        }
-    };
-
-    private static final Closure isSorted = new Closure()
-    {
-
-        public void execute(Object o) {
-            if (o instanceof Object[])
-            {
-                Object[] oArray = (Object[]) o;
-                Object[] sorted = Arrays.copyOf(oArray, oArray.length);
-                Arrays.sort(sorted);
-                if (!Arrays.equals(sorted, oArray))
-                {
-                    throw new IllegalArgumentException("Bin edge arrays must be arranged in ascending order");
-                }
-            }
-        }
-    };
-
     public DisaggregationCalculator(
             Double[] latBinEdges,
             Double[] lonBinEdges,
@@ -113,7 +65,7 @@ public class DisaggregationCalculator {
 
         // Validation for the bin edges:
         forAllDo(binEdges, notNull);
-        forAllDo(binEdges, lenGE2);
+        forAllDo(binEdges, lenGE(2));
         forAllDo(binEdges, isSorted);
 
         this.latBinLims = latBinEdges;
@@ -257,18 +209,6 @@ public class DisaggregationCalculator {
                 && inRange(this.lonBinLims, lon)
                 && inRange(this.magBinLims, mag)
                 && inRange(this.epsilonBinLims, epsilon);
-    }
-
-    public static void assertPoissonian(EqkRupForecastAPI erf)
-    {
-        for (int i = 0; i < erf.getSourceList().size(); i++)
-        {
-            ProbEqkSource source = erf.getSource(i);
-            if (!source.isPoissonianSource()) {
-                throw new RuntimeException(
-                        "Sources must be Poissonian. (Non-Poissonian source are not currently supported.)");
-            }
-        }
     }
 
     public static void assertNonZeroStdDev(

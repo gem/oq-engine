@@ -1,6 +1,7 @@
 package org.gem.calc;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,6 +19,12 @@ import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
 import org.opensha.sha.util.TectonicRegionType;
 import static org.gem.Utils.digitize;
 import static org.gem.calc.CalcUtils.getGMV;
+import static org.gem.calc.CalcUtils.isSorted;
+import static org.gem.calc.CalcUtils.notNull;
+import static org.gem.calc.CalcUtils.lenGE;
+import static org.gem.calc.CalcUtils.assertPoissonian;
+
+import static org.apache.commons.collections.CollectionUtils.forAllDo;
 
 public class UHSCalculator
 {
@@ -39,7 +46,8 @@ public class UHSCalculator
      *            PoE value.
      * @param imls
      *            List of Intensity Measure Level values (x-axis of hazard
-     *            curves and y-axis of UHS).
+     *            curves and y-axis of UHS), with natrual log (Math.log) applied
+     *            to each value.
      * @param erf
      *            Earthquake Rupture Forecast
      * @param imrMap
@@ -64,17 +72,45 @@ public class UHSCalculator
         this.imrMap = imrMap;
         this.maxDistance = maxDistance;
 
+        validateInput();
+
         hazCurveMap = new HashMap<Double, DiscretizedFuncAPI>();
         for (double period : this.periods)
         {
             hazCurveMap.put(period, initHazCurve(this.imls));
         }
-        // TODO: validate input
     }
+
+    private void validateInput()
+    {
+        assertPoissonian(this.erf);
+        notNull.execute(this.periods);
+        forAllDo(Arrays.asList(this.periods), notNull);
+        isSorted.execute(this.periods);
+        lenGE(1).execute(this.periods);
+
+        notNull.execute(this.imls);
+        forAllDo(Arrays.asList(this.imls), notNull);
+        isSorted.execute(this.imls);
+        lenGE(1).execute(this.poes);
+
+        notNull.execute(this.poes);
+        forAllDo(Arrays.asList(this.poes), notNull);
+        lenGE(2).execute(this.imls);
+    }
+
     /**
      * Compute a list of UHS results (1 per PoE). Each result is 1D array
      * representing the y-axis values of the UHS curve; x-axis values of UHS
      * curves are the specified SA period values.
+     * 
+     * This method computes Hazard Curves to produce the UHS results. The following
+     * equation is used to compute the Hazard Curves:
+     * 
+     * Hazard Curve Equation for Poissonian Sources (no official title)
+     * Published in Seismological Research Letters, Vol. 74
+     * Title: OpenSHA - A Developing Community-Modeling Environment for Seismic Hazard Analysis
+     * Author: Field et al. (2003)
      * 
      * @param site
      *            The site of interest for this computation.
@@ -82,10 +118,8 @@ public class UHSCalculator
      */
     public List<Double[]> computeUHS(Site site)
     {
-        // TODO: validate input
         // Final results of the calculation
         List<Double[]> uhsResults = new ArrayList<Double[]>();
-
         for (int is = 0; is < erf.getNumSources(); is++)
         {
             ProbEqkSource source = erf.getSource(is);
@@ -158,9 +192,9 @@ public class UHSCalculator
                 }
             }
         }
-        
 
-        // TODO: what does this do exactly?
+        // This is the final step in the equation we're using to compute
+        // the hazard curves.
         for (DiscretizedFuncAPI hazCurve : hazCurveMap.values())
         {
             for (int i = 0; i < hazCurve.getNum(); i++)
@@ -175,7 +209,7 @@ public class UHSCalculator
             for (int i = 0; i < periods.length; i++)
             {
                 DiscretizedFuncAPI hazCurve = hazCurveMap.get(periods[i]);
-                uhs[i] = getGMV(hazCurve, poe);
+                uhs[i] = Math.exp(getGMV(hazCurve, poe));
             }
             uhsResults.add(uhs);
         }
@@ -300,7 +334,7 @@ public class UHSCalculator
             double rupProb,
             double period)
     {
-        int periodBinIndex = digitize(null, period);
+        int periodBinIndex = digitize(periodList.toArray(new Double[periodList.size()]), period);
 
         double period1 = periodList.get(periodBinIndex);
         double period2 = periodList.get(periodBinIndex + 1);
@@ -310,6 +344,7 @@ public class UHSCalculator
         for (double iml : imls)
         {
             double poe1, poe2, poe;
+
             imr.setIntensityMeasureLevel(iml);
 
             imr.getParameter(PeriodParam.NAME).setValue(period1);
