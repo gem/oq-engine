@@ -23,24 +23,28 @@ Unit tests for the utils.stats module.
 """
 
 import redis
+import sys
 import unittest
 
 from openquake.utils import config
 from openquake.utils import stats
 
 
-class ProgressIndicatorTestCase(unittest.TestCase):
-    """Tests the behaviour of utils.stats.progress_indicator()."""
+class RedisMixin(object):
+    """Redis-related utilities for testing."""
 
-    def __init__(self, *args, **kwargs):
-        super(ProgressIndicatorTestCase, self).__init__(*args, **kwargs)
+    def connect(self, *args, **kwargs):
         host = config.get("kvs", "host")
         port = config.get("kvs", "port")
         port = int(port) if port else 6379
         stats_db = config.get("kvs", "stats_db")
         stats_db = int(stats_db) if stats_db else 15
         args = {"host": host, "port": port, "db": stats_db}
-        self.redis = redis.Redis(**args)
+        return redis.Redis(**args)
+
+
+class ProgressIndicatorTestCase(RedisMixin, unittest.TestCase):
+    """Tests the behaviour of utils.stats.progress_indicator()."""
 
     def test_success_stats(self):
         """
@@ -52,14 +56,15 @@ class ProgressIndicatorTestCase(unittest.TestCase):
         def no_exception(job_id):
             return 999
 
+        kvs = self.connect()
         key = stats.key_name(11, no_exception.__name__)
-        previous_value = self.redis.get(key)
+        previous_value = kvs.get(key)
         previous_value = int(previous_value) if previous_value else 0
 
         # Call the wrapped function.
         self.assertEqual(999, no_exception(11))
 
-        value = int(self.redis.get(key))
+        value = int(kvs.get(key))
         self.assertEqual(1, (value - previous_value))
 
     def test_failure_stats(self):
@@ -72,60 +77,81 @@ class ProgressIndicatorTestCase(unittest.TestCase):
         def raise_exception(job_id):
             raise NotImplementedError
 
+        kvs = self.connect()
         key = stats.key_name(22, raise_exception.__name__) + ":f"
-        previous_value = self.redis.get(key)
+        previous_value = kvs.get(key)
         previous_value = int(previous_value) if previous_value else 0
 
         # Call the wrapped function.
         self.assertRaises(NotImplementedError, raise_exception, 22)
 
-        value = int(self.redis.get(key))
+        value = int(kvs.get(key))
         self.assertEqual(1, (value - previous_value))
 
 
-class SetTotalTestCase(unittest.TestCase):
+class SetTotalTestCase(RedisMixin, unittest.TestCase):
     """Tests the behaviour of utils.stats.set_total()."""
-
-    def __init__(self, *args, **kwargs):
-        super(SetTotalTestCase, self).__init__(*args, **kwargs)
-        host = config.get("kvs", "host")
-        port = config.get("kvs", "port")
-        port = int(port) if port else 6379
-        stats_db = config.get("kvs", "stats_db")
-        stats_db = int(stats_db) if stats_db else 15
-        args = {"host": host, "port": port, "db": stats_db}
-        self.redis = redis.Redis(**args)
 
     def test_set_total(self):
         """
         The total value is set for the given key
         """
+        kvs = self.connect()
+        # Specify a 'totals' counter type.
         key = stats.key_name(33, "a/b/c", counter_type="t")
         stats.set_total(33, "a/b/c", 123)
-        self.assertEqual("123", self.redis.get(key))
+        self.assertEqual("123", kvs.get(key))
 
 
-class IncrCounterTestCase(unittest.TestCase):
+class IncrCounterTestCase(RedisMixin, unittest.TestCase):
     """Tests the behaviour of utils.stats.incr_counter()."""
-
-    def __init__(self, *args, **kwargs):
-        super(IncrCounterTestCase, self).__init__(*args, **kwargs)
-        host = config.get("kvs", "host")
-        port = config.get("kvs", "port")
-        port = int(port) if port else 6379
-        stats_db = config.get("kvs", "stats_db")
-        stats_db = int(stats_db) if stats_db else 15
-        args = {"host": host, "port": port, "db": stats_db}
-        self.redis = redis.Redis(**args)
 
     def test_incr_counter(self):
         """
         The counter is incremented for the given key
         """
         args = (44, "d/x/z")
+        kvs = self.connect()
         key = stats.key_name(*args)
-        previous_value = self.redis.get(key)
+        previous_value = kvs.get(key)
         previous_value = int(previous_value) if previous_value else 0
         stats.incr_counter(*args)
-        value = int(self.redis.get(key))
+        value = int(kvs.get(key))
         self.assertEqual(1, (value - previous_value))
+
+
+class DeleteJobCountersTestCase(RedisMixin, unittest.TestCase):
+    """Tests the behaviour of utils.stats.delete_job_counters()."""
+
+    def test_delete_job_counters_deletes_counters_for_job(self):
+        """
+        The progress indication counters for a given job are deleted.
+        """
+        kvs = self.connect()
+        args = [(55, "a/b/c"), (55, "d/e/f")]
+        for data in args:
+            stats.incr_counter(*data)
+        stats.delete_job_counters(55)
+        self.assertEqual(0, len(kvs.keys("oqs:55:*")))
+
+    def test_delete_job_counters_resets_counters(self):
+        """
+        The progress indication counters for a given job are reset.
+        """
+        kvs = self.connect()
+        args = [(66, "g/h/i"), (66, "j/k/l")]
+        for data in args:
+            stats.incr_counter(*data)
+        stats.delete_job_counters(66)
+        # The counters have been reset, after incrementing we expect them all
+        # to have a value of "1".
+        for data in args:
+            stats.incr_counter(*data)
+            self.assertEqual("1", kvs.get(stats.key_name(*data)))
+
+    def test_delete_job_counters_copes_with_nonexistent_counters(self):
+        """
+        stats.delete_job_counters() copes with jobs without progress indication
+        counters.
+        """
+        stats.delete_job_counters(sys.maxint)
