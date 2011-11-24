@@ -73,7 +73,8 @@ class AMQPMessageConsumer(object):
                                    routing_key=routing_key, exclusive=True)
         queue.queue_declare()
         queue.queue_bind()
-        consumer = kombu.messaging.Consumer(self.channel, queue)
+        consumer = kombu.messaging.Consumer(
+            self.channel, queue, auto_declare=False)
         consumer.register_callback(self._message_callback)
         consumer.consume()
 
