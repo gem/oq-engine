@@ -414,8 +414,8 @@ class Job(object):
         self.serialize_results_to = list(serialize_results_to)
 
     def has(self, name):
-        """Return true if this job has the given parameter defined
-        and specified, false otherwise."""
+        """Return false if this job doesn't have the given parameter defined,
+        or parameter's string value otherwise."""
         return name in self.params and self.params[name]
 
     @property
