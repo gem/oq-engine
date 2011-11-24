@@ -1,9 +1,26 @@
 package org.gem.calc;
 
+import java.util.Arrays;
+
+import org.apache.commons.collections.Closure;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
+import org.opensha.sha.earthquake.EqkRupForecastAPI;
+import org.opensha.sha.earthquake.ProbEqkSource;
 
 public class CalcUtils
 {
+    /**
+     * Throw this if an input validation check fails. (Input to a constructor,
+     * method, etc.)
+     */
+    public static class InputValidationException extends RuntimeException
+    {
+        public InputValidationException(String msg)
+        {
+            super(msg);
+        }
+    }
+
     /**
      * Extract a GMV (Ground Motion Value) for a given curve and PoE
      * (Probability of Exceedance) value.
@@ -37,6 +54,74 @@ public class CalcUtils
         else
         {
             return hazardCurve.getFirstInterpolatedX(poe);
+        }
+    }
+
+    /**
+     * Useful for doing a single-line check if a value is null.
+     * This is nice for validating input.
+     */
+    public static final Closure notNull = new Closure()
+    {
+
+        public void execute(Object o)
+        {
+            if (o == null)
+            {
+                throw new InputValidationException("Unexpected null value");
+            }
+        }
+    };
+
+    /**
+     * Useful for checking if an array is sorted. If the array is not sorted
+     * in ascending order, an IllegalArgumentException is thrown.
+     */
+    public static final Closure isSorted = new Closure()
+    {
+
+        public void execute(Object o) {
+            if (o instanceof Object[])
+            {
+                Object[] oArray = (Object[]) o;
+                Object[] sorted = Arrays.copyOf(oArray, oArray.length);
+                Arrays.sort(sorted);
+                if (!Arrays.equals(sorted, oArray))
+                {
+                    throw new InputValidationException("Array must be arranged in ascending order.");
+                }
+            }
+        }
+    };
+
+    public static final Closure lenGE(final int len)
+    {
+        return new Closure ()
+        {
+            public void execute(Object o)
+            {
+                if (o instanceof Object[])
+                {
+                    Object[] oArray = (Object[]) o;
+                    if (oArray.length < len)
+                    {
+                        throw new InputValidationException("Array must have a length >= " + len);
+                    }
+                }
+            }
+            
+        };
+    }
+
+    public static void assertPoissonian(EqkRupForecastAPI erf)
+    {
+        for (int i = 0; i < erf.getSourceList().size(); i++)
+        {
+            ProbEqkSource source = erf.getSource(i);
+            if (!source.isPoissonianSource()) {
+                throw new RuntimeException(
+                        "Sources must be Poissonian. (Non-Poissonian source are not currently supported.)");
+            }
         }
     }
 }
