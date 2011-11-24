@@ -144,17 +144,6 @@ class ClassicalMixin(BasePSHAMixin):
             if serializer:
                 serializer(sites, realization)
 
-    def param_set(self, name):
-        """Is the parameter with the given `name` set and non-empty?
-
-        :param name: The name of the parameter that should be set and
-            non-empty.
-        :return: `True` if the parameter in question set and non-empty, `False`
-            otherwise.
-        :rtype: bool
-        """
-        return self.has(name)
-
     # pylint: disable=R0913
     def do_means(self, sites, realizations,
                  curve_serializer=None,
@@ -187,7 +176,7 @@ class ClassicalMixin(BasePSHAMixin):
         :type map_func: function(:py:class:`openquake.job.Job`)
         :returns: `None`
         """
-        if not self.param_set("COMPUTE_MEAN_HAZARD_CURVE"):
+        if not self["COMPUTE_MEAN_HAZARD_CURVE"]:
             return
 
         # Compute and serialize the mean curves.
