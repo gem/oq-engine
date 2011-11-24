@@ -241,6 +241,14 @@ class DoMeansTestCase(helpers.TestMixin, unittest.TestCase):
             curve_serializer=lambda _: True, curve_task=test_data_reflector,
             map_serializer=lambda _: True, map_func=None)
 
+    def test_no_do_means_if_disabled(self):
+        self.mixin.params['COMPUTE_MEAN_HAZARD_CURVE'] = 'false'
+        with helpers.patch('openquake.utils.tasks.distribute') as distribute:
+            self.mixin.do_means(self.sites, 1,
+                                curve_serializer=None,
+                                curve_task=None)
+        self.assertEqual(distribute.call_count, 0)
+
 
 class DoQuantilesTestCase(helpers.TestMixin, unittest.TestCase):
     """Tests the behaviour of ClassicalMixin.do_quantiles()."""
