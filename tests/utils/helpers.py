@@ -187,7 +187,7 @@ def timeit(method):
     try:
         import nose
         return nose.tools.make_decorator(method)(_timed)
-    except ImportError, _e:
+    except ImportError:
         pass
     return _timed
 
@@ -197,7 +197,7 @@ def skipit(method):
     try:
         import nose
         from nose.plugins.skip import SkipTest
-    except ImportError, _e:
+    except ImportError:
 
         def skip_me(*_args, **_kw):
             """The skipped method"""
@@ -224,7 +224,7 @@ def measureit(method):
     try:
         import nose
         return nose.tools.make_decorator(method)(_measured)
-    except ImportError, _e:
+    except ImportError:
         pass
     return _measured
 
