@@ -24,8 +24,6 @@ Task functions for our unit tests.
 
 
 from celery.task import task
-import random
-import time
 
 from openquake import java
 
