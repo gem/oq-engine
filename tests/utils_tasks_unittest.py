@@ -385,9 +385,12 @@ class IgnoreResultsTestCase(unittest.TestCase):
 
     def test_distribute_with_ignore_result_set(self):
         """
-        The specified number of subtasks is actually spawned
-        even for tasks with ignore_result=True and these run
-        and complete.
+        The specified number of subtasks is actually spawned even for tasks
+        with ignore_result=True and these run and complete.
+
+        Since the results of the tasks are ignored, the only way to know that
+        they ran and completed is to verify that the data they were supposed
+        to write the key value store is actually there.
         """
 
         def value(key):
@@ -404,5 +407,6 @@ class IgnoreResultsTestCase(unittest.TestCase):
 
         # Give the tasks a bit of time to complete.
         time.sleep(0.1)
+
         for key, value in data:
             self.assertEqual(value, TestStore.get(key))
