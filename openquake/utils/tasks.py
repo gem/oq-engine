@@ -43,9 +43,15 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
     The given `data` is portioned across the subtasks in the task set.
     The results returned by the subtasks are returned in a list e.g.:
         [result1, result2, ..]
+
     If each subtask returns a list that will result in list of lists. Please
     set `flatten_results` to `True` if you want the results to be returned in a
     single list.
+
+    Please note that for tasks with ignore_result=True
+        - no results are returned
+        - the control flow returns to the caller immediately i.e. this
+          function does *not* block while the tasks are running
 
     :param int cardinality: The size of the task set.
     :param the_task: A `celery` task callable.
