@@ -43,9 +43,15 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
     The given `data` is portioned across the subtasks in the task set.
     The results returned by the subtasks are returned in a list e.g.:
         [result1, result2, ..]
+
     If each subtask returns a list that will result in list of lists. Please
     set `flatten_results` to `True` if you want the results to be returned in a
     single list.
+
+    Please note that for tasks with ignore_result=True
+        - no results are returned
+        - the control flow returns to the caller immediately i.e. this
+          function does *not* block while the tasks are running
 
     :param int cardinality: The size of the task set.
     :param the_task: A `celery` task callable.
@@ -70,19 +76,24 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
     data_length = len(data)
     logs.HAZARD_LOG.debug("data_length: %s" % data_length)
 
-    results = []
+    ignore_results = the_task.ignore_result
+    results = None if ignore_results else []
 
     for start in xrange(0, data_length, block_size):
         end = start + block_size
         logs.HAZARD_LOG.debug("data[%s:%s]" % (start, end))
         iresults = _distribute(cardinality, the_task, name, data[start:end],
-                               other_args, flatten_results)
-        results.extend(iresults)
+                               other_args, flatten_results, ignore_results)
+        if not ignore_results:
+            results.extend(iresults)
 
     return results
 
 
-def _distribute(cardinality, a_task, name, data, other_args, flatten_results):
+# Too many local arguments
+# pylint: disable=R0913
+def _distribute(cardinality, a_task, name, data, other_args, flatten_results,
+                ignore_results):
     """Runs `a_task` in a task set with the given `cardinality`.
 
     The given `data` is portioned across the subtasks in the task set.
@@ -102,6 +113,8 @@ def _distribute(cardinality, a_task, name, data, other_args, flatten_results):
         passed to the subtasks.
     :param bool flatten_results: If set, the results will be returned as a
         single list (as opposed to [[results1], [results2], ..]).
+    :param bool ignore_results: If set, the task's results are to be ignored
+        i.e. there will be no result messages.
     :returns: A list where each element is a result returned by a subtask.
         The result order is the same as the subtask order.
     """
@@ -148,7 +161,7 @@ def _distribute(cardinality, a_task, name, data, other_args, flatten_results):
     # a portion of the data that is to be processed. Now we will create
     # and run the task set.
     logs.HAZARD_LOG.debug("-#subtasks: %s" % len(subtasks))
-    the_results = _handle_subtasks(subtasks, flatten_results)
+    the_results = _handle_subtasks(subtasks, flatten_results, ignore_results)
     return the_results
 
 
@@ -198,27 +211,33 @@ def _check_exception(results):
             raise result
 
 
-def _handle_subtasks(subtasks, flatten_results):
+def _handle_subtasks(subtasks, flatten_results, ignore_results=False):
     """Start a `TaskSet` with the given `subtasks` and wait for it to finish.
 
     :param subtasks: The subtasks to run
     :type subtasks: [celery_subtask]
     :param bool flatten_results: If set, the results will be returned as a
         single list (as opposed to [[results1], [results2], ..]).
-    :returns: A list where each element is a result returned by a subtask.
-        The result order is the same as the subtask order.
+    :param bool ignore_results: If set, task results will be ignored i.e.
+        we are not supposed to call join_native() because there will be
+        no results messages.
+    :returns: A list where each element is a result returned by a subtask
+        or `None` if the task's results are ignored.
     :raises WrongTaskParameters: When a task receives a parameter it does not
         know.
     :raises TaskFailed: When at least one subtask fails (raises an exception).
     """
     result = TaskSet(tasks=subtasks).apply_async()
 
-    the_results = result.join_native()
-    _check_exception(the_results)
+    if not ignore_results:
+        the_results = result.join_native()
+        _check_exception(the_results)
 
-    if flatten_results and the_results:
-        if isinstance(the_results, list) or isinstance(the_results, tuple):
-            the_results = list(itertools.chain(*the_results))
+        if flatten_results and the_results:
+            if isinstance(the_results, list) or isinstance(the_results, tuple):
+                the_results = list(itertools.chain(*the_results))
+    else:
+        the_results = None
 
     return the_results
 

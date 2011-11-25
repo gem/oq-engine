@@ -24,13 +24,16 @@ Unit tests for the utils.tasks module.
 
 import mock
 import unittest
+import time
+import uuid
 
 from openquake.utils import tasks
 
-from tests.utils.helpers import patch, ConfigTestMixin
+from tests.utils.helpers import patch, ConfigTestMixin, TestStore
 from tests.utils.tasks import (
-    failing_task, just_say_hello, reflect_args, reflect_data_to_be_processed,
-    single_arg_called_a, reflect_data_with_task_index)
+    failing_task, ignore_result, just_say_hello, reflect_args,
+    reflect_data_to_be_processed, single_arg_called_a,
+    reflect_data_with_task_index)
 
 # The keyword args below are injected by the celery framework.
 celery_injected_kwargs = set((
@@ -326,7 +329,7 @@ class CheckJobStatusTestCase(unittest.TestCase):
             tasks.check_job_status(42)
             self.assertEqual(mock.call_args_list, [((42, ), {})])
 
-    def test_not_completed(self):
+    def test_not_completed_with_true(self):
         with patch('openquake.job.Job.is_job_completed') as mock:
             mock.return_value = True
             try:
@@ -362,3 +365,48 @@ class DistributeBlockingTestCase(ConfigTestMixin, unittest.TestCase):
             3, reflect_data_to_be_processed, ("data", range(7)),
             flatten_results=True)
         self.assertEqual(expected, result)
+
+
+class IgnoreResultsTestCase(unittest.TestCase):
+    """
+    Tests the behaviour of utils.tasks.distribute() with tasks whose results
+    are ignored.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(IgnoreResultsTestCase, self).__init__(*args, **kwargs)
+
+    def setUp(self):
+        # Make sure we have no obsolete test data in the kvs.
+        kvs = TestStore.kvs()
+        existing_data = kvs.keys("irtc:*")
+        if existing_data:
+            kvs.delete(*existing_data)
+
+    def test_distribute_with_ignore_result_set(self):
+        """
+        The specified number of subtasks is actually spawned even for tasks
+        with ignore_result=True and these run and complete.
+
+        Since the results of the tasks are ignored, the only way to know that
+        they ran and completed is to verify that the data they were supposed
+        to write the key value store is actually there.
+        """
+
+        def value(key):
+            """Construct a test value for the given key."""
+            return key[-3:] * 2
+
+        keys = ["irtc:%s" % str(uuid.uuid4())[:8] for _ in xrange(5)]
+        values = [value(uid) for uid in keys]
+        data = zip(keys, values)
+
+        result = tasks.distribute(5, ignore_result, ("data", data))
+        # None is returned for tasks with ignore_result=True
+        self.assertIs(None,  result)
+
+        # Give the tasks a bit of time to complete.
+        time.sleep(0.1)
+
+        for key, value in data:
+            self.assertEqual(value, TestStore.get(key))
