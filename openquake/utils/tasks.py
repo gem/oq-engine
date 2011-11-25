@@ -84,6 +84,8 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
     return results
 
 
+# Too many local arguments
+# pylint: disable=R0913
 def _distribute(cardinality, a_task, name, data, other_args, flatten_results,
                 ignore_results):
     """Runs `a_task` in a task set with the given `cardinality`.
