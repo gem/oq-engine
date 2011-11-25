@@ -24,6 +24,8 @@ Task functions for our unit tests.
 
 
 from celery.task import task
+import random
+import time
 
 from openquake import java
 
@@ -113,4 +115,13 @@ def reflect_data_to_be_processed(data):
 def reflect_data_with_task_index(data, task_index):
     """Returns the data received with the `task_index` appended."""
     data.append(task_index)
+    return data
+
+
+@task(ignore_result=True)
+def ignore_result(data):
+    """Write the data using the given test store key."""
+    key, value = data[0]
+    helpers.TestStore.set(key, value)
+    # Results will be ignored.
     return data
