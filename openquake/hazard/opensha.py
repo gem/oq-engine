@@ -266,7 +266,7 @@ class ClassicalMixin(BasePSHAMixin):
             for quantile in quantiles:
                 map_serializer(sites, self.poes_hazard_maps, quantile)
 
-    @java.jexception
+    @java.unpack_exception
     @preload
     @create_java_cache
     def execute(self):
@@ -587,7 +587,7 @@ class EventBasedMixin(BasePSHAMixin):
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the Job configuration file."""
 
-    @java.jexception
+    @java.unpack_exception
     @preload
     @create_java_cache
     def execute(self):

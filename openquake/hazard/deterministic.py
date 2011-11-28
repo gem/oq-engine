@@ -40,7 +40,7 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the job configuration file."""
 
-    @java.jexception
+    @java.unpack_exception
     def execute(self):
         """Entry point to trigger the computation."""
 
