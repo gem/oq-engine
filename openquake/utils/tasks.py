@@ -48,7 +48,7 @@ def _get_kwargs(name, data, other_args):
 
 
 def distribute(cardinality, the_task, (name, data), other_args=None,
-               flatten_results=False):
+               flatten_results=False, ppf=None):
     """Runs `the_task` in a task set with the given `cardinality`.
 
     The given `data` is portioned across the subtasks in the task set.
@@ -74,6 +74,8 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
         passed to the subtasks.
     :param bool flatten_results: If set, the results will be returned as a
         single list (as opposed to [[results1], [results2], ..]).
+    :param ppf: a post-processing function, may only be specified for a
+        task whose results are ignored.
     :returns: A list where each element is a result returned by a subtask.
         The result order is the same as the subtask order.
     """
@@ -88,14 +90,19 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
     logs.HAZARD_LOG.debug("data_length: %s" % data_length)
 
     ignore_results = the_task.ignore_result
-    results = None if ignore_results else []
+    results = []
 
     for start in xrange(0, data_length, block_size):
         end = start + block_size
         logs.HAZARD_LOG.debug("data[%s:%s]" % (start, end))
-        iresults = _distribute(cardinality, the_task, name, data[start:end],
-                               other_args, flatten_results, ignore_results)
-        if not ignore_results:
+        chunk = data[start:end]
+        iresults = _distribute(cardinality, the_task, name, chunk, other_args,
+                               flatten_results, ignore_results)
+        if ignore_results:
+            if ppf:
+                pp_results = ppf(**_get_kwargs(name, chunk, other_args))
+                results.extend(pp_results)
+        else:
             results.extend(iresults)
 
     return results

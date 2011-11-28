@@ -402,8 +402,9 @@ class IgnoreResultsTestCase(unittest.TestCase):
         data = zip(keys, values)
 
         result = tasks.distribute(5, ignore_result, ("data", data))
-        # None is returned for tasks with ignore_result=True
-        self.assertIs(None,  result)
+        # An empty list is returned for tasks with ignore_result=True
+        # and no post-processing function.
+        self.assertEqual(False, bool(result))
 
         # Give the tasks a bit of time to complete.
         time.sleep(0.1)
