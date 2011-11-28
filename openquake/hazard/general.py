@@ -71,7 +71,7 @@ def preload(fn):
     return preloader
 
 
-@java.jexception
+@java.unpack_exception
 def generate_erf(job_id, cache):
     """ Generate the Earthquake Rupture Forecast from the source model data
     stored in the KVS.
