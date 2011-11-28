@@ -165,6 +165,7 @@ def _distribute(cardinality, a_task, name, data, other_args, flatten_results,
         TaskSet(tasks=subtasks).apply_async()
         return None
     else:
+        # Only called when we expect result messages to come back.
         return _handle_subtasks(subtasks, flatten_results)
 
 
