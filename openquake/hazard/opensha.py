@@ -142,7 +142,7 @@ class ClassicalMixin(BasePSHAMixin):
                 flatten_results=True)
 
             if serializer:
-                serializer(sites, realization)
+                serializer(realization, sites)
 
     # pylint: disable=R0913
     def do_means(self, sites, realizations,
@@ -299,14 +299,14 @@ class ClassicalMixin(BasePSHAMixin):
             map_func=classical_psha.compute_quantile_hazard_maps,
             map_serializer=self.serialize_quantile_hazard_map)
 
-    def serialize_hazard_curve_of_realization(self, sites, realization):
+    def serialize_hazard_curve_of_realization(self, realization, sites):
         """
         Serialize the hazard curves of a set of sites for a given realization.
 
-        :param sites: the sites of which the curves will be serialized
-        :type sites: list of :py:class:`openquake.shapes.Site`
         :param realization: the realization to be serialized
         :type realization: :py:class:`int`
+        :param sites: the sites of which the curves will be serialized
+        :type sites: list of :py:class:`openquake.shapes.Site`
         """
         hc_attrib_update = {'endBranchLabel': realization}
         nrml_file = self.hazard_curve_filename(realization)
