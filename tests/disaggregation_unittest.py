@@ -39,22 +39,6 @@ DISAGG_DEMO_CONFIG_FILE = helpers.demo_file('disaggregation/config.gem')
 class DisaggregationFuncsTestCase(unittest.TestCase):
     """Test for disaggregation calculator helper functions."""
 
-    def test_list_to_jdouble_array(self):
-        """Test construction of a Double[] (Java array) from a list of floats.
-        """
-        test_input = [0.01, 0.02, 0.03, 0.04]
-
-        # Make the (Java) Double[] array (the input is copied as a simple way
-        # to avoid false positives).
-        jdouble_a = disagg_core.list_to_jdouble_array(list(test_input))
-
-        # It should be a jpype Double[] type:
-        self.assertEqual('java.lang.Double[]', jdouble_a.__class__.__name__)
-
-        # Now check that the len and values are correct:
-        self.assertEqual(len(test_input), len(jdouble_a))
-        self.assertEqual(test_input, [x.doubleValue() for x in jdouble_a])
-
     def test_save_5d_matrix_to_h5(self):
         """Save a 5D matrix (as a numpy array of float64s) to a file, then read
         the file and make sure the data is save properly."""
