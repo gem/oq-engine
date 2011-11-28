@@ -36,7 +36,7 @@ from openquake.utils import config
 DEFAULT_BLOCK_SIZE = 4096
 
 
-def _get_kwargs(name, data, other_args):
+def _prepare_kwargs(name, data, other_args):
     """
     Construct the full set of keyword parameters for the task to be
     invoked.
@@ -47,6 +47,8 @@ def _get_kwargs(name, data, other_args):
     return params
 
 
+# Too many local variables
+# pylint: disable=R0914
 def distribute(cardinality, the_task, (name, data), other_args=None,
                flatten_results=False, ppf=None):
     """Runs `the_task` in a task set with the given `cardinality`.
@@ -99,8 +101,9 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
         iresults = _distribute(cardinality, the_task, name, chunk, other_args,
                                flatten_results, ignore_results)
         if ignore_results:
+            # Did the user specify a post-processing function?
             if ppf:
-                pp_results = ppf(**_get_kwargs(name, chunk, other_args))
+                pp_results = ppf(**_prepare_kwargs(name, chunk, other_args))
                 results.extend(pp_results)
         else:
             results.extend(iresults)
@@ -156,13 +159,14 @@ def _distribute(cardinality, a_task, name, data, other_args, flatten_results,
 
     for _ in xrange(cardinality - 1):
         data_portion = data[start:end]
-        subtask = a_task.subtask(**_get_kwargs(name, data_portion, other_args))
+        subtask = a_task.subtask(**_prepare_kwargs(name, data_portion,
+                                                   other_args))
         subtasks.append(subtask)
         start = end
         end += chunk_size
     # The last subtask takes the rest of the data.
     data_portion = data[start:]
-    subtask = a_task.subtask(**_get_kwargs(name, data_portion, other_args))
+    subtask = a_task.subtask(**_prepare_kwargs(name, data_portion, other_args))
     subtasks.append(subtask)
 
     # At this point we have created all the subtasks and each one got
