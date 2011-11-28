@@ -411,3 +411,41 @@ class IgnoreResultsTestCase(unittest.TestCase):
 
         for key, value in data:
             self.assertEqual(value, TestStore.get(key))
+
+    def test_distribute_with_ignore_result_set_and_ppf(self):
+        """
+        The specified number of subtasks is actually spawned even for tasks
+        with ignore_result=True and the post-processing function is run.
+        """
+
+        def value(key):
+            """Construct a test value for the given key."""
+            return key[-3:] * 2
+
+        def ppf(data):
+            """
+            A post-processing function that converts all results to upper case
+            and returns the list of keys found.
+            """
+            items_expected = len(data)
+            items_found = []
+            while len(items_found) < items_expected:
+                for key, _ in data:
+                    if key in items_found:
+                        continue
+                    value = TestStore.get(key)
+                    if value is not None:
+                        TestStore.set(key, value.upper())
+                        items_found.append(key)
+                time.sleep(0.05)
+            return items_found
+
+        keys = ["irtc:%s" % str(uuid.uuid4())[:8] for _ in xrange(5)]
+        values = [value(uid) for uid in keys]
+        data = zip(keys, values)
+
+        result = tasks.distribute(5, ignore_result, ("data", data), ppf=ppf)
+        self.assertEqual(sorted(keys), sorted(result))
+
+        for key, value in data:
+            self.assertEqual(value.upper(), TestStore.get(key))
