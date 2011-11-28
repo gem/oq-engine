@@ -414,8 +414,8 @@ class IgnoreResultsTestCase(unittest.TestCase):
 
     def test_distribute_with_ignore_result_set_and_ppf(self):
         """
-        The specified number of subtasks is actually spawned even for tasks
-        with ignore_result=True and the post-processing function is run.
+        The specified number of subtasks is actually spawned (even for tasks
+        with ignore_result=True) and the post-processing function is run.
         """
 
         def value(key):
