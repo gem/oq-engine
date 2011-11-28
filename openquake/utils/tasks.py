@@ -47,7 +47,7 @@ def _prepare_kwargs(name, data, other_args):
 # Too many local variables
 # pylint: disable=R0914
 def distribute(cardinality, the_task, (name, data), other_args=None,
-               flatten_results=False, ppf=None):
+               flatten_results=False, ath=None):
     """Runs `the_task` in a task set with the given `cardinality`.
 
     The given `data` is portioned across the subtasks in the task set.
@@ -62,11 +62,11 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
         - no results are returned
         - the control flow returns to the caller immediately i.e. this
           function does *not* block while the tasks are running
-        - the user may pass in a post-processing function (`ppf`) that will
-          be run as soon as the tasks have been started. It can be used to
-          check/wait for task results as appropriate.
-          The post-processing function is likely to run in parallel with
-          longer running tasks.
+        - the user may pass in an asynchronous task handler function (`ath`)
+          that will be run as soon as the tasks have been started.
+          It can be used to check/wait for task results as appropriate. The
+          asynchronous task handler function is likely to execute in parallel
+          with longer running tasks.
 
     :param int cardinality: The size of the task set.
     :param the_task: A `celery` task callable.
@@ -78,10 +78,10 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
         passed to the subtasks.
     :param bool flatten_results: If set, the results will be returned as a
         single list (as opposed to [[results1], [results2], ..]).
-    :param ppf: a post-processing function, may only be specified for a
-        task whose results are ignored.
+    :param ath: an asynchronous task handler function, may only be specified
+        for a task whose results are ignored.
     :returns: A list where each element is a result returned by a subtask.
-        If a `ppf` function is passed we return whatever it returns.
+        If an `ath` function is passed we return whatever it returns.
     """
     logs.HAZARD_LOG.info("cardinality: %s" % cardinality)
 
@@ -103,9 +103,9 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
         iresults = _distribute(cardinality, the_task, name, chunk, other_args,
                                flatten_results, ignore_results)
         if ignore_results:
-            # Did the user specify a post-processing function?
-            if ppf:
-                pp_results = ppf(**_prepare_kwargs(name, chunk, other_args))
+            # Did the user specify a asynchronous task handler function?
+            if ath:
+                pp_results = ath(**_prepare_kwargs(name, chunk, other_args))
                 results.extend(pp_results)
         else:
             results.extend(iresults)
