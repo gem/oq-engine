@@ -412,7 +412,7 @@ class IgnoreResultsTestCase(unittest.TestCase):
         for key, value in data:
             self.assertEqual(value, TestStore.get(key))
 
-    def test_distribute_with_ignore_result_set_and_ppf(self):
+    def test_distribute_with_ignore_result_set_and_ath(self):
         """
         The specified number of subtasks is actually spawned (even for tasks
         with ignore_result=True) and the asynchronous task handler function is
@@ -423,7 +423,7 @@ class IgnoreResultsTestCase(unittest.TestCase):
             """Construct a test value for the given key."""
             return key[-3:] * 2
 
-        def ppf(data):
+        def ath(data):
             """
             A asynchronous task handler function that converts all task results
             to upper case and returns the list of keys found.
@@ -445,7 +445,7 @@ class IgnoreResultsTestCase(unittest.TestCase):
         values = [value(uid) for uid in keys]
         data = zip(keys, values)
 
-        result = tasks.distribute(5, ignore_result, ("data", data), ppf=ppf)
+        result = tasks.distribute(5, ignore_result, ("data", data), ath=ath)
         self.assertEqual(sorted(keys), sorted(result))
 
         for key, value in data:
