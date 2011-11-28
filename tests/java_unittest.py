@@ -144,8 +144,8 @@ class JavaExceptionTestCase(unittest.TestCase):
         self.assertTrue(unpickled.message.startswith(
                 'java.lang.NumberFormatException'))
 
-    def test_jexception_decorator(self):
-        @java.jexception
+    def test_unpack_exception_decorator(self):
+        @java.unpack_exception
         def test():
             jpype = java.jvm()
 
