@@ -48,7 +48,7 @@ LOG = logs.LOG
 
 
 # pylint: disable=R0914
-@java.jexception
+@java.unpack_exception
 def compute_disagg_matrix(job_id, site, poe, result_dir):
     """ Compute a complete 5D Disaggregation matrix. This task leans heavily
     on the DisaggregationCalculator (in the OpenQuake Java lib) to handle this
