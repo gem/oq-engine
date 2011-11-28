@@ -76,6 +76,7 @@ JAVA_CLASSES = {
     "LocationListFormatter": "org.gem.LocationListFormatter",
     "PythonBridgeAppender": "org.gem.log.PythonBridgeAppender",
     "DisaggregationCalculator": "org.gem.calc.DisaggregationCalculator",
+    "UHSCalculator": "org.gem.calc.UHSCalculator",
 }
 
 
