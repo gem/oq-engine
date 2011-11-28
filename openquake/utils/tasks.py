@@ -66,8 +66,10 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
         - the control flow returns to the caller immediately i.e. this
           function does *not* block while the tasks are running
         - the user may pass in a post-processing function (`ppf`) that will
-          be run as soon as the tasks have been started. That function can
+          be run as soon as the tasks have been started. It can be used to
           check/wait for task results as appropriate.
+          The post-processing function is likely to run in parallel with
+          longer running tasks.
 
     :param int cardinality: The size of the task set.
     :param the_task: A `celery` task callable.
