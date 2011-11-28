@@ -27,6 +27,7 @@ import os
 import unittest
 
 from openquake import java
+from openquake import utils
 
 from tests.utils import helpers
 from tests.utils.tasks import jtask_task, failing_jtask_task
@@ -206,3 +207,21 @@ class GetJvmMaxMemTestcase(helpers.ConfigTestMixin, unittest.TestCase):
         return a default value (768 MB).
         """
         self.assertEqual(java.DEFAULT_JVM_MAX_MEM, java.get_jvm_max_mem())
+
+
+class JavaUtilsTestCase(unittest.TestCase):
+    """Tests for Java-related utilities."""
+
+    def test_list_to_jdouble_array(self):
+        """Test construction of a Double[] (Java array) from a list of floats.
+        """
+        test_input = [0.01, 0.02, 0.03, 0.04]
+
+        jdouble_a = utils.list_to_jdouble_array(list(test_input))
+
+        # It should be a jpype Double[] type:
+        self.assertEqual('java.lang.Double[]', jdouble_a.__class__.__name__)
+
+        # Now check that the len and values are correct:
+        self.assertEqual(len(test_input), len(jdouble_a))
+        self.assertEqual(test_input, [x.doubleValue() for x in jdouble_a])
