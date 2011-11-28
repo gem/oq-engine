@@ -3,8 +3,10 @@ package org.gem.calc;
 import static org.gem.calc.CalcTestHelper.makeHazardCurve;
 import static org.gem.calc.CalcUtils.getGMV;
 import static org.gem.calc.CalcUtils.assertPoissonian;
+import static org.gem.calc.CalcUtils.assertVs30TypeIsValid;
 import static org.junit.Assert.*;
 
+import org.gem.calc.CalcUtils.InputValidationException;
 import org.junit.Test;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
 import org.opensha.commons.geo.BorderType;
@@ -58,4 +60,19 @@ public class CalcUtilsTest
         assertPoissonian(new NonPoissonianERF());
     }
 
+    @Test
+    public void testAssertVs30TypeIsValid()
+    {
+        // These should succeed without any errors
+        assertVs30TypeIsValid("Measured");
+        assertVs30TypeIsValid("Inferred");
+    }
+
+    @Test(expected=InputValidationException.class)
+    public void testAssertVs30TypeIsValidThrows()
+    {
+        // The vs30 type is case sensitive;
+        // "measured" is not in the VS30  type enum.
+        assertVs30TypeIsValid("measured");
+    }
 }

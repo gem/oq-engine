@@ -9,6 +9,9 @@ import java.util.Map;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
+import org.opensha.commons.geo.Location;
+import org.opensha.commons.param.DoubleParameter;
+import org.opensha.commons.param.StringParameter;
 import org.opensha.sha.earthquake.EqkRupForecastAPI;
 import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
@@ -16,6 +19,10 @@ import org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PGA_Param;
 import org.opensha.sha.imr.param.IntensityMeasureParams.PeriodParam;
 import org.opensha.sha.imr.param.IntensityMeasureParams.SA_Param;
+import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
+import org.opensha.sha.imr.param.SiteParams.DepthTo2pt5kmPerSecParam;
+import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
+import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam;
 import org.opensha.sha.util.TectonicRegionType;
 import static org.gem.Utils.digitize;
 import static org.gem.calc.CalcUtils.getGMV;
@@ -23,6 +30,7 @@ import static org.gem.calc.CalcUtils.isSorted;
 import static org.gem.calc.CalcUtils.notNull;
 import static org.gem.calc.CalcUtils.lenGE;
 import static org.gem.calc.CalcUtils.assertPoissonian;
+import static org.gem.calc.CalcUtils.assertVs30TypeIsValid;
 
 import static org.apache.commons.collections.CollectionUtils.forAllDo;
 
@@ -97,6 +105,35 @@ public class UHSCalculator
         notNull.execute(this.poes);
         forAllDo(Arrays.asList(this.poes), notNull);
         lenGE(2).execute(this.imls);
+    }
+
+    /**
+     * A more 'primitive' overload of the computeUHS method.
+     * 
+     * @param lat Latitude
+     * @param lon Longitude
+     * @param vs30Type
+     * @param vs30Value
+     * @param depthTo1pt0KMPS
+     * @param depthTo2pt5KMPS
+     * @return list of UHS results (1 per PoE)
+     */
+    public List<Double[]> computeUHS(
+            double lat,
+            double lon,
+            String vs30Type,
+            double vs30Value,
+            double depthTo1pt0KMPS,
+            double depthTo2pt5KMPS)
+    {
+        assertVs30TypeIsValid(vs30Type);
+        Site site = new Site(new Location(lat, lon));
+        site.addParameter(new StringParameter(Vs30_TypeParam.NAME, vs30Type));
+        site.addParameter(new DoubleParameter(Vs30_Param.NAME, vs30Value));
+        site.addParameter(new DoubleParameter(DepthTo1pt0kmPerSecParam.NAME, depthTo1pt0KMPS));
+        site.addParameter(new DoubleParameter(DepthTo2pt5kmPerSecParam.NAME, depthTo2pt5KMPS));
+
+        return computeUHS(site);
     }
 
     /**
