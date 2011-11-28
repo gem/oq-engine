@@ -34,7 +34,7 @@ from openquake.hazard import job as haz_job
 from openquake.hazard import disagg
 from openquake.job import config as job_cfg
 from openquake.output import hazard_disagg as hazard_output
-from openquake.utils import config
+from openquake.utils import config, list_to_jdouble_array
 
 from openquake.hazard.disagg import subsets
 from openquake.hazard.general import (
@@ -130,17 +130,6 @@ def save_5d_matrix_to_h5(directory, matrix):
         target.create_dataset(disagg.FULL_DISAGG_MATRIX, data=matrix)
 
     return file_path
-
-
-def list_to_jdouble_array(float_list):
-    """Convert a 1D list of floats to a 1D Java Double[] (as a jpype object).
-    """
-    jdouble = java.jvm().JArray(java.jvm().java.lang.Double)(len(float_list))
-
-    for i, val in enumerate(float_list):
-        jdouble[i] = java.jvm().JClass('java.lang.Double')(val)
-
-    return jdouble
 
 
 @task
