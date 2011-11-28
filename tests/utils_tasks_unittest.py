@@ -403,7 +403,7 @@ class IgnoreResultsTestCase(unittest.TestCase):
 
         result = tasks.distribute(5, ignore_result, ("data", data))
         # An empty list is returned for tasks with ignore_result=True
-        # and no post-processing function.
+        # and no asynchronous task handler function.
         self.assertEqual(False, bool(result))
 
         # Give the tasks a bit of time to complete.
@@ -415,7 +415,8 @@ class IgnoreResultsTestCase(unittest.TestCase):
     def test_distribute_with_ignore_result_set_and_ppf(self):
         """
         The specified number of subtasks is actually spawned (even for tasks
-        with ignore_result=True) and the post-processing function is run.
+        with ignore_result=True) and the asynchronous task handler function is
+        run.
         """
 
         def value(key):
@@ -424,8 +425,8 @@ class IgnoreResultsTestCase(unittest.TestCase):
 
         def ppf(data):
             """
-            A post-processing function that converts all results to upper case
-            and returns the list of keys found.
+            A asynchronous task handler function that converts all task results
+            to upper case and returns the list of keys found.
             """
             items_expected = len(data)
             items_found = []
