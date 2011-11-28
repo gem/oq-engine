@@ -81,7 +81,7 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
     :param ppf: a post-processing function, may only be specified for a
         task whose results are ignored.
     :returns: A list where each element is a result returned by a subtask.
-        The result order is the same as the subtask order.
+        If a `ppf` function is passed we return whatever it returns.
     """
     logs.HAZARD_LOG.info("cardinality: %s" % cardinality)
 
