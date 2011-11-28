@@ -161,8 +161,11 @@ def _distribute(cardinality, a_task, name, data, other_args, flatten_results,
     # a portion of the data that is to be processed. Now we will create
     # and run the task set.
     logs.HAZARD_LOG.debug("-#subtasks: %s" % len(subtasks))
-    the_results = _handle_subtasks(subtasks, flatten_results, ignore_results)
-    return the_results
+    if ignore_results:
+        TaskSet(tasks=subtasks).apply_async()
+        return None
+    else:
+        return _handle_subtasks(subtasks, flatten_results)
 
 
 def parallelize(
@@ -211,16 +214,13 @@ def _check_exception(results):
             raise result
 
 
-def _handle_subtasks(subtasks, flatten_results, ignore_results=False):
+def _handle_subtasks(subtasks, flatten_results):
     """Start a `TaskSet` with the given `subtasks` and wait for it to finish.
 
     :param subtasks: The subtasks to run
     :type subtasks: [celery_subtask]
     :param bool flatten_results: If set, the results will be returned as a
         single list (as opposed to [[results1], [results2], ..]).
-    :param bool ignore_results: If set, task results will be ignored i.e.
-        we are not supposed to call join_native() because there will be
-        no results messages.
     :returns: A list where each element is a result returned by a subtask
         or `None` if the task's results are ignored.
     :raises WrongTaskParameters: When a task receives a parameter it does not
@@ -229,15 +229,12 @@ def _handle_subtasks(subtasks, flatten_results, ignore_results=False):
     """
     result = TaskSet(tasks=subtasks).apply_async()
 
-    if not ignore_results:
-        the_results = result.join_native()
-        _check_exception(the_results)
+    the_results = result.join_native()
+    _check_exception(the_results)
 
-        if flatten_results and the_results:
-            if isinstance(the_results, list) or isinstance(the_results, tuple):
-                the_results = list(itertools.chain(*the_results))
-    else:
-        the_results = None
+    if flatten_results and the_results:
+        if isinstance(the_results, list) or isinstance(the_results, tuple):
+            the_results = list(itertools.chain(*the_results))
 
     return the_results
 
