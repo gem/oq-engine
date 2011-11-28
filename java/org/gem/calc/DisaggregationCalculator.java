@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.collections.Closure;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
@@ -25,7 +24,6 @@ import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.DepthTo2pt5kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam;
-import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam.Vs30Type;
 import org.opensha.sha.util.TectonicRegionType;
 import static org.gem.Utils.digitize;
 import static org.gem.calc.CalcUtils.assertPoissonian;
@@ -33,6 +31,7 @@ import static org.gem.calc.CalcUtils.getGMV;
 import static org.gem.calc.CalcUtils.notNull;
 import static org.gem.calc.CalcUtils.isSorted;
 import static org.gem.calc.CalcUtils.lenGE;
+import static org.gem.calc.CalcUtils.assertVs30TypeIsValid;
 import static org.apache.commons.collections.CollectionUtils.forAllDo;
 
 import org.gem.calc.DisaggregationResult;
@@ -223,15 +222,6 @@ public class DisaggregationCalculator {
                 throw new RuntimeException(
                         "Attenuation relationship must have a non-zero standard deviation.");
             }
-        }
-    }
-
-    public static void assertVs30TypeIsValid(String vs30Type) {
-        try {
-            Vs30Type.valueOf(vs30Type);
-        }
-        catch (IllegalArgumentException e) {
-            throw new RuntimeException(e);
         }
     }
 

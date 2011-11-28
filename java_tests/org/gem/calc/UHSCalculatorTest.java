@@ -12,6 +12,7 @@ import org.opensha.commons.data.DataPoint2D;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
 import org.opensha.commons.geo.BorderType;
 import org.opensha.sha.earthquake.EqkRupForecastAPI;
+import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam.Vs30Type;
 
 import static org.gem.calc.UHSCalculator.initHazCurve;
 import static org.gem.calc.UHSCalculator.interpolatePoe;
@@ -166,9 +167,54 @@ public class UHSCalculatorTest
 
         List<Double[]> expected = expectedUHSResults();
         List<Double[]> actual = uhsCalc.computeUHS(makeTestSite());
+
+        assertEquals(expected.size(), actual.size());
         for (int i = 0; i < expected.size(); i++)
         {
             assertTrue(Arrays.equals(expected.get(i), actual.get(i)));
         }
+    }
+
+    /**
+     * Test the full UHS computation using the more 'primitive'
+     * function.
+     */
+    @Test
+    public void testComputeUHS2()
+    {
+        UHSCalculator uhsCalc = new UHSCalculator(
+                PERIODS, POES, LOG_IMLS.toArray(new Double[LOG_IMLS.size()]),
+                ERF, makeTestImrMap(), MAX_DISTANCE);
+
+        List<Double[]> expected = expectedUHSResults();
+
+        String vs30Type = Vs30Type.Measured.toString();
+        double lat, lon, vs30Value, depthTo1pt0KMPS, depthTo2pt5KMPS;
+        lat = 0.0;
+        lon = 0.0;
+        vs30Value = 760.0;
+        depthTo1pt0KMPS = 100.0;
+        depthTo2pt5KMPS = 1.0;
+
+        List<Double[]> actual = uhsCalc.computeUHS(
+                lat, lon, vs30Type, vs30Value,
+                depthTo1pt0KMPS, depthTo2pt5KMPS);
+
+        assertEquals(expected.size(), actual.size());
+        for (int i = 0; i < expected.size(); i++)
+        {
+            assertTrue(Arrays.equals(expected.get(i), actual.get(i)));
+        }
+    }
+
+    @Test(expected=InputValidationException.class)
+    public void testComputeUHSThrowsOnInvalidVs30Type()
+    {
+        UHSCalculator uhsCalc = new UHSCalculator(
+                PERIODS, POES, LOG_IMLS.toArray(new Double[LOG_IMLS.size()]),
+                ERF, makeTestImrMap(), MAX_DISTANCE);
+
+        // vs30Type is case-sensitive
+        uhsCalc.computeUHS(0, 0, "measured", 0, 0, 0);
     }
 }
