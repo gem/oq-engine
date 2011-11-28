@@ -23,6 +23,8 @@ import numpy
 
 from celery.task import task
 
+from openquake import java
+
 
 @task(ignore_result=True)
 def touch_result_file(path, sites, n_samples, n_periods):
@@ -47,3 +49,31 @@ def touch_result_file(path, sites, n_samples, n_periods):
             ds_shape = (n_samples, n_periods)
             h5_file.create_dataset(ds_name, dtype=numpy.float64,
                                    shape=ds_shape)
+
+
+@task(ignore_results=True)
+@java.unpack_exception
+def compute_uhs(result_path, sample, site, poes):
+    """Compute Uniform Hazard Spectra for a given site of interest and 1 or
+    more Probability of Exceedance values. The bulk of the computation will
+    be done by utilizing the `UHSCalculator` class in the Java code.
+
+    UHS results (for each poe) will be written as a 1D array into temporary
+    HDF5 files. (The files will later be collected and 'reduced' into final
+    result files.)
+
+    :param result_dir:
+        NFS result directory path. For each poe, a subfolder will be created to
+        contain intermediate calculation results. (Each call to this task will
+        generate 1 result file per poe.
+    :param sample:
+        Logic tree sample number (from 1 to N, where N is the
+        NUMBER_OF_LOGIC_TREE_SAMPLES param defined in the job config.
+    :param site:
+        The site of interest (a :class:`openquake.shapes.Site` object).
+    :param poes:
+        List of Probability of Exceedance values (as floats). This function
+        will compute 1 UHS curve per poe.
+    :returns:
+        A list of the resulting file names (1 per poe).
+    """
