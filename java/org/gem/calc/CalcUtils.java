@@ -6,6 +6,7 @@ import org.apache.commons.collections.Closure;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
 import org.opensha.sha.earthquake.EqkRupForecastAPI;
 import org.opensha.sha.earthquake.ProbEqkSource;
+import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam.Vs30Type;
 
 public class CalcUtils
 {
@@ -18,6 +19,11 @@ public class CalcUtils
         public InputValidationException(String msg)
         {
             super(msg);
+        }
+
+        public InputValidationException(Exception e)
+        {
+            super(e);
         }
     }
 
@@ -122,6 +128,15 @@ public class CalcUtils
                 throw new RuntimeException(
                         "Sources must be Poissonian. (Non-Poissonian source are not currently supported.)");
             }
+        }
+    }
+
+    public static void assertVs30TypeIsValid(String vs30Type) {
+        try {
+            Vs30Type.valueOf(vs30Type);
+        }
+        catch (IllegalArgumentException e) {
+            throw new InputValidationException(e);
         }
     }
 }
