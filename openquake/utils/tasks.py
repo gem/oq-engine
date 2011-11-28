@@ -41,10 +41,7 @@ def _prepare_kwargs(name, data, other_args):
     Construct the full set of keyword parameters for the task to be
     invoked.
     """
-    params = {name: data}
-    if other_args:
-        params.update(other_args)
-    return params
+    return dict(other_args, **{name: data}) if other_args else {name: data}
 
 
 # Too many local variables
