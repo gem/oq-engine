@@ -291,10 +291,14 @@ class ClassicalMixin(BasePSHAMixin):
                 map_serializer=self.serialize_mean_hazard_map)
 
             # quantile curves
-            self.do_quantiles(data, realizations, self.quantile_levels,
+            quantiles = self.quantile_levels
+            self.do_quantiles(data, realizations, quantiles,
                 curve_serializer=self.serialize_quantile_hazard_curves,
                 map_func=classical_psha.compute_quantile_hazard_maps,
                 map_serializer=self.serialize_quantile_hazard_map)
+
+            # Done with this chunk, purge intermediate results from kvs.
+            self.release_curve_data_from_kvs(data, realizations, quantiles)
 
     def release_curve_data_from_kvs(self, sites, realizations, quantiles):
         """Purge the hazard curve data for the given `sites` from the kvs."""

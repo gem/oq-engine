@@ -21,6 +21,7 @@
 Unit tests for classic PSHA hazard computations with the hazard engine.
 """
 
+import mock
 import multiprocessing
 import unittest
 
@@ -426,3 +427,67 @@ class NumberOfTasksTestCase(helpers.TestMixin, unittest.TestCase):
         """
         self.mixin.params = dict(HAZARD_TASKS=" 	")
         self.assertRaises(ValueError, self.mixin.number_of_tasks)
+
+
+class ClassicalExecuteTestCase(helpers.TestMixin, unittest.TestCase):
+    """Tests the behaviour of ClassicalMixin.execute()."""
+
+    def __init__(self, *args, **kwargs):
+        super(ClassicalExecuteTestCase, self).__init__(*args, **kwargs)
+        self.sites = [shapes.Site(-121.9, 38.0), shapes.Site(-121.8, 38.0),
+                      shapes.Site(-122.9, 38.0), shapes.Site(-122.8, 38.0),
+                      shapes.Site(-123.9, 38.0), shapes.Site(-123.8, 38.0),
+                      shapes.Site(-124.9, 38.0), shapes.Site(-124.8, 38.0)]
+        self.originals = dict()
+
+    class FakeLogicTreeProcessor(object):
+        """
+        Fake logic tree processor class. This test will not manipulate any
+        logic trees.
+        """
+        def sample_and_save_source_model_logictree(self, cache, key, seed,
+                                                   bin_width):
+            """Do nothing."""
+
+        def sample_and_save_gmpe_logictree(self, cache, key, seed):
+            """Do nothing."""
+
+    def setUp(self):
+        self.mixin = self.create_job_with_mixin({'CALCULATION_MODE': 'Hazard'},
+                                                opensha.ClassicalMixin)
+        # Initialize the mixin instance.
+        self.mixin.params = dict(NUMBER_OF_LOGIC_TREE_SAMPLES=2,
+                                 WIDTH_OF_MFD_BIN=1, HAZARD_BLOCK_SIZE=3)
+        self.mixin.calc = self.FakeLogicTreeProcessor()
+        self.mixin.cache = dict()
+        self.mixin.sites = self.sites
+        for method in ["do_curves", "do_means", "do_quantiles",
+                       "release_curve_data_from_kvs"]:
+            self.originals[method] = getattr(self.mixin, method)
+            setattr(self.mixin, method,
+                    mock.mocksignature(self.originals[method]))
+
+    def tearDown(self):
+        self.unload_job_mixin()
+        for method, original in self.originals.iteritems():
+            setattr(self.mixin, method, original)
+
+    def test_invocations(self):
+        """Make sure execute() calls the methods properly.
+
+        We have 8 sites and a block size (`HAZARD_BLOCK_SIZE`) of 3 i.e.
+        the methids called by execute() will
+            - be called three times
+            - get passed 3, 3 and 2 sites on the 1st, 2nd and 3rd invocation
+              respectively.
+        """
+        data_slices = [self.sites[:3], self.sites[3:6], self.sites[6:]]
+        # Make sure no real logic is invoked.
+        with helpers.patch('openquake.input.logictree.LogicTreeProcessor'):
+            self.mixin.execute()
+            for method in self.originals:
+                mock = getattr(self.mixin, method).mock
+                self.assertEqual(3, mock.call_count)
+                for idx, data_len in enumerate([3, 3, 2]):
+                    args = mock.call_args_list[idx][0]
+                    self.assertEqual(data_slices[idx], args[0])
