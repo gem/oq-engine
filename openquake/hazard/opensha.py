@@ -20,16 +20,17 @@
 Wrapper around the OpenSHA-lite java library.
 """
 
-import math
-import os
-import multiprocessing
-import random
-import functools
 
 from itertools import izip
+import functools
+import math
+import multiprocessing
+import os
+import random
+import time
 
-from openquake import java
 from openquake import kvs
+from openquake import java
 from openquake import logs
 from openquake import shapes
 from openquake import xml
@@ -98,8 +99,7 @@ class ClassicalMixin(BasePSHAMixin):
         value = self["HAZARD_TASKS"]
         return 2 * multiprocessing.cpu_count() if value is None else int(value)
 
-    def do_curves(self, sites, realizations,
-                  serializer=None,
+    def do_curves(self, sites, realizations, serializer=None,
                   the_task=tasks.compute_hazard_curve):
         """Trigger the calculation of hazard curves, serialize as requested.
 
@@ -374,19 +374,32 @@ class ClassicalMixin(BasePSHAMixin):
             self.job_id, self.serialize_results_to, nrml_path)
         hc_data = []
 
-        for site in sites:
-            # Use hazard curve ordinate values (PoE) from KVS and abscissae
-            # from the IML list in config.
-            hc_attrib = {
-                'investigationTimeSpan': self['INVESTIGATION_TIME'],
-                'IMLValues': self.imls,
-                'IMT': self['INTENSITY_MEASURE_TYPE'],
+        sites = set(sites)
+        accounted_for = set()
+        initial_iteration = True
 
-                'PoEValues': kvs.get_value_json_decoded(key_template
-                                                        % hash(site))}
-
-            hc_attrib.update(hc_attrib_update)
-            hc_data.append((site, hc_attrib))
+        while accounted_for < sites:
+            # Sleep a little before checking the availability of additional
+            # hazard curve results.
+            if not initial_iteration:
+                time.sleep(1)
+            for site in sites:
+                key = key_template % hash(site)
+                value = kvs.get_value_json_decoded(key)
+                if value is None:
+                    # The curve for this site is not ready yet. Proceed to
+                    # the next.
+                    continue
+                # Use hazard curve ordinate values (PoE) from KVS and abscissae
+                # from the IML list in config.
+                hc_attrib = {
+                    'investigationTimeSpan': self['INVESTIGATION_TIME'],
+                    'IMLValues': self.imls,
+                    'IMT': self['INTENSITY_MEASURE_TYPE'],
+                    'PoEValues': value}
+                hc_attrib.update(hc_attrib_update)
+                hc_data.append((site, hc_attrib))
+                accounted_for.add(site)
 
         curve_writer.serialize(hc_data)
 
