@@ -72,12 +72,12 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
     Please note that for tasks with ignore_result=True
         - no results are returned
         - the control flow returns to the caller immediately i.e. this
-          function does *not* block while the tasks are running
-        - the user may pass in an asynchronous task handler function (`ath`)
-          that will be run as soon as the tasks have been started.
-          It can be used to check/wait for task results as appropriate. The
-          asynchronous task handler function is likely to execute in parallel
-          with longer running tasks.
+          function does *not* block while the tasks are running unless
+          the caller specifies an asynchronous task handler function.
+        - if specified, an asynchronous task handler function (`ath`)
+          will be run as soon as the tasks have been started.
+          It can be used to check/wait for task results as appropriate
+          and is likely to execute in parallel with longer running tasks.
 
     :param int cardinality: The size of the task set.
     :param the_task: A `celery` task callable.
@@ -116,8 +116,10 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
         if ignore_results:
             # Did the user specify a asynchronous task handler function?
             if ath:
-                pp_results = ath(**_prepare_kwargs(name, chunk, other_args))
-                results.extend(pp_results)
+                params = _prepare_kwargs(name, chunk, other_args, ath)
+                iresults = ath(**params)
+                if iresults:
+                    results.extend(iresults)
         else:
             results.extend(iresults)
 
