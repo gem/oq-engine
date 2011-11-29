@@ -438,7 +438,7 @@ class ClassicalExecuteTestCase(helpers.TestMixin, unittest.TestCase):
                       shapes.Site(-122.9, 38.0), shapes.Site(-122.8, 38.0),
                       shapes.Site(-123.9, 38.0), shapes.Site(-123.8, 38.0),
                       shapes.Site(-124.9, 38.0), shapes.Site(-124.8, 38.0)]
-        self.originals = dict()
+        self.methods = dict()
 
     class FakeLogicTreeProcessor(object):
         """
@@ -463,14 +463,14 @@ class ClassicalExecuteTestCase(helpers.TestMixin, unittest.TestCase):
         self.mixin.sites = self.sites
         for method in ["do_curves", "do_means", "do_quantiles",
                        "release_curve_data_from_kvs"]:
-            self.originals[method] = getattr(self.mixin, method)
+            self.methods[method] = getattr(self.mixin, method)
             setattr(self.mixin, method,
-                    mock.mocksignature(self.originals[method]))
+                    mock.mocksignature(self.methods[method]))
 
     def tearDown(self):
-        self.unload_job_mixin()
-        for method, original in self.originals.iteritems():
+        for method, original in self.methods.iteritems():
             setattr(self.mixin, method, original)
+        self.unload_job_mixin()
 
     def test_invocations(self):
         """Make sure execute() calls the methods properly.
@@ -485,9 +485,10 @@ class ClassicalExecuteTestCase(helpers.TestMixin, unittest.TestCase):
         # Make sure no real logic is invoked.
         with helpers.patch('openquake.input.logictree.LogicTreeProcessor'):
             self.mixin.execute()
-            for method in self.originals:
+            for method in self.methods:
                 mock = getattr(self.mixin, method).mock
                 self.assertEqual(3, mock.call_count)
                 for idx, data_len in enumerate([3, 3, 2]):
+                    # Get the arguments for an invocation identified by `idx`.
                     args = mock.call_args_list[idx][0]
                     self.assertEqual(data_slices[idx], args[0])
