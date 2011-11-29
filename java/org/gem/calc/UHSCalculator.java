@@ -118,7 +118,7 @@ public class UHSCalculator
      * @param depthTo2pt5KMPS
      * @return list of UHS results (1 per PoE)
      */
-    public List<Double[]> computeUHS(
+    public List<UHSResult> computeUHS(
             double lat,
             double lon,
             String vs30Type,
@@ -153,10 +153,10 @@ public class UHSCalculator
      *            The site of interest for this computation.
      * @return list of UHS results (1 per PoE)
      */
-    public List<Double[]> computeUHS(Site site)
+    public List<UHSResult> computeUHS(Site site)
     {
         // Final results of the calculation
-        List<Double[]> uhsResults = new ArrayList<Double[]>();
+        List<UHSResult> uhsResults = new ArrayList<UHSResult>();
         for (int is = 0; is < erf.getNumSources(); is++)
         {
             ProbEqkSource source = erf.getSource(is);
@@ -248,7 +248,7 @@ public class UHSCalculator
                 DiscretizedFuncAPI hazCurve = hazCurveMap.get(periods[i]);
                 uhs[i] = Math.exp(getGMV(hazCurve, poe));
             }
-            uhsResults.add(uhs);
+            uhsResults.add(new UHSResult(poe, uhs));
         }
 
         return uhsResults;
