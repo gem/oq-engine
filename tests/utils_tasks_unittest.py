@@ -341,32 +341,6 @@ class CheckJobStatusTestCase(unittest.TestCase):
             self.assertEqual(mock.call_args_list, [((31, ), {})])
 
 
-class DistributeBlockingTestCase(ConfigTestMixin, unittest.TestCase):
-    """
-    Make sure that the partitioning of data into blocks as performed
-    by utils.tasks.distribute() works
-    """
-
-    def setUp(self):
-        self.setup_config()
-
-    def tearDown(self):
-        self.teardown_config()
-
-    def test_multiple_blocks(self):
-        """
-        The results passed back are correct when the data is partitioned
-        into multiple blocks.
-        """
-        # The block size is 2 i.e. distribute() will use 4 blocks.
-        self.prepare_config("tasks", {"block_size": 2})
-        expected = range(7)
-        result = tasks.distribute(
-            3, reflect_data_to_be_processed, ("data", range(7)),
-            flatten_results=True)
-        self.assertEqual(expected, result)
-
-
 class IgnoreResultsTestCase(unittest.TestCase):
     """
     Tests the behaviour of utils.tasks.distribute() with tasks whose results

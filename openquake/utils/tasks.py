@@ -57,9 +57,9 @@ def _prepare_kwargs(name, data, other_args, func=None):
 
 # Too many local variables
 # pylint: disable=R0914
-def distribute(cardinality, the_task, (name, data), other_args=None,
+def distribute(cardinality, a_task, (name, data), other_args=None,
                flatten_results=False, ath=None):
-    """Runs `the_task` in a task set with the given `cardinality`.
+    """Runs `a_task` in a task set with the given `cardinality`.
 
     The given `data` is portioned across the subtasks in the task set.
     The results returned by the subtasks are returned in a list e.g.:
@@ -80,9 +80,9 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
           and is likely to execute in parallel with longer running tasks.
 
     :param int cardinality: The size of the task set.
-    :param the_task: A `celery` task callable.
+    :param a_task: A `celery` task callable.
     :param str name: The parameter name under which the portioned `data` is to
-        be passed to `the_task`.
+        be passed to `a_task`.
     :param data: The `data` that is to be portioned and passed to the subtasks
         for processing.
     :param dict other_args: The remaining (keyword) parameters that are to be
@@ -94,70 +94,6 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
     :returns: A list where each element is a result returned by a subtask.
         If an `ath` function is passed we return whatever it returns.
     """
-    logs.HAZARD_LOG.info("cardinality: %s" % cardinality)
-
-    block_size = config.get("tasks", "block_size")
-    block_size = int(block_size) if block_size else DEFAULT_BLOCK_SIZE
-
-    logs.HAZARD_LOG.debug("block_size: %s" % block_size)
-
-    data_length = len(data)
-    logs.HAZARD_LOG.debug("data_length: %s" % data_length)
-
-    ignore_results = the_task.ignore_result
-    results = []
-
-    for start in xrange(0, data_length, block_size):
-        end = start + block_size
-        logs.HAZARD_LOG.debug("data[%s:%s]" % (start, end))
-        chunk = data[start:end]
-        iresults = _distribute(cardinality, the_task, name, chunk, other_args,
-                               flatten_results, ignore_results)
-        if ignore_results:
-            # Did the user specify a asynchronous task handler function?
-            if ath:
-                params = _prepare_kwargs(name, chunk, other_args, ath)
-                print params
-                iresults = ath(**params)
-                if iresults:
-                    results.extend(iresults)
-        else:
-            results.extend(iresults)
-
-    return results
-
-
-# Too many local arguments
-# pylint: disable=R0913
-def _distribute(cardinality, a_task, name, data, other_args, flatten_results,
-                ignore_results):
-    """Runs `a_task` in a task set with the given `cardinality`.
-
-    The given `data` is portioned across the subtasks in the task set.
-    The results returned by the subtasks are returned in a list e.g.:
-        [result1, result2, ..]
-    If each subtask returns a list that will result in list of lists. Please
-    set `flatten_results` to `True` if you want the results to be returned in a
-    single list.
-
-    :param int cardinality: The size of the task set.
-    :param a_task: A `celery` task callable.
-    :param str name: The parameter name under which the portioned `data` is to
-        be passed to `a_task`.
-    :param data: The `data` that is to be portioned and passed to the subtasks
-        for processing.
-    :param dict other_args: The remaining (keyword) parameters that are to be
-        passed to the subtasks.
-    :param bool flatten_results: If set, the results will be returned as a
-        single list (as opposed to [[results1], [results2], ..]).
-    :param bool ignore_results: If set, the task's results are to be ignored
-        i.e. there will be no result messages.
-    :returns: A list where each element is a result returned by a subtask.
-        The result order is the same as the subtask order.
-    """
-    # Too many local variables
-    # pylint: disable=R0914
-
     data_length = len(data)
     logs.HAZARD_LOG.debug("-data_length: %s" % data_length)
 
@@ -189,9 +125,12 @@ def _distribute(cardinality, a_task, name, data, other_args, flatten_results,
     # a portion of the data that is to be processed. Now we will create
     # and run the task set.
     logs.HAZARD_LOG.debug("-#subtasks: %s" % len(subtasks))
-    if ignore_results:
+    if a_task.ignore_result:
         TaskSet(tasks=subtasks).apply_async()
-        return None
+        # Did the user specify a asynchronous task handler function?
+        if ath:
+            params = _prepare_kwargs(name, data, other_args, ath)
+            return ath(**params)
     else:
         # Only called when we expect result messages to come back.
         return _handle_subtasks(subtasks, flatten_results)
