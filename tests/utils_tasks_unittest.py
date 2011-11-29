@@ -29,7 +29,7 @@ import uuid
 
 from openquake.utils import tasks
 
-from tests.utils.helpers import patch, ConfigTestMixin, TestStore
+from tests.utils.helpers import patch, TestStore
 from tests.utils.tasks import (
     failing_task, ignore_result, just_say_hello, reflect_args,
     reflect_data_to_be_processed, single_arg_called_a,

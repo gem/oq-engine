@@ -29,7 +29,6 @@ from celery.task.sets import TaskSet
 
 from openquake.job import Job
 from openquake import logs
-from openquake.utils import config
 
 
 # Do not create batches of more than DEFAULT_BLOCK_SIZE celery subtasks.
