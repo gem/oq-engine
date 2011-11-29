@@ -22,6 +22,7 @@
 Utility functions related to splitting work into tasks.
 """
 
+import inspect
 import itertools
 
 from celery.task.sets import TaskSet
@@ -36,12 +37,22 @@ from openquake.utils import config
 DEFAULT_BLOCK_SIZE = 4096
 
 
-def _prepare_kwargs(name, data, other_args):
+def _prepare_kwargs(name, data, other_args, func=None):
     """
-    Construct the full set of keyword parameters for the task to be
-    invoked.
+    Construct the (full) set of keyword parameters for the task to be
+    invoked and/or its associated asynchronous task handler function.
+
+    If a `func` is passed it will be inspected and only parameters it is
+    prepared to receive will be included in the resulting `dict`.
+
     """
-    return dict(other_args, **{name: data}) if other_args else {name: data}
+    params = dict(other_args, **{name: data}) if other_args else {name: data}
+    if func:
+        # A functiom was passed, remove params it is not prepared to receive.
+        func_params = inspect.getargspec(func).args
+        filtered_params = [(k, params[k]) for k in params if k in func_params]
+        params = dict(filtered_params)
+    return params
 
 
 # Too many local variables
