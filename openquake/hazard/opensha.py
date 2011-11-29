@@ -137,7 +137,7 @@ class ClassicalMixin(BasePSHAMixin):
             self.store_gmpe_map(source_model_generator.getrandbits(32))
 
             utils_tasks.distribute(
-                self.number_of_tasks(), the_task, ("site_list", sites),
+                self.number_of_tasks(), the_task, ("sites", sites),
                 dict(job_id=self.job_id, realization=realization),
                 flatten_results=True, ath=serializer)
 
@@ -367,7 +367,7 @@ class ClassicalMixin(BasePSHAMixin):
             # Sleep a little before checking the availability of additional
             # hazard curve results.
             if not initial_iteration:
-                time.sleep(1)
+                time.sleep(0.1)
             for site in sites:
                 key = key_template % hash(site)
                 value = kvs.get_value_json_decoded(key)

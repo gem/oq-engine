@@ -117,6 +117,7 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
             # Did the user specify a asynchronous task handler function?
             if ath:
                 params = _prepare_kwargs(name, chunk, other_args, ath)
+                print params
                 iresults = ath(**params)
                 if iresults:
                     results.extend(iresults)
