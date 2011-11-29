@@ -261,6 +261,9 @@ class ClassicalMixin(BasePSHAMixin):
         """
         Trigger the calculation and serialization of hazard curves, mean hazard
         curves/maps and quantile curves.
+
+        :returns: the keys used in the course of the calculation (for the sake
+            of testability).
         """
         keys = []
         sites = self.sites_to_compute()
@@ -306,7 +309,10 @@ class ClassicalMixin(BasePSHAMixin):
 
     def release_curve_data_from_kvs(
         self, sites, realizations, quantiles, poes):
-        """Purge the hazard curve data for the given `sites` from the kvs."""
+        """Purge the hazard curve data for the given `sites` from the kvs.
+
+        :returns: the keys purged.
+        """
         purged = []
         for realization in xrange(0, realizations):
             template = kvs.tokens.hazard_curve_poes_key_template(
@@ -521,7 +527,6 @@ class ClassicalMixin(BasePSHAMixin):
 
         for site in sites:
             key = key_template % hash(site)
-            LOG.info("Generating NRML hazard map file for key %s" % key)
             # use hazard map IML values from KVS
             hm_attrib = {
                 'investigationTimeSpan': self['INVESTIGATION_TIME'],
