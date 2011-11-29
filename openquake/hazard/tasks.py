@@ -81,16 +81,12 @@ def compute_ground_motion_fields(job_id, site_list, history, realization,
 @task
 @java.unpack_exception
 @stats.progress_indicator
-def compute_hazard_curve(job_id, site_list, realization, callback=None):
+def compute_hazard_curve(job_id, site_list, realization):
     """ Generate hazard curve for a given site list. """
     check_job_status(job_id)
     hazengine = job.Job.from_kvs(job_id)
     with mixins.Mixin(hazengine, hazjob.HazJobMixin):
         keys = hazengine.compute_hazard_curve(site_list, realization)
-
-        if callback:
-            subtask(callback).delay(job_id, site_list)
-
         return keys
 
 
