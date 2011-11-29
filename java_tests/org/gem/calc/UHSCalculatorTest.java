@@ -162,7 +162,7 @@ public class UHSCalculatorTest
     public void testComputeUHS()
     {
         UHSCalculator uhsCalc = new UHSCalculator(
-                PERIODS, POES, LOG_IMLS.toArray(new Double[LOG_IMLS.size()]),
+                PERIODS, POES, LOG_IMLS,
                 ERF, makeTestImrMap(), MAX_DISTANCE);
 
         List<Double[]> expected = expectedUHSResults();
@@ -183,7 +183,7 @@ public class UHSCalculatorTest
     public void testComputeUHS2()
     {
         UHSCalculator uhsCalc = new UHSCalculator(
-                PERIODS, POES, LOG_IMLS.toArray(new Double[LOG_IMLS.size()]),
+                PERIODS, POES, LOG_IMLS,
                 ERF, makeTestImrMap(), MAX_DISTANCE);
 
         List<Double[]> expected = expectedUHSResults();
@@ -211,7 +211,7 @@ public class UHSCalculatorTest
     public void testComputeUHSThrowsOnInvalidVs30Type()
     {
         UHSCalculator uhsCalc = new UHSCalculator(
-                PERIODS, POES, LOG_IMLS.toArray(new Double[LOG_IMLS.size()]),
+                PERIODS, POES, LOG_IMLS,
                 ERF, makeTestImrMap(), MAX_DISTANCE);
 
         // vs30Type is case-sensitive
