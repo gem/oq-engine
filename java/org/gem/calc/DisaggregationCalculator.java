@@ -90,7 +90,7 @@ public class DisaggregationCalculator {
             GEM1ERF erf,
             Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap,
             double poe,
-            List<Double> imls,
+            Double[] imls,
             String vs30Type,
             double vs30Value,
             double depthTo1pt0KMPS,
