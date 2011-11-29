@@ -450,3 +450,67 @@ class IgnoreResultsTestCase(unittest.TestCase):
 
         for key, value in data:
             self.assertEqual(value.upper(), TestStore.get(key))
+
+
+class PrepareKwargsTestCase(unittest.TestCase):
+    """
+    Tests the behaviour of utils.tasks._prepare_kwargs().
+    """
+
+    def test_prepare_kwargs_with_data_only(self):
+        """Simplest case: no other args and no function passed"""
+        self.assertEqual(dict(a=1), tasks._prepare_kwargs("a", 1, None))
+
+    def test_prepare_kwargs_with_other_data(self):
+        """Pass `other_args` that is not `None`."""
+        self.assertEqual(dict(a=1, c=3, d=4),
+                         tasks._prepare_kwargs("a", 1, dict(c=3, d=4)))
+
+    def test_prepare_kwargs_with_data_only_and_func_params_mismatch(self):
+        """A function is passed, its params do not match."""
+
+        def ath(x):
+            pass
+
+        self.assertEqual(dict(), tasks._prepare_kwargs("a", 1, None, ath))
+
+    def test_prepare_kwargs_with_data_only_and_func_params_match(self):
+        """A function is passed, its params *do* match."""
+
+        def ath(a):
+            pass
+
+        self.assertEqual(dict(a=1), tasks._prepare_kwargs("a", 1, None, ath))
+
+    def test_prepare_kwargs_with_func_params_mismatch(self):
+        """
+        Other args and a function is passed, the latter's params do not match.
+        """
+
+        def ath(x):
+            pass
+
+        self.assertEqual(dict(),
+                         tasks._prepare_kwargs("a", 1, dict(c=3, d=4), ath))
+
+    def test_prepare_kwargs_with_func_params_match(self):
+        """
+        Other args and a function is passed, the latter's params *do* match.
+        """
+
+        def ath(a, d):
+            pass
+
+        self.assertEqual(dict(a=1, d=4),
+                         tasks._prepare_kwargs("a", 1, dict(c=3, d=4), ath))
+
+    def test_prepare_kwargs_with_full_func_params_match(self):
+        """
+        Other args and a function is passed, the latter's params all match.
+        """
+
+        def ath(a, c, d):
+            pass
+
+        self.assertEqual(dict(a=1, c=3, d=4),
+                         tasks._prepare_kwargs("a", 1, dict(c=3, d=4), ath))
