@@ -425,8 +425,8 @@ class IgnoreResultsTestCase(unittest.TestCase):
 
         def ath(data):
             """
-            A asynchronous task handler function that converts all task results
-            to upper case and returns the list of keys found.
+            An asynchronous task handler function that converts all task
+            results to upper case and returns the list of keys found.
             """
             items_expected = len(data)
             items_found = []
