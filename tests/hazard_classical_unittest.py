@@ -93,9 +93,9 @@ class DoCurvesTestCase(helpers.TestMixin, unittest.TestCase):
     def test_serializer_called_when_passed(self):
         """The passed serialization function is called for each realization."""
 
-        def fake_serializer(site_list, realization):
+        def fake_serializer(sites, realization):
             """Fake serialization function to be used in this test."""
-            self.assertEqual(self.sites, site_list)
+            self.assertEqual(self.sites, sites)
 
             fake_serializer.number_of_calls += 1
 
