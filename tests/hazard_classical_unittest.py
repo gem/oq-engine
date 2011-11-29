@@ -30,7 +30,8 @@ from openquake import shapes
 from openquake.hazard import opensha
 
 from tests.utils import helpers
-from tests.utils.tasks import test_compute_hazard_curve, test_data_reflector
+from tests.utils.tasks import (
+    test_async_data_reflector, test_compute_hazard_curve, test_data_reflector)
 
 LOG = logs.LOG
 
@@ -92,9 +93,9 @@ class DoCurvesTestCase(helpers.TestMixin, unittest.TestCase):
     def test_serializer_called_when_passed(self):
         """The passed serialization function is called for each realization."""
 
-        def fake_serializer(sites, realization):
+        def fake_serializer(site_list, realization):
             """Fake serialization function to be used in this test."""
-            self.assertEqual(self.sites, sites)
+            self.assertEqual(self.sites, site_list)
 
             fake_serializer.number_of_calls += 1
 
@@ -154,7 +155,7 @@ class DoMeansTestCase(helpers.TestMixin, unittest.TestCase):
         self.keys.append(key)
         self.mixin.do_means(self.sites, 1,
                         curve_serializer=fake_serializer,
-                        curve_task=test_data_reflector)
+                        curve_task=test_async_data_reflector)
         self.assertEqual(1, fake_serializer.number_of_calls)
 
     def test_map_serializer_not_called_unless_configured(self):
@@ -278,7 +279,8 @@ class DoQuantilesTestCase(helpers.TestMixin, unittest.TestCase):
 
     def test_curve_serializer_called_when_passed(self):
         """The passed quantile curve serialization function is called."""
-        def fake_serializer(sites, quantile):
+
+        def fake_serializer(sites, quantiles):
             """Fake serialization function to be used in this test."""
             fake_serializer.number_of_calls += 1
 
@@ -288,9 +290,9 @@ class DoQuantilesTestCase(helpers.TestMixin, unittest.TestCase):
         self.keys.append(key)
         self.mixin.do_quantiles(self.sites, 1, [0.2, 0.4],
                             curve_serializer=fake_serializer,
-                            curve_task=test_data_reflector)
-        # The serializer is called once for each quantile.
-        self.assertEqual(2, fake_serializer.number_of_calls)
+                            curve_task=test_async_data_reflector)
+        # The serializer is called only once (for all quantiles).
+        self.assertEqual(1, fake_serializer.number_of_calls)
 
     def test_map_serializer_called_when_configured(self):
         """

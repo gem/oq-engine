@@ -78,7 +78,7 @@ def compute_ground_motion_fields(job_id, site_list, history, realization,
                                                seed)
 
 
-@task
+@task(ignore_result=True)
 @java.unpack_exception
 @stats.progress_indicator
 def compute_hazard_curve(job_id, site_list, realization):
@@ -116,7 +116,7 @@ def compute_mgm_intensity(job_id, block_id, site_id):
     return json.JSONDecoder().decode(mgm)
 
 
-@task
+@task(ignore_result=True)
 @java.unpack_exception
 @stats.progress_indicator
 def compute_mean_curves(job_id, sites, realizations):
@@ -130,7 +130,7 @@ def compute_mean_curves(job_id, sites, realizations):
         realizations)
 
 
-@task
+@task(ignore_result=True)
 @java.unpack_exception
 @stats.progress_indicator
 def compute_quantile_curves(job_id, sites, realizations, quantiles):

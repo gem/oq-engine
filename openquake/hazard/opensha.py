@@ -139,10 +139,7 @@ class ClassicalMixin(BasePSHAMixin):
             utils_tasks.distribute(
                 self.number_of_tasks(), the_task, ("site_list", sites),
                 dict(job_id=self.job_id, realization=realization),
-                flatten_results=True)
-
-            if serializer:
-                serializer(sites, realization)
+                flatten_results=True, ath=serializer)
 
     # pylint: disable=R0913
     def do_means(self, sites, realizations,
@@ -185,12 +182,7 @@ class ClassicalMixin(BasePSHAMixin):
         utils_tasks.distribute(
             self.number_of_tasks(), curve_task, ("sites", sites),
             dict(job_id=self.job_id, realizations=realizations),
-            flatten_results=True)
-
-        if curve_serializer:
-            LOG.info("Serializing mean hazard curves")
-
-            curve_serializer(sites)
+            flatten_results=True, ath=curve_serializer)
 
         if self.poes_hazard_maps:
             assert map_func, "No calculation function for mean hazard maps set"
@@ -244,13 +236,7 @@ class ClassicalMixin(BasePSHAMixin):
             self.number_of_tasks(), curve_task, ("sites", sites),
             dict(job_id=self.job_id, realizations=realizations,
                  quantiles=quantiles),
-            flatten_results=True)
-
-        if curve_serializer:
-            LOG.info("Serializing quantile curves for %s values"
-                     % len(quantiles))
-            for quantile in quantiles:
-                curve_serializer(sites, quantile)
+            flatten_results=True, ath=curve_serializer)
 
         if self.poes_hazard_maps:
             assert map_func, "No calculation function for quantile maps set."
@@ -328,7 +314,7 @@ class ClassicalMixin(BasePSHAMixin):
         self.serialize_hazard_curve(nrml_file, key_template, hc_attrib_update,
                                     sites)
 
-    def serialize_quantile_hazard_curves(self, sites, quantile):
+    def serialize_quantile_hazard_curves(self, sites, quantiles):
         """
         Serialize the quantile hazard curves of a set of sites for a given
         quantile.
@@ -338,16 +324,15 @@ class ClassicalMixin(BasePSHAMixin):
         :param quantile: the quantile to be serialized
         :type quantile: :py:class:`float`
         """
-        hc_attrib_update = {
-            'statistics': 'quantile',
-            'quantileValue': quantile}
-        nrml_file = self.quantile_hazard_curve_filename(quantile)
-        key_template = \
-            kvs.tokens.quantile_hazard_curve_key_template(self.job_id,
-                                                          str(quantile))
-
-        self.serialize_hazard_curve(nrml_file, key_template, hc_attrib_update,
-                                    sites)
+        for quantile in quantiles:
+            hc_attrib_update = {
+                'statistics': 'quantile',
+                'quantileValue': quantile}
+            nrml_file = self.quantile_hazard_curve_filename(quantile)
+            key_template = kvs.tokens.quantile_hazard_curve_key_template(
+                self.job_id, str(quantile))
+            self.serialize_hazard_curve(nrml_file, key_template,
+                                        hc_attrib_update, sites)
 
     def serialize_hazard_curve(self, nrml_file, key_template, hc_attrib_update,
                                sites):
