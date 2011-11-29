@@ -262,6 +262,7 @@ class ClassicalMixin(BasePSHAMixin):
         Trigger the calculation and serialization of hazard curves, mean hazard
         curves/maps and quantile curves.
         """
+        keys = []
         sites = self.sites_to_compute()
         realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
         if self["HAZARD_BLOCK_SIZE"]:
@@ -298,25 +299,46 @@ class ClassicalMixin(BasePSHAMixin):
                 map_serializer=self.serialize_quantile_hazard_map)
 
             # Done with this chunk, purge intermediate results from kvs.
-            self.release_curve_data_from_kvs(data, realizations, quantiles)
+            keys.extend(self.release_curve_data_from_kvs(
+                data, realizations, quantiles, self.poes_hazard_maps))
 
-    def release_curve_data_from_kvs(self, sites, realizations, quantiles):
+        return keys
+
+    def release_curve_data_from_kvs(
+        self, sites, realizations, quantiles, poes):
         """Purge the hazard curve data for the given `sites` from the kvs."""
+        purged = []
         for realization in xrange(0, realizations):
             template = kvs.tokens.hazard_curve_poes_key_template(
                 self.job_id, realization)
             keys = [template % hash(site) for site in sites]
             kvs.get_client().delete(*keys)
+            purged.extend(keys)
 
         template = kvs.tokens.mean_hazard_curve_key_template(self.job_id)
         keys = [template % hash(site) for site in sites]
         kvs.get_client().delete(*keys)
+        purged.extend(keys)
 
         for quantile in quantiles:
             template = kvs.tokens.quantile_hazard_curve_key_template(
                 self.job_id, str(quantile))
             keys = [template % hash(site) for site in sites]
+            for poe in poes:
+                template = kvs.tokens.quantile_hazard_map_key_template(
+                    self.job_id, poe, quantile)
+                keys.extend([template % hash(site) for site in sites])
             kvs.get_client().delete(*keys)
+            purged.extend(keys)
+
+        for poe in poes:
+            template = kvs.tokens.mean_hazard_map_key_template(
+                self.job_id, poe)
+            keys = [template % hash(site) for site in sites]
+            kvs.get_client().delete(*keys)
+            purged.extend(keys)
+
+        return purged
 
     def serialize_hazard_curve_of_realization(self, sites, realization):
         """
@@ -437,8 +459,8 @@ class ClassicalMixin(BasePSHAMixin):
             nrml_file = self.mean_hazard_map_filename(poe)
 
             hm_attrib_update = {'statistics': 'mean'}
-            key_template = kvs.tokens.mean_hazard_map_key_template(self.job_id,
-                                                          poe)
+            key_template = kvs.tokens.mean_hazard_map_key_template(
+                self.job_id, poe)
 
             self.serialize_hazard_map_at_poe(sites, poe, key_template,
                                              hm_attrib_update, nrml_file)
@@ -490,21 +512,22 @@ class ClassicalMixin(BasePSHAMixin):
         """
         nrml_path = self.build_nrml_path(nrml_file)
 
-        LOG.debug("Generating NRML hazard map file for PoE %s, "\
-            "%s nodes in hazard map: %s" % (
-            poe, len(sites), nrml_file))
+        LOG.info("Generating NRML hazard map file for PoE %s, "
+                 "%s nodes in hazard map: %s" % (poe, len(sites), nrml_file))
 
         map_writer = hazard_output.create_hazardmap_writer(
             self.job_id, self.serialize_results_to, nrml_path)
         hm_data = []
 
         for site in sites:
+            key = key_template % hash(site)
+            LOG.info("Generating NRML hazard map file for key %s" % key)
             # use hazard map IML values from KVS
             hm_attrib = {
                 'investigationTimeSpan': self['INVESTIGATION_TIME'],
                 'IMT': self['INTENSITY_MEASURE_TYPE'],
                 'vs30': self['REFERENCE_VS30_VALUE'],
-                'IML': kvs.get_value_json_decoded(key_template % hash(site)),
+                'IML': kvs.get_value_json_decoded(key),
                 'poE': poe}
 
             hm_attrib.update(hm_attrib_update)
