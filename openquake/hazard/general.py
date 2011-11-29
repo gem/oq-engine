@@ -27,6 +27,7 @@ from openquake import kvs
 from openquake import logs
 
 from openquake.input import logictree
+from openquake.utils import list_to_jdouble_array
 
 from openquake.job.mixins import Mixin
 
@@ -51,10 +52,8 @@ def get_iml_list(imls, intensity_measure_type):
     """Build the appropriate Arbitrary Discretized Func from the IMLs,
     based on the IMT"""
 
-    iml_list = java.jclass("ArrayList")()
-    for val in imls:
-        iml_list.add(IML_SCALING[intensity_measure_type](val))
-    return iml_list
+    return list_to_jdouble_array(
+        map(IML_SCALING[intensity_measure_type], imls))
 
 
 def preload(fn):
