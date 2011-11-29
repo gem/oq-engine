@@ -66,10 +66,9 @@ def generate_erf(job_id):
 @task
 @java.unpack_exception
 @stats.progress_indicator
-def compute_ground_motion_fields(job_id, sites, history, realization,
-                                 seed):
+def compute_ground_motion_fields(job_id, sites, history, realization, seed):
     """ Generate ground motion fields """
-    # TODO(JMC): Use a block_id instead of a sites
+    # TODO(JMC): Use a block_id instead of a sites list
     check_job_status(job_id)
     hazengine = job.Job.from_kvs(job_id)
     with mixins.Mixin(hazengine, hazjob.HazJobMixin):
@@ -123,10 +122,10 @@ def compute_mean_curves(job_id, sites, realizations):
 
     check_job_status(job_id)
     HAZARD_LOG.info("Computing MEAN curves for %s sites (job_id %s)"
-            % (len(sites), job_id))
+                    % (len(sites), job_id))
 
     return classical_psha.compute_mean_hazard_curves(job_id, sites,
-        realizations)
+                                                     realizations)
 
 
 @task(ignore_result=True)
@@ -137,7 +136,7 @@ def compute_quantile_curves(job_id, sites, realizations, quantiles):
 
     check_job_status(job_id)
     HAZARD_LOG.info("Computing QUANTILE curves for %s sites (job_id %s)"
-            % (len(sites), job_id))
+                    % (len(sites), job_id))
 
-    return classical_psha.compute_quantile_hazard_curves(job_id, sites,
-        realizations, quantiles)
+    return classical_psha.compute_quantile_hazard_curves(
+        job_id, sites, realizations, quantiles)
