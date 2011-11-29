@@ -39,7 +39,7 @@ from openquake.utils import config, list_to_jdouble_array
 from openquake.hazard.disagg import subsets
 from openquake.hazard.general import (
     preload, generate_erf, generate_gmpe_map, set_gmpe_params,
-    store_source_model, store_gmpe_map)
+    store_source_model, store_gmpe_map, get_iml_list)
 from openquake.job.mixins import Mixin
 from openquake.utils.tasks import check_job_status
 
@@ -90,12 +90,8 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
     gmpe_map = generate_gmpe_map(job_id, cache)
     set_gmpe_params(gmpe_map, the_job.params)
 
-    iml_arraylist = java.jclass('ArrayList')()
-    iml_vals = the_job['INTENSITY_MEASURE_LEVELS']
-    # Map `log` (natural log) to each IML value before passing to the
-    # calculator.
-    iml_vals = [log(x) for x in iml_vals]
-    iml_arraylist.addAll(iml_vals)
+    iml_arraylist = get_iml_list(the_job['INTENSITY_MEASURE_LEVELS'],
+                                 the_job['INTENSITY_MEASURE_TYPE'])
     vs30_type = the_job['VS30_TYPE']
     vs30_value = the_job['REFERENCE_VS30_VALUE']
     depth_to_1pt0 = the_job['DEPTHTO1PT0KMPERSEC']
