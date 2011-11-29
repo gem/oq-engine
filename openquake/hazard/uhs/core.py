@@ -20,19 +20,28 @@
 
 import h5py
 import numpy
+import os
+import uuid
 
 from celery.task import task
 
 from openquake import java
+from openquake.job import Job
+from openquake.utils import list_to_jdouble_array
+from openquake.hazard.general import (
+    generate_erf, generate_gmpe_map, set_gmpe_params, get_iml_list)
+from openquake.utils import tasks as utils_tasks
 
 
 @task(ignore_result=True)
-def touch_result_file(path, sites, n_samples, n_periods):
+def touch_result_file(job_id, path, sites, n_samples, n_periods):
     """Given a path (including the file name), create an empty HDF5 result file
     containing 1 empty data set for each site. Each dataset will be a matrix
     with the number of rows = number of samples and number of cols = number of
     UHS periods.
 
+    :param int job_id:
+        ID of the job record in the DB/KVS.
     :param str path:
         Location (including a file name) on an NFS where the empty
         result file should be created.
@@ -43,6 +52,8 @@ def touch_result_file(path, sites, n_samples, n_periods):
     :param int n_periods:
         Number of UHS periods (the x-dimension of each dataset).
     """
+    utils_tasks.check_job_status(job_id)
+    # TODO: Generate the sites, instead of pumping them through rabbit?
     with h5py.File(path, 'w') as h5_file:
         for site in sites:
             ds_name = 'lon:%s-lat:%s' % (site.longitude, site.latitude)
@@ -53,7 +64,7 @@ def touch_result_file(path, sites, n_samples, n_periods):
 
 @task(ignore_results=True)
 @java.unpack_exception
-def compute_uhs(result_path, sample, site, poes):
+def compute_uhs_task(job_id, result_path, sample, site):
     """Compute Uniform Hazard Spectra for a given site of interest and 1 or
     more Probability of Exceedance values. The bulk of the computation will
     be done by utilizing the `UHSCalculator` class in the Java code.
@@ -62,7 +73,9 @@ def compute_uhs(result_path, sample, site, poes):
     HDF5 files. (The files will later be collected and 'reduced' into final
     result files.)
 
-    :param result_dir:
+    :param int job_id:
+        ID of the job record in the DB/KVS.
+    :param result_path:
         NFS result directory path. For each poe, a subfolder will be created to
         contain intermediate calculation results. (Each call to this task will
         generate 1 result file per poe.
@@ -71,9 +84,83 @@ def compute_uhs(result_path, sample, site, poes):
         NUMBER_OF_LOGIC_TREE_SAMPLES param defined in the job config.
     :param site:
         The site of interest (a :class:`openquake.shapes.Site` object).
-    :param poes:
-        List of Probability of Exceedance values (as floats). This function
-        will compute 1 UHS curve per poe.
     :returns:
         A list of the resulting file names (1 per poe).
     """
+    utils_tasks.check_job_status(job_id)
+
+    the_job = Job.from_kvs(job_id)
+
+    periods = list_to_jdouble_array(the_job['UHS_PERIODS'])
+    poes = list_to_jdouble_array(the_job['POES'])
+    imls = get_iml_list(the_job['INTENSITY_MEASURE_LEVELS'],
+                        the_job['INTENSITY_MEASURE_TYPE'])
+    max_distance = the_job['MAXIMUM_DISTANCE']
+
+    cache = java.jclass('KVS')(
+        config.get('kvs', 'host'),
+        int(config.get('kvs', 'port')))
+
+    erf = generate_erf(job_id, cache)
+    gmpe_map = generate_gmpe_map(job_id, cache)
+    set_gmpe_params(gmpe_map, the_job.params)
+
+    uhs_calc = java.jclass('UHSCalculator')(periods, poes, imls, erf, gmpe_map,
+                                            max_distance)
+
+    uhs_results = uhs_calc.computeUHS(
+        site.latitude,
+        site.longitude,
+        the_job['VS30_TYPE'],
+        the_job['REFERENCE_VS30_VALUE'],
+        the_job['DEPTHTO1PT0KMPERSEC'],
+        the_job['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM'])
+
+    return write_uhs_results(result_path, uhs_results)
+
+
+def write_uhs_results(result_path, uhs_results):
+    """
+
+    :param uhs_results:
+        A sequence of `UHSResult` jpype Java objects.
+    :param result_path:
+        NFS result directory path. For each poe, a subfolder will be created to
+        contain intermediate calculation results. (Each call to this task will
+        generate 1 result file per poe.
+    :param uhs_results: TODO:
+    :returns:
+        A list of the resulting file names (1 per poe).
+    """
+    result_files = []
+
+    for result in uhs_results:
+        poe = result.getPoe()
+        uhs = result.getUhs()  # This is a Java Double[]
+
+        # We want intermediate calc results to be organized by PoE,
+        # so that they can be collected and reduced into a single result file
+        # per PoE.
+        # Having results separated this way means that a result collector
+        # is simply assigned a directory to poll and grabs any result files
+        # that it finds (without having to do much/any fitering or searching).
+        poe_path = os.path.join(result_path, 'poe:%s' % poe)
+        if not os.path.exists(poe_path):
+            os.makedirs(poe_path)
+
+        file_path = os.path.join(poe_path, str(uuid.uuid4()))
+
+        with h5py.File(file_path, 'w') as h5_file:
+            print uhs
+            print type(uhs)
+            print dir(uhs)
+            print numpy.array(uhs)
+            h5_file.create_dataset(
+                'uhs',
+                # We have to get the primitive 'value' for each Double in the
+                # Double[]
+                data=numpy.array([x.value for x in uhs], dtype=numpy.float64))
+
+        result_files.append(file_path)
+
+    return result_files
