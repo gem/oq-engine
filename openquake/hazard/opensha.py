@@ -396,15 +396,15 @@ class ClassicalMixin(BasePSHAMixin):
         accounted_for = set()
         initial_iteration = True
 
-        while accounted_for < sites:
+        while accounted_for != sites:
             # Sleep a little before checking the availability of additional
             # hazard curve results.
             if not initial_iteration:
-                time.sleep(0.1)
+                time.sleep(5.0)
             for site in sites:
                 key = key_template % hash(site)
                 value = kvs.get_value_json_decoded(key)
-                if value is None:
+                if value is None or site in accounted_for:
                     # The curve for this site is not ready yet. Proceed to
                     # the next.
                     continue
@@ -659,7 +659,7 @@ class EventBasedMixin(BasePSHAMixin):
             for j in range(0, realizations):
                 stochastic_set_key = kvs.tokens.stochastic_set_key(self.job_id,
                                                                    i, j)
-                print "Writing output for ses %s" % stochastic_set_key
+                LOG.info("Writing output for ses %s" % stochastic_set_key)
                 ses = kvs.get_value_json_decoded(stochastic_set_key)
                 if ses:
                     self.serialize_gmf(ses)
