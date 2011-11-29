@@ -296,6 +296,23 @@ class ClassicalMixin(BasePSHAMixin):
                 map_func=classical_psha.compute_quantile_hazard_maps,
                 map_serializer=self.serialize_quantile_hazard_map)
 
+    def release_curve_data_from_kvs(self, sites, realizations, quantiles):
+        """Purge the hazard curve data for the given `sites` from the kvs."""
+        for realization in xrange(0, realizations):
+            template = kvs.tokens.hazard_curve_poes_key_template(
+                self.job_id, realization)
+            keys = [template % hash(site) for site in sites]
+            kvs.get_client().delete(*keys)
+
+        template = kvs.tokens.mean_hazard_curve_key_template(self.job_id)
+        keys = [template % hash(site) for site in sites]
+        kvs.get_client().delete(*keys)
+
+        for quantile in quantiles:
+            template = kvs.tokens.quantile_hazard_curve_key_template(
+                self.job_id, str(quantile))
+            keys = [template % hash(site) for site in sites]
+            kvs.get_client().delete(*keys)
 
     def serialize_hazard_curve_of_realization(self, sites, realization):
         """
