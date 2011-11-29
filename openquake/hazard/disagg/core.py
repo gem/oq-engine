@@ -90,15 +90,15 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
     gmpe_map = generate_gmpe_map(job_id, cache)
     set_gmpe_params(gmpe_map, the_job.params)
 
-    iml_arraylist = get_iml_list(the_job['INTENSITY_MEASURE_LEVELS'],
-                                 the_job['INTENSITY_MEASURE_TYPE'])
+    imls = get_iml_list(the_job['INTENSITY_MEASURE_LEVELS'],
+                        the_job['INTENSITY_MEASURE_TYPE'])
     vs30_type = the_job['VS30_TYPE']
     vs30_value = the_job['REFERENCE_VS30_VALUE']
     depth_to_1pt0 = the_job['DEPTHTO1PT0KMPERSEC']
     depth_to_2pt5 = the_job['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']
 
     matrix_result = disagg_calc.computeMatrix(
-        site.latitude, site.longitude, erf, gmpe_map, poe, iml_arraylist,
+        site.latitude, site.longitude, erf, gmpe_map, poe, imls,
         vs30_type, vs30_value, depth_to_1pt0, depth_to_2pt5)
 
     matrix_path = save_5d_matrix_to_h5(result_dir,
