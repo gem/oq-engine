@@ -466,6 +466,7 @@ class ClassicalExecuteTestCase(helpers.TestMixin, unittest.TestCase):
             self.methods[method] = getattr(self.mixin, method)
             setattr(self.mixin, method,
                     mock.mocksignature(self.methods[method]))
+        self.mixin.release_curve_data_from_kvs.mock.return_value = []
 
     def tearDown(self):
         for method, original in self.methods.iteritems():
