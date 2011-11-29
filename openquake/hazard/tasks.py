@@ -67,26 +67,26 @@ def generate_erf(job_id):
 @task
 @java.unpack_exception
 @stats.progress_indicator
-def compute_ground_motion_fields(job_id, site_list, history, realization,
+def compute_ground_motion_fields(job_id, sites, history, realization,
                                  seed):
     """ Generate ground motion fields """
-    # TODO(JMC): Use a block_id instead of a site_list
+    # TODO(JMC): Use a block_id instead of a sites
     check_job_status(job_id)
     hazengine = job.Job.from_kvs(job_id)
     with mixins.Mixin(hazengine, hazjob.HazJobMixin):
-        hazengine.compute_ground_motion_fields(site_list, history, realization,
+        hazengine.compute_ground_motion_fields(sites, history, realization,
                                                seed)
 
 
 @task(ignore_result=True)
 @java.unpack_exception
 @stats.progress_indicator
-def compute_hazard_curve(job_id, site_list, realization):
+def compute_hazard_curve(job_id, sites, realization):
     """ Generate hazard curve for a given site list. """
     check_job_status(job_id)
     hazengine = job.Job.from_kvs(job_id)
     with mixins.Mixin(hazengine, hazjob.HazJobMixin):
-        keys = hazengine.compute_hazard_curve(site_list, realization)
+        keys = hazengine.compute_hazard_curve(sites, realization)
         return keys
 
 
