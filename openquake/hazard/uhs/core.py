@@ -27,6 +27,7 @@ from celery.task import task
 
 from openquake import java
 from openquake.job import Job
+from openquake.logs import LOG
 from openquake.utils import list_to_jdouble_array
 from openquake.hazard.general import (
     generate_erf, generate_gmpe_map, set_gmpe_params, get_iml_list)
@@ -65,7 +66,7 @@ def touch_result_file(job_id, path, sites, n_samples, n_periods):
 
 @task(ignore_results=True)
 @java.unpack_exception
-def compute_uhs_task(job_id, result_path, sample, site):
+def compute_uhs_task(job_id, realization, site, result_dir):
     """Compute Uniform Hazard Spectra for a given site of interest and 1 or
     more Probability of Exceedance values. The bulk of the computation will
     be done by utilizing the `UHSCalculator` class in the Java code.
@@ -76,15 +77,15 @@ def compute_uhs_task(job_id, result_path, sample, site):
 
     :param int job_id:
         ID of the job record in the DB/KVS.
-    :param result_path:
-        NFS result directory path. For each poe, a subfolder will be created to
-        contain intermediate calculation results. (Each call to this task will
-        generate 1 result file per poe.
-    :param sample:
+    :param realization:
         Logic tree sample number (from 1 to N, where N is the
         NUMBER_OF_LOGIC_TREE_SAMPLES param defined in the job config.
     :param site:
         The site of interest (a :class:`openquake.shapes.Site` object).
+    :param result_dir:
+        NFS result directory path. For each poe, a subfolder will be created to
+        contain intermediate calculation results. (Each call to this task will
+        generate 1 result file per poe.)
     :returns:
         A list of the resulting file names (1 per poe).
     """
@@ -92,10 +93,15 @@ def compute_uhs_task(job_id, result_path, sample, site):
 
     the_job = Job.from_kvs(job_id)
 
-    # TODO: log the computation
-    uhs_results = compute_uhs(the_job)
+    log_msg = (
+        "Computing UHS for job_id=%s, site=%s, realization=%s."
+        " UHS results will be serialized to `%s`.")
+    log_msg %= (the_job.job_id, site, realization, result_dir)
+    LOG.info(log_msg)
 
-    return write_uhs_results(result_path, uhs_results)
+    uhs_results = compute_uhs(the_job, site)
+
+    return write_uhs_results(result_dir, uhs_results)
 
 
 def compute_uhs(the_job, site):
@@ -138,16 +144,16 @@ def compute_uhs(the_job, site):
     return uhs_results
 
 
-def write_uhs_results(result_path, uhs_results):
-    """
+def write_uhs_results(result_dir, uhs_results):
+    """Write intermediate (temporary) UHS results to the specified directory.
+    Results will later be collected and written to the final results file(s).
 
-    :param uhs_results:
-        A sequence of `UHSResult` jpype Java objects.
-    :param result_path:
+    :param result_dir:
         NFS result directory path. For each poe, a subfolder will be created to
         contain intermediate calculation results. (Each call to this task will
         generate 1 result file per poe.
-    :param uhs_results: TODO:
+    :param uhs_results:
+        A sequence of `UHSResult` jpype Java objects.
     :returns:
         A list of the resulting file names (1 per poe).
     """
@@ -163,7 +169,7 @@ def write_uhs_results(result_path, uhs_results):
         # Having results separated this way means that a result collector
         # is simply assigned a directory to poll and grabs any result files
         # that it finds (without having to do much/any fitering or searching).
-        poe_path = os.path.join(result_path, 'poe:%s' % poe)
+        poe_path = os.path.join(result_dir, 'poe:%s' % poe)
         if not os.path.exists(poe_path):
             os.makedirs(poe_path)
 

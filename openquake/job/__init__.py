@@ -478,7 +478,7 @@ class Job(object):
         if (hasattr(defined_param, 'to_job')
             and defined_param.to_job is not None
             and self.params.get(name) is not None):
-                return defined_param.to_job(self.params.get(name))
+            return defined_param.to_job(self.params.get(name))
         return self.params.get(name)
 
     def __eq__(self, other):
