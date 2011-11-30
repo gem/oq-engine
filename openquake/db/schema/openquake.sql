@@ -615,8 +615,9 @@ CREATE TABLE uiapi.oq_params (
         CHECK(((job_type = 'uhs') AND (imt = 'sa'))
             OR (imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd', 'mmi'))),
     period float CONSTRAINT period_is_set
-        CHECK(((imt = 'sa') AND (period IS NOT NULL))
-              OR ((imt != 'sa') AND (period IS NULL))),
+        -- TODO: not for uhs
+        CHECK(((imt = 'sa' OR job_type = 'uhs') AND (period IS NOT NULL))
+              OR ((imt != 'sa' OR job_type != 'uhs') AND (period IS NULL))),
     damping float CONSTRAINT damping_is_set
         CHECK(((imt = 'sa') AND (damping IS NOT NULL))
               OR ((imt != 'sa') AND (damping IS NULL))),
@@ -728,7 +729,7 @@ CREATE TABLE uiapi.oq_params (
         CHECK(
             (job_type IN ('deterministic', 'event_based'))
             OR
-            ((job_type IN ('classical', 'disaggregation'))
+            ((job_type IN ('classical', 'disaggregation', 'uhs'))
              AND (gmf_random_seed IS NULL))),
     gmpe_lt_random_seed integer
         CONSTRAINT gmpe_lt_random_seed_is_set
@@ -787,7 +788,7 @@ CREATE TABLE uiapi.oq_params (
             ((job_type = 'classical')
              AND (quantile_levels IS NOT NULL))
             OR
-            ((job_type IN ('deterministic', 'event_based', 'disaggregation'))
+            ((job_type IN ('deterministic', 'event_based', 'disaggregation', 'uhs'))
              AND (quantile_levels IS NULL))),
     reference_depth_to_2pt5km_per_sec_param float,
     risk_cell_size float,
@@ -806,7 +807,7 @@ CREATE TABLE uiapi.oq_params (
     rupture_floating_type VARCHAR
         CONSTRAINT rupture_floating_type_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation'))
+            ((job_type IN ('classical', 'event_based', 'disaggregation', 'uhs'))
              AND (rupture_floating_type IN ('alongstrike', 'downdip', 'centereddowndip')))
             OR
             ((job_type = 'deterministic')

@@ -25,13 +25,27 @@ import unittest
 from openquake import java
 from openquake.shapes import Site
 from openquake.utils import list_to_jdouble_array
-from openquake.hazard.uhs.core import touch_result_file, write_uhs_results
+from openquake.hazard.uhs.core import (
+    compute_uhs, touch_result_file, write_uhs_results)
 
-from tests.utils.helpers import patch
+from tests.utils import helpers
+
+
+UHS_DEMO_CONFIG_FILE = helpers.demo_file('uhs/config.gem')
 
 
 class UHSCoreTestCase(unittest.TestCase):
     """Tests for core UHS tasks and other functions."""
+
+    # Sample UHS result data
+    UHS_RESULTS = [
+        (0.1, [0.2774217067746703,
+               0.32675005743942004,
+               0.05309858927852786]),
+        (0.02, [0.5667404129191248,
+                0.6185688023781438,
+                0.11843417899553109])]
+
 
     def test_touch_result_file(self):
         """Call the :function:`openquake.hazard.uhs.core.touch_result_file` and
@@ -48,8 +62,7 @@ class UHSCoreTestCase(unittest.TestCase):
         n_samples = 4
         n_periods = 3
 
-        with patch('openquake.utils.tasks.check_job_status') as cjs:
-            print dir(cjs)
+        with helpers.patch('openquake.utils.tasks.check_job_status') as cjs:
             touch_result_file(fake_job_id, path, sites, n_samples, n_periods)
 
         # Does the resulting file exist?
@@ -71,6 +84,29 @@ class UHSCoreTestCase(unittest.TestCase):
         # Clean up the test file.
         os.unlink(path)
 
+    def test_compute_uhs(self):
+        """Test the :function:`openquake.hazard.uhs.core.compute_uhs`
+        function. This function makes use of the Java `UHSCalculator` and
+        performs the main UHS computation.
+
+        The results of the computation are a sequence of Java `UHSResult`
+        objects."""
+        the_job = helpers.job_from_file(UHS_DEMO_CONFIG_FILE)
+
+        site = Site(0.0, 0.0)
+
+        helpers.store_hazard_logic_trees(the_job)
+
+        uhs_results = compute_uhs(the_job, site)
+
+        for i, result in enumerate(uhs_results):
+            poe = result.getPoe()
+            uhs = result.getUhs()
+
+            self.assertEquals(self.UHS_RESULTS[i][0], poe)
+            self.assertTrue(numpy.allclose(self.UHS_RESULTS[i][1],
+                                           [x.value for x in uhs]))
+
     def test_write_uhs_results(self):
         """Given some mocked up UHS calc results, write them to some temporary
         HDF5 files. We need to verify that the result file paths are correct,
@@ -78,18 +114,11 @@ class UHSCoreTestCase(unittest.TestCase):
 
         The results should be written to separate directories (depending on the
         PoE)."""
-        uhs_result_data = [
-            (0.1, [0.2774217067746703,
-                   0.32675005743942004,
-                   0.05309858927852786]),
-            (0.02, [0.5667404129191248,
-                    0.6185688023781438,
-                    0.11843417899553109])]
 
         uhs_results = []  # The results we want to write to HDF5
         uhs_result = java.jvm().JClass('org.gem.calc.UHSResult')
 
-        for poe, uhs in uhs_result_data:
+        for poe, uhs in self.UHS_RESULTS:
             uhs_results.append(uhs_result(poe, list_to_jdouble_array(uhs)))
 
         result_dir = tempfile.mkdtemp()
@@ -100,11 +129,11 @@ class UHSCoreTestCase(unittest.TestCase):
             self.assertTrue(os.path.exists(res_file))
 
             expected_dir = os.path.join(result_dir,
-                                        'poe:%s' % uhs_result_data[i][0])
+                                        'poe:%s' % self.UHS_RESULTS[i][0])
             self.assertEquals(expected_dir, os.path.split(res_file)[0])
 
             with h5py.File(res_file, 'r') as h5_file:
-                self.assertTrue(numpy.allclose(uhs_result_data[i][1],
+                self.assertTrue(numpy.allclose(self.UHS_RESULTS[i][1],
                                                h5_file['uhs'].value))
 
         shutil.rmtree(result_dir)

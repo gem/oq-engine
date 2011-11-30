@@ -159,6 +159,7 @@ class JobTestCase(unittest.TestCase):
                 ProbabilisticEventMixin in self.job.__class__.__bases__)
 
     def test_can_store_and_read_jobs_from_kvs(self):
+        flags_debug_default = flags.FLAGS.debug
         flags.FLAGS.debug = 'debug'
         try:
             self.job = helpers.job_from_file(
@@ -169,7 +170,9 @@ class JobTestCase(unittest.TestCase):
             self.assertEqual(self.job, job_from_kvs)
         finally:
             helpers.cleanup_loggers()
-            flags.FLAGS.debug = None
+            # Restore the default global FLAGS.debug level
+            # so we don't break stuff.
+            flags.FLAGS.debug = flags_debug_default
 
 
 class JobDbRecordTestCase(unittest.TestCase):
