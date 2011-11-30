@@ -46,7 +46,6 @@ class UHSCoreTestCase(unittest.TestCase):
                 0.6185688023781438,
                 0.11843417899553109])]
 
-
     def test_touch_result_file(self):
         """Call the :function:`openquake.hazard.uhs.core.touch_result_file` and
         verify that the result file is properly created with the correct number

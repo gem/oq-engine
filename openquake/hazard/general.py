@@ -53,7 +53,7 @@ def get_iml_list(imls, intensity_measure_type):
     based on the IMT"""
 
     return list_to_jdouble_array(
-        map(IML_SCALING[intensity_measure_type], imls))
+        [IML_SCALING[intensity_measure_type](x) for x in imls])
 
 
 def preload(fn):

@@ -24,8 +24,6 @@ import os
 import random
 import uuid
 
-from math import log
-
 from openquake import java
 from openquake import job
 from openquake import logs
