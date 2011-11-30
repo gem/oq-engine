@@ -80,19 +80,7 @@ class DisaggregationTaskTestCase(unittest.TestCase):
 
         the_job = helpers.job_from_file(DISAGG_DEMO_CONFIG_FILE)
 
-        # We need to store the source model and gmpe model in the KVS for this
-        # test.
-        lt_proc = LogicTreeProcessor(
-            the_job.params['BASE_PATH'],
-            the_job.params['SOURCE_MODEL_LOGIC_TREE_FILE_PATH'],
-            the_job.params['GMPE_LOGIC_TREE_FILE_PATH'])
-
-        src_model_seed = int(the_job.params.get('SOURCE_MODEL_LT_RANDOM_SEED'))
-        gmpe_seed = int(the_job.params.get('GMPE_LT_RANDOM_SEED'))
-
-        store_source_model(the_job.job_id, src_model_seed, the_job.params,
-                           lt_proc)
-        store_gmpe_map(the_job.job_id, gmpe_seed, lt_proc)
+        helpers.store_hazard_logic_trees(the_job)
 
         site = shapes.Site(0.0, 0.0)
         poe = 0.1
