@@ -402,11 +402,51 @@ class IgnoreResultsTestCase(unittest.TestCase):
         data = zip(keys, values)
 
         result = tasks.distribute(5, ignore_result, ("data", data))
-        # None is returned for tasks with ignore_result=True
-        self.assertIs(None,  result)
+        # An empty list is returned for tasks with ignore_result=True
+        # and no asynchronous task handler function.
+        self.assertEqual(False, bool(result))
 
         # Give the tasks a bit of time to complete.
         time.sleep(0.1)
 
         for key, value in data:
             self.assertEqual(value, TestStore.get(key))
+
+    def test_distribute_with_ignore_result_set_and_ath(self):
+        """
+        The specified number of subtasks is actually spawned (even for tasks
+        with ignore_result=True) and the asynchronous task handler function is
+        run.
+        """
+
+        def value(key):
+            """Construct a test value for the given key."""
+            return key[-3:] * 2
+
+        def ath(data):
+            """
+            An asynchronous task handler function that converts all task
+            results to upper case and returns the list of keys found.
+            """
+            items_expected = len(data)
+            items_found = []
+            while len(items_found) < items_expected:
+                for key, _ in data:
+                    if key in items_found:
+                        continue
+                    value = TestStore.get(key)
+                    if value is not None:
+                        TestStore.set(key, value.upper())
+                        items_found.append(key)
+                time.sleep(0.05)
+            return items_found
+
+        keys = ["irtc:%s" % str(uuid.uuid4())[:8] for _ in xrange(5)]
+        values = [value(uid) for uid in keys]
+        data = zip(keys, values)
+
+        result = tasks.distribute(5, ignore_result, ("data", data), ath=ath)
+        self.assertEqual(sorted(keys), sorted(result))
+
+        for key, value in data:
+            self.assertEqual(value.upper(), TestStore.get(key))

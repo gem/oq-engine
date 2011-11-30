@@ -36,8 +36,18 @@ from openquake.utils import config
 DEFAULT_BLOCK_SIZE = 4096
 
 
+def _prepare_kwargs(name, data, other_args):
+    """
+    Construct the full set of keyword parameters for the task to be
+    invoked.
+    """
+    return dict(other_args, **{name: data}) if other_args else {name: data}
+
+
+# Too many local variables
+# pylint: disable=R0914
 def distribute(cardinality, the_task, (name, data), other_args=None,
-               flatten_results=False):
+               flatten_results=False, ath=None):
     """Runs `the_task` in a task set with the given `cardinality`.
 
     The given `data` is portioned across the subtasks in the task set.
@@ -52,6 +62,11 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
         - no results are returned
         - the control flow returns to the caller immediately i.e. this
           function does *not* block while the tasks are running
+        - the user may pass in an asynchronous task handler function (`ath`)
+          that will be run as soon as the tasks have been started.
+          It can be used to check/wait for task results as appropriate. The
+          asynchronous task handler function is likely to execute in parallel
+          with longer running tasks.
 
     :param int cardinality: The size of the task set.
     :param the_task: A `celery` task callable.
@@ -63,8 +78,10 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
         passed to the subtasks.
     :param bool flatten_results: If set, the results will be returned as a
         single list (as opposed to [[results1], [results2], ..]).
+    :param ath: an asynchronous task handler function, may only be specified
+        for a task whose results are ignored.
     :returns: A list where each element is a result returned by a subtask.
-        The result order is the same as the subtask order.
+        If an `ath` function is passed we return whatever it returns.
     """
     logs.HAZARD_LOG.info("cardinality: %s" % cardinality)
 
@@ -77,14 +94,20 @@ def distribute(cardinality, the_task, (name, data), other_args=None,
     logs.HAZARD_LOG.debug("data_length: %s" % data_length)
 
     ignore_results = the_task.ignore_result
-    results = None if ignore_results else []
+    results = []
 
     for start in xrange(0, data_length, block_size):
         end = start + block_size
         logs.HAZARD_LOG.debug("data[%s:%s]" % (start, end))
-        iresults = _distribute(cardinality, the_task, name, data[start:end],
-                               other_args, flatten_results, ignore_results)
-        if not ignore_results:
+        chunk = data[start:end]
+        iresults = _distribute(cardinality, the_task, name, chunk, other_args,
+                               flatten_results, ignore_results)
+        if ignore_results:
+            # Did the user specify a asynchronous task handler function?
+            if ath:
+                pp_results = ath(**_prepare_kwargs(name, chunk, other_args))
+                results.extend(pp_results)
+        else:
             results.extend(iresults)
 
     return results
@@ -121,16 +144,6 @@ def _distribute(cardinality, a_task, name, data, other_args, flatten_results,
     # Too many local variables
     # pylint: disable=R0914
 
-    def kwargs(data_portion):
-        """
-        Construct the full set of keyword parameters for the task to be
-        invoked.
-        """
-        params = {name: data_portion}
-        if other_args:
-            params.update(other_args)
-        return params
-
     data_length = len(data)
     logs.HAZARD_LOG.debug("-data_length: %s" % data_length)
 
@@ -148,21 +161,26 @@ def _distribute(cardinality, a_task, name, data, other_args, flatten_results,
 
     for _ in xrange(cardinality - 1):
         data_portion = data[start:end]
-        subtask = a_task.subtask(**kwargs(data_portion))
+        subtask = a_task.subtask(**_prepare_kwargs(name, data_portion,
+                                                   other_args))
         subtasks.append(subtask)
         start = end
         end += chunk_size
     # The last subtask takes the rest of the data.
     data_portion = data[start:]
-    subtask = a_task.subtask(**kwargs(data_portion))
+    subtask = a_task.subtask(**_prepare_kwargs(name, data_portion, other_args))
     subtasks.append(subtask)
 
     # At this point we have created all the subtasks and each one got
     # a portion of the data that is to be processed. Now we will create
     # and run the task set.
     logs.HAZARD_LOG.debug("-#subtasks: %s" % len(subtasks))
-    the_results = _handle_subtasks(subtasks, flatten_results, ignore_results)
-    return the_results
+    if ignore_results:
+        TaskSet(tasks=subtasks).apply_async()
+        return None
+    else:
+        # Only called when we expect result messages to come back.
+        return _handle_subtasks(subtasks, flatten_results)
 
 
 def parallelize(
@@ -211,16 +229,13 @@ def _check_exception(results):
             raise result
 
 
-def _handle_subtasks(subtasks, flatten_results, ignore_results=False):
+def _handle_subtasks(subtasks, flatten_results):
     """Start a `TaskSet` with the given `subtasks` and wait for it to finish.
 
     :param subtasks: The subtasks to run
     :type subtasks: [celery_subtask]
     :param bool flatten_results: If set, the results will be returned as a
         single list (as opposed to [[results1], [results2], ..]).
-    :param bool ignore_results: If set, task results will be ignored i.e.
-        we are not supposed to call join_native() because there will be
-        no results messages.
     :returns: A list where each element is a result returned by a subtask
         or `None` if the task's results are ignored.
     :raises WrongTaskParameters: When a task receives a parameter it does not
@@ -229,15 +244,12 @@ def _handle_subtasks(subtasks, flatten_results, ignore_results=False):
     """
     result = TaskSet(tasks=subtasks).apply_async()
 
-    if not ignore_results:
-        the_results = result.join_native()
-        _check_exception(the_results)
+    the_results = result.join_native()
+    _check_exception(the_results)
 
-        if flatten_results and the_results:
-            if isinstance(the_results, list) or isinstance(the_results, tuple):
-                the_results = list(itertools.chain(*the_results))
-    else:
-        the_results = None
+    if flatten_results and the_results:
+        if isinstance(the_results, list) or isinstance(the_results, tuple):
+            the_results = list(itertools.chain(*the_results))
 
     return the_results
 
