@@ -169,7 +169,6 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
             jpype.JDouble(float(self.params["DAMPING"])),
             self.params["GMPE_TRUNCATION_TYPE"],
             jpype.JDouble(float(self.params["TRUNCATION_LEVEL"])), "Total",
-            jpype.JDouble(float(self.params["REFERENCE_VS30_VALUE"])),
             jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
 
         return gmpe

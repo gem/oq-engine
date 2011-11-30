@@ -30,6 +30,7 @@ from openquake.job import Job
 from openquake.utils import list_to_jdouble_array
 from openquake.hazard.general import (
     generate_erf, generate_gmpe_map, set_gmpe_params, get_iml_list)
+from openquake.utils import config
 from openquake.utils import tasks as utils_tasks
 
 
@@ -91,6 +92,24 @@ def compute_uhs_task(job_id, result_path, sample, site):
 
     the_job = Job.from_kvs(job_id)
 
+    # TODO: log the computation
+    uhs_results = compute_uhs(the_job)
+
+    return write_uhs_results(result_path, uhs_results)
+
+
+def compute_uhs(the_job, site):
+    """Given a `Job` and a site of interest, compute UHS. The Java
+    `UHSCalculator` is called to do perform the core computation.
+
+    :param the_job:
+        :class:`openquake.job.Job` instance.
+    :param site:
+        :class:`openquake.shapes.Site` instance.
+    :returns:
+        An `ArrayList` (Java object) of `UHSResult` objects, one per PoE.
+    """
+
     periods = list_to_jdouble_array(the_job['UHS_PERIODS'])
     poes = list_to_jdouble_array(the_job['POES'])
     imls = get_iml_list(the_job['INTENSITY_MEASURE_LEVELS'],
@@ -101,8 +120,8 @@ def compute_uhs_task(job_id, result_path, sample, site):
         config.get('kvs', 'host'),
         int(config.get('kvs', 'port')))
 
-    erf = generate_erf(job_id, cache)
-    gmpe_map = generate_gmpe_map(job_id, cache)
+    erf = generate_erf(the_job.job_id, cache)
+    gmpe_map = generate_gmpe_map(the_job.job_id, cache)
     set_gmpe_params(gmpe_map, the_job.params)
 
     uhs_calc = java.jclass('UHSCalculator')(periods, poes, imls, erf, gmpe_map,
@@ -116,7 +135,7 @@ def compute_uhs_task(job_id, result_path, sample, site):
         the_job['DEPTHTO1PT0KMPERSEC'],
         the_job['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM'])
 
-    return write_uhs_results(result_path, uhs_results)
+    return uhs_results
 
 
 def write_uhs_results(result_path, uhs_results):
@@ -151,10 +170,6 @@ def write_uhs_results(result_path, uhs_results):
         file_path = os.path.join(poe_path, str(uuid.uuid4()))
 
         with h5py.File(file_path, 'w') as h5_file:
-            print uhs
-            print type(uhs)
-            print dir(uhs)
-            print numpy.array(uhs)
             h5_file.create_dataset(
                 'uhs',
                 # We have to get the primitive 'value' for each Double in the
