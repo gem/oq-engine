@@ -147,18 +147,34 @@ def set_gmpe_params(gmpe_map, params):
     :param dict params: job config params
     """
     jpype = java.jvm()
+
+    jd_float = lambda x: jpype.JDouble(float(x))
+
+    component = params.get('COMPONENT')
+    imt = params.get('INTENSITY_MEASURE_TYPE')
+    # PERIOD is not used in UHS calculations.
+    period = (jd_float(params.get('PERIOD'))
+              if params.get('PERIOD') is not None else None)
+    damping = jd_float(params.get('DAMPING'))
+    gmpe_trunc_type = params.get('GMPE_TRUNCATION_TYPE')
+    trunc_level = jd_float(params.get('TRUNCATION_LEVEL'))
+    stddev_type = params.get('STANDARD_DEVIATION_TYPE')
+
     j_set_gmpe_params = java.jclass("GmpeLogicTreeData").setGmpeParams
     for tect_region in gmpe_map.keySet():
         gmpe = gmpe_map.get(tect_region)
-        j_set_gmpe_params(params['COMPONENT'],
-            params['INTENSITY_MEASURE_TYPE'],
-            jpype.JDouble(float(params['PERIOD'])),
-            jpype.JDouble(float(params['DAMPING'])),
-            params['GMPE_TRUNCATION_TYPE'],
-            jpype.JDouble(float(params['TRUNCATION_LEVEL'])),
-            params['STANDARD_DEVIATION_TYPE'],
-            jpype.JDouble(float(params['REFERENCE_VS30_VALUE'])),
-            jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
+        # There are two overloads for this method; one with 'period'...
+        if period is not None:
+            j_set_gmpe_params(
+                component, imt, period, damping,
+                gmpe_trunc_type, trunc_level, stddev_type,
+                jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
+        # ... and one without.
+        else:
+            j_set_gmpe_params(
+                component, imt, damping,
+                gmpe_trunc_type, trunc_level, stddev_type,
+                jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
         gmpe_map.put(tect_region, gmpe)
 
 
