@@ -17,7 +17,7 @@
 # pylint: disable=W0232
 
 """
-This module performs hazard calculations using the deterministic
+This module performs hazard calculations using the scenario
 event based approach.
 """
 
@@ -33,8 +33,8 @@ from openquake.hazard import job
 from openquake.hazard.opensha import BasePSHAMixin
 
 
-class DeterministicEventBasedMixin(BasePSHAMixin):
-    """Deterministic Event Based method for performing hazard calculations.
+class ScenarioEventBasedMixin(BasePSHAMixin):
+    """Scenario Event Based method for performing hazard calculations.
 
     Note that this mixin, during execution, will always be an instance of the
     Job class, and thus has access to the self.params dict, full of config
@@ -213,4 +213,4 @@ def gmf_to_dict(hashmap, intensity_measure_type):
 
 
 job.HazJobMixin.register(
-    "Deterministic", DeterministicEventBasedMixin, order=2)
+    "Scenario", ScenarioEventBasedMixin, order=2)

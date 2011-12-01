@@ -92,7 +92,7 @@ GML_ID_KEY = '{%s}id' % xml.GML_NS
 DEFAULT_METADATA = risk_output.LossMapXMLWriter.DEFAULT_METADATA
 
 DEFAULT_NON_DET_METADATA = \
-        risk_output.LossMapNonDeterministicXMLWriter.DEFAULT_METADATA
+        risk_output.LossMapNonScenarioXMLWriter.DEFAULT_METADATA
 
 LOSS_MAP_NODE_ATTRS = ('endBranchLabel', 'lossCategory', 'unit')
 LOSS_MAP_NON_DET_NODE_ATTRS = ('endBranchLabel', 'lossCategory', 'unit',
@@ -100,14 +100,14 @@ LOSS_MAP_NON_DET_NODE_ATTRS = ('endBranchLabel', 'lossCategory', 'unit',
 
 
 class LossMapOutputTestCase(unittest.TestCase):
-    """Confirm that XML output (Deterministic/Non Deterministic) from risk
+    """Confirm that XML output (Scenario/Non Scenario) from risk
     engine is valid against schema, as well as correct given the inputs."""
 
     def setUp(self):
         self.xml_writer = \
             risk_output.LossMapXMLWriter(TEST_LOSS_MAP_XML_OUTPUT_PATH)
         self.xml_non_det_writer = \
-            risk_output.LossMapNonDeterministicXMLWriter(
+            risk_output.LossMapNonScenarioXMLWriter(
                     TEST_NON_DET_LOSS_MAP_XML_OUTPUT_PATH)
 
     def tearDown(self):
@@ -127,7 +127,7 @@ class LossMapOutputTestCase(unittest.TestCase):
             TEST_LOSS_MAP_XML_OUTPUT_PATH)
 
         xml_non_det_writer = \
-            risk_output.LossMapNonDeterministicXMLWriter(
+            risk_output.LossMapNonScenarioXMLWriter(
                     TEST_NON_DET_LOSS_MAP_XML_OUTPUT_PATH)
         xml_non_det_writer.serialize(SAMPLE_LOSS_MAP_NON_DET_DATA)
         self.assertTrue(
@@ -156,7 +156,7 @@ class LossMapOutputTestCase(unittest.TestCase):
                     node.attrib[GML_ID_KEY])
 
             if isinstance(xml_writer,
-                    risk_output.LossMapNonDeterministicXMLWriter):
+                    risk_output.LossMapNonScenarioXMLWriter):
                 loss_map_node_attrs = LOSS_MAP_NON_DET_NODE_ATTRS
             else:
                 loss_map_node_attrs = LOSS_MAP_NODE_ATTRS
@@ -206,7 +206,7 @@ class LossMapOutputTestCase(unittest.TestCase):
                 (self.xml_non_det_writer, LOSS_MAP_NON_DET_METADATA)):
 
             if isinstance(xml_writer,
-                    risk_output.LossMapNonDeterministicXMLWriter):
+                    risk_output.LossMapNonScenarioXMLWriter):
                 loss_map_node_attrs = LOSS_MAP_NON_DET_NODE_ATTRS
                 # everything but metadata
                 test_data = SAMPLE_LOSS_MAP_NON_DET_DATA[1:]
@@ -270,7 +270,7 @@ class LossMapOutputTestCase(unittest.TestCase):
             xml_writer.serialize(loss_map_data)
 
             if isinstance(xml_writer,
-                    risk_output.LossMapNonDeterministicXMLWriter):
+                    risk_output.LossMapNonScenarioXMLWriter):
                 expected_loss_map = EXPECTED_TEST_NON_DET_LOSS_MAP
                 test_loss_map_xml_output_path = \
                         TEST_NON_DET_LOSS_MAP_XML_OUTPUT_PATH
