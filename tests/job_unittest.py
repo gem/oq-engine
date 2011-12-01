@@ -159,6 +159,7 @@ class JobTestCase(unittest.TestCase):
                 ProbabilisticEventMixin in self.job.__class__.__bases__)
 
     def test_can_store_and_read_jobs_from_kvs(self):
+        flags_debug_default = flags.FLAGS.debug
         flags.FLAGS.debug = 'debug'
         try:
             self.job = helpers.job_from_file(
@@ -169,7 +170,9 @@ class JobTestCase(unittest.TestCase):
             self.assertEqual(self.job, job_from_kvs)
         finally:
             helpers.cleanup_loggers()
-            flags.FLAGS.debug = None
+            # Restore the default global FLAGS.debug level
+            # so we don't break stuff.
+            flags.FLAGS.debug = flags_debug_default
 
 
 class JobDbRecordTestCase(unittest.TestCase):
@@ -238,13 +241,6 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
         self.assertEquals(['GENERAL', 'HAZARD'], sorted(sections))
 
     def test_parse_missing_files(self):
-        content = '''
-            [GENERAL]
-            CALCULATION_MODE = Event Based
-
-            [HAZARD]
-            MINIMUM_MAGNITUDE = 5.0
-            '''
         config_path = '/does/not/exist'
 
         self.assertRaises(config.ValidationException, parse_config_file,
@@ -934,8 +930,8 @@ class JobStatsTestCase(unittest.TestCase):
             'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute'
         record = 'openquake.job.Job._record_initial_stats'
 
-        with patch(haz_execute) as _haz_mock:
-            with patch(risk_execute) as _risk_mock:
+        with patch(haz_execute):
+            with patch(risk_execute):
                 with patch(record) as record_mock:
                     self.eb_job.launch()
 
