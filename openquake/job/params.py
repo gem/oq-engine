@@ -185,9 +185,9 @@ define_param('VULNERABILITY', None)
 define_param("SINGLE_RUPTURE_MODEL", None, modes=("deterministic",))
 define_param('EXPOSURE', None)
 define_param('GMPE_LOGIC_TREE_FILE', None,
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'))
 define_param('SOURCE_MODEL_LOGIC_TREE_FILE', None,
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'))
 
 # Disaggregation parameters:
 define_param('DISAGGREGATION_RESULTS', 'disagg_results',
@@ -208,78 +208,78 @@ define_param('UHS_PERIODS', 'uhs_periods', modes='uhs', to_job=cttfl)
 
 # area sources
 define_param('INCLUDE_AREA_SOURCES', 'include_area_sources',
-             modes=('classical', 'event_based', 'disaggregation'),
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_job=str2bool)
 define_param('TREAT_AREA_SOURCE_AS', 'treat_area_source_as',
-             modes=('classical', 'event_based', 'disaggregation'),
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_db=map_enum)
 define_param('AREA_SOURCE_DISCRETIZATION',
              'area_source_discretization',
-             modes=('classical', 'event_based', 'disaggregation'),
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_job=float)
 define_param('AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP',
              'area_source_magnitude_scaling_relationship',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'))
 
 # grid/point sources
 define_param('INCLUDE_GRID_SOURCES', 'include_grid_sources',
-             modes=('classical', 'event_based', 'disaggregation'),
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_job=str2bool)
 define_param('TREAT_GRID_SOURCE_AS', 'treat_grid_source_as',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'))
 define_param('GRID_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP',
              'grid_source_magnitude_scaling_relationship')
 
 # simple faults
 define_param('INCLUDE_FAULT_SOURCE', 'include_fault_source',
-             modes=('classical', 'event_based', 'disaggregation'),
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_job=str2bool)
 define_param('FAULT_RUPTURE_OFFSET', 'fault_rupture_offset',
-             modes=('classical', 'event_based', 'disaggregation'),
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_job=float)
 define_param('FAULT_SURFACE_DISCRETIZATION', 'fault_surface_discretization',
-             modes=('classical', 'event_based', 'disaggregation'),
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_job=float)
 define_param('FAULT_MAGNITUDE_SCALING_RELATIONSHIP',
              'fault_magnitude_scaling_relationship',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'))
 define_param('FAULT_MAGNITUDE_SCALING_SIGMA',
              'fault_magnitude_scaling_sigma',
-             modes=('classical', 'event_based', 'disaggregation'),
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_job=float)
 define_param('RUPTURE_ASPECT_RATIO', 'rupture_aspect_ratio',
-             modes=('classical', 'event_based', 'disaggregation'),
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_job=float)
 define_param('RUPTURE_FLOATING_TYPE', 'rupture_floating_type',
-             modes=('classical', 'event_based', 'disaggregation'),
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_db=map_enum)
 
 # complex faults
 define_param('INCLUDE_SUBDUCTION_FAULT_SOURCE',
              'include_subduction_fault_source',
-             modes=('classical', 'event_based', 'disaggregation'),
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_job=str2bool)
 define_param('SUBDUCTION_FAULT_RUPTURE_OFFSET',
              'subduction_fault_rupture_offset',
-             modes=('classical', 'event_based', 'disaggregation'),
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_job=float)
 define_param('SUBDUCTION_FAULT_SURFACE_DISCRETIZATION',
              'subduction_fault_surface_discretization',
-             modes=('classical', 'event_based', 'disaggregation'),
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_job=float)
 define_param('SUBDUCTION_FAULT_MAGNITUDE_SCALING_RELATIONSHIP',
              'subduction_fault_magnitude_scaling_relationship',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'))
 define_param('SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA',
              'subduction_fault_magnitude_scaling_sigma',
-             modes=('classical', 'event_based', 'disaggregation'),
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_job=float)
 define_param('SUBDUCTION_RUPTURE_ASPECT_RATIO',
              'subduction_rupture_aspect_ratio',
-             modes=('classical', 'event_based', 'disaggregation'))
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'))
 define_param('SUBDUCTION_RUPTURE_FLOATING_TYPE',
              'subduction_rupture_floating_type',
-             modes=('classical', 'event_based', 'disaggregation'),
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_db=map_enum)
 
 # Everything else; please maintain alphabetical ordering.
@@ -297,32 +297,34 @@ define_param('GMF_OUTPUT', None,
 define_param('GMF_RANDOM_SEED', 'gmf_random_seed',
              modes=('event_based', 'deterministic'), to_job=int)
 define_param('GMPE_LT_RANDOM_SEED', 'gmpe_lt_random_seed',
-             modes=('classical', 'event_based', 'disaggregation'), to_job=int)
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
+             to_job=int)
 define_param('GMPE_MODEL_NAME', 'gmpe_model_name')
 define_param('GMPE_TRUNCATION_TYPE', 'truncation_type', to_db=map_enum)
 define_param('GROUND_MOTION_CORRELATION', 'gm_correlated',
              modes=('deterministic', 'event_based'), to_job=str2bool)
 define_param('INTENSITY_MEASURE_LEVELS', 'imls',
-             modes=('classical', 'event_based', 'disaggregation'),
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_job=cttfl)
 define_param('INTENSITY_MEASURE_TYPE', 'imt', to_db=map_enum)
 define_param('INVESTIGATION_TIME', 'investigation_time', default=0.0,
-             modes=('classical', 'event_based', 'disaggregation'),
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_job=float)
 define_param('LOSS_CURVES_OUTPUT_PREFIX', 'loss_curves_output_prefix')
 define_param('MAXIMUM_DISTANCE', 'maximum_distance',
-             modes=('classical', 'disaggregation'), to_job=float)
+             modes=('classical', 'disaggregation', 'uhs'), to_job=float)
 define_param('MINIMUM_MAGNITUDE', 'min_magnitude', default=0.0,
-             modes=('classical', 'event_based', 'disaggregation'),
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_job=float)
 define_param('NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS',
              'gmf_calculation_number', modes='deterministic', to_job=int)
 define_param('NUMBER_OF_LOGIC_TREE_SAMPLES', 'realizations',
-             modes=('classical', 'event_based', 'disaggregation'), to_job=int)
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
+             to_job=int)
 define_param('NUMBER_OF_SEISMICITY_HISTORIES', 'histories',
              modes='event_based', to_job=int)
 define_param('PERIOD', 'period', default=0.0, to_job=float)
-define_param('POES', 'poes', modes=('classical', 'disaggregation'),
+define_param('POES', 'poes', modes=('classical', 'disaggregation', 'uhs'),
              to_job=cttfl)
 define_param('QUANTILE_LEVELS', 'quantile_levels', modes='classical',
              to_job=cttfl)
@@ -338,11 +340,12 @@ define_param('RUPTURE_SURFACE_DISCRETIZATION',
 define_param("SADIGH_SITE_TYPE", "sadigh_site_type", to_db=map_enum,
              java_name="Sadigh Site Type")
 define_param('SOURCE_MODEL_LT_RANDOM_SEED', 'source_model_lt_random_seed',
-             modes=('classical', 'event_based', 'disaggregation'), to_job=int)
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
+             to_job=int)
 define_param('STANDARD_DEVIATION_TYPE', 'standard_deviation_type',
-             modes=('classical', 'event_based', 'disaggregation'),
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_db=map_enum)
 define_param('TRUNCATION_LEVEL', 'truncation_level', to_job=int)
 define_param('WIDTH_OF_MFD_BIN', 'width_of_mfd_bin',
-             modes=('classical', 'event_based', 'disaggregation'),
+             modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_job=float)
