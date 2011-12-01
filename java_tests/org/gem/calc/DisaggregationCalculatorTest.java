@@ -18,7 +18,6 @@ import static org.gem.calc.DisaggregationCalculator.closestLocation;
 import static org.gem.calc.DisaggregationCalculator.inRange;
 import static org.gem.calc.DisaggregationCalculator.normalize;
 import static org.gem.calc.DisaggregationCalculator.assertNonZeroStdDev;
-import static org.gem.calc.DisaggregationCalculator.assertVs30TypeIsValid;
 import static org.gem.calc.CalcUtils.InputValidationException;
 
 public class DisaggregationCalculatorTest
@@ -158,7 +157,7 @@ public class DisaggregationCalculatorTest
         assertArrayEquals(EXPECTED, result.getMatrix(), 0.00000009);
     }
 
-    @Test(expected=RuntimeException.class)
+    @Test(expected=InputValidationException.class)
     public void testComputeMatrixThrowsOnInvalidVs30Type()
     {
         DisaggregationCalculator disCalc = new DisaggregationCalculator(
@@ -315,22 +314,6 @@ public class DisaggregationCalculatorTest
             };
 
         assertTrue(Arrays.deepEquals(expected, normalize(input, normFactor)));
-    }
-
-    @Test
-    public void testAssertVs30TypeIsValid()
-    {
-        // These should succeed without any errors
-        assertVs30TypeIsValid("Measured");
-        assertVs30TypeIsValid("Inferred");
-    }
-
-    @Test(expected=RuntimeException.class)
-    public void testAssertVs30TypeIsValidThrows()
-    {
-        // The vs30 type is case sensitive;
-        // "measured" is not in the VS30  type enum.
-        assertVs30TypeIsValid("measured");
     }
 
     @Test

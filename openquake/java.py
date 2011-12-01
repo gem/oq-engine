@@ -76,6 +76,7 @@ JAVA_CLASSES = {
     "LocationListFormatter": "org.gem.LocationListFormatter",
     "PythonBridgeAppender": "org.gem.log.PythonBridgeAppender",
     "DisaggregationCalculator": "org.gem.calc.DisaggregationCalculator",
+    "UHSCalculator": "org.gem.calc.UHSCalculator",
 }
 
 
@@ -314,12 +315,15 @@ class JavaException(Exception):
         return trace
 
 
-def jexception(func):
+def unpack_exception(func):
     """
     Decorator to extract the stack trace from a Java exception.
 
     Re-throws a pickleable :class:`JavaException` object containing the
     exception message and Java stack trace.
+
+    This decorator can be used with the celery @task decorator (though the
+    celery @task decorator must be the outermost decorator).
     """
     @wraps(func)
     def unwrap_exception(*targs, **tkwargs):  # pylint: disable=C0111
@@ -333,43 +337,3 @@ def jexception(func):
             raise JavaException(e), None, trace
 
     return unwrap_exception
-
-
-# alternative implementation using the decorator module; this can be composed
-# with the Celery task decorator
-# import decorator
-#
-# def jexception(func):
-#     @wraps(func)
-#     def unwrap_exception(func, *targs, **tkwargs):
-#         jvm_instance = jvm()
-#
-#         try:
-#             return func(*targs, **tkwargs)
-#         except jvm_instance.JavaException, e:
-#             trace = sys.exc_info()[2]
-#
-#             raise JavaException(e), None, trace
-#
-#     return decorator.decorator(unwrap_exception, func)
-
-
-# Java-exception-aware task decorator for celery
-def unpack_exception(func):
-    """
-    Java-exception aware task decorator for Celery.
-
-    Re-throws the exception as a pickleable :class:`JavaException` object.
-    """
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        """The actual decorator."""
-        jvm_instance = jvm()
-
-        try:
-            return func(*args, **kwargs)
-        except jvm_instance.JavaException, e:
-            trace = sys.exc_info()[2]
-            raise JavaException(e), None, trace
-
-    return wrapper
