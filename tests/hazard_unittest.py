@@ -269,7 +269,8 @@ class HazardEngineTestCase(unittest.TestCase):
             helpers.testdata_path("classical_psha_simple/config.gem"))
 
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
-            used_keys = hazengine.execute()
+            used_keys = []
+            hazengine.execute(used_keys)
 
             verify_realization_haz_curves_stored_to_kvs(hazengine, used_keys)
             verify_realization_haz_curves_stored_to_nrml(hazengine)
