@@ -20,4 +20,4 @@
 
 import probabilistic
 import classical_psha
-import deterministic
+import scenario
