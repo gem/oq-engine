@@ -477,7 +477,7 @@ class ClassicalExecuteTestCase(helpers.TestMixin, unittest.TestCase):
         """Make sure execute() calls the methods properly.
 
         We have 8 sites and a block size (`HAZARD_BLOCK_SIZE`) of 3 i.e.
-        the methids called by execute() will
+        the methods called by execute() will
             - be called three times
             - get passed 3, 3 and 2 sites on the 1st, 2nd and 3rd invocation
               respectively.
