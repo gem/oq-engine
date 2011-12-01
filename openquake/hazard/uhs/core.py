@@ -21,7 +21,6 @@
 import h5py
 import numpy
 import os
-import uuid
 
 from celery.task import task
 
@@ -101,7 +100,7 @@ def compute_uhs_task(job_id, realization, site, result_dir):
 
     uhs_results = compute_uhs(the_job, site)
 
-    return write_uhs_results(result_dir, uhs_results)
+    return write_uhs_results(result_dir, realization, site, uhs_results)
 
 
 def compute_uhs(the_job, site):
@@ -144,14 +143,18 @@ def compute_uhs(the_job, site):
     return uhs_results
 
 
-def write_uhs_results(result_dir, uhs_results):
+def write_uhs_results(result_dir, realization, site, uhs_results):
     """Write intermediate (temporary) UHS results to the specified directory.
     Results will later be collected and written to the final results file(s).
 
     :param result_dir:
         NFS result directory path. For each poe, a subfolder will be created to
         contain intermediate calculation results. (Each call to this task will
-        generate 1 result file per poe.
+        generate 1 result file per poe).
+    :param int realization:
+        Logic tree sample number.
+    :param site:
+        :class:`openquake.shapes.Site` associated with the results.
     :param uhs_results:
         A sequence of `UHSResult` jpype Java objects.
     :returns:
@@ -173,7 +176,12 @@ def write_uhs_results(result_dir, uhs_results):
         if not os.path.exists(poe_path):
             os.makedirs(poe_path)
 
-        file_path = os.path.join(poe_path, str(uuid.uuid4()))
+        # Initially, prepend the file name with an underscore.
+        # When the file done being written to, rename it and remove the
+        # underscore.
+        file_name = '_sample:%s-lon:%s-lat:%s.h5'
+        file_name %= (realization, site.longitude, site.latitude)
+        file_path = os.path.join(poe_path, file_name)
 
         with h5py.File(file_path, 'w') as h5_file:
             h5_file.create_dataset(
@@ -182,6 +190,11 @@ def write_uhs_results(result_dir, uhs_results):
                 # Double[]
                 data=numpy.array([x.value for x in uhs], dtype=numpy.float64))
 
-        result_files.append(file_path)
+        # We're done writing so we can rename it. This is an indicator to
+        # result collector code that these results are ready to be collected.
+        complete_file_path = os.path.join(poe_path, file_name[1:])
+        os.rename(file_path, complete_file_path)
+
+        result_files.append(complete_file_path)
 
     return result_files
