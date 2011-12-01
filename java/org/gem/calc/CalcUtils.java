@@ -75,7 +75,7 @@ public class CalcUtils
 
     /**
      * Useful for checking if an array is sorted. If the array is not sorted
-     * in ascending order, an IllegalArgumentException is thrown.
+     * in ascending order, an InputValidationException is thrown.
      */
     public static final Closure isSorted = new Closure()
     {
