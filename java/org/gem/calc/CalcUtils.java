@@ -94,6 +94,12 @@ public class CalcUtils
         }
     };
 
+    /**
+     * Useful for checking that an array contains at least `len` elements.
+     * @param len
+     * @return A Closure that throws an InputValidationException if the minimum
+     * length of an input array is not met.
+     */
     public static final Closure lenGE(final int len)
     {
         return new Closure ()
@@ -113,6 +119,13 @@ public class CalcUtils
         };
     }
 
+    /**
+     * Given an Earthquake Rupture Forecast, check each Source verify that it is
+     * a poissonian source. If any non-poissonian sources are detected in the
+     * ERF, throw a RuntimeException. (Currently, we do not support
+     * non-poissonian sources.)
+     * @param erf
+     */
     public static void assertPoissonian(EqkRupForecastAPI erf)
     {
         for (int i = 0; i < erf.getSourceList().size(); i++)
