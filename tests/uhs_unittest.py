@@ -113,6 +113,9 @@ class UHSCoreTestCase(unittest.TestCase):
 
         The results should be written to separate directories (depending on the
         PoE)."""
+        # Both result files should have the same file name,
+        # just a different directory location.
+        expected_file_name = 'sample:1-lon:0.0-lat:0.0.h5'
 
         uhs_results = []  # The results we want to write to HDF5
         uhs_result = java.jvm().JClass('org.gem.calc.UHSResult')
@@ -122,14 +125,18 @@ class UHSCoreTestCase(unittest.TestCase):
 
         result_dir = tempfile.mkdtemp()
 
-        result_files = write_uhs_results(result_dir, uhs_results)
+        result_files = write_uhs_results(result_dir, 1, Site(0.0, 0.0),
+                                         uhs_results)
 
         for i, res_file in enumerate(result_files):
+            print res_file
             self.assertTrue(os.path.exists(res_file))
 
             expected_dir = os.path.join(result_dir,
                                         'poe:%s' % self.UHS_RESULTS[i][0])
-            self.assertEquals(expected_dir, os.path.split(res_file)[0])
+            actual_dir, actual_file_name = os.path.split(res_file)
+            self.assertEquals(expected_dir, actual_dir)
+            self.assertEquals(expected_file_name, actual_file_name)
 
             with h5py.File(res_file, 'r') as h5_file:
                 self.assertTrue(numpy.allclose(self.UHS_RESULTS[i][1],
