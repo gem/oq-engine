@@ -31,7 +31,7 @@ from openquake import shapes
 
 from openquake.output import risk as risk_output
 from openquake.parser import vulnerability
-from openquake.risk import scenario_event_based as det
+from openquake.risk import scenario
 from openquake.risk.job import general
 
 
@@ -60,7 +60,8 @@ class ScenarioEventBasedMixin:
 
         epsilon_provider = general.EpsilonProvider(self.params)
 
-        sum_per_gmf = det.SumPerGroundMotionField(vuln_model, epsilon_provider)
+        sum_per_gmf = scenario.SumPerGroundMotionField(vuln_model,
+                                                       epsilon_provider)
 
         region_loss_map_data = {}
 
@@ -207,7 +208,8 @@ class ScenarioEventBasedMixin:
             per realization.
 
         """
-        sum_per_gmf = det.SumPerGroundMotionField(vuln_model, epsilon_provider)
+        sum_per_gmf = scenario.SumPerGroundMotionField(vuln_model,
+                                                       epsilon_provider)
         for point in block.grid(self.region):
             gmvs = load_gmvs_for_point(self.job_id, point)
             assets = load_assets_for_point(self.job_id, point)
@@ -269,10 +271,10 @@ class ScenarioEventBasedMixin:
                 vuln_function = \
                     vuln_model[asset['taxonomy']]
 
-                asset_mean_loss = det.compute_mean_loss(
+                asset_mean_loss = scenario.compute_mean_loss(
                     vuln_function, gmvs, epsilon_provider, asset)
 
-                asset_stddev_loss = det.compute_stddev_loss(
+                asset_stddev_loss = scenario.compute_stddev_loss(
                     vuln_function, gmvs, epsilon_provider, asset)
 
                 asset_site = shapes.Site(asset['lon'], asset['lat'])
