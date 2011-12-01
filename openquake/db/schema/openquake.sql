@@ -615,9 +615,11 @@ CREATE TABLE uiapi.oq_params (
         CHECK(((job_type = 'uhs') AND (imt = 'sa'))
             OR (imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd', 'mmi'))),
     period float CONSTRAINT period_is_set
-        -- TODO: not for uhs
-        CHECK(((imt = 'sa' OR job_type = 'uhs') AND (period IS NOT NULL))
-              OR ((imt != 'sa' OR job_type != 'uhs') AND (period IS NULL))),
+        -- The 'period' parameter is only used when the intensity measure type is SA.
+        -- This rule only applies to job types != 'uhs' (the Uniform Hazard Spectra
+        -- calculator instead defines an array of periods).
+        CHECK(((imt = 'sa' AND job_type != 'uhs') AND (period IS NOT NULL))
+              OR ((imt != 'sa' OR job_type = 'uhs') AND (period IS NULL))),
     damping float CONSTRAINT damping_is_set
         CHECK(((imt = 'sa') AND (damping IS NOT NULL))
               OR ((imt != 'sa') AND (damping IS NULL))),
