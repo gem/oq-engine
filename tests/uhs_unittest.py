@@ -61,7 +61,7 @@ class UHSCoreTestCase(unittest.TestCase):
         n_samples = 4
         n_periods = 3
 
-        with helpers.patch('openquake.utils.tasks.check_job_status') as cjs:
+        with helpers.patch('openquake.utils.tasks.check_job_status'):
             touch_result_file(fake_job_id, path, sites, n_samples, n_periods)
 
         # Does the resulting file exist?
