@@ -12,6 +12,7 @@ import org.opensha.commons.data.DataPoint2D;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
 import org.opensha.commons.geo.BorderType;
 import org.opensha.sha.earthquake.EqkRupForecastAPI;
+import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam.Vs30Type;
 
 import static org.gem.calc.UHSCalculator.initHazCurve;
 import static org.gem.calc.UHSCalculator.interpolatePoe;
@@ -44,11 +45,11 @@ public class UHSCalculatorTest
     public static final Double [] IMLS_SHORT = {Math.log(0.005), Math.log(0.007)};
     private static final EqkRupForecastAPI ERF = makeTestERF(AREA_SRC_DISCRETIZATION, NUM_MFD_PTS, BORDER_TYPE);
 
-    private static List<Double[]> expectedUHSResults()
+    private static List<UHSResult> expectedUHSResults()
     {
-        List<Double[]> results = new ArrayList<Double[]>();
-        results.add(UHS_CURVE_POE_0_1);
-        results.add(UHS_CURVE_POE_0_02);
+        List<UHSResult> results = new ArrayList<UHSResult>();
+        results.add(new UHSResult(0.1, UHS_CURVE_POE_0_1));
+        results.add(new UHSResult(0.02, UHS_CURVE_POE_0_02));
         return results;
     }
 
@@ -161,14 +162,70 @@ public class UHSCalculatorTest
     public void testComputeUHS()
     {
         UHSCalculator uhsCalc = new UHSCalculator(
-                PERIODS, POES, LOG_IMLS.toArray(new Double[LOG_IMLS.size()]),
+                PERIODS, POES, LOG_IMLS,
                 ERF, makeTestImrMap(), MAX_DISTANCE);
 
-        List<Double[]> expected = expectedUHSResults();
-        List<Double[]> actual = uhsCalc.computeUHS(makeTestSite());
+        List<UHSResult> expected = expectedUHSResults();
+        List<UHSResult> actual = uhsCalc.computeUHS(makeTestSite());
+
+        assertUHSResultsEqual(expected, actual);
+    }
+
+    /**
+     * Test the full UHS computation using the more 'primitive'
+     * function.
+     */
+    @Test
+    public void testComputeUHS2()
+    {
+        UHSCalculator uhsCalc = new UHSCalculator(
+                PERIODS, POES, LOG_IMLS,
+                ERF, makeTestImrMap(), MAX_DISTANCE);
+
+        List<UHSResult> expected = expectedUHSResults();
+
+        String vs30Type = Vs30Type.Measured.toString();
+        double lat, lon, vs30Value, depthTo1pt0KMPS, depthTo2pt5KMPS;
+        lat = 0.0;
+        lon = 0.0;
+        vs30Value = 760.0;
+        depthTo1pt0KMPS = 100.0;
+        depthTo2pt5KMPS = 1.0;
+
+        List<UHSResult> actual = uhsCalc.computeUHS(
+                lat, lon, vs30Type, vs30Value,
+                depthTo1pt0KMPS, depthTo2pt5KMPS);
+
+        assertUHSResultsEqual(expected, actual);
+    }
+
+    @Test(expected=InputValidationException.class)
+    public void testComputeUHSThrowsOnInvalidVs30Type()
+    {
+        UHSCalculator uhsCalc = new UHSCalculator(
+                PERIODS, POES, LOG_IMLS,
+                ERF, makeTestImrMap(), MAX_DISTANCE);
+
+        // vs30Type is case-sensitive
+        uhsCalc.computeUHS(0, 0, "measured", 0, 0, 0);
+    }
+
+    private static void assertUHSResultsEqual(List<UHSResult> expected,
+                                              List<UHSResult> actual)
+    {
+        assertEquals(expected.size(), actual.size());
         for (int i = 0; i < expected.size(); i++)
         {
-            assertTrue(Arrays.equals(expected.get(i), actual.get(i)));
+            double expectedPoe, actualPoe;
+            Double[] expectedUhs, actualUhs;
+
+            expectedPoe = expected.get(i).getPoe();
+            expectedUhs = expected.get(i).getUhs();
+            actualPoe = actual.get(i).getPoe();
+            actualUhs = actual.get(i).getUhs();
+            assertEquals(expectedPoe, actualPoe, 0.0);
+            
+            assertTrue(Arrays.equals(expectedUhs, actualUhs));
         }
     }
 }

@@ -50,14 +50,13 @@ public class CalcTestHelper
         0.0376, 0.0527, 0.0738, 0.103, 0.145, 0.203,
         0.284, 0.397, 0.556, 0.778, 1.09, 1.52, 2.13};
 
-    public static final List<Double> LOG_IMLS = 
-            Arrays.asList(mapLog(IMLS));
+    public static final Double[] LOG_IMLS = mapLog(IMLS);
 
     /**
      * Map the Math.log() method to each element in the input list
      * to create a new list.
      */
-    private static Double[] mapLog(Double[] list)
+    public static Double[] mapLog(Double[] list)
     {
         Double[] result = new Double[list.length];
         for (int i = 0; i < list.length; i++)
@@ -211,7 +210,7 @@ public class CalcTestHelper
 		return srcData;
 	}
 
-	public static DiscretizedFuncAPI makeHazardCurve(List<Double> imls, double areaSrcDiscretization, EqkRupForecastAPI erf)
+	public static DiscretizedFuncAPI makeHazardCurve(Double[] imls, double areaSrcDiscretization, EqkRupForecastAPI erf)
 	{
 		DiscretizedFuncAPI hazardCurve = new ArbitrarilyDiscretizedFunc();
 		// initialize the curve our defined list of IMLs,

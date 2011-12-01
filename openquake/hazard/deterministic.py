@@ -40,7 +40,7 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the job configuration file."""
 
-    @java.jexception
+    @java.unpack_exception
     def execute(self):
         """Entry point to trigger the computation."""
 
@@ -169,7 +169,6 @@ class DeterministicEventBasedMixin(BasePSHAMixin):
             jpype.JDouble(float(self.params["DAMPING"])),
             self.params["GMPE_TRUNCATION_TYPE"],
             jpype.JDouble(float(self.params["TRUNCATION_LEVEL"])), "Total",
-            jpype.JDouble(float(self.params["REFERENCE_VS30_VALUE"])),
             jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
 
         return gmpe
