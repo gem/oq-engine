@@ -17,7 +17,7 @@
 # pylint: disable=W0232
 
 """
-This module performs risk calculations using the deterministic
+This module performs risk calculations using the scenario
 event based approach.
 """
 
@@ -31,15 +31,15 @@ from openquake import shapes
 
 from openquake.output import risk as risk_output
 from openquake.parser import vulnerability
-from openquake.risk import deterministic_event_based as det
+from openquake.risk import scenario_event_based as det
 from openquake.risk.job import general
 
 
 LOGGER = logs.LOG
 
 
-class DeterministicEventBasedMixin:
-    """Deterministic Event Based method for performing risk calculations.
+class ScenarioEventBasedMixin:
+    """Scenario Event Based method for performing risk calculations.
 
     Note that this mixin, during execution, will always be an instance of the
     Job class, and thus has access to the self.params dict, full of config
@@ -49,7 +49,7 @@ class DeterministicEventBasedMixin:
     def execute(self):
         """Entry point for triggering the computation."""
 
-        LOGGER.debug("Executing deterministic risk computation.")
+        LOGGER.debug("Executing scenario risk computation.")
         LOGGER.debug("This will calculate mean and standard deviation loss"
             "values for the region defined in the job config.")
 
@@ -106,7 +106,7 @@ class DeterministicEventBasedMixin:
 
             # Add a metadata dict in the first list position
             # Note: the metadata is still incomplete (see bug 809410)
-            loss_map_metadata = {'deterministic': True}
+            loss_map_metadata = {'scenario': True}
             loss_map_data.insert(0, loss_map_metadata)
             loss_map_writer.serialize(loss_map_data)
 
@@ -136,7 +136,7 @@ class DeterministicEventBasedMixin:
         Other info:
 
         The GMF data for each realization is stored in the KVS by the preceding
-        deterministic hazard calculation.
+        scenario hazard calculation.
 
         :param block_id: id of the region block data we need to pull from the
             KVS
@@ -335,4 +335,4 @@ def collect_block_data(loss_data, asset_site, asset_data):
     loss_data[asset_site] = data
 
 
-general.RiskJobMixin.register("Deterministic", DeterministicEventBasedMixin)
+general.RiskJobMixin.register("Scenario", ScenarioEventBasedMixin)

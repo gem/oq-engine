@@ -32,7 +32,7 @@ from openquake.risk.job.general import Block
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 from openquake.risk import probabilistic_event_based as prob
 from openquake.risk import classical_psha_based as psha
-from openquake.risk import deterministic_event_based as det
+from openquake.risk import scenario_event_based as det
 from openquake.risk import common
 
 from tests.utils import helpers
@@ -1054,7 +1054,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
                 common.compute_mean_loss(loss_ratio_curve), 3)
 
 
-class DeterministicEventBasedTestCase(unittest.TestCase):
+class ScenarioEventBasedTestCase(unittest.TestCase):
 
     def setUp(self):
         imls = [0.10, 0.30, 0.50, 1.00]

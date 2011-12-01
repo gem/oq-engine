@@ -1,6 +1,6 @@
 [general]
 
-CALCULATION_MODE = Deterministic
+CALCULATION_MODE = Scenario
 
 # NOTE: The order of the vertices is to be kept!!!
 # lat, lon of polygon vertices (in clock or counter-clock wise order)
