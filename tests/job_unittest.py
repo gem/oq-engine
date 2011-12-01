@@ -368,8 +368,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'RUPTURE_FLOATING_TYPE': 'Along strike and down dip',
     }
 
-    BASE_DETERMINISTIC_PARAMS = {
-        'CALCULATION_MODE': 'Deterministic',
+    BASE_SCENARIO_PARAMS = {
+        'CALCULATION_MODE': 'Scenario',
         'GMPE_MODEL_NAME': 'BA_2008_AttenRel',
         'GMF_RANDOM_SEED': '3',
         'RUPTURE_SURFACE_DISCRETIZATION': '0.1',
@@ -546,9 +546,9 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'gm_correlated': None,
              }, self.job.oq_params)
 
-    def test_prepare_deterministic_job(self):
-        abs_path = partial(datapath, "deterministic")
-        params = self.BASE_DETERMINISTIC_PARAMS.copy()
+    def test_prepare_scenario_job(self):
+        abs_path = partial(datapath, "scenario")
+        params = self.BASE_SCENARIO_PARAMS.copy()
         params['REGION_VERTEX'] = \
             '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
         params['REGION_GRID_SPACING'] = '0.02'
@@ -561,7 +561,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals(params['REGION_VERTEX'],
                           _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
-            {'job_type': 'deterministic',
+            {'job_type': 'scenario',
              'region_grid_spacing': 0.02,
              'min_magnitude': None,
              'investigation_time': None,
@@ -589,12 +589,12 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
                  'type': 'vulnerability'},
                 ], self._get_inputs(self.job))
 
-    def test_prepare_deterministic_job_over_sites(self):
+    def test_prepare_scenario_job_over_sites(self):
         '''
-        Same as test_prepare_deterministic_job, but with geometry specified as
+        Same as test_prepare_scenario_job, but with geometry specified as
         a list of sites.
         '''
-        params = self.BASE_DETERMINISTIC_PARAMS.copy()
+        params = self.BASE_SCENARIO_PARAMS.copy()
         params['SITES'] = '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
 
         self.job = prepare_job(params)
@@ -602,7 +602,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals(params['SITES'],
                           _to_coord_list(self.job.oq_params.sites))
         self.assertFieldsEqual(
-            {'job_type': 'deterministic',
+            {'job_type': 'scenario',
              'min_magnitude': None,
              'investigation_time': None,
              'component': 'gmroti50',
