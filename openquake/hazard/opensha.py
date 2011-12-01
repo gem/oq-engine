@@ -425,6 +425,16 @@ class ClassicalMixin(BasePSHAMixin):
         :param sites: the sites of which the curve will be serialized
         :type sites: list of :py:class:`openquake.shapes.Site`
         """
+
+        def duration_generator(value):
+            """
+            Returns the initial value when called for the first time and
+            the double value upon each subsequent invocation."""
+            yield value
+            while True:
+                value *= 2
+                yield value
+
         nrml_path = self.build_nrml_path(nrml_file)
 
         curve_writer = hazard_output.create_hazardcurve_writer(
@@ -433,13 +443,14 @@ class ClassicalMixin(BasePSHAMixin):
 
         sites = set(sites)
         accounted_for = set()
-        initial_iteration = True
+        dgen = duration_generator(0.1)
+        duration = dgen.next()
 
         while accounted_for != sites:
             # Sleep a little before checking the availability of additional
             # hazard curve results.
-            if not initial_iteration:
-                time.sleep(5.0)
+            time.sleep(duration)
+            results_found = 0
             for site in sites:
                 key = key_template % hash(site)
                 value = kvs.get_value_json_decoded(key)
@@ -457,6 +468,10 @@ class ClassicalMixin(BasePSHAMixin):
                 hc_attrib.update(hc_attrib_update)
                 hc_data.append((site, hc_attrib))
                 accounted_for.add(site)
+                results_found += 1
+            if not results_found:
+                # No results found, increase the sleep duration.
+                duration = dgen.next()
 
         curve_writer.serialize(hc_data)
 
