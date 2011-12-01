@@ -257,15 +257,16 @@ class ClassicalMixin(BasePSHAMixin):
     @java.jexception
     @preload
     @create_java_cache
-    def execute(self):
+    def execute(self, kvs_keys_purged=None):
         """
         Trigger the calculation and serialization of hazard curves, mean hazard
         curves/maps and quantile curves.
 
+        :param kvs_keys_purged: a list only passed by tests who check the
+            kvs keys used/purged in the course of the calculation.
         :returns: the keys used in the course of the calculation (for the sake
             of testability).
         """
-        keys = []
         sites = self.sites_to_compute()
         realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
         if self["HAZARD_BLOCK_SIZE"]:
@@ -302,29 +303,39 @@ class ClassicalMixin(BasePSHAMixin):
                 map_serializer=self.serialize_quantile_hazard_map)
 
             # Done with this chunk, purge intermediate results from kvs.
-            keys.extend(self.release_curve_data_from_kvs(
-                data, realizations, quantiles, self.poes_hazard_maps))
+            self.release_curve_data_from_kvs(
+                data, realizations, quantiles, self.poes_hazard_maps,
+                kvs_keys_purged)
 
-        return keys
-
-    def release_curve_data_from_kvs(
-        self, sites, realizations, quantiles, poes):
+    def release_curve_data_from_kvs(self, sites, realizations, quantiles, poes,
+                                    kvs_keys_purged):
         """Purge the hazard curve data for the given `sites` from the kvs.
 
-        :returns: the keys purged.
+        The parameters below will be used to construct kvs keys for
+            - hazard curves (including means and quantiles)
+            - hazard maps (including means)
+
+        :param list sites: the sites for which to purge content from the kvs
+        :param int sites: the number of logic tree passes for this calculation
+        :param list sites: the quantiles specified for this calculation
+        :param list poes: the probabilities of exceedence specified for this
+            calculation
+        :param kvs_keys_purged: a list only passed by tests who check the
+            kvs keys used/purged in the course of the calculation.
         """
-        purged = []
         for realization in xrange(0, realizations):
             template = kvs.tokens.hazard_curve_poes_key_template(
                 self.job_id, realization)
             keys = [template % hash(site) for site in sites]
             kvs.get_client().delete(*keys)
-            purged.extend(keys)
+            if kvs_keys_purged is not None:
+                kvs_keys_purged.extend(keys)
 
         template = kvs.tokens.mean_hazard_curve_key_template(self.job_id)
         keys = [template % hash(site) for site in sites]
         kvs.get_client().delete(*keys)
-        purged.extend(keys)
+        if kvs_keys_purged is not None:
+            kvs_keys_purged.extend(keys)
 
         for quantile in quantiles:
             template = kvs.tokens.quantile_hazard_curve_key_template(
@@ -335,16 +346,16 @@ class ClassicalMixin(BasePSHAMixin):
                     self.job_id, poe, quantile)
                 keys.extend([template % hash(site) for site in sites])
             kvs.get_client().delete(*keys)
-            purged.extend(keys)
+            if kvs_keys_purged is not None:
+                kvs_keys_purged.extend(keys)
 
         for poe in poes:
             template = kvs.tokens.mean_hazard_map_key_template(
                 self.job_id, poe)
             keys = [template % hash(site) for site in sites]
             kvs.get_client().delete(*keys)
-            purged.extend(keys)
-
-        return purged
+            if kvs_keys_purged is not None:
+                kvs_keys_purged.extend(keys)
 
     def serialize_hazard_curve_of_realization(self, sites, realization):
         """
