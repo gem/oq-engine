@@ -31,11 +31,6 @@ from openquake.job import Job
 from openquake import logs
 
 
-# Do not create batches of more than DEFAULT_BLOCK_SIZE celery subtasks.
-# Celery cannot cope with these and dies.
-DEFAULT_BLOCK_SIZE = 4096
-
-
 def _prepare_kwargs(name, data, other_args, func=None):
     """
     Construct the (full) set of keyword parameters for the task to be
@@ -47,7 +42,7 @@ def _prepare_kwargs(name, data, other_args, func=None):
     """
     params = dict(other_args, **{name: data}) if other_args else {name: data}
     if func:
-        # A functiom was passed, remove params it is not prepared to receive.
+        # A function was passed, remove params it is not prepared to receive.
         func_params = inspect.getargspec(func).args
         filtered_params = [(k, params[k]) for k in params if k in func_params]
         params = dict(filtered_params)
