@@ -27,7 +27,6 @@ import os
 import unittest
 
 from openquake import java
-from openquake import utils
 
 from tests.utils import helpers
 from tests.utils.tasks import jtask_task, failing_jtask_task
@@ -217,7 +216,7 @@ class JavaUtilsTestCase(unittest.TestCase):
         """
         test_input = [0.01, 0.02, 0.03, 0.04]
 
-        jdouble_a = utils.list_to_jdouble_array(list(test_input))
+        jdouble_a = java.list_to_jdouble_array(list(test_input))
 
         # It should be a jpype Double[] type:
         self.assertEqual('java.lang.Double[]', jdouble_a.__class__.__name__)
