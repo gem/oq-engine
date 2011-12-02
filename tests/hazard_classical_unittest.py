@@ -25,6 +25,7 @@ import mock
 import multiprocessing
 import unittest
 
+from openquake import kvs
 from openquake import logs
 from openquake import shapes
 
@@ -439,6 +440,7 @@ class ClassicalExecuteTestCase(TestMixin, unittest.TestCase):
                       shapes.Site(-123.9, 38.0), shapes.Site(-123.8, 38.0),
                       shapes.Site(-124.9, 38.0), shapes.Site(-124.8, 38.0)]
         self.methods = dict()
+        self.patchers = []
 
     class FakeLogicTreeProcessor(object):
         """
@@ -461,14 +463,17 @@ class ClassicalExecuteTestCase(TestMixin, unittest.TestCase):
         self.mixin.calc = self.FakeLogicTreeProcessor()
         self.mixin.cache = dict()
         self.mixin.sites = self.sites
-        for method in ["do_curves", "do_means", "do_quantiles",
-                       "release_curve_data_from_kvs"]:
+        for method in ["do_curves", "do_means", "do_quantiles"]:
             self.methods[method] = getattr(self.mixin, method)
             setattr(self.mixin, method,
                     mock.mocksignature(self.methods[method]))
-        self.mixin.release_curve_data_from_kvs.mock.return_value = []
+        patcher = patch("openquake.utils.config.hazard_block_size")
+        patcher.start().return_value = 3
+        self.patchers.append(patcher)
 
     def tearDown(self):
+        for patcher in self.patchers:
+            patcher.stop()
         for method, original in self.methods.iteritems():
             setattr(self.mixin, method, original)
         self.unload_job_mixin()
@@ -485,14 +490,165 @@ class ClassicalExecuteTestCase(TestMixin, unittest.TestCase):
         data_slices = [self.sites[:3], self.sites[3:6], self.sites[6:]]
         # Make sure no real logic is invoked.
         with patch("openquake.input.logictree.LogicTreeProcessor"):
-            with patch("openquake.utils.config.hazard_block_size") as hbs:
-                hbs.return_value = 3
+            self.mixin.execute()
+            for method in self.methods:
+                mmock = getattr(self.mixin, method).mock
+                self.assertEqual(3, mmock.call_count)
+                for idx, data_len in enumerate([3, 3, 2]):
+                    # Get the arguments for an invocation identified by `idx`.
+                    args = mmock.call_args_list[idx][0]
+                    self.assertEqual(data_slices[idx], args[0])
+
+    def test_release_data_from_kvs_called(self):
+        """Make sure execute() calls release_data_from_kvs() properly.
+
+        We have 8 sites and a block size (`HAZARD_BLOCK_SIZE`) of 3 i.e.
+        the methods called by execute() will
+            - be called three times
+            - get passed 3, 3 and 2 sites on the 1st, 2nd and 3rd invocation
+              respectively.
+        """
+        data_slices = [self.sites[:3], self.sites[3:6], self.sites[6:]]
+        # Make sure no real logic is invoked.
+        with patch("openquake.input.logictree.LogicTreeProcessor"):
+            with patch("openquake.hazard.opensha.release_data_from_kvs") as m:
                 self.mixin.execute()
-                for method in self.methods:
-                    mock = getattr(self.mixin, method).mock
-                    self.assertEqual(3, mock.call_count)
-                    for idx, data_len in enumerate([3, 3, 2]):
-                        # Get the arguments for an invocation identified by
-                        # `idx`.
-                        args = mock.call_args_list[idx][0]
-                        self.assertEqual(data_slices[idx], args[0])
+                self.assertEqual(3, m.call_count)
+                for idx, data_len in enumerate([3, 3, 2]):
+                    # Get the arguments for an invocation identified by `idx`.
+                    args = m.call_args_list[idx][0]
+                    self.assertEqual(data_slices[idx], args[1])
+
+
+class ReleaseDataFromKvsTestCase(TestMixin, unittest.TestCase):
+    """Tests the behaviour of opensha.release_data_from_kvs()."""
+
+    SITES = [shapes.Site(-118.3, 33.76), shapes.Site(-118.2, 33.76),
+             shapes.Site(-118.1, 33.76), shapes.Site(-118.3, 33.86),
+             shapes.Site(-118.2, 33.86), shapes.Site(-118.1, 33.86)]
+    REALIZATIONS = 2
+    POES = [0.01, 0.1]
+    QUANTILES = [0.25, 0.5]
+    ARGS = (SITES, REALIZATIONS, QUANTILES, POES, None)
+
+    def _populate_data_in_kvs(self, job_id, keys):
+        """Load the data to be purged into the kvs."""
+        conn = kvs.get_client()
+        for idx, key in enumerate(keys):
+            conn.set(key % job_id, idx + 1)
+
+    def _keys_found(self, job_id, keys):
+        """Return the keys found in kvs."""
+        result = []
+        conn = kvs.get_client()
+        for key in keys:
+            key %= job_id
+            if conn.get(key) is not None:
+                result.append(key)
+        return result
+
+    def _test(self, keys, job_id):
+        """Perform the actual test.
+
+        This involves
+            1 - populating the kvs with the keys passed
+            2 - making sure step 1 worked
+            3 - calling the function under test (release_data_from_kvs())
+            4 - ascertaining the keys in question have been purged from kvs.
+        """
+        self._populate_data_in_kvs(job_id, keys)
+        self.assertEqual(sorted(k % job_id for k in keys),
+                         sorted(self._keys_found(job_id, keys)))
+        opensha.release_data_from_kvs(job_id, *self.ARGS)
+        self.assertFalse(self._keys_found(job_id, keys))
+
+    def test_curve_data(self):
+        """Hazard curve data is purged correctly."""
+        keys = [
+            "::JOB::%s::!hazard_curve_poes!0!-1656082506525860821",
+            "::JOB::%s::!hazard_curve_poes!0!-3197290148354731068",
+            "::JOB::%s::!hazard_curve_poes!0!-3431201036734844224",
+            "::JOB::%s::!hazard_curve_poes!0!-4803231368264023776",
+            "::JOB::%s::!hazard_curve_poes!0!6691116160089896596",
+            "::JOB::%s::!hazard_curve_poes!0!-9103945534382545143",
+            "::JOB::%s::!hazard_curve_poes!1!-1656082506525860821",
+            "::JOB::%s::!hazard_curve_poes!1!-3197290148354731068",
+            "::JOB::%s::!hazard_curve_poes!1!-3431201036734844224",
+            "::JOB::%s::!hazard_curve_poes!1!-4803231368264023776",
+            "::JOB::%s::!hazard_curve_poes!1!6691116160089896596",
+            "::JOB::%s::!hazard_curve_poes!1!-9103945534382545143"]
+        self._test(keys, 1)
+
+    def test_mean_curve_data(self):
+        """Mean hazard curve data is purged correctly."""
+        keys = [
+            "::JOB::%s::!mean_hazard_curve!-1656082506525860821",
+            "::JOB::%s::!mean_hazard_curve!-3197290148354731068",
+            "::JOB::%s::!mean_hazard_curve!-3431201036734844224",
+            "::JOB::%s::!mean_hazard_curve!-4803231368264023776",
+            "::JOB::%s::!mean_hazard_curve!6691116160089896596",
+            "::JOB::%s::!mean_hazard_curve!-9103945534382545143"]
+        self._test(keys, 2)
+
+    def test_quantile_curve_data(self):
+        """Quantile hazard curve data is purged correctly."""
+        keys = [
+            "::JOB::%s::!quantile_hazard_curve!-1656082506525860821!0.25",
+            "::JOB::%s::!quantile_hazard_curve!-1656082506525860821!0.5",
+            "::JOB::%s::!quantile_hazard_curve!-3197290148354731068!0.25",
+            "::JOB::%s::!quantile_hazard_curve!-3197290148354731068!0.5",
+            "::JOB::%s::!quantile_hazard_curve!-3431201036734844224!0.25",
+            "::JOB::%s::!quantile_hazard_curve!-3431201036734844224!0.5",
+            "::JOB::%s::!quantile_hazard_curve!-4803231368264023776!0.25",
+            "::JOB::%s::!quantile_hazard_curve!-4803231368264023776!0.5",
+            "::JOB::%s::!quantile_hazard_curve!6691116160089896596!0.25",
+            "::JOB::%s::!quantile_hazard_curve!6691116160089896596!0.5",
+            "::JOB::%s::!quantile_hazard_curve!-9103945534382545143!0.25",
+            "::JOB::%s::!quantile_hazard_curve!-9103945534382545143!0.5"]
+        self._test(keys, 3)
+
+    def test_mean_map_data(self):
+        """Mean hazard map data is purged correctly."""
+        keys = [
+            "::JOB::%s::!mean_hazard_map!-1656082506525860821!0.01",
+            "::JOB::%s::!mean_hazard_map!-1656082506525860821!0.1",
+            "::JOB::%s::!mean_hazard_map!-3197290148354731068!0.01",
+            "::JOB::%s::!mean_hazard_map!-3197290148354731068!0.1",
+            "::JOB::%s::!mean_hazard_map!-3431201036734844224!0.01",
+            "::JOB::%s::!mean_hazard_map!-3431201036734844224!0.1",
+            "::JOB::%s::!mean_hazard_map!-4803231368264023776!0.01",
+            "::JOB::%s::!mean_hazard_map!-4803231368264023776!0.1",
+            "::JOB::%s::!mean_hazard_map!6691116160089896596!0.01",
+            "::JOB::%s::!mean_hazard_map!6691116160089896596!0.1",
+            "::JOB::%s::!mean_hazard_map!-9103945534382545143!0.01",
+            "::JOB::%s::!mean_hazard_map!-9103945534382545143!0.1"]
+        self._test(keys, 4)
+
+    def test_quantile_map_data(self):
+        """Quantile hazard map data is purged correctly."""
+        keys = [
+            "::JOB::%s::!quantile_hazard_map!-1656082506525860821!0.01!0.25",
+            "::JOB::%s::!quantile_hazard_map!-1656082506525860821!0.01!0.5",
+            "::JOB::%s::!quantile_hazard_map!-1656082506525860821!0.1!0.25",
+            "::JOB::%s::!quantile_hazard_map!-1656082506525860821!0.1!0.5",
+            "::JOB::%s::!quantile_hazard_map!-3197290148354731068!0.01!0.25",
+            "::JOB::%s::!quantile_hazard_map!-3197290148354731068!0.01!0.5",
+            "::JOB::%s::!quantile_hazard_map!-3197290148354731068!0.1!0.25",
+            "::JOB::%s::!quantile_hazard_map!-3197290148354731068!0.1!0.5",
+            "::JOB::%s::!quantile_hazard_map!-3431201036734844224!0.01!0.25",
+            "::JOB::%s::!quantile_hazard_map!-3431201036734844224!0.01!0.5",
+            "::JOB::%s::!quantile_hazard_map!-3431201036734844224!0.1!0.25",
+            "::JOB::%s::!quantile_hazard_map!-3431201036734844224!0.1!0.5",
+            "::JOB::%s::!quantile_hazard_map!-4803231368264023776!0.01!0.25",
+            "::JOB::%s::!quantile_hazard_map!-4803231368264023776!0.01!0.5",
+            "::JOB::%s::!quantile_hazard_map!-4803231368264023776!0.1!0.25",
+            "::JOB::%s::!quantile_hazard_map!-4803231368264023776!0.1!0.5",
+            "::JOB::%s::!quantile_hazard_map!6691116160089896596!0.01!0.25",
+            "::JOB::%s::!quantile_hazard_map!6691116160089896596!0.01!0.5",
+            "::JOB::%s::!quantile_hazard_map!6691116160089896596!0.1!0.25",
+            "::JOB::%s::!quantile_hazard_map!6691116160089896596!0.1!0.5",
+            "::JOB::%s::!quantile_hazard_map!-9103945534382545143!0.01!0.25",
+            "::JOB::%s::!quantile_hazard_map!-9103945534382545143!0.01!0.5",
+            "::JOB::%s::!quantile_hazard_map!-9103945534382545143!0.1!0.25",
+            "::JOB::%s::!quantile_hazard_map!-9103945534382545143!0.1!0.5"]
+        self._test(keys, 5)
