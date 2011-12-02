@@ -1,0 +1,187 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" 
+      xmlns:qml="http://quakeml.org/xmlns/quakeml/1.1"
+      xmlns="http://openquake.org/xmlns/nrml/0.2"
+      gml:id="n1">
+      
+    <!-- sourceModel is a gml:Feature -->
+    <sourceModel gml:id="sm1">
+        <config/>
+    
+        <!-- simpleFaultSource is a gml:Feature -->
+        <!-- put original element sourceID into attribute gml:id and 
+             sourceName into element gml:name -->
+        <simpleFaultSource gml:id="src01">
+            <gml:name>Mount Diablo Thrust</gml:name>
+            
+            <tectonicRegion>Active Shallow Crust</tectonicRegion>
+            <rake>90.0</rake>
+            
+            <evenlyDiscretizedIncrementalMFD minVal="6.55" binSize="0.1" type="ML">
+                0.0010614989 8.8291627E-4 7.3437777E-4 6.108288E-4 5.080653E-4
+            </evenlyDiscretizedIncrementalMFD>
+         
+            <!-- simpleFaultGeometry is a gml:Feature -->
+            <simpleFaultGeometry gml:id="sfg_1">
+                
+                <!-- geospatial property: restriction of gml:CurvePropertyType -->
+                <faultTrace>
+                    <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                        <gml:posList>
+                            -121.82290 37.73010
+                            -122.03880 37.87710
+                        </gml:posList>
+                    </gml:LineString>
+                </faultTrace>
+                
+                <!-- non-geospatial properties -->
+                <dip>50.0</dip>
+                <upperSeismogenicDepth>0.0</upperSeismogenicDepth>
+                <lowerSeismogenicDepth>19.5</lowerSeismogenicDepth>
+            </simpleFaultGeometry>
+
+        </simpleFaultSource>
+        
+        <!-- complexFaultSource is a gml:Feature -->
+        <complexFaultSource gml:id="src02">
+            <gml:name>Cascadia Megathrust</gml:name>
+            
+            <tectonicRegion>Subduction Interface</tectonicRegion>
+            <rake>90.0</rake>
+            
+            <truncatedGutenbergRichter type="ML">
+                <aValueCumulative>1.0</aValueCumulative>
+                <bValue>0.8</bValue>
+                <minMagnitude>6.5</minMagnitude>
+                <maxMagnitude>9.0</maxMagnitude>
+            </truncatedGutenbergRichter>
+            
+            <complexFaultGeometry>
+                <faultEdges>
+                    <faultTopEdge>
+                        <gml:LineString srsName="urn:ogc:def:crs:EPSG::4979">
+                            <gml:posList>
+                                -124.704  40.363  0.5493260E+01
+                                -124.977  41.214  0.4988560E+01
+                                -125.140  42.096  0.4897340E+01
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultTopEdge>
+                    <faultBottomEdge>
+                        <gml:LineString srsName="urn:ogc:def:crs:EPSG::4979">
+                            <gml:posList>
+                                -123.829  40.347  0.2038490E+02
+                                -124.137  41.218  0.1741390E+02
+                                -124.252  42.115  0.1752740E+02
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultBottomEdge>
+                </faultEdges>
+            </complexFaultGeometry>
+        </complexFaultSource>
+    
+        <!-- areaSource is a gml:Feature -->
+        <areaSource gml:id="src03">
+            <gml:name>Quito</gml:name>
+            
+            <tectonicRegion>Active Shallow Crust</tectonicRegion>
+            
+            <!-- this is the geospatial property, of type gml:SurfacePropertyType -->
+            <areaBoundary>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing srsName="urn:ogc:def:crs:EPSG::4326">
+                            <gml:posList>
+                             -122.5 37.5 
+                             -121.5 37.5
+                             -121.5 38.5
+                             -122.5 38.5
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+            </areaBoundary>
+            
+            <ruptureRateModel>
+                <truncatedGutenbergRichter type="ML">
+                    <aValueCumulative>5.0</aValueCumulative>
+                    <bValue>0.8</bValue>
+                    <minMagnitude>5.0</minMagnitude>
+                    <maxMagnitude>7.0</maxMagnitude>
+                </truncatedGutenbergRichter>
+                
+                <focalMechanism publicID="smi:local/1">
+                    <qml:nodalPlanes>
+                        <qml:nodalPlane1>
+                            <qml:strike>
+                                <qml:value>0.0</qml:value>
+                            </qml:strike>
+                            <qml:dip>
+                                <qml:value>90.0</qml:value>
+                            </qml:dip>
+                            <qml:rake>
+                                <qml:value>0.0</qml:value>
+                            </qml:rake>
+                        </qml:nodalPlane1>
+                    </qml:nodalPlanes>
+                </focalMechanism>
+            </ruptureRateModel>
+
+            <ruptureDepthDistribution>
+                <magnitude type="ML">6.0 6.5 7.0</magnitude>
+                <depth>5000.0 3000.0 0.0</depth>
+            </ruptureDepthDistribution>
+                
+            <!-- NOTE: as a suggestion, I use meters here, as in QuakeML (basic SI unit) -->
+            <hypocentralDepth>5000.0</hypocentralDepth>
+ 
+        </areaSource>
+    
+        <!-- pointSource is a gml:Feature -->
+        <pointSource gml:id="src04">
+            <gml:name>point</gml:name>
+            <tectonicRegion>Active Shallow Crust</tectonicRegion>
+            
+            <!-- this is the geospatial property, of type gml:PointPropertyType -->
+            <location>
+                <gml:Point srsName="epsg:4326">
+                    <gml:pos>-122.0 38.0</gml:pos>
+                </gml:Point>
+            </location>
+                
+            <ruptureRateModel>
+                <truncatedGutenbergRichter type="ML">
+                    <aValueCumulative>5.0</aValueCumulative>
+                    <bValue>0.8</bValue>
+                    <minMagnitude>5.0</minMagnitude>
+                    <maxMagnitude>7.0</maxMagnitude>
+                </truncatedGutenbergRichter>
+                
+                <focalMechanism publicID="smi:local/1">
+                    <qml:nodalPlanes>
+                        <qml:nodalPlane1>
+                            <qml:strike>
+                                <qml:value>0.0</qml:value>
+                            </qml:strike>
+                            <qml:dip>
+                                <qml:value>90.0</qml:value>
+                            </qml:dip>
+                            <qml:rake>
+                                <qml:value>0.0</qml:value>
+                            </qml:rake>
+                        </qml:nodalPlane1>
+                    </qml:nodalPlanes>
+                </focalMechanism>
+            </ruptureRateModel>
+
+            <ruptureDepthDistribution>
+                <magnitude type="ML">6.0 6.5 7.0</magnitude>
+                <depth>5000.0 3000.0 0.0</depth>
+            </ruptureDepthDistribution>
+
+            <hypocentralDepth>5000.0</hypocentralDepth>
+ 
+        </pointSource>
+    
+    </sourceModel>
+</nrml>
