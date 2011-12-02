@@ -521,6 +521,21 @@ class ReleaseDataFromKvsTestCase(helpers.TestMixin, unittest.TestCase):
                 result.append(key)
         return result
 
+    def _test(self, keys, job_id):
+        """Perform the actual test.
+
+        This involves
+            1 - populating the kvs with the keys passed
+            2 - making sure step 1 worked
+            3 - calling the function under test (release_data_from_kvs())
+            4 - ascertaining the keys in question have been purged from kvs.
+        """
+        self._populate_data_in_kvs(job_id, keys)
+        self.assertEqual(sorted(k % job_id for k in keys),
+                         sorted(self._keys_found(job_id, keys)))
+        opensha.release_data_from_kvs(job_id, *self.ARGS)
+        self.assertFalse(self._keys_found(job_id, keys))
+
     def test_curve_data(self):
         """Hazard curve data is purged correctly."""
         keys = [
@@ -536,9 +551,7 @@ class ReleaseDataFromKvsTestCase(helpers.TestMixin, unittest.TestCase):
             "::JOB::%s::!hazard_curve_poes!1!-4803231368264023776",
             "::JOB::%s::!hazard_curve_poes!1!6691116160089896596",
             "::JOB::%s::!hazard_curve_poes!1!-9103945534382545143"]
-        self._populate_data_in_kvs(1, keys)
-        opensha.release_data_from_kvs(1, *self.ARGS)
-        self.assertFalse(self._keys_found(1, keys))
+        self._test(keys, 1)
 
     def test_mean_curve_data(self):
         """Mean hazard curve data is purged correctly."""
@@ -549,9 +562,7 @@ class ReleaseDataFromKvsTestCase(helpers.TestMixin, unittest.TestCase):
             "::JOB::%s::!mean_hazard_curve!-4803231368264023776",
             "::JOB::%s::!mean_hazard_curve!6691116160089896596",
             "::JOB::%s::!mean_hazard_curve!-9103945534382545143"]
-        self._populate_data_in_kvs(2, keys)
-        opensha.release_data_from_kvs(2, *self.ARGS)
-        self.assertFalse(self._keys_found(2, keys))
+        self._test(keys, 2)
 
     def test_quantile_curve_data(self):
         """Quantile hazard curve data is purged correctly."""
@@ -568,9 +579,7 @@ class ReleaseDataFromKvsTestCase(helpers.TestMixin, unittest.TestCase):
             "::JOB::%s::!quantile_hazard_curve!6691116160089896596!0.5",
             "::JOB::%s::!quantile_hazard_curve!-9103945534382545143!0.25",
             "::JOB::%s::!quantile_hazard_curve!-9103945534382545143!0.5"]
-        self._populate_data_in_kvs(3, keys)
-        opensha.release_data_from_kvs(3, *self.ARGS)
-        self.assertFalse(self._keys_found(3, keys))
+        self._test(keys, 3)
 
     def test_mean_map_data(self):
         """Mean hazard map data is purged correctly."""
@@ -587,9 +596,7 @@ class ReleaseDataFromKvsTestCase(helpers.TestMixin, unittest.TestCase):
             "::JOB::%s::!mean_hazard_map!6691116160089896596!0.1",
             "::JOB::%s::!mean_hazard_map!-9103945534382545143!0.01",
             "::JOB::%s::!mean_hazard_map!-9103945534382545143!0.1"]
-        self._populate_data_in_kvs(4, keys)
-        opensha.release_data_from_kvs(4, *self.ARGS)
-        self.assertFalse(self._keys_found(4, keys))
+        self._test(keys, 4)
 
     def test_quantile_map_data(self):
         """Quantile hazard map data is purged correctly."""
@@ -618,6 +625,4 @@ class ReleaseDataFromKvsTestCase(helpers.TestMixin, unittest.TestCase):
             "::JOB::%s::!quantile_hazard_map!-9103945534382545143!0.01!0.5",
             "::JOB::%s::!quantile_hazard_map!-9103945534382545143!0.1!0.25",
             "::JOB::%s::!quantile_hazard_map!-9103945534382545143!0.1!0.5"]
-        self._populate_data_in_kvs(5, keys)
-        opensha.release_data_from_kvs(5, *self.ARGS)
-        self.assertFalse(self._keys_found(5, keys))
+        self._test(keys, 5)
