@@ -462,12 +462,10 @@ class ClassicalExecuteTestCase(helpers.TestMixin, unittest.TestCase):
         self.mixin.calc = self.FakeLogicTreeProcessor()
         self.mixin.cache = dict()
         self.mixin.sites = self.sites
-        for method in ["do_curves", "do_means", "do_quantiles",
-                       "release_data_from_kvs"]:
+        for method in ["do_curves", "do_means", "do_quantiles"]:
             self.methods[method] = getattr(self.mixin, method)
             setattr(self.mixin, method,
                     mock.mocksignature(self.methods[method]))
-        self.mixin.release_data_from_kvs.mock.return_value = []
 
     def tearDown(self):
         for method, original in self.methods.iteritems():
