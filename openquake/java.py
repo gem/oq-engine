@@ -337,3 +337,15 @@ def unpack_exception(func):
             raise JavaException(e), None, trace
 
     return unwrap_exception
+
+
+def list_to_jdouble_array(float_list):
+    """Convert a 1D list of floats to a 1D Java Double[] (as a jpype object).
+    """
+    jp = jvm()
+    jdouble = jp.JArray(jp.java.lang.Double)(len(float_list))
+
+    for i, val in enumerate(float_list):
+        jdouble[i] = jp.JClass('java.lang.Double')(val)
+
+    return jdouble

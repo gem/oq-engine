@@ -25,9 +25,9 @@ import os
 from celery.task import task
 
 from openquake import java
+from openquake.java import list_to_jdouble_array
 from openquake.job import Job
 from openquake.logs import LOG
-from openquake.utils import list_to_jdouble_array
 from openquake.hazard.general import (
     generate_erf, generate_gmpe_map, set_gmpe_params, get_iml_list)
 from openquake.utils import config
