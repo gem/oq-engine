@@ -20,16 +20,17 @@
 Wrapper around the OpenSHA-lite java library.
 """
 
-import math
-import os
-import multiprocessing
-import random
-import functools
 
 from itertools import izip
+import functools
+import math
+import multiprocessing
+import os
+import random
+import time
 
-from openquake import java
 from openquake import kvs
+from openquake import java
 from openquake import logs
 from openquake import shapes
 from openquake import xml
@@ -93,13 +94,14 @@ class ClassicalMixin(BasePSHAMixin):
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the Job configuration file."""
 
+    DEFAULT_BLOCK_SIZE = 8192
+
     def number_of_tasks(self):
         """How many `celery` tasks should be used for the calculations?"""
         value = self["HAZARD_TASKS"]
         return 2 * multiprocessing.cpu_count() if value is None else int(value)
 
-    def do_curves(self, sites, realizations,
-                  serializer=None,
+    def do_curves(self, sites, realizations, serializer=None,
                   the_task=tasks.compute_hazard_curve):
         """Trigger the calculation of hazard curves, serialize as requested.
 
@@ -137,12 +139,9 @@ class ClassicalMixin(BasePSHAMixin):
             self.store_gmpe_map(source_model_generator.getrandbits(32))
 
             utils_tasks.distribute(
-                self.number_of_tasks(), the_task, ("site_list", sites),
+                self.number_of_tasks(), the_task, ("sites", sites),
                 dict(job_id=self.job_id, realization=realization),
-                flatten_results=True)
-
-            if serializer:
-                serializer(sites, realization)
+                flatten_results=True, ath=serializer)
 
     # pylint: disable=R0913
     def do_means(self, sites, realizations,
@@ -185,12 +184,7 @@ class ClassicalMixin(BasePSHAMixin):
         utils_tasks.distribute(
             self.number_of_tasks(), curve_task, ("sites", sites),
             dict(job_id=self.job_id, realizations=realizations),
-            flatten_results=True)
-
-        if curve_serializer:
-            LOG.info("Serializing mean hazard curves")
-
-            curve_serializer(sites)
+            flatten_results=True, ath=curve_serializer)
 
         if self.poes_hazard_maps:
             assert map_func, "No calculation function for mean hazard maps set"
@@ -244,13 +238,7 @@ class ClassicalMixin(BasePSHAMixin):
             self.number_of_tasks(), curve_task, ("sites", sites),
             dict(job_id=self.job_id, realizations=realizations,
                  quantiles=quantiles),
-            flatten_results=True)
-
-        if curve_serializer:
-            LOG.info("Serializing quantile curves for %s values"
-                     % len(quantiles))
-            for quantile in quantiles:
-                curve_serializer(sites, quantile)
+            flatten_results=True, ath=curve_serializer)
 
         if self.poes_hazard_maps:
             assert map_func, "No calculation function for quantile maps set."
@@ -273,9 +261,17 @@ class ClassicalMixin(BasePSHAMixin):
         """
         Trigger the calculation and serialization of hazard curves, mean hazard
         curves/maps and quantile curves.
+
+        :returns: the keys used in the course of the calculation (for the sake
+            of testability).
         """
+        keys = []
         sites = self.sites_to_compute()
         realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
+        if self["HAZARD_BLOCK_SIZE"]:
+            block_size = self["HAZARD_BLOCK_SIZE"]
+        else:
+            block_size = ClassicalMixin.DEFAULT_BLOCK_SIZE
 
         LOG.info("Going to run classical PSHA hazard for %s realizations "
                  "and %s sites" % (realizations, len(sites)))
@@ -284,20 +280,71 @@ class ClassicalMixin(BasePSHAMixin):
         stats.set_total(
             self.job_id, "classical:execute:realizations", realizations)
 
-        self.do_curves(sites, realizations,
-            serializer=self.serialize_hazard_curve_of_realization)
+        for start in xrange(0, len(sites), block_size):
+            end = start + block_size
 
-        # mean curves
-        self.do_means(sites, realizations,
-            curve_serializer=self.serialize_mean_hazard_curves,
-            map_func=classical_psha.compute_mean_hazard_maps,
-            map_serializer=self.serialize_mean_hazard_map)
+            data = sites[start:end]
 
-        # quantile curves
-        self.do_quantiles(sites, realizations, self.quantile_levels,
-            curve_serializer=self.serialize_quantile_hazard_curves,
-            map_func=classical_psha.compute_quantile_hazard_maps,
-            map_serializer=self.serialize_quantile_hazard_map)
+            self.do_curves(data, realizations,
+                serializer=self.serialize_hazard_curve_of_realization)
+
+            # mean curves
+            self.do_means(data, realizations,
+                curve_serializer=self.serialize_mean_hazard_curves,
+                map_func=classical_psha.compute_mean_hazard_maps,
+                map_serializer=self.serialize_mean_hazard_map)
+
+            # quantile curves
+            quantiles = self.quantile_levels
+            self.do_quantiles(data, realizations, quantiles,
+                curve_serializer=self.serialize_quantile_hazard_curves,
+                map_func=classical_psha.compute_quantile_hazard_maps,
+                map_serializer=self.serialize_quantile_hazard_map)
+
+            # Done with this chunk, purge intermediate results from kvs.
+            keys.extend(self.release_curve_data_from_kvs(
+                data, realizations, quantiles, self.poes_hazard_maps))
+
+        return keys
+
+    def release_curve_data_from_kvs(
+        self, sites, realizations, quantiles, poes):
+        """Purge the hazard curve data for the given `sites` from the kvs.
+
+        :returns: the keys purged.
+        """
+        purged = []
+        for realization in xrange(0, realizations):
+            template = kvs.tokens.hazard_curve_poes_key_template(
+                self.job_id, realization)
+            keys = [template % hash(site) for site in sites]
+            kvs.get_client().delete(*keys)
+            purged.extend(keys)
+
+        template = kvs.tokens.mean_hazard_curve_key_template(self.job_id)
+        keys = [template % hash(site) for site in sites]
+        kvs.get_client().delete(*keys)
+        purged.extend(keys)
+
+        for quantile in quantiles:
+            template = kvs.tokens.quantile_hazard_curve_key_template(
+                self.job_id, str(quantile))
+            keys = [template % hash(site) for site in sites]
+            for poe in poes:
+                template = kvs.tokens.quantile_hazard_map_key_template(
+                    self.job_id, poe, quantile)
+                keys.extend([template % hash(site) for site in sites])
+            kvs.get_client().delete(*keys)
+            purged.extend(keys)
+
+        for poe in poes:
+            template = kvs.tokens.mean_hazard_map_key_template(
+                self.job_id, poe)
+            keys = [template % hash(site) for site in sites]
+            kvs.get_client().delete(*keys)
+            purged.extend(keys)
+
+        return purged
 
     def serialize_hazard_curve_of_realization(self, sites, realization):
         """
@@ -328,7 +375,7 @@ class ClassicalMixin(BasePSHAMixin):
         self.serialize_hazard_curve(nrml_file, key_template, hc_attrib_update,
                                     sites)
 
-    def serialize_quantile_hazard_curves(self, sites, quantile):
+    def serialize_quantile_hazard_curves(self, sites, quantiles):
         """
         Serialize the quantile hazard curves of a set of sites for a given
         quantile.
@@ -338,16 +385,15 @@ class ClassicalMixin(BasePSHAMixin):
         :param quantile: the quantile to be serialized
         :type quantile: :py:class:`float`
         """
-        hc_attrib_update = {
-            'statistics': 'quantile',
-            'quantileValue': quantile}
-        nrml_file = self.quantile_hazard_curve_filename(quantile)
-        key_template = \
-            kvs.tokens.quantile_hazard_curve_key_template(self.job_id,
-                                                          str(quantile))
-
-        self.serialize_hazard_curve(nrml_file, key_template, hc_attrib_update,
-                                    sites)
+        for quantile in quantiles:
+            hc_attrib_update = {
+                'statistics': 'quantile',
+                'quantileValue': quantile}
+            nrml_file = self.quantile_hazard_curve_filename(quantile)
+            key_template = kvs.tokens.quantile_hazard_curve_key_template(
+                self.job_id, str(quantile))
+            self.serialize_hazard_curve(nrml_file, key_template,
+                                        hc_attrib_update, sites)
 
     def serialize_hazard_curve(self, nrml_file, key_template, hc_attrib_update,
                                sites):
@@ -374,19 +420,32 @@ class ClassicalMixin(BasePSHAMixin):
             self.job_id, self.serialize_results_to, nrml_path)
         hc_data = []
 
-        for site in sites:
-            # Use hazard curve ordinate values (PoE) from KVS and abscissae
-            # from the IML list in config.
-            hc_attrib = {
-                'investigationTimeSpan': self['INVESTIGATION_TIME'],
-                'IMLValues': self.imls,
-                'IMT': self['INTENSITY_MEASURE_TYPE'],
+        sites = set(sites)
+        accounted_for = set()
+        initial_iteration = True
 
-                'PoEValues': kvs.get_value_json_decoded(key_template
-                                                        % hash(site))}
-
-            hc_attrib.update(hc_attrib_update)
-            hc_data.append((site, hc_attrib))
+        while accounted_for != sites:
+            # Sleep a little before checking the availability of additional
+            # hazard curve results.
+            if not initial_iteration:
+                time.sleep(5.0)
+            for site in sites:
+                key = key_template % hash(site)
+                value = kvs.get_value_json_decoded(key)
+                if value is None or site in accounted_for:
+                    # The curve for this site is not ready yet. Proceed to
+                    # the next.
+                    continue
+                # Use hazard curve ordinate values (PoE) from KVS and abscissae
+                # from the IML list in config.
+                hc_attrib = {
+                    'investigationTimeSpan': self['INVESTIGATION_TIME'],
+                    'IMLValues': self.imls,
+                    'IMT': self['INTENSITY_MEASURE_TYPE'],
+                    'PoEValues': value}
+                hc_attrib.update(hc_attrib_update)
+                hc_data.append((site, hc_attrib))
+                accounted_for.add(site)
 
         curve_writer.serialize(hc_data)
 
@@ -406,8 +465,8 @@ class ClassicalMixin(BasePSHAMixin):
             nrml_file = self.mean_hazard_map_filename(poe)
 
             hm_attrib_update = {'statistics': 'mean'}
-            key_template = kvs.tokens.mean_hazard_map_key_template(self.job_id,
-                                                          poe)
+            key_template = kvs.tokens.mean_hazard_map_key_template(
+                self.job_id, poe)
 
             self.serialize_hazard_map_at_poe(sites, poe, key_template,
                                              hm_attrib_update, nrml_file)
@@ -459,21 +518,21 @@ class ClassicalMixin(BasePSHAMixin):
         """
         nrml_path = self.build_nrml_path(nrml_file)
 
-        LOG.debug("Generating NRML hazard map file for PoE %s, "\
-            "%s nodes in hazard map: %s" % (
-            poe, len(sites), nrml_file))
+        LOG.info("Generating NRML hazard map file for PoE %s, "
+                 "%s nodes in hazard map: %s" % (poe, len(sites), nrml_file))
 
         map_writer = hazard_output.create_hazardmap_writer(
             self.job_id, self.serialize_results_to, nrml_path)
         hm_data = []
 
         for site in sites:
+            key = key_template % hash(site)
             # use hazard map IML values from KVS
             hm_attrib = {
                 'investigationTimeSpan': self['INVESTIGATION_TIME'],
                 'IMT': self['INTENSITY_MEASURE_TYPE'],
                 'vs30': self['REFERENCE_VS30_VALUE'],
-                'IML': kvs.get_value_json_decoded(key_template % hash(site)),
+                'IML': kvs.get_value_json_decoded(key),
                 'poE': poe}
 
             hm_attrib.update(hm_attrib_update)
@@ -628,7 +687,7 @@ class EventBasedMixin(BasePSHAMixin):
             for j in range(0, realizations):
                 stochastic_set_key = kvs.tokens.stochastic_set_key(self.job_id,
                                                                    i, j)
-                print "Writing output for ses %s" % stochastic_set_key
+                LOG.info("Writing output for ses %s" % stochastic_set_key)
                 ses = kvs.get_value_json_decoded(stochastic_set_key)
                 if ses:
                     self.serialize_gmf(ses)
