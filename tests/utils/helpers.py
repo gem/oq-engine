@@ -25,6 +25,7 @@ Helper functions for our unit and smoke tests.
 import functools
 import logging
 import os
+import random
 import redis
 import shutil
 import subprocess
@@ -44,7 +45,8 @@ from openquake import logs
 from openquake.job import Job
 from openquake import producer
 from openquake.utils import config
-
+from openquake.hazard.general import store_source_model, store_gmpe_map
+from openquake.input.logictree import LogicTreeProcessor
 from openquake.db import models
 
 FLAGS = flags.FLAGS
@@ -148,6 +150,32 @@ def create_job(params, **kwargs):
     job_id = kwargs.pop('job_id', 0)
 
     return Job(params, job_id, **kwargs)
+
+
+def store_hazard_logic_trees(a_job):
+    """Helper function to store the source model and GMPE logic trees in the
+    KVS so that it can be read by the Java code. This is basically what the
+    @preload decorator does.
+
+    :param a_job:
+        :class:`openquake.job.Job` instance.
+    """
+    lt_proc = LogicTreeProcessor(
+        a_job['BASE_PATH'],
+        a_job['SOURCE_MODEL_LOGIC_TREE_FILE_PATH'],
+        a_job['GMPE_LOGIC_TREE_FILE_PATH'])
+
+    src_model_seed = a_job['SOURCE_MODEL_LT_RANDOM_SEED']
+    gmpe_seed = a_job['GMPE_LT_RANDOM_SEED']
+
+    src_model_rnd = random.Random()
+    src_model_rnd.seed(src_model_seed)
+    gmpe_rnd = random.Random()
+    gmpe_rnd.seed(gmpe_seed)
+
+    store_source_model(a_job.job_id, src_model_rnd.getrandbits(32),
+                       a_job.params, lt_proc)
+    store_gmpe_map(a_job.job_id, gmpe_rnd.getrandbits(32), lt_proc)
 
 
 class WordProducer(producer.FileProducer):
