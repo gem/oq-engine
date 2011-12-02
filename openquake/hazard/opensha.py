@@ -145,8 +145,6 @@ class ClassicalMixin(BasePSHAMixin):
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the Job configuration file."""
 
-    DEFAULT_BLOCK_SIZE = 8192
-
     def number_of_tasks(self):
         """How many `celery` tasks should be used for the calculations?"""
         value = self["HAZARD_TASKS"]
@@ -320,10 +318,6 @@ class ClassicalMixin(BasePSHAMixin):
         """
         sites = self.sites_to_compute()
         realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
-        if self["HAZARD_BLOCK_SIZE"]:
-            block_size = self["HAZARD_BLOCK_SIZE"]
-        else:
-            block_size = ClassicalMixin.DEFAULT_BLOCK_SIZE
 
         LOG.info("Going to run classical PSHA hazard for %s realizations "
                  "and %s sites" % (realizations, len(sites)))
@@ -332,6 +326,7 @@ class ClassicalMixin(BasePSHAMixin):
         stats.set_total(
             self.job_id, "classical:execute:realizations", realizations)
 
+        block_size = config.hazard_block_size()
         for start in xrange(0, len(sites), block_size):
             end = start + block_size
 
