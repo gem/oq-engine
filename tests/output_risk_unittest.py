@@ -366,7 +366,7 @@ class LossMapDBReaderTestCase(LossMapDBBaseTestCase):
 
         # Call the function under test.
         data = self.reader.deserialize(self.writer.output.id)
-        got_metadata = data.pop(0)
+        data.pop(0)
         data = sorted(data, key=lambda e: (e[0].longitude, e[0].latitude))
 
         # compare metadata, ignoring fields that we know aren't saved
@@ -375,7 +375,7 @@ class LossMapDBReaderTestCase(LossMapDBBaseTestCase):
         result_metadata.pop('riskResultID')
 
         # before overwriting, check the value is not set
-        assert 'poe' not in result_metadata
+        self.assertTrue('poe' not in result_metadata)
         result_metadata['poe'] = None
 
         self.assertEquals(result_metadata, result_metadata)
@@ -393,7 +393,7 @@ class LossMapDBReaderTestCase(LossMapDBBaseTestCase):
 
         # Call the function under test.
         data = self.reader.deserialize(self.writer.output.id)
-        got_metadata = data.pop(0)
+        data.pop(0)
         data = sorted(data, key=lambda e: (e[0].longitude, e[0].latitude))
 
         # compare metadata, ignoring fields that we know aren't saved
