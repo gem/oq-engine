@@ -299,8 +299,18 @@ class HazardBlockSizeTestCase(ConfigTestMixin, unittest.TestCase):
         self.teardown_config()
 
     def test_not_configured(self):
-        """The hazard block size was not set in openquake.cfg"""
+        """
+        The hazard block size was not set in openquake.cfg, the default
+        is returned.
+        """
         self.assertEqual(8192, config.hazard_block_size())
+
+    def test_not_configured_default_overriden(self):
+        """
+        The hazard block size was not set in openquake.cfg, the default
+        is specified by the caller is returned.
+        """
+        self.assertEqual(333, config.hazard_block_size(333))
 
     def test_configured(self):
         """The hazard block size *was* configured in openquake.cfg"""
