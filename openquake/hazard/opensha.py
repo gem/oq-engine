@@ -429,10 +429,14 @@ class ClassicalMixin(BasePSHAMixin):
         def duration_generator(value):
             """
             Returns the initial value when called for the first time and
-            the double value upon each subsequent invocation."""
+            the double value upon each subsequent invocation.
+
+            N.B.: the maximum value returned will never exceed 90 (seconds).
+            """
             yield value
             while True:
-                value *= 2
+                if value < 45:
+                    value *= 2
                 yield value
 
         nrml_path = self.build_nrml_path(nrml_file)
