@@ -118,6 +118,8 @@ def get_value_json_decoded(key):
     """ Get value from kvs and json decode """
     try:
         value = get_client().get(key)
+        if not value:
+            return value
         decoder = json.JSONDecoder()
         return decoder.decode(value)
     except (TypeError, ValueError), e:
