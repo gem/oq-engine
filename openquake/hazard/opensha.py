@@ -83,6 +83,57 @@ def unwrap_validation_error(jpype, runtime_exception, path=None):
     raise runtime_exception
 
 
+def release_data_from_kvs(job_id, sites, realizations, quantiles, poes,
+                          kvs_keys_purged):
+    """Purge the hazard curve data for the given `sites` from the kvs.
+
+    The parameters below will be used to construct kvs keys for
+        - hazard curves (including means and quantiles)
+        - hazard maps (including means)
+
+    :param int job_id: the identifier of the job at hand
+    :param list sites: the sites for which to purge content from the kvs
+    :param int sites: the number of logic tree passes for this calculation
+    :param list sites: the quantiles specified for this calculation
+    :param list poes: the probabilities of exceedence specified for this
+        calculation
+    :param kvs_keys_purged: a list only passed by tests who check the
+        kvs keys used/purged in the course of the calculation.
+    """
+    for realization in xrange(0, realizations):
+        template = kvs.tokens.hazard_curve_poes_key_template(
+            job_id, realization)
+        keys = [template % hash(site) for site in sites]
+        kvs.get_client().delete(*keys)
+        if kvs_keys_purged is not None:
+            kvs_keys_purged.extend(keys)
+
+    template = kvs.tokens.mean_hazard_curve_key_template(job_id)
+    keys = [template % hash(site) for site in sites]
+    kvs.get_client().delete(*keys)
+    if kvs_keys_purged is not None:
+        kvs_keys_purged.extend(keys)
+
+    for quantile in quantiles:
+        template = kvs.tokens.quantile_hazard_curve_key_template(
+            job_id, quantile)
+        keys = [template % hash(site) for site in sites]
+        for poe in poes:
+            template = kvs.tokens.quantile_hazard_map_key_template(
+                job_id, poe, quantile)
+            keys.extend([template % hash(site) for site in sites])
+        kvs.get_client().delete(*keys)
+        if kvs_keys_purged is not None:
+            kvs_keys_purged.extend(keys)
+
+    for poe in poes:
+        template = kvs.tokens.mean_hazard_map_key_template(job_id, poe)
+        keys = [template % hash(site) for site in sites]
+        kvs.get_client().delete(*keys)
+        if kvs_keys_purged is not None:
+            kvs_keys_purged.extend(keys)
+
+
 # pylint: disable=R0904
 class ClassicalMixin(BasePSHAMixin):
     """Classical PSHA method for performing Hazard calculations.
@@ -93,8 +144,6 @@ class ClassicalMixin(BasePSHAMixin):
     Note that this Mixin, during execution, will always be an instance of the
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the Job configuration file."""
-
-    DEFAULT_BLOCK_SIZE = 8192
 
     def number_of_tasks(self):
         """How many `celery` tasks should be used for the calculations?"""
@@ -269,10 +318,6 @@ class ClassicalMixin(BasePSHAMixin):
         """
         sites = self.sites_to_compute()
         realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
-        if self["HAZARD_BLOCK_SIZE"]:
-            block_size = self["HAZARD_BLOCK_SIZE"]
-        else:
-            block_size = ClassicalMixin.DEFAULT_BLOCK_SIZE
 
         LOG.info("Going to run classical PSHA hazard for %s realizations "
                  "and %s sites" % (realizations, len(sites)))
@@ -281,6 +326,7 @@ class ClassicalMixin(BasePSHAMixin):
         stats.set_total(
             self.job_id, "classical:execute:realizations", realizations)
 
+        block_size = config.hazard_block_size()
         for start in xrange(0, len(sites), block_size):
             end = start + block_size
 
@@ -303,59 +349,8 @@ class ClassicalMixin(BasePSHAMixin):
                 map_serializer=self.serialize_quantile_hazard_map)
 
             # Done with this chunk, purge intermediate results from kvs.
-            self.release_curve_data_from_kvs(
-                data, realizations, quantiles, self.poes_hazard_maps,
-                kvs_keys_purged)
-
-    def release_curve_data_from_kvs(self, sites, realizations, quantiles, poes,
-                                    kvs_keys_purged):
-        """Purge the hazard curve data for the given `sites` from the kvs.
-
-        The parameters below will be used to construct kvs keys for
-            - hazard curves (including means and quantiles)
-            - hazard maps (including means)
-
-        :param list sites: the sites for which to purge content from the kvs
-        :param int sites: the number of logic tree passes for this calculation
-        :param list sites: the quantiles specified for this calculation
-        :param list poes: the probabilities of exceedence specified for this
-            calculation
-        :param kvs_keys_purged: a list only passed by tests who check the
-            kvs keys used/purged in the course of the calculation.
-        """
-        for realization in xrange(0, realizations):
-            template = kvs.tokens.hazard_curve_poes_key_template(
-                self.job_id, realization)
-            keys = [template % hash(site) for site in sites]
-            kvs.get_client().delete(*keys)
-            if kvs_keys_purged is not None:
-                kvs_keys_purged.extend(keys)
-
-        template = kvs.tokens.mean_hazard_curve_key_template(self.job_id)
-        keys = [template % hash(site) for site in sites]
-        kvs.get_client().delete(*keys)
-        if kvs_keys_purged is not None:
-            kvs_keys_purged.extend(keys)
-
-        for quantile in quantiles:
-            template = kvs.tokens.quantile_hazard_curve_key_template(
-                self.job_id, str(quantile))
-            keys = [template % hash(site) for site in sites]
-            for poe in poes:
-                template = kvs.tokens.quantile_hazard_map_key_template(
-                    self.job_id, poe, quantile)
-                keys.extend([template % hash(site) for site in sites])
-            kvs.get_client().delete(*keys)
-            if kvs_keys_purged is not None:
-                kvs_keys_purged.extend(keys)
-
-        for poe in poes:
-            template = kvs.tokens.mean_hazard_map_key_template(
-                self.job_id, poe)
-            keys = [template % hash(site) for site in sites]
-            kvs.get_client().delete(*keys)
-            if kvs_keys_purged is not None:
-                kvs_keys_purged.extend(keys)
+            release_data_from_kvs(self.job_id, data, realizations, quantiles,
+                                  self.poes_hazard_maps, kvs_keys_purged)
 
     def serialize_hazard_curve_of_realization(self, sites, realization):
         """
