@@ -78,7 +78,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
     def test_generate_hazard_curves_using_classical_psha(self):
 
-        def verify_realization_haz_curves_stored_to_kvs(hazengine):
+        def verify_realization_haz_curves_stored_to_kvs(hazengine, keys):
             """ This just tests to make sure there something in the KVS
             for each key in given list of keys. This does NOT test the
             actual results. """
@@ -92,13 +92,9 @@ class HazardEngineTestCase(unittest.TestCase):
                 for site in hazengine.sites_to_compute():
                     key = tokens.hazard_curve_poes_key(
                         hazengine.job_id, realization, site)
+                    self.assertTrue(key in keys, "Missing key %s" % key)
 
-                    value = self.kvs_client.get(key)
-                    # LOG.debug("kvs value is %s" % value)
-                    self.assertTrue(value is not None,
-                        "no non-empty value found at KVS key")
-
-        def verify_mean_haz_curves_stored_to_kvs(hazengine):
+        def verify_mean_haz_curves_stored_to_kvs(hazengine, keys):
             """ Make sure that the keys and non-empty values for mean
             hazard curves have been written to KVS."""
 
@@ -107,11 +103,9 @@ class HazardEngineTestCase(unittest.TestCase):
                 LOG.debug("verifying KVS entries for mean hazard curves")
                 for site in hazengine.sites_to_compute():
                     key = tokens.mean_hazard_curve_key(hazengine.job_id, site)
-                    value = self.kvs_client.get(key)
-                    self.assertTrue(
-                        value is not None, "no value found at KVS key")
+                    self.assertTrue(key in keys, "Missing key %s" % key)
 
-        def verify_mean_haz_maps_stored_to_kvs(hazengine):
+        def verify_mean_haz_maps_stored_to_kvs(hazengine, keys):
             """ Make sure that the keys and non-empty values for mean
             hazard maps have been written to KVS."""
 
@@ -125,11 +119,9 @@ class HazardEngineTestCase(unittest.TestCase):
                     for site in hazengine.sites_to_compute():
                         key = tokens.mean_hazard_map_key(
                             hazengine.job_id, site, poe)
-                        value = self.kvs_client.get(key)
-                        self.assertTrue(
-                            value is not None, "no value found at KVS key")
+                        self.assertTrue(key in keys, "Missing key %s" % key)
 
-        def verify_quantile_haz_curves_stored_to_kvs(hazengine):
+        def verify_quantile_haz_curves_stored_to_kvs(hazengine, keys):
             """ Make sure that the keys and non-empty values for quantile
             hazard curves have been written to KVS."""
 
@@ -142,11 +134,9 @@ class HazardEngineTestCase(unittest.TestCase):
                 for site in hazengine.sites_to_compute():
                     key = tokens.quantile_hazard_curve_key(
                         hazengine.job_id, site, quantile)
-                    value = self.kvs_client.get(key)
-                    self.assertTrue(
-                        value is not None, "no value found at KVS key")
+                    self.assertTrue(key in keys, "Missing key %s" % key)
 
-        def verify_quantile_haz_maps_stored_to_kvs(hazengine):
+        def verify_quantile_haz_maps_stored_to_kvs(hazengine, keys):
             """ Make sure that the keys and non-empty values for quantile
             hazard maps have been written to KVS."""
 
@@ -166,10 +156,8 @@ class HazardEngineTestCase(unittest.TestCase):
                         for site in hazengine.sites_to_compute():
                             key = tokens.quantile_hazard_map_key(
                                 hazengine.job_id, site, poe, quantile)
-                            value = self.kvs_client.get(key)
                             self.assertTrue(
-                                value is not None,
-                                "no value found at KVS key %s" % key)
+                                key in keys, "Missing key %s" % key)
 
         def verify_realization_haz_curves_stored_to_nrml(hazengine):
             """Tests that a NRML file has been written for each realization,
@@ -281,21 +269,22 @@ class HazardEngineTestCase(unittest.TestCase):
             helpers.testdata_path("classical_psha_simple/config.gem"))
 
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
-            hazengine.execute()
+            used_keys = []
+            hazengine.execute(used_keys)
 
-            verify_realization_haz_curves_stored_to_kvs(hazengine)
+            verify_realization_haz_curves_stored_to_kvs(hazengine, used_keys)
             verify_realization_haz_curves_stored_to_nrml(hazengine)
 
             # hazard curves: check results of mean and quantile computation
-            verify_mean_haz_curves_stored_to_kvs(hazengine)
-            verify_quantile_haz_curves_stored_to_kvs(hazengine)
+            verify_mean_haz_curves_stored_to_kvs(hazengine, used_keys)
+            verify_quantile_haz_curves_stored_to_kvs(hazengine, used_keys)
 
             verify_mean_haz_curves_stored_to_nrml(hazengine)
             verify_quantile_haz_curves_stored_to_nrml(hazengine)
 
             # hazard maps: check results of mean and quantile computation
-            verify_mean_haz_maps_stored_to_kvs(hazengine)
-            verify_quantile_haz_maps_stored_to_kvs(hazengine)
+            verify_mean_haz_maps_stored_to_kvs(hazengine, used_keys)
+            verify_quantile_haz_maps_stored_to_kvs(hazengine, used_keys)
 
             verify_mean_haz_maps_stored_to_nrml(hazengine)
             verify_quantile_haz_maps_stored_to_nrml(hazengine)

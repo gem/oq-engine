@@ -29,7 +29,6 @@ The following tasks are defined in the hazard engine:
 import json
 
 from celery.task import task
-from celery.task.sets import subtask
 
 from openquake import job
 from openquake import kvs
@@ -67,30 +66,25 @@ def generate_erf(job_id):
 @task
 @java.unpack_exception
 @stats.progress_indicator
-def compute_ground_motion_fields(job_id, site_list, history, realization,
-                                 seed):
+def compute_ground_motion_fields(job_id, sites, history, realization, seed):
     """ Generate ground motion fields """
-    # TODO(JMC): Use a block_id instead of a site_list
+    # TODO(JMC): Use a block_id instead of a sites list
     check_job_status(job_id)
     hazengine = job.Job.from_kvs(job_id)
     with mixins.Mixin(hazengine, hazjob.HazJobMixin):
-        hazengine.compute_ground_motion_fields(site_list, history, realization,
+        hazengine.compute_ground_motion_fields(sites, history, realization,
                                                seed)
 
 
-@task
+@task(ignore_result=True)
 @java.unpack_exception
 @stats.progress_indicator
-def compute_hazard_curve(job_id, site_list, realization, callback=None):
+def compute_hazard_curve(job_id, sites, realization):
     """ Generate hazard curve for a given site list. """
     check_job_status(job_id)
     hazengine = job.Job.from_kvs(job_id)
     with mixins.Mixin(hazengine, hazjob.HazJobMixin):
-        keys = hazengine.compute_hazard_curve(site_list, realization)
-
-        if callback:
-            subtask(callback).delay(job_id, site_list)
-
+        keys = hazengine.compute_hazard_curve(sites, realization)
         return keys
 
 
@@ -120,7 +114,7 @@ def compute_mgm_intensity(job_id, block_id, site_id):
     return json.JSONDecoder().decode(mgm)
 
 
-@task
+@task(ignore_result=True)
 @java.unpack_exception
 @stats.progress_indicator
 def compute_mean_curves(job_id, sites, realizations):
@@ -128,13 +122,13 @@ def compute_mean_curves(job_id, sites, realizations):
 
     check_job_status(job_id)
     HAZARD_LOG.info("Computing MEAN curves for %s sites (job_id %s)"
-            % (len(sites), job_id))
+                    % (len(sites), job_id))
 
     return classical_psha.compute_mean_hazard_curves(job_id, sites,
-        realizations)
+                                                     realizations)
 
 
-@task
+@task(ignore_result=True)
 @java.unpack_exception
 @stats.progress_indicator
 def compute_quantile_curves(job_id, sites, realizations, quantiles):
@@ -142,7 +136,7 @@ def compute_quantile_curves(job_id, sites, realizations, quantiles):
 
     check_job_status(job_id)
     HAZARD_LOG.info("Computing QUANTILE curves for %s sites (job_id %s)"
-            % (len(sites), job_id))
+                    % (len(sites), job_id))
 
-    return classical_psha.compute_quantile_hazard_curves(job_id, sites,
-        realizations, quantiles)
+    return classical_psha.compute_quantile_hazard_curves(
+        job_id, sites, realizations, quantiles)
