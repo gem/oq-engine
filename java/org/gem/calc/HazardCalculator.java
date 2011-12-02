@@ -62,14 +62,14 @@ public class HazardCalculator {
                     List<Site> siteList,
                     EqkRupForecastAPI erf,
                     Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
-                    List<Double> imlVals, double integrationDistance) {
+                    Double[] imlVals, double integrationDistance) {
         validateInput(siteList, erf, gmpeMap);
         if (imlVals == null) {
             String msg = "Array of intensity measure levels cannot be null";
             logger.error(msg);
             throw new IllegalArgumentException(msg);
         }
-        if (imlVals.isEmpty()) {
+        if (imlVals.length == 0) {
             String msg =
                     "Array of intensity measure levels must"
                             + " contain at least one value";
@@ -121,7 +121,7 @@ public class HazardCalculator {
                     List<Site> siteList,
                     EqkRupForecastAPI erf,
                     Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap,
-                    List<Double> imlVals, double integrationDistance) {
+                    Double[] imlVals, double integrationDistance) {
         Map<Site, DiscretizedFuncAPI> curves =
                 getHazardCurves(siteList, erf, gmpeMap, imlVals,
                         integrationDistance);
