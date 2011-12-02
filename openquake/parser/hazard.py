@@ -220,7 +220,8 @@ class HazardMapReader(producer.FileProducer):
     The attribute dictionary looks like:
     { "IMT": "PGA", "poE": 0.1, "IML": 0.5 }
 
-    A sample file is provided under docs/schema/examples (hazard-map.xml).
+    A sample file is provided in
+    openquake/nrml/schema/0.2/examples/hazard-map.xml.
 
     This parser currently doesn't support:
         * the </config /> element
