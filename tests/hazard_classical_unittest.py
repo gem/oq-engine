@@ -483,15 +483,36 @@ class ClassicalExecuteTestCase(helpers.TestMixin, unittest.TestCase):
         """
         data_slices = [self.sites[:3], self.sites[3:6], self.sites[6:]]
         # Make sure no real logic is invoked.
-        with helpers.patch('openquake.input.logictree.LogicTreeProcessor'):
+        with helpers.patch("openquake.input.logictree.LogicTreeProcessor"):
             self.mixin.execute()
             for method in self.methods:
-                mock = getattr(self.mixin, method).mock
-                self.assertEqual(3, mock.call_count)
+                mmock = getattr(self.mixin, method).mock
+                self.assertEqual(3, mmock.call_count)
                 for idx, data_len in enumerate([3, 3, 2]):
                     # Get the arguments for an invocation identified by `idx`.
-                    args = mock.call_args_list[idx][0]
+                    args = mmock.call_args_list[idx][0]
                     self.assertEqual(data_slices[idx], args[0])
+
+    def test_release_data_from_kvs_called(self):
+        """Make sure execute() calls release_data_from_kvs() properly.
+
+        We have 8 sites and a block size (`HAZARD_BLOCK_SIZE`) of 3 i.e.
+        the methods called by execute() will
+            - be called three times
+            - get passed 3, 3 and 2 sites on the 1st, 2nd and 3rd invocation
+              respectively.
+        """
+        data_slices = [self.sites[:3], self.sites[3:6], self.sites[6:]]
+        # Make sure no real logic is invoked.
+        fqn = "openquake.hazard.opensha.release_data_from_kvs"
+        with helpers.patch("openquake.input.logictree.LogicTreeProcessor"):
+            with helpers.patch(fqn) as rdfk:
+                self.mixin.execute()
+                self.assertEqual(3, rdfk.call_count)
+                for idx, data_len in enumerate([3, 3, 2]):
+                    # Get the arguments for an invocation identified by `idx`.
+                    args = rdfk.call_args_list[idx][0]
+                    self.assertEqual(data_slices[idx], args[1])
 
 
 class ReleaseDataFromKvsTestCase(helpers.TestMixin, unittest.TestCase):
