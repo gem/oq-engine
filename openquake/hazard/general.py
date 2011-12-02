@@ -27,7 +27,7 @@ from openquake import kvs
 from openquake import logs
 
 from openquake.input import logictree
-from openquake.utils import list_to_jdouble_array
+from openquake.java import list_to_jdouble_array
 
 from openquake.job.mixins import Mixin
 
