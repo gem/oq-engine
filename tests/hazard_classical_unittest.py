@@ -30,14 +30,14 @@ from openquake import shapes
 
 from openquake.hazard import opensha
 
-from tests.utils import helpers
+from tests.utils.helpers import patch, TestMixin, TestStore
 from tests.utils.tasks import (
     test_async_data_reflector, test_compute_hazard_curve, test_data_reflector)
 
 LOG = logs.LOG
 
 
-class DoCurvesTestCase(helpers.TestMixin, unittest.TestCase):
+class DoCurvesTestCase(TestMixin, unittest.TestCase):
     """Tests the behaviour of ClassicalMixin.do_curves()."""
 
     def __init__(self, *args, **kwargs):
@@ -75,7 +75,7 @@ class DoCurvesTestCase(helpers.TestMixin, unittest.TestCase):
         key = self.mixin.job_id
         for realization in xrange(2):
             key = "%s/%s" % (self.mixin.job_id, realization + 1)
-            helpers.TestStore.put(key, self.mock_results[realization])
+            TestStore.put(key, self.mock_results[realization])
             self.keys.append(key)
         LOG.debug("keys = '%s'" % self.keys)
         # Initialize the mixin instance.
@@ -87,7 +87,7 @@ class DoCurvesTestCase(helpers.TestMixin, unittest.TestCase):
     def tearDown(self):
         # Remove the canned result data from the KVS.
         for key in self.keys:
-            helpers.TestStore.remove(key)
+            TestStore.remove(key)
 
         self.unload_job_mixin()
 
@@ -109,7 +109,7 @@ class DoCurvesTestCase(helpers.TestMixin, unittest.TestCase):
         self.assertEqual(2, fake_serializer.number_of_calls)
 
 
-class DoMeansTestCase(helpers.TestMixin, unittest.TestCase):
+class DoMeansTestCase(TestMixin, unittest.TestCase):
     """Tests the behaviour of ClassicalMixin.do_means()."""
 
     def __init__(self, *args, **kwargs):
@@ -136,7 +136,7 @@ class DoMeansTestCase(helpers.TestMixin, unittest.TestCase):
     def tearDown(self):
         # Remove the canned result data from the KVS.
         for key in self.keys:
-            helpers.TestStore.remove(key)
+            TestStore.remove(key)
 
         self.unload_job_mixin()
 
@@ -152,7 +152,7 @@ class DoMeansTestCase(helpers.TestMixin, unittest.TestCase):
         # serializer function.
         fake_serializer.number_of_calls = 0
 
-        key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
+        key = TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.do_means(self.sites, 1,
                         curve_serializer=fake_serializer,
@@ -173,7 +173,7 @@ class DoMeansTestCase(helpers.TestMixin, unittest.TestCase):
 
         fake_serializer.number_of_calls = 0
 
-        key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
+        key = TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.do_means(self.sites, 1,
                         curve_serializer=lambda _: True,
@@ -197,7 +197,7 @@ class DoMeansTestCase(helpers.TestMixin, unittest.TestCase):
 
         fake_serializer.number_of_calls = 0
 
-        key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
+        key = TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.params["POES"] = "0.6 0.8"
         self.mixin.do_means(self.sites, 1,
@@ -216,7 +216,7 @@ class DoMeansTestCase(helpers.TestMixin, unittest.TestCase):
         for the specific assertion message.
         """
 
-        key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
+        key = TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.params["POES"] = "0.6 0.8"
         self.assertRaises(
@@ -234,7 +234,7 @@ class DoMeansTestCase(helpers.TestMixin, unittest.TestCase):
         for the specific assertion message.
         """
 
-        key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
+        key = TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.params["POES"] = "0.6 0.8"
         self.assertRaises(
@@ -245,14 +245,14 @@ class DoMeansTestCase(helpers.TestMixin, unittest.TestCase):
 
     def test_no_do_means_if_disabled(self):
         self.mixin.params['COMPUTE_MEAN_HAZARD_CURVE'] = 'false'
-        with helpers.patch('openquake.utils.tasks.distribute') as distribute:
+        with patch('openquake.utils.tasks.distribute') as distribute:
             self.mixin.do_means(self.sites, 1,
                                 curve_serializer=None,
                                 curve_task=None)
         self.assertEqual(distribute.call_count, 0)
 
 
-class DoQuantilesTestCase(helpers.TestMixin, unittest.TestCase):
+class DoQuantilesTestCase(TestMixin, unittest.TestCase):
     """Tests the behaviour of ClassicalMixin.do_quantiles()."""
 
     def __init__(self, *args, **kwargs):
@@ -274,7 +274,7 @@ class DoQuantilesTestCase(helpers.TestMixin, unittest.TestCase):
     def tearDown(self):
         # Remove the canned result data from the KVS.
         for key in self.keys:
-            helpers.TestStore.remove(key)
+            TestStore.remove(key)
 
         self.unload_job_mixin()
 
@@ -287,7 +287,7 @@ class DoQuantilesTestCase(helpers.TestMixin, unittest.TestCase):
 
         fake_serializer.number_of_calls = 0
 
-        key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
+        key = TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.do_quantiles(self.sites, 1, [0.2, 0.4],
                             curve_serializer=fake_serializer,
@@ -312,7 +312,7 @@ class DoQuantilesTestCase(helpers.TestMixin, unittest.TestCase):
                     "quantile_hazard_map!10!-122.8!38.0!0.4",
                     "quantile_hazard_map!10!-121.8!38.0!0.4"]
 
-        key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
+        key = TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.params["POES"] = "0.6 0.8"
         self.mixin.do_quantiles(
@@ -338,7 +338,7 @@ class DoQuantilesTestCase(helpers.TestMixin, unittest.TestCase):
 
         fake_serializer.number_of_calls = 0
 
-        key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
+        key = TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.do_quantiles(self.sites, 1, [],
                             curve_serializer=lambda _: True,
@@ -355,7 +355,7 @@ class DoQuantilesTestCase(helpers.TestMixin, unittest.TestCase):
         for the specific assertion message.
         """
 
-        key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
+        key = TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.params["POES"] = "0.6 0.8"
         self.assertRaises(
@@ -373,7 +373,7 @@ class DoQuantilesTestCase(helpers.TestMixin, unittest.TestCase):
         for the specific assertion message.
         """
 
-        key = helpers.TestStore.put(self.mixin.job_id, self.mock_results)
+        key = TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.params["POES"] = "0.6 0.8"
         self.assertRaises(
@@ -384,7 +384,7 @@ class DoQuantilesTestCase(helpers.TestMixin, unittest.TestCase):
             map_serializer=lambda _, __, ___: True, map_func=None)
 
 
-class NumberOfTasksTestCase(helpers.TestMixin, unittest.TestCase):
+class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
     """Tests the behaviour of ClassicalMixin.number_of_tasks()."""
 
     def setUp(self):
@@ -429,7 +429,7 @@ class NumberOfTasksTestCase(helpers.TestMixin, unittest.TestCase):
         self.assertRaises(ValueError, self.mixin.number_of_tasks)
 
 
-class ClassicalExecuteTestCase(helpers.TestMixin, unittest.TestCase):
+class ClassicalExecuteTestCase(TestMixin, unittest.TestCase):
     """Tests the behaviour of ClassicalMixin.execute()."""
 
     def __init__(self, *args, **kwargs):
@@ -457,7 +457,7 @@ class ClassicalExecuteTestCase(helpers.TestMixin, unittest.TestCase):
                                                 opensha.ClassicalMixin)
         # Initialize the mixin instance.
         self.mixin.params = dict(NUMBER_OF_LOGIC_TREE_SAMPLES=2,
-                                 WIDTH_OF_MFD_BIN=1, HAZARD_BLOCK_SIZE=3)
+                                 WIDTH_OF_MFD_BIN=1)
         self.mixin.calc = self.FakeLogicTreeProcessor()
         self.mixin.cache = dict()
         self.mixin.sites = self.sites
@@ -484,12 +484,15 @@ class ClassicalExecuteTestCase(helpers.TestMixin, unittest.TestCase):
         """
         data_slices = [self.sites[:3], self.sites[3:6], self.sites[6:]]
         # Make sure no real logic is invoked.
-        with helpers.patch('openquake.input.logictree.LogicTreeProcessor'):
-            self.mixin.execute()
-            for method in self.methods:
-                mock = getattr(self.mixin, method).mock
-                self.assertEqual(3, mock.call_count)
-                for idx, data_len in enumerate([3, 3, 2]):
-                    # Get the arguments for an invocation identified by `idx`.
-                    args = mock.call_args_list[idx][0]
-                    self.assertEqual(data_slices[idx], args[0])
+        with patch("openquake.input.logictree.LogicTreeProcessor"):
+            with patch("openquake.utils.config.hazard_block_size") as hbs:
+                hbs.return_value = 3
+                self.mixin.execute()
+                for method in self.methods:
+                    mock = getattr(self.mixin, method).mock
+                    self.assertEqual(3, mock.call_count)
+                    for idx, data_len in enumerate([3, 3, 2]):
+                        # Get the arguments for an invocation identified by
+                        # `idx`.
+                        args = mock.call_args_list[idx][0]
+                        self.assertEqual(data_slices[idx], args[0])
