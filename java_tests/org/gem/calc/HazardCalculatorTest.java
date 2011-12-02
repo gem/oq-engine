@@ -50,13 +50,14 @@ import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
+import static org.gem.calc.CalcTestHelper.mapLog;
 
 public class HazardCalculatorTest {
 
     private static List<Site> siteList;
     private static EqkRupForecastAPI erf;
     private static Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap;
-    private static List<Double> imlVals;
+    private static Double[] imlVals;
     private static double integrationDistance = 200.0;
     private static Random rn = new Random();
     private static Boolean correlationFlag = false;
@@ -173,8 +174,7 @@ public class HazardCalculatorTest {
      */
     @Test(expected = IllegalArgumentException.class)
     public void getHazardCurvesNullImlLevelsList() {
-        List<Double> imlVals = null;
-        HazardCalculator.getHazardCurves(siteList, erf, gmpeMap, imlVals,
+        HazardCalculator.getHazardCurves(siteList, erf, gmpeMap, null,
                 integrationDistance);
     }
 
@@ -184,8 +184,7 @@ public class HazardCalculatorTest {
      */
     @Test(expected = IllegalArgumentException.class)
     public void getHazardCurvesEmptyImlLevelsList() {
-        List<Double> imlVals = new ArrayList<Double>();
-        HazardCalculator.getHazardCurves(siteList, erf, gmpeMap, imlVals,
+        HazardCalculator.getHazardCurves(siteList, erf, gmpeMap, new Double[0],
                 integrationDistance);
     }
 
@@ -471,24 +470,11 @@ public class HazardCalculatorTest {
      * Set up intensity measure levels
      */
     private void setUpImlValues() {
-        imlVals = new ArrayList<Double>();
-        imlVals.add(Math.log(0.005));
-        imlVals.add(Math.log(0.007));
-        imlVals.add(Math.log(0.0098));
-        imlVals.add(Math.log(0.0137));
-        imlVals.add(Math.log(0.0192));
-        imlVals.add(Math.log(0.0269));
-        imlVals.add(Math.log(0.0376));
-        imlVals.add(Math.log(0.0527));
-        imlVals.add(Math.log(0.0738));
-        imlVals.add(Math.log(0.103));
-        imlVals.add(Math.log(0.145));
-        imlVals.add(Math.log(0.203));
-        imlVals.add(Math.log(0.284));
-        imlVals.add(Math.log(0.397));
-        imlVals.add(Math.log(0.556));
-        imlVals.add(Math.log(0.778));
-        imlVals.add(Math.log(1.09));
+        imlVals = mapLog(new Double[] {
+            0.005, 0.007, 0.0098, 0.0137,
+            0.0192, 0.0269, 0.0376, 0.0527,
+            0.0738, 0.103, 0.145, 0.203, 0.284,
+            0.397, 0.556, 0.778, 1.09});
     }
 
     /**

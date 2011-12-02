@@ -14,7 +14,7 @@ import org.opensha.sha.faultSurface.EvenlyGriddedSurfaceAPI;
 @Ignore
 public class NonPoissonianERF extends EqkRupForecast
 {
-	public class NonPoissonianEqkSource extends ProbEqkSource
+	public static class NonPoissonianEqkSource extends ProbEqkSource
 	{
 		public boolean isPoissonianSource()
 		{

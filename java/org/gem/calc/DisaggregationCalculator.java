@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.commons.collections.Closure;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.function.ArbitrarilyDiscretizedFunc;
 import org.opensha.commons.data.function.DiscretizedFuncAPI;
@@ -25,8 +24,14 @@ import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.DepthTo2pt5kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam;
-import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam.Vs30Type;
 import org.opensha.sha.util.TectonicRegionType;
+import static org.gem.Utils.digitize;
+import static org.gem.calc.CalcUtils.assertPoissonian;
+import static org.gem.calc.CalcUtils.getGMV;
+import static org.gem.calc.CalcUtils.notNull;
+import static org.gem.calc.CalcUtils.isSorted;
+import static org.gem.calc.CalcUtils.lenGE;
+import static org.gem.calc.CalcUtils.assertVs30TypeIsValid;
 import static org.apache.commons.collections.CollectionUtils.forAllDo;
 
 import org.gem.calc.DisaggregationResult;
@@ -48,58 +53,6 @@ public class DisaggregationCalculator {
      */
     private final long[] dims;
 
-    /**
-     * Used for checking that bin edge lists are not null;
-     */
-    private static final Closure notNull = new Closure()
-    {
-
-        public void execute(Object o)
-        {
-            if (o == null)
-            {
-                throw new IllegalArgumentException("Bin edges should not be null");
-            }
-        }
-    };
-
-    /**
-     * Used for checking that bin edge lists have a length greater than or equal
-     * to 2.
-     */
-    private static final Closure lenGE2 = new Closure()
-    {
-
-        public void execute(Object o)
-        {
-            if (o instanceof Object[])
-            {
-                Object[] oArray = (Object[]) o;
-                if (oArray.length < 2)
-                {
-                    throw new IllegalArgumentException("Bin edge arrays must have a length >= 2");
-                }
-            }
-        }
-    };
-
-    private static final Closure isSorted = new Closure()
-    {
-
-        public void execute(Object o) {
-            if (o instanceof Object[])
-            {
-                Object[] oArray = (Object[]) o;
-                Object[] sorted = Arrays.copyOf(oArray, oArray.length);
-                Arrays.sort(sorted);
-                if (!Arrays.equals(sorted, oArray))
-                {
-                    throw new IllegalArgumentException("Bin edge arrays must be arranged in ascending order");
-                }
-            }
-        }
-    };
-
     public DisaggregationCalculator(
             Double[] latBinEdges,
             Double[] lonBinEdges,
@@ -111,7 +64,7 @@ public class DisaggregationCalculator {
 
         // Validation for the bin edges:
         forAllDo(binEdges, notNull);
-        forAllDo(binEdges, lenGE2);
+        forAllDo(binEdges, lenGE(2));
         forAllDo(binEdges, isSorted);
 
         this.latBinLims = latBinEdges;
@@ -137,7 +90,7 @@ public class DisaggregationCalculator {
             GEM1ERF erf,
             Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap,
             double poe,
-            List<Double> imls,
+            Double[] imls,
             String vs30Type,
             double vs30Value,
             double depthTo1pt0KMPS,
@@ -257,18 +210,6 @@ public class DisaggregationCalculator {
                 && inRange(this.epsilonBinLims, epsilon);
     }
 
-    public static void assertPoissonian(EqkRupForecastAPI erf)
-    {
-        for (int i = 0; i < erf.getSourceList().size(); i++)
-        {
-            ProbEqkSource source = erf.getSource(i);
-            if (!source.isPoissonianSource()) {
-                throw new RuntimeException(
-                        "Sources must be Poissonian. (Non-Poissonian source are not currently supported.)");
-            }
-        }
-    }
-
     public static void assertNonZeroStdDev(
             Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> imrMap)
     {
@@ -281,15 +222,6 @@ public class DisaggregationCalculator {
                 throw new RuntimeException(
                         "Attenuation relationship must have a non-zero standard deviation.");
             }
-        }
-    }
-
-    public static void assertVs30TypeIsValid(String vs30Type) {
-        try {
-            Vs30Type.valueOf(vs30Type);
-        }
-        catch (IllegalArgumentException e) {
-            throw new RuntimeException(e);
         }
     }
 
@@ -322,19 +254,6 @@ public class DisaggregationCalculator {
         return result;
     }
 
-    public static int digitize(Double[] bins, Double value)
-    {
-        for (int i = 0; i < bins.length - 1; i++)
-        {
-            if (value >= bins[i] && value < bins[i + 1])
-            {
-                return i;
-            }
-        }
-        throw new IllegalArgumentException(
-                "Value '" + value + "' is outside the expected range");
-    }
-
     /**
      * Given a LocationList and a Location target, get the Location in the
      * LocationList which is closest to the target Location.
@@ -360,42 +279,6 @@ public class DisaggregationCalculator {
             }
         }
         return closest;
-    }
-
-    /**
-     * Extract a GMV (Ground Motion Value) for a given curve and PoE
-     * (Probability of Exceedance) value.
-     *
-     * IML (Intensity Measure Level) values make up the X-axis of the curve.
-     * IMLs are arranged in ascending order. The lower the IML value, the
-     * higher the PoE value (Y value) on the curve. Thus, it is assumed that
-     * hazard curves will always have a negative slope.
-     *
-     * If the input poe value is > the max Y value in the curve, extrapolate
-     * and return the X value corresponding to the max Y value (the first Y
-     * value).
-     * If the input poe value is < the min Y value in the curve, extrapolate
-     * and return the X value corresponding to the min Y value (the last Y
-     * value).
-     * Otherwise, interpolate an X value in the curve given the input PoE.
-     * @param hazardCurve
-     * @param poe Probability of Exceedance value
-     * @return GMV corresponding to the input poe
-     */
-    public static Double getGMV(DiscretizedFuncAPI hazardCurve, double poe)
-    {
-        if (poe > hazardCurve.getY(0))
-        {
-            return hazardCurve.getX(0);
-        }
-        else if (poe < hazardCurve.getY(hazardCurve.getNum() - 1))
-        {
-            return hazardCurve.getX(hazardCurve.getNum() - 1);
-        }
-        else
-        {
-            return hazardCurve.getFirstInterpolatedX(poe);
-        }
     }
 
     /**
