@@ -41,7 +41,6 @@ from tests.utils import helpers
 
 def HAZARD_MAP_DATA(r1, r2):
     data = []
-    poes = imls = [0.1] * 20
 
     for lon in xrange(-179, -179 + r1):
         for lat in xrange(-90, + r2):
