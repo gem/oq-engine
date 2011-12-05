@@ -1,54 +1,193 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
-	targetNamespace="http://openquake.org/xmlns/nrml/0.1"
-	xmlns:nrml="http://openquake.org/xmlns/nrml/0.1"
-	xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" elementFormDefault="qualified">
-	<!-- import -->
-	<xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
-		schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
-		<!-- schemaLocation="./gml.xsd"/> -->
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns:nrml="http://openquake.org/xmlns/nrml/0.2"
+           xmlns="http://openquake.org/xmlns/nrml/0.2"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.2"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gmlsf.xsd"/>
 	<xs:include schemaLocation="nrml_common.xsd"/>
 
-	<xs:element name="AssetInstance" type="nrml:AssetType" substitutionGroup="nrml:Asset"/>
-	<xs:element name="DiscreteVulnerability" type="nrml:ModelType" substitutionGroup="nrml:Model"/>
-	<xs:element name="IntensityMeasureLevels" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
-	<xs:element name="LossCurve" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
-	<xs:element name="LossCurvePE" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
-	<xs:element name="LossRatioCurve" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
-		<xs:element name="LossRatioCurvePE" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
-	<xs:element name="ExposureList" type="nrml:AssetPortfolioType"/>	
-	<xs:element name="ContinuousVulnerabilitySet" type="nrml:ModelListType"/>
-	<xs:element name="DiscreteVulnerabilitySet" type="nrml:ModelListType"/>
-	<xs:element name="LossCurveList" type="nrml:CurveListType"/>
-	<xs:element name="LossRatioCurveList" type="nrml:CurveListType"/>
-	<xs:element name="ExposurePortfolio">
-		<xs:complexType>
-			<xs:sequence minOccurs="1">
-				<xs:element ref="nrml:Config"/>
-				<xs:element ref="nrml:ExposureList"/>
-			</xs:sequence>
-		</xs:complexType>
-	</xs:element>
-	<xs:element name="RiskResult">
-		<xs:complexType>
-			<xs:sequence minOccurs="1">
-				<xs:element ref="nrml:Config"/>
-				<xs:choice>
-					<xs:element ref="nrml:LossCurveList"/>
-					<xs:element ref="nrml:LossRatioCurveList"/>
-				</xs:choice>
-			</xs:sequence>
-		</xs:complexType>
-	</xs:element>
-	<xs:element name="VulnerabilityModel">
-		<xs:complexType>
-			<xs:sequence minOccurs="1">
-				<xs:element ref="nrml:Config"/>
-				<xs:choice>
-					<xs:element ref="nrml:DiscreteVulnerabilitySet"/>
-					<xs:element ref="nrml:ContinuousVulnerabilitySet"/>
-				</xs:choice>
-			</xs:sequence>
-		</xs:complexType>
-	</xs:element>
+    <!-- ============================================================= -->
+    
+    <xs:complexType name="AssetValue">
+        <xs:simpleContent>
+            <xs:extension base="NonNegativeDoubleType">
+                <xs:attribute name="unit" type="AssetValueUnit"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <!-- ============================================================= -->
+    
+    <xs:simpleType name="AssetCategory">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="population"/>
+            <xs:enumeration value="buildings"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:simpleType name="LossCategory">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="fatalities"/>
+            <xs:enumeration value="economic_loss"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:simpleType name="AssetValueUnit">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="USD"/>
+            <xs:enumeration value="EUR"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <!-- ============================================================= -->
+    
+    <xs:complexType name="DiscreteVulnerabilitySet">
+        <xs:sequence>
+            <xs:element name="IML" type="IMLType"/>
+            <xs:element name="discreteVulnerability" type="DiscreteVulnerability" minOccurs="1" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="vulnerabilitySetID" type="xs:string" use="required"/>
+        <xs:attribute name="assetCategory" type="AssetCategory" use="required"/>
+        <xs:attribute name="lossCategory" type="LossCategory" use="required"/>
+    </xs:complexType>
+    
+    <xs:complexType name="DiscreteVulnerability">
+        <xs:sequence>
+            <xs:element name="lossRatio" type="NormalizedDoubleList"/>
+            <xs:element name="coefficientsVariation" type="gml:doubleList"/>
+        </xs:sequence>
+        <xs:attribute name="vulnerabilityFunctionID" type="xs:string" use="required"/>
+        <xs:attribute name="probabilisticDistribution" type="ProbabilisticDistributionType" use="required"/>
+    </xs:complexType>
+
+    <!-- ============================================================= -->
+
+    <xs:complexType name="LossRatioCurve">
+        <xs:sequence>
+            <xs:element name="lossRatio" type="NormalizedDoubleList" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="poE" type="NormalizedDoubleList" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="endBranchLabel" type="xs:string"/>
+    </xs:complexType>
+
+    <xs:complexType name="LossCurve">
+        <xs:sequence>
+            <xs:element name="loss" type="NonNegativeDoubleList" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="poE" type="NormalizedDoubleList" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="endBranchLabel" type="xs:string"/>
+    </xs:complexType>
+
+    <xs:complexType name="LossRatioCurves">
+        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+            <xs:element name="lossRatioCurve" type="LossRatioCurve"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="LossCurves">
+        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+            <xs:element name="lossCurve" type="LossCurve"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- GML substitution groups -->
+
+    <xs:element name="exposureList" type="ExposureList" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="ExposureList">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element ref="assetDefinition" minOccurs="0" maxOccurs="unbounded"/>
+                </xs:sequence>
+                <xs:attribute name="assetCategory" type="AssetCategory" use="required"/>
+                <xs:attribute name="lossCategory" type="LossCategory" use="required"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:element name="lossCurveList" type="AssetList" substitutionGroup="gml:_Feature"/>
+    <xs:element name="lossRatioCurveList" type="AssetList" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="AssetList">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element ref="asset" minOccurs="0" maxOccurs="unbounded"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:element name="_abstractAsset" type="FieldNode" substitutionGroup="gml:_Feature" abstract="true"/>
+
+    <xs:element name="asset" type="Asset" substitutionGroup="_abstractAsset"/>
+    <xs:complexType name="Asset">
+        <xs:complexContent>
+            <xs:extension base="FieldNode">
+                <xs:sequence>
+                    <xs:choice minOccurs="0" maxOccurs="2">
+                        <xs:element name="lossRatioCurves" type="LossRatioCurves"/>
+                        <xs:element name="lossCurves" type="LossCurves"/>
+                    </xs:choice>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:element name="assetDefinition" type="AssetDefinition" substitutionGroup="_abstractAsset"/>
+    <xs:complexType name="AssetDefinition">
+        <xs:complexContent>
+            <xs:extension base="FieldNode">
+                <xs:sequence>
+                    <xs:element name="assetDescription" type="xs:string" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="vulnerabilityFunctionReference" type="xs:string"/>
+                    <xs:element name="structureCategory" type="xs:string"/>
+                    <xs:element name="assetValue" type="AssetValue"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <!-- child elements of nrml -->
+    <xs:element name="riskResult" type="RiskResult" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="RiskResult">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
+                    <xs:choice>
+                        <xs:element ref="lossCurveList"/>
+                        <xs:element ref="lossRatioCurveList"/>
+                    </xs:choice>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="exposurePortfolio" type="ExposurePortfolio" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="ExposurePortfolio">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
+                    <xs:element ref="exposureList"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:element name="vulnerabilityModel" type="VulnerabilityModel"/>
+    <xs:complexType name="VulnerabilityModel">
+        <xs:sequence>
+            <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
+            <xs:choice minOccurs="1" maxOccurs="unbounded">
+                <xs:element name="discreteVulnerabilitySet" type="DiscreteVulnerabilitySet"/>
+                <xs:element name="continuousVulnerabilitySet" type="xs:anyType"/>
+            </xs:choice>
+        </xs:sequence>
+    </xs:complexType>
+
 </xs:schema>
