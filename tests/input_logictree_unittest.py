@@ -66,7 +66,7 @@ class _TesteableGMPELogicTree(logictree.GMPELogicTree):
 def _make_nrml(content):
     return """\
     <nrml xmlns:gml="http://www.opengis.net/gml"\
-          xmlns="http://openquake.org/xmlns/nrml/0.2"\
+          xmlns="http://openquake.org/xmlns/nrml/0.3"\
           gml:id="n1">\
         %s
     </nrml>""" % content
@@ -214,7 +214,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             'screwed_schema', {'screwed_schema': source}, 'base',
             logictree.ParsingError
         )
-        error = "'{http://openquake.org/xmlns/nrml/0.2}logicTreeSet': " \
+        error = "'{http://openquake.org/xmlns/nrml/0.3}logicTreeSet': " \
                 "This element is not expected."
         self.assertTrue(error in exc.message,
                         "wrong exception message: %s" % exc.message)
