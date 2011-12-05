@@ -3,8 +3,6 @@
 
 import decimal
 
-from openquake import java
-
 
 def round_float(value):
     """
@@ -30,15 +28,3 @@ def round_float(value):
         decimal.Decimal(str(value)).quantize(
             decimal.Decimal(quantize_str),
             rounding=decimal.ROUND_HALF_EVEN))
-
-
-def list_to_jdouble_array(float_list):
-    """Convert a 1D list of floats to a 1D Java Double[] (as a jpype object).
-    """
-    jp = java.jvm()
-    jdouble = jp.JArray(jp.java.lang.Double)(len(float_list))
-
-    for i, val in enumerate(float_list):
-        jdouble[i] = jp.JClass('java.lang.Double')(val)
-
-    return jdouble
