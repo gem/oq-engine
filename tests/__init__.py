@@ -22,8 +22,8 @@ from db_fields_unittest import *
 from db_loader_unittest import *
 from db_loader_unittest import *
 from db_routers_unittest import *
-from deterministic_hazard_unittest import *
-from deterministic_risk_unittest import *
+from scenario_hazard_unittest import *
+from scenario_risk_unittest import *
 from disaggregation_unittest import *
 from disagg_subsets_unittest import *
 from handlers_unittest import *
