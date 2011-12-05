@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml" 
+      xmlns="http://openquake.org/xmlns/nrml/0.2"
+      gml:id="n1">
+      
+    <!-- hazardResult is a gml:Feature -->
+    <hazardResult gml:id="hr1">
+    
+        <config> 
+            <!-- TODO: is this a good place for these attributes? -->
+            <hazardProcessing investigationTimeSpan="50.0" IDmodel="PGA_1_1" saPeriod="0.1" saDamping="0.2" />
+        </config>
+        
+        <!-- one hazardResult instance file can contain several hazardCurveField elements -->
+        <!-- hazardCurveField is a gml:Feature -->
+        <hazardCurveField gml:id="hcl_1_1" endBranchLabel="1_1">
+            
+            <IML IMT="PGA">5.0000e-03 7.0000e-03 1.3700e-02</IML>
+            
+            <!-- HCNode is a gml:Feature -->
+            <HCNode gml:id="hc1">
+                <site>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-122.5000 37.5000</gml:pos>
+                    </gml:Point>
+                </site>
+                
+                <hazardCurve>
+                    <poE>9.8728e-01 9.8266e-01 9.4957e-01</poE>
+                </hazardCurve>
+            </HCNode>
+            
+            <HCNode gml:id="hc2">
+                <site>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-123.5000 37.5000</gml:pos>
+                    </gml:Point>
+                </site>
+                
+                <hazardCurve>
+                    <poE>9.8728e-02 9.8266e-02 9.4957e-02</poE>
+                </hazardCurve>
+            </HCNode>
+            
+        </hazardCurveField>
+        
+        <!-- second hazardCurveField, for a different endBranchLabel -->
+        <hazardCurveField gml:id="hcl_1_2" endBranchLabel="1_2">
+            
+            <IML IMT="PGA">0.0001 0.0002 0.0003</IML>
+            
+            <HCNode gml:id="hc3">
+                <site>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-125.5000 37.5000</gml:pos>
+                    </gml:Point>
+                </site>
+                
+                <hazardCurve investigationTimeSpan="100.0">
+                    <!-- Re-define IML values and investigationTimeSpan 
+                         in hazardCurve element. This should
+                         be possible in order to make the HazardCurve type complete,
+                         although it's probably not required in a hazardResult type
+                         document. -->
+                    <IML IMT="PGA">6.0000e-03 8.0000e-03 1.400e-02</IML>
+                    <poE>9.3e-01 9.2e-01 9.1e-01</poE>
+                </hazardCurve>
+            </HCNode>
+        </hazardCurveField>
+        
+        <!-- third hazardCurveField, a statistical summary -->
+        <hazardCurveField gml:id="hcl_1_3" statistics="quantile" quantileValue="0.6">
+            
+            <IML IMT="PGA">0.0001 0.0002 0.0003</IML>
+            
+            <HCNode gml:id="hc4">
+                <site>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-125.5000 37.5000</gml:pos>
+                    </gml:Point>
+                </site>
+                
+                <hazardCurve>
+                    <poE>9.2e-01 9.15e-01 9.05e-01</poE>
+                </hazardCurve>
+            </HCNode>
+        </hazardCurveField>
+        
+    </hazardResult>
+</nrml>
