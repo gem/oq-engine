@@ -1,0 +1,114 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns:qml="http://quakeml.org/xmlns/quakeml/1.1"
+      xmlns="http://openquake.org/xmlns/nrml/0.2"
+      gml:id="n1">
+    
+    <hazardResult gml:id="hr1">
+        <config>
+            <hazardProcessing investigationTimeSpan="50.0"/>
+        </config>
+        
+        <groundMotionFieldSet gml:id="gmfs_1">
+        
+            <gml:description>Optional description element</gml:description>
+            
+            <GMPEParameters IMT="PGA"/>
+            
+            <pointRupture gml:id="pr_1">
+                
+                <magnitude type="Mw">6.5</magnitude>
+                <tectonicRegion>Active Shallow Crust</tectonicRegion>
+
+                <focalMechanism publicID="smi:local/1">
+                    <qml:nodalPlanes>
+                        <qml:nodalPlane1>
+                            <qml:strike>
+                                <qml:value>0.0</qml:value>
+                            </qml:strike>
+                            <qml:dip>
+                                <qml:value>90.0</qml:value>
+                            </qml:dip>
+                            <qml:rake>
+                                <qml:value>0.0</qml:value>
+                            </qml:rake>
+                        </qml:nodalPlane1>
+                    </qml:nodalPlanes>
+                </focalMechanism>
+                
+                <hypocenterLocation>
+                    <gml:Point srsName="urn:ogc:def:crs:EPSG::4979">
+                        <gml:pos>-124.704 40.363 30.0</gml:pos>
+                    </gml:Point>
+                </hypocenterLocation>
+            </pointRupture>
+            
+            <pointRupture gml:id="pr_2">
+                
+                <magnitude type="Mw">7.5</magnitude>
+                <tectonicRegion>Active Shallow Crust</tectonicRegion>
+
+                <focalMechanism publicID="smi:local/1">
+                    <qml:nodalPlanes>
+                        <qml:nodalPlane1>
+                            <qml:strike>
+                                <qml:value>0.0</qml:value>
+                            </qml:strike>
+                            <qml:dip>
+                                <qml:value>60.0</qml:value>
+                            </qml:dip>
+                            <qml:rake>
+                                <qml:value>0.0</qml:value>
+                            </qml:rake>
+                        </qml:nodalPlane1>
+                    </qml:nodalPlanes>
+                </focalMechanism>
+                
+                <hypocenterLocation>
+                    <gml:Point srsName="urn:ogc:def:crs:EPSG::4979">
+                        <gml:pos>-134.6 35.3 20.0</gml:pos>
+                    </gml:Point>
+                </hypocenterLocation>
+            </pointRupture>
+            
+            <GMF gml:id="gmf_1" ruptureReference="pr_1">
+                <GMFNode gml:id="gmf_1_1">
+                    <site>
+                        <gml:Point srsName="epsg:4326">
+                            <gml:pos>-116.0 41.0</gml:pos>
+                        </gml:Point>
+                    </site>
+                    <groundMotion>0.2</groundMotion>
+                </GMFNode>
+                <GMFNode gml:id="gmf_1_2">
+                    <site>
+                        <gml:Point srsName="epsg:4326">
+                            <gml:pos>-118.0 41.0</gml:pos>
+                        </gml:Point>
+                    </site>
+                    <groundMotion>0.3</groundMotion>
+                </GMFNode>
+            </GMF>
+            
+            <GMF gml:id="gmf_2" ruptureReference="pr_2">
+                <GMFNode gml:id="gmf_2_1">
+                    <site>
+                        <gml:Point srsName="epsg:4326">
+                            <gml:pos>-116.0 41.0</gml:pos>
+                        </gml:Point>
+                    </site>
+                    <groundMotion>0.7</groundMotion>
+                </GMFNode>
+                <GMFNode gml:id="gmf_2_2">
+                    <site>
+                        <gml:Point srsName="epsg:4326">
+                            <gml:pos>-118.0 41.0</gml:pos>
+                        </gml:Point>
+                    </site>
+                    <groundMotion>0.6</groundMotion>
+                </GMFNode>
+            </GMF>
+        </groundMotionFieldSet>
+        
+    </hazardResult>
+</nrml>
