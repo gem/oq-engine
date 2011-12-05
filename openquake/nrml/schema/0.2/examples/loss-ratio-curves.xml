@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml" 
+      xmlns="http://openquake.org/xmlns/nrml/0.2"
+      gml:id="n1">
+      
+    <!-- riskResult is a gml:Feature -->
+    <riskResult gml:id="rr1">
+        <config/>
+        
+        <lossRatioCurveList gml:id="lossRatioCurveList_1">
+        
+            <asset gml:id="asset_1">
+                <site>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-117.0 30.0</gml:pos>
+                    </gml:Point>
+                </site>
+                
+                <lossRatioCurves>
+                    <lossRatioCurve endBranchLabel="vf_1">
+                        <lossRatio>0.0 0.2 0.4</lossRatio>
+                        <poE>0.4 0.2 0.1</poE>
+                    </lossRatioCurve>
+                    <lossRatioCurve endBranchLabel="vf_2">
+                        <lossRatio>0.0 0.5 0.8</lossRatio>
+                        <poE>0.2 0.1 0.05</poE>
+                    </lossRatioCurve>
+                </lossRatioCurves>
+            </asset>
+
+            <asset gml:id="asset_2">
+                <site>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-117.0 35.0</gml:pos>
+                    </gml:Point>
+                </site>
+                
+                <lossRatioCurves>
+                    <lossRatioCurve endBranchLabel="vf_3">
+                        <lossRatio>0.0 0.0001 0.0002</lossRatio>
+                        <poE>0.6 0.3 0.1</poE>
+                    </lossRatioCurve>
+                    
+                    <!-- loss ratio curve with no explicit vuln function, should this be allowed? 
+                         Could be useful to "just plot" a loss ratio curve -->
+                    <lossRatioCurve>
+                        <lossRatio>0.0 0.0004 0.0008</lossRatio>
+                        <poE>0.5 0.2 0.05</poE>
+                    </lossRatioCurve>
+                </lossRatioCurves>
+            </asset>
+
+        </lossRatioCurveList>
+    </riskResult>
+</nrml>
