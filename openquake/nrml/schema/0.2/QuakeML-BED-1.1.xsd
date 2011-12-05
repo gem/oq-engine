@@ -1,0 +1,547 @@
+<?xml version="1.0"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:qml="http://quakeml.org/xmlns/quakeml/1.1" targetNamespace="http://quakeml.org/xmlns/quakeml/1.1" elementFormDefault="qualified" attributeFormDefault="unqualified">
+  <xs:simpleType name="ResourceIdentifier">
+    <xs:restriction base="xs:anyURI">
+      <xs:pattern value="(smi|quakeml):[\w\d][\w\d\-\.\*\(\)_~']{2,}/[\w\d\-\.\*\(\)_~'][\w\d\-\.\*\(\)\+\?_~'=,;#/&amp;]*"/> 
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="ResourceReference">
+    <xs:restriction base="qml:ResourceIdentifier"/>
+  </xs:simpleType>
+  <xs:simpleType name="OriginUncertaintyDescription">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="horizontal uncertainty"/>
+      <xs:enumeration value="uncertainty ellipse"/>
+      <xs:enumeration value="confidence ellipsoid"/>
+      <xs:enumeration value="probability density function"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="MomentTensorStatus">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="standard CMT solution"/>
+      <xs:enumeration value="quick CMT solution"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="OriginDepthType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="from location"/>
+      <xs:enumeration value="from moment tensor inversion"/>
+      <xs:enumeration value="from modeling of broad-band P waveforms"/>
+      <xs:enumeration value="constrained by depth phases"/>
+      <xs:enumeration value="constrained by direct phases"/>
+      <xs:enumeration value="operator assigned"/>
+      <xs:enumeration value="other"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="OriginType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="hypocenter"/>
+      <xs:enumeration value="centroid"/>
+      <xs:enumeration value="amplitude"/>
+      <xs:enumeration value="macroseismic"/>
+      <xs:enumeration value="rupture start"/>
+      <xs:enumeration value="rupture end"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="EvaluationMode">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="manual"/>
+      <xs:enumeration value="automatic"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="EvaluationStatus">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="preliminary"/>
+      <xs:enumeration value="confirmed"/>
+      <xs:enumeration value="reviewed"/>
+      <xs:enumeration value="final"/>
+      <xs:enumeration value="rejected"/>
+      <xs:enumeration value="reported"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="PickOnset">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="emergent"/>
+      <xs:enumeration value="impulsive"/>
+      <xs:enumeration value="questionable"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="MomentTensorMethod">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="CMT - general moment tensor"/>
+      <xs:enumeration value="CMT - moment tensor with zero trace"/>
+      <xs:enumeration value="CMT - double-couple source"/>
+      <xs:enumeration value="teleseismic"/>
+      <xs:enumeration value="regional"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="DataUsedWaveType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="body waves"/>
+      <xs:enumeration value="P body waves"/>
+      <xs:enumeration value="long-period body waves"/>
+      <xs:enumeration value="surface waves"/>
+      <xs:enumeration value="intermediate-period surface waves"/>
+      <xs:enumeration value="long-period mantle waves"/>
+      <xs:enumeration value="unknown"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="EventDescriptionType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="felt report"/>
+      <xs:enumeration value="Flinn-Engdahl region"/>
+      <xs:enumeration value="local time"/>
+      <xs:enumeration value="tectonic summary"/>
+      <xs:enumeration value="nearest cities"/>
+      <xs:enumeration value="earthquake name"/>
+      <xs:enumeration value="region name"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="EventType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="earthquake"/>
+      <xs:enumeration value="induced earthquake"/>
+      <xs:enumeration value="quarry blast"/>
+      <xs:enumeration value="explosion"/>
+      <xs:enumeration value="chemical explosion"/>
+      <xs:enumeration value="nuclear explosion"/>
+      <xs:enumeration value="landslide"/>
+      <xs:enumeration value="rockslide"/>
+      <xs:enumeration value="snow avalanche"/>
+      <xs:enumeration value="debris avalanche"/>
+      <xs:enumeration value="mine collapse"/>
+      <xs:enumeration value="building collapse"/>
+      <xs:enumeration value="volcanic eruption"/>
+      <xs:enumeration value="meteor impact"/>
+      <xs:enumeration value="plane crash"/>
+      <xs:enumeration value="sonic boom"/>
+      <xs:enumeration value="not existing"/>
+      <xs:enumeration value="null"/>
+      <xs:enumeration value="other"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="EventTypeCertainty">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="known"/>
+      <xs:enumeration value="suspected"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="SourceTimeFunctionType">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="box car"/>
+      <xs:enumeration value="triangle"/>
+      <xs:enumeration value="trapezoid"/>
+      <xs:enumeration value="unknown"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:simpleType name="PickPolarity">
+    <xs:restriction base="xs:string">
+      <xs:enumeration value="positive"/>
+      <xs:enumeration value="negative"/>
+      <xs:enumeration value="undecidable"/>
+    </xs:restriction>
+  </xs:simpleType>
+  <xs:complexType name="TimeQuantity">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="value" type="xs:dateTime" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="uncertainty" type="xs:double" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="lowerUncertainty" type="xs:double" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="upperUncertainty" type="xs:double" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="confidenceLevel" type="xs:double" minOccurs="0" maxOccurs="1"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="CreationInfo">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="agencyID" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="agencyURI" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="author" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="authorURI" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="creationTime" type="xs:dateTime" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="version" type="xs:string" minOccurs="0" maxOccurs="1"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="EventDescription">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="text" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="type" type="qml:EventDescriptionType" minOccurs="0" maxOccurs="1"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="Phase">
+    <xs:simpleContent>
+      <xs:extension base="xs:string"/>
+    </xs:simpleContent>
+  </xs:complexType>
+  <xs:complexType name="Comment">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="text" type="xs:string" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="creationInfo" type="qml:CreationInfo" minOccurs="0" maxOccurs="1"/>
+    </xs:choice>
+    <xs:attribute name="id" type="qml:ResourceReference"/>
+  </xs:complexType>
+  <xs:complexType name="Axis">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="azimuth" type="qml:RealQuantity" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="plunge" type="qml:RealQuantity" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="length" type="qml:RealQuantity" minOccurs="1" maxOccurs="1"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="PrincipalAxes">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="tAxis" type="qml:Axis" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="pAxis" type="qml:Axis" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="nAxis" type="qml:Axis" minOccurs="0" maxOccurs="1"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="DataUsed">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="waveType" type="qml:DataUsedWaveType" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="stationCount" type="xs:integer" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="componentCount" type="xs:integer" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="shortestPeriod" type="xs:double" minOccurs="0" maxOccurs="1"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="CompositeTime">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="year" type="qml:IntegerQuantity" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="month" type="qml:IntegerQuantity" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="day" type="qml:IntegerQuantity" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="hour" type="qml:IntegerQuantity" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="minute" type="qml:IntegerQuantity" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="second" type="qml:RealQuantity" minOccurs="0" maxOccurs="1"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="Tensor">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="Mrr" type="qml:RealQuantity" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="Mtt" type="qml:RealQuantity" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="Mpp" type="qml:RealQuantity" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="Mrt" type="qml:RealQuantity" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="Mrp" type="qml:RealQuantity" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="Mtp" type="qml:RealQuantity" minOccurs="1" maxOccurs="1"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="OriginQuality">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="associatedPhaseCount" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="usedPhaseCount" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="asociatedStationCount" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="usedStationCount" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="depthPhaseCount" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="standardError" type="xs:double" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="azimuthalGap" type="xs:double" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="secondaryAzimuthalGap" type="xs:double" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="groundTruthLevel" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="maximumDistance" type="xs:double" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="minimumDistance" type="xs:double" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="medianDistance" type="xs:double" minOccurs="0" maxOccurs="1"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="RealQuantity">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="value" type="xs:double" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="uncertainty" type="xs:double" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="lowerUncertainty" type="xs:double" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="upperUncertainty" type="xs:double" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="confidenceLevel" type="xs:double" minOccurs="0" maxOccurs="1"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="NodalPlane">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="strike" type="qml:RealQuantity" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="dip" type="qml:RealQuantity" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="rake" type="qml:RealQuantity" minOccurs="1" maxOccurs="1"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="TimeWindow">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="begin" type="xs:double" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="end" type="xs:double" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="reference" type="xs:dateTime" minOccurs="1" maxOccurs="1"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="WaveformStreamID">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="resourceURI" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+    </xs:choice>
+    <xs:attribute name="networkCode" type="xs:string" use="required"/>
+    <xs:attribute name="stationCode" type="xs:string" use="required"/>
+    <xs:attribute name="channelCode" type="xs:string"/>
+    <xs:attribute name="locationCode" type="xs:string"/>
+  </xs:complexType>
+  <xs:complexType name="IntegerQuantity">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="value" type="xs:integer" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="uncertainty" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="lowerUncertainty" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="upperUncertainty" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="confidenceLevel" type="xs:double" minOccurs="0" maxOccurs="1"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="SourceTimeFunction">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="type" type="qml:SourceTimeFunctionType" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="duration" type="xs:double" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="riseTime" type="xs:double" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="decayTime" type="xs:double" minOccurs="0" maxOccurs="1"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="NodalPlanes">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="nodalPlane1" type="qml:NodalPlane" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="nodalPlane2" type="qml:NodalPlane" minOccurs="0" maxOccurs="1"/>
+    </xs:choice>
+    <xs:attribute name="preferredPlane" type="xs:integer"/>
+  </xs:complexType>
+  <xs:complexType name="ConfidenceEllipsoid">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="semiMajorAxisLength" type="xs:double" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="semiMinorAxisLength" type="xs:double" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="semiIntermediateAxisLength" type="xs:double" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="majorAxisPlunge" type="xs:double" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="majorAxisAzimuth" type="xs:double" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="majorAxisRotation" type="xs:double" minOccurs="1" maxOccurs="1"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="MomentTensor">
+    <xs:sequence>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="derivedOriginID" type="qml:ResourceReference" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="momentMagnitudeID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="scalarMoment" type="qml:RealQuantity" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="tensor" type="qml:Tensor" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="variance" type="xs:double" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="varianceReduction" type="xs:double" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="doubleCouple" type="xs:double" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="clvd" type="xs:double" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="iso" type="xs:double" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="greensFunctionID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="filterID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="sourceTimeFunction" type="qml:SourceTimeFunction" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="methodID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="method" type="qml:MomentTensorMethod" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="status" type="qml:MomentTensorStatus" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="cmtName" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="cmtVersion" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="creationInfo" type="qml:CreationInfo" minOccurs="0" maxOccurs="1"/>
+      </xs:choice>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="dataUsed" type="qml:DataUsed"/>
+        <xs:element name="comment" type="qml:Comment"/>
+      </xs:choice>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="FocalMechanism">
+    <xs:sequence>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="triggeringOriginID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="nodalPlanes" type="qml:NodalPlanes" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="principalAxes" type="qml:PrincipalAxes" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="azimuthalGap" type="xs:double" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="stationPolarityCount" type="xs:int" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="misfit" type="xs:double" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="stationDistributionRatio" type="xs:double" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="methodID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="creationInfo" type="qml:CreationInfo" minOccurs="0" maxOccurs="1"/>
+      </xs:choice>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="comment" type="qml:Comment"/>
+        <xs:element name="momentTensor" type="qml:MomentTensor"/>
+      </xs:choice>
+    </xs:sequence>
+    <xs:attribute name="publicID" type="qml:ResourceReference" use="required"/>
+  </xs:complexType>
+  <xs:complexType name="Amplitude">
+    <xs:sequence>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="type" type="xs:string" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="displacement" type="qml:RealQuantity" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="timeWindow" type="qml:TimeWindow" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="period" type="qml:RealQuantity" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="snr" type="xs:double" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="pickID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="waveformID" type="qml:WaveformStreamID" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="filterID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="methodID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="scalingTime" type="qml:TimeQuantity" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="magnitudeHint" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="evaluationMode" type="qml:EvaluationMode" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="creationInfo" type="qml:CreationInfo" minOccurs="0" maxOccurs="1"/>
+      </xs:choice>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="comment" type="qml:Comment"/>
+      </xs:choice>
+    </xs:sequence>
+    <xs:attribute name="publicID" type="qml:ResourceReference" use="required"/>
+  </xs:complexType>
+  <xs:complexType name="StationMagnitudeContribution">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="stationMagnitudeID" type="qml:ResourceReference" minOccurs="1" maxOccurs="1"/>
+      <xs:element name="residual" type="xs:double" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="weight" type="xs:double" minOccurs="0" maxOccurs="1"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="Magnitude">
+    <xs:sequence>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="mag" type="qml:RealQuantity" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="type" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="originID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="methodID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="stationCount" type="xs:integer" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="azimuthalGap" type="xs:double" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="evaluationStatus" type="qml:EvaluationStatus" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="creationInfo" type="qml:CreationInfo" minOccurs="0" maxOccurs="1"/>
+      </xs:choice>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="comment" type="qml:Comment"/>
+        <xs:element name="stationMagnitudeContribution" type="qml:StationMagnitudeContribution"/>
+      </xs:choice>
+    </xs:sequence>
+    <xs:attribute name="publicID" type="qml:ResourceReference" use="required"/>
+  </xs:complexType>
+  <xs:complexType name="StationMagnitude">
+    <xs:sequence>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="originID" type="qml:ResourceReference" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="mag" type="qml:RealQuantity" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="type" type="xs:string" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="amplitudeID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="methodID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="waveformID" type="qml:WaveformStreamID" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="creationInfo" type="qml:CreationInfo" minOccurs="0" maxOccurs="1"/>
+      </xs:choice>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="comment" type="qml:Comment"/>
+      </xs:choice>
+    </xs:sequence>
+    <xs:attribute name="publicID" type="qml:ResourceReference" use="required"/>
+  </xs:complexType>
+  <xs:complexType name="Pick">
+    <xs:sequence>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="time" type="qml:TimeQuantity" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="waveformID" type="qml:WaveformStreamID" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="filterID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="methodID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="horizontalSlowness" type="qml:RealQuantity" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="backazimuth" type="qml:RealQuantity" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="slownessMethodID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="onset" type="qml:PickOnset" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="phaseHint" type="qml:Phase" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="polarity" type="qml:PickPolarity" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="evaluationMode" type="qml:EvaluationMode" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="evaluationStatus" type="qml:EvaluationStatus" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="creationInfo" type="qml:CreationInfo" minOccurs="0" maxOccurs="1"/>
+      </xs:choice>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="comment" type="qml:Comment"/>
+      </xs:choice>
+    </xs:sequence>
+    <xs:attribute name="publicID" type="qml:ResourceReference" use="required"/>
+  </xs:complexType>
+  <xs:complexType name="Event">
+    <xs:sequence>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="preferredOriginID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="preferredMagnitudeID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="preferredFocalMechanismID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="type" type="qml:EventType" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="typeCertainty" type="qml:EventTypeCertainty" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="creationInfo" type="qml:CreationInfo" minOccurs="0" maxOccurs="1"/>
+      </xs:choice>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="description" type="qml:EventDescription"/>
+        <xs:element name="comment" type="qml:Comment"/>
+        <xs:element name="focalMechanism" type="qml:FocalMechanism"/>
+        <xs:element name="amplitude" type="qml:Amplitude"/>
+        <xs:element name="magnitude" type="qml:Magnitude"/>
+        <xs:element name="stationMagnitude" type="qml:StationMagnitude"/>
+        <xs:element name="origin" type="qml:Origin"/>
+        <xs:element name="pick" type="qml:Pick"/>
+      </xs:choice>
+    </xs:sequence>
+    <xs:attribute name="publicID" type="qml:ResourceReference" use="required"/>
+  </xs:complexType>
+  <xs:complexType name="OriginUncertainty">
+    <xs:choice minOccurs="0" maxOccurs="unbounded">
+      <xs:element name="horizontalUncertainty" type="xs:double" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="minHorizontalUncertainty" type="xs:double" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="maxHorizontalUncertainty" type="xs:double" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="azimuthMaxHorizontalUncertainty" type="xs:double" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="confidenceEllipsoid" type="qml:ConfidenceEllipsoid" minOccurs="0" maxOccurs="1"/>
+      <xs:element name="preferredDescription" type="qml:OriginUncertaintyDescription" minOccurs="0" maxOccurs="1"/>
+    </xs:choice>
+  </xs:complexType>
+  <xs:complexType name="Arrival">
+    <xs:sequence>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="pickID" type="qml:ResourceReference" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="phase" type="qml:Phase" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="timeCorrection" type="xs:double" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="azimuth" type="xs:double" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="distance" type="xs:double" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="timeResidual" type="xs:double" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="horizontalSlownessResidual" type="xs:double" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="backazimuthResidual" type="xs:double" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="timeUsed" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="horizontalSlownessUsed" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="backazimuthUsed" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="weight" type="xs:double" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="earthModelID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="creationInfo" type="qml:CreationInfo" minOccurs="0" maxOccurs="1"/>
+      </xs:choice>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="comment" type="qml:Comment"/>
+      </xs:choice>
+    </xs:sequence>
+    <xs:attribute name="preliminary" type="xs:boolean"/>
+  </xs:complexType>
+  <xs:complexType name="Origin">
+    <xs:sequence>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="time" type="qml:TimeQuantity" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="latitude" type="qml:RealQuantity" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="longitude" type="qml:RealQuantity" minOccurs="1" maxOccurs="1"/>
+        <xs:element name="depth" type="qml:RealQuantity" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="depthType" type="qml:OriginDepthType" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="timeFixed" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="epicenterFixed" type="xs:boolean" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="referenceSystemID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="methodID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="earthModelID" type="qml:ResourceReference" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="quality" type="qml:OriginQuality" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="type" type="qml:OriginType" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="evaluationMode" type="qml:EvaluationMode" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="evaluationStatus" type="qml:EvaluationStatus" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="creationInfo" type="qml:CreationInfo" minOccurs="0" maxOccurs="1"/>
+      </xs:choice>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="compositeTime" type="qml:CompositeTime"/>
+        <xs:element name="comment" type="qml:Comment"/>
+        <xs:element name="originUncertainty" type="qml:OriginUncertainty"/>
+        <xs:element name="arrival" type="qml:Arrival"/>
+      </xs:choice>
+    </xs:sequence>
+    <xs:attribute name="publicID" type="qml:ResourceReference" use="required"/>
+  </xs:complexType>
+  <xs:complexType name="EventParameters">
+    <xs:sequence>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="creationInfo" type="qml:CreationInfo" minOccurs="0" maxOccurs="1"/>
+        <xs:element name="description" type="xs:string" minOccurs="0" maxOccurs="1"/>
+      </xs:choice>
+      <xs:choice minOccurs="0" maxOccurs="unbounded">
+        <xs:element name="comment" type="qml:Comment"/>
+        <xs:element name="event" type="qml:Event"/>
+      </xs:choice>
+    </xs:sequence>
+    <xs:attribute name="publicID" type="qml:ResourceReference" use="required"/>
+  </xs:complexType>
+  <xs:element name="quakeml">
+    <xs:complexType>
+      <xs:all>
+        <xs:element name="eventParameters" type="qml:EventParameters" minOccurs="0" maxOccurs="1"/>
+      </xs:all>
+    </xs:complexType>
+  </xs:element>
+</xs:schema>

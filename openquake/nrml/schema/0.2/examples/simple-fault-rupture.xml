@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns:qml="http://quakeml.org/xmlns/quakeml/1.1"
+	xmlns="http://openquake.org/xmlns/nrml/0.2" gml:id="n1">
+
+	<simpleFaultRupture gml:id="sfr_1">
+		<magnitude type="Mw">7.65</magnitude>
+		<tectonicRegion>Active Shallow Crust</tectonicRegion>
+		<rake>15.0</rake>
+
+		<simpleFaultGeometry gml:id="sfg_1">
+			<faultTrace>
+				<gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+					<gml:posList>
+						-124.704 40.363 0.1
+						-124.977 41.214 0.1
+						-125.140 42.096 0.1
+					</gml:posList>
+				</gml:LineString>
+			</faultTrace>
+			<dip>50.0</dip>
+			<upperSeismogenicDepth>12.5</upperSeismogenicDepth>
+			<lowerSeismogenicDepth>19.5</lowerSeismogenicDepth>
+		</simpleFaultGeometry>
+	</simpleFaultRupture>
+</nrml>
