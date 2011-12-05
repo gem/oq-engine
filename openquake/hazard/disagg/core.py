@@ -30,9 +30,10 @@ from openquake import logs
 
 from openquake.hazard import job as haz_job
 from openquake.hazard import disagg
+from openquake.java import list_to_jdouble_array
 from openquake.job import config as job_cfg
 from openquake.output import hazard_disagg as hazard_output
-from openquake.utils import config, list_to_jdouble_array
+from openquake.utils import config
 
 from openquake.hazard.disagg import subsets
 from openquake.hazard.general import (

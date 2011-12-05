@@ -564,91 +564,51 @@ class ReleaseDataFromKvsTestCase(TestMixin, unittest.TestCase):
 
     def test_curve_data(self):
         """Hazard curve data is purged correctly."""
-        keys = [
-            "::JOB::%s::!hazard_curve_poes!0!-1656082506525860821",
-            "::JOB::%s::!hazard_curve_poes!0!-3197290148354731068",
-            "::JOB::%s::!hazard_curve_poes!0!-3431201036734844224",
-            "::JOB::%s::!hazard_curve_poes!0!-4803231368264023776",
-            "::JOB::%s::!hazard_curve_poes!0!6691116160089896596",
-            "::JOB::%s::!hazard_curve_poes!0!-9103945534382545143",
-            "::JOB::%s::!hazard_curve_poes!1!-1656082506525860821",
-            "::JOB::%s::!hazard_curve_poes!1!-3197290148354731068",
-            "::JOB::%s::!hazard_curve_poes!1!-3431201036734844224",
-            "::JOB::%s::!hazard_curve_poes!1!-4803231368264023776",
-            "::JOB::%s::!hazard_curve_poes!1!6691116160089896596",
-            "::JOB::%s::!hazard_curve_poes!1!-9103945534382545143"]
+        # example: ::JOB::%s::!hazard_curve_poes!0!-4803231368264023776
+        kt = "::JOB::%%s::!hazard_curve_poes!%s!"
+        keys = []
+        for sample in range(self.REALIZATIONS):
+            skt = kt % sample
+            keys.extend(skt + str(hash(s)) for s in self.SITES)
         self._test(keys, 1)
 
     def test_mean_curve_data(self):
         """Mean hazard curve data is purged correctly."""
-        keys = [
-            "::JOB::%s::!mean_hazard_curve!-1656082506525860821",
-            "::JOB::%s::!mean_hazard_curve!-3197290148354731068",
-            "::JOB::%s::!mean_hazard_curve!-3431201036734844224",
-            "::JOB::%s::!mean_hazard_curve!-4803231368264023776",
-            "::JOB::%s::!mean_hazard_curve!6691116160089896596",
-            "::JOB::%s::!mean_hazard_curve!-9103945534382545143"]
+        # example: ::JOB::%s::!mean_hazard_curve!-1656082506525860821
+        kt = "::JOB::%%s::!mean_hazard_curve!%s"
+        keys = [kt % hash(s) for s in self.SITES]
         self._test(keys, 2)
 
     def test_quantile_curve_data(self):
         """Quantile hazard curve data is purged correctly."""
-        keys = [
-            "::JOB::%s::!quantile_hazard_curve!-1656082506525860821!0.25",
-            "::JOB::%s::!quantile_hazard_curve!-1656082506525860821!0.5",
-            "::JOB::%s::!quantile_hazard_curve!-3197290148354731068!0.25",
-            "::JOB::%s::!quantile_hazard_curve!-3197290148354731068!0.5",
-            "::JOB::%s::!quantile_hazard_curve!-3431201036734844224!0.25",
-            "::JOB::%s::!quantile_hazard_curve!-3431201036734844224!0.5",
-            "::JOB::%s::!quantile_hazard_curve!-4803231368264023776!0.25",
-            "::JOB::%s::!quantile_hazard_curve!-4803231368264023776!0.5",
-            "::JOB::%s::!quantile_hazard_curve!6691116160089896596!0.25",
-            "::JOB::%s::!quantile_hazard_curve!6691116160089896596!0.5",
-            "::JOB::%s::!quantile_hazard_curve!-9103945534382545143!0.25",
-            "::JOB::%s::!quantile_hazard_curve!-9103945534382545143!0.5"]
+        # example: ::JOB::%s::!quantile_hazard_curve!-1656082506525860821!0.25
+        kt = "::JOB::%%s::!quantile_hazard_curve!%s!"
+        keys = []
+        skeys = [kt % hash(s) for s in self.SITES]
+        for skey in skeys:
+            keys.extend(skey + str(quantile) for quantile in self.QUANTILES)
         self._test(keys, 3)
 
     def test_mean_map_data(self):
         """Mean hazard map data is purged correctly."""
-        keys = [
-            "::JOB::%s::!mean_hazard_map!-1656082506525860821!0.01",
-            "::JOB::%s::!mean_hazard_map!-1656082506525860821!0.1",
-            "::JOB::%s::!mean_hazard_map!-3197290148354731068!0.01",
-            "::JOB::%s::!mean_hazard_map!-3197290148354731068!0.1",
-            "::JOB::%s::!mean_hazard_map!-3431201036734844224!0.01",
-            "::JOB::%s::!mean_hazard_map!-3431201036734844224!0.1",
-            "::JOB::%s::!mean_hazard_map!-4803231368264023776!0.01",
-            "::JOB::%s::!mean_hazard_map!-4803231368264023776!0.1",
-            "::JOB::%s::!mean_hazard_map!6691116160089896596!0.01",
-            "::JOB::%s::!mean_hazard_map!6691116160089896596!0.1",
-            "::JOB::%s::!mean_hazard_map!-9103945534382545143!0.01",
-            "::JOB::%s::!mean_hazard_map!-9103945534382545143!0.1"]
+        # example: ::JOB::%s::!mean_hazard_map!-1656082506525860821!0.01
+        kt = "::JOB::%%s::!mean_hazard_map!%s!"
+        keys = []
+        skeys = [kt % hash(s) for s in self.SITES]
+        for skey in skeys:
+            keys.extend(skey + str(poe) for poe in self.POES)
         self._test(keys, 4)
 
     def test_quantile_map_data(self):
         """Quantile hazard map data is purged correctly."""
-        keys = [
-            "::JOB::%s::!quantile_hazard_map!-1656082506525860821!0.01!0.25",
-            "::JOB::%s::!quantile_hazard_map!-1656082506525860821!0.01!0.5",
-            "::JOB::%s::!quantile_hazard_map!-1656082506525860821!0.1!0.25",
-            "::JOB::%s::!quantile_hazard_map!-1656082506525860821!0.1!0.5",
-            "::JOB::%s::!quantile_hazard_map!-3197290148354731068!0.01!0.25",
-            "::JOB::%s::!quantile_hazard_map!-3197290148354731068!0.01!0.5",
-            "::JOB::%s::!quantile_hazard_map!-3197290148354731068!0.1!0.25",
-            "::JOB::%s::!quantile_hazard_map!-3197290148354731068!0.1!0.5",
-            "::JOB::%s::!quantile_hazard_map!-3431201036734844224!0.01!0.25",
-            "::JOB::%s::!quantile_hazard_map!-3431201036734844224!0.01!0.5",
-            "::JOB::%s::!quantile_hazard_map!-3431201036734844224!0.1!0.25",
-            "::JOB::%s::!quantile_hazard_map!-3431201036734844224!0.1!0.5",
-            "::JOB::%s::!quantile_hazard_map!-4803231368264023776!0.01!0.25",
-            "::JOB::%s::!quantile_hazard_map!-4803231368264023776!0.01!0.5",
-            "::JOB::%s::!quantile_hazard_map!-4803231368264023776!0.1!0.25",
-            "::JOB::%s::!quantile_hazard_map!-4803231368264023776!0.1!0.5",
-            "::JOB::%s::!quantile_hazard_map!6691116160089896596!0.01!0.25",
-            "::JOB::%s::!quantile_hazard_map!6691116160089896596!0.01!0.5",
-            "::JOB::%s::!quantile_hazard_map!6691116160089896596!0.1!0.25",
-            "::JOB::%s::!quantile_hazard_map!6691116160089896596!0.1!0.5",
-            "::JOB::%s::!quantile_hazard_map!-9103945534382545143!0.01!0.25",
-            "::JOB::%s::!quantile_hazard_map!-9103945534382545143!0.01!0.5",
-            "::JOB::%s::!quantile_hazard_map!-9103945534382545143!0.1!0.25",
-            "::JOB::%s::!quantile_hazard_map!-9103945534382545143!0.1!0.5"]
+        # example:
+        #   ::JOB::%s::!quantile_hazard_map!-1656082506525860821!0.01!0.25
+        kt = "::JOB::%%s::!quantile_hazard_map!%s!"
+        keys = []
+        skeys = [kt % hash(s) for s in self.SITES]
+        for skey in skeys:
+            for poe in self.POES:
+                pkey = skey + str(poe) + '!'
+                for quantile in self.QUANTILES:
+                    keys.append(pkey + str(quantile))
         self._test(keys, 5)
