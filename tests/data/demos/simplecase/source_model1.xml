@@ -146,7 +146,7 @@
                     <maxMagnitude>7.0</maxMagnitude>
                 </truncatedGutenbergRichter>
                 
-                <strike>0.0</strike>
+                <strike>90.0</strike>
                 <dip>90.0</dip>
                 <rake>0.0</rake>
             </ruptureRateModel>

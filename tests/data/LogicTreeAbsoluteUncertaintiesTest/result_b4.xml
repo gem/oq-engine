@@ -112,8 +112,8 @@
         <maxMagnitude>6.8</maxMagnitude>
       </truncatedGutenbergRichter>
         <strike>0.0</strike>
-        <dip>90.0</dip>
-        <rake>0.0</rake>
+        <dip>50.0</dip>
+        <rake>90.0</rake>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>6.0 6.5</magnitude>
