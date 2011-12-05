@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ns2:logicTreeSet xmlns:ns1="http://www.opengis.net/gml/profile/sfgml/1.0"
+ xmlns:ns2="http://openquake.org/xmlns/nrml/0.1"
+ xmlns:ns3="http://www.w3.org/1999/xlink"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://openquake.org/xmlns/nrml/0.1 file:/Users/damianomonelli/Projects/opengem/docs/schema/nrml_seismic.xsd">
+    <ns2:logicTree tectonicRegion="Active Shallow Crust">
+        <ns2:logicTreeBranchSet ns2:uncertaintyType="gmpeModel">
+            <ns2:logicTreeBranch>
+                <ns2:uncertaintyModel>BA_2008_AttenRel</ns2:uncertaintyModel>
+                <ns2:uncertaintyWeight>0.5</ns2:uncertaintyWeight>
+            </ns2:logicTreeBranch>
+            <ns2:logicTreeBranch>
+                <ns2:uncertaintyModel>CB_2008_AttenRel</ns2:uncertaintyModel>
+                <ns2:uncertaintyWeight>0.5</ns2:uncertaintyWeight>
+            </ns2:logicTreeBranch>
+        </ns2:logicTreeBranchSet>
+    </ns2:logicTree>
+    <ns2:logicTree tectonicRegion="Subduction Interface">
+        <ns2:logicTreeBranchSet ns2:uncertaintyType="gmpeModel">
+            <ns2:logicTreeBranch>
+                <ns2:uncertaintyModel>McVerryetal_2000_AttenRel</ns2:uncertaintyModel>
+                <ns2:uncertaintyWeight>1.0</ns2:uncertaintyWeight>
+            </ns2:logicTreeBranch>
+        </ns2:logicTreeBranchSet>
+    </ns2:logicTree>
+</ns2:logicTreeSet>
