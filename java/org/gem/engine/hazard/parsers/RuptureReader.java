@@ -31,7 +31,7 @@ public class RuptureReader
 
     {
         namespaces.put("gml", "http://www.opengis.net/gml");
-        namespaces.put("nrml", "http://openquake.org/xmlns/nrml/0.2");
+        namespaces.put("nrml", "http://openquake.org/xmlns/nrml/0.3");
     }
 
     static class InvalidFormatException extends RuntimeException
