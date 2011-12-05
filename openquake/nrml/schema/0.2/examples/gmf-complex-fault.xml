@@ -1,0 +1,81 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" 
+      xmlns="http://openquake.org/xmlns/nrml/0.2"
+      gml:id="n1">
+      
+    <!-- hazardResult is a gml:Feature -->
+    <hazardResult gml:id="hr1">
+        <config>
+            <hazardProcessing investigationTimeSpan="50.0"/>
+        </config>
+        
+        <!-- groundMotionFieldSet is a gml:Feature -->
+        <groundMotionFieldSet gml:id="gmfs_1">
+            
+            <gml:description>Optional description element</gml:description>
+            <GMPEParameters IMT="PGA"/>
+            
+            <!-- complexFaultRupture is a gml:Feature -->
+            <complexFaultRupture gml:id="cfr_1">
+                
+                <!-- non-geospatial properties -->
+                <magnitude type="Mw">9.0</magnitude>
+                <tectonicRegion>Subduction Interface</tectonicRegion>
+                <rake>0.0</rake>
+
+                <!-- geospatial property: restriction of gml:MultiGeometry (aggregate) -->
+                <complexFaultGeometry>
+                    
+                    <!-- restriction of gml:MultiCurve -->
+                    <faultEdges>
+                    
+                        <!-- restriction of gml:curveMember -->
+                        <faultTopEdge>
+                            <gml:LineString srsName="urn:ogc:def:crs:EPSG::4979">
+                                <gml:posList>
+                                    -124.704  40.363  0.5493260E+01
+                                    -124.977  41.214  0.4988560E+01
+                                    -125.140  42.096  0.4897340E+01
+                                </gml:posList>
+                            </gml:LineString>
+                        </faultTopEdge>
+                        
+                        <!-- restriction of gml:curveMember -->
+                        <faultBottomEdge>
+                            <gml:LineString srsName="urn:ogc:def:crs:EPSG::4979">
+                                <gml:posList>
+                                    -123.829  40.347  0.2038490E+02
+                                    -124.137  41.218  0.1741390E+02
+                                    -124.252  42.115  0.1752740E+02
+                                </gml:posList>
+                            </gml:LineString>
+                        </faultBottomEdge>
+                    </faultEdges>
+                </complexFaultGeometry>
+            </complexFaultRupture>
+            
+            <GMF gml:id="gmf_1" ruptureReference="cfr_1">
+                
+                <GMFNode gml:id="s_1">
+                    <site>
+                        <gml:Point srsName="epsg:4326">
+                            <gml:pos>-116.0 41.0</gml:pos>
+                        </gml:Point>
+                    </site>
+                    <groundMotion>0.2</groundMotion>
+                </GMFNode>
+                
+                <GMFNode gml:id="s_2">
+                    <site>
+                        <gml:Point srsName="epsg:4326">
+                            <gml:pos>-118.0 41.0</gml:pos>
+                        </gml:Point>
+                    </site>
+                    <groundMotion>0.3</groundMotion>
+                </GMFNode>
+                
+            </GMF>
+        </groundMotionFieldSet>
+        
+    </hazardResult>
+</nrml>
