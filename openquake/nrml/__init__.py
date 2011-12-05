@@ -28,4 +28,4 @@ def nrml_schema_file():
     """Returns the absolute path to the NRML schema file"""
     return os.path.join(
         os.path.abspath(os.path.dirname(__file__)),
-        'schema', '0.2', NRML_SCHEMA_FILE)
+        'schema', '0.3', NRML_SCHEMA_FILE)
