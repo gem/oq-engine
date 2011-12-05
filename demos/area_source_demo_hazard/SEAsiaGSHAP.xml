@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.2" xmlns:gml="http://www.opengis.net/gml" xmlns:qml="http://quakeml.org/xmlns/quakeml/1.1" gml:id="n1">
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.2"
+      xmlns:gml="http://www.opengis.net/gml"
+      gml:id="n1">
   <sourceModel gml:id="sm1">
     <config/>
     <areaSource gml:id="src_1">
@@ -22,14 +24,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -56,14 +55,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -90,14 +86,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -124,14 +117,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -158,14 +148,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -192,14 +179,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -226,14 +210,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -260,14 +241,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -294,14 +272,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -328,14 +303,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -362,14 +334,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -396,14 +365,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>5.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -430,14 +396,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -464,14 +427,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -498,14 +458,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -532,14 +489,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -566,14 +520,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>5.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -600,14 +551,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -634,14 +582,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8999999999999995</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -668,14 +613,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -702,14 +644,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -736,14 +675,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -770,14 +706,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -804,14 +737,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -838,14 +768,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -872,14 +799,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -906,14 +830,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.6</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -940,14 +861,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -974,14 +892,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1008,14 +923,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1042,14 +954,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1076,14 +985,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1110,14 +1016,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1144,14 +1047,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1178,14 +1078,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1212,14 +1109,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1246,14 +1140,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1280,14 +1171,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1314,14 +1202,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1348,14 +1233,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1382,14 +1264,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1416,14 +1295,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1450,14 +1326,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1484,14 +1357,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1518,14 +1388,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1552,14 +1419,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1586,14 +1450,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.2</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1620,14 +1481,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1654,14 +1512,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1688,14 +1543,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.2</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1722,14 +1574,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1756,14 +1605,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1790,14 +1636,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.3</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1824,14 +1667,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1858,14 +1698,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1892,14 +1729,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1926,14 +1760,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1960,14 +1791,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -1994,14 +1822,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2028,14 +1853,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2062,14 +1884,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.2</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2096,14 +1915,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2130,14 +1946,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.2</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2164,14 +1977,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2198,14 +2008,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2232,14 +2039,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2266,14 +2070,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2300,14 +2101,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2334,14 +2132,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2368,14 +2163,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2402,14 +2194,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2436,14 +2225,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2470,14 +2256,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2504,14 +2287,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2538,14 +2318,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2572,14 +2349,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>5.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2606,14 +2380,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2640,14 +2411,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2674,14 +2442,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>5.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2708,14 +2473,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>5.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2742,14 +2504,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2776,14 +2535,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2810,14 +2566,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.7</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2844,14 +2597,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2878,14 +2628,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2912,14 +2659,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2946,14 +2690,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -2980,14 +2721,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.7</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3014,14 +2752,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3048,14 +2783,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>5.6</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3082,14 +2814,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3116,14 +2845,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3150,14 +2876,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3184,14 +2907,11 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3218,14 +2938,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3252,14 +2972,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3286,14 +3006,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.2</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3320,14 +3040,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3354,14 +3074,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3388,14 +3108,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.6</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3422,14 +3142,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3456,14 +3176,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3490,14 +3210,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3524,14 +3244,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3558,14 +3278,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3592,14 +3312,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3999999999999995</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3626,14 +3346,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3660,14 +3380,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3694,14 +3414,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3728,14 +3448,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3762,14 +3482,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3796,14 +3516,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.2</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3830,14 +3550,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3864,14 +3584,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3898,14 +3618,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3932,14 +3652,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -3966,14 +3686,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4000,14 +3720,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4034,14 +3754,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.1</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4068,14 +3788,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4102,14 +3822,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4136,14 +3856,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4170,14 +3890,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4204,14 +3924,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4238,14 +3958,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4272,14 +3992,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4306,14 +4026,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.1</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4340,14 +4060,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4374,14 +4094,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4408,14 +4128,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4442,14 +4162,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4476,14 +4196,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4510,14 +4230,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4544,14 +4264,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4578,14 +4298,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4612,14 +4332,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4646,14 +4366,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4680,14 +4400,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4714,14 +4434,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4748,14 +4468,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4782,14 +4502,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4816,14 +4536,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4850,14 +4570,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4884,14 +4604,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4918,14 +4638,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4952,14 +4672,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -4986,14 +4706,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5020,14 +4740,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5054,14 +4774,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5088,14 +4808,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5122,14 +4842,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5156,14 +4876,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5190,14 +4910,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5224,14 +4944,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5258,14 +4978,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8999999999999995</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5292,14 +5012,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5326,14 +5046,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5360,14 +5080,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5394,14 +5114,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8999999999999995</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5428,14 +5148,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5462,14 +5182,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5496,14 +5216,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5530,14 +5250,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5564,14 +5284,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5598,14 +5318,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8999999999999995</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5632,14 +5352,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5666,14 +5386,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.6</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5700,14 +5420,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5734,14 +5454,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5768,14 +5488,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5802,14 +5522,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5836,14 +5556,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5870,14 +5590,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5904,14 +5624,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5938,14 +5658,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -5972,14 +5692,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6006,14 +5726,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6040,14 +5760,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6074,14 +5794,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6108,14 +5828,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3999999999999995</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6142,14 +5862,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6176,14 +5896,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6210,14 +5930,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6244,14 +5964,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8999999999999995</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6278,14 +5998,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6312,14 +6032,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.3</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6346,14 +6066,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6380,14 +6100,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6414,14 +6134,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6448,14 +6168,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6482,14 +6202,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6516,14 +6236,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6550,14 +6270,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6584,14 +6304,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6618,14 +6338,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6652,14 +6372,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6686,14 +6406,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6720,14 +6440,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6754,14 +6474,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6788,14 +6508,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6822,14 +6542,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6856,14 +6576,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6890,14 +6610,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6924,14 +6644,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6958,14 +6678,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -6992,14 +6712,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7026,14 +6746,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7060,14 +6780,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7094,14 +6814,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7128,14 +6848,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7162,14 +6882,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7196,14 +6916,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7230,14 +6950,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7264,14 +6984,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7298,14 +7018,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7332,14 +7052,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7366,14 +7086,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.600000000000001</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7400,14 +7120,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7434,14 +7154,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7468,14 +7188,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7502,14 +7222,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7536,14 +7256,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7570,14 +7290,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.700000000000001</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7604,14 +7324,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7638,14 +7358,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.6</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7672,14 +7392,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7706,14 +7426,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7740,14 +7460,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7774,14 +7494,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7808,14 +7528,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7842,14 +7562,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7876,14 +7596,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7910,14 +7630,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7944,14 +7664,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -7978,14 +7698,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8012,14 +7732,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8046,14 +7766,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8080,14 +7800,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8114,14 +7834,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8148,14 +7868,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8182,14 +7902,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8216,14 +7936,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8250,14 +7970,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8284,14 +8004,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8318,14 +8038,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.2</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8352,14 +8072,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8386,14 +8106,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8420,14 +8140,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8454,14 +8174,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8488,14 +8208,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.2</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8522,14 +8242,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8556,14 +8276,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8590,14 +8310,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.2</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8624,14 +8344,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8658,14 +8378,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8692,14 +8412,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3999999999999995</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8726,14 +8446,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8760,14 +8480,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8794,14 +8514,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8828,14 +8548,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8862,14 +8582,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8896,14 +8616,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8930,14 +8650,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8964,14 +8684,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -8998,14 +8718,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.6</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9032,14 +8752,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9066,14 +8786,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9100,14 +8820,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.2</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9134,14 +8854,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9168,14 +8888,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.3</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9202,14 +8922,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.1</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9236,14 +8956,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3999999999999995</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9270,14 +8990,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9304,14 +9024,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9338,14 +9058,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9372,14 +9092,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3999999999999995</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9406,14 +9126,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9440,14 +9160,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9474,14 +9194,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>5.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9508,14 +9228,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9542,14 +9262,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>5.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9576,14 +9296,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9610,14 +9330,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9644,14 +9364,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9678,14 +9398,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9712,14 +9432,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.3</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9746,14 +9466,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9780,14 +9500,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9814,14 +9534,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3999999999999995</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9848,14 +9568,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9882,14 +9602,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9916,14 +9636,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9950,14 +9670,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -9984,14 +9704,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10018,14 +9738,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.2</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10052,14 +9772,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10086,14 +9806,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10120,14 +9840,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10154,14 +9874,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10188,14 +9908,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10222,14 +9942,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10256,14 +9976,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10290,14 +10010,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10324,14 +10044,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10358,14 +10078,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10392,14 +10112,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10426,14 +10146,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10460,14 +10180,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10494,14 +10214,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.2</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10528,14 +10248,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10562,14 +10282,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10596,14 +10316,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10630,14 +10350,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10664,14 +10384,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10698,14 +10418,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10732,14 +10452,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10766,14 +10486,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10800,14 +10520,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10834,14 +10554,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10868,14 +10588,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10902,14 +10622,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10936,14 +10656,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -10970,14 +10690,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.3</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11004,14 +10724,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.200000000000001</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11038,14 +10758,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.7</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11072,14 +10792,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11106,14 +10826,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.100000000000001</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11140,14 +10860,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.6</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11174,14 +10894,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11208,14 +10928,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11242,14 +10962,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11276,14 +10996,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11310,14 +11030,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11344,14 +11064,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11378,14 +11098,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3999999999999995</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11412,14 +11132,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.2</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11446,14 +11166,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3999999999999995</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11480,14 +11200,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.6</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11514,14 +11234,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8999999999999995</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11548,14 +11268,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11582,14 +11302,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11616,14 +11336,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.2</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11650,14 +11370,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11684,14 +11404,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11718,14 +11438,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11752,14 +11472,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11786,14 +11506,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.2</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11820,14 +11540,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.7</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11854,14 +11574,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3999999999999995</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11888,14 +11608,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11922,14 +11642,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.2</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11956,14 +11676,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -11990,14 +11710,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>5.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12024,14 +11744,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>5.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12058,14 +11778,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12092,14 +11812,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12126,14 +11846,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12160,14 +11880,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12194,14 +11914,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12228,14 +11948,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12262,14 +11982,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.7</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12296,14 +12016,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12330,14 +12050,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12364,14 +12084,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12398,14 +12118,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12432,14 +12152,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12466,14 +12186,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12500,14 +12220,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12534,14 +12254,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12568,14 +12288,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12602,14 +12322,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.7</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12636,14 +12356,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12670,14 +12390,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.2</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12704,14 +12424,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12738,14 +12458,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12772,14 +12492,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12806,14 +12526,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12840,14 +12560,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8999999999999995</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12874,14 +12594,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12908,14 +12628,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12942,14 +12662,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.8</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -12976,14 +12696,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -13010,14 +12730,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -13044,14 +12764,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -13078,14 +12798,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.2</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -13112,14 +12832,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -13146,14 +12866,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -13180,14 +12900,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -13214,14 +12934,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -13248,14 +12968,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -13282,14 +13002,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.3</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -13316,14 +13036,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.3</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -13350,14 +13070,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -13384,14 +13104,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -13418,14 +13138,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>6.5</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -13452,14 +13172,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -13486,14 +13206,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>7.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
@@ -13520,14 +13240,14 @@
           <minMagnitude>5.0</minMagnitude>
           <maxMagnitude>8.0</maxMagnitude>
         </truncatedGutenbergRichter>
-        <focalMechanism publicID="smi:fm1/0">
-          <qml:nodalPlanes>
+
+
         <strike>0.0</strike>
         <dip>90.0</dip>
         <rake>0.0</rake>
 
-          </qml:nodalPlanes>
-        </focalMechanism>
+
+
       </ruptureRateModel>
       <ruptureDepthDistribution>
         <magnitude>5.0</magnitude>
