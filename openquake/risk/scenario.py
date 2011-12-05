@@ -18,7 +18,7 @@
 
 """
 This module defines functions used to compute losses
-using the deterministic event based approach.
+using the scenario event based approach.
 """
 
 import numpy

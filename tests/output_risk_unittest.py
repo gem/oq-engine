@@ -180,39 +180,39 @@ LOSS_MAP_METADATA = {
     'lossCategory': 'economic_loss',
     'unit': 'EUR'}
 
-DETERMINISTIC_LOSS_MAP_METADATA = LOSS_MAP_METADATA.copy()
-DETERMINISTIC_LOSS_MAP_METADATA.update({
-    'deterministic': True})
+SCENARIO_LOSS_MAP_METADATA = LOSS_MAP_METADATA.copy()
+SCENARIO_LOSS_MAP_METADATA.update({
+    'scenario': True})
 
-SITE_A_DETERMINISTIC_LOSS_ONE = {'mean_loss': 0, 'stddev_loss': 100}
-SITE_A_DETERMINISTIC_LOSS_TWO = {'mean_loss': 5, 'stddev_loss': 2000.0}
+SITE_A_SCENARIO_LOSS_ONE = {'mean_loss': 0, 'stddev_loss': 100}
+SITE_A_SCENARIO_LOSS_TWO = {'mean_loss': 5, 'stddev_loss': 2000.0}
 
-SITE_B_DETERMINISTIC_LOSS_ONE = {'mean_loss': 120000.0, 'stddev_loss': 2000.0}
+SITE_B_SCENARIO_LOSS_ONE = {'mean_loss': 120000.0, 'stddev_loss': 2000.0}
 
-SAMPLE_DETERMINISTIC_LOSS_MAP_DATA = [
-    DETERMINISTIC_LOSS_MAP_METADATA,
-    (SITE_A, [(SITE_A_DETERMINISTIC_LOSS_ONE, SITE_A_ASSET_ONE),
-    (SITE_A_DETERMINISTIC_LOSS_TWO, SITE_A_ASSET_TWO)]),
-    (SITE_B, [(SITE_B_DETERMINISTIC_LOSS_ONE, SITE_B_ASSET_ONE)])]
+SAMPLE_SCENARIO_LOSS_MAP_DATA = [
+    SCENARIO_LOSS_MAP_METADATA,
+    (SITE_A, [(SITE_A_SCENARIO_LOSS_ONE, SITE_A_ASSET_ONE),
+    (SITE_A_SCENARIO_LOSS_TWO, SITE_A_ASSET_TWO)]),
+    (SITE_B, [(SITE_B_SCENARIO_LOSS_ONE, SITE_B_ASSET_ONE)])]
 
-NONDETERMINISTIC_LOSS_MAP_METADATA = LOSS_MAP_METADATA.copy()
-NONDETERMINISTIC_LOSS_MAP_METADATA.update({
+NONSCENARIO_LOSS_MAP_METADATA = LOSS_MAP_METADATA.copy()
+NONSCENARIO_LOSS_MAP_METADATA.update({
     'poE': 0.6,
-    'deterministic': False,
+    'scenario': False,
     'timeSpan': 1,
     })
 
 
-SITE_A_NONDETERMINISTIC_LOSS_ONE = {'value': 12}
-SITE_A_NONDETERMINISTIC_LOSS_TWO = {'value': 66}
+SITE_A_NONSCENARIO_LOSS_ONE = {'value': 12}
+SITE_A_NONSCENARIO_LOSS_TWO = {'value': 66}
 
-SITE_B_NONDETERMINISTIC_LOSS_ONE = {'value': 1000.0}
+SITE_B_NONSCENARIO_LOSS_ONE = {'value': 1000.0}
 
-SAMPLE_NONDETERMINISTIC_LOSS_MAP_DATA = [
-    NONDETERMINISTIC_LOSS_MAP_METADATA,
-    (SITE_A, [(SITE_A_NONDETERMINISTIC_LOSS_ONE, SITE_A_ASSET_ONE),
-    (SITE_A_NONDETERMINISTIC_LOSS_TWO, SITE_A_ASSET_TWO)]),
-    (SITE_B, [(SITE_B_NONDETERMINISTIC_LOSS_ONE, SITE_B_ASSET_ONE)])]
+SAMPLE_NONSCENARIO_LOSS_MAP_DATA = [
+    NONSCENARIO_LOSS_MAP_METADATA,
+    (SITE_A, [(SITE_A_NONSCENARIO_LOSS_ONE, SITE_A_ASSET_ONE),
+    (SITE_A_NONSCENARIO_LOSS_TWO, SITE_A_ASSET_TWO)]),
+    (SITE_B, [(SITE_B_NONSCENARIO_LOSS_ONE, SITE_B_ASSET_ONE)])]
 
 
 class LossMapDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
@@ -237,15 +237,15 @@ class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
     Unit tests for the LossMapDBWriter class, which serializes
     loss maps to the database.
     """
-    def test_serialize_deterministic(self):
+    def test_serialize_scenario(self):
         """
-        All the records for deterministic loss maps are inserted correctly.
+        All the records for scenario loss maps are inserted correctly.
         """
 
         output = self.writer.output
 
         # Call the function under test.
-        data = SAMPLE_DETERMINISTIC_LOSS_MAP_DATA
+        data = SAMPLE_SCENARIO_LOSS_MAP_DATA
         self.writer.serialize(data)
 
         # Output record
@@ -259,13 +259,13 @@ class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
         # LossMap record
         self.assertEqual(1, len(output.lossmap_set.all()))
         metadata = output.lossmap_set.get()
-        self.assertEqual(DETERMINISTIC_LOSS_MAP_METADATA['deterministic'],
-                         metadata.deterministic)
-        self.assertEqual(DETERMINISTIC_LOSS_MAP_METADATA['endBranchLabel'],
+        self.assertEqual(SCENARIO_LOSS_MAP_METADATA['scenario'],
+                         metadata.scenario)
+        self.assertEqual(SCENARIO_LOSS_MAP_METADATA['endBranchLabel'],
                          metadata.end_branch_label)
-        self.assertEqual(DETERMINISTIC_LOSS_MAP_METADATA['lossCategory'],
+        self.assertEqual(SCENARIO_LOSS_MAP_METADATA['lossCategory'],
                          metadata.category)
-        self.assertEqual(DETERMINISTIC_LOSS_MAP_METADATA['unit'],
+        self.assertEqual(SCENARIO_LOSS_MAP_METADATA['unit'],
                          metadata.unit)
         self.assertEqual(None, metadata.poe)
 
@@ -276,34 +276,34 @@ class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
 
         self.assertEqual(SITE_A, Site(*data_a.location.coords))
         self.assertEqual(SITE_A_ASSET_ONE['assetID'], data_a.asset_ref)
-        self.assertEqual(SITE_A_DETERMINISTIC_LOSS_ONE['mean_loss'],
+        self.assertEqual(SITE_A_SCENARIO_LOSS_ONE['mean_loss'],
                         data_a.value)
-        self.assertEqual(SITE_A_DETERMINISTIC_LOSS_ONE['stddev_loss'],
+        self.assertEqual(SITE_A_SCENARIO_LOSS_ONE['stddev_loss'],
                          data_a.std_dev)
 
         self.assertEqual(SITE_A, Site(*data_b.location.coords))
         self.assertEqual(SITE_A_ASSET_TWO['assetID'], data_b.asset_ref)
-        self.assertEqual(SITE_A_DETERMINISTIC_LOSS_TWO['mean_loss'],
+        self.assertEqual(SITE_A_SCENARIO_LOSS_TWO['mean_loss'],
                          data_b.value)
-        self.assertEqual(SITE_A_DETERMINISTIC_LOSS_TWO['stddev_loss'],
+        self.assertEqual(SITE_A_SCENARIO_LOSS_TWO['stddev_loss'],
                          data_b.std_dev)
 
         self.assertEqual(SITE_B, Site(*data_c.location.coords))
         self.assertEqual(SITE_B_ASSET_ONE['assetID'], data_c.asset_ref)
-        self.assertEqual(SITE_B_DETERMINISTIC_LOSS_ONE['mean_loss'],
+        self.assertEqual(SITE_B_SCENARIO_LOSS_ONE['mean_loss'],
                          data_c.value)
-        self.assertEqual(SITE_B_DETERMINISTIC_LOSS_ONE['stddev_loss'],
+        self.assertEqual(SITE_B_SCENARIO_LOSS_ONE['stddev_loss'],
                          data_c.std_dev)
 
-    def test_serialize_nondeterministic(self):
+    def test_serialize_nonscenario(self):
         """
-        All the records for non-deterministic loss maps are inserted correctly.
+        All the records for non-scenario loss maps are inserted correctly.
         """
 
         output = self.writer.output
 
         # Call the function under test.
-        data = SAMPLE_NONDETERMINISTIC_LOSS_MAP_DATA
+        data = SAMPLE_NONSCENARIO_LOSS_MAP_DATA
 
         self.writer.serialize(data)
 
@@ -319,17 +319,17 @@ class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
         self.assertEqual(1, len(output.lossmap_set.all()))
 
         metadata = output.lossmap_set.get()
-        self.assertEqual(NONDETERMINISTIC_LOSS_MAP_METADATA['deterministic'],
-                         metadata.deterministic)
-        self.assertEqual(NONDETERMINISTIC_LOSS_MAP_METADATA['endBranchLabel'],
+        self.assertEqual(NONSCENARIO_LOSS_MAP_METADATA['scenario'],
+                         metadata.scenario)
+        self.assertEqual(NONSCENARIO_LOSS_MAP_METADATA['endBranchLabel'],
                          metadata.end_branch_label)
-        self.assertEqual(NONDETERMINISTIC_LOSS_MAP_METADATA['lossCategory'],
+        self.assertEqual(NONSCENARIO_LOSS_MAP_METADATA['lossCategory'],
                          metadata.category)
-        self.assertEqual(NONDETERMINISTIC_LOSS_MAP_METADATA['unit'],
+        self.assertEqual(NONSCENARIO_LOSS_MAP_METADATA['unit'],
                          metadata.unit)
-        self.assertEqual(NONDETERMINISTIC_LOSS_MAP_METADATA['timeSpan'],
+        self.assertEqual(NONSCENARIO_LOSS_MAP_METADATA['timeSpan'],
                          metadata.timespan)
-        self.assertEqual(NONDETERMINISTIC_LOSS_MAP_METADATA['poE'],
+        self.assertEqual(NONSCENARIO_LOSS_MAP_METADATA['poE'],
                          metadata.poe)
 
         # LossMapData records
@@ -339,17 +339,17 @@ class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
 
         self.assertEqual(SITE_A, Site(*data_a.location.coords))
         self.assertEqual(SITE_A_ASSET_ONE['assetID'], data_a.asset_ref)
-        self.assertEqual(SITE_A_NONDETERMINISTIC_LOSS_ONE['value'],
+        self.assertEqual(SITE_A_NONSCENARIO_LOSS_ONE['value'],
                          data_a.value)
 
         self.assertEqual(SITE_A, Site(*data_b.location.coords))
         self.assertEqual(SITE_A_ASSET_TWO['assetID'], data_b.asset_ref)
-        self.assertEqual(SITE_A_NONDETERMINISTIC_LOSS_TWO['value'],
+        self.assertEqual(SITE_A_NONSCENARIO_LOSS_TWO['value'],
                          data_b.value)
 
         self.assertEqual(SITE_B, Site(*data_c.location.coords))
         self.assertEqual(SITE_B_ASSET_ONE['assetID'], data_c.asset_ref)
-        self.assertEqual(SITE_B_NONDETERMINISTIC_LOSS_ONE['value'],
+        self.assertEqual(SITE_B_NONSCENARIO_LOSS_ONE['value'],
                          data_c.value)
 
 
@@ -358,46 +358,46 @@ class LossMapDBReaderTestCase(LossMapDBBaseTestCase):
     Unit tests for the LossMapDBReader class, which deserializes
     loss maps from the database.
     """
-    def test_deserialize_deterministic(self):
+    def test_deserialize_scenario(self):
         """
-        Deterministic loss map is read back correctly
+        Scenario loss map is read back correctly
         """
-        self.writer.serialize(SAMPLE_DETERMINISTIC_LOSS_MAP_DATA)
+        self.writer.serialize(SAMPLE_SCENARIO_LOSS_MAP_DATA)
 
         # Call the function under test.
         data = self.reader.deserialize(self.writer.output.id)
-        got_metadata = data.pop(0)
+        data.pop(0)
         data = sorted(data, key=lambda e: (e[0].longitude, e[0].latitude))
 
         # compare metadata, ignoring fields that we know aren't saved
-        result_metadata = dict(DETERMINISTIC_LOSS_MAP_METADATA)
+        result_metadata = dict(SCENARIO_LOSS_MAP_METADATA)
         result_metadata.pop('nrmlID')
         result_metadata.pop('riskResultID')
 
         # before overwriting, check the value is not set
-        assert 'poe' not in result_metadata
+        self.assertTrue('poe' not in result_metadata)
         result_metadata['poe'] = None
 
         self.assertEquals(result_metadata, result_metadata)
 
         # compare sites ad losses
         self.assertEquals(
-            self.normalize(SAMPLE_DETERMINISTIC_LOSS_MAP_DATA[1:]),
+            self.normalize(SAMPLE_SCENARIO_LOSS_MAP_DATA[1:]),
             self.normalize(data))
 
-    def test_deserialize_nondeterministic(self):
+    def test_deserialize_nonscenario(self):
         """
-        Deterministic loss map is read back correctly
+        Scenario loss map is read back correctly
         """
-        self.writer.serialize(SAMPLE_NONDETERMINISTIC_LOSS_MAP_DATA)
+        self.writer.serialize(SAMPLE_NONSCENARIO_LOSS_MAP_DATA)
 
         # Call the function under test.
         data = self.reader.deserialize(self.writer.output.id)
-        got_metadata = data.pop(0)
+        data.pop(0)
         data = sorted(data, key=lambda e: (e[0].longitude, e[0].latitude))
 
         # compare metadata, ignoring fields that we know aren't saved
-        result_metadata = dict(NONDETERMINISTIC_LOSS_MAP_METADATA)
+        result_metadata = dict(NONSCENARIO_LOSS_MAP_METADATA)
         result_metadata.pop('nrmlID')
         result_metadata.pop('riskResultID')
 
@@ -405,7 +405,7 @@ class LossMapDBReaderTestCase(LossMapDBBaseTestCase):
 
         # compare sites ad losses
         self.assertEquals(
-            self.normalize(SAMPLE_NONDETERMINISTIC_LOSS_MAP_DATA[1:]),
+            self.normalize(SAMPLE_NONSCENARIO_LOSS_MAP_DATA[1:]),
             self.normalize(data))
 
     def normalize(self, data):
