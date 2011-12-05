@@ -31,11 +31,10 @@ public class RuptureReader
 
     {
         namespaces.put("gml", "http://www.opengis.net/gml");
-        namespaces.put("qml", "http://quakeml.org/xmlns/quakeml/1.1");
         namespaces.put("nrml", "http://openquake.org/xmlns/nrml/0.2");
     }
 
-    class InvalidFormatException extends RuntimeException
+    static class InvalidFormatException extends RuntimeException
     {
 
         private static final long serialVersionUID = 4430401704068185529L;
@@ -74,11 +73,11 @@ public class RuptureReader
         public void update(EqkRupture rupture)
         {
             rupture.setHypocenterLocation(location());
-            rupture.setAveRake(asDouble("//qml:rake/qml:value"));
+            rupture.setAveRake(asDouble("//nrml:rake"));
 
             PointSurface surface = new PointSurface(location());
-            surface.setAveStrike(asDouble("//qml:strike/qml:value"));
-            surface.setAveDip(asDouble("//qml:dip/qml:value"));
+            surface.setAveStrike(asDouble("//nrml:strike"));
+            surface.setAveDip(asDouble("//nrml:dip"));
 
             rupture.setRuptureSurface(surface);
         }
