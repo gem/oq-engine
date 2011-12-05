@@ -36,7 +36,7 @@ Param = namedtuple('Param', 'column type default modes to_db to_job java_name')
 # TODO unify with utils/oqrunner/config_writer.py
 CALCULATION_MODE = {
     'Classical': 'classical',
-    'Deterministic': 'deterministic',
+    'Scenario': 'scenario',
     'Event Based': 'event_based',
     'Disaggregation': 'disaggregation',
     'UHS': 'uhs',
@@ -182,7 +182,7 @@ define_param("HAZARD_TASKS", None, modes="classical", to_job=int)
 
 # input files
 define_param('VULNERABILITY', None)
-define_param("SINGLE_RUPTURE_MODEL", None, modes=("deterministic",))
+define_param("SINGLE_RUPTURE_MODEL", None, modes=("scenario",))
 define_param('EXPOSURE', None)
 define_param('GMPE_LOGIC_TREE_FILE', None,
              modes=('classical', 'event_based', 'disaggregation', 'uhs'))
@@ -286,23 +286,23 @@ define_param('SUBDUCTION_RUPTURE_FLOATING_TYPE',
 define_param('AGGREGATE_LOSS_CURVE', 'aggregate_loss_curve', to_job=str2bool)
 define_param('COMPONENT', 'component', to_db=map_enum)
 define_param('COMPUTE_HAZARD_AT_ASSETS_LOCATIONS', None,
-             modes=('event_based', 'deterministic', 'classical'),
+             modes=('event_based', 'scenario', 'classical'),
              to_job=str2bool)
 define_param('COMPUTE_MEAN_HAZARD_CURVE', 'compute_mean_hazard_curve',
              modes='classical', to_job=str2bool)
 define_param('CONDITIONAL_LOSS_POE', 'conditional_loss_poe', to_job=cttfl)
 define_param('DAMPING', 'damping', default=0.0, to_job=float)
 define_param('GMF_OUTPUT', None,
-             modes=('event_based', 'deterministic'), to_job=str2bool)
+             modes=('event_based', 'scenario'), to_job=str2bool)
 define_param('GMF_RANDOM_SEED', 'gmf_random_seed',
-             modes=('event_based', 'deterministic'), to_job=int)
+             modes=('event_based', 'scenario'), to_job=int)
 define_param('GMPE_LT_RANDOM_SEED', 'gmpe_lt_random_seed',
              modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_job=int)
 define_param('GMPE_MODEL_NAME', 'gmpe_model_name')
 define_param('GMPE_TRUNCATION_TYPE', 'truncation_type', to_db=map_enum)
 define_param('GROUND_MOTION_CORRELATION', 'gm_correlated',
-             modes=('deterministic', 'event_based'), to_job=str2bool)
+             modes=('scenario', 'event_based'), to_job=str2bool)
 define_param('INTENSITY_MEASURE_LEVELS', 'imls',
              modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_job=cttfl)
@@ -317,7 +317,7 @@ define_param('MINIMUM_MAGNITUDE', 'min_magnitude', default=0.0,
              modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_job=float)
 define_param('NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS',
-             'gmf_calculation_number', modes='deterministic', to_job=int)
+             'gmf_calculation_number', modes='scenario', to_job=int)
 define_param('NUMBER_OF_LOGIC_TREE_SAMPLES', 'realizations',
              modes=('classical', 'event_based', 'disaggregation', 'uhs'),
              to_job=int)
@@ -335,7 +335,7 @@ define_param("REFERENCE_VS30_VALUE", "reference_vs30_value", java_name="Vs30",
              to_job=float)
 define_param('RISK_CELL_SIZE', 'risk_cell_size', to_job=float)
 define_param('RUPTURE_SURFACE_DISCRETIZATION',
-             'rupture_surface_discretization', modes='deterministic',
+             'rupture_surface_discretization', modes='scenario',
              to_job=float)
 define_param("SADIGH_SITE_TYPE", "sadigh_site_type", to_db=map_enum,
              java_name="Sadigh Site Type")

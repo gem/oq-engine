@@ -229,21 +229,21 @@ COMMENT ON COLUMN riski.vulnerability_model.last_update IS 'Date/time of the las
 -- riskr schema tables ------------------------------------------
 COMMENT ON TABLE riskr.loss_map IS 'Holds metadata for loss maps.';
 COMMENT ON COLUMN riskr.loss_map.output_id IS 'The foreign key to the output record that represents the corresponding loss map.';
-COMMENT ON COLUMN riskr.loss_map.deterministic IS 'Is the loss map result of deterministic calculations (deterministic event-based) or not (classical psha-based or probabilistic based)';
+COMMENT ON COLUMN riskr.loss_map.scenario IS 'Is the loss map result of scenario calculations (scenario event-based) or not (classical psha-based or probabilistic based)';
 COMMENT ON COLUMN riskr.loss_map.loss_map_ref IS 'A simple identifier';
 COMMENT ON COLUMN riskr.loss_map.end_branch_label IS 'End branch label';
 COMMENT ON COLUMN riskr.loss_map.category IS 'Loss category (e.g. economic_loss).';
 COMMENT ON COLUMN riskr.loss_map.unit IS 'Unit of measurement';
-COMMENT ON COLUMN riskr.loss_map.timespan IS 'timespan of years (for non deterministic loss maps, i.e. classical/probabilistic)';
+COMMENT ON COLUMN riskr.loss_map.timespan IS 'timespan of years (for non scenario loss maps, i.e. classical/probabilistic)';
 COMMENT ON COLUMN riskr.loss_map.poe IS 'Probability of exceedance (for probabilistic loss maps)';
 
 
-COMMENT ON TABLE riskr.loss_map_data IS 'Holds an asset, its position and a value plus (for non-deterministic maps) the standard deviation for its loss.';
+COMMENT ON TABLE riskr.loss_map_data IS 'Holds an asset, its position and a value plus (for non-scenario maps) the standard deviation for its loss.';
 COMMENT ON COLUMN riskr.loss_map_data.loss_map_id IS 'The foreign key to the loss map';
 COMMENT ON COLUMN riskr.loss_map_data.asset_ref IS 'The asset reference';
 COMMENT ON COLUMN riskr.loss_map_data.location IS 'The position of the asset';
 COMMENT ON COLUMN riskr.loss_map_data.value IS 'The value of the loss';
-COMMENT ON COLUMN riskr.loss_map_data.std_dev IS 'The standard deviation of the loss (for deterministic maps, for non-deterministic maps the standard deviation is 0)';
+COMMENT ON COLUMN riskr.loss_map_data.std_dev IS 'The standard deviation of the loss (for scenario maps, for non-scenario maps the standard deviation is 0)';
 
 
 COMMENT ON TABLE riskr.loss_curve IS 'Holds the parameters common to a set of loss curves.';
@@ -304,18 +304,18 @@ COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was crea
 COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
 COMMENT ON COLUMN uiapi.oq_job.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
 COMMENT ON COLUMN uiapi.oq_job.supervisor_pid IS 'The process id (PID) of the supervisor for this OpenQuake job';
-COMMENT ON COLUMN uiapi.oq_job.job_type IS 'One of: classical, event_based, deterministic, disaggregation, or uhs.';
+COMMENT ON COLUMN uiapi.oq_job.job_type IS 'One of: classical, event_based, scenario, disaggregation, or uhs.';
 COMMENT ON COLUMN uiapi.oq_job.status IS 'One of: pending, running, failed or succeeded.';
 COMMENT ON COLUMN uiapi.oq_job.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
 
 
 COMMENT ON TABLE uiapi.job_stats IS 'Tracks various job statistics';
 COMMENT ON COLUMN uiapi.job_stats.num_sites IS 'The number of total sites in the calculation';
-COMMENT ON COLUMN uiapi.job_stats.realizations IS 'The number of logic tree samples in the calculation (for hazard jobs of all types except deterministic)';
+COMMENT ON COLUMN uiapi.job_stats.realizations IS 'The number of logic tree samples in the calculation (for hazard jobs of all types except scenario)';
 
 
 COMMENT ON TABLE uiapi.oq_params IS 'Holds the parameters needed to invoke the OpenQuake engine.';
-COMMENT ON COLUMN uiapi.oq_params.job_type IS 'One of: classical, event_based, deterministic, disaggregation, or uhs.';
+COMMENT ON COLUMN uiapi.oq_params.job_type IS 'One of: classical, event_based, scenario, disaggregation, or uhs.';
 COMMENT ON COLUMN uiapi.oq_params.histories IS 'Number of seismicity histories';
 COMMENT ON COLUMN uiapi.oq_params.imls IS 'Intensity measure levels';
 COMMENT ON COLUMN uiapi.oq_params.imt IS 'Intensity measure type, one of:

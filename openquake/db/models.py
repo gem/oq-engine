@@ -479,7 +479,7 @@ class OqJob(models.Model):
     JOB_TYPE_CHOICES = (
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
-        (u'deterministic', u'Deterministic'),
+        (u'scenario', u'Scenario'),
         (u'disaggregation', u'Disaggregation'),
         (u'uhs', u'UHS'),  # Uniform Hazard Spectra
     )
@@ -511,7 +511,7 @@ class JobStats(models.Model):
     # The number of total sites in job
     num_sites = models.IntegerField()
     # The number of logic tree samples
-    # (for hazard jobs of all types except deterministic)
+    # (for hazard jobs of all types except scenario)
     realizations = models.IntegerField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
@@ -525,7 +525,7 @@ class OqParams(models.Model):
     JOB_TYPE_CHOICES = (
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
-        (u'deterministic', u'Deterministic'),
+        (u'scenario', u'Scenario'),
         (u'disaggregation', u'Disaggregation'),
         (u'uhs', u'UHS'),  # Uniform Hazard Spectra
     )
@@ -815,7 +815,7 @@ class LossMap(models.Model):
     '''
 
     output = models.ForeignKey("Output")
-    deterministic = models.BooleanField()
+    scenario = models.BooleanField()
     loss_map_ref = models.TextField(null=True)
     end_branch_label = models.TextField(null=True)
     category = models.TextField(null=True)
@@ -830,7 +830,7 @@ class LossMap(models.Model):
 class LossMapData(models.Model):
     '''
     Holds an asset, its position and a value plus (for
-    non-deterministic maps) the standard deviation for its loss
+    non-scenario maps) the standard deviation for its loss
     '''
 
     loss_map = models.ForeignKey("LossMap")
