@@ -45,6 +45,7 @@ class ScenarioEventBasedMixin:
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the job configuration file."""
 
+    # pylint: disable=R0914
     @general.preload
     def execute(self):
         """Entry point for triggering the computation."""
