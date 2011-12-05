@@ -609,7 +609,7 @@ class Job(object):
 
         job_type = CALCULATION_MODE[self['CALCULATION_MODE']]
         if conf.HAZARD_SECTION in self.sections:
-            if job_type != 'deterministic':
+            if job_type != 'scenario':
                 job_stats.realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
 
         job_stats.save()
