@@ -30,12 +30,12 @@ public class SourceModelReaderTest {
             "tests/data/invalid/source_model1.xml";
     public static final double MFD_BIN_WIDTH = 0.1;
     public static final String MISMATCHED_FILE =
-            "openquake/nrml/schema/0.2/examples/logic-tree-gmpe.xml";
+            "openquake/nrml/schema/0.3/examples/logic-tree-gmpe.xml";
 
     @Before
     public void setUp() {
         System.setProperty("openquake.nrml.schema",
-                           new File("openquake/nrml/schema/0.2/nrml.xsd").getAbsolutePath());
+                           new File("openquake/nrml/schema/0.3/nrml.xsd").getAbsolutePath());
     }
 
     /**
