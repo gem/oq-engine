@@ -18,7 +18,7 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 """
-This module tests the risk side of the deterministic event based calculation.
+This module tests the risk side of the scenario event based calculation.
 """
 
 import json
@@ -26,25 +26,25 @@ import unittest
 
 from openquake import kvs
 from openquake import shapes
-from openquake.risk.job import deterministic as risk_job_det
+from openquake.risk.job import scenario as risk_job_det
 
 from tests.utils import helpers
 from tests.utils.helpers import patch
 
 TEST_JOB_ID = "1234"
 TEST_REGION = shapes.Region.from_simple((0.1, 0.1), (0.2, 0.2))
-TEST_JOB_FILE = helpers.testdata_path('deterministic/config.gem')
+TEST_JOB_FILE = helpers.testdata_path('scenario/config.gem')
 
 
-class DeterministicRiskTestCase(unittest.TestCase):
+class ScenarioRiskTestCase(unittest.TestCase):
     """
-    Test case for module-level functions of the deterministic risk job code.
+    Test case for module-level functions of the scenario risk job code.
     """
 
     def test_load_gmvs_for_point(self):
         """
         Exercises the function
-        :py:func:`openquake.risk.job.deterministic.load_gmvs_for_point`.
+        :py:func:`openquake.risk.job.scenario.load_gmvs_for_point`.
         """
 
         # clear the kvs before running the test
@@ -81,7 +81,7 @@ class DeterministicRiskTestCase(unittest.TestCase):
     def test_load_assets_for_point(self):
         """
         Exercises the function
-        :py:func:`openquake.risk.job.deterministic.load_assets_for_point`.
+        :py:func:`openquake.risk.job.scenario.load_assets_for_point`.
         """
 
         kvs.flush()
@@ -130,9 +130,9 @@ class DeterministicRiskTestCase(unittest.TestCase):
         # They should come out exactly the way they went in.
         self.assertEqual(test_assets, actual_assets)
 
-    def test_deterministic_job_completes(self):
+    def test_scenario_job_completes(self):
         """
-        Exercise the deterministic risk job and make sure it runs end-to-end.
+        Exercise the scenario risk job and make sure it runs end-to-end.
         """
         risk_job = helpers.job_from_file(TEST_JOB_FILE)
 

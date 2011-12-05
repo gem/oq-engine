@@ -18,7 +18,7 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 """
-This module tests the hazard side of the deterministic
+This module tests the hazard side of the scenario
 event based calculation.
 """
 
@@ -34,9 +34,9 @@ from openquake import java
 from openquake import kvs
 from openquake import shapes
 
-from openquake.hazard import deterministic as det
+from openquake.hazard import scenario as det
 
-DETERMINISTIC_SMOKE_TEST = helpers.testdata_path("deterministic/config.gem")
+SCENARIO_SMOKE_TEST = helpers.testdata_path("scenario/config.gem")
 NUMBER_OF_CALC_KEY = "NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"
 
 
@@ -54,9 +54,9 @@ def compute_ground_motion_field(self, _random_generator):
     return hashmap
 
 
-class DeterministicEventBasedMixinTestCase(unittest.TestCase):
+class ScenarioEventBasedMixinTestCase(unittest.TestCase):
     """
-    Tests for the Deterministic Hazard engine.
+    Tests for the Scenario Hazard engine.
     """
 
     @classmethod
@@ -66,7 +66,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
     def setUp(self):
         kvs.flush()
 
-        self.job = helpers.job_from_file(DETERMINISTIC_SMOKE_TEST)
+        self.job = helpers.job_from_file(SCENARIO_SMOKE_TEST)
 
         self.job.params[NUMBER_OF_CALC_KEY] = "1"
 
@@ -74,7 +74,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
 
         # saving the default java implementation
         self.default = \
-            det.DeterministicEventBasedMixin.compute_ground_motion_field
+            det.ScenarioEventBasedMixin.compute_ground_motion_field
 
         self.grid = self.job.region.grid
 
@@ -82,19 +82,19 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
 
     def tearDown(self):
         # restoring the default java implementation
-        det.DeterministicEventBasedMixin.compute_ground_motion_field = \
+        det.ScenarioEventBasedMixin.compute_ground_motion_field = \
             self.default
 
         kvs.flush()
 
-    def test_deterministic_job_completes(self):
-        """The deterministic calculator is triggered.
+    def test_scenario_job_completes(self):
+        """The scenario calculator is triggered.
 
-        When CALCULATION_MODE is set to "Deterministic" the deterministic event
+        When CALCULATION_MODE is set to "Scenario" the scenario event
         based calculator is triggered.
         """
 
-        det.DeterministicEventBasedMixin.compute_ground_motion_field = \
+        det.ScenarioEventBasedMixin.compute_ground_motion_field = \
             compute_ground_motion_field
 
         # KVS garbage collection is going to be called asynchronously by the
@@ -110,7 +110,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         in the underlying kvs system.
         """
 
-        det.DeterministicEventBasedMixin.compute_ground_motion_field = \
+        det.ScenarioEventBasedMixin.compute_ground_motion_field = \
             compute_ground_motion_field
 
         # KVS garbage collection is going to be called asynchronously by the
@@ -146,7 +146,7 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
         multiple times.
         """
 
-        det.DeterministicEventBasedMixin.compute_ground_motion_field = \
+        det.ScenarioEventBasedMixin.compute_ground_motion_field = \
             compute_ground_motion_field
 
         self.job.params["INTENSITY_MEASURE_TYPE"] = "MMI"
@@ -241,14 +241,14 @@ class DeterministicEventBasedMixinTestCase(unittest.TestCase):
             self.assertEqual(0.1, gmv["mag"])
 
     def test_loads_the_rupture_model(self):
-        calculator = det.DeterministicEventBasedMixin(None, None)
+        calculator = det.ScenarioEventBasedMixin(None, None)
         calculator.params = self.job.params
 
         self.assertEqual("org.opensha.sha.earthquake.EqkRupture",
                          calculator.rupture_model.__class__.__name__)
 
     def test_the_same_calculator_is_used_between_multiple_invocations(self):
-        calculator = det.DeterministicEventBasedMixin(None, None)
+        calculator = det.ScenarioEventBasedMixin(None, None)
         calculator.params = self.job.params
 
         gmf_calculator1 = calculator.gmf_calculator([shapes.Site(1.0, 1.0)])
