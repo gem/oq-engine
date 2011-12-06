@@ -1,20 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:gml="http://www.opengis.net/gml"
-           xmlns:nrml="http://openquake.org/xmlns/nrml/0.3"
            xmlns="http://openquake.org/xmlns/nrml/0.3"
            targetNamespace="http://openquake.org/xmlns/nrml/0.3"
            elementFormDefault="qualified"
            xml:lang="en">
 
-    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gml/gmlsf.xsd"/>
-	<xs:include schemaLocation="nrml_common.xsd"/>
-	<xs:include schemaLocation="nrml_seismic.xsd"/>
-	
-	<!-- ============================================================= -->
-	
-	<xs:complexType name="HazardProcessing">
-	
+    <xs:complexType name="HazardProcessing">
+
         <!-- NOTE: renamed timeSpanDuration (OpenSHA name) to investigationTimeSpan.
              This parameter should be given in the unit years, since the base
              SI unit (seconds) would yield values that are not instructive.
@@ -25,10 +18,7 @@
         <xs:attribute name="saPeriod" type="NonNegativeDoubleType"/>
         <xs:attribute name="saDamping" type="NonNegativeDoubleType"/>
     </xs:complexType>
-    
-    <!-- ============================================================= -->
-    
-	<!-- TODO: add useful enum items (T&O group) -->
+
 	<xs:simpleType name="Vs30Method">
         <xs:annotation>
             <xs:documentation>Method used to define the vs30 value.</xs:documentation>
@@ -38,7 +28,7 @@
             <xs:enumeration value="fixed value"/>
         </xs:restriction>
     </xs:simpleType>
-    
+
     <xs:simpleType name="GroundMotionComponent">
         <xs:restriction base="xs:string">
             <xs:enumeration value="average"/>
@@ -48,17 +38,17 @@
             <xs:enumeration value="vertical"/>
         </xs:restriction>
     </xs:simpleType>
-    
+
     <xs:simpleType name="TruncationType">
         <xs:restriction base="xs:string">
             <xs:enumeration value="none"/>
-            
+
             <!-- NOTE: removed the whitespace in enum values -->
             <xs:enumeration value="one_sided"/>
             <xs:enumeration value="two_sided"/>
         </xs:restriction>
     </xs:simpleType>
-    
+
     <xs:simpleType name="StdDevType">
         <xs:restriction base="xs:string">
             <xs:enumeration value="none"/>
@@ -67,7 +57,7 @@
             <xs:enumeration value="intra"/>
         </xs:restriction>
     </xs:simpleType>
-    
+
 	<xs:complexType name="GMPEParametersType">
         <xs:annotation>
             <xs:documentation>Describe the IMR (GMPE) related information</xs:documentation>
@@ -78,15 +68,12 @@
 
         <xs:attribute name="period" type="NonNegativeDoubleType"/>
         <xs:attribute name="damping" type="NonNegativeDoubleType"/>
-        
+
         <xs:attribute name="truncationType" type="TruncationType"/>
         <xs:attribute name="truncationLevel" type="NonNegativeDoubleType"/>
         <xs:attribute name="stdDevType" type="StdDevType"/>
     </xs:complexType>
 
-    <!-- ============================================================= -->
-    <!-- child elements of nrml -->
-    
     <xs:element name="hazardResult" type="HazardResult" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="HazardResult">
         <xs:complexContent>
@@ -104,5 +91,5 @@
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
-    
+
 </xs:schema>
