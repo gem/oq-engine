@@ -8,8 +8,8 @@
            elementFormDefault="qualified"
            xml:lang="en">
 
-    <xs:import namespace="http://www.opengis.net/gmlsf" schemaLocation="./gmlsfLevels.xsd"/>
-    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gmlsf.xsd"/>
+    <xs:import namespace="http://www.opengis.net/gmlsf" schemaLocation="./gml/gmlsfLevels.xsd"/>
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gml/gmlsf.xsd"/>
 
     <xs:annotation>
         <xs:appinfo>
