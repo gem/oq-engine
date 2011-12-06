@@ -11,18 +11,22 @@
     <xs:import namespace="http://www.opengis.net/gmlsf" schemaLocation="./gml/gmlsfLevels.xsd"/>
     <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gml/gmlsf.xsd"/>
 
+    <xs:include schemaLocation="./nrml_common.xsd"/>
+    <xs:include schemaLocation="./nrml_seismic.xsd"/>
+    <xs:include schemaLocation="./nrml_hazard.xsd"/>
+    <xs:include schemaLocation="./nrml_risk.xsd"/>
+    <xs:include schemaLocation="./hazard/gmf.xsd"/>
+    <xs:include schemaLocation="./hazard/hazard_curve.xsd"/>
+    <xs:include schemaLocation="./hazard/hazard_map.xsd"/>
+    <xs:include schemaLocation="./hazard/uhs.xsd"/>
+    <xs:include schemaLocation="./hazard/disaggregation.xsd"/>
+
     <xs:annotation>
         <xs:appinfo>
             <gmlsf:ComplianceLevel>1</gmlsf:ComplianceLevel>
             <gmlsf:GMLProfileSchema>http://schemas.opengis.net/gml/3.1.1/profiles/gmlSimpleFeatureProfile/1.0.0/gmlsf.xsd</gmlsf:GMLProfileSchema>
         </xs:appinfo>
    </xs:annotation>
-
-    <!-- Include schemas being part of NRML -->
-    <xs:include schemaLocation="./nrml_common.xsd"/>
-    <xs:include schemaLocation="./nrml_seismic.xsd"/>
-    <xs:include schemaLocation="./nrml_hazard.xsd"/>
-    <xs:include schemaLocation="./nrml_risk.xsd"/>
 
     <xs:element name="nrml" type="NRML" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="NRML">
