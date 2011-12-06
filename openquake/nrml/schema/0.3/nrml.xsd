@@ -13,8 +13,8 @@
 
     <xs:include schemaLocation="./nrml_common.xsd"/>
     <xs:include schemaLocation="./nrml_seismic.xsd"/>
-    <xs:include schemaLocation="./nrml_hazard.xsd"/>
     <xs:include schemaLocation="./nrml_risk.xsd"/>
+    <xs:include schemaLocation="./hazard/general.xsd"/>
     <xs:include schemaLocation="./hazard/gmf.xsd"/>
     <xs:include schemaLocation="./hazard/hazard_curve.xsd"/>
     <xs:include schemaLocation="./hazard/hazard_map.xsd"/>
