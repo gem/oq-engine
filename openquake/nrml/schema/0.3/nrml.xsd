@@ -20,6 +20,10 @@
     <xs:include schemaLocation="./hazard/hazard_map.xsd"/>
     <xs:include schemaLocation="./hazard/uhs.xsd"/>
     <xs:include schemaLocation="./hazard/disaggregation.xsd"/>
+    <xs:include schemaLocation="./risk/general.xsd"/>
+    <xs:include schemaLocation="./risk/loss_map.xsd"/>
+    <xs:include schemaLocation="./risk/loss_curve.xsd"/>
+    <xs:include schemaLocation="./risk/vulnerability.xsd"/>
 
     <xs:annotation>
         <xs:appinfo>
