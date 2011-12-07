@@ -6,8 +6,9 @@
            elementFormDefault="qualified"
            xml:lang="en">
 
-    <xs:complexType name="HazardProcessing">
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
 
+    <xs:complexType name="HazardProcessing">
         <!-- NOTE: renamed timeSpanDuration (OpenSHA name) to investigationTimeSpan.
              This parameter should be given in the unit years, since the base
              SI unit (seconds) would yield values that are not instructive.
@@ -91,5 +92,56 @@
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
+
+    <!-- Geometry defintions. Used by rupture and source models. -->
+
+    <xs:element name="simpleFaultGeometry" type="SimpleFaultGeometry" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="SimpleFaultGeometry">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="faultTrace" type="FaultEdge"/>
+                    <xs:element name="dip" type="Dip"/>
+                    <xs:element name="upperSeismogenicDepth" type="NonNegativeDoubleType"/>
+                    <xs:element name="lowerSeismogenicDepth" type="NonNegativeDoubleType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="ComplexFaultGeometry">
+        <xs:complexContent>
+            <xs:restriction base="gml:MultiGeometryPropertyType">
+                <xs:sequence>
+                    <xs:element ref="faultEdges"/>
+                </xs:sequence>
+            </xs:restriction>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="faultEdges" type="FaultEdges" substitutionGroup="gml:MultiCurve"/>
+    <xs:complexType name="FaultEdges">
+        <xs:complexContent>
+            <xs:restriction base="gml:MultiCurveType">
+                <xs:sequence>
+                    <xs:element ref="faultTopEdge"/>
+                    <xs:element ref="faultBottomEdge"/>
+                </xs:sequence>
+            </xs:restriction>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="faultTopEdge" type="FaultEdge" substitutionGroup="gml:curveMember"/>
+    <xs:element name="faultBottomEdge" type="FaultEdge" substitutionGroup="gml:curveMember"/>
+    <xs:complexType name="FaultEdge">
+        <xs:complexContent>
+            <xs:restriction base="gml:CurvePropertyType">
+                <xs:sequence>
+                    <xs:element ref="gml:LineString"/>
+                </xs:sequence>
+            </xs:restriction>
+        </xs:complexContent>
+    </xs:complexType>
+
 
 </xs:schema>
