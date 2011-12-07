@@ -6,19 +6,18 @@
            elementFormDefault="qualified"
            xml:lang="en">
 
-	<xs:include schemaLocation="nrml_common.xsd"/>
-
-    <!-- ============================================================= -->
-    
-    <xs:complexType name="AssetValue">
-        <xs:simpleContent>
-            <xs:extension base="NonNegativeDoubleType" />
-        </xs:simpleContent>
+    <!-- Top-level element for Exposure model definitions. -->
+    <xs:element name="exposurePortfolio" type="ExposurePortfolio" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="ExposurePortfolio">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
+                    <xs:element ref="exposureList"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
     </xs:complexType>
-
-    <!-- ============================================================= -->
-    
-    <!-- GML substitution groups -->
 
     <xs:element name="exposureList" type="ExposureList" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="ExposureList">
@@ -34,8 +33,6 @@
         </xs:complexContent>
     </xs:complexType>
 
-    <!-- ============================================================= -->
-
     <xs:element name="assetDefinition" type="AssetDefinition" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="AssetDefinition">
         <xs:complexContent>
@@ -48,19 +45,11 @@
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
-    
-    <!-- child elements of nrml -->
 
-    <xs:element name="exposurePortfolio" type="ExposurePortfolio" substitutionGroup="gml:_Feature"/>
-    <xs:complexType name="ExposurePortfolio">
-        <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
-                <xs:sequence>
-                    <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
-                    <xs:element ref="exposureList"/>
-                </xs:sequence>
-            </xs:extension>
-        </xs:complexContent>
+    <xs:complexType name="AssetValue">
+        <xs:simpleContent>
+            <xs:extension base="NonNegativeDoubleType" />
+        </xs:simpleContent>
     </xs:complexType>
 
 </xs:schema>
