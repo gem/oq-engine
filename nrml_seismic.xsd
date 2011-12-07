@@ -13,7 +13,6 @@
     </xs:annotation>
 
     <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gmlsf.xsd"/>
-    <xs:import namespace="http://quakeml.org/xmlns/quakeml/1.1" schemaLocation="./QuakeML-BED-1.1.xsd"/>
     <xs:include schemaLocation="nrml_common.xsd"/>
 
     <!-- ============================================================= -->
