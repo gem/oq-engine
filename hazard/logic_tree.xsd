@@ -6,6 +6,8 @@
            elementFormDefault="qualified"
            xml:lang="en">
 
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
     <xs:simpleType name="LogicTreeBranchUncertaintyType">
         <xs:restriction base="xs:string">
             <xs:enumeration value="gmpeModel"/>

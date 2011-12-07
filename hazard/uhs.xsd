@@ -6,7 +6,7 @@
            elementFormDefault="qualified"
            xml:lang="en">
 
-    <!-- Uniform Hazard Spectra -->
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
 
     <!-- UHS Result Set: the top-level element for UHS results -->
     <xs:element name="uhsResultSet" type="UHSResultSetType"/>

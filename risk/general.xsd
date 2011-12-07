@@ -6,6 +6,8 @@
            elementFormDefault="qualified"
            xml:lang="en">
 
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
     <xs:element name="riskResult" type="RiskResult" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="RiskResult">
         <xs:complexContent>
