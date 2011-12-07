@@ -6,6 +6,8 @@
            elementFormDefault="qualified"
            xml:lang="en">
 
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
     <!-- Top-level element for Exposure model definitions. -->
     <xs:element name="exposurePortfolio" type="ExposurePortfolio" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="ExposurePortfolio">

@@ -6,7 +6,7 @@
            elementFormDefault="qualified"
            xml:lang="en">
 
-    <!-- hazardCurve -->
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
 
     <xs:element name="hazardCurveField" type="HazardCurveField" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="HazardCurveField">
