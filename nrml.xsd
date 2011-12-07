@@ -12,7 +12,6 @@
     <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gml/gmlsf.xsd"/>
 
     <xs:include schemaLocation="./nrml_common.xsd"/>
-    <xs:include schemaLocation="./nrml_seismic.xsd"/>
     <xs:include schemaLocation="./hazard/disaggregation.xsd"/>
     <xs:include schemaLocation="./hazard/general.xsd"/>
     <xs:include schemaLocation="./hazard/gmf.xsd"/>
