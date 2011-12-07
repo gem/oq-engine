@@ -6,7 +6,7 @@
            elementFormDefault="qualified"
            xml:lang="en">
 
-    <!-- lossMap -->
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
 
     <xs:element name="lossMap" type="LossMap" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="LossMap">

@@ -6,6 +6,8 @@
            elementFormDefault="qualified"
            xml:lang="en">
 
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
     <xs:element name="lossCurveList" type="AssetList" substitutionGroup="gml:_Feature"/>
     <xs:element name="lossRatioCurveList" type="AssetList" substitutionGroup="gml:_Feature"/>
 
