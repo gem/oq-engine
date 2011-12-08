@@ -22,8 +22,8 @@ from db_fields_unittest import *
 from db_loader_unittest import *
 from db_loader_unittest import *
 from db_routers_unittest import *
-from deterministic_hazard_unittest import *
-from deterministic_risk_unittest import *
+from scenario_hazard_unittest import *
+from scenario_risk_unittest import *
 from disaggregation_unittest import *
 from disagg_subsets_unittest import *
 from handlers_unittest import *
@@ -57,8 +57,10 @@ from signalling_unittest import *
 from supervisor_unittest import *
 from tools_dbmaint_unittest import *
 from tools_oqbugs_unittest import *
+from uhs_unittest import *
 from utils_config_unittest import *
 from utils_general_unittest import *
+from utils_stats_unittest import *
 from utils_tasks_unittest import *
 from utils_version_unittest import *
 from validator_unittest import *

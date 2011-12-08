@@ -43,6 +43,7 @@ from openquake.kvs import tokens
 from openquake.hazard import tasks
 from openquake.hazard import classical_psha
 from openquake.hazard import opensha
+from openquake.hazard import general as hazard_general
 import openquake.hazard.job
 
 from tests.utils import helpers
@@ -77,7 +78,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
     def test_generate_hazard_curves_using_classical_psha(self):
 
-        def verify_realization_haz_curves_stored_to_kvs(hazengine):
+        def verify_realization_haz_curves_stored_to_kvs(hazengine, keys):
             """ This just tests to make sure there something in the KVS
             for each key in given list of keys. This does NOT test the
             actual results. """
@@ -91,13 +92,9 @@ class HazardEngineTestCase(unittest.TestCase):
                 for site in hazengine.sites_to_compute():
                     key = tokens.hazard_curve_poes_key(
                         hazengine.job_id, realization, site)
+                    self.assertTrue(key in keys, "Missing key %s" % key)
 
-                    value = self.kvs_client.get(key)
-                    # LOG.debug("kvs value is %s" % value)
-                    self.assertTrue(value is not None,
-                        "no non-empty value found at KVS key")
-
-        def verify_mean_haz_curves_stored_to_kvs(hazengine):
+        def verify_mean_haz_curves_stored_to_kvs(hazengine, keys):
             """ Make sure that the keys and non-empty values for mean
             hazard curves have been written to KVS."""
 
@@ -106,11 +103,9 @@ class HazardEngineTestCase(unittest.TestCase):
                 LOG.debug("verifying KVS entries for mean hazard curves")
                 for site in hazengine.sites_to_compute():
                     key = tokens.mean_hazard_curve_key(hazengine.job_id, site)
-                    value = self.kvs_client.get(key)
-                    self.assertTrue(
-                        value is not None, "no value found at KVS key")
+                    self.assertTrue(key in keys, "Missing key %s" % key)
 
-        def verify_mean_haz_maps_stored_to_kvs(hazengine):
+        def verify_mean_haz_maps_stored_to_kvs(hazengine, keys):
             """ Make sure that the keys and non-empty values for mean
             hazard maps have been written to KVS."""
 
@@ -124,11 +119,9 @@ class HazardEngineTestCase(unittest.TestCase):
                     for site in hazengine.sites_to_compute():
                         key = tokens.mean_hazard_map_key(
                             hazengine.job_id, site, poe)
-                        value = self.kvs_client.get(key)
-                        self.assertTrue(
-                            value is not None, "no value found at KVS key")
+                        self.assertTrue(key in keys, "Missing key %s" % key)
 
-        def verify_quantile_haz_curves_stored_to_kvs(hazengine):
+        def verify_quantile_haz_curves_stored_to_kvs(hazengine, keys):
             """ Make sure that the keys and non-empty values for quantile
             hazard curves have been written to KVS."""
 
@@ -141,11 +134,9 @@ class HazardEngineTestCase(unittest.TestCase):
                 for site in hazengine.sites_to_compute():
                     key = tokens.quantile_hazard_curve_key(
                         hazengine.job_id, site, quantile)
-                    value = self.kvs_client.get(key)
-                    self.assertTrue(
-                        value is not None, "no value found at KVS key")
+                    self.assertTrue(key in keys, "Missing key %s" % key)
 
-        def verify_quantile_haz_maps_stored_to_kvs(hazengine):
+        def verify_quantile_haz_maps_stored_to_kvs(hazengine, keys):
             """ Make sure that the keys and non-empty values for quantile
             hazard maps have been written to KVS."""
 
@@ -165,10 +156,8 @@ class HazardEngineTestCase(unittest.TestCase):
                         for site in hazengine.sites_to_compute():
                             key = tokens.quantile_hazard_map_key(
                                 hazengine.job_id, site, poe, quantile)
-                            value = self.kvs_client.get(key)
                             self.assertTrue(
-                                value is not None,
-                                "no value found at KVS key %s" % key)
+                                key in keys, "Missing key %s" % key)
 
         def verify_realization_haz_curves_stored_to_nrml(hazengine):
             """Tests that a NRML file has been written for each realization,
@@ -280,21 +269,22 @@ class HazardEngineTestCase(unittest.TestCase):
             helpers.testdata_path("classical_psha_simple/config.gem"))
 
         with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
-            hazengine.execute()
+            used_keys = []
+            hazengine.execute(used_keys)
 
-            verify_realization_haz_curves_stored_to_kvs(hazengine)
+            verify_realization_haz_curves_stored_to_kvs(hazengine, used_keys)
             verify_realization_haz_curves_stored_to_nrml(hazengine)
 
             # hazard curves: check results of mean and quantile computation
-            verify_mean_haz_curves_stored_to_kvs(hazengine)
-            verify_quantile_haz_curves_stored_to_kvs(hazengine)
+            verify_mean_haz_curves_stored_to_kvs(hazengine, used_keys)
+            verify_quantile_haz_curves_stored_to_kvs(hazengine, used_keys)
 
             verify_mean_haz_curves_stored_to_nrml(hazengine)
             verify_quantile_haz_curves_stored_to_nrml(hazengine)
 
             # hazard maps: check results of mean and quantile computation
-            verify_mean_haz_maps_stored_to_kvs(hazengine)
-            verify_quantile_haz_maps_stored_to_kvs(hazengine)
+            verify_mean_haz_maps_stored_to_kvs(hazengine, used_keys)
+            verify_quantile_haz_maps_stored_to_kvs(hazengine, used_keys)
 
             verify_mean_haz_maps_stored_to_nrml(hazengine)
             verify_quantile_haz_maps_stored_to_nrml(hazengine)
@@ -919,3 +909,56 @@ class ParameterizeSitesTestCase(helpers.TestMixin, unittest.TestCase):
             mandatory_params.issubset(params_handled),
             "The following parameters have no defaults: %s" % (
                 mandatory_params - params_handled))
+
+
+class IMLTestCase(unittest.TestCase):
+    """
+    Tests that every Intensity Measure Type
+    declared in ``openquake.db.models.OqParams.IMT_CHOICES``
+    has a correct corresponding function
+    in ``openquake.hazard.general.IML_SCALING`` mapping
+    and is allowed to be the configuration parameter value
+    for ``INTENSITY_MEASURE_TYPE``.
+    """
+    def test_scaling_definitions(self):
+        from openquake.db.models import OqParams
+        from openquake.job.params import ENUM_MAP
+        from openquake.hazard.general import IML_SCALING
+        enum_map_reversed = dict((val, key) for (key, val) in ENUM_MAP.items())
+        imt_config_names = [enum_map_reversed[imt]
+                            for (imt, imt_verbose) in OqParams.IMT_CHOICES
+                            if imt in enum_map_reversed]
+        self.assertEqual(set(IML_SCALING) - set(imt_config_names), set())
+        self.assertEqual(set(imt_config_names), set(IML_SCALING))
+        for imt in imt_config_names:
+            self.assertTrue(callable(IML_SCALING[imt]))
+            self.assertTrue(hasattr(self, 'test_imt_%s' % imt),
+                            'please test imt %s' % imt)
+
+    def _test_imt(self, imt, function):
+        sample_imt = [1.2, 3.4, 5.6]
+        double_array = hazard_general.get_iml_list(sample_imt, imt)
+        actual_result = [val.value for val in double_array]
+        expected_result = map(function, sample_imt)
+        self.assertEqual(actual_result, expected_result)
+
+    def test_imt_PGA(self):
+        self._test_imt('PGA', numpy.log)
+
+    def test_imt_SA(self):
+        self._test_imt('SA', numpy.log)
+
+    def test_imt_PGV(self):
+        self._test_imt('PGV', numpy.log)
+
+    def test_imt_PGD(self):
+        self._test_imt('PGD', numpy.log)
+
+    def test_imt_IA(self):
+        self._test_imt('IA', numpy.log)
+
+    def test_imt_RSD(self):
+        self._test_imt('RSD', numpy.log)
+
+    def test_imt_MMI(self):
+        self._test_imt('MMI', lambda val: val)

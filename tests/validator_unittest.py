@@ -25,7 +25,7 @@ and its validation.
 from openquake.job import config
 from openquake.job.config import (
     DisaggregationValidator, HazardMandatoryParamsValidator,
-    RiskMandatoryParamsValidator, DeterministicComputationValidator,
+    RiskMandatoryParamsValidator, ScenarioComputationValidator,
     UHSValidator, to_float_array, to_str_array, validate_numeric_sequence,
     BCRValidator)
 from tests.utils import helpers
@@ -103,7 +103,7 @@ class ValidatorSetTestCase(unittest.TestCase):
         validators = [
             RiskMandatoryParamsValidator(None, None),
             DisaggregationValidator(None),
-            DeterministicComputationValidator(None, None),
+            ScenarioComputationValidator(None, None),
         ]
 
         for v in validators:
@@ -215,16 +215,16 @@ class ConfigurationConstraintsTestCase(unittest.TestCase, helpers.TestMixin):
         # Restore the list with the mandatory hazard parameters.
         HazardMandatoryParamsValidator.MANDATORY_PARAMS.pop()
 
-    def test_deterministic_is_not_supported_alone(self):
-        """When we specify a deterministic computation, we only
+    def test_scenario_is_not_supported_alone(self):
+        """When we specify a scenario computation, we only
         support hazard + risk jobs."""
 
         sections = [config.RISK_SECTION,
                 config.HAZARD_SECTION, config.GENERAL_SECTION]
 
-        params = {config.CALCULATION_MODE: config.DETERMINISTIC_MODE}
+        params = {config.CALCULATION_MODE: config.SCENARIO_MODE}
 
-        validator = config.DeterministicComputationValidator(sections, params)
+        validator = config.ScenarioComputationValidator(sections, params)
 
         self.assertTrue(validator.is_valid()[0])
 

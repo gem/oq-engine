@@ -24,13 +24,16 @@ Unit tests for the utils.tasks module.
 
 import mock
 import unittest
+import time
+import uuid
 
 from openquake.utils import tasks
 
-from tests.utils.helpers import patch, ConfigTestMixin
+from tests.utils.helpers import patch, TestStore
 from tests.utils.tasks import (
-    failing_task, just_say_hello, reflect_args, reflect_data_to_be_processed,
-    single_arg_called_a, reflect_data_with_task_index)
+    failing_task, ignore_result, just_say_hello, reflect_args,
+    reflect_data_to_be_processed, single_arg_called_a,
+    reflect_data_with_task_index)
 
 # The keyword args below are injected by the celery framework.
 celery_injected_kwargs = set((
@@ -162,7 +165,7 @@ class DistributeTestCase(unittest.TestCase):
         try:
             with patch('celery.task.sets.TaskSet.apply_async') as m2:
                 m2.return_value = mock.Mock(spec=TaskSetResult)
-                m2.return_value.join.side_effect = TypeError
+                m2.return_value.join_native.side_effect = TypeError
                 tasks.distribute(2, single_arg_called_a, ("a", range(5)))
         except Exception, exc:
             self.assertEqual((), exc.args)
@@ -326,7 +329,7 @@ class CheckJobStatusTestCase(unittest.TestCase):
             tasks.check_job_status(42)
             self.assertEqual(mock.call_args_list, [((42, ), {})])
 
-    def test_not_completed(self):
+    def test_not_completed_with_true(self):
         with patch('openquake.job.Job.is_job_completed') as mock:
             mock.return_value = True
             try:
@@ -338,27 +341,150 @@ class CheckJobStatusTestCase(unittest.TestCase):
             self.assertEqual(mock.call_args_list, [((31, ), {})])
 
 
-class DistributeBlockingTestCase(ConfigTestMixin, unittest.TestCase):
+class IgnoreResultsTestCase(unittest.TestCase):
     """
-    Make sure that the partitioning of data into blocks as performed
-    by utils.tasks.distribute() works
+    Tests the behaviour of utils.tasks.distribute() with tasks whose results
+    are ignored.
     """
+
+    def __init__(self, *args, **kwargs):
+        super(IgnoreResultsTestCase, self).__init__(*args, **kwargs)
 
     def setUp(self):
-        self.setup_config()
+        # Make sure we have no obsolete test data in the kvs.
+        kvs = TestStore.kvs()
+        existing_data = kvs.keys("irtc:*")
+        if existing_data:
+            kvs.delete(*existing_data)
 
-    def tearDown(self):
-        self.teardown_config()
+    def test_distribute_with_ignore_result_set(self):
+        """
+        The specified number of subtasks is actually spawned even for tasks
+        with ignore_result=True and these run and complete.
 
-    def test_multiple_blocks(self):
+        Since the results of the tasks are ignored, the only way to know that
+        they ran and completed is to verify that the data they were supposed
+        to write the key value store is actually there.
         """
-        The results passed back are correct when the data is partitioned
-        into multiple blocks.
+
+        def value(key):
+            """Construct a test value for the given key."""
+            return key[-3:] * 2
+
+        keys = ["irtc:%s" % str(uuid.uuid4())[:8] for _ in xrange(5)]
+        values = [value(uid) for uid in keys]
+        data = zip(keys, values)
+
+        result = tasks.distribute(5, ignore_result, ("data", data))
+        # An empty list is returned for tasks with ignore_result=True
+        # and no asynchronous task handler function.
+        self.assertEqual(False, bool(result))
+
+        # Give the tasks a bit of time to complete.
+        time.sleep(0.1)
+
+        for key, value in data:
+            self.assertEqual(value, TestStore.get(key))
+
+    def test_distribute_with_ignore_result_set_and_ath(self):
         """
-        # The block size is 2 i.e. distribute() will use 4 blocks.
-        self.prepare_config("tasks", {"block_size": 2})
-        expected = range(7)
-        result = tasks.distribute(
-            3, reflect_data_to_be_processed, ("data", range(7)),
-            flatten_results=True)
-        self.assertEqual(expected, result)
+        The specified number of subtasks is actually spawned (even for tasks
+        with ignore_result=True) and the asynchronous task handler function is
+        run.
+        """
+
+        def value(key):
+            """Construct a test value for the given key."""
+            return key[-3:] * 2
+
+        def ath(data):
+            """
+            An asynchronous task handler function that converts all task
+            results to upper case and returns the list of keys found.
+            """
+            items_expected = len(data)
+            items_found = []
+            while len(items_found) < items_expected:
+                for key, _ in data:
+                    if key in items_found:
+                        continue
+                    value = TestStore.get(key)
+                    if value is not None:
+                        TestStore.set(key, value.upper())
+                        items_found.append(key)
+                time.sleep(0.05)
+            return items_found
+
+        keys = ["irtc:%s" % str(uuid.uuid4())[:8] for _ in xrange(5)]
+        values = [value(uid) for uid in keys]
+        data = zip(keys, values)
+
+        result = tasks.distribute(5, ignore_result, ("data", data), ath=ath)
+        self.assertEqual(sorted(keys), sorted(result))
+
+        for key, value in data:
+            self.assertEqual(value.upper(), TestStore.get(key))
+
+
+class PrepareKwargsTestCase(unittest.TestCase):
+    """
+    Tests the behaviour of utils.tasks._prepare_kwargs().
+    """
+
+    def test_prepare_kwargs_with_data_only(self):
+        """Simplest case: no other args and no function passed"""
+        self.assertEqual(dict(a=1), tasks._prepare_kwargs("a", 1, None))
+
+    def test_prepare_kwargs_with_other_data(self):
+        """Pass `other_args` that is not `None`."""
+        self.assertEqual(dict(a=1, c=3, d=4),
+                         tasks._prepare_kwargs("a", 1, dict(c=3, d=4)))
+
+    def test_prepare_kwargs_with_data_only_and_func_params_mismatch(self):
+        """A function is passed, its params do not match."""
+
+        def ath(x):
+            pass
+
+        self.assertEqual(dict(), tasks._prepare_kwargs("a", 1, None, ath))
+
+    def test_prepare_kwargs_with_data_only_and_func_params_match(self):
+        """A function is passed, its params *do* match."""
+
+        def ath(a):
+            pass
+
+        self.assertEqual(dict(a=1), tasks._prepare_kwargs("a", 1, None, ath))
+
+    def test_prepare_kwargs_with_func_params_mismatch(self):
+        """
+        Other args and a function is passed, the latter's params do not match.
+        """
+
+        def ath(x):
+            pass
+
+        self.assertEqual(dict(),
+                         tasks._prepare_kwargs("a", 1, dict(c=3, d=4), ath))
+
+    def test_prepare_kwargs_with_func_params_match(self):
+        """
+        Other args and a function is passed, the latter's params *do* match.
+        """
+
+        def ath(a, d):
+            pass
+
+        self.assertEqual(dict(a=1, d=4),
+                         tasks._prepare_kwargs("a", 1, dict(c=3, d=4), ath))
+
+    def test_prepare_kwargs_with_full_func_params_match(self):
+        """
+        Other args and a function is passed, the latter's params all match.
+        """
+
+        def ath(a, c, d):
+            pass
+
+        self.assertEqual(dict(a=1, c=3, d=4),
+                         tasks._prepare_kwargs("a", 1, dict(c=3, d=4), ath))
