@@ -334,7 +334,8 @@ define_param('GMPE_LT_RANDOM_SEED', 'gmpe_lt_random_seed',
 define_param('GMPE_MODEL_NAME', 'gmpe_model_name')
 define_param('GMPE_TRUNCATION_TYPE', 'truncation_type', to_db=map_enum)
 define_param('GROUND_MOTION_CORRELATION', 'gm_correlated',
-             modes=('scenario', 'event_based'), to_job=str2bool)
+             modes=('scenario', 'event_based', 'event_based_bcr'),
+             to_job=str2bool)
 define_param('INTENSITY_MEASURE_LEVELS', 'imls',
              modes=('classical', 'event_based', 'disaggregation', 'uhs',
                     'classical_bcr', 'event_based_bcr'),
@@ -360,7 +361,7 @@ define_param('NUMBER_OF_LOGIC_TREE_SAMPLES', 'realizations',
              modes=('classical', 'event_based', 'disaggregation', 'uhs',
                     'classical_bcr', 'event_based_bcr'), to_job=int)
 define_param('NUMBER_OF_SEISMICITY_HISTORIES', 'histories',
-             modes='event_based', to_job=int)
+             modes=('event_based', 'event_based_bcr'), to_job=int)
 define_param('PERIOD', 'period', default=0.0, to_job=float)
 define_param('POES', 'poes', modes=('classical', 'disaggregation', 'uhs'),
              to_job=cttfl)
