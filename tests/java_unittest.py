@@ -144,8 +144,8 @@ class JavaExceptionTestCase(unittest.TestCase):
         self.assertTrue(unpickled.message.startswith(
                 'java.lang.NumberFormatException'))
 
-    def test_jexception_decorator(self):
-        @java.jexception
+    def test_unpack_exception_decorator(self):
+        @java.unpack_exception
         def test():
             jpype = java.jvm()
 
@@ -206,3 +206,21 @@ class GetJvmMaxMemTestcase(helpers.ConfigTestMixin, unittest.TestCase):
         return a default value (768 MB).
         """
         self.assertEqual(java.DEFAULT_JVM_MAX_MEM, java.get_jvm_max_mem())
+
+
+class JavaUtilsTestCase(unittest.TestCase):
+    """Tests for Java-related utilities."""
+
+    def test_list_to_jdouble_array(self):
+        """Test construction of a Double[] (Java array) from a list of floats.
+        """
+        test_input = [0.01, 0.02, 0.03, 0.04]
+
+        jdouble_a = java.list_to_jdouble_array(list(test_input))
+
+        # It should be a jpype Double[] type:
+        self.assertEqual('java.lang.Double[]', jdouble_a.__class__.__name__)
+
+        # Now check that the len and values are correct:
+        self.assertEqual(len(test_input), len(jdouble_a))
+        self.assertEqual(test_input, [x.doubleValue() for x in jdouble_a])

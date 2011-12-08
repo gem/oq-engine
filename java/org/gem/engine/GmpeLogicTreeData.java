@@ -18,12 +18,38 @@ public class GmpeLogicTreeData {
 
     private static Log logger = LogFactory.getLog(GmpeLogicTreeData.class);
 
+    public static void setGmpeParams(String component, String intensityMeasureType,
+            double period, double damping, String truncType, double truncLevel,
+            String stdType, AttenuationRelationship ar) {
+        String gmpeName = ar.getClass().getCanonicalName();
+
+        if (intensityMeasureType.equalsIgnoreCase(SA_Param.NAME)) {
+            if (ar.getParameter(PeriodParam.NAME).isAllowed(period)) {
+                ar.getParameter(PeriodParam.NAME).setValue(period);
+            } else {
+                String msg =
+                        "The chosen period: "
+                                + period
+                                + " is not supported by "
+                                + gmpeName
+                                + "\n"
+                                + "The allowed values are the following:\n"
+                                + ar.getParameter(PeriodParam.NAME)
+                                        .getConstraint() + "\n"
+                                + "Check your input file\n"
+                                + "Execution stopped.";
+                logger.error(msg);
+                throw new IllegalArgumentException(msg);
+            }
+        }
+        setGmpeParams(component, intensityMeasureType, damping, truncType, truncLevel, stdType, ar);
+    }
     /**
      * Set GMPE parameters
      */
     public static void setGmpeParams(String component, String intensityMeasureType,
-            double period, double damping, String truncType, double truncLevel,
-            String stdType, double vs30, AttenuationRelationship ar) {
+            double damping, String truncType, double truncLevel,
+            String stdType, AttenuationRelationship ar) {
         String gmpeName = ar.getClass().getCanonicalName();
 
         ar.setComponentParameter(component, intensityMeasureType);
@@ -44,23 +70,6 @@ public class GmpeLogicTreeData {
             throw new IllegalArgumentException(msg);
         }
         if (intensityMeasureType.equalsIgnoreCase(SA_Param.NAME)) {
-            if (ar.getParameter(PeriodParam.NAME).isAllowed(period)) {
-                ar.getParameter(PeriodParam.NAME).setValue(period);
-            } else {
-                String msg =
-                        "The chosen period: "
-                                + period
-                                + " is not supported by "
-                                + gmpeName
-                                + "\n"
-                                + "The allowed values are the following:\n"
-                                + ar.getParameter(PeriodParam.NAME)
-                                        .getConstraint() + "\n"
-                                + "Check your input file\n"
-                                + "Execution stopped.";
-                logger.error(msg);
-                new IllegalArgumentException(msg);
-            }
             if (ar.getParameter(DampingParam.NAME).isAllowed(damping)) {
                 ar.getParameter(DampingParam.NAME).setValue(damping);
             } else {
@@ -121,7 +130,7 @@ public class GmpeLogicTreeData {
                                     .getConstraint() + "\n"
                             + "Check your input file\n" + "Execution stopped.";
             logger.error(msg);
-            new IllegalArgumentException(msg);
+            throw new IllegalArgumentException(msg);
         }
     }
 

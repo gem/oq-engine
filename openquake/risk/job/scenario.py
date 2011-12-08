@@ -17,7 +17,7 @@
 # pylint: disable=W0232
 
 """
-This module performs risk calculations using the deterministic
+This module performs risk calculations using the scenario
 event based approach.
 """
 
@@ -31,25 +31,26 @@ from openquake import shapes
 
 from openquake.output import risk as risk_output
 from openquake.parser import vulnerability
-from openquake.risk import deterministic_event_based as det
+from openquake.risk import scenario
 from openquake.risk.job import general
 
 
 LOGGER = logs.LOG
 
 
-class DeterministicEventBasedMixin:
-    """Deterministic Event Based method for performing risk calculations.
+class ScenarioEventBasedMixin:
+    """Scenario Event Based method for performing risk calculations.
 
     Note that this mixin, during execution, will always be an instance of the
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the job configuration file."""
 
+    # pylint: disable=R0914
     @general.preload
     def execute(self):
         """Entry point for triggering the computation."""
 
-        LOGGER.debug("Executing deterministic risk computation.")
+        LOGGER.debug("Executing scenario risk computation.")
         LOGGER.debug("This will calculate mean and standard deviation loss"
             "values for the region defined in the job config.")
 
@@ -60,7 +61,8 @@ class DeterministicEventBasedMixin:
 
         epsilon_provider = general.EpsilonProvider(self.params)
 
-        sum_per_gmf = det.SumPerGroundMotionField(vuln_model, epsilon_provider)
+        sum_per_gmf = scenario.SumPerGroundMotionField(vuln_model,
+                                                       epsilon_provider)
 
         region_loss_map_data = {}
 
@@ -106,7 +108,7 @@ class DeterministicEventBasedMixin:
 
             # Add a metadata dict in the first list position
             # Note: the metadata is still incomplete (see bug 809410)
-            loss_map_metadata = {'deterministic': True}
+            loss_map_metadata = {'scenario': True}
             loss_map_data.insert(0, loss_map_metadata)
             loss_map_writer.serialize(loss_map_data)
 
@@ -136,7 +138,7 @@ class DeterministicEventBasedMixin:
         Other info:
 
         The GMF data for each realization is stored in the KVS by the preceding
-        deterministic hazard calculation.
+        scenario hazard calculation.
 
         :param block_id: id of the region block data we need to pull from the
             KVS
@@ -207,7 +209,8 @@ class DeterministicEventBasedMixin:
             per realization.
 
         """
-        sum_per_gmf = det.SumPerGroundMotionField(vuln_model, epsilon_provider)
+        sum_per_gmf = scenario.SumPerGroundMotionField(vuln_model,
+                                                       epsilon_provider)
         for point in block.grid(self.region):
             gmvs = load_gmvs_for_point(self.job_id, point)
             assets = load_assets_for_point(self.job_id, point)
@@ -269,10 +272,10 @@ class DeterministicEventBasedMixin:
                 vuln_function = \
                     vuln_model[asset['taxonomy']]
 
-                asset_mean_loss = det.compute_mean_loss(
+                asset_mean_loss = scenario.compute_mean_loss(
                     vuln_function, gmvs, epsilon_provider, asset)
 
-                asset_stddev_loss = det.compute_stddev_loss(
+                asset_stddev_loss = scenario.compute_stddev_loss(
                     vuln_function, gmvs, epsilon_provider, asset)
 
                 asset_site = shapes.Site(asset['lon'], asset['lat'])
@@ -335,4 +338,4 @@ def collect_block_data(loss_data, asset_site, asset_data):
     loss_data[asset_site] = data
 
 
-general.RiskJobMixin.register("Deterministic", DeterministicEventBasedMixin)
+general.RiskJobMixin.register("Scenario", ScenarioEventBasedMixin)
