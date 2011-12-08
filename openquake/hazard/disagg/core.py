@@ -17,13 +17,12 @@
 
 """Core functionality for the Disaggregation Hazard calculator."""
 
+from celery.task import task
 import h5py
 import numpy
 import os
 import random
 import uuid
-
-from math import log
 
 from openquake import java
 from openquake import job
@@ -31,7 +30,7 @@ from openquake import logs
 
 from openquake.hazard import job as haz_job
 from openquake.hazard import disagg
-from openquake.java import jtask as task
+from openquake.java import list_to_jdouble_array
 from openquake.job import config as job_cfg
 from openquake.output import hazard_disagg as hazard_output
 from openquake.utils import config
@@ -39,7 +38,7 @@ from openquake.utils import config
 from openquake.hazard.disagg import subsets
 from openquake.hazard.general import (
     preload, generate_erf, generate_gmpe_map, set_gmpe_params,
-    store_source_model, store_gmpe_map)
+    store_source_model, store_gmpe_map, get_iml_list)
 from openquake.job.mixins import Mixin
 from openquake.utils.tasks import check_job_status
 
@@ -48,7 +47,7 @@ LOG = logs.LOG
 
 
 # pylint: disable=R0914
-@java.jexception
+@java.unpack_exception
 def compute_disagg_matrix(job_id, site, poe, result_dir):
     """ Compute a complete 5D Disaggregation matrix. This task leans heavily
     on the DisaggregationCalculator (in the OpenQuake Java lib) to handle this
@@ -90,19 +89,15 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
     gmpe_map = generate_gmpe_map(job_id, cache)
     set_gmpe_params(gmpe_map, the_job.params)
 
-    iml_arraylist = java.jclass('ArrayList')()
-    iml_vals = the_job['INTENSITY_MEASURE_LEVELS']
-    # Map `log` (natural log) to each IML value before passing to the
-    # calculator.
-    iml_vals = [log(x) for x in iml_vals]
-    iml_arraylist.addAll(iml_vals)
+    imls = get_iml_list(the_job['INTENSITY_MEASURE_LEVELS'],
+                        the_job['INTENSITY_MEASURE_TYPE'])
     vs30_type = the_job['VS30_TYPE']
     vs30_value = the_job['REFERENCE_VS30_VALUE']
     depth_to_1pt0 = the_job['DEPTHTO1PT0KMPERSEC']
     depth_to_2pt5 = the_job['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']
 
     matrix_result = disagg_calc.computeMatrix(
-        site.latitude, site.longitude, erf, gmpe_map, poe, iml_arraylist,
+        site.latitude, site.longitude, erf, gmpe_map, poe, imls,
         vs30_type, vs30_value, depth_to_1pt0, depth_to_2pt5)
 
     matrix_path = save_5d_matrix_to_h5(result_dir,
@@ -132,18 +127,8 @@ def save_5d_matrix_to_h5(directory, matrix):
     return file_path
 
 
-def list_to_jdouble_array(float_list):
-    """Convert a 1D list of floats to a 1D Java Double[] (as a jpype object).
-    """
-    jdouble = java.jvm().JArray(java.jvm().java.lang.Double)(len(float_list))
-
-    for i, val in enumerate(float_list):
-        jdouble[i] = java.jvm().JClass('java.lang.Double')(val)
-
-    return jdouble
-
-
 @task
+@java.unpack_exception
 def compute_disagg_matrix_task(job_id, site, realization, poe, result_dir):
     """ Compute a complete 5D Disaggregation matrix. This task leans heavily
     on the DisaggregationCalculator (in the OpenQuake Java lib) to handle this
@@ -400,9 +385,9 @@ class DisaggMixin(Mixin):
                 target_file = os.path.join(target_dir, subset_file)
 
                 a_task = subsets.extract_subsets.delay(
-                    site, matrix_path, lat_bin_lims, lon_bin_lims,
-                    mag_bin_lims, eps_bin_lims, dist_bin_lims, target_file,
-                    subset_types)
+                    the_job.job_id, site, matrix_path, lat_bin_lims,
+                    lon_bin_lims, mag_bin_lims, eps_bin_lims, dist_bin_lims,
+                    target_file, subset_types)
 
                 task_data.append((a_task, site, gmv, matrix_path, target_file))
 

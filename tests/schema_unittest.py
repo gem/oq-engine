@@ -34,7 +34,8 @@ XML_TEST_DIRECTORY= 'examples'
 SCHEMA_FILE = 'nrml.xsd'
 
 class SchemaValidationTestCase(unittest.TestCase):
-    """Confirm that all XML examples in docs/schema/examples match schema."""
+    """Confirm that all XML examples in openquake/nrml/schema/0.2/examples/
+    match schema."""
 
     def setUp(self):
         self.example_dir = os.path.join(helpers.SCHEMA_DIR, XML_TEST_DIRECTORY)
