@@ -8,7 +8,7 @@
     <xsl:output method="xml" indent="yes"/>
 
     <!-- Update all nrml elements in the nrml 0.2 namespace
-         to the nrml0.3 namespace. -->
+         to the nrml 0.3 namespace. -->
     <xsl:template match='*[namespace-uri() = "http://openquake.org/xmlns/nrml/0.2"]'>
         <xsl:element name="{name()}" namespace="http://openquake.org/xmlns/nrml/0.3">
             <xsl:copy-of select="@*"/>
@@ -26,7 +26,11 @@
     </xsl:template>
 
     <!-- Copy assetValue elements, update the namespace, and don't include any attributes.
-         This is used to drop the 'unit' attribute, which is obsolete. -->
+         This is used to drop the 'unit' attribute, which is obsolete.
+         Example:
+            <assetValue unit="EUR">150000</assetValue>
+            is changed to
+            <assetValue>150000</assetValue> -->
     <xsl:template match="//nrml_02:assetValue">
         <xsl:element name="assetValue" namespace="http://openquake.org/xmlns/nrml/0.3">
             <xsl:copy-of select="*"/>
