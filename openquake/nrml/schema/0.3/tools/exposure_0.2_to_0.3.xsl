@@ -18,91 +18,36 @@
 
     <!-- If an element is in any other namespace, copy it and don't change anything.
          This properly handles elements in the gml namespace. -->
-    <xsl:template match='*'>
+    <xsl:template match="*">
         <xsl:element name="{name()}" namespace="{namespace-uri()}">
             <xsl:copy-of select="@*"/>
             <xsl:apply-templates/>
         </xsl:element>
     </xsl:template>
 
+    <!-- Copy assetValue elements, update the namespace, and don't include any attributes.
+         This is used to drop the 'unit' attribute, which is obsolete. -->
     <xsl:template match="//nrml_02:assetValue">
-        <assetValue xmlns="http://openquake.org/xmlns/nrml/0.3">
-            <xsl:apply-templates select="node( )"/>
-        </assetValue>
+        <xsl:element name="assetValue" namespace="http://openquake.org/xmlns/nrml/0.3">
+            <xsl:copy-of select="*"/>
+            <xsl:apply-templates/>
+        </xsl:element>
     </xsl:template>
 
+    <!-- Rename 'vulnerabilityFunctionReference' to 'taxonomy'. -->
     <xsl:template match="//nrml_02:vulnerabilityFunctionReference">
-        <taxonomy xmlns="http://openquake.org/xmlns/nrml/0.3">
-            <xsl:apply-templates select="@* | node( )"/>
-        </taxonomy>
-    </xsl:template>
-
-    <xsl:template match="//nrml_02:assetDescription">
-        <!-- Effectively replaces assetDescription with nothing. -->
-    </xsl:template>
-
-<!--
-        <xsl:element name="{name()}" namespace="{namespace-uri()}">
+        <xsl:element name="taxonomy" namespace="http://openquake.org/xmlns/nrml/0.3">
             <xsl:copy-of select="@*"/>
             <xsl:apply-templates/>
         </xsl:element>
--->
-
-<!--
-    <xsl:template match="node( ) | @*">
-        <xsl:copy>
-            <xsl:apply-templates select="@* | node( )"/>
-        </xsl:copy>
-    </xsl:template>
--->
-<!--
-    <xsl:template match="//nrml_02:nrml">
-        <nrml xmlns="http://openquake.org/xmlns/nrml/0.3">
-            <xsl:apply-templates select="@* | node( )"/>
-        </nrml>
     </xsl:template>
 
-    <xsl:template match="//nrml_02:exposurePortfolio">
-        <exposurePortfolio xmlns="http://openquake.org/xmlns/nrml/0.3">
-            <xsl:apply-templates select="@* | node( )"/>
-        </exposurePortfolio>
-    </xsl:template>
+    <!-- Delete all assetDescription elements. -->
+    <xsl:template match="//nrml_02:assetDescription"/>
 
-    <xsl:template match="//nrml_02:config">
-        <config xmlns="http://openquake.org/xmlns/nrml/0.3">
-            <xsl:apply-templates select="@* | node( )"/>
-        </config>
+    <!-- Copy comments. -->
+    <xsl:template match="comment()">
+        <xsl:copy/>
     </xsl:template>
-
-    <xsl:template match="//nrml_02:exposureList">
-        <exposureList xmlns="http://openquake.org/xmlns/nrml/0.3">
-            <xsl:apply-templates select="@* | node( )"/>
-        </exposureList>
-    </xsl:template>
-
-    <xsl:template match="//nrml_02:assetDefinition">
-        <assetDefinition xmlns="http://openquake.org/xmlns/nrml/0.3">
-            <xsl:apply-templates select="@* | node( )"/>
-        </assetDefinition>
-    </xsl:template>
-
-    <xsl:template match="//nrml_02:assetDefinition">
-        <assetDefinition xmlns="http://openquake.org/xmlns/nrml/0.3">
-            <xsl:apply-templates select="@* | node( )"/>
-        </assetDefinition>
-    </xsl:template>
-
-    <xsl:template match="//nrml_02:site">
-        <site xmlns="http://openquake.org/xmlns/nrml/0.3">
-            <xsl:apply-templates select="@* | node( )"/>
-        </site>
-    </xsl:template>
-
-    <xsl:template match="//nrml_02:structureCategory">
-        <structureCategory xmlns="http://openquake.org/xmlns/nrml/0.3">
-            <xsl:apply-templates select="@* | node( )"/>
-        </structureCategory>
-    </xsl:template>
--->
 
 </xsl:stylesheet>
