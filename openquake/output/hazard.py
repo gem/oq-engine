@@ -49,7 +49,7 @@ from openquake import job
 from openquake import shapes
 from openquake import writer
 from openquake.utils import round_float
-from openquake.xml import NSMAP, NRML, GML, NSMAP_WITH_QUAKEML
+from openquake.xml import NSMAP, NRML, GML
 
 
 LOGGER = logging.getLogger('hazard-serializer')
@@ -413,7 +413,7 @@ class GMFXMLWriter(writer.XMLFileWriter):
         """Write out the file header."""
 
         self.root_node = etree.Element(
-                GMFXMLWriter.root_tag, nsmap=NSMAP_WITH_QUAKEML)
+                GMFXMLWriter.root_tag, nsmap=NSMAP)
 
         _set_gml_id(self.root_node, NRML_GML_ID)
 
