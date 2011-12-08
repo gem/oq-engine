@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:gml="http://www.opengis.net/gml"
-           xmlns:qml="http://quakeml.org/xmlns/quakeml/1.1"
            xmlns:nrml="http://openquake.org/xmlns/nrml/0.2"
            xmlns="http://openquake.org/xmlns/nrml/0.2"
            targetNamespace="http://openquake.org/xmlns/nrml/0.2"
@@ -14,7 +13,6 @@
     </xs:annotation>
 
     <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gmlsf.xsd"/>
-    <xs:import namespace="http://quakeml.org/xmlns/quakeml/1.1" schemaLocation="./QuakeML-BED-1.1.xsd"/>
     <xs:include schemaLocation="nrml_common.xsd"/>
 
     <!-- ============================================================= -->
@@ -208,7 +206,9 @@
     <xs:complexType name="RuptureRateModel">
         <xs:sequence>
             <xs:element ref="magnitudeFrequencyDistribution"/>
-            <xs:element name="focalMechanism" type="qml:FocalMechanism"/>
+            <xs:element name="strike" type="Strike"/>
+            <xs:element name="dip" type="Dip"/>
+            <xs:element name="rake" type="Rake"/>
         </xs:sequence>
     </xs:complexType>
         
@@ -256,7 +256,9 @@
         <xs:complexContent>
             <xs:extension base="Rupture">
                 <xs:sequence>
-                    <xs:element name="focalMechanism" type="qml:FocalMechanism"/>
+                    <xs:element name="strike" type="Strike"/>
+                    <xs:element name="dip" type="Dip"/>
+                    <xs:element name="rake" type="Rake"/>
                     <xs:element name="hypocenterLocation" type="gml:PointPropertyType"/>
                 </xs:sequence>
             </xs:extension>
