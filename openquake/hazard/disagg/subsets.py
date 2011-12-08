@@ -253,35 +253,28 @@ SUBSET_EXTRACTORS = {
 
 
 @task
-def extract_subsets(site, full_matrix_path,
-                    lat_bin_edges, lon_bin_edges,
-                    mag_bin_edges, eps_bin_edges,
-                    distance_bin_edges,
-                    target_path, subsets):
+def extract_subsets(
+    job_id, site, full_matrix_path, lat_bin_edges, lon_bin_edges,
+    mag_bin_edges, eps_bin_edges, distance_bin_edges, target_path, subsets):
     """
     Celery task for extracting subsets from full disaggregation matrix.
 
     All subsets are saved in one file with dataset name equal
     to the extractor name.
 
-    :param site:
-        :class:`openquake.shapes.Site` instance.
-    :param full_matrix_path:
-        Path to the full matrix file in hdf5 format.
-    :param lat_bin_edges:
-        Corresponds to ``LATITUDE_BIN_LIMITS`` job parameter.
+    :param int job_id: current job identifier.
+    :param site: :class:`openquake.shapes.Site` instance.
+    :param full_matrix_path: Path to the full matrix file in hdf5 format.
+    :param lat_bin_edges: Corresponds to ``LATITUDE_BIN_LIMITS`` job parameter.
     :param lon_bin_edges:
         Corresponds to ``LONGITUDE_BIN_LIMITS`` job parameter.
     :param mag_bin_edges:
         Corresponds to ``MAGNITUDE_BIN_LIMITS`` job parameter.
-    :param eps_bin_edges:
-        Corresponds to ``EPSILON_BIN_LIMITS`` job parameter.
+    :param eps_bin_edges: Corresponds to ``EPSILON_BIN_LIMITS`` job parameter.
     :param distance_bin_edges:
         Corresponds to ``DISTANCE_BIN_LIMITS`` job parameter.
-    :param target_path:
-        Path to the file where the result should be saved.
-    :param subsets:
-        A list of PMF extractor names.
+    :param target_path: Path to the file where the result should be saved.
+    :param subsets: A list of PMF extractor names.
     """
     nlat = len(lat_bin_edges)
     nlon = len(lon_bin_edges)

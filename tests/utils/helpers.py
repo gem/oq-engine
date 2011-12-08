@@ -25,6 +25,7 @@ Helper functions for our unit and smoke tests.
 import functools
 import logging
 import os
+import random
 import redis
 import shutil
 import subprocess
@@ -44,7 +45,8 @@ from openquake import logs
 from openquake.job import Job
 from openquake import producer
 from openquake.utils import config
-
+from openquake.hazard.general import store_source_model, store_gmpe_map
+from openquake.input.logictree import LogicTreeProcessor
 from openquake.db import models
 
 FLAGS = flags.FLAGS
@@ -59,7 +61,7 @@ OUTPUT_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '../data/output'))
 
 SCHEMA_DIR = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), '../../openquake/nrml/schema'))
+    os.path.dirname(__file__), '../../openquake/nrml/schema/0.3'))
 
 SCHEMA_EXAMPLES_DIR = os.path.abspath(os.path.join(
     SCHEMA_DIR, 'examples'))
@@ -150,6 +152,32 @@ def create_job(params, **kwargs):
     return Job(params, job_id, **kwargs)
 
 
+def store_hazard_logic_trees(a_job):
+    """Helper function to store the source model and GMPE logic trees in the
+    KVS so that it can be read by the Java code. This is basically what the
+    @preload decorator does.
+
+    :param a_job:
+        :class:`openquake.job.Job` instance.
+    """
+    lt_proc = LogicTreeProcessor(
+        a_job['BASE_PATH'],
+        a_job['SOURCE_MODEL_LOGIC_TREE_FILE_PATH'],
+        a_job['GMPE_LOGIC_TREE_FILE_PATH'])
+
+    src_model_seed = a_job['SOURCE_MODEL_LT_RANDOM_SEED']
+    gmpe_seed = a_job['GMPE_LT_RANDOM_SEED']
+
+    src_model_rnd = random.Random()
+    src_model_rnd.seed(src_model_seed)
+    gmpe_rnd = random.Random()
+    gmpe_rnd.seed(gmpe_seed)
+
+    store_source_model(a_job.job_id, src_model_rnd.getrandbits(32),
+                       a_job.params, lt_proc)
+    store_gmpe_map(a_job.job_id, gmpe_rnd.getrandbits(32), lt_proc)
+
+
 class WordProducer(producer.FileProducer):
     """Simple File parser that looks for three
     space-separated values on each line - lat, long and value"""
@@ -187,7 +215,7 @@ def timeit(method):
     try:
         import nose
         return nose.tools.make_decorator(method)(_timed)
-    except ImportError, _e:
+    except ImportError:
         pass
     return _timed
 
@@ -197,7 +225,7 @@ def skipit(method):
     try:
         import nose
         from nose.plugins.skip import SkipTest
-    except ImportError, _e:
+    except ImportError:
 
         def skip_me(*_args, **_kw):
             """The skipped method"""
@@ -224,7 +252,7 @@ def measureit(method):
     try:
         import nose
         return nose.tools.make_decorator(method)(_measured)
-    except ImportError, _e:
+    except ImportError:
         pass
     return _measured
 
@@ -355,9 +383,14 @@ def cleanup_loggers():
 
 
 class TestStore(object):
-    """Simple object store, to be used in tests only."""
+    """Simple key value store, to be used in tests only."""
 
     _conn = None
+
+    @staticmethod
+    def kvs():
+        TestStore.open()
+        return TestStore._conn
 
     @staticmethod
     def open():
@@ -384,10 +417,10 @@ class TestStore(object):
 
     @staticmethod
     def add(obj):
-        """Add an object to the store and return the key chosen.
+        """Add a datum to the store and return the key chosen.
 
-        :param obj: The object to be added to the store.
-        :returns: The identifier of the object added.
+        :param obj: The datum to be added to the store.
+        :returns: The identifier of the datum added.
         :rtype: integer
         """
         TestStore.open()
@@ -395,10 +428,10 @@ class TestStore(object):
 
     @staticmethod
     def put(key, obj):
-        """Add an object to the store and associate it with the given `key`.
+        """Append the datum to the kvs list identified the given `key`.
 
-        :param key: The key for the object to be added to the store.
-        :param obj: The object to be added to the store.
+        :param key: The key for the datum to be added to the store.
+        :param obj: The datum to be added to the store.
         :returns: The `key` given.
         """
         TestStore.open()
@@ -411,18 +444,18 @@ class TestStore(object):
 
     @staticmethod
     def remove(oid):
-        """Remove object with given identifier from the store.
+        """Remove the datum with given identifier from the store.
 
-        :param oid: The identifier associated with the object to be removed.
+        :param oid: The identifier associated with the datum to be removed.
         """
         TestStore.open()
         TestStore._conn.delete(oid)
 
     @staticmethod
     def lookup(oid):
-        """Return object associated with `oid` or `None`.
+        """Return the datum associated with `oid` or `None`.
 
-        :param oid: The identifier of the object saught.
+        :param oid: The identifier of the datum sought.
         """
         TestStore.open()
         num_of_words = TestStore._conn.llen(oid)
@@ -430,6 +463,27 @@ class TestStore(object):
             return TestStore._conn.lrange(oid, 0, num_of_words + 1)
         else:
             return TestStore._conn.lindex(oid, 0)
+
+    @staticmethod
+    def set(key, obj):
+        """Asssociate a single datum with the given `key`.
+
+        :param key: The key for the datum to be added to the store.
+        :param obj: The datum to be added to the store.
+        :returns: The `key` given.
+        """
+        TestStore.open()
+        TestStore._conn.set(key, obj)
+
+    @staticmethod
+    def get(key):
+        """Return the datum associated with the given `key` or `None`.
+
+        :param key: The key of the datum sought.
+        :returns: The datum associated with the given `key` or `None`.
+        """
+        TestStore.open()
+        return TestStore._conn.get(key)
 
 
 class TestMixin(object):

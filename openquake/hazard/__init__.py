@@ -21,4 +21,4 @@ computation is backed by the Java HazardEngine via the hazard_wrapper
 """
 
 import opensha
-import deterministic
+import scenario

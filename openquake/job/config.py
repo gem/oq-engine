@@ -38,7 +38,7 @@ REGION_GRID_SPACING = "REGION_GRID_SPACING"
 CALCULATION_MODE = "CALCULATION_MODE"
 REGION_GRID_SPACING = "REGION_GRID_SPACING"
 SITES = "SITES"
-DETERMINISTIC_MODE = "Deterministic"
+SCENARIO_MODE = "Scenario"
 DISAGGREGATION_MODE = "Disaggregation"
 UHS_MODE = "UHS"
 BASE_PATH = "BASE_PATH"
@@ -232,10 +232,10 @@ class ComputationTypeValidator(object):
         return (True, [])
 
 
-class DeterministicComputationValidator(object):
-    """Validator that checks if the deterministic calculation
+class ScenarioComputationValidator(object):
+    """Validator that checks if the scenario calculation
     mode specified in the configuration file is for an
-    hazard + risk job. We don't currently support deterministic
+    hazard + risk job. We don't currently support scenario
     calculations for hazard jobs only."""
 
     def __init__(self, sections, params):
@@ -243,13 +243,13 @@ class DeterministicComputationValidator(object):
         self.sections = sections
 
     def is_valid(self):
-        """Return `True` if the deterministic calculation mode
+        """Return `True` if the scenario calculation mode
         specified is for an hazard + risk job, `False` otherwise."""
 
         if RISK_SECTION not in self.sections \
-                and self.params[CALCULATION_MODE] == DETERMINISTIC_MODE:
+                and self.params[CALCULATION_MODE] == SCENARIO_MODE:
 
-            return (False, ["With DETERMINISTIC calculations we"
+            return (False, ["With SCENARIO calculations we"
                     + " only support hazard + risk jobs."])
 
         return (True, [])
@@ -535,14 +535,14 @@ def default_validators(sections, params):
 
     hazard = HazardMandatoryParamsValidator(sections, params)
     exposure = RiskMandatoryParamsValidator(sections, params)
-    deterministic = DeterministicComputationValidator(sections, params)
+    scenario = ScenarioComputationValidator(sections, params)
     hazard_comp_type = ComputationTypeValidator(params)
     file_path = FilePathValidator(params)
     parameter = BasicParameterValidator(params)
 
     validators = ValidatorSet()
     validators.add(hazard_comp_type)
-    validators.add(deterministic)
+    validators.add(scenario)
     validators.add(exposure)
     validators.add(parameter)
     validators.add(file_path)

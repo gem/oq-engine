@@ -551,14 +551,14 @@ CREATE TABLE uiapi.oq_job (
     -- One of:
     --      classical (Classical PSHA)
     --      event_based (Probabilistic event based)
-    --      deterministic (Deterministic)
+    --      scenario (Scenario)
     --      disaggregation (Hazard only)
     --      uhs (Uniform Hazard Spectra; Hazard only)
     --      classical_bcr (Benefit-cost ratio calc based on Classical PSHA)
     --      event_based_bcr (BCR calc based on Probabilistic event-based)
     -- Note: 'classical' and 'event_based' are both probabilistic methods
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
-        CHECK(job_type IN ('classical', 'event_based', 'deterministic',
+        CHECK(job_type IN ('classical', 'event_based', 'scenario',
                            'disaggregation', 'uhs',
                            'classical_bcr', 'event_based_bcr')),
     -- One of: pending, running, failed, succeeded
@@ -581,7 +581,7 @@ CREATE TABLE uiapi.job_stats (
     stop_time timestamp with time zone,
     -- The number of total sites in the calculation
     num_sites INTEGER NOT NULL,
-    -- The number of logic tree samples (for hazard jobs of all types except deterministic)
+    -- The number of logic tree samples (for hazard jobs of all types except scenario)
     realizations INTEGER
 ) TABLESPACE uiapi_ts;
 
@@ -590,19 +590,19 @@ CREATE TABLE uiapi.job_stats (
 CREATE TABLE uiapi.oq_params (
     id SERIAL PRIMARY KEY,
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
-        CHECK(job_type IN ('classical', 'event_based', 'deterministic',
+        CHECK(job_type IN ('classical', 'event_based', 'scenario',
                            'disaggregation', 'uhs',
                            'classical_bcr', 'event_based_bcr')),
     input_set_id INTEGER NOT NULL,
     region_grid_spacing float,
     min_magnitude float CONSTRAINT min_magnitude_set
         CHECK(
-            ((job_type = 'deterministic') AND (min_magnitude IS NULL))
-            OR ((job_type != 'deterministic') AND (min_magnitude IS NOT NULL))),
+            ((job_type = 'scenario') AND (min_magnitude IS NULL))
+            OR ((job_type != 'scenario') AND (min_magnitude IS NOT NULL))),
     investigation_time float CONSTRAINT investigation_time_set
         CHECK(
-            ((job_type = 'deterministic') AND (investigation_time IS NULL))
-            OR ((job_type != 'deterministic') AND (investigation_time IS NOT NULL))),
+            ((job_type = 'scenario') AND (investigation_time IS NULL))
+            OR ((job_type != 'scenario') AND (investigation_time IS NOT NULL))),
     -- One of:
     --      average (Average horizontal)
     --      gmroti50 (Average horizontal (GMRotI50))
@@ -618,10 +618,13 @@ CREATE TABLE uiapi.oq_params (
     -- For UHS calculations, IMT should always be 'sa'.
     imt VARCHAR NOT NULL CONSTRAINT imt_value
         CHECK(((job_type = 'uhs') AND (imt = 'sa'))
-            OR (imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd'))),
+            OR (imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd', 'mmi'))),
     period float CONSTRAINT period_is_set
-        CHECK(((imt = 'sa') AND (period IS NOT NULL))
-              OR ((imt != 'sa') AND (period IS NULL))),
+        -- The 'period' parameter is only used when the intensity measure type is SA.
+        -- This rule only applies to job types != 'uhs' (the Uniform Hazard Spectra
+        -- calculator instead defines an array of periods).
+        CHECK(((imt = 'sa' AND job_type != 'uhs') AND (period IS NOT NULL))
+              OR ((imt != 'sa' OR job_type = 'uhs') AND (period IS NULL))),
     damping float CONSTRAINT damping_is_set
         CHECK(((imt = 'sa') AND (damping IS NOT NULL))
               OR ((imt != 'sa') AND (damping IS NULL))),
@@ -632,19 +635,19 @@ CREATE TABLE uiapi.oq_params (
     -- Intensity measure levels
     imls float[] CONSTRAINT imls_are_set
         CHECK(
-            ((job_type != 'deterministic') AND (imls IS NOT NULL))
-            OR ((job_type = 'deterministic') AND (imls IS NULL))),
+            ((job_type != 'scenario') AND (imls IS NOT NULL))
+            OR ((job_type = 'scenario') AND (imls IS NULL))),
     -- Probabilities of exceedence
     poes float[] CONSTRAINT poes_are_set
         CHECK(
             ((job_type IN ('classical', 'disaggregation', 'uhs')) AND (poes IS NOT NULL))
-            OR ((job_type IN ('event_based', 'deterministic',
+            OR ((job_type IN ('event_based', 'scenario',
                               'classical_bcr', 'event_based_bcr')) AND (poes IS NULL))),
     -- Number of logic tree samples
     realizations integer CONSTRAINT realizations_is_set
         CHECK(
-            ((job_type = 'deterministic') AND (realizations IS NULL))
-            OR ((job_type != 'deterministic') AND (realizations IS NOT NULL))),
+            ((job_type = 'scenario') AND (realizations IS NULL))
+            OR ((job_type != 'scenario') AND (realizations IS NOT NULL))),
     -- Number of seismicity histories
     histories integer CONSTRAINT histories_is_set
         CHECK(
@@ -655,39 +658,39 @@ CREATE TABLE uiapi.oq_params (
         CHECK(
             ((job_type IN ('classical', 'disaggregation', 'uhs',
                            'classical_bcr', 'event_based_bcr')) AND (gm_correlated IS NULL))
-            OR ((job_type IN ('event_based', 'deterministic')) AND (gm_correlated IS NOT NULL))),
+            OR ((job_type IN ('event_based', 'scenario')) AND (gm_correlated IS NOT NULL))),
     gmf_calculation_number integer CONSTRAINT gmf_calculation_number_is_set
         CHECK(
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (gmf_calculation_number IS NOT NULL)
              AND (realizations > 0))
             OR
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (gmf_calculation_number IS NULL))),
     rupture_surface_discretization float
         CONSTRAINT rupture_surface_discretization_is_set
         CHECK(
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (rupture_surface_discretization IS NOT NULL)
              AND (rupture_surface_discretization > 0))
             OR
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (rupture_surface_discretization IS NULL))),
 
     aggregate_loss_curve boolean,
     area_source_discretization float
         CONSTRAINT area_source_discretization_is_set
         CHECK(
-            ((job_type != 'deterministic') AND (area_source_discretization IS NOT NULL))
+            ((job_type != 'scenario') AND (area_source_discretization IS NOT NULL))
             OR
-            ((job_type = 'deterministic') AND (area_source_discretization IS NULL))),
+            ((job_type = 'scenario') AND (area_source_discretization IS NULL))),
     area_source_magnitude_scaling_relationship VARCHAR
         CONSTRAINT area_source_magnitude_scaling_relationship_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (area_source_magnitude_scaling_relationship IS NOT NULL))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (area_source_magnitude_scaling_relationship IS NULL))),
     asset_life_expectancy float
         CONSTRAINT asset_life_expectancy_is_set
@@ -709,83 +712,83 @@ CREATE TABLE uiapi.oq_params (
     fault_magnitude_scaling_relationship VARCHAR
         CONSTRAINT fault_magnitude_scaling_relationship_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (fault_magnitude_scaling_relationship IS NOT NULL))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (fault_magnitude_scaling_relationship IS NULL))),
     fault_magnitude_scaling_sigma float
         CONSTRAINT fault_magnitude_scaling_sigma_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (fault_magnitude_scaling_sigma IS NOT NULL))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (fault_magnitude_scaling_sigma IS NULL))),
     fault_rupture_offset float
         CONSTRAINT fault_rupture_offset_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (fault_rupture_offset IS NOT NULL))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (fault_rupture_offset IS NULL))),
     fault_surface_discretization float
         CONSTRAINT fault_surface_discretization_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (fault_surface_discretization IS NOT NULL))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (fault_surface_discretization IS NULL))),
     gmf_random_seed integer
         CONSTRAINT gmf_random_seed_is_set
         CHECK(
-            (job_type IN ('deterministic', 'event_based'))
+            (job_type IN ('scenario', 'event_based'))
             OR
-            ((job_type NOT IN ('deterministic', 'event_based'))
+            ((job_type NOT IN ('scenario', 'event_based'))
              AND (gmf_random_seed IS NULL))),
     gmpe_lt_random_seed integer
         CONSTRAINT gmpe_lt_random_seed_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (gmpe_lt_random_seed IS NOT NULL))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (gmpe_lt_random_seed IS NULL))),
     gmpe_model_name VARCHAR,
     grid_source_magnitude_scaling_relationship VARCHAR,
     include_area_sources boolean
         CONSTRAINT include_area_sources_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (include_area_sources IS NOT NULL))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (include_area_sources IS NULL))),
     include_fault_source boolean
         CONSTRAINT include_fault_source_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (include_fault_source IS NOT NULL))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (include_fault_source IS NULL))),
     include_grid_sources boolean
         CONSTRAINT include_grid_sources_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (include_grid_sources IS NOT NULL))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (include_grid_sources IS NULL))),
     include_subduction_fault_source boolean
         CONSTRAINT include_subduction_fault_source_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (include_subduction_fault_source IS NOT NULL))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (include_subduction_fault_source IS NULL))),
     interest_rate float
         CONSTRAINT interest_rate_is_set
@@ -803,7 +806,7 @@ CREATE TABLE uiapi.oq_params (
                            'classical_bcr', 'event_based_bcr'))
              AND (maximum_distance IS NOT NULL))
             OR
-            ((job_type IN ('deterministic', 'event_based'))
+            ((job_type IN ('scenario', 'event_based'))
              AND (maximum_distance IS NULL))),
     quantile_levels float[]
         CONSTRAINT quantile_levels_is_set
@@ -818,10 +821,10 @@ CREATE TABLE uiapi.oq_params (
     rupture_aspect_ratio float
         CONSTRAINT rupture_aspect_ratio_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (rupture_aspect_ratio IS NOT NULL))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (rupture_aspect_ratio IS NULL))),
     -- Rupture floating type, one of:
     --     Only along strike ( rupture full DDW) (alongstrike)
@@ -830,11 +833,11 @@ CREATE TABLE uiapi.oq_params (
     rupture_floating_type VARCHAR
         CONSTRAINT rupture_floating_type_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation',
+            ((job_type IN ('classical', 'event_based', 'disaggregation', 'uhs',
                            'classical_bcr', 'event_based_bcr'))
              AND (rupture_floating_type IN ('alongstrike', 'downdip', 'centereddowndip')))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (rupture_floating_type IS NULL))),
     -- Sadigh site type, one of:
     --     Rock (rock)
@@ -845,10 +848,10 @@ CREATE TABLE uiapi.oq_params (
     source_model_lt_random_seed integer
         CONSTRAINT source_model_lt_random_seed_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (source_model_lt_random_seed IS NOT NULL))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (source_model_lt_random_seed IS NULL))),
     -- Standard deviation, one of:
     --     Total (total)
@@ -861,50 +864,50 @@ CREATE TABLE uiapi.oq_params (
     standard_deviation_type VARCHAR
         CONSTRAINT standard_deviation_type_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (standard_deviation_type IN ('total', 'interevent', 'intraevent', 'zero', 'total_mag_dependent', 'total_pga_dependent', 'intraevent_mag_dependent')))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (standard_deviation_type IS NULL))),
     subduction_fault_magnitude_scaling_relationship VARCHAR
         CONSTRAINT subduction_fault_magnitude_scaling_relationship_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (subduction_fault_magnitude_scaling_relationship IS NOT NULL))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (subduction_fault_magnitude_scaling_relationship IS NULL))),
     subduction_fault_magnitude_scaling_sigma float
         CONSTRAINT subduction_fault_magnitude_scaling_sigma_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (subduction_fault_magnitude_scaling_sigma IS NOT NULL))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (subduction_fault_magnitude_scaling_sigma IS NULL))),
     subduction_fault_rupture_offset float
         CONSTRAINT subduction_fault_rupture_offset_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (subduction_fault_rupture_offset IS NOT NULL))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (subduction_fault_rupture_offset IS NULL))),
     subduction_fault_surface_discretization float
         CONSTRAINT subduction_fault_surface_discretization_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (subduction_fault_surface_discretization IS NOT NULL))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (subduction_fault_surface_discretization IS NULL))),
     subduction_rupture_aspect_ratio float
         CONSTRAINT subduction_rupture_aspect_ratio_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (subduction_rupture_aspect_ratio IS NOT NULL))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (subduction_rupture_aspect_ratio IS NULL))),
     -- Rupture floating type, one of:
     --     Only along strike ( rupture full DDW) (alongstrike)
@@ -913,10 +916,10 @@ CREATE TABLE uiapi.oq_params (
     subduction_rupture_floating_type VARCHAR
         CONSTRAINT subduction_rupture_floating_type_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (subduction_rupture_floating_type IN ('alongstrike', 'downdip', 'centereddowndip')))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (subduction_rupture_floating_type IS NULL))),
     -- Source as, one of:
     --     Point Sources (pointsources)
@@ -926,26 +929,26 @@ CREATE TABLE uiapi.oq_params (
     treat_area_source_as VARCHAR
         CONSTRAINT treat_area_source_as_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (treat_area_source_as IN ('pointsources', 'linesources', 'crosshairsources', '16spokedsources')))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (treat_area_source_as IS NULL))),
     treat_grid_source_as VARCHAR
         CONSTRAINT treat_grid_source_as_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (treat_grid_source_as IS NOT NULL))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (treat_grid_source_as IS NULL))),
     width_of_mfd_bin float
         CONSTRAINT width_of_mfd_bin_is_set
         CHECK(
-            ((job_type != 'deterministic')
+            ((job_type != 'scenario')
              AND (width_of_mfd_bin IS NOT NULL))
             OR
-            ((job_type = 'deterministic')
+            ((job_type = 'scenario')
              AND (width_of_mfd_bin IS NULL))),
     lat_bin_limits float[]
         CONSTRAINT lat_bin_limits_valid
@@ -1174,17 +1177,17 @@ ALTER TABLE hzrdr.gmf_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE riskr.loss_map (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
-    deterministic BOOLEAN NOT NULL,
+    scenario BOOLEAN NOT NULL,
     loss_map_ref VARCHAR,
     end_branch_label VARCHAR,
     category VARCHAR,
     unit VARCHAR, -- e.g. USD, EUR
     timespan float CONSTRAINT valid_timespan
         CHECK (timespan > 0.0),
-    -- poe is significant only for non-deterministic calculations
+    -- poe is significant only for non-scenario calculations
     poe float CONSTRAINT valid_poe
-        CHECK ((NOT deterministic AND (poe >= 0.0) AND (poe <= 1.0))
-               OR (deterministic AND poe IS NULL))
+        CHECK ((NOT scenario AND (poe >= 0.0) AND (poe <= 1.0))
+               OR (scenario AND poe IS NULL))
 ) TABLESPACE riskr_ts;
 
 CREATE TABLE riskr.loss_map_data (
@@ -1192,7 +1195,7 @@ CREATE TABLE riskr.loss_map_data (
     loss_map_id INTEGER NOT NULL, -- FK to loss_map.id
     asset_ref VARCHAR NOT NULL,
     value float NOT NULL,
-    -- for non-deterministic calculations std_dev is 0
+    -- for non-scenario calculations std_dev is 0
     std_dev float NOT NULL DEFAULT 0.0
 ) TABLESPACE riskr_ts;
 SELECT AddGeometryColumn('riskr', 'loss_map_data', 'location', 4326, 'POINT', 2);
@@ -1318,7 +1321,7 @@ CREATE TABLE riski.vulnerability_model (
     name VARCHAR NOT NULL,
     description VARCHAR,
     imt VARCHAR NOT NULL CONSTRAINT imt_value
-        CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd')),
+        CHECK(imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd', 'mmi')),
     imls float[] NOT NULL,
     -- e.g. "buildings", "bridges" etc.
     category VARCHAR NOT NULL,

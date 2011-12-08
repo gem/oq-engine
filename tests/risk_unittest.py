@@ -32,7 +32,7 @@ from openquake.risk.job.general import Block
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 from openquake.risk import probabilistic_event_based as prob
 from openquake.risk import classical_psha_based as psha
-from openquake.risk import deterministic_event_based as det
+from openquake.risk import scenario
 from openquake.risk import common
 
 from tests.utils import helpers
@@ -1054,7 +1054,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
                 common.compute_mean_loss(loss_ratio_curve), 3)
 
 
-class DeterministicEventBasedTestCase(unittest.TestCase):
+class ScenarioEventBasedTestCase(unittest.TestCase):
 
     def setUp(self):
         imls = [0.10, 0.30, 0.50, 1.00]
@@ -1073,7 +1073,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         asset = {"assetValue": 1000}
         loss_ratios = numpy.array([0.20, 0.05, 0.10, 0.05, 0.10])
 
-        self.assertEqual(100, det._mean_loss_from_loss_ratios(
+        self.assertEqual(100, scenario._mean_loss_from_loss_ratios(
                          loss_ratios, asset))
 
     def test_computes_the_mean_loss(self):
@@ -1081,15 +1081,17 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         epsilon_provider = EpsilonProvider(asset, self.epsilons)
 
         self.assertTrue(numpy.allclose(2.4887999999999999,
-                        det.compute_mean_loss(self.vuln_function, self.gmfs,
-                        epsilon_provider, asset), atol=0.0001))
+                        scenario.compute_mean_loss(
+                            self.vuln_function, self.gmfs, epsilon_provider,
+                            asset),
+                        atol=0.0001))
 
     def test_computes_the_stddev_loss_from_loss_ratios(self):
         asset = {"assetValue": 1000}
         loss_ratios = numpy.array([0.20, 0.05, 0.10, 0.05, 0.10])
 
         self.assertTrue(numpy.allclose(61.237,
-                        det._stddev_loss_from_loss_ratios(
+                        scenario._stddev_loss_from_loss_ratios(
                         loss_ratios, asset), atol=0.001))
 
     def test_computes_the_stddev_loss(self):
@@ -1097,8 +1099,10 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         epsilon_provider = EpsilonProvider(asset, self.epsilons)
 
         self.assertTrue(numpy.allclose(1.631,
-                        det.compute_stddev_loss(self.vuln_function, self.gmfs,
-                        epsilon_provider, asset), atol=0.002))
+                        scenario.compute_stddev_loss(
+                            self.vuln_function, self.gmfs, epsilon_provider,
+                            asset),
+                        atol=0.002))
 
     def test_calls_the_loss_ratios_calculator_correctly(self):
         gmfs = {"IMLs": ()}
@@ -1116,7 +1120,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
 
             return numpy.array([])
 
-        calculator = det.SumPerGroundMotionField(
+        calculator = scenario.SumPerGroundMotionField(
             vuln_model, epsilon_provider, lr_calculator=loss_ratios_calculator)
 
         calculator.add(gmfs, asset)
@@ -1135,7 +1139,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         vuln_model = {"ID": self.vuln_function}
         asset = {"assetValue": 100, "taxonomy": "ID"}
 
-        calculator = det.SumPerGroundMotionField(
+        calculator = scenario.SumPerGroundMotionField(
             vuln_model, None, lr_calculator=loss_ratios_calculator)
 
         self.assertTrue(numpy.allclose([], calculator.losses))
@@ -1152,7 +1156,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(expected_sum, calculator.losses))
 
     def test_handles_empty_losses_correctly(self):
-        calculator = det.SumPerGroundMotionField(None, None)
+        calculator = scenario.SumPerGroundMotionField(None, None)
         losses = numpy.array([1.0, 2.0])
 
         self.assertTrue(numpy.allclose([], calculator.losses))
@@ -1166,7 +1170,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose([2.0, 4.0], calculator.losses))
 
     def test_computes_the_mean_from_the_current_sum(self):
-        calculator = det.SumPerGroundMotionField(None, None)
+        calculator = scenario.SumPerGroundMotionField(None, None)
 
         sum_of_losses = numpy.array(
             [62.63191284, 98.16576808, 166.2920523, 84.25372286, 23.10280904])
@@ -1176,7 +1180,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(86.88925302, calculator.mean))
 
     def test_computes_the_stddev_from_the_current_sum(self):
-        calculator = det.SumPerGroundMotionField(None, None)
+        calculator = scenario.SumPerGroundMotionField(None, None)
 
         sum_of_losses = numpy.array(
             [62.63191284, 98.16576808, 166.2920523, 84.25372286, 23.10280904])
@@ -1196,7 +1200,7 @@ class DeterministicEventBasedTestCase(unittest.TestCase):
         asset = {"assetValue": 100, "assetID": "ID",
                  "taxonomy": "XX"}
 
-        calculator = det.SumPerGroundMotionField(vuln_model, None)
+        calculator = scenario.SumPerGroundMotionField(vuln_model, None)
 
         self.assertTrue(numpy.allclose([], calculator.losses))
 
