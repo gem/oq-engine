@@ -5,7 +5,7 @@ Subduction Interface, Subduction IntraSlab. All the sources but the point (srcID
 magnitude frequency distribution of Gutenberg-Richter type. The point source contains 3 magnitude-frequency
 distributions, two of Gutenberg-Richter type and one evenly discretized.-->
 
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.2" xmlns:gml="http://www.opengis.net/gml" gml:id="n1">
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.3" xmlns:gml="http://www.opengis.net/gml" gml:id="n1">
   <sourceModel gml:id="sm1">
     <config/>
     <areaSource gml:id="src_1">
