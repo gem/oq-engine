@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.2"
+      xmlns="http://openquake.org/xmlns/nrml/0.3"
       gml:id="test_nrml_id">
     <riskResult gml:id="test_rr_id">
         <lossMap gml:id="test_lm_id" endBranchLabel="test_ebl"
