@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!-- Source model corresponding to b1-b3-b7 path.-->
 
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.2" xmlns:gml="http://www.opengis.net/gml" gml:id="n1">
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.3" xmlns:gml="http://www.opengis.net/gml" gml:id="n1">
   <sourceModel gml:id="sm1">
     <config/>
     <areaSource gml:id="src_1">
