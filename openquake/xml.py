@@ -28,7 +28,7 @@ from openquake import nrml
 from openquake import shapes
 
 
-NRML_NS = 'http://openquake.org/xmlns/nrml/0.2'
+NRML_NS = 'http://openquake.org/xmlns/nrml/0.3'
 GML_NS = 'http://www.opengis.net/gml'
 
 NRML = "{%s}" % NRML_NS
