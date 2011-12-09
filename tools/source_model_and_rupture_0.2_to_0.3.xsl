@@ -1,11 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-
-<!-- This stylesheet updates Risk Exposure models from NRML 0.2 to 0.3. -->
 <xsl:stylesheet version="1.0"
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 xmlns:nrml_02="http://openquake.org/xmlns/nrml/0.2"
                 xmlns:nrml="http://openquake.org/xmlns/nrml/0.3"
-                exclude-result-prefixes="nrml_02 nrml">
+                xmlns:qml="http://quakeml.org/xmlns/quakeml/1.1"
+                exclude-result-prefixes="nrml_02 nrml qml">
 
     <xsl:output method="xml" indent="yes"/>
 
@@ -27,33 +26,28 @@
         </xsl:element>
     </xsl:template>
 
-    <!-- Copy assetValue elements, update the namespace, and don't include any attributes.
-         This is used to drop the 'unit' attribute, which is obsolete.
-         Example:
-            <assetValue unit="EUR">150000</assetValue>
-            is changed to
-            <assetValue>150000</assetValue> -->
-    <xsl:template match="//nrml_02:assetValue">
-        <xsl:element name="assetValue" namespace="http://openquake.org/xmlns/nrml/0.3">
-            <xsl:copy-of select="*"/>
-            <xsl:apply-templates/>
-        </xsl:element>
-    </xsl:template>
+    <!-- Replaces a focal mechanism (containing strike, dip, and rake) with
+         more primitive elements: <strike>, <dip>, and <rake>. 
 
-    <!-- Rename 'vulnerabilityFunctionReference' to 'taxonomy'. -->
-    <xsl:template match="//nrml_02:vulnerabilityFunctionReference">
-        <xsl:element name="taxonomy" namespace="http://openquake.org/xmlns/nrml/0.3">
-            <xsl:copy-of select="@*"/>
-            <xsl:apply-templates/>
-        </xsl:element>
-    </xsl:template>
+         This also helps remove our dependency on QuakeML. -->
+    <xsl:template match="//nrml_02:focalMechanism">
+        <strike xmlns="http://openquake.org/xmlns/nrml/0.3">
+            <xsl:value-of select="./qml:nodalPlanes/qml:nodalPlane1/qml:strike/qml:value"/>
+        </strike>
 
-    <!-- Delete all assetDescription elements. -->
-    <xsl:template match="//nrml_02:assetDescription"/>
+        <dip xmlns="http://openquake.org/xmlns/nrml/0.3">
+            <xsl:value-of select="./qml:nodalPlanes/qml:nodalPlane1/qml:dip/qml:value"/> 
+        </dip>
+
+        <rake xmlns="http://openquake.org/xmlns/nrml/0.3">
+            <xsl:value-of select="./qml:nodalPlanes/qml:nodalPlane1/qml:rake/qml:value"/>
+        </rake>
+    </xsl:template>
 
     <!-- Copy comments. -->
     <xsl:template match="comment()">
         <xsl:copy/>
     </xsl:template>
+
 
 </xsl:stylesheet>
