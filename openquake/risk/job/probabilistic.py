@@ -309,3 +309,4 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
 
 
 general.RiskJobMixin.register("Event Based", ProbabilisticEventMixin)
+general.RiskJobMixin.register("Event Based BCR", ProbabilisticEventMixin)
