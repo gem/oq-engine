@@ -25,6 +25,7 @@
                 <taxonomy>RC/DMRF-D/LR</taxonomy>
                 <structureCategory>RC-LR-PC</structureCategory>
                 <assetValue>150000</assetValue>
+                <retrofittingCost>1</retrofittingCost>
             </assetDefinition>
             
             <assetDefinition gml:id="asset_02">
@@ -37,6 +38,7 @@
                 <taxonomy>RC/DMRF-D/LR</taxonomy>
                 <structureCategory>RC-HR-PC</structureCategory>
                 <assetValue>250000</assetValue>
+                <retrofittingCost>1</retrofittingCost>
             </assetDefinition>
             
             <assetDefinition gml:id="asset_03">
@@ -49,6 +51,7 @@
                 <taxonomy>RC/DMRF-D/LR</taxonomy>
                 <structureCategory>RC-LR-PC</structureCategory>
                 <assetValue>500000</assetValue>
+                <retrofittingCost>1</retrofittingCost>
             </assetDefinition>
 
         </exposureList>
