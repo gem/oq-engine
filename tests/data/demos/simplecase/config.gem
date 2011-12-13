@@ -14,6 +14,8 @@ REGION_GRID_SPACING = 0.02
 # list of sites to compute in the format lat1, lon1, lat2, lon2, ...
 # SITES = 33.88, -118.30, 33.88, -118.06, 33.76, -118.06, 33.76, -118.30
 
+GMF_RANDOM_SEED = 1
+
 [HAZARD]
 
 DEPTHTO1PT0KMPERSEC = 100.0
