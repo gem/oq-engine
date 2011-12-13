@@ -541,7 +541,6 @@ def default_validators(sections, params):
     hazard_comp_type = ComputationTypeValidator(params)
     file_path = FilePathValidator(params)
     parameter = BasicParameterValidator(params)
-    bcr = BCRValidator(params)
 
     validators = ValidatorSet()
     validators.add(hazard_comp_type)
