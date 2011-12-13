@@ -26,7 +26,8 @@ from openquake.job import config
 from openquake.job.config import (
     DisaggregationValidator, HazardMandatoryParamsValidator,
     RiskMandatoryParamsValidator, ScenarioComputationValidator,
-    UHSValidator, to_float_array, to_str_array, validate_numeric_sequence)
+    UHSValidator, to_float_array, to_str_array, validate_numeric_sequence,
+    BCRValidator)
 from tests.utils import helpers
 
 import unittest
@@ -582,3 +583,33 @@ class UHSValidatorTestCase(unittest.TestCase):
     def test_invalid_check_dupes(self):
         validator = UHSValidator(self.CHECK_DUPES)
         self.assertFalse(validator.is_valid()[0])
+
+
+class BCRValidatorTestCase(unittest.TestCase):
+    """Tests for :class:`openquake.job.config.BCRValidator`"""
+
+    GOOD_PARAMS = dict(INVESTIGATION_TIME=1.0, INTEREST_RATE=0.05,
+                       ASSET_LIFE_EXPECTANCY=30)
+
+    def assert_invalid(self, **params):
+        for key in self.GOOD_PARAMS:
+            params.setdefault(key, self.GOOD_PARAMS[key])
+        validator = BCRValidator(params)
+        self.assertEqual(validator.is_valid()[0], False)
+
+    def test_investigation_time(self):
+        self.assert_invalid(INVESTIGATION_TIME=0.0)
+        self.assert_invalid(INVESTIGATION_TIME=50.0)
+        self.assert_invalid(INVESTIGATION_TIME=1.1)
+
+    def test_interest_rate(self):
+        self.assert_invalid(INTEREST_RATE=0.0)
+        self.assert_invalid(INTEREST_RATE=-1.2)
+
+    def test_asset_life_expectancy(self):
+        self.assert_invalid(ASSET_LIFE_EXPECTANCY=0.0)
+        self.assert_invalid(ASSET_LIFE_EXPECTANCY=-1.0)
+
+    def test_all_ok(self):
+        validator = BCRValidator(self.GOOD_PARAMS)
+        self.assertEqual(validator.is_valid(), (True, []))
