@@ -32,12 +32,15 @@
          Example:
             <assetValue unit="EUR">150000</assetValue>
             is changed to
-            <assetValue>150000</assetValue> -->
+            <assetValue>150000</assetValue>
+
+         Also, append a retrofittingCost element with a dummy value (to match the new schema). -->
     <xsl:template match="//nrml_02:assetValue">
         <xsl:element name="assetValue" namespace="http://openquake.org/xmlns/nrml/0.3">
             <xsl:copy-of select="*"/>
             <xsl:apply-templates/>
         </xsl:element>
+        <xsl:element name="retrofittingCost" xmlns="http://openquake.org/xmlns/nrml/0.3">1</xsl:element>
     </xsl:template>
 
     <!-- Rename 'vulnerabilityFunctionReference' to 'taxonomy'. -->
