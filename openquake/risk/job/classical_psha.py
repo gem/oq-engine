@@ -177,3 +177,4 @@ class ClassicalPSHABasedMixin:
         return loss_ratio_curve
 
 general.RiskJobMixin.register("Classical", ClassicalPSHABasedMixin)
+general.RiskJobMixin.register("Classical BCR", ClassicalPSHABasedMixin)

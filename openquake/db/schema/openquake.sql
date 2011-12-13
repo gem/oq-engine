@@ -530,7 +530,8 @@ CREATE TABLE uiapi.input (
     --      rupture file (rupture)
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
         CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gmpe',
-                             'exposure', 'vulnerability', 'rupture')),
+                             'exposure', 'rupture',
+                             'vulnerability', 'vulnerability_retrofitted')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
     last_update timestamp without time zone
@@ -553,10 +554,13 @@ CREATE TABLE uiapi.oq_job (
     --      scenario (Scenario)
     --      disaggregation (Hazard only)
     --      uhs (Uniform Hazard Spectra; Hazard only)
+    --      classical_bcr (Benefit-cost ratio calc based on Classical PSHA)
+    --      event_based_bcr (BCR calc based on Probabilistic event-based)
     -- Note: 'classical' and 'event_based' are both probabilistic methods
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
         CHECK(job_type IN ('classical', 'event_based', 'scenario',
-                           'disaggregation', 'uhs')),
+                           'disaggregation', 'uhs',
+                           'classical_bcr', 'event_based_bcr')),
     -- One of: pending, running, failed, succeeded
     status VARCHAR NOT NULL DEFAULT 'pending' CONSTRAINT job_status_value
         CHECK(status IN ('pending', 'running', 'failed', 'succeeded')),
@@ -587,7 +591,8 @@ CREATE TABLE uiapi.oq_params (
     id SERIAL PRIMARY KEY,
     job_type VARCHAR NOT NULL CONSTRAINT job_type_value
         CHECK(job_type IN ('classical', 'event_based', 'scenario',
-                           'disaggregation', 'uhs')),
+                           'disaggregation', 'uhs',
+                           'classical_bcr', 'event_based_bcr')),
     input_set_id INTEGER NOT NULL,
     region_grid_spacing float,
     min_magnitude float CONSTRAINT min_magnitude_set
@@ -636,7 +641,8 @@ CREATE TABLE uiapi.oq_params (
     poes float[] CONSTRAINT poes_are_set
         CHECK(
             ((job_type IN ('classical', 'disaggregation', 'uhs')) AND (poes IS NOT NULL))
-            OR ((job_type IN ('event_based', 'scenario')) AND (poes IS NULL))),
+            OR ((job_type IN ('event_based', 'scenario',
+                              'classical_bcr', 'event_based_bcr')) AND (poes IS NULL))),
     -- Number of logic tree samples
     realizations integer CONSTRAINT realizations_is_set
         CHECK(
@@ -645,13 +651,14 @@ CREATE TABLE uiapi.oq_params (
     -- Number of seismicity histories
     histories integer CONSTRAINT histories_is_set
         CHECK(
-            ((job_type = 'event_based') AND (histories IS NOT NULL))
-            OR ((job_type != 'event_based') AND (histories IS NULL))),
+            ((job_type IN ('event_based', 'event_based_bcr') AND (histories IS NOT NULL))
+            OR (job_type NOT IN ('event_based', 'event_based_bcr')) AND (histories IS NULL))),
     -- ground motion correlation flag
     gm_correlated boolean CONSTRAINT gm_correlated_is_set
         CHECK(
-            ((job_type IN ('classical', 'disaggregation', 'uhs')) AND (gm_correlated IS NULL))
-            OR ((job_type IN ('event_based', 'scenario')) AND (gm_correlated IS NOT NULL))),
+            ((job_type IN ('classical', 'disaggregation', 'uhs',
+                           'classical_bcr', 'event_based_bcr')) AND (gm_correlated IS NULL))
+            OR ((job_type IN ('event_based', 'scenario', 'event_based_bcr')) AND (gm_correlated IS NOT NULL))),
     gmf_calculation_number integer CONSTRAINT gmf_calculation_number_is_set
         CHECK(
             ((job_type = 'scenario')
@@ -685,6 +692,14 @@ CREATE TABLE uiapi.oq_params (
             OR
             ((job_type = 'scenario')
              AND (area_source_magnitude_scaling_relationship IS NULL))),
+    asset_life_expectancy float
+        CONSTRAINT asset_life_expectancy_is_set
+        CHECK (
+            ((job_type IN ('classical_bcr', 'event_based_bcr'))
+             AND asset_life_expectancy IS NOT NULL)
+            OR
+            ((job_type NOT IN ('classical_bcr', 'event_based_bcr'))
+             AND asset_life_expectancy IS NULL)),
     compute_mean_hazard_curve boolean
         CONSTRAINT compute_mean_hazard_curve_is_set
         CHECK(
@@ -729,9 +744,10 @@ CREATE TABLE uiapi.oq_params (
     gmf_random_seed integer
         CONSTRAINT gmf_random_seed_is_set
         CHECK(
-            (job_type IN ('scenario', 'event_based'))
+            (job_type IN ('scenario', 'event_based')
+             AND (gmf_random_seed IS NOT NULL))
             OR
-            ((job_type IN ('classical', 'disaggregation', 'uhs'))
+            ((job_type NOT IN ('scenario', 'event_based'))
              AND (gmf_random_seed IS NULL))),
     gmpe_lt_random_seed integer
         CONSTRAINT gmpe_lt_random_seed_is_set
@@ -775,11 +791,20 @@ CREATE TABLE uiapi.oq_params (
             OR
             ((job_type = 'scenario')
              AND (include_subduction_fault_source IS NULL))),
+    interest_rate float
+        CONSTRAINT interest_rate_is_set
+        CHECK (
+            ((job_type IN ('classical_bcr', 'event_based_bcr'))
+             AND interest_rate IS NOT NULL)
+            OR
+            ((job_type NOT IN ('classical_bcr', 'event_based_bcr'))
+             AND interest_rate IS NULL)),
     loss_curves_output_prefix VARCHAR,
     maximum_distance VARCHAR
         CONSTRAINT maximum_distance_is_set
         CHECK(
-            ((job_type IN ('classical', 'disaggregation', 'uhs'))
+            ((job_type IN ('classical', 'disaggregation', 'uhs',
+                           'classical_bcr', 'event_based_bcr'))
              AND (maximum_distance IS NOT NULL))
             OR
             ((job_type IN ('scenario', 'event_based'))
@@ -790,7 +815,7 @@ CREATE TABLE uiapi.oq_params (
             ((job_type = 'classical')
              AND (quantile_levels IS NOT NULL))
             OR
-            ((job_type IN ('scenario', 'event_based', 'disaggregation', 'uhs'))
+            ((job_type != 'classical')
              AND (quantile_levels IS NULL))),
     reference_depth_to_2pt5km_per_sec_param float,
     risk_cell_size float,
@@ -809,7 +834,8 @@ CREATE TABLE uiapi.oq_params (
     rupture_floating_type VARCHAR
         CONSTRAINT rupture_floating_type_is_set
         CHECK(
-            ((job_type IN ('classical', 'event_based', 'disaggregation', 'uhs'))
+            ((job_type IN ('classical', 'event_based', 'disaggregation', 'uhs',
+                           'classical_bcr', 'event_based_bcr'))
              AND (rupture_floating_type IN ('alongstrike', 'downdip', 'centereddowndip')))
             OR
             ((job_type = 'scenario')

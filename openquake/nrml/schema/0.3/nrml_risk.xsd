@@ -185,6 +185,7 @@
                     <xs:element name="taxonomy" type="xs:string"/>
                     <xs:element name="structureCategory" type="xs:string"/>
                     <xs:element name="assetValue" type="AssetValue"/>
+                    <xs:element name="retrofittingCost" type="xs:double"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
