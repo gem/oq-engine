@@ -145,7 +145,7 @@ class ClassicalMixin(BasePSHAMixin):
     params loaded from the Job configuration file."""
 
     def number_of_items(self):
-        """How many `celery` items should be used for the calculations?"""
+        """How many data items (e.g. sites) should be in each 'celery' task?"""
         value = self["ITEMS_PER_TASK"]
         return 1 if value is None else int(value)
 
