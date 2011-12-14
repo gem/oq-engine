@@ -24,7 +24,6 @@ Wrapper around the OpenSHA-lite java library.
 from itertools import izip
 import functools
 import math
-import multiprocessing
 import os
 import random
 import time
