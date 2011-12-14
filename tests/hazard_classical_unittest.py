@@ -399,11 +399,10 @@ class NumberOfItemsTestCase(TestMixin, unittest.TestCase):
     def test_number_of_items_with_param_not_set(self):
         """
         When the `ITEMS_PER_TASK` parameter is not set the expected value is
-        twice the number of CPUs/cores.
+        1.
         """
         self.mixin.params = dict()
-        self.assertEqual(
-            2 * multiprocessing.cpu_count(), self.mixin.number_of_items())
+        self.assertEqual(1, self.mixin.number_of_items())
 
     def test_number_of_items_with_param_set_and_valid(self):
         """

@@ -145,10 +145,10 @@ class ClassicalMixin(BasePSHAMixin):
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the Job configuration file."""
 
-    def number_of_tasks(self):
-        """How many `celery` tasks should be used for the calculations?"""
-        value = self["HAZARD_TASKS"]
-        return 2 * multiprocessing.cpu_count() if value is None else int(value)
+    def number_of_items(self):
+        """How many `celery` items should be used for the calculations?"""
+        value = self["ITEMS_PER_TASK"]
+        return 1 if value is None else int(value)
 
     def do_curves(self, sites, realizations, serializer=None,
                   the_task=tasks.compute_hazard_curve):
@@ -188,7 +188,7 @@ class ClassicalMixin(BasePSHAMixin):
             self.store_gmpe_map(source_model_generator.getrandbits(32))
 
             utils_tasks.distribute(
-                self.number_of_tasks(), the_task, ("sites", sites),
+                self.number_of_items(), the_task, ("sites", sites),
                 dict(job_id=self.job_id, realization=realization),
                 flatten_results=True, ath=serializer)
 
@@ -231,7 +231,7 @@ class ClassicalMixin(BasePSHAMixin):
         LOG.info("Computing mean hazard curves")
 
         utils_tasks.distribute(
-            self.number_of_tasks(), curve_task, ("sites", sites),
+            self.number_of_items(), curve_task, ("sites", sites),
             dict(job_id=self.job_id, realizations=realizations),
             flatten_results=True, ath=curve_serializer)
 
@@ -284,7 +284,7 @@ class ClassicalMixin(BasePSHAMixin):
         LOG.info("Computing quantile hazard curves")
 
         utils_tasks.distribute(
-            self.number_of_tasks(), curve_task, ("sites", sites),
+            self.number_of_items(), curve_task, ("sites", sites),
             dict(job_id=self.job_id, realizations=realizations,
                  quantiles=quantiles),
             flatten_results=True, ath=curve_serializer)
