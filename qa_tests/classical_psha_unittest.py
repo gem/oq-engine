@@ -78,7 +78,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case2", "config.gem")))
 
-        self._assert_results_are(expected_results)
+        self._assert_hazcurve_results_are(expected_results)
 
     @attr("qa")
     def test_peer_test_set_1_case_5(self):
@@ -87,7 +87,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case5", "config.gem")))
 
-        self._assert_results_are(expected_results)
+        self._assert_hazcurve_results_are(expected_results)
 
     @attr("qa")
     def test_peer_test_set_1_case_8a(self):
@@ -96,7 +96,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case8a", "config.gem")))
 
-        self._assert_results_are(expected_results)
+        self._assert_hazcurve_results_are(expected_results)
 
     @attr("qa")
     def test_peer_test_set_1_case_10(self):
@@ -105,7 +105,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case10", "config.gem")))
 
-        self._assert_results_are(expected_results)
+        self._assert_hazcurve_results_are(expected_results)
 
     @attr("qa")
     def test_hazard_map_test(self):
@@ -131,7 +131,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
             self.assertTrue(numpy.allclose(numpy.array(value),
                     numpy.array(hm_db.value)))
 
-    def _assert_results_are(self, expected_results):
+    def _assert_hazcurve_results_are(self, expected_results):
         """Compare the expected results with the results
         computed by the given job."""
 
