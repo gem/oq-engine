@@ -25,8 +25,9 @@ and its validation.
 from openquake.job import config
 from openquake.job.config import (
     DisaggregationValidator, HazardMandatoryParamsValidator,
-    RiskMandatoryParamsValidator, DeterministicComputationValidator,
-    to_float_array, to_str_array)
+    RiskMandatoryParamsValidator, ScenarioComputationValidator,
+    UHSValidator, to_float_array, to_str_array, validate_numeric_sequence,
+    BCRValidator)
 from tests.utils import helpers
 
 import unittest
@@ -102,7 +103,7 @@ class ValidatorSetTestCase(unittest.TestCase):
         validators = [
             RiskMandatoryParamsValidator(None, None),
             DisaggregationValidator(None),
-            DeterministicComputationValidator(None, None),
+            ScenarioComputationValidator(None, None),
         ]
 
         for v in validators:
@@ -214,16 +215,16 @@ class ConfigurationConstraintsTestCase(unittest.TestCase, helpers.TestMixin):
         # Restore the list with the mandatory hazard parameters.
         HazardMandatoryParamsValidator.MANDATORY_PARAMS.pop()
 
-    def test_deterministic_is_not_supported_alone(self):
-        """When we specify a deterministic computation, we only
+    def test_scenario_is_not_supported_alone(self):
+        """When we specify a scenario computation, we only
         support hazard + risk jobs."""
 
         sections = [config.RISK_SECTION,
                 config.HAZARD_SECTION, config.GENERAL_SECTION]
 
-        params = {config.CALCULATION_MODE: config.DETERMINISTIC_MODE}
+        params = {config.CALCULATION_MODE: config.SCENARIO_MODE}
 
-        validator = config.DeterministicComputationValidator(sections, params)
+        validator = config.ScenarioComputationValidator(sections, params)
 
         self.assertTrue(validator.is_valid()[0])
 
@@ -438,87 +439,23 @@ class DisaggregationValidatorTestCase(unittest.TestCase):
         'LONGITUDE_BIN_LIMITS': '-180, 0, 180',
         'MAGNITUDE_BIN_LIMITS': '0, 1, 2, 4',
         'EPSILON_BIN_LIMITS': '-1, 3, 5, 7',
-        'DISTANCE_BIN_LIMITS': '0, 10, 20'
+        'DISTANCE_BIN_LIMITS': '0, 10, 20',
     }
     BAD_PARAMS = {
         'LATITUDE_BIN_LIMITS': '-90.1, 0, 90',
         'LONGITUDE_BIN_LIMITS': '-180, 0, 180.1',
         'MAGNITUDE_BIN_LIMITS': '-0.5, 0, 1, 2',
         'EPSILON_BIN_LIMITS': '-1, 3, 5, 7',
-        'DISTANCE_BIN_LIMITS': '-10, 0, 10'
+        'DISTANCE_BIN_LIMITS': '-10, 0, 10',
     }
 
-    @classmethod
-    def setUpClass(cls):
-        cls.dav_cls = config.DisaggregationValidator
-
-    def test_check_good_bin_limits(self):
-        """Check validation for known-good limits"""
-        good_limits = (
-            [5, 6, 7, 8],
-            [5, 6],
-            [-8.6, -7.3, -6.2, -6.1],
-        )
-
-        for limits in good_limits:
-            # if no error is raised, the limits are good
-            self.dav_cls.check_bin_limits(limits)
-
-    def test_check_bad_bin_limits(self):
-        """Check validation for known-bad limits"""
-        bad_limits = (
-            [5],
-            [],
-            [1.3],
-        )
-
-        for limits in bad_limits:
-            self.assertRaises(ValueError, self.dav_cls.check_bin_limits,
-                              limits)
-
-    def test_check_good_bin_limits_with_min_max(self):
-        """Check validation for known-good limits, with min/max specified"""
-        bin_min = -90.0
-        bin_max = 90.0
-
-        limits = [-90.0, 42.7, 90.0]
-
-        self.dav_cls.check_bin_limits(limits, bin_min=bin_min, bin_max=bin_max)
-
-    def test_check_bad_limits_with_min_max(self):
-        """Check validation for known-bad limits, with min/max specified"""
-        bin_min = -90.0
-        bin_max = 90.0
-
-        too_low = [-90.1, 42.7, 90.0]
-        too_high = [-90.0, 42.7, 90.1]
-
-        for limits in (too_low, too_high):
-            self.assertRaises(ValueError, self.dav_cls.check_bin_limits,
-                              too_low, bin_min=bin_min, bin_max=bin_max)
-
-    def test_is_valid_good_params(self):
-        """Test the entire validator with a set of known-good parameters"""
+    def test_good_params(self):
         validator = config.DisaggregationValidator(self.GOOD_PARAMS)
+        self.assertTrue(validator.is_valid()[0])
 
-        self.assertEqual((True, []), validator.is_valid())
-
-    def test_is_valid_bad_params(self):
-        """Test the entire validator with a set of known-bad parameters"""
+    def test_bad_params(self):
         validator = config.DisaggregationValidator(self.BAD_PARAMS)
-
-        expected_results = (False,
-            ['Invalid bin limits: [-90.1, 0.0, 90.0]. Limits must be >= -90.0',
-             ('Invalid bin limits: [-180.0, 0.0, 180.1].'
-              ' Limits must be <= 180.0'),
-             ('Invalid bin limits: [-0.5, 0.0, 1.0, 2.0].'
-              ' Limits must be >= 0.0'),
-             'Invalid bin limits: [-10.0, 0.0, 10.0]. Limits must be >= 0.0']
-        )
-
-        actual_results = validator.is_valid()
-
-        self.assertEqual(expected_results, actual_results)
+        self.assertFalse(validator.is_valid()[0])
 
 
 class DefaultValidatorsTestCase(unittest.TestCase):
@@ -570,3 +507,109 @@ class ValidatorsUtilsTestCase(unittest.TestCase):
         test_input = 'MagPMF MagDistPMF MagDistEpsPMF'
 
         self.assertEqual(expected, to_str_array(test_input))
+
+
+class NumericSequenceValidationTestCase(unittest.TestCase):
+    """Test cases for
+    :function:`openquake.job.config.validate_numeric_sequence`
+    """
+
+    # This test sequence can be used to trigger errors with any of the
+    # individual checks.
+    TEST_VALUES = [-91.0, -91.0, -92.0]
+
+    def test_no_checks(self):
+        """If no checks are specified, no errors should be raised."""
+        validate_numeric_sequence(self.TEST_VALUES)
+
+    def test_min_length(self):
+        self.assertRaises(ValueError, validate_numeric_sequence,
+                          self.TEST_VALUES, min_length=4)
+
+    def test_max_length(self):
+        self.assertRaises(ValueError, validate_numeric_sequence,
+                          self.TEST_VALUES, max_length=2)
+
+    def test_min_val(self):
+        self.assertRaises(ValueError, validate_numeric_sequence,
+                          self.TEST_VALUES, min_val=-90.0)
+
+    def test_max_val(self):
+        self.assertRaises(ValueError, validate_numeric_sequence,
+                          self.TEST_VALUES, max_val=-93.0)
+
+    def test_check_sorted(self):
+        self.assertRaises(ValueError, validate_numeric_sequence,
+                          self.TEST_VALUES, check_sorted=True)
+
+    def test_check_dupes(self):
+        self.assertRaises(ValueError, validate_numeric_sequence,
+                          self.TEST_VALUES, check_dupes=True)
+
+
+class UHSValidatorTestCase(unittest.TestCase):
+    """Tests for :class:`openquake.job.config.UHSValidator`"""
+
+    # Parameters for success cases:
+    GOOD_PARAMS_SHORT = {'UHS_PERIODS': '0.0'}
+    GOOD_PARAMS_LONG = {'UHS_PERIODS': '0.0, 0.5, 1.0, 1.5'}
+
+    # Parameters for fail cases:
+    MIN_LENGTH = {'UHS_PERIODS': ''}
+    MIN_VAL = {'UHS_PERIODS': '1.0, 0.0, 1.0'}
+    CHECK_SORTED = {'UHS_PERIODS': '0.5, 0.0, 1.0, 1.5'}
+    CHECK_DUPES = {'UHS_PERIODS': '0.0, 0.5, 0.5, 1.0'}
+
+    def test_good_params_short(self):
+        validator = UHSValidator(self.GOOD_PARAMS_SHORT)
+        self.assertTrue(validator.is_valid()[0])
+
+    def test_good_params_long(self):
+        validator = UHSValidator(self.GOOD_PARAMS_LONG)
+        self.assertTrue(validator.is_valid()[0])
+
+    def test_invalid_min_length(self):
+        validator = UHSValidator(self.MIN_LENGTH)
+        self.assertFalse(validator.is_valid()[0])
+
+    def test_invalid_min_val(self):
+        validator = UHSValidator(self.MIN_VAL)
+        self.assertFalse(validator.is_valid()[0])
+
+    def test_invalid_check_sorted(self):
+        validator = UHSValidator(self.CHECK_SORTED)
+        self.assertFalse(validator.is_valid()[0])
+
+    def test_invalid_check_dupes(self):
+        validator = UHSValidator(self.CHECK_DUPES)
+        self.assertFalse(validator.is_valid()[0])
+
+
+class BCRValidatorTestCase(unittest.TestCase):
+    """Tests for :class:`openquake.job.config.BCRValidator`"""
+
+    GOOD_PARAMS = dict(INVESTIGATION_TIME=1.0, INTEREST_RATE=0.05,
+                       ASSET_LIFE_EXPECTANCY=30)
+
+    def assert_invalid(self, **params):
+        for key in self.GOOD_PARAMS:
+            params.setdefault(key, self.GOOD_PARAMS[key])
+        validator = BCRValidator(params)
+        self.assertEqual(validator.is_valid()[0], False)
+
+    def test_investigation_time(self):
+        self.assert_invalid(INVESTIGATION_TIME=0.0)
+        self.assert_invalid(INVESTIGATION_TIME=50.0)
+        self.assert_invalid(INVESTIGATION_TIME=1.1)
+
+    def test_interest_rate(self):
+        self.assert_invalid(INTEREST_RATE=0.0)
+        self.assert_invalid(INTEREST_RATE=-1.2)
+
+    def test_asset_life_expectancy(self):
+        self.assert_invalid(ASSET_LIFE_EXPECTANCY=0.0)
+        self.assert_invalid(ASSET_LIFE_EXPECTANCY=-1.0)
+
+    def test_all_ok(self):
+        validator = BCRValidator(self.GOOD_PARAMS)
+        self.assertEqual(validator.is_valid(), (True, []))

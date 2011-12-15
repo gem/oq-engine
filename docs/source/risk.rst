@@ -22,10 +22,10 @@ The :mod:`classical_psha_based` module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`deterministic_event_based` module
+The :mod:`scenario_event_based` module
 --------------------------------------
 
-.. automodule:: openquake.risk.deterministic_event_based
+.. automodule:: openquake.risk.scenario_event_based
     :members:
     :undoc-members:
     :show-inheritance:

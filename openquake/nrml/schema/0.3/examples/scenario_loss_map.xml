@@ -1,0 +1,62 @@
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.3"
+      gml:id="n1">
+
+    <riskResult gml:id="Haiti2010">
+        <config/>
+
+        <lossMap gml:id="LM1" endBranchLabel="VM1" lossCategory="economic_loss"
+                 unit="EUR">
+
+            <LMNode gml:id="lmn1">
+                <site>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-72.20 18.00</gml:pos>
+                    </gml:Point>
+                </site>
+                <loss assetRef="RCLCMR1">
+                    <mean>873213.6</mean>
+                    <stdDev>47512.7</stdDev>
+                </loss>
+                <loss assetRef="RCLCHR1">
+                    <mean>71548.9</mean>
+                    <stdDev>20170.1</stdDev>
+                </loss>
+                <loss assetRef="RCLCLR1">
+                    <mean>3148.9</mean>
+                    <stdDev>901.1</stdDev>
+                </loss>
+                <loss assetRef="M1LCLR1">
+                    <mean>9548.6</mean>
+                    <stdDev>1720.4</stdDev>
+                </loss>
+            </LMNode>
+
+            <LMNode gml:id="lmn2">
+                <site>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-72.25 18.00</gml:pos>
+                    </gml:Point>
+                </site>
+                <loss assetRef="RCLCMR2">
+                    <mean>12713.6</mean>
+                    <stdDev>4475.7</stdDev>
+                </loss>
+                <loss assetRef="RCLCHR2">
+                    <mean>88548.3</mean>
+                    <stdDev>16370.3</stdDev>
+                </loss>
+                <loss assetRef="RCLCLR2">
+                    <mean>63133.5</mean>
+                    <stdDev>14091.0</stdDev>
+                </loss>
+                <loss assetRef="M1LCLR2">
+                    <mean>759548.3</mean>
+                    <stdDev>70255.1</stdDev>
+                </loss>
+            </LMNode>
+
+        </lossMap>
+
+    </riskResult>
+</nrml>

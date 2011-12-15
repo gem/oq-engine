@@ -38,8 +38,11 @@ REGION_GRID_SPACING = "REGION_GRID_SPACING"
 CALCULATION_MODE = "CALCULATION_MODE"
 REGION_GRID_SPACING = "REGION_GRID_SPACING"
 SITES = "SITES"
-DETERMINISTIC_MODE = "Deterministic"
+SCENARIO_MODE = "Scenario"
 DISAGGREGATION_MODE = "Disaggregation"
+BCR_EVENT_BASED_MODE = "Event Based BCR"
+BCR_CLASSICAL_MODE = "Classical BCR"
+UHS_MODE = "UHS"
 BASE_PATH = "BASE_PATH"
 COMPUTE_HAZARD_AT_ASSETS = "COMPUTE_HAZARD_AT_ASSETS_LOCATIONS"
 
@@ -52,6 +55,8 @@ LON_BIN_LIMITS = 'LONGITUDE_BIN_LIMITS'
 MAG_BIN_LIMITS = 'MAGNITUDE_BIN_LIMITS'
 EPS_BIN_LIMITS = 'EPSILON_BIN_LIMITS'
 DIST_BIN_LIMITS = 'DISTANCE_BIN_LIMITS'
+
+UHS_PERIODS = 'UHS_PERIODS'
 
 
 def to_float_array(value):
@@ -229,10 +234,10 @@ class ComputationTypeValidator(object):
         return (True, [])
 
 
-class DeterministicComputationValidator(object):
-    """Validator that checks if the deterministic calculation
+class ScenarioComputationValidator(object):
+    """Validator that checks if the scenario calculation
     mode specified in the configuration file is for an
-    hazard + risk job. We don't currently support deterministic
+    hazard + risk job. We don't currently support scenario
     calculations for hazard jobs only."""
 
     def __init__(self, sections, params):
@@ -240,16 +245,65 @@ class DeterministicComputationValidator(object):
         self.sections = sections
 
     def is_valid(self):
-        """Return `True` if the deterministic calculation mode
+        """Return `True` if the scenario calculation mode
         specified is for an hazard + risk job, `False` otherwise."""
 
         if RISK_SECTION not in self.sections \
-                and self.params[CALCULATION_MODE] == DETERMINISTIC_MODE:
+                and self.params[CALCULATION_MODE] == SCENARIO_MODE:
 
-            return (False, ["With DETERMINISTIC calculations we"
+            return (False, ["With SCENARIO calculations we"
                     + " only support hazard + risk jobs."])
 
         return (True, [])
+
+
+# pylint: disable=R0913
+def validate_numeric_sequence(values, min_length=None, max_length=None,
+                              min_val=None, max_val=None,
+                              check_sorted=False, check_dupes=False):
+    """General function for checking the validity of a numeric sequence.
+
+    If any check fails, a ValueError is raised.
+
+    :param values:
+        A sequence (such as `list` or `tuple`) of numeric values.
+    :param int min_length:
+        Minimum length for the input sequence.
+    :param int max_length:
+        Maximum length for the input sequence.
+    :param float min_val:
+        Minimum value for each element in the input sequence.
+    :param float max_val:
+        Maximum value for each element in the input sequence.
+    :param bool check_sorted:
+        If True, check if the sequence is sorted in ascending order. If the
+        sequence is not sorted, the check will fail.
+    :param bool check_dupes:
+        If True, check if the sequence contains duplicates. If the sequence
+        contains duplicates, the check will fail.
+    """
+    try:
+        assert min_length is None or len(values) >= min_length, (
+            "Sequence must contain at least %s elements." % min_length)
+        assert max_length is None or len(values) <= max_length, (
+            "Sequence must contain at most %s elements." % max_length)
+        assert min_val is None or all(x >= min_val for x in values), (
+            "All values in sequence must be >= %s." % min_val)
+        assert max_val is None or all(x <= max_val for x in values), (
+            "All values in sequence must be <= %s." % max_val)
+        assert ((not check_sorted)
+                or
+                (all(values[i] <= values[i + 1]
+                       for i in xrange(len(values) - 1)))), (
+            "Sequence is not sorted.")
+        assert ((not check_dupes)
+                or
+                (len(set(values)) == len(values))), (
+            "Sequence contains duplicates.")
+
+    except AssertionError, err:
+        msg = "Invalid numeric sequence: %s. Error: %s" % (values, err.message)
+        raise ValueError(msg)
 
 
 class DisaggregationValidator(object):
@@ -258,42 +312,6 @@ class DisaggregationValidator(object):
 
     def __init__(self, params):
         self.params = params
-
-    @staticmethod
-    def check_bin_limits(limits, bin_min=None, bin_max=None):
-        """Check a sequence of bin limits to ensure the following:
-            - There are at least 2 elements
-            - Elements are in ascending order
-            - There are no duplicates
-            - Limits are within the correct range (if range min and/or max
-              are specified
-
-        If limits are not valid, a ValueError is raised.
-        """
-
-        try:
-            # at least 2 elements:
-            assert len(limits) >= 2, \
-                "Limits should contain at least 2 elements"
-
-            # ascending order:
-            assert all(
-                limits[i] < limits[i + 1] for i in xrange(len(limits) - 1)), \
-                "Limits should be arranged in ascending order"
-
-            # no duplicates:
-            assert sorted(list(set(limits))) == list(limits), \
-                "Limits should not contain duplicates"
-
-            # values are in the correct range:
-            assert bin_min is None or all(x >= bin_min for x in limits), \
-                "Limits must be >= %s" % bin_min
-            assert bin_max is None or all(x <= bin_max for x in limits), \
-                "Limits must be <= %s" % bin_max
-
-        except AssertionError, err:
-            msg = "Invalid bin limits: %s. %s" % (limits, err)
-            raise ValueError(msg)
 
     def is_valid(self):
         """Check if parameters are valid for a Disaggregation calculation.
@@ -321,13 +339,78 @@ class DisaggregationValidator(object):
             bin_min = check.get('bin_min', None)
             bin_max = check.get('bin_max', None)
             try:
-                DisaggregationValidator.check_bin_limits(limits, bin_min,
-                                                         bin_max)
+                validate_numeric_sequence(limits, min_length=2,
+                                          min_val=bin_min, max_val=bin_max,
+                                          check_sorted=True, check_dupes=True)
             except ValueError, err:
                 valid = False
                 errors.append(err.message)
 
         return (valid, errors)
+
+
+class UHSValidator(object):
+    """Validator for parameters which are specific to the Uniform Hazard
+    Spectra calculator."""
+
+    def __init__(self, params):
+        self.params = params
+
+    def is_valid(self):
+        """Check if UHS_PERIODS contains valid data for a UHS calculation.
+
+        Currently, this is the only UHS-specific parameter we need to check.
+        :returns: the status of this validator and the related error messages.
+        :rtype: when valid, a (True, []) tuple is returned. When invalid, a
+            (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
+            tuple is returned
+        """
+        valid = True
+        errors = []
+
+        uhs_periods = self.params.get(UHS_PERIODS)
+        if uhs_periods is None:
+            valid = False
+            errors.append(
+                "Parameter `%s` must be defined for UHS calculations."
+                % UHS_PERIODS)
+        else:
+            vals = to_float_array(uhs_periods)
+            try:
+                validate_numeric_sequence(vals, min_length=1, min_val=0.0,
+                                          check_sorted=True, check_dupes=True)
+            except ValueError, err:
+                valid = False
+                errors.append(err.message)
+
+        return (valid, errors)
+
+
+class BCRValidator(object):
+    """
+    Validator for both classical- and probabilistic-based BCR calculators
+    """
+
+    def __init__(self, params):
+        self.params = params
+
+    def is_valid(self):
+        """
+        Checks the following conditions:
+
+        * INVESTIGATION_TIME is set to 1.0
+        * INTEREST_RATE is positive
+        * ASSET_LIFE_EXPECTANCY is positive
+        """
+        errors = []
+        if self.params.get('INVESTIGATION_TIME') != 1.0:
+            errors.append("Parameter 'INVESTIGATION_TIME' must be set to 1.0 "
+                          "for BCR calculations.")
+        if self.params.get('INTEREST_RATE') <= 0:
+            errors.append("Parameter 'INTEREST_RATE' must be positive")
+        if self.params.get('ASSET_LIFE_EXPECTANCY') <= 0:
+            errors.append("Parameter 'ASSET_LIFE_EXPECTANCY' must be positive")
+        return (not bool(errors), errors)
 
 
 class FilePathValidator(object):
@@ -454,14 +537,14 @@ def default_validators(sections, params):
 
     hazard = HazardMandatoryParamsValidator(sections, params)
     exposure = RiskMandatoryParamsValidator(sections, params)
-    deterministic = DeterministicComputationValidator(sections, params)
+    scenario = ScenarioComputationValidator(sections, params)
     hazard_comp_type = ComputationTypeValidator(params)
     file_path = FilePathValidator(params)
     parameter = BasicParameterValidator(params)
 
     validators = ValidatorSet()
     validators.add(hazard_comp_type)
-    validators.add(deterministic)
+    validators.add(scenario)
     validators.add(exposure)
     validators.add(parameter)
     validators.add(file_path)
@@ -469,5 +552,8 @@ def default_validators(sections, params):
 
     if params.get(CALCULATION_MODE) == DISAGGREGATION_MODE:
         validators.add(DisaggregationValidator(params))
+    elif params.get(CALCULATION_MODE) in (BCR_CLASSICAL_MODE,
+                                          BCR_EVENT_BASED_MODE):
+        validators.add(BCRValidator(params))
 
     return validators

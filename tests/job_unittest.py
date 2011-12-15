@@ -32,9 +32,10 @@ from openquake import kvs
 from openquake import flags
 from openquake import shapes
 from openquake.job import (
-    Job, config, prepare_job, run_job, config_text_to_list, parse_config_file,
+    Job, config, prepare_job, run_job, parse_config_file,
     prepare_config_parameters, get_source_models)
 from openquake.job.mixins import Mixin
+from openquake.job.params import config_text_to_list
 from openquake.db.models import OqJob, JobStats, OqParams
 from openquake.risk.job import general
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
@@ -158,6 +159,7 @@ class JobTestCase(unittest.TestCase):
                 ProbabilisticEventMixin in self.job.__class__.__bases__)
 
     def test_can_store_and_read_jobs_from_kvs(self):
+        flags_debug_default = flags.FLAGS.debug
         flags.FLAGS.debug = 'debug'
         try:
             self.job = helpers.job_from_file(
@@ -168,7 +170,9 @@ class JobTestCase(unittest.TestCase):
             self.assertEqual(self.job, job_from_kvs)
         finally:
             helpers.cleanup_loggers()
-            flags.FLAGS.debug = None
+            # Restore the default global FLAGS.debug level
+            # so we don't break stuff.
+            flags.FLAGS.debug = flags_debug_default
 
 
 class JobDbRecordTestCase(unittest.TestCase):
@@ -237,13 +241,6 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
         self.assertEquals(['GENERAL', 'HAZARD'], sorted(sections))
 
     def test_parse_missing_files(self):
-        content = '''
-            [GENERAL]
-            CALCULATION_MODE = Event Based
-
-            [HAZARD]
-            MINIMUM_MAGNITUDE = 5.0
-            '''
         config_path = '/does/not/exist'
 
         self.assertRaises(config.ValidationException, parse_config_file,
@@ -325,6 +322,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
     BASE_CLASSICAL_PARAMS = {
         'CALCULATION_MODE': 'Classical',
         'POES': '0.01 0.1',
+        'SOURCE_MODEL_LT_RANDOM_SEED': '23',
+        'GMPE_LT_RANDOM_SEED': '5',
         'INTENSITY_MEASURE_TYPE': 'PGA',
         'MINIMUM_MAGNITUDE': '5.0',
         'INVESTIGATION_TIME': '50.0',
@@ -369,8 +368,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'RUPTURE_FLOATING_TYPE': 'Along strike and down dip',
     }
 
-    BASE_DETERMINISTIC_PARAMS = {
-        'CALCULATION_MODE': 'Deterministic',
+    BASE_SCENARIO_PARAMS = {
+        'CALCULATION_MODE': 'Scenario',
         'GMPE_MODEL_NAME': 'BA_2008_AttenRel',
         'GMF_RANDOM_SEED': '3',
         'RUPTURE_SURFACE_DISCRETIZATION': '0.1',
@@ -387,6 +386,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     BASE_EVENT_BASED_PARAMS = {
         'CALCULATION_MODE': 'Event Based',
+        'SOURCE_MODEL_LT_RANDOM_SEED': '23',
+        'GMPE_LT_RANDOM_SEED': '5',
         'INTENSITY_MEASURE_TYPE': 'SA',
         'INCLUDE_GRID_SOURCES': 'false',
         'INCLUDE_SUBDUCTION_FAULT_SOURCE': 'false',
@@ -433,6 +434,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
             'W&C 1994 Mag-Length Rel.',
         'RUPTURE_ASPECT_RATIO': '1.5',
         'RUPTURE_FLOATING_TYPE': 'Along strike and down dip',
+        'GMF_RANDOM_SEED': '1',
     }
 
     def tearDown(self):
@@ -473,6 +475,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['GMPE_LOGIC_TREE_FILE'] = abs_path("gmpe_logic_tree.xml")
         params['EXPOSURE'] = abs_path("small_exposure.xml")
         params['VULNERABILITY'] = abs_path("vulnerability.xml")
+        params['SOURCE_MODEL_LT_RANDOM_SEED'] = '23'
+        params['GMPE_LT_RANDOM_SEED'] = '5'
 
         self.job = prepare_job(params)
         self.job.oq_params = self._reload_params()
@@ -543,9 +547,9 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'gm_correlated': None,
              }, self.job.oq_params)
 
-    def test_prepare_deterministic_job(self):
-        abs_path = partial(datapath, "deterministic")
-        params = self.BASE_DETERMINISTIC_PARAMS.copy()
+    def test_prepare_scenario_job(self):
+        abs_path = partial(datapath, "scenario")
+        params = self.BASE_SCENARIO_PARAMS.copy()
         params['REGION_VERTEX'] = \
             '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
         params['REGION_GRID_SPACING'] = '0.02'
@@ -558,7 +562,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals(params['REGION_VERTEX'],
                           _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
-            {'job_type': 'deterministic',
+            {'job_type': 'scenario',
              'region_grid_spacing': 0.02,
              'min_magnitude': None,
              'investigation_time': None,
@@ -586,12 +590,12 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
                  'type': 'vulnerability'},
                 ], self._get_inputs(self.job))
 
-    def test_prepare_deterministic_job_over_sites(self):
+    def test_prepare_scenario_job_over_sites(self):
         '''
-        Same as test_prepare_deterministic_job, but with geometry specified as
+        Same as test_prepare_scenario_job, but with geometry specified as
         a list of sites.
         '''
-        params = self.BASE_DETERMINISTIC_PARAMS.copy()
+        params = self.BASE_SCENARIO_PARAMS.copy()
         params['SITES'] = '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
 
         self.job = prepare_job(params)
@@ -599,7 +603,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals(params['SITES'],
                           _to_coord_list(self.job.oq_params.sites))
         self.assertFieldsEqual(
-            {'job_type': 'deterministic',
+            {'job_type': 'scenario',
              'min_magnitude': None,
              'investigation_time': None,
              'component': 'gmroti50',
@@ -626,6 +630,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['GMPE_LOGIC_TREE_FILE'] = abs_path("gmpe_logic_tree.xml")
         params['EXPOSURE'] = abs_path("small_exposure.xml")
         params['VULNERABILITY'] = abs_path("vulnerability.xml")
+        params['GMF_RANDOM_SEED'] = '1'
 
         self.job = prepare_job(params)
         self.job.oq_params = self._reload_params()
@@ -927,8 +932,8 @@ class JobStatsTestCase(unittest.TestCase):
             'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute'
         record = 'openquake.job.Job._record_initial_stats'
 
-        with patch(haz_execute) as _haz_mock:
-            with patch(risk_execute) as _risk_mock:
+        with patch(haz_execute):
+            with patch(risk_execute):
                 with patch(record) as record_mock:
                     self.eb_job.launch()
 
@@ -939,16 +944,16 @@ class JobUtilsTestCase(unittest.TestCase):
     """Tests for utility functions in the job module."""
 
     def test_config_text_to_list(self):
-        """Exercise :function:`openquake.job.config_text_to_list`."""
-        expected = ['magdistpmf', 'magdistepspmf', 'fulldisaggmatrix']
+        """Exercise :function:`openquake.job.params.config_text_to_list`."""
+        expected = ['MagDistPMF', 'MagDistEpsPMF', 'FullDisaggMatrix']
 
         # the input mixes spaces and commas for robustness testing:
-        test_input = 'magdistpmf,magdistepspmf fulldisaggmatrix'
+        test_input = 'MagDistPMF,MagDistEpsPMF FullDisaggMatrix'
 
         self.assertEqual(expected, config_text_to_list(test_input))
 
     def test_config_text_to_list_with_transform(self):
-        """Exercise :function:`openquake.job.config_text_to_list` with a
+        """Exercise :function:`openquake.job.params.config_text_to_list` with a
         transform specified.
         """
         expected = [0.01, 0.02, 0.03, 0.04]
@@ -959,8 +964,8 @@ class JobUtilsTestCase(unittest.TestCase):
         self.assertEqual(expected, config_text_to_list(test_input, float))
 
     def test_config_text_to_list_all_whitespace_input(self):
-        """Exercise :function:`openquake.job.config_text_to_list` with an
-        input of only spaces. """
+        """Exercise :function:`openquake.job.params.config_text_to_list` with
+        an input of only spaces. """
 
         expected = []
 

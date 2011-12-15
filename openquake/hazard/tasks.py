@@ -28,20 +28,22 @@ The following tasks are defined in the hazard engine:
 
 import json
 
-from celery.task.sets import subtask
+from celery.task import task
 
 from openquake import job
 from openquake import kvs
 
 from openquake.hazard import job as hazjob
 from openquake.hazard import classical_psha
-from openquake.java import jtask as task
+from openquake import java
 from openquake.job import mixins
 from openquake.logs import HAZARD_LOG
+from openquake.utils import stats
 from openquake.utils.tasks import check_job_status
 
 
 @task
+@java.unpack_exception
 def generate_erf(job_id):
     """
     Stubbed ERF generator
@@ -62,32 +64,33 @@ def generate_erf(job_id):
 
 
 @task
-def compute_ground_motion_fields(job_id, site_list, history, realization,
-                                 seed):
+@java.unpack_exception
+@stats.progress_indicator
+def compute_ground_motion_fields(job_id, sites, history, realization, seed):
     """ Generate ground motion fields """
-    # TODO(JMC): Use a block_id instead of a site_list
+    # TODO(JMC): Use a block_id instead of a sites list
     check_job_status(job_id)
     hazengine = job.Job.from_kvs(job_id)
     with mixins.Mixin(hazengine, hazjob.HazJobMixin):
-        hazengine.compute_ground_motion_fields(site_list, history, realization,
+        hazengine.compute_ground_motion_fields(sites, history, realization,
                                                seed)
 
 
-@task
-def compute_hazard_curve(job_id, site_list, realization, callback=None):
+@task(ignore_result=True)
+@java.unpack_exception
+@stats.progress_indicator
+def compute_hazard_curve(job_id, sites, realization):
     """ Generate hazard curve for a given site list. """
     check_job_status(job_id)
     hazengine = job.Job.from_kvs(job_id)
     with mixins.Mixin(hazengine, hazjob.HazJobMixin):
-        keys = hazengine.compute_hazard_curve(site_list, realization)
-
-        if callback:
-            subtask(callback).delay(job_id, site_list)
-
+        keys = hazengine.compute_hazard_curve(sites, realization)
         return keys
 
 
 @task
+@java.unpack_exception
+@stats.progress_indicator
 def compute_mgm_intensity(job_id, block_id, site_id):
     """
     Compute mean ground intensity for a specific site.
@@ -111,25 +114,29 @@ def compute_mgm_intensity(job_id, block_id, site_id):
     return json.JSONDecoder().decode(mgm)
 
 
-@task
+@task(ignore_result=True)
+@java.unpack_exception
+@stats.progress_indicator
 def compute_mean_curves(job_id, sites, realizations):
     """Compute the mean hazard curve for each site given."""
 
     check_job_status(job_id)
     HAZARD_LOG.info("Computing MEAN curves for %s sites (job_id %s)"
-            % (len(sites), job_id))
+                    % (len(sites), job_id))
 
     return classical_psha.compute_mean_hazard_curves(job_id, sites,
-        realizations)
+                                                     realizations)
 
 
-@task
+@task(ignore_result=True)
+@java.unpack_exception
+@stats.progress_indicator
 def compute_quantile_curves(job_id, sites, realizations, quantiles):
     """Compute the quantile hazard curve for each site given."""
 
     check_job_status(job_id)
     HAZARD_LOG.info("Computing QUANTILE curves for %s sites (job_id %s)"
-            % (len(sites), job_id))
+                    % (len(sites), job_id))
 
-    return classical_psha.compute_quantile_hazard_curves(job_id, sites,
-        realizations, quantiles)
+    return classical_psha.compute_quantile_hazard_curves(
+        job_id, sites, realizations, quantiles)

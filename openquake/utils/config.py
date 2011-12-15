@@ -105,3 +105,19 @@ def abort_if_no_config_available():
             % pwd.getpwuid(os.geteuid()).pw_name)
         print msg
         sys.exit(2)
+
+
+def hazard_block_size(default=8192):
+    """Return the default or configured hazard block size."""
+    block_size = 0
+
+    configured_size = get("hazard", "block_size")
+    if configured_size is not None:
+        configured_size = int(configured_size.strip())
+
+    if configured_size and configured_size > 0:
+        block_size = configured_size
+    else:
+        block_size = default
+
+    return block_size

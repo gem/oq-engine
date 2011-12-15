@@ -1,0 +1,371 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns:nrml="http://openquake.org/xmlns/nrml/0.3"
+           xmlns="http://openquake.org/xmlns/nrml/0.3"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gmlsf.xsd"/>
+	<xs:include schemaLocation="nrml_common.xsd"/>
+	<xs:include schemaLocation="nrml_seismic.xsd"/>
+	
+	<!-- ============================================================= -->
+	
+	<xs:complexType name="HazardProcessing">
+	
+        <!-- NOTE: renamed timeSpanDuration (OpenSHA name) to investigationTimeSpan.
+             This parameter should be given in the unit years, since the base
+             SI unit (seconds) would yield values that are not instructive.
+             We use a simple non-negative float here, not the xs:duration type,
+             because xs:duration could be hard to match with a database type -->
+        <xs:attribute name="investigationTimeSpan" type="NonNegativeDoubleType"/>
+        <xs:attribute name="IDmodel" type="xs:string"/>
+        <xs:attribute name="saPeriod" type="NonNegativeDoubleType"/>
+        <xs:attribute name="saDamping" type="NonNegativeDoubleType"/>
+    </xs:complexType>
+    
+    <!-- ============================================================= -->
+    
+	<!-- TODO: add useful enum items (T&O group) -->
+	<xs:simpleType name="Vs30Method">
+        <xs:annotation>
+            <xs:documentation>Method used to define the vs30 value.</xs:documentation>
+        </xs:annotation>
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="Wald and Allen Topographic proxy"/>
+            <xs:enumeration value="fixed value"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:simpleType name="GroundMotionComponent">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="average"/>
+            <xs:enumeration value="GMRotI50"/>
+            <xs:enumeration value="random"/>
+            <xs:enumeration value="greater"/>
+            <xs:enumeration value="vertical"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:simpleType name="TruncationType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="none"/>
+            
+            <!-- NOTE: removed the whitespace in enum values -->
+            <xs:enumeration value="one_sided"/>
+            <xs:enumeration value="two_sided"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:simpleType name="StdDevType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="none"/>
+            <xs:enumeration value="total"/>
+            <xs:enumeration value="inter"/>
+            <xs:enumeration value="intra"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+	<xs:complexType name="GMPEParametersType">
+        <xs:annotation>
+            <xs:documentation>Describe the IMR (GMPE) related information</xs:documentation>
+        </xs:annotation>
+        <xs:attribute name="IMT" type="IMTType"/>
+        <xs:attribute name="vs30method" type="Vs30Method"/>
+        <xs:attribute name="groundMotionComponent" type="GroundMotionComponent"/>
+
+        <xs:attribute name="period" type="NonNegativeDoubleType"/>
+        <xs:attribute name="damping" type="NonNegativeDoubleType"/>
+        
+        <xs:attribute name="truncationType" type="TruncationType"/>
+        <xs:attribute name="truncationLevel" type="NonNegativeDoubleType"/>
+        <xs:attribute name="stdDevType" type="StdDevType"/>
+    </xs:complexType>
+
+    <!-- ============================================================= -->
+	<!-- GML substitution groups -->
+
+    <!-- ground motion field (GMF) -->
+    
+    <xs:element name="groundMotionFieldSet" type="GroundMotionFieldSet" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="GroundMotionFieldSet">
+        <xs:annotation>
+            <xs:documentation>Describes a set of Ground Motion Fields</xs:documentation>
+        </xs:annotation>
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <!-- NOTE: the description attribute of old 'field' element can go into
+                         the optional gml:description element of the groundMotionFieldSet feature -->
+                    <xs:element name="GMPEParameters" type="GMPEParametersType"/>
+                    <xs:element ref="rupture" minOccurs="1" maxOccurs="unbounded"/>
+                    <xs:element ref="GMF" minOccurs="1" maxOccurs="unbounded"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="GMF" type="GMFType" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="GMFType">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element ref="GMFNode" minOccurs="1" maxOccurs="unbounded"/>
+                </xs:sequence>
+                
+                <!-- NOTE: the optional attribute ruptureReference refers to the 
+                     gml:id of one of the ruptures -->
+                <xs:attribute name="ruptureReference" type="xs:IDREF"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="GMFNode" type="GMFNodeType" substitutionGroup="fieldNode"/>
+    <xs:complexType name="GMFNodeType">
+        <xs:complexContent>
+            <xs:extension base="FieldNode">
+                <xs:sequence>
+                    <xs:element name="groundMotion" type="xs:double"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <!-- hazardCurve -->
+    
+    <xs:element name="hazardCurveField" type="HazardCurveField" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="HazardCurveField">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="IML" type="IMLType"/>
+                    <xs:element ref="HCNode" minOccurs="1" maxOccurs="unbounded"/>
+                </xs:sequence>
+                <xs:attribute name="endBranchLabel" type="xs:string"/>
+                <xs:attributeGroup ref="QuantileGroup"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:element name="HCNode" type="HCNodeType" substitutionGroup="fieldNode"/>
+    <xs:complexType name="HCNodeType">
+        <xs:complexContent>
+            <xs:extension base="FieldNode">
+                <xs:sequence>
+                    <xs:element name="hazardCurve" type="HazardCurve"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="HazardCurve">
+        <xs:sequence>
+            <xs:element name="IML" type="IMLType" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="poE" type="NormalizedDoubleList"/>
+        </xs:sequence>
+        <xs:attribute name="investigationTimeSpan" type="NonNegativeDoubleType"/>
+    </xs:complexType>
+    
+    <!-- hazardMap -->
+    
+    <xs:element name="hazardMap" type="HazardMap" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="HazardMap">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element ref="HMNode" minOccurs="1" maxOccurs="unbounded"/>
+                </xs:sequence>
+                <xs:attribute name="poE" type="NormalizedDoubleType" use="required"/>
+                <xs:attribute name="IMT" type="IMTType" use="required"/>
+                <xs:attribute name="endBranchLabel" type="xs:string"/>
+                <xs:attributeGroup ref="QuantileGroup"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:element name="HMNode" type="HMNodeType" substitutionGroup="fieldNode"/>
+    <xs:complexType name="HMNodeType">
+        <xs:complexContent>
+            <xs:extension base="HMFieldNode">
+                <xs:sequence>
+                    <xs:element name="IML" type="xs:double"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="HMFieldNode">
+        <xs:complexContent>
+            <xs:restriction base="FieldNode">
+                <xs:sequence>
+                    <xs:element ref="HMSite"/>
+                </xs:sequence>
+            </xs:restriction>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:element name="HMSite" type="HMSiteType" substitutionGroup="site"/>
+    <xs:complexType name="HMSiteType">
+        <xs:complexContent>
+            <xs:extension base="gml:PointPropertyType">
+                <xs:sequence>
+                    <xs:element name="vs30" type="NonNegativeDoubleType" minOccurs="0" maxOccurs="1"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <!-- Disaggregation -->
+    
+    <xs:element name="disaggregationResultField" type="DisaggregationResultFieldType" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="DisaggregationResultFieldType">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element ref="disaggregationResultTypes" minOccurs="1" maxOccurs="1"/>
+                    <xs:element ref="disaggregationResultNode" minOccurs="1" maxOccurs="unbounded"/>
+                </xs:sequence>
+                <xs:attribute name="poE" type="NormalizedDoubleType" use="required"/>
+                <xs:attribute name="IMT" type="IMTType" use="required"/>
+                <xs:attribute name="endBranchLabel" type="xs:string"/>
+                <xs:attributeGroup ref="QuantileGroup"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <!-- List of disaggregation result types for a disaggregationResultField. -->
+    <xs:element name="disaggregationResultTypes">
+        <xs:simpleType>
+            <xs:restriction base="DisaggregationResultTypesType">
+                <xs:minLength value="1"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:element>
+
+    <xs:simpleType name="DisaggregationResultTypesType">
+        <xs:list itemType="DisaggregationPMFType"/>
+    </xs:simpleType>
+
+    <xs:element name="disaggregationResultNode" type="DisaggregationResultNodeType" substitutionGroup="fieldNode"/>
+    <xs:complexType name="DisaggregationResultNodeType">
+        <xs:complexContent>
+            <xs:extension base="FieldNode">
+                <xs:choice>
+                    <xs:sequence>
+                        <xs:element name="disaggregationMatrixSet" type="DisaggregationMatrixSetType"/>
+                    </xs:sequence>
+                    <xs:sequence>
+                        <xs:element name="disaggregationResult" type="DisaggregationResultType"/>
+                    </xs:sequence>
+                </xs:choice>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <xs:complexType name="DisaggregationMatrixSetType">
+        <xs:sequence>
+            <xs:element name="disaggregationMatrix" type="DisaggregationMatrixType" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="groundMotionValue" type="NonNegativeDoubleType" use="required"/>
+    </xs:complexType>
+
+    <!-- For binary disaggregation results.
+         Indicates the GMV and a path to the file containing all of the disagg. results for this node. -->
+    <xs:complexType name="DisaggregationResultType">
+        <xs:attribute name="groundMotionValue" type="NonNegativeDoubleType" use="required"/>
+        <xs:attribute name="path" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <xs:complexType name="DisaggregationMatrixType">
+        <xs:sequence>
+            <xs:element name="disaggregationMatrixValue" type="DisaggregationMatrixValue" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="disaggregationPMFType" type="DisaggregationPMFType" use="required"/>
+    </xs:complexType>
+    
+    <xs:simpleType name="DisaggregationPMFType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="MagPMF"/>
+            <xs:enumeration value="DistPMF"/>
+            <xs:enumeration value="TRTPMF"/>
+            <xs:enumeration value="MagTRTPMF"/>
+            <xs:enumeration value="MagDistPMF"/>
+            <xs:enumeration value="MagDistEpsPMF"/>
+            <xs:enumeration value="LatLonPMF"/>
+            <xs:enumeration value="LatLonMagPMF"/>
+            <xs:enumeration value="LatLonEpsPMF"/>
+            <xs:enumeration value="LatLonMagEpsPMF"/>
+            <xs:enumeration value="LatLonTRTPMF"/>
+            <xs:enumeration value="FullDisaggMatrix"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:complexType name="DisaggregationMatrixValue">
+        <xs:sequence>
+            <xs:element name="PMFValue" type="NormalizedDoubleType"/>
+        </xs:sequence>
+        <xs:attribute name="latitudeBin" type="gml:doubleList"></xs:attribute>
+        <xs:attribute name="longitudeBin" type="gml:doubleList"></xs:attribute>
+        <xs:attribute name="magnitudeBin" type="gml:doubleList"></xs:attribute>
+        <xs:attribute name="distanceBin" type="gml:doubleList"></xs:attribute>
+        <xs:attribute name="epsilonBin" type="gml:doubleList"></xs:attribute>
+        <xs:attribute name="tectonicRegionTypeBin" type="TectonicRegion"></xs:attribute>
+    </xs:complexType>
+
+
+    <!-- Uniform Hazard Spectra -->
+
+    <!-- UHS Result Set: the top-level element for UHS results -->
+    <xs:element name="uhsResultSet" type="UHSResultSetType"/>
+    <xs:complexType name="UHSResultSetType">
+        <xs:sequence>
+            <xs:element ref="uhsPeriods" minOccurs="1" maxOccurs="1"/>
+            <xs:element ref="timeSpan" minOccurs="1" maxOccurs="1"/>
+            <xs:element ref="uhsResult" minOccurs="1" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- List of UHS periods for a uhsResultSet (float values) -->
+    <xs:element name="uhsPeriods">
+        <xs:simpleType>
+            <xs:restriction base="gml:doubleList">
+                <xs:minLength value="1"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:element>
+
+    <xs:element name="timeSpan" type="NonNegativeDoubleType"/>
+
+    <!-- UHS result node -->
+    <xs:element name="uhsResult"> 
+        <xs:complexType>
+            <xs:attribute name="poE" type="NonNegativeDoubleType" use="required"/>
+            <xs:attribute name="path" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+    
+
+    <!-- ============================================================= -->
+    <!-- child elements of nrml -->
+    
+    <xs:element name="hazardResult" type="HazardResult" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="HazardResult">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
+                    <xs:choice>
+                        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+                            <xs:element ref="hazardCurveField"/>
+                        </xs:sequence>
+                        <xs:element ref="groundMotionFieldSet"/>
+                        <xs:element ref="hazardMap"/>
+                    </xs:choice>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+</xs:schema>
