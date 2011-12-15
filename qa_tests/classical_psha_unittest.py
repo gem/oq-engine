@@ -132,8 +132,8 @@ class ClassicalPSHACalculatorAssuranceTestCase(
                     numpy.array(hm_db.value)))
 
     def _assert_hazcurve_results_are(self, expected_results):
-        """Compare the expected results with the results
-        computed by the given job."""
+        """Compare the expected hazard curve results with the results
+        computed by the current job."""
 
         self.job = models.OqJob.objects.latest("id")
 
