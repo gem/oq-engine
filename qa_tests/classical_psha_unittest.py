@@ -30,14 +30,52 @@ from openquake import shapes
 from tests.utils import helpers
 
 
+def load_expected_map(path):
+    """Load expected map data from the given expected results file. Map data
+    are expected to be stored in a space-delimited table form. The table
+    columns are expected to be ordered ``lat lon value``.
+
+    :param path:
+        Path to the expected results file.
+    :returns:
+        A dict of map values (as floats), keyed by a :class:`shapes.Site`
+        object.
+    """
+    map_data = {}
+
+    for line in open(path):
+        lat, lon, value = line.split()
+        map_data[shapes.Site(lat, lon)] = float(value)
+
+    return map_data
+
+
+def run_job(config_file):
+    """Given a path to a config file, run openquake as a separate process using
+    `subprocess`.
+
+    This function blocks until the openquake job has concluded.
+
+    :returns:
+        The return code of the subprocess.
+    """
+    return subprocess.call(["bin/openquake", "--config_file=" + config_file])
+
+
 class ClassicalPSHACalculatorAssuranceTestCase(
     unittest.TestCase, helpers.DbTestMixin):
+
+    job = None
+
+    def tearDown(self):
+        self.teardown_job(self.job)
+        self.job = None
 
     @attr("qa")
     def test_peer_test_set_1_case_2(self):
         expected_results = self._load_results("PeerTestSet1Case2")
 
-        self._run_job(helpers.demo_file(
+        run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case2", "config.gem")))
 
         self._assert_results_are(expected_results)
@@ -46,7 +84,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
     def test_peer_test_set_1_case_5(self):
         expected_results = self._load_results("PeerTestSet1Case5")
 
-        self._run_job(helpers.demo_file(
+        run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case5", "config.gem")))
 
         self._assert_results_are(expected_results)
@@ -55,7 +93,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
     def test_peer_test_set_1_case_8a(self):
         expected_results = self._load_results("PeerTestSet1Case8a")
 
-        self._run_job(helpers.demo_file(
+        run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case8a", "config.gem")))
 
         self._assert_results_are(expected_results)
@@ -64,40 +102,28 @@ class ClassicalPSHACalculatorAssuranceTestCase(
     def test_peer_test_set_1_case_10(self):
         expected_results = self._load_results("PeerTestSet1Case10")
 
-        self._run_job(helpers.demo_file(
+        run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case10", "config.gem")))
 
         self._assert_results_are(expected_results)
 
     @attr("qa")
     def test_hazard_map_test(self):
-        expected_map = {}
+        path = helpers.demo_file(os.path.join("HazardMapTest",
+            "expected_results", "meanHazardMap0.1.dat"))
 
-        def load_expected_map():
-            """Load the expected hazard map."""
+        expected_map = load_expected_map(path)
 
-            path = helpers.demo_file(os.path.join("HazardMapTest",
-                "expected_results", "meanHazardMap0.1.dat"))
-
-            with open(path) as maps:
-                lines = maps.readlines()
-
-                for line in lines:
-                    values = line.split()
-                    site = shapes.Site(values[0], values[1])
-                    expected_map[site] = float(values[2])
-
-        self._run_job(helpers.demo_file(
+        run_job(helpers.demo_file(
             os.path.join("HazardMapTest", "config.gem")))
 
-        load_expected_map()
-        job_db = models.OqJob.objects.latest("id")
+        self.job = models.OqJob.objects.latest("id")
 
         for site, value in expected_map.items():
             gh = geohash.encode(site.latitude, site.longitude, precision=12)
 
             hm_db = models.HazardMapData.objects.filter(
-                hazard_map__output__oq_job=job_db,
+                hazard_map__output__oq_job=self.job,
                 hazard_map__statistic_type="mean",
                 hazard_map__poe=0.1).extra(
                 where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
@@ -105,26 +131,22 @@ class ClassicalPSHACalculatorAssuranceTestCase(
             self.assertTrue(numpy.allclose(numpy.array(value),
                     numpy.array(hm_db.value)))
 
-        self.teardown_job(job_db)
-
     def _assert_results_are(self, expected_results):
         """Compare the expected results with the results
         computed by the given job."""
 
-        job_db = models.OqJob.objects.latest("id")
+        self.job = models.OqJob.objects.latest("id")
 
         for site, curve in expected_results.items():
             gh = geohash.encode(site.latitude, site.longitude, precision=12)
 
             hc_db = models.HazardCurveData.objects.filter(
-                hazard_curve__output__oq_job=job_db,
+                hazard_curve__output__oq_job=self.job,
                 hazard_curve__statistic_type="mean").extra(
                 where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
 
             self._assert_curve_is(
-                curve, zip(job_db.oq_params.imls, hc_db.poes), 0.005)
-
-        self.teardown_job(job_db)
+                curve, zip(self.job.oq_params.imls, hc_db.poes), 0.005)
 
     def _assert_curve_is(self, expected, actual, tolerance):
         self.assertTrue(numpy.allclose(
@@ -132,11 +154,6 @@ class ClassicalPSHACalculatorAssuranceTestCase(
                 "Expected %s within a tolerance of %s, but was %s"
                 % (expected, tolerance, actual))
 
-    def _run_job(self, config_file):
-        sp = subprocess.Popen(
-            ["bin/openquake", "--config_file=" + config_file])
-
-        sp.wait()
 
     def _load_results(self, test_name):
         """Return the hazard curves read from the expected_results/ dir.
