@@ -27,6 +27,7 @@ from openquake import kvs
 from openquake import logs
 
 from openquake.input import logictree
+from openquake.java import list_to_jdouble_array
 
 from openquake.job.mixins import Mixin
 
@@ -42,7 +43,17 @@ IML_SCALING = {
     'PGV': numpy.log,
     'PGD': numpy.log,
     'SA': numpy.log,
+    'IA': numpy.log,
+    'RSD': numpy.log,
 }
+
+
+def get_iml_list(imls, intensity_measure_type):
+    """Build the appropriate Arbitrary Discretized Func from the IMLs,
+    based on the IMT"""
+
+    return list_to_jdouble_array(
+        [IML_SCALING[intensity_measure_type](x) for x in imls])
 
 
 def preload(fn):
@@ -59,7 +70,7 @@ def preload(fn):
     return preloader
 
 
-@java.jexception
+@java.unpack_exception
 def generate_erf(job_id, cache):
     """ Generate the Earthquake Rupture Forecast from the source model data
     stored in the KVS.
@@ -136,18 +147,34 @@ def set_gmpe_params(gmpe_map, params):
     :param dict params: job config params
     """
     jpype = java.jvm()
+
+    jd_float = lambda x: jpype.JDouble(float(x))
+
+    component = params.get('COMPONENT')
+    imt = params.get('INTENSITY_MEASURE_TYPE')
+    # PERIOD is not used in UHS calculations.
+    period = (jd_float(params.get('PERIOD'))
+              if params.get('PERIOD') is not None else None)
+    damping = jd_float(params.get('DAMPING'))
+    gmpe_trunc_type = params.get('GMPE_TRUNCATION_TYPE')
+    trunc_level = jd_float(params.get('TRUNCATION_LEVEL'))
+    stddev_type = params.get('STANDARD_DEVIATION_TYPE')
+
     j_set_gmpe_params = java.jclass("GmpeLogicTreeData").setGmpeParams
     for tect_region in gmpe_map.keySet():
         gmpe = gmpe_map.get(tect_region)
-        j_set_gmpe_params(params['COMPONENT'],
-            params['INTENSITY_MEASURE_TYPE'],
-            jpype.JDouble(float(params['PERIOD'])),
-            jpype.JDouble(float(params['DAMPING'])),
-            params['GMPE_TRUNCATION_TYPE'],
-            jpype.JDouble(float(params['TRUNCATION_LEVEL'])),
-            params['STANDARD_DEVIATION_TYPE'],
-            jpype.JDouble(float(params['REFERENCE_VS30_VALUE'])),
-            jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
+        # There are two overloads for this method; one with 'period'...
+        if period is not None:
+            j_set_gmpe_params(
+                component, imt, period, damping,
+                gmpe_trunc_type, trunc_level, stddev_type,
+                jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
+        # ... and one without.
+        else:
+            j_set_gmpe_params(
+                component, imt, damping,
+                gmpe_trunc_type, trunc_level, stddev_type,
+                jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
         gmpe_map.put(tect_region, gmpe)
 
 
@@ -177,17 +204,6 @@ class BasePSHAMixin(Mixin):
         gmpe_map = generate_gmpe_map(self.job_id, self.cache)
         self.set_gmpe_params(gmpe_map)
         return gmpe_map
-
-    def get_iml_list(self):
-        """Build the appropriate Arbitrary Discretized Func from the IMLs,
-        based on the IMT"""
-
-        iml_list = java.jclass("ArrayList")()
-        for val in self.imls:
-            iml_list.add(
-                IML_SCALING[self.params['INTENSITY_MEASURE_TYPE']](
-                val))
-        return iml_list
 
     def parameterize_sites(self, site_list):
         """Convert python Sites to Java Sites, and add default parameters."""

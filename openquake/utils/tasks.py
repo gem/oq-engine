@@ -22,76 +22,56 @@
 Utility functions related to splitting work into tasks.
 """
 
+import inspect
 import itertools
-import math
-import time
 
 from celery.task.sets import TaskSet
 
 from openquake.job import Job
 from openquake import logs
-from openquake.utils import config
 
 
-# Do not create batches of more than DEFAULT_BLOCK_SIZE celery subtasks.
-# Celery cannot cope with these and dies.
-DEFAULT_BLOCK_SIZE = 4096
-
-
-def distribute(cardinality, the_task, (name, data), other_args=None,
-               flatten_results=False):
-    """Runs `the_task` in a task set with the given `cardinality`.
-
-    The given `data` is portioned across the subtasks in the task set.
-    The results returned by the subtasks are returned in a list e.g.:
-        [result1, result2, ..]
-    If each subtask returns a list that will result in list of lists. Please
-    set `flatten_results` to `True` if you want the results to be returned in a
-    single list.
-
-    :param int cardinality: The size of the task set.
-    :param the_task: A `celery` task callable.
-    :param str name: The parameter name under which the portioned `data` is to
-        be passed to `the_task`.
-    :param data: The `data` that is to be portioned and passed to the subtasks
-        for processing.
-    :param dict other_args: The remaining (keyword) parameters that are to be
-        passed to the subtasks.
-    :param bool flatten_results: If set, the results will be returned as a
-        single list (as opposed to [[results1], [results2], ..]).
-    :returns: A list where each element is a result returned by a subtask.
-        The result order is the same as the subtask order.
+def _prepare_kwargs(name, data, other_args, func=None):
     """
-    logs.HAZARD_LOG.info("cardinality: %s" % cardinality)
+    Construct the (full) set of keyword parameters for the task to be
+    invoked and/or its associated asynchronous task handler function.
 
-    block_size = config.get("tasks", "block_size")
-    block_size = int(block_size) if block_size else DEFAULT_BLOCK_SIZE
+    If a `func` is passed it will be inspected and only parameters it is
+    prepared to receive will be included in the resulting `dict`.
 
-    logs.HAZARD_LOG.info("block_size: %s" % block_size)
-
-    data_length = len(data)
-    logs.HAZARD_LOG.info("data_length: %s" % data_length)
-
-    results = []
-
-    for start in xrange(0, data_length, block_size):
-        end = start + block_size
-        iresults = _distribute(cardinality, the_task, name, data[start:end],
-                               other_args, flatten_results)
-        results.extend(iresults)
-
-    return results
+    """
+    params = dict(other_args, **{name: data}) if other_args else {name: data}
+    if func:
+        # A function was passed, remove params it is not prepared to receive.
+        func_params = inspect.getargspec(func).args
+        filtered_params = [(k, params[k]) for k in params if k in func_params]
+        params = dict(filtered_params)
+    return params
 
 
-def _distribute(cardinality, a_task, name, data, other_args, flatten_results):
+# Too many local variables
+# pylint: disable=R0914
+def distribute(cardinality, a_task, (name, data), other_args=None,
+               flatten_results=False, ath=None):
     """Runs `a_task` in a task set with the given `cardinality`.
 
     The given `data` is portioned across the subtasks in the task set.
     The results returned by the subtasks are returned in a list e.g.:
         [result1, result2, ..]
+
     If each subtask returns a list that will result in list of lists. Please
     set `flatten_results` to `True` if you want the results to be returned in a
     single list.
+
+    Please note that for tasks with ignore_result=True
+        - no results are returned
+        - the control flow returns to the caller immediately i.e. this
+          function does *not* block while the tasks are running unless
+          the caller specifies an asynchronous task handler function.
+        - if specified, an asynchronous task handler function (`ath`)
+          will be run as soon as the tasks have been started.
+          It can be used to check/wait for task results as appropriate
+          and is likely to execute in parallel with longer running tasks.
 
     :param int cardinality: The size of the task set.
     :param a_task: A `celery` task callable.
@@ -103,24 +83,13 @@ def _distribute(cardinality, a_task, name, data, other_args, flatten_results):
         passed to the subtasks.
     :param bool flatten_results: If set, the results will be returned as a
         single list (as opposed to [[results1], [results2], ..]).
+    :param ath: an asynchronous task handler function, may only be specified
+        for a task whose results are ignored.
     :returns: A list where each element is a result returned by a subtask.
-        The result order is the same as the subtask order.
+        If an `ath` function is passed we return whatever it returns.
     """
-    # Too many local variables
-    # pylint: disable=R0914
-
-    def kwargs(data_portion):
-        """
-        Construct the full set of keyword parameters for the task to be
-        invoked.
-        """
-        params = {name: data_portion}
-        if other_args:
-            params.update(other_args)
-        return params
-
     data_length = len(data)
-    logs.HAZARD_LOG.info("data_length: %s" % data_length)
+    logs.HAZARD_LOG.debug("-data_length: %s" % data_length)
 
     subtasks = []
     start = 0
@@ -132,24 +101,33 @@ def _distribute(cardinality, a_task, name, data, other_args, flatten_results):
         cardinality = data_length if data_length > 0 else 1
         end = chunk_size = 1
 
-    logs.HAZARD_LOG.info("chunk_size: %s" % chunk_size)
+    logs.HAZARD_LOG.debug("-chunk_size: %s" % chunk_size)
 
     for _ in xrange(cardinality - 1):
         data_portion = data[start:end]
-        subtask = a_task.subtask(**kwargs(data_portion))
+        subtask = a_task.subtask(**_prepare_kwargs(name, data_portion,
+                                                   other_args))
         subtasks.append(subtask)
         start = end
         end += chunk_size
     # The last subtask takes the rest of the data.
     data_portion = data[start:]
-    subtask = a_task.subtask(**kwargs(data_portion))
+    subtask = a_task.subtask(**_prepare_kwargs(name, data_portion, other_args))
     subtasks.append(subtask)
 
     # At this point we have created all the subtasks and each one got
     # a portion of the data that is to be processed. Now we will create
     # and run the task set.
-    the_results = _handle_subtasks(subtasks, flatten_results)
-    return the_results
+    logs.HAZARD_LOG.debug("-#subtasks: %s" % len(subtasks))
+    if a_task.ignore_result:
+        TaskSet(tasks=subtasks).apply_async()
+        # Did the user specify a asynchronous task handler function?
+        if ath:
+            params = _prepare_kwargs(name, data, other_args, ath)
+            return ath(**params)
+    else:
+        # Only called when we expect result messages to come back.
+        return _handle_subtasks(subtasks, flatten_results)
 
 
 def parallelize(
@@ -173,7 +151,7 @@ def parallelize(
         know.
     :raises TaskFailed: When at least one subtask fails (raises an exception).
     """
-    logs.HAZARD_LOG.info("cardinality: %s" % cardinality)
+    logs.HAZARD_LOG.debug("cardinality: %s" % cardinality)
 
     assert isinstance(kwargs, dict), "Parameters must be passed in a dict."
     subtasks = []
@@ -184,11 +162,18 @@ def parallelize(
         subtask = the_task.subtask(**task_args)
         subtasks.append(subtask)
 
-    logs.HAZARD_LOG.info("#subtasks: %s" % len(subtasks))
+    logs.HAZARD_LOG.debug("#subtasks: %s" % len(subtasks))
 
     # At this point we have created all the subtasks.
     the_results = _handle_subtasks(subtasks, flatten_results)
     return the_results
+
+
+def _check_exception(results):
+    """If any of the results is an exception, raise it."""
+    for result in results:
+        if isinstance(result, Exception):
+            raise result
 
 
 def _handle_subtasks(subtasks, flatten_results):
@@ -198,19 +183,16 @@ def _handle_subtasks(subtasks, flatten_results):
     :type subtasks: [celery_subtask]
     :param bool flatten_results: If set, the results will be returned as a
         single list (as opposed to [[results1], [results2], ..]).
-    :returns: A list where each element is a result returned by a subtask.
-        The result order is the same as the subtask order.
+    :returns: A list where each element is a result returned by a subtask
+        or `None` if the task's results are ignored.
     :raises WrongTaskParameters: When a task receives a parameter it does not
         know.
     :raises TaskFailed: When at least one subtask fails (raises an exception).
     """
     result = TaskSet(tasks=subtasks).apply_async()
 
-    # Wait for all subtasks to complete.
-    while not result.ready():
-        time.sleep(0.25)
-
-    the_results = result.join()
+    the_results = result.join_native()
+    _check_exception(the_results)
 
     if flatten_results and the_results:
         if isinstance(the_results, list) or isinstance(the_results, tuple):

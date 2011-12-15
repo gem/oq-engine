@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+	targetNamespace="http://openquake.org/xmlns/nrml/0.1"
+	xmlns:nrml="http://openquake.org/xmlns/nrml/0.1"
+	xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" elementFormDefault="qualified">
+	<!-- import -->
+	<xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
+		schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
+
+	<xs:include schemaLocation="nrml_common.xsd"/>
+
+	<xs:include schemaLocation="nrml_seismic.xsd"/>
+	<xs:element name="HazardCurve" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
+	<xs:element name="HazardCurvePGA" type="nrml:CurveType" substitutionGroup="nrml:Curve"/>
+	<xs:element name="HazardCurveList" type="nrml:CurveListType"/>
+	<xs:element name="HazardResult">
+		<xs:complexType>
+			<xs:sequence minOccurs="1">
+				<xs:element ref="nrml:Config"/>
+				<xs:choice>
+					<xs:sequence maxOccurs="unbounded">
+						<xs:element ref="nrml:HazardCurveList"/>
+					</xs:sequence>
+					<xs:element name="GroundMotionFieldSet" type="nrml:GroundMotionFieldSetType"/>
+				</xs:choice>
+			</xs:sequence>
+		</xs:complexType>
+	</xs:element>
+	<xs:attribute name="endBranchLabel" type="xs:string"/>
+
+
+	<!-- Hazard shakemap definition -->
+	<xs:simpleType name="IntensityMeasureTypeType">
+		<xs:annotation>
+			<xs:documentation>Describe the valid IMT values</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="PGA"/>
+			<xs:enumeration value="PGD"/>
+			<xs:enumeration value="PGV"/>
+			<xs:enumeration value="MMI"/>
+			<xs:enumeration value="SA"/>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<xs:element name="IntensityMeasureType" type="nrml:IntensityMeasureTypeType"/>
+
+	<xs:simpleType name="GroundMotionType">
+		<xs:restriction base="xs:double"/>
+	</xs:simpleType>
+	<xs:element name="GroundMotion" type="nrml:GroundMotionType"/>
+
+	<xs:simpleType name="Vs30MethodType">
+		<xs:annotation>
+			<xs:documentation>Method used to account for vs30</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="None"/>
+		</xs:restriction>
+	</xs:simpleType>
+
+	<!-- Type of equation seems missing in the config file defined in OpenSHA -->
+	<xs:complexType name="GMPEParametersType">
+		<xs:annotation>
+			<xs:documentation>Describe the IMR (GMPE) related information</xs:documentation>
+		</xs:annotation>
+		<xs:attribute name="IMT" use="optional" type="nrml:IntensityMeasureTypeType"/>
+		<xs:attribute name="vs30method" type="nrml:Vs30MethodType"/>
+		<xs:attribute name="groundMotionComponent" use="optional">
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="average"/>
+					<xs:enumeration value="GMRotI50"/>
+					<xs:enumeration value="random"/>
+					<xs:enumeration value="greater"/>
+					<xs:enumeration value="vertical"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="period" use="optional" type="xs:double"/>
+		<xs:attribute name="damping" use="optional" type="xs:double"/>
+		<xs:attribute name="truncationType" use="optional">
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="None"/>
+					<xs:enumeration value="1 Sided"/>
+					<xs:enumeration value="2 Sided"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+		<xs:attribute name="truncationLevel" use="optional" type="xs:double"/>
+		<xs:attribute name="stdDevType" use="optional">
+			<xs:simpleType>
+				<xs:restriction base="xs:string">
+					<xs:enumeration value="total"/>
+					<xs:enumeration value="inter"/>
+					<xs:enumeration value="intra"/>
+					<xs:enumeration value="none"/>
+				</xs:restriction>
+			</xs:simpleType>
+		</xs:attribute>
+	</xs:complexType>
+
+	<xs:complexType name="GroundMotionSiteType">
+		<xs:annotation>
+			<xs:documentation>Describe a ground motion value for a single site</xs:documentation>
+		</xs:annotation>
+		<xs:all>
+			<xs:element name="site" type="gml:PointType"/>
+		</xs:all>
+		<xs:attribute name="groundMotion" use="required" type="nrml:GroundMotionType"/>
+	</xs:complexType>
+
+	<xs:complexType name="GroundMotionFieldType">
+		<xs:annotation>
+			<xs:documentation>Describe a ground motion field (ground motion values for a set of sites)</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element maxOccurs="unbounded" name="site" type="nrml:GroundMotionSiteType"/>
+		</xs:sequence>
+		<xs:attribute name="description" type="xs:string"/>
+	</xs:complexType>
+
+	<xs:complexType name="GroundMotionFieldSetType">
+		<xs:annotation>
+			<xs:documentation>Describes a set of Ground Motion Fields</xs:documentation>
+		</xs:annotation>
+		<xs:sequence>
+			<xs:element ref="nrml:rupture"/>
+			<xs:element name="GMPEParameters" type="nrml:GMPEParametersType"/>
+			<xs:element maxOccurs="unbounded" name="field" type="nrml:GroundMotionFieldType"/>
+		</xs:sequence>
+	</xs:complexType>
+	<xs:element name="GroundMotionFieldSet" type="nrml:GroundMotionFieldSetType"/>
+</xs:schema>

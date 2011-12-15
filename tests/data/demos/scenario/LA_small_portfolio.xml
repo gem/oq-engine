@@ -1,0 +1,108 @@
+<?xml version="1.0"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.3" xmlns:gml="http://www.opengis.net/gml" gml:id="nrml">
+<exposurePortfolio gml:id="ep">
+<exposureList gml:id="LA01" assetCategory="buildings" unit="EUR">
+<gml:description>Collection of exposure values for existing building in Los Angeles County, California, US
+</gml:description>
+	<assetDefinition gml:id="src0">
+		<site>
+			<gml:Point srsName="epsg:4326">
+			<gml:pos>-118.229726 34.050622</gml:pos>
+			</gml:Point>
+		</site>
+		<taxonomy>HAZUS_C2L_MC</taxonomy>
+		<structureCategory>C2L_MC</structureCategory>
+		<assetValue>22.86</assetValue>
+		<retrofittingCost>123</retrofittingCost>
+	</assetDefinition>
+	<assetDefinition gml:id="src1">
+		<site>
+			<gml:Point srsName="epsg:4326">
+			<gml:pos>-118.229726 34.050622</gml:pos>
+			</gml:Point>
+		</site>
+		<taxonomy>HAZUS_RM1L_LC</taxonomy>
+		<structureCategory>RM1L_LC</structureCategory>
+		<assetValue>41.51</assetValue>
+		<retrofittingCost>123</retrofittingCost>
+	</assetDefinition>
+	<assetDefinition gml:id="src2">
+		<site>
+			<gml:Point srsName="epsg:4326">
+			<gml:pos>-118.229726 34.050622</gml:pos>
+			</gml:Point>
+		</site>
+		<taxonomy>HAZUS_C2L_HC</taxonomy>
+		<structureCategory>C2L_HC</structureCategory>
+		<assetValue>23.55</assetValue>
+		<retrofittingCost>123</retrofittingCost>
+	</assetDefinition>
+	<assetDefinition gml:id="src104">
+		<site>
+			<gml:Point srsName="epsg:4326">
+			<gml:pos>-118.241243 34.061557</gml:pos>
+			</gml:Point>
+		</site>
+		<taxonomy>HAZUS_S4L_MC</taxonomy>
+		<structureCategory>S4L_MC</structureCategory>
+		<assetValue>2129.55</assetValue>
+		<retrofittingCost>123</retrofittingCost>
+	</assetDefinition>
+	<assetDefinition gml:id="src105">
+		<site>
+			<gml:Point srsName="epsg:4326">
+			<gml:pos>-118.241243 34.061557</gml:pos>
+			</gml:Point>
+		</site>
+		<taxonomy>HAZUS_C2L_LC</taxonomy>
+		<structureCategory>C2L_LC</structureCategory>
+		<assetValue>624.66</assetValue>
+		<retrofittingCost>123</retrofittingCost>
+	</assetDefinition>
+	<assetDefinition gml:id="src106">
+		<site>
+			<gml:Point srsName="epsg:4326">
+			<gml:pos>-118.241243 34.061557</gml:pos>
+			</gml:Point>
+		</site>
+		<taxonomy>HAZUS_C2L_MC</taxonomy>
+		<structureCategory>C2L_MC</structureCategory>
+		<assetValue>1874</assetValue>
+		<retrofittingCost>123</retrofittingCost>
+	</assetDefinition>
+	<assetDefinition gml:id="src219">
+		<site>
+			<gml:Point srsName="epsg:4326">
+			<gml:pos>-118.245388 34.055984</gml:pos>
+			</gml:Point>
+		</site>
+		<taxonomy>HAZUS_RM2L_MC</taxonomy>
+		<structureCategory>RM2L_MC</structureCategory>
+		<assetValue>663.02</assetValue>
+		<retrofittingCost>123</retrofittingCost>
+	</assetDefinition>
+	<assetDefinition gml:id="src220">
+		<site>
+			<gml:Point srsName="epsg:4326">
+			<gml:pos>-118.245388 34.055984</gml:pos>
+			</gml:Point>
+		</site>
+		<taxonomy>HAZUS_S1L_MC</taxonomy>
+		<structureCategory>S1L_MC</structureCategory>
+		<assetValue>984.48</assetValue>
+		<retrofittingCost>123</retrofittingCost>
+	</assetDefinition>
+	<assetDefinition gml:id="src221">
+		<site>
+			<gml:Point srsName="epsg:4326">
+			<gml:pos>-118.245388 34.055984</gml:pos>
+			</gml:Point>
+		</site>
+		<taxonomy>HAZUS_S2L_MC</taxonomy>
+		<structureCategory>S2L_MC</structureCategory>
+		<assetValue>984.48</assetValue>
+		<retrofittingCost>123</retrofittingCost>
+	</assetDefinition>
+</exposureList>
+</exposurePortfolio>
+</nrml>
