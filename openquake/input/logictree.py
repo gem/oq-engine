@@ -345,7 +345,7 @@ class BaseLogicTree(object):
         If logic tree file has a logic error, which can not be prevented
         by xml schema rules (like referencing sources with missing id).
     """
-    NRML = 'http://openquake.org/xmlns/nrml/0.2'
+    NRML = 'http://openquake.org/xmlns/nrml/0.3'
     FILTERS = ('applyToTectonicRegionType',
                'applyToSources',
                'applyToSourceType')

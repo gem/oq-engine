@@ -458,6 +458,7 @@ class Input(models.Model):
         (u'lt_gmpe', u'GMPE Logic Tree'),
         (u'exposure', u'Exposure'),
         (u'vulnerability', u'Vulnerability'),
+        (u'vulnerability_retrofitted', u'Vulnerability Retroffited'),
         (u'rupture', u'Rupture'),
     )
     input_type = models.TextField(choices=INPUT_TYPE_CHOICES)
@@ -479,8 +480,13 @@ class OqJob(models.Model):
     JOB_TYPE_CHOICES = (
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
-        (u'deterministic', u'Deterministic'),
+        (u'scenario', u'Scenario'),
         (u'disaggregation', u'Disaggregation'),
+        (u'uhs', u'UHS'),  # Uniform Hazard Spectra
+        # Benefit-cost ratio calculator based on Classical PSHA risk calc
+        (u'classical_bcr', u'Classical BCR'),
+        # Benefit-cost ratio calculator based on Event Based risk calc
+        (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
     job_type = models.TextField(choices=JOB_TYPE_CHOICES)
     STATUS_CHOICES = (
@@ -510,7 +516,7 @@ class JobStats(models.Model):
     # The number of total sites in job
     num_sites = models.IntegerField()
     # The number of logic tree samples
-    # (for hazard jobs of all types except deterministic)
+    # (for hazard jobs of all types except scenario)
     realizations = models.IntegerField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
@@ -521,13 +527,7 @@ class OqParams(models.Model):
     '''
     Parameters needed to run an OpenQuake job
     '''
-    JOB_TYPE_CHOICES = (
-        (u'classical', u'Classical PSHA'),
-        (u'event_based', u'Probabilistic Event-Based'),
-        (u'deterministic', u'Deterministic'),
-        (u'disaggregation', u'Disaggregation'),
-    )
-    job_type = models.TextField(choices=JOB_TYPE_CHOICES)
+    job_type = models.TextField(choices=OqJob.JOB_TYPE_CHOICES)
     input_set = models.ForeignKey('InputSet')
     min_magnitude = models.FloatField(null=True)
     investigation_time = models.FloatField(null=True)
@@ -543,6 +543,7 @@ class OqParams(models.Model):
        (u'pgd', u'Peak Ground Displacement'),
        (u'ia', u'Arias Intensity'),
        (u'rsd', u'Relative Significant Duration'),
+       (u'mmi', u'Modified Mercalli Intensity'),
     )
     imt = models.TextField(choices=IMT_CHOICES)
     period = models.FloatField(null=True)
@@ -654,25 +655,28 @@ class OqParams(models.Model):
     # constraint checking for disagg_results. For now, I'm just going to let
     # the database check the constraints.
     # The following are the valid options for each element of this array field:
-    #   magpmf (Magnitude Probability Mass Function)
-    #   distpmf (Distance PMF)
-    #   trtpmf (Tectonic Region Type PMF)
-    #   magdistpmf (Magnitude-Distance PMF)
-    #   magdistepspmf (Magnitude-Distance-Epsilon PMF)
-    #   latlonpmf (Latitude-Longitude PMF)
-    #   latlonmagpmf (Latitude-Longitude-Magnitude PMF)
-    #   latlonmagepspmf (Latitude-Longitude-Magnitude-Epsilon PMF)
-    #   magtrtpmf (Magnitude-Tectonic Region Type PMF)
-    #   latlontrtpmf (Latitude-Longitude-Tectonic Region Type PMF)
-    #   fulldisaggmatrix (The full disaggregation matrix; includes
+    #   MagPMF (Magnitude Probability Mass Function)
+    #   DistPMF (Distance PMF)
+    #   TRTPMF (Tectonic Region Type PMF)
+    #   MagDistPMF (Magnitude-Distance PMF)
+    #   MagDistEpsPMF (Magnitude-Distance-Epsilon PMF)
+    #   LatLonPMF (Latitude-Longitude PMF)
+    #   LatLonMagPMF (Latitude-Longitude-Magnitude PMF)
+    #   LatLonMagEpsPMF (Latitude-Longitude-Magnitude-Epsilon PMF)
+    #   MagTRTPMF (Magnitude-Tectonic Region Type PMF)
+    #   LatLonTRTPMF (Latitude-Longitude-Tectonic Region Type PMF)
+    #   FullDisaggMatrix (The full disaggregation matrix; includes
     #       Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
     disagg_results = CharArrayField(null=True)
+    uhs_periods = FloatArrayField(null=True)
     VS30_TYPE_CHOICES = (
        (u"measured", u"Value obtained from on-site measurements"),
        (u"inferred", u"Estimated value"),
     )
     vs30_type = models.TextField(choices=VS30_TYPE_CHOICES, default="measured")
     depth_to_1pt_0km_per_sec = models.FloatField(default=100.0)
+    asset_life_expectancy = models.FloatField(null=True)
+    interest_rate = models.FloatField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"oq_params'
@@ -811,7 +815,7 @@ class LossMap(models.Model):
     '''
 
     output = models.ForeignKey("Output")
-    deterministic = models.BooleanField()
+    scenario = models.BooleanField()
     loss_map_ref = models.TextField(null=True)
     end_branch_label = models.TextField(null=True)
     category = models.TextField(null=True)
@@ -826,7 +830,7 @@ class LossMap(models.Model):
 class LossMapData(models.Model):
     '''
     Holds an asset, its position and a value plus (for
-    non-deterministic maps) the standard deviation for its loss
+    non-scenario maps) the standard deviation for its loss
     '''
 
     loss_map = models.ForeignKey("LossMap")
@@ -983,15 +987,7 @@ class VulnerabilityModel(models.Model):
     owner = models.ForeignKey("OqUser")
     name = models.TextField()
     description = models.TextField(null=True)
-    IMT_CHOICES = (
-        ('pga', 'Peak Ground Acceleration'),
-        ('sa', 'Spectral Acceleration'),
-        ('pgv', 'Peak Ground Velocity'),
-        ('pgd', 'Peak Ground Displacement'),
-        ('ia', 'Arias Intensity'),
-        ('rsd', 'Relative Significant Duration'),
-    )
-    imt = models.TextField(choices=IMT_CHOICES)
+    imt = models.TextField(choices=OqParams.IMT_CHOICES)
     imls = FloatArrayField()
     category = models.TextField()
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)

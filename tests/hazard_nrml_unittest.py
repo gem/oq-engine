@@ -284,11 +284,11 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
     POE = 0.1
     IMT = "PGA"
     SUBSETS = [
-        'MagnitudePMF',
-        'MagnitudeDistancePMF',
-        'MagnitudeDistanceEpsilonPMF',
-        'LatitudeLongitudeMagnitudeEpsilonPMF',
-        'LatitudeLongitudeMagnitudeEpsilonTectonicRegionTypePMF',
+        'MagPMF',
+        'MagDistPMF',
+        'MagDistEpsPMF',
+        'LatLonMagEpsPMF',
+        'FullDisaggMatrix',
     ]
     END_BRANCH_LABEL = "1"
     STATISTICS = "mean"

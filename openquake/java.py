@@ -24,8 +24,6 @@ import sys
 import traceback
 import logging
 
-from celery.decorators import task as celery_task
-
 from functools import wraps
 
 from openquake import nrml
@@ -78,6 +76,7 @@ JAVA_CLASSES = {
     "LocationListFormatter": "org.gem.LocationListFormatter",
     "PythonBridgeAppender": "org.gem.log.PythonBridgeAppender",
     "DisaggregationCalculator": "org.gem.calc.DisaggregationCalculator",
+    "UHSCalculator": "org.gem.calc.UHSCalculator",
 }
 
 
@@ -316,12 +315,15 @@ class JavaException(Exception):
         return trace
 
 
-def jexception(func):
+def unpack_exception(func):
     """
     Decorator to extract the stack trace from a Java exception.
 
     Re-throws a pickleable :class:`JavaException` object containing the
     exception message and Java stack trace.
+
+    This decorator can be used with the celery @task decorator (though the
+    celery @task decorator must be the outermost decorator).
     """
     @wraps(func)
     def unwrap_exception(*targs, **tkwargs):  # pylint: disable=C0111
@@ -337,50 +339,13 @@ def jexception(func):
     return unwrap_exception
 
 
-# alternative implementation using the decorator module; this can be composed
-# with the Celery task decorator
-# import decorator
-#
-# def jexception(func):
-#     @wraps(func)
-#     def unwrap_exception(func, *targs, **tkwargs):
-#         jvm_instance = jvm()
-#
-#         try:
-#             return func(*targs, **tkwargs)
-#         except jvm_instance.JavaException, e:
-#             trace = sys.exc_info()[2]
-#
-#             raise JavaException(e), None, trace
-#
-#     return decorator.decorator(unwrap_exception, func)
-
-
-# Java-exception-aware task decorator for celery
-def jtask(func, *args, **kwargs):
+def list_to_jdouble_array(float_list):
+    """Convert a 1D list of floats to a 1D Java Double[] (as a jpype object).
     """
-    Java-exception aware task decorator for Celery.
+    jp = jvm()
+    jdouble = jp.JArray(jp.java.lang.Double)(len(float_list))
 
-    Re-throws the exception as a pickleable :class:`JavaException` object.
-    """
-    task = celery_task(func, *args, **kwargs)
-    run = task.run
+    for i, val in enumerate(float_list):
+        jdouble[i] = jp.JClass('java.lang.Double')(val)
 
-    @wraps(run)
-    def call_task(*targs, **tkwargs):  # pylint: disable=C0111
-        jvm_instance = jvm()
-
-        try:
-            return run(*targs, **tkwargs)
-        except jvm_instance.JavaException, e:
-            trace = sys.exc_info()[2]
-
-            raise JavaException(e), None, trace
-
-    # overwrite the run method of the instance with our wrapper; we
-    # can't just pass call_task to celery_task because it does not
-    # have the right signature (we would need the decorator module as
-    # in the example below)
-    task.run = call_task
-
-    return task
+    return jdouble
