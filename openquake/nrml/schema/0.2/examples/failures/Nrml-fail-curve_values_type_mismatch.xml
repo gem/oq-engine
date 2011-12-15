@@ -1,0 +1,24 @@
+<nrml xmlns:gml="http://www.opengis.net/gml" 
+      xmlns="http://openquake.org/xmlns/nrml/0.2"
+      gml:id="n1">
+
+    <hazardResult gml:id="hr1">
+        <config> 
+            <hazardProcessing investigationTimeSpan="50.0" IDmodel="PGA_1_1" saPeriod="0.1" saDamping="0.2" />
+        </config>
+        <hazardCurveField gml:id="hcl_1_1" endBranchLabel="1_1">
+            <IML IMT="PGA">5.0000e-03 7.0000e-03 1.3700e-02</IML>
+            <HCNode gml:id="hc1">
+                <site>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-122.5000 37.5000</gml:pos>
+                    </gml:Point>
+                </site>
+                
+                <hazardCurve>
+                    <poE>9.8728e-01 9.8266e-01 foo</poE>
+                </hazardCurve>
+            </HCNode>
+        </hazardCurveField>
+    </hazardResult> 
+</nrml> 

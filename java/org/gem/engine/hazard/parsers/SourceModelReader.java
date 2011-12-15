@@ -315,7 +315,7 @@ public class SourceModelReader {
             IncrementalMagFreqDist magFreqDist = getMagFreqDist(deltaMFD, e);
             mfdList.add(magFreqDist);
             FocalMechanism focMech =
-                    getFocalMechanism(e.element(FOCAL_MECHANISM));
+                    getFocalMechanism(e);
             focMechList.add(focMech);
         }
         IncrementalMagFreqDist[] mfdArray =
@@ -402,22 +402,16 @@ public class SourceModelReader {
     }
 
     /**
-     * Reads focal mechanism data (strike, dip and rake) and returns
+     * Reads rutpureRateModel element and builds a FocalMechanism object
+     * (which contains strike, dip and rake).
      * {@link FocalMechanism}
      */
-    private FocalMechanism getFocalMechanism(Element focalMech) {
-        Element nodalPlane =
-                focalMech.element(NODAL_PLANES).element(NODAL_PLANE1);
+    private FocalMechanism getFocalMechanism(Element rRateModel) {
+        double strike, dip, rake;
 
-        double strike =
-                Double.valueOf((String) nodalPlane.element(STRIKE).element(
-                        VALUE).getData());
-        double dip =
-                Double.valueOf((String) nodalPlane.element(DIP).element(VALUE)
-                        .getData());
-        double rake =
-                Double.valueOf((String) nodalPlane.element(RAKE).element(VALUE)
-                        .getData());
+        strike = Double.valueOf(rRateModel.element(STRIKE).getData().toString());
+        dip = Double.valueOf(rRateModel.element(DIP).getData().toString());
+        rake = Double.valueOf(rRateModel.element(RAKE).getData().toString());
         return new FocalMechanism(strike, dip, rake);
     }
 
