@@ -138,7 +138,9 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         """Run the `complex_fault_demo_hazard` demo and verify all of the
         resulting hazard curve and hazard map data."""
 
-        def verify_hazcurve_results(job, end_branch_label, exp_results_file):
+        def verify_hazcurve_results(
+            job, exp_results_file, end_branch_label=None, statistic_type=None):
+
             curve_data = [line for line in open(exp_results_file, 'r')]
 
             # The actual curve data;
@@ -156,11 +158,13 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
                 hc = models.HazardCurveData.objects.filter(
                     hazard_curve__output__oq_job=self.job,
-                    hazard_curve__end_branch_label=0).extra(
+                    hazard_curve__end_branch_label=end_branch_label,
+                    hazard_curve__statistic_type=statistic_type).extra(
                         where=["ST_GeoHash(location, 12) = %s"],
                         params=[gh]).get()
 
-            self.assertTrue(numpy.allclose(poes, hc.poes))
+                self.assertTrue(numpy.allclose(poes, hc.poes))
+
 
         job_cfg = helpers.demo_file(os.path.join(
             "complex_fault_demo_hazard", "config.gem"))
@@ -176,10 +180,15 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         # Hazard curve expected results for logic tree sample 0:
         hazcurve_0 = helpers.demo_file(os.path.join(exp_results_dir,
                                                      "hazardcurve-0.dat"))
-        verify_hazcurve_results(self.job, 0, hazcurve_0)
+        verify_hazcurve_results(self.job, hazcurve_0, end_branch_label=0)
+
+        # Check mean hazard curves:
+        hazcurve_mean = helpers.demo_file(os.path.join(exp_results_dir,
+                                                       "hazardcurve-mean.dat"))
+        verify_hazcurve_results(self.job, hazcurve_mean, statistic_type='mean')
+
 
         # TODO:
-        # Check mean hazard curves:
         # Check hazard map mean 0.02:
         # Check hazard map mean 0.1:
 
