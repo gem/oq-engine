@@ -73,7 +73,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
     @attr("qa")
     def test_peer_test_set_1_case_2(self):
-        expected_results = self._load_results("PeerTestSet1Case2")
+        expected_results = self._load_exp_hazcurve_results("PeerTestSet1Case2")
 
         run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case2", "config.gem")))
@@ -82,7 +82,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
     @attr("qa")
     def test_peer_test_set_1_case_5(self):
-        expected_results = self._load_results("PeerTestSet1Case5")
+        expected_results = self._load_exp_hazcurve_results("PeerTestSet1Case5")
 
         run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case5", "config.gem")))
@@ -91,7 +91,8 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
     @attr("qa")
     def test_peer_test_set_1_case_8a(self):
-        expected_results = self._load_results("PeerTestSet1Case8a")
+        expected_results = self._load_exp_hazcurve_results(
+            "PeerTestSet1Case8a")
 
         run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case8a", "config.gem")))
@@ -100,7 +101,8 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
     @attr("qa")
     def test_peer_test_set_1_case_10(self):
-        expected_results = self._load_results("PeerTestSet1Case10")
+        expected_results = self._load_exp_hazcurve_results(
+            "PeerTestSet1Case10")
 
         run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case10", "config.gem")))
@@ -154,8 +156,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
                 "Expected %s within a tolerance of %s, but was %s"
                 % (expected, tolerance, actual))
 
-
-    def _load_results(self, test_name):
+    def _load_exp_hazcurve_results(self, test_name):
         """Return the hazard curves read from the expected_results/ dir.
 
         :returns: the expected hazard curves.
