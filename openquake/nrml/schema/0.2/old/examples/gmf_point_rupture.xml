@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ns2:GroundMotionFieldSet xmlns:ns1="http://www.opengis.net/gml/profile/sfgml/1.0"
+ xmlns:ns2="http://openquake.org/xmlns/nrml/0.1"
+ xmlns:ns3="http://www.w3.org/1999/xlink"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://openquake.org/xmlns/nrml/0.1 file:/Users/damianomonelli/Projects/opengem/docs/schema/nrml_hazard.xsd">
+    <ns2:pointRupture>
+            <ns2:magnitude>6.5</ns2:magnitude>
+            <ns2:tectonicRegion>Active Shallow Crust</ns2:tectonicRegion>
+            <ns2:focalMechanism>
+                <ns2:strike>0.0</ns2:strike>
+                <ns2:dip>90.0</ns2:dip>
+                <ns2:rake>0.0</ns2:rake>
+            </ns2:focalMechanism>
+            <ns2:hypocenterLocation>
+                <ns1:pos>35.4 20.3 20.0</ns1:pos>
+            </ns2:hypocenterLocation>
+    </ns2:pointRupture>
+    <ns2:GMPEParameters/>
+    <ns2:field>
+        <ns2:site groundMotion="0.5">
+            <ns2:site>
+                <ns1:pos>35.4 20.3</ns1:pos>
+            </ns2:site>
+        </ns2:site>
+    </ns2:field>
+</ns2:GroundMotionFieldSet>
