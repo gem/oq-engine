@@ -94,9 +94,10 @@ def generate_blob_key(job_id, blob):
     return _generate_key(job_id, 'blob', hashlib.sha1(blob).hexdigest())
 
 
-def vuln_key(job_id):
+def vuln_key(job_id, retrofitted=False):
     """Generate the key used to store vulnerability curves."""
-    return _generate_key(job_id, "VULN_CURVES")
+    return _generate_key(job_id, "VULN_CURVES",
+                         "retrofitted" if retrofitted else "normal")
 
 
 def asset_key(job_id, row, col):
@@ -155,9 +156,10 @@ def loss_ratio_key(job_id, row, col, asset_id):
                          row, col)
 
 
-def loss_curve_key(job_id, row, col, asset_id):
+def loss_curve_key(job_id, row, col, asset_id, retrofitted=False):
     """ Return a loss curve key """
-    return _generate_key(job_id, LOSS_CURVE_KEY_TOKEN, asset_id, row, col)
+    return _generate_key(job_id, LOSS_CURVE_KEY_TOKEN, asset_id, row, col,
+                         "retrofitted" if retrofitted else "normal")
 
 
 def loss_key(job_id, row, col, asset_id, poe):
