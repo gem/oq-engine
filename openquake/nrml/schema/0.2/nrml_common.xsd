@@ -1,0 +1,182 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns:nrml="http://openquake.org/xmlns/nrml/0.2"
+           xmlns="http://openquake.org/xmlns/nrml/0.2"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.2"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gmlsf.xsd"/>
+
+    <!-- ============================================================= -->
+
+    <xs:complexType name="Config">
+        <xs:sequence>
+            <xs:element name="hazardProcessing" type="HazardProcessing" minOccurs="0" maxOccurs="1"/>
+        </xs:sequence>
+    </xs:complexType>
+    
+	<!-- ============================================================= -->
+
+    <xs:complexType name="IMLType">
+        <xs:simpleContent>
+            <xs:extension base="gml:doubleList">
+                <xs:attribute name="IMT" type="IMTType" use="required"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:simpleType name="IMTType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="PGA"/>
+            <xs:enumeration value="PGV"/>
+            <xs:enumeration value="PGD"/>
+            <xs:enumeration value="SA"/>
+            <xs:enumeration value="MMI"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="Magnitude">
+        <xs:simpleContent>
+            <xs:extension base="xs:double">
+                <!-- NOTE: using free-text field for magnitude type, like in QuakeML -->
+                <xs:attribute name="type" type="xs:string"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+    
+    <!-- TODO: add magnitude types (Taxonomy&Ontology group), possibly IASPEI-defined list -->
+    <!-- NOTE: not used at the moment -->
+    <xs:simpleType name="MagnitudeType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="ML"/>
+            <xs:enumeration value="Mw"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:complexType name="MagnitudeList">
+        <xs:simpleContent>
+            <xs:extension base="gml:doubleList">
+                <xs:attribute name="type" type="MagnitudeType"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+    
+    <xs:simpleType name="ProbabilisticDistributionType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="LN"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:simpleType name="StatisticalSummary">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="mean"/>
+            <xs:enumeration value="median"/>
+            <xs:enumeration value="quantile"/>
+        </xs:restriction>
+    </xs:simpleType>
+    
+    <xs:attributeGroup name="QuantileGroup">
+        <xs:attribute name="statistics" type="StatisticalSummary"/>
+        <xs:attribute name="quantileValue" type="NormalizedDoubleType"/>
+    </xs:attributeGroup>
+    
+    <!-- ============================================================= -->
+
+    <xs:complexType name="EvenlyDiscretizedDistribution">
+        <xs:annotation>
+            <xs:documentation>Describes an evenly discretized distribution.</xs:documentation>
+        </xs:annotation>
+        <xs:simpleContent>
+            <!-- NOTE: removed child element 'distributionValues', since it's not required -->
+            <xs:extension base="gml:doubleList">
+                <xs:attribute name="minVal" type="xs:double" use="required"/>
+                <xs:attribute name="binSize" type="NonNegativeDoubleType" use="required"/>
+                
+                <!-- NOTE: removed attribute 'binCount', since it's given implicitly throgh the
+                    number of values given in the element -->
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:complexType name="ArbitrarilyDiscretizedDistribution">
+        <xs:annotation>
+            <xs:documentation>This complex type allows to define a whatever discretized function</xs:documentation>
+        </xs:annotation>
+        <xs:sequence>
+            <xs:element name="abscissa" type="gml:doubleList"/>
+            <xs:element name="ordinate" type="gml:doubleList"/>
+        </xs:sequence>
+    </xs:complexType>
+    
+    <!-- ============================================================= -->
+    
+    <xs:element name="fieldNode" type="FieldNode" substitutionGroup="gml:_Feature" abstract="true"/>
+    <xs:complexType name="FieldNode" abstract="true">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element ref="site"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+    
+    <!-- NOTE: site is the head of a substitution group -->
+    <xs:element name="site" type="gml:PointPropertyType"/>
+    
+    <!-- ============================================================= -->
+    
+    <!-- NOTE: not used at the moment -->
+	<xs:simpleType name="paramType">
+		<xs:annotation>
+			<xs:documentation>Labels that can be used to describe the parameters to be used in NRML.</xs:documentation>
+		</xs:annotation>
+		<xs:restriction base="xs:string">
+			<xs:enumeration value="adimensional"/>
+			<xs:enumeration value="aGR"/>
+			<xs:enumeration value="bGR"/>
+			<xs:enumeration value="lon"/>
+			<xs:enumeration value="lat"/>
+			<xs:enumeration value="mmi"/>
+			<xs:enumeration value="m_max"/>
+			<xs:enumeration value="occ"/>
+			<xs:enumeration value="prb_occ"/>
+			<xs:enumeration value="prb_exc"/>
+			<xs:enumeration value="prb_nex"/>
+			<xs:enumeration value="pga"/>
+			<xs:enumeration value="pgv"/>
+			<xs:enumeration value="pgd"/>
+			<xs:enumeration value="rate"/>
+			<xs:enumeration value="sa"/>
+			<xs:enumeration value="sv"/>
+			<xs:enumeration value="sd"/>
+			<xs:enumeration value="si"/>
+		</xs:restriction>
+	</xs:simpleType>
+	
+    <!-- ============================================================= -->
+
+	<xs:simpleType name="NonNegativeDoubleType">
+		<xs:restriction base="xs:double">
+			<xs:minInclusive value="0.0"/>
+		</xs:restriction>
+	</xs:simpleType>
+	
+	<xs:simpleType name="NormalizedDoubleType">
+        <xs:restriction base="xs:double">
+            <xs:minInclusive value="0.0"/>
+            <xs:maxInclusive value="1.0"/>
+        </xs:restriction>
+    </xs:simpleType>
+	
+	<xs:simpleType name="NonNegativeDoubleList">
+        <xs:list itemType="NonNegativeDoubleType"/>
+	</xs:simpleType>
+	
+	<xs:simpleType name="NormalizedDoubleList">
+        <xs:list itemType="NormalizedDoubleType"/>
+    </xs:simpleType>
+    
+</xs:schema>

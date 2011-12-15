@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns="http://openquake.org/xmlns/nrml/0.2"
+           xmlns:nrml="http://openquake.org/xmlns/nrml/0.2"
+           xmlns:gmlsf="http://www.opengis.net/gmlsf"
+           xmlns:gml="http://www.opengis.net/gml"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.2"
+           elementFormDefault="qualified"
+           xml:lang="en"> 
+
+    <xs:import namespace="http://www.opengis.net/gmlsf" schemaLocation="./gmlsfLevels.xsd"/>
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gmlsf.xsd"/>
+
+    <xs:annotation>
+        <xs:appinfo>
+            <gmlsf:ComplianceLevel>1</gmlsf:ComplianceLevel>
+            <gmlsf:GMLProfileSchema>http://schemas.opengis.net/gml/3.1.1/profiles/gmlSimpleFeatureProfile/1.0.0/gmlsf.xsd</gmlsf:GMLProfileSchema>
+        </xs:appinfo>
+   </xs:annotation>
+
+    <!-- Include schemas being part of NRML -->
+    <xs:include schemaLocation="./nrml_common.xsd"/>
+    <xs:include schemaLocation="./nrml_seismic.xsd"/>
+    <xs:include schemaLocation="./nrml_hazard.xsd"/>
+    <xs:include schemaLocation="./nrml_risk.xsd"/>
+
+    <xs:element name="nrml" type="NRML" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="NRML">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:choice minOccurs="0" maxOccurs="1">
+                        <xs:element ref="hazardResult"/>
+                        <xs:element ref="sourceModel"/>
+                        <xs:element ref="logicTreeSet"/>
+                        <xs:element ref="rupture"/>
+                        <xs:element ref="riskResult"/>
+                        <xs:element ref="exposurePortfolio"/>
+                        <xs:element ref="vulnerabilityModel"/>
+                    </xs:choice>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+</xs:schema>
