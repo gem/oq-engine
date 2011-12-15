@@ -1,0 +1,155 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ns2:sourceModel xmlns:ns1="http://www.opengis.net/gml/profile/sfgml/1.0"
+ xmlns:ns2="http://openquake.org/xmlns/nrml/0.1"
+ xmlns:ns3="http://www.w3.org/1999/xlink"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://openquake.org/xmlns/nrml/0.1 file:/Users/damianomonelli/Projects/opengem/docs/schema/nrml_seismic.xsd">
+     <ns2:simpleFault>
+            <ns2:sourceName>Mount Diablo Thrust</ns2:sourceName>
+            <ns2:sourceID>src01</ns2:sourceID>
+            <ns2:tectonicRegion>Active Shallow Crust</ns2:tectonicRegion>
+            <ns2:simpleFaultGeometry>
+                <ns2:faultTrace>
+                    <ns1:posList>
+                        -121.82290 37.73010  0.0
+                        -122.03880 37.87710  0.0
+                    </ns1:posList>
+                </ns2:faultTrace>
+                <ns2:dip>38</ns2:dip>
+                <ns2:upperSeismogenicDepth>8.0</ns2:upperSeismogenicDepth>
+                <ns2:lowerSeismogenicDepth>13.0</ns2:lowerSeismogenicDepth>
+            </ns2:simpleFaultGeometry>
+            <ns2:rake>90.0</ns2:rake>
+         <ns2:evenlyDiscretizedIncrementalMagFreqDist binSize="0.1" minVal="6.55" binCount="5">
+             <DistributionValues>0.0010614989 8.8291627E-4 7.3437777E-4 6.108288E-4 5.080653E-4</DistributionValues>
+         </ns2:evenlyDiscretizedIncrementalMagFreqDist>
+    </ns2:simpleFault>
+    <ns2:complexFault>
+            <ns2:sourceName>Cascadia Megathrust</ns2:sourceName>
+            <ns2:sourceID>src02</ns2:sourceID>
+            <ns2:tectonicRegion>Subduction Interface</ns2:tectonicRegion>
+            <ns2:complexFaultGeometry>
+                <ns2:faultTopEdge>
+                    <ns1:posList>
+                        -124.704  40.363  0.5493260E+01
+                        -124.977  41.214  0.4988560E+01
+                        -125.140  42.096  0.4897340E+01
+                        -125.219  42.965  0.4847610E+01
+                        -125.257  43.852  0.4871280E+01
+                        -125.313  44.718  0.4782420E+01
+                        -125.416  45.458  0.4410880E+01
+                        -125.623  46.337  0.4028170E+01
+                        -125.746  46.642  0.3797400E+01
+                        -125.874  46.965  0.3649880E+01
+                        -126.015  47.289  0.3650670E+01
+                        -126.240  47.661  0.3675160E+01
+                        -126.422  47.994  0.3907950E+01
+                        -126.660  48.287  0.4125160E+01
+                        -127.037  48.711  0.4583670E+01
+                        -127.605  49.279  0.4761580E+01
+                    </ns1:posList>
+                </ns2:faultTopEdge>
+                <ns2:faultBottomEdge>
+                    <ns1:posList>
+                        -123.829  40.347  0.2038490E+02
+                        -124.137  41.218  0.1741390E+02
+                        -124.252  42.115  0.1752740E+02
+                        -124.313  42.984  0.1729190E+02
+                        -124.263  43.868  0.1856200E+02
+                        -124.213  44.740  0.1977810E+02
+                        -124.099  45.494  0.2230320E+02
+                        -123.853  46.369  0.2575860E+02
+                        -123.644  46.811  0.2711490E+02
+                        -123.423  47.300  0.2761730E+02
+                        -123.440  47.792  0.2750930E+02
+                        -124.075  48.221  0.2602160E+02
+                        -124.773  48.560  0.2572870E+02
+                        -125.409  48.873  0.2544710E+02
+                        -126.117  49.244  0.2471340E+02
+                        -126.911  49.687  0.2275770E+02
+                    </ns1:posList>
+                </ns2:faultBottomEdge>
+            </ns2:complexFaultGeometry>
+            <ns2:rake>0.0</ns2:rake>
+            <ns2:truncatedGutenbergRichter>
+                <ns2:aValueCumulative>1.0</ns2:aValueCumulative>
+                <ns2:bValue>0.8</ns2:bValue>
+                <ns2:minMagnitude>6.5</ns2:minMagnitude>
+                <ns2:maxMagnitude>9.0</ns2:maxMagnitude>
+            </ns2:truncatedGutenbergRichter>
+    </ns2:complexFault>
+    <ns2:area>
+            <ns2:sourceName>Quito</ns2:sourceName>
+            <ns2:sourceID>src03</ns2:sourceID>
+            <ns2:tectonicRegion>Active Shallow Crust</ns2:tectonicRegion>
+            <ns2:areaBoundary>
+                 <ns1:exterior>
+                     <ns1:LinearRing>
+                         <ns1:posList>            
+                             -122.5 37.5 
+                             -121.5 37.5
+                             -121.5 38.5
+                             -122.5 38.5
+                     </ns1:posList>
+                  </ns1:LinearRing>
+             </ns1:exterior>
+            </ns2:areaBoundary>
+                <ns2:ruptureRateModel>
+                    <ns2:truncatedGutenbergRichter>
+                        <ns2:aValueCumulative>5.0</ns2:aValueCumulative>
+                        <ns2:bValue>0.8</ns2:bValue>
+                        <ns2:minMagnitude>5.0</ns2:minMagnitude>
+                        <ns2:maxMagnitude>7.0</ns2:maxMagnitude>
+                    </ns2:truncatedGutenbergRichter>
+                    <ns2:focalMechanism>
+                        <ns2:strike>0.0</ns2:strike>
+                        <ns2:dip>90.0</ns2:dip>
+                        <ns2:rake>0.0</ns2:rake>
+                    </ns2:focalMechanism>
+                </ns2:ruptureRateModel>
+        <ns2:ruptureRateModel>
+            <ns2:truncatedGutenbergRichter>
+                <ns2:aValueCumulative>5.0</ns2:aValueCumulative>
+                <ns2:bValue>0.8</ns2:bValue>
+                <ns2:minMagnitude>5.0</ns2:minMagnitude>
+                <ns2:maxMagnitude>7.0</ns2:maxMagnitude>
+            </ns2:truncatedGutenbergRichter>
+            <ns2:focalMechanism>
+                <ns2:strike>90.0</ns2:strike>
+                <ns2:dip>90.0</ns2:dip>
+                <ns2:rake>0.0</ns2:rake>
+            </ns2:focalMechanism>
+        </ns2:ruptureRateModel>
+             <ns2:ruptureDepthDistribution>
+                  <XValues>6.0 6.5 7.0</XValues>
+                  <YValues>5.0 3.0 0.0</YValues>
+             </ns2:ruptureDepthDistribution>
+            <ns2:hypocentralDepth>5.0</ns2:hypocentralDepth>
+    </ns2:area>
+    <ns2:point>
+        <ns2:sourceName>point</ns2:sourceName>
+            <ns2:sourceID>src04</ns2:sourceID>
+            <ns2:tectonicRegion>Active Shallow Crust</ns2:tectonicRegion>
+            <ns2:pointLocation>
+                <ns1:pos> -122.0 38.0</ns1:pos>
+            </ns2:pointLocation>
+                <ns2:ruptureRateModel>
+                    <ns2:truncatedGutenbergRichter>
+                        <ns2:aValueCumulative>0.5</ns2:aValueCumulative>
+                        <ns2:bValue>0.8</ns2:bValue>
+                        <ns2:minMagnitude>5.0</ns2:minMagnitude>
+                        <ns2:maxMagnitude>7.0</ns2:maxMagnitude>
+                    </ns2:truncatedGutenbergRichter>
+                    <ns2:focalMechanism>
+                        <ns2:strike>0.0</ns2:strike>
+                        <ns2:dip>90.0</ns2:dip>
+                        <ns2:rake>0.0</ns2:rake>
+                    </ns2:focalMechanism>
+                </ns2:ruptureRateModel>
+             <ns2:ruptureDepthDistribution>
+                  <XValues>6.0 6.5 7.0</XValues>
+                  <YValues>5.0 3.0 0.0</YValues>
+             </ns2:ruptureDepthDistribution>
+            <ns2:hypocentralDepth>5</ns2:hypocentralDepth>
+    </ns2:point>
+</ns2:sourceModel>
