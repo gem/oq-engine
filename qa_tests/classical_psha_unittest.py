@@ -133,6 +133,57 @@ class ClassicalPSHACalculatorAssuranceTestCase(
             self.assertTrue(numpy.allclose(numpy.array(value),
                     numpy.array(hm_db.value)))
 
+
+    def test_complex_fault_demo_hazard(self):
+        """Run the `complex_fault_demo_hazard` demo and verify all of the
+        resulting hazard curve and hazard map data."""
+
+        def verify_hazcurve_results(job, end_branch_label, exp_results_file):
+            curve_data = [line for line in open(exp_results_file, 'r')]
+
+            # The actual curve data;
+            # Pairs of (site_coords, poes) for each curve:
+            sites_poes = zip(curve_data[::2], curve_data[1::2])
+
+            for site, poes in sites_poes:
+                # lon, lat is the order which GML uses for coord pairs.
+                lon, lat = [float(x) for x in site.split()]
+                poes = [float(x) for x in poes.split()]
+
+                # Pay attention to the lat, lon ordering here;
+                # It's reversed from above.
+                gh = geohash.encode(lat, lon)
+
+                hc = models.HazardCurveData.objects.filter(
+                    hazard_curve__output__oq_job=self.job,
+                    hazard_curve__end_branch_label=0).extra(
+                        where=["ST_GeoHash(location, 12) = %s"],
+                        params=[gh]).get()
+
+            self.assertTrue(numpy.allclose(poes, hc.poes))
+
+        job_cfg = helpers.demo_file(os.path.join(
+            "complex_fault_demo_hazard", "config.gem"))
+
+        exp_results_dir = os.path.join("complex_fault_demo_hazard",
+                                       "expected_results")
+
+        run_job(job_cfg)
+
+        self.job = models.OqJob.objects.latest("id")
+
+        # Check hazard curves for sample 0:
+        # Hazard curve expected results for logic tree sample 0:
+        hazcurve_0 = helpers.demo_file(os.path.join(exp_results_dir,
+                                                     "hazardcurve-0.dat"))
+        verify_hazcurve_results(self.job, 0, hazcurve_0)
+
+        # TODO:
+        # Check mean hazard curves:
+        # Check hazard map mean 0.02:
+        # Check hazard map mean 0.1:
+
+
     def _assert_hazcurve_results_are(self, expected_results):
         """Compare the expected hazard curve results with the results
         computed by the current job."""
