@@ -744,7 +744,8 @@ CREATE TABLE uiapi.oq_params (
     gmf_random_seed integer
         CONSTRAINT gmf_random_seed_is_set
         CHECK(
-            (job_type IN ('scenario', 'event_based'))
+            (job_type IN ('scenario', 'event_based')
+             AND (gmf_random_seed IS NOT NULL))
             OR
             ((job_type NOT IN ('scenario', 'event_based'))
              AND (gmf_random_seed IS NULL))),
