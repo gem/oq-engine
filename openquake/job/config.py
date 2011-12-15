@@ -40,6 +40,8 @@ REGION_GRID_SPACING = "REGION_GRID_SPACING"
 SITES = "SITES"
 SCENARIO_MODE = "Scenario"
 DISAGGREGATION_MODE = "Disaggregation"
+BCR_EVENT_BASED_MODE = "Event Based BCR"
+BCR_CLASSICAL_MODE = "Classical BCR"
 UHS_MODE = "UHS"
 BASE_PATH = "BASE_PATH"
 COMPUTE_HAZARD_AT_ASSETS = "COMPUTE_HAZARD_AT_ASSETS_LOCATIONS"
@@ -550,5 +552,8 @@ def default_validators(sections, params):
 
     if params.get(CALCULATION_MODE) == DISAGGREGATION_MODE:
         validators.add(DisaggregationValidator(params))
+    elif params.get(CALCULATION_MODE) in (BCR_CLASSICAL_MODE,
+                                          BCR_EVENT_BASED_MODE):
+        validators.add(BCRValidator(params))
 
     return validators
