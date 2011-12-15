@@ -23,11 +23,11 @@ Task functions for our unit tests.
 """
 
 
-from celery.decorators import task
-
-from tests.utils import helpers
+from celery.task import task
 
 from openquake import java
+
+from tests.utils import helpers
 
 
 @task
@@ -44,8 +44,22 @@ def test_data_reflector(job_id, *args, **kwargs):
     return helpers.TestStore.lookup(job_id)
 
 
-@task
-def test_compute_hazard_curve(job_id, site_list, realization):
+@task(ignore_result=True)
+def test_async_data_reflector(job_id, *args, **kwargs):
+    """Throw back the data stored in the KVS for the given `job_id`.
+
+    This should be used for testing purposes only. The idea is to store the
+    data expected in test setup and then use this task to play that data back
+    to the test.
+
+    See :py:class:`DoCurvesTestCase` for an example of how this task should be
+    used.
+    """
+    return helpers.TestStore.lookup(job_id)
+
+
+@task(ignore_result=True)
+def test_compute_hazard_curve(job_id, sites, realization):
     """This task will be used to test :py:class`ClassicalMixin` code.
 
     The test setup code will prepare a result set for each `realization`.
@@ -85,7 +99,8 @@ def failing_task(data):
     raise NotImplementedError(data)
 
 
-@java.jtask
+@task
+@java.unpack_exception
 def jtask_task(data):
     """
     Takes a single argument called `data` and might raise a Java exception.
@@ -93,7 +108,8 @@ def jtask_task(data):
     return str(java.jvm().java.lang.Integer(data))
 
 
-@java.jtask
+@task
+@java.unpack_exception
 def failing_jtask_task(data):
     """
     Takes a single argument called `data` and raises a Python exception.
@@ -111,4 +127,13 @@ def reflect_data_to_be_processed(data):
 def reflect_data_with_task_index(data, task_index):
     """Returns the data received with the `task_index` appended."""
     data.append(task_index)
+    return data
+
+
+@task(ignore_result=True)
+def ignore_result(data):
+    """Write the data using the given test store key."""
+    key, value = data[0]
+    helpers.TestStore.set(key, value)
+    # Results will be ignored.
     return data

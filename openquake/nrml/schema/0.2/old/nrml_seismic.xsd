@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+    targetNamespace="http://openquake.org/xmlns/nrml/0.1"
+    xmlns:nrml="http://openquake.org/xmlns/nrml/0.1"
+    xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" elementFormDefault="qualified">
+
+    <!-- include common types-->
+    <xs:annotation>
+        <xs:documentation xml:lang="en">Schema describing the XML structure of files containing information pertinent with the creation of ERF.
+        </xs:documentation>
+    </xs:annotation>
+    <!-- -->
+
+    <!-- import -->
+    <xs:import namespace="http://www.opengis.net/gml/profile/sfgml/1.0"
+        schemaLocation="./GML-SimpleFeaturesProfileSchema.xsd"/>
+    <xs:include schemaLocation="nrml_common.xsd"/>
+    <!-- -->
+
+    <xs:simpleType name="StrikeType">
+        <xs:restriction base="xs:double">
+            <xs:minInclusive value="0.0"/>
+            <xs:maxInclusive value="360.0"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="DipType">
+        <xs:restriction base="xs:double">
+            <xs:minInclusive value="0.0"/>
+            <xs:maxInclusive value="90.0"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="RakeType">
+        <xs:restriction base="xs:double">
+            <xs:minInclusive value="-180.0"/>
+            <xs:maxInclusive value="+180.0"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="TectonicRegionType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="Active Shallow Crust"/>
+            <xs:enumeration value="Stable Shallow Crust"/>
+            <xs:enumeration value="Subduction Interface"/>
+            <xs:enumeration value="Subduction IntraSlab"/>
+            <xs:enumeration value="Volcanic"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="FocalMechanismType">
+        <xs:sequence>
+            <xs:element name="strike" type="nrml:StrikeType"/>
+            <xs:element name="dip" type="nrml:DipType"/>
+            <xs:element name="rake" type="nrml:RakeType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="TruncatedGutenbergRichterType">
+        <xs:sequence>
+            <xs:element name="aValueCumulative" type="xs:double"/>
+            <xs:element name="bValue" type="nrml:NonNegativeDoubleType"/>
+            <xs:element name="minMagnitude" type="nrml:NonNegativeDoubleType"/>
+            <xs:element name="maxMagnitude" type="nrml:NonNegativeDoubleType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="magnitudeFrequencyDistribution" abstract="true"/>
+    <xs:element name="truncatedGutenbergRichter" type="nrml:TruncatedGutenbergRichterType"
+        substitutionGroup="nrml:magnitudeFrequencyDistribution"/>
+    <xs:element name="evenlyDiscretizedIncrementalMagFreqDist" type="nrml:EvenlyDiscretizedDistType"
+        substitutionGroup="nrml:magnitudeFrequencyDistribution"/>
+
+    <xs:complexType name="RuptureRateModelType">
+        <xs:sequence>
+            <xs:element ref="nrml:magnitudeFrequencyDistribution"/>
+            <xs:element name="focalMechanism" type="nrml:FocalMechanismType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="SourceDataType">
+        <xs:sequence>
+            <xs:element name="sourceName" type="xs:string"/>
+            <xs:element name="sourceID" type="xs:string"/>
+            <xs:element name="tectonicRegion" type="nrml:TectonicRegionType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="SimpleFaultGeometryType">
+        <xs:sequence>
+            <xs:element name="faultTrace" type="gml:LineStringType"/>
+            <xs:element name="dip" type="nrml:DipType"/>
+            <xs:element name="upperSeismogenicDepth" type="nrml:NonNegativeDoubleType"/>
+            <xs:element name="lowerSeismogenicDepth" type="nrml:NonNegativeDoubleType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="SimpleFaultSourceDataType">
+        <xs:complexContent>
+            <xs:extension base="nrml:SourceDataType">
+                <xs:sequence>
+                    <xs:element name="simpleFaultGeometry" type="nrml:SimpleFaultGeometryType"/>
+                    <xs:element name="rake" type="nrml:RakeType"/>
+                    <xs:element ref="nrml:magnitudeFrequencyDistribution"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="ComplexFaultGeometryType">
+        <xs:sequence>
+            <xs:element name="faultTopEdge" type="gml:LineStringType"/>
+            <xs:element name="faultBottomEdge" type="gml:LineStringType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="ComplexFaultSourceDataType">
+        <xs:complexContent>
+            <xs:extension base="nrml:SourceDataType">
+                <xs:sequence>
+                    <xs:element name="complexFaultGeometry" type="nrml:ComplexFaultGeometryType"/>
+                    <xs:element name="rake" type="nrml:RakeType"/>
+                    <xs:element ref="nrml:magnitudeFrequencyDistribution"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="AreaSourceDataType">
+        <xs:complexContent>
+            <xs:extension base="nrml:SourceDataType">
+                <xs:sequence>
+                    <xs:element name="areaBoundary" type="gml:PolygonType"/>
+                    <xs:sequence minOccurs="1" maxOccurs="unbounded">
+                        <xs:element name="ruptureRateModel" type="nrml:RuptureRateModelType"/>
+                    </xs:sequence>
+                    <xs:element name="ruptureDepthDistribution"
+                        type="nrml:ArbitrarilyDiscretizedDistType"/>
+                    <xs:element name="hypocentralDepth" type="nrml:NonNegativeDoubleType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="PointSourceDataType">
+        <xs:complexContent>
+            <xs:extension base="nrml:SourceDataType">
+                <xs:sequence>
+                    <xs:element name="pointLocation" type="gml:PointType"/>
+                    <xs:sequence minOccurs="1" maxOccurs="unbounded">
+                        <xs:element name="ruptureRateModel" type="nrml:RuptureRateModelType"/>
+                    </xs:sequence>
+                    <xs:element name="ruptureDepthDistribution"
+                        type="nrml:ArbitrarilyDiscretizedDistType"/>
+                    <xs:element name="hypocentralDepth" type="nrml:NonNegativeDoubleType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="seismicSource" abstract="true"/>
+    <xs:element name="simpleFault" type="nrml:SimpleFaultSourceDataType"
+        substitutionGroup="nrml:seismicSource"/>
+    <xs:element name="complexFault" type="nrml:ComplexFaultSourceDataType"
+        substitutionGroup="nrml:seismicSource"/>
+    <xs:element name="area" type="nrml:AreaSourceDataType" substitutionGroup="nrml:seismicSource"/>
+    <xs:element name="point" type="nrml:PointSourceDataType" substitutionGroup="nrml:seismicSource"/>
+
+    <xs:complexType name="SourceModelType">
+        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+            <xs:element ref="nrml:seismicSource"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:element name="sourceModel" type="nrml:SourceModelType"/>
+
+    <xs:complexType name="RuptureType">
+        <xs:sequence>
+            <xs:element name="magnitude" type="xs:double"/>
+            <xs:element name="tectonicRegion" type="nrml:TectonicRegionType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="PointRuptureType">
+        <xs:complexContent>
+            <xs:extension base="nrml:RuptureType">
+                <xs:sequence>
+                    <xs:element name="focalMechanism" type="nrml:FocalMechanismType"/>
+                    <xs:element name="hypocenterLocation" type="gml:PointType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="SimpleFaultRuptureType">
+        <xs:complexContent>
+            <xs:extension base="nrml:RuptureType">
+                <xs:sequence>
+                    <xs:element name="simpleFaultGeometry" type="nrml:SimpleFaultGeometryType"/>
+                    <xs:element name="rake" type="nrml:RakeType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="ComplexFaultRuptureType">
+        <xs:complexContent>
+            <xs:extension base="nrml:RuptureType">
+                <xs:sequence>
+                    <xs:element name="complexFaultGeometry" type="nrml:ComplexFaultGeometryType"/>
+                    <xs:element name="rake" type="nrml:RakeType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="ArbitrarilyComplexRuptureType">
+        <xs:complexContent>
+            <xs:extension base="nrml:RuptureType">
+                <xs:sequence>
+                    <xs:element ref="gml:Surface"/>
+                    <xs:element name="rake" type="nrml:RakeType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="rupture" abstract="true"/>
+    <xs:element name="pointRupture" type="nrml:PointRuptureType" substitutionGroup="nrml:rupture"/>
+    <xs:element name="simpleFaultRupture" type="nrml:SimpleFaultRuptureType"
+        substitutionGroup="nrml:rupture"/>
+    <xs:element name="complexFaultRupture" type="nrml:ComplexFaultRuptureType"
+        substitutionGroup="nrml:rupture"/>
+    <xs:element name="arbitrarilyComplexRupture" type="nrml:ArbitrarilyComplexRuptureType"
+        substitutionGroup="nrml:rupture"/>
+
+    <xs:attribute name="uncertaintyType">
+        <xs:simpleType>
+            <xs:restriction base="xs:string">
+                <xs:enumeration value="gmpeModel"/>
+                <xs:enumeration value="sourceModel"/>
+                <xs:enumeration value="maxMagnitudeGutenbergRichterRelative"/>
+                <xs:enumeration value="bValueGutenbergRichterRelative"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:attribute>
+
+    <xs:complexType name="LogicTreeBranchType">
+        <xs:sequence>
+            <xs:element name="uncertaintyModel" type="xs:string"/>
+            <xs:element name="uncertaintyWeight" type="nrml:NonNegativeDoubleType"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="LogicTreeBranchSetType">
+        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+            <xs:element name="logicTreeBranch" type="nrml:LogicTreeBranchType"/>
+        </xs:sequence>
+        <xs:attribute ref="nrml:uncertaintyType" use="required"/>
+    </xs:complexType>
+
+    <xs:complexType name="LogicTreeType">
+        <xs:sequence maxOccurs="unbounded">
+            <xs:element name="logicTreeBranchSet" type="nrml:LogicTreeBranchSetType"/>
+        </xs:sequence>
+        <xs:attribute name="tectonicRegion" type="nrml:TectonicRegionType" use="optional"/>
+    </xs:complexType>
+    
+    <xs:complexType name="LogicTreeSetType">
+        <xs:sequence maxOccurs="unbounded">
+            <xs:element name="logicTree" type="nrml:LogicTreeType"></xs:element>
+        </xs:sequence>
+    </xs:complexType>
+    
+    <xs:element name="logicTreeSet" type="nrml:LogicTreeSetType"></xs:element>
+
+</xs:schema>

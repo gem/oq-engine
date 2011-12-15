@@ -3,7 +3,7 @@
 The available optional flags are also tested: applyToBranches, applyToTectonicRegionType,
 applyToSources, applyToSourceType -->
 <nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.2"
+      xmlns="http://openquake.org/xmlns/nrml/0.3"
       gml:id="n1">
 
     <logicTree logicTreeID="lt1">

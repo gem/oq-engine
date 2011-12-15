@@ -22,14 +22,9 @@ import os
 import tempfile
 import unittest
 
-from nose.plugins.attrib import attr
-
-from openquake import java
 from openquake import shapes
 from openquake.hazard import disagg
 from openquake.hazard.disagg import core as disagg_core
-from openquake.hazard.general import store_source_model, store_gmpe_map
-from openquake.input.logictree import LogicTreeProcessor
 
 from tests.utils import helpers
 
@@ -38,22 +33,6 @@ DISAGG_DEMO_CONFIG_FILE = helpers.demo_file('disaggregation/config.gem')
 
 class DisaggregationFuncsTestCase(unittest.TestCase):
     """Test for disaggregation calculator helper functions."""
-
-    def test_list_to_jdouble_array(self):
-        """Test construction of a Double[] (Java array) from a list of floats.
-        """
-        test_input = [0.01, 0.02, 0.03, 0.04]
-
-        # Make the (Java) Double[] array (the input is copied as a simple way
-        # to avoid false positives).
-        jdouble_a = disagg_core.list_to_jdouble_array(list(test_input))
-
-        # It should be a jpype Double[] type:
-        self.assertEqual('java.lang.Double[]', jdouble_a.__class__.__name__)
-
-        # Now check that the len and values are correct:
-        self.assertEqual(len(test_input), len(jdouble_a))
-        self.assertEqual(test_input, [x.doubleValue() for x in jdouble_a])
 
     def test_save_5d_matrix_to_h5(self):
         """Save a 5D matrix (as a numpy array of float64s) to a file, then read
@@ -92,23 +71,11 @@ class DisaggregationTaskTestCase(unittest.TestCase):
 
         # for the given test input data, we expect the calculator to return
         # this gmv:
-        expected_gmv = 0.225743641602613
+        expected_gmv = 0.2259803374787534
 
         the_job = helpers.job_from_file(DISAGG_DEMO_CONFIG_FILE)
 
-        # We need to store the source model and gmpe model in the KVS for this
-        # test.
-        lt_proc = LogicTreeProcessor(
-            the_job.params['BASE_PATH'],
-            the_job.params['SOURCE_MODEL_LOGIC_TREE_FILE_PATH'],
-            the_job.params['GMPE_LOGIC_TREE_FILE_PATH'])
-
-        src_model_seed = int(the_job.params.get('SOURCE_MODEL_LT_RANDOM_SEED'))
-        gmpe_seed = int(the_job.params.get('GMPE_LT_RANDOM_SEED'))
-
-        store_source_model(the_job.job_id, src_model_seed, the_job.params,
-                           lt_proc)
-        store_gmpe_map(the_job.job_id, gmpe_seed, lt_proc)
+        helpers.store_hazard_logic_trees(the_job)
 
         site = shapes.Site(0.0, 0.0)
         poe = 0.1

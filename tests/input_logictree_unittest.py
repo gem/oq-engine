@@ -66,8 +66,7 @@ class _TesteableGMPELogicTree(logictree.GMPELogicTree):
 def _make_nrml(content):
     return """\
     <nrml xmlns:gml="http://www.opengis.net/gml"\
-          xmlns="http://openquake.org/xmlns/nrml/0.2"\
-          xmlns:qml="http://quakeml.org/xmlns/quakeml/1.1"\
+          xmlns="http://openquake.org/xmlns/nrml/0.3"\
           gml:id="n1">\
         %s
     </nrml>""" % content
@@ -138,15 +137,9 @@ def _whatever_sourcemodel():
                 <minMagnitude>5.0</minMagnitude>
                 <maxMagnitude>7.0</maxMagnitude>
             </truncatedGutenbergRichter>
-            <focalMechanism publicID="smi:fm1/0">
-              <qml:nodalPlanes>
-                <qml:nodalPlane1>
-                  <qml:strike><qml:value>0.0</qml:value></qml:strike>
-                  <qml:dip><qml:value>90.0</qml:value></qml:dip>
-                  <qml:rake><qml:value>0.0</qml:value></qml:rake>
-                </qml:nodalPlane1>
-              </qml:nodalPlanes>
-            </focalMechanism>
+            <strike>0.0</strike>
+            <dip>90.0</dip>
+            <rake>0.0</rake>
           </ruptureRateModel>
           <ruptureRateModel>
             <truncatedGutenbergRichter>
@@ -155,15 +148,9 @@ def _whatever_sourcemodel():
                 <minMagnitude>5.0</minMagnitude>
                 <maxMagnitude>7.0</maxMagnitude>
             </truncatedGutenbergRichter>
-            <focalMechanism publicID="smi:fm1/1">
-              <qml:nodalPlanes>
-                <qml:nodalPlane1>
-                  <qml:strike><qml:value>0.0</qml:value></qml:strike>
-                  <qml:dip><qml:value>90.0</qml:value></qml:dip>
-                  <qml:rake><qml:value>0.0</qml:value></qml:rake>
-                </qml:nodalPlane1>
-              </qml:nodalPlanes>
-            </focalMechanism>
+            <strike>0.0</strike>
+            <dip>90.0</dip>
+            <rake>0.0</rake>
           </ruptureRateModel>
           <ruptureDepthDistribution>
             <magnitude>6.0 6.5</magnitude>
@@ -227,7 +214,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             'screwed_schema', {'screwed_schema': source}, 'base',
             logictree.ParsingError
         )
-        error = "'{http://openquake.org/xmlns/nrml/0.2}logicTreeSet': " \
+        error = "'{http://openquake.org/xmlns/nrml/0.3}logicTreeSet': " \
                 "This element is not expected."
         self.assertTrue(error in exc.message,
                         "wrong exception message: %s" % exc.message)
@@ -1437,15 +1424,9 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                     <minMagnitude>5.0</minMagnitude>
                     <maxMagnitude>7.0</maxMagnitude>
                 </truncatedGutenbergRichter>
-                <focalMechanism publicID="smi:fm1/0">
-                  <qml:nodalPlanes>
-                    <qml:nodalPlane1>
-                      <qml:strike><qml:value>0.0</qml:value></qml:strike>
-                      <qml:dip><qml:value>90.0</qml:value></qml:dip>
-                      <qml:rake><qml:value>0.0</qml:value></qml:rake>
-                    </qml:nodalPlane1>
-                  </qml:nodalPlanes>
-                </focalMechanism>
+                <strike>0.0</strike>
+                <dip>90.0</dip>
+                <rake>0.0</rake>
               </ruptureRateModel>
 
               <ruptureRateModel>
@@ -1454,15 +1435,9 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                     0.0010614989 8.8291627E-4 7.3437777E-4
                     6.108288E-4 5.080653E-4
                 </evenlyDiscretizedIncrementalMFD>
-                <focalMechanism publicID="smi:fm1/1">
-                  <qml:nodalPlanes>
-                    <qml:nodalPlane1>
-                      <qml:strike><qml:value>0.0</qml:value></qml:strike>
-                      <qml:dip><qml:value>90.0</qml:value></qml:dip>
-                      <qml:rake><qml:value>0.0</qml:value></qml:rake>
-                    </qml:nodalPlane1>
-                  </qml:nodalPlanes>
-                </focalMechanism>
+                <strike>0.0</strike>
+                <dip>90.0</dip>
+                <rake>0.0</rake>
               </ruptureRateModel>
 
               <ruptureRateModel>
@@ -1472,15 +1447,9 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                     <minMagnitude>5.0</minMagnitude>
                     <maxMagnitude>7.0</maxMagnitude>
                 </truncatedGutenbergRichter>
-                <focalMechanism publicID="smi:fm1/1">
-                  <qml:nodalPlanes>
-                    <qml:nodalPlane1>
-                      <qml:strike><qml:value>0.0</qml:value></qml:strike>
-                      <qml:dip><qml:value>90.0</qml:value></qml:dip>
-                      <qml:rake><qml:value>0.0</qml:value></qml:rake>
-                    </qml:nodalPlane1>
-                  </qml:nodalPlanes>
-                </focalMechanism>
+                <strike>0.0</strike>
+                <dip>90.0</dip>
+                <rake>0.0</rake>
               </ruptureRateModel>
 
               <ruptureDepthDistribution>

@@ -17,12 +17,12 @@
 
 """Core functionality for the Disaggregation Hazard calculator."""
 
+from celery.task import task
 import h5py
 import numpy
 import os
+import random
 import uuid
-
-from math import log
 
 from openquake import java
 from openquake import job
@@ -30,16 +30,15 @@ from openquake import logs
 
 from openquake.hazard import job as haz_job
 from openquake.hazard import disagg
-from openquake.java import jtask as task
+from openquake.java import list_to_jdouble_array
 from openquake.job import config as job_cfg
-from openquake.job import config_text_to_list
 from openquake.output import hazard_disagg as hazard_output
 from openquake.utils import config
 
 from openquake.hazard.disagg import subsets
 from openquake.hazard.general import (
     preload, generate_erf, generate_gmpe_map, set_gmpe_params,
-    store_source_model, store_gmpe_map)
+    store_source_model, store_gmpe_map, get_iml_list)
 from openquake.job.mixins import Mixin
 from openquake.utils.tasks import check_job_status
 
@@ -48,7 +47,7 @@ LOG = logs.LOG
 
 
 # pylint: disable=R0914
-@java.jexception
+@java.unpack_exception
 def compute_disagg_matrix(job_id, site, poe, result_dir):
     """ Compute a complete 5D Disaggregation matrix. This task leans heavily
     on the DisaggregationCalculator (in the OpenQuake Java lib) to handle this
@@ -71,14 +70,10 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
     """
     the_job = job.Job.from_kvs(job_id)
 
-    lat_bin_lims = config_text_to_list(
-        the_job[job_cfg.LAT_BIN_LIMITS], float)
-    lon_bin_lims = config_text_to_list(
-        the_job[job_cfg.LON_BIN_LIMITS], float)
-    mag_bin_lims = config_text_to_list(
-        the_job[job_cfg.MAG_BIN_LIMITS], float)
-    eps_bin_lims = config_text_to_list(
-        the_job[job_cfg.EPS_BIN_LIMITS], float)
+    lat_bin_lims = the_job[job_cfg.LAT_BIN_LIMITS]
+    lon_bin_lims = the_job[job_cfg.LON_BIN_LIMITS]
+    mag_bin_lims = the_job[job_cfg.MAG_BIN_LIMITS]
+    eps_bin_lims = the_job[job_cfg.EPS_BIN_LIMITS]
 
     jd = list_to_jdouble_array
 
@@ -94,19 +89,16 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
     gmpe_map = generate_gmpe_map(job_id, cache)
     set_gmpe_params(gmpe_map, the_job.params)
 
-    iml_arraylist = java.jclass('ArrayList')()
-    iml_vals = job.config_text_to_list(
-        the_job['INTENSITY_MEASURE_LEVELS'], float)
-    # Map `log` (natural log) to each IML value before passing to the
-    # calculator.
-    iml_vals = [log(x) for x in iml_vals]
-    iml_arraylist.addAll(iml_vals)
-    vs30_value = float(the_job['REFERENCE_VS30_VALUE'])
-    depth_to_2pt5 = float(the_job['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM'])
+    imls = get_iml_list(the_job['INTENSITY_MEASURE_LEVELS'],
+                        the_job['INTENSITY_MEASURE_TYPE'])
+    vs30_type = the_job['VS30_TYPE']
+    vs30_value = the_job['REFERENCE_VS30_VALUE']
+    depth_to_1pt0 = the_job['DEPTHTO1PT0KMPERSEC']
+    depth_to_2pt5 = the_job['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']
 
     matrix_result = disagg_calc.computeMatrix(
-        site.latitude, site.longitude, erf, gmpe_map, poe, iml_arraylist,
-        vs30_value, depth_to_2pt5)
+        site.latitude, site.longitude, erf, gmpe_map, poe, imls,
+        vs30_type, vs30_value, depth_to_1pt0, depth_to_2pt5)
 
     matrix_path = save_5d_matrix_to_h5(result_dir,
                                        numpy.array(matrix_result.getMatrix()))
@@ -135,18 +127,8 @@ def save_5d_matrix_to_h5(directory, matrix):
     return file_path
 
 
-def list_to_jdouble_array(float_list):
-    """Convert a 1D list of floats to a 1D Java Double[] (as a jpype object).
-    """
-    jdouble = java.jvm().JArray(java.jvm().java.lang.Double)(len(float_list))
-
-    for i, val in enumerate(float_list):
-        jdouble[i] = java.jvm().JClass('java.lang.Double')(val)
-
-    return jdouble
-
-
 @task
+@java.unpack_exception
 def compute_disagg_matrix_task(job_id, site, realization, poe, result_dir):
     """ Compute a complete 5D Disaggregation matrix. This task leans heavily
     on the DisaggregationCalculator (in the OpenQuake Java lib) to handle this
@@ -206,20 +188,12 @@ class DisaggMixin(Mixin):
             input.
         5) Finally, write an NRML/XML wrapper around the disagg. results.
         """
-        # cache the source model and gmpe model in the KVS
-        # so the Java code can access it
-        src_model_seed = int(self.params.get('SOURCE_MODEL_LT_RANDOM_SEED'))
-        gmpe_seed = int(self.params.get('GMPE_LT_RANDOM_SEED'))
-
-        store_source_model(self.job_id, src_model_seed, self.params, self.calc)
-        store_gmpe_map(self.job_id, gmpe_seed, self.calc)
-
         # matrix results for this job will go here:
         result_dir = DisaggMixin.create_result_dir(
             config.get('nfs', 'base_dir'), self.job_id)
 
-        realizations = int(self.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
-        poes = job.config_text_to_list(self.params['POES'], float)
+        realizations = self['NUMBER_OF_LOGIC_TREE_SAMPLES']
+        poes = self['POES']
         sites = self.sites_to_compute()
 
         log_msg = ("Computing disaggregation for job_id=%s,  %s sites, "
@@ -230,8 +204,7 @@ class DisaggMixin(Mixin):
         full_disagg_results = DisaggMixin.distribute_disagg(
             self, sites, realizations, poes, result_dir)
 
-        subset_types = config_text_to_list(
-            self.params['DISAGGREGATION_RESULTS'])
+        subset_types = self['DISAGGREGATION_RESULTS']
 
         subset_results = DisaggMixin.distribute_subsets(
             self, full_disagg_results, subset_types, result_dir)
@@ -305,7 +278,20 @@ class DisaggMixin(Mixin):
         # accumulates task data across the realization and poe loops
         task_data = []
 
+        src_model_rnd = random.Random()
+        src_model_rnd.seed(the_job['SOURCE_MODEL_LT_RANDOM_SEED'])
+        gmpe_rnd = random.Random()
+        gmpe_rnd.seed(the_job['GMPE_LT_RANDOM_SEED'])
+
         for rlz in xrange(1, realizations + 1):  # 1 to N, inclusive
+            # cache the source model and gmpe model in the KVS
+            # so the Java code can access it
+
+            store_source_model(the_job.job_id, src_model_rnd.getrandbits(32),
+                               the_job.params, the_job.calc)
+            store_gmpe_map(the_job.job_id, gmpe_rnd.getrandbits(32),
+                           the_job.calc)
+
             for poe in poes:
                 task_site_pairs = []
                 for site in sites:
@@ -381,21 +367,12 @@ class DisaggMixin(Mixin):
                  ),
                 ]
         """
-        lat_bin_lims = config_text_to_list(
-            the_job[job_cfg.LAT_BIN_LIMITS], float)
-        lon_bin_lims = config_text_to_list(
-            the_job[job_cfg.LON_BIN_LIMITS], float)
-        mag_bin_lims = config_text_to_list(
-            the_job[job_cfg.MAG_BIN_LIMITS], float)
-        eps_bin_lims = config_text_to_list(
-            the_job[job_cfg.EPS_BIN_LIMITS], float)
-        dist_bin_lims = config_text_to_list(
-            the_job[job_cfg.DIST_BIN_LIMITS], float)
+        lat_bin_lims = the_job[job_cfg.LAT_BIN_LIMITS]
+        lon_bin_lims = the_job[job_cfg.LON_BIN_LIMITS]
+        mag_bin_lims = the_job[job_cfg.MAG_BIN_LIMITS]
+        eps_bin_lims = the_job[job_cfg.EPS_BIN_LIMITS]
+        dist_bin_lims = the_job[job_cfg.DIST_BIN_LIMITS]
 
-        # the subset types need to be all lower case for extraction
-        subset_types = [x.lower() for x in subset_types]
-
-        # imt = the_job['INTENSITY_MEASURE_TYPE']
         rlz_poe_task_data = []
 
         for rlz, poe, data_list in full_disagg_results:
@@ -408,11 +385,11 @@ class DisaggMixin(Mixin):
                 target_file = os.path.join(target_dir, subset_file)
 
                 a_task = subsets.extract_subsets.delay(
-                    site, matrix_path, lat_bin_lims, lon_bin_lims,
-                    mag_bin_lims, eps_bin_lims, dist_bin_lims, target_file,
-                    subset_types)
+                    the_job.job_id, site, matrix_path, lat_bin_lims,
+                    lon_bin_lims, mag_bin_lims, eps_bin_lims, dist_bin_lims,
+                    target_file, subset_types)
 
-                task_data.append((a_task, site, gmv, target_file))
+                task_data.append((a_task, site, gmv, matrix_path, target_file))
 
             rlz_poe_task_data.append((rlz, poe, task_data))
 
@@ -420,7 +397,7 @@ class DisaggMixin(Mixin):
 
         for rlz, poe, task_data in rlz_poe_task_data:
             rlz_poe_results = []  # list of data/results per (rlz, poe) pair
-            for a_task, site, gmv, target_file in task_data:
+            for a_task, site, gmv, matrix_path, target_file in task_data:
 
                 a_task.wait()
                 if not a_task.successful():
@@ -434,6 +411,9 @@ class DisaggMixin(Mixin):
                     raise RuntimeError(msg)
                 else:
                     rlz_poe_results.append((site, gmv, target_file))
+
+                # We don't need the full matrix file anymore.
+                os.unlink(matrix_path)
 
             final_results.append((rlz, poe, rlz_poe_results))
 
@@ -452,14 +432,22 @@ class DisaggMixin(Mixin):
         :param subsets_data:
             Results of :method:`DisaggMixin.distribute_subsets`.
         """
+        LOG.info("Serializing XML results for job=%s" % the_job.job_id)
         imt = the_job['INTENSITY_MEASURE_TYPE']
+
+        base_output_dir = os.path.join(the_job['BASE_PATH'],
+                                       the_job['OUTPUT_DIR'])
+
+        if not os.path.exists(base_output_dir):
+            LOG.info("Creating output directory `%s`" % base_output_dir)
+            os.makedirs(base_output_dir)
 
         for rlz, poe, data in subsets_data:
 
             file_name = 'disagg-results-sample:%s-PoE:%s.xml'
             file_name %= (rlz, poe)
-            path = os.path.join(the_job['BASE_PATH'], the_job['OUTPUT_DIR'],
-                                file_name)
+            path = os.path.join(base_output_dir, file_name)
+            LOG.info("Serializing XML results to %s" % path)
             writer = hazard_output.DisaggregationBinaryMatrixXMLWriter(
                 path, poe, imt, subset_types, end_branch_label=rlz)
 

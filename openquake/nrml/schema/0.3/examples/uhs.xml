@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.3"
+      gml:id="IDXXX">
+    <uhsResultSet>
+        <!-- X-axis values for all curves in this result set -->
+        <uhsPeriods>
+            0.0 0.1 0.5
+        </uhsPeriods>
+        <timeSpan>50.0</timeSpan>
+
+        <!-- 1 result node per Probability of Exceedance -->
+        <!-- Each file (indicated by 'path') is an HDF5 file containing data
+             for all sites and all logic tree samples.  -->
+        <uhsResult poE="0.02" path="some/filea"/>
+        <uhsResult poE="0.1" path="some/fileb"/>
+        <uhsResult poE="0.2" path="some/filec"/>
+    </uhsResultSet>
+</nrml>

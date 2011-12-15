@@ -146,7 +146,7 @@ class CreateRiskWriterTest(unittest.TestCase):
             1, ['db'], "fakepath.xml", "loss")
         self.assertEqual(type(writer), risk_output.LossCurveDBWriter)
 
-    def test_deterministic_loss_map_writer_creation(self):
+    def test_scenario_loss_map_writer_creation(self):
         # XML writer
         writer = risk_output.create_loss_map_writer(
             None, ['xml'], "fakepath.xml", True)
@@ -157,14 +157,14 @@ class CreateRiskWriterTest(unittest.TestCase):
             1, ['db'], "fakepath.xml", True)
         self.assertEqual(type(writer), risk_output.LossMapDBWriter)
 
-    def test_nondeterministic_loss_map_writer_creation(self):
+    def test_nonscenario_loss_map_writer_creation(self):
         # XML writer
         writer = risk_output.create_loss_map_writer(
             None, ['xml'], "fakepath.xml", False)
         self.assertEqual(type(writer),
-                risk_output.LossMapNonDeterministicXMLWriter)
+                risk_output.LossMapNonScenarioXMLWriter)
 
-        # database writer is the same for deterministic and non-deterministic
+        # database writer is the same for scenario and non-scenario
         writer = risk_output.create_loss_map_writer(
             1, ['db'], "fakepath.xml", False)
 
