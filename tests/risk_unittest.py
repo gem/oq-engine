@@ -817,13 +817,13 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         mixin = ClassicalPSHABasedMixin()
 
         # empty vuln curves
-        mixin.vuln_curves = {}
+        vuln_curves = {}
 
         # "empty" asset
         asset = {"taxonomy": "ID", "assetID": 1}
 
         self.assertEqual(None, mixin.compute_loss_ratio_curve(
-                         None, asset, None))
+                         None, asset, None, vuln_curves))
 
     def _compute_risk_classical_psha_setup(self):
         SITE = shapes.Site(1.0, 1.0)
@@ -934,13 +934,13 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         psha.STEPS_PER_INTERVAL = 2
 
         mixin.job_id = 1234
-        mixin.vuln_curves = {"ID": vuln_function}
+        vuln_curves = {"ID": vuln_function}
 
         asset = {"taxonomy": "ID", "assetID": 1}
 
         self.assertTrue(mixin.compute_loss_ratio_curve(
                         shapes.GridPoint(None, 10, 20),
-                        asset, hazard_curve) is not None)
+                        asset, hazard_curve, vuln_curves) is not None)
 
     def test_splits_with_real_values_from_turkey(self):
         loss_ratios = [0.0, 1.96E-15, 2.53E-12, 8.00E-10, 8.31E-08, 3.52E-06,

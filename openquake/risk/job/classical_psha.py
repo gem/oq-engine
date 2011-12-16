@@ -88,8 +88,7 @@ class ClassicalPSHABasedMixin:
         block = general.Block.from_kvs(block_id)
 
         #pylint: disable=W0201
-        self.vuln_curves = \
-                vulnerability.load_vuln_model_from_kvs(self.job_id)
+        vuln_curves = vulnerability.load_vuln_model_from_kvs(self.job_id)
 
         for point in block.grid(self.region):
             hazard_curve = self._get_db_curve(point.site)
@@ -100,7 +99,7 @@ class ClassicalPSHABasedMixin:
                 LOGGER.debug("processing asset %s" % (asset))
 
                 loss_ratio_curve = self.compute_loss_ratio_curve(
-                    point, asset, hazard_curve)
+                    point, asset, hazard_curve, vuln_curves)
 
                 if loss_ratio_curve:
                     loss_curve = self.compute_loss_curve(point,
@@ -138,7 +137,8 @@ class ClassicalPSHABasedMixin:
 
         return loss_curve
 
-    def compute_loss_ratio_curve(self, point, asset, hazard_curve):
+    def compute_loss_ratio_curve(self, point, asset,
+                                 hazard_curve, vuln_curves):
         """ Computes the loss ratio curve and stores in kvs
             the curve itself
 
@@ -155,8 +155,7 @@ class ClassicalPSHABasedMixin:
         # we get the vulnerability function related to the asset
 
         vuln_function_reference = asset["taxonomy"]
-        vuln_function = self.vuln_curves.get(
-            vuln_function_reference, None)
+        vuln_function = vuln_curves.get(vuln_function_reference, None)
 
         if not vuln_function:
             LOGGER.error(
