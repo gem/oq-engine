@@ -76,7 +76,7 @@ class ClassicalPSHABasedMixin:
 
         return Curve(zip(job.oq_params.imls, hc.poes))
 
-    def compute_risk(self, block_id, **kwargs):  # pylint: disable=W0613
+    def compute_risk(self, block_id):
         """This task computes risk for a block of sites. It requires to have
         pre-initialized in kvs:
          1) list of sites

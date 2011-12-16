@@ -168,7 +168,7 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
                     "TimeSpan": self._time_span()}
             kvs.set_value_json_encoded(key_gmf, gmf)
 
-    def compute_risk(self, block_id, **kwargs):  # pylint: disable=W0613
+    def compute_risk(self, block_id):
         """Compute risk for a block of sites, that means:
 
         * loss ratio curves
