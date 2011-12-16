@@ -477,7 +477,7 @@ class OqJob(models.Model):
     owner = models.ForeignKey('OqUser')
     description = models.TextField()
     path = models.TextField(null=True, unique=True)
-    JOB_TYPE_CHOICES = (
+    CALC_MODE_CHOICES = (
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
         (u'scenario', u'Scenario'),
@@ -488,7 +488,7 @@ class OqJob(models.Model):
         # Benefit-cost ratio calculator based on Event Based risk calc
         (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
-    job_type = models.TextField(choices=JOB_TYPE_CHOICES)
+    calc_mode = models.TextField(choices=CALC_MODE_CHOICES)
     STATUS_CHOICES = (
         (u'pending', u'Pending'),
         (u'running', u'Running'),
@@ -527,7 +527,7 @@ class OqParams(models.Model):
     '''
     Parameters needed to run an OpenQuake job
     '''
-    job_type = models.TextField(choices=OqJob.JOB_TYPE_CHOICES)
+    calc_mode = models.TextField(choices=OqJob.CALC_MODE_CHOICES)
     input_set = models.ForeignKey('InputSet')
     min_magnitude = models.FloatField(null=True)
     investigation_time = models.FloatField(null=True)
