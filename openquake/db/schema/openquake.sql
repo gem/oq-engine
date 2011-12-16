@@ -615,6 +615,7 @@ CREATE TABLE uiapi.oq_params (
     --      peak ground displacement (pgd)
     --      Arias Intensity (ia)
     --      relative significant duration (rsd)
+    --      Modified Mercalli Intensity
     -- For UHS calculations, IMT should always be 'sa'.
     imt VARCHAR NOT NULL CONSTRAINT imt_value
         CHECK(((job_type = 'uhs') AND (imt = 'sa'))
