@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.3"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
+    <!-- UHS Result Set: the top-level element for UHS results -->
+    <xs:element name="uhsResultSet" type="UHSResultSetType"/>
+    <xs:complexType name="UHSResultSetType">
+        <xs:sequence>
+            <xs:element ref="uhsPeriods" minOccurs="1" maxOccurs="1"/>
+            <xs:element ref="timeSpan" minOccurs="1" maxOccurs="1"/>
+            <xs:element ref="uhsResult" minOccurs="1" maxOccurs="unbounded"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <!-- List of UHS periods for a uhsResultSet (float values) -->
+    <xs:element name="uhsPeriods">
+        <xs:simpleType>
+            <xs:restriction base="gml:doubleList">
+                <xs:minLength value="1"/>
+            </xs:restriction>
+        </xs:simpleType>
+    </xs:element>
+
+    <xs:element name="timeSpan" type="NonNegativeDoubleType"/>
+
+    <!-- UHS result node -->
+    <xs:element name="uhsResult">
+        <xs:complexType>
+            <xs:attribute name="poE" type="NonNegativeDoubleType" use="required"/>
+            <xs:attribute name="path" type="xs:string" use="required"/>
+        </xs:complexType>
+    </xs:element>
+
+</xs:schema>
