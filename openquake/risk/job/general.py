@@ -134,6 +134,12 @@ class RiskJobMixin(mixins.Mixin):
     """A mixin proxy for Risk jobs."""
     mixins = {}
 
+    def is_benefit_cost_ratio_mode(self):
+        return self.params[job_config.CALCULATION_MODE] in (
+            job_config.BCR_CLASSICAL_MODE,
+            job_config.BCR_EVENT_BASED_MODE
+        )
+
     def partition(self):
         """Split the sites to compute in blocks and store
         them in the underlying KVS system."""
@@ -172,8 +178,14 @@ class RiskJobMixin(mixins.Mixin):
 
     def store_vulnerability_model(self):
         """ load vulnerability and write to kvs """
-        vulnerability.load_vulnerability_model(self.job_id,
-            os.path.join(self.base_path, self.params["VULNERABILITY"]))
+        path = os.path.join(self.base_path, self.params["VULNERABILITY"])
+        vulnerability.load_vulnerability_model(self.job_id, path)
+
+        if self.is_benefit_cost_ratio_mode():
+            path = os.path.join(self.base_path,
+                                self.params["VULNERABILITY_RETROFITTED"])
+            vulnerability.load_vulnerability_model(self.job_id, path,
+                                                   retrofitted=True)
 
     def _serialize(self, block_id, **kwargs):
         """
