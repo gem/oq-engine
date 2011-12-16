@@ -897,8 +897,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         self._store_asset(asset, 10, 10)
 
         # computes the loss curves and puts them in kvs
-        self.assertTrue(mixin.compute_risk(self.block_id,
-            point=shapes.GridPoint(None, 10, 20)))
+        self.assertTrue(mixin.compute_risk(self.block_id))
 
         for point in block.grid(mixin.region):
             asset_key = kvs.tokens.asset_key(self.job_id, point.row,
