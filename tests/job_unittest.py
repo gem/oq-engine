@@ -478,7 +478,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['SOURCE_MODEL_LT_RANDOM_SEED'] = '23'
         params['GMPE_LT_RANDOM_SEED'] = '5'
 
-        self.job = prepare_job(params)
+        self.job = prepare_job(params, ['HAZARD', 'RISK'])
         self.job.oq_params = self._reload_params()
         self.assertEquals(params['REGION_VERTEX'],
                           _to_coord_list(self.job.oq_params.region))
@@ -526,7 +526,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params = self.BASE_CLASSICAL_PARAMS.copy()
         params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
 
-        self.job = prepare_job(params)
+        self.job = prepare_job(params, ['HAZARD', 'RISK'])
         self.job.oq_params = self._reload_params()
         self.assertEquals(params['SITES'],
                           _to_coord_list(self.job.oq_params.sites))
@@ -557,7 +557,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['EXPOSURE'] = abs_path("LA_small_portfolio.xml")
         params['VULNERABILITY'] = abs_path("vulnerability.xml")
 
-        self.job = prepare_job(params)
+        self.job = prepare_job(params, ['HAZARD', 'RISK'])
         self.job.oq_params = self._reload_params()
         self.assertEquals(params['REGION_VERTEX'],
                           _to_coord_list(self.job.oq_params.region))
@@ -598,7 +598,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params = self.BASE_SCENARIO_PARAMS.copy()
         params['SITES'] = '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
 
-        self.job = prepare_job(params)
+        self.job = prepare_job(params, ['HAZARD', 'RISK'])
         self.job.oq_params = self._reload_params()
         self.assertEquals(params['SITES'],
                           _to_coord_list(self.job.oq_params.sites))
@@ -632,7 +632,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['VULNERABILITY'] = abs_path("vulnerability.xml")
         params['GMF_RANDOM_SEED'] = '1'
 
-        self.job = prepare_job(params)
+        self.job = prepare_job(params, ['HAZARD', 'RISK'])
         self.job.oq_params = self._reload_params()
         self.assertEquals(params['REGION_VERTEX'],
                           _to_coord_list(self.job.oq_params.region))
@@ -680,7 +680,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params = self.BASE_EVENT_BASED_PARAMS.copy()
         params['SITES'] = '33.88, -118.3, 33.88, -118.06, 33.76, -118.06'
 
-        self.job = prepare_job(params)
+        self.job = prepare_job(params, ['HAZARD', 'RISK'])
         self.job.oq_params = self._reload_params()
         self.assertEquals(params['SITES'],
                           _to_coord_list(self.job.oq_params.sites))

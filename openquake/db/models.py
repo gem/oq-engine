@@ -489,6 +489,7 @@ class OqJob(models.Model):
         (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
     calc_mode = models.TextField(choices=CALC_MODE_CHOICES)
+    job_type = CharArrayField()
     STATUS_CHOICES = (
         (u'pending', u'Pending'),
         (u'running', u'Running'),
@@ -528,6 +529,7 @@ class OqParams(models.Model):
     Parameters needed to run an OpenQuake job
     '''
     calc_mode = models.TextField(choices=OqJob.CALC_MODE_CHOICES)
+    job_type = CharArrayField()
     input_set = models.ForeignKey('InputSet')
     min_magnitude = models.FloatField(null=True)
     investigation_time = models.FloatField(null=True)

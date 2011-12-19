@@ -275,11 +275,16 @@ def _store_input_parameters(params, calc_mode, oqp):
 
 
 @transaction.commit_on_success(using='job_init')
-def prepare_job(params):
+def prepare_job(params, sections):
     """
     Create a new OqJob and fill in the related OpParams entry.
 
     Returns the newly created job object.
+
+    :param dict params:
+        The job config params.
+    :params sections:
+        The job config file sections, as a list of strings.
     """
     # TODO specify the owner as a command line parameter
     owner = OqUser.objects.get(user_name='openquake')
@@ -288,10 +293,12 @@ def prepare_job(params):
     input_set.save()
 
     calc_mode = CALCULATION_MODE[params['CALCULATION_MODE']]
-    job = OqJob(owner=owner, path=None, calc_mode=calc_mode)
+    job_type = [s.lower() for s in sections
+        if s.upper() in [conf.HAZARD_SECTION, conf.RISK_SECTION]]
 
-    oqp = OqParams(input_set=input_set)
-    oqp.calc_mode = calc_mode
+    job = OqJob(owner=owner, path=None, calc_mode=calc_mode, job_type=job_type)
+
+    oqp = OqParams(input_set=input_set, calc_mode=calc_mode, job_type=job_type)
 
     _insert_input_files(params, input_set)
     _store_input_parameters(params, calc_mode, oqp)
@@ -359,7 +366,7 @@ class Job(object):
             job_id = params.get('OPENQUAKE_JOB_ID')
             if not job_id:
                 # create the database record for this job
-                job_id = prepare_job(params).id
+                job_id = prepare_job(params, sections).id
 
             if output_type == 'db':
                 serialize_results_to = ['db']
