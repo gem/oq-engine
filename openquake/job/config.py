@@ -403,12 +403,12 @@ class BCRValidator(object):
         * ASSET_LIFE_EXPECTANCY is positive
         """
         errors = []
-        if self.params.get('INVESTIGATION_TIME') != 1.0:
+        if float(self.params.get('INVESTIGATION_TIME')) != 1.0:
             errors.append("Parameter 'INVESTIGATION_TIME' must be set to 1.0 "
                           "for BCR calculations.")
-        if self.params.get('INTEREST_RATE') <= 0:
+        if float(self.params.get('INTEREST_RATE')) <= 0:
             errors.append("Parameter 'INTEREST_RATE' must be positive")
-        if self.params.get('ASSET_LIFE_EXPECTANCY') <= 0:
+        if float(self.params.get('ASSET_LIFE_EXPECTANCY')) <= 0:
             errors.append("Parameter 'ASSET_LIFE_EXPECTANCY' must be positive")
         return (not bool(errors), errors)
 
