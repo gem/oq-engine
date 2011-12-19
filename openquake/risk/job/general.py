@@ -36,7 +36,7 @@ from openquake.parser import vulnerability
 from openquake.risk import common
 from openquake.utils.tasks import check_job_status
 
-from celery.decorators import task
+from celery.task import task
 
 LOG = logs.LOG
 BLOCK_SIZE = 100
