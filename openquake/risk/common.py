@@ -23,7 +23,7 @@ or loss curves.
 """
 
 from collections import OrderedDict
-from numpy import mean
+from numpy import mean, exp
 
 from openquake import shapes
 
@@ -120,3 +120,24 @@ def unique_curve(curve):
         seen[ordinate] = abscissa
 
     return zip(seen.values(), seen.keys())
+
+
+def compute_bcr(eal_original, eal_retrofitted, interest_rate,
+                asset_life_expectancy, retrofitting_cost):
+    """
+    Compute the Benefit-Cost Ratio.
+
+    BCR = (EALo - EALr)(1-exp(-r*t))/C
+
+    Where:
+
+    * BCR -- Benefit cost ratio
+    * EALo -- Expected annual loss for original asset
+    * EALr -- Expected annual loss for retrofitted asset
+    * r -- Interest rate
+    * t -- Life expectancy of the asset
+    * C -- Retrofitting cost
+    """
+    return ((eal_original - eal_retrofitted)
+            * (1 - exp(- retrofitting_cost * asset_life_expectancy))
+            / retrofitting_cost)
