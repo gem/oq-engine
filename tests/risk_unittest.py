@@ -1207,3 +1207,18 @@ class ScenarioEventBasedTestCase(unittest.TestCase):
 
         # still None, no losses are added
         self.assertTrue(numpy.allclose([], calculator.losses))
+
+
+class RiskCommonTestCase(unittest.TestCase):
+    def test_compute_bcr(self):
+        eal_orig = 12345.21
+        eal_retrofitted = 11042.84
+        retrofitting_cost = 721.9345
+        interest = 0.03
+        life_expectancy = 22
+        expected_result = 1.804
+
+        result = common.compute_bcr(eal_orig, eal_retrofitted,
+                                    interest, life_expectancy,
+                                    retrofitting_cost)
+        self.assertAlmostEqual(result, expected_result, delta=1e-5)
