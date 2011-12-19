@@ -26,7 +26,7 @@ import os
 from django.contrib.gis.db import models
 from openquake.db.models import CharArrayField, FloatArrayField
 
-from openquake.job.params import PARAMS, PATH_PARAMS, ARRAY_RE
+from openquake.job.params import PARAMS, PATH_PARAMS, ARRAY_RE, str2bool
 
 
 CALCULATION_MODE = "CALCULATION_MODE"
@@ -523,7 +523,7 @@ class BasicParameterValidator(object):
         return (len(errors) == 0, errors)
 
 
-def ClassicalValidator(object):
+class ClassicalValidator(object):
     """Validator for Classical job configs."""
 
     def __init__(self, sections, params):
@@ -536,11 +536,12 @@ def ClassicalValidator(object):
 
         # If this is hazard & risk job...
         if set([HAZARD_SECTION, RISK_SECTION]).issubset(self.sections):
-            # ... make sure COMPUTE_MEAN_HAZARD_CURVE is set to True
-            if not self.params.get('COMPUTE_MEAN_HAZARD_CURVE') == True:
+            # ... make sure COMPUTE_MEAN_HAZARD_CURVE is set to true.
+            # Note: We expected this parameter to passed in string form.
+            if not str2bool(self.params.get('COMPUTE_MEAN_HAZARD_CURVE')):
                 valid = False
-                errors.append('COMPUTE_MEAN_HAZARD_CURVE must be defined in'
-                              ' hazard+risk jobs.')
+                errors.append('COMPUTE_MEAN_HAZARD_CURVE must be defined and'
+                              ' set to True in classical hazard+risk jobs.')
 
         return (valid, errors)
 

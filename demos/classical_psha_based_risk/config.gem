@@ -115,9 +115,6 @@ NUMBER_OF_SEISMICITY_HISTORIES = 1
 # List of quantiles to compute (e.g. 0.25 0.50...)
 QUANTILE_LEVELS =
 
-# Compute mean hazard curve (true,false)
-COMPUTE_MEAN_HAZARD_CURVE = false
-
 # List of POEs to use for computing hazard maps
 POES = 0.1
 
