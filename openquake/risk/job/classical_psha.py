@@ -22,6 +22,7 @@
 import geohash
 
 from celery.exceptions import TimeoutError
+import simplejson as json
 
 from openquake import kvs
 from openquake import logs
@@ -31,8 +32,10 @@ from openquake.db import models
 from openquake.parser import vulnerability
 from openquake.risk import classical_psha_based as cpsha_based
 from openquake.shapes import Curve
+from openquake.job import config as job_config
 
-from openquake.risk.common import  compute_loss_curve
+from openquake.risk.common import compute_loss_curve, compute_bcr, \
+                                  compute_mean_loss
 from openquake.risk.job import general
 
 LOGGER = logs.LOG
@@ -82,12 +85,25 @@ class ClassicalPSHABasedMixin:
          1) list of sites
          2) exposure portfolio (=assets)
          3) vulnerability
+         4) vulnerability for retrofitted asset portfolio (only for BCR mode)
 
+        Calls either :meth:`_compute_bcr` or :meth:`_compute_loss` depending
+        on the calculation mode.
         """
 
+        if self.params[job_config.CALCULATION_MODE] \
+                == job_config.BCR_CLASSICAL_MODE:
+            return self._compute_bcr(block_id)
+        else:
+            return self._compute_loss(block_id)
+
+
+    def _compute_loss(self, block_id):
+        """
+        Calculate and store in the kvs the loss data.
+        """
         block = general.Block.from_kvs(block_id)
 
-        #pylint: disable=W0201
         vuln_curves = vulnerability.load_vuln_model_from_kvs(self.job_id)
 
         for point in block.grid(self.region):
@@ -109,6 +125,59 @@ class ClassicalPSHABasedMixin:
                         general.compute_conditional_loss(self.job_id,
                                 point.column, point.row, loss_curve, asset,
                                 loss_poe)
+
+        return True
+
+    def _compute_bcr(self, block_id):
+        """
+        Calculate and store in the kvs the benefit-cost ratio data for block.
+
+        A value is stored with key :func:`openquake.kvs.tokens.bcr_block_key`
+        and is a list of dictionaries -- one dictionary for each point
+        in the block. Dict values are three-item tuples with point row, column
+        and a mapping of asset ids to the BCR value.
+        """
+        block = general.Block.from_kvs(block_id)
+
+        vuln_curves = vulnerability.load_vuln_model_from_kvs(self.job_id)
+        vuln_curves_retrofitted = vulnerability.load_vuln_model_from_kvs(
+            self.job_id, retrofitted=True)
+
+        result = []
+
+        for point in block.grid(self.region):
+            point_result = {}
+
+            hazard_curve = self._get_db_curve(point.site)
+
+            asset_key = kvs.tokens.asset_key(self.job_id,
+                            point.row, point.column)
+            for asset in kvs.get_list_json_decoded(asset_key):
+                LOGGER.debug("processing BCR for asset %s", asset)
+
+                vuln_function = vuln_curves[asset['taxonomy']]
+                loss_ratio_curve = cpsha_based.compute_loss_ratio_curve(
+                        vuln_function, hazard_curve)
+                loss_curve = compute_loss_curve(
+                        loss_ratio_curve, asset['assetValue'])
+                eal_original = compute_mean_loss(loss_curve)
+
+                vuln_function = vuln_curves_retrofitted[asset['taxonomy']]
+                loss_ratio_curve = cpsha_based.compute_loss_ratio_curve(
+                        vuln_function, hazard_curve)
+                loss_curve = compute_loss_curve(
+                        loss_ratio_curve, asset['assetValue'])
+                eal_retrofitted = compute_mean_loss(loss_curve)
+
+                point_result[asset['assetID']] = compute_bcr(
+                    eal_original, eal_retrofitted, self['INTEREST_RATE'],
+                    self['ASSET_LIFE_EXPECTANCY'], asset['retrofittingCost']
+                )
+
+            result.append((point.row, point.column, point_result))
+
+        bcr_block_key = kvs.tokens.bcr_block_key(self.job_id, block_id)
+        kvs.set(bcr_block_key, json.dumps(result))
 
         return True
 
