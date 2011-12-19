@@ -558,9 +558,17 @@ CREATE TABLE uiapi.oq_job (
     --      event_based_bcr (BCR calc based on Probabilistic event-based)
     -- Note: 'classical' and 'event_based' are both probabilistic methods
     calc_mode VARCHAR NOT NULL CONSTRAINT calc_mode_value
-        CHECK(calc_mode IN ('classical', 'event_based', 'scenario',
+        CHECK(((calc_mode IS NOT NULL)
+            AND (calc_mode IN ('classical', 'event_based', 'scenario',
                            'disaggregation', 'uhs',
-                           'classical_bcr', 'event_based_bcr')),
+                           'classical_bcr', 'event_based_bcr')))),
+    -- Job type: hazard and/or risk
+    job_type VARCHAR[] CONSTRAINT job_type_value
+        CHECK(((job_type IS NOT NULL)
+            -- The array_length() function is supposed to return an int,
+            -- but if you pass it zero-length array, is returns NULL instead of 0.
+            AND (array_length(job_type, 1) IS NOT NULL)
+            AND (job_type <@ ARRAY['hazard', 'risk']::VARCHAR[]))),
     -- One of: pending, running, failed, succeeded
     status VARCHAR NOT NULL DEFAULT 'pending' CONSTRAINT job_status_value
         CHECK(status IN ('pending', 'running', 'failed', 'succeeded')),
@@ -590,9 +598,17 @@ CREATE TABLE uiapi.job_stats (
 CREATE TABLE uiapi.oq_params (
     id SERIAL PRIMARY KEY,
     calc_mode VARCHAR NOT NULL CONSTRAINT calc_mode_value
-        CHECK(calc_mode IN ('classical', 'event_based', 'scenario',
+        CHECK(((calc_mode IS NOT NULL)
+            AND (calc_mode IN ('classical', 'event_based', 'scenario',
                            'disaggregation', 'uhs',
-                           'classical_bcr', 'event_based_bcr')),
+                           'classical_bcr', 'event_based_bcr')))),
+    -- Job type: hazard and/or risk.
+    job_type VARCHAR[] CONSTRAINT job_type_value
+        CHECK(((job_type IS NOT NULL)
+           -- The array_length() function is supposed to return an int,
+           -- but if you pass it zero-length array, is returns NULL instead of 0.
+           AND (array_length(job_type, 1) IS NOT NULL)
+            AND (job_type <@ ARRAY['hazard', 'risk']::VARCHAR[]))),
     input_set_id INTEGER NOT NULL,
     region_grid_spacing float,
     min_magnitude float CONSTRAINT min_magnitude_set
@@ -1014,6 +1030,9 @@ CREATE TABLE uiapi.oq_params (
         CHECK(
             (((calc_mode = 'disaggregation')
             AND (disagg_results IS NOT NULL)
+            -- array_length() returns NULL instead 0 when the array length is 0;
+            -- I have no idea why.
+            AND (array_length(disagg_results, 1) IS NOT NULL)
             AND (disagg_results <@ ARRAY['MagPMF', 'DistPMF', 'TRTPMF',
                                          'MagDistPMF', 'MagDistEpsPMF',
                                          'LatLonPMF', 'LatLonMagPMF',
