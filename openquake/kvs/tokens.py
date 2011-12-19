@@ -44,6 +44,7 @@ GMF_KEY_TOKEN = 'GMF'
 LOSS_RATIO_CURVE_KEY_TOKEN = 'LOSS_RATIO_CURVE'
 LOSS_CURVE_KEY_TOKEN = 'LOSS_CURVE'
 VULNERABILITY_CURVE_KEY_TOKEN = 'VULNERABILITY_CURVE'
+BCR_BLOCK_KEY_TOKEN = 'BCR_BLOCK'
 
 
 CURRENT_JOBS = 'CURRENT_JOBS'
@@ -166,6 +167,11 @@ def loss_key(job_id, row, col, asset_id, poe):
     """ Return a loss key """
     return _generate_key(job_id, CONDITIONAL_LOSS_KEY_TOKEN, asset_id, poe,
                          row, col)
+
+
+def bcr_block_key(job_id, block_id):
+    """ Return a BCR block result key """
+    return _generate_key(job_id, BCR_BLOCK_KEY_TOKEN, block_id)
 
 
 def _mean_hazard_curve_key(job_id, site_fragment):
