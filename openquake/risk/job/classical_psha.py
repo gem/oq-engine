@@ -171,8 +171,10 @@ class ClassicalPSHABasedMixin:
                 eal_retrofitted = compute_mean_loss(loss_curve)
 
                 point_result[asset['assetID']] = compute_bcr(
-                    eal_original, eal_retrofitted, self['INTEREST_RATE'],
-                    self['ASSET_LIFE_EXPECTANCY'], asset['retrofittingCost']
+                    eal_original, eal_retrofitted,
+                    float(self.params['INTEREST_RATE']),
+                    float(self.params['ASSET_LIFE_EXPECTANCY']),
+                    asset['retrofittingCost']
                 )
 
             result.append((point.row, point.column, point_result))
