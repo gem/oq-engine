@@ -8,8 +8,24 @@
            elementFormDefault="qualified"
            xml:lang="en">
 
-    <xs:import namespace="http://www.opengis.net/gmlsf" schemaLocation="./gmlsfLevels.xsd"/>
-    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gmlsf.xsd"/>
+    <xs:import namespace="http://www.opengis.net/gmlsf" schemaLocation="./gml/gmlsfLevels.xsd"/>
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gml/gmlsf.xsd"/>
+
+    <xs:include schemaLocation="./nrml_common.xsd"/>
+    <xs:include schemaLocation="./hazard/disaggregation.xsd"/>
+    <xs:include schemaLocation="./hazard/general.xsd"/>
+    <xs:include schemaLocation="./hazard/gmf.xsd"/>
+    <xs:include schemaLocation="./hazard/hazard_curve.xsd"/>
+    <xs:include schemaLocation="./hazard/hazard_map.xsd"/>
+    <xs:include schemaLocation="./hazard/logic_tree.xsd"/>
+    <xs:include schemaLocation="./hazard/rupture.xsd"/>
+    <xs:include schemaLocation="./hazard/source_model.xsd"/>
+    <xs:include schemaLocation="./hazard/uhs.xsd"/>
+    <xs:include schemaLocation="./risk/exposure.xsd"/>
+    <xs:include schemaLocation="./risk/general.xsd"/>
+    <xs:include schemaLocation="./risk/loss_map.xsd"/>
+    <xs:include schemaLocation="./risk/loss_curve.xsd"/>
+    <xs:include schemaLocation="./risk/vulnerability.xsd"/>
 
     <xs:annotation>
         <xs:appinfo>
@@ -17,12 +33,6 @@
             <gmlsf:GMLProfileSchema>http://schemas.opengis.net/gml/3.1.1/profiles/gmlSimpleFeatureProfile/1.0.0/gmlsf.xsd</gmlsf:GMLProfileSchema>
         </xs:appinfo>
    </xs:annotation>
-
-    <!-- Include schemas being part of NRML -->
-    <xs:include schemaLocation="./nrml_common.xsd"/>
-    <xs:include schemaLocation="./nrml_seismic.xsd"/>
-    <xs:include schemaLocation="./nrml_hazard.xsd"/>
-    <xs:include schemaLocation="./nrml_risk.xsd"/>
 
     <xs:element name="nrml" type="NRML" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="NRML">
