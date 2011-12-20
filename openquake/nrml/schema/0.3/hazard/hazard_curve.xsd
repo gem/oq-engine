@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.3"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
+    <xs:element name="hazardCurveField" type="HazardCurveField" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="HazardCurveField">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="IML" type="IMLType"/>
+                    <xs:element ref="HCNode" minOccurs="1" maxOccurs="unbounded"/>
+                </xs:sequence>
+                <xs:attribute name="endBranchLabel" type="xs:string"/>
+                <xs:attributeGroup ref="QuantileGroup"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="HCNode" type="HCNodeType" substitutionGroup="fieldNode"/>
+    <xs:complexType name="HCNodeType">
+        <xs:complexContent>
+            <xs:extension base="FieldNode">
+                <xs:sequence>
+                    <xs:element name="hazardCurve" type="HazardCurve"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="HazardCurve">
+        <xs:sequence>
+            <xs:element name="IML" type="IMLType" minOccurs="0" maxOccurs="1"/>
+            <xs:element name="poE" type="NormalizedDoubleList"/>
+        </xs:sequence>
+        <xs:attribute name="investigationTimeSpan" type="NonNegativeDoubleType"/>
+    </xs:complexType>
+
+</xs:schema>

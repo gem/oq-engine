@@ -324,7 +324,8 @@ COMMENT ON COLUMN uiapi.oq_params.imt IS 'Intensity measure type, one of:
     - peak ground velocity (pgv)
     - peak ground displacement (pgd)
     - Arias Intensity (ia)
-    - relative significant duration (rsd)';
+    - relative significant duration (rsd)
+    - Modified Mercalli Intensity';
 COMMENT ON COLUMN uiapi.oq_params.poes IS 'Probabilities of exceedence';
 COMMENT ON COLUMN uiapi.oq_params.region IS 'Region of interest for the calculation (Polygon)';
 COMMENT ON COLUMN uiapi.oq_params.region_grid_spacing IS 'Desired cell size (in degrees), used when splitting up the region of interest. This effectively defines the resolution of the calculation. (Smaller grid spacing means more sites and thus more calculations.)';
