@@ -606,7 +606,7 @@ class DbTestMixin(TestMixin):
         input_set.save()
 
         oqp = models.OqParams()
-        oqp.job_type = "classical"
+        oqp.calc_mode = "classical"
         oqp.input_set = input_set
         oqp.region_grid_spacing = 0.01
         oqp.min_magnitude = 5.0
@@ -660,7 +660,7 @@ class DbTestMixin(TestMixin):
         oqp.save()
 
         job = models.OqJob(oq_params=oqp, owner=owner,
-                           job_type="classical")
+                           calc_mode="classical")
         job.save()
 
         if create_job_path:
