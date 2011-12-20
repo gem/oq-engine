@@ -28,16 +28,13 @@ from openquake import nrml
 from openquake import shapes
 
 
-NRML_NS = 'http://openquake.org/xmlns/nrml/0.2'
+NRML_NS = 'http://openquake.org/xmlns/nrml/0.3'
 GML_NS = 'http://www.opengis.net/gml'
-QUAKEML_NS = 'http://quakeml.org/xmlns/quakeml/1.1'
 
 NRML = "{%s}" % NRML_NS
 GML = "{%s}" % GML_NS
 
-QUAKEML = "{%s}" % QUAKEML_NS
 NSMAP = {None: NRML_NS, "gml": GML_NS}
-NSMAP_WITH_QUAKEML = {None: NRML_NS, "gml": GML_NS, "qml": QUAKEML_NS}
 
 NRML_ROOT_TAG = "%snrml" % NRML
 NRML_CONFIG_TAG = "%sconfig" % NRML
