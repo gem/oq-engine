@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ns2:GroundMotionFieldSet xmlns:ns1="http://www.opengis.net/gml/profile/sfgml/1.0"
+ xmlns:ns2="http://openquake.org/xmlns/nrml/0.1"
+ xmlns:ns3="http://www.w3.org/1999/xlink"
+ xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://openquake.org/xmlns/nrml/0.1 file:/Users/damianomonelli/Projects/opengem/docs/schema/nrml_hazard.xsd">
+    <ns2:arbitrarilyComplexRupture>
+            <ns2:magnitude>8.0</ns2:magnitude>
+            <ns2:tectonicRegion>Active Shallow Crust</ns2:tectonicRegion>
+            <ns1:Surface>
+                    <ns1:patches>
+                            <ns1:PolygonPatch>
+                                    <ns1:exterior>
+                                            <ns1:LinearRing>
+                                                    <ns1:posList>45.0 20.3 5 45.0 20.5 5 45.0 20.5 10.0 45.0 20.3 10.0</ns1:posList>
+                                            </ns1:LinearRing>
+                                    </ns1:exterior>
+                            </ns1:PolygonPatch>
+                            <ns1:PolygonPatch>
+                                    <ns1:exterior>
+                                            <ns1:LinearRing>
+                                                    <ns1:posList>45.0 20.5 5 45.0 20.7 5 45.0 20.7 10.0 45.0 20.5 10.0</ns1:posList>
+                                            </ns1:LinearRing>
+                                    </ns1:exterior>
+                            </ns1:PolygonPatch>
+                            <ns1:PolygonPatch>
+                                    <ns1:exterior>
+                                            <ns1:LinearRing>
+                                                    <ns1:posList>45.0 20.3 10 45.0 20.5 10 45.0 20.5 15.0 45.0 20.3 15.0</ns1:posList>
+                                            </ns1:LinearRing>
+                                    </ns1:exterior>
+                            </ns1:PolygonPatch>
+                            <ns1:PolygonPatch>
+                                    <ns1:exterior>
+                                            <ns1:LinearRing>
+                                                    <ns1:posList>45.0 20.5 10 45.0 20.7 10 45.0 20.7 15.0 45.0 20.5 15.0</ns1:posList>
+                                            </ns1:LinearRing>
+                                    </ns1:exterior>
+                            </ns1:PolygonPatch>
+                    </ns1:patches>
+            </ns1:Surface>
+            <ns2:rake>0</ns2:rake>
+    </ns2:arbitrarilyComplexRupture>
+    <ns2:GMPEParameters/>
+    <ns2:field>
+        <ns2:site groundMotion="0.5">
+            <ns2:site>
+                    <ns1:pos>45.0 20.3</ns1:pos>
+            </ns2:site>
+        </ns2:site>
+    </ns2:field>
+</ns2:GroundMotionFieldSet>

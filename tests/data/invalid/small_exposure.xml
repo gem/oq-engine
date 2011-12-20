@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.2" xmlns:gml="http://www.opengis.net/gml" gml:id="nrml">
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.3" xmlns:gml="http://www.opengis.net/gml" gml:id="nrml">
   <exposurePortfolio gml:id="ep">
     <invalid />
     <exposureList gml:id="LA01" assetCategory="buildings" lossCategory="economic_loss">

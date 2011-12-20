@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='UTF-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.2" gml:id="ID0">
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.3" gml:id="ID0">
   <disaggregationResultField gml:id="ID1" poE="0.1" IMT="PGA" endBranchLabel="1">
     <disaggregationResultTypes>MagPMF DistPMF TRTPMF MagDistPMF MagDistEpsPMF LatLonPMF LatLonMagPMF LatLonMagEpsPMF MagTRTPMF LatLonTRTPMF FullDisaggMatrix</disaggregationResultTypes>
     <disaggregationResultNode gml:id="ID2">
