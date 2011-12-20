@@ -845,7 +845,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         # Vitor provided this Vulnerability Function
         imls_1 = [0.03, 0.04, 0.07, 0.1, 0.12, 0.22, 0.37, 0.52]
         loss_ratios_1 = [0.001, 0.022, 0.051, 0.08, 0.1, 0.2, 0.405, 0.700]
-        covs_1 = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+        covs_1 = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
         self.vuln_function = shapes.VulnerabilityFunction(imls_1,
             loss_ratios_1, covs_1)
 
@@ -872,6 +872,9 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         kvs.set_value_json_encoded(
                 kvs.tokens.vuln_key(self.job_id),
+                {"ID": self.vuln_function.to_json()})
+        kvs.set_value_json_encoded(
+                kvs.tokens.vuln_key(self.job_id, retrofitted=True),
                 {"ID": self.vuln_function.to_json()})
 
     def test_compute_risk_in_the_classical_psha_mixin(self):
@@ -911,6 +914,31 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
                     point.column, asset['assetID'])
 
                 self.assertTrue(kvs.get(loss_key))
+
+    def test_compute_bcr_in_the_classical_psha_mixin(self):
+        self._compute_risk_classical_psha_setup()
+        mixin = ClassicalPSHABasedMixin()
+        mixin.region = self.region
+        mixin.job_id = self.job_id
+        mixin.id = self.job_id
+        mixin.params = {'CALCULATION_MODE': 'Classical BCR',
+                        'INTEREST_RATE': '0.05',
+                        'ASSET_LIFE_EXPECTANCY': '50'}
+
+        block = Block.from_kvs(self.block_id)
+
+        asset = {"taxonomy": "ID",
+                 "assetID": 22.61,
+                 "assetValue": 1,
+                 "retrofittingCost": 123.45}
+
+        self._store_asset(asset, 10, 10)
+
+        mixin.compute_risk(self.block_id)
+
+        result_key = kvs.tokens.bcr_block_key(self.job_id, self.block_id)
+        result = kvs.get_value_json_decoded(result_key)
+        self.assertEqual(result, [[10, 10, {u'22.61': 0.0}]])
 
     def test_loss_ratio_curve_in_the_classical_psha_mixin(self):
 
