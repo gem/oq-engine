@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.3"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
+    <xs:element name="lossMap" type="LossMap" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="LossMap">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element ref="LMNode" minOccurs="1" maxOccurs="unbounded"/>
+                </xs:sequence>
+                <xs:attribute name="calculator" type="xs:string"/>
+                <xs:attribute name="endBranchLabel" type="xs:string"/>
+                <xs:attribute name="lossCategory" type="LossCategory"/>
+                <xs:attribute name="unit" type="AssetValueUnit"/>
+                <xs:attribute name="timeSpan" type="xs:double"/>
+                <xs:attribute name="poE" type="PoE"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:simpleType name="PoE">
+        <xs:restriction base="xs:double">
+            <xs:minInclusive value="0"/>
+            <xs:maxInclusive value="1"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:element name="LMNode" type="LMNodeType" substitutionGroup="fieldNode"/>
+    <xs:complexType name="LMNodeType">
+        <xs:complexContent>
+            <xs:extension base="FieldNode">
+                <xs:sequence minOccurs="1" maxOccurs="unbounded">
+                    <xs:element name="loss" type="LMLossType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="LMLossType">
+        <xs:sequence>
+            <xs:choice minOccurs="1" maxOccurs="2">
+                <xs:element name="mean" type="NonNegativeDoubleType"/>
+                <xs:element name="stdDev" type="NonNegativeDoubleType"/>
+                <xs:element name="value" type="NonNegativeDoubleType"/>
+            </xs:choice>
+        </xs:sequence>
+        <xs:attribute name="assetRef" type="xs:ID" use="required"/>
+    </xs:complexType>
+
+</xs:schema>
