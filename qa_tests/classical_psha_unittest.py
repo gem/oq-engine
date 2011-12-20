@@ -30,6 +30,45 @@ from openquake import shapes
 from tests.utils import helpers
 
 
+def load_exp_hazcurve_results(test_name):
+    """Return the hazard curves read from the expected_results/ dir.
+
+    :returns: the expected hazard curves.
+    :rtype: :py:class:`dict` where each key is an instance of
+        :py:class:`openquake.shapes.Site` and each value is a list
+        of (IML, PoE) tuples
+    """
+
+    # split the x string and get
+    # the value at index y casted to float
+    get = lambda x, y: float(x.split(",")[y])
+
+    results_dir = helpers.demo_file(
+        os.path.join(test_name, "expected_results"))
+
+    results_files = os.listdir(results_dir)
+
+    results = {}
+
+    for result_file in results_files:
+        path = os.path.join(results_dir, result_file)
+
+        with open(path) as hazard_curve:
+            lines = hazard_curve.readlines()
+            coords = lines.pop(0)
+
+            # the format is latitude,longitude
+            site = shapes.Site(get(coords, 1), get(coords, 0))
+
+            results[site] = []
+
+            for pair in lines:
+                # the format is IML,PoE
+                results[site].append((get(pair, 0), get(pair, 1)))
+
+    return results
+
+
 def load_expected_map(path):
     """Load expected map data from the given expected results file. Map data
     are expected to be stored in a space-delimited table form. The table
@@ -62,6 +101,73 @@ def run_job(config_file):
     return subprocess.call(["bin/openquake", "--config_file=" + config_file])
 
 
+def verify_hazcurve_results(
+    tc, job, exp_results_file, end_branch_label=None, statistic_type=None):
+    """Given a job, a path to an expected results file, and a few optional
+    parameters (end_branch_label and statistic_type), load in expected results
+    from the text file and compare the data to the results in the database.
+
+    :param tc:
+        :class:`unittest.TestCase` object (for test assertions).
+    :param job:
+        :class:`openquake.job.Job` instance
+    :param exp_results_file:
+        Path to the expected results file (text file).
+    :param int end_branch_label:
+        Optional. Can specified if we need to query the database for hazard
+        curve data for a particular end branch label/sample.
+    :param statistic_type:
+        Optional. Can be 'mean', 'quantile', etc. Defaults to `None`.
+    """
+    curve_data = [line for line in open(exp_results_file, 'r')]
+
+    # The actual curve data;
+    # Pairs of (site_coords, poes) for each curve:
+    sites_poes = zip(curve_data[::2], curve_data[1::2])
+
+    for site, poes in sites_poes:
+        # lon, lat is the order which GML uses for coord pairs.
+        lon, lat = [float(x) for x in site.split()]
+        poes = [float(x) for x in poes.split()]
+
+        # Pay attention to the lat, lon ordering here;
+        # It's reversed from above.
+        gh = geohash.encode(lat, lon)
+
+        hc = models.HazardCurveData.objects.filter(
+            hazard_curve__output__oq_job=job,
+            hazard_curve__end_branch_label=end_branch_label,
+            hazard_curve__statistic_type=statistic_type).extra(
+                where=["ST_GeoHash(location, 12) = %s"],
+                params=[gh]).get()
+
+        tc.assertTrue(numpy.allclose(poes, hc.poes))
+
+
+def verify_hazmap_results(tc, job, expected_map, poe, statistic_type):
+    """Given a job object and a dict of map results, verify the computed hazmap
+    in the database with the expected results.
+
+    :param tc:
+        :class:`unittest.TestCase` instance (for test assertions).
+    :param job:
+        :class:`openquake.job.Job` instance.
+    :param expected_map:
+        Dict with expected results in the following structure::
+            {'a': 15}
+    :"""
+    for site, value in expected_map.items():
+        gh = geohash.encode(site.latitude, site.longitude, precision=12)
+
+        hm_db = models.HazardMapData.objects.filter(
+            hazard_map__output__oq_job=job,
+            hazard_map__statistic_type=statistic_type,
+            hazard_map__poe=poe).extra(
+            where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
+
+        tc.assertTrue(numpy.allclose(value, hm_db.value))
+
+
 class ClassicalPSHACalculatorAssuranceTestCase(
     unittest.TestCase, helpers.DbTestMixin):
 
@@ -73,7 +179,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
     @attr("qa")
     def test_peer_test_set_1_case_2(self):
-        expected_results = self._load_exp_hazcurve_results("PeerTestSet1Case2")
+        expected_results = load_exp_hazcurve_results("PeerTestSet1Case2")
 
         run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case2", "config.gem")))
@@ -82,7 +188,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
     @attr("qa")
     def test_peer_test_set_1_case_5(self):
-        expected_results = self._load_exp_hazcurve_results("PeerTestSet1Case5")
+        expected_results = load_exp_hazcurve_results("PeerTestSet1Case5")
 
         run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case5", "config.gem")))
@@ -91,7 +197,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
     @attr("qa")
     def test_peer_test_set_1_case_8a(self):
-        expected_results = self._load_exp_hazcurve_results(
+        expected_results = load_exp_hazcurve_results(
             "PeerTestSet1Case8a")
 
         run_job(helpers.demo_file(
@@ -101,7 +207,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
     @attr("qa")
     def test_peer_test_set_1_case_10(self):
-        expected_results = self._load_exp_hazcurve_results(
+        expected_results = load_exp_hazcurve_results(
             "PeerTestSet1Case10")
 
         run_job(helpers.demo_file(
@@ -111,27 +217,58 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
     @attr("qa")
     def test_hazard_map_test(self):
-        path = helpers.demo_file(os.path.join("HazardMapTest",
-            "expected_results", "meanHazardMap0.1.dat"))
-
-        expected_map = load_expected_map(path)
-
         run_job(helpers.demo_file(
             os.path.join("HazardMapTest", "config.gem")))
 
         self.job = models.OqJob.objects.latest("id")
 
-        for site, value in expected_map.items():
-            gh = geohash.encode(site.latitude, site.longitude, precision=12)
+        path = helpers.demo_file(os.path.join("HazardMapTest",
+            "expected_results", "meanHazardMap0.1.dat"))
+        expected_map = load_expected_map(path)
 
-            hm_db = models.HazardMapData.objects.filter(
-                hazard_map__output__oq_job=self.job,
-                hazard_map__statistic_type="mean",
-                hazard_map__poe=0.1).extra(
-                where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
+        poe = 0.1
+        statistic_type = "mean"
+        verify_hazmap_results(self, self.job, expected_map, poe,
+                              statistic_type)
 
-            self.assertTrue(numpy.allclose(numpy.array(value),
-                    numpy.array(hm_db.value)))
+    @attr("qa")
+    def test_complex_fault_demo_hazard(self):
+        """Run the `complex_fault_demo_hazard` demo and verify all of the
+        resulting hazard curve and hazard map data."""
+        job_cfg = helpers.demo_file(os.path.join(
+            "complex_fault_demo_hazard", "config.gem"))
+
+        exp_results_dir = os.path.join("complex_fault_demo_hazard",
+                                       "expected_results")
+
+        run_job(job_cfg)
+
+        self.job = models.OqJob.objects.latest("id")
+
+        # Check hazard curves for sample 0:
+        # Hazard curve expected results for logic tree sample 0:
+        hazcurve_0 = helpers.demo_file(os.path.join(exp_results_dir,
+                                                     "hazardcurve-0.dat"))
+        verify_hazcurve_results(
+            self, self.job, hazcurve_0, end_branch_label=0)
+
+        # Check mean hazard curves:
+        hazcurve_mean = helpers.demo_file(os.path.join(exp_results_dir,
+                                                       "hazardcurve-mean.dat"))
+        verify_hazcurve_results(
+            self, self.job, hazcurve_mean, statistic_type="mean")
+
+        # Check hazard map mean 0.02:
+        hazmap_mean_0_02 = helpers.demo_file(
+            os.path.join(exp_results_dir, "hazardmap-0.02-mean.dat"))
+        verify_hazmap_results(
+            self, self.job, load_expected_map(hazmap_mean_0_02), 0.02, "mean")
+
+        # Check hazard map mean 0.1:
+        hazmap_mean_0_1 = helpers.demo_file(
+            os.path.join(exp_results_dir, "hazardmap-0.1-mean.dat"))
+        verify_hazmap_results(
+            self, self.job, load_expected_map(hazmap_mean_0_1), 0.1, "mean")
 
     def _assert_hazcurve_results_are(self, expected_results):
         """Compare the expected hazard curve results with the results
@@ -155,41 +292,3 @@ class ClassicalPSHACalculatorAssuranceTestCase(
                 numpy.array(expected), numpy.array(actual), atol=tolerance),
                 "Expected %s within a tolerance of %s, but was %s"
                 % (expected, tolerance, actual))
-
-    def _load_exp_hazcurve_results(self, test_name):
-        """Return the hazard curves read from the expected_results/ dir.
-
-        :returns: the expected hazard curves.
-        :rtype: :py:class:`dict` where each key is an instance of
-            :py:class:`openquake.shapes.Site` and each value is a list
-            of (IML, PoE) tuples
-        """
-
-        # split the x string and get
-        # the value at index y casted to float
-        get = lambda x, y: float(x.split(",")[y])
-
-        results_dir = helpers.demo_file(
-            os.path.join(test_name, "expected_results"))
-
-        results_files = os.listdir(results_dir)
-
-        results = {}
-
-        for result_file in results_files:
-            path = os.path.join(results_dir, result_file)
-
-            with open(path) as hazard_curve:
-                lines = hazard_curve.readlines()
-                coords = lines.pop(0)
-
-                # the format is latitude,longitude
-                site = shapes.Site(get(coords, 1), get(coords, 0))
-
-                results[site] = []
-
-                for pair in lines:
-                    # the format is IML,PoE
-                    results[site].append((get(pair, 0), get(pair, 1)))
-
-        return results
