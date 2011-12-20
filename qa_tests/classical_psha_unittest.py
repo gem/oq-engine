@@ -143,6 +143,7 @@ def verify_hazcurve_results(
 
         tc.assertTrue(numpy.allclose(poes, hc.poes))
 
+
 def verify_hazmap_results(tc, job, expected_map, poe, statistic_type):
     """Given a job object and a dict of map results, verify the computed hazmap
     in the database with the expected results.
@@ -269,7 +270,6 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         verify_hazmap_results(
             self, self.job, load_expected_map(hazmap_mean_0_1), 0.1, "mean")
 
-
     def _assert_hazcurve_results_are(self, expected_results):
         """Compare the expected hazard curve results with the results
         computed by the current job."""
@@ -292,5 +292,3 @@ class ClassicalPSHACalculatorAssuranceTestCase(
                 numpy.array(expected), numpy.array(actual), atol=tolerance),
                 "Expected %s within a tolerance of %s, but was %s"
                 % (expected, tolerance, actual))
-
-
