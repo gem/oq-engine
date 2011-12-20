@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.3"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
+    <xs:element name="groundMotionFieldSet" type="GroundMotionFieldSet" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="GroundMotionFieldSet">
+        <xs:annotation>
+            <xs:documentation>Describes a set of Ground Motion Fields</xs:documentation>
+        </xs:annotation>
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <!-- NOTE: the description attribute of old 'field' element can go into
+                         the optional gml:description element of the groundMotionFieldSet feature -->
+                    <xs:element name="GMPEParameters" type="GMPEParametersType"/>
+                    <xs:element ref="rupture" minOccurs="1" maxOccurs="unbounded"/>
+                    <xs:element ref="GMF" minOccurs="1" maxOccurs="unbounded"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="GMF" type="GMFType" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="GMFType">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element ref="GMFNode" minOccurs="1" maxOccurs="unbounded"/>
+                </xs:sequence>
+
+                <!-- NOTE: the optional attribute ruptureReference refers to the
+                     gml:id of one of the ruptures -->
+                <xs:attribute name="ruptureReference" type="xs:IDREF"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="GMFNode" type="GMFNodeType" substitutionGroup="fieldNode"/>
+    <xs:complexType name="GMFNodeType">
+        <xs:complexContent>
+            <xs:extension base="FieldNode">
+                <xs:sequence>
+                    <xs:element name="groundMotion" type="xs:double"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+</xs:schema>

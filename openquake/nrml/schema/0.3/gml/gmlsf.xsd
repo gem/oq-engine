@@ -18,7 +18,7 @@
    <!-- ============================================================= -->
    <!-- === includes and imports                                  === -->
    <!-- ============================================================= -->
-   <import namespace="http://www.w3.org/1999/xlink" schemaLocation="./xlinks.xsd"/>
+   <import namespace="http://www.w3.org/1999/xlink" schemaLocation="../xlinks//xlinks.xsd"/>
    <!-- =========================================================== -->
    <!-- === Subset of geometryAggregates.xsd for this profile ===== -->
    <!-- =========================================================== -->
