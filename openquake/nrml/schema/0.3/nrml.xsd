@@ -24,6 +24,7 @@
     <xs:include schemaLocation="./risk/exposure.xsd"/>
     <xs:include schemaLocation="./risk/general.xsd"/>
     <xs:include schemaLocation="./risk/loss_map.xsd"/>
+    <xs:include schemaLocation="./risk/bcr_map.xsd"/>
     <xs:include schemaLocation="./risk/loss_curve.xsd"/>
     <xs:include schemaLocation="./risk/vulnerability.xsd"/>
 
