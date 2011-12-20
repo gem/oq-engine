@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.3"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
+    <xs:element name="hazardMap" type="HazardMap" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="HazardMap">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element ref="HMNode" minOccurs="1" maxOccurs="unbounded"/>
+                </xs:sequence>
+                <xs:attribute name="poE" type="NormalizedDoubleType" use="required"/>
+                <xs:attribute name="IMT" type="IMTType" use="required"/>
+                <xs:attribute name="endBranchLabel" type="xs:string"/>
+                <xs:attributeGroup ref="QuantileGroup"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="HMNode" type="HMNodeType" substitutionGroup="fieldNode"/>
+    <xs:complexType name="HMNodeType">
+        <xs:complexContent>
+            <xs:extension base="HMFieldNode">
+                <xs:sequence>
+                    <xs:element name="IML" type="xs:double"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="HMFieldNode">
+        <xs:complexContent>
+            <xs:restriction base="FieldNode">
+                <xs:sequence>
+                    <xs:element ref="HMSite"/>
+                </xs:sequence>
+            </xs:restriction>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="HMSite" type="HMSiteType" substitutionGroup="site"/>
+    <xs:complexType name="HMSiteType">
+        <xs:complexContent>
+            <xs:extension base="gml:PointPropertyType">
+                <xs:sequence>
+                    <xs:element name="vs30" type="NonNegativeDoubleType" minOccurs="0" maxOccurs="1"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+</xs:schema>
