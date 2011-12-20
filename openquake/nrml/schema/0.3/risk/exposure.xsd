@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.3"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
+    <!-- Top-level element for Exposure model definitions. -->
+    <xs:element name="exposurePortfolio" type="ExposurePortfolio" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="ExposurePortfolio">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
+                    <xs:element ref="exposureList"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="exposureList" type="ExposureList" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="ExposureList">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element ref="assetDefinition" minOccurs="0" maxOccurs="unbounded"/>
+                </xs:sequence>
+                <xs:attribute name="assetCategory" type="AssetCategory" use="required"/>
+                <xs:attribute name="lossCategory" type="LossCategory" use="required"/>
+                <xs:attribute name="unit" type="AssetValueUnit"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="assetDefinition" type="AssetDefinition" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="AssetDefinition">
+        <xs:complexContent>
+            <xs:extension base="FieldNode">
+                <xs:sequence>
+                    <xs:element name="taxonomy" type="xs:string"/>
+                    <xs:element name="structureCategory" type="xs:string"/>
+                    <xs:element name="assetValue" type="AssetValue"/>
+                    <xs:element name="retrofittingCost" type="xs:double"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="AssetValue">
+        <xs:simpleContent>
+            <xs:extension base="NonNegativeDoubleType" />
+        </xs:simpleContent>
+    </xs:complexType>
+
+</xs:schema>
