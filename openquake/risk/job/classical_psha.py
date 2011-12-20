@@ -137,6 +137,7 @@ class ClassicalPSHABasedMixin:
         in the block. Dict values are three-item tuples with point row, column
         and a mapping of asset ids to the BCR value.
         """
+        # TODO: unittest
         block = general.Block.from_kvs(block_id)
 
         vuln_curves = vulnerability.load_vuln_model_from_kvs(self.job_id)
