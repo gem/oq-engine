@@ -434,6 +434,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
             'W&C 1994 Mag-Length Rel.',
         'RUPTURE_ASPECT_RATIO': '1.5',
         'RUPTURE_FLOATING_TYPE': 'Along strike and down dip',
+        'GMF_RANDOM_SEED': '1',
     }
 
     def tearDown(self):
@@ -629,6 +630,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['GMPE_LOGIC_TREE_FILE'] = abs_path("gmpe_logic_tree.xml")
         params['EXPOSURE'] = abs_path("small_exposure.xml")
         params['VULNERABILITY'] = abs_path("vulnerability.xml")
+        params['GMF_RANDOM_SEED'] = '1'
 
         self.job = prepare_job(params)
         self.job.oq_params = self._reload_params()
