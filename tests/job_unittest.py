@@ -255,7 +255,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
 
             [HAZARD]
             MINIMUM_MAGNITUDE = 5.0
-            # not used for this job type
+            # not used for this calc mode
             COMPUTE_MEAN_HAZARD_CURVE = true
             '''
         config_path = self.touch(
@@ -483,7 +483,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals(params['REGION_VERTEX'],
                           _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
-            {'job_type': 'classical',
+            {'calc_mode': 'classical',
              'region_grid_spacing': 0.1,
              'min_magnitude': 5.0,
              'investigation_time': 50.0,
@@ -531,7 +531,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals(params['SITES'],
                           _to_coord_list(self.job.oq_params.sites))
         self.assertFieldsEqual(
-            {'job_type': 'classical',
+            {'calc_mode': 'classical',
              'min_magnitude': 5.0,
              'investigation_time': 50.0,
              'component': 'gmroti50',
@@ -562,7 +562,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals(params['REGION_VERTEX'],
                           _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
-            {'job_type': 'scenario',
+            {'calc_mode': 'scenario',
              'region_grid_spacing': 0.02,
              'min_magnitude': None,
              'investigation_time': None,
@@ -603,7 +603,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals(params['SITES'],
                           _to_coord_list(self.job.oq_params.sites))
         self.assertFieldsEqual(
-            {'job_type': 'scenario',
+            {'calc_mode': 'scenario',
              'min_magnitude': None,
              'investigation_time': None,
              'component': 'gmroti50',
@@ -637,7 +637,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals(params['REGION_VERTEX'],
                           _to_coord_list(self.job.oq_params.region))
         self.assertFieldsEqual(
-            {'job_type': 'event_based',
+            {'calc_mode': 'event_based',
              'region_grid_spacing': 0.02,
              'min_magnitude': 5.0,
              'investigation_time': 50.0,
@@ -685,7 +685,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals(params['SITES'],
                           _to_coord_list(self.job.oq_params.sites))
         self.assertFieldsEqual(
-            {'job_type': 'event_based',
+            {'calc_mode': 'event_based',
              'min_magnitude': 5.0,
              'investigation_time': 50.0,
              'component': 'average',
