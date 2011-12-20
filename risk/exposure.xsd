@@ -51,7 +51,7 @@
 
     <xs:complexType name="AssetValue">
         <xs:simpleContent>
-            <xs:extension base="NonNegativeDoubleType" />
+            <xs:extension base="NonNegativeDoubleType"/>
         </xs:simpleContent>
     </xs:complexType>
 
