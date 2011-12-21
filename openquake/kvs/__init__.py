@@ -22,6 +22,7 @@ This module contains generic functions to access
 the underlying kvs systems.
 """
 
+import hashlib
 import json
 import numpy
 
@@ -107,11 +108,17 @@ def get(key):
     return get_client().get(key)
 
 
+# Module-private kvs connection cache, to be used by get_client().
+__KVS_CONN_CACHE = {}
+
+
 def get_client(**kwargs):
-    """possible kwargs:
-        db: database identifier
-    """
-    return Redis(**kwargs)
+    """Return a redis kvs client connection object."""
+    key = hashlib.md5(repr(kwargs)).hexdigest()
+    if key not in __KVS_CONN_CACHE:
+        __KVS_CONN_CACHE[key] = Redis(**kwargs)
+
+    return __KVS_CONN_CACHE[key]
 
 
 def get_value_json_decoded(key):
