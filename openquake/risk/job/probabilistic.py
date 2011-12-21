@@ -24,7 +24,6 @@ compute_risk task
 """
 
 from numpy import zeros
-import simplejson as json
 
 from celery.exceptions import TimeoutError
 
@@ -37,7 +36,6 @@ from openquake.parser import vulnerability
 
 from openquake.risk.job import aggregate_loss_curve
 from openquake.risk.job import general
-from openquake.risk.common import compute_bcr, compute_mean_loss
 
 from openquake.db import models
 from openquake.job import config as job_config
@@ -245,71 +243,40 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
     def _compute_bcr(self, block_id):
         """
         Calculate and store in the kvs the benefit-cost ratio data for block.
+
+        A value is stored with key :func:`openquake.kvs.tokens.bcr_block_key`.
+        See :func:`openquake.risk.general.compute_bcr_for_block` for return
+        value spec.
         """
-        # TODO: unittest
         self.slice_gmfs(block_id)
 
-        vuln_curves = vulnerability.load_vuln_model_from_kvs(self.job_id)
-        vuln_curves_retrofitted = vulnerability.load_vuln_model_from_kvs(
-            self.job_id, retrofitted=True)
-
-        block = general.Block.from_kvs(block_id)
-
-        # aggregate the losses for this block
-        aggregate_curve = prob.AggregateLossCurve()
-
-        result = []
-
+        points = list(general.Block.from_kvs(block_id).grid(self.region))
+        gmf_slices = dict(
+            (point.site, kvs.get_value_json_decoded(
+                 kvs.tokens.gmf_set_key(self.job_id, point.column, point.row)
+            ))
+            for point in points
+        )
         epsilon_provider = general.EpsilonProvider(self.params)
 
-        for point in block.grid(self.region):
-            point_result = {}
+        def get_loss_curve(point, vuln_function, asset):
+            "Compute loss curve basing on GMF data"
+            gmf_slice = gmf_slices[point.site]
+            loss_ratios = prob.compute_loss_ratios(
+                vuln_function, gmf_slice, epsilon_provider, asset)
+            loss_ratio_curve = prob.compute_loss_ratio_curve(
+                vuln_function, gmf_slice, epsilon_provider, asset,
+                self._get_number_of_samples(), loss_ratios=loss_ratios)
+            return loss_ratio_curve.rescale_abscissae(asset["assetValue"])
 
-            key = kvs.tokens.gmf_set_key(self.job_id, point.column, point.row)
-            gmf_slice = kvs.get_value_json_decoded(key)
-
-            asset_key = kvs.tokens.asset_key(
-                self.job_id, point.row, point.column)
-
-            for asset in kvs.get_list_json_decoded(asset_key):
-                LOGGER.debug("Processing BCR for asset %s", asset)
-
-                # loss curve for an asset in its original state
-                vuln_function = vuln_curves[asset["taxonomy"]]
-                loss_ratios = prob.compute_loss_ratios(
-                    vuln_function, gmf_slice, epsilon_provider, asset)
-                loss_ratio_curve = prob.compute_loss_ratio_curve(
-                    vuln_function, gmf_slice, epsilon_provider, asset,
-                    self._get_number_of_samples(), loss_ratios=loss_ratios)
-                loss_curve = loss_ratio_curve.rescale_abscissae(
-                    asset["assetValue"])
-                eal_original = compute_mean_loss(loss_curve)
-
-                # the same once again for retrofitted asset
-                vuln_function = vuln_curves_retrofitted[asset["taxonomy"]]
-                loss_ratios = prob.compute_loss_ratios(
-                    vuln_function, gmf_slice, epsilon_provider, asset)
-                loss_ratio_curve = prob.compute_loss_ratio_curve(
-                    vuln_function, gmf_slice, epsilon_provider, asset,
-                    self._get_number_of_samples(), loss_ratios=loss_ratios)
-                loss_curve = loss_ratio_curve.rescale_abscissae(
-                    asset["assetValue"])
-                eal_retrofitted = compute_mean_loss(loss_curve)
-
-                point_result[asset['assetID']] = compute_bcr(
-                    eal_original, eal_retrofitted,
-                    float(self.params['INTEREST_RATE']),
-                    float(self.params['ASSET_LIFE_EXPECTANCY']),
-                    asset['retrofittingCost']
-                )
-
-            result.append((point.row, point.column, point_result))
+        result = general.compute_bcr_for_block(self.job_id, points,
+            get_loss_curve, float(self.params['INTEREST_RATE']),
+            float(self.params['ASSET_LIFE_EXPECTANCY'])
+        )
 
         bcr_block_key = kvs.tokens.bcr_block_key(self.job_id, block_id)
-        kvs.set(bcr_block_key, json.dumps(result))
-
+        kvs.set_value_json_encoded(bcr_block_key, result)
         LOGGER.debug('bcr result for block %s: %r', block_id, result)
-
         return True
 
     def compute_loss_ratios(self, asset, gmf_slice):
