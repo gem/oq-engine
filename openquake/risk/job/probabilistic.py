@@ -308,7 +308,7 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
         bcr_block_key = kvs.tokens.bcr_block_key(self.job_id, block_id)
         kvs.set(bcr_block_key, json.dumps(result))
 
-        logs.LOG.error(json.dumps(result))
+        LOGGER.debug('bcr result for block %s: %r', block_id, result)
 
         return True
 
