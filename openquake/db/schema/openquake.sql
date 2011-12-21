@@ -558,10 +558,9 @@ CREATE TABLE uiapi.oq_job (
     --      event_based_bcr (BCR calc based on Probabilistic event-based)
     -- Note: 'classical' and 'event_based' are both probabilistic methods
     calc_mode VARCHAR NOT NULL CONSTRAINT calc_mode_value
-        CHECK(((calc_mode IS NOT NULL)
-            AND (calc_mode IN ('classical', 'event_based', 'scenario',
-                           'disaggregation', 'uhs',
-                           'classical_bcr', 'event_based_bcr')))),
+        CHECK(calc_mode IN ('classical', 'event_based', 'scenario',
+                            'disaggregation', 'uhs',
+                            'classical_bcr', 'event_based_bcr')),
     -- Job type: hazard and/or risk
     job_type VARCHAR[] CONSTRAINT job_type_value
         CHECK(((job_type IS NOT NULL)
@@ -598,10 +597,9 @@ CREATE TABLE uiapi.job_stats (
 CREATE TABLE uiapi.oq_params (
     id SERIAL PRIMARY KEY,
     calc_mode VARCHAR NOT NULL CONSTRAINT calc_mode_value
-        CHECK(((calc_mode IS NOT NULL)
-            AND (calc_mode IN ('classical', 'event_based', 'scenario',
-                           'disaggregation', 'uhs',
-                           'classical_bcr', 'event_based_bcr')))),
+        CHECK(calc_mode IN ('classical', 'event_based', 'scenario',
+                            'disaggregation', 'uhs',
+                            'classical_bcr', 'event_based_bcr')),
     -- Job type: hazard and/or risk.
     job_type VARCHAR[] CONSTRAINT job_type_value
         CHECK(((job_type IS NOT NULL)
