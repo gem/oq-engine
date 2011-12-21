@@ -1276,7 +1276,7 @@ class RiskCommonTestCase(unittest.TestCase):
         retrofitting_cost = 721.9345
         interest = 0.03
         life_expectancy = 22
-        expected_result = 1.804
+        expected_result = 0.8716
 
         result = common.compute_bcr(eal_orig, eal_retrofitted,
                                     interest, life_expectancy,
