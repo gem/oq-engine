@@ -156,7 +156,7 @@ def prepare_config_parameters(params, sections):
     Pre-process configuration parameters removing unknown ones.
     """
 
-    job_type = CALCULATION_MODE[params['CALCULATION_MODE']]
+    calc_mode = CALCULATION_MODE[params['CALCULATION_MODE']]
     new_params = dict()
 
     for name, value in params.items():
@@ -166,9 +166,9 @@ def prepare_config_parameters(params, sections):
             print 'Ignoring unknown parameter %r' % name
             continue
 
-        if job_type not in param.modes:
+        if calc_mode not in param.modes:
             msg = "Ignoring %s in %s, it's meaningful only in "
-            msg %= (name, job_type)
+            msg %= (name, calc_mode)
             print msg, ', '.join(param.modes)
             continue
 
@@ -237,11 +237,11 @@ def _insert_input_files(params, input_set):
             in_model.save()
 
 
-def _store_input_parameters(params, job_type, oqp):
+def _store_input_parameters(params, calc_mode, oqp):
     """Store parameters in uiapi.oq_params columns"""
 
     for name, param in PARAMS.items():
-        if job_type in param.modes and param.default is not None:
+        if calc_mode in param.modes and param.default is not None:
             setattr(oqp, param.column, param.default)
 
     for name, value in params.items():
@@ -287,14 +287,14 @@ def prepare_job(params):
     input_set = InputSet(upload=None, owner=owner)
     input_set.save()
 
-    job_type = CALCULATION_MODE[params['CALCULATION_MODE']]
-    job = OqJob(owner=owner, path=None, job_type=job_type)
+    calc_mode = CALCULATION_MODE[params['CALCULATION_MODE']]
+    job = OqJob(owner=owner, path=None, calc_mode=calc_mode)
 
     oqp = OqParams(input_set=input_set)
-    oqp.job_type = job_type
+    oqp.calc_mode = calc_mode
 
     _insert_input_files(params, input_set)
-    _store_input_parameters(params, job_type, oqp)
+    _store_input_parameters(params, calc_mode, oqp)
 
     oqp.save()
 
@@ -607,9 +607,9 @@ class Job(object):
         job_stats.start_time = datetime.utcnow()
         job_stats.num_sites = len(self.sites_to_compute())
 
-        job_type = CALCULATION_MODE[self['CALCULATION_MODE']]
+        calc_mode = CALCULATION_MODE[self['CALCULATION_MODE']]
         if conf.HAZARD_SECTION in self.sections:
-            if job_type != 'scenario':
+            if calc_mode != 'scenario':
                 job_stats.realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
 
         job_stats.save()
