@@ -30,6 +30,7 @@ from openquake.output import hazard
 from openquake.risk.job import aggregate_loss_curve as aggregate
 from openquake.risk.job.general import Block
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
+from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk import probabilistic_event_based as prob
 from openquake.risk import classical_psha_based as psha
 from openquake.risk import scenario
@@ -198,6 +199,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         kvs.set_value_json_encoded(
                 kvs.tokens.vuln_key(self.job_id),
+                {"ID": self.vuln_function_2.to_json()})
+        kvs.set_value_json_encoded(
+                kvs.tokens.vuln_key(self.job_id, retrofitted=True),
                 {"ID": self.vuln_function_2.to_json()})
 
         # store the gmfs
@@ -657,6 +661,34 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 # the plotter should not be called
                 self.assertEqual(0, write_mock.call_count)
                 self.assertEqual(0, close_mock.call_count)
+
+    def test_compute_bcr(self):
+        mixin = ProbabilisticEventMixin()
+        mixin.job_id = self.job_id
+        mixin.params = self.params.copy()
+        mixin.params.update({'CALCULATION_MODE': 'Event Based BCR',
+                             'INTEREST_RATE': '0.05',
+                             'ASSET_LIFE_EXPECTANCY': '50',
+                             'NUMBER_OF_SEISMICITY_HISTORIES': '1',
+                             'NUMBER_OF_LOGIC_TREE_SAMPLES': '1'})
+        mixin.region = shapes.RegionConstraint.from_simple(
+                (0.0, 0.0), (2.0, 2.0))
+
+        self.block_id = kvs.tokens.risk_block_key(self.job_id, 7)
+        SITE = shapes.Site(1.0, 1.0)
+        Block((SITE, SITE), self.block_id).to_kvs()
+
+        asset = {"taxonomy": "ID",
+                 "assetID": 22.61,
+                 "assetValue": 1,
+                 "retrofittingCost": 123.45}
+        self._store_asset(asset, 10, 10)
+
+        mixin.compute_risk(self.block_id)
+
+        result_key = kvs.tokens.bcr_block_key(self.job_id, self.block_id)
+        result = kvs.get_value_json_decoded(result_key)
+        self.assertEqual(result, [[10, 10, {u'22.61': 0.0}]])
 
 
 class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
