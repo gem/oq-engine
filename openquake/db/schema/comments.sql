@@ -304,7 +304,7 @@ COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was crea
 COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
 COMMENT ON COLUMN uiapi.oq_job.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
 COMMENT ON COLUMN uiapi.oq_job.supervisor_pid IS 'The process id (PID) of the supervisor for this OpenQuake job';
-COMMENT ON COLUMN uiapi.oq_job.job_type IS 'One of: classical, event_based, scenario, disaggregation, uhs, classical_bcr or event_based_bcr.';
+COMMENT ON COLUMN uiapi.oq_job.calc_mode IS 'One of: classical, event_based, scenario, disaggregation, uhs, classical_bcr or event_based_bcr.';
 COMMENT ON COLUMN uiapi.oq_job.status IS 'One of: pending, running, failed or succeeded.';
 COMMENT ON COLUMN uiapi.oq_job.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
 
@@ -315,7 +315,7 @@ COMMENT ON COLUMN uiapi.job_stats.realizations IS 'The number of logic tree samp
 
 
 COMMENT ON TABLE uiapi.oq_params IS 'Holds the parameters needed to invoke the OpenQuake engine.';
-COMMENT ON COLUMN uiapi.oq_params.job_type IS 'One of: classical, event_based, scenario, disaggregation, uhs, classical_bcr or event_based_bcr.';
+COMMENT ON COLUMN uiapi.oq_params.calc_mode IS 'One of: classical, event_based, scenario, disaggregation, uhs, classical_bcr or event_based_bcr.';
 COMMENT ON COLUMN uiapi.oq_params.histories IS 'Number of seismicity histories';
 COMMENT ON COLUMN uiapi.oq_params.imls IS 'Intensity measure levels';
 COMMENT ON COLUMN uiapi.oq_params.imt IS 'Intensity measure type, one of:
@@ -324,7 +324,8 @@ COMMENT ON COLUMN uiapi.oq_params.imt IS 'Intensity measure type, one of:
     - peak ground velocity (pgv)
     - peak ground displacement (pgd)
     - Arias Intensity (ia)
-    - relative significant duration (rsd)';
+    - relative significant duration (rsd)
+    - Modified Mercalli Intensity';
 COMMENT ON COLUMN uiapi.oq_params.poes IS 'Probabilities of exceedence';
 COMMENT ON COLUMN uiapi.oq_params.region IS 'Region of interest for the calculation (Polygon)';
 COMMENT ON COLUMN uiapi.oq_params.region_grid_spacing IS 'Desired cell size (in degrees), used when splitting up the region of interest. This effectively defines the resolution of the calculation. (Smaller grid spacing means more sites and thus more calculations.)';
