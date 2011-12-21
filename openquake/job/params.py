@@ -182,8 +182,8 @@ define_param("DEPTHTO1PT0KMPERSEC", "depth_to_1pt_0km_per_sec",
              default=100.0, java_name="Depth 1.0 km/sec", to_job=float)
 define_param("VS30_TYPE", "vs30_type", default="measured",
              java_name="Vs30 Type", to_job=lambda s: s.capitalize())
-define_param("HAZARD_TASKS", None, modes=("classical", "classical_bcr"),
-             to_job=int)
+define_param("ITEMS_PER_TASK", None, modes=("classical",
+             "classical_bcr"), to_job=int)
 
 # input files
 define_param('VULNERABILITY', None)

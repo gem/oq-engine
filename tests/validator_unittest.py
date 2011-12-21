@@ -168,9 +168,9 @@ class ConfigurationConstraintsTestCase(unittest.TestCase, helpers.TestMixin):
         validator = config.default_validators(sections, params)
         self.assertTrue(validator.is_valid()[0])
 
-    def test_hazard_tasks(self):
+    def test_items_per_task(self):
         """
-        The `HAZARD_TASKS` parameter is not ignored for classical PSHA
+        The `ITEMS_PER_TASK` parameter is not ignored for classical PSHA
         calculations.
         """
         sections = [config.HAZARD_SECTION]
@@ -179,7 +179,7 @@ class ConfigurationConstraintsTestCase(unittest.TestCase, helpers.TestMixin):
                   config.SITES: "37.9, -121.9",
                   config.DEPTHTO1PT0KMPERSEC: "33.33",
                   config.VS30_TYPE: "measured",
-                  config.HAZARD_TASKS: "96"}
+                  config.ITEMS_PER_TASK: "96"}
 
         validator = config.default_validators(sections, params)
         self.assertTrue(validator.is_valid()[0])

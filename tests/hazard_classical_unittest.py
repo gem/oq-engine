@@ -385,8 +385,8 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
             map_serializer=lambda _, __, ___: True, map_func=None)
 
 
-class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
-    """Tests the behaviour of ClassicalMixin.number_of_tasks()."""
+class NumberOfItemsTestCase(TestMixin, unittest.TestCase):
+    """Tests the behaviour of ClassicalMixin.number_of_items()."""
 
     def setUp(self):
         params = {'CALCULATION_MODE': 'Hazard'}
@@ -396,38 +396,37 @@ class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
     def tearDown(self):
         self.unload_job_mixin()
 
-    def test_number_of_tasks_with_param_not_set(self):
+    def test_number_of_items_with_param_not_set(self):
         """
-        When the `HAZARD_TASKS` parameter is not set the expected value is
-        twice the number of CPUs/cores.
+        When the `ITEMS_PER_TASK` parameter is not set the expected value is
+        1.
         """
         self.mixin.params = dict()
-        self.assertEqual(
-            2 * multiprocessing.cpu_count(), self.mixin.number_of_tasks())
+        self.assertEqual(1, self.mixin.number_of_items())
 
-    def test_number_of_tasks_with_param_set_and_valid(self):
+    def test_number_of_items_with_param_set_and_valid(self):
         """
-        When the `HAZARD_TASKS` parameter *is* set and a valid integer its
+        When the `ITEMS_PER_TASK` parameter *is* set and a valid integer its
         value will be returned.
         """
-        self.mixin.params = dict(HAZARD_TASKS="5")
-        self.assertEqual(5, self.mixin.number_of_tasks())
+        self.mixin.params = dict(ITEMS_PER_TASK="5")
+        self.assertEqual(5, self.mixin.number_of_items())
 
-    def test_number_of_tasks_with_param_set_but_invalid(self):
+    def test_number_of_items_with_param_set_but_invalid(self):
         """
-        When the `HAZARD_TASKS` parameter is set but not a valid integer a
+        When the `ITEMS_PER_TASK` parameter is set but not a valid integer a
         `ValueError` will be raised.
         """
-        self.mixin.params = dict(HAZARD_TASKS="this-is-not-a-number")
-        self.assertRaises(ValueError, self.mixin.number_of_tasks)
+        self.mixin.params = dict(ITEMS_PER_TASK="this-is-not-a-number")
+        self.assertRaises(ValueError, self.mixin.number_of_items)
 
-    def test_number_of_tasks_with_param_set_but_all_whitespace(self):
+    def test_number_of_items_with_param_set_but_all_whitespace(self):
         """
-        When the `HAZARD_TASKS` parameter is set to whitespace a
+        When the `ITEMS_PER_TASK` parameter is set to whitespace a
         `ValueError` will be raised.
         """
-        self.mixin.params = dict(HAZARD_TASKS=" 	")
-        self.assertRaises(ValueError, self.mixin.number_of_tasks)
+        self.mixin.params = dict(ITEMS_PER_TASK=" 	")
+        self.assertRaises(ValueError, self.mixin.number_of_items)
 
 
 class ClassicalExecuteTestCase(TestMixin, unittest.TestCase):
