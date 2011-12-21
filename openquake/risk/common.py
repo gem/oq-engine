@@ -139,5 +139,5 @@ def compute_bcr(eal_original, eal_retrofitted, interest_rate,
     * C -- Retrofitting cost
     """
     return ((eal_original - eal_retrofitted)
-            * (1 - exp(- retrofitting_cost * asset_life_expectancy))
+            * (1 - exp(- interest_rate * asset_life_expectancy))
             / retrofitting_cost)
