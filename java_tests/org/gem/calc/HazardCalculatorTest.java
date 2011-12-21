@@ -6,6 +6,7 @@ import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
@@ -15,8 +16,6 @@ import java.util.Random;
 
 import junit.framework.Assert;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.gem.engine.hazard.redis.Cache;
 import org.junit.After;
 import org.junit.Before;
@@ -51,6 +50,7 @@ import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.magdist.GutenbergRichterMagFreqDist;
 import org.opensha.sha.util.TectonicRegionType;
 import static org.gem.calc.CalcTestHelper.mapLog;
+import static org.gem.calc.HazardCalculatorTestHelper.*;
 
 public class HazardCalculatorTest {
 
@@ -82,10 +82,6 @@ public class HazardCalculatorTest {
 
     @After
     public void tearDown() {
-        siteList = null;
-        erf = null;
-        gmpeMap = null;
-        imlVals = null;
         if (cache != null) {
             cache.flush();
             cache = null;
@@ -255,8 +251,7 @@ public class HazardCalculatorTest {
     {
         int maxTries = 111;
         Map<EqkRupture, Map<Site, Double>> groundMotionFields = null;
-        while (maxTries > 0 && groundMotionFields == null
-                || groundMotionFields.values().size() == 0) {
+        while (maxTries > 0 || groundMotionFields.values().size() == 0) {
             --maxTries;
             // HazardCalculator does not return ground motion fields in more
             // than 50% of the runs. Is it possible that this
@@ -348,8 +343,7 @@ public class HazardCalculatorTest {
     public void gmfToMemcacheTest() {
         int maxTries = 111;
         Map<EqkRupture, Map<Site, Double>> groundMotionFields = null;
-        while (maxTries > 0 && groundMotionFields == null
-                || groundMotionFields.values().size() == 0) {
+        while (maxTries > 0 || groundMotionFields.values().size() == 0) {
             --maxTries;
             // HazardCalculator does not return ground motion fields in more
             // than 50% of the runs. Is it possible that this
@@ -419,8 +413,7 @@ public class HazardCalculatorTest {
 
             @Override
             public String getName() {
-                return new String(
-                        "Earthquake rupture forecast for testing pourpose");
+                return "Earthquake rupture forecast for testing pourpose";
             }
 
             @Override
@@ -521,5 +514,32 @@ public class HazardCalculatorTest {
                         rake, 50.0, mMin, 1, 12.0);
         src.setTectonicRegionType(TectonicRegionType.ACTIVE_SHALLOW);
         return src;
+    }
+
+    @Test
+    public void testGetHazardCurves() {
+        DiscretizedFuncAPI expectedHazCurve = expectedHazardCurve();
+        FloatingPoissonFaultSource src = testSource();
+        Site site = testSite();
+        ScalarIntensityMeasureRelationshipAPI gmpe = testGMPE();
+
+        Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI> gmpeMap =
+                new HashMap<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>();
+        gmpeMap.put(TectonicRegionType.ACTIVE_SHALLOW, gmpe);
+
+        
+        Map<Site, DiscretizedFuncAPI> curves = HazardCalculator.getHazardCurves(
+                Arrays.asList(site), testERF(), gmpeMap,
+                IMLS, MAX_DISTANCE);
+
+        assertEquals(1, curves.values().size());
+        DiscretizedFuncAPI actualHazCurve = curves.get(site);
+        assertNotNull(actualHazCurve);
+        for (int i = 0; i < expectedHazCurve.getNum(); i++)
+        {
+            // The PoEs should be equal, up to 3 decimal places
+            // of precision.
+            assertEquals(expectedHazCurve.getY(i), actualHazCurve.getY(i), 0.0009);
+        }
     }
 }
