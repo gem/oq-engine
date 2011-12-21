@@ -182,6 +182,8 @@ class ClassicalPSHABasedMixin:
         bcr_block_key = kvs.tokens.bcr_block_key(self.job_id, block_id)
         kvs.set(bcr_block_key, json.dumps(result))
 
+        LOGGER.debug('bcr result for block %s: %r', block_id, result)
+
         return True
 
     def compute_loss_curve(self, point, loss_ratio_curve, asset):
