@@ -21,6 +21,7 @@ Wrapper around the OpenSHA-lite java library.
 """
 
 
+import hashlib
 from itertools import izip
 import functools
 import math
@@ -50,14 +51,20 @@ HAZARD_CURVE_FILENAME_PREFIX = 'hazardcurve'
 HAZARD_MAP_FILENAME_PREFIX = 'hazardmap'
 
 
+# Module-private kvs connection cache, to be used by create_java_cache().
+__KVS_CONN_CACHE = {}
+
+
 def create_java_cache(fn):
     """A decorator for creating java cache object"""
 
     @functools.wraps(fn)
     def decorated(self, *args, **kwargs):  # pylint: disable=C0111
-        self.cache = java.jclass("KVS")(
-                config.get("kvs", "host"),
-                int(config.get("kvs", "port")))
+        kvs_data = (config.get("kvs", "host"), int(config.get("kvs", "port")))
+        key = hashlib.md5(repr(kvs_data)).hexdigest()
+        if key not in __KVS_CONN_CACHE:
+            __KVS_CONN_CACHE[key] = java.jclass("KVS")(*kvs_data)
+        self.cache = __KVS_CONN_CACHE[key]
         return fn(self, *args, **kwargs)
 
     return decorated
