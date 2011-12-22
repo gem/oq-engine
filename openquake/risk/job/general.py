@@ -36,7 +36,7 @@ from openquake.parser import vulnerability
 from openquake.risk import common
 from openquake.utils.tasks import check_job_status
 
-from celery.decorators import task
+from celery.task import task
 
 LOG = logs.LOG
 BLOCK_SIZE = 100
@@ -134,6 +134,15 @@ class RiskJobMixin(mixins.Mixin):
     """A mixin proxy for Risk jobs."""
     mixins = {}
 
+    def is_benefit_cost_ratio_mode(self):
+        """
+        Return True if current calculation mode is Benefit-Cost Ratio.
+        """
+        return self.params[job_config.CALCULATION_MODE] in (
+            job_config.BCR_CLASSICAL_MODE,
+            job_config.BCR_EVENT_BASED_MODE
+        )
+
     def partition(self):
         """Split the sites to compute in blocks and store
         them in the underlying KVS system."""
@@ -172,8 +181,14 @@ class RiskJobMixin(mixins.Mixin):
 
     def store_vulnerability_model(self):
         """ load vulnerability and write to kvs """
-        vulnerability.load_vulnerability_model(self.job_id,
-            os.path.join(self.base_path, self.params["VULNERABILITY"]))
+        path = os.path.join(self.base_path, self.params["VULNERABILITY"])
+        vulnerability.load_vulnerability_model(self.job_id, path)
+
+        if self.is_benefit_cost_ratio_mode():
+            path = os.path.join(self.base_path,
+                                self.params["VULNERABILITY_RETROFITTED"])
+            vulnerability.load_vulnerability_model(self.job_id, path,
+                                                   retrofitted=True)
 
     def _serialize(self, block_id, **kwargs):
         """
@@ -440,3 +455,49 @@ def split_into_blocks(job_id, sites, block_size=BLOCK_SIZE):
 
     block_id = kvs.tokens.risk_block_key(job_id, block_count)
     yield(Block(block_sites, block_id))
+
+
+def compute_bcr_for_block(job_id, points, get_loss_curve,
+                          interest_rate, asset_life_expectancy):
+    """
+    Compute and return Benefit-Cost Ratio data for a number of points.
+
+    :param get_loss_curve:
+        Function that takes three positional arguments: point object,
+        vulnerability function object and asset object and is supposed
+        to return a loss curve.
+    :return:
+        A list of three-item tuples, one tuple per point in the block. Each
+        tuple consists of point row, point column and a mapping of point's
+        asset ids to the BCR value.
+    """
+    # too many local vars (16/15) -- pylint: disable=R0914
+    result = []
+
+    vuln_curves = vulnerability.load_vuln_model_from_kvs(job_id)
+    vuln_curves_retrofitted = vulnerability.load_vuln_model_from_kvs(
+        job_id, retrofitted=True)
+
+    for point in points:
+        point_result = {}
+
+        asset_key = kvs.tokens.asset_key(job_id, point.row, point.column)
+
+        for asset in kvs.get_list_json_decoded(asset_key):
+            vuln_function = vuln_curves[asset['taxonomy']]
+            loss_curve = get_loss_curve(point, vuln_function, asset)
+            eal_original = common.compute_mean_loss(loss_curve)
+
+            vuln_function = vuln_curves_retrofitted[asset['taxonomy']]
+            loss_curve = get_loss_curve(point, vuln_function, asset)
+            eal_retrofitted = common.compute_mean_loss(loss_curve)
+
+            point_result[asset['assetID']] = common.compute_bcr(
+                eal_original, eal_retrofitted,
+                interest_rate, asset_life_expectancy,
+                asset['retrofittingCost']
+            )
+
+        result.append((point.row, point.column, point_result))
+
+    return result
