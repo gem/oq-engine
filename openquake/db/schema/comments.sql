@@ -304,8 +304,6 @@ COMMENT ON TABLE uiapi.oq_calculation IS 'Date related to an OpenQuake job that 
 COMMENT ON COLUMN uiapi.oq_calculation.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
 COMMENT ON COLUMN uiapi.oq_calculation.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
 COMMENT ON COLUMN uiapi.oq_calculation.supervisor_pid IS 'The process id (PID) of the supervisor for this OpenQuake job';
-COMMENT ON COLUMN uiapi.oq_calculation.calc_mode IS 'One of: classical, event_based, scenario, disaggregation, uhs, classical_bcr or event_based_bcr.';
-COMMENT ON COLUMN uiapi.oq_calculation.job_type IS '"hazard" and/or "risk"';
 COMMENT ON COLUMN uiapi.oq_calculation.status IS 'One of: pending, running, failed or succeeded.';
 COMMENT ON COLUMN uiapi.oq_calculation.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
 

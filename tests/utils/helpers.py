@@ -660,8 +660,7 @@ class DbTestMixin(TestMixin):
         oqp.gmpe_lt_random_seed = 5
         oqp.save()
 
-        job = models.OqCalculation(oq_params=oqp, owner=owner,
-                           calc_mode="classical", job_type=['hazard'])
+        job = models.OqCalculation(oq_params=oqp, owner=owner)
         job.save()
 
         if create_job_path:

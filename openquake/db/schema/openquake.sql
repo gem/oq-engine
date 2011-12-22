@@ -548,26 +548,6 @@ CREATE TABLE uiapi.oq_calculation (
     -- engine reside. This is used internally by openquake-server, can probably
     -- be removed (see https://github.com/gem/openquake-server/issues/55)
     path VARCHAR UNIQUE,
-    -- One of:
-    --      classical (Classical PSHA)
-    --      event_based (Probabilistic event based)
-    --      scenario (Scenario)
-    --      disaggregation (Hazard only)
-    --      uhs (Uniform Hazard Spectra; Hazard only)
-    --      classical_bcr (Benefit-cost ratio calc based on Classical PSHA)
-    --      event_based_bcr (BCR calc based on Probabilistic event-based)
-    -- Note: 'classical' and 'event_based' are both probabilistic methods
-    calc_mode VARCHAR NOT NULL CONSTRAINT calc_mode_value
-        CHECK(calc_mode IN ('classical', 'event_based', 'scenario',
-                            'disaggregation', 'uhs',
-                            'classical_bcr', 'event_based_bcr')),
-    -- Job type: hazard and/or risk
-    job_type VARCHAR[] CONSTRAINT job_type_value
-        CHECK(((job_type IS NOT NULL)
-            -- The array_length() function is supposed to return an int,
-            -- but if you pass it zero-length array, is returns NULL instead of 0.
-            AND (array_length(job_type, 1) IS NOT NULL)
-            AND (job_type <@ ARRAY['hazard', 'risk']::VARCHAR[]))),
     -- One of: pending, running, failed, succeeded
     status VARCHAR NOT NULL DEFAULT 'pending' CONSTRAINT job_status_value
         CHECK(status IN ('pending', 'running', 'failed', 'succeeded')),
@@ -596,6 +576,15 @@ CREATE TABLE uiapi.job_stats (
 -- The parameters needed for an OpenQuake engine run
 CREATE TABLE uiapi.oq_params (
     id SERIAL PRIMARY KEY,
+    -- One of:
+    --      classical (Classical PSHA)
+    --      event_based (Probabilistic event based)
+    --      scenario (Scenario)
+    --      disaggregation (Hazard only)
+    --      uhs (Uniform Hazard Spectra; Hazard only)
+    --      classical_bcr (Benefit-cost ratio calc based on Classical PSHA)
+    --      event_based_bcr (BCR calc based on Probabilistic event-based)
+    -- Note: 'classical' and 'event_based' are both probabilistic methods
     calc_mode VARCHAR NOT NULL CONSTRAINT calc_mode_value
         CHECK(calc_mode IN ('classical', 'event_based', 'scenario',
                             'disaggregation', 'uhs',
