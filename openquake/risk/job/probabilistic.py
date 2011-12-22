@@ -46,7 +46,6 @@ LOGGER = logs.LOG
 class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
     """Mixin for Probalistic Event Risk Job."""
 
-    @general.output
     def execute(self):
         """Execute the job."""
         general.preload(self)
@@ -74,6 +73,8 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
 
         curve = aggregate_curve.compute(self._tses(), self._time_span())
         aggregate_loss_curve.plot_aggregate_curve(self, curve)
+
+        general.write_output(self)
 
     def _tses(self):
         """Return the time representative of the Stochastic Event Set
