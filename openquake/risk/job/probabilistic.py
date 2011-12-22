@@ -46,10 +46,10 @@ LOGGER = logs.LOG
 class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
     """Mixin for Probalistic Event Risk Job."""
 
-    @general.preload
     @general.output
     def execute(self):
         """Execute the job."""
+        general.preload(self)
 
         aggregate_curve = prob.AggregateLossCurve()
 

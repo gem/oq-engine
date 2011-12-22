@@ -42,10 +42,11 @@ LOGGER = logs.LOG
 class ClassicalPSHABasedMixin:
     """Mixin for Classical PSHA Based Risk Job"""
 
-    @general.preload
     @general.output
     def execute(self):
         """ execute -- general mixin entry point """
+        general.preload(self)
+
         celery_tasks = []
         for block_id in self.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s"
