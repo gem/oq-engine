@@ -632,7 +632,6 @@ class CreateJavaCacheTestCase(TestMixin, unittest.TestCase):
             """Fake calculator method."""
             return self.cache
 
-
     def test_create_java_cache(self):
         """The cache is instantiated."""
         fake = self.Fake()
