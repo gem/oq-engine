@@ -36,7 +36,7 @@ from openquake import shapes
 from openquake import xml
 from openquake.parser import exposure
 from openquake.db.models import (
-    OqJob, OqParams, OqUser, JobStats, FloatArrayField, CharArrayField,
+    OqCalculation, OqParams, OqUser, JobStats, FloatArrayField, CharArrayField,
     InputSet, Input)
 from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
@@ -92,7 +92,7 @@ def run_job(job_file, output_type):
     if not supervisor_pid:
         # supervisor process
         supervisor_pid = os.getpid()
-        job = OqJob.objects.get(id=a_job.job_id)
+        job = OqCalculation.objects.get(id=a_job.job_id)
         job.supervisor_pid = supervisor_pid
         job.job_pid = job_pid
         job.save()
@@ -277,7 +277,7 @@ def _store_input_parameters(params, calc_mode, oqp):
 @transaction.commit_on_success(using='job_init')
 def prepare_job(params, sections):
     """
-    Create a new OqJob and fill in the related OpParams entry.
+    Create a new OqCalculation and fill in the related OpParams entry.
 
     Returns the newly created job object.
 
@@ -296,7 +296,7 @@ def prepare_job(params, sections):
     job_type = [s.lower() for s in sections
         if s.upper() in [conf.HAZARD_SECTION, conf.RISK_SECTION]]
 
-    job = OqJob(owner=owner, path=None, calc_mode=calc_mode, job_type=job_type)
+    job = OqCalculation(owner=owner, path=None, calc_mode=calc_mode, job_type=job_type)
 
     oqp = OqParams(input_set=input_set, calc_mode=calc_mode, job_type=job_type)
 
@@ -388,7 +388,7 @@ class Job(object):
 
         :returns: one of strings 'pending', 'running', 'succeeded', 'failed'.
         """
-        return OqJob.objects.get(id=job_id).status
+        return OqCalculation.objects.get(id=job_id).status
 
     @staticmethod
     def is_job_completed(job_id):
@@ -404,7 +404,7 @@ class Job(object):
                  serialize_results_to=list()):
         """
         :param dict params: Dict of job config params.
-        :param int job_id: ID of the corresponding oq_job db record.
+        :param int job_id: ID of the corresponding oq_calculation db record.
         :param list sections: List of config file sections. Example::
             ['HAZARD', 'RISK']
         :param str base_path: base directory containing job input files
@@ -442,7 +442,7 @@ class Job(object):
         :param status: one of 'pending', 'running', 'succeeded', 'failed'
         :type status: string
         """
-        job = OqJob.objects.get(id=self.job_id)
+        job = OqCalculation.objects.get(id=self.job_id)
         job.status = status
         job.save()
 
@@ -608,9 +608,9 @@ class Job(object):
         Report initial job stats (such as start time) by adding a
         uiapi.job_stats record to the db.
         '''
-        oq_job = OqJob.objects.get(id=self.job_id)
+        oq_calculation = OqCalculation.objects.get(id=self.job_id)
 
-        job_stats = JobStats(oq_job=oq_job)
+        job_stats = JobStats(oq_calculation=oq_calculation)
         job_stats.start_time = datetime.utcnow()
         job_stats.num_sites = len(self.sites_to_compute())
 

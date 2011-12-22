@@ -25,7 +25,7 @@ to respawn crashed :mod:`supervisors <openquake.supervising.supervisor>`.
 """
 import multiprocessing
 
-from openquake.db.models import OqJob
+from openquake.db.models import OqCalculation
 from openquake import supervising
 from openquake.supervising.supervisor import supervise
 
@@ -36,7 +36,7 @@ def main():
     the status of their supervisors: if one is missing --
     do :meth:`openquake.job.spawn_job_supervisor` for it.
     """
-    qs = OqJob.objects.filter(status='running') \
+    qs = OqCalculation.objects.filter(status='running') \
                       .values_list('id', 'job_pid', 'supervisor_pid')
     for job_id, job_pid, supervisor_pid in qs:
         if not supervising.is_pid_running(supervisor_pid):

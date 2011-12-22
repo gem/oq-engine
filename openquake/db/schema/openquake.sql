@@ -540,7 +540,7 @@ CREATE TABLE uiapi.input (
 
 
 -- An OpenQuake engine run started by the user
-CREATE TABLE uiapi.oq_job (
+CREATE TABLE uiapi.oq_calculation (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     description VARCHAR NOT NULL,
@@ -583,7 +583,7 @@ CREATE TABLE uiapi.oq_job (
 -- Tracks various job statistics
 CREATE TABLE uiapi.job_stats (
     id SERIAL PRIMARY KEY,
-    oq_job_id INTEGER NOT NULL,
+    oq_calculation_id INTEGER NOT NULL,
     start_time timestamp with time zone,
     stop_time timestamp with time zone,
     -- The number of total sites in the calculation
@@ -1072,7 +1072,7 @@ ALTER TABLE uiapi.oq_params ADD CONSTRAINT oq_params_geometry CHECK(
 CREATE TABLE uiapi.output (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
-    oq_job_id INTEGER NOT NULL,
+    oq_calculation_id INTEGER NOT NULL,
     -- The full path of the output file on the server, optional and only set
     -- for outputs with NRML/XML files.
     path VARCHAR UNIQUE,
@@ -1109,7 +1109,7 @@ CREATE TABLE uiapi.output (
 -- A place to store error information in the case of a job failure.
 CREATE TABLE uiapi.error_msg (
     id SERIAL PRIMARY KEY,
-    oq_job_id INTEGER NOT NULL,
+    oq_calculation_id INTEGER NOT NULL,
     -- Summary of the error message.
     brief VARCHAR NOT NULL,
     -- The full error message.
@@ -1481,14 +1481,14 @@ FOREIGN KEY (magnitude_id) REFERENCES eqcat.magnitude(id) ON DELETE RESTRICT;
 ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_surface_fk
 FOREIGN KEY (surface_id) REFERENCES eqcat.surface(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_owner_fk
+ALTER TABLE uiapi.oq_calculation ADD CONSTRAINT uiapi_oq_calculation_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_oq_params_fk
+ALTER TABLE uiapi.oq_calculation ADD CONSTRAINT uiapi_oq_calculation_oq_params_fk
 FOREIGN KEY (oq_params_id) REFERENCES uiapi.oq_params(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.job_stats ADD CONSTRAINT  uiapi_job_stats_oq_job_fk
-FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
+ALTER TABLE uiapi.job_stats ADD CONSTRAINT  uiapi_job_stats_oq_calculation_fk
+FOREIGN KEY (oq_calculation_id) REFERENCES uiapi.oq_calculation(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.upload ADD CONSTRAINT uiapi_upload_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
@@ -1505,14 +1505,14 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 ALTER TABLE uiapi.input_set ADD CONSTRAINT uiapi_input_set_upload_fk
 FOREIGN KEY (upload_id) REFERENCES uiapi.upload(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_oq_job_fk
-FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;
+ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_oq_calculation_fk
+FOREIGN KEY (oq_calculation_id) REFERENCES uiapi.oq_calculation(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.error_msg ADD CONSTRAINT uiapi_error_msg_oq_job_fk
-FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
+ALTER TABLE uiapi.error_msg ADD CONSTRAINT uiapi_error_msg_oq_calculation_fk
+FOREIGN KEY (oq_calculation_id) REFERENCES uiapi.oq_calculation(id) ON DELETE CASCADE;
 
 ALTER TABLE oqmif.exposure_model ADD CONSTRAINT oqmif_exposure_model_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
