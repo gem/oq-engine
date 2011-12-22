@@ -69,9 +69,9 @@ class ClassicalPSHABasedMixin:
     def _get_db_curve(self, site):
         """Read hazard curve data from the DB"""
         gh = geohash.encode(site.latitude, site.longitude, precision=12)
-        job = models.OqJob.objects.get(id=self.job_id)
+        job = models.OqCalculation.objects.get(id=self.job_id)
         hc = models.HazardCurveData.objects.filter(
-            hazard_curve__output__oq_job=job,
+            hazard_curve__output__oq_calculation=job,
             hazard_curve__statistic_type='mean').extra(
             where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
 

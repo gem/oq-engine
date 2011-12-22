@@ -549,7 +549,7 @@ class HazardMapDBReader(object):
         """
         hazard_map = models.HazardMap.objects.get(output=output_id)
         hazard_map_data = hazard_map.hazardmapdata_set.all()
-        params = hazard_map.output.oq_job.oq_params
+        params = hazard_map.output.oq_calculation.oq_params
         points = []
 
         for datum in hazard_map_data:
@@ -597,8 +597,8 @@ class HazardMapDBWriter(writer.DBWriter):
     the same for all items.
     """
 
-    def __init__(self, nrml_path, oq_job_id):
-        super(HazardMapDBWriter, self).__init__(nrml_path, oq_job_id)
+    def __init__(self, nrml_path, oq_calculation_id):
+        super(HazardMapDBWriter, self).__init__(nrml_path, oq_calculation_id)
 
         self.bulk_inserter = writer.BulkInserter(models.HazardMapData)
         self.hazard_map = None
@@ -670,7 +670,7 @@ class HazardCurveDBReader(object):
         :class:`HazardCurveDBWriter`.
         """
         hazard_curves = models.HazardCurve.objects.filter(output=output_id)
-        params = models.Output.objects.get(id=output_id).oq_job.oq_params
+        params = models.Output.objects.get(id=output_id).oq_calculation.oq_params
         points = []
 
         for hazard_curve_datum in hazard_curves:
@@ -722,8 +722,8 @@ class HazardCurveDBWriter(writer.DBWriter):
            'statistics': 'quantile'})]
     """
 
-    def __init__(self, nrml_path, oq_job_id):
-        super(HazardCurveDBWriter, self).__init__(nrml_path, oq_job_id)
+    def __init__(self, nrml_path, oq_calculation_id):
+        super(HazardCurveDBWriter, self).__init__(nrml_path, oq_calculation_id)
 
         self.curves_per_branch_label = {}
         self.bulk_inserter = writer.BulkInserter(models.HazardCurveData)
@@ -816,8 +816,8 @@ class GmfDBWriter(writer.DBWriter):
          Site(-117, 41): {'groundMotion': 0.3}}
     """
 
-    def __init__(self, nrml_path, oq_job_id):
-        super(GmfDBWriter, self).__init__(nrml_path, oq_job_id)
+    def __init__(self, nrml_path, oq_calculation_id):
+        super(GmfDBWriter, self).__init__(nrml_path, oq_calculation_id)
 
         self.curves_per_branch_label = {}
         self.bulk_inserter = writer.BulkInserter(models.GmfData)
