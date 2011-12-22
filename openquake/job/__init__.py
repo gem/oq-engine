@@ -296,7 +296,7 @@ def prepare_job(params, sections):
     job_type = [s.lower() for s in sections
         if s.upper() in [conf.HAZARD_SECTION, conf.RISK_SECTION]]
 
-    job = OqCalculation(owner=owner, path=None, calc_mode=calc_mode, job_type=job_type)
+    job = OqCalculation(owner=owner, path=None)
 
     oqp = OqParams(input_set=input_set, calc_mode=calc_mode, job_type=job_type)
 

@@ -477,19 +477,6 @@ class OqCalculation(models.Model):
     owner = models.ForeignKey('OqUser')
     description = models.TextField()
     path = models.TextField(null=True, unique=True)
-    CALC_MODE_CHOICES = (
-        (u'classical', u'Classical PSHA'),
-        (u'event_based', u'Probabilistic Event-Based'),
-        (u'scenario', u'Scenario'),
-        (u'disaggregation', u'Disaggregation'),
-        (u'uhs', u'UHS'),  # Uniform Hazard Spectra
-        # Benefit-cost ratio calculator based on Classical PSHA risk calc
-        (u'classical_bcr', u'Classical BCR'),
-        # Benefit-cost ratio calculator based on Event Based risk calc
-        (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
-    )
-    calc_mode = models.TextField(choices=CALC_MODE_CHOICES)
-    job_type = CharArrayField()
     STATUS_CHOICES = (
         (u'pending', u'Pending'),
         (u'running', u'Running'),
@@ -528,7 +515,18 @@ class OqParams(models.Model):
     '''
     Parameters needed to run an OpenQuake job
     '''
-    calc_mode = models.TextField(choices=OqCalculation.CALC_MODE_CHOICES)
+    CALC_MODE_CHOICES = (
+        (u'classical', u'Classical PSHA'),
+        (u'event_based', u'Probabilistic Event-Based'),
+        (u'scenario', u'Scenario'),
+        (u'disaggregation', u'Disaggregation'),
+        (u'uhs', u'UHS'),  # Uniform Hazard Spectra
+        # Benefit-cost ratio calculator based on Classical PSHA risk calc
+        (u'classical_bcr', u'Classical BCR'),
+        # Benefit-cost ratio calculator based on Event Based risk calc
+        (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
+    )
+    calc_mode = models.TextField(choices=CALC_MODE_CHOICES)
     job_type = CharArrayField()
     input_set = models.ForeignKey('InputSet')
     min_magnitude = models.FloatField(null=True)
