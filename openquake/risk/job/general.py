@@ -467,9 +467,9 @@ def compute_bcr_for_block(job_id, points, get_loss_curve,
         vulnerability function object and asset object and is supposed
         to return a loss curve.
     :return:
-        A list of dictionaries -- one dictionary for each point in the block.
-        Dict values are three-item tuples with point row, column and a mapping
-        of asset ids to the BCR value.
+        A list of three-item tuples, one tuple per point in the block. Each
+        tuple consists of point row, point column and a mapping of point's
+        asset ids to the BCR value.
     """
     # too many local vars (16/15) -- pylint: disable=R0914
     result = []
