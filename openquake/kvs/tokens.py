@@ -44,6 +44,7 @@ GMF_KEY_TOKEN = 'GMF'
 LOSS_RATIO_CURVE_KEY_TOKEN = 'LOSS_RATIO_CURVE'
 LOSS_CURVE_KEY_TOKEN = 'LOSS_CURVE'
 VULNERABILITY_CURVE_KEY_TOKEN = 'VULNERABILITY_CURVE'
+BCR_BLOCK_KEY_TOKEN = 'BCR_BLOCK'
 
 
 CURRENT_JOBS = 'CURRENT_JOBS'
@@ -94,9 +95,10 @@ def generate_blob_key(job_id, blob):
     return _generate_key(job_id, 'blob', hashlib.sha1(blob).hexdigest())
 
 
-def vuln_key(job_id):
+def vuln_key(job_id, retrofitted=False):
     """Generate the key used to store vulnerability curves."""
-    return _generate_key(job_id, "VULN_CURVES")
+    return _generate_key(job_id, "VULN_CURVES",
+                         "retrofitted" if retrofitted else "normal")
 
 
 def asset_key(job_id, row, col):
@@ -155,15 +157,21 @@ def loss_ratio_key(job_id, row, col, asset_id):
                          row, col)
 
 
-def loss_curve_key(job_id, row, col, asset_id):
+def loss_curve_key(job_id, row, col, asset_id, retrofitted=False):
     """ Return a loss curve key """
-    return _generate_key(job_id, LOSS_CURVE_KEY_TOKEN, asset_id, row, col)
+    return _generate_key(job_id, LOSS_CURVE_KEY_TOKEN, asset_id, row, col,
+                         "retrofitted" if retrofitted else "normal")
 
 
 def loss_key(job_id, row, col, asset_id, poe):
     """ Return a loss key """
     return _generate_key(job_id, CONDITIONAL_LOSS_KEY_TOKEN, asset_id, poe,
                          row, col)
+
+
+def bcr_block_key(job_id, block_id):
+    """ Return a BCR block result key """
+    return _generate_key(job_id, BCR_BLOCK_KEY_TOKEN, block_id)
 
 
 def _mean_hazard_curve_key(job_id, site_fragment):

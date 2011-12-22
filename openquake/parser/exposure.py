@@ -151,6 +151,9 @@ class ExposurePortfolioFile(producer.FileProducer):
         except Exception:
             error_str = 'element assetDefinition: no valid assetValue'
             raise ValueError(error_str)
+        site_attributes['retrofittingCost'] = float(
+            element.find('%sretrofittingCost' % NRML).text
+        )
 
         # all of these attributes are in the NRML namespace
         for (required_attr, attr_type) in (('taxonomy', str),
