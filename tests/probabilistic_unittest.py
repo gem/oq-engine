@@ -62,6 +62,7 @@ class LossMapCurveSerialization(unittest.TestCase):
             'NUMBER_OF_LOGIC_TREE_SAMPLES': 0,
             'INVESTIGATION_TIME': 0.0,
             'OUTPUT_DIR': 'foo',
+            'CALCULATION_MODE': 'Event Based'
         }
         self.mixin.serialize_results_to = ['db', 'xml']
         self.mixin.job_id = -1
