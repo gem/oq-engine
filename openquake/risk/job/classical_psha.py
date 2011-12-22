@@ -42,7 +42,6 @@ LOGGER = logs.LOG
 class ClassicalPSHABasedMixin:
     """Mixin for Classical PSHA Based Risk Job"""
 
-    @general.output
     def execute(self):
         """ execute -- general mixin entry point """
         general.preload(self)
@@ -66,6 +65,8 @@ class ClassicalPSHABasedMixin:
             except TimeoutError:
                 # TODO(jmc): Cancel and respawn this task
                 return
+
+        general.write_output(self)
 
     def _get_db_curve(self, site):
         """Read hazard curve data from the DB"""
