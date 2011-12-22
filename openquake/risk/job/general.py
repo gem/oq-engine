@@ -42,24 +42,18 @@ LOG = logs.LOG
 BLOCK_SIZE = 100
 
 
-def preload(fn):
-    """Preload decorator."""
+def preload(mixin):
+    """
+    Define some preliminary steps needed before starting
+    the risk processing.
 
-    def preloader(self, *args, **kwargs):
-        """Define some preliminary steps needed before starting
-        the risk processing. The decorator:
-
-        * reads and stores in KVS the assets
-        * reads and stores in KVS the vulnerability model
-        * splits into blocks and stores in KVS the exposure sites
-        """
-
-        self.store_exposure_assets()
-        self.store_vulnerability_model()
-        self.partition()
-
-        return fn(self, *args, **kwargs)
-    return preloader
+    * read and store in KVS the assets
+    * read and store in KVS the vulnerability model
+    * split into blocks and store in KVS the exposure sites
+    """
+    mixin.store_exposure_assets()
+    mixin.store_vulnerability_model()
+    mixin.partition()
 
 
 def output(fn):
