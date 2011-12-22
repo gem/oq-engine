@@ -53,8 +53,8 @@ CREATE INDEX hzrdi_source_owner_id_idx on hzrdi.source(owner_id);
 CREATE INDEX uiapi_input_input_set_id_idx on uiapi.input(input_set_id);
 CREATE INDEX uiapi_input_set_owner_id_idx on uiapi.input_set(owner_id);
 CREATE INDEX uiapi_input_set_upload_id_idx on uiapi.input_set(upload_id);
-CREATE INDEX uiapi_oq_job_owner_id_idx on uiapi.oq_job(owner_id);
-CREATE INDEX uiapi_oq_job_status_running on uiapi.oq_job(status) WHERE status = 'running';
+CREATE INDEX uiapi_oq_calculation_owner_id_idx on uiapi.oq_calculation(owner_id);
+CREATE INDEX uiapi_oq_calculation_status_running on uiapi.oq_calculation(status) WHERE status = 'running';
 CREATE INDEX uiapi_output_owner_id_idx on uiapi.output(owner_id);
 CREATE INDEX uiapi_upload_owner_id_idx on uiapi.upload(owner_id);
 

@@ -64,8 +64,8 @@ oq_admin
 oq_eqcat_reader
 oq_eqcat_writer
 oq_ged4gem
-oq_job_init
-oq_job_superv
+oq_calculation_init
+oq_calculation_superv
 oq_reslt_writer
 EOF
 

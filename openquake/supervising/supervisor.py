@@ -42,7 +42,7 @@ except ImportError:
     setproctitle = lambda title: None  # pylint: disable=C0103
 
 from openquake import flags
-from openquake.db.models import OqJob, ErrorMsg, JobStats
+from openquake.db.models import OqCalculation, ErrorMsg, JobStats
 from openquake import supervising
 from openquake import kvs
 from openquake import logs
@@ -82,7 +82,7 @@ def record_job_stop_time(job_id):
     """
     logging.info('Recording stop time for job %s to job_stats', job_id)
 
-    job_stats = JobStats.objects.get(oq_job=job_id)
+    job_stats = JobStats.objects.get(oq_calculation=job_id)
     job_stats.stop_time = datetime.utcnow()
     job_stats.save(using='job_superv')
 
@@ -109,7 +109,7 @@ def get_job_status(job_id):
     :rtype: string
     """
 
-    return OqJob.objects.get(id=job_id).status
+    return OqCalculation.objects.get(id=job_id).status
 
 
 def update_job_status_and_error_msg(job_id, status, error_msg=None):
@@ -123,13 +123,13 @@ def update_job_status_and_error_msg(job_id, status, error_msg=None):
     :param error_msg: the error message, if any
     :type error_msg: string or None
     """
-    job = OqJob.objects.get(id=job_id)
+    job = OqCalculation.objects.get(id=job_id)
     job.status = status
     job.save()
 
     if error_msg:
         ErrorMsg.objects.using('job_superv')\
-                        .create(oq_job=job, detailed=error_msg)
+                        .create(oq_calculation=job, detailed=error_msg)
 
 
 class SupervisorLogHandler(logging.StreamHandler):
