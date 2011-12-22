@@ -57,7 +57,9 @@ def preload(mixin):
 
 
 def write_output(mixin):
-    """ Write the output of a block to kvs. """
+    """
+    Write the output of a block to db/xml.
+    """
     for block_id in mixin.blocks_keys:
         #pylint: disable=W0212
         mixin._write_output_for_block(mixin.job_id, block_id)
