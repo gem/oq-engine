@@ -292,3 +292,29 @@ class GarbageCollectionTestCase(unittest.TestCase):
             delete_mock.return_value = False
 
             self.assertRaises(RuntimeError, kvs.cache_gc, self.test_job)
+
+
+class GetClientTestCase(unittest.TestCase):
+    """
+    Tests for get_client()
+    """
+
+    def test_get_client_same_params(self):
+        """
+        get_client() returns the same redis client instance for identical
+        parameters received.
+        """
+        obj1 = kvs.get_client(a=1, b=2)
+        obj2 = kvs.get_client(a=1, b=2)
+        self.assertIs(obj1, obj2)
+
+    def test_get_client_different_params(self):
+        """
+        get_client() returns the same redis client instance for identical
+        parameters received.
+        """
+        obj1 = kvs.get_client(a=1, b=2)
+        obj2 = kvs.get_client(c=3, d=4)
+        self.assertIsNot(obj1, obj2)
+        obj3 = kvs.get_client(a=1, b=2)
+        self.assertIs(obj1, obj3)
