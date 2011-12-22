@@ -56,7 +56,7 @@
     <xsl:template match="//nrml_02:assetDescription"/>
 
     <!-- Drop all lossCategory attributes from exposureList elements. -->
-    <xsl:template match="//nrml:exposureList">
+    <xsl:template match="//nrml_02:exposureList">
         <xsl:element name="exposureList" xmlns="http://openquake.org/xmlns/nrml/0.3">
             <!-- We copy everything except for the lossCategory. -->
             <xsl:copy-of select="./@gml:id"/>
