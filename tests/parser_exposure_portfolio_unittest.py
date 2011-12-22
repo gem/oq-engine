@@ -89,6 +89,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
              'structureCategory': 'RC-HR-PC',
              'assetValue': 250000.0,
              'unit': 'EUR',
+             'retrofittingCost': 1.0
             })]
 
         ctr = None
