@@ -56,39 +56,32 @@ def preload(mixin):
     mixin.partition()
 
 
-def output(fn):
-    """ Decorator for output """
+def write_output(mixin):
+    """ Write the output of a block to kvs. """
+    for block_id in mixin.blocks_keys:
+        #pylint: disable=W0212
+        mixin._write_output_for_block(mixin.job_id, block_id)
 
-    def output_writer(self, *args, **kwargs):
-        """ Write the output of a block to kvs. """
-        fn(self, *args, **kwargs)
+    for loss_poe in conditional_loss_poes(mixin.params):
+        path = os.path.join(mixin.base_path,
+                            mixin.params['OUTPUT_DIR'],
+                            "losses_at-%s.xml" % loss_poe)
+        writer = risk_output.create_loss_map_writer(
+            mixin.job_id, mixin.serialize_results_to, path, False)
 
-        for block_id in self.blocks_keys:
-            #pylint: disable=W0212
-            self._write_output_for_block(self.job_id, block_id)
+        if writer:
+            metadata = {
+                "scenario": False,
+                "timeSpan": mixin.params["INVESTIGATION_TIME"],
+                "poE": loss_poe,
+            }
 
-        for loss_poe in conditional_loss_poes(self.params):
-            path = os.path.join(self.base_path,
-                                self.params['OUTPUT_DIR'],
-                                "losses_at-%s.xml" % loss_poe)
-            writer = risk_output.create_loss_map_writer(
-                self.job_id, self.serialize_results_to, path, False)
-
-            if writer:
-                metadata = {
-                    "scenario": False,
-                    "timeSpan": self.params["INVESTIGATION_TIME"],
-                    "poE": loss_poe,
-                }
-
-                writer.serialize(
-                    [metadata]
-                    + self.asset_losses_per_site(
-                        loss_poe,
-                        self.grid_assets_iterator(self.region.grid)))
-                LOG.info('Loss Map is at: %s' % path)
-
-    return output_writer
+            writer.serialize(
+                [metadata]
+                + mixin.asset_losses_per_site(
+                    loss_poe,
+                    mixin.grid_assets_iterator(mixin.region.grid)))
+            LOG.info('Loss Map is at: %s' % path)
 
 
 def conditional_loss_poes(params):
