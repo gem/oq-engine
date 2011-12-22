@@ -470,7 +470,7 @@ class Input(models.Model):
         db_table = 'uiapi\".\"input'
 
 
-class OqJob(models.Model):
+class OqCalculation(models.Model):
     '''
     An OpenQuake engine run started by the user
     '''
@@ -504,14 +504,14 @@ class OqJob(models.Model):
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
-        db_table = 'uiapi\".\"oq_job'
+        db_table = 'uiapi\".\"oq_calculation'
 
 
 class JobStats(models.Model):
     '''
     Capture various statistics about a job.
     '''
-    oq_job = models.ForeignKey('OqJob')
+    oq_calculation = models.ForeignKey('OqCalculation')
     start_time = models.DateTimeField(editable=False)
     stop_time = models.DateTimeField(editable=False)
     # The number of total sites in job
@@ -528,7 +528,7 @@ class OqParams(models.Model):
     '''
     Parameters needed to run an OpenQuake job
     '''
-    calc_mode = models.TextField(choices=OqJob.CALC_MODE_CHOICES)
+    calc_mode = models.TextField(choices=OqCalculation.CALC_MODE_CHOICES)
     job_type = CharArrayField()
     input_set = models.ForeignKey('InputSet')
     min_magnitude = models.FloatField(null=True)
@@ -690,7 +690,7 @@ class Output(models.Model):
     The data may reside in a file or in the database.
     '''
     owner = models.ForeignKey('OqUser')
-    oq_job = models.ForeignKey('OqJob')
+    oq_calculation = models.ForeignKey('OqCalculation')
     path = models.TextField(null=True, unique=True)
     display_name = models.TextField()
     db_backed = models.BooleanField(default=False)
@@ -723,7 +723,7 @@ class ErrorMsg(models.Model):
     '''
     Error information associated with a job failure
     '''
-    oq_job = models.ForeignKey('OqJob')
+    oq_calculation = models.ForeignKey('OqCalculation')
     brief = models.TextField()
     detailed = models.TextField()
 

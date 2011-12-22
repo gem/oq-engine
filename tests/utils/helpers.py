@@ -596,7 +596,7 @@ class DbTestMixin(TestMixin):
         :param integer upload_id: if set use upload record with given db key.
         :param bool create_job_path: if set the path for the job will be
             created and captured in the job record
-        :returns: a :py:class:`db.models.OqJob` instance
+        :returns: a :py:class:`db.models.OqCalculation` instance
         """
         assert upload_id is None  # temporary
 
@@ -660,7 +660,7 @@ class DbTestMixin(TestMixin):
         oqp.gmpe_lt_random_seed = 5
         oqp.save()
 
-        job = models.OqJob(oq_params=oqp, owner=owner,
+        job = models.OqCalculation(oq_params=oqp, owner=owner,
                            calc_mode="classical", job_type=['hazard'])
         job.save()
 
@@ -678,9 +678,9 @@ class DbTestMixin(TestMixin):
         Tear down the file system (and potentially db) artefacts for the
         given job.
 
-        :param job: the :py:class:`db.models.OqJob` instance
+        :param job: the :py:class:`db.models.OqCalculation` instance
             in question
-        :param bool filesystem_only: if set the oq_job/oq_param/upload/input
+        :param bool filesystem_only: if set the oq_calculation/oq_param/upload/input
             database records will be left intact. This saves time and the test
             db will be dropped/recreated prior to the next db test suite run
             anyway.
@@ -700,7 +700,7 @@ class DbTestMixin(TestMixin):
         """Create an output object of the given type.
 
         :param job_to_use: if set use the passed
-            :py:class:`db.models.OqJob` instance as opposed to
+            :py:class:`db.models.OqCalculation` instance as opposed to
             creating a new one.
         :param str output_type: map type, one of "hazard_map", "loss_map"
         :param bool db_backed: initialize the property of the newly created
@@ -708,7 +708,7 @@ class DbTestMixin(TestMixin):
         :returns: a :py:class:`db.models.Output` instance
         """
         job = job_to_use if job_to_use else self.setup_classic_job()
-        output = models.Output(owner=job.owner, oq_job=job,
+        output = models.Output(owner=job.owner, oq_calculation=job,
                                output_type=output_type,
                                db_backed=db_backed)
         output.path = self.generate_output_path(job, output_type)
@@ -737,7 +737,7 @@ class DbTestMixin(TestMixin):
             be left intact. This saves time and the test db will be
             dropped/recreated prior to the next db test suite run anyway.
         """
-        job = output.oq_job
+        job = output.oq_calculation
         if not filesystem_only:
             output.delete()
         if teardown_job:
