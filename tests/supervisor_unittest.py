@@ -23,7 +23,7 @@ from datetime import datetime
 from tests.utils.helpers import patch, job_from_file, get_data_path
 from tests.utils.helpers import DbTestMixin, cleanup_loggers
 
-from openquake.db.models import OqJob, ErrorMsg, JobStats
+from openquake.db.models import OqCalculation, ErrorMsg, CalcStats
 from openquake.supervising import supervisor
 from openquake.supervising import supersupervisor
 
@@ -38,21 +38,22 @@ class SupervisorHelpersTestCase(DbTestMixin, unittest.TestCase):
     def tearDown(self):
         if self.job:
             ErrorMsg.objects.using('job_superv')\
-                            .filter(oq_job=self.job.id).delete()
+                            .filter(oq_calculation=self.job.id).delete()
             self.teardown_job(self.job, filesystem_only=True)
 
     def test_record_job_stop_time(self):
         """
         Test that job stop time is recorded properly.
         """
-        stats = JobStats(
-            oq_job=self.job, start_time=datetime.utcnow(), num_sites=10)
+        stats = CalcStats(
+            oq_calculation=self.job, start_time=datetime.utcnow(),
+            num_sites=10)
         stats.save(using='job_superv')
 
         supervisor.record_job_stop_time(self.job.id)
 
         # Fetch the stats and check for the stop_time
-        stats = JobStats.objects.get(oq_job=self.job.id)
+        stats = CalcStats.objects.get(oq_calculation=self.job.id)
         self.assertTrue(stats.stop_time is not None)
 
     def test_cleanup_after_job(self):
@@ -69,8 +70,9 @@ class SupervisorHelpersTestCase(DbTestMixin, unittest.TestCase):
                                                    error_msg)
 
         self.assertEqual(status, supervisor.get_job_status(self.job.id))
-        self.assertEqual(error_msg,
-                         ErrorMsg.objects.get(oq_job=self.job.id).detailed)
+        self.assertEqual(
+            error_msg,
+            ErrorMsg.objects.get(oq_calculation=self.job.id).detailed)
 
 
 class SupervisorTestCase(unittest.TestCase):
@@ -181,12 +183,12 @@ class SupersupervisorTestCase(unittest.TestCase):
     def setUp(self):
         self.running_pid = 1324
         self.stopped_pid = 4312
-        OqJob.objects.all().update(status='succeeded')
+        OqCalculation.objects.all().update(status='succeeded')
         job_pid = 1
         for status in ('pending', 'running', 'failed', 'succeeded'):
             for supervisor_pid in (self.running_pid, self.stopped_pid):
                 job = job_from_file(get_data_path(CONFIG_FILE))
-                job = OqJob.objects.get(id=job.job_id)
+                job = OqCalculation.objects.get(id=job.job_id)
                 job.status = status
                 job.supervisor_pid = supervisor_pid
                 job.job_pid = job_pid

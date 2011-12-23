@@ -135,7 +135,7 @@ def verify_hazcurve_results(
         gh = geohash.encode(lat, lon)
 
         hc = models.HazardCurveData.objects.filter(
-            hazard_curve__output__oq_job=job,
+            hazard_curve__output__oq_calculation=job,
             hazard_curve__end_branch_label=end_branch_label,
             hazard_curve__statistic_type=statistic_type).extra(
                 where=["ST_GeoHash(location, 12) = %s"],
@@ -160,7 +160,7 @@ def verify_hazmap_results(tc, job, expected_map, poe, statistic_type):
         gh = geohash.encode(site.latitude, site.longitude, precision=12)
 
         hm_db = models.HazardMapData.objects.filter(
-            hazard_map__output__oq_job=job,
+            hazard_map__output__oq_calculation=job,
             hazard_map__statistic_type=statistic_type,
             hazard_map__poe=poe).extra(
             where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
@@ -220,7 +220,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         run_job(helpers.demo_file(
             os.path.join("HazardMapTest", "config.gem")))
 
-        self.job = models.OqJob.objects.latest("id")
+        self.job = models.OqCalculation.objects.latest("id")
 
         path = helpers.demo_file(os.path.join("HazardMapTest",
             "expected_results", "meanHazardMap0.1.dat"))
@@ -243,7 +243,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
         run_job(job_cfg)
 
-        self.job = models.OqJob.objects.latest("id")
+        self.job = models.OqCalculation.objects.latest("id")
 
         # Check hazard curves for sample 0:
         # Hazard curve expected results for logic tree sample 0:
@@ -274,13 +274,13 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         """Compare the expected hazard curve results with the results
         computed by the current job."""
 
-        self.job = models.OqJob.objects.latest("id")
+        self.job = models.OqCalculation.objects.latest("id")
 
         for site, curve in expected_results.items():
             gh = geohash.encode(site.latitude, site.longitude, precision=12)
 
             hc_db = models.HazardCurveData.objects.filter(
-                hazard_curve__output__oq_job=self.job,
+                hazard_curve__output__oq_calculation=self.job,
                 hazard_curve__statistic_type="mean").extra(
                 where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
 

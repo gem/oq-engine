@@ -112,9 +112,9 @@ class DBWriter(object):
     override serialize().
     """
 
-    def __init__(self, nrml_path, oq_job_id):
+    def __init__(self, nrml_path, oq_calculation_id):
         self.nrml_path = nrml_path
-        self.oq_job_id = oq_job_id
+        self.oq_calculation_id = oq_calculation_id
         self.output = None
         self.bulk_inserter = None
 
@@ -123,8 +123,8 @@ class DBWriter(object):
 
         assert self.output is None
 
-        job = models.OqJob.objects.get(id=self.oq_job_id)
-        self.output = models.Output(owner=job.owner, oq_job=job,
+        job = models.OqCalculation.objects.get(id=self.oq_calculation_id)
+        self.output = models.Output(owner=job.owner, oq_calculation=job,
                                     display_name=basename(self.nrml_path),
                                     output_type=output_type, db_backed=True)
         self.output.save()

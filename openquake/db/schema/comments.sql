@@ -300,19 +300,17 @@ COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 
 COMMENT ON TABLE uiapi.input_set IS 'The set of input files for a job';
 
-COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
-COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
-COMMENT ON COLUMN uiapi.oq_job.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
-COMMENT ON COLUMN uiapi.oq_job.supervisor_pid IS 'The process id (PID) of the supervisor for this OpenQuake job';
-COMMENT ON COLUMN uiapi.oq_job.calc_mode IS 'One of: classical, event_based, scenario, disaggregation, uhs, classical_bcr or event_based_bcr.';
-COMMENT ON COLUMN uiapi.oq_job.job_type IS '"hazard" and/or "risk"';
-COMMENT ON COLUMN uiapi.oq_job.status IS 'One of: pending, running, failed or succeeded.';
-COMMENT ON COLUMN uiapi.oq_job.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
+COMMENT ON TABLE uiapi.oq_calculation IS 'Date related to an OpenQuake job that was created in the UI.';
+COMMENT ON COLUMN uiapi.oq_calculation.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
+COMMENT ON COLUMN uiapi.oq_calculation.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
+COMMENT ON COLUMN uiapi.oq_calculation.supervisor_pid IS 'The process id (PID) of the supervisor for this OpenQuake job';
+COMMENT ON COLUMN uiapi.oq_calculation.status IS 'One of: pending, running, failed or succeeded.';
+COMMENT ON COLUMN uiapi.oq_calculation.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
 
 
-COMMENT ON TABLE uiapi.job_stats IS 'Tracks various job statistics';
-COMMENT ON COLUMN uiapi.job_stats.num_sites IS 'The number of total sites in the calculation';
-COMMENT ON COLUMN uiapi.job_stats.realizations IS 'The number of logic tree samples in the calculation (for hazard jobs of all types except scenario)';
+COMMENT ON TABLE uiapi.calc_stats IS 'Tracks various job statistics';
+COMMENT ON COLUMN uiapi.calc_stats.num_sites IS 'The number of total sites in the calculation';
+COMMENT ON COLUMN uiapi.calc_stats.realizations IS 'The number of logic tree samples in the calculation (for hazard jobs of all types except scenario)';
 
 
 COMMENT ON TABLE uiapi.oq_params IS 'Holds the parameters needed to invoke the OpenQuake engine.';
