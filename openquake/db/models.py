@@ -470,26 +470,13 @@ class Input(models.Model):
         db_table = 'uiapi\".\"input'
 
 
-class OqJob(models.Model):
+class OqCalculation(models.Model):
     '''
     An OpenQuake engine run started by the user
     '''
     owner = models.ForeignKey('OqUser')
     description = models.TextField()
     path = models.TextField(null=True, unique=True)
-    CALC_MODE_CHOICES = (
-        (u'classical', u'Classical PSHA'),
-        (u'event_based', u'Probabilistic Event-Based'),
-        (u'scenario', u'Scenario'),
-        (u'disaggregation', u'Disaggregation'),
-        (u'uhs', u'UHS'),  # Uniform Hazard Spectra
-        # Benefit-cost ratio calculator based on Classical PSHA risk calc
-        (u'classical_bcr', u'Classical BCR'),
-        # Benefit-cost ratio calculator based on Event Based risk calc
-        (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
-    )
-    calc_mode = models.TextField(choices=CALC_MODE_CHOICES)
-    job_type = CharArrayField()
     STATUS_CHOICES = (
         (u'pending', u'Pending'),
         (u'running', u'Running'),
@@ -504,14 +491,14 @@ class OqJob(models.Model):
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
-        db_table = 'uiapi\".\"oq_job'
+        db_table = 'uiapi\".\"oq_calculation'
 
 
-class JobStats(models.Model):
+class CalcStats(models.Model):
     '''
     Capture various statistics about a job.
     '''
-    oq_job = models.ForeignKey('OqJob')
+    oq_calculation = models.ForeignKey('OqCalculation')
     start_time = models.DateTimeField(editable=False)
     stop_time = models.DateTimeField(editable=False)
     # The number of total sites in job
@@ -521,14 +508,25 @@ class JobStats(models.Model):
     realizations = models.IntegerField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
-        db_table = 'uiapi\".\"job_stats'
+        db_table = 'uiapi\".\"calc_stats'
 
 
 class OqParams(models.Model):
     '''
     Parameters needed to run an OpenQuake job
     '''
-    calc_mode = models.TextField(choices=OqJob.CALC_MODE_CHOICES)
+    CALC_MODE_CHOICES = (
+        (u'classical', u'Classical PSHA'),
+        (u'event_based', u'Probabilistic Event-Based'),
+        (u'scenario', u'Scenario'),
+        (u'disaggregation', u'Disaggregation'),
+        (u'uhs', u'UHS'),  # Uniform Hazard Spectra
+        # Benefit-cost ratio calculator based on Classical PSHA risk calc
+        (u'classical_bcr', u'Classical BCR'),
+        # Benefit-cost ratio calculator based on Event Based risk calc
+        (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
+    )
+    calc_mode = models.TextField(choices=CALC_MODE_CHOICES)
     job_type = CharArrayField()
     input_set = models.ForeignKey('InputSet')
     min_magnitude = models.FloatField(null=True)
@@ -690,7 +688,7 @@ class Output(models.Model):
     The data may reside in a file or in the database.
     '''
     owner = models.ForeignKey('OqUser')
-    oq_job = models.ForeignKey('OqJob')
+    oq_calculation = models.ForeignKey('OqCalculation')
     path = models.TextField(null=True, unique=True)
     display_name = models.TextField()
     db_backed = models.BooleanField(default=False)
@@ -723,7 +721,7 @@ class ErrorMsg(models.Model):
     '''
     Error information associated with a job failure
     '''
-    oq_job = models.ForeignKey('OqJob')
+    oq_calculation = models.ForeignKey('OqCalculation')
     brief = models.TextField()
     detailed = models.TextField()
 
