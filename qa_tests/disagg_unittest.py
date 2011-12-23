@@ -106,7 +106,7 @@ class DisaggCalcQATestCase(unittest.TestCase, helpers.ConfigTestMixin):
 
         h5_file = H5_OUTPUT_FILE % job_record.id
         self.assertTrue(os.path.exists(h5_file))
-        self._verify_h5(h5_file, job_record.oq_params)
+        self._verify_h5(h5_file, job_record.oq_job_profile)
 
         # clean up the job hdf5 results dir:
         shutil.rmtree(H5_OUTPUT_DIR % job_record.id)
@@ -135,23 +135,23 @@ class DisaggCalcQATestCase(unittest.TestCase, helpers.ConfigTestMixin):
             else:
                 self.assertEqual(line, actual_text[i])
 
-    def _verify_h5(self, h5_file, oq_params):
+    def _verify_h5(self, h5_file, oq_job_profile):
         """Verify the contents of the resulting h5 file.
 
         :param h5_file:
             Path to the resulting h5 file.
-        :param oq_params:
+        :param oq_job_profile:
             :class:`openquake.db.models.OqParams` instance. We need this to
             access subset types and bin limits.
         """
-        subset_types = oq_params.disagg_results
+        subset_types = oq_job_profile.disagg_results
         self.assertTrue(len(subset_types) > 0)
 
-        nlat = len(oq_params.lat_bin_limits) - 1
-        nlon = len(oq_params.lon_bin_limits) - 1
-        ndist = len(oq_params.distance_bin_limits) - 1
-        nmag = len(oq_params.mag_bin_limits) - 1
-        neps = len(oq_params.epsilon_bin_limits) - 1
+        nlat = len(oq_job_profile.lat_bin_limits) - 1
+        nlon = len(oq_job_profile.lon_bin_limits) - 1
+        ndist = len(oq_job_profile.distance_bin_limits) - 1
+        nmag = len(oq_job_profile.mag_bin_limits) - 1
+        neps = len(oq_job_profile.epsilon_bin_limits) - 1
 
         with h5py.File(h5_file, 'r') as h5:
             for subset in subset_types:
