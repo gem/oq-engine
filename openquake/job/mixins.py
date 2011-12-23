@@ -56,6 +56,10 @@ class Mixin:
         self.target = target
         self.mixin = mixin
 
+        # This is a temporary member
+        # to help a bit with decoupling Jobs and Mixins
+        self.job = target
+
     def __enter__(self):
         return self._load()
 
