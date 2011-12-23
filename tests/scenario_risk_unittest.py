@@ -24,6 +24,7 @@ This module tests the risk side of the scenario event based calculation.
 import json
 import unittest
 
+from openquake import engine
 from openquake import kvs
 from openquake import shapes
 from openquake.risk.job import scenario as risk_job_det
@@ -140,4 +141,4 @@ class ScenarioRiskTestCase(unittest.TestCase):
         # job. We don't actually want that to happen.
         with patch('subprocess.Popen'):
 
-            risk_job.launch()
+            engine.launch(risk_job)
