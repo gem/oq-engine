@@ -252,3 +252,7 @@ def cache_gc(job_id):
             '%s is not recognized as a current job.' % job_id
         LOG.error(msg)
         return None
+
+
+def cache_connections():
+    """True if kvs connections should be cached."""
