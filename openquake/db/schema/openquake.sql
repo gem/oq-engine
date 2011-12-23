@@ -561,7 +561,7 @@ CREATE TABLE uiapi.oq_calculation (
 
 
 -- Tracks various job statistics
-CREATE TABLE uiapi.job_stats (
+CREATE TABLE uiapi.calc_stats (
     id SERIAL PRIMARY KEY,
     oq_calculation_id INTEGER NOT NULL,
     start_time timestamp with time zone,
@@ -1476,7 +1476,7 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 ALTER TABLE uiapi.oq_calculation ADD CONSTRAINT uiapi_oq_calculation_oq_params_fk
 FOREIGN KEY (oq_params_id) REFERENCES uiapi.oq_params(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.job_stats ADD CONSTRAINT  uiapi_job_stats_oq_calculation_fk
+ALTER TABLE uiapi.calc_stats ADD CONSTRAINT  uiapi_calc_stats_oq_calculation_fk
 FOREIGN KEY (oq_calculation_id) REFERENCES uiapi.oq_calculation(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.upload ADD CONSTRAINT uiapi_upload_owner_fk

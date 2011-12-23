@@ -75,16 +75,16 @@ def terminate_job(pid):
 def record_job_stop_time(job_id):
     """
     Call this when a job concludes (successful or not) to record the
-    'stop_time' (using the current UTC time) in the uiapi.job_stats table.
+    'stop_time' (using the current UTC time) in the uiapi.calc_stats table.
 
     :param job_id: the job id
     :type job_id: int
     """
-    logging.info('Recording stop time for job %s to job_stats', job_id)
+    logging.info('Recording stop time for job %s to calc_stats', job_id)
 
-    job_stats = JobStats.objects.get(oq_calculation=job_id)
-    job_stats.stop_time = datetime.utcnow()
-    job_stats.save(using='job_superv')
+    calc_stats = JobStats.objects.get(oq_calculation=job_id)
+    calc_stats.stop_time = datetime.utcnow()
+    calc_stats.save(using='job_superv')
 
 
 def cleanup_after_job(job_id):
