@@ -23,7 +23,7 @@ from datetime import datetime
 from tests.utils.helpers import patch, job_from_file, get_data_path
 from tests.utils.helpers import DbTestMixin, cleanup_loggers
 
-from openquake.db.models import OqCalculation, ErrorMsg, JobStats
+from openquake.db.models import OqCalculation, ErrorMsg, CalcStats
 from openquake.supervising import supervisor
 from openquake.supervising import supersupervisor
 
@@ -45,14 +45,15 @@ class SupervisorHelpersTestCase(DbTestMixin, unittest.TestCase):
         """
         Test that job stop time is recorded properly.
         """
-        stats = JobStats(
-            oq_calculation=self.job, start_time=datetime.utcnow(), num_sites=10)
+        stats = CalcStats(
+            oq_calculation=self.job, start_time=datetime.utcnow(),
+            num_sites=10)
         stats.save(using='job_superv')
 
         supervisor.record_job_stop_time(self.job.id)
 
         # Fetch the stats and check for the stop_time
-        stats = JobStats.objects.get(oq_calculation=self.job.id)
+        stats = CalcStats.objects.get(oq_calculation=self.job.id)
         self.assertTrue(stats.stop_time is not None)
 
     def test_cleanup_after_job(self):

@@ -494,7 +494,7 @@ class OqCalculation(models.Model):
         db_table = 'uiapi\".\"oq_calculation'
 
 
-class JobStats(models.Model):
+class CalcStats(models.Model):
     '''
     Capture various statistics about a job.
     '''
@@ -508,7 +508,7 @@ class JobStats(models.Model):
     realizations = models.IntegerField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
-        db_table = 'uiapi\".\"job_stats'
+        db_table = 'uiapi\".\"calc_stats'
 
 
 class OqParams(models.Model):

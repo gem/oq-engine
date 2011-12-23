@@ -36,7 +36,7 @@ from openquake.job import (
     prepare_config_parameters, get_source_models)
 from openquake.job.mixins import Mixin
 from openquake.job.params import config_text_to_list
-from openquake.db.models import OqCalculation, JobStats, OqParams
+from openquake.db.models import OqCalculation, CalcStats, OqParams
 from openquake.risk.job import general
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
@@ -895,7 +895,7 @@ class RunJobTestCase(unittest.TestCase):
                           supervise.call_args)
 
 
-class JobStatsTestCase(unittest.TestCase):
+class CalcStatsTestCase(unittest.TestCase):
     '''
     Tests related to capturing job stats.
     '''
@@ -908,14 +908,14 @@ class JobStatsTestCase(unittest.TestCase):
     def test_record_initial_stats(self):
         '''
         Verify that :py:method:`openquake.job.Job._record_initial_stats`
-        reports initial job stats.
+        reports initial calculation stats.
 
-        As we add fields to the uiapi.job_stats table, this test will need to
+        As we add fields to the uiapi.calc_stats table, this test will need to
         be updated to check for this new information.
         '''
         self.eb_job._record_initial_stats()
 
-        actual_stats = JobStats.objects.get(oq_calculation=self.eb_job.job_id)
+        actual_stats = CalcStats.objects.get(oq_calculation=self.eb_job.job_id)
 
         self.assertTrue(actual_stats.start_time is not None)
         self.assertEqual(91, actual_stats.num_sites)
