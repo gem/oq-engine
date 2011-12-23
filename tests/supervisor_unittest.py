@@ -70,8 +70,9 @@ class SupervisorHelpersTestCase(DbTestMixin, unittest.TestCase):
                                                    error_msg)
 
         self.assertEqual(status, supervisor.get_job_status(self.job.id))
-        self.assertEqual(error_msg,
-                         ErrorMsg.objects.get(oq_calculation=self.job.id).detailed)
+        self.assertEqual(
+            error_msg,
+            ErrorMsg.objects.get(oq_calculation=self.job.id).detailed)
 
 
 class SupervisorTestCase(unittest.TestCase):
