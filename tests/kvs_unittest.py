@@ -325,6 +325,12 @@ class CacheConnectionsTestCase(helpers.ConfigTestMixin, unittest.TestCase):
     Tests for cache_connections()
     """
 
+    def setUp(self):
+        self.setup_config()
+
+    def tearDown(self):
+        self.teardown_config()
+
     def test_cache_connections_with_absent_key(self):
         """
         cache_connections() returns False if the cache_connections entry
@@ -354,7 +360,7 @@ class CacheConnectionsTestCase(helpers.ConfigTestMixin, unittest.TestCase):
         cache_connections() returns True if the cache_connections entry
         is not present and equal to 'true'.
         """
-        self.prepare_config("kvs", { "cache_connections": "true" })
+        self.prepare_config("kvs", { "cache_connections": "  true" })
         self.assertIs(True, kvs.cache_connections())
 
     def test_cache_connections_with_True(self):
@@ -362,5 +368,5 @@ class CacheConnectionsTestCase(helpers.ConfigTestMixin, unittest.TestCase):
         cache_connections() returns True if the cache_connections entry
         is not present and equal to 'True'.
         """
-        self.prepare_config("kvs", { "cache_connections": "True" })
+        self.prepare_config("kvs", { "cache_connections": "True  " })
         self.assertIs(True, kvs.cache_connections())
