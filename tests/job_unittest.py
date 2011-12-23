@@ -452,7 +452,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def _get_inputs(self, job):
         inputs = [dict(path=i.path, type=i.input_type)
-                      for i in self.job.oq_job_profile.input_set.input_set.all()]
+                  for i in self.job.oq_job_profile.input_set.input_set.all()]
 
         return sorted(inputs, key=lambda i: (i['type'], i['path']))
 
