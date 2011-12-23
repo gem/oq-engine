@@ -192,7 +192,8 @@ class JobDbRecordTestCase(unittest.TestCase):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
         status = 'running'
         self.job.set_status(status)
-        self.assertEqual(status, OqCalculation.objects.get(id=self.job.job_id).status)
+        self.assertEqual(status,
+                         OqCalculation.objects.get(id=self.job.job_id).status)
 
     def test_get_status_from_db(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')

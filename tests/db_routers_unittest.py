@@ -113,7 +113,8 @@ class OQRouterTestCase(unittest.TestCase):
         For each model in the 'uiapi' schema, test for proper db routing
         for read operations.
         '''
-        classes = [Upload, Input, InputSet, OqCalculation, OqParams, Output, ErrorMsg]
+        classes = [Upload, Input, InputSet, OqCalculation, OqParams, Output,
+                   ErrorMsg]
         expected_db = 'reslt_writer'
 
         self._db_for_read_helper(classes, expected_db)
