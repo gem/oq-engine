@@ -40,11 +40,10 @@ def launch(a_job):
         if not key.upper() in a_job.sections:
             continue
 
-        with Mixin(a_job, mixin):
+        with Mixin(a_job, mixin) as calculator:
             # The mixin defines a preload decorator to handle the needed
             # data for the tasks and decorates _execute(). the mixin's
             # _execute() method calls the expected tasks.
             LOG.debug(
                 "Job %s Launching %s for %s" % (a_job.job_id, mixin, key))
-            a_job.execute()
-
+            calculator.execute()
