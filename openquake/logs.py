@@ -50,6 +50,7 @@ def init_logs_amqp_send(level, job_id):
     Adds handler :class:`AMQPHandler` to logger 'oq.job'.
     """
     def class_name(datum):
+        """Return the class name of given datum."""
         return str(datum.__class__).split("'")[1]
 
     amqp_handler_present = any(
