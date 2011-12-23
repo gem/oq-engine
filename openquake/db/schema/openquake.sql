@@ -718,7 +718,7 @@ CREATE TABLE uiapi.oq_params (
     compute_mean_hazard_curve boolean
         CONSTRAINT compute_mean_hazard_curve_is_set
         CHECK(
-            ((calc_mode = 'classical')
+            ((calc_mode IN ('classical', 'classical_bcr'))
             AND
             (
                 -- If the job is hazard+risk and classical,
@@ -730,9 +730,8 @@ CREATE TABLE uiapi.oq_params (
                 ((NOT ARRAY['hazard', 'risk']::VARCHAR[] <@ job_type) AND (compute_mean_hazard_curve IS NOT NULL))
             ))
             OR
-            ((calc_mode != 'classical')
+            ((calc_mode NOT IN ('classical', 'classical_bcr'))
              AND (compute_mean_hazard_curve IS NULL))),
-
     conditional_loss_poe float[],
     fault_magnitude_scaling_relationship VARCHAR
         CONSTRAINT fault_magnitude_scaling_relationship_is_set

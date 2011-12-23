@@ -5,6 +5,7 @@
                 xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
                 xmlns:nrml_02="http://openquake.org/xmlns/nrml/0.2"
                 xmlns:nrml="http://openquake.org/xmlns/nrml/0.3"
+                xmlns:gml="http://www.opengis.net/gml"
                 exclude-result-prefixes="nrml_02 nrml">
 
     <xsl:output method="xml" indent="yes"/>
@@ -53,6 +54,16 @@
 
     <!-- Delete all assetDescription elements. -->
     <xsl:template match="//nrml_02:assetDescription"/>
+
+    <!-- Drop all lossCategory attributes from exposureList elements. -->
+    <xsl:template match="//nrml_02:exposureList">
+        <xsl:element name="exposureList" xmlns="http://openquake.org/xmlns/nrml/0.3">
+            <!-- We copy everything except for the lossCategory. -->
+            <xsl:copy-of select="./@gml:id"/>
+            <xsl:copy-of select="./@assetCategory"/>
+            <xsl:apply-templates />
+        </xsl:element>
+    </xsl:template>
 
     <!-- Copy comments. -->
     <xsl:template match="comment()">

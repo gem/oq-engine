@@ -31,8 +31,9 @@ from openquake.db import models
 from openquake.parser import vulnerability
 from openquake.risk import classical_psha_based as cpsha_based
 from openquake.shapes import Curve
+from openquake.job import config as job_config
 
-from openquake.risk.common import  compute_loss_curve
+from openquake.risk.common import compute_loss_curve
 from openquake.risk.job import general
 
 LOGGER = logs.LOG
@@ -76,20 +77,31 @@ class ClassicalPSHABasedMixin:
 
         return Curve(zip(job.oq_params.imls, hc.poes))
 
-    def compute_risk(self, block_id, **kwargs):  # pylint: disable=W0613
+    def compute_risk(self, block_id):
         """This task computes risk for a block of sites. It requires to have
         pre-initialized in kvs:
          1) list of sites
          2) exposure portfolio (=assets)
          3) vulnerability
+         4) vulnerability for retrofitted asset portfolio (only for BCR mode)
 
+        Calls either :meth:`_compute_bcr` or :meth:`_compute_loss` depending
+        on the calculation mode.
         """
 
+        if self.params[job_config.CALCULATION_MODE] \
+                == job_config.BCR_CLASSICAL_MODE:
+            return self._compute_bcr(block_id)
+        else:
+            return self._compute_loss(block_id)
+
+    def _compute_loss(self, block_id):
+        """
+        Calculate and store in the kvs the loss data.
+        """
         block = general.Block.from_kvs(block_id)
 
-        #pylint: disable=W0201
-        self.vuln_curves = \
-                vulnerability.load_vuln_model_from_kvs(self.job_id)
+        vuln_curves = vulnerability.load_vuln_model_from_kvs(self.job_id)
 
         for point in block.grid(self.region):
             hazard_curve = self._get_db_curve(point.site)
@@ -100,7 +112,7 @@ class ClassicalPSHABasedMixin:
                 LOGGER.debug("processing asset %s" % (asset))
 
                 loss_ratio_curve = self.compute_loss_ratio_curve(
-                    point, asset, hazard_curve)
+                    point, asset, hazard_curve, vuln_curves)
 
                 if loss_ratio_curve:
                     loss_curve = self.compute_loss_curve(point,
@@ -111,6 +123,36 @@ class ClassicalPSHABasedMixin:
                                 point.column, point.row, loss_curve, asset,
                                 loss_poe)
 
+        return True
+
+    def _compute_bcr(self, block_id):
+        """
+        Calculate and store in the kvs the benefit-cost ratio data for block.
+
+        A value is stored with key :func:`openquake.kvs.tokens.bcr_block_key`.
+        See :func:`openquake.risk.general.compute_bcr_for_block` for return
+        value spec.
+        """
+        result = []
+
+        points = list(general.Block.from_kvs(block_id).grid(self.region))
+        hazard_curves = dict((point.site, self._get_db_curve(point.site))
+                             for point in points)
+
+        def get_loss_curve(point, vuln_function, asset):
+            "Compute loss curve basing on hazard curve"
+            hazard_curve = hazard_curves[point.site]
+            loss_ratio_curve = cpsha_based.compute_loss_ratio_curve(
+                    vuln_function, hazard_curve)
+            return compute_loss_curve(loss_ratio_curve, asset['assetValue'])
+
+        result = general.compute_bcr_for_block(self.job_id, points,
+            get_loss_curve, float(self.params['INTEREST_RATE']),
+            float(self.params['ASSET_LIFE_EXPECTANCY'])
+        )
+        bcr_block_key = kvs.tokens.bcr_block_key(self.job_id, block_id)
+        kvs.set_value_json_encoded(bcr_block_key, result)
+        LOGGER.debug('bcr result for block %s: %r', block_id, result)
         return True
 
     def compute_loss_curve(self, point, loss_ratio_curve, asset):
@@ -138,7 +180,8 @@ class ClassicalPSHABasedMixin:
 
         return loss_curve
 
-    def compute_loss_ratio_curve(self, point, asset, hazard_curve):
+    def compute_loss_ratio_curve(self, point, asset,
+                                 hazard_curve, vuln_curves):
         """ Computes the loss ratio curve and stores in kvs
             the curve itself
 
@@ -155,8 +198,7 @@ class ClassicalPSHABasedMixin:
         # we get the vulnerability function related to the asset
 
         vuln_function_reference = asset["taxonomy"]
-        vuln_function = self.vuln_curves.get(
-            vuln_function_reference, None)
+        vuln_function = vuln_curves.get(vuln_function_reference, None)
 
         if not vuln_function:
             LOGGER.error(

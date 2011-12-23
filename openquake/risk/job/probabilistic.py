@@ -38,6 +38,7 @@ from openquake.risk.job import aggregate_loss_curve
 from openquake.risk.job import general
 
 from openquake.db import models
+from openquake.job import config as job_config
 
 LOGGER = logs.LOG
 
@@ -67,6 +68,9 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
             except TimeoutError:
                 # TODO(jmc): Cancel and respawn this task
                 return
+
+        if self.is_benefit_cost_ratio():
+            return
 
         curve = aggregate_curve.compute(self._tses(), self._time_span())
         aggregate_loss_curve.plot_aggregate_curve(self, curve)
@@ -154,6 +158,13 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
 
         return gmfs
 
+    def is_benefit_cost_ratio(self):
+        """
+        Return True if current calculation mode is Benefit-Cost Ratio.
+        """
+        return self.params[job_config.CALCULATION_MODE] \
+                == job_config.BCR_EVENT_BASED_MODE
+
     def slice_gmfs(self, block_id):
         """Load and collate GMF values for all sites in this block. """
         block = general.Block.from_kvs(block_id)
@@ -168,7 +179,19 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
                     "TimeSpan": self._time_span()}
             kvs.set_value_json_encoded(key_gmf, gmf)
 
-    def compute_risk(self, block_id, **kwargs):  # pylint: disable=W0613
+    def compute_risk(self, block_id):
+        """
+        Perform calculation and store the result in the kvs.
+
+        Calls either :meth:`_compute_bcr` or :meth:`_compute_loss` depending
+        on the calculation mode.
+        """
+        if self.is_benefit_cost_ratio():
+            return self._compute_bcr(block_id)
+        else:
+            return self._compute_loss(block_id)
+
+    def _compute_loss(self, block_id):
         """Compute risk for a block of sites, that means:
 
         * loss ratio curves
@@ -216,6 +239,45 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
                                 loss_poe)
 
         return aggregate_curve.losses
+
+    def _compute_bcr(self, block_id):
+        """
+        Calculate and store in the kvs the benefit-cost ratio data for block.
+
+        A value is stored with key :func:`openquake.kvs.tokens.bcr_block_key`.
+        See :func:`openquake.risk.general.compute_bcr_for_block` for return
+        value spec.
+        """
+        self.slice_gmfs(block_id)
+
+        points = list(general.Block.from_kvs(block_id).grid(self.region))
+        gmf_slices = dict(
+            (point.site, kvs.get_value_json_decoded(
+                 kvs.tokens.gmf_set_key(self.job_id, point.column, point.row)
+            ))
+            for point in points
+        )
+        epsilon_provider = general.EpsilonProvider(self.params)
+
+        def get_loss_curve(point, vuln_function, asset):
+            "Compute loss curve basing on GMF data"
+            gmf_slice = gmf_slices[point.site]
+            loss_ratios = prob.compute_loss_ratios(
+                vuln_function, gmf_slice, epsilon_provider, asset)
+            loss_ratio_curve = prob.compute_loss_ratio_curve(
+                vuln_function, gmf_slice, epsilon_provider, asset,
+                self._get_number_of_samples(), loss_ratios=loss_ratios)
+            return loss_ratio_curve.rescale_abscissae(asset["assetValue"])
+
+        result = general.compute_bcr_for_block(self.job_id, points,
+            get_loss_curve, float(self.params['INTEREST_RATE']),
+            float(self.params['ASSET_LIFE_EXPECTANCY'])
+        )
+
+        bcr_block_key = kvs.tokens.bcr_block_key(self.job_id, block_id)
+        kvs.set_value_json_encoded(bcr_block_key, result)
+        LOGGER.debug('bcr result for block %s: %r', block_id, result)
+        return True
 
     def compute_loss_ratios(self, asset, gmf_slice):
         """For a given asset and ground motion field, computes
