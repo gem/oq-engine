@@ -487,7 +487,7 @@ class OqCalculation(models.Model):
     duration = models.IntegerField(default=0)
     job_pid = models.IntegerField(default=0)
     supervisor_pid = models.IntegerField(default=0)
-    oq_params = models.ForeignKey('OqParams')
+    oq_job_profile = models.ForeignKey('OqParams')
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
@@ -679,7 +679,7 @@ class OqParams(models.Model):
     interest_rate = models.FloatField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
-        db_table = 'uiapi\".\"oq_params'
+        db_table = 'uiapi\".\"oq_job_profile'
 
 
 class Output(models.Model):

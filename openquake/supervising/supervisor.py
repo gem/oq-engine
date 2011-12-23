@@ -42,7 +42,7 @@ except ImportError:
     setproctitle = lambda title: None  # pylint: disable=C0103
 
 from openquake import flags
-from openquake.db.models import OqCalculation, ErrorMsg, JobStats
+from openquake.db.models import OqCalculation, ErrorMsg, CalcStats
 from openquake import supervising
 from openquake import kvs
 from openquake import logs
@@ -82,7 +82,7 @@ def record_job_stop_time(job_id):
     """
     logging.info('Recording stop time for job %s to calc_stats', job_id)
 
-    calc_stats = JobStats.objects.get(oq_calculation=job_id)
+    calc_stats = CalcStats.objects.get(oq_calculation=job_id)
     calc_stats.stop_time = datetime.utcnow()
     calc_stats.save(using='job_superv')
 
