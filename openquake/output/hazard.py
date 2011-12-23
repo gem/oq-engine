@@ -670,7 +670,8 @@ class HazardCurveDBReader(object):
         :class:`HazardCurveDBWriter`.
         """
         hazard_curves = models.HazardCurve.objects.filter(output=output_id)
-        params = models.Output.objects.get(id=output_id).oq_calculation.oq_params
+        params = models.Output.objects.get(
+            id=output_id).oq_calculation.oq_params
         points = []
 
         for hazard_curve_datum in hazard_curves:

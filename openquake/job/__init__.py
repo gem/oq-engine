@@ -36,8 +36,8 @@ from openquake import shapes
 from openquake import xml
 from openquake.parser import exposure
 from openquake.db.models import (
-    OqCalculation, OqParams, OqUser, CalcStats, FloatArrayField, CharArrayField,
-    InputSet, Input)
+    OqCalculation, OqParams, OqUser, CalcStats, FloatArrayField,
+    CharArrayField, InputSet, Input)
 from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
