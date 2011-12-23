@@ -636,9 +636,9 @@ class ClassicalValidatorTestCase(unittest.TestCase):
 
     # This is only bad for hazard+risk jobs; this perfectly valid
     # for a hazard-only job:
-    PARAMS_1 = dict(COMPUTE_MEAN_HAZARD_CURVE=False)
+    PARAMS_1 = dict(COMPUTE_MEAN_HAZARD_CURVE='false')
 
-    PARAMS_2 = dict(COMPUTE_MEAN_HAZARD_CURVE=True)
+    PARAMS_2 = dict(COMPUTE_MEAN_HAZARD_CURVE='true')
 
     def test_invalid_params_haz_plus_risk(self):
         """Test validation on a hazard+risk config with known-bad parameters.
