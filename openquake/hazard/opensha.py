@@ -61,10 +61,15 @@ def create_java_cache(fn):
     @functools.wraps(fn)
     def decorated(self, *args, **kwargs):  # pylint: disable=C0111
         kvs_data = (config.get("kvs", "host"), int(config.get("kvs", "port")))
-        key = hashlib.md5(repr(kvs_data)).hexdigest()
-        if key not in __KVS_CONN_CACHE:
-            __KVS_CONN_CACHE[key] = java.jclass("KVS")(*kvs_data)
-        self.cache = __KVS_CONN_CACHE[key]
+
+        if kvs.cache_connections():
+            key = hashlib.md5(repr(kvs_data)).hexdigest()
+            if key not in __KVS_CONN_CACHE:
+                __KVS_CONN_CACHE[key] = java.jclass("KVS")(*kvs_data)
+            self.cache = __KVS_CONN_CACHE[key]
+        else:
+            self.cache = java.jclass("KVS")(*kvs_data)
+
         return fn(self, *args, **kwargs)
 
     return decorated

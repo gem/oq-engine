@@ -642,6 +642,20 @@ class CreateJavaCacheTestCase(TestMixin, unittest.TestCase):
     def test_create_java_cache_same_instance_used(self):
         """The cache is instantiated and used for all decorated functions."""
         fake = self.Fake()
-        result1 = fake.calculate1()
-        result2 = fake.calculate2()
-        self.assertIs(result1, result2)
+        with patch("openquake.kvs.cache_connections") as mfunc:
+            mfunc.return_value = True
+            result1 = fake.calculate1()
+            result2 = fake.calculate2()
+            self.assertIs(result1, result2)
+
+    def test_create_java_cache_without_caching(self):
+        """
+        Different `Cache` instances are used when kvs connection caching is
+        turned off.
+        """
+        fake = self.Fake()
+        with patch("openquake.kvs.cache_connections") as mfunc:
+            mfunc.return_value = False
+            result1 = fake.calculate1()
+            result2 = fake.calculate2()
+            self.assertIsNot(result1, result2)
