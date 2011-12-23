@@ -49,12 +49,8 @@ def init_logs_amqp_send(level, job_id):
 
     Adds handler :class:`AMQPHandler` to logger 'oq.job'.
     """
-    def class_name(datum):
-        """Return the class name of given datum."""
-        return str(datum.__class__).split("'")[1]
-
     amqp_handlers = [h for h in logging.root.handlers
-                     if class_name(h) == "openquake.logs.AMQPHandler"]
+                     if isinstance(h, AMQPHandler)]
 
     if amqp_handlers:
         [handler] = amqp_handlers
@@ -98,12 +94,13 @@ class AMQPHandler(logging.Handler):  # pylint: disable=R0902
     # pylint: disable=R0913
     def __init__(self, level=logging.NOTSET):
         logging.Handler.__init__(self, level=level)
-        self.connection = None
-        self.channel = None
+        self.producer = self._initialize()
 
-        self.connection, self.channel, self.exchange = amqp_connect()
-        self.producer = kombu.messaging.Producer(self.channel, self.exchange,
-                                                 serializer='json')
+    @staticmethod
+    def _initialize():
+        """Initialize amqp artefacts."""
+        connection, channel, exchange = amqp_connect()
+        return kombu.messaging.Producer(channel, exchange, serializer='json')
 
     def set_job_id(self, job_id):
         """

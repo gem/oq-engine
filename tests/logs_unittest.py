@@ -252,7 +252,7 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         thisfile = __file__.rstrip('c')
         self.assertEqual(info['pathname'], thisfile)
         self.assertEqual(info['filename'], os.path.basename(thisfile))
-        self.assertEqual(info['lineno'], 213)
+        self.assertEqual(info['lineno'], 216)
         self.assertEqual(info['hostname'], socket.getfqdn())
 
         self.assertEqual(info['exc_info'], None)
@@ -322,13 +322,14 @@ class InitLogsAmqpSendTestCase(unittest.TestCase):
         before = logging.root.handlers
         try:
             logging.root.handlers = []
-            mm = mock.MagicMock(spec=logs.AMQPHandler)
-            with helpers.patch("openquake.logs.AMQPHandler", new=mm):
+            mm = mock.MagicMock(spec=kombu.messaging.Producer)
+            with mock.patch_object(logs.AMQPHandler, "_initialize") as mi:
+                mi.return_value = mm
                 with helpers.patch("logging.root.addHandler") as mh:
                     logs.init_logs_amqp_send("INFO", 321)
                     self.assertEqual(1, mh.call_count)
-                    args = mh.call_args[0]
-                    self.assertEqual((mm,), args)
+                    (single_arg,) = mh.call_args[0]
+                    self.assertTrue(isinstance(single_arg, logs.AMQPHandler))
         finally:
             logging.root.handlers = before
 
@@ -339,11 +340,16 @@ class InitLogsAmqpSendTestCase(unittest.TestCase):
         """
         before = logging.root.handlers
         try:
-            mm = mock.MagicMock(spec=logs.AMQPHandler)
-            logging.root.handlers.append(mm)
-            with helpers.patch("logging.root.addHandler") as mh:
-                logs.init_logs_amqp_send("INFO", 322)
-                self.assertEqual(0, mh.call_count)
-                self.assertEqual([('set_job_id', (322,), {})], mm.method_calls)
+            mm = mock.MagicMock(spec=kombu.messaging.Producer)
+            with mock.patch_object(logs.AMQPHandler, "_initialize") as mi:
+                mi.return_value = mm
+                handler = logs.AMQPHandler()
+                handler.set_job_id = mock.Mock()
+                logging.root.handlers.append(handler)
+                with helpers.patch("logging.root.addHandler") as mh:
+                    logs.init_logs_amqp_send("INFO", 322)
+                    self.assertEqual(0, mh.call_count)
+                    self.assertEqual(1, handler.set_job_id.call_count)
+                    self.assertEqual((322,), handler.set_job_id.call_args[0])
         finally:
             logging.root.handlers = before
