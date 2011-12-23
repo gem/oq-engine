@@ -49,6 +49,16 @@ def init_logs_amqp_send(level, job_id):
 
     Adds handler :class:`AMQPHandler` to logger 'oq.job'.
     """
+    def class_name(datum):
+        return str(datum.__class__).split("'")[1]
+
+    amqp_handler_present = any(
+        True for h in logging.root.handlers
+        if class_name(h) == "openquake.logs.AMQPHandler")
+
+    if amqp_handler_present:
+        return
+
     logging.getLogger("amqplib").propagate = False
     set_logger_level(logging.root, level)
     hdlr = AMQPHandler()
