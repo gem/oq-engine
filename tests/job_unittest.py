@@ -771,7 +771,6 @@ class RunJobTestCase(unittest.TestCase):
 
             with patch('openquake.job.Job.from_file') as from_file:
                 from_file.side_effect = patch_job_launch
-
                 with patch('os.fork', mocksignature=False) as fork:
                     fork.return_value = 0
                     self.assertRaises(Exception, run_job,
