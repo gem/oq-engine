@@ -26,6 +26,7 @@ import hashlib
 import json
 import numpy
 
+from openquake.utils import config
 from openquake import logs
 from openquake.kvs import tokens
 from openquake.kvs.redis import Redis
@@ -256,3 +257,8 @@ def cache_gc(job_id):
 
 def cache_connections():
     """True if kvs connections should be cached."""
+    setting = config.get("kvs", "cache_connections")
+    if setting is None:
+        return False
+    setting = setting.strip().lower()
+    return True if setting == "true" else False
