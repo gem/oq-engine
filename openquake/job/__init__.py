@@ -238,7 +238,7 @@ def _insert_input_files(params, input_set):
 
 
 def _store_input_parameters(params, calc_mode, oqp):
-    """Store parameters in uiapi.oq_params columns"""
+    """Store parameters in uiapi.oq_job_profile columns"""
 
     for name, param in PARAMS.items():
         if calc_mode in param.modes and param.default is not None:
@@ -305,7 +305,7 @@ def prepare_job(params, sections):
 
     oqp.save()
 
-    job.oq_params = oqp
+    job.oq_job_profile = oqp
     job.save()
 
     # Reset all progress indication counters for the job at hand.
