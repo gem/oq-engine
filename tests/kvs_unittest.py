@@ -359,7 +359,7 @@ class CacheConnectionsTestCase(helpers.ConfigTestMixin, unittest.TestCase):
         cache_connections() returns False if the cache_connections entry
         is present but not equal to 'true'.
         """
-        self.prepare_config("kvs", { "cache_connections": "123" })
+        self.prepare_config("kvs", {"cache_connections": "123"})
         self.assertIs(False, kvs.cache_connections())
 
     def test_cache_connections_with_text_but_not_true(self):
@@ -367,7 +367,7 @@ class CacheConnectionsTestCase(helpers.ConfigTestMixin, unittest.TestCase):
         cache_connections() returns False if the cache_connections entry
         is present but not equal to 'true'.
         """
-        self.prepare_config("kvs", { "cache_connections": "blah" })
+        self.prepare_config("kvs", {"cache_connections": "blah"})
         self.assertIs(False, kvs.cache_connections())
 
     def test_cache_connections_with_true(self):
@@ -375,7 +375,7 @@ class CacheConnectionsTestCase(helpers.ConfigTestMixin, unittest.TestCase):
         cache_connections() returns True if the cache_connections entry
         is not present and equal to 'true'.
         """
-        self.prepare_config("kvs", { "cache_connections": "  true" })
+        self.prepare_config("kvs", {"cache_connections": "  true"})
         self.assertIs(True, kvs.cache_connections())
 
     def test_cache_connections_with_True(self):
@@ -383,5 +383,5 @@ class CacheConnectionsTestCase(helpers.ConfigTestMixin, unittest.TestCase):
         cache_connections() returns True if the cache_connections entry
         is not present and equal to 'True'.
         """
-        self.prepare_config("kvs", { "cache_connections": "True  " })
+        self.prepare_config("kvs", {"cache_connections": "True  "})
         self.assertIs(True, kvs.cache_connections())
