@@ -339,9 +339,11 @@ class InitLogsAmqpSendTestCase(unittest.TestCase):
         """
         before = logging.root.handlers
         try:
-            logging.root.handlers.append(mock.MagicMock(spec=logs.AMQPHandler))
+            mm = mock.MagicMock(spec=logs.AMQPHandler)
+            logging.root.handlers.append(mm)
             with helpers.patch("logging.root.addHandler") as mh:
                 logs.init_logs_amqp_send("INFO", 322)
                 self.assertEqual(0, mh.call_count)
+                self.assertEqual([('set_job_id', (322,), {})], mm.method_calls)
         finally:
             logging.root.handlers = before
