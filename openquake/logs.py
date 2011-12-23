@@ -53,11 +53,12 @@ def init_logs_amqp_send(level, job_id):
         """Return the class name of given datum."""
         return str(datum.__class__).split("'")[1]
 
-    amqp_handler_present = any(
-        True for h in logging.root.handlers
-        if class_name(h) == "openquake.logs.AMQPHandler")
+    amqp_handlers = [h for h in logging.root.handlers
+                     if class_name(h) == "openquake.logs.AMQPHandler"]
 
-    if amqp_handler_present:
+    if amqp_handlers:
+        [handler] = amqp_handlers
+        handler.set_job_id(job_id)
         return
 
     logging.getLogger("amqplib").propagate = False
