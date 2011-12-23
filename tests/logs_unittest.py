@@ -323,12 +323,12 @@ class InitLogsAmqpSendTestCase(unittest.TestCase):
         try:
             logging.root.handlers = []
             mm = mock.MagicMock(spec=kombu.messaging.Producer)
-            with mock.patch_object(logs.AMQPHandler, "_initialize") as mi:
-                mi.return_value = mm
-                with helpers.patch("logging.root.addHandler") as mh:
+            with mock.patch_object(logs.AMQPHandler, "_initialize") as minit:
+                minit.return_value = mm
+                with helpers.patch("logging.root.addHandler") as mah:
                     logs.init_logs_amqp_send("INFO", 321)
-                    self.assertEqual(1, mh.call_count)
-                    (single_arg,) = mh.call_args[0]
+                    self.assertEqual(1, mah.call_count)
+                    (single_arg,) = mah.call_args[0]
                     self.assertTrue(isinstance(single_arg, logs.AMQPHandler))
         finally:
             logging.root.handlers = before
@@ -341,14 +341,14 @@ class InitLogsAmqpSendTestCase(unittest.TestCase):
         before = logging.root.handlers
         try:
             mm = mock.MagicMock(spec=kombu.messaging.Producer)
-            with mock.patch_object(logs.AMQPHandler, "_initialize") as mi:
-                mi.return_value = mm
+            with mock.patch_object(logs.AMQPHandler, "_initialize") as minit:
+                minit.return_value = mm
                 handler = logs.AMQPHandler()
                 handler.set_job_id = mock.Mock()
                 logging.root.handlers.append(handler)
-                with helpers.patch("logging.root.addHandler") as mh:
+                with helpers.patch("logging.root.addHandler") as mah:
                     logs.init_logs_amqp_send("INFO", 322)
-                    self.assertEqual(0, mh.call_count)
+                    self.assertEqual(0, mah.call_count)
                     self.assertEqual(1, handler.set_job_id.call_count)
                     self.assertEqual((322,), handler.set_job_id.call_args[0])
         finally:
