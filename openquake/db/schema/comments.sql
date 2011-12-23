@@ -308,9 +308,9 @@ COMMENT ON COLUMN uiapi.oq_calculation.status IS 'One of: pending, running, fail
 COMMENT ON COLUMN uiapi.oq_calculation.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
 
 
-COMMENT ON TABLE uiapi.job_stats IS 'Tracks various job statistics';
-COMMENT ON COLUMN uiapi.job_stats.num_sites IS 'The number of total sites in the calculation';
-COMMENT ON COLUMN uiapi.job_stats.realizations IS 'The number of logic tree samples in the calculation (for hazard jobs of all types except scenario)';
+COMMENT ON TABLE uiapi.calc_stats IS 'Tracks various job statistics';
+COMMENT ON COLUMN uiapi.calc_stats.num_sites IS 'The number of total sites in the calculation';
+COMMENT ON COLUMN uiapi.calc_stats.realizations IS 'The number of logic tree samples in the calculation (for hazard jobs of all types except scenario)';
 
 
 COMMENT ON TABLE uiapi.oq_params IS 'Holds the parameters needed to invoke the OpenQuake engine.';
