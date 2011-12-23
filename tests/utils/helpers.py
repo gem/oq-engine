@@ -679,10 +679,10 @@ class DbTestMixin(TestMixin):
 
         :param job: the :py:class:`db.models.OqCalculation` instance
             in question
-        :param bool filesystem_only: if set the oq_calculation/oq_param/upload/input
-            database records will be left intact. This saves time and the test
-            db will be dropped/recreated prior to the next db test suite run
-            anyway.
+        :param bool filesystem_only: if set the oq_calculation/oq_param/upload/
+            input database records will be left intact. This saves time and the
+            test db will be dropped/recreated prior to the next db test suite
+            run anyway.
         """
         oqp = job.oq_params
         if oqp.input_set is not None:
