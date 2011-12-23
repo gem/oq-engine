@@ -18,7 +18,7 @@
 
 """
 This module contains the data required to map configuration values into
-oq_params columns.
+oq_job_profile columns.
 """
 
 import re
@@ -127,7 +127,7 @@ def define_param(name, column, modes=None, default=None, to_db=None,
     Adds a new parameter definition to the PARAMS dictionary
 
     :param column: If `column` is `None`, the parameter is only checked but not
-        inserted into the `oq_params` table.
+        inserted into the `oq_job_profile` table.
     :type column: `str`
     :param modes: The calculation modes to which this parameter applies. (Can
         either be a single string (for a single mode) or a sequence of strings
