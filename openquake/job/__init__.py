@@ -36,7 +36,7 @@ from openquake import shapes
 from openquake import xml
 from openquake.parser import exposure
 from openquake.db.models import (
-    OqCalculation, OqParams, OqUser, JobStats, FloatArrayField, CharArrayField,
+    OqCalculation, OqParams, OqUser, CalcStats, FloatArrayField, CharArrayField,
     InputSet, Input)
 from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
@@ -606,20 +606,20 @@ class Job(object):
     def _record_initial_stats(self):
         '''
         Report initial job stats (such as start time) by adding a
-        uiapi.job_stats record to the db.
+        uiapi.calc_stats record to the db.
         '''
         oq_calculation = OqCalculation.objects.get(id=self.job_id)
 
-        job_stats = JobStats(oq_calculation=oq_calculation)
-        job_stats.start_time = datetime.utcnow()
-        job_stats.num_sites = len(self.sites_to_compute())
+        calc_stats = CalcStats(oq_calculation=oq_calculation)
+        calc_stats.start_time = datetime.utcnow()
+        calc_stats.num_sites = len(self.sites_to_compute())
 
         calc_mode = CALCULATION_MODE[self['CALCULATION_MODE']]
         if conf.HAZARD_SECTION in self.sections:
             if calc_mode != 'scenario':
-                job_stats.realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
+                calc_stats.realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
 
-        job_stats.save()
+        calc_stats.save()
 
 
 def read_sites_from_exposure(a_job):
