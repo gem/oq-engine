@@ -24,7 +24,7 @@ import shutil
 
 from nose.plugins.attrib import attr
 
-from openquake.db.models import OqJob
+from openquake.db.models import OqCalculation
 
 from tests.utils import helpers
 
@@ -97,7 +97,7 @@ class DisaggCalcQATestCase(unittest.TestCase, helpers.ConfigTestMixin):
         args = [exepath, '--config_file=%s' % DISAGG_DEMO_CONFIG]
         subprocess.call(args)
 
-        job_record = OqJob.objects.latest("id")
+        job_record = OqCalculation.objects.latest("id")
         self.assertEqual('succeeded', job_record.status)
 
         self.assertTrue(os.path.exists(XML_OUTPUT_FILE))
