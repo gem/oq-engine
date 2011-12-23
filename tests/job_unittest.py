@@ -36,7 +36,7 @@ from openquake.job import (
     prepare_config_parameters, get_source_models)
 from openquake.job.mixins import Mixin
 from openquake.job.params import config_text_to_list
-from openquake.db.models import OqJob, JobStats, OqParams
+from openquake.db.models import OqCalculation, CalcStats, OqParams
 from openquake.risk.job import general
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
@@ -182,21 +182,22 @@ class JobDbRecordTestCase(unittest.TestCase):
 
     def test_job_db_record_for_output_type_db(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
-        OqJob.objects.get(id=self.job.job_id)
+        OqCalculation.objects.get(id=self.job.job_id)
 
     def test_job_db_record_for_output_type_xml(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'xml')
-        OqJob.objects.get(id=self.job.job_id)
+        OqCalculation.objects.get(id=self.job.job_id)
 
     def test_set_status(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
         status = 'running'
         self.job.set_status(status)
-        self.assertEqual(status, OqJob.objects.get(id=self.job.job_id).status)
+        self.assertEqual(status,
+                         OqCalculation.objects.get(id=self.job.job_id).status)
 
     def test_get_status_from_db(self):
         self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
-        row = OqJob.objects.get(id=self.job.job_id)
+        row = OqCalculation.objects.get(id=self.job.job_id)
 
         row.status = "failed"
         row.save()
@@ -208,7 +209,7 @@ class JobDbRecordTestCase(unittest.TestCase):
 
     def test_is_job_completed(self):
         job_id = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db').job_id
-        row = OqJob.objects.get(id=job_id)
+        row = OqCalculation.objects.get(id=job_id)
         pairs = [('pending', False), ('running', False),
                  ('succeeded', True), ('failed', True)]
         for status, is_completed in pairs:
@@ -715,7 +716,7 @@ class RunJobTestCase(unittest.TestCase):
         self.init_logs_amqp_send.stop()
 
     def _job_status(self):
-        return OqJob.objects.get(id=self.job.job_id).status
+        return OqCalculation.objects.get(id=self.job.job_id).status
 
     def test_successful_job_lifecycle(self):
         with patch('openquake.job.Job.from_file') as from_file:
@@ -895,7 +896,7 @@ class RunJobTestCase(unittest.TestCase):
                           supervise.call_args)
 
 
-class JobStatsTestCase(unittest.TestCase):
+class CalcStatsTestCase(unittest.TestCase):
     '''
     Tests related to capturing job stats.
     '''
@@ -908,14 +909,14 @@ class JobStatsTestCase(unittest.TestCase):
     def test_record_initial_stats(self):
         '''
         Verify that :py:method:`openquake.job.Job._record_initial_stats`
-        reports initial job stats.
+        reports initial calculation stats.
 
-        As we add fields to the uiapi.job_stats table, this test will need to
+        As we add fields to the uiapi.calc_stats table, this test will need to
         be updated to check for this new information.
         '''
         self.eb_job._record_initial_stats()
 
-        actual_stats = JobStats.objects.get(oq_job=self.eb_job.job_id)
+        actual_stats = CalcStats.objects.get(oq_calculation=self.eb_job.job_id)
 
         self.assertTrue(actual_stats.start_time is not None)
         self.assertEqual(91, actual_stats.num_sites)
