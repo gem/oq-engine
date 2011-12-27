@@ -14,14 +14,15 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-import logging.handlers
-import unittest
-import multiprocessing
-import threading
-import os.path
-import time
-import socket
 import json
+import logging
+import mock
+import multiprocessing
+import os.path
+import socket
+import threading
+import time
+import unittest
 
 import kombu
 import kombu.entity
@@ -30,6 +31,8 @@ import kombu.messaging
 from openquake import java
 from openquake import logs
 from openquake.utils import config
+
+from tests.utils import helpers
 
 
 class JavaLogsTestCase(unittest.TestCase):
@@ -249,7 +252,7 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         thisfile = __file__.rstrip('c')
         self.assertEqual(info['pathname'], thisfile)
         self.assertEqual(info['filename'], os.path.basename(thisfile))
-        self.assertEqual(info['lineno'], 213)
+        self.assertEqual(info['lineno'], 216)
         self.assertEqual(info['hostname'], socket.getfqdn())
 
         self.assertEqual(info['exc_info'], None)
@@ -306,3 +309,47 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         [record] = handler.buffer
         for key in msg:
             self.assertEqual(msg[key], getattr(record, key))
+
+
+class InitLogsAmqpSendTestCase(unittest.TestCase):
+    """Exercises the init_logs_amqp_send() function."""
+
+    def test_init_logs_amqp_send_with_no_amqp_handler(self):
+        """
+        init_logs_amqp_send() will add an `AMQPHandler` instance to the
+        root logger if none is present.
+        """
+        before = logging.root.handlers
+        try:
+            logging.root.handlers = []
+            mm = mock.MagicMock(spec=kombu.messaging.Producer)
+            with mock.patch_object(logs.AMQPHandler, "_initialize") as minit:
+                minit.return_value = mm
+                with helpers.patch("logging.root.addHandler") as mah:
+                    logs.init_logs_amqp_send("INFO", 321)
+                    self.assertEqual(1, mah.call_count)
+                    (single_arg,) = mah.call_args[0]
+                    self.assertTrue(isinstance(single_arg, logs.AMQPHandler))
+        finally:
+            logging.root.handlers = before
+
+    def test_init_logs_amqp_send_with_existing_amqp_handler(self):
+        """
+        init_logs_amqp_send() will not add more than one `AMQPHandler`
+        instance to the root logger.
+        """
+        before = logging.root.handlers
+        try:
+            mm = mock.MagicMock(spec=kombu.messaging.Producer)
+            with mock.patch_object(logs.AMQPHandler, "_initialize") as minit:
+                minit.return_value = mm
+                handler = logs.AMQPHandler()
+                handler.set_job_id = mock.Mock()
+                logging.root.handlers.append(handler)
+                with helpers.patch("logging.root.addHandler") as mah:
+                    logs.init_logs_amqp_send("INFO", 322)
+                    self.assertEqual(0, mah.call_count)
+                    self.assertEqual(1, handler.set_job_id.call_count)
+                    self.assertEqual((322,), handler.set_job_id.call_args[0])
+        finally:
+            logging.root.handlers = before
