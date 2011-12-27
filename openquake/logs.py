@@ -99,7 +99,7 @@ class AMQPHandler(logging.Handler):  # pylint: disable=R0902
     @staticmethod
     def _initialize():
         """Initialize amqp artefacts."""
-        connection, channel, exchange = amqp_connect()
+        _, channel, exchange = amqp_connect()
         return kombu.messaging.Producer(channel, exchange, serializer='json')
 
     def set_job_id(self, job_id):
