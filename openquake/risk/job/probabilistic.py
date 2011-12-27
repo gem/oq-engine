@@ -95,7 +95,8 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
         """Returns a list of the output IDs of all computed GMFs"""
 
         ids = models.Output.objects.filter(
-            oq_job=job_id, output_type='gmf').values_list('id', flat=True)
+            oq_calculation=job_id, output_type='gmf').values_list('id',
+                                                                  flat=True)
 
         return list(ids)
 
