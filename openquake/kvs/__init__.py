@@ -22,14 +22,20 @@ This module contains generic functions to access
 the underlying kvs systems.
 """
 
-import hashlib
+from __future__ import absolute_import
 import json
 import numpy
+import redis
 
-from openquake.utils import config
+
+# Module-private kvs connection pool, to be used by get_client().
+KVS_CONN_POOL = redis.ConnectionPool(max_connections=1)
+
+
 from openquake import logs
 from openquake.kvs import tokens
 from openquake.kvs.redis import Redis
+from openquake.utils import config
 
 
 LOG = logs.LOG
@@ -109,19 +115,10 @@ def get(key):
     return get_client().get(key)
 
 
-# Module-private kvs connection cache, to be used by get_client().
-__KVS_CONN_CACHE = {}
-
-
 def get_client(**kwargs):
     """Return a redis kvs client connection object."""
-    if not cache_connections():
-        return Redis(**kwargs)
-    else:
-        key = hashlib.md5(repr(kwargs)).hexdigest()
-        if key not in __KVS_CONN_CACHE:
-            __KVS_CONN_CACHE[key] = Redis(**kwargs)
-        return __KVS_CONN_CACHE[key]
+    kwargs.update({"connection_pool": KVS_CONN_POOL})
+    return Redis(**kwargs)
 
 
 def get_value_json_decoded(key):
