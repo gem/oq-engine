@@ -301,38 +301,11 @@ class GetClientTestCase(unittest.TestCase):
 
     def test_get_client_same_params(self):
         """
-        get_client() returns the same redis client instance for identical
-        parameters received.
+        get_client() returns redis client instances with the same connection.
         """
-        with patch("openquake.kvs.cache_connections") as mfunc:
-            mfunc.return_value = True
-            obj1 = kvs.get_client(a=1, b=2)
-            obj2 = kvs.get_client(a=1, b=2)
-            self.assertIs(obj1, obj2)
-
-    def test_get_client_different_params(self):
-        """
-        get_client() returns the same redis client instance for identical
-        parameters received.
-        """
-        with patch("openquake.kvs.cache_connections") as mfunc:
-            mfunc.return_value = True
-            obj1 = kvs.get_client(a=1, b=2)
-            obj2 = kvs.get_client(c=3, d=4)
-            self.assertIsNot(obj1, obj2)
-            obj3 = kvs.get_client(a=1, b=2)
-            self.assertIs(obj1, obj3)
-
-    def test_get_client_without_caching(self):
-        """
-        get_client() returns the different redis client instances
-        when caching is turned off.
-        """
-        with patch("openquake.kvs.cache_connections") as mfunc:
-            mfunc.return_value = False
-            obj1 = kvs.get_client(a=1, b=2)
-            obj2 = kvs.get_client(a=1, b=2)
-            self.assertIsNot(obj1, obj2)
+        obj1 = kvs.get_client(a=1, b=2)
+        obj2 = kvs.get_client(a=1, b=2)
+        self.assertIs(obj1.conn, obj2.conn)
 
 
 class CacheConnectionsTestCase(helpers.ConfigTestMixin, unittest.TestCase):
