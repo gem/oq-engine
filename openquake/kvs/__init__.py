@@ -34,7 +34,6 @@ KVS_CONN_POOL = redis.ConnectionPool(max_connections=1)
 
 from openquake import logs
 from openquake.kvs import tokens
-from openquake.kvs.redis import Redis
 from openquake.utils import config
 
 
@@ -118,7 +117,7 @@ def get(key):
 def get_client(**kwargs):
     """Return a redis kvs client connection object."""
     kwargs.update({"connection_pool": KVS_CONN_POOL})
-    return Redis(**kwargs)
+    return redis.Redis(**kwargs)
 
 
 def get_value_json_decoded(key):
