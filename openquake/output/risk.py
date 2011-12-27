@@ -41,27 +41,31 @@ NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
 
 
 class BaseMapXMLWriter(nrml.TreeNRMLWriter):
+    """
+    Base class for NRML writers of such risk results as loss map and BCR map.
+    """
 
+    #: Value to be used for unspecified metadata key.
     UNDEFINED = 'undefined'
+    #: List of attributes to be applied to the map container element.
+    #: Values are provided as a dict, see :meth:`serialize`.
     METADATA = ['endBranchLabel', 'lossCategory', 'unit']
-    CONTAINER_ID_ATTRIBUTE = None
-    MAP_NODE_TAG = None
 
-    RISK_RESULT_TAG = xml.RISK_RESULT_TAG
+    #: Name of map container tag. To be overridden.
     MAP_CONTAINER_TAG = None
+    #: Name of ID attribute for a map container. To be overridden.
+    CONTAINER_ID_ATTRIBUTE = None
+    #: Name of one map node tag. To be overridden.
+    MAP_NODE_TAG = None
 
     def __init__(self, path):
         super(BaseMapXMLWriter, self).__init__(path)
-
         self.node_counter = 0
-
         # root <nrml> element:
         self._create_root_element()
-
         # <riskResult>
         self.risk_result_node = etree.SubElement(self.root_node,
                                                  xml.RISK_RESULT_TAG)
-
         # map container -- <lossMap> or <benefitCostRatioMap>
         self.map_container = etree.SubElement(self.risk_result_node,
                                               self.MAP_CONTAINER_TAG)
@@ -95,7 +99,7 @@ class BaseMapXMLWriter(nrml.TreeNRMLWriter):
         else:
             self.write_metadata({})
 
-        nrml.TreeNRMLWriter.serialize(self, data)
+        super(BaseMapXMLWriter, self).serialize()
 
     def write_metadata(self, metadata):
         """
@@ -117,7 +121,7 @@ class BaseMapXMLWriter(nrml.TreeNRMLWriter):
 
     def _generate_map_node(self, site):
         """ convenience method to generate a new map node """
-        # Generate an id for the new LMNode
+        # Generate an id for the new node element
         # Note: ids are created start at '1'
         self.node_counter += 1
         map_node_id = "mn_%i" % self.node_counter
@@ -182,7 +186,7 @@ class BaseMapXMLWriter(nrml.TreeNRMLWriter):
 
         map_node_el = self._generate_map_node(site)
 
-        # now add the loss nodes as a child of the LMNode
+        # now add the loss/bcr nodes as a child of the map node
         # we have loss data in first position, asset data in second position
         # ({'stddev_loss': 100, 'mean_loss': 0}, {'assetID': 'a1711'})
         for value in values:
@@ -197,9 +201,8 @@ class LossMapXMLWriter(BaseMapXMLWriter):
     """
 
     MAP_CONTAINER_TAG = xml.RISK_LOSS_MAP_CONTAINER_TAG
-    MAP_NODE_TAG = xml.RISK_LMNODE_TAG
-
     CONTAINER_ID_ATTRIBUTE = 'lossMapID'
+    MAP_NODE_TAG = xml.RISK_LMNODE_TAG
 
     def handle_map_node_for_asset(self, lmnode_el, loss_dict, asset_dict):
         """
@@ -222,18 +225,16 @@ class LossMapNonScenarioXMLWriter(BaseMapXMLWriter):
     """
     This class serializes loss maps to NRML for Non Scenario calculators
 
-    Additionally in this loss map we have a timespan and a poe
+    Additionally in this loss map we have a timespan and a poe:
 
-    timeSpan is an integer representing time in years
-    poE is a float between 0 and 1 (extremes included)
+    #. timeSpan is an integer representing time in years
+    #. poE is a float between 0 and 1 (extremes included)
     """
 
     METADATA = BaseMapXMLWriter.METADATA + ['timeSpan', 'poE']
-
     MAP_CONTAINER_TAG = xml.RISK_LOSS_MAP_CONTAINER_TAG
-    MAP_NODE_TAG = xml.RISK_LMNODE_TAG
-
     CONTAINER_ID_ATTRIBUTE = 'lossMapID'
+    MAP_NODE_TAG = xml.RISK_LMNODE_TAG
 
     def handle_map_node_for_asset(self, lmnode_el, loss_dict, asset_dict):
         """
