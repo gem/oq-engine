@@ -73,8 +73,8 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
         self.job.params['SERIALIZE_RESULTS_TO'] = 'xml'
 
         # saving the default java implementation
-        self.default = \
-            det.ScenarioEventBasedMixin.compute_ground_motion_field
+        self.default = (
+            det.ScenarioEventBasedMixin.compute_ground_motion_field)
 
         self.grid = self.job.region.grid
 

@@ -122,8 +122,8 @@ class ScenarioRiskTestCase(unittest.TestCase):
         # The data should now be in the KVS.
         # Now verify that the load_assets_for_point function returns
         # the appropriate data.
-        actual_assets = \
-            risk_job_det.load_assets_for_point(TEST_JOB_ID, test_point)
+        actual_assets = (
+            risk_job_det.load_assets_for_point(TEST_JOB_ID, test_point))
 
         kvs.get_client().flushall()
 
