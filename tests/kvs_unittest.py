@@ -301,7 +301,8 @@ class GetClientTestCase(unittest.TestCase):
 
     def test_get_client_same_conn(self):
         """
-        get_client() returns redis client instances with the same connection.
+        get_client() returns redis client instances with the same connection
+        pool.
         """
         obj1 = kvs.get_client()
         obj2 = kvs.get_client()
