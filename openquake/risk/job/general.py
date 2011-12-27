@@ -118,7 +118,7 @@ def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
     LOG.debug("Conditional loss is %s, write to key %s" %
             (loss_conditional, key))
 
-    kvs.set(key, loss_conditional)
+    kvs.get_client().set(key, loss_conditional)
 
 
 @task
@@ -247,16 +247,12 @@ class RiskJobMixin(mixins.Mixin):
                 block.grid(self.region)):
             site = shapes.Site(asset['lon'], asset['lat'])
 
-            loss_curve = kvs.get(
-                            kvs.tokens.loss_curve_key(job_id,
-                                                        point.row,
-                                                        point.column,
-                                                        asset["assetID"]))
-            loss_ratio_curve = kvs.get(
-                            kvs.tokens.loss_ratio_key(job_id,
-                                                        point.row,
-                                                        point.column,
-                                                        asset["assetID"]))
+            loss_curve = kvs.get_client().get(
+                kvs.tokens.loss_curve_key(
+                    job_id, point.row, point.column, asset["assetID"]))
+            loss_ratio_curve = kvs.get_client().get(
+                kvs.tokens.loss_ratio_key(
+                    job_id, point.row, point.column, asset["assetID"]))
 
             if loss_curve:
                 loss_curve = shapes.Curve.from_json(loss_curve)
@@ -270,11 +266,10 @@ class RiskJobMixin(mixins.Mixin):
                                            curves=loss_ratio_curves,
                                            curve_mode='loss_ratio')
         if loss_curves:
-            results.extend(self._serialize(block_id,
-                                                curves=loss_curves,
-                                                curve_mode='loss',
-                                                curve_mode_prefix='loss_curve',
-                                                render_multi=True))
+            results.extend(
+                self._serialize(
+                    block_id, curves=loss_curves, curve_mode='loss',
+                    curve_mode_prefix='loss_curve', render_multi=True))
         return results
 
     def asset_losses_per_site(self, loss_poe, assets_iterator):
@@ -306,7 +301,8 @@ class RiskJobMixin(mixins.Mixin):
             key = kvs.tokens.loss_key(self.job_id, point.row, point.column,
                     asset["assetID"], loss_poe)
 
-            loss_value = kvs.get(key)
+            loss_value = kvs.get_client().get(key)
+
             LOG.debug("Loss for asset %s at %s %s is %s" %
                 (asset["assetID"], asset['lon'], asset['lat'], loss_value))
 
