@@ -192,7 +192,7 @@ class HazardMapDBWriterTestCase(HazardMapDBBaseTestCase):
         # Call the function under test.
         self.writer.insert_output("hazard_map")
 
-        self.job = models.OqJob.objects.get(id=self.job.id)
+        self.job = models.OqCalculation.objects.get(id=self.job.id)
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set.all()))
 
@@ -211,7 +211,7 @@ class HazardMapDBWriterTestCase(HazardMapDBBaseTestCase):
         # Call the function under test.
         self.writer.serialize(HAZARD_MAP_MEAN_DATA())
 
-        self.job = models.OqJob.objects.get(id=self.job.id)
+        self.job = models.OqCalculation.objects.get(id=self.job.id)
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set.all()))
 
@@ -235,7 +235,7 @@ class HazardMapDBWriterTestCase(HazardMapDBBaseTestCase):
         # Call the function under test.
         self.writer.serialize(HAZARD_MAP_QUANTILE_DATA())
 
-        self.job = models.OqJob.objects.get(id=self.job.id)
+        self.job = models.OqCalculation.objects.get(id=self.job.id)
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set.all()))
 
@@ -360,7 +360,7 @@ class HazardCurveDBWriterTestCase(HazardCurveDBBaseTestCase):
         self.writer.serialize(HAZARD_CURVE_DATA())
 
         # After calling the function under test we see the expected output.
-        self.job = models.OqJob.objects.get(id=self.job.id)
+        self.job = models.OqCalculation.objects.get(id=self.job.id)
         self.assertEqual(1, len(self.job.output_set.all()))
 
         # After calling the function under test we see the expected map data.
@@ -452,7 +452,7 @@ class GmfDBWriterTestCase(GmfDBBaseTestCase):
         self.writer.serialize(GMF_DATA())
 
         # Reload job row.
-        self.job = models.OqJob.objects.get(id=self.job.id)
+        self.job = models.OqCalculation.objects.get(id=self.job.id)
         # After calling the function under test we see the expected output.
         self.assertEqual(1, len(self.job.output_set.all()))
 
