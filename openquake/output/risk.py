@@ -40,106 +40,36 @@ from openquake.xml import NRML_NS, GML_NS
 NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
 
 
-def new_loss_scenario_node(lmnode_el, loss_dict, asset_dict):
-    """
-    Create a new asset loss node under a pre-existing parent LMNode.
-    """
-    loss_el = etree.SubElement(lmnode_el,
-                            xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
+class BaseMapXMLWriter(nrml.TreeNRMLWriter):
 
-    loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_ATTR,
-                str(asset_dict['assetID']))
-    mean_loss = etree.SubElement(
-        loss_el, xml.RISK_LOSS_MAP_MEAN_LOSS_TAG)
-    mean_loss.text = "%s" % loss_dict['mean_loss']
-    stddev = etree.SubElement(loss_el,
-                    xml.RISK_LOSS_MAP_STANDARD_DEVIATION_TAG)
-    stddev.text = "%s" % loss_dict['stddev_loss']
+    UNDEFINED = 'undefined'
+    METADATA = ['endBranchLabel', 'lossCategory', 'unit']
+    CONTAINER_ID_ATTRIBUTE = None
+    MAP_NODE_TAG = None
 
-
-def new_loss_nonscenario_node(lmnode_el, loss_dict, asset_dict):
-    """
-    Create a new asset loss node under a pre-existing parent LMNode.
-    """
-    loss_el = etree.SubElement(lmnode_el,
-                            xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
-
-    loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_ATTR,
-                str(asset_dict['assetID']))
-    value = etree.SubElement(
-        loss_el, xml.RISK_LOSS_MAP_VALUE)
-    value.text = "%s" % loss_dict['value']
-
-
-class BaseXMLWriter(nrml.TreeNRMLWriter):
-    """
-    This is the base class which prepares the XML document (for risk) to be
-    customized in another class.
-    """
-    container_tag = None
+    RISK_RESULT_TAG = xml.RISK_RESULT_TAG
+    MAP_CONTAINER_TAG = None
 
     def __init__(self, path):
-        super(BaseXMLWriter, self).__init__(path)
+        super(BaseMapXMLWriter, self).__init__(path)
 
-        self.result_el = None
-
-    def write(self, point, values):
-        if isinstance(point, shapes.GridPoint):
-            point = point.site
-        asset_object = values[1]
-        if self.root_node is None:
-            # nrml:nrml, needs gml:id
-            self._create_root_element()
-
-            if 'nrml_id' in asset_object:
-                nrml.set_gml_id(self.root_node, str(asset_object['nrml_id']))
-            else:
-                nrml.set_gml_id(self.root_node, nrml.NRML_DEFAULT_ID)
-
-            # nrml:riskResult, needs gml:id
-            result_el = etree.SubElement(self.root_node, xml.RISK_RESULT_TAG)
-            if 'riskres_id' in asset_object:
-                nrml.set_gml_id(result_el, str(asset_object['riskres_id']))
-            else:
-                nrml.set_gml_id(result_el, nrml.RISKRESULT_DEFAULT_ID)
-
-            etree.SubElement(result_el, xml.NRML_CONFIG_TAG)
-
-            self.result_el = result_el
-
-
-class LossMapXMLWriter(nrml.TreeNRMLWriter):
-    """
-    This class serializes loss maps to NRML. The primary contents of a loss map
-    include the mean and standard deviation loss values for each asset in a
-    defined region over many computed realizations.
-    """
-
-    DEFAULT_METADATA = {
-        'nrmlID': 'undefined', 'riskResultID': 'undefined',
-        'lossMapID': 'undefined', 'endBranchLabel': 'undefined',
-        'lossCategory': 'undefined', 'unit': 'undefined'}
-
-    def __init__(self, path):
-        nrml.TreeNRMLWriter.__init__(self, path)
-        self.lmnode_counter = 0
+        self.node_counter = 0
 
         # root <nrml> element:
         self._create_root_element()
 
         # <riskResult>
-        self.risk_result_node = etree.SubElement(
-            self.root_node, xml.RISK_RESULT_TAG)
+        self.risk_result_node = etree.SubElement(self.root_node,
+                                                 xml.RISK_RESULT_TAG)
 
-        # <lossMap>
-        self.loss_map_node = etree.SubElement(
-            self.risk_result_node, xml.RISK_LOSS_MAP_CONTAINER_TAG)
+        # map container -- <lossMap> or <benefitCostRatioMap>
+        self.map_container = etree.SubElement(self.risk_result_node,
+                                              self.MAP_CONTAINER_TAG)
 
     def serialize(self, data):
         """
-        Overrides the base `serialize` method to handle writing metadata for
-        the `nrml`, `riskResult`, and `lossMap` elements (in addition to the
-        site/asset/loss data).
+        Overrides the base `serialize` method to handle writing metadata
+        in addition to the site/asset/loss/BCR data.
 
         :param data: List of data to serialize to the output file.
 
@@ -163,57 +93,45 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
             self.write_metadata(data[0])
             data = data[1:]
         else:
-            self.write_metadata(self.DEFAULT_METADATA)
+            self.write_metadata({})
 
         nrml.TreeNRMLWriter.serialize(self, data)
 
     def write_metadata(self, metadata):
         """
         Write gml:ids and other meta data for `nrml`, `riskResult`, and
-        `lossMap` XML elements.
+        map container XML elements.
 
-        :param metadata: A dict containing metadata about the loss map.
-            For example::
-
-                {'nrmlID': 'n1', 'riskResultID': 'rr1', 'lossMapID': 'lm1',
-                 'endBranchLabel': 'vf1', 'lossCategory': 'economic_loss',
-                 'unit': 'EUR'}
-
-            If any of these items are not defined in the dict, default values
-            will be used.
-
-        :type metadata: dict
+        :param metadata: A dict containing metadata about the map.
         """
         # set gml:id attributes:
         for node, key in (
             (self.root_node, 'nrmlID'),
             (self.risk_result_node, 'riskResultID'),
-            (self.loss_map_node, 'lossMapID')):
-            nrml.set_gml_id(
-                node, metadata.get(key, self.DEFAULT_METADATA[key]))
+            (self.map_container, self.CONTAINER_ID_ATTRIBUTE)):
+            nrml.set_gml_id(node, metadata.get(key, self.UNDEFINED))
 
-        # set the rest of the <lossMap> attributes
-        for key in ('endBranchLabel', 'lossCategory', 'unit'):
-            self.loss_map_node.set(
-                key, metadata.get(key, self.DEFAULT_METADATA[key]))
+        # set the rest of the map container attributes
+        for key in self.METADATA:
+            self.map_container.set(key, metadata.get(key, self.UNDEFINED))
 
-    def _generate_lmnode(self, site):
-        """ convenience method to generate a new lmnode """
+    def _generate_map_node(self, site):
+        """ convenience method to generate a new map node """
         # Generate an id for the new LMNode
         # Note: ids are created start at '1'
-        self.lmnode_counter += 1
-        lmnode_id = "lmn_%i" % self.lmnode_counter
+        self.node_counter += 1
+        map_node_id = "mn_%i" % self.node_counter
 
-        # Create the new LMNode
-        lmnode_el = etree.SubElement(self.loss_map_node, xml.RISK_LMNODE_TAG)
+        # Create the new node element
+        map_node_el = etree.SubElement(self.map_container, self.MAP_NODE_TAG)
 
         # Set the gml:id
-        nrml.set_gml_id(lmnode_el, lmnode_id)
+        nrml.set_gml_id(map_node_el, map_node_id)
 
         # We also need Site, gml:Point, and gml:pos nodes
-        # for the new LMNode.
+        # for the new map node.
         # Each one (site, point, pos) is the parent of the next.
-        site_el = etree.SubElement(lmnode_el, xml.RISK_SITE_TAG)
+        site_el = etree.SubElement(map_node_el, xml.RISK_SITE_TAG)
 
         point_el = etree.SubElement(site_el, xml.GML_POINT_TAG)
         point_el.set(xml.GML_SRS_ATTR_NAME, xml.GML_SRS_EPSG_4326)
@@ -221,7 +139,25 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
         pos_el = etree.SubElement(point_el, xml.GML_POS_TAG)
         pos_el.text = "%s %s" % (site.longitude, site.latitude)
 
-        return lmnode_el
+        return map_node_el
+
+    def _get_site_elem_for_site(self, site):
+        """
+        Searches the current xml document for a Site node matching the input
+        Site object.
+
+        :param site: Site object to match with Site node in the xml document
+        :type site: :py:class:`shapes.Site` object
+
+        :returns: matching Site node (of type :py:class:`lxml.etree._Element`,
+            or None if no match is found
+        """
+        site_nodes = self.map_container.xpath(
+            './nrml:LMNode/nrml:site', namespaces=NAMESPACES)
+        for node in site_nodes:
+            if xml.element_equal_to_site(node, site):
+                return node
+        return None
 
     def write(self, site, values):
         """Writes an asset element with loss map ratio information.
@@ -244,34 +180,45 @@ class LossMapXMLWriter(nrml.TreeNRMLWriter):
                 ***assetID*** - the assetID
         """
 
-        lmnode_el = self._generate_lmnode(site)
+        map_node_el = self._generate_map_node(site)
 
         # now add the loss nodes as a child of the LMNode
         # we have loss data in first position, asset data in second position
         # ({'stddev_loss': 100, 'mean_loss': 0}, {'assetID': 'a1711'})
         for value in values:
-            new_loss_scenario_node(lmnode_el, value[0], value[1])
+            self.handle_map_node_for_asset(map_node_el, value[0], value[1])
 
-    def _get_site_elem_for_site(self, site):
+
+class LossMapXMLWriter(BaseMapXMLWriter):
+    """
+    This class serializes loss maps to NRML. The primary contents of a loss map
+    include the mean and standard deviation loss values for each asset in a
+    defined region over many computed realizations.
+    """
+
+    MAP_CONTAINER_TAG = xml.RISK_LOSS_MAP_CONTAINER_TAG
+    MAP_NODE_TAG = xml.RISK_LMNODE_TAG
+
+    CONTAINER_ID_ATTRIBUTE = 'lossMapID'
+
+    def handle_map_node_for_asset(self, lmnode_el, loss_dict, asset_dict):
         """
-        Searches the current xml document for a Site node matching the input
-        Site object.
-
-        :param site: Site object to match with Site node in the xml document
-        :type site: :py:class:`shapes.Site` object
-
-        :returns: matching Site node (of type :py:class:`lxml.etree._Element`,
-            or None if no match is found
+        Create a new asset loss node under a pre-existing parent LMNode.
         """
-        site_nodes = self.loss_map_node.xpath(
-            './nrml:LMNode/nrml:site', namespaces=NAMESPACES)
-        for node in site_nodes:
-            if xml.element_equal_to_site(node, site):
-                return node
-        return None
+        loss_el = etree.SubElement(lmnode_el,
+                                xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
+
+        loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_ATTR,
+                    str(asset_dict['assetID']))
+        mean_loss = etree.SubElement(
+            loss_el, xml.RISK_LOSS_MAP_MEAN_LOSS_TAG)
+        mean_loss.text = "%s" % loss_dict['mean_loss']
+        stddev = etree.SubElement(loss_el,
+                        xml.RISK_LOSS_MAP_STANDARD_DEVIATION_TAG)
+        stddev.text = "%s" % loss_dict['stddev_loss']
 
 
-class LossMapNonScenarioXMLWriter(LossMapXMLWriter):
+class LossMapNonScenarioXMLWriter(BaseMapXMLWriter):
     """
     This class serializes loss maps to NRML for Non Scenario calculators
 
@@ -279,27 +226,28 @@ class LossMapNonScenarioXMLWriter(LossMapXMLWriter):
 
     timeSpan is an integer representing time in years
     poE is a float between 0 and 1 (extremes included)
-
     """
-    DEFAULT_METADATA = {
-        'nrmlID': 'undefined', 'riskResultID': 'undefined',
-        'lossMapID': 'undefined', 'endBranchLabel': 'undefined',
-        'lossCategory': 'undefined', 'unit': 'undefined',
-        'timeSpan': 'undefined', 'poE': 'undefined'}
 
-    def write_metadata(self, metadata):
-        super(LossMapNonScenarioXMLWriter, self).write_metadata(metadata)
+    METADATA = BaseMapXMLWriter.METADATA + ['timeSpan', 'poE']
 
-        # set the rest of the <lossMap> attributes for non scenario
-        for key in ('timeSpan', 'poE'):
-            self.loss_map_node.set(
-                key, str(metadata.get(key, self.DEFAULT_METADATA[key])))
+    MAP_CONTAINER_TAG = xml.RISK_LOSS_MAP_CONTAINER_TAG
+    MAP_NODE_TAG = xml.RISK_LMNODE_TAG
 
-    def write(self, site, values):
-        lmnode_el = self._generate_lmnode(site)
+    CONTAINER_ID_ATTRIBUTE = 'lossMapID'
 
-        for value in values:
-            new_loss_nonscenario_node(lmnode_el, value[0], value[1])
+    def handle_map_node_for_asset(self, lmnode_el, loss_dict, asset_dict):
+        """
+        Create a new asset loss node under a pre-existing parent LMNode.
+        """
+        loss_el = etree.SubElement(lmnode_el,
+                                xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
+
+        loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_ATTR,
+                    str(asset_dict['assetID']))
+        value = etree.SubElement(
+            loss_el, xml.RISK_LOSS_MAP_VALUE)
+        value.text = "%s" % loss_dict['value']
+
 
 LOSS_MAP_METADATA_KEYS = [
     ('loss_map_ref', 'lossMapID'),
@@ -547,11 +495,48 @@ def create_loss_map_writer(job_id, serialize_to, nrml_path, scenario):
     return writer.compose_writers(writers)
 
 
-class CurveXMLWriter(BaseXMLWriter):
+class BaseCurveXMLWriter(nrml.TreeNRMLWriter):
+    """
+    This is the base class which prepares the XML document (for risk) to be
+    customized in another class.
+    """
+    container_tag = None
+
+    def __init__(self, path):
+        super(BaseCurveXMLWriter, self).__init__(path)
+
+        self.result_el = None
+
+    def write(self, point, values):
+        if isinstance(point, shapes.GridPoint):
+            point = point.site
+        asset_object = values[1]
+        if self.root_node is None:
+            # nrml:nrml, needs gml:id
+            self._create_root_element()
+
+            if 'nrml_id' in asset_object:
+                nrml.set_gml_id(self.root_node, str(asset_object['nrml_id']))
+            else:
+                nrml.set_gml_id(self.root_node, nrml.NRML_DEFAULT_ID)
+
+            # nrml:riskResult, needs gml:id
+            result_el = etree.SubElement(self.root_node, xml.RISK_RESULT_TAG)
+            if 'riskres_id' in asset_object:
+                nrml.set_gml_id(result_el, str(asset_object['riskres_id']))
+            else:
+                nrml.set_gml_id(result_el, nrml.RISKRESULT_DEFAULT_ID)
+
+            etree.SubElement(result_el, xml.NRML_CONFIG_TAG)
+
+            self.result_el = result_el
+
+
+class CurveXMLWriter(BaseCurveXMLWriter):
     """This class serializes a set of loss or loss ratio curves to NRML.
     Since the curves have to be collected under several different asset
     objects, we have to build the whole tree before serializing
-    (uses base class BaseXMLWriter).
+    (uses base class BaseCurveXMLWriter).
     """
 
     # these tag names have to be redefined in the derived classes
