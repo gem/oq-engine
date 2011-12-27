@@ -299,13 +299,13 @@ class GetClientTestCase(unittest.TestCase):
     Tests for get_client()
     """
 
-    def test_get_client_same_params(self):
+    def test_get_client_same_conn(self):
         """
         get_client() returns redis client instances with the same connection.
         """
-        obj1 = kvs.get_client(a=1, b=2)
-        obj2 = kvs.get_client(a=1, b=2)
-        self.assertIs(obj1.conn, obj2.conn)
+        obj1 = kvs.get_client()
+        obj2 = kvs.get_client()
+        self.assertIs(obj1.connection_pool, obj2.connection_pool)
 
 
 class CacheConnectionsTestCase(helpers.ConfigTestMixin, unittest.TestCase):
