@@ -297,7 +297,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
     def test_generate_erf_returns_erf_via_kvs(self):
         results = []
-        result_keys = []
+        keys = []
         expected_values = {}
 
         job_ids = [helpers.job_from_file(TEST_JOB_FILE).job_id
@@ -309,15 +309,13 @@ class HazardEngineTestCase(unittest.TestCase):
             expected_values[erf_key] = json.JSONEncoder().encode([job_id])
 
             # Get our result keys
-            result_keys.append(erf_key)
+            keys.append(erf_key)
 
             # Spawn our tasks.
             results.append(tasks.generate_erf.apply_async(args=[job_id]))
 
         helpers.wait_for_celery_tasks(results)
-
-        result_values = self.kvs_client.get_multi(result_keys)
-
+        result_values = dict(zip(keys, self.kvs_client.mget(keys)))
         self.assertEqual(result_values, expected_values)
 
     def test_compute_mgm_intensity(self):
