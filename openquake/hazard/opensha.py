@@ -602,7 +602,7 @@ class ClassicalMixin(BasePSHAMixin):
             curve_key = kvs.tokens.hazard_curve_poes_key(
                 self.job_id, realization, site)
 
-            kvs.set(curve_key, poes)
+            kvs.get_client().set(curve_key, poes)
 
             curve_keys.append(curve_key)
 

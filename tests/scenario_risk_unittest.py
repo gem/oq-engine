@@ -48,7 +48,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
         """
 
         # clear the kvs before running the test
-        kvs.flush()
+        kvs.get_client().flushall()
 
         # values to place in the kvs
         test_gmvs = [
@@ -74,7 +74,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
         actual_gmvs = risk_job_det.load_gmvs_for_point(TEST_JOB_ID, test_point)
 
         # clear the kvs again before the test concludes
-        kvs.flush()
+        kvs.get_client().flushall()
 
         self.assertEqual(expected_gmvs, actual_gmvs)
 
@@ -84,7 +84,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
         :py:func:`openquake.risk.job.scenario.load_assets_for_point`.
         """
 
-        kvs.flush()
+        kvs.get_client().flushall()
 
         # Fabricate some test data.
         test_assets = [
@@ -125,7 +125,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
         actual_assets = \
             risk_job_det.load_assets_for_point(TEST_JOB_ID, test_point)
 
-        kvs.flush()
+        kvs.get_client().flushall()
 
         # They should come out exactly the way they went in.
         self.assertEqual(test_assets, actual_assets)

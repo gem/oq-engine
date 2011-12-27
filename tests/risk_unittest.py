@@ -940,12 +940,12 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
             for asset in kvs.get_list_json_decoded(asset_key):
                 loss_ratio_key = kvs.tokens.loss_ratio_key(
                     self.job_id, point.row, point.column, asset['assetID'])
-                self.assertTrue(kvs.get(loss_ratio_key))
+                self.assertTrue(kvs.get_client().get(loss_ratio_key))
 
                 loss_key = kvs.tokens.loss_curve_key(self.job_id, point.row,
                     point.column, asset['assetID'])
 
-                self.assertTrue(kvs.get(loss_key))
+                self.assertTrue(kvs.get_client().get(loss_key))
 
     def test_compute_bcr_in_the_classical_psha_mixin(self):
         self._compute_risk_classical_psha_setup()

@@ -17,8 +17,9 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-import numpy
+import mock
 import os
+import redis
 import unittest
 
 from openquake import job
@@ -26,10 +27,10 @@ from openquake import kvs
 from openquake import shapes
 from openquake.job import config
 from openquake.job.mixins import Mixin
-from openquake.risk.job import general
 from openquake.parser import exposure
+from openquake.risk.job import general
+
 from tests.utils import helpers
-from tests.utils.helpers import patch
 
 TEST_FILE = "exposure-portfolio.xml"
 EXPOSURE_TEST_FILE = "exposure-portfolio.xml"
@@ -264,7 +265,7 @@ class RiskMixinTestCase(unittest.TestCase):
             (shapes.GridPoint(self.grid, 1, 1), GRID_ASSETS[(1, 1)])]
 
     def test_grid_assets_iterator(self):
-        with patch('openquake.kvs.get_list_json_decoded') as get_mock:
+        with helpers.patch('openquake.kvs.get_list_json_decoded') as get_mock:
 
             def get_list_json_decoded(key):
                 row, col = kvs.tokens.asset_row_col_from_kvs_key(key)
@@ -297,11 +298,13 @@ class RiskMixinTestCase(unittest.TestCase):
         loss_key = kvs.tokens.loss_key(job_id, row, col,
                 asset["assetID"], loss_poe)
 
-        self.assertTrue(kvs.get(loss_key))
+        self.assertTrue(kvs.get_client().get(loss_key))
 
     def test_asset_losses_per_site(self):
-        with patch('openquake.kvs.get') as get_mock:
-            get_mock.return_value = 0.123
+        mm = mock.MagicMock(spec=redis.Redis)
+        mm.get.return_value = 0.123
+        with helpers.patch('openquake.kvs.get_client') as mgc:
+            mgc.return_value = mm
 
             def coords(item):
                 return item[0].coords
@@ -317,6 +320,8 @@ class RiskMixinTestCase(unittest.TestCase):
                     [({'value': 0.123}, GRID_ASSETS[(1, 1)])])]
 
             with job.mixins.Mixin(self.job, general.RiskJobMixin):
-                self.assertEqual(sorted(expected, key=coords),
-                sorted(self.job.asset_losses_per_site(0.5, self.grid_assets),
-                       key=coords))
+                self.assertEqual(
+                    sorted(expected, key=coords),
+                    sorted(
+                        self.job.asset_losses_per_site(0.5, self.grid_assets),
+                        key=coords))
