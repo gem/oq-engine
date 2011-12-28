@@ -51,6 +51,7 @@ RISK_RESULT_TAG = "%sriskResult" % NRML
 RISK_ASSET_TAG = "%sasset" % NRML
 RISK_SITE_TAG = "%ssite" % NRML
 RISK_LMNODE_TAG = "%sLMNode" % NRML
+RISK_BCR_NODE_TAG = "%sBCRNode" % NRML
 RISK_POE_TAG = "%spoE" % NRML
 RISK_END_BRANCH_ATTR_NAME = 'endBranchLabel'
 
@@ -76,6 +77,9 @@ RISK_LOSS_MAP_VALUE = "%svalue" % NRML
 RISK_LOSS_MAP_LOSS_CATEGORY_ATTR = "lossCategory"
 RISK_LOSS_MAP_UNIT_ATTR = "unit"
 RISK_LOSS_MAP_ASSET_REF_ATTR = "assetRef"
+
+RISK_BCR_MAP_CONTAINER_TAG = "%sbenefitCostRatioMap" % NRML
+RISK_BCR_MAP_BCR_CONTAINER_TAG = "%sbenefitCostRatio" % NRML
 
 
 class XMLValidationError(Exception):
