@@ -89,11 +89,10 @@ def output(fn):
                     "poE": loss_poe,
                 }
 
-                writer.serialize(
-                    [metadata]
-                    + self.asset_losses_per_site(
-                        loss_poe,
-                        self.grid_assets_iterator(self.job_profile.region.grid)))
+                data = [metadata] + self.asset_losses_per_site(
+                    loss_poe,
+                    self.grid_assets_iterator(self.job_profile.region.grid))
+                writer.serialize(data)
                 LOG.info('Loss Map is at: %s' % path)
 
     return output_writer
@@ -169,7 +168,8 @@ class RiskJobMixin(mixins.Mixin):
         """Load exposure assets and write them to KVS."""
 
         exposure_parser = exposure.ExposurePortfolioFile(
-            os.path.join(self.job_profile.base_path, self.job_profile.params[job_config.EXPOSURE]))
+            os.path.join(self.job_profile.base_path,
+                         self.job_profile.params[job_config.EXPOSURE]))
 
         region = self.job_profile.region
 
@@ -186,14 +186,17 @@ class RiskJobMixin(mixins.Mixin):
 
     def store_vulnerability_model(self):
         """ load vulnerability and write to kvs """
-        path = os.path.join(self.job_profile.base_path, self.job_profile.params["VULNERABILITY"])
+        path = os.path.join(
+            self.job_profile.base_path,
+            self.job_profile.params["VULNERABILITY"])
         vulnerability.load_vulnerability_model(self.job_profile.job_id, path)
 
         if self.is_benefit_cost_ratio_mode():
-            path = os.path.join(self.job_profile.base_path,
-                                self.job_profile.params["VULNERABILITY_RETROFITTED"])
-            vulnerability.load_vulnerability_model(self.job_profile.job_id, path,
-                                                   retrofitted=True)
+            path = os.path.join(
+                self.job_profile.base_path,
+                self.job_profile.params["VULNERABILITY_RETROFITTED"])
+            vulnerability.load_vulnerability_model(
+                self.job_profile.job_id, path, retrofitted=True)
 
     def _serialize(self, block_id, **kwargs):
         """
@@ -205,20 +208,21 @@ class RiskJobMixin(mixins.Mixin):
 
         if kwargs['curve_mode'] == 'loss_ratio':
             serialize_filename = "%s-block-%s.xml" % (
-                                     self.job_profile.params["LOSS_CURVES_OUTPUT_PREFIX"],
-                                     block_id)
+                self.job_profile.params["LOSS_CURVES_OUTPUT_PREFIX"],
+                block_id)
         elif kwargs['curve_mode'] == 'loss':
             serialize_filename = "%s-loss-block-%s.xml" % (
-                                     self.job_profile.params["LOSS_CURVES_OUTPUT_PREFIX"],
-                                     block_id)
+                self.job_profile.params["LOSS_CURVES_OUTPUT_PREFIX"],
+                block_id)
 
         serialize_path = os.path.join(self.job_profile.base_path,
                                       self.job_profile.params['OUTPUT_DIR'],
                                       serialize_filename)
 
         LOG.debug("Serializing %s" % kwargs['curve_mode'])
-        writer = risk_output.create_loss_curve_writer(self.job_profile.job_id,
-            self.job_profile.serialize_results_to, serialize_path, kwargs['curve_mode'])
+        writer = risk_output.create_loss_curve_writer(
+            self.job_profile.job_id, self.job_profile.serialize_results_to,
+            serialize_path, kwargs['curve_mode'])
         if writer:
             writer.serialize(kwargs['curves'])
 
@@ -308,7 +312,8 @@ class RiskJobMixin(mixins.Mixin):
         result = defaultdict(list)
 
         for point, asset in assets_iterator:
-            key = kvs.tokens.loss_key(self.job_profile.job_id, point.row, point.column,
+            key = kvs.tokens.loss_key(self.job_profile.job_id, point.row,
+                                      point.column,
                     asset["assetID"], loss_poe)
 
             loss_value = kvs.get(key)
