@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 # Copyright (c) 2010-2011, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify
@@ -16,8 +14,23 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-""" Mixins for risk jobs. """
 
-#import probabilistic
-#import classical_psha
-#import scenario
+CALCULATORS = dict()
+
+
+def _load_calcs():
+    from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
+    from openquake.risk.job.probabilistic import ProbabilisticEventMixin
+    from openquake.risk.job.scenario import ScenarioEventBasedMixin
+
+    calcs = {
+        'Classical': ClassicalPSHABasedMixin,
+        'Classical BCR': ClassicalPSHABasedMixin,
+        'Event Based': ProbabilisticEventMixin,
+        'Event Based BCR': ProbabilisticEventMixin,
+        'Scenario': ScenarioEventBasedMixin,
+    }
+    CALCULATORS.update(calcs)
+
+
+_load_calcs()
