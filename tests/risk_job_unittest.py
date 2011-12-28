@@ -280,7 +280,6 @@ class RiskMixinTestCase(unittest.TestCase):
 
             calculator = general.RiskJobMixin(self.job)
 
-            
             got = sorted(calculator.grid_assets_iterator(self.grid),
                          key=row_col)
 

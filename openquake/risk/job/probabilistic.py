@@ -51,7 +51,6 @@ class ProbabilisticEventMixin(Mixin):  # pylint: disable=W0232,W0201
     def __init__(self, *args, **kwargs):
         Mixin.__init__(self, *args, **kwargs)
         self.vuln_curves = None
-        
 
     @general.preload
     @general.output
