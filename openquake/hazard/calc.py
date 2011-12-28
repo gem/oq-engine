@@ -15,14 +15,15 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+from openquake.hazard.opensha import ClassicalMixin, EventBasedMixin
+from openquake.hazard.disagg.core import DisaggMixin
+from openquake.hazard.scenario import ScenarioEventBasedMixin
+
+
 CALCULATORS = dict()
 
 
 def _load_calcs():
-    from openquake.hazard.opensha import ClassicalMixin, EventBasedMixin
-    from openquake.hazard.disagg.core import DisaggMixin
-    from openquake.hazard.scenario import ScenarioEventBasedMixin
-
     calcs = {
         'Classical': ClassicalMixin,
         'Classical BCR': ClassicalMixin,

@@ -15,14 +15,15 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
+from openquake.risk.job.probabilistic import ProbabilisticEventMixin
+from openquake.risk.job.scenario import ScenarioEventBasedMixin
+
+
 CALCULATORS = dict()
 
 
 def _load_calcs():
-    from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
-    from openquake.risk.job.probabilistic import ProbabilisticEventMixin
-    from openquake.risk.job.scenario import ScenarioEventBasedMixin
-
     calcs = {
         'Classical': ClassicalPSHABasedMixin,
         'Classical BCR': ClassicalPSHABasedMixin,
