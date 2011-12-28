@@ -52,3 +52,6 @@ class MemoizeMutable:
             self.memo[key] = self.fun(*args, **kwds)
 
         return self.memo[key]
+
+
+str2bool = lambda x: x.lower() in ("true", "yes", "t", "1")
