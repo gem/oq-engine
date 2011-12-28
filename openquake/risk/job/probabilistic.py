@@ -69,6 +69,7 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
                 return
 
         if self.is_benefit_cost_ratio():
+            general.write_output_bcr(self)
             return
 
         curve = aggregate_curve.compute(self._tses(), self._time_span())
