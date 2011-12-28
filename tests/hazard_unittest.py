@@ -842,22 +842,28 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
             [0.25, 0.50, 0.75], self.imls, [0.10])
 
         # asserting imls have been produced for all poes and quantiles
-        self.assertTrue(kvs.get_client().get(kvs.tokens.quantile_hazard_map_key(
+        self.assertTrue(kvs.get_client().get(
+            kvs.tokens.quantile_hazard_map_key(
                 self.job_id, sites[0], 0.10, 0.25)))
 
-        self.assertTrue(kvs.get_client().get(kvs.tokens.quantile_hazard_map_key(
+        self.assertTrue(kvs.get_client().get(
+            kvs.tokens.quantile_hazard_map_key(
                 self.job_id, sites[0], 0.10, 0.50)))
 
-        self.assertTrue(kvs.get_client().get(kvs.tokens.quantile_hazard_map_key(
+        self.assertTrue(kvs.get_client().get(
+            kvs.tokens.quantile_hazard_map_key(
                 self.job_id, sites[0], 0.10, 0.75)))
 
-        self.assertTrue(kvs.get_client().get(kvs.tokens.quantile_hazard_map_key(
+        self.assertTrue(kvs.get_client().get(
+            kvs.tokens.quantile_hazard_map_key(
                 self.job_id, sites[1], 0.10, 0.25)))
 
-        self.assertTrue(kvs.get_client().get(kvs.tokens.quantile_hazard_map_key(
+        self.assertTrue(kvs.get_client().get(
+            kvs.tokens.quantile_hazard_map_key(
                 self.job_id, sites[1], 0.10, 0.50)))
 
-        self.assertTrue(kvs.get_client().get(kvs.tokens.quantile_hazard_map_key(
+        self.assertTrue(kvs.get_client().get(
+            kvs.tokens.quantile_hazard_map_key(
                 self.job_id, sites[1], 0.10, 0.75)))
 
     def _get_iml_at(self, site, poe):

@@ -104,8 +104,7 @@ class EpsilonTestCase(unittest.TestCase):
         self.epsilon_provider.__dict__["ASSET_CORRELATION"] = "perfect"
         for _, asset in self.exposure_parser:
             del asset["structureCategory"]
-            e = self.assertRaises(
-                ValueError, self.epsilon_provider.epsilon, asset)
+            self.assertRaises(ValueError, self.epsilon_provider.epsilon, asset)
             break
 
 
