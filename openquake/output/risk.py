@@ -250,6 +250,36 @@ class LossMapNonScenarioXMLWriter(BaseMapXMLWriter):
         value.text = "%s" % loss_dict['value']
 
 
+class BCRMapXMLWriter(BaseMapXMLWriter):
+    """
+    This class serializes BCR maps to NRML.
+
+    The following metadata is added to the map container: Interest rate,
+    Asset life expectancy.
+    """
+    # TODO: unittest
+
+    METADATA = BaseMapXMLWriter.METADATA + [
+        'interestRate', 'assetLifeExpectancy'
+    ]
+    MAP_CONTAINER_TAG = xml.RISK_BCR_MAP_CONTAINER_TAG
+    CONTAINER_ID_ATTRIBUTE = 'bcrMapID'
+    MAP_NODE_TAG = xml.RISK_BCR_NODE_TAG
+
+    def handle_map_node_for_asset(self, bcr_node_el, loss_dict, asset_dict):
+        """
+        Create a new asset loss node under a pre-existing parent node.
+        """
+        loss_el = etree.SubElement(bcr_node_el,
+                                   xml.RISK_BCR_MAP_BCR_CONTAINER_TAG)
+
+        loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_ATTR,
+                    str(asset_dict['assetID']))
+        value = etree.SubElement(
+            loss_el, xml.RISK_LOSS_MAP_VALUE)
+        value.text = "%s" % loss_dict['value']
+
+
 LOSS_MAP_METADATA_KEYS = [
     ('loss_map_ref', 'lossMapID'),
     ('end_branch_label', 'endBranchLabel'),
