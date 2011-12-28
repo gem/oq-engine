@@ -32,7 +32,6 @@ from openquake.job import Job
 from openquake.supervising import supervisor
 
 from openquake.db.models import OqCalculation
-from openquake.job.mixins import Mixin
 from openquake.hazard.calc import CALCULATORS as HAZ_CALCS
 from openquake.risk.calc import CALCULATORS as RISK_CALCS
 

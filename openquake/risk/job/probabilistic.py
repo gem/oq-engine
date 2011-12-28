@@ -48,6 +48,11 @@ LOGGER = logs.LOG
 class ProbabilisticEventMixin(Mixin):  # pylint: disable=W0232,W0201
     """Mixin for Probalistic Event Risk Job."""
 
+    def __init__(self, *args, **kwargs):
+        Mixin.__init__(self, *args, **kwargs)
+        self.vuln_curves = None
+        
+
     @general.preload
     @general.output
     def execute(self):
