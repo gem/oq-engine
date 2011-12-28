@@ -266,18 +266,15 @@ class BCRMapXMLWriter(BaseMapXMLWriter):
     CONTAINER_ID_ATTRIBUTE = 'bcrMapID'
     MAP_NODE_TAG = xml.RISK_BCR_NODE_TAG
 
-    def handle_map_node_for_asset(self, bcr_node_el, loss_dict, asset_dict):
+    def handle_map_node_for_asset(self, bcr_node_el, loss_dict, asset_id):
         """
         Create a new asset loss node under a pre-existing parent node.
         """
         loss_el = etree.SubElement(bcr_node_el,
                                    xml.RISK_BCR_MAP_BCR_CONTAINER_TAG)
-
-        loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_ATTR,
-                    str(asset_dict['assetID']))
-        value = etree.SubElement(
-            loss_el, xml.RISK_LOSS_MAP_VALUE)
-        value.text = "%s" % loss_dict['value']
+        loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_ATTR, str(asset_id))
+        value = etree.SubElement(loss_el, xml.RISK_LOSS_MAP_VALUE)
+        value.text = str(loss_dict['value'])
 
 
 LOSS_MAP_METADATA_KEYS = [
@@ -526,7 +523,7 @@ def create_loss_map_writer(job_id, serialize_to, nrml_path, scenario):
     return writer.compose_writers(writers)
 
 
-def create_bcr_map_writer(job_id, serialize_to, nrml_path, scenario):
+def create_bcr_map_writer(job_id, serialize_to, nrml_path):
     """
     Create a bcr map writer.
 
