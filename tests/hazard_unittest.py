@@ -61,6 +61,22 @@ TEST_JOB_FILE = helpers.testdata_path('simplecase/config.gem')
 NRML_SCHEMA_PATH = nrml.nrml_schema_file()
 
 
+def get_pattern(regexp):
+    """Get all the values whose keys satisfy the given regexp.
+
+    Return an empty list if there are no keys satisfying the given regxep.
+    """
+
+    values = []
+
+    keys = kvs.get_client().keys(regexp)
+
+    if keys:
+        values = kvs.get_client().mget(keys)
+
+    return values
+
+
 class HazardEngineTestCase(unittest.TestCase):
     """The Hazard Engine is a JPype-based wrapper around OpenSHA-lite.
     Most data returned from the engine is via the KVS."""
@@ -297,7 +313,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
     def test_generate_erf_returns_erf_via_kvs(self):
         results = []
-        result_keys = []
+        keys = []
         expected_values = {}
 
         job_ids = [helpers.job_from_file(TEST_JOB_FILE).job_id
@@ -309,15 +325,13 @@ class HazardEngineTestCase(unittest.TestCase):
             expected_values[erf_key] = json.JSONEncoder().encode([job_id])
 
             # Get our result keys
-            result_keys.append(erf_key)
+            keys.append(erf_key)
 
             # Spawn our tasks.
             results.append(tasks.generate_erf.apply_async(args=[job_id]))
 
         helpers.wait_for_celery_tasks(results)
-
-        result_values = self.kvs_client.get_multi(result_keys)
-
+        result_values = dict(zip(keys, self.kvs_client.mget(keys)))
         self.assertEqual(result_values, expected_values)
 
     def test_compute_mgm_intensity(self):
@@ -359,7 +373,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
         self.empty_curve = []
 
         # deleting server side cached data
-        kvs.flush()
+        kvs.get_client().flushall()
 
     def test_process_the_curves_for_a_single_site(self):
         self._store_hazard_curve_at(shapes.Site(2.0, 5.0), self.empty_curve)
@@ -488,7 +502,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
                 site), curve)
 
     def _has_computed_mean_curve_for_site(self, site):
-        self.assertTrue(kvs.get(kvs.tokens.mean_hazard_curve_key(
+        self.assertTrue(kvs.get_client().get(kvs.tokens.mean_hazard_curve_key(
                 self.job_id, site)) != None)
 
 
@@ -509,7 +523,7 @@ class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
                 1.5582000e-05])
 
         # deleting server side cached data
-        kvs.flush()
+        kvs.get_client().flushall()
 
     def tearDown(self):
         self.unload_job_mixin()
@@ -681,10 +695,10 @@ class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
                 site), curve)
 
     def _no_stored_values_for(self, pattern):
-        self.assertEqual([], kvs.get_pattern(pattern))
+        self.assertEqual([], get_pattern(pattern))
 
     def _has_computed_quantile_for_site(self, site, value):
-        self.assertTrue(kvs.get_pattern(kvs.tokens.quantile_hazard_curve_key(
+        self.assertTrue(get_pattern(kvs.tokens.quantile_hazard_curve_key(
             self.job_id, site, value)))
 
 
@@ -709,7 +723,7 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
         self.empty_mean_curve = []
 
         # deleting server side cached data
-        kvs.flush()
+        kvs.get_client().flushall()
 
         mean_curve = [9.8728e-01, 9.8266e-01, 9.4957e-01,
                 9.0326e-01, 8.1956e-01, 6.9192e-01, 5.2866e-01, 3.6143e-01,
@@ -828,22 +842,28 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
             [0.25, 0.50, 0.75], self.imls, [0.10])
 
         # asserting imls have been produced for all poes and quantiles
-        self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
+        self.assertTrue(kvs.get_client().get(
+            kvs.tokens.quantile_hazard_map_key(
                 self.job_id, sites[0], 0.10, 0.25)))
 
-        self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
+        self.assertTrue(kvs.get_client().get(
+            kvs.tokens.quantile_hazard_map_key(
                 self.job_id, sites[0], 0.10, 0.50)))
 
-        self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
+        self.assertTrue(kvs.get_client().get(
+            kvs.tokens.quantile_hazard_map_key(
                 self.job_id, sites[0], 0.10, 0.75)))
 
-        self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
+        self.assertTrue(kvs.get_client().get(
+            kvs.tokens.quantile_hazard_map_key(
                 self.job_id, sites[1], 0.10, 0.25)))
 
-        self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
+        self.assertTrue(kvs.get_client().get(
+            kvs.tokens.quantile_hazard_map_key(
                 self.job_id, sites[1], 0.10, 0.50)))
 
-        self.assertTrue(kvs.get(kvs.tokens.quantile_hazard_map_key(
+        self.assertTrue(kvs.get_client().get(
+            kvs.tokens.quantile_hazard_map_key(
                 self.job_id, sites[1], 0.10, 0.75)))
 
     def _get_iml_at(self, site, poe):
@@ -858,7 +878,7 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
                                                 self.imls, poes)
 
     def _no_stored_values_for(self, pattern):
-        self.assertEqual([], kvs.get_pattern(pattern))
+        self.assertEqual([], get_pattern(pattern))
 
     def _store_curve_at(self, site, mean_curve):
         kvs.set_value_json_encoded(
@@ -866,7 +886,7 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
                 self.job_id, site), mean_curve)
 
     def _has_computed_IML_for_site(self, site, poe):
-        self.assertTrue(kvs.get(kvs.tokens.mean_hazard_map_key(
+        self.assertTrue(kvs.get_client().get(kvs.tokens.mean_hazard_map_key(
             self.job_id, site, poe)))
 
 
