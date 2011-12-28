@@ -91,6 +91,9 @@ def write_output_bcr(mixin):
     Write BCR map in NRML format.
     """
     # TODO: unittest
+    path = os.path.join(mixin.base_path,
+                        mixin.params['OUTPUT_DIR'],
+                        "bcr-map.xml")
     writer = risk_output.create_bcr_map_writer(
         mixin.job_id, mixin.serialize_results_to, path)
 
@@ -329,7 +332,7 @@ class RiskJobMixin(mixins.Mixin):
         data = []
         for block_id in self.blocks_keys:
             key = kvs.tokens.bcr_block_key(self.job_id, block_id)
-            block_data = kvs.get_list_json_decoded(key)
+            block_data = kvs.get_value_json_decoded(key)
             data += [(shapes.Site(latitude=lat, longitude=lon), payload)
                      for ((lat, lon), payload) in block_data]
         return data
