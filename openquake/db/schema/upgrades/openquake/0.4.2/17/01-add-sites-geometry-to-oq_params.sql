@@ -16,7 +16,7 @@
 ALTER TABLE uiapi.oq_params ALTER COLUMN region DROP NOT NULL;
 ALTER TABLE uiapi.oq_params ALTER COLUMN region_grid_spacing DROP NOT NULL;
 
---- Add the 'sites' column to oq_params:
+-- Add the 'sites' column to oq_params:
 SELECT AddGeometryColumn('uiapi', 'oq_params', 'sites', 4326, 'MULTIPOINT', 2);
 -- Params can either contain a site list ('sites') or
 -- region + region_grid_spacing, but not both.
