@@ -99,7 +99,7 @@ class BaseMapXMLWriter(nrml.TreeNRMLWriter):
         else:
             self.write_metadata({})
 
-        super(BaseMapXMLWriter, self).serialize()
+        super(BaseMapXMLWriter, self).serialize(data)
 
     def write_metadata(self, metadata):
         """
