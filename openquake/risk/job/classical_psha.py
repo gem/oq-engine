@@ -132,8 +132,8 @@ class ClassicalPSHABasedMixin:
         Calculate and store in the kvs the benefit-cost ratio data for block.
 
         A value is stored with key :func:`openquake.kvs.tokens.bcr_block_key`.
-        See :func:`openquake.risk.general.compute_bcr_for_block` for return
-        value spec.
+        See :func:`openquake.risk.job.general.compute_bcr_for_block` for result
+        data structure spec.
         """
         result = []
 
