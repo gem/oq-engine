@@ -35,6 +35,7 @@ from openquake.parser import exposure
 from openquake.parser import vulnerability
 from openquake.risk import common
 from openquake.utils.tasks import check_job_status
+from openquake.risk.calc import CALCULATORS
 
 from celery.task import task
 
@@ -69,21 +70,22 @@ def output(fn):
         """ Write the output of a block to kvs. """
         fn(self, *args, **kwargs)
 
-        for block_id in self.blocks_keys:
+        for block_id in self.job_profile.blocks_keys:
             #pylint: disable=W0212
-            self._write_output_for_block(self.job_id, block_id)
+            self._write_output_for_block(self.job_profile.job_id, block_id)
 
-        for loss_poe in conditional_loss_poes(self.params):
-            path = os.path.join(self.base_path,
-                                self.params['OUTPUT_DIR'],
+        for loss_poe in conditional_loss_poes(self.job_profile.params):
+            path = os.path.join(self.job_profile.base_path,
+                                self.job_profile.params['OUTPUT_DIR'],
                                 "losses_at-%s.xml" % loss_poe)
             writer = risk_output.create_loss_map_writer(
-                self.job_id, self.serialize_results_to, path, False)
+                self.job_profile.job_id, self.job_profile.serialize_results_to,
+                path, False)
 
             if writer:
                 metadata = {
                     "scenario": False,
-                    "timeSpan": self.params["INVESTIGATION_TIME"],
+                    "timeSpan": self.job_profile.params["INVESTIGATION_TIME"],
                     "poE": loss_poe,
                 }
 
@@ -91,7 +93,7 @@ def output(fn):
                     [metadata]
                     + self.asset_losses_per_site(
                         loss_poe,
-                        self.grid_assets_iterator(self.region.grid)))
+                        self.grid_assets_iterator(self.job_profile.region.grid)))
                 LOG.info('Loss Map is at: %s' % path)
 
     return output_writer
@@ -125,9 +127,10 @@ def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
 def compute_risk(job_id, block_id, **kwargs):
     """ A task for computing risk, calls the mixed in compute_risk method """
     check_job_status(job_id)
-    engine = job.Job.from_kvs(job_id)
-    with mixins.Mixin(engine, RiskJobMixin) as mixed:
-        return mixed.compute_risk(block_id, **kwargs)
+    the_job = job.Job.from_kvs(job_id)
+    calculator = CALCULATORS[the_job['CALCULATION_MODE']](the_job)
+
+    return calculator.compute_risk(block_id, **kwargs)
 
 
 class RiskJobMixin(mixins.Mixin):
@@ -138,7 +141,7 @@ class RiskJobMixin(mixins.Mixin):
         """
         Return True if current calculation mode is Benefit-Cost Ratio.
         """
-        return self.params[job_config.CALCULATION_MODE] in (
+        return self.job_profile.params[job_config.CALCULATION_MODE] in (
             job_config.BCR_CLASSICAL_MODE,
             job_config.BCR_EVENT_BASED_MODE
         )
@@ -148,13 +151,13 @@ class RiskJobMixin(mixins.Mixin):
         them in the underlying KVS system."""
 
         sites = []
-        self.blocks_keys = []  # pylint: disable=W0201
-        sites = job.read_sites_from_exposure(self)
+        self.job_profile.blocks_keys = []  # pylint: disable=W0201
+        sites = job.read_sites_from_exposure(self.job_profile)
 
         block_count = 0
 
-        for block in split_into_blocks(self.job_id, sites):
-            self.blocks_keys.append(block.id)
+        for block in split_into_blocks(self.job_profile.job_id, sites):
+            self.job_profile.blocks_keys.append(block.id)
             block.to_kvs()
 
             block_count += 1
@@ -166,28 +169,30 @@ class RiskJobMixin(mixins.Mixin):
         """Load exposure assets and write them to KVS."""
 
         exposure_parser = exposure.ExposurePortfolioFile(
-            os.path.join(self.base_path, self.params[job_config.EXPOSURE]))
+            os.path.join(self.job_profile.base_path, self.job_profile.params[job_config.EXPOSURE]))
 
-        for site, asset in exposure_parser.filter(self.region):
-# TODO(ac): This is kludgey (?)
+        region = self.job_profile.region
+
+        for site, asset in exposure_parser.filter(region):
+            # TODO(ac): This is kludgey (?)
             asset["lat"] = site.latitude
             asset["lon"] = site.longitude
-            gridpoint = self.region.grid.point_at(site)
+            gridpoint = region.grid.point_at(site)
 
             asset_key = kvs.tokens.asset_key(
-                self.job_id, gridpoint.row, gridpoint.column)
+                self.job_profile.job_id, gridpoint.row, gridpoint.column)
 
             kvs.get_client().rpush(asset_key, json.JSONEncoder().encode(asset))
 
     def store_vulnerability_model(self):
         """ load vulnerability and write to kvs """
-        path = os.path.join(self.base_path, self.params["VULNERABILITY"])
-        vulnerability.load_vulnerability_model(self.job_id, path)
+        path = os.path.join(self.job_profile.base_path, self.job_profile.params["VULNERABILITY"])
+        vulnerability.load_vulnerability_model(self.job_profile.job_id, path)
 
         if self.is_benefit_cost_ratio_mode():
-            path = os.path.join(self.base_path,
-                                self.params["VULNERABILITY_RETROFITTED"])
-            vulnerability.load_vulnerability_model(self.job_id, path,
+            path = os.path.join(self.job_profile.base_path,
+                                self.job_profile.params["VULNERABILITY_RETROFITTED"])
+            vulnerability.load_vulnerability_model(self.job_profile.job_id, path,
                                                    retrofitted=True)
 
     def _serialize(self, block_id, **kwargs):
@@ -200,20 +205,20 @@ class RiskJobMixin(mixins.Mixin):
 
         if kwargs['curve_mode'] == 'loss_ratio':
             serialize_filename = "%s-block-%s.xml" % (
-                                     self.params["LOSS_CURVES_OUTPUT_PREFIX"],
+                                     self.job_profile.params["LOSS_CURVES_OUTPUT_PREFIX"],
                                      block_id)
         elif kwargs['curve_mode'] == 'loss':
             serialize_filename = "%s-loss-block-%s.xml" % (
-                                     self.params["LOSS_CURVES_OUTPUT_PREFIX"],
+                                     self.job_profile.params["LOSS_CURVES_OUTPUT_PREFIX"],
                                      block_id)
 
-        serialize_path = os.path.join(self.base_path,
-                                      self.params['OUTPUT_DIR'],
+        serialize_path = os.path.join(self.job_profile.base_path,
+                                      self.job_profile.params['OUTPUT_DIR'],
                                       serialize_filename)
 
         LOG.debug("Serializing %s" % kwargs['curve_mode'])
-        writer = risk_output.create_loss_curve_writer(self.job_id,
-            self.serialize_results_to, serialize_path, kwargs['curve_mode'])
+        writer = risk_output.create_loss_curve_writer(self.job_profile.job_id,
+            self.job_profile.serialize_results_to, serialize_path, kwargs['curve_mode'])
         if writer:
             writer.serialize(kwargs['curves'])
 
@@ -234,7 +239,7 @@ class RiskJobMixin(mixins.Mixin):
 
         for point in grid:
             asset_key = kvs.tokens.asset_key(
-                self.job_id, point.row, point.column)
+                self.job_profile.job_id, point.row, point.column)
             for asset in kvs.get_list_json_decoded(asset_key):
                 yield point, asset
 
@@ -244,7 +249,7 @@ class RiskJobMixin(mixins.Mixin):
         loss_curves = []
         block = Block.from_kvs(block_id)
         for point, asset in self.grid_assets_iterator(
-                block.grid(self.region)):
+                block.grid(self.job_profile.region)):
             site = shapes.Site(asset['lon'], asset['lat'])
 
             loss_curve = kvs.get_client().get(
@@ -298,7 +303,7 @@ class RiskJobMixin(mixins.Mixin):
         result = defaultdict(list)
 
         for point, asset in assets_iterator:
-            key = kvs.tokens.loss_key(self.job_id, point.row, point.column,
+            key = kvs.tokens.loss_key(self.job_profile.job_id, point.row, point.column,
                     asset["assetID"], loss_poe)
 
             loss_value = kvs.get_client().get(key)

@@ -189,24 +189,25 @@ class RiskJobMixinTestCase(unittest.TestCase):
         """The base risk mixin is able to read the exposure file,
         split the sites into blocks and store them in KVS."""
 
-        mixin = general.RiskJobMixin(None, None)
+        params = {
+            config.EXPOSURE: os.path.join(helpers.SCHEMA_EXAMPLES_DIR,
+                                          EXPOSURE_TEST_FILE),
+        }
+        a_job = helpers.create_job(params)
 
-        mixin.params = {config.EXPOSURE: os.path.join(
-            helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE)}
+        calculator = general.RiskJobMixin(a_job)
 
-        mixin.region = None
-        mixin.base_path = "."
-        mixin.job_id = 123
-        mixin.partition()
+        a_job.base_path = "."
+        calculator.partition()
 
         expected = general.Block(
             (shapes.Site(9.15000, 45.16667), shapes.Site(9.15333, 45.12200),
              shapes.Site(9.14777, 45.17999)), None)
 
-        self.assertEqual(1, len(mixin.blocks_keys))
+        self.assertEqual(1, len(a_job.blocks_keys))
 
         self.assertEqual(
-            expected, general.Block.from_kvs(mixin.blocks_keys[0]))
+            expected, general.Block.from_kvs(a_job.blocks_keys[0]))
 
     def test_prepares_blocks_using_the_exposure_and_filtering(self):
         """When reading the exposure file, the mixin also provides filtering
@@ -229,13 +230,14 @@ class RiskJobMixinTestCase(unittest.TestCase):
             (shapes.Site(9.15, 45.16667), shapes.Site(9.14777, 45.17999)),
             None)
 
-        with Mixin(a_job, general.RiskJobMixin):
-            a_job.partition()
+        calculator = general.RiskJobMixin(a_job)
 
-            self.assertEqual(1, len(a_job.blocks_keys))
+        calculator.partition()
 
-            self.assertEqual(
-                expected_block, general.Block.from_kvs(a_job.blocks_keys[0]))
+        self.assertEqual(1, len(a_job.blocks_keys))
+
+        self.assertEqual(
+            expected_block, general.Block.from_kvs(a_job.blocks_keys[0]))
 
 
 GRID_ASSETS = {
@@ -276,11 +278,13 @@ class RiskMixinTestCase(unittest.TestCase):
             def row_col(item):
                 return item[0].row, item[0].column
 
-            with job.mixins.Mixin(self.job, general.RiskJobMixin):
-                got = sorted(self.job.grid_assets_iterator(self.grid),
-                             key=row_col)
+            calculator = general.RiskJobMixin(self.job)
 
-                self.assertEqual(sorted(self.grid_assets, key=row_col), got)
+            
+            got = sorted(calculator.grid_assets_iterator(self.grid),
+                         key=row_col)
+
+            self.assertEqual(sorted(self.grid_assets, key=row_col), got)
 
     def test_that_conditional_loss_is_in_kvs(self):
         asset = {"assetID": 1}
@@ -318,9 +322,20 @@ class RiskMixinTestCase(unittest.TestCase):
                 (shapes.Site(10.1, 10.1),
                     [({'value': 0.123}, GRID_ASSETS[(1, 1)])])]
 
+<<<<<<< HEAD
             with job.mixins.Mixin(self.job, general.RiskJobMixin):
                 self.assertEqual(
                     sorted(expected, key=coords),
                     sorted(
                         self.job.asset_losses_per_site(0.5, self.grid_assets),
                         key=coords))
+=======
+            calculator = general.RiskJobMixin(self.job)
+
+            self.assertEqual(
+                sorted(expected, key=coords),
+                sorted(
+                    calculator.asset_losses_per_site(
+                        0.5, self.grid_assets),
+                    key=coords))
+>>>>>>> Ginormous refactoring job here. Job objects are now fully decoupled from the mixin/calculators

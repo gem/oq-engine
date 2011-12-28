@@ -34,6 +34,7 @@ from openquake import job
 from openquake import kvs
 
 from openquake.hazard import job as hazjob
+from openquake.hazard import calc as hazcalc
 from openquake.hazard import classical_psha
 from openquake import java
 from openquake.job import mixins
@@ -82,10 +83,11 @@ def compute_ground_motion_fields(job_id, sites, history, realization, seed):
 def compute_hazard_curve(job_id, sites, realization):
     """ Generate hazard curve for a given site list. """
     check_job_status(job_id)
-    hazengine = job.Job.from_kvs(job_id)
-    with mixins.Mixin(hazengine, hazjob.HazJobMixin):
-        keys = hazengine.compute_hazard_curve(sites, realization)
-        return keys
+    the_job = job.Job.from_kvs(job_id)
+    calc_mode = the_job['CALCULATION_MODE']
+    calculator = hazcalc.CALCULATORS[calc_mode](the_job)
+    keys = calculator.compute_hazard_curve(sites, realization)
+    return keys
 
 
 @task
