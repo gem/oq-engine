@@ -947,12 +947,12 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
             for asset in kvs.get_list_json_decoded(asset_key):
                 loss_ratio_key = kvs.tokens.loss_ratio_key(
                     self.job_id, point.row, point.column, asset['assetID'])
-                self.assertTrue(kvs.get(loss_ratio_key))
+                self.assertTrue(kvs.get_client().get(loss_ratio_key))
 
                 loss_key = kvs.tokens.loss_curve_key(self.job_id, point.row,
                     point.column, asset['assetID'])
 
-                self.assertTrue(kvs.get(loss_key))
+                self.assertTrue(kvs.get_client().get(loss_key))
 
     def test_compute_bcr_in_the_classical_psha_mixin(self):
         self._compute_risk_classical_psha_setup()
@@ -968,13 +968,11 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         calculator = ClassicalPSHABasedMixin(the_job)
 
-        block = Block.from_kvs(self.block_id)
-
+        Block.from_kvs(self.block_id)
         asset = {"taxonomy": "ID",
                  "assetID": 22.61,
                  "assetValue": 1,
                  "retrofittingCost": 123.45}
-
         self._store_asset(asset, 10, 10)
 
         calculator.compute_risk(self.block_id)
@@ -1119,7 +1117,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
                 (0.12, 0.057), (0.18, 0.04),
                 (0.24, 0.019), (0.3, 0.009), (0.45, 0)])
 
-# TODO (ac): Check the difference between 0.023305 and 0.023673
+        # TODO (ac): Check the difference between 0.023305 and 0.023673
         self.assertAlmostEqual(0.023305,
                 common.compute_mean_loss(loss_ratio_curve), 3)
 
