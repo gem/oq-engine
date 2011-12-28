@@ -681,14 +681,16 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         asset = {"taxonomy": "ID",
                  "assetID": 22.61,
                  "assetValue": 1,
-                 "retrofittingCost": 123.45}
+                 "retrofittingCost": 123.45,
+                 'lat': -1,
+                 'lon': -2}
         self._store_asset(asset, 10, 10)
 
         mixin.compute_risk(self.block_id)
 
         result_key = kvs.tokens.bcr_block_key(self.job_id, self.block_id)
         result = kvs.get_value_json_decoded(result_key)
-        self.assertEqual(result, [[10, 10, {u'22.61': 0.0}]])
+        self.assertEqual(result, [[[-1, -2], [[{u'value': 0.0}, 22.61]]]])
 
 
 class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
@@ -962,15 +964,17 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         asset = {"taxonomy": "ID",
                  "assetID": 22.61,
                  "assetValue": 1,
-                 "retrofittingCost": 123.45}
+                 "retrofittingCost": 123.45,
+                 'lat': 12.34,
+                 'lon': 56.67}
 
         self._store_asset(asset, 10, 10)
 
         mixin.compute_risk(self.block_id)
 
         result_key = kvs.tokens.bcr_block_key(self.job_id, self.block_id)
-        result = kvs.get_value_json_decoded(result_key)
-        self.assertEqual(result, [[10, 10, {u'22.61': 0.0}]])
+        res = kvs.get_value_json_decoded(result_key)
+        self.assertEqual(res, [[[12.34, 56.67], [[{u'value': 0.0}, 22.61]]]])
 
     def test_loss_ratio_curve_in_the_classical_psha_mixin(self):
 
