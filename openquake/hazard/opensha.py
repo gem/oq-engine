@@ -21,25 +21,25 @@ Wrapper around the OpenSHA-lite java library.
 """
 
 
-import hashlib
 from itertools import izip
 import functools
+import hashlib
 import math
 import multiprocessing
 import os
 import random
 import time
 
-from openquake import kvs
 from openquake import java
+from openquake import kvs
 from openquake import logs
 from openquake import shapes
 from openquake import xml
 
+from openquake.hazard.general import BasePSHAMixin, preload, get_iml_list
 from openquake.hazard import classical_psha
 from openquake.hazard import job
 from openquake.hazard import tasks
-from openquake.hazard.general import BasePSHAMixin, preload, get_iml_list
 from openquake.output import hazard as hazard_output
 from openquake.utils import config
 from openquake.utils import stats
@@ -61,10 +61,15 @@ def create_java_cache(fn):
     @functools.wraps(fn)
     def decorated(self, *args, **kwargs):  # pylint: disable=C0111
         kvs_data = (config.get("kvs", "host"), int(config.get("kvs", "port")))
-        key = hashlib.md5(repr(kvs_data)).hexdigest()
-        if key not in __KVS_CONN_CACHE:
-            __KVS_CONN_CACHE[key] = java.jclass("KVS")(*kvs_data)
-        self.cache = __KVS_CONN_CACHE[key]
+
+        if kvs.cache_connections():
+            key = hashlib.md5(repr(kvs_data)).hexdigest()
+            if key not in __KVS_CONN_CACHE:
+                __KVS_CONN_CACHE[key] = java.jclass("KVS")(*kvs_data)
+            self.cache = __KVS_CONN_CACHE[key]
+        else:
+            self.cache = java.jclass("KVS")(*kvs_data)
+
         return fn(self, *args, **kwargs)
 
     return decorated
@@ -597,7 +602,7 @@ class ClassicalMixin(BasePSHAMixin):
             curve_key = kvs.tokens.hazard_curve_poes_key(
                 self.job_id, realization, site)
 
-            kvs.set(curve_key, poes)
+            kvs.get_client().set(curve_key, poes)
 
             curve_keys.append(curve_key)
 

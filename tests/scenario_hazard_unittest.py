@@ -64,7 +64,7 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
         cls.kvs_client = kvs.get_client()
 
     def setUp(self):
-        kvs.flush()
+        kvs.get_client().flushall()
 
         self.job = helpers.job_from_file(SCENARIO_SMOKE_TEST)
 
@@ -73,8 +73,8 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
         self.job.params['SERIALIZE_RESULTS_TO'] = 'xml'
 
         # saving the default java implementation
-        self.default = \
-            det.ScenarioEventBasedMixin.compute_ground_motion_field
+        self.default = (
+            det.ScenarioEventBasedMixin.compute_ground_motion_field)
 
         self.grid = self.job.region.grid
 
@@ -85,7 +85,7 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
         det.ScenarioEventBasedMixin.compute_ground_motion_field = \
             self.default
 
-        kvs.flush()
+        kvs.get_client().flushall()
 
     def test_scenario_job_completes(self):
         """The scenario calculator is triggered.
@@ -218,7 +218,7 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
                 key = kvs.tokens.ground_motion_values_key(
                     self.job.job_id, point)
 
-                self.assertTrue(kvs.get_keys(key))
+                self.assertTrue(kvs.get_client().keys(key))
 
     def test_when_measure_type_is_not_mmi_exp_is_stored(self):
         location = java.jclass("Location")(1.0, 2.0)
