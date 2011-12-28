@@ -60,7 +60,7 @@ class Mixin:
             Deprecated.
         """
         self.job_profile = job_profile
-        # We're keep this just for the transition
+        # We're keeping this just for the transition
         self.target = job_profile
         self.mixin = mixin
 
