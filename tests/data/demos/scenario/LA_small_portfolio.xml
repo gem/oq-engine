@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <nrml xmlns="http://openquake.org/xmlns/nrml/0.3" xmlns:gml="http://www.opengis.net/gml" gml:id="nrml">
 <exposurePortfolio gml:id="ep">
-<exposureList gml:id="LA01" assetCategory="buildings" lossCategory="economic_loss" unit="EUR">
+<exposureList gml:id="LA01" assetCategory="buildings" unit="EUR">
 <gml:description>Collection of exposure values for existing building in Los Angeles County, California, US
 </gml:description>
 	<assetDefinition gml:id="src0">

@@ -26,6 +26,7 @@ import re
 from collections import namedtuple
 
 from openquake.db.models import OqParams
+from openquake.utils.general import str2bool
 
 
 ARRAY_RE = re.compile('[\s,]+')
@@ -168,7 +169,6 @@ def define_param(name, column, modes=None, default=None, to_db=None,
 # from the config file into a Job. Shortened names for the sake of brevity.
 cttl = config_text_to_list
 cttfl = lambda x: cttl(x, float)  # config text to float list
-str2bool = lambda x: x.lower() in ("true", "yes", "t", "1")
 
 
 # general params

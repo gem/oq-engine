@@ -639,3 +639,50 @@ class ReleaseDataFromKvsTestCase(TestMixin, unittest.TestCase):
                 for quantile in self.QUANTILES:
                     keys.append(pkey + str(quantile))
         self._test(keys, 5)
+
+
+class CreateJavaCacheTestCase(TestMixin, unittest.TestCase):
+    """Tests the behaviour of opensha.create_java_cache()."""
+
+    class Fake(object):
+        """Fake calculator class."""
+        def __init__(self):
+            self.cache = None
+
+        @opensha.create_java_cache
+        def calculate1(self):
+            """Fake calculator method."""
+            return self.cache
+
+        @opensha.create_java_cache
+        def calculate2(self):
+            """Fake calculator method."""
+            return self.cache
+
+    def test_create_java_cache(self):
+        """The cache is instantiated."""
+        fake = self.Fake()
+        self.assertIs(None, fake.cache)
+        result = fake.calculate1()
+        self.assertIs(result, fake.cache)
+
+    def test_create_java_cache_same_instance_used(self):
+        """The cache is instantiated and used for all decorated functions."""
+        fake = self.Fake()
+        with patch("openquake.kvs.cache_connections") as mfunc:
+            mfunc.return_value = True
+            result1 = fake.calculate1()
+            result2 = fake.calculate2()
+            self.assertIs(result1, result2)
+
+    def test_create_java_cache_without_caching(self):
+        """
+        Different `Cache` instances are used when kvs connection caching is
+        turned off.
+        """
+        fake = self.Fake()
+        with patch("openquake.kvs.cache_connections") as mfunc:
+            mfunc.return_value = False
+            result1 = fake.calculate1()
+            result2 = fake.calculate2()
+            self.assertIsNot(result1, result2)

@@ -344,7 +344,7 @@ class ProbabilisticEventMixin(Mixin):  # pylint: disable=W0232,W0201
         key = kvs.tokens.loss_ratio_key(
             self.job_profile.job_id, row, col, asset["assetID"])
 
-        kvs.set(key, loss_ratio_curve.to_json())
+        kvs.get_client().set(key, loss_ratio_curve.to_json())
 
         LOGGER.debug("Loss ratio curve is %s, write to key %s" %
                 (loss_ratio_curve, key))
@@ -383,7 +383,7 @@ class ProbabilisticEventMixin(Mixin):  # pylint: disable=W0232,W0201
             self.job_profile.job_id, row, column, asset["assetID"])
 
         LOGGER.debug("Loss curve is %s, write to key %s" % (loss_curve, key))
-        kvs.set(key, loss_curve.to_json())
+        kvs.get_client().set(key, loss_curve.to_json())
 
         return loss_curve
 

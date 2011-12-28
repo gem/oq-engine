@@ -21,6 +21,7 @@ Collection of functions that compute stuff using
 as input data produced with the classical psha method.
 """
 
+import json
 import math
 import numpy
 
@@ -33,6 +34,20 @@ from openquake.logs import LOG
 
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
 POES_PARAM_NAME = "POES"
+
+
+def mget_decoded(keys):
+    """
+    Retrieve multiple JSON values from the KVS
+
+    :param keys: keys to retrieve (the corresponding value must be a
+        JSON string)
+    :type keys: list
+    :returns: one value for each key in the list
+    """
+    decoder = json.JSONDecoder()
+
+    return [decoder.decode(value) for value in kvs.get_client().mget(keys)]
 
 
 def compute_mean_curve(curves):
@@ -76,7 +91,7 @@ def poes_at(job_id, site, realizations):
     keys = [kvs.tokens.hazard_curve_poes_key(job_id, realization, site)
                 for realization in xrange(realizations)]
     # get the probablity of exceedence for each curve in the site
-    return kvs.mget_decoded(keys)
+    return mget_decoded(keys)
 
 
 def compute_mean_hazard_curves(job_id, sites, realizations):

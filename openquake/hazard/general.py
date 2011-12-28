@@ -123,7 +123,8 @@ def store_source_model(job_id, seed, params, calc):
     LOG.info("Storing source model from job config")
     key = kvs.tokens.source_model_key(job_id)
     mfd_bin_width = float(params.get('WIDTH_OF_MFD_BIN'))
-    calc.sample_and_save_source_model_logictree(kvs, key, seed, mfd_bin_width)
+    calc.sample_and_save_source_model_logictree(
+        kvs.get_client(), key, seed, mfd_bin_width)
 
 
 def store_gmpe_map(job_id, seed, calc):
@@ -137,7 +138,7 @@ def store_gmpe_map(job_id, seed, calc):
     """
     LOG.info("Storing GMPE map from job config")
     key = kvs.tokens.gmpe_key(job_id)
-    calc.sample_and_save_gmpe_logictree(kvs, key, seed)
+    calc.sample_and_save_gmpe_logictree(kvs.get_client(), key, seed)
 
 
 def set_gmpe_params(gmpe_map, params):

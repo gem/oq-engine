@@ -24,10 +24,11 @@ the underlying kvs systems.
 
 import json
 import numpy
-
+import redis
 from openquake import logs
 from openquake.kvs import tokens
-from openquake.kvs.redis import Redis
+from openquake.utils import config
+from openquake.utils import general
 
 
 LOG = logs.LOG
@@ -38,80 +39,20 @@ MAX_LENGTH_RANDOM_ID = 36
 SITES_KEY_TOKEN = "sites"
 
 
-def flush():
-    """Flush (delete) all the values stored in the underlying kvs system."""
-    get_client().flushall()
+# Module-private kvs connection pool, to be used by get_client().
+__KVS_CONN_POOL = None
 
 
-def get_keys(regexp):
-    """Get all KVS keys that match a given regexp pattern."""
-    return get_client().keys(regexp)
-
-
-def mget(keys):
-    """
-    Retrieve multiple keys from the KVS.
-
-    :param keys: keys to retrieve
-    :type keys: list
-    :returns: one value for each key in the list
-    """
-    return get_client().mget(keys)
-
-
-def mget_decoded(keys):
-    """
-    Retrieve multiple JSON values from the KVS
-
-    :param keys: keys to retrieve (the corresponding value must be a
-        JSON string)
-    :type keys: list
-    :returns: one value for each key in the list
-    """
-    decoder = json.JSONDecoder()
-
-    return [decoder.decode(value) for value in get_client().mget(keys)]
-
-
-def get_pattern(regexp):
-    """Get all the values whose keys satisfy the given regexp.
-
-    Return an empty list if there are no keys satisfying the given regxep.
-    """
-
-    values = []
-
-    keys = get_client().keys(regexp)
-
-    if keys:
-        values = get_client().mget(keys)
-
-    return values
-
-
-def get_pattern_decoded(regexp):
-    """Get and decode (from json format) all the values whose keys
-    satisfy the given regexp."""
-
-    decoded_values = []
-    decoder = json.JSONDecoder()
-
-    for value in get_pattern(regexp):
-        decoded_values.append(decoder.decode(value))
-
-    return decoded_values
-
-
-def get(key):
-    """Get value from kvs for external decoding"""
-    return get_client().get(key)
-
-
+# pylint: disable=W0603
 def get_client(**kwargs):
-    """possible kwargs:
-        db: database identifier
-    """
-    return Redis(**kwargs)
+    """Return a redis kvs client connection object."""
+    global __KVS_CONN_POOL
+    if __KVS_CONN_POOL is None:
+        cfg = config.get_section("kvs")
+        __KVS_CONN_POOL = redis.ConnectionPool(
+            max_connections=1, host=cfg["host"], port=int(cfg["port"]))
+    kwargs.update({"connection_pool": __KVS_CONN_POOL})
+    return redis.Redis(**kwargs)
 
 
 def get_value_json_decoded(key):
@@ -166,13 +107,6 @@ def set_value_json_encoded(key, value):
         raise ValueError("cannot encode value %s of type %s to JSON"
                          % (value, type(value)))
 
-    return True
-
-
-def set(key, encoded_value):  # pylint: disable=W0622
-    """ Set value in kvs, for objects that have their own encoding method. """
-
-    get_client().set(key, encoded_value)
     return True
 
 
@@ -245,3 +179,11 @@ def cache_gc(job_id):
             '%s is not recognized as a current job.' % job_id
         LOG.error(msg)
         return None
+
+
+def cache_connections():
+    """True if kvs connections should be cached."""
+    setting = config.get("kvs", "cache_connections")
+    if setting is None:
+        return False
+    return general.str2bool(setting)
