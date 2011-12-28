@@ -209,7 +209,8 @@ class DisaggMixin(Mixin):
         subset_results = self.distribute_subsets(full_disagg_results,
                                                  subset_types, result_dir)
 
-        DisaggMixin.serialize_nrml(self.job_profile, subset_types, subset_results)
+        DisaggMixin.serialize_nrml(self.job_profile, subset_types,
+                                   subset_results)
 
     @staticmethod
     def create_result_dir(base_path, job_id):
@@ -286,7 +287,8 @@ class DisaggMixin(Mixin):
             # cache the source model and gmpe model in the KVS
             # so the Java code can access it
 
-            store_source_model(self.job_profile.job_id, src_model_rnd.getrandbits(32),
+            store_source_model(self.job_profile.job_id,
+                               src_model_rnd.getrandbits(32),
                                self.job_profile.params, self.calc)
             store_gmpe_map(self.job_profile.job_id, gmpe_rnd.getrandbits(32),
                            self.calc)
@@ -313,8 +315,8 @@ class DisaggMixin(Mixin):
                         " for job %s with task_id=%s, realization=%s, PoE=%s,"
                         " site=%s has failed with the following error: %s")
                     msg %= (
-                        self.job_profile.job_id, a_task.task_id, rlz, poe, site,
-                        a_task.result)
+                        self.job_profile.job_id, a_task.task_id, rlz, poe,
+                        site, a_task.result)
                     LOG.critical(msg)
                     raise RuntimeError(msg)
                 else:
@@ -401,8 +403,8 @@ class DisaggMixin(Mixin):
                         "Matrix subset extraction task for job %s with"
                         " task_id=%s, realization=%s, PoE=%s, target_file=%s"
                         " has failed with the following error: %s")
-                    msg %= (self.job_profile.job_id, a_task.task_id, poe, target_file,
-                            a_task.result)
+                    msg %= (self.job_profile.job_id, a_task.task_id, poe,
+                            target_file, a_task.result)
                     LOG.critical(msg)
                     raise RuntimeError(msg)
                 else:

@@ -22,7 +22,7 @@ def _load_calcs():
     from openquake.hazard.opensha import ClassicalMixin, EventBasedMixin
     from openquake.hazard.disagg.core import DisaggMixin
     from openquake.hazard.scenario import ScenarioEventBasedMixin
-   
+
     calcs = {
         'Classical': ClassicalMixin,
         'Classical BCR': ClassicalMixin,

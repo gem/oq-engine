@@ -199,7 +199,8 @@ class BasePSHAMixin(Mixin):
 
     def store_source_model(self, seed):
         """Generates a source model from the source model logic tree."""
-        store_source_model(self.job_profile.job_id, seed, self.job_profile.params, self.calc)
+        store_source_model(self.job_profile.job_id, seed,
+                           self.job_profile.params, self.calc)
 
     def store_gmpe_map(self, seed):
         """Generates a hash of tectonic regions and GMPEs, using the logic tree
@@ -232,19 +233,23 @@ class BasePSHAMixin(Mixin):
             site = x.to_java()
 
             vs30 = java.jclass("DoubleParameter")(jpype.JString("Vs30"))
-            vs30.setValue(float(self.job_profile.params['REFERENCE_VS30_VALUE']))
+            vs30.setValue(
+                float(self.job_profile.params['REFERENCE_VS30_VALUE']))
             depth25 = java.jclass("DoubleParameter")("Depth 2.5 km/sec")
             depth25.setValue(float(
-                    self.job_profile.params['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']))
+                self.job_profile.params[
+                    'REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']))
             sadigh = java.jclass("StringParameter")("Sadigh Site Type")
             sadigh.setValue(self.job_profile.params['SADIGH_SITE_TYPE'])
 
             depth1km = java.jclass("DoubleParameter")(jpype.JString(
                 "Depth 1.0 km/sec"))
-            depth1km.setValue(float(self.job_profile.params['DEPTHTO1PT0KMPERSEC']))
+            depth1km.setValue(
+                float(self.job_profile.params['DEPTHTO1PT0KMPERSEC']))
             vs30_type = java.jclass("StringParameter")("Vs30 Type")
             # Enum values must be capitalized in the Java domain!
-            vs30_type.setValue(self.job_profile.params['VS30_TYPE'].capitalize())
+            vs30_type.setValue(
+                self.job_profile.params['VS30_TYPE'].capitalize())
 
             site.addParameter(vs30)
             site.addParameter(depth25)
