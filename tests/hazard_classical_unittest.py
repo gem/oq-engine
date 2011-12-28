@@ -23,6 +23,7 @@ Unit tests for classic PSHA hazard computations with the hazard engine.
 
 import mock
 import multiprocessing
+import os
 import unittest
 
 from openquake import kvs
@@ -31,11 +32,17 @@ from openquake import shapes
 
 from openquake.hazard import opensha
 
-from tests.utils.helpers import patch, TestMixin, TestStore
+from tests.utils.helpers import patch, TestMixin, TestStore, demo_file
 from tests.utils.tasks import (
     test_async_data_reflector, test_compute_hazard_curve, test_data_reflector)
 
 LOG = logs.LOG
+
+SIMPLE_FAULT_SRC_MODEL_LT = demo_file(
+    'simple_fault_demo_hazard/source_model_logic_tree.xml')
+SIMPLE_FAULT_GMPE_LT = demo_file(
+    'simple_fault_demo_hazard/gmpe_logic_tree.xml')
+SIMPLE_FAULT_BASE_PATH = os.path.abspath(demo_file('simple_fault_demo_hazard'))
 
 
 class DoCurvesTestCase(TestMixin, unittest.TestCase):
@@ -70,8 +77,12 @@ class DoCurvesTestCase(TestMixin, unittest.TestCase):
             "hazard_curve!38cdc377!2!-121.7!38.0"]]
 
     def setUp(self):
-        self.mixin = self.create_job_with_mixin({'CALCULATION_MODE': 'Hazard'},
-                                                opensha.ClassicalMixin)
+        params = dict(
+            CALCULATION_MODE='Hazard',
+            SOURCE_MODEL_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_SRC_MODEL_LT,
+            GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
+            BASE_PATH=SIMPLE_FAULT_BASE_PATH)
+        self.mixin = self.create_job_with_mixin(params, opensha.ClassicalMixin)
         # Store the canned result data in the KVS.
         key = self.mixin.job_id
         for realization in xrange(2):
@@ -105,7 +116,7 @@ class DoCurvesTestCase(TestMixin, unittest.TestCase):
         # serializer function.
         fake_serializer.number_of_calls = 0
 
-        self.mixin.do_curves(self.sites, 2, serializer=fake_serializer,
+        self._mixin.do_curves(self.sites, 2, serializer=fake_serializer,
                              the_task=test_compute_hazard_curve)
         self.assertEqual(2, fake_serializer.number_of_calls)
 
@@ -127,10 +138,12 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
         "mean_hazard_curve!38cdc377!1!-121.7!38.0"]
 
     def setUp(self):
-        params = {
-            'CALCULATION_MODE': 'Hazard',
-            'COMPUTE_MEAN_HAZARD_CURVE': 'True',
-        }
+        params = dict(
+            CALCULATION_MODE='Hazard',
+            COMPUTE_MEAN_HAZARD_CURVE='true',
+            SOURCE_MODEL_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_SRC_MODEL_LT,
+            GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
+            BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
         self.mixin = self.create_job_with_mixin(params, opensha.ClassicalMixin)
 
@@ -155,7 +168,7 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
 
         key = TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
-        self.mixin.do_means(self.sites, 1,
+        self._mixin.do_means(self.sites, 1,
                         curve_serializer=fake_serializer,
                         curve_task=test_async_data_reflector)
         self.assertEqual(1, fake_serializer.number_of_calls)
@@ -176,7 +189,7 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
 
         key = TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
-        self.mixin.do_means(self.sites, 1,
+        self._mixin.do_means(self.sites, 1,
                         curve_serializer=lambda _: True,
                         curve_task=test_data_reflector)
         self.assertEqual(0, fake_serializer.number_of_calls)
@@ -201,7 +214,7 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
         key = TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.params["POES"] = "0.6 0.8"
-        self.mixin.do_means(self.sites, 1,
+        self._mixin.do_means(self.sites, 1,
             curve_serializer=lambda _: True,
             curve_task=test_data_reflector,
             map_func=fake_map_func,
@@ -221,7 +234,7 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
         self.keys.append(key)
         self.mixin.params["POES"] = "0.6 0.8"
         self.assertRaises(
-            AssertionError, self.mixin.do_means,
+            AssertionError, self._mixin.do_means,
             self.sites, 1,
             curve_serializer=lambda _: True,
             curve_task=test_data_reflector, map_func=lambda _: [1, 2, 3])
@@ -239,7 +252,7 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
         self.keys.append(key)
         self.mixin.params["POES"] = "0.6 0.8"
         self.assertRaises(
-            AssertionError, self.mixin.do_means,
+            AssertionError, self._mixin.do_means,
             self.sites, 1,
             curve_serializer=lambda _: True, curve_task=test_data_reflector,
             map_serializer=lambda _: True, map_func=None)
@@ -247,7 +260,7 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
     def test_no_do_means_if_disabled(self):
         self.mixin.params['COMPUTE_MEAN_HAZARD_CURVE'] = 'false'
         with patch('openquake.utils.tasks.distribute') as distribute:
-            self.mixin.do_means(self.sites, 1,
+            self._mixin.do_means(self.sites, 1,
                                 curve_serializer=None,
                                 curve_task=None)
         self.assertEqual(distribute.call_count, 0)
@@ -269,8 +282,12 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
         "quantile_hazard_curve!10!-122.8!38.0!0.4"]
 
     def setUp(self):
-        self.mixin = self.create_job_with_mixin({'CALCULATION_MODE': 'Hazard'},
-                                                opensha.ClassicalMixin)
+        params = dict(
+            CALCULATION_MODE='Hazard',
+            SOURCE_MODEL_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_SRC_MODEL_LT,
+            GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
+            BASE_PATH=SIMPLE_FAULT_BASE_PATH)
+        self.mixin = self.create_job_with_mixin(params, opensha.ClassicalMixin)
 
     def tearDown(self):
         # Remove the canned result data from the KVS.
@@ -290,7 +307,7 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
 
         key = TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
-        self.mixin.do_quantiles(self.sites, 1, [0.2, 0.4],
+        self._mixin.do_quantiles(self.sites, 1, [0.2, 0.4],
                             curve_serializer=fake_serializer,
                             curve_task=test_async_data_reflector)
         # The serializer is called only once (for all quantiles).
@@ -316,7 +333,7 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
         key = TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
         self.mixin.params["POES"] = "0.6 0.8"
-        self.mixin.do_quantiles(
+        self._mixin.do_quantiles(
             self.sites, 1, [0.2, 0.4],
             curve_serializer=lambda _, __: True,
             curve_task=test_data_reflector,
@@ -358,9 +375,9 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
 
         key = TestStore.put(self.mixin.job_id, self.mock_results)
         self.keys.append(key)
-        self.mixin.params["POES"] = "0.6 0.8"
+        self._mixin.job_profile.params["POES"] = "0.6 0.8"
         self.assertRaises(
-            AssertionError, self.mixin.do_quantiles,
+            AssertionError, self._mixin.do_quantiles,
             self.sites, 1, [0.5],
             curve_serializer=lambda _, __: True,
             curve_task=test_data_reflector, map_func=lambda _: [1, 2, 3])
@@ -378,7 +395,7 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
         self.keys.append(key)
         self.mixin.params["POES"] = "0.6 0.8"
         self.assertRaises(
-            AssertionError, self.mixin.do_quantiles,
+            AssertionError, self._mixin.do_quantiles,
             self.sites, 1, [0.5],
             curve_serializer=lambda _, __: True,
             curve_task=test_data_reflector,
@@ -389,7 +406,11 @@ class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
     """Tests the behaviour of ClassicalMixin.number_of_tasks()."""
 
     def setUp(self):
-        params = {'CALCULATION_MODE': 'Hazard'}
+        params = dict(
+            CALCULATION_MODE='Hazard',
+            SOURCE_MODEL_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_SRC_MODEL_LT,
+            GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
+            BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
         self.mixin = self.create_job_with_mixin(params, opensha.ClassicalMixin)
 
@@ -403,7 +424,7 @@ class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
         """
         self.mixin.params = dict()
         self.assertEqual(
-            2 * multiprocessing.cpu_count(), self.mixin.number_of_tasks())
+            2 * multiprocessing.cpu_count(), self._mixin.number_of_tasks())
 
     def test_number_of_tasks_with_param_set_and_valid(self):
         """
@@ -411,7 +432,7 @@ class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
         value will be returned.
         """
         self.mixin.params = dict(HAZARD_TASKS="5")
-        self.assertEqual(5, self.mixin.number_of_tasks())
+        self.assertEqual(5, self._mixin.number_of_tasks())
 
     def test_number_of_tasks_with_param_set_but_invalid(self):
         """
@@ -419,7 +440,7 @@ class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
         `ValueError` will be raised.
         """
         self.mixin.params = dict(HAZARD_TASKS="this-is-not-a-number")
-        self.assertRaises(ValueError, self.mixin.number_of_tasks)
+        self.assertRaises(ValueError, self._mixin.number_of_tasks)
 
     def test_number_of_tasks_with_param_set_but_all_whitespace(self):
         """
@@ -427,7 +448,7 @@ class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
         `ValueError` will be raised.
         """
         self.mixin.params = dict(HAZARD_TASKS=" 	")
-        self.assertRaises(ValueError, self.mixin.number_of_tasks)
+        self.assertRaises(ValueError, self._mixin.number_of_tasks)
 
 
 class ClassicalExecuteTestCase(TestMixin, unittest.TestCase):
@@ -455,17 +476,23 @@ class ClassicalExecuteTestCase(TestMixin, unittest.TestCase):
             """Do nothing."""
 
     def setUp(self):
-        self.mixin = self.create_job_with_mixin({'CALCULATION_MODE': 'Hazard'},
-                                                opensha.ClassicalMixin)
+        base_path = os.path.abspath(demo_file('simple_fault_demo_hazard'))
+        params = dict(
+            CALCULATION_MODE='Hazard',
+            NUMBER_OF_LOGIC_TREE_SAMPLES=2,
+            WIDTH_OF_MFD_BIN=1,
+            SOURCE_MODEL_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_SRC_MODEL_LT,
+            GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
+            BASE_PATH=SIMPLE_FAULT_BASE_PATH)
+        self.mixin = self.create_job_with_mixin(params, opensha.ClassicalMixin)
+
         # Initialize the mixin instance.
-        self.mixin.params = dict(NUMBER_OF_LOGIC_TREE_SAMPLES=2,
-                                 WIDTH_OF_MFD_BIN=1)
         self.mixin.calc = self.FakeLogicTreeProcessor()
         self.mixin.cache = dict()
         self.mixin.sites = self.sites
         for method in ["do_curves", "do_means", "do_quantiles"]:
-            self.methods[method] = getattr(self.mixin, method)
-            setattr(self.mixin, method,
+            self.methods[method] = getattr(self._mixin, method)
+            setattr(self._mixin, method,
                     mock.mocksignature(self.methods[method]))
         patcher = patch("openquake.utils.config.hazard_block_size")
         patcher.start().return_value = 3
@@ -490,9 +517,9 @@ class ClassicalExecuteTestCase(TestMixin, unittest.TestCase):
         data_slices = [self.sites[:3], self.sites[3:6], self.sites[6:]]
         # Make sure no real logic is invoked.
         with patch("openquake.input.logictree.LogicTreeProcessor"):
-            self.mixin.execute()
+            self._mixin.execute()
             for method in self.methods:
-                mmock = getattr(self.mixin, method).mock
+                mmock = getattr(self._mixin, method).mock
                 self.assertEqual(3, mmock.call_count)
                 for idx, data_len in enumerate([3, 3, 2]):
                     # Get the arguments for an invocation identified by `idx`.
@@ -512,7 +539,7 @@ class ClassicalExecuteTestCase(TestMixin, unittest.TestCase):
         # Make sure no real logic is invoked.
         with patch("openquake.input.logictree.LogicTreeProcessor"):
             with patch("openquake.hazard.opensha.release_data_from_kvs") as m:
-                self.mixin.execute()
+                self._mixin.execute()
                 self.assertEqual(3, m.call_count)
                 for idx, data_len in enumerate([3, 3, 2]):
                     # Get the arguments for an invocation identified by `idx`.

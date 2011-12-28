@@ -33,8 +33,8 @@ from openquake import kvs
 from openquake import flags
 from openquake import shapes
 from openquake.job import (
-    Job, config, prepare_job, run_job, parse_config_file,
-    prepare_config_parameters, get_source_models)
+    Job, config, prepare_job, parse_config_file, prepare_config_parameters,
+    get_source_models)
 from openquake.job.mixins import Mixin
 from openquake.job.params import config_text_to_list
 from openquake.db.models import OqCalculation, CalcStats, OqParams
@@ -137,27 +137,6 @@ class JobTestCase(unittest.TestCase):
         del self.job_with_includes.params[gmpe]
 
         self.assertEqual(self.job.params, self.job_with_includes.params)
-
-    def test_classical_psha_based_job_mixes_in_properly(self):
-        with Mixin(self.job, general.RiskJobMixin):
-            self.assertTrue(
-                general.RiskJobMixin in self.job.__class__.__bases__)
-
-        with Mixin(self.job, ClassicalPSHABasedMixin):
-            self.assertTrue(
-                ClassicalPSHABasedMixin in self.job.__class__.__bases__)
-
-    def test_job_mixes_in_properly(self):
-        with Mixin(self.job, general.RiskJobMixin):
-            self.assertTrue(
-                general.RiskJobMixin in self.job.__class__.__bases__)
-
-            self.assertTrue(
-                ProbabilisticEventMixin in self.job.__class__.__bases__)
-
-        with Mixin(self.job, ProbabilisticEventMixin):
-            self.assertTrue(
-                ProbabilisticEventMixin in self.job.__class__.__bases__)
 
     def test_can_store_and_read_jobs_from_kvs(self):
         flags_debug_default = flags.FLAGS.debug
@@ -744,7 +723,7 @@ class RunJobTestCase(unittest.TestCase):
 
                 with patch('os.fork', mocksignature=False) as fork:
                     fork.return_value = 0
-                    run_job(helpers.get_data_path(CONFIG_FILE), 'db')
+                    engine.run_job(helpers.get_data_path(CONFIG_FILE), 'db')
 
             self.assertEquals(1, engine.launch.call_count)
             self.assertEquals('succeeded', self._job_status())
@@ -777,7 +756,7 @@ class RunJobTestCase(unittest.TestCase):
 
                 with patch('os.fork', mocksignature=False) as fork:
                     fork.return_value = 0
-                    self.assertRaises(Exception, run_job,
+                    self.assertRaises(Exception, engine.run_job,
                                     helpers.get_data_path(CONFIG_FILE), 'db')
 
             self.assertEquals(1, engine.launch.call_count)
@@ -899,7 +878,7 @@ class RunJobTestCase(unittest.TestCase):
                 fork.side_effect = fork_side_effect
                 with patch('openquake.supervising.supervisor.supervise') \
                         as supervise:
-                    run_job(helpers.get_data_path(CONFIG_FILE), 'db')
+                    engine.run_job(helpers.get_data_path(CONFIG_FILE), 'db')
 
         self.assertEquals(1, supervise.call_count)
         self.assertEquals(((1234, self.job.job_id), {}),

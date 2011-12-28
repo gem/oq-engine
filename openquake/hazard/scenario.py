@@ -30,7 +30,7 @@ from openquake import java
 from openquake import kvs
 from openquake import shapes
 from openquake.hazard import job
-from openquake.hazard.opensha import BasePSHAMixin
+from openquake.hazard.general import BasePSHAMixin
 
 
 class ScenarioEventBasedMixin(BasePSHAMixin):
@@ -45,24 +45,24 @@ class ScenarioEventBasedMixin(BasePSHAMixin):
         """Entry point to trigger the computation."""
 
         random_generator = java.jclass(
-            "Random")(int(self.params["GMF_RANDOM_SEED"]))
+            "Random")(int(self.job_profile.params["GMF_RANDOM_SEED"]))
 
         encoder = json.JSONEncoder()
         kvs_client = kvs.get_client()
 
-        grid = self.region.grid
+        grid = self.job_profile.region.grid
 
         for _ in xrange(self._number_of_calculations()):
             gmf = self.compute_ground_motion_field(random_generator)
 
             for gmv in gmf_to_dict(
-                gmf, self.params["INTENSITY_MEASURE_TYPE"]):
+                gmf, self.job_profile.params["INTENSITY_MEASURE_TYPE"]):
 
                 site = shapes.Site(gmv["site_lon"], gmv["site_lat"])
                 point = grid.point_at(site)
 
                 key = kvs.tokens.ground_motion_values_key(
-                    self.job_id, point)
+                    self.job_profile.job_id, point)
 
                 kvs_client.rpush(key, encoder.encode(gmv))
 
@@ -75,7 +75,7 @@ class ScenarioEventBasedMixin(BasePSHAMixin):
         :returns: the number of computations to trigger.
         """
 
-        value = int(self.params["NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"])
+        value = int(self.job_profile.params["NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"])
 
         if value <= 0:
             raise ValueError("NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS "
@@ -94,9 +94,9 @@ class ScenarioEventBasedMixin(BasePSHAMixin):
             around an instance of java.util.Map.
         """
 
-        calculator = self.gmf_calculator(self.sites_to_compute())
+        calculator = self.gmf_calculator(self.job_profile.sites_to_compute())
 
-        if self.params["GROUND_MOTION_CORRELATION"].lower() == "true":
+        if self.job_profile.params["GROUND_MOTION_CORRELATION"].lower() == "true":
             return calculator.getCorrelatedGroundMotionField_JB2009(
                 random_generator)
         else:
@@ -134,9 +134,9 @@ class ScenarioEventBasedMixin(BasePSHAMixin):
             org.opensha.sha.earthquake.EqkRupture.
         """
 
-        rel_path = self.params["SINGLE_RUPTURE_MODEL"]
-        abs_path = os.path.join(self.params["BASE_PATH"], rel_path)
-        grid_spacing = float(self.params["RUPTURE_SURFACE_DISCRETIZATION"])
+        rel_path = self.job_profile.params["SINGLE_RUPTURE_MODEL"]
+        abs_path = os.path.join(self.job_profile.params["BASE_PATH"], rel_path)
+        grid_spacing = float(self.job_profile.params["RUPTURE_SURFACE_DISCRETIZATION"])
 
         return java.jclass("RuptureReader")(abs_path, grid_spacing).read()
 
@@ -154,7 +154,7 @@ class ScenarioEventBasedMixin(BasePSHAMixin):
         deserializer = java.jclass("GMPEDeserializer")()
 
         package_name = "org.opensha.sha.imr.attenRelImpl"
-        class_name = self.params["GMPE_MODEL_NAME"]
+        class_name = self.job_profile.params["GMPE_MODEL_NAME"]
         fqn = package_name + "." + class_name
 
         gmpe = deserializer.deserialize(
@@ -163,12 +163,12 @@ class ScenarioEventBasedMixin(BasePSHAMixin):
         tree_data = java.jclass("GmpeLogicTreeData")
 
         tree_data.setGmpeParams(
-            self.params["COMPONENT"],
-            self.params["INTENSITY_MEASURE_TYPE"],
-            jpype.JDouble(float(self.params["PERIOD"])),
-            jpype.JDouble(float(self.params["DAMPING"])),
-            self.params["GMPE_TRUNCATION_TYPE"],
-            jpype.JDouble(float(self.params["TRUNCATION_LEVEL"])), "Total",
+            self.job_profile.params["COMPONENT"],
+            self.job_profile.params["INTENSITY_MEASURE_TYPE"],
+            jpype.JDouble(float(self.job_profile.params["PERIOD"])),
+            jpype.JDouble(float(self.job_profile.params["DAMPING"])),
+            self.job_profile.params["GMPE_TRUNCATION_TYPE"],
+            jpype.JDouble(float(self.job_profile.params["TRUNCATION_LEVEL"])), "Total",
             jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
 
         return gmpe

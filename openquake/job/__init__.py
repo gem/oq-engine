@@ -24,12 +24,11 @@ import urlparse
 
 from ConfigParser import ConfigParser
 from datetime import datetime
-from django.db import transaction, close_connection
+from django.db import transaction
 from django.contrib.gis.db import models
 from django.contrib.gis.geos import GEOSGeometry
 from lxml import etree
 
-from openquake import engine
 from openquake import flags
 from openquake import kvs
 from openquake import logs
@@ -39,7 +38,6 @@ from openquake.parser import exposure
 from openquake.db.models import (
     OqCalculation, OqParams, OqUser, CalcStats, FloatArrayField,
     CharArrayField, InputSet, Input)
-from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
 from openquake.job import params as job_params
@@ -56,58 +54,6 @@ RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 FLAGS = flags.FLAGS
 
 REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
-
-
-def run_job(job_file, output_type):
-    """
-    Given a job_file, run the job.
-
-    :param job_file: the path of the configuration file for the job
-    :type job_file: string
-    :param output_type: the desired format for the results, one of 'db', 'xml'
-    :type output_type: string
-    """
-    a_job = Job.from_file(job_file, output_type)
-    a_job.set_status('running')
-
-    # closing all db connections to make sure they're not shared between
-    # supervisor and job executor processes. otherwise if one of them closes
-    # the connection it immediately becomes unavailable for other
-    close_connection()
-
-    job_pid = os.fork()
-    if not job_pid:
-        # job executor process
-        try:
-            logs.init_logs_amqp_send(level=FLAGS.debug, job_id=a_job.job_id)
-            engine.launch(a_job)
-        except Exception, ex:
-            LOG.critical("Job failed with exception: '%s'" % str(ex))
-            a_job.set_status('failed')
-            raise
-        else:
-            a_job.set_status('succeeded')
-        return
-
-    supervisor_pid = os.fork()
-    if not supervisor_pid:
-        # supervisor process
-        supervisor_pid = os.getpid()
-        job = OqCalculation.objects.get(id=a_job.job_id)
-        job.supervisor_pid = supervisor_pid
-        job.job_pid = job_pid
-        job.save()
-        supervisor.supervise(job_pid, a_job.job_id)
-        return
-
-    # parent process
-
-    # ignore Ctrl-C as well as supervisor process does. thus only
-    # job executor terminates on SIGINT
-    supervisor.ignore_sigint()
-    # wait till both child processes are done
-    os.waitpid(job_pid, 0)
-    os.waitpid(supervisor_pid, 0)
 
 
 def parse_config_file(config_file):
