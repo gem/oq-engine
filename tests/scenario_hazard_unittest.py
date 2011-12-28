@@ -47,7 +47,7 @@ def compute_ground_motion_field(self, _random_generator):
 
     hashmap = java.jclass("HashMap")()
 
-    for site in self.sites_to_compute():
+    for site in self.job_profile.sites_to_compute():
         location = java.jclass("Location")(site.latitude, site.longitude)
         site = java.jclass("Site")(location)
         hashmap.put(site, 0.5)
@@ -242,15 +242,13 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
             self.assertEqual(0.1, gmv["mag"])
 
     def test_loads_the_rupture_model(self):
-        calculator = det.ScenarioEventBasedMixin(None, None)
-        calculator.params = self.job.params
+        calculator = det.ScenarioEventBasedMixin(self.job)
 
         self.assertEqual("org.opensha.sha.earthquake.EqkRupture",
                          calculator.rupture_model.__class__.__name__)
 
     def test_the_same_calculator_is_used_between_multiple_invocations(self):
-        calculator = det.ScenarioEventBasedMixin(None, None)
-        calculator.params = self.job.params
+        calculator = det.ScenarioEventBasedMixin(self.job)
 
         gmf_calculator1 = calculator.gmf_calculator([shapes.Site(1.0, 1.0)])
         gmf_calculator2 = calculator.gmf_calculator([shapes.Site(1.0, 1.0)])
