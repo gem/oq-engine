@@ -66,7 +66,10 @@ class ClassicalPSHABasedMixin:
                 # TODO(jmc): Cancel and respawn this task
                 return
 
-        general.write_output(self)
+        if self.is_benefit_cost_ratio():
+            general.write_output_bcr(self)
+        else:
+            general.write_output(self)
 
     def _get_db_curve(self, site):
         """Read hazard curve data from the DB"""
@@ -79,6 +82,13 @@ class ClassicalPSHABasedMixin:
 
         return Curve(zip(job.oq_params.imls, hc.poes))
 
+    def is_benefit_cost_ratio(self):
+        """
+        Return True if current calculation mode is Benefit-Cost Ratio.
+        """
+        return self.params[job_config.CALCULATION_MODE] \
+                == job_config.BCR_CLASSICAL_MODE
+
     def compute_risk(self, block_id):
         """This task computes risk for a block of sites. It requires to have
         pre-initialized in kvs:
@@ -90,9 +100,7 @@ class ClassicalPSHABasedMixin:
         Calls either :meth:`_compute_bcr` or :meth:`_compute_loss` depending
         on the calculation mode.
         """
-
-        if self.params[job_config.CALCULATION_MODE] \
-                == job_config.BCR_CLASSICAL_MODE:
+        if self.is_benefit_cost_ratio():
             return self._compute_bcr(block_id)
         else:
             return self._compute_loss(block_id)
