@@ -117,10 +117,12 @@ def compute_ground_motion_fields(job_id, sites, history, realization, seed):
     """ Generate ground motion fields """
     # TODO(JMC): Use a block_id instead of a sites list
     utils_tasks.check_job_status(job_id)
-    hazengine = job.Job.from_kvs(job_id)
-    with mixins.Mixin(hazengine, hazjob.HazJobMixin):
-        hazengine.compute_ground_motion_fields(sites, history, realization,
-                                               seed)
+    the_job = job.Job.from_kvs(job_id)
+    calc_mode = the_job['CALCULATION_MODE']
+    calculator = CALCULATORS[calc_mode](the_job)
+
+    calculator.compute_ground_motion_fields(
+        sites, history, realization, seed)
 
 
 @task(ignore_result=True)
@@ -814,10 +816,10 @@ class EventBasedMixin(BasePSHAMixin):
                         self.job_profile.job_id, self.sites_to_compute(),
                         i, j, gmf_generator.getrandbits(32)))
 
-            for task in pending_tasks:
-                task.wait()
-                if task.status != 'SUCCESS':
-                    raise Exception(task.result)
+            for each_task in pending_tasks:
+                each_task.wait()
+                if each_task.status != 'SUCCESS':
+                    raise Exception(each_task.result)
 
             for j in range(0, realizations):
                 stochastic_set_key = kvs.tokens.stochastic_set_key(
