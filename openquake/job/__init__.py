@@ -38,7 +38,6 @@ from openquake.parser import exposure
 from openquake.db.models import (
     OqCalculation, OqJobProfile, OqUser, CalcStats, FloatArrayField,
     CharArrayField, InputSet, Input)
-from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
 from openquake.job import params as job_params
 from openquake.job.mixins import Mixin
@@ -172,14 +171,6 @@ def get_source_models(logic_tree):
                 model_files.append(os.path.join(base_path, e_text))
 
     return model_files
-
-
-def guarantee_file(base_path, file_spec):
-    """Resolves a file_spec (http, local relative or absolute path, git url,
-    etc.) to an absolute path to a (possibly temporary) file."""
-
-    url = urlparse.urlparse(file_spec)
-    return resolve_handler(url, base_path).get()
 
 
 def _insert_input_files(params, input_set):

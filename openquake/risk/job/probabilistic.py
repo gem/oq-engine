@@ -60,7 +60,8 @@ class ProbabilisticEventMixin(Mixin):  # pylint: disable=W0232,W0201
             LOGGER.debug("Starting task block, block_id = %s of %s"
                     % (block_id, len(self.blocks_keys)))
 
-            tasks.append(general.compute_risk.delay(self.job_profile.job_id, block_id))
+            tasks.append(general.compute_risk.delay(self.job_profile.job_id,
+                                                    block_id))
 
         for task in tasks:
             try:
@@ -82,8 +83,10 @@ class ProbabilisticEventMixin(Mixin):  # pylint: disable=W0232,W0201
         specified for this job."""
 
         # TODO (ac): Confirm this works regardless of the method of hazard calc
-        histories = int(self.job_profile.params["NUMBER_OF_SEISMICITY_HISTORIES"])
-        realizations = int(self.job_profile.params["NUMBER_OF_LOGIC_TREE_SAMPLES"])
+        histories = int(
+            self.job_profile.params["NUMBER_OF_SEISMICITY_HISTORIES"])
+        realizations = int(
+            self.job_profile.params["NUMBER_OF_LOGIC_TREE_SAMPLES"])
         num_ses = histories * realizations
 
         return num_ses * self._time_span()
@@ -150,7 +153,8 @@ class ProbabilisticEventMixin(Mixin):  # pylint: disable=W0232,W0201
 
         for i in range(0, histories):
             for j in range(0, realizations):
-                key = kvs.tokens.stochastic_set_key(self.job_profile.job_id, i, j)
+                key = kvs.tokens.stochastic_set_key(
+                    self.job_profile.job_id, i, j)
                 fieldset = shapes.FieldSet.from_json(kvs.get(key),
                     self.region.grid)
 
@@ -214,7 +218,8 @@ class ProbabilisticEventMixin(Mixin):  # pylint: disable=W0232,W0201
         aggregate_curve = prob.AggregateLossCurve()
 
         for point in block.grid(self.region):
-            key = kvs.tokens.gmf_set_key(self.job_profile.job_id, point.column, point.row)
+            key = kvs.tokens.gmf_set_key(self.job_profile.job_id, point.column,
+                                         point.row)
             gmf_slice = kvs.get_value_json_decoded(key)
 
             asset_key = kvs.tokens.asset_key(
@@ -236,10 +241,12 @@ class ProbabilisticEventMixin(Mixin):  # pylint: disable=W0232,W0201
                     loss_curve = self.compute_loss_curve(
                         point.column, point.row, loss_ratio_curve, asset)
 
-                    for loss_poe in general.conditional_loss_poes(self.job_profile.params):
-                        general.compute_conditional_loss(self.job_profile.job_id,
-                                point.column, point.row, loss_curve, asset,
-                                loss_poe)
+                    for loss_poe in general.conditional_loss_poes(
+                        self.job_profile.params):
+
+                        general.compute_conditional_loss(
+                                self.job_profile.job_id, point.column,
+                                point.row, loss_curve, asset, loss_poe)
 
         return aggregate_curve.losses
 
@@ -253,10 +260,12 @@ class ProbabilisticEventMixin(Mixin):  # pylint: disable=W0232,W0201
         """
         self.slice_gmfs(block_id)
 
-        points = list(general.Block.from_kvs(block_id).grid(self.job_profile.region))
+        points = list(general.Block.from_kvs(block_id).grid(
+            self.job_profile.region))
         gmf_slices = dict(
             (point.site, kvs.get_value_json_decoded(
-                 kvs.tokens.gmf_set_key(self.job_profile.job_id, point.column, point.row)
+                 kvs.tokens.gmf_set_key(self.job_profile.job_id, point.column,
+                                        point.row)
             ))
             for point in points
         )
@@ -277,7 +286,8 @@ class ProbabilisticEventMixin(Mixin):  # pylint: disable=W0232,W0201
             float(self.job_profile.params['ASSET_LIFE_EXPECTANCY'])
         )
 
-        bcr_block_key = kvs.tokens.bcr_block_key(self.job_profile.job_id, block_id)
+        bcr_block_key = kvs.tokens.bcr_block_key(self.job_profile.job_id,
+                                                 block_id)
         kvs.set_value_json_encoded(bcr_block_key, result)
         LOGGER.debug('bcr result for block %s: %r', block_id, result)
         return True

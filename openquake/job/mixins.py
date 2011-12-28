@@ -52,7 +52,6 @@ class Mixin:
     """
     mixins = {}
 
-
     def __init__(self, job_profile, mixin=None):
         """
         :param job_profile:

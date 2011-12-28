@@ -21,11 +21,6 @@ The parser_vulnerability_model
 The :mod:`parser` Sub-package
 -----------------------------
 
-.. automodule:: openquake.parser.esri
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 .. automodule:: openquake.parser.exposure
     :members:
     :undoc-members:
