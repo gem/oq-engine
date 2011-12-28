@@ -176,7 +176,7 @@ class ClassicalPSHABasedMixin:
         loss_key = kvs.tokens.loss_curve_key(self.job_id, point.row,
             point.column, asset['assetID'])
 
-        kvs.set(loss_key, loss_curve.to_json())
+        kvs.get_client().set(loss_key, loss_curve.to_json())
 
         return loss_curve
 
@@ -214,7 +214,7 @@ class ClassicalPSHABasedMixin:
         loss_ratio_key = kvs.tokens.loss_ratio_key(
             self.job_id, point.row, point.column, asset['assetID'])
 
-        kvs.set(loss_ratio_key, loss_ratio_curve.to_json())
+        kvs.get_client().set(loss_ratio_key, loss_ratio_curve.to_json())
 
         return loss_ratio_curve
 
