@@ -101,7 +101,8 @@ class ScenarioEventBasedMixin(general.RiskJobMixin):
             self.job_profile['OUTPUT_DIR'],
             'loss-map-%s.xml' % self.job_profile.job_id)
         loss_map_writer = risk_output.create_loss_map_writer(
-            self.job_profile.job_id, self.job_profile.serialize_results_to, loss_map_path, True)
+            self.job_profile.job_id, self.job_profile.serialize_results_to,
+            loss_map_path, True)
 
         if loss_map_writer:
             LOGGER.debug("Starting serialization of the loss map...")
@@ -266,7 +267,8 @@ class ScenarioEventBasedMixin(general.RiskJobMixin):
             # the mean and stddev calculation functions used below
             # require the gmvs to be wrapped in a dict with a single key:
             # 'IMLs'
-            gmvs = {'IMLs': load_gmvs_for_point(self.job_profile.job_id, point)}
+            gmvs = {'IMLs': load_gmvs_for_point(self.job_profile.job_id,
+                                                point)}
             assets = load_assets_for_point(self.job_profile.job_id, point)
             for asset in assets:
                 vuln_function = \
