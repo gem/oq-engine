@@ -28,6 +28,7 @@ import redis
 from openquake import logs
 from openquake.kvs import tokens
 from openquake.utils import config
+from openquake.utils import general
 
 
 LOG = logs.LOG
@@ -39,12 +40,17 @@ SITES_KEY_TOKEN = "sites"
 
 
 # Module-private kvs connection pool, to be used by get_client().
-KVS_CONN_POOL = redis.ConnectionPool(max_connections=1)
+__KVS_CONN_POOL = None
 
 
 def get_client(**kwargs):
     """Return a redis kvs client connection object."""
-    kwargs.update({"connection_pool": KVS_CONN_POOL})
+    global __KVS_CONN_POOL
+    if __KVS_CONN_POOL is None:
+        cfg = config.get_section("kvs")
+        __KVS_CONN_POOL = redis.ConnectionPool(
+            max_connections=1, host=cfg["host"], port=int(cfg["port"]))
+    kwargs.update({"connection_pool": __KVS_CONN_POOL})
     return redis.Redis(**kwargs)
 
 
@@ -179,5 +185,4 @@ def cache_connections():
     setting = config.get("kvs", "cache_connections")
     if setting is None:
         return False
-    setting = setting.strip().lower()
-    return True if setting == "true" else False
+    return general.str2bool(setting)
