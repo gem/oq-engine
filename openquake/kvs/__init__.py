@@ -43,6 +43,7 @@ SITES_KEY_TOKEN = "sites"
 __KVS_CONN_POOL = None
 
 
+# pylint: disable=W0603
 def get_client(**kwargs):
     """Return a redis kvs client connection object."""
     global __KVS_CONN_POOL
