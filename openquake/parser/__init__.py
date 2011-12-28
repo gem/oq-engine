@@ -14,6 +14,4 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-"""A variety of file format parsers, including many of our 
-internally defined NRML format, in both XML and YAML. Also
-parsers for well-known ESRI binary and ascii formats."""
+"""A variety of file format parsers, including NRML parsers."""

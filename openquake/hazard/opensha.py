@@ -43,7 +43,6 @@ from openquake import xml
 
 from openquake.hazard.general import BasePSHAMixin, preload, get_iml_list
 from openquake.hazard import classical_psha
-from openquake.hazard import job
 from openquake.hazard import tasks
 from openquake.hazard import job as hazard_job 
 from openquake.hazard.calc import CALCULATORS
@@ -288,13 +287,15 @@ class ClassicalMixin(BasePSHAMixin):
         :rtype: list of string
         """
         source_model_generator = random.Random()
-        source_model_generator.seed(self.job_profile["SOURCE_MODEL_LT_RANDOM_SEED"])
+        source_model_generator.seed(
+            self.job_profile["SOURCE_MODEL_LT_RANDOM_SEED"])
 
         gmpe_generator = random.Random()
         gmpe_generator.seed(self.job_profile["GMPE_LT_RANDOM_SEED"])
 
         for realization in xrange(0, realizations):
-            stats.incr_counter(self.job_profile.job_id, "classical:do_curves:realization")
+            stats.incr_counter(self.job_profile.job_id,
+                               "classical:do_curves:realization")
             LOG.info("Calculating hazard curves for realization %s"
                      % realization)
             self.store_source_model(source_model_generator.getrandbits(32))
@@ -435,9 +436,11 @@ class ClassicalMixin(BasePSHAMixin):
         LOG.info("Going to run classical PSHA hazard for %s realizations "
                  "and %s sites" % (realizations, len(sites)))
 
-        stats.set_total(self.job_profile.job_id, "classical:execute:sites", len(sites))
+        stats.set_total(self.job_profile.job_id, "classical:execute:sites",
+                        len(sites))
         stats.set_total(
-            self.job_profile.job_id, "classical:execute:realizations", realizations)
+            self.job_profile.job_id, "classical:execute:realizations",
+            realizations)
 
         block_size = config.hazard_block_size()
         for start in xrange(0, len(sites), block_size):
@@ -462,8 +465,9 @@ class ClassicalMixin(BasePSHAMixin):
                 map_serializer=self.serialize_quantile_hazard_map)
 
             # Done with this chunk, purge intermediate results from kvs.
-            release_data_from_kvs(self.job_profile.job_id, data, realizations, quantiles,
-                                  self.poes_hazard_maps, kvs_keys_purged)
+            release_data_from_kvs(self.job_profile.job_id, data, realizations,
+                                  quantiles, self.poes_hazard_maps,
+                                  kvs_keys_purged)
 
     def serialize_hazard_curve_of_realization(self, sites, realization):
         """
@@ -476,8 +480,8 @@ class ClassicalMixin(BasePSHAMixin):
         """
         hc_attrib_update = {'endBranchLabel': realization}
         nrml_file = self.hazard_curve_filename(realization)
-        key_template = kvs.tokens.hazard_curve_poes_key_template(self.job_profile.job_id,
-                                                        realization)
+        key_template = kvs.tokens.hazard_curve_poes_key_template(
+            self.job_profile.job_id, realization)
         self.serialize_hazard_curve(nrml_file, key_template,
                                     hc_attrib_update, sites)
 
@@ -490,7 +494,8 @@ class ClassicalMixin(BasePSHAMixin):
         """
         hc_attrib_update = {'statistics': 'mean'}
         nrml_file = self.mean_hazard_curve_filename()
-        key_template = kvs.tokens.mean_hazard_curve_key_template(self.job_profile.job_id)
+        key_template = kvs.tokens.mean_hazard_curve_key_template(
+            self.job_profile.job_id)
         self.serialize_hazard_curve(nrml_file, key_template, hc_attrib_update,
                                     sites)
 
@@ -550,7 +555,8 @@ class ClassicalMixin(BasePSHAMixin):
         nrml_path = self.job_profile.build_nrml_path(nrml_file)
 
         curve_writer = hazard_output.create_hazardcurve_writer(
-            self.job_profile.job_id, self.job_profile.serialize_results_to, nrml_path)
+            self.job_profile.job_id, self.job_profile.serialize_results_to,
+            nrml_path)
         hc_data = []
 
         sites = set(sites)
@@ -573,7 +579,8 @@ class ClassicalMixin(BasePSHAMixin):
                 # Use hazard curve ordinate values (PoE) from KVS and abscissae
                 # from the IML list in config.
                 hc_attrib = {
-                    'investigationTimeSpan': self.job_profile['INVESTIGATION_TIME'],
+                    'investigationTimeSpan':
+                        self.job_profile['INVESTIGATION_TIME'],
                     'IMLValues': self.job_profile.imls,
                     'IMT': self.job_profile['INTENSITY_MEASURE_TYPE'],
                     'PoEValues': value}
@@ -625,7 +632,7 @@ class ClassicalMixin(BasePSHAMixin):
             nrml_file = self.quantile_hazard_map_filename(quantile, poe)
 
             key_template = kvs.tokens.quantile_hazard_map_key_template(
-                                             self.job_profile.job_id, poe, quantile)
+                self.job_profile.job_id, poe, quantile)
 
             hm_attrib_update = {'statistics': 'quantile',
                                 'quantileValue': quantile}
@@ -660,14 +667,16 @@ class ClassicalMixin(BasePSHAMixin):
                  "%s nodes in hazard map: %s" % (poe, len(sites), nrml_file))
 
         map_writer = hazard_output.create_hazardmap_writer(
-            self.job_profile.job_id, self.job_profile.serialize_results_to, nrml_path)
+            self.job_profile.job_id, self.job_profile.serialize_results_to,
+            nrml_path)
         hm_data = []
 
         for site in sites:
             key = key_template % hash(site)
             # use hazard map IML values from KVS
             hm_attrib = {
-                'investigationTimeSpan': self.job_profile['INVESTIGATION_TIME'],
+                'investigationTimeSpan':
+                    self.job_profile['INVESTIGATION_TIME'],
                 'IMT': self.job_profile['INTENSITY_MEASURE_TYPE'],
                 'vs30': self.job_profile['REFERENCE_VS30_VALUE'],
                 'IML': kvs.get_value_json_decoded(key),
@@ -691,7 +700,9 @@ class ClassicalMixin(BasePSHAMixin):
                 self.parameterize_sites(sites),
                 self.generate_erf(),
                 self.generate_gmpe_map(),
-                get_iml_list(self.job_profile.imls, self.job_profile.params['INTENSITY_MEASURE_TYPE']),
+                get_iml_list(
+                    self.job_profile.imls,
+                    self.job_profile.params['INTENSITY_MEASURE_TYPE']),
                 self.job_profile['MAXIMUM_DISTANCE'])
         except jpype.JavaException, ex:
             unwrap_validation_error(jpype, ex)
@@ -792,7 +803,8 @@ class EventBasedMixin(BasePSHAMixin):
         Loops through various random realizations, spawning tasks to compute
         GMFs."""
         source_model_generator = random.Random()
-        source_model_generator.seed(self.job_profile['SOURCE_MODEL_LT_RANDOM_SEED'])
+        source_model_generator.seed(
+            self.job_profile['SOURCE_MODEL_LT_RANDOM_SEED'])
 
         gmpe_generator = random.Random()
         gmpe_generator.seed(self.job_profile['GMPE_LT_RANDOM_SEED'])
@@ -822,8 +834,8 @@ class EventBasedMixin(BasePSHAMixin):
                     raise Exception(task.result)
 
             for j in range(0, realizations):
-                stochastic_set_key = kvs.tokens.stochastic_set_key(self.job_profile.job_id,
-                                                                   i, j)
+                stochastic_set_key = kvs.tokens.stochastic_set_key(
+                    self.job_profile.job_id, i, j)
                 LOG.info("Writing output for ses %s" % stochastic_set_key)
                 ses = kvs.get_value_json_decoded(stochastic_set_key)
                 if ses:
@@ -851,7 +863,9 @@ class EventBasedMixin(BasePSHAMixin):
                     nrml_path = "%s.xml" % common_path
 
                 gmf_writer = hazard_output.create_gmf_writer(
-                    self.job_profile.job_id, self.job_profile.serialize_results_to, nrml_path)
+                    self.job_profile.job_id,
+                    self.job_profile.serialize_results_to,
+                    nrml_path)
                 gmf_data = {}
                 for site_key in ses[event_set][rupture]:
                     site = ses[event_set][rupture][site_key]
@@ -870,7 +884,8 @@ class EventBasedMixin(BasePSHAMixin):
         jpype = java.jvm()
 
         jsite_list = self.parameterize_sites(site_list)
-        key = kvs.tokens.stochastic_set_key(self.job_profile.job_id, history, realization)
+        key = kvs.tokens.stochastic_set_key(self.job_profile.job_id, history,
+                                            realization)
         correlate = self.job_profile['GROUND_MOTION_CORRELATION']
         stochastic_set_id = "%s!%s" % (history, realization)
         java.jclass("HazardCalculator").generateAndSaveGMFs(
