@@ -54,4 +54,6 @@ class MemoizeMutable:
         return self.memo[key]
 
 
-str2bool = lambda x: x.lower() in ("true", "yes", "t", "1")
+def str2bool(x):
+    """Convert a string representation of a boolean value to a bool."""
+    return x.lower() in ("true", "yes", "t", "1")
