@@ -957,15 +957,12 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
                         'INTEREST_RATE': '0.05',
                         'ASSET_LIFE_EXPECTANCY': '50'}
 
-        block = Block.from_kvs(self.block_id)
-
+        Block.from_kvs(self.block_id)
         asset = {"taxonomy": "ID",
                  "assetID": 22.61,
                  "assetValue": 1,
                  "retrofittingCost": 123.45}
-
         self._store_asset(asset, 10, 10)
-
         mixin.compute_risk(self.block_id)
 
         result_key = kvs.tokens.bcr_block_key(self.job_id, self.block_id)
