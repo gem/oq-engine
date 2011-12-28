@@ -75,7 +75,8 @@ class ScenarioEventBasedMixin(BasePSHAMixin):
         :returns: the number of computations to trigger.
         """
 
-        value = int(self.job_profile.params["NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"])
+        value = int(self.job_profile.params[
+            "NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"])
 
         if value <= 0:
             raise ValueError("NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS "
@@ -96,7 +97,8 @@ class ScenarioEventBasedMixin(BasePSHAMixin):
 
         calculator = self.gmf_calculator(self.job_profile.sites_to_compute())
 
-        if self.job_profile.params["GROUND_MOTION_CORRELATION"].lower() == "true":
+        if (self.job_profile.params["GROUND_MOTION_CORRELATION"].lower()
+            == "true"):
             return calculator.getCorrelatedGroundMotionField_JB2009(
                 random_generator)
         else:
@@ -136,7 +138,8 @@ class ScenarioEventBasedMixin(BasePSHAMixin):
 
         rel_path = self.job_profile.params["SINGLE_RUPTURE_MODEL"]
         abs_path = os.path.join(self.job_profile.params["BASE_PATH"], rel_path)
-        grid_spacing = float(self.job_profile.params["RUPTURE_SURFACE_DISCRETIZATION"])
+        grid_spacing = float(
+            self.job_profile.params["RUPTURE_SURFACE_DISCRETIZATION"])
 
         return java.jclass("RuptureReader")(abs_path, grid_spacing).read()
 
@@ -168,7 +171,8 @@ class ScenarioEventBasedMixin(BasePSHAMixin):
             jpype.JDouble(float(self.job_profile.params["PERIOD"])),
             jpype.JDouble(float(self.job_profile.params["DAMPING"])),
             self.job_profile.params["GMPE_TRUNCATION_TYPE"],
-            jpype.JDouble(float(self.job_profile.params["TRUNCATION_LEVEL"])), "Total",
+            jpype.JDouble(float(self.job_profile.params["TRUNCATION_LEVEL"])),
+            "Total",
             jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
 
         return gmpe
