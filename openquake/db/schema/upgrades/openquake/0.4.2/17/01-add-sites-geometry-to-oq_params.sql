@@ -31,3 +31,4 @@ ALTER TABLE uiapi.oq_params ADD CONSTRAINT oq_params_geometry CHECK(
 COMMENT ON COLUMN uiapi.oq_params.region IS 'Region of interest for the calculation (Polygon)';
 COMMENT ON COLUMN uiapi.oq_params.region_grid_spacing IS 'Desired cell size (in degrees), used when splitting up the region of interest. This effectively defines the resolution of the calculation. (Smaller grid spacing means more sites and thus more calculations.)';
 COMMENT ON COLUMN uiapi.oq_params.sites IS 'Sites of interest for the calculation (MultiPoint)';
+
