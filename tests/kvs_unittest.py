@@ -292,3 +292,70 @@ class GarbageCollectionTestCase(unittest.TestCase):
             delete_mock.return_value = False
 
             self.assertRaises(RuntimeError, kvs.cache_gc, self.test_job)
+
+
+class GetClientTestCase(unittest.TestCase):
+    """
+    Tests for get_client()
+    """
+
+    def test_get_client_same_conn(self):
+        """
+        get_client() returns redis client instances with the same connection
+        pool.
+        """
+        obj1 = kvs.get_client()
+        obj2 = kvs.get_client()
+        self.assertIs(obj1.connection_pool, obj2.connection_pool)
+
+
+class CacheConnectionsTestCase(helpers.ConfigTestMixin, unittest.TestCase):
+    """
+    Tests for cache_connections()
+    """
+
+    def setUp(self):
+        self.setup_config()
+
+    def tearDown(self):
+        self.teardown_config()
+
+    def test_cache_connections_with_absent_key(self):
+        """
+        cache_connections() returns False if the cache_connections entry
+        is not present in the configuration file.
+        """
+        self.prepare_config("kvs")
+        self.assertIs(False, kvs.cache_connections())
+
+    def test_cache_connections_with_number(self):
+        """
+        cache_connections() returns False if the cache_connections entry
+        is present but not equal to 'true'.
+        """
+        self.prepare_config("kvs", {"cache_connections": "123"})
+        self.assertIs(False, kvs.cache_connections())
+
+    def test_cache_connections_with_text_but_not_true(self):
+        """
+        cache_connections() returns False if the cache_connections entry
+        is present but not equal to 'true'.
+        """
+        self.prepare_config("kvs", {"cache_connections": "blah"})
+        self.assertIs(False, kvs.cache_connections())
+
+    def test_cache_connections_with_true(self):
+        """
+        cache_connections() returns True if the cache_connections entry
+        is not present and equal to 'true'.
+        """
+        self.prepare_config("kvs", {"cache_connections": "  true"})
+        self.assertIs(True, kvs.cache_connections())
+
+    def test_cache_connections_with_True(self):
+        """
+        cache_connections() returns True if the cache_connections entry
+        is not present and equal to 'True'.
+        """
+        self.prepare_config("kvs", {"cache_connections": "True  "})
+        self.assertIs(True, kvs.cache_connections())

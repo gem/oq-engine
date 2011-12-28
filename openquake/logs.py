@@ -49,6 +49,14 @@ def init_logs_amqp_send(level, job_id):
 
     Adds handler :class:`AMQPHandler` to logger 'oq.job'.
     """
+    amqp_handlers = [h for h in logging.root.handlers
+                     if isinstance(h, AMQPHandler)]
+
+    if amqp_handlers:
+        [handler] = amqp_handlers
+        handler.set_job_id(job_id)
+        return
+
     logging.getLogger("amqplib").propagate = False
     set_logger_level(logging.root, level)
     hdlr = AMQPHandler()
@@ -86,12 +94,13 @@ class AMQPHandler(logging.Handler):  # pylint: disable=R0902
     # pylint: disable=R0913
     def __init__(self, level=logging.NOTSET):
         logging.Handler.__init__(self, level=level)
-        self.connection = None
-        self.channel = None
+        self.producer = self._initialize()
 
-        self.connection, self.channel, self.exchange = amqp_connect()
-        self.producer = kombu.messaging.Producer(self.channel, self.exchange,
-                                                 serializer='json')
+    @staticmethod
+    def _initialize():
+        """Initialize amqp artefacts."""
+        _, channel, exchange = amqp_connect()
+        return kombu.messaging.Producer(channel, exchange, serializer='json')
 
     def set_job_id(self, job_id):
         """
