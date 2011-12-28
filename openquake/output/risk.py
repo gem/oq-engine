@@ -526,6 +526,16 @@ def create_loss_map_writer(job_id, serialize_to, nrml_path, scenario):
     return writer.compose_writers(writers)
 
 
+def create_bcr_map_writer(job_id, serialize_to, nrml_path, scenario):
+    """
+    Create a bcr map writer.
+
+    Parameters are the same as for :func:`create_loss_map_writer`.
+    """
+    # TODO: support db writer
+    return BCRMapXMLWriter(nrml_path)
+
+
 class BaseCurveXMLWriter(nrml.TreeNRMLWriter):
     """
     This is the base class which prepares the XML document (for risk) to be
