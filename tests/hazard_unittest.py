@@ -301,7 +301,8 @@ class HazardEngineTestCase(helpers.TestMixin, unittest.TestCase):
 
         # hazard curves: check results of mean and quantile computation
         verify_mean_haz_curves_stored_to_kvs(the_job, used_keys)
-        verify_quantile_haz_curves_stored_to_kvs(the_job, calculator, used_keys)
+        verify_quantile_haz_curves_stored_to_kvs(the_job, calculator,
+                                                 used_keys)
 
         verify_mean_haz_curves_stored_to_nrml(the_job, calculator)
         verify_quantile_haz_curves_stored_to_nrml(the_job, calculator)

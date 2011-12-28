@@ -75,11 +75,14 @@ class LossMapCurveSerialization(unittest.TestCase, helpers.TestMixin):
         self.calculator.partition = lambda: None
 
     def test_loss_map_serialized_if_conditional_loss_poes(self):
-        self.calculator.job_profile.params['CONDITIONAL_LOSS_POE'] = '0.01 0.02'
+        self.calculator.job_profile.params['CONDITIONAL_LOSS_POE'] = (
+            '0.01 0.02')
 
         with helpers.patch('openquake.risk.job.probabilistic'
                    '.aggregate_loss_curve.plot_aggregate_curve'):
-            with helpers.patch('openquake.output.risk.create_loss_map_writer') as clw:
+            with helpers.patch(
+                'openquake.output.risk.create_loss_map_writer') as clw:
+
                 clw.return_value = None
 
                 self.calculator.execute()
@@ -88,7 +91,9 @@ class LossMapCurveSerialization(unittest.TestCase, helpers.TestMixin):
     def test_loss_map_not_serialized_unless_conditional_loss_poes(self):
         with helpers.patch('openquake.risk.job.probabilistic'
                    '.aggregate_loss_curve.plot_aggregate_curve'):
-            with helpers.patch('openquake.output.risk.create_loss_map_writer') as clw:
+            with helpers.patch(
+                'openquake.output.risk.create_loss_map_writer') as clw:
+
                 clw.return_value = None
 
                 self.calculator.execute()
