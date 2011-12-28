@@ -31,6 +31,8 @@ from openquake import kvs
 from openquake import logs
 from openquake import shapes
 
+from openquake.job.mixins import Mixin
+
 from openquake.risk import probabilistic_event_based as prob
 from openquake.parser import vulnerability
 
@@ -43,7 +45,7 @@ from openquake.job import config as job_config
 LOGGER = logs.LOG
 
 
-class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
+class ProbabilisticEventMixin(Mixin):  # pylint: disable=W0232,W0201
     """Mixin for Probalistic Event Risk Job."""
 
     @general.preload
@@ -54,11 +56,11 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
         aggregate_curve = prob.AggregateLossCurve()
 
         tasks = []
-        for block_id in self.blocks_keys:
+        for block_id in self.job_profile.blocks_keys:
             LOGGER.debug("Starting task block, block_id = %s of %s"
                     % (block_id, len(self.blocks_keys)))
 
-            tasks.append(general.compute_risk.delay(self.job_id, block_id))
+            tasks.append(general.compute_risk.delay(self.job_profile.job_id, block_id))
 
         for task in tasks:
             try:
@@ -79,16 +81,16 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
         """Return the time representative of the Stochastic Event Set
         specified for this job."""
 
-# TODO (ac): Confirm this works regardless of the method of hazard calc
-        histories = int(self.params["NUMBER_OF_SEISMICITY_HISTORIES"])
-        realizations = int(self.params["NUMBER_OF_LOGIC_TREE_SAMPLES"])
+        # TODO (ac): Confirm this works regardless of the method of hazard calc
+        histories = int(self.job_profile.params["NUMBER_OF_SEISMICITY_HISTORIES"])
+        realizations = int(self.job_profile.params["NUMBER_OF_LOGIC_TREE_SAMPLES"])
         num_ses = histories * realizations
 
         return num_ses * self._time_span()
 
     def _time_span(self):
         """Return the time span specified for this job."""
-        return float(self.params["INVESTIGATION_TIME"])
+        return float(self.job_profile.params["INVESTIGATION_TIME"])
 
     def _gmf_db_list(self, job_id):  # pylint: disable=R0201
         """Returns a list of the output IDs of all computed GMFs"""
@@ -101,7 +103,7 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
 
     def _get_db_gmf(self, gmf_id):
         """Returns a field for the given GMF"""
-        grid = self.region.grid
+        grid = self.job_profile.region.grid
         field = zeros((grid.rows, grid.columns))
 
         gmf_sites = models.GmfData.objects.filter(output=gmf_id)
@@ -120,7 +122,7 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
         keys = []
 
         for site in sites:
-            risk_point = self.region.grid.point_at(site)
+            risk_point = self.job_profile.region.grid.point_at(site)
             key = "%s!%s" % (risk_point.row, risk_point.column)
             keys.append(key)
 
@@ -148,7 +150,7 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
 
         for i in range(0, histories):
             for j in range(0, realizations):
-                key = kvs.tokens.stochastic_set_key(self.job_id, i, j)
+                key = kvs.tokens.stochastic_set_key(self.job_profile.job_id, i, j)
                 fieldset = shapes.FieldSet.from_json(kvs.get(key),
                     self.region.grid)
 
@@ -163,17 +165,17 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
         """
         Return True if current calculation mode is Benefit-Cost Ratio.
         """
-        return self.params[job_config.CALCULATION_MODE] \
-                == job_config.BCR_EVENT_BASED_MODE
+        return (self.job_profile.params[job_config.CALCULATION_MODE]
+                == job_config.BCR_EVENT_BASED_MODE)
 
     def slice_gmfs(self, block_id):
         """Load and collate GMF values for all sites in this block. """
         block = general.Block.from_kvs(block_id)
-        gmfs = self._get_db_gmfs(block.sites, self.job_id)
+        gmfs = self._get_db_gmfs(block.sites, self.job_profile.job_id)
 
         for key, gmf_slice in gmfs.items():
             (row, col) = key.split("!")
-            key_gmf = kvs.tokens.gmf_set_key(self.job_id, col, row)
+            key_gmf = kvs.tokens.gmf_set_key(self.job_profile.job_id, col, row)
             LOGGER.debug("GMF_SLICE for %s X %s : \n\t%s" % (
                     col, row, gmf_slice))
             gmf = {"IMLs": gmf_slice, "TSES": self._tses(),
@@ -204,7 +206,7 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
         self.slice_gmfs(block_id)
 
         self.vuln_curves = vulnerability.load_vuln_model_from_kvs(
-            self.job_id)
+            self.job_profile.job_id)
 
         block = general.Block.from_kvs(block_id)
 
@@ -212,11 +214,11 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
         aggregate_curve = prob.AggregateLossCurve()
 
         for point in block.grid(self.region):
-            key = kvs.tokens.gmf_set_key(self.job_id, point.column, point.row)
+            key = kvs.tokens.gmf_set_key(self.job_profile.job_id, point.column, point.row)
             gmf_slice = kvs.get_value_json_decoded(key)
 
             asset_key = kvs.tokens.asset_key(
-                self.job_id, point.row, point.column)
+                self.job_profile.job_id, point.row, point.column)
 
             for asset in kvs.get_list_json_decoded(asset_key):
                 LOGGER.debug("Processing asset %s" % (asset))
@@ -234,8 +236,8 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
                     loss_curve = self.compute_loss_curve(
                         point.column, point.row, loss_ratio_curve, asset)
 
-                    for loss_poe in general.conditional_loss_poes(self.params):
-                        general.compute_conditional_loss(self.job_id,
+                    for loss_poe in general.conditional_loss_poes(self.job_profile.params):
+                        general.compute_conditional_loss(self.job_profile.job_id,
                                 point.column, point.row, loss_curve, asset,
                                 loss_poe)
 
@@ -251,14 +253,14 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
         """
         self.slice_gmfs(block_id)
 
-        points = list(general.Block.from_kvs(block_id).grid(self.region))
+        points = list(general.Block.from_kvs(block_id).grid(self.job_profile.region))
         gmf_slices = dict(
             (point.site, kvs.get_value_json_decoded(
-                 kvs.tokens.gmf_set_key(self.job_id, point.column, point.row)
+                 kvs.tokens.gmf_set_key(self.job_profile.job_id, point.column, point.row)
             ))
             for point in points
         )
-        epsilon_provider = general.EpsilonProvider(self.params)
+        epsilon_provider = general.EpsilonProvider(self.job_profile.params)
 
         def get_loss_curve(point, vuln_function, asset):
             "Compute loss curve basing on GMF data"
@@ -270,12 +272,12 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
                 self._get_number_of_samples(), loss_ratios=loss_ratios)
             return loss_ratio_curve.rescale_abscissae(asset["assetValue"])
 
-        result = general.compute_bcr_for_block(self.job_id, points,
-            get_loss_curve, float(self.params['INTEREST_RATE']),
-            float(self.params['ASSET_LIFE_EXPECTANCY'])
+        result = general.compute_bcr_for_block(self.job_profile.job_id, points,
+            get_loss_curve, float(self.job_profile.params['INTEREST_RATE']),
+            float(self.job_profile.params['ASSET_LIFE_EXPECTANCY'])
         )
 
-        bcr_block_key = kvs.tokens.bcr_block_key(self.job_id, block_id)
+        bcr_block_key = kvs.tokens.bcr_block_key(self.job_profile.job_id, block_id)
         kvs.set_value_json_encoded(bcr_block_key, result)
         LOGGER.debug('bcr result for block %s: %r', block_id, result)
         return True
@@ -285,7 +287,7 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
         the loss ratios used to obtain the related loss ratio curve
         and aggregate loss curve."""
 
-        epsilon_provider = general.EpsilonProvider(self.params)
+        epsilon_provider = general.EpsilonProvider(self.job_profile.params)
 
         vuln_function = self.vuln_curves.get(
             asset["taxonomy"], None)
@@ -314,7 +316,7 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
 
             return None
 
-        epsilon_provider = general.EpsilonProvider(self.params)
+        epsilon_provider = general.EpsilonProvider(self.job_profile.params)
 
         loss_ratio_curve = prob.compute_loss_ratio_curve(
                 vuln_function, gmf_slice, epsilon_provider, asset,
@@ -325,7 +327,7 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
             return None
 
         key = kvs.tokens.loss_ratio_key(
-            self.job_id, row, col, asset["assetID"])
+            self.job_profile.job_id, row, col, asset["assetID"])
 
         kvs.set(key, loss_ratio_curve.to_json())
 
@@ -363,7 +365,7 @@ class ProbabilisticEventMixin():  # pylint: disable=W0232,W0201
         loss_curve = loss_ratio_curve.rescale_abscissae(asset["assetValue"])
 
         key = kvs.tokens.loss_curve_key(
-            self.job_id, row, column, asset["assetID"])
+            self.job_profile.job_id, row, column, asset["assetID"])
 
         LOGGER.debug("Loss curve is %s, write to key %s" % (loss_curve, key))
         kvs.set(key, loss_curve.to_json())

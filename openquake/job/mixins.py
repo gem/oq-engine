@@ -52,13 +52,18 @@ class Mixin:
     """
     mixins = {}
 
-    def __init__(self, target, mixin):
-        self.target = target
-        self.mixin = mixin
 
-        # This is a temporary member
-        # to help a bit with decoupling Jobs and Mixins
-        self.job = target
+    def __init__(self, job_profile, mixin=None):
+        """
+        :param job_profile:
+            :class:`openquake.job.Job` instance.
+        :param mixin:
+            Deprecated.
+        """
+        self.job_profile = job_profile
+        # We're keep this just for the transition
+        self.target = job_profile
+        self.mixin = mixin
 
     def __enter__(self):
         return self._load()
