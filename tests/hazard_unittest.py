@@ -37,7 +37,6 @@ from openquake import shapes
 from openquake import xml
 
 from openquake.hazard import calc as hazcalc
-from openquake.job import mixins
 from openquake.job.config import HazardMandatoryParamsValidator
 from openquake.job.config import PARAMS
 from openquake.kvs import tokens
