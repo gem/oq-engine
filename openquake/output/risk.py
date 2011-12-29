@@ -257,8 +257,6 @@ class BCRMapXMLWriter(BaseMapXMLWriter):
     The following metadata is added to the map container: Interest rate,
     Asset life expectancy.
     """
-    # TODO: unittest
-
     METADATA = BaseMapXMLWriter.METADATA + [
         'interestRate', 'assetLifeExpectancy'
     ]
