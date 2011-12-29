@@ -898,9 +898,3 @@ class EventBasedMixin(BasePSHAMixin):
                 self.generate_gmpe_map(),
                 java.jclass("Random")(seed),
                 jpype.JBoolean(correlate))
-
-
-hazard_job.HazJobMixin.register("Event Based", EventBasedMixin)
-hazard_job.HazJobMixin.register("Event Based BCR", EventBasedMixin)
-hazard_job.HazJobMixin.register("Classical", ClassicalMixin)
-hazard_job.HazJobMixin.register("Classical BCR", ClassicalMixin)
