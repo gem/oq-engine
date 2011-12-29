@@ -90,7 +90,6 @@ def write_output_bcr(mixin):
     """
     Write BCR map in NRML format.
     """
-    # TODO: unittest
     path = os.path.join(mixin.base_path,
                         mixin.params['OUTPUT_DIR'],
                         "bcr-map.xml")
