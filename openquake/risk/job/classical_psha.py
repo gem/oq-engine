@@ -102,6 +102,7 @@ class ClassicalPSHABasedMixin:
         """
         if self.is_benefit_cost_ratio():
             return self._compute_bcr(block_id)
+
         else:
             return self._compute_loss(block_id)
 
