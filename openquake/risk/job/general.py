@@ -325,6 +325,13 @@ class RiskJobMixin(mixins.Mixin):
         return result.items()
 
     def asset_bcr_per_site(self):
+        """
+        Fetch and return Benefit-Cost Ratio results computed by workers.
+
+        :return:
+            List of two-item tuples: site object and lists of BCR values per
+            asset in that site. See :func:`compute_bcr_for_block`.
+        """
         data = []
         for block_id in self.blocks_keys:
             key = kvs.tokens.bcr_block_key(self.job_id, block_id)
