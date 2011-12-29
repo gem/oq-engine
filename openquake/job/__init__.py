@@ -40,7 +40,6 @@ from openquake.db.models import (
     CharArrayField, InputSet, Input)
 from openquake.job import config as conf
 from openquake.job import params as job_params
-from openquake.job.mixins import Mixin
 from openquake.job.params import (
     PARAMS, CALCULATION_MODE, ENUM_MAP, PATH_PARAMS, INPUT_FILE_TYPES,
     ARRAY_RE)
