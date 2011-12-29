@@ -17,13 +17,6 @@ The :mod:`job` class
     :undoc-members:
     :show-inheritance:
 
-The :mod:`mixin` class
-----------------------
-.. automodule:: openquake.job.mixins
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 The :mod:`hazard` job proxy and mixins
 --------------------------------------
 .. automodule:: openquake.hazard.job

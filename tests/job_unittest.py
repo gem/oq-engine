@@ -35,7 +35,6 @@ from openquake import shapes
 from openquake.job import (
     Job, config, prepare_job, parse_config_file, prepare_config_parameters,
     get_source_models)
-from openquake.job.mixins import Mixin
 from openquake.job.params import config_text_to_list
 from openquake.db.models import OqCalculation, CalcStats, OqParams
 from openquake.risk.job import general
