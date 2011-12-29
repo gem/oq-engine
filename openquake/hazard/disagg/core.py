@@ -455,6 +455,3 @@ class DisaggMixin(Calculator):
                 writer.write(site, node_data)
 
             writer.close()
-
-
-haz_job.HazJobMixin.register("Disaggregation", DisaggMixin)
