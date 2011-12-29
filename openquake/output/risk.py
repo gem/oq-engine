@@ -204,6 +204,7 @@ class LossMapXMLWriter(BaseMapXMLWriter):
     CONTAINER_ID_ATTRIBUTE = 'lossMapID'
     MAP_NODE_TAG = xml.RISK_LMNODE_TAG
 
+    # method could be a function pylint: disable=R0201
     def handle_map_node_for_asset(self, lmnode_el, loss_dict, asset_dict):
         """
         Create a new asset loss node under a pre-existing parent LMNode.
@@ -236,6 +237,7 @@ class LossMapNonScenarioXMLWriter(BaseMapXMLWriter):
     CONTAINER_ID_ATTRIBUTE = 'lossMapID'
     MAP_NODE_TAG = xml.RISK_LMNODE_TAG
 
+    # method could be a function pylint: disable=R0201
     def handle_map_node_for_asset(self, lmnode_el, loss_dict, asset_dict):
         """
         Create a new asset loss node under a pre-existing parent LMNode.
@@ -264,6 +266,7 @@ class BCRMapXMLWriter(BaseMapXMLWriter):
     CONTAINER_ID_ATTRIBUTE = 'bcrMapID'
     MAP_NODE_TAG = xml.RISK_BCR_NODE_TAG
 
+    # method could be a function pylint: disable=R0201
     def handle_map_node_for_asset(self, bcr_node_el, loss_dict, asset_id):
         """
         Create a new asset loss node under a pre-existing parent node.
@@ -527,6 +530,7 @@ def create_bcr_map_writer(job_id, serialize_to, nrml_path):
 
     Parameters are the same as for :func:`create_loss_map_writer`.
     """
+    # unused arguments pylint: disable=W0613
     # TODO: support db writer
     return BCRMapXMLWriter(nrml_path)
 
