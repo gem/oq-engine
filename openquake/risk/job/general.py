@@ -29,11 +29,11 @@ from openquake import kvs
 from openquake import logs
 from openquake import shapes
 from openquake.job import config as job_config
-from openquake.job import mixins
 from openquake.output import risk as risk_output
 from openquake.parser import exposure
 from openquake.parser import vulnerability
 from openquake.risk import common
+from openquake.calculators.base import Calculator
 from openquake.utils.tasks import check_job_status
 
 from celery.task import task
@@ -133,9 +133,8 @@ def compute_risk(job_id, block_id, **kwargs):
     return calculator.compute_risk(block_id, **kwargs)
 
 
-class RiskJobMixin(mixins.Mixin):
+class RiskJobMixin(Calculator):
     """A mixin proxy for Risk jobs."""
-    mixins = {}
 
     def is_benefit_cost_ratio_mode(self):
         """
@@ -376,9 +375,6 @@ class EpsilonProvider(object):
             if category not in samples:
                 samples[category] = norm.rvs(loc=0, scale=1)
             return samples[category]
-
-
-mixins.Mixin.register("Risk", RiskJobMixin, order=2)
 
 
 class Block(object):

@@ -385,7 +385,3 @@ class ProbabilisticEventMixin(Calculator):
         kvs.get_client().set(key, loss_curve.to_json())
 
         return loss_curve
-
-
-general.RiskJobMixin.register("Event Based", ProbabilisticEventMixin)
-general.RiskJobMixin.register("Event Based BCR", ProbabilisticEventMixin)
