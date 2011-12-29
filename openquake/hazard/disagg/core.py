@@ -40,7 +40,6 @@ from openquake.hazard.disagg import subsets
 from openquake.hazard.general import (
     preload, generate_erf, generate_gmpe_map, set_gmpe_params,
     store_source_model, store_gmpe_map, get_iml_list)
-from openquake.job.mixins import Mixin
 from openquake.utils.tasks import check_job_status
 
 
