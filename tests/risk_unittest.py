@@ -28,7 +28,7 @@ from openquake import shapes
 from openquake.output import hazard
 
 from openquake.risk.job import aggregate_loss_curve as aggregate
-from openquake.risk.job.general import Block
+from openquake.risk.job.general import Block, RiskJobMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk import probabilistic_event_based as prob
@@ -1285,3 +1285,37 @@ class RiskCommonTestCase(unittest.TestCase):
                                     interest, life_expectancy,
                                     retrofitting_cost)
         self.assertAlmostEqual(result, expected_result, delta=1e-5)
+
+
+class RiskJobMixinTestCase(unittest.TestCase):
+    def test_asset_bcr_per_site(self):
+        self.job = helpers.create_job({}, base_path=".")
+        self.job_id = self.job.job_id
+        self.job.to_kvs()
+
+        block_keys = [19, 20]
+        for blockn in block_keys:
+            block = kvs.tokens.bcr_block_key(self.job_id, blockn)
+            result = [
+                ((blockn, -blockn), [
+                    ({'value': 35.1}, 'assetID-%d1' % blockn),
+                    ({'value': 35.2}, 'assetID-%d2' % blockn),
+                ])
+            ]
+            kvs.set_value_json_encoded(block, result)
+
+        mixin = RiskJobMixin(None, None)
+        mixin.job_id = self.job_id
+        mixin.blocks_keys = block_keys
+
+        bcr_per_site = mixin.asset_bcr_per_site()
+        self.assertEqual(bcr_per_site, [
+            (shapes.Site(-19.0, 19.0), [
+                [{u'value': 35.1}, u'assetID-191'],
+                [{u'value': 35.2}, u'assetID-192']
+            ]),
+            (shapes.Site(-20.0, 20.0), [
+                [{u'value': 35.1}, u'assetID-201'],
+                [{u'value': 35.2}, u'assetID-202']
+            ])
+        ])
