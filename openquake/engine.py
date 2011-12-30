@@ -133,7 +133,7 @@ def launch(a_job):
         calculator.execute()
 
 
-def job_from_file(config_file, output_type):
+def job_from_file(config_file, output_type, owner_username='openquake'):
     """
     Create a job from external configuration files.
 
@@ -168,12 +168,17 @@ def job_from_file(config_file, output_type):
         job_id = 0
         serialize_results_to = ['xml']
     else:
-        # openquake-server creates the job record in advance and stores the
-        # job id in the config file
-        job_id = params.get('OPENQUAKE_JOB_ID')
-        if not job_id:
-            # create the database record for this job
-            job_id = prepare_job(params, sections).id
+        owner = OqUser.objects.get(user_name=owner_username)
+        # openquake-server creates the calculation record in advance and stores
+        # the calculation id in the config file
+        calculation_id = params.get('OPENQUAKE_JOB_ID')
+        if not calculation_id:
+            # create the database record for this calculation
+            job_profile = prepare_job(params, sections)
+            calculation = OqCalculation(owner=owner, path=None)
+            calculation.oq_job_profile = job_profile
+            calculation.save()
+            calculation_id = calculation.id
 
         if output_type == 'db':
             serialize_results_to = ['db']
@@ -182,7 +187,7 @@ def job_from_file(config_file, output_type):
 
     base_path = params['BASE_PATH']
 
-    job = Job(params, job_id, sections=sections, base_path=base_path,
+    job = Job(params, calculation_id, sections=sections, base_path=base_path,
               serialize_results_to=serialize_results_to)
     job.to_kvs()
 
@@ -295,6 +300,9 @@ def prepare_job(params, sections):
         The job config params.
     :params sections:
         The job config file sections, as a list of strings.
+
+    :returns:
+        A new :class:`openquake.db.models.OqJobProfile` object.
     """
     # TODO specify the owner as a command line parameter
     owner = OqUser.objects.get(user_name='openquake')
@@ -306,23 +314,28 @@ def prepare_job(params, sections):
     job_type = [s.lower() for s in sections
         if s.upper() in [jobconf.HAZARD_SECTION, jobconf.RISK_SECTION]]
 
-    job = OqCalculation(owner=owner, path=None)
+    # TODO: Move this to another function, called prepare_calc(), perhaps.
+    # job = OqCalculation(owner=owner, path=None)
 
-    oqp = OqJobProfile(input_set=input_set, calc_mode=calc_mode,
+    job_profile = OqJobProfile(input_set=input_set, calc_mode=calc_mode,
                        job_type=job_type)
 
     _insert_input_files(params, input_set)
-    _store_input_parameters(params, calc_mode, oqp)
+    # TODO: _store_input_parameters should just construct and return the
+    # OqJobProfile.
+    _store_input_parameters(params, calc_mode, job_profile)
+    # TODO: Then we set the input_set attribute of the job_profile
 
-    oqp.save()
+    job_profile.save()
 
-    job.oq_job_profile = oqp
-    job.save()
+    # job.oq_job_profile = oqp
+    # job.save()
 
     # Reset all progress indication counters for the job at hand.
-    stats.delete_job_counters(job.id)
+    # TODO: Put this back in, in the correct place.
+    # stats.delete_job_counters(job.id)
 
-    return job
+    return job_profile
 
 
 def get_source_models(logic_tree):
@@ -410,3 +423,4 @@ def import_job_profile(path_to_cfg):
     :returns:
         :class:`openquake.db.models.OqJobProfile` instance.
     """
+    
