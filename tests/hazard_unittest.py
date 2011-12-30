@@ -947,19 +947,19 @@ class ParameterizeSitesTestCase(helpers.TestMixin, unittest.TestCase):
 class IMLTestCase(unittest.TestCase):
     """
     Tests that every Intensity Measure Type
-    declared in ``openquake.db.models.OqParams.IMT_CHOICES``
+    declared in ``openquake.db.models.OqJobProfile.IMT_CHOICES``
     has a correct corresponding function
     in ``openquake.hazard.general.IML_SCALING`` mapping
     and is allowed to be the configuration parameter value
     for ``INTENSITY_MEASURE_TYPE``.
     """
     def test_scaling_definitions(self):
-        from openquake.db.models import OqParams
+        from openquake.db.models import OqJobProfile
         from openquake.job.params import ENUM_MAP
         from openquake.hazard.general import IML_SCALING
         enum_map_reversed = dict((val, key) for (key, val) in ENUM_MAP.items())
         imt_config_names = [enum_map_reversed[imt]
-                            for (imt, imt_verbose) in OqParams.IMT_CHOICES
+                            for (imt, imt_verbose) in OqJobProfile.IMT_CHOICES
                             if imt in enum_map_reversed]
         self.assertEqual(set(IML_SCALING) - set(imt_config_names), set())
         self.assertEqual(set(imt_config_names), set(IML_SCALING))

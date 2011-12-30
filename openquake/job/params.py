@@ -25,8 +25,8 @@ import re
 
 from collections import namedtuple
 
-from openquake.db.models import OqParams
 from openquake.utils.general import str2bool
+from openquake.db.models import OqJobProfile
 
 
 ARRAY_RE = re.compile('[\s,]+')
@@ -159,7 +159,7 @@ def define_param(name, column, modes=None, default=None, to_db=None,
                              modes=modes, to_db=None, to_job=to_job,
                              java_name=java_name)
     else:
-        column_type = type(OqParams._meta.get_field_by_name(column)[0])
+        column_type = type(OqJobProfile._meta.get_field_by_name(column)[0])
         PARAMS[name] = Param(column=column, type=column_type,
                              default=default, modes=modes, to_db=to_db,
                              to_job=to_job, java_name=java_name)
