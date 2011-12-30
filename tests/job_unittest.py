@@ -36,7 +36,7 @@ from openquake.engine import (get_source_models, parse_config_file,
                               prepare_config_parameters, prepare_job)
 from openquake.job import Job, config
 from openquake.job.params import config_text_to_list
-from openquake.db.models import OqCalculation, CalcStats, OqJobProfile
+from openquake.db.models import OqCalculation, CalcStats, OqJobProfile, OqUser
 
 from tests.utils import helpers
 from tests.utils.helpers import patch
@@ -414,12 +414,18 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         'GMF_RANDOM_SEED': '1',
     }
 
+    def setUp(self):
+        owner = OqUser.objects.get(user_name='openquake')
+        self.calculation = OqCalculation(owner=owner, path=None)
+
     def tearDown(self):
-        if hasattr(self, "job") and self.job:
-            self.teardown_job(self.job)
+        if (hasattr(self, "calculation")
+            and self.calculation
+            and hasattr(self.calculation, "oq_job_profile")):
+            self.teardown_job(self.calculation)
 
     def _reload_params(self):
-        return OqJobProfile.objects.get(id=self.job.oq_job_profile.id)
+        return OqJobProfile.objects.get(id=self.job.id)
 
     def assertFieldsEqual(self, expected, params):
         got_params = dict((k, getattr(params, k)) for k in expected.keys())
@@ -428,7 +434,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def _get_inputs(self, job):
         inputs = [dict(path=i.path, type=i.input_type)
-                  for i in self.job.oq_job_profile.input_set.input_set.all()]
+                  for i in self.job.input_set.input_set.all()]
 
         return sorted(inputs, key=lambda i: (i['type'], i['path']))
 
@@ -456,9 +462,11 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['GMPE_LT_RANDOM_SEED'] = '5'
 
         self.job = prepare_job(params, ['HAZARD', 'RISK'])
-        self.job.oq_job_profile = self._reload_params()
+        self.calculation.oq_job_profile = self.job
+        self.calculation.save()
+        self.job = self._reload_params()
         self.assertEquals(params['REGION_VERTEX'],
-                          _to_coord_list(self.job.oq_job_profile.region))
+                          _to_coord_list(self.job.region))
         self.assertFieldsEqual(
             {'calc_mode': 'classical',
              'region_grid_spacing': 0.1,
@@ -479,7 +487,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'gmf_calculation_number': None,
              'rupture_surface_discretization': None,
              'subduction_rupture_floating_type': 'downdip',
-             }, self.job.oq_job_profile)
+             }, self.job)
         self.assertEqual([
                 {'path': abs_path("small_exposure.xml"),
                  'type': 'exposure'},
@@ -504,9 +512,12 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
 
         self.job = prepare_job(params, ['HAZARD', 'RISK'])
-        self.job.oq_job_profile = self._reload_params()
+        self.calculation.oq_job_profile = self.job
+        self.calculation.save()
+        self.job = self._reload_params()
+
         self.assertEquals(params['SITES'],
-                          _to_coord_list(self.job.oq_job_profile.sites))
+                          _to_coord_list(self.job.sites))
         self.assertFieldsEqual(
             {'calc_mode': 'classical',
              'min_magnitude': 5.0,
@@ -522,7 +533,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'realizations': 2,
              'histories': None,
              'gm_correlated': None,
-             }, self.job.oq_job_profile)
+             }, self.job)
 
     def test_prepare_scenario_job(self):
         abs_path = partial(datapath, "scenario")
@@ -535,9 +546,12 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['VULNERABILITY'] = abs_path("vulnerability.xml")
 
         self.job = prepare_job(params, ['HAZARD', 'RISK'])
-        self.job.oq_job_profile = self._reload_params()
+        self.calculation.oq_job_profile = self.job
+        self.calculation.save()
+        self.job = self._reload_params()
+
         self.assertEquals(params['REGION_VERTEX'],
-                          _to_coord_list(self.job.oq_job_profile.region))
+                          _to_coord_list(self.job.region))
         self.assertFieldsEqual(
             {'calc_mode': 'scenario',
              'region_grid_spacing': 0.02,
@@ -557,7 +571,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'damping': None,
              'gmf_calculation_number': 5,
              'rupture_surface_discretization': 0.1,
-             }, self.job.oq_job_profile)
+             }, self.job)
         self.assertEqual([
                 {'path': abs_path("LA_small_portfolio.xml"),
                  'type': 'exposure'},
@@ -576,9 +590,12 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['SITES'] = '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
 
         self.job = prepare_job(params, ['HAZARD', 'RISK'])
-        self.job.oq_job_profile = self._reload_params()
+        self.calculation.oq_job_profile = self.job
+        self.calculation.save()
+        self.job = self._reload_params()
+
         self.assertEquals(params['SITES'],
-                          _to_coord_list(self.job.oq_job_profile.sites))
+                          _to_coord_list(self.job.sites))
         self.assertFieldsEqual(
             {'calc_mode': 'scenario',
              'min_magnitude': None,
@@ -594,7 +611,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'realizations': None,
              'histories': None,
              'gm_correlated': True,
-             }, self.job.oq_job_profile)
+             }, self.job)
 
     def test_prepare_event_based_job(self):
         abs_path = partial(datapath, "simplecase")
