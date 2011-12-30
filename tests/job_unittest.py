@@ -32,14 +32,11 @@ from openquake import job
 from openquake import kvs
 from openquake import flags
 from openquake import shapes
-from openquake.job import (
-    Job, config, prepare_job, parse_config_file, prepare_config_parameters,
-    get_source_models)
+from openquake.engine import (get_source_models, parse_config_file,
+                              prepare_config_parameters, prepare_job)
+from openquake.job import Job, config
 from openquake.job.params import config_text_to_list
 from openquake.db.models import OqCalculation, CalcStats, OqJobProfile
-from openquake.risk.job import general
-from openquake.risk.job.probabilistic import ProbabilisticEventMixin
-from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 
 from tests.utils import helpers
 from tests.utils.helpers import patch
@@ -160,22 +157,22 @@ class JobDbRecordTestCase(unittest.TestCase):
         self.job = None
 
     def test_job_db_record_for_output_type_db(self):
-        self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
+        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE), 'db')
         OqCalculation.objects.get(id=self.job.job_id)
 
     def test_job_db_record_for_output_type_xml(self):
-        self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'xml')
+        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE), 'xml')
         OqCalculation.objects.get(id=self.job.job_id)
 
     def test_set_status(self):
-        self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
+        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE), 'db')
         status = 'running'
         self.job.set_status(status)
         self.assertEqual(status,
                          OqCalculation.objects.get(id=self.job.job_id).status)
 
     def test_get_status_from_db(self):
-        self.job = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db')
+        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE), 'db')
         row = OqCalculation.objects.get(id=self.job.job_id)
 
         row.status = "failed"
@@ -187,7 +184,7 @@ class JobDbRecordTestCase(unittest.TestCase):
         self.assertEqual("running", Job.get_status_from_db(self.job.job_id))
 
     def test_is_job_completed(self):
-        job_id = Job.from_file(helpers.get_data_path(CONFIG_FILE), 'db').job_id
+        job_id = engine.job_from_file(helpers.get_data_path(CONFIG_FILE), 'db').job_id
         row = OqCalculation.objects.get(id=job_id)
         pairs = [('pending', False), ('running', False),
                  ('succeeded', True), ('failed', True)]
@@ -686,7 +683,7 @@ class RunJobTestCase(unittest.TestCase):
 
     def setUp(self):
         self.job = None
-        self.job_from_file = Job.from_file
+        self.job_from_file = engine.job_from_file
         self.init_logs_amqp_send = patch('openquake.logs.init_logs_amqp_send')
         self.init_logs_amqp_send.start()
 
@@ -716,7 +713,7 @@ class RunJobTestCase(unittest.TestCase):
             engine.launch = mock.Mock(
                 side_effect=test_status_running_and_succeed)
 
-            with patch('openquake.job.Job.from_file') as from_file:
+            with patch('openquake.engine.job_from_file') as from_file:
                 from_file.side_effect = patch_job_launch
 
                 with patch('os.fork', mocksignature=False) as fork:
@@ -747,7 +744,7 @@ class RunJobTestCase(unittest.TestCase):
             engine.launch = mock.Mock(
                 side_effect=test_status_running_and_fail)
 
-            with patch('openquake.job.Job.from_file') as from_file:
+            with patch('openquake.engine.job_from_file') as from_file:
                 from_file.side_effect = patch_job_launch
 
                 with patch('os.fork', mocksignature=False) as fork:
@@ -855,7 +852,7 @@ class RunJobTestCase(unittest.TestCase):
             job.read_sites_from_exposure(test_job))
 
     def test_supervisor_is_spawned(self):
-        with patch('openquake.job.Job.from_file') as from_file:
+        with patch('openquake.engine.job_from_file') as from_file:
 
             # replaces Job.launch with a mock
             def patch_job_launch(*args, **kwargs):

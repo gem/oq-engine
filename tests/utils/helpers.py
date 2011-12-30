@@ -40,6 +40,7 @@ import numpy
 
 from django.core import exceptions
 
+from openquake import engine
 from openquake import flags
 from openquake import logs
 from openquake.job import Job
@@ -140,7 +141,7 @@ def job_from_file(config_file_path):
     a database.
     """
 
-    job = Job.from_file(config_file_path, 'xml')
+    job = engine.job_from_file(config_file_path, 'xml')
     cleanup_loggers()
 
     return job
