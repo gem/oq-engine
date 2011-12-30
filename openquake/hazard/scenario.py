@@ -29,7 +29,6 @@ import json
 from openquake import java
 from openquake import kvs
 from openquake import shapes
-from openquake.hazard import job
 from openquake.hazard.general import BasePSHAMixin
 
 

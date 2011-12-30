@@ -44,7 +44,6 @@ from openquake import xml
 
 from openquake.hazard.general import BasePSHAMixin, get_iml_list
 from openquake.hazard import classical_psha
-from openquake.hazard import job as hazard_job
 from openquake.hazard.general import BasePSHAMixin, get_iml_list
 from openquake.output import hazard as hazard_output
 from openquake.utils import config

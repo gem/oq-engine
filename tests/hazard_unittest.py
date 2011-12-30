@@ -43,7 +43,6 @@ from openquake.kvs import tokens
 from openquake.hazard import classical_psha
 from openquake.hazard import opensha
 from openquake.hazard import general as hazard_general
-import openquake.hazard.job
 
 from tests.utils import helpers
 
