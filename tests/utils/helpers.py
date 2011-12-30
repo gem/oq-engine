@@ -605,7 +605,7 @@ class DbTestMixin(TestMixin):
         input_set = models.InputSet(owner=owner)
         input_set.save()
 
-        oqp = models.OqParams()
+        oqp = models.OqJobProfile()
         oqp.calc_mode = "classical"
         oqp.job_type = ['hazard']
         oqp.input_set = input_set
