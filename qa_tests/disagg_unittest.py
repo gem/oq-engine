@@ -141,7 +141,7 @@ class DisaggCalcQATestCase(unittest.TestCase, helpers.ConfigTestMixin):
         :param h5_file:
             Path to the resulting h5 file.
         :param oq_job_profile:
-            :class:`openquake.db.models.OqParams` instance. We need this to
+            :class:`openquake.db.models.OqJobProfile` instance. We need this to
             access subset types and bin limits.
         """
         subset_types = oq_job_profile.disagg_results
