@@ -120,6 +120,46 @@ class IncrCounterTestCase(RedisMixin, unittest.TestCase):
         self.assertEqual(1, (value - previous_value))
 
 
+class GetValueTestCase(RedisMixin, unittest.TestCase):
+    """Tests the behaviour of utils.stats.incr_counter()."""
+
+    def test_get_value_with_non_existent_incremental(self):
+        """`None` is returned for a non-existent incremental counter."""
+        args = (55, "d/a/z")
+        key = stats.key_name(*args)
+        kvs = self.connect()
+        self.assertIs(None, kvs.get(key))
+        self.assertIs(None, stats.get_value(*args))
+
+    def test_get_value_with_existent_incremental(self):
+        """
+        The expected value is returned for an existent incremental counter.
+        """
+        value = "I am!"
+        args = (56, "d/b/z")
+        key = stats.key_name(*args)
+        kvs = self.connect()
+        kvs.set(key, value)
+        self.assertEqual(value, stats.get_value(*args))
+
+    def test_get_value_with_non_existent_total(self):
+        """`None` is returned for a non-existent total counter."""
+        args = (57, "d/c/z")
+        key = stats.key_name(*args, counter_type="t")
+        kvs = self.connect()
+        self.assertIs(None, kvs.get(key))
+        self.assertIs(None, stats.get_value(*args, counter_type="t"))
+
+    def test_get_value_with_existent_total(self):
+        """The expected value is returned for an existent total counter."""
+        value = "You are?"
+        args = (58, "d/d/z")
+        key = stats.key_name(*args, counter_type="t")
+        kvs = self.connect()
+        kvs.set(key, value)
+        self.assertEqual(value, stats.get_value(*args, counter_type="t"))
+
+
 class DeleteJobCountersTestCase(RedisMixin, unittest.TestCase):
     """Tests the behaviour of utils.stats.delete_job_counters()."""
 

@@ -92,6 +92,17 @@ def incr_counter(job_id, key):
     conn.incr(key)
 
 
+def get_value(job_id, key, counter_type="i"):
+    """Get the value for the given key.
+
+    The counter types in use are 'i' (for incremental counters) and
+    't' (for totals).
+    """
+    key = key_name(job_id, key, counter_type=counter_type)
+    conn = _redis()
+    return conn.get(key)
+
+
 def delete_job_counters(job):
     """Delete the progress indication counters for the given job."""
     conn = _redis()
