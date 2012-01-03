@@ -23,15 +23,13 @@ Tests related to the various Writer base classes.
 import mock
 import unittest
 
-from tests.utils import helpers
-
 from openquake import writer
 
 
 class FileWriterTestCase(unittest.TestCase):
     """Tests related to the `FileWriter` abstract base class."""
 
-    def test__init_file_with_part_not_set(self):
+    def test__init_file_with_mode_not_set(self):
         """_init_file() will truncate the file when opening it."""
         path = "/tmp/a"
         # Only mock the open() built-in in the writer module.
@@ -40,20 +38,23 @@ class FileWriterTestCase(unittest.TestCase):
             fw._init_file()
             self.assertEqual((path, "w"), mock_open.call_args[0])
 
-    def test__init_file_with_part_equal_to_one(self):
-        """_init_file() will truncate the file when opening it."""
+    def test__init_file_with_valid_mode(self):
+        """_init_file() will open the file in append mode."""
         path = "/tmp/b"
         # Only mock the open() built-in in the writer module.
         with mock.patch("openquake.writer.open", create=True) as mock_open:
-            fw = writer.FileWriter(path, part=1)
+            fw = writer.FileWriter(path, mode="a")
             fw._init_file()
-            self.assertEqual((path, "w"), mock_open.call_args[0])
+            self.assertEqual((path, "a"), mock_open.call_args[0])
 
-    def test__init_file_with_part_above_one(self):
-        """_init_file() will open the file in append mode."""
+    def test__init_file_with_invalid_mode(self):
+        """
+        An invalid mode (not in ('a', 'w')) will be ignored and the file be
+        truncated.
+        """
         path = "/tmp/c"
         # Only mock the open() built-in in the writer module.
         with mock.patch("openquake.writer.open", create=True) as mock_open:
-            fw = writer.FileWriter(path, part=99)
+            fw = writer.FileWriter(path, mode="what!?")
             fw._init_file()
-            self.assertEqual((path, "a"), mock_open.call_args[0])
+            self.assertEqual((path, "w"), mock_open.call_args[0])
