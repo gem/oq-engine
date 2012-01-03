@@ -168,9 +168,9 @@ class ClassicalMixin(BasePSHAMixin):
             `openquake.utils.stats` module.
         """
         if datum:
-            return (self.job_id, STATS_KEYS[kname], datum)
+            return (self.job_id, STATS_KEYS[kname][0], datum)
         else:
-            return (self.job_id, STATS_KEYS[kname])
+            return (self.job_id, STATS_KEYS[kname][0])
 
     def number_of_tasks(self):
         """How many `celery` tasks should be used for the calculations?"""
