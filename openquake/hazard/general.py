@@ -48,7 +48,7 @@ IML_SCALING = {
 }
 
 
-STATS_KEY = {
+STATS_KEYS = {
     # Classical PSHA kvs statistics db keys
     "hcls_realizations": "classical:realizations",
     "hcls_crealization": "classical:crealization",
