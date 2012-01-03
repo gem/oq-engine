@@ -36,7 +36,8 @@ from openquake import logs
 from openquake import shapes
 from openquake import xml
 
-from openquake.hazard.general import BasePSHAMixin, preload, get_iml_list
+from openquake.hazard.general import (
+    BasePSHAMixin, STATS_KEY, preload, get_iml_list)
 from openquake.hazard import classical_psha
 from openquake.hazard import job
 from openquake.hazard import tasks
@@ -157,12 +158,26 @@ class ClassicalMixin(BasePSHAMixin):
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the Job configuration file."""
 
+    def ksdb_args(self, kname, datum=None):
+        """Construct the arguments for access to the kvs statistics db.
+
+        :param string kname: a key in the `openquake.hazard.general.STATS_KEY`
+            dictionary
+        :param datum: the datum the caller wishes to store (if any).
+        :returns: a tuple with arguments for the functions in
+            `openquake.utils.stats` module.
+        """
+        if datum:
+            return (self.job_id, STATS_KEY[kname], datum)
+        else:
+            return (self.job_id, STATS_KEY[kname])
+
     def number_of_tasks(self):
         """How many `celery` tasks should be used for the calculations?"""
         value = self["HAZARD_TASKS"]
         return 2 * multiprocessing.cpu_count() if value is None else int(value)
 
-    def do_curves(self, sites, realizations, serializer=None, scdata=None,
+    def do_curves(self, sites, realizations, serializer=None,
                   the_task=tasks.compute_hazard_curve):
         """Trigger the calculation of hazard curves, serialize as requested.
 
@@ -177,8 +192,6 @@ class ClassicalMixin(BasePSHAMixin):
             receives the KVS keys of the calculated hazard curves in
             its single parameter.
         :type serializer: a callable with a single parameter: list of strings
-        :param tuple scdata: A (chunk_index, number_of_chunks) 2-tuple that
-            should be passed on to all serializers.
         :param the_task: The `celery` task to use for the hazard curve
             calculation, it takes the following parameters:
                 * job ID
@@ -195,7 +208,7 @@ class ClassicalMixin(BasePSHAMixin):
         gmpe_generator.seed(self["GMPE_LT_RANDOM_SEED"])
 
         for realization in xrange(0, realizations):
-            stats.incr_counter(self.job_id, "classical:do_curves:realization")
+            stats.incr_counter(*self.ksdb_args("hcls_crealization"))
             LOG.info("Calculating hazard curves for realization %s"
                      % realization)
             self.store_source_model(source_model_generator.getrandbits(32))
@@ -207,7 +220,7 @@ class ClassicalMixin(BasePSHAMixin):
                 flatten_results=True, ath=serializer)
 
     # pylint: disable=R0913
-    def do_means(self, sites, realizations, curve_serializer=None, scdata=None,
+    def do_means(self, sites, realizations, curve_serializer=None,
                  curve_task=tasks.compute_mean_curves, map_func=None,
                  map_serializer=None):
         """Trigger the calculation of mean curves/maps, serialize as requested.
@@ -223,8 +236,6 @@ class ClassicalMixin(BasePSHAMixin):
             receives the KVS keys of the calculated curves in
             its single parameter.
         :type curve_serializer: function([string])
-        :param tuple scdata: A (chunk_index, number_of_chunks) 2-tuple that
-            should be passed on to all serializers.
         :param map_serializer: A serializer for the calculated maps,
             receives the KVS keys of the calculated maps in its single
             parameter.
@@ -259,7 +270,7 @@ class ClassicalMixin(BasePSHAMixin):
 
     # pylint: disable=R0913
     def do_quantiles(self, sites, realizations, quantiles,
-                     curve_serializer=None, scdata=None,
+                     curve_serializer=None,
                      curve_task=tasks.compute_quantile_curves,
                      map_func=None, map_serializer=None):
         """Trigger the calculation/serialization of quantile curves/maps.
@@ -277,8 +288,6 @@ class ClassicalMixin(BasePSHAMixin):
             receives the KVS keys of the calculated curves in
             its single parameter.
         :type curve_serializer: function([string])
-        :param tuple scdata: A (chunk_index, number_of_chunks) 2-tuple that
-            should be passed on to all serializers.
         :param map_serializer: A serializer for the calculated maps,
             receives the KVS keys of the calculated maps in its single
             parameter.
@@ -337,21 +346,25 @@ class ClassicalMixin(BasePSHAMixin):
         LOG.info("Going to run classical PSHA hazard for %s realizations "
                  "and %s sites" % (realizations, len(sites)))
 
-        stats.set_total(self.job_id, "classical:execute:sites", len(sites))
-        stats.set_total(
-            self.job_id, "classical:execute:realizations", realizations)
+        stats.set_total(*self.ksdb_args("hcls_sites", len(sites)))
+        stats.set_total(*self.ksdb_args("hcls_realizations", realizations))
 
         block_size = config.hazard_block_size()
-        chunks = range(0, len(sites), block_size)
-        for cidx, start in enumerate(chunks):
+        stats.set_total(*self.ksdb_args("hcls_block_size", block_size))
+
+        blocks = range(0, len(sites), block_size)
+        stats.set_total(*self.ksdb_args("hcls_blocks", len(blocks)))
+
+        for start in blocks:
+            stats.incr_counter(*self.ksdb_args("hcls_cblock"))
             end = start + block_size
             data = sites[start:end]
 
-            self.do_curves(data, realizations, scdata=(cidx, len(chunks)),
+            self.do_curves(data, realizations,
                 serializer=self.serialize_hazard_curve_of_realization)
 
             # mean curves
-            self.do_means(data, realizations, scdata=(cidx, len(chunks)),
+            self.do_means(data, realizations,
                 curve_serializer=self.serialize_mean_hazard_curves,
                 map_func=classical_psha.compute_mean_hazard_maps,
                 map_serializer=self.serialize_mean_hazard_map)
@@ -359,17 +372,15 @@ class ClassicalMixin(BasePSHAMixin):
             # quantile curves
             quantiles = self.quantile_levels
             self.do_quantiles(data, realizations, quantiles,
-                scdata=(cidx, len(chunks)),
                 curve_serializer=self.serialize_quantile_hazard_curves,
                 map_func=classical_psha.compute_quantile_hazard_maps,
                 map_serializer=self.serialize_quantile_hazard_map)
 
-            # Done with this chunk, purge intermediate results from kvs.
+            # Done with this block, purge intermediate results from kvs.
             release_data_from_kvs(self.job_id, data, realizations, quantiles,
                                   self.poes_hazard_maps, kvs_keys_purged)
 
-    def serialize_hazard_curve_of_realization(
-        self, sites, realization, scdata):
+    def serialize_hazard_curve_of_realization(self, sites, realization):
         """
         Serialize the hazard curves of a set of sites for a given realization.
 
@@ -377,13 +388,11 @@ class ClassicalMixin(BasePSHAMixin):
         :type sites: list of :py:class:`openquake.shapes.Site`
         :param realization: the realization to be serialized
         :type realization: :py:class:`int`
-        :param tuple scdata: A (chunk_index, number_of_chunks) 2-tuple that
-            allows (NRML) serializers to write XML files in chunks.
         """
         hc_attrib_update = {'endBranchLabel': realization}
         nrml_file = self.hazard_curve_filename(realization)
-        key_template = kvs.tokens.hazard_curve_poes_key_template(
-            self.job_id, realization)
+        key_template = kvs.tokens.hazard_curve_poes_key_template(self.job_id,
+                                                        realization)
         self.serialize_hazard_curve(nrml_file, key_template,
                                     hc_attrib_update, sites)
 

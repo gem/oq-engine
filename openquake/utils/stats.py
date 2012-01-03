@@ -39,14 +39,14 @@ def _redis():
     return redis.Redis(**args)
 
 
-def key_name(job_id, func, area="h", counter_type="i"):
+def key_name(job_id, fragment, area="h", counter_type="i"):
     """Return the redis key name for the given job/function.
 
     The areas in use are 'h' (for hazard) and 'r' (for risk).
     The counter types in use are 'i' (for incremental counters) and
     't' (for totals).
     """
-    return "oqs:%s:%s:%s:%s" % (job_id, area, counter_type, func)
+    return "oqs:%s:%s:%s:%s" % (job_id, area, counter_type, fragment)
 
 
 def progress_indicator(func):
