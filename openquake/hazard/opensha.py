@@ -37,7 +37,7 @@ from openquake import shapes
 from openquake import xml
 
 from openquake.hazard.general import (
-    BasePSHAMixin, STATS_KEY, preload, get_iml_list)
+    BasePSHAMixin, STATS_KEYS, preload, get_iml_list)
 from openquake.hazard import classical_psha
 from openquake.hazard import job
 from openquake.hazard import tasks
@@ -161,16 +161,16 @@ class ClassicalMixin(BasePSHAMixin):
     def ksdb_args(self, kname, datum=None):
         """Construct the arguments for access to the kvs statistics db.
 
-        :param string kname: a key in the `openquake.hazard.general.STATS_KEY`
+        :param string kname: a key in the `openquake.hazard.general.STATS_KEYS`
             dictionary
         :param datum: the datum the caller wishes to store (if any).
         :returns: a tuple with arguments for the functions in
             `openquake.utils.stats` module.
         """
         if datum:
-            return (self.job_id, STATS_KEY[kname], datum)
+            return (self.job_id, STATS_KEYS[kname], datum)
         else:
-            return (self.job_id, STATS_KEY[kname])
+            return (self.job_id, STATS_KEYS[kname])
 
     def number_of_tasks(self):
         """How many `celery` tasks should be used for the calculations?"""
