@@ -36,15 +36,17 @@ LOGGER = logging.getLogger('serializer')
 class FileWriter(object):
     """Simple output half of the codec process."""
 
-    def __init__(self, path):
+    def __init__(self, path, part=None):
         self.path = path
+        self.part = part
         self.file = None
         self._init_file()
         self.root_node = None
 
     def _init_file(self):
         """Get the file handle open for writing"""
-        self.file = open(self.path, "w")
+        mode = "w" if self.part is None or self.part < 2 else "a"
+        self.file = open(self.path, mode)
 
     def write(self, point, value):
         """
