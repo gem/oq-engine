@@ -487,7 +487,7 @@ class OqCalculation(models.Model):
     duration = models.IntegerField(default=0)
     job_pid = models.IntegerField(default=0)
     supervisor_pid = models.IntegerField(default=0)
-    oq_params = models.ForeignKey('OqParams')
+    oq_job_profile = models.ForeignKey('OqJobProfile')
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
@@ -511,7 +511,7 @@ class CalcStats(models.Model):
         db_table = 'uiapi\".\"calc_stats'
 
 
-class OqParams(models.Model):
+class OqJobProfile(models.Model):
     '''
     Parameters needed to run an OpenQuake job
     '''
@@ -679,7 +679,7 @@ class OqParams(models.Model):
     interest_rate = models.FloatField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
-        db_table = 'uiapi\".\"oq_params'
+        db_table = 'uiapi\".\"oq_job_profile'
 
 
 class Output(models.Model):
@@ -987,7 +987,7 @@ class VulnerabilityModel(models.Model):
     owner = models.ForeignKey("OqUser")
     name = models.TextField()
     description = models.TextField(null=True)
-    imt = models.TextField(choices=OqParams.IMT_CHOICES)
+    imt = models.TextField(choices=OqJobProfile.IMT_CHOICES)
     imls = FloatArrayField()
     category = models.TextField()
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
