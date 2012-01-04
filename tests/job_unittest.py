@@ -37,7 +37,7 @@ from openquake.job import (
     get_source_models)
 from openquake.job.mixins import Mixin
 from openquake.job.params import config_text_to_list
-from openquake.db.models import OqCalculation, CalcStats, OqParams
+from openquake.db.models import OqCalculation, CalcStats, OqJobProfile
 from openquake.risk.job import general
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
@@ -423,7 +423,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
             self.teardown_job(self.job)
 
     def _reload_params(self):
-        return OqParams.objects.get(id=self.job.oq_job_profile.id)
+        return OqJobProfile.objects.get(id=self.job.oq_job_profile.id)
 
     def assertFieldsEqual(self, expected, params):
         got_params = dict((k, getattr(params, k)) for k in expected.keys())
