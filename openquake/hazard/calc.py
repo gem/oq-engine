@@ -15,6 +15,9 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+"""Information about the calculators available for the Hazard engine."""
+
+
 from openquake.hazard.opensha import ClassicalMixin, EventBasedMixin
 from openquake.hazard.disagg.core import DisaggMixin
 from openquake.hazard.scenario import ScenarioEventBasedMixin
