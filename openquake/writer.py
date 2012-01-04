@@ -32,13 +32,18 @@ from openquake.db import models
 
 LOGGER = logging.getLogger('serializer')
 
+MODE_IN_THE_MIDDLE = 2
+MODE_START = -1
+MODE_END = 0
+MODE_START_AND_END = -3
+
 
 class FileWriter(object):
     """Simple output half of the codec process."""
 
-    def __init__(self, path, mode=None):
+    def __init__(self, path, mode=MODE_START_AND_END):
         self.path = path
-        self.mode = mode if mode and mode in ("a", "w") else "w"
+        self.mode = "w" if mode < 0 else "a"
         self.file = None
         self._init_file()
         self.root_node = None

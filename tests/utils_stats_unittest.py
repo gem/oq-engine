@@ -22,28 +22,15 @@
 Unit tests for the utils.stats module.
 """
 
-import redis
 import sys
 import unittest
 
-from openquake.utils import config
 from openquake.utils import stats
 
-
-class RedisMixin(object):
-    """Redis-related utilities for testing."""
-
-    def connect(self, *args, **kwargs):
-        host = config.get("kvs", "host")
-        port = config.get("kvs", "port")
-        port = int(port) if port else 6379
-        stats_db = config.get("kvs", "stats_db")
-        stats_db = int(stats_db) if stats_db else 15
-        args = {"host": host, "port": port, "db": stats_db}
-        return redis.Redis(**args)
+from tests.utils import helpers
 
 
-class ProgressIndicatorTestCase(RedisMixin, unittest.TestCase):
+class ProgressIndicatorTestCase(helpers.RedisTestMixin, unittest.TestCase):
     """Tests the behaviour of utils.stats.progress_indicator()."""
 
     def test_success_stats(self):
@@ -89,7 +76,7 @@ class ProgressIndicatorTestCase(RedisMixin, unittest.TestCase):
         self.assertEqual(1, (value - previous_value))
 
 
-class SetTotalTestCase(RedisMixin, unittest.TestCase):
+class SetTotalTestCase(helpers.RedisTestMixin, unittest.TestCase):
     """Tests the behaviour of utils.stats.set_total()."""
 
     def test_set_total(self):
@@ -103,7 +90,7 @@ class SetTotalTestCase(RedisMixin, unittest.TestCase):
         self.assertEqual("123", kvs.get(key))
 
 
-class IncrCounterTestCase(RedisMixin, unittest.TestCase):
+class IncrCounterTestCase(helpers.RedisTestMixin, unittest.TestCase):
     """Tests the behaviour of utils.stats.incr_counter()."""
 
     def test_incr_counter(self):
@@ -120,8 +107,8 @@ class IncrCounterTestCase(RedisMixin, unittest.TestCase):
         self.assertEqual(1, (value - previous_value))
 
 
-class GetValueTestCase(RedisMixin, unittest.TestCase):
-    """Tests the behaviour of utils.stats.incr_counter()."""
+class GetCounterTestCase(helpers.RedisTestMixin, unittest.TestCase):
+    """Tests the behaviour of utils.stats.get_counter()."""
 
     def test_get_value_with_non_existent_incremental(self):
         """`None` is returned for a non-existent incremental counter."""
@@ -129,18 +116,18 @@ class GetValueTestCase(RedisMixin, unittest.TestCase):
         key = stats.key_name(*args)
         kvs = self.connect()
         self.assertIs(None, kvs.get(key))
-        self.assertIs(None, stats.get_value(*args))
+        self.assertIs(None, stats.get_counter(*args))
 
     def test_get_value_with_existent_incremental(self):
         """
         The expected value is returned for an existent incremental counter.
         """
-        value = "I am!"
+        value = "561"
         args = (56, "d/b/z")
         key = stats.key_name(*args)
         kvs = self.connect()
         kvs.set(key, value)
-        self.assertEqual(value, stats.get_value(*args))
+        self.assertEqual(int(value), stats.get_counter(*args))
 
     def test_get_value_with_non_existent_total(self):
         """`None` is returned for a non-existent total counter."""
@@ -148,19 +135,20 @@ class GetValueTestCase(RedisMixin, unittest.TestCase):
         key = stats.key_name(*args, counter_type="t")
         kvs = self.connect()
         self.assertIs(None, kvs.get(key))
-        self.assertIs(None, stats.get_value(*args, counter_type="t"))
+        self.assertIs(None, stats.get_counter(*args, counter_type="t"))
 
     def test_get_value_with_existent_total(self):
         """The expected value is returned for an existent total counter."""
-        value = "You are?"
+        value = "582"
         args = (58, "d/d/z")
         key = stats.key_name(*args, counter_type="t")
         kvs = self.connect()
         kvs.set(key, value)
-        self.assertEqual(value, stats.get_value(*args, counter_type="t"))
+        self.assertEqual(
+            int(value), stats.get_counter(*args, counter_type="t"))
 
 
-class DeleteJobCountersTestCase(RedisMixin, unittest.TestCase):
+class DeleteJobCountersTestCase(helpers.RedisTestMixin, unittest.TestCase):
     """Tests the behaviour of utils.stats.delete_job_counters()."""
 
     def test_delete_job_counters_deletes_counters_for_job(self):
