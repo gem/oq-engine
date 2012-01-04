@@ -44,11 +44,12 @@ import logging
 from lxml import etree
 
 from openquake.db import models
-
+from openquake.hazard import general
 from openquake import job
 from openquake import shapes
 from openquake import writer
 from openquake.utils import round_float
+from openquake.utils import stats
 from openquake.xml import NSMAP, NRML, GML
 
 
@@ -66,14 +67,15 @@ SRS_EPSG_4326 = 'epsg:4326'
 class HazardCurveXMLWriter(writer.FileWriter):
     """This class writes an hazard curve into the NRML format."""
 
-    def __init__(self, path):
-        writer.FileWriter.__init__(self, path)
+    def __init__(self, path, mode=writer.MODE_START_AND_END):
+        super(HazardCurveXMLWriter, self).__init__(path, mode)
 
         self.nrml_el = None
         self.result_el = None
         self.curves_per_branch_label = {}
         self.hcnode_counter = 0
         self.hcfield_counter = 0
+        self.mode = mode
 
     def close(self):
         """Override the default implementation writing all the
@@ -231,8 +233,8 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
     HAZARD_MAP_DEFAULT_ID = 'hm'
     HAZARD_MAP_NODE_ID_PREFIX = 'n_'
 
-    def __init__(self, path):
-        super(HazardMapXMLWriter, self).__init__(path)
+    def __init__(self, path, mode=writer.MODE_START_AND_END):
+        super(HazardMapXMLWriter, self).__init__(path, mode)
 
         self.hmnode_counter = 0
         self.root_node = None
@@ -841,8 +843,8 @@ class GmfDBWriter(writer.DBWriter):
             location="POINT(%s %s)" % (point.point.x, point.point.y))
 
 
-def _create_writer(job_id, serialize_to, nrml_path,
-                   create_xml_writer, create_db_writer):
+def _create_writer(job_id, serialize_to, nrml_path, create_xml_writer,
+                   create_db_writer, mode=None):
     """Common code for the functions below"""
 
     writers = []
@@ -853,9 +855,41 @@ def _create_writer(job_id, serialize_to, nrml_path,
         writers.append(create_db_writer(nrml_path, job_id))
 
     if 'xml' in serialize_to and nrml_path:
-        writers.append(create_xml_writer(nrml_path))
+        if mode:
+            writers.append(create_xml_writer(nrml_path, mode))
+        else:
+            writers.append(create_xml_writer(nrml_path))
 
     return writer.compose_writers(writers)
+
+
+def get_mode(job_id, serialize_to, nrml_path):
+    """Figure out the XML serialization mode.
+
+    Should we write the XML header and/or the footer?
+
+    :param int job_id: the id of the job the data belongs to.
+    :param serialize_to: where to serialize
+    :type serialize_to: list of strings, permitted values: 'db', 'xml'.
+    :param string nrml_path: the full XML/NRML path.
+    :returns: `None` if neither header nor footer should be written or
+        a list that contains "header", "footer" or both.
+    """
+    if 'xml' in serialize_to and nrml_path:
+        mode = 2
+        # Figure out the mode, are we at the beginning, in the middle or at
+        # the end of the XML file?
+        blocks = stats.get_counter(
+            job_id, general.STATS_KEYS["hcls_blocks"][0], counter_type="t")
+        cblock = stats.get_counter(
+            job_id, general.STATS_KEYS["hcls_cblock"][0])
+        if cblock == 1:
+            mode -= 3
+        if cblock == blocks:
+            mode -= 2
+    else:
+        mode = writer.MODE_START_AND_END
+    return mode
 
 
 def create_hazardcurve_writer(job_id, serialize_to, nrml_path):
@@ -870,9 +904,9 @@ def create_hazardcurve_writer(job_id, serialize_to, nrml_path):
     :returns: an :py:class:`output.hazard.HazardCurveXMLWriter` or an
         :py:class:`output.hazard.HazardCurveDBWriter` instance.
     """
+    mode = get_mode(job_id, serialize_to, nrml_path)
     return _create_writer(job_id, serialize_to, nrml_path,
-                          HazardCurveXMLWriter,
-                          HazardCurveDBWriter)
+                          HazardCurveXMLWriter, HazardCurveDBWriter, mode)
 
 
 def create_hazardmap_writer(job_id, serialize_to, nrml_path):
@@ -887,9 +921,9 @@ def create_hazardmap_writer(job_id, serialize_to, nrml_path):
     :returns: an :py:class:`output.hazard.HazardMapXMLWriter` or an
         :py:class:`output.hazard.HazardMapDBWriter` instance.
     """
-    return _create_writer(job_id, serialize_to, nrml_path,
-                          HazardMapXMLWriter,
-                          HazardMapDBWriter)
+    mode = get_mode(job_id, serialize_to, nrml_path)
+    return _create_writer(job_id, serialize_to, nrml_path, HazardMapXMLWriter,
+                          HazardMapDBWriter, mode)
 
 
 def create_gmf_writer(job_id, serialize_to, nrml_path):
