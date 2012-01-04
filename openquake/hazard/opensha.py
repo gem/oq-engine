@@ -37,12 +37,10 @@ from celery.task import task
 from openquake import job
 from openquake import kvs
 from openquake import java
-from openquake import kvs
 from openquake import logs
 from openquake import shapes
 from openquake import xml
 
-from openquake.hazard.general import BasePSHAMixin, get_iml_list
 from openquake.hazard import classical_psha
 from openquake.hazard import job as hazard_job
 from openquake.hazard.general import BasePSHAMixin, get_iml_list
@@ -128,6 +126,8 @@ def generate_erf(job_id):
 @stats.progress_indicator
 def compute_ground_motion_fields(job_id, sites, history, realization, seed):
     """ Generate ground motion fields """
+    # To prevent a circular import,
+    # pylint: disable=W0404
     from openquake.hazard.calc import CALCULATORS
 
     utils_tasks.check_job_status(job_id)
@@ -144,6 +144,8 @@ def compute_ground_motion_fields(job_id, sites, history, realization, seed):
 @stats.progress_indicator
 def compute_hazard_curve(job_id, sites, realization):
     """ Generate hazard curve for a given site list. """
+    # To prevent a circular import,
+    # pylint: disable=W0404
     from openquake.hazard.calc import CALCULATORS
 
     utils_tasks.check_job_status(job_id)
