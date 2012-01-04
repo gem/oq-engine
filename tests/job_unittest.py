@@ -33,7 +33,7 @@ from openquake import kvs
 from openquake import flags
 from openquake import shapes
 from openquake.engine import (get_source_models, parse_config_file,
-                              prepare_config_parameters, prepare_job)
+                              prepare_config_parameters, _prepare_job)
 from openquake.job import Job, config
 from openquake.job.params import config_text_to_list
 from openquake.db.models import OqCalculation, CalcStats, OqJobProfile, OqUser
@@ -288,7 +288,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
     maxDiff = None
 
     """
-    Unit tests for the prepare_job helper function, which creates a new
+    Unit tests for the _prepare_job helper function, which creates a new
     job entry with the associated parameters.
 
     Test data is a trimmed-down version of smoketest config files
@@ -461,7 +461,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['SOURCE_MODEL_LT_RANDOM_SEED'] = '23'
         params['GMPE_LT_RANDOM_SEED'] = '5'
 
-        self.job = prepare_job(params, ['HAZARD', 'RISK'])
+        self.job = _prepare_job(params, ['HAZARD', 'RISK'])
         self.calculation.oq_job_profile = self.job
         self.calculation.save()
         self.job = self._reload_params()
@@ -511,7 +511,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params = self.BASE_CLASSICAL_PARAMS.copy()
         params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
 
-        self.job = prepare_job(params, ['HAZARD', 'RISK'])
+        self.job = _prepare_job(params, ['HAZARD', 'RISK'])
         self.calculation.oq_job_profile = self.job
         self.calculation.save()
         self.job = self._reload_params()
@@ -545,7 +545,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['EXPOSURE'] = abs_path("LA_small_portfolio.xml")
         params['VULNERABILITY'] = abs_path("vulnerability.xml")
 
-        self.job = prepare_job(params, ['HAZARD', 'RISK'])
+        self.job = _prepare_job(params, ['HAZARD', 'RISK'])
         self.calculation.oq_job_profile = self.job
         self.calculation.save()
         self.job = self._reload_params()
@@ -589,7 +589,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params = self.BASE_SCENARIO_PARAMS.copy()
         params['SITES'] = '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
 
-        self.job = prepare_job(params, ['HAZARD', 'RISK'])
+        self.job = _prepare_job(params, ['HAZARD', 'RISK'])
         self.calculation.oq_job_profile = self.job
         self.calculation.save()
         self.job = self._reload_params()
@@ -626,7 +626,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['VULNERABILITY'] = abs_path("vulnerability.xml")
         params['GMF_RANDOM_SEED'] = '1'
 
-        self.job = prepare_job(params, ['HAZARD', 'RISK'])
+        self.job = _prepare_job(params, ['HAZARD', 'RISK'])
         self.job.oq_job_profile = self._reload_params()
         self.assertEquals(params['REGION_VERTEX'],
                           _to_coord_list(self.job.oq_job_profile.region))
@@ -674,7 +674,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params = self.BASE_EVENT_BASED_PARAMS.copy()
         params['SITES'] = '33.88, -118.3, 33.88, -118.06, 33.76, -118.06'
 
-        self.job = prepare_job(params, ['HAZARD', 'RISK'])
+        self.job = _prepare_job(params, ['HAZARD', 'RISK'])
         self.job.oq_job_profile = self._reload_params()
         self.assertEquals(params['SITES'],
                           _to_coord_list(self.job.oq_job_profile.sites))

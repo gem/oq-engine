@@ -137,13 +137,12 @@ def job_from_file(config_file, output_type, owner_username='openquake'):
     """
     Create a job from external configuration files.
 
-    :param config_file: the external configuration file path
-    :param output_type: where to store results:
+    :param config_file:
+        The external configuration file path
+    :param output_type:
+        Where to store results:
         * 'db' database
         * 'xml' XML files *plus* database
-    :param params: optional dictionary of default parameters, overridden by
-        the ones read from the config file
-    :type params: :py:class:`dict`
     """
 
     # output_type can be set, in addition to 'db' and 'xml', also to
@@ -152,10 +151,11 @@ def job_from_file(config_file, output_type, owner_username='openquake'):
     # This allows to run tests without requiring a database.
     # This is not documented in the public interface because it is
     # essentially a detail of our current tests and ci infrastructure.
-    assert output_type in ('db', 'xml', 'xml_without_db')
+    assert output_type in ('db', 'xml')
 
     params, sections = parse_config_file(config_file)
     params, sections = prepare_config_parameters(params, sections)
+    job_profile = _prepare_job(params, sections)
 
     validator = jobconf.default_validators(sections, params)
     is_valid, errors = validator.is_valid()
@@ -163,27 +163,21 @@ def job_from_file(config_file, output_type, owner_username='openquake'):
     if not is_valid:
         raise jobconf.ValidationException(errors)
 
-    if output_type == 'xml_without_db':
-        # we are running a test
-        job_id = 0
-        serialize_results_to = ['xml']
-    else:
-        owner = OqUser.objects.get(user_name=owner_username)
-        # openquake-server creates the calculation record in advance and stores
-        # the calculation id in the config file
-        calculation_id = params.get('OPENQUAKE_JOB_ID')
-        if not calculation_id:
-            # create the database record for this calculation
-            job_profile = prepare_job(params, sections)
-            calculation = OqCalculation(owner=owner, path=None)
-            calculation.oq_job_profile = job_profile
-            calculation.save()
-            calculation_id = calculation.id
+    owner = OqUser.objects.get(user_name=owner_username)
+    # openquake-server creates the calculation record in advance and stores
+    # the calculation id in the config file
+    calculation_id = params.get('OPENQUAKE_JOB_ID')
+    if not calculation_id:
+        # create the database record for this calculation
+        calculation = OqCalculation(owner=owner, path=None)
+        calculation.oq_job_profile = job_profile
+        calculation.save()
+        calculation_id = calculation.id
 
-        if output_type == 'db':
-            serialize_results_to = ['db']
-        else:
-            serialize_results_to = ['db', 'xml']
+    if output_type == 'db':
+        serialize_results_to = ['db']
+    else:
+        serialize_results_to = ['db', 'xml']
 
     base_path = params['BASE_PATH']
 
@@ -290,7 +284,7 @@ def _insert_input_files(params, input_set):
 
 
 @transaction.commit_on_success(using='job_init')
-def prepare_job(params, sections):
+def _prepare_job(params, sections):
     """
     Create a new OqCalculation and fill in the related OqJobProfile entry.
 
@@ -313,9 +307,6 @@ def prepare_job(params, sections):
     calc_mode = CALCULATION_MODE[params['CALCULATION_MODE']]
     job_type = [s.lower() for s in sections
         if s.upper() in [jobconf.HAZARD_SECTION, jobconf.RISK_SECTION]]
-
-    # TODO: Move this to another function, called prepare_calc(), perhaps.
-    # job = OqCalculation(owner=owner, path=None)
 
     job_profile = OqJobProfile(input_set=input_set, calc_mode=calc_mode,
                        job_type=job_type)
@@ -423,4 +414,14 @@ def import_job_profile(path_to_cfg):
     :returns:
         :class:`openquake.db.models.OqJobProfile` instance.
     """
-    
+    params, sections = parse_config_file(path_to_cfg)
+    params, sections = prepare_config_parameters(params, sections)
+
+    validator = jobconf.default_validators(sections, params)
+    is_valid, errors = validator.is_valid()
+
+    if not is_valid:
+        raise jobconf.ValidationException(errors)
+
+    job_profile = _prepare_job(params, sections)
+    return job_profile
