@@ -29,6 +29,7 @@ from django.contrib.gis.db import models
 from django.contrib.gis.geos import GEOSGeometry
 from lxml import etree
 
+from openquake import engine
 from openquake import flags
 from openquake import kvs
 from openquake import logs
@@ -79,7 +80,7 @@ def run_job(job_file, output_type):
         # job executor process
         try:
             logs.init_logs_amqp_send(level=FLAGS.debug, job_id=a_job.job_id)
-            a_job.launch()
+            engine.launch(a_job)
         except Exception, ex:
             LOG.critical("Job failed with exception: '%s'" % str(ex))
             a_job.set_status('failed')
@@ -476,28 +477,6 @@ class Job(object):
 
         region.cell_size = float(self['REGION_GRID_SPACING'])
         return region
-
-    def launch(self):
-        """ Based on the behaviour specified in the configuration, mix in the
-        correct behaviour for the tasks and then execute them.
-        """
-        self._record_initial_stats()
-
-        output_dir = os.path.join(self.base_path, self['OUTPUT_DIR'])
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-
-        for (key, mixin) in Mixin.ordered_mixins():
-            if key.upper() not in self.sections:
-                continue
-
-            with Mixin(self, mixin):
-                # The mixin defines a preload decorator to handle the needed
-                # data for the tasks and decorates _execute(). the mixin's
-                # _execute() method calls the expected tasks.
-                LOG.debug(
-                    "Job %s Launching %s for %s" % (self.job_id, mixin, key))
-                self.execute()
 
     def __getitem__(self, name):
         defined_param = job_params.PARAMS.get(name)
