@@ -30,7 +30,9 @@ class FileWriterTestCase(unittest.TestCase):
     """Tests related to the `FileWriter` abstract base class."""
 
     def test__init_file_with_mode_not_set(self):
-        """_init_file() will truncate the file when opening it."""
+        """
+        _init_file() will truncate the file if no mode was specified.
+        """
         path = "/tmp/a"
         # Only mock the open() built-in in the writer module.
         with mock.patch("openquake.writer.open", create=True) as mock_open:
@@ -38,23 +40,50 @@ class FileWriterTestCase(unittest.TestCase):
             fw._init_file()
             self.assertEqual((path, "w"), mock_open.call_args[0])
 
-    def test__init_file_with_valid_mode(self):
-        """_init_file() will open the file in append mode."""
+    def test__init_file_with_mode_start(self):
+        """
+        _init_file() will truncate the file if the mode passed was
+        `MODE_START`.
+        """
         path = "/tmp/b"
         # Only mock the open() built-in in the writer module.
         with mock.patch("openquake.writer.open", create=True) as mock_open:
-            fw = writer.FileWriter(path, mode="a")
+            fw = writer.FileWriter(path, mode=writer.MODE_START)
             fw._init_file()
-            self.assertEqual((path, "a"), mock_open.call_args[0])
+            self.assertEqual((path, "w"), mock_open.call_args[0])
 
-    def test__init_file_with_invalid_mode(self):
+    def test__init_file_with_mode_start_and_end(self):
         """
-        An invalid mode (not in ('a', 'w')) will be ignored and the file be
-        truncated.
+        _init_file() will truncate the file if the mode passed was
+        `MODE_START_AND_END`.
         """
         path = "/tmp/c"
         # Only mock the open() built-in in the writer module.
         with mock.patch("openquake.writer.open", create=True) as mock_open:
-            fw = writer.FileWriter(path, mode="what!?")
+            fw = writer.FileWriter(path, mode=writer.MODE_START_AND_END)
             fw._init_file()
             self.assertEqual((path, "w"), mock_open.call_args[0])
+
+    def test__init_file_with_mode_in_the_middle(self):
+        """
+        _init_file() will append to the file if the mode passed was
+        `MODE_IN_THE_MIDDLE`.
+        """
+        path = "/tmp/d"
+        # Only mock the open() built-in in the writer module.
+        with mock.patch("openquake.writer.open", create=True) as mock_open:
+            fw = writer.FileWriter(path, mode=writer.MODE_IN_THE_MIDDLE)
+            fw._init_file()
+            self.assertEqual((path, "a"), mock_open.call_args[0])
+
+    def test__init_file_with_mode_end(self):
+        """
+        _init_file() will append to the file if the mode passed was
+        `MODE_END`.
+        """
+        path = "/tmp/e"
+        # Only mock the open() built-in in the writer module.
+        with mock.patch("openquake.writer.open", create=True) as mock_open:
+            fw = writer.FileWriter(path, mode=writer.MODE_END)
+            fw._init_file()
+            self.assertEqual((path, "a"), mock_open.call_args[0])

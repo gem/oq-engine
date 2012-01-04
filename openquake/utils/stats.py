@@ -92,7 +92,7 @@ def incr_counter(job_id, key):
     conn.incr(key)
 
 
-def get_value(job_id, key, counter_type="i"):
+def get_counter(job_id, key, counter_type="i"):
     """Get the value for the given key.
 
     The counter types in use are 'i' (for incremental counters) and
@@ -100,12 +100,13 @@ def get_value(job_id, key, counter_type="i"):
     """
     key = key_name(job_id, key, counter_type=counter_type)
     conn = _redis()
-    return conn.get(key)
+    value = conn.get(key)
+    return int(value) if value else value
 
 
-def delete_job_counters(job):
-    """Delete the progress indication counters for the given job."""
+def delete_job_counters(job_id):
+    """Delete the progress indication counters for the given `job_id`."""
     conn = _redis()
-    keys = conn.keys("oqs:%s*" % job)
+    keys = conn.keys("oqs:%s*" % job_id)
     if keys:
         conn.delete(*keys)
