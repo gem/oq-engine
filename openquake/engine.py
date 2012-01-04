@@ -17,6 +17,10 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+"""The 'Engine' is responsible for instantiating calculators and running jobs.
+"""
+
+
 import os
 
 from openquake.logs import LOG
@@ -47,4 +51,3 @@ def launch(a_job):
             LOG.debug(
                 "Job %s Launching %s for %s" % (a_job.job_id, mixin, key))
             a_job.execute()
-
