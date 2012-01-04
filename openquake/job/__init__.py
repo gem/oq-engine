@@ -154,7 +154,10 @@ def parse_config_file(config_file):
 
 def prepare_config_parameters(params, sections):
     """
-    Pre-process configuration parameters removing unknown ones.
+    Pre-process configuration parameters to:
+        - remove unknown parameters
+        - expand file paths to make them absolute
+        - set default parameter values
     """
 
     calc_mode = CALCULATION_MODE[params['CALCULATION_MODE']]
@@ -181,6 +184,21 @@ def prepare_config_parameters(params, sections):
             continue
 
         new_params[name] = os.path.join(params['BASE_PATH'], new_params[name])
+
+    # Set default parameters (if applicable).
+    # TODO(LB): This probably isn't the best place for this code (since we may
+    # want to implement similar default param logic elsewhere). For now,
+    # though, it will have to do.
+
+    # If job is classical and hazard+risk:
+    if calc_mode == 'classical' and set(['HAZARD', 'RISK']).issubset(sections):
+        if params.get('COMPUTE_MEAN_HAZARD_CURVE'):
+            # If this param is already defined, display a message to the user
+            # that this config param is being ignored and set to the default:
+            print "Ignoring COMPUTE_MEAN_HAZARD_CURVE; defaulting to 'true'."
+        # The value is set to a string because validators still expected job
+        # config params to be strings at this point:
+        new_params['COMPUTE_MEAN_HAZARD_CURVE'] = 'true'
 
     return new_params, sections
 
