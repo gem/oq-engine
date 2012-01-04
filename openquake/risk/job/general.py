@@ -124,6 +124,8 @@ def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
 @task
 def compute_risk(job_id, block_id, **kwargs):
     """ A task for computing risk, calls the mixed in compute_risk method """
+    # To prevent a circular import,
+    # pylint: disable=W0404
     from openquake.risk.calc import CALCULATORS
 
     check_job_status(job_id)
