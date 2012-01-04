@@ -75,7 +75,7 @@ class ClassicalPSHABasedMixin:
             hazard_curve__statistic_type='mean').extra(
             where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
 
-        return Curve(zip(job.oq_params.imls, hc.poes))
+        return Curve(zip(job.oq_job_profile.imls, hc.poes))
 
     def compute_risk(self, block_id):
         """This task computes risk for a block of sites. It requires to have
