@@ -733,7 +733,6 @@ class RunJobTestCase(unittest.TestCase):
 
             return self.job
 
-
         before_launch = engine.launch
         try:
             engine.launch = mock.Mock(
@@ -751,7 +750,6 @@ class RunJobTestCase(unittest.TestCase):
         finally:
             engine.launch = before_launch
 
-
     def test_failed_job_lifecycle(self):
 
         def test_status_running_and_fail(*args):
@@ -765,7 +763,6 @@ class RunJobTestCase(unittest.TestCase):
             self.assertEquals('pending', self._job_status())
 
             return self.job
-
 
         before_launch = engine.launch
         try:
