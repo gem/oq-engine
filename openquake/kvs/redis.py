@@ -34,7 +34,7 @@
 """ Redis class """
 
 from __future__ import absolute_import
-import redis
+import redis  # pylint: disable=W0406
 
 from openquake.utils import config
 
