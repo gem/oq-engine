@@ -30,6 +30,7 @@ import json
 from tests.utils import helpers
 from tests.utils.helpers import patch
 
+from openquake import engine
 from openquake import java
 from openquake import kvs
 from openquake import shapes
@@ -101,7 +102,7 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
         # job. We don't actually want that to happen in this test.
         with patch('subprocess.Popen'):
             # True, True means that both mixins (hazard and risk) are triggered
-            self.job.launch()
+            engine.launch(self.job)
 
     def test_the_hazard_subsystem_stores_gmfs_for_all_the_sites(self):
         """The hazard subsystem stores the computed gmfs in kvs.
@@ -117,7 +118,7 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
         # job. We don't actually want that to happen in this test.
         with patch('subprocess.Popen'):
 
-            self.job.launch()
+            engine.launch(self.job)
             decoder = json.JSONDecoder()
 
             for site in self.job.sites_to_compute():
@@ -156,7 +157,7 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
         # job. We don't actually want that to happen in this test.
         with patch('subprocess.Popen'):
 
-            self.job.launch()
+            engine.launch(self.job)
             decoder = json.JSONDecoder()
 
             for site in self.job.sites_to_compute():
@@ -201,17 +202,17 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
 
     def test_the_number_of_calculation_must_be_greater_than_zero(self):
         self.job.params[NUMBER_OF_CALC_KEY] = "0"
-        self.assertRaises(ValueError, self.job.launch)
+        self.assertRaises(ValueError, engine.launch, self.job)
 
         self.job.params[NUMBER_OF_CALC_KEY] = "-1"
-        self.assertRaises(ValueError, self.job.launch)
+        self.assertRaises(ValueError, engine.launch, self.job)
 
     def test_simple_computation_using_the_java_calculator(self):
         # KVS garbage collection is going to be called asynchronously by the
         # job. We don't actually want that to happen in this test.
         with patch('subprocess.Popen'):
 
-            self.job.launch()
+            engine.launch(self.job)
 
             for site in self.job.sites_to_compute():
                 point = self.grid.point_at(site)
