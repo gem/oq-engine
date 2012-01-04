@@ -34,7 +34,8 @@ def launch(a_job):
     :param a_job:
         :class:`openquake.job.Job` instance.
     """
-    a_job._record_initial_stats()  # move this to the job constructor
+    # TODO: This needs to be done as a pre-execution step of calculation.
+    a_job._record_initial_stats()  # pylint: disable=W0212
 
     output_dir = os.path.join(a_job.base_path, a_job['OUTPUT_DIR'])
     if not os.path.exists(output_dir):
