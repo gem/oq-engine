@@ -31,13 +31,47 @@ from openquake.utils import config
 STATS_KEYS = {
     # Classical PSHA kvs statistics db keys, "t" and "i" mark a totals
     # and an incremental counter respectively.
-    "hcls_realizations": ("classical:realizations", "t"),
-    "hcls_crealization": ("classical:crealization", "i"),
-    "hcls_sites": ("classical:sites", "t"),
-    "hcls_block_size": ("classical:block_size", "t"),
-    "hcls_blocks": ("classical:blocks", "t"),
-    "hcls_cblock": ("classical:cblock", "i"),
+    "hcls_realizations": ("classical:realizations", "h", "t"),
+    "hcls_crealization": ("classical:crealization", "h", "i"),
+    "hcls_sites": ("classical:sites", "h", "t"),
+    "hcls_block_size": ("classical:block_size", "h", "t"),
+    "hcls_blocks": ("classical:blocks", "h", "t"),
+    "hcls_cblock": ("classical:cblock", "h", "i"),
 }
+
+
+def pk_set(job_id, skey, value):
+    """Set the value for a predefined statistics key.
+
+    :param int job_id: identifier of the job in question
+    :param string skey: predefined statistics key
+    :param value: the desired value
+    """
+    key = key_name(job_id, *STATS_KEYS[skey])
+    conn = _redis()
+    conn.set(key, value)
+
+
+def pk_inc(job_id, skey):
+    """Increment the value for a predefined statistics key.
+
+    :param int job_id: identifier of the job in question
+    :param string skey: predefined statistics key
+    """
+    key = key_name(job_id, *STATS_KEYS[skey])
+    conn = _redis()
+    conn.incr(key)
+
+
+def pk_get(job_id, skey):
+    """Get the value for a predefined statistics key.
+
+    :param int job_id: identifier of the job in question
+    :param string skey: predefined statistics key
+    """
+    key = key_name(job_id, *STATS_KEYS[skey])
+    conn = _redis()
+    return conn.get(key)
 
 
 def _redis():
