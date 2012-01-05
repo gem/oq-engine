@@ -104,36 +104,34 @@ class LossMapOutputTestCase(unittest.TestCase):
     engine is valid against schema, as well as correct given the inputs."""
 
     def setUp(self):
-        self.xml_writer = \
-            risk_output.LossMapXMLWriter(TEST_LOSS_MAP_XML_OUTPUT_PATH)
-        self.xml_non_det_writer = \
-            risk_output.LossMapNonScenarioXMLWriter(
-                    TEST_NON_DET_LOSS_MAP_XML_OUTPUT_PATH)
+        self.xml_writer = risk_output.LossMapXMLWriter(
+            TEST_LOSS_MAP_XML_OUTPUT_PATH)
+        self.xml_non_det_writer = risk_output.LossMapNonScenarioXMLWriter(
+            TEST_NON_DET_LOSS_MAP_XML_OUTPUT_PATH)
 
     def tearDown(self):
         self.xml_writer = None
         self.xml_non_det_writer = None
-        os.remove(TEST_LOSS_MAP_XML_OUTPUT_PATH)
-        #os.remove(TEST_NON_DET_LOSS_MAP_XML_OUTPUT_PATH)
+        if os.path.exists(TEST_LOSS_MAP_XML_OUTPUT_PATH):
+            os.remove(TEST_LOSS_MAP_XML_OUTPUT_PATH)
 
     def test_loss_map_output_writes_and_validates(self):
-        xml_writer = \
-            risk_output.LossMapXMLWriter(TEST_LOSS_MAP_XML_OUTPUT_PATH)
+        xml_writer = risk_output.LossMapXMLWriter(
+            TEST_LOSS_MAP_XML_OUTPUT_PATH)
         xml_writer.serialize(SAMPLE_LOSS_MAP_DATA)
         self.assertTrue(
             xml.validates_against_xml_schema(TEST_LOSS_MAP_XML_OUTPUT_PATH,
             NRML_SCHEMA_PATH),
-            "NRML instance file %s does not validate against schema" % \
+            "NRML instance file %s does not validate against schema" %
             TEST_LOSS_MAP_XML_OUTPUT_PATH)
 
-        xml_non_det_writer = \
-            risk_output.LossMapNonScenarioXMLWriter(
-                    TEST_NON_DET_LOSS_MAP_XML_OUTPUT_PATH)
+        xml_non_det_writer = risk_output.LossMapNonScenarioXMLWriter(
+            TEST_NON_DET_LOSS_MAP_XML_OUTPUT_PATH)
         xml_non_det_writer.serialize(SAMPLE_LOSS_MAP_NON_DET_DATA)
         self.assertTrue(
             xml.validates_against_xml_schema(
                 TEST_NON_DET_LOSS_MAP_XML_OUTPUT_PATH, NRML_SCHEMA_PATH),
-            "NRML instance file %s does not validate against schema" % \
+            "NRML instance file %s does not validate against schema" %
             TEST_NON_DET_LOSS_MAP_XML_OUTPUT_PATH)
 
     def test_write_metadata(self):
@@ -269,17 +267,15 @@ class LossMapOutputTestCase(unittest.TestCase):
                 (self.xml_non_det_writer, SAMPLE_LOSS_MAP_NON_DET_DATA)):
             xml_writer.serialize(loss_map_data)
 
-            if isinstance(xml_writer,
-                    risk_output.LossMapNonScenarioXMLWriter):
+            if isinstance(xml_writer, risk_output.LossMapNonScenarioXMLWriter):
                 expected_loss_map = EXPECTED_TEST_NON_DET_LOSS_MAP
-                test_loss_map_xml_output_path = \
-                        TEST_NON_DET_LOSS_MAP_XML_OUTPUT_PATH
+                lossmap_xml_out_path = TEST_NON_DET_LOSS_MAP_XML_OUTPUT_PATH
             else:
                 expected_loss_map = EXPECTED_TEST_LOSS_MAP
-                test_loss_map_xml_output_path = TEST_LOSS_MAP_XML_OUTPUT_PATH
+                lossmap_xml_out_path = TEST_LOSS_MAP_XML_OUTPUT_PATH
 
             expected_elems = get_xml_elems_list(expected_loss_map)
-            actual_elems = get_xml_elems_list(test_loss_map_xml_output_path)
+            actual_elems = get_xml_elems_list(lossmap_xml_out_path)
 
             # first, make sure out elem list from the expected data
             # is _not_ empty (otherwise, this would be an epic test fail)
