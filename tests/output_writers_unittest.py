@@ -25,7 +25,6 @@ import unittest
 from openquake import writer
 from openquake.output import hazard as hazard_output
 from openquake.output import risk as risk_output
-from openquake.output import writer as output_writer
 from openquake.utils import stats
 
 from tests.utils import helpers
@@ -34,10 +33,10 @@ from tests.utils import helpers
 class ComposeWritersTest(unittest.TestCase):
 
     def test_empty(self):
-        self.assertEqual(None, output_writer.compose_writers([]))
+        self.assertEqual(None, writer.compose_writers([]))
 
     def test_writer_is_none(self):
-        self.assertEqual(None, output_writer.compose_writers([None]))
+        self.assertEqual(None, writer.compose_writers([None]))
 
     def test_single_writer(self):
 
@@ -45,7 +44,7 @@ class ComposeWritersTest(unittest.TestCase):
             pass
 
         w = W()
-        self.assertEqual(w, output_writer.compose_writers([w]))
+        self.assertEqual(w, writer.compose_writers([w]))
 
     def test_multiple_writers(self):
 
@@ -54,9 +53,9 @@ class ComposeWritersTest(unittest.TestCase):
 
         ws = [W(), W()]
 
-        w = output_writer.compose_writers(ws)
+        w = writer.compose_writers(ws)
 
-        self.assertTrue(isinstance(w, output_writer.CompositeWriter))
+        self.assertTrue(isinstance(w, writer.CompositeWriter))
         self.assertEqual(list(w.writers), ws)
 
 

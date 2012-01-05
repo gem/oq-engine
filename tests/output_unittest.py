@@ -389,8 +389,7 @@ class OutputTestCase(unittest.TestCase):
             os.remove(svg_file)
 
     def test_geotiff_generation_and_metadata_validation(self):
-        """Create a GeoTIFF, and check if it has the
-        correct metadata."""
+        """Create a GeoTIFF, and check if it has the correct metadata."""
         path = helpers.get_output_path(GEOTIFF_FILENAME_WITHOUT_NUMBER)
         smallregion = shapes.Region.from_coordinates(TEST_REGION_SMALL)
         gwriter = geotiff.LossMapGeoTiffFile(
