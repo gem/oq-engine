@@ -79,6 +79,8 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
             os.remove(path)
 
         self.writer = hazard_output.HazardCurveXMLWriter(path)
+        self.writer.set_params(path)
+        self.writer.initialize()
 
     def test_raises_an_error_if_no_curve_is_serialized(self):
         path = helpers.get_output_path(TEST_FILE)
@@ -308,6 +310,7 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
         """Test that the various disaggregationResultField attrs are written
         correctly (including all of the optional attributes)."""
         # write a single node just to create a valid document
+        self.writer.open()
         self.writer.write(shapes.Site(0.0, 0.0),
                           {"groundMotionValue": 0.25, "path": "filea"})
         self.writer.close()
@@ -329,6 +332,7 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
         result_data = dict(groundMotionValue=0.25, path="filea")
         expected_result_attrib = dict(groundMotionValue="0.25", path="filea")
 
+        self.writer.open()
         self.writer.write(shapes.Site(1.0, 2.0), result_data)
         self.writer.close()
 
@@ -355,6 +359,7 @@ class DisaggregationBinaryMatrixXMLWriterTestCase(unittest.TestCase):
             dict(groundMotionValue="0.11", path="filec"),
         ]
 
+        self.writer.open()
         self.writer.write(shapes.Site(1.0, 2.0), result_data[0])
         self.writer.write(shapes.Site(2.0, 3.0), result_data[1])
         self.writer.write(shapes.Site(3.0, 4.0), result_data[2])

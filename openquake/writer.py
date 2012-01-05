@@ -47,7 +47,7 @@ class FileWriter(object):
         self.root_node = None
         self.mode = MODE_START_AND_END
 
-    def set_params(self, path, mode):
+    def set_params(self, path, mode=MODE_START_AND_END):
         self.path = path
         assert mode in [MODE_START, MODE_IN_THE_MIDDLE, MODE_END,
                         MODE_START_AND_END]
