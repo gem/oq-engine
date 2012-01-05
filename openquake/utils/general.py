@@ -29,12 +29,12 @@ def singleton(cls):
     """This class decorator facilitates the definition of singletons."""
     instances = {}
 
-    def getinstance():
+    def getinstance(*args, **kwargs):
         """
         Return an instance from the cache if present, create one otherwise.
         """
         if cls not in instances:
-            instances[cls] = cls()
+            instances[cls] = cls(*args, **kwargs)
         return instances[cls]
     return getinstance
 

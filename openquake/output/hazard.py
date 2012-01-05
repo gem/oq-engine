@@ -855,7 +855,7 @@ def _create_writer(job_id, serialize_to, nrml_path, create_xml_writer,
     if 'xml' in serialize_to and nrml_path:
         if mode:
             obj = create_xml_writer(nrml_path)
-            obj.set_mode(mode)
+            obj.set_params(nrml_path, mode)
             writers.append(obj)
         else:
             writers.append(create_xml_writer(nrml_path))
@@ -939,6 +939,5 @@ def create_gmf_writer(job_id, serialize_to, nrml_path):
     :returns: an :py:class:`output.hazard.GMFXMLWriter` or an
         :py:class:`output.hazard.GmfDBWriter` instance.
     """
-    return _create_writer(job_id, serialize_to, nrml_path,
-                          GMFXMLWriter,
-                          GmfDBWriter)
+    return _create_writer(
+        job_id, serialize_to, nrml_path, GMFXMLWriter, GmfDBWriter)
