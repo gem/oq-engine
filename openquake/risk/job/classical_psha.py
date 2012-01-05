@@ -35,6 +35,8 @@ from openquake.job import config as job_config
 
 from openquake.risk.common import compute_loss_curve
 from openquake.risk.job import general
+from openquake.risk.job.general import (conditional_loss_poes,
+                                        compute_conditional_loss)
 
 LOGGER = logs.LOG
 
@@ -119,10 +121,10 @@ class ClassicalPSHABasedMixin(general.RiskJobMixin):
                     loss_curve = self.compute_loss_curve(point,
                             loss_ratio_curve, asset)
 
-                    for loss_poe in general.conditional_loss_poes(
+                    for loss_poe in conditional_loss_poes(
                         self.job_profile.params):
 
-                        general.compute_conditional_loss(
+                        compute_conditional_loss(
                                 self.job_profile.job_id, point.column,
                                 point.row, loss_curve, asset, loss_poe)
 
@@ -136,8 +138,6 @@ class ClassicalPSHABasedMixin(general.RiskJobMixin):
         See :func:`openquake.risk.general.compute_bcr_for_block` for return
         value spec.
         """
-        result = []
-
         points = list(general.Block.from_kvs(block_id).grid(
             self.job_profile.region))
         hazard_curves = dict((point.site, self._get_db_curve(point.site))
@@ -150,14 +150,14 @@ class ClassicalPSHABasedMixin(general.RiskJobMixin):
                     vuln_function, hazard_curve)
             return compute_loss_curve(loss_ratio_curve, asset['assetValue'])
 
-        result = general.compute_bcr_for_block(self.job_profile.job_id, points,
+        bcr = general.compute_bcr_for_block(self.job_profile.job_id, points,
             get_loss_curve, float(self.job_profile.params['INTEREST_RATE']),
             float(self.job_profile.params['ASSET_LIFE_EXPECTANCY'])
         )
         bcr_block_key = kvs.tokens.bcr_block_key(self.job_profile.job_id,
                                                  block_id)
-        kvs.set_value_json_encoded(bcr_block_key, result)
-        LOGGER.debug('bcr result for block %s: %r', block_id, result)
+        kvs.set_value_json_encoded(bcr_block_key, bcr)
+        LOGGER.debug('bcr result for block %s: %r', block_id, bcr)
         return True
 
     def compute_loss_curve(self, point, loss_ratio_curve, asset):

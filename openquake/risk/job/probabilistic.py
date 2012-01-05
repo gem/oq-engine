@@ -45,7 +45,7 @@ from openquake.job import config as job_config
 LOGGER = logs.LOG
 
 
-class ProbabilisticEventMixin(Mixin):  # pylint: disable=W0232,W0201
+class ProbabilisticEventMixin(Mixin):
     """Mixin for Probalistic Event Risk Job."""
 
     def __init__(self, *args, **kwargs):
