@@ -48,18 +48,6 @@ IML_SCALING = {
 }
 
 
-STATS_KEYS = {
-    # Classical PSHA kvs statistics db keys, "t" and "i" mark a totals
-    # and an incremental counter respectively.
-    "hcls_realizations": ("classical:realizations", "t"),
-    "hcls_crealization": ("classical:crealization", "i"),
-    "hcls_sites": ("classical:sites", "t"),
-    "hcls_block_size": ("classical:block_size", "t"),
-    "hcls_blocks": ("classical:blocks", "t"),
-    "hcls_cblock": ("classical:cblock", "i"),
-}
-
-
 def get_iml_list(imls, intensity_measure_type):
     """Build the appropriate Arbitrary Discretized Func from the IMLs,
     based on the IMT"""

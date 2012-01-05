@@ -43,12 +43,16 @@ class FileWriter(object):
 
     def __init__(self, path, mode=MODE_START_AND_END):
         self.path = path
-        self.mode = mode
         self.file = None
-        self._init_file()
         self.root_node = None
+        self.mode = MODE_START_AND_END
 
-    def _init_file(self):
+    def set_mode(self, mode):
+        assert mode in [MODE_START, MODE_IN_THE_MIDDLE, MODE_END,
+                        MODE_START_AND_END]
+        self.mode = mode
+
+    def open(self):
         """Get the file handle open for writing"""
         if self.mode in [MODE_END, MODE_START_AND_END]:
             self.file = open(self.path, "w")
@@ -75,6 +79,7 @@ class FileWriter(object):
         """Wrapper for writing all items in an iterable object."""
         if isinstance(iterable, dict):
             iterable = iterable.items()
+        self.open()
         for key, val in iterable:
             self.write(key, val)
         self.close()
@@ -103,6 +108,7 @@ class XMLFileWriter(FileWriter):
         """
         if isinstance(iterable, dict):
             iterable = iterable.items()
+        self.open()
         self.write_header()
         for key, val in iterable:
             self.write(key, val)
