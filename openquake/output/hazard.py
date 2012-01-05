@@ -876,17 +876,19 @@ def get_mode(job_id, serialize_to, nrml_path):
         a list that contains "header", "footer" or both.
     """
     if 'xml' in serialize_to and nrml_path:
-        mode = 2
+        mode = writer.MODE_IN_THE_MIDDLE
         # Figure out the mode, are we at the beginning, in the middle or at
         # the end of the XML file?
         blocks = stats.get_counter(
             job_id, general.STATS_KEYS["hcls_blocks"][0], counter_type="t")
         cblock = stats.get_counter(
             job_id, general.STATS_KEYS["hcls_cblock"][0])
-        if cblock == 1:
-            mode -= 3
-        if cblock == blocks:
-            mode -= 2
+        if cblock == 1 and cblock == blocks:
+            mode = writer.MODE_START_AND_END
+        elif cblock == 1:
+            mode = writer.MODE_START
+        elif cblock == blocks:
+            mode = writer.MODE_END
     else:
         mode = writer.MODE_START_AND_END
     return mode
