@@ -183,3 +183,107 @@ class DeleteJobCountersTestCase(helpers.RedisTestMixin, unittest.TestCase):
         counters.
         """
         stats.delete_job_counters(sys.maxint)
+
+
+class PkSetTestCase(helpers.RedisTestMixin, unittest.TestCase):
+    """Tests the behaviour of utils.stats.pk_set()."""
+
+    def test_pk_set_with_existing_total(self):
+        """The value is set correctly for an existing predefined key."""
+        job_id = 71
+        pkey = "hcls_blocks"
+        key = stats.key_name(job_id, *stats.STATS_KEYS[pkey])
+
+        stats.delete_job_counters(job_id)
+        kvs = self.connect()
+        stats.pk_set(job_id, pkey, 717)
+        self.assertEqual("717", kvs.get(key))
+
+    def test_pk_set_with_existing_incremental(self):
+        """The value is set correctly for an existing predefined key."""
+        job_id = 72
+        pkey = "hcls_cblock"
+        key = stats.key_name(job_id, *stats.STATS_KEYS[pkey])
+
+        stats.delete_job_counters(job_id)
+        kvs = self.connect()
+        stats.pk_set(job_id, pkey, 727)
+        self.assertEqual("727", kvs.get(key))
+
+    def test_pk_set_with_non_existent_predef_key(self):
+        """`KeyError` is raised for keys that do not exist in `STATS_KEYS`."""
+        job_id = 73
+        pkey = "To be or not to be!?"
+        stats.delete_job_counters(job_id)
+
+        self.assertRaises(KeyError, stats.pk_set, job_id, pkey, 737)
+
+
+class PkIncTestCase(helpers.RedisTestMixin, unittest.TestCase):
+    """Tests the behaviour of utils.stats.pk_inc()."""
+
+    def test_pk_inc_with_existing_total(self):
+        """The value is incremented for an existing predefined key."""
+        job_id = 81
+        pkey = "hcls_blocks"
+        key = stats.key_name(job_id, *stats.STATS_KEYS[pkey])
+
+        stats.delete_job_counters(job_id)
+        kvs = self.connect()
+        stats.pk_inc(job_id, pkey)
+        self.assertEqual("1", kvs.get(key))
+
+    def test_pk_inc_with_existing_incremental(self):
+        """The value is incremented for an existing predefined key."""
+        job_id = 82
+        pkey = "hcls_cblock"
+        key = stats.key_name(job_id, *stats.STATS_KEYS[pkey])
+
+        stats.delete_job_counters(job_id)
+        kvs = self.connect()
+        stats.pk_inc(job_id, pkey)
+        self.assertEqual("1", kvs.get(key))
+
+    def test_pk_inc_with_non_existent_predef_key(self):
+        """`KeyError` is raised for keys that do not exist in `STATS_KEYS`."""
+        job_id = 83
+        pkey = "That is the question.."
+        stats.delete_job_counters(job_id)
+
+        self.assertRaises(KeyError, stats.pk_inc, job_id, pkey)
+
+
+class PkGetTestCase(helpers.RedisTestMixin, unittest.TestCase):
+    """Tests the behaviour of utils.stats.pk_get()."""
+
+    def test_pk_get_with_existing_total(self):
+        """The correct value is obtained for an existing predefined key."""
+        job_id = 91
+        pkey = "hcls_blocks"
+        key = stats.key_name(job_id, *stats.STATS_KEYS[pkey])
+
+        stats.delete_job_counters(job_id)
+        kvs = self.connect()
+        kvs.set(key, 919)
+        stats.pk_get(job_id, pkey)
+        self.assertEqual("919", kvs.get(key))
+
+    def test_pk_get_with_existing_getremental(self):
+        """The correct value is obtained for an existing predefined key."""
+        job_id = 92
+        pkey = "hcls_cblock"
+        key = stats.key_name(job_id, *stats.STATS_KEYS[pkey])
+
+        stats.delete_job_counters(job_id)
+        kvs = self.connect()
+        kvs.set(key, 929)
+        stats.pk_get(job_id, pkey)
+        self.assertEqual("929", kvs.get(key))
+
+    def test_pk_get_with_non_existent_predef_key(self):
+        """`KeyError` is raised for keys that do not exist in `STATS_KEYS`."""
+        job_id = 93
+        pkey = "This is unlikely to exist"
+        stats.delete_job_counters(job_id)
+
+        self.assertRaises(KeyError, stats.pk_get, job_id, pkey)
