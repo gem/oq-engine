@@ -52,6 +52,10 @@ class FileWriter(object):
                         MODE_START_AND_END]
         self.mode = mode
 
+    def initialize(self):
+        """Initialization hook for derived classes."""
+        pass
+
     def open(self):
         """Get the file handle open for writing"""
         if self.mode in [MODE_END, MODE_START_AND_END]:
@@ -79,6 +83,7 @@ class FileWriter(object):
         """Wrapper for writing all items in an iterable object."""
         if isinstance(iterable, dict):
             iterable = iterable.items()
+        self.initialize()
         self.open()
         for key, val in iterable:
             self.write(key, val)
@@ -108,6 +113,7 @@ class XMLFileWriter(FileWriter):
         """
         if isinstance(iterable, dict):
             iterable = iterable.items()
+        self.initialize()
         self.open()
         self.write_header()
         for key, val in iterable:
