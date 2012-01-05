@@ -27,6 +27,47 @@ from datetime import datetime
 from django.contrib.gis.db import models
 
 
+def model_equals(a, b, ignore=None):
+    """Compare two Django model objects for equality. The two objects are
+    considered equal if the __dict__ attributes of both objects are equals.
+
+    If you want to ignore some attributes (such as `id`) and compare the rest
+    of the attributes, you can specify a list or tuple of attributes to ignore.
+
+    Note: The `_state` attribute will always be ignored; we only want to
+    compare the fields which map to a column in the database.
+
+    :param a:
+        A :class:`django.contrib.gis.db.models.Model` instance.
+    :param b:
+        A :class:`django.contrib.gis.db.models.Model` instance.
+    :param ignore:
+        Optional. A list or tuple of attribute names (as strings) to ignore in
+        the comparison. For example::
+            ('id', 'last_updated')
+        `_state` is always ignored.
+
+    :returns:
+        `True` if the contents each model object are equal, taking into account
+        any ignores.
+    """
+    dict_a = a.__dict__.copy()
+    dict_b = b.__dict__.copy()
+
+    # Ignore _state:
+    dict_a.pop('_state')
+    dict_b.pop('_state')
+
+    if ignore:
+        for ign in ignore:
+            # We supply the default of `None` here so that we can gracefully
+            # ignore attributes that do not exist in either of the dicts.
+            dict_a.pop(ign, None)
+            dict_b.pop(ign, None)
+
+    return dict_a == dict_b
+
+
 class FloatArrayField(models.Field):  # pylint: disable=R0904
     """This field models a postgres `float` array."""
 
