@@ -66,16 +66,16 @@ SRS_EPSG_4326 = 'epsg:4326'
 
 @general.singleton
 class HazardCurveXMLWriter(writer.FileWriter):
-    """This class writes an hazard curve into the NRML format."""
+    """This class serializes hazard curve information to NRML format."""
 
-    def __init__(self, path):
-        super(HazardCurveXMLWriter, self).__init__(path)
-
-        self.nrml_el = None
-        self.result_el = None
-        self.curves_per_branch_label = {}
-        self.hcnode_counter = 0
-        self.hcfield_counter = 0
+    def initialize(self):
+        """Initialize the data if we are starting serialization."""
+        if self.mode in [writer.MODE_START, writer.MODE_START_AND_END]:
+            self.nrml_el = None
+            self.result_el = None
+            self.curves_per_branch_label = {}
+            self.hcnode_counter = 0
+            self.hcfield_counter = 0
 
     def close(self):
         """Override the default implementation writing all the
@@ -200,9 +200,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
 
 @general.singleton
 class HazardMapXMLWriter(writer.XMLFileWriter):
-    """This class serializes hazard map information
-    to NRML format.
-    """
+    """This class serializes hazard map information to NRML format."""
 
     root_tag = "%snrml" % NRML
     hazard_result_tag = "%shazardResult" % NRML
@@ -234,9 +232,8 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
     HAZARD_MAP_DEFAULT_ID = 'hm'
     HAZARD_MAP_NODE_ID_PREFIX = 'n_'
 
-    def __init__(self, path):
-        super(HazardMapXMLWriter, self).__init__(path)
-
+    def initialize(self):
+        """Initialize the data if we are starting serialization."""
         self.hmnode_counter = 0
         self.root_node = None
         self.parent_node = None
