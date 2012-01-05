@@ -108,9 +108,6 @@ class SMWrapper(object):
         return self.func(*args, **kwargs)
 
 
-class GetModeTestCase(unittest.TestCase):
-    """Tests for openquake.output.hazard.get_mode()."""
-
 class CreateHazardmapWriterTestCase(unittest.TestCase, CreateWriterTestBase):
     """Tests for openquake.output.hazard.create_hazardmap_writer()."""
 
