@@ -32,10 +32,10 @@ from openquake.db import models
 
 LOGGER = logging.getLogger('serializer')
 
-MODE_IN_THE_MIDDLE = 2
-MODE_START = -1
-MODE_END = 0
-MODE_START_AND_END = -3
+MODE_START = 1
+MODE_IN_THE_MIDDLE = 0
+MODE_END = -1
+MODE_START_AND_END = -2
 
 
 class FileWriter(object):
@@ -43,14 +43,15 @@ class FileWriter(object):
 
     def __init__(self, path, mode=MODE_START_AND_END):
         self.path = path
-        self.mode = "w" if mode < 0 else "a"
+        self.mode = mode
         self.file = None
         self._init_file()
         self.root_node = None
 
     def _init_file(self):
         """Get the file handle open for writing"""
-        self.file = open(self.path, self.mode)
+        if self.mode in [MODE_END, MODE_START_AND_END]:
+            self.file = open(self.path, "w")
 
     def write(self, point, value):
         """
