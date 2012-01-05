@@ -22,7 +22,6 @@ Database related unit tests for hazard computations with the hazard engine.
 
 import unittest
 
-from openquake.hazard import general
 from openquake import writer
 from openquake.output import hazard as hazard_output
 from openquake.output import risk as risk_output
@@ -187,8 +186,8 @@ class GetModeTestCase(helpers.RedisTestMixin, unittest.TestCase):
         job_id = 61
         args = (job_id, ["db", "xml"], "/path/1")
         stats.delete_job_counters(job_id)
-        stats.set_total(job_id, general.STATS_KEYS["hcls_blocks"][0], 3)
-        stats.incr_counter(job_id, general.STATS_KEYS["hcls_cblock"][0])
+        stats.set_total(job_id, stats.STATS_KEYS["hcls_blocks"][0], 3)
+        stats.incr_counter(job_id, stats.STATS_KEYS["hcls_cblock"][0])
         self.assertEqual(writer.MODE_START, hazard_output.get_mode(*args))
 
     def test_get_mode_in_the_middle(self):
@@ -199,9 +198,9 @@ class GetModeTestCase(helpers.RedisTestMixin, unittest.TestCase):
         job_id = 62
         args = (job_id, ["db", "xml"], "/path/2")
         stats.delete_job_counters(job_id)
-        stats.set_total(job_id, general.STATS_KEYS["hcls_blocks"][0], 3)
-        stats.incr_counter(job_id, general.STATS_KEYS["hcls_cblock"][0])
-        stats.incr_counter(job_id, general.STATS_KEYS["hcls_cblock"][0])
+        stats.set_total(job_id, stats.STATS_KEYS["hcls_blocks"][0], 3)
+        stats.incr_counter(job_id, stats.STATS_KEYS["hcls_cblock"][0])
+        stats.incr_counter(job_id, stats.STATS_KEYS["hcls_cblock"][0])
         self.assertEqual(writer.MODE_IN_THE_MIDDLE,
                          hazard_output.get_mode(*args))
 
@@ -212,9 +211,9 @@ class GetModeTestCase(helpers.RedisTestMixin, unittest.TestCase):
         job_id = 63
         args = (job_id, ["db", "xml"], "/path/3")
         stats.delete_job_counters(job_id)
-        stats.set_total(job_id, general.STATS_KEYS["hcls_blocks"][0], 2)
-        stats.incr_counter(job_id, general.STATS_KEYS["hcls_cblock"][0])
-        stats.incr_counter(job_id, general.STATS_KEYS["hcls_cblock"][0])
+        stats.set_total(job_id, stats.STATS_KEYS["hcls_blocks"][0], 2)
+        stats.incr_counter(job_id, stats.STATS_KEYS["hcls_cblock"][0])
+        stats.incr_counter(job_id, stats.STATS_KEYS["hcls_cblock"][0])
         self.assertEqual(writer.MODE_END, hazard_output.get_mode(*args))
 
     def test_get_mode_with_single_block(self):
@@ -224,8 +223,8 @@ class GetModeTestCase(helpers.RedisTestMixin, unittest.TestCase):
         job_id = 64
         args = (job_id, ["db", "xml"], "/path/4")
         stats.delete_job_counters(job_id)
-        stats.set_total(job_id, general.STATS_KEYS["hcls_blocks"][0], 1)
-        stats.incr_counter(job_id, general.STATS_KEYS["hcls_cblock"][0])
+        stats.set_total(job_id, stats.STATS_KEYS["hcls_blocks"][0], 1)
+        stats.incr_counter(job_id, stats.STATS_KEYS["hcls_cblock"][0])
         self.assertEqual(writer.MODE_START_AND_END,
                          hazard_output.get_mode(*args))
 
