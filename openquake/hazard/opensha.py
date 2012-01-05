@@ -157,20 +157,6 @@ class ClassicalMixin(BasePSHAMixin):
     Job class, and thus has access to the self.params dict, full of config
     params loaded from the Job configuration file."""
 
-    def stats_args(self, kname, datum=None):
-        """Construct the arguments for access to the kvs statistics db.
-
-        :param string kname: a key in the `openquake.utils.stats.STATS_KEYS`
-            dictionary
-        :param datum: the datum the caller wishes to store (if any).
-        :returns: a tuple with arguments for the functions in
-            `openquake.utils.stats` module.
-        """
-        if datum:
-            return (self.job_id, stats.STATS_KEYS[kname][0], datum)
-        else:
-            return (self.job_id, stats.STATS_KEYS[kname][0])
-
     def number_of_tasks(self):
         """How many `celery` tasks should be used for the calculations?"""
         value = self["HAZARD_TASKS"]
@@ -207,7 +193,7 @@ class ClassicalMixin(BasePSHAMixin):
         gmpe_generator.seed(self["GMPE_LT_RANDOM_SEED"])
 
         for realization in xrange(0, realizations):
-            stats.incr_counter(*self.stats_args("hcls_crealization"))
+            stats.pk_inc(self.job_id, "hcls_crealization")
             LOG.info("Calculating hazard curves for realization %s"
                      % realization)
             self.store_source_model(source_model_generator.getrandbits(32))
@@ -345,17 +331,17 @@ class ClassicalMixin(BasePSHAMixin):
         LOG.info("Going to run classical PSHA hazard for %s realizations "
                  "and %s sites" % (realizations, len(sites)))
 
-        stats.set_total(*self.stats_args("hcls_sites", len(sites)))
-        stats.set_total(*self.stats_args("hcls_realizations", realizations))
+        stats.pk_set(self.job_id, "hcls_sites", len(sites))
+        stats.pk_set(self.job_id, "hcls_realizations", realizations)
 
         block_size = config.hazard_block_size()
-        stats.set_total(*self.stats_args("hcls_block_size", block_size))
+        stats.pk_set(self.job_id, "hcls_block_size", block_size)
 
         blocks = range(0, len(sites), block_size)
-        stats.set_total(*self.stats_args("hcls_blocks", len(blocks)))
+        stats.pk_set(self.job_id, "hcls_blocks", len(blocks))
 
         for start in blocks:
-            stats.incr_counter(*self.stats_args("hcls_cblock"))
+            stats.pk_inc(self.job_id, "hcls_cblock")
             end = start + block_size
             data = sites[start:end]
 
