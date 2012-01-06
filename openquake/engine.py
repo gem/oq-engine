@@ -284,7 +284,7 @@ def _insert_input_files(params, input_set):
 
 
 @transaction.commit_on_success(using='job_init')
-def _prepare_job(params, sections):
+def _prepare_job(params, sections, owner_username='openquake'):
     """
     Create a new OqCalculation and fill in the related OqJobProfile entry.
 
@@ -300,7 +300,7 @@ def _prepare_job(params, sections):
     """
 
     @transaction.commit_on_success(using='job_init')
-    def _get_job_profile(input_set, calc_mode, job_type):
+    def _get_job_profile(input_set, calc_mode, job_type, owner):
         """Create an OqJobProfile, save it to the db, commit, and return."""
         job_profile = OqJobProfile(input_set=input_set, calc_mode=calc_mode,
                                    job_type=job_type)
@@ -308,6 +308,7 @@ def _prepare_job(params, sections):
         _insert_input_files(params, input_set)
         _store_input_parameters(params, calc_mode, job_profile)
 
+        job_profile.owner = owner
         job_profile.save()
 
         # Reset all progress indication counters for the job at hand.
@@ -318,7 +319,7 @@ def _prepare_job(params, sections):
 
 
     # TODO specify the owner as a command line parameter
-    owner = OqUser.objects.get(user_name='openquake')
+    owner = OqUser.objects.get(user_name=owner_username)
 
     input_set = InputSet(upload=None, owner=owner)
     input_set.save()
@@ -327,7 +328,8 @@ def _prepare_job(params, sections):
     job_type = [s.lower() for s in sections
         if s.upper() in [jobconf.HAZARD_SECTION, jobconf.RISK_SECTION]]
 
-    job_profile = _get_job_profile(input_set, calc_mode, job_type)
+    job_profile = _get_job_profile(input_set, calc_mode, job_type, owner)
+    job_profile.owner = owner
 
     # When querying this record from the db, Django changes the values
     # slightly (with respect to geometry, for example). Thus, we want a
