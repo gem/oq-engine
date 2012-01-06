@@ -241,7 +241,8 @@ define_param('INCLUDE_GRID_SOURCES', 'include_grid_sources',
              to_job=str2bool)
 define_param('TREAT_GRID_SOURCE_AS', 'treat_grid_source_as',
              modes=('classical', 'event_based', 'disaggregation', 'uhs',
-                    'classical_bcr', 'event_based_bcr'))
+                    'classical_bcr', 'event_based_bcr'),
+             to_db=map_enum)
 define_param('GRID_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP',
              'grid_source_magnitude_scaling_relationship')
 
