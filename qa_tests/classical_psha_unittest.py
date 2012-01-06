@@ -119,7 +119,7 @@ def verify_hazcurve_results(
     :param statistic_type:
         Optional. Can be 'mean', 'quantile', etc. Defaults to `None`.
     """
-    curve_data = [line for line in open(exp_results_file, 'r')]
+    curve_data = open(exp_results_file, 'r').readlines()
 
     # The actual curve data;
     # Pairs of (site_coords, poes) for each curve:
