@@ -17,8 +17,10 @@
 
 import unittest
 
+from django.contrib.gis.geos.geometry import GEOSGeometry
 
 from openquake.db.models import model_equals
+from openquake.db.models import GmfData
 from openquake.db.models import Organization
 
 from tests.utils.helpers import skipit
@@ -40,6 +42,10 @@ class ModelEqualsTestCase(unittest.TestCase):
 
     def test_model_equals(self):
         self.assertTrue(model_equals(self.o1, self.o2))
+
+    def test_model_equals_with_different_values(self):
+        self.o1.name = 'something different'
+        self.assertFalse(model_equals(self.o1, self.o2))
 
     def test_model_equals_with_ignore(self):
         self.o1.name = 'something different'
@@ -84,7 +90,29 @@ class ModelEqualsTestCase(unittest.TestCase):
         # Now finally compare the two objects:
         self.assertTrue(model_equals(self.o1, self.o2))
 
-    @skipit
+    def test_model_equals_different_classes(self):
+        gmf = GmfData(ground_motion=1.0)
+
+        self.assertFalse(model_equals(self.o1, gmf))
+
     def test_model_equals_with_geometry(self):
-        # TODO: Write me.
-        self.assertTrue(False)
+        gmf_data_1 = GmfData(
+            ground_motion=5.0,
+            location=GEOSGeometry("POINT (30.0 10.0)"))
+
+        gmf_data_2 = GmfData(
+            ground_motion=5.0,
+            location=GEOSGeometry("POINT (30.0 10.0)"))
+
+        self.assertTrue(model_equals(gmf_data_1, gmf_data_2))
+
+    def test_model_equals_with_different_geometry(self):
+        gmf_data_1 = GmfData(
+            ground_motion=5.0,
+            location=GEOSGeometry("POINT (30.0 10.0)"))
+
+        gmf_data_2 = GmfData(
+            ground_motion=5.0,
+            location=GEOSGeometry("POINT (30.0 10.1)"))
+
+        self.assertFalse(model_equals(gmf_data_1, gmf_data_2))
