@@ -568,6 +568,7 @@ class OqJobProfile(models.Model):
     '''
     Parameters needed to run an OpenQuake job
     '''
+    owner = models.ForeignKey('OqUser')
     CALC_MODE_CHOICES = (
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
