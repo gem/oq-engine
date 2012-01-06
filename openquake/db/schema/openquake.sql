@@ -804,7 +804,7 @@ CREATE TABLE uiapi.oq_job_profile (
             ((calc_mode NOT IN ('classical_bcr', 'event_based_bcr'))
              AND interest_rate IS NULL)),
     loss_curves_output_prefix VARCHAR,
-    maximum_distance VARCHAR
+    maximum_distance float
         CONSTRAINT maximum_distance_is_set
         CHECK(
             ((calc_mode IN ('classical', 'disaggregation', 'uhs',
@@ -943,7 +943,7 @@ CREATE TABLE uiapi.oq_job_profile (
         CONSTRAINT treat_grid_source_as_is_set
         CHECK(
             ((calc_mode != 'scenario')
-             AND (treat_grid_source_as IS NOT NULL))
+             AND (treat_grid_source_as IN ('pointsources', 'linesources', 'crosshairsources', '16spokedsources')))
             OR
             ((calc_mode = 'scenario')
              AND (treat_grid_source_as IS NULL))),
