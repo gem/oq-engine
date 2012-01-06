@@ -610,8 +610,8 @@ class DbTestMixin(TestMixin):
         oqp.poes = [0.01, 0.10]
         oqp.realizations = 1
         oqp.width_of_mfd_bin = 0.1
-        oqp.treat_grid_source_as = 'Point Sources'
-        oqp.treat_area_source_as = 'Point Sources'
+        oqp.treat_grid_source_as = 'pointsources'
+        oqp.treat_area_source_as = 'pointsources'
         oqp.subduction_rupture_floating_type = 'Along strike and down dip'
         oqp.subduction_rupture_aspect_ratio = 1.5
         oqp.subduction_fault_surface_discretization = 0.5

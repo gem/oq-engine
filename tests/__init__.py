@@ -64,6 +64,7 @@ from utils_tasks_unittest import *
 from utils_version_unittest import *
 from validator_unittest import *
 from models_unittest import *
+from engine_unittest import *
 
 import glob
 import os
