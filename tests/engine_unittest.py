@@ -15,14 +15,17 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+import os
 import unittest
 
 from django.contrib.gis.geos import GEOSGeometry
 
 from openquake import engine
 from openquake.db.models import model_equals
+from openquake.db.models import Input
 from openquake.db.models import InputSet
 from openquake.db.models import OqJobProfile
+from openquake.db.models import OqUser
 
 from tests.utils.helpers import demo_file
 
@@ -35,9 +38,37 @@ class EngineAPITestCase(unittest.TestCase):
         """
         cfg_path = demo_file('HazardMapTest/config.gem')
 
-        expected_input_set = InputSet()
+        # Default 'openquake' user:
+        owner = OqUser.objects.get(user_name='openquake')
+
+        expected_input_set = InputSet(owner=owner)
+
+        smlt_input = Input(
+            input_set=expected_input_set,
+            path=os.path.abspath(demo_file(
+                'HazardMapTest/source_model_logic_tree.xml')),
+            input_type='lt_source',
+            size=671)
+
+        gmpelt_input = Input(
+            input_set=expected_input_set,
+            path=os.path.abspath(demo_file(
+                'HazardMapTest/gmpe_logic_tree.xml')),
+            input_type='lt_gmpe',
+            size=709)
+
+        src_model_input = Input(
+            input_set=expected_input_set,
+            path=os.path.abspath(demo_file(
+                'HazardMapTest/source_model.xml')),
+            input_type='source',
+            size=1644)
+
+        expected_inputs_map = dict(
+            lt_source=smlt_input, lt_gmpe=gmpelt_input, source=src_model_input)
 
         expected_jp = OqJobProfile(
+            owner=owner,
             calc_mode='classical',
             job_type=['hazard'],
             region=GEOSGeometry(
@@ -101,9 +132,25 @@ class EngineAPITestCase(unittest.TestCase):
 
         actual_jp = engine.import_job_profile(cfg_path)
 
+        # Test the OqJobProfile:
         self.assertTrue(
             model_equals(expected_jp, actual_jp, ignore=(
                 'id', 'input_set', 'last_update', 'input_set_id',
-                '_input_set_cache')))
+                '_input_set_cache', '_owner_cache')))
 
-        # TODO: Verify Inputs and InputSet
+        actual_input_set = actual_jp.input_set
+        # Test the InputSet:
+        self.assertTrue(
+            model_equals(expected_input_set, actual_input_set,
+                         ignore=('id', 'last_update', '_owner_cache')))
+
+        # Test the Inputs:
+        actual_inputs = Input.objects.filter(input_set=actual_input_set.id)
+        self.assertEquals(3, len(actual_inputs))
+
+        for act_inp in actual_inputs:
+            exp_inp = expected_inputs_map[act_inp.input_type]
+            self.assertTrue(
+                model_equals(exp_inp, act_inp,
+                             ignore=('id', 'input_set_id', 'last_update',
+                                     '_input_set_cache')))
