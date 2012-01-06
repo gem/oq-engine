@@ -67,7 +67,14 @@ class CreateWriterTestBase(object):
         set to 'xml'.
         """
         writer = self.create_function(None, ['xml'], "/tmp/b.xml")
-        self.assertTrue(isinstance(writer, self.xml_writer_class))
+        try:
+            self.assertTrue(isinstance(writer, self.xml_writer_class))
+        except TypeError:
+            # Please note: these two classes have been converted to singletons.
+            # The utils.general.singleton() class decorator returns a function
+            # which is why isinstance() fails for them.
+            self.assertTrue(writer.__class__.__name__ in
+                            ["HazardCurveXMLWriter", "HazardMapXMLWriter"])
 
     def test_create_writer_with_db(self):
         """
