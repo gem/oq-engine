@@ -25,47 +25,59 @@ Model representations of the OpenQuake DB tables.
 
 from datetime import datetime
 from django.contrib.gis.db import models
+from django.contrib.gis.geos.geometry import GEOSGeometry
 
 
 def model_equals(a, b, ignore=None):
     """Compare two Django model objects for equality. The two objects are
-    considered equal if the __dict__ attributes of both objects are equals.
+    considered equal if the values of the all of the fields of both models are
+    equal.
 
     If you want to ignore some attributes (such as `id`) and compare the rest
     of the attributes, you can specify a list or tuple of attributes to ignore.
 
-    Note: The `_state` attribute will always be ignored; we only want to
-    compare the fields which map to a column in the database.
-
     :param a:
-        A :class:`django.contrib.gis.db.models.Model` instance.
+        A :class:`django.db.models.Model` instance.
     :param b:
-        A :class:`django.contrib.gis.db.models.Model` instance.
+        A :class:`django.db.models.Model` instance.
     :param ignore:
         Optional. A list or tuple of attribute names (as strings) to ignore in
         the comparison. For example::
             ('id', 'last_updated')
-        `_state` is always ignored.
 
     :returns:
         `True` if the contents each model object are equal, taking into account
         any ignores.
     """
-    dict_a = a.__dict__.copy()
-    dict_b = b.__dict__.copy()
+    if not a.__class__ == b.__class__:
+        # Not the same class type; these are definitely not equal.
+        return False
 
-    # Ignore _state:
-    dict_a.pop('_state')
-    dict_b.pop('_state')
+    # Now get each field name and compare the attributes in both objects.
+    for field_name in a.__dict__.keys():
+        # Ignore _state; this is an ever-present attribute of the model
+        # __dict__ which we don't care about. It doesn't affect our equality
+        # comparison.
+        if field_name == '_state':
+            continue
 
-    if ignore:
-        for ign in ignore:
-            # We supply the default of `None` here so that we can gracefully
-            # ignore attributes that do not exist in either of the dicts.
-            dict_a.pop(ign, None)
-            dict_b.pop(ign, None)
+        # Make sure we ignore the attributes that were specified.
+        if ignore is not None and field_name in ignore:
+            continue
 
-    return dict_a == dict_b
+        a_val = getattr(a, field_name)
+        b_val = getattr(b, field_name)
+
+        # If the attribute is a geometry object,
+        # use the GEOSGeometry.equals method to compare:
+        if isinstance(a_val, GEOSGeometry):
+            if not a_val.equals(b_val):
+                return False
+        else:
+            if not a_val == b_val:
+                return False
+
+    return True
 
 
 class FloatArrayField(models.Field):  # pylint: disable=R0904
