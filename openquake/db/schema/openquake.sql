@@ -576,6 +576,7 @@ CREATE TABLE uiapi.calc_stats (
 -- The parameters needed for an OpenQuake engine run
 CREATE TABLE uiapi.oq_job_profile (
     id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL,
     -- One of:
     --      classical (Classical PSHA)
     --      event_based (Probabilistic event based)
@@ -1475,6 +1476,9 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.oq_calculation ADD CONSTRAINT uiapi_oq_calculation_oq_job_profile_fk
 FOREIGN KEY (oq_job_profile_id) REFERENCES uiapi.oq_job_profile(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.oq_job_profile ADD CONSTRAINT uiapi_oq_job_profile_owner_fk
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.calc_stats ADD CONSTRAINT  uiapi_calc_stats_oq_calculation_fk
 FOREIGN KEY (oq_calculation_id) REFERENCES uiapi.oq_calculation(id) ON DELETE CASCADE;
