@@ -298,6 +298,25 @@ def _prepare_job(params, sections):
     :returns:
         A new :class:`openquake.db.models.OqJobProfile` object.
     """
+
+    @transaction.commit_on_success(using='job_init')
+    def _get_job_profile(input_set, calc_mode, job_type):
+        """Create an OqJobProfile, save it to the db, commit, and return."""
+        job_profile = OqJobProfile(input_set=input_set, calc_mode=calc_mode,
+                                   job_type=job_type)
+
+        _insert_input_files(params, input_set)
+        _store_input_parameters(params, calc_mode, job_profile)
+
+        job_profile.save()
+
+        # Reset all progress indication counters for the job at hand.
+        # TODO: Put this back in, in the correct place.
+        # stats.delete_job_counters(job.id)
+
+        return job_profile
+
+
     # TODO specify the owner as a command line parameter
     owner = OqUser.objects.get(user_name='openquake')
 
@@ -308,25 +327,12 @@ def _prepare_job(params, sections):
     job_type = [s.lower() for s in sections
         if s.upper() in [jobconf.HAZARD_SECTION, jobconf.RISK_SECTION]]
 
-    job_profile = OqJobProfile(input_set=input_set, calc_mode=calc_mode,
-                       job_type=job_type)
+    job_profile = _get_job_profile(input_set, calc_mode, job_type)
 
-    _insert_input_files(params, input_set)
-    # TODO: _store_input_parameters should just construct and return the
-    # OqJobProfile.
-    _store_input_parameters(params, calc_mode, job_profile)
-    # TODO: Then we set the input_set attribute of the job_profile
-
-    job_profile.save()
-
-    # job.oq_job_profile = oqp
-    # job.save()
-
-    # Reset all progress indication counters for the job at hand.
-    # TODO: Put this back in, in the correct place.
-    # stats.delete_job_counters(job.id)
-
-    return job_profile
+    # When querying this record from the db, Django changes the values
+    # slightly (with respect to geometry, for example). Thus, we want a
+    # "fresh" copy of the record from the db.
+    return OqJobProfile.objects.get(id=job_profile.id)
 
 
 def get_source_models(logic_tree):
@@ -354,12 +360,12 @@ def get_source_models(logic_tree):
     return model_files
 
 
-def _store_input_parameters(params, calc_mode, oqp):
+def _store_input_parameters(params, calc_mode, job_profile):
     """Store parameters in uiapi.oq_job_profile columns"""
 
     for name, param in PARAMS.items():
         if calc_mode in param.modes and param.default is not None:
-            setattr(oqp, param.column, param.default)
+            setattr(job_profile, param.column, param.default)
 
     for name, value in params.items():
         param = PARAMS[name]
@@ -384,11 +390,11 @@ def _store_input_parameters(params, calc_mode, oqp):
         elif param.type == None:
             continue
 
-        setattr(oqp, param.column, value)
+        setattr(job_profile, param.column, value)
 
-    if oqp.imt != 'sa':
-        oqp.period = None
-        oqp.damping = None
+    if job_profile.imt != 'sa':
+        job_profile.period = None
+        job_profile.damping = None
 
 
 def run_calc(job_profile):
