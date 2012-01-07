@@ -844,6 +844,38 @@ class GmfDBWriter(writer.DBWriter):
             location="POINT(%s %s)" % (point.point.x, point.point.y))
 
 
+def get_mode(job_id, serialize_to, nrml_path):
+    """Figure out the XML serialization mode.
+
+    This facilitates multi-stage XML serialization.
+
+    :param int job_id: the id of the job the data belongs to.
+    :param serialize_to: where to serialize
+    :type serialize_to: list of strings, permitted values: 'db', 'xml'.
+    :param string nrml_path: the full XML/NRML path.
+    :returns: one of: MODE_START, MODE_IN_THE_MIDDLE, MODE_END,
+        MODE_START_AND_END (single-stage serialization).
+    """
+    mode = writer.MODE_START_AND_END
+    if 'xml' in serialize_to and nrml_path:
+        # Figure out the mode, are we at the beginning, in the middle or at
+        # the end of the XML file?
+        blocks = stats.pk_get(job_id, "hcls_blocks")
+        cblock = stats.pk_get(job_id, "hcls_cblock")
+        if blocks and cblock:
+            blocks = int(blocks)
+            cblock = int(cblock)
+            if blocks == 1:
+                pass    # MODE_START_AND_END
+            elif cblock == 1:
+                mode = writer.MODE_START
+            elif cblock == blocks:
+                mode = writer.MODE_END
+            else:
+                mode = writer.MODE_IN_THE_MIDDLE
+    return mode
+
+
 # Facilitate multi-stage XML serialization by using the same serializer
 # object for a given job and NRML path.
 _XML_SERIALIZER_CACHE = defaultdict(lambda: None)
@@ -872,40 +904,6 @@ def _create_writer(job_id, serialize_to, nrml_path, create_xml_writer,
         writers.append(obj)
 
     return writer.compose_writers(writers)
-
-
-def get_mode(job_id, serialize_to, nrml_path):
-    """Figure out the XML serialization mode.
-
-    Should we write the XML header and/or the footer?
-
-    :param int job_id: the id of the job the data belongs to.
-    :param serialize_to: where to serialize
-    :type serialize_to: list of strings, permitted values: 'db', 'xml'.
-    :param string nrml_path: the full XML/NRML path.
-    :returns: `None` if neither header nor footer should be written or
-        a list that contains "header", "footer" or both.
-    """
-    if 'xml' in serialize_to and nrml_path:
-        mode = writer.MODE_IN_THE_MIDDLE
-        # Figure out the mode, are we at the beginning, in the middle or at
-        # the end of the XML file?
-        blocks = stats.pk_get(job_id, "hcls_blocks")
-        cblock = stats.pk_get(job_id, "hcls_cblock")
-        if blocks and cblock:
-            blocks = int(blocks)
-            cblock = int(cblock)
-            if cblock == 1 and cblock == blocks:
-                mode = writer.MODE_START_AND_END
-            elif cblock == 1:
-                mode = writer.MODE_START
-            elif cblock == blocks:
-                mode = writer.MODE_END
-        else:
-            mode = writer.MODE_START_AND_END
-    else:
-        mode = writer.MODE_START_AND_END
-    return mode
 
 
 def create_hazardcurve_writer(job_id, serialize_to, nrml_path):
