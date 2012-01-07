@@ -255,8 +255,8 @@ class CurvePlot(writer.FileWriter):
         self.color_code_generator = _color_code_generator()
         super(CurvePlot, self).__init__(path)
 
-    def _init_file(self):
-
+    def open(self):
+        """This overrides the `FileWriter` method."""
         # set figure size
         pylab.rcParams['figure.figsize'] = self._plotFig['figsize']
 
