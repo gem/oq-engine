@@ -78,7 +78,7 @@ class FileWriter(object):
 
     def close(self):
         """Close and flush the file. Send finished messages."""
-        if getattr(self, "file") and self.file:
+        if self.file:
             self.file.close()
 
     def serialize(self, iterable):
