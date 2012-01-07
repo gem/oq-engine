@@ -20,6 +20,8 @@
 Database related unit tests for hazard computations with the hazard engine.
 """
 
+import itertools
+import string
 import unittest
 
 from openquake import writer
@@ -61,20 +63,17 @@ class ComposeWritersTest(unittest.TestCase):
 
 class CreateWriterTestBase(object):
 
+    jobs = itertools.count(10)
+    files = itertools.cycle(string.ascii_lowercase)
+
     def test_create_writer_with_xml(self):
         """
         A `*XMLWriter` instance is returned when the serialize_to parameter is
         set to 'xml'.
         """
-        writer = self.create_function(None, ['xml'], "/tmp/b.xml")
-        try:
-            self.assertTrue(isinstance(writer, self.xml_writer_class))
-        except TypeError:
-            # Please note: these two classes have been converted to singletons.
-            # The utils.general.singleton() class decorator returns a function
-            # which is why isinstance() fails for them.
-            self.assertTrue(writer.__class__.__name__ in
-                            ["HazardCurveXMLWriter", "HazardMapXMLWriter"])
+        writer = self.create_function(
+            self.jobs.next(), ['xml'], "/tmp/%s.xml" % self.files.next())
+        self.assertTrue(isinstance(writer, self.xml_writer_class))
 
     def test_create_writer_with_db(self):
         """
