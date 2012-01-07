@@ -41,13 +41,16 @@ MODE_START_AND_END = -2
 class FileWriter(object):
     """Simple output half of the codec process."""
 
-    def __init__(self, path, mode=MODE_START_AND_END):
+    def __init__(self, path):
         self.path = path
         self.file = None
         self.root_node = None
         self.mode = MODE_START_AND_END
 
     def set_params(self, path, mode=MODE_START_AND_END):
+        """
+        Allow singleton classes to set the NRML path and serialization mode.
+        """
         self.path = path
         assert mode in [MODE_START, MODE_IN_THE_MIDDLE, MODE_END,
                         MODE_START_AND_END]

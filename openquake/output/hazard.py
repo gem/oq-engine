@@ -68,6 +68,14 @@ SRS_EPSG_4326 = 'epsg:4326'
 class HazardCurveXMLWriter(writer.FileWriter):
     """This class serializes hazard curve information to NRML format."""
 
+    def __init__(self):
+        """Pacify pylint."""
+        self.nrml_el = None
+        self.result_el = None
+        self.curves_per_branch_label = {}
+        self.hcnode_counter = 0
+        self.hcfield_counter = 0
+
     def initialize(self):
         """Initialize the data if we are starting serialization."""
         if self.mode in [writer.MODE_START, writer.MODE_START_AND_END]:
