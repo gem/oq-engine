@@ -48,7 +48,7 @@ class FileWriterTestCase(unittest.TestCase):
         # Only mock the open() built-in in the writer module.
         with mock.patch("openquake.writer.open", create=True) as mock_open:
             fw = writer.FileWriter(path)
-            fw.set_params(path, writer.MODE_START)
+            fw.set_mode(writer.MODE_START)
             fw.open()
             self.assertEqual(0, mock_open.call_count)
 
@@ -61,7 +61,7 @@ class FileWriterTestCase(unittest.TestCase):
         # Only mock the open() built-in in the writer module.
         with mock.patch("openquake.writer.open", create=True) as mock_open:
             fw = writer.FileWriter(path)
-            fw.set_params(path, writer.MODE_START_AND_END)
+            fw.set_mode(writer.MODE_START_AND_END)
             fw.open()
             self.assertEqual((path, "w"), mock_open.call_args[0])
 
@@ -73,7 +73,7 @@ class FileWriterTestCase(unittest.TestCase):
         # Only mock the open() built-in in the writer module.
         with mock.patch("openquake.writer.open", create=True) as mock_open:
             fw = writer.FileWriter(path)
-            fw.set_params(path, writer.MODE_IN_THE_MIDDLE)
+            fw.set_mode(writer.MODE_IN_THE_MIDDLE)
             fw.open()
             self.assertEqual(0, mock_open.call_count)
 
@@ -86,6 +86,6 @@ class FileWriterTestCase(unittest.TestCase):
         # Only mock the open() built-in in the writer module.
         with mock.patch("openquake.writer.open", create=True) as mock_open:
             fw = writer.FileWriter(path)
-            fw.set_params(path, writer.MODE_END)
+            fw.set_mode(writer.MODE_END)
             fw.open()
             self.assertEqual((path, "w"), mock_open.call_args[0])
