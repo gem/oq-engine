@@ -160,8 +160,8 @@ def verify_hazcurve_nrml(tc, nrml_path, exp_results_file):
     :param string exp_results_file: path to the expected results file
     """
     root = etree.parse(nrml_path)
-    hcns = root.xpath(
-        "//ns:HCNode", namespaces={"ns":"http://openquake.org/xmlns/nrml/0.3"})
+    hcns = root.xpath("//ns:HCNode",
+                      namespaces={"ns": "http://openquake.org/xmlns/nrml/0.3"})
 
     # Example "-122.7 47.8": [0.0850461222404, .., 0.0]
     nrml_data = dict(
@@ -191,8 +191,8 @@ def verify_hazmap_nrml(tc, nrml_path, exp_results_file):
     :param string exp_results_file: path to the expected results file
     """
     root = etree.parse(nrml_path)
-    hmns = root.xpath(
-        "//ns:HMNode", namespaces={"ns":"http://openquake.org/xmlns/nrml/0.3"})
+    hmns = root.xpath("//ns:HMNode",
+                      namespaces={"ns": "http://openquake.org/xmlns/nrml/0.3"})
 
     # Example "-122.7 47.8": 0.15097656969
     nrml_data = dict([(hmn[0][0][0].text, float(hmn[1].text)) for hmn in hmns])

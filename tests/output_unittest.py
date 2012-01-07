@@ -745,8 +745,6 @@ class OutputTestCase(unittest.TestCase):
 
     def test_discrete_colorscale(self):
 
-        min = 0.8
-        max = 0.4
         expected_output = [
             ('#ffffff', '0.80 - 0.93'), ('#d0d8fb', '0.93 - 1.07'),
             ('#bac5f7', '1.07 - 1.20'), ('#8fa1f1', '1.20 - 1.33'),
