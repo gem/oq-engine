@@ -68,8 +68,9 @@ SRS_EPSG_4326 = 'epsg:4326'
 class HazardCurveXMLWriter(writer.FileWriter):
     """This class serializes hazard curve information to NRML format."""
 
-    def __init__(self):
+    def __init__(self, path):
         """Pacify pylint."""
+        super(HazardCurveXMLWriter, self).__init__(path)
         self.nrml_el = None
         self.result_el = None
         self.curves_per_branch_label = {}
@@ -239,6 +240,14 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
     HAZARD_RESULT_DEFAULT_ID = 'hr'
     HAZARD_MAP_DEFAULT_ID = 'hm'
     HAZARD_MAP_NODE_ID_PREFIX = 'n_'
+
+    def __init__(self, path):
+        """Pacify pylint."""
+        super(HazardMapXMLWriter, self).__init__(path)
+        self.hmnode_counter = 0
+        self.root_node = None
+        self.parent_node = None
+        self.hazard_processing_node = None
 
     def initialize(self):
         """Initialize the data if we are starting serialization."""
