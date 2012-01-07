@@ -47,11 +47,8 @@ class FileWriter(object):
         self.root_node = None
         self.mode = MODE_START_AND_END
 
-    def set_params(self, path, mode=MODE_START_AND_END):
-        """
-        Allow singleton classes to set the NRML path and serialization mode.
-        """
-        self.path = path
+    def set_mode(self, mode):
+        """Facilitate XML serialization in multiple stages."""
         assert mode in [MODE_START, MODE_IN_THE_MIDDLE, MODE_END,
                         MODE_START_AND_END]
         self.mode = mode
@@ -81,7 +78,8 @@ class FileWriter(object):
 
     def close(self):
         """Close and flush the file. Send finished messages."""
-        self.file.close()
+        if getattr(self, "file") and self.file:
+            self.file.close()
 
     def serialize(self, iterable):
         """Wrapper for writing all items in an iterable object."""

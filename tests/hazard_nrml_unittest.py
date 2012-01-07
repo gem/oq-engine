@@ -79,7 +79,6 @@ class HazardCurveXMLWriterTestCase(unittest.TestCase):
             os.remove(path)
 
         self.writer = hazard_output.HazardCurveXMLWriter(path)
-        self.writer.set_params(path)
         self.writer.initialize()
 
     def test_raises_an_error_if_no_curve_is_serialized(self):
