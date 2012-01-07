@@ -29,9 +29,9 @@ from openquake import writer
 class FileWriterTestCase(unittest.TestCase):
     """Tests related to the `FileWriter` abstract base class."""
 
-    def test__init_file_with_mode_not_set(self):
+    def test_open_with_mode_not_set(self):
         """
-        _init_file() will open and truncate the file if no mode was specified.
+        open() will open and truncate the file if no mode was specified.
         """
         path = "/tmp/a"
         # Only mock the open() built-in in the writer module.
@@ -40,9 +40,9 @@ class FileWriterTestCase(unittest.TestCase):
             fw.open()
             self.assertEqual((path, "w"), mock_open.call_args[0])
 
-    def test__init_file_with_mode_start(self):
+    def test_open_with_mode_start(self):
         """
-        _init_file() will not open the file in mode `MODE_START`.
+        open() will not open the file in mode `MODE_START`.
         """
         path = "/tmp/b"
         # Only mock the open() built-in in the writer module.
@@ -52,9 +52,9 @@ class FileWriterTestCase(unittest.TestCase):
             fw.open()
             self.assertEqual(0, mock_open.call_count)
 
-    def test__init_file_with_mode_start_and_end(self):
+    def test_open_with_mode_start_and_end(self):
         """
-        _init_file() will open and truncate the file if the mode passed was
+        open() will open and truncate the file if the mode passed was
         `MODE_START_AND_END`.
         """
         path = "/tmp/c"
@@ -65,9 +65,9 @@ class FileWriterTestCase(unittest.TestCase):
             fw.open()
             self.assertEqual((path, "w"), mock_open.call_args[0])
 
-    def test__init_file_with_mode_in_the_middle(self):
+    def test_open_with_mode_in_the_middle(self):
         """
-        _init_file() will not open the file in mode `MODE_IN_THE_MIDDLE`.
+        open() will not open the file in mode `MODE_IN_THE_MIDDLE`.
         """
         path = "/tmp/d"
         # Only mock the open() built-in in the writer module.
@@ -77,9 +77,9 @@ class FileWriterTestCase(unittest.TestCase):
             fw.open()
             self.assertEqual(0, mock_open.call_count)
 
-    def test__init_file_with_mode_end(self):
+    def test_open_with_mode_end(self):
         """
-        _init_file() will open and truncate the file if the mode passed was
+        open() will open and truncate the file if the mode passed was
         `MODE_END`.
         """
         path = "/tmp/e"
