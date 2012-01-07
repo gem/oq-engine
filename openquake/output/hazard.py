@@ -70,7 +70,6 @@ class HazardCurveXMLWriter(writer.FileWriter):
 
     def __init__(self, path):
         """Pacify pylint."""
-        super(HazardCurveXMLWriter, self).__init__(path)
         self.nrml_el = None
         self.result_el = None
         self.curves_per_branch_label = {}
@@ -243,7 +242,6 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
 
     def __init__(self, path):
         """Pacify pylint."""
-        super(HazardMapXMLWriter, self).__init__(path)
         self.hmnode_counter = 0
         self.root_node = None
         self.parent_node = None

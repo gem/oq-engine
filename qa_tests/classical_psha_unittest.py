@@ -21,6 +21,7 @@ from lxml import etree
 import geohash
 import numpy
 import os
+import shutil
 import subprocess
 import unittest
 
@@ -102,7 +103,6 @@ def run_job(config_file, **kw_params):
     params = ["bin/openquake", "--config_file=" + config_file]
     if kw_params:
         params.extend(["--%s=%s" % p for p in kw_params.iteritems()])
-    return 0
     return subprocess.call(params)
 
 
@@ -377,27 +377,31 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
         copath = helpers.demo_file(os.path.join(
             "complex_fault_demo_hazard", "computed_output"))
-        # Check hazard curves for sample 0:
-        # Hazard curve expected results for logic tree sample 0:
-        hazcurve_0 = helpers.demo_file(
-            os.path.join(exp_results_dir, "hazardcurve-0.dat"))
-        nrml_path = os.path.join(copath, "hazardcurve-0.xml")
-        verify_hazcurve_nrml(self, nrml_path, hazcurve_0)
 
-        # Check mean hazard curves:
-        hazcurve_mean = helpers.demo_file(
-            os.path.join(exp_results_dir, "hazardcurve-mean.dat"))
-        nrml_path = os.path.join(copath, "hazardcurve-mean.xml")
-        verify_hazcurve_nrml(self, nrml_path, hazcurve_mean)
+        try:
+            # Check hazard curves for sample 0:
+            # Hazard curve expected results for logic tree sample 0:
+            hazcurve_0 = helpers.demo_file(
+                os.path.join(exp_results_dir, "hazardcurve-0.dat"))
+            nrml_path = os.path.join(copath, "hazardcurve-0.xml")
+            verify_hazcurve_nrml(self, nrml_path, hazcurve_0)
 
-        # Check hazard map mean 0.02:
-        hazmap_mean_0_02 = helpers.demo_file(
-            os.path.join(exp_results_dir, "hazardmap-0.02-mean.dat"))
-        nrml_path = os.path.join(copath, "hazardmap-0.02-mean.xml")
-        verify_hazmap_nrml(self, nrml_path, hazmap_mean_0_02)
+            # Check mean hazard curves:
+            hazcurve_mean = helpers.demo_file(
+                os.path.join(exp_results_dir, "hazardcurve-mean.dat"))
+            nrml_path = os.path.join(copath, "hazardcurve-mean.xml")
+            verify_hazcurve_nrml(self, nrml_path, hazcurve_mean)
 
-        # Check hazard map mean 0.1:
-        hazmap_mean_0_1 = helpers.demo_file(
-            os.path.join(exp_results_dir, "hazardmap-0.1-mean.dat"))
-        nrml_path = os.path.join(copath, "hazardmap-0.1-mean.xml")
-        verify_hazmap_nrml(self, nrml_path, hazmap_mean_0_1)
+            # Check hazard map mean 0.02:
+            hazmap_mean_0_02 = helpers.demo_file(
+                os.path.join(exp_results_dir, "hazardmap-0.02-mean.dat"))
+            nrml_path = os.path.join(copath, "hazardmap-0.02-mean.xml")
+            verify_hazmap_nrml(self, nrml_path, hazmap_mean_0_02)
+
+            # Check hazard map mean 0.1:
+            hazmap_mean_0_1 = helpers.demo_file(
+                os.path.join(exp_results_dir, "hazardmap-0.1-mean.dat"))
+            nrml_path = os.path.join(copath, "hazardmap-0.1-mean.xml")
+            verify_hazmap_nrml(self, nrml_path, hazmap_mean_0_1)
+        finally:
+            shutil.rmtree(copath)
