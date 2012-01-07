@@ -46,7 +46,6 @@ import logging
 
 from openquake.db import models
 from openquake import job, shapes, writer
-from openquake.utils import general
 from openquake.utils import round_float
 from openquake.utils import stats
 from openquake.xml import NSMAP, NRML, GML
