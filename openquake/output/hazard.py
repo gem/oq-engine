@@ -299,7 +299,6 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
     def _append_node(self, point, val, parent_node):
         """Write HMNode element."""
 
-        print ">> pn: %s" % parent_node
         self.hmnode_counter += 1
         node_node = etree.SubElement(parent_node, self.node_tag, nsmap=NSMAP)
         node_node.attrib["%sid" % GML] = "%s%s" % (
@@ -863,7 +862,7 @@ def _create_writer(job_id, serialize_to, nrml_path, create_xml_writer,
         writers.append(create_db_writer(nrml_path, job_id))
 
     if 'xml' in serialize_to and nrml_path:
-        if mode:
+        if mode is not None:
             obj = _XML_SERIALIZER_CACHE[(job_id, nrml_path)]
             if obj is None:
                 obj = create_xml_writer(nrml_path)
@@ -897,7 +896,6 @@ def get_mode(job_id, serialize_to, nrml_path):
         if blocks and cblock:
             blocks = int(blocks)
             cblock = int(cblock)
-            print ">> %s of %s" % (cblock, blocks)
             if cblock == 1 and cblock == blocks:
                 mode = writer.MODE_START_AND_END
             elif cblock == 1:
@@ -908,7 +906,6 @@ def get_mode(job_id, serialize_to, nrml_path):
             mode = writer.MODE_START_AND_END
     else:
         mode = writer.MODE_START_AND_END
-    print ">> mode: %s" % mode
     return mode
 
 
@@ -924,7 +921,6 @@ def create_hazardcurve_writer(job_id, serialize_to, nrml_path):
     :returns: an :py:class:`output.hazard.HazardCurveXMLWriter` or an
         :py:class:`output.hazard.HazardCurveDBWriter` instance.
     """
-    print ">> curve: %s" % nrml_path
     mode = get_mode(job_id, serialize_to, nrml_path)
     return _create_writer(job_id, serialize_to, nrml_path,
                           HazardCurveXMLWriter, HazardCurveDBWriter, mode)
@@ -942,7 +938,6 @@ def create_hazardmap_writer(job_id, serialize_to, nrml_path):
     :returns: an :py:class:`output.hazard.HazardMapXMLWriter` or an
         :py:class:`output.hazard.HazardMapDBWriter` instance.
     """
-    print ">> map: %s" % nrml_path
     mode = get_mode(job_id, serialize_to, nrml_path)
     return _create_writer(job_id, serialize_to, nrml_path, HazardMapXMLWriter,
                           HazardMapDBWriter, mode)
