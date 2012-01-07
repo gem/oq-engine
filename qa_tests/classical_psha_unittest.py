@@ -149,22 +149,15 @@ def verify_hazcurve_results(
         tc.assertTrue(numpy.allclose(poes, hc.poes))
 
 
-def verify_hazcurve_nrml(tc, nrml_path, exp_results_file,
-                         end_branch_label=None, statistic_type=None):
-    """Given a job, a path to an expected results file, and a few optional
-    parameters (end_branch_label and statistic_type), load in expected results
-    from the text file and compare the data to the results in the database.
+def verify_hazcurve_nrml(tc, nrml_path, exp_results_file):
+    """
+    Given a NRML path and a path to an expected results file, load the
+    expected hazard curve results from the latter and compare them with the
+    data contained in the NRML file.
 
-    :param tc:
-        :class:`unittest.TestCase` object (for test assertions).
-    :param string nrml_path: path of the nrml file to check.
-    :param exp_results_file:
-        Path to the expected results file (text file).
-    :param int end_branch_label:
-        Optional. Can specified if we need to query the database for hazard
-        curve data for a particular end branch label/sample.
-    :param statistic_type:
-        Optional. Can be 'mean', 'quantile', etc. Defaults to `None`.
+    :param tc: :class:`unittest.TestCase` object (for test assertions).
+    :param string nrml_path: path to the nrml file to check
+    :param string exp_results_file: path to the expected results file
     """
     root = etree.parse(nrml_path)
     hcns = root.xpath(
@@ -178,16 +171,43 @@ def verify_hazcurve_nrml(tc, nrml_path, exp_results_file,
     curve_data = [line.strip()
                   for line in open(exp_results_file, 'r').readlines()]
 
-    # The actual curve data;
-    # Pairs of (site_coords, poes) for each curve:
     sites_poes = dict(zip(curve_data[::2], curve_data[1::2]))
 
     tc.assertEqual(len(sites_poes), len(nrml_data))
 
     for site, poes in sites_poes.iteritems():
-        # lon, lat is the order which GML uses for coord pairs.
         poes = [float(x) for x in poes.split()]
         tc.assertTrue(numpy.allclose(poes, nrml_data[site]))
+
+
+def verify_hazmap_nrml(tc, nrml_path, exp_results_file):
+    """
+    Given a NRML path and a path to an expected results file, load the
+    expected hazard map results from the latter and compare them with the
+    data contained in the NRML file.
+
+    :param tc: :class:`unittest.TestCase` object (for test assertions).
+    :param string nrml_path: path to the nrml file to check
+    :param string exp_results_file: path to the expected results file
+    """
+    root = etree.parse(nrml_path)
+    hmns = root.xpath(
+        "//ns:HMNode", namespaces={"ns":"http://openquake.org/xmlns/nrml/0.3"})
+
+    # Example "-122.7 47.8": 0.15097656969
+    nrml_data = dict([(hmn[0][0][0].text, float(hmn[1].text)) for hmn in hmns])
+
+    map_data = [line.strip() for line in
+                open(exp_results_file, 'r').readlines()]
+
+    # Example line: "-122.7 47.8 0.15097656969"
+    map_data = dict(line.rsplit(" ", 1) for line in map_data)
+
+    tc.assertEqual(len(map_data), len(nrml_data))
+
+    for site, iml in map_data.iteritems():
+        iml = float(iml)
+        numpy.testing.assert_approx_equal(iml, nrml_data[site])
 
 
 def verify_hazmap_results(tc, job, expected_map, poe, statistic_type):
@@ -362,11 +382,22 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         hazcurve_0 = helpers.demo_file(
             os.path.join(exp_results_dir, "hazardcurve-0.dat"))
         nrml_path = os.path.join(copath, "hazardcurve-0.xml")
-        verify_hazcurve_nrml(self, nrml_path, hazcurve_0, end_branch_label=0)
+        verify_hazcurve_nrml(self, nrml_path, hazcurve_0)
 
         # Check mean hazard curves:
         hazcurve_mean = helpers.demo_file(
             os.path.join(exp_results_dir, "hazardcurve-mean.dat"))
         nrml_path = os.path.join(copath, "hazardcurve-mean.xml")
-        verify_hazcurve_nrml(
-            self, nrml_path, hazcurve_mean, statistic_type="mean")
+        verify_hazcurve_nrml(self, nrml_path, hazcurve_mean)
+
+        # Check hazard map mean 0.02:
+        hazmap_mean_0_02 = helpers.demo_file(
+            os.path.join(exp_results_dir, "hazardmap-0.02-mean.dat"))
+        nrml_path = os.path.join(copath, "hazardmap-0.02-mean.xml")
+        verify_hazmap_nrml(self, nrml_path, hazmap_mean_0_02)
+
+        # Check hazard map mean 0.1:
+        hazmap_mean_0_1 = helpers.demo_file(
+            os.path.join(exp_results_dir, "hazardmap-0.1-mean.dat"))
+        nrml_path = os.path.join(copath, "hazardmap-0.1-mean.xml")
+        verify_hazmap_nrml(self, nrml_path, hazmap_mean_0_1)
