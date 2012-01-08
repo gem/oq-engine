@@ -21,6 +21,7 @@ Database related unit tests for hazard computations with the hazard engine.
 """
 
 import itertools
+import mock
 import string
 import unittest
 
@@ -243,3 +244,212 @@ class GetModeTestCase(helpers.RedisTestMixin, unittest.TestCase):
         stats.delete_job_counters(job_id)
         self.assertEqual(writer.MODE_START_AND_END,
                          hazard_output.get_mode(*args))
+
+
+class CreateWriterTestCase(unittest.TestCase):
+    """Tests the behaviour of output.hazard._create_writer()."""
+
+    class _FDS(object):
+        """Fake DB serializer class to be used for testing."""
+        def __init__(self, identifier):
+            self.identifier = identifier
+
+        def __call__(self):
+            """Return the `identifier` so we can compare and test."""
+            return self.identifier
+
+    class _FXS(_FDS):
+        """Fake XML serializer class to be used for testing."""
+        def set_mode(self, _mode):
+            """Will be invoked by the function under test."""
+            pass
+
+    jobs = itertools.count(20)
+    files = itertools.cycle(string.ascii_lowercase)
+    dbs = itertools.count(1000)
+    xmls = itertools.count(2000)
+
+    def _init_curve(self):
+        # Constructor for DB serializer.
+        self.d = mock.Mock(spec=hazard_output.HazardCurveDBWriter)
+        self.d.side_effect = lambda _p1, _p2: self._FDS(self.dbs.next())
+        # Constructor for XML serializer.
+        self.x = mock.Mock(spec=hazard_output.HazardCurveXMLWriter)
+        self.x.side_effect = lambda _p1: self._FXS(self.xmls.next())
+
+    def _init_map(self):
+        # Constructor for DB serializer.
+        self.d = mock.Mock(spec=hazard_output.HazardMapDBWriter)
+        self.d.side_effect = lambda _p1, _p2: self._FDS(self.dbs.next())
+        # Constructor for XML serializer.
+        self.x = mock.Mock(spec=hazard_output.HazardMapXMLWriter)
+        self.x.side_effect = lambda _p1: self._FXS(self.xmls.next())
+
+    def test__create_writer_with_db_only_and_curve(self):
+        """
+        Only the db writer is created
+        """
+        self._init_curve()
+        result = hazard_output._create_writer(
+            self.jobs.next(), ["db"], self.files.next(), self.x, self.d, None)
+        self.assertEqual(0, self.x.call_count)
+        self.assertEqual(1, self.d.call_count)
+        self.assertEqual(self.dbs.next() - 1, result())
+
+    def test__create_writer_with_db_only_and_map(self):
+        """
+        Only the db writer is created
+        """
+        self._init_map()
+        result = hazard_output._create_writer(
+            self.jobs.next(), ["db"], self.files.next(), self.x, self.d, None)
+        self.assertEqual(0, self.x.call_count)
+        self.assertEqual(1, self.d.call_count)
+        self.assertEqual(self.dbs.next() - 1, result())
+
+    def test__create_writers_with_no_mode_and_curve(self):
+        """
+        Both serializers are created, no caching of the xml serializers.
+        """
+        self._init_curve()
+        result = hazard_output._create_writer(
+            self.jobs.next(), ["db", "xml"], self.files.next(), self.x, self.d,
+            None)
+        self.assertEqual(1, self.d.call_count)
+        self.assertEqual(1, self.x.call_count)
+        self.assertEqual([self.dbs.next() - 1, self.xmls.next() - 1],
+                         [rw() for rw in result.writers])
+        # Next time we call the method under test it will invoke the
+        # constructors and the serializers returned are different.
+        result = hazard_output._create_writer(
+            self.jobs.next(), ["db", "xml"], self.files.next(), self.x, self.d,
+            None)
+        self.assertEqual(2, self.d.call_count)
+        self.assertEqual(2, self.x.call_count)
+        self.assertEqual([self.dbs.next() - 1, self.xmls.next() - 1],
+                         [rw() for rw in result.writers])
+
+    def test__create_writers_with_no_mode_and_map(self):
+        """
+        Both serializers are created, no caching of the xml serializers.
+        """
+        self._init_map()
+        result = hazard_output._create_writer(
+            self.jobs.next(), ["db", "xml"], self.files.next(), self.x, self.d,
+            None)
+        self.assertEqual(1, self.d.call_count)
+        self.assertEqual(1, self.x.call_count)
+        self.assertEqual([self.dbs.next() - 1, self.xmls.next() - 1],
+                         [rw() for rw in result.writers])
+        # Next time we call the method under test it will invoke the
+        # constructors and the serializers returned are different.
+        result = hazard_output._create_writer(
+            self.jobs.next(), ["db", "xml"], self.files.next(), self.x, self.d,
+            None)
+        self.assertEqual(2, self.d.call_count)
+        self.assertEqual(2, self.x.call_count)
+        self.assertEqual([self.dbs.next() - 1, self.xmls.next() - 1],
+                         [rw() for rw in result.writers])
+
+    def test__create_writers_with_mode_and_curve(self):
+        """
+        Both serializers are created, the xml serializer is cached.
+        """
+        self._init_curve()
+        job_id = self.jobs.next()
+        nrml_path = self.files.next()
+        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
+                                              self.x, self.d, writer.MODE_START)
+        self.assertEqual(1, self.d.call_count)
+        self.assertEqual(1, self.x.call_count)
+        xml_serializer = self.xmls.next() - 1
+        self.assertEqual([self.dbs.next() - 1, xml_serializer],
+                         [rw() for rw in result.writers])
+        # Next time we call the method under test it will invoke only
+        # the constructor for the db serializer and the cached xml serializer
+        # is returned.
+        # This only works if the function under test is called with the same
+        # 'job_id' and 'nrml_path'.
+        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
+                                              self.x, self.d, writer.MODE_END)
+        self.assertEqual(2, self.d.call_count)
+        self.assertEqual(1, self.x.call_count)
+        self.assertEqual([self.dbs.next() - 1, xml_serializer],
+                         [rw() for rw in result.writers])
+
+    def test__create_writers_with_mode_and_map(self):
+        """
+        Both serializers are created, the xml serializer is cached.
+        """
+        self._init_map()
+        job_id = self.jobs.next()
+        nrml_path = self.files.next()
+        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
+                                              self.x, self.d, writer.MODE_START)
+        self.assertEqual(1, self.d.call_count)
+        self.assertEqual(1, self.x.call_count)
+        xml_serializer = self.xmls.next() - 1
+        self.assertEqual([self.dbs.next() - 1, xml_serializer],
+                         [rw() for rw in result.writers])
+        # Next time we call the method under test it will invoke only
+        # the constructor for the db serializer and the cached xml serializer
+        # is returned.
+        # This only works if the function under test is called with the same
+        # 'job_id' and 'nrml_path'.
+        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
+                                              self.x, self.d, writer.MODE_END)
+        self.assertEqual(2, self.d.call_count)
+        self.assertEqual(1, self.x.call_count)
+        self.assertEqual([self.dbs.next() - 1, xml_serializer],
+                         [rw() for rw in result.writers])
+
+    def test__create_writers_with_mode_and_curve_and_different_job(self):
+        """
+        Both serializers are created, the xml serializer is *not* cached
+        because the jobs differ.
+        """
+        self._init_curve()
+        job_id = self.jobs.next()
+        nrml_path = self.files.next()
+        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
+                                              self.x, self.d, writer.MODE_START)
+        self.assertEqual(1, self.d.call_count)
+        self.assertEqual(1, self.x.call_count)
+        xml_serializer = self.xmls.next() - 1
+        self.assertEqual([self.dbs.next() - 1, xml_serializer],
+                         [rw() for rw in result.writers])
+        # We are passing different job identifiers to the method under test.
+        # It will thus call both constructors.  The serializers returned are
+        # different.
+        result = hazard_output._create_writer(
+            self.jobs.next(), ["db", "xml"], nrml_path, self.x, self.d,
+            writer.MODE_END)
+        self.assertEqual(2, self.d.call_count)
+        self.assertEqual(2, self.x.call_count)
+        self.assertEqual([self.dbs.next() - 1,  self.xmls.next() - 1],
+                         [rw() for rw in result.writers])
+
+    def test__create_writers_with_mode_and_map_and_different_path(self):
+        """
+        Both serializers are created, the xml serializer is *not* cached
+        because the paths differ.
+        """
+        self._init_map()
+        job_id = self.jobs.next()
+        nrml_path = self.files.next()
+        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
+                                              self.x, self.d, writer.MODE_START)
+        self.assertEqual(1, self.d.call_count)
+        self.assertEqual(1, self.x.call_count)
+        xml_serializer = self.xmls.next() - 1
+        self.assertEqual([self.dbs.next() - 1, xml_serializer],
+                         [rw() for rw in result.writers])
+        # We are passing different paths to the method under test. It will
+        # thus call both constructors. The serializers returned are different.
+        result = hazard_output._create_writer(
+            job_id, ["db", "xml"], self.files.next(), self.x, self.d,
+            writer.MODE_END)
+        self.assertEqual(2, self.d.call_count)
+        self.assertEqual(2, self.x.call_count)
+        self.assertEqual([self.dbs.next() - 1,  self.xmls.next() - 1],
+                         [rw() for rw in result.writers])
