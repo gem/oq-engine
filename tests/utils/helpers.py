@@ -141,7 +141,7 @@ def job_from_file(config_file_path):
     a database.
     """
 
-    job = engine.job_from_file(config_file_path, 'xml')
+    job = engine._job_from_file(config_file_path, 'xml')
     cleanup_loggers()
 
     return job
