@@ -30,13 +30,16 @@ import numpy
 import os
 import unittest
 
+from openquake import engine
 from openquake import kvs
 from openquake import logs
 from openquake import nrml
 from openquake import shapes
 from openquake import xml
 
+from openquake.db.models import OqCalculation
 from openquake.hazard import calc as hazcalc
+from openquake.job import CalculationProxy
 from openquake.job.config import HazardMandatoryParamsValidator
 from openquake.job.config import PARAMS
 from openquake.kvs import tokens
@@ -287,10 +290,21 @@ class HazardEngineTestCase(helpers.TestMixin, unittest.TestCase):
                             "NRML instance file %s does not validate against "\
                             "schema" % nrml_path)
 
-        the_job = helpers.job_from_file(
-            helpers.testdata_path("classical_psha_simple/config.gem"))
+        base_path = helpers.testdata_path("classical_psha_simple")
+        path = helpers.testdata_path("classical_psha_simple/config.gem")
+        job_profile, params, sections = engine.import_job_profile(path)
 
-        calc_mode = the_job['CALCULATION_MODE']
+        calculation = OqCalculation(owner=job_profile.owner)
+        calculation.oq_job_profile = job_profile
+        calculation.save()
+
+        the_job = CalculationProxy(
+            params, calculation.id, sections=sections, base_path=base_path,
+            serialize_results_to=['db'], oq_job_profile=job_profile,
+            oq_calculation=calculation)
+        the_job.to_kvs()
+
+        calc_mode = job_profile.calc_mode
         calculator = hazcalc.CALCULATORS[calc_mode](the_job)
 
         used_keys = []

@@ -25,11 +25,11 @@ CALCULATORS = dict()
 
 def _load_calcs():
     calcs = {
-        'Classical': ClassicalPSHABasedMixin,
-        'Classical BCR': ClassicalPSHABasedMixin,
-        'Event Based': ProbabilisticEventMixin,
-        'Event Based BCR': ProbabilisticEventMixin,
-        'Scenario': ScenarioEventBasedMixin,
+        'classical': ClassicalPSHABasedMixin,
+        'classical_bcr': ClassicalPSHABasedMixin,
+        'event_based': ProbabilisticEventMixin,
+        'event_based_bcr': ProbabilisticEventMixin,
+        'scenario': ScenarioEventBasedMixin,
     }
     CALCULATORS.update(calcs)
 

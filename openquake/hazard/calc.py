@@ -25,12 +25,12 @@ CALCULATORS = dict()
 
 def _load_calcs():
     calcs = {
-        'Classical': ClassicalMixin,
-        'Classical BCR': ClassicalMixin,
-        'Event Based': EventBasedMixin,
-        'Event Based BCR': EventBasedMixin,
-        'Disaggregation': DisaggMixin,
-        'Scenario': ScenarioEventBasedMixin,
+        'classical': ClassicalMixin,
+        'classical_bcr': ClassicalMixin,
+        'event_based': EventBasedMixin,
+        'event_based_bcr': EventBasedMixin,
+        'disaggregation': DisaggMixin,
+        'scenario': ScenarioEventBasedMixin,
     }
     CALCULATORS.update(calcs)
 

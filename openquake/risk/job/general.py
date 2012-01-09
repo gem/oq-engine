@@ -128,7 +128,8 @@ def compute_risk(job_id, block_id, **kwargs):
 
     check_job_status(job_id)
     the_job = job.CalculationProxy.from_kvs(job_id)
-    calculator = CALCULATORS[the_job['CALCULATION_MODE']](the_job)
+    calc_mode = the_job.oq_job_profile.calc_mode
+    calculator = CALCULATORS[calc_mode](the_job)
 
     return calculator.compute_risk(block_id, **kwargs)
 
