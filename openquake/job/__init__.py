@@ -32,7 +32,10 @@ from openquake.db.models import (OqCalculation, CalcStats, FloatArrayField,
                                  CharArrayField, InputSet, Input)
 from openquake.job import config as conf
 from openquake.job import params as job_params
-from openquake.job.params import PARAMS, CALCULATION_MODE, ENUM_MAP
+from openquake.job.params import CALCULATION_MODE
+from openquake.job.params import ENUM_MAP
+from openquake.job.params import PARAMS
+from openquake.job.params import PATH_PARAMS
 from openquake.kvs import mark_job_as_current
 from openquake.logs import LOG
 from openquake.utils import stats
@@ -45,32 +48,54 @@ REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
 class CalculationProxy(object):
     """A job is a collection of parameters identified by a unique id."""
 
-    def __init__(self, params, job_id, sections=list(), base_path=None,
-                 serialize_results_to=list()):
+    def __init__(self, params, calculation_id, sections=list(), base_path=None,
+                 serialize_results_to=list(), oq_job_profile=None,
+                 oq_calculation=None):
         """
         :param dict params: Dict of job config params.
-        :param int job_id: ID of the corresponding oq_calculation db record.
+        :param int calculation_id:
+            ID of the corresponding oq_calculation db record.
         :param list sections: List of config file sections. Example::
             ['HAZARD', 'RISK']
         :param str base_path: base directory containing job input files
+        :param oq_job_profile:
+            :class:`openquake.db.models.OqJobProfile` instance; database
+            representation of the job profile / calculation configuration.
+        :param oq_calculation:
+            :class:`openquake.db.models.OqCalculation` instance; database
+            representation of the runtime thing we refer to as the
+            'calculation'.
         """
-        self._job_id = job_id
-        mark_job_as_current(job_id)  # enables KVS gc
+        self._calculation_id = calculation_id
+        mark_job_as_current(calculation_id)  # enables KVS gc
 
         self.sites = []
         self.blocks_keys = []
         self.params = params
         self.sections = list(set(sections))
         self.serialize_results_to = []
-        self.base_path = base_path
+        self._base_path = base_path
         self.serialize_results_to = list(serialize_results_to)
+
+        self.oq_job_profile = oq_job_profile
+        self.oq_calculation = oq_calculation
+
+    @property
+    def base_path(self):
+        if self._base_path is not None:
+            return self._base_path
+        else:
+            return self.params.get('BASE_PATH')
 
     @staticmethod
     def from_kvs(job_id):
         """Return the job in the underlying kvs system with the given id."""
         params = kvs.get_value_json_decoded(
             kvs.tokens.generate_job_key(job_id))
-        job = CalculationProxy(params, job_id)
+        calculation = OqCalculation.objects.get(id=job_id)
+        job_profile = calculation.oq_job_profile
+        job = CalculationProxy(params, job_id, oq_job_profile=job_profile,
+                               oq_calculation=calculation)
         return job
 
     @staticmethod
@@ -100,7 +125,7 @@ class CalculationProxy(object):
     @property
     def job_id(self):
         """Return the id of this job."""
-        return self._job_id
+        return self._calculation_id
 
     @property
     def key(self):
@@ -258,9 +283,7 @@ class CalculationProxy(object):
         Report initial job stats (such as start time) by adding a
         uiapi.calc_stats record to the db.
         '''
-        oq_calculation = OqCalculation.objects.get(id=self.job_id)
-
-        calc_stats = CalcStats(oq_calculation=oq_calculation)
+        calc_stats = CalcStats(oq_calculation=self.oq_calculation)
         calc_stats.start_time = datetime.utcnow()
         calc_stats.num_sites = len(self.sites_to_compute())
 
@@ -299,3 +322,36 @@ def read_sites_from_exposure(a_job):
             sites.append(site)
 
     return sites
+
+
+def prepare_config_parameters(params):
+    """
+    Pre-process configuration parameters removing unknown ones.
+    """
+
+    calc_mode = CALCULATION_MODE[params['CALCULATION_MODE']]
+    new_params = dict()
+
+    for name, value in params.items():
+        try:
+            param = PARAMS[name]
+        except KeyError:
+            print 'Ignoring unknown parameter %r' % name
+            continue
+
+        if calc_mode not in param.modes:
+            msg = "Ignoring %s in %s, it's meaningful only in "
+            msg %= (name, calc_mode)
+            print msg, ', '.join(param.modes)
+            continue
+
+        new_params[name] = value
+
+    # make file paths absolute
+    for name in PATH_PARAMS:
+        if name not in new_params:
+            continue
+
+        new_params[name] = os.path.join(params['BASE_PATH'], new_params[name])
+
+    return new_params

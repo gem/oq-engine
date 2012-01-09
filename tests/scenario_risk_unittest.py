@@ -34,7 +34,6 @@ from tests.utils.helpers import patch
 
 TEST_JOB_ID = "1234"
 TEST_REGION = shapes.Region.from_simple((0.1, 0.1), (0.2, 0.2))
-TEST_JOB_FILE = helpers.testdata_path('scenario/config.gem')
 
 
 class ScenarioRiskTestCase(unittest.TestCase):
@@ -130,15 +129,3 @@ class ScenarioRiskTestCase(unittest.TestCase):
 
         # They should come out exactly the way they went in.
         self.assertEqual(test_assets, actual_assets)
-
-    def test_scenario_job_completes(self):
-        """
-        Exercise the scenario risk job and make sure it runs end-to-end.
-        """
-        risk_job = helpers.job_from_file(TEST_JOB_FILE)
-
-        # KVS garbage collection is going to be called asynchronously by the
-        # job. We don't actually want that to happen.
-        with patch('subprocess.Popen'):
-
-            engine.launch(risk_job)

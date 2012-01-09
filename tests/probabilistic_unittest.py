@@ -63,12 +63,12 @@ class LossMapCurveSerialization(unittest.TestCase, helpers.TestMixin):
             'INVESTIGATION_TIME': 0.0,
             'OUTPUT_DIR': 'foo',
             'CALCULATION_MODE': 'Event Based',
+            'BASE_PATH': '/tmp',
         }
         the_job = helpers.create_job(params)
 
         self.calculator = ProbabilisticEventMixin(the_job)
         the_job.serialize_results_to = ['db', 'xml']
-        the_job.base_path = '/tmp'
         the_job.blocks_keys = []
         self.calculator.store_exposure_assets = lambda: None
         self.calculator.store_vulnerability_model = lambda: None
