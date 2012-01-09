@@ -127,7 +127,7 @@ def compute_risk(job_id, block_id, **kwargs):
     from openquake.risk.calc import CALCULATORS
 
     check_job_status(job_id)
-    the_job = job.Job.from_kvs(job_id)
+    the_job = job.CalculationProxy.from_kvs(job_id)
     calculator = CALCULATORS[the_job['CALCULATION_MODE']](the_job)
 
     return calculator.compute_risk(block_id, **kwargs)

@@ -112,7 +112,7 @@ def launch(a_job):
     behavior for job and execute it.
 
     :param a_job:
-        :class:`openquake.job.Job` instance.
+        :class:`openquake.job.CalculationProxy` instance.
     """
     a_job._record_initial_stats()  # move this to the job constructor
 
