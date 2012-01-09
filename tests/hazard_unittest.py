@@ -300,7 +300,7 @@ class HazardEngineTestCase(helpers.TestMixin, unittest.TestCase):
 
         the_job = CalculationProxy(
             params, calculation.id, sections=sections, base_path=base_path,
-            serialize_results_to=['db'], oq_job_profile=job_profile,
+            serialize_results_to=['db', 'xml'], oq_job_profile=job_profile,
             oq_calculation=calculation)
         the_job.to_kvs()
 

@@ -32,7 +32,7 @@ from openquake import job
 from openquake import kvs
 from openquake import flags
 from openquake import shapes
-from openquake.engine import (get_source_models, parse_config_file,
+from openquake.engine import (_get_source_models, _parse_config_file,
                               prepare_config_parameters, _prepare_job)
 from openquake.job import CalculationProxy
 from openquake.job import config
@@ -158,22 +158,22 @@ class JobDbRecordTestCase(unittest.TestCase):
         self.job = None
 
     def test_job_db_record_for_output_type_db(self):
-        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE), 'db')
+        self.job = engine._job_from_file(helpers.get_data_path(CONFIG_FILE), 'db')
         OqCalculation.objects.get(id=self.job.job_id)
 
     def test_job_db_record_for_output_type_xml(self):
-        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE), 'xml')
+        self.job = engine._job_from_file(helpers.get_data_path(CONFIG_FILE), 'xml')
         OqCalculation.objects.get(id=self.job.job_id)
 
     def test_set_status(self):
-        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE), 'db')
+        self.job = engine._job_from_file(helpers.get_data_path(CONFIG_FILE), 'db')
         status = 'running'
         self.job.set_status(status)
         self.assertEqual(status,
                          OqCalculation.objects.get(id=self.job.job_id).status)
 
     def test_get_status_from_db(self):
-        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE), 'db')
+        self.job = engine._job_from_file(helpers.get_data_path(CONFIG_FILE), 'db')
         row = OqCalculation.objects.get(id=self.job.job_id)
 
         row.status = "failed"
@@ -185,7 +185,7 @@ class JobDbRecordTestCase(unittest.TestCase):
         self.assertEqual("running", CalculationProxy.get_status_from_db(self.job.job_id))
 
     def test_is_job_completed(self):
-        job_id = engine.job_from_file(helpers.get_data_path(CONFIG_FILE), 'db').job_id
+        job_id = engine._job_from_file(helpers.get_data_path(CONFIG_FILE), 'db').job_id
         row = OqCalculation.objects.get(id=job_id)
         pairs = [('pending', False), ('running', False),
                  ('succeeded', True), ('failed', True)]
@@ -209,7 +209,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
         config_path = self.touch(
             dir=gettempdir(), content=textwrap.dedent(content))
 
-        params, sections = parse_config_file(config_path)
+        params, sections = _parse_config_file(config_path)
 
         self.assertEquals(
             {'BASE_PATH': gettempdir(),
@@ -221,7 +221,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
     def test_parse_missing_files(self):
         config_path = '/does/not/exist'
 
-        self.assertRaises(config.ValidationException, parse_config_file,
+        self.assertRaises(config.ValidationException, _parse_config_file,
                           config_path)
 
     def test_prepare_parameters(self):
@@ -239,7 +239,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
         config_path = self.touch(
             dir=gettempdir(), content=textwrap.dedent(content))
 
-        params, sections = parse_config_file(config_path)
+        params, sections = _parse_config_file(config_path)
         params = prepare_config_parameters(params)
 
         self.assertEquals(
@@ -265,7 +265,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             '''
         config_path = self.touch(content=textwrap.dedent(content))
 
-        params, sections = parse_config_file(config_path)
+        params, sections = _parse_config_file(config_path)
         params = prepare_config_parameters(params)
 
         self.assertEquals(
@@ -443,7 +443,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         abs_path = partial(datapath, "classical_psha_simple")
 
         path = abs_path('source_model_logic_tree.xml')
-        models = get_source_models(path)
+        models = _get_source_models(path)
         expected_models = [abs_path('source_model1.xml'),
                            abs_path('source_model2.xml')]
 
@@ -700,7 +700,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 class RunJobTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.job_from_file = engine.job_from_file
+        self.job_from_file = engine._job_from_file
         self.init_logs_amqp_send = patch('openquake.logs.init_logs_amqp_send')
         self.init_logs_amqp_send.start()
         self.job_profile, self.params, self.sections = (
@@ -732,7 +732,7 @@ class RunJobTestCase(unittest.TestCase):
             engine._launch_calculation = mock.Mock(
                 side_effect=test_status_running_and_succeed)
 
-            with patch('openquake.engine.job_from_file') as from_file:
+            with patch('openquake.engine._job_from_file') as from_file:
                 from_file.side_effect = patch_job_launch
 
                 with patch('os.fork', mocksignature=False) as fork:
@@ -764,7 +764,7 @@ class RunJobTestCase(unittest.TestCase):
             engine._launch_calculation = mock.Mock(
                 side_effect=test_status_running_and_fail)
 
-            with patch('openquake.engine.job_from_file') as from_file:
+            with patch('openquake.engine._job_from_file') as from_file:
                 from_file.side_effect = patch_job_launch
 
                 with patch('os.fork', mocksignature=False) as fork:
@@ -873,7 +873,7 @@ class RunJobTestCase(unittest.TestCase):
             job.read_sites_from_exposure(test_job))
 
     def test_supervisor_is_spawned(self):
-        with patch('openquake.engine.job_from_file') as from_file:
+        with patch('openquake.engine._job_from_file') as from_file:
 
             before_launch = engine._launch_calculation
             try:
