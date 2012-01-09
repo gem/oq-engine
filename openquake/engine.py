@@ -38,7 +38,7 @@ from openquake import xml
 
 from openquake.flags import FLAGS
 from openquake.job import config as jobconf
-from openquake.job import Job
+from openquake.job import CalculationProxy
 from openquake.supervising import supervisor
 from openquake.utils import stats
 
@@ -143,6 +143,9 @@ def job_from_file(config_file, output_type, owner_username='openquake'):
         Where to store results:
         * 'db' database
         * 'xml' XML files *plus* database
+    :param owner_username:
+        oq_user.user_name which defines the owner of all DB artifacts created
+        by this function.
     """
 
     # output_type can be set, in addition to 'db' and 'xml', also to
@@ -181,8 +184,9 @@ def job_from_file(config_file, output_type, owner_username='openquake'):
 
     base_path = params['BASE_PATH']
 
-    job = Job(params, calculation_id, sections=sections, base_path=base_path,
-              serialize_results_to=serialize_results_to)
+    job = CalculationProxy(params, calculation_id, sections=sections,
+                           base_path=base_path,
+                           serialize_results_to=serialize_results_to)
     job.to_kvs()
 
     return job
@@ -399,14 +403,24 @@ def _store_input_parameters(params, calc_mode, job_profile):
         job_profile.damping = None
 
 
-def run_calc(job_profile):
+def run_calc(job_profile, params, sections):
     """Given an :class:`openquake.db.models.OqJobProfile` object, create a new
     :class:`openquake.db.models.OqCalculation` object and run the calculation.
+
+    NOTE: The params and sections parameters are temporary but will be required
+    until we can run calculations purely using Django model objects as
+    calculator input.
 
     Returns the calculation object when the calculation concludes.
 
     :param job_profile:
         :class:`openquake.db.models.OqJobProfile` instance.
+    :param params:
+        A dictionary of config parameters parsed from the calculation
+        config file.
+    :param sections:
+        A list of sections parsed from the calculation config file.
+
     :returns:
         :class:`openquake.db.models.OqCalculation` instance.
     """
@@ -419,8 +433,13 @@ def import_job_profile(path_to_cfg):
 
     :param str path_to_cfg:
         Path to a job config file.
+
     :returns:
-        :class:`openquake.db.models.OqJobProfile` instance.
+        A tuple of :class:`openquake.db.models.OqJobProfile` instance,
+        params dict, and sections list.
+        NOTE: The params and sections are temporary. These should be removed
+        from the return value the future whenever possible to keep the API
+        clean.
     """
     params, sections = parse_config_file(path_to_cfg)
     params, sections = prepare_config_parameters(params, sections)
@@ -432,4 +451,4 @@ def import_job_profile(path_to_cfg):
         raise jobconf.ValidationException(errors)
 
     job_profile = _prepare_job(params, sections)
-    return job_profile
+    return job_profile, params, sections
