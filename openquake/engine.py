@@ -403,7 +403,7 @@ def run_calc(job_profile):
     """Given an :class:`openquake.db.models.OqJobProfile` object, create a new
     :class:`openquake.db.models.OqCalculation` object and run the calculation.
 
-    Returns the calculation object.
+    Returns the calculation object when the calculation concludes.
 
     :param job_profile:
         :class:`openquake.db.models.OqJobProfile` instance.
