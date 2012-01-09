@@ -39,6 +39,7 @@ from openquake import xml
 from openquake.flags import FLAGS
 from openquake.job import config as jobconf
 from openquake.job import CalculationProxy
+from openquake.job import prepare_config_parameters
 from openquake.supervising import supervisor
 from openquake.utils import stats
 
@@ -53,84 +54,6 @@ from openquake.risk.calc import CALCULATORS as RISK_CALCS
 CALCS = dict(hazard=HAZ_CALCS, risk=RISK_CALCS)
 
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
-
-
-def run_job(job_file, output_type):
-    """
-    Given a job_file, run the job.
-
-    :param job_file: the path of the configuration file for the job
-    :type job_file: string
-    :param output_type: the desired format for the results, one of 'db', 'xml'
-    :type output_type: string
-    """
-    a_job = job_from_file(job_file, output_type)
-    a_job.set_status('running')
-
-    # closing all db connections to make sure they're not shared between
-    # supervisor and job executor processes. otherwise if one of them closes
-    # the connection it immediately becomes unavailable for other
-    close_connection()
-
-    job_pid = os.fork()
-    if not job_pid:
-        # job executor process
-        try:
-            logs.init_logs_amqp_send(level=FLAGS.debug, job_id=a_job.job_id)
-            launch(a_job)
-        except Exception, ex:
-            logs.LOG.critical("Job failed with exception: '%s'" % str(ex))
-            a_job.set_status('failed')
-            raise
-        else:
-            a_job.set_status('succeeded')
-        return
-
-    supervisor_pid = os.fork()
-    if not supervisor_pid:
-        # supervisor process
-        supervisor_pid = os.getpid()
-        job = OqCalculation.objects.get(id=a_job.job_id)
-        job.supervisor_pid = supervisor_pid
-        job.job_pid = job_pid
-        job.save()
-        supervisor.supervise(job_pid, a_job.job_id)
-        return
-
-    # parent process
-
-    # ignore Ctrl-C as well as supervisor process does. thus only
-    # job executor terminates on SIGINT
-    supervisor.ignore_sigint()
-    # wait till both child processes are done
-    os.waitpid(job_pid, 0)
-    os.waitpid(supervisor_pid, 0)
-
-
-def launch(a_job):
-    """Based on the behavior specified in the configuration, mix in the correct
-    behavior for job and execute it.
-
-    :param a_job:
-        :class:`openquake.job.CalculationProxy` instance.
-    """
-    a_job._record_initial_stats()  # move this to the job constructor
-
-    output_dir = os.path.join(a_job.base_path, a_job['OUTPUT_DIR'])
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    for job_type in ('hazard', 'risk'):
-        if not job_type.upper() in a_job.sections:
-            continue
-
-        calc_mode = a_job['CALCULATION_MODE']
-        calc_class = CALCS[job_type][calc_mode]
-
-        calculator = calc_class(a_job)
-        logs.LOG.debug("Launching job with id=%s and type='%s'"
-                       % (a_job.job_id, job_type))
-        calculator.execute()
 
 
 def job_from_file(config_file, output_type, owner_username='openquake'):
@@ -157,7 +80,7 @@ def job_from_file(config_file, output_type, owner_username='openquake'):
     assert output_type in ('db', 'xml')
 
     params, sections = parse_config_file(config_file)
-    params, sections = prepare_config_parameters(params, sections)
+    params = prepare_config_parameters(params)
     job_profile = _prepare_job(params, sections)
 
     validator = jobconf.default_validators(sections, params)
@@ -232,39 +155,6 @@ def parse_config_file(config_file):
     params['BASE_PATH'] = base_path
 
     return params, list(set(sections))
-
-
-def prepare_config_parameters(params, sections):
-    """
-    Pre-process configuration parameters removing unknown ones.
-    """
-
-    calc_mode = CALCULATION_MODE[params['CALCULATION_MODE']]
-    new_params = dict()
-
-    for name, value in params.items():
-        try:
-            param = PARAMS[name]
-        except KeyError:
-            print 'Ignoring unknown parameter %r' % name
-            continue
-
-        if calc_mode not in param.modes:
-            msg = "Ignoring %s in %s, it's meaningful only in "
-            msg %= (name, calc_mode)
-            print msg, ', '.join(param.modes)
-            continue
-
-        new_params[name] = value
-
-    # make file paths absolute
-    for name in PATH_PARAMS:
-        if name not in new_params:
-            continue
-
-        new_params[name] = os.path.join(params['BASE_PATH'], new_params[name])
-
-    return new_params, sections
 
 
 def _insert_input_files(params, input_set):
@@ -403,7 +293,7 @@ def _store_input_parameters(params, calc_mode, job_profile):
         job_profile.damping = None
 
 
-def run_calc(job_profile, params, sections):
+def run_calculation(job_profile, params, sections):
     """Given an :class:`openquake.db.models.OqJobProfile` object, create a new
     :class:`openquake.db.models.OqCalculation` object and run the calculation.
 
@@ -425,6 +315,88 @@ def run_calc(job_profile, params, sections):
         :class:`openquake.db.models.OqCalculation` instance.
     """
 
+    calculation = OqCalculation(owner=job_profile.owner)
+    calculation.oq_job_profile = job_profile
+    calculation.status = 'running'
+    calculation.save()
+
+    calc_proxy = CalculationProxy(params, calculation.id, sections=sections,
+                                  oq_job_profile=job_profile,
+                                  oq_calculation=calculation)
+
+    # closing all db connections to make sure they're not shared between
+    # supervisor and job executor processes. otherwise if one of them closes
+    # the connection it immediately becomes unavailable for other
+    close_connection()
+
+    calc_pid = os.fork()
+    if not calc_pid:
+        # calculation executor process
+        try:
+            logs.init_logs_amqp_send(level=FLAGS.debug, job_id=calculation.id)
+            _launch_calculation(calc_proxy, sections)
+        except Exception, ex:
+            logs.LOG.critical("Calculation failed with exception: '%s'"
+                              % str(ex))
+            calculation.status = 'failed'
+            calculation.save()
+            raise
+        else:
+            calculation.status = 'succeeded'
+            calculation.save()
+        return
+
+    supervisor_pid = os.fork()
+    if not supervisor_pid:
+        # supervisor process
+        supervisor_pid = os.getpid()
+        calculation.supervisor_pid = supervisor_pid
+        calculation.job_pid = calc_pid
+        calculation.save()
+        supervisor.supervise(calc_pid, calculation.id)
+        return
+
+    # parent process
+
+    # ignore Ctrl-C as well as supervisor process does. thus only
+    # job executor terminates on SIGINT
+    supervisor.ignore_sigint()
+    # wait till both child processes are done
+    os.waitpid(calc_pid, 0)
+    os.waitpid(supervisor_pid, 0)
+
+    return calculation
+
+
+def _launch_calculation(calc_proxy, sections):
+    """Instantiate calculator(s) and actually run the calculation.
+
+    :param calc_proxy:
+        :class:`openquake.job.CalculationProxy` instance.
+    :param sections:
+        List of config file sections. Example::
+            ['general', 'HAZARD', 'RISK']
+    """
+    calc_proxy._record_initial_stats()  # move this to the job constructor
+    calc_proxy.to_kvs()
+
+    output_dir = os.path.join(calc_proxy.base_path, calc_proxy['OUTPUT_DIR'])
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    calc_mode = calc_proxy.oq_job_profile.calc_mode
+
+    for job_type in ('hazard', 'risk'):
+        if not job_type.upper() in sections:
+            continue
+
+        calc_class = CALCS[job_type][calc_mode]
+
+        calculator = calc_class(calc_proxy)
+        logs.LOG.debug("Launching calculation with id=%s and type='%s'"
+                       % (calc_proxy.job_id, job_type))
+        calculator.execute()
+
 
 def import_job_profile(path_to_cfg):
     """Given the path to a job config file, create a new
@@ -442,7 +414,7 @@ def import_job_profile(path_to_cfg):
         clean.
     """
     params, sections = parse_config_file(path_to_cfg)
-    params, sections = prepare_config_parameters(params, sections)
+    params = prepare_config_parameters(params)
 
     validator = jobconf.default_validators(sections, params)
     is_valid, errors = validator.is_valid()

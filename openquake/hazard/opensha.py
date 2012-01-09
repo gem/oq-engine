@@ -131,7 +131,7 @@ def compute_ground_motion_fields(job_id, sites, history, realization, seed):
 
     utils_tasks.check_job_status(job_id)
     the_job = job.CalculationProxy.from_kvs(job_id)
-    calc_mode = the_job['CALCULATION_MODE']
+    calc_mode = the_job.oq_job_profile.calc_mode
     calculator = CALCULATORS[calc_mode](the_job)
 
     calculator.compute_ground_motion_fields(
@@ -147,7 +147,7 @@ def compute_hazard_curve(job_id, sites, realization):
 
     utils_tasks.check_job_status(job_id)
     the_job = job.CalculationProxy.from_kvs(job_id)
-    calc_mode = the_job['CALCULATION_MODE']
+    calc_mode = the_job.oq_job_profile.calc_mode
     calculator = CALCULATORS[calc_mode](the_job)
     keys = calculator.compute_hazard_curve(sites, realization)
     return keys
