@@ -52,9 +52,9 @@ REVOKE ALL PRIVILEGES ON uiapi.oq_job FROM oq_uiapi_writer;
 REVOKE ALL PRIVILEGES ON uiapi.oq_job FROM oq_reslt_writer;
 GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job TO oq_job_init;
 
-REVOKE ALL PRIVILEGES ON uiapi.oq_params FROM oq_uiapi_writer;
-REVOKE ALL PRIVILEGES ON uiapi.oq_params FROM oq_reslt_writer;
-GRANT SELECT,INSERT,UPDATE ON uiapi.oq_params TO oq_job_init;
+REVOKE ALL PRIVILEGES ON uiapi.oq_job_profile FROM oq_uiapi_writer;
+REVOKE ALL PRIVILEGES ON uiapi.oq_job_profile FROM oq_reslt_writer;
+GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job_profile TO oq_job_init;
 
 REVOKE ALL PRIVILEGES ON uiapi.output FROM oq_uiapi_writer;
 
