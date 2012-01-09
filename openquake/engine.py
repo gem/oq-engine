@@ -56,7 +56,7 @@ CALCS = dict(hazard=HAZ_CALCS, risk=RISK_CALCS)
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 
 
-def job_from_file(config_file, output_type, owner_username='openquake'):
+def _job_from_file(config_file, output_type, owner_username='openquake'):
     """
     Create a job from external configuration files.
 
@@ -79,7 +79,7 @@ def job_from_file(config_file, output_type, owner_username='openquake'):
     # essentially a detail of our current tests and ci infrastructure.
     assert output_type in ('db', 'xml')
 
-    params, sections = parse_config_file(config_file)
+    params, sections = _parse_config_file(config_file)
     params = prepare_config_parameters(params)
     job_profile = _prepare_job(params, sections)
 
@@ -115,7 +115,7 @@ def job_from_file(config_file, output_type, owner_username='openquake'):
     return job
 
 
-def parse_config_file(config_file):
+def _parse_config_file(config_file):
     """
     We have a single configuration file which may contain a risk section and
     a hazard section. This input file must be in the ConfigParser format
@@ -145,7 +145,7 @@ def parse_config_file(config_file):
             # Handle includes.
             if RE_INCLUDE.match(key):
                 config_file = os.path.join(os.path.dirname(config_file), value)
-                new_params, new_sections = parse_config_file(config_file)
+                new_params, new_sections = _parse_config_file(config_file)
                 sections.extend(new_sections)
                 params.update(new_params)
             else:
@@ -171,7 +171,7 @@ def _insert_input_files(params, input_set):
 
     # insert soft-linked source models in input table
     if 'SOURCE_MODEL_LOGIC_TREE_FILE' in params:
-        for path in get_source_models(params['SOURCE_MODEL_LOGIC_TREE_FILE']):
+        for path in _get_source_models(params['SOURCE_MODEL_LOGIC_TREE_FILE']):
             in_model = Input(input_set=input_set, path=path,
                              input_type='source', size=os.path.getsize(path))
             in_model.save()
@@ -231,7 +231,7 @@ def _prepare_job(params, sections, owner_username='openquake'):
     return OqJobProfile.objects.get(id=job_profile.id)
 
 
-def get_source_models(logic_tree):
+def _get_source_models(logic_tree):
     """Returns the source models soft-linked by the given logic tree.
 
     :param str logic_tree: path to a source model logic tree file
@@ -413,7 +413,7 @@ def import_job_profile(path_to_cfg):
         from the return value the future whenever possible to keep the API
         clean.
     """
-    params, sections = parse_config_file(path_to_cfg)
+    params, sections = _parse_config_file(path_to_cfg)
     params = prepare_config_parameters(params)
 
     validator = jobconf.default_validators(sections, params)
