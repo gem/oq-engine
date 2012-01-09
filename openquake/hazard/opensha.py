@@ -451,7 +451,6 @@ class ClassicalMixin(BasePSHAMixin):
 
         curve_writer = hazard_output.create_hazardcurve_writer(
             self.job_id, self.serialize_results_to, nrml_path)
-        hc_data = []
 
         sites = set(sites)
         accounted_for = set()
@@ -459,6 +458,7 @@ class ClassicalMixin(BasePSHAMixin):
         duration = dgen.next()
 
         while accounted_for != sites:
+            hc_data = []
             # Sleep a little before checking the availability of additional
             # hazard curve results.
             time.sleep(duration)
@@ -484,8 +484,8 @@ class ClassicalMixin(BasePSHAMixin):
             if not results_found:
                 # No results found, increase the sleep duration.
                 duration = dgen.next()
-
-        curve_writer.serialize(hc_data)
+            else:
+                curve_writer.serialize(hc_data)
 
         return nrml_path
 
