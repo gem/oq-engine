@@ -42,7 +42,7 @@ FLAGS = flags.FLAGS
 REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
 
 
-class Job(object):
+class CalculationProxy(object):
     """A job is a collection of parameters identified by a unique id."""
 
     def __init__(self, params, job_id, sections=list(), base_path=None,
@@ -91,8 +91,6 @@ class Job(object):
         """
         status = Job.get_status_from_db(job_id)
         return status == 'succeeded' or status == 'failed'
-
-
 
     def has(self, name):
         """Return false if this job doesn't have the given parameter defined,

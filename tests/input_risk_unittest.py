@@ -21,7 +21,6 @@
 import unittest
 import os
 
-from openquake.job import Job
 from openquake.output.hazard import *
 from openquake.input.exposure import ExposureDBWriter
 from openquake.parser.exposure import ExposurePortfolioFile
