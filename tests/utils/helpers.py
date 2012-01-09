@@ -605,7 +605,7 @@ class DbTestMixin(TestMixin):
         input_set = models.InputSet(owner=owner)
         input_set.save()
 
-        oqp = models.OqParams()
+        oqp = models.OqJobProfile()
         oqp.calc_mode = "classical"
         oqp.job_type = ['hazard']
         oqp.input_set = input_set
@@ -660,7 +660,7 @@ class DbTestMixin(TestMixin):
         oqp.gmpe_lt_random_seed = 5
         oqp.save()
 
-        job = models.OqCalculation(oq_params=oqp, owner=owner)
+        job = models.OqCalculation(oq_job_profile=oqp, owner=owner)
         job.save()
 
         if create_job_path:
@@ -684,7 +684,7 @@ class DbTestMixin(TestMixin):
             test db will be dropped/recreated prior to the next db test suite
             run anyway.
         """
-        oqp = job.oq_params
+        oqp = job.oq_job_profile
         if oqp.input_set is not None:
             self.teardown_input_set(oqp.input_set,
                                     filesystem_only=filesystem_only)

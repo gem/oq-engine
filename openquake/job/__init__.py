@@ -29,6 +29,7 @@ from django.contrib.gis.db import models
 from django.contrib.gis.geos import GEOSGeometry
 from lxml import etree
 
+from openquake import engine
 from openquake import flags
 from openquake import kvs
 from openquake import logs
@@ -36,7 +37,7 @@ from openquake import shapes
 from openquake import xml
 from openquake.parser import exposure
 from openquake.db.models import (
-    OqCalculation, OqParams, OqUser, CalcStats, FloatArrayField,
+    OqCalculation, OqJobProfile, OqUser, CalcStats, FloatArrayField,
     CharArrayField, InputSet, Input)
 from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
@@ -79,7 +80,7 @@ def run_job(job_file, output_type):
         # job executor process
         try:
             logs.init_logs_amqp_send(level=FLAGS.debug, job_id=a_job.job_id)
-            a_job.launch()
+            engine.launch(a_job)
         except Exception, ex:
             LOG.critical("Job failed with exception: '%s'" % str(ex))
             a_job.set_status('failed')
@@ -153,7 +154,10 @@ def parse_config_file(config_file):
 
 def prepare_config_parameters(params, sections):
     """
-    Pre-process configuration parameters removing unknown ones.
+    Pre-process configuration parameters to:
+        - remove unknown parameters
+        - expand file paths to make them absolute
+        - set default parameter values
     """
 
     calc_mode = CALCULATION_MODE[params['CALCULATION_MODE']]
@@ -180,6 +184,21 @@ def prepare_config_parameters(params, sections):
             continue
 
         new_params[name] = os.path.join(params['BASE_PATH'], new_params[name])
+
+    # Set default parameters (if applicable).
+    # TODO(LB): This probably isn't the best place for this code (since we may
+    # want to implement similar default param logic elsewhere). For now,
+    # though, it will have to do.
+
+    # If job is classical and hazard+risk:
+    if calc_mode == 'classical' and set(['HAZARD', 'RISK']).issubset(sections):
+        if params.get('COMPUTE_MEAN_HAZARD_CURVE'):
+            # If this param is already defined, display a message to the user
+            # that this config param is being ignored and set to the default:
+            print "Ignoring COMPUTE_MEAN_HAZARD_CURVE; defaulting to 'true'."
+        # The value is set to a string because validators still expected job
+        # config params to be strings at this point:
+        new_params['COMPUTE_MEAN_HAZARD_CURVE'] = 'true'
 
     return new_params, sections
 
@@ -238,7 +257,7 @@ def _insert_input_files(params, input_set):
 
 
 def _store_input_parameters(params, calc_mode, oqp):
-    """Store parameters in uiapi.oq_params columns"""
+    """Store parameters in uiapi.oq_job_profile columns"""
 
     for name, param in PARAMS.items():
         if calc_mode in param.modes and param.default is not None:
@@ -298,14 +317,15 @@ def prepare_job(params, sections):
 
     job = OqCalculation(owner=owner, path=None)
 
-    oqp = OqParams(input_set=input_set, calc_mode=calc_mode, job_type=job_type)
+    oqp = OqJobProfile(input_set=input_set, calc_mode=calc_mode,
+                       job_type=job_type)
 
     _insert_input_files(params, input_set)
     _store_input_parameters(params, calc_mode, oqp)
 
     oqp.save()
 
-    job.oq_params = oqp
+    job.oq_job_profile = oqp
     job.save()
 
     # Reset all progress indication counters for the job at hand.
@@ -457,28 +477,6 @@ class Job(object):
 
         region.cell_size = float(self['REGION_GRID_SPACING'])
         return region
-
-    def launch(self):
-        """ Based on the behaviour specified in the configuration, mix in the
-        correct behaviour for the tasks and then execute them.
-        """
-        self._record_initial_stats()
-
-        output_dir = os.path.join(self.base_path, self['OUTPUT_DIR'])
-        if not os.path.exists(output_dir):
-            os.makedirs(output_dir)
-
-        for (key, mixin) in Mixin.ordered_mixins():
-            if key.upper() not in self.sections:
-                continue
-
-            with Mixin(self, mixin):
-                # The mixin defines a preload decorator to handle the needed
-                # data for the tasks and decorates _execute(). the mixin's
-                # _execute() method calls the expected tasks.
-                LOG.debug(
-                    "Job %s Launching %s for %s" % (self.job_id, mixin, key))
-                self.execute()
 
     def __getitem__(self, name):
         defined_param = job_params.PARAMS.get(name)

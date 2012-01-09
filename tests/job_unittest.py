@@ -27,6 +27,7 @@ import unittest
 from django.contrib.gis.geos.polygon import Polygon
 from django.contrib.gis.geos.collections import MultiPoint
 
+from openquake import engine
 from openquake import job
 from openquake import kvs
 from openquake import flags
@@ -36,7 +37,7 @@ from openquake.job import (
     prepare_config_parameters, get_source_models)
 from openquake.job.mixins import Mixin
 from openquake.job.params import config_text_to_list
-from openquake.db.models import OqCalculation, CalcStats, OqParams
+from openquake.db.models import OqCalculation, CalcStats, OqJobProfile
 from openquake.risk.job import general
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
@@ -443,7 +444,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
             self.teardown_job(self.job)
 
     def _reload_params(self):
-        return OqParams.objects.get(id=self.job.oq_params.id)
+        return OqJobProfile.objects.get(id=self.job.oq_job_profile.id)
 
     def assertFieldsEqual(self, expected, params):
         got_params = dict((k, getattr(params, k)) for k in expected.keys())
@@ -452,7 +453,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def _get_inputs(self, job):
         inputs = [dict(path=i.path, type=i.input_type)
-                      for i in self.job.oq_params.input_set.input_set.all()]
+                  for i in self.job.oq_job_profile.input_set.input_set.all()]
 
         return sorted(inputs, key=lambda i: (i['type'], i['path']))
 
@@ -480,9 +481,9 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['GMPE_LT_RANDOM_SEED'] = '5'
 
         self.job = prepare_job(params, ['HAZARD', 'RISK'])
-        self.job.oq_params = self._reload_params()
+        self.job.oq_job_profile = self._reload_params()
         self.assertEquals(params['REGION_VERTEX'],
-                          _to_coord_list(self.job.oq_params.region))
+                          _to_coord_list(self.job.oq_job_profile.region))
         self.assertFieldsEqual(
             {'calc_mode': 'classical',
              'region_grid_spacing': 0.1,
@@ -503,7 +504,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'gmf_calculation_number': None,
              'rupture_surface_discretization': None,
              'subduction_rupture_floating_type': 'downdip',
-             }, self.job.oq_params)
+             }, self.job.oq_job_profile)
         self.assertEqual([
                 {'path': abs_path("small_exposure.xml"),
                  'type': 'exposure'},
@@ -528,9 +529,9 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
 
         self.job = prepare_job(params, ['HAZARD', 'RISK'])
-        self.job.oq_params = self._reload_params()
+        self.job.oq_job_profile = self._reload_params()
         self.assertEquals(params['SITES'],
-                          _to_coord_list(self.job.oq_params.sites))
+                          _to_coord_list(self.job.oq_job_profile.sites))
         self.assertFieldsEqual(
             {'calc_mode': 'classical',
              'min_magnitude': 5.0,
@@ -546,7 +547,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'realizations': 2,
              'histories': None,
              'gm_correlated': None,
-             }, self.job.oq_params)
+             }, self.job.oq_job_profile)
 
     def test_prepare_scenario_job(self):
         abs_path = partial(datapath, "scenario")
@@ -559,9 +560,9 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['VULNERABILITY'] = abs_path("vulnerability.xml")
 
         self.job = prepare_job(params, ['HAZARD', 'RISK'])
-        self.job.oq_params = self._reload_params()
+        self.job.oq_job_profile = self._reload_params()
         self.assertEquals(params['REGION_VERTEX'],
-                          _to_coord_list(self.job.oq_params.region))
+                          _to_coord_list(self.job.oq_job_profile.region))
         self.assertFieldsEqual(
             {'calc_mode': 'scenario',
              'region_grid_spacing': 0.02,
@@ -581,7 +582,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'damping': None,
              'gmf_calculation_number': 5,
              'rupture_surface_discretization': 0.1,
-             }, self.job.oq_params)
+             }, self.job.oq_job_profile)
         self.assertEqual([
                 {'path': abs_path("LA_small_portfolio.xml"),
                  'type': 'exposure'},
@@ -600,9 +601,9 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['SITES'] = '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
 
         self.job = prepare_job(params, ['HAZARD', 'RISK'])
-        self.job.oq_params = self._reload_params()
+        self.job.oq_job_profile = self._reload_params()
         self.assertEquals(params['SITES'],
-                          _to_coord_list(self.job.oq_params.sites))
+                          _to_coord_list(self.job.oq_job_profile.sites))
         self.assertFieldsEqual(
             {'calc_mode': 'scenario',
              'min_magnitude': None,
@@ -618,7 +619,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'realizations': None,
              'histories': None,
              'gm_correlated': True,
-             }, self.job.oq_params)
+             }, self.job.oq_job_profile)
 
     def test_prepare_event_based_job(self):
         abs_path = partial(datapath, "simplecase")
@@ -634,9 +635,9 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['GMF_RANDOM_SEED'] = '1'
 
         self.job = prepare_job(params, ['HAZARD', 'RISK'])
-        self.job.oq_params = self._reload_params()
+        self.job.oq_job_profile = self._reload_params()
         self.assertEquals(params['REGION_VERTEX'],
-                          _to_coord_list(self.job.oq_params.region))
+                          _to_coord_list(self.job.oq_job_profile.region))
         self.assertFieldsEqual(
             {'calc_mode': 'event_based',
              'region_grid_spacing': 0.02,
@@ -656,7 +657,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'damping': 5.0,
              'gmf_calculation_number': None,
              'rupture_surface_discretization': None,
-             }, self.job.oq_params)
+             }, self.job.oq_job_profile)
         self.assertEqual([
                 {'path': abs_path("small_exposure.xml"),
                  'type': 'exposure'},
@@ -682,9 +683,9 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         params['SITES'] = '33.88, -118.3, 33.88, -118.06, 33.76, -118.06'
 
         self.job = prepare_job(params, ['HAZARD', 'RISK'])
-        self.job.oq_params = self._reload_params()
+        self.job.oq_job_profile = self._reload_params()
         self.assertEquals(params['SITES'],
-                          _to_coord_list(self.job.oq_params.sites))
+                          _to_coord_list(self.job.oq_job_profile.sites))
         self.assertFieldsEqual(
             {'calc_mode': 'event_based',
              'min_magnitude': 5.0,
@@ -700,7 +701,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
              'realizations': 5,
              'histories': 1,
              'gm_correlated': False,
-             }, self.job.oq_params)
+             }, self.job.oq_job_profile)
 
 
 class RunJobTestCase(unittest.TestCase):
@@ -719,61 +720,67 @@ class RunJobTestCase(unittest.TestCase):
         return OqCalculation.objects.get(id=self.job.job_id).status
 
     def test_successful_job_lifecycle(self):
-        with patch('openquake.job.Job.from_file') as from_file:
 
-            # called in place of Job.launch
-            def test_status_running_and_succeed():
-                self.assertEquals('running', self._job_status())
+        def test_status_running_and_succeed(*args):
+            self.assertEquals('running', self._job_status())
 
-                return []
+            return []
 
-            # replaces Job.launch with a mock
-            def patch_job_launch(*args, **kwargs):
-                self.job = self.job_from_file(*args, **kwargs)
-                self.job.launch = mock.Mock(
-                    side_effect=test_status_running_and_succeed)
+        def patch_job_launch(*args, **kwargs):
+            self.job = self.job_from_file(*args, **kwargs)
 
-                self.assertEquals('pending', self._job_status())
+            self.assertEquals('pending', self._job_status())
 
-                return self.job
+            return self.job
 
-            from_file.side_effect = patch_job_launch
+        before_launch = engine.launch
+        try:
+            engine.launch = mock.Mock(
+                side_effect=test_status_running_and_succeed)
 
-            with patch('os.fork', mocksignature=False) as fork:
-                fork.return_value = 0
-                run_job(helpers.get_data_path(CONFIG_FILE), 'db')
+            with patch('openquake.job.Job.from_file') as from_file:
+                from_file.side_effect = patch_job_launch
 
-        self.assertEquals(1, self.job.launch.call_count)
-        self.assertEquals('succeeded', self._job_status())
+                with patch('os.fork', mocksignature=False) as fork:
+                    fork.return_value = 0
+                    run_job(helpers.get_data_path(CONFIG_FILE), 'db')
+
+            self.assertEquals(1, engine.launch.call_count)
+            self.assertEquals('succeeded', self._job_status())
+        finally:
+            engine.launch = before_launch
 
     def test_failed_job_lifecycle(self):
-        with patch('openquake.job.Job.from_file') as from_file:
 
-            # called in place of Job.launch
-            def test_status_running_and_fail():
-                self.assertEquals('running', self._job_status())
+        def test_status_running_and_fail(*args):
+            self.assertEquals('running', self._job_status())
 
-                raise Exception('OMG!')
+            raise Exception('OMG!')
 
-            # replaces Job.launch with a mock
-            def patch_job_launch(*args, **kwargs):
-                self.job = self.job_from_file(*args, **kwargs)
-                self.job.launch = mock.Mock(
-                    side_effect=test_status_running_and_fail)
+        def patch_job_launch(*args, **kwargs):
+            self.job = self.job_from_file(*args, **kwargs)
 
-                self.assertEquals('pending', self._job_status())
+            self.assertEquals('pending', self._job_status())
 
-                return self.job
+            return self.job
 
-            from_file.side_effect = patch_job_launch
+        before_launch = engine.launch
+        try:
+            engine.launch = mock.Mock(
+                side_effect=test_status_running_and_fail)
 
-            with patch('os.fork', mocksignature=False) as fork:
-                fork.return_value = 0
-                self.assertRaises(Exception, run_job,
-                                helpers.get_data_path(CONFIG_FILE), 'db')
+            with patch('openquake.job.Job.from_file') as from_file:
+                from_file.side_effect = patch_job_launch
 
-        self.assertEquals(1, self.job.launch.call_count)
-        self.assertEquals('failed', self._job_status())
+                with patch('os.fork', mocksignature=False) as fork:
+                    fork.return_value = 0
+                    self.assertRaises(Exception, run_job,
+                                    helpers.get_data_path(CONFIG_FILE), 'db')
+
+            self.assertEquals(1, engine.launch.call_count)
+            self.assertEquals('failed', self._job_status())
+        finally:
+            engine.launch = before_launch
 
     def test_computes_sites_in_region_when_specified(self):
         """When we have hazard jobs only, and we specify a region,
@@ -936,7 +943,7 @@ class CalcStatsTestCase(unittest.TestCase):
         with patch(haz_execute):
             with patch(risk_execute):
                 with patch(record) as record_mock:
-                    self.eb_job.launch()
+                    engine.launch(self.eb_job)
 
                     self.assertEqual(1, record_mock.call_count)
 
