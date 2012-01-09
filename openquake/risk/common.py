@@ -127,7 +127,7 @@ def compute_bcr(eal_original, eal_retrofitted, interest_rate,
     """
     Compute the Benefit-Cost Ratio.
 
-    BCR = (EALo - EALr)(1-exp(-r*t))/C
+    BCR = (EALo - EALr)(1-exp(-r*t))/(r*C)
 
     Where:
 
@@ -140,4 +140,4 @@ def compute_bcr(eal_original, eal_retrofitted, interest_rate,
     """
     return ((eal_original - eal_retrofitted)
             * (1 - exp(- interest_rate * asset_life_expectancy))
-            / retrofitting_cost)
+            / (interest_rate * retrofitting_cost))
