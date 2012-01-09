@@ -30,7 +30,6 @@ import threading
 import kombu
 from openquake.signalling import AMQPMessageConsumer, amqp_connect
 
-logging.basicConfig()
 
 LEVELS = {'debug': logging.DEBUG,
           'info': logging.INFO,
