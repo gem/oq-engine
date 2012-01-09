@@ -285,7 +285,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
                 where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
 
             self._assert_curve_is(
-                curve, zip(self.job.oq_params.imls, hc_db.poes), 0.005)
+                curve, zip(self.job.oq_job_profile.imls, hc_db.poes), 0.005)
 
     def _assert_curve_is(self, expected, actual, tolerance):
         self.assertTrue(numpy.allclose(

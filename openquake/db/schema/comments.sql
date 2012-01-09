@@ -313,12 +313,12 @@ COMMENT ON COLUMN uiapi.calc_stats.num_sites IS 'The number of total sites in th
 COMMENT ON COLUMN uiapi.calc_stats.realizations IS 'The number of logic tree samples in the calculation (for hazard jobs of all types except scenario)';
 
 
-COMMENT ON TABLE uiapi.oq_params IS 'Holds the parameters needed to invoke the OpenQuake engine.';
-COMMENT ON COLUMN uiapi.oq_params.calc_mode IS 'One of: classical, event_based, scenario, disaggregation, uhs, classical_bcr or event_based_bcr.';
-COMMENT ON COLUMN uiapi.oq_params.job_type IS '"hazard" and/or "risk"';
-COMMENT ON COLUMN uiapi.oq_params.histories IS 'Number of seismicity histories';
-COMMENT ON COLUMN uiapi.oq_params.imls IS 'Intensity measure levels';
-COMMENT ON COLUMN uiapi.oq_params.imt IS 'Intensity measure type, one of:
+COMMENT ON TABLE uiapi.oq_job_profile IS 'Holds the parameters needed to invoke the OpenQuake engine.';
+COMMENT ON COLUMN uiapi.oq_job_profile.calc_mode IS 'One of: classical, event_based, scenario, disaggregation, uhs, classical_bcr or event_based_bcr.';
+COMMENT ON COLUMN uiapi.oq_job_profile.job_type IS '"hazard" and/or "risk"';
+COMMENT ON COLUMN uiapi.oq_job_profile.histories IS 'Number of seismicity histories';
+COMMENT ON COLUMN uiapi.oq_job_profile.imls IS 'Intensity measure levels';
+COMMENT ON COLUMN uiapi.oq_job_profile.imt IS 'Intensity measure type, one of:
     - peak ground acceleration (pga)
     - spectral acceleration (sa)
     - peak ground velocity (pgv)
@@ -326,10 +326,10 @@ COMMENT ON COLUMN uiapi.oq_params.imt IS 'Intensity measure type, one of:
     - Arias Intensity (ia)
     - relative significant duration (rsd)
     - Modified Mercalli Intensity';
-COMMENT ON COLUMN uiapi.oq_params.poes IS 'Probabilities of exceedence';
-COMMENT ON COLUMN uiapi.oq_params.region IS 'Region of interest for the calculation (Polygon)';
-COMMENT ON COLUMN uiapi.oq_params.region_grid_spacing IS 'Desired cell size (in degrees), used when splitting up the region of interest. This effectively defines the resolution of the calculation. (Smaller grid spacing means more sites and thus more calculations.)';
-COMMENT ON COLUMN uiapi.oq_params.sites IS 'Sites of interest for the calculation (MultiPoint)';
+COMMENT ON COLUMN uiapi.oq_job_profile.poes IS 'Probabilities of exceedence';
+COMMENT ON COLUMN uiapi.oq_job_profile.region IS 'Region of interest for the calculation (Polygon)';
+COMMENT ON COLUMN uiapi.oq_job_profile.region_grid_spacing IS 'Desired cell size (in degrees), used when splitting up the region of interest. This effectively defines the resolution of the calculation. (Smaller grid spacing means more sites and thus more calculations.)';
+COMMENT ON COLUMN uiapi.oq_job_profile.sites IS 'Sites of interest for the calculation (MultiPoint)';
 
 
 COMMENT ON TABLE uiapi.output IS 'A single OpenQuake calculation engine output. The data may reside in a file or in the database.';
