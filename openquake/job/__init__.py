@@ -70,7 +70,7 @@ class CalculationProxy(object):
         """Return the job in the underlying kvs system with the given id."""
         params = kvs.get_value_json_decoded(
             kvs.tokens.generate_job_key(job_id))
-        job = Job(params, job_id)
+        job = CalculationProxy(params, job_id)
         return job
 
     @staticmethod
@@ -89,7 +89,7 @@ class CalculationProxy(object):
         of the job ``job_id`` is either 'succeeded' or 'failed'. Returns
         ``False`` otherwise.
         """
-        status = Job.get_status_from_db(job_id)
+        status = CalculationProxy.get_status_from_db(job_id)
         return status == 'succeeded' or status == 'failed'
 
     def has(self, name):
@@ -277,8 +277,8 @@ def read_sites_from_exposure(a_job):
     Given the exposure model specified in the job config, read all sites which
     are located within the region of interest.
 
-    :param a_job: a Job object with an EXPOSURE parameter defined
-    :type a_job: :py:class:`openquake.job.Job`
+    :param a_job: a CalculationProxy object with an EXPOSURE parameter defined
+    :type a_job: :py:class:`openquake.job.CalculationProxy`
 
     :returns: a list of :py:class:`openquake.shapes.Site` objects
     """
