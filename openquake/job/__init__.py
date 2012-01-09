@@ -45,6 +45,26 @@ REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
 class Job(object):
     """A job is a collection of parameters identified by a unique id."""
 
+    def __init__(self, params, job_id, sections=list(), base_path=None,
+                 serialize_results_to=list()):
+        """
+        :param dict params: Dict of job config params.
+        :param int job_id: ID of the corresponding oq_calculation db record.
+        :param list sections: List of config file sections. Example::
+            ['HAZARD', 'RISK']
+        :param str base_path: base directory containing job input files
+        """
+        self._job_id = job_id
+        mark_job_as_current(job_id)  # enables KVS gc
+
+        self.sites = []
+        self.blocks_keys = []
+        self.params = params
+        self.sections = list(set(sections))
+        self.serialize_results_to = []
+        self.base_path = base_path
+        self.serialize_results_to = list(serialize_results_to)
+
     @staticmethod
     def from_kvs(job_id):
         """Return the job in the underlying kvs system with the given id."""
@@ -52,7 +72,6 @@ class Job(object):
             kvs.tokens.generate_job_key(job_id))
         job = Job(params, job_id)
         return job
-
 
     @staticmethod
     def get_status_from_db(job_id):
@@ -73,25 +92,7 @@ class Job(object):
         status = Job.get_status_from_db(job_id)
         return status == 'succeeded' or status == 'failed'
 
-    def __init__(self, params, job_id, sections=list(), base_path=None,
-                 serialize_results_to=list()):
-        """
-        :param dict params: Dict of job config params.
-        :param int job_id: ID of the corresponding oq_calculation db record.
-        :param list sections: List of config file sections. Example::
-            ['HAZARD', 'RISK']
-        :param str base_path: base directory containing job input files
-        """
-        self._job_id = job_id
-        mark_job_as_current(job_id)  # enables KVS gc
 
-        self.sites = []
-        self.blocks_keys = []
-        self.params = params
-        self.sections = list(set(sections))
-        self.serialize_results_to = []
-        self.base_path = base_path
-        self.serialize_results_to = list(serialize_results_to)
 
     def has(self, name):
         """Return false if this job doesn't have the given parameter defined,
