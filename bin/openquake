@@ -112,6 +112,7 @@ if __name__ == '__main__':
     from openquake import job
     from openquake import engine
     try:
-        engine.run_job(FLAGS.config_file, FLAGS.output_type)
+        job_profile, params, sections = engine.import_job_profile(FLAGS.config_file)
+        engine.run_calculation(job_profile, params, sections, output_type=FLAGS.output_type)
     except job.config.ValidationException as e:
         print str(e)

@@ -60,6 +60,9 @@ def _job_from_file(config_file, output_type, owner_username='openquake'):
     """
     Create a job from external configuration files.
 
+    NOTE: This function is deprecated. Please use
+    :function:`openquake.engine.import_job_profile`.
+
     :param config_file:
         The external configuration file path
     :param output_type:
@@ -293,7 +296,7 @@ def _store_input_parameters(params, calc_mode, job_profile):
         job_profile.damping = None
 
 
-def run_calculation(job_profile, params, sections):
+def run_calculation(job_profile, params, sections, output_type='db'):
     """Given an :class:`openquake.db.models.OqJobProfile` object, create a new
     :class:`openquake.db.models.OqCalculation` object and run the calculation.
 
@@ -310,17 +313,26 @@ def run_calculation(job_profile, params, sections):
         config file.
     :param sections:
         A list of sections parsed from the calculation config file.
+    :param output_type:
+        'db' or 'xml' (defaults to 'db')
 
     :returns:
         :class:`openquake.db.models.OqCalculation` instance.
     """
+    if not output_type in ('db', 'xml'):
+        raise RuntimeException("output_type must be 'db' or 'xml'")
 
     calculation = OqCalculation(owner=job_profile.owner)
     calculation.oq_job_profile = job_profile
     calculation.status = 'running'
     calculation.save()
 
+    serialize_results_to = ['db']
+    if output_type == 'xml':
+        serialize_results_to.append('xml')
+
     calc_proxy = CalculationProxy(params, calculation.id, sections=sections,
+                                  serialize_results_to=serialize_results_to, 
                                   oq_job_profile=job_profile,
                                   oq_calculation=calculation)
 
