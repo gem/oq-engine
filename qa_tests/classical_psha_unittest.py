@@ -51,6 +51,10 @@ def load_exp_hazcurve_results(test_name):
     results = {}
 
     for result_file in results_files:
+        if not (result_file.startswith('site')
+                and result_file.endswith('.dat')):
+            continue
+
         path = os.path.join(results_dir, result_file)
 
         with open(path) as hazard_curve:
