@@ -280,6 +280,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
         self.job = models.OqCalculation.objects.latest("id")
 
+        errors = []
         for site, curve in expected_results.items():
             gh = geohash.encode(site.latitude, site.longitude, precision=12)
 
@@ -288,11 +289,27 @@ class ClassicalPSHACalculatorAssuranceTestCase(
                 hazard_curve__statistic_type="mean").extra(
                 where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
 
-            self._assert_curve_is(
-                curve, zip(self.job.oq_job_profile.imls, hc_db.poes), 0.005)
+            try:
+                self._assert_curve_is(
+                    curve, zip(self.job.oq_job_profile.imls, hc_db.poes),
+                    site, tolerance=0.005)
+            except AssertionError as exc:
+                errors.append(str(exc))
+        if errors:
+            raise AssertionError('\n' + '\n'.join(errors))
 
-    def _assert_curve_is(self, expected, actual, tolerance):
-        self.assertTrue(numpy.allclose(
-                numpy.array(expected), numpy.array(actual), atol=tolerance),
-                "Expected %s within a tolerance of %s, but was %s"
-                % (expected, tolerance, actual))
+    def _assert_curve_is(self, expected, actual, site, tolerance):
+        errors = []
+        for i in xrange(max(len(expected), len(actual))):
+            self.assertEqual(expected[i][0], actual[i][0])
+            exp_val, act_val = expected[i][1], actual[i][1]
+            msg='{:<22} PoE {:5}: expected {:.2E} != actual {:.2E}'.format(
+                site, expected[i][0], exp_val, act_val
+            )
+            try:
+                self.assertAlmostEqual(act_val, exp_val, delta=tolerance,
+                                       msg=msg)
+            except AssertionError as exc:
+                errors.append(str(exc))
+        if errors:
+            raise AssertionError('\n'.join(errors))
