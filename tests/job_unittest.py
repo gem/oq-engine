@@ -34,7 +34,8 @@ from openquake import flags
 from openquake import shapes
 from openquake.engine import (get_source_models, parse_config_file,
                               prepare_config_parameters, _prepare_job)
-from openquake.job import Job, config
+from openquake.job import CalculationProxy
+from openquake.job import config
 from openquake.job.params import config_text_to_list
 from openquake.db.models import OqCalculation, CalcStats, OqJobProfile, OqUser
 
@@ -140,7 +141,7 @@ class JobTestCase(unittest.TestCase):
         try:
             self.job = helpers.job_from_file(
                 os.path.join(helpers.DATA_DIR, CONFIG_FILE))
-            job_from_kvs = Job.from_kvs(self.job.job_id)
+            job_from_kvs = CalculationProxy.from_kvs(self.job.job_id)
             self.assertEqual(flags.FLAGS.debug,
                              job_from_kvs.params.pop('debug'))
             self.assertEqual(self.job, job_from_kvs)
@@ -177,11 +178,11 @@ class JobDbRecordTestCase(unittest.TestCase):
 
         row.status = "failed"
         row.save()
-        self.assertEqual("failed", Job.get_status_from_db(self.job.job_id))
+        self.assertEqual("failed", CalculationProxy.get_status_from_db(self.job.job_id))
 
         row.status = "running"
         row.save()
-        self.assertEqual("running", Job.get_status_from_db(self.job.job_id))
+        self.assertEqual("running", CalculationProxy.get_status_from_db(self.job.job_id))
 
     def test_is_job_completed(self):
         job_id = engine.job_from_file(helpers.get_data_path(CONFIG_FILE), 'db').job_id
@@ -191,7 +192,7 @@ class JobDbRecordTestCase(unittest.TestCase):
         for status, is_completed in pairs:
             row.status = status
             row.save()
-            self.assertEqual(Job.is_job_completed(job_id), is_completed)
+            self.assertEqual(CalculationProxy.is_job_completed(job_id), is_completed)
 
 
 class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
@@ -871,7 +872,7 @@ class RunJobTestCase(unittest.TestCase):
     def test_supervisor_is_spawned(self):
         with patch('openquake.engine.job_from_file') as from_file:
 
-            # replaces Job.launch with a mock
+            # replaces CalculationProxy.launch with a mock
             def patch_job_launch(*args, **kwargs):
                 self.job = self.job_from_file(*args, **kwargs)
                 self.job.launch = mock.Mock()
@@ -907,7 +908,7 @@ class CalcStatsTestCase(unittest.TestCase):
 
     def test_record_initial_stats(self):
         '''
-        Verify that :py:method:`openquake.job.Job._record_initial_stats`
+        Verify that :py:method:`openquake.job.CalculationProxy._record_initial_stats`
         reports initial calculation stats.
 
         As we add fields to the uiapi.calc_stats table, this test will need to
@@ -924,13 +925,13 @@ class CalcStatsTestCase(unittest.TestCase):
     def test_job_launch_calls_record_initial_stats(self):
         '''
         When a job is launched, make sure that
-        :py:method:`openquake.job.Job._record_initial_stats` is called.
+        :py:method:`openquake.job.CalculationProxy._record_initial_stats` is called.
         '''
         # Mock out pieces of the test job so it doesn't actually run.
         haz_execute = 'openquake.hazard.opensha.EventBasedMixin.execute'
         risk_execute = \
             'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute'
-        record = 'openquake.job.Job._record_initial_stats'
+        record = 'openquake.job.CalculationProxy._record_initial_stats'
 
         with patch(haz_execute):
             with patch(risk_execute):

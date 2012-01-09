@@ -35,6 +35,9 @@ class EngineAPITestCase(unittest.TestCase):
     def test_import_job_profile(self):
         """Given a path to a demo config file, ensure that the appropriate
         database records for OqJobProfile, InputSet, and Input are created.
+
+        At the moment, the api function used to import the job profile also
+        returns a dict of the config params and a list of config file sections.
         """
         cfg_path = demo_file('HazardMapTest/config.gem')
 
@@ -130,7 +133,73 @@ class EngineAPITestCase(unittest.TestCase):
             quantile_levels=[],
             compute_mean_hazard_curve=True)
 
-        actual_jp = engine.import_job_profile(cfg_path)
+        expected_sections = ['HAZARD', 'general']
+        expected_params = {
+            'AREA_SOURCE_DISCRETIZATION': '0.1',
+            'AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP':
+                'W&C 1994 Mag-Length Rel.',
+            'BASE_PATH': os.path.abspath(demo_file('HazardMapTest')),
+            'CALCULATION_MODE': 'Classical',
+            'COMPONENT': 'Average Horizontal (GMRotI50)',
+            'COMPUTE_MEAN_HAZARD_CURVE': 'true',
+            'DAMPING': '5.0',
+            'DEPTHTO1PT0KMPERSEC': '100.0',
+            'FAULT_MAGNITUDE_SCALING_RELATIONSHIP':
+                'Wells & Coppersmith (1994)',
+            'FAULT_MAGNITUDE_SCALING_SIGMA': '0.0',
+            'FAULT_RUPTURE_OFFSET': '1.0',
+            'FAULT_SURFACE_DISCRETIZATION': '1.0',
+            'GMPE_LOGIC_TREE_FILE': os.path.abspath(
+                demo_file('HazardMapTest/gmpe_logic_tree.xml')),
+            'GMPE_LT_RANDOM_SEED': '5',
+            'GMPE_TRUNCATION_TYPE': '2 Sided',
+            'GRID_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP':
+                'W&C 1994 Mag-Length Rel.',
+            'INCLUDE_AREA_SOURCES': 'true',
+            'INCLUDE_FAULT_SOURCE': 'true',
+            'INCLUDE_GRID_SOURCES': 'false',
+            'INCLUDE_SUBDUCTION_FAULT_SOURCE': 'false',
+            'INTENSITY_MEASURE_LEVELS': (
+                '0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527,'
+                ' 0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778,'
+                ' 1.09'),
+            'INTENSITY_MEASURE_TYPE': 'PGA',
+            'INVESTIGATION_TIME': '50.0',
+            'MAXIMUM_DISTANCE': '200.0',
+            'MINIMUM_MAGNITUDE': '5.0',
+            'NUMBER_OF_LOGIC_TREE_SAMPLES': '1',
+            'OUTPUT_DIR': 'computed_output',
+            'PERIOD': '0.0',
+            'POES': '0.1',
+            'QUANTILE_LEVELS': '',
+            'REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM': '5.0',
+            'REFERENCE_VS30_VALUE': '760.0',
+            'REGION_GRID_SPACING': '0.01',
+            'REGION_VERTEX':
+                '37.6, -122.2, 38.2, -122.2, 38.2, -121.5, 37.6, -121.5',
+            'RUPTURE_ASPECT_RATIO': '2.0',
+            'RUPTURE_FLOATING_TYPE': 'Along strike and down dip',
+            'SADIGH_SITE_TYPE': 'Rock',
+            'SOURCE_MODEL_LOGIC_TREE_FILE': os.path.abspath(
+                demo_file('HazardMapTest/source_model_logic_tree.xml')),
+            'SOURCE_MODEL_LT_RANDOM_SEED': '23',
+            'STANDARD_DEVIATION_TYPE': 'Total',
+            'SUBDUCTION_FAULT_MAGNITUDE_SCALING_RELATIONSHIP':
+                'W&C 1994 Mag-Length Rel.',
+            'SUBDUCTION_FAULT_MAGNITUDE_SCALING_SIGMA': '0.0',
+            'SUBDUCTION_FAULT_RUPTURE_OFFSET': '10.0',
+            'SUBDUCTION_FAULT_SURFACE_DISCRETIZATION': '10.0',
+            'SUBDUCTION_RUPTURE_ASPECT_RATIO': '1.5',
+            'SUBDUCTION_RUPTURE_FLOATING_TYPE': 'Along strike and down dip',
+            'TREAT_AREA_SOURCE_AS': 'Point Sources',
+            'TREAT_GRID_SOURCE_AS': 'Point Sources',
+            'TRUNCATION_LEVEL': '3',
+            'VS30_TYPE': 'measured',
+            'WIDTH_OF_MFD_BIN': '0.1'}
+
+        actual_jp, params, sections = engine.import_job_profile(cfg_path)
+        self.assertEquals(expected_params, params)
+        self.assertEquals(expected_sections, sections)
 
         # Test the OqJobProfile:
         self.assertTrue(
