@@ -28,6 +28,11 @@ import redis
 from openquake.utils import config
 
 
+# Predefined kvs keys for calculator progress/statistics counters.
+# Calculators will maintain totals/incremental counter values of interest.
+# These can be used to provide feedback to the user and/or terminate the
+# job in case of failures. See e.g.
+#   https://bugs.launchpad.net/openquake/+bug/907703
 STATS_KEYS = {
     # Classical PSHA kvs statistics db keys, "t" and "i" mark a totals
     # and an incremental counter respectively.
