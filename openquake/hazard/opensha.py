@@ -34,7 +34,6 @@ from itertools import izip
 
 from celery.task import task
 
-from openquake import job
 from openquake import kvs
 from openquake import java
 from openquake import kvs
@@ -42,6 +41,7 @@ from openquake import logs
 from openquake import shapes
 from openquake import xml
 
+from openquake.engine import CalculationProxy
 from openquake.hazard.general import BasePSHAMixin, get_iml_list
 from openquake.hazard import classical_psha
 from openquake.hazard.general import BasePSHAMixin, get_iml_list
@@ -130,7 +130,7 @@ def compute_ground_motion_fields(job_id, sites, history, realization, seed):
     from openquake.hazard.calc import CALCULATORS
 
     utils_tasks.check_job_status(job_id)
-    the_job = job.CalculationProxy.from_kvs(job_id)
+    the_job = CalculationProxy.from_kvs(job_id)
     calc_mode = the_job.oq_job_profile.calc_mode
     calculator = CALCULATORS[calc_mode](the_job)
 
@@ -146,7 +146,7 @@ def compute_hazard_curve(job_id, sites, realization):
     from openquake.hazard.calc import CALCULATORS
 
     utils_tasks.check_job_status(job_id)
-    the_job = job.CalculationProxy.from_kvs(job_id)
+    the_job = CalculationProxy.from_kvs(job_id)
     calc_mode = the_job.oq_job_profile.calc_mode
     calculator = CALCULATORS[calc_mode](the_job)
     keys = calculator.compute_hazard_curve(sites, realization)
@@ -335,7 +335,7 @@ class ClassicalMixin(BasePSHAMixin):
                 * the sites for which to calculate the hazard curves
         :type curve_task: function(string, [:py:class:`openquake.shapes.Site`])
         :param map_func: A function that computes mean hazard maps.
-        :type map_func: function(:py:class:`openquake.job.CalculationProxy`)
+        :type map_func: function(:py:class:`openquake.engine.CalculationProxy`)
         :returns: `None`
         """
         if not self.calc_proxy["COMPUTE_MEAN_HAZARD_CURVE"]:
@@ -389,7 +389,7 @@ class ClassicalMixin(BasePSHAMixin):
                 * the sites for which to calculate the hazard curves
         :type curve_task: function(string, [:py:class:`openquake.shapes.Site`])
         :param map_func: A function that computes quantile hazard maps.
-        :type map_func: function(:py:class:`openquake.job.CalculationProxy`)
+        :type map_func: function(:py:class:`openquake.engine.CalculationProxy`)
         :returns: `None`
         """
         if not quantiles:
