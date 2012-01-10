@@ -445,13 +445,13 @@ class ClassicalMixin(BasePSHAMixin):
                      realizations)
 
         block_size = config.hazard_block_size()
-        stats.pk_set(self.job_id, "hcls_block_size", block_size)
+        stats.pk_set(self.job_profile.job_id, "hcls_block_size", block_size)
 
         blocks = range(0, len(sites), block_size)
-        stats.pk_set(self.job_id, "hcls_blocks", len(blocks))
+        stats.pk_set(self.job_profile.job_id, "hcls_blocks", len(blocks))
 
         for start in blocks:
-            stats.pk_inc(self.job_id, "hcls_cblock")
+            stats.pk_inc(self.job_profile.job_id, "hcls_cblock")
             end = start + block_size
             data = sites[start:end]
 
@@ -562,7 +562,8 @@ class ClassicalMixin(BasePSHAMixin):
         nrml_path = self.job_profile.build_nrml_path(nrml_file)
 
         curve_writer = hazard_output.create_hazardcurve_writer(
-            self.job_profile.job_id, self.serialize_results_to, nrml_path)
+            self.job_profile.job_id, self.job_profile.serialize_results_to,
+            nrml_path)
 
         sites = set(sites)
         accounted_for = set()

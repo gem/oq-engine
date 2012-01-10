@@ -28,7 +28,6 @@ import os
 import random
 import redis
 import shutil
-import subprocess
 import tempfile
 import textwrap
 import time
