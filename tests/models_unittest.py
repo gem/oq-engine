@@ -80,7 +80,7 @@ class ModelEqualsTestCase(unittest.TestCase):
 
         # Sanity check: make sure _state is in the object dict.
         self.assertTrue('_state' in self.o1.__dict__)
-        self.assertTure('_state' in self.o2.__dict__)
+        self.assertTrue('_state' in self.o2.__dict__)
 
         # Sanity check 2: Make sure the object dict _state is correctly set.
         self.assertEquals('fake_state', self.o1.__dict__['_state'])
