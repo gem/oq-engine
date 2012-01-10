@@ -27,8 +27,8 @@ import itertools
 
 from celery.task.sets import TaskSet
 
-from openquake.job import CalculationProxy
 from openquake import logs
+from openquake.engine import CalculationProxy
 
 
 def _prepare_kwargs(name, data, other_args, func=None):
@@ -213,7 +213,7 @@ def check_job_status(job_id):
     Helper function which is intended to be run by celery task functions.
 
     :raises JobCompletedError:
-        If :meth:`~openquake.job.CalculationProxy.is_job_completed` returns
+        If :meth:`~openquake.engine.CalculationProxy.is_job_completed` returns
         ``True`` for ``job_id``.
     """
     job = CalculationProxy.from_kvs(job_id)

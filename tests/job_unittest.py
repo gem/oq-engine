@@ -32,12 +32,17 @@ from openquake import job
 from openquake import kvs
 from openquake import flags
 from openquake import shapes
-from openquake.engine import (_get_source_models, _parse_config_file,
-                              prepare_config_parameters, _prepare_job)
-from openquake.job import CalculationProxy
+from openquake.engine import _get_source_models
+from openquake.engine import _parse_config_file
+from openquake.engine import _prepare_config_parameters
+from openquake.engine import _prepare_job
+from openquake.engine import CalculationProxy
 from openquake.job import config
 from openquake.job.params import config_text_to_list
-from openquake.db.models import OqCalculation, CalcStats, OqJobProfile, OqUser
+from openquake.db.models import CalcStats
+from openquake.db.models import OqCalculation
+from openquake.db.models import OqJobProfile
+from openquake.db.models import OqUser
 
 from tests.utils import helpers
 from tests.utils.helpers import patch
@@ -248,7 +253,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             dir=gettempdir(), content=textwrap.dedent(content))
 
         params, sections = _parse_config_file(config_path)
-        params = prepare_config_parameters(params)
+        params = _prepare_config_parameters(params)
 
         self.assertEquals(
             {'BASE_PATH': gettempdir(),
@@ -274,7 +279,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
         config_path = self.touch(content=textwrap.dedent(content))
 
         params, sections = _parse_config_file(config_path)
-        params = prepare_config_parameters(params)
+        params = _prepare_config_parameters(params)
 
         self.assertEquals(
             {'BASE_PATH': gettempdir(),
@@ -930,7 +935,7 @@ class CalcStatsTestCase(unittest.TestCase):
 
     def test_record_initial_stats(self):
         '''Verify that
-        :py:method:`openquake.job.CalculationProxy._record_initial_stats`
+        :py:method:`openquake.engine.CalculationProxy._record_initial_stats`
         reports initial calculation stats.
 
         As we add fields to the uiapi.calc_stats table, this test will need to
@@ -946,14 +951,14 @@ class CalcStatsTestCase(unittest.TestCase):
 
     def test_job_launch_calls_record_initial_stats(self):
         '''When a job is launched, make sure that
-        :py:method:`openquake.job.CalculationProxy._record_initial_stats`
+        :py:method:`openquake.engine.CalculationProxy._record_initial_stats`
         is called.
         '''
         # Mock out pieces of the test job so it doesn't actually run.
         haz_execute = 'openquake.hazard.opensha.EventBasedMixin.execute'
         risk_execute = (
             'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute')
-        record = 'openquake.job.CalculationProxy._record_initial_stats'
+        record = 'openquake.engine.CalculationProxy._record_initial_stats'
 
         with patch(haz_execute):
             with patch(risk_execute):
