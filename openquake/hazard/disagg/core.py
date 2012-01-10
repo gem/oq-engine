@@ -25,10 +25,8 @@ import random
 import uuid
 
 from openquake import java
-from openquake import job
 from openquake import logs
 
-from openquake.engine import CalculationProxy
 from openquake.hazard import disagg
 from openquake.java import list_to_jdouble_array
 from openquake.job import config as job_cfg
@@ -68,6 +66,7 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
 
     :returns: 2-tuple of (ground_motion_value, path_to_h5_matrix_file)
     """
+    from openquake.engine import CalculationProxy
     the_job = CalculationProxy.from_kvs(job_id)
 
     lat_bin_lims = the_job[job_cfg.LAT_BIN_LIMITS]

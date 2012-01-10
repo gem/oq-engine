@@ -23,7 +23,6 @@
 
 import os
 import re
-import urlparse
 
 from datetime import datetime
 from ConfigParser import ConfigParser
@@ -40,11 +39,9 @@ from openquake import shapes
 from openquake import xml
 from openquake.flags import FLAGS
 from openquake.job import config as jobconf
-from openquake.job import params
 from openquake.kvs import mark_job_as_current
 from openquake.parser import exposure
 from openquake.supervising import supervisor
-from openquake.utils import stats
 from openquake.db.models import CalcStats
 from openquake.db.models import CharArrayField
 from openquake.db.models import FloatArrayField
@@ -187,7 +184,7 @@ class CalculationProxy(object):
         return region
 
     def __getitem__(self, name):
-        defined_param = job_params.PARAMS.get(name)
+        defined_param = PARAMS.get(name)
         if (hasattr(defined_param, 'to_job')
             and defined_param.to_job is not None
             and self.params.get(name) is not None):
@@ -653,7 +650,7 @@ def run_calculation(job_profile, params, sections, output_type='db'):
         :class:`openquake.db.models.OqCalculation` instance.
     """
     if not output_type in ('db', 'xml'):
-        raise RuntimeException("output_type must be 'db' or 'xml'")
+        raise RuntimeError("output_type must be 'db' or 'xml'")
 
     calculation = OqCalculation(owner=job_profile.owner)
     calculation.oq_job_profile = job_profile

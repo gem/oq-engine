@@ -28,7 +28,6 @@ from openquake import job
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
-from openquake.engine import CalculationProxy
 from openquake.job import config as job_config
 from openquake.output import risk as risk_output
 from openquake.parser import exposure
@@ -125,6 +124,7 @@ def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
 @task
 def compute_risk(job_id, block_id, **kwargs):
     """ A task for computing risk, calls the mixed in compute_risk method """
+    from openquake.engine import CalculationProxy
     from openquake.risk.calc import CALCULATORS
 
     check_job_status(job_id)
