@@ -1,6 +1,3 @@
-# -*- coding: utf-8 -*-
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2010-2011, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify
@@ -18,10 +15,18 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+"""Information about the calculators available for the Risk engine."""
 
 
-"""
-This module contains common stuff for parsing NRML instance files.
-"""
+from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
+from openquake.risk.job.probabilistic import ProbabilisticEventMixin
+from openquake.risk.job.scenario import ScenarioEventBasedMixin
 
-# TODO(fab): collect common stuff for all parsers here
+
+CALCULATORS = {
+    'Classical': ClassicalPSHABasedMixin,
+    'Classical BCR': ClassicalPSHABasedMixin,
+    'Event Based': ProbabilisticEventMixin,
+    'Event Based BCR': ProbabilisticEventMixin,
+    'Scenario': ScenarioEventBasedMixin,
+}

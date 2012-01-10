@@ -663,16 +663,19 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 self.assertEqual(0, close_mock.call_count)
 
     def test_compute_bcr(self):
-        mixin = ProbabilisticEventMixin()
-        mixin.job_id = self.job_id
-        mixin.params = self.params.copy()
-        mixin.params.update({'CALCULATION_MODE': 'Event Based BCR',
-                             'INTEREST_RATE': '0.05',
-                             'ASSET_LIFE_EXPECTANCY': '50',
-                             'NUMBER_OF_SEISMICITY_HISTORIES': '1',
-                             'NUMBER_OF_LOGIC_TREE_SAMPLES': '1'})
-        mixin.region = shapes.RegionConstraint.from_simple(
-                (0.0, 0.0), (2.0, 2.0))
+        params = self.params.copy()
+        params.update(dict(CALCULATION_MODE='Event Based BCR',
+                           INTEREST_RATE='0.05',
+                           ASSET_LIFE_EXPECTANCY='50',
+                           NUMBER_OF_SEISMICITY_HISTORIES='1',
+                           NUMBER_OF_LOGIC_TREE_SAMPLES='1',
+                           REGION_VERTEX=('0.0, 0.0, 0.0, 2.0, '
+                                          '2.0, 2.0, 2.0, 0.0'),
+                           REGION_GRID_SPACING='0.1'))
+
+        the_job = helpers.create_job(params, job_id=self.job_id)
+
+        calculator = ProbabilisticEventMixin(the_job)
 
         self.block_id = kvs.tokens.risk_block_key(self.job_id, 7)
         SITE = shapes.Site(1.0, 1.0)
@@ -684,7 +687,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                  "retrofittingCost": 123.45}
         self._store_asset(asset, 10, 10)
 
-        mixin.compute_risk(self.block_id)
+        calculator.compute_risk(self.block_id)
 
         result_key = kvs.tokens.bcr_block_key(self.job_id, self.block_id)
         result = kvs.get_value_json_decoded(result_key)
@@ -846,7 +849,8 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
     def test_loss_ratio_curve_is_none_with_unknown_vuln_function(self):
 
         # mixin "instance"
-        mixin = ClassicalPSHABasedMixin()
+        the_job = helpers.create_job({})
+        calculator = ClassicalPSHABasedMixin(the_job)
 
         # empty vuln curves
         vuln_curves = {}
@@ -854,7 +858,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         # "empty" asset
         asset = {"taxonomy": "ID", "assetID": 1}
 
-        self.assertEqual(None, mixin.compute_loss_ratio_curve(
+        self.assertEqual(None, calculator.compute_loss_ratio_curve(
                          None, asset, None, vuln_curves))
 
     def _compute_risk_classical_psha_setup(self):
@@ -916,13 +920,16 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         """
 
         self._compute_risk_classical_psha_setup()
-        # mixin "instance"
-        mixin = ClassicalPSHABasedMixin()
-        mixin.region = self.region
-        mixin.job_id = self.job_id
-        mixin.id = self.job_id
-        mixin.vuln_curves = {"ID": self.vuln_function}
-        mixin.params = {'CALCULATION_MODE': 'Classical'}
+
+        params = dict(CALCULATION_MODE='Classical',
+                      REGION_VERTEX=('0.0, 0.0, 0.0, 2.0, '
+                                     '2.0, 2.0, 2.0, 0.0'),
+                      REGION_GRID_SPACING='0.1')
+
+        the_job = helpers.create_job(params, job_id=self.job_id)
+
+        calculator = ClassicalPSHABasedMixin(the_job)
+        calculator.vuln_curves = {"ID": self.vuln_function}
 
         block = Block.from_kvs(self.block_id)
 
@@ -932,9 +939,9 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         self._store_asset(asset, 10, 10)
 
         # computes the loss curves and puts them in kvs
-        self.assertTrue(mixin.compute_risk(self.block_id))
+        self.assertTrue(calculator.compute_risk(self.block_id))
 
-        for point in block.grid(mixin.region):
+        for point in block.grid(the_job.region):
             asset_key = kvs.tokens.asset_key(self.job_id, point.row,
                 point.column)
             for asset in kvs.get_list_json_decoded(asset_key):
@@ -949,13 +956,17 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def test_compute_bcr_in_the_classical_psha_mixin(self):
         self._compute_risk_classical_psha_setup()
-        mixin = ClassicalPSHABasedMixin()
-        mixin.region = self.region
-        mixin.job_id = self.job_id
-        mixin.id = self.job_id
-        mixin.params = {'CALCULATION_MODE': 'Classical BCR',
-                        'INTEREST_RATE': '0.05',
-                        'ASSET_LIFE_EXPECTANCY': '50'}
+
+        params = dict(CALCULATION_MODE='Classical BCR',
+                      INTEREST_RATE='0.05',
+                      ASSET_LIFE_EXPECTANCY='50',
+                      REGION_VERTEX=('0.0, 0.0, 0.0, 2.0, '
+                                     '2.0, 2.0, 2.0, 0.0'),
+                      REGION_GRID_SPACING='0.1')
+
+        the_job = helpers.create_job(params, job_id=self.job_id)
+
+        calculator = ClassicalPSHABasedMixin(the_job)
 
         Block.from_kvs(self.block_id)
         asset = {"taxonomy": "ID",
@@ -963,7 +974,8 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
                  "assetValue": 1,
                  "retrofittingCost": 123.45}
         self._store_asset(asset, 10, 10)
-        mixin.compute_risk(self.block_id)
+
+        calculator.compute_risk(self.block_id)
 
         result_key = kvs.tokens.bcr_block_key(self.job_id, self.block_id)
         result = kvs.get_value_json_decoded(result_key)
@@ -972,7 +984,8 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
     def test_loss_ratio_curve_in_the_classical_psha_mixin(self):
 
         # mixin "instance"
-        mixin = ClassicalPSHABasedMixin()
+        the_job = helpers.create_job({}, job_id=1234)
+        calculator = ClassicalPSHABasedMixin(the_job)
 
         hazard_curve = shapes.Curve([
               (0.01, 0.99), (0.08, 0.96),
@@ -989,12 +1002,11 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         # values between the imls
         psha.STEPS_PER_INTERVAL = 2
 
-        mixin.job_id = 1234
         vuln_curves = {"ID": vuln_function}
 
         asset = {"taxonomy": "ID", "assetID": 1}
 
-        self.assertTrue(mixin.compute_loss_ratio_curve(
+        self.assertTrue(calculator.compute_loss_ratio_curve(
                         shapes.GridPoint(None, 10, 20),
                         asset, hazard_curve, vuln_curves) is not None)
 
@@ -1105,7 +1117,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
                 (0.12, 0.057), (0.18, 0.04),
                 (0.24, 0.019), (0.3, 0.009), (0.45, 0)])
 
-# TODO (ac): Check the difference between 0.023305 and 0.023673
+        # TODO (ac): Check the difference between 0.023305 and 0.023673
         self.assertAlmostEqual(0.023305,
                 common.compute_mean_loss(loss_ratio_curve), 3)
 

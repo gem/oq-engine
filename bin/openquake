@@ -123,8 +123,9 @@ if __name__ == '__main__':
     # Generate output
 
     from openquake import job
+    from openquake import engine
     register_mixins()
     try:
-        job.run_job(FLAGS.config_file, FLAGS.output_type)
+        engine.run_job(FLAGS.config_file, FLAGS.output_type)
     except job.config.ValidationException as e:
         print str(e)
