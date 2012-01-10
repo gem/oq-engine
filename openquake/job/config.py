@@ -26,29 +26,24 @@ import os
 from django.contrib.gis.db import models
 from openquake.db.models import CharArrayField, FloatArrayField
 
-from openquake.job.params import PARAMS, PATH_PARAMS, ARRAY_RE
+from openquake.job.params import PARAMS, PATH_PARAMS, ARRAY_RE, str2bool
 
 
-EXPOSURE = "EXPOSURE"
-RISK_SECTION = "RISK"
-INPUT_REGION = "REGION_VERTEX"
-HAZARD_SECTION = "HAZARD"
-GENERAL_SECTION = "general"
-REGION_GRID_SPACING = "REGION_GRID_SPACING"
 CALCULATION_MODE = "CALCULATION_MODE"
+BCR_CLASSICAL_MODE = "Classical BCR"
+BCR_EVENT_BASED_MODE = "Event Based BCR"
+CLASSICAL_MODE = "Classical"
+DISAGGREGATION_MODE = "Disaggregation"
+SCENARIO_MODE = "Scenario"
+UHS_MODE = "UHS"
+
+GENERAL_SECTION = "general"
+HAZARD_SECTION = "HAZARD"
+RISK_SECTION = "RISK"
+
+INPUT_REGION = "REGION_VERTEX"
 REGION_GRID_SPACING = "REGION_GRID_SPACING"
 SITES = "SITES"
-SCENARIO_MODE = "Scenario"
-DISAGGREGATION_MODE = "Disaggregation"
-BCR_EVENT_BASED_MODE = "Event Based BCR"
-BCR_CLASSICAL_MODE = "Classical BCR"
-UHS_MODE = "UHS"
-BASE_PATH = "BASE_PATH"
-COMPUTE_HAZARD_AT_ASSETS = "COMPUTE_HAZARD_AT_ASSETS_LOCATIONS"
-
-DEPTHTO1PT0KMPERSEC = "DEPTHTO1PT0KMPERSEC"
-VS30_TYPE = "VS30_TYPE"
-HAZARD_TASKS = "HAZARD_TASKS"
 
 LAT_BIN_LIMITS = 'LATITUDE_BIN_LIMITS'
 LON_BIN_LIMITS = 'LONGITUDE_BIN_LIMITS'
@@ -57,6 +52,13 @@ EPS_BIN_LIMITS = 'EPSILON_BIN_LIMITS'
 DIST_BIN_LIMITS = 'DISTANCE_BIN_LIMITS'
 
 UHS_PERIODS = 'UHS_PERIODS'
+
+BASE_PATH = "BASE_PATH"
+COMPUTE_HAZARD_AT_ASSETS = "COMPUTE_HAZARD_AT_ASSETS_LOCATIONS"
+EXPOSURE = "EXPOSURE"
+DEPTHTO1PT0KMPERSEC = "DEPTHTO1PT0KMPERSEC"
+VS30_TYPE = "VS30_TYPE"
+HAZARD_TASKS = "HAZARD_TASKS"
 
 
 def to_float_array(value):
@@ -521,6 +523,29 @@ class BasicParameterValidator(object):
         return (len(errors) == 0, errors)
 
 
+class ClassicalValidator(object):
+    """Validator for Classical job configs."""
+
+    def __init__(self, sections, params):
+        self.sections = sections
+        self.params = params
+
+    def is_valid(self):
+        errors = []
+        valid = True
+
+        # If this is hazard & risk job...
+        if set([HAZARD_SECTION, RISK_SECTION]).issubset(self.sections):
+            # ... make sure COMPUTE_MEAN_HAZARD_CURVE is set to true.
+            # Note: We expected this parameter to passed in string form.
+            if not str2bool(self.params.get('COMPUTE_MEAN_HAZARD_CURVE')):
+                valid = False
+                errors.append('COMPUTE_MEAN_HAZARD_CURVE must be defined and'
+                              ' set to True in classical hazard+risk jobs.')
+
+        return (valid, errors)
+
+
 def default_validators(sections, params):
     """Create the set of default validators for a job.
 
@@ -555,5 +580,8 @@ def default_validators(sections, params):
     elif params.get(CALCULATION_MODE) in (BCR_CLASSICAL_MODE,
                                           BCR_EVENT_BASED_MODE):
         validators.add(BCRValidator(params))
+
+    if params.get(CALCULATION_MODE) == CLASSICAL_MODE:
+        validators.add(ClassicalValidator(sections, params))
 
     return validators

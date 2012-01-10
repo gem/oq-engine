@@ -67,7 +67,7 @@ GRANT ALL ON SEQUENCE riskr.bcr_distribution_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.input_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_calculation_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.calc_stats_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE uiapi.oq_params_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.oq_job_profile_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.output_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.upload_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.input_set_id_seq to GROUP openquake;
@@ -231,9 +231,9 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.calc_stats to oq_calculation_init;
 -- oq_calculation_superv is granted write access so that the job supervisor can record job completion time
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.calc_stats to oq_calculation_superv;
 
--- uiapi.oq_params
-GRANT SELECT ON uiapi.oq_params TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE ON uiapi.oq_params TO oq_calculation_init;
+-- uiapi.oq_job_profile
+GRANT SELECT ON uiapi.oq_job_profile TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job_profile TO oq_calculation_init;
 
 -- uiapi.output
 GRANT SELECT ON uiapi.output TO GROUP openquake;
