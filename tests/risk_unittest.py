@@ -1117,7 +1117,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
                 (0.12, 0.057), (0.18, 0.04),
                 (0.24, 0.019), (0.3, 0.009), (0.45, 0)])
 
-# TODO (ac): Check the difference between 0.023305 and 0.023673
+        # TODO (ac): Check the difference between 0.023305 and 0.023673
         self.assertAlmostEqual(0.023305,
                 common.compute_mean_loss(loss_ratio_curve), 3)
 

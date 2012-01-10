@@ -67,6 +67,7 @@ SIMPLE_FAULT_GMPE_LT = helpers.demo_file(
 SIMPLE_FAULT_BASE_PATH = os.path.abspath(
     helpers.demo_file('simple_fault_demo_hazard'))
 
+
 def get_pattern(regexp):
     """Get all the values whose keys satisfy the given regexp.
 
@@ -143,7 +144,8 @@ class HazardEngineTestCase(helpers.TestMixin, unittest.TestCase):
                             the_job.job_id, site, poe)
                         self.assertTrue(key in keys, "Missing key %s" % key)
 
-        def verify_quantile_haz_curves_stored_to_kvs(the_job, calculator, keys):
+        def verify_quantile_haz_curves_stored_to_kvs(the_job, calculator,
+                                                     keys):
             """ Make sure that the keys and non-empty values for quantile
             hazard curves have been written to KVS."""
 
@@ -644,7 +646,7 @@ class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
                 hazard_curve_1, hazard_curve_2, hazard_curve_3,
                 hazard_curve_4, hazard_curve_5], 0.75)
 
-# TODO (ac): Check if this tolerance is enough
+        # TODO (ac): Check if this tolerance is enough
         self.assertTrue(numpy.allclose(
                 self.expected_curve, quantile_hazard_curve, atol=0.005))
 
