@@ -711,7 +711,7 @@ class RunJobTestCase(unittest.TestCase):
         self.job_from_file = engine._job_from_file
         self.init_logs_amqp_send = patch('openquake.logs.init_logs_amqp_send')
         self.init_logs_amqp_send.start()
-        self.job_profile, self.params, self.sections = (
+        self.calc_proxy, self.params, self.sections = (
             engine.import_job_profile(helpers.get_data_path(CONFIG_FILE)))
 
     def tearDown(self):
@@ -744,7 +744,7 @@ class RunJobTestCase(unittest.TestCase):
 
                 with patch('os.fork', mocksignature=False) as fork:
                     fork.return_value = 0
-                    engine.run_calculation(self.job_profile, self.params,
+                    engine.run_calculation(self.calc_proxy, self.params,
                                            self.sections)
 
             self.assertEquals(1, engine._launch_calculation.call_count)
@@ -777,7 +777,7 @@ class RunJobTestCase(unittest.TestCase):
                 with patch('os.fork', mocksignature=False) as fork:
                     fork.return_value = 0
                     self.assertRaises(Exception, engine.run_calculation,
-                                      self.job_profile, self.params,
+                                      self.calc_proxy, self.params,
                                       self.sections)
 
             self.assertEquals(1, engine._launch_calculation.call_count)
@@ -893,7 +893,7 @@ class RunJobTestCase(unittest.TestCase):
                     fork.side_effect = fork_side_effect
                     superv_func = 'openquake.supervising.supervisor.supervise'
                     with patch(superv_func) as supervise:
-                        engine.run_calculation(self.job_profile,
+                        engine.run_calculation(self.calc_proxy,
                                                self.params,
                                                self.sections)
                         calculation = OqCalculation.objects.latest(

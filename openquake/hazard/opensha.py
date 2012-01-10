@@ -259,7 +259,7 @@ class ClassicalMixin(BasePSHAMixin):
 
     def number_of_tasks(self):
         """How many `celery` tasks should be used for the calculations?"""
-        value = self.job_profile["HAZARD_TASKS"]
+        value = self.calc_proxy["HAZARD_TASKS"]
         return 2 * multiprocessing.cpu_count() if value is None else int(value)
 
     def do_curves(self, sites, realizations, serializer=None,
@@ -288,13 +288,13 @@ class ClassicalMixin(BasePSHAMixin):
         """
         source_model_generator = random.Random()
         source_model_generator.seed(
-            self.job_profile["SOURCE_MODEL_LT_RANDOM_SEED"])
+            self.calc_proxy["SOURCE_MODEL_LT_RANDOM_SEED"])
 
         gmpe_generator = random.Random()
-        gmpe_generator.seed(self.job_profile["GMPE_LT_RANDOM_SEED"])
+        gmpe_generator.seed(self.calc_proxy["GMPE_LT_RANDOM_SEED"])
 
         for realization in xrange(0, realizations):
-            stats.incr_counter(self.job_profile.job_id,
+            stats.incr_counter(self.calc_proxy.job_id,
                                "classical:do_curves:realization")
             LOG.info("Calculating hazard curves for realization %s"
                      % realization)
@@ -303,7 +303,7 @@ class ClassicalMixin(BasePSHAMixin):
 
             utils_tasks.distribute(
                 self.number_of_tasks(), the_task, ("sites", sites),
-                dict(job_id=self.job_profile.job_id, realization=realization),
+                dict(job_id=self.calc_proxy.job_id, realization=realization),
                 flatten_results=True, ath=serializer)
 
     # pylint: disable=R0913
@@ -338,7 +338,7 @@ class ClassicalMixin(BasePSHAMixin):
         :type map_func: function(:py:class:`openquake.job.CalculationProxy`)
         :returns: `None`
         """
-        if not self.job_profile["COMPUTE_MEAN_HAZARD_CURVE"]:
+        if not self.calc_proxy["COMPUTE_MEAN_HAZARD_CURVE"]:
             return
 
         # Compute and serialize the mean curves.
@@ -346,7 +346,7 @@ class ClassicalMixin(BasePSHAMixin):
 
         utils_tasks.distribute(
             self.number_of_tasks(), curve_task, ("sites", sites),
-            dict(job_id=self.job_profile.job_id, realizations=realizations),
+            dict(job_id=self.calc_proxy.job_id, realizations=realizations),
             flatten_results=True, ath=curve_serializer)
 
         if self.poes_hazard_maps:
@@ -354,7 +354,7 @@ class ClassicalMixin(BasePSHAMixin):
             assert map_serializer, "No serializer for the mean hazard maps set"
 
             LOG.info("Computing/serializing mean hazard maps")
-            map_func(self.job_profile.job_id, sites, self.job_profile.imls,
+            map_func(self.calc_proxy.job_id, sites, self.calc_proxy.imls,
                      self.poes_hazard_maps)
             map_serializer(sites, self.poes_hazard_maps)
 
@@ -400,7 +400,7 @@ class ClassicalMixin(BasePSHAMixin):
 
         utils_tasks.distribute(
             self.number_of_tasks(), curve_task, ("sites", sites),
-            dict(job_id=self.job_profile.job_id, realizations=realizations,
+            dict(job_id=self.calc_proxy.job_id, realizations=realizations,
                  quantiles=quantiles),
             flatten_results=True, ath=curve_serializer)
 
@@ -410,8 +410,8 @@ class ClassicalMixin(BasePSHAMixin):
 
             # quantile maps
             LOG.info("Computing quantile hazard maps")
-            map_func(self.job_profile.job_id, sites, quantiles,
-                     self.job_profile.imls, self.poes_hazard_maps)
+            map_func(self.calc_proxy.job_id, sites, quantiles,
+                     self.calc_proxy.imls, self.poes_hazard_maps)
 
             LOG.info("Serializing quantile maps for %s values"
                      % len(quantiles))
@@ -430,16 +430,16 @@ class ClassicalMixin(BasePSHAMixin):
         :returns: the keys used in the course of the calculation (for the sake
             of testability).
         """
-        sites = self.job_profile.sites_to_compute()
-        realizations = self.job_profile["NUMBER_OF_LOGIC_TREE_SAMPLES"]
+        sites = self.calc_proxy.sites_to_compute()
+        realizations = self.calc_proxy["NUMBER_OF_LOGIC_TREE_SAMPLES"]
 
         LOG.info("Going to run classical PSHA hazard for %s realizations "
                  "and %s sites" % (realizations, len(sites)))
 
-        stats.set_total(self.job_profile.job_id, "classical:execute:sites",
+        stats.set_total(self.calc_proxy.job_id, "classical:execute:sites",
                         len(sites))
         stats.set_total(
-            self.job_profile.job_id, "classical:execute:realizations",
+            self.calc_proxy.job_id, "classical:execute:realizations",
             realizations)
 
         block_size = config.hazard_block_size()
@@ -465,7 +465,7 @@ class ClassicalMixin(BasePSHAMixin):
                 map_serializer=self.serialize_quantile_hazard_map)
 
             # Done with this chunk, purge intermediate results from kvs.
-            release_data_from_kvs(self.job_profile.job_id, data, realizations,
+            release_data_from_kvs(self.calc_proxy.job_id, data, realizations,
                                   quantiles, self.poes_hazard_maps,
                                   kvs_keys_purged)
 
@@ -481,7 +481,7 @@ class ClassicalMixin(BasePSHAMixin):
         hc_attrib_update = {'endBranchLabel': realization}
         nrml_file = self.hazard_curve_filename(realization)
         key_template = kvs.tokens.hazard_curve_poes_key_template(
-            self.job_profile.job_id, realization)
+            self.calc_proxy.job_id, realization)
         self.serialize_hazard_curve(nrml_file, key_template,
                                     hc_attrib_update, sites)
 
@@ -495,7 +495,7 @@ class ClassicalMixin(BasePSHAMixin):
         hc_attrib_update = {'statistics': 'mean'}
         nrml_file = self.mean_hazard_curve_filename()
         key_template = kvs.tokens.mean_hazard_curve_key_template(
-            self.job_profile.job_id)
+            self.calc_proxy.job_id)
         self.serialize_hazard_curve(nrml_file, key_template, hc_attrib_update,
                                     sites)
 
@@ -515,7 +515,7 @@ class ClassicalMixin(BasePSHAMixin):
                 'quantileValue': quantile}
             nrml_file = self.quantile_hazard_curve_filename(quantile)
             key_template = kvs.tokens.quantile_hazard_curve_key_template(
-                self.job_profile.job_id, str(quantile))
+                self.calc_proxy.job_id, str(quantile))
             self.serialize_hazard_curve(nrml_file, key_template,
                                         hc_attrib_update, sites)
 
@@ -552,10 +552,10 @@ class ClassicalMixin(BasePSHAMixin):
                     value *= 2
                 yield value
 
-        nrml_path = self.job_profile.build_nrml_path(nrml_file)
+        nrml_path = self.calc_proxy.build_nrml_path(nrml_file)
 
         curve_writer = hazard_output.create_hazardcurve_writer(
-            self.job_profile.job_id, self.job_profile.serialize_results_to,
+            self.calc_proxy.job_id, self.calc_proxy.serialize_results_to,
             nrml_path)
         hc_data = []
 
@@ -580,9 +580,9 @@ class ClassicalMixin(BasePSHAMixin):
                 # from the IML list in config.
                 hc_attrib = {
                     'investigationTimeSpan':
-                        self.job_profile['INVESTIGATION_TIME'],
-                    'IMLValues': self.job_profile.imls,
-                    'IMT': self.job_profile['INTENSITY_MEASURE_TYPE'],
+                        self.calc_proxy['INVESTIGATION_TIME'],
+                    'IMLValues': self.calc_proxy.imls,
+                    'IMT': self.calc_proxy['INTENSITY_MEASURE_TYPE'],
                     'PoEValues': value}
                 hc_attrib.update(hc_attrib_update)
                 hc_data.append((site, hc_attrib))
@@ -611,7 +611,7 @@ class ClassicalMixin(BasePSHAMixin):
 
             hm_attrib_update = {'statistics': 'mean'}
             key_template = kvs.tokens.mean_hazard_map_key_template(
-                self.job_profile.job_id, poe)
+                self.calc_proxy.job_id, poe)
 
             self.serialize_hazard_map_at_poe(sites, poe, key_template,
                                              hm_attrib_update, nrml_file)
@@ -632,7 +632,7 @@ class ClassicalMixin(BasePSHAMixin):
             nrml_file = self.quantile_hazard_map_filename(quantile, poe)
 
             key_template = kvs.tokens.quantile_hazard_map_key_template(
-                self.job_profile.job_id, poe, quantile)
+                self.calc_proxy.job_id, poe, quantile)
 
             hm_attrib_update = {'statistics': 'quantile',
                                 'quantileValue': quantile}
@@ -661,13 +661,13 @@ class ClassicalMixin(BasePSHAMixin):
         :param nrml_file: the output filename
         :type nrml_file: :py:class:`string`
         """
-        nrml_path = self.job_profile.build_nrml_path(nrml_file)
+        nrml_path = self.calc_proxy.build_nrml_path(nrml_file)
 
         LOG.info("Generating NRML hazard map file for PoE %s, "
                  "%s nodes in hazard map: %s" % (poe, len(sites), nrml_file))
 
         map_writer = hazard_output.create_hazardmap_writer(
-            self.job_profile.job_id, self.job_profile.serialize_results_to,
+            self.calc_proxy.job_id, self.calc_proxy.serialize_results_to,
             nrml_path)
         hm_data = []
 
@@ -676,9 +676,9 @@ class ClassicalMixin(BasePSHAMixin):
             # use hazard map IML values from KVS
             hm_attrib = {
                 'investigationTimeSpan':
-                    self.job_profile['INVESTIGATION_TIME'],
-                'IMT': self.job_profile['INTENSITY_MEASURE_TYPE'],
-                'vs30': self.job_profile['REFERENCE_VS30_VALUE'],
+                    self.calc_proxy['INVESTIGATION_TIME'],
+                'IMT': self.calc_proxy['INTENSITY_MEASURE_TYPE'],
+                'vs30': self.calc_proxy['REFERENCE_VS30_VALUE'],
                 'IML': kvs.get_value_json_decoded(key),
                 'poE': poe}
 
@@ -701,9 +701,9 @@ class ClassicalMixin(BasePSHAMixin):
                 self.generate_erf(),
                 self.generate_gmpe_map(),
                 get_iml_list(
-                    self.job_profile.imls,
-                    self.job_profile.params['INTENSITY_MEASURE_TYPE']),
-                self.job_profile['MAXIMUM_DISTANCE'])
+                    self.calc_proxy.imls,
+                    self.calc_proxy.params['INTENSITY_MEASURE_TYPE']),
+                self.calc_proxy['MAXIMUM_DISTANCE'])
         except jpype.JavaException, ex:
             unwrap_validation_error(jpype, ex)
 
@@ -712,7 +712,7 @@ class ClassicalMixin(BasePSHAMixin):
         curve_keys = []
         for site, poes in izip(sites, poes_list):
             curve_key = kvs.tokens.hazard_curve_poes_key(
-                self.job_profile.job_id, realization, site)
+                self.calc_proxy.job_id, realization, site)
 
             kvs.get_client().set(curve_key, poes)
 
@@ -722,7 +722,7 @@ class ClassicalMixin(BasePSHAMixin):
 
     def _hazard_curve_filename(self, filename_part):
         "Helper to build the filenames of hazard curves"
-        return self.job_profile.build_nrml_path('%s-%s.xml'
+        return self.calc_proxy.build_nrml_path('%s-%s.xml'
                                     % (HAZARD_CURVE_FILENAME_PREFIX,
                                        filename_part))
 
@@ -749,7 +749,7 @@ class ClassicalMixin(BasePSHAMixin):
 
     def _hazard_map_filename(self, filename_part):
         "Helper to build the filenames of hazard maps"
-        return self.job_profile.build_nrml_path('%s-%s.xml'
+        return self.calc_proxy.build_nrml_path('%s-%s.xml'
                                     % (HAZARD_MAP_FILENAME_PREFIX,
                                        filename_part))
 
@@ -770,7 +770,7 @@ class ClassicalMixin(BasePSHAMixin):
     @property
     def quantile_levels(self):
         "Returns the quantile levels specified in the config file of this job"
-        return self.job_profile.extract_values_from_config(
+        return self.calc_proxy.extract_values_from_config(
             classical_psha.QUANTILE_PARAM_NAME,
             check_value=lambda v: v >= 0.0 and v <= 1.0)
 
@@ -780,7 +780,7 @@ class ClassicalMixin(BasePSHAMixin):
         Returns the PoEs at which the hazard maps will be calculated, as
         specified in the config file of this job.
         """
-        return self.job_profile.extract_values_from_config(
+        return self.calc_proxy.extract_values_from_config(
             classical_psha.POES_PARAM_NAME,
             check_value=lambda v: v >= 0.0 and v <= 1.0)
 
@@ -801,16 +801,16 @@ class EventBasedMixin(BasePSHAMixin):
         GMFs."""
         source_model_generator = random.Random()
         source_model_generator.seed(
-            self.job_profile['SOURCE_MODEL_LT_RANDOM_SEED'])
+            self.calc_proxy['SOURCE_MODEL_LT_RANDOM_SEED'])
 
         gmpe_generator = random.Random()
-        gmpe_generator.seed(self.job_profile['GMPE_LT_RANDOM_SEED'])
+        gmpe_generator.seed(self.calc_proxy['GMPE_LT_RANDOM_SEED'])
 
         gmf_generator = random.Random()
-        gmf_generator.seed(self.job_profile['GMF_RANDOM_SEED'])
+        gmf_generator.seed(self.calc_proxy['GMF_RANDOM_SEED'])
 
-        histories = self.job_profile['NUMBER_OF_SEISMICITY_HISTORIES']
-        realizations = self.job_profile['NUMBER_OF_LOGIC_TREE_SAMPLES']
+        histories = self.calc_proxy['NUMBER_OF_SEISMICITY_HISTORIES']
+        realizations = self.calc_proxy['NUMBER_OF_LOGIC_TREE_SAMPLES']
         LOG.info(
             "Going to run hazard for %s histories of %s realizations each."
             % (histories, realizations))
@@ -822,7 +822,7 @@ class EventBasedMixin(BasePSHAMixin):
                 self.store_gmpe_map(gmpe_generator.getrandbits(32))
                 pending_tasks.append(
                     compute_ground_motion_fields.delay(
-                        self.job_profile.job_id, self.sites_to_compute(),
+                        self.calc_proxy.job_id, self.sites_to_compute(),
                         i, j, gmf_generator.getrandbits(32)))
 
             for each_task in pending_tasks:
@@ -832,7 +832,7 @@ class EventBasedMixin(BasePSHAMixin):
 
             for j in range(0, realizations):
                 stochastic_set_key = kvs.tokens.stochastic_set_key(
-                    self.job_profile.job_id, i, j)
+                    self.calc_proxy.job_id, i, j)
                 LOG.info("Writing output for ses %s" % stochastic_set_key)
                 ses = kvs.get_value_json_decoded(stochastic_set_key)
                 if ses:
@@ -842,7 +842,7 @@ class EventBasedMixin(BasePSHAMixin):
         """
         Write each GMF to an NRML file or to DB depending on job configuration.
         """
-        iml_list = self.job_profile['INTENSITY_MEASURE_LEVELS']
+        iml_list = self.calc_proxy['INTENSITY_MEASURE_LEVELS']
 
         LOG.debug("IML: %s" % (iml_list))
         files = []
@@ -852,16 +852,16 @@ class EventBasedMixin(BasePSHAMixin):
         for event_set in ses:
             for rupture in ses[event_set]:
 
-                if self.job_profile['GMF_OUTPUT']:
+                if self.calc_proxy['GMF_OUTPUT']:
                     common_path = os.path.join(self.base_path,
-                            self.job_profile['OUTPUT_DIR'],
+                            self.calc_proxy['OUTPUT_DIR'],
                             "gmf-%s-%s" % (str(event_set.replace("!", "_")),
                                            str(rupture.replace("!", "_"))))
                     nrml_path = "%s.xml" % common_path
 
                 gmf_writer = hazard_output.create_gmf_writer(
-                    self.job_profile.job_id,
-                    self.job_profile.serialize_results_to,
+                    self.calc_proxy.job_id,
+                    self.calc_proxy.serialize_results_to,
                     nrml_path)
                 gmf_data = {}
                 for site_key in ses[event_set][rupture]:
@@ -881,9 +881,9 @@ class EventBasedMixin(BasePSHAMixin):
         jpype = java.jvm()
 
         jsite_list = self.parameterize_sites(site_list)
-        key = kvs.tokens.stochastic_set_key(self.job_profile.job_id, history,
+        key = kvs.tokens.stochastic_set_key(self.calc_proxy.job_id, history,
                                             realization)
-        correlate = self.job_profile['GROUND_MOTION_CORRELATION']
+        correlate = self.calc_proxy['GROUND_MOTION_CORRELATION']
         stochastic_set_id = "%s!%s" % (history, realization)
         java.jclass("HazardCalculator").generateAndSaveGMFs(
                 self.cache, key, stochastic_set_id, jsite_list,
