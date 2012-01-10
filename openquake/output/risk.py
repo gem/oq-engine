@@ -274,8 +274,16 @@ class BCRMapXMLWriter(BaseMapXMLWriter):
         loss_el = etree.SubElement(bcr_node_el,
                                    xml.RISK_BCR_MAP_BCR_CONTAINER_TAG)
         loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_ATTR, str(asset_id))
-        value = etree.SubElement(loss_el, xml.RISK_LOSS_MAP_VALUE)
-        value.text = str(loss_dict['value'])
+
+        eal_o = etree.SubElement(loss_el, xml.RISK_BCR_MAP_EAL_ORIGINAL_VALUE)
+        eal_o.text = str(loss_dict['eal_original'])
+
+        eal_r = etree.SubElement(loss_el,
+                                 xml.RISK_BCR_MAP_EAL_RETROFITTED_VALUE)
+        eal_r.text = str(loss_dict['eal_retrofitted'])
+
+        bcr = etree.SubElement(loss_el, xml.RISK_BCR_MAP_BCR_VALUE)
+        bcr.text = str(loss_dict['bcr'])
 
 
 LOSS_MAP_METADATA_KEYS = [
