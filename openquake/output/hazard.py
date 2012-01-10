@@ -40,15 +40,14 @@ in the base class.
 GMFs are serialized per object (=Site) as implemented in the base class.
 """
 
-import logging
+from collections import defaultdict
 from lxml import etree
+import logging
 
 from openquake.db import models
-
-from openquake import job
-from openquake import shapes
-from openquake import writer
+from openquake import job, shapes, writer
 from openquake.utils import round_float
+from openquake.utils import stats
 from openquake.xml import NSMAP, NRML, GML
 
 
@@ -64,11 +63,11 @@ SRS_EPSG_4326 = 'epsg:4326'
 
 
 class HazardCurveXMLWriter(writer.FileWriter):
-    """This class writes an hazard curve into the NRML format."""
+    """This class serializes hazard curve information to NRML format."""
 
     def __init__(self, path):
-        writer.FileWriter.__init__(self, path)
-
+        """Initialize the data to be used."""
+        super(HazardCurveXMLWriter, self).__init__(path)
         self.nrml_el = None
         self.result_el = None
         self.curves_per_branch_label = {}
@@ -84,10 +83,11 @@ class HazardCurveXMLWriter(writer.FileWriter):
                         "a valid output!"
             raise RuntimeError(error_msg)
 
-        self.file.write(etree.tostring(self.nrml_el, pretty_print=True,
-            xml_declaration=True, encoding="UTF-8"))
-
-        writer.FileWriter.close(self)
+        if self.mode in [writer.MODE_END, writer.MODE_START_AND_END]:
+            self.file.write(etree.tostring(
+                self.nrml_el, pretty_print=True, xml_declaration=True,
+                encoding="UTF-8"))
+            writer.FileWriter.close(self)
 
     def write(self, point, values):
         """Write a hazard curve.
@@ -197,9 +197,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
 
 
 class HazardMapXMLWriter(writer.XMLFileWriter):
-    """This class serializes hazard map information
-    to NRML format.
-    """
+    """This class serializes hazard map information to NRML format."""
 
     root_tag = "%snrml" % NRML
     hazard_result_tag = "%shazardResult" % NRML
@@ -232,8 +230,8 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
     HAZARD_MAP_NODE_ID_PREFIX = 'n_'
 
     def __init__(self, path):
+        """Initialize the data to be used."""
         super(HazardMapXMLWriter, self).__init__(path)
-
         self.hmnode_counter = 0
         self.root_node = None
         self.parent_node = None
@@ -263,6 +261,9 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
     def write_header(self):
         """Header (i.e., common) information for all nodes."""
 
+        if self.mode not in [writer.MODE_START, writer.MODE_START_AND_END]:
+            return
+
         self.root_node = etree.Element(self.root_tag, nsmap=NSMAP)
         self.root_node.attrib['%sid' % GML] = self.NRML_DEFAULT_ID
 
@@ -284,14 +285,15 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
     def write_footer(self):
         """Serialize tree to file."""
 
-        if self._ensure_all_attributes_set():
-            et = etree.ElementTree(self.root_node)
-            et.write(self.file, pretty_print=True, xml_declaration=True,
-                    encoding="UTF-8")
-        else:
-            error_msg = "not all required attributes set in hazard curve " \
-                        "dataset"
-            raise ValueError(error_msg)
+        if self.mode in [writer.MODE_END, writer.MODE_START_AND_END]:
+            if self._ensure_all_attributes_set():
+                et = etree.ElementTree(self.root_node)
+                et.write(self.file, pretty_print=True, xml_declaration=True,
+                         encoding="UTF-8")
+            else:
+                error_msg = ("not all required attributes set in hazard curve "
+                             "dataset")
+                raise ValueError(error_msg)
 
     def _append_node(self, point, val, parent_node):
         """Write HMNode element."""
@@ -377,7 +379,7 @@ class GMFXMLWriter(writer.XMLFileWriter):
     config_tag = NRML + "config"
     hazard_processing_tag = NRML + "hazardProcessing"
     gmpe_params_tag = NRML + "GMPEParameters"
-    groun_motion_field_set_tag = NRML + "groundMotionFieldSet"
+    gmf_set_tag = NRML + "groundMotionFieldSet"
     field_tag = NRML + "GMF"
     node_tag = NRML + "GMFNode"
     site_tag = NRML + "site"
@@ -412,35 +414,35 @@ class GMFXMLWriter(writer.XMLFileWriter):
     def write_header(self):
         """Write out the file header."""
 
-        self.root_node = etree.Element(
-                GMFXMLWriter.root_tag, nsmap=NSMAP)
+        if self.mode not in [writer.MODE_START, writer.MODE_START_AND_END]:
+            return
+
+        self.root_node = etree.Element(GMFXMLWriter.root_tag, nsmap=NSMAP)
 
         _set_gml_id(self.root_node, NRML_GML_ID)
 
-        hazard_result_node = etree.SubElement(self.root_node,
-                GMFXMLWriter.hazard_result_tag, nsmap=NSMAP)
+        hazard_result_node = etree.SubElement(
+            self.root_node, GMFXMLWriter.hazard_result_tag, nsmap=NSMAP)
 
         _set_gml_id(hazard_result_node, HAZARDRESULT_GML_ID)
 
-        config_node = etree.SubElement(hazard_result_node,
-                GMFXMLWriter.config_tag, nsmap=NSMAP)
+        config_node = etree.SubElement(
+            hazard_result_node, GMFXMLWriter.config_tag, nsmap=NSMAP)
 
-        hazard_processing_node = etree.SubElement(config_node,
-                GMFXMLWriter.hazard_processing_tag, nsmap=NSMAP)
+        hazard_processing_node = etree.SubElement(
+            config_node, GMFXMLWriter.hazard_processing_tag, nsmap=NSMAP)
 
         # stubbed value, not yet implemented...
-        hazard_processing_node.set(
-                "%sinvestigationTimeSpan" % NRML, str(50.0))
+        hazard_processing_node.set("%sinvestigationTimeSpan" % NRML, str(50.0))
 
         ground_motion_field_set_node = etree.SubElement(
-                hazard_result_node,
-                GMFXMLWriter.groun_motion_field_set_tag, nsmap=NSMAP)
+            hazard_result_node, GMFXMLWriter.gmf_set_tag, nsmap=NSMAP)
 
         _set_gml_id(ground_motion_field_set_node, GMFS_GML_ID)
 
         gmpe_params_node = etree.SubElement(
-                ground_motion_field_set_node,
-                GMFXMLWriter.gmpe_params_tag, nsmap=NSMAP)
+            ground_motion_field_set_node,
+            GMFXMLWriter.gmpe_params_tag, nsmap=NSMAP)
 
         # stubbed value, not yet implemented...
         gmpe_params_node.set("%sIMT" % NRML, "PGA")
@@ -454,9 +456,10 @@ class GMFXMLWriter(writer.XMLFileWriter):
 
     def write_footer(self):
         """Write out the file footer."""
-        et = etree.ElementTree(self.root_node)
-        et.write(self.file, pretty_print=True, xml_declaration=True,
-                 encoding="UTF-8")
+        if self.mode in [writer.MODE_END, writer.MODE_START_AND_END]:
+            et = etree.ElementTree(self.root_node)
+            et.write(self.file, pretty_print=True, xml_declaration=True,
+                     encoding="UTF-8")
 
     def _append_site_node(self, point, val, parent_node):
         """Write a single GMFNode element."""
@@ -549,7 +552,7 @@ class HazardMapDBReader(object):
         """
         hazard_map = models.HazardMap.objects.get(output=output_id)
         hazard_map_data = hazard_map.hazardmapdata_set.all()
-        params = hazard_map.output.oq_calculation.oq_params
+        params = hazard_map.output.oq_calculation.oq_job_profile
         points = []
 
         for datum in hazard_map_data:
@@ -671,7 +674,7 @@ class HazardCurveDBReader(object):
         """
         hazard_curves = models.HazardCurve.objects.filter(output=output_id)
         params = models.Output.objects.get(
-            id=output_id).oq_calculation.oq_params
+            id=output_id).oq_calculation.oq_job_profile
         points = []
 
         for hazard_curve_datum in hazard_curves:
@@ -841,8 +844,45 @@ class GmfDBWriter(writer.DBWriter):
             location="POINT(%s %s)" % (point.point.x, point.point.y))
 
 
-def _create_writer(job_id, serialize_to, nrml_path,
-                   create_xml_writer, create_db_writer):
+def get_mode(job_id, serialize_to, nrml_path):
+    """Figure out the XML serialization mode.
+
+    This facilitates multi-stage XML serialization.
+
+    :param int job_id: the id of the job the data belongs to.
+    :param serialize_to: where to serialize
+    :type serialize_to: list of strings, permitted values: 'db', 'xml'.
+    :param string nrml_path: the full XML/NRML path.
+    :returns: one of: MODE_START, MODE_IN_THE_MIDDLE, MODE_END,
+        MODE_START_AND_END (single-stage serialization).
+    """
+    mode = writer.MODE_START_AND_END
+    if 'xml' in serialize_to and nrml_path:
+        # Figure out the mode, are we at the beginning, in the middle or at
+        # the end of the XML file?
+        blocks = stats.pk_get(job_id, "hcls_blocks")
+        cblock = stats.pk_get(job_id, "hcls_cblock")
+        if blocks and cblock:
+            blocks = int(blocks)
+            cblock = int(cblock)
+            if blocks == 1:
+                pass    # MODE_START_AND_END
+            elif cblock == 1:
+                mode = writer.MODE_START
+            elif cblock == blocks:
+                mode = writer.MODE_END
+            else:
+                mode = writer.MODE_IN_THE_MIDDLE
+    return mode
+
+
+# Facilitate multi-stage XML serialization by using the same serializer
+# object for a given job and NRML path.
+_XML_SERIALIZER_CACHE = defaultdict(lambda: None)
+
+
+def _create_writer(job_id, serialize_to, nrml_path, create_xml_writer,
+                   create_db_writer, mode=None):
     """Common code for the functions below"""
 
     writers = []
@@ -853,7 +893,15 @@ def _create_writer(job_id, serialize_to, nrml_path,
         writers.append(create_db_writer(nrml_path, job_id))
 
     if 'xml' in serialize_to and nrml_path:
-        writers.append(create_xml_writer(nrml_path))
+        if mode is not None:
+            obj = _XML_SERIALIZER_CACHE[(job_id, nrml_path)]
+            if obj is None:
+                obj = create_xml_writer(nrml_path)
+                _XML_SERIALIZER_CACHE[(job_id, nrml_path)] = obj
+            obj.set_mode(mode)
+        else:
+            obj = create_xml_writer(nrml_path)
+        writers.append(obj)
 
     return writer.compose_writers(writers)
 
@@ -870,9 +918,9 @@ def create_hazardcurve_writer(job_id, serialize_to, nrml_path):
     :returns: an :py:class:`output.hazard.HazardCurveXMLWriter` or an
         :py:class:`output.hazard.HazardCurveDBWriter` instance.
     """
+    mode = get_mode(job_id, serialize_to, nrml_path)
     return _create_writer(job_id, serialize_to, nrml_path,
-                          HazardCurveXMLWriter,
-                          HazardCurveDBWriter)
+                          HazardCurveXMLWriter, HazardCurveDBWriter, mode)
 
 
 def create_hazardmap_writer(job_id, serialize_to, nrml_path):
@@ -887,9 +935,9 @@ def create_hazardmap_writer(job_id, serialize_to, nrml_path):
     :returns: an :py:class:`output.hazard.HazardMapXMLWriter` or an
         :py:class:`output.hazard.HazardMapDBWriter` instance.
     """
-    return _create_writer(job_id, serialize_to, nrml_path,
-                          HazardMapXMLWriter,
-                          HazardMapDBWriter)
+    mode = get_mode(job_id, serialize_to, nrml_path)
+    return _create_writer(job_id, serialize_to, nrml_path, HazardMapXMLWriter,
+                          HazardMapDBWriter, mode)
 
 
 def create_gmf_writer(job_id, serialize_to, nrml_path):
@@ -904,6 +952,5 @@ def create_gmf_writer(job_id, serialize_to, nrml_path):
     :returns: an :py:class:`output.hazard.GMFXMLWriter` or an
         :py:class:`output.hazard.GmfDBWriter` instance.
     """
-    return _create_writer(job_id, serialize_to, nrml_path,
-                          GMFXMLWriter,
-                          GmfDBWriter)
+    return _create_writer(
+        job_id, serialize_to, nrml_path, GMFXMLWriter, GmfDBWriter)
