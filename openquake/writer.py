@@ -32,6 +32,11 @@ from openquake.db import models
 
 LOGGER = logging.getLogger('serializer')
 
+MODE_START = 1
+MODE_IN_THE_MIDDLE = 0
+MODE_END = -1
+MODE_START_AND_END = -2
+
 
 class FileWriter(object):
     """Simple output half of the codec process."""
@@ -39,12 +44,23 @@ class FileWriter(object):
     def __init__(self, path):
         self.path = path
         self.file = None
-        self._init_file()
         self.root_node = None
+        self.mode = MODE_START_AND_END
 
-    def _init_file(self):
+    def set_mode(self, mode):
+        """Facilitate XML serialization in multiple stages."""
+        assert mode in [MODE_START, MODE_IN_THE_MIDDLE, MODE_END,
+                        MODE_START_AND_END]
+        self.mode = mode
+
+    def initialize(self):
+        """Initialization hook for derived classes."""
+        pass
+
+    def open(self):
         """Get the file handle open for writing"""
-        self.file = open(self.path, "w")
+        if self.mode in [MODE_END, MODE_START_AND_END]:
+            self.file = open(self.path, "w")
 
     def write(self, point, value):
         """
@@ -62,12 +78,15 @@ class FileWriter(object):
 
     def close(self):
         """Close and flush the file. Send finished messages."""
-        self.file.close()
+        if self.file:
+            self.file.close()
 
     def serialize(self, iterable):
         """Wrapper for writing all items in an iterable object."""
         if isinstance(iterable, dict):
             iterable = iterable.items()
+        self.initialize()
+        self.open()
         for key, val in iterable:
             self.write(key, val)
         self.close()
@@ -96,6 +115,8 @@ class XMLFileWriter(FileWriter):
         """
         if isinstance(iterable, dict):
             iterable = iterable.items()
+        self.initialize()
+        self.open()
         self.write_header()
         for key, val in iterable:
             self.write(key, val)
