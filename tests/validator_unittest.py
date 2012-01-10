@@ -627,6 +627,7 @@ class BCRValidatorTestCase(unittest.TestCase):
         validator = BCRValidator(self.GOOD_PARAMS)
         self.assertEqual(validator.is_valid(), (True, []))
 
+
 class ScenarioValidatorTestCase(unittest.TestCase):
 
     def test_num_of_calculation_set_to_zero(self):
