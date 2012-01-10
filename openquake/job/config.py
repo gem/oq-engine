@@ -262,7 +262,7 @@ class ScenarioComputationValidator(object):
                                 " parameter must be greater than 0."])
         except ValueError, err:
             return (False, [err.message])
-            
+
         return (True, [])
 
 
@@ -564,6 +564,5 @@ def default_validators(sections, params):
         validators.add(BCRValidator(params))
     elif calc_mode == SCENARIO_MODE:
         validators.add(ScenarioComputationValidator(sections, params))
-        
 
     return validators

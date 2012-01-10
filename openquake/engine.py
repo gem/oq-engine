@@ -214,7 +214,6 @@ def _prepare_job(params, sections, owner_username='openquake'):
 
         return job_profile
 
-
     # TODO specify the owner as a command line parameter
     owner = OqUser.objects.get(user_name=owner_username)
 
@@ -332,7 +331,7 @@ def run_calculation(job_profile, params, sections, output_type='db'):
         serialize_results_to.append('xml')
 
     calc_proxy = CalculationProxy(params, calculation.id, sections=sections,
-                                  serialize_results_to=serialize_results_to, 
+                                  serialize_results_to=serialize_results_to,
                                   oq_job_profile=job_profile,
                                   oq_calculation=calculation)
 
