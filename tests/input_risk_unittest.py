@@ -27,7 +27,7 @@ from openquake.output.hazard import HazardCurveDBWriter
 from openquake.parser.exposure import ExposurePortfolioFile
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
-from openquake.shapes import Site, Region
+from openquake.shapes import Site
 
 from tests.utils import helpers
 

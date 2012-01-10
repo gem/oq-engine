@@ -22,11 +22,9 @@ import os
 import redis
 import unittest
 
-from openquake import job
 from openquake import kvs
 from openquake import shapes
 from openquake.job import config
-from openquake.job.mixins import Mixin
 from openquake.parser import exposure
 from openquake.risk.job import general
 
