@@ -35,8 +35,8 @@ from openquake import java
 from openquake import kvs
 from openquake import shapes
 
+from openquake.engine import CalculationProxy
 from openquake.hazard import scenario
-from openquake.job import CalculationProxy
 
 from openquake.db.models import OqCalculation
 

@@ -43,8 +43,8 @@ from django.core import exceptions
 from openquake import engine
 from openquake import flags
 from openquake import logs
-from openquake.job import CalculationProxy
 from openquake import producer
+from openquake.engine import CalculationProxy
 from openquake.utils import config
 from openquake.hazard.general import store_source_model, store_gmpe_map
 from openquake.input.logictree import LogicTreeProcessor
@@ -159,7 +159,7 @@ def store_hazard_logic_trees(a_job):
     @preload decorator does.
 
     :param a_job:
-        :class:`openquake.job.CalculationProxy` instance.
+        :class:`openquake.engine.CalculationProxy` instance.
     """
     lt_proc = LogicTreeProcessor(
         a_job['BASE_PATH'],
@@ -512,7 +512,7 @@ class TestMixin(object):
         :param mixin_class: the mixin that will be mixed in the job
         :type mixin_class: :py:class:`openquake.job.Mixin`
         :returns: a CalculationProxy
-        :rtype: :py:class:`openquake.job.CalculationProxy`
+        :rtype: :py:class:`openquake.engine.CalculationProxy`
         """
         # preserve some status to be used by unload
         self._calculation_mode = params.get('CALCULATION_MODE')
