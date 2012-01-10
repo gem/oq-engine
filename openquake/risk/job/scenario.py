@@ -57,20 +57,20 @@ class ScenarioEventBasedMixin(general.RiskJobMixin):
         tasks = []
 
         vuln_model = \
-            vulnerability.load_vuln_model_from_kvs(self.job_profile.job_id)
+            vulnerability.load_vuln_model_from_kvs(self.calc_proxy.job_id)
 
-        epsilon_provider = general.EpsilonProvider(self.job_profile.params)
+        epsilon_provider = general.EpsilonProvider(self.calc_proxy.params)
 
         sum_per_gmf = scenario.SumPerGroundMotionField(vuln_model,
                                                        epsilon_provider)
 
         region_loss_map_data = {}
 
-        for block_id in self.job_profile.blocks_keys:
+        for block_id in self.calc_proxy.blocks_keys:
             LOGGER.debug("Dispatching task for block %s of %s"
-                % (block_id, len(self.job_profile.blocks_keys)))
+                % (block_id, len(self.calc_proxy.blocks_keys)))
             a_task = general.compute_risk.delay(
-                self.job_profile.job_id, block_id, vuln_model=vuln_model,
+                self.calc_proxy.job_id, block_id, vuln_model=vuln_model,
                 epsilon_provider=epsilon_provider)
             tasks.append(a_task)
 
@@ -97,11 +97,11 @@ class ScenarioEventBasedMixin(general.RiskJobMixin):
 
         # serialize the loss map data to XML
         loss_map_path = os.path.join(
-            self.job_profile['BASE_PATH'],
-            self.job_profile['OUTPUT_DIR'],
-            'loss-map-%s.xml' % self.job_profile.job_id)
+            self.calc_proxy['BASE_PATH'],
+            self.calc_proxy['OUTPUT_DIR'],
+            'loss-map-%s.xml' % self.calc_proxy.job_id)
         loss_map_writer = risk_output.create_loss_map_writer(
-            self.job_profile.job_id, self.job_profile.serialize_results_to,
+            self.calc_proxy.job_id, self.calc_proxy.serialize_results_to,
             loss_map_path, True)
 
         if loss_map_writer:
@@ -212,9 +212,9 @@ class ScenarioEventBasedMixin(general.RiskJobMixin):
         """
         sum_per_gmf = scenario.SumPerGroundMotionField(vuln_model,
                                                        epsilon_provider)
-        for point in block.grid(self.job_profile.region):
-            gmvs = load_gmvs_for_point(self.job_profile.job_id, point)
-            assets = load_assets_for_point(self.job_profile.job_id, point)
+        for point in block.grid(self.calc_proxy.region):
+            gmvs = load_gmvs_for_point(self.calc_proxy.job_id, point)
+            assets = load_assets_for_point(self.calc_proxy.job_id, point)
             for asset in assets:
                 # the SumPerGroundMotionField add() method expects a dict
                 # with a single key ('IMLs') and value set to the sequence of
@@ -263,13 +263,13 @@ class ScenarioEventBasedMixin(general.RiskJobMixin):
         """
         loss_data = {}
 
-        for point in block.grid(self.job_profile.region):
+        for point in block.grid(self.calc_proxy.region):
             # the mean and stddev calculation functions used below
             # require the gmvs to be wrapped in a dict with a single key:
             # 'IMLs'
-            gmvs = {'IMLs': load_gmvs_for_point(self.job_profile.job_id,
+            gmvs = {'IMLs': load_gmvs_for_point(self.calc_proxy.job_id,
                                                 point)}
-            assets = load_assets_for_point(self.job_profile.job_id, point)
+            assets = load_assets_for_point(self.calc_proxy.job_id, point)
             for asset in assets:
                 vuln_function = \
                     vuln_model[asset['taxonomy']]
