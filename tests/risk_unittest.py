@@ -694,7 +694,12 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         result_key = kvs.tokens.bcr_block_key(self.job_id, self.block_id)
         result = kvs.get_value_json_decoded(result_key)
-        self.assertEqual(result, [[[-1, -2], [[{u'value': 0.0}, 22.61]]]])
+        expected_result = {'bcr': 0.0,
+                           'eal_original': 0.0,
+                           'eal_retrofitted': 0.0}
+        helpers.assertDeepAlmostEqual(
+            self, result, [[[-1, -2], [[expected_result, 22.61]]]]
+        )
 
 
 class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
@@ -977,7 +982,12 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         result_key = kvs.tokens.bcr_block_key(self.job_id, self.block_id)
         res = kvs.get_value_json_decoded(result_key)
-        self.assertEqual(res, [[[12.34, 56.67], [[{u'value': 0.0}, 22.61]]]])
+        expected_result = {'bcr': 0.0,
+                           'eal_original': 0.003032,
+                           'eal_retrofitted': 0.003032}
+        helpers.assertDeepAlmostEqual(
+            self, res, [[[12.34, 56.67], [[expected_result, 22.61]]]]
+        )
 
     def test_loss_ratio_curve_in_the_classical_psha_mixin(self):
 
@@ -1299,15 +1309,22 @@ class RiskJobGeneralTestCase(unittest.TestCase):
 
     def _prepare_bcr_result(self):
         self.block_keys = [19, 20]
-        for blockn in self.block_keys:
-            block = kvs.tokens.bcr_block_key(self.job_id, blockn)
-            result = [
-                ((blockn, -blockn), [
-                    ({'value': 35.1}, 'assetID-%d1' % blockn),
-                    ({'value': 35.2}, 'assetID-%d2' % blockn),
-                ])
-            ]
-            kvs.set_value_json_encoded(block, result)
+        kvs.set_value_json_encoded(kvs.tokens.bcr_block_key(self.job_id, 19), [
+            ((19.0, -1.1), [
+                ({'bcr': 35.1, 'eal_original': 12.34, 'eal_retrofitted': 4},
+                 'assetID-191'),
+                ({'bcr': 35.2, 'eal_original': 2.5, 'eal_retrofitted': 2.2},
+                 'assetID-192'),
+            ])
+        ])
+        kvs.set_value_json_encoded(kvs.tokens.bcr_block_key(self.job_id, 20), [
+            ((20.0, 2.3), [
+                ({'bcr': 35.1, 'eal_original': 1.23, 'eal_retrofitted': 0.3},
+                 'assetID-201'),
+                ({'bcr': 35.2, 'eal_original': 4, 'eal_retrofitted': 0.4},
+                 'assetID-202'),
+            ])
+        ])
 
     def test_asset_bcr_per_site(self):
         self._make_job({})
@@ -1319,13 +1336,17 @@ class RiskJobGeneralTestCase(unittest.TestCase):
 
         bcr_per_site = mixin.asset_bcr_per_site()
         self.assertEqual(bcr_per_site, [
-            (shapes.Site(-19.0, 19.0), [
-                [{u'value': 35.1}, u'assetID-191'],
-                [{u'value': 35.2}, u'assetID-192']
+            (shapes.Site(-1.1, 19.0), [
+                [{u'bcr': 35.1, 'eal_original': 12.34, 'eal_retrofitted': 4},
+                 u'assetID-191'],
+                [{u'bcr': 35.2, 'eal_original': 2.5, 'eal_retrofitted': 2.2},
+                 u'assetID-192']
             ]),
-            (shapes.Site(-20.0, 20.0), [
-                [{u'value': 35.1}, u'assetID-201'],
-                [{u'value': 35.2}, u'assetID-202']
+            (shapes.Site(2.3, 20.0), [
+                [{u'bcr': 35.1, 'eal_original': 1.23, 'eal_retrofitted': 0.3},
+                 u'assetID-201'],
+                [{u'bcr': 35.2, 'eal_original': 4, 'eal_retrofitted': 0.4},
+                 u'assetID-202']
             ])
         ])
 
@@ -1349,28 +1370,36 @@ class RiskJobGeneralTestCase(unittest.TestCase):
       <BCRNode gml:id="mn_1">
         <site>
           <gml:Point srsName="epsg:4326">
-            <gml:pos>-19.0 19.0</gml:pos>
+            <gml:pos>-1.1 19.0</gml:pos>
           </gml:Point>
         </site>
-        <benefitCostRatio assetRef="assetID-191">
-          <value>35.1</value>
-        </benefitCostRatio>
-        <benefitCostRatio assetRef="assetID-192">
-          <value>35.2</value>
-        </benefitCostRatio>
+        <benefitCostRatioValue assetRef="assetID-191">
+          <expectedAnnualLossOriginal>12.34</expectedAnnualLossOriginal>
+          <expectedAnnualLossRetrofitted>4</expectedAnnualLossRetrofitted>
+          <benefitCostRatio>35.1</benefitCostRatio>
+        </benefitCostRatioValue>
+        <benefitCostRatioValue assetRef="assetID-192">
+          <expectedAnnualLossOriginal>2.5</expectedAnnualLossOriginal>
+          <expectedAnnualLossRetrofitted>2.2</expectedAnnualLossRetrofitted>
+          <benefitCostRatio>35.2</benefitCostRatio>
+        </benefitCostRatioValue>
       </BCRNode>
       <BCRNode gml:id="mn_2">
         <site>
           <gml:Point srsName="epsg:4326">
-            <gml:pos>-20.0 20.0</gml:pos>
+            <gml:pos>2.3 20.0</gml:pos>
           </gml:Point>
         </site>
-        <benefitCostRatio assetRef="assetID-201">
-          <value>35.1</value>
-        </benefitCostRatio>
-        <benefitCostRatio assetRef="assetID-202">
-          <value>35.2</value>
-        </benefitCostRatio>
+        <benefitCostRatioValue assetRef="assetID-201">
+          <expectedAnnualLossOriginal>1.23</expectedAnnualLossOriginal>
+          <expectedAnnualLossRetrofitted>0.3</expectedAnnualLossRetrofitted>
+          <benefitCostRatio>35.1</benefitCostRatio>
+        </benefitCostRatioValue>
+        <benefitCostRatioValue assetRef="assetID-202">
+          <expectedAnnualLossOriginal>4</expectedAnnualLossOriginal>
+          <expectedAnnualLossRetrofitted>0.4</expectedAnnualLossRetrofitted>
+          <benefitCostRatio>35.2</benefitCostRatio>
+        </benefitCostRatioValue>
       </BCRNode>
     </benefitCostRatioMap>
   </riskResult>
@@ -1384,13 +1413,14 @@ class RiskJobGeneralTestCase(unittest.TestCase):
             mixin.base_path = '.'
             mixin.serialize_results_to = None
 
-            write_output_bcr(mixin)
-
             resultfile = os.path.join(output_dir, 'bcr-map.xml')
+
             try:
+                write_output_bcr(mixin)
                 result = open(resultfile).read()
             finally:
-                os.remove(resultfile)
+                if os.path.exists(resultfile):
+                    os.remove(resultfile)
         finally:
             os.rmdir(output_dir)
 
