@@ -38,6 +38,7 @@ import guppy
 import mock as mock_module
 import numpy
 
+from gflags import DEFINE_boolean
 from django.core import exceptions
 
 from openquake import engine
@@ -52,7 +53,7 @@ from openquake.db import models
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_boolean('download_test_data', True,
+DEFINE_boolean('download_test_data', True,
         'Fetch test data files if needed')
 
 DATA_DIR = os.path.abspath(os.path.join(
