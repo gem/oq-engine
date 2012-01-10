@@ -35,14 +35,12 @@ from itertools import izip
 from celery.task import task
 
 from openquake import job
-from openquake import kvs
 from openquake import java
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
 from openquake import xml
 
-from openquake.hazard.general import BasePSHAMixin, get_iml_list
 from openquake.hazard import classical_psha
 from openquake.hazard.general import BasePSHAMixin, get_iml_list
 from openquake.output import hazard as hazard_output

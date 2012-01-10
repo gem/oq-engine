@@ -41,12 +41,11 @@ from openquake.job import config as jobconf
 from openquake.job import CalculationProxy
 from openquake.job import prepare_config_parameters
 from openquake.supervising import supervisor
-from openquake.utils import stats
 
 from openquake.db.models import (CharArrayField, FloatArrayField, Input,
                                  InputSet, OqCalculation, OqJobProfile, OqUser)
 from openquake.job.params import (ARRAY_RE, CALCULATION_MODE, INPUT_FILE_TYPES,
-                                  PARAMS, PATH_PARAMS)
+                                  PARAMS)
 from openquake.hazard.calc import CALCULATORS as HAZ_CALCS
 from openquake.risk.calc import CALCULATORS as RISK_CALCS
 
@@ -319,7 +318,7 @@ def run_calculation(job_profile, params, sections, output_type='db'):
         :class:`openquake.db.models.OqCalculation` instance.
     """
     if not output_type in ('db', 'xml'):
-        raise RuntimeException("output_type must be 'db' or 'xml'")
+        raise RuntimeError("output_type must be 'db' or 'xml'")
 
     calculation = OqCalculation(owner=job_profile.owner)
     calculation.oq_job_profile = job_profile
