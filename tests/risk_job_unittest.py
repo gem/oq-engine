@@ -321,14 +321,6 @@ class RiskMixinTestCase(unittest.TestCase):
                 (shapes.Site(10.1, 10.1),
                     [({'value': 0.123}, GRID_ASSETS[(1, 1)])])]
 
-<<<<<<< HEAD
-            with job.mixins.Mixin(self.job, general.RiskJobMixin):
-                self.assertEqual(
-                    sorted(expected, key=coords),
-                    sorted(
-                        self.job.asset_losses_per_site(0.5, self.grid_assets),
-                        key=coords))
-=======
             calculator = general.RiskJobMixin(self.job)
 
             self.assertEqual(
@@ -337,4 +329,3 @@ class RiskMixinTestCase(unittest.TestCase):
                     calculator.asset_losses_per_site(
                         0.5, self.grid_assets),
                     key=coords))
->>>>>>> Ginormous refactoring job here. Job objects are now fully decoupled from the mixin/calculators
