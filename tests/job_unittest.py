@@ -158,41 +158,49 @@ class JobDbRecordTestCase(unittest.TestCase):
         self.job = None
 
     def test_job_db_record_for_output_type_db(self):
-        self.job = engine._job_from_file(helpers.get_data_path(CONFIG_FILE), 'db')
+        self.job = engine._job_from_file(
+            helpers.get_data_path(CONFIG_FILE), 'db')
         OqCalculation.objects.get(id=self.job.job_id)
 
     def test_job_db_record_for_output_type_xml(self):
-        self.job = engine._job_from_file(helpers.get_data_path(CONFIG_FILE), 'xml')
+        self.job = engine._job_from_file(
+            helpers.get_data_path(CONFIG_FILE), 'xml')
         OqCalculation.objects.get(id=self.job.job_id)
 
     def test_set_status(self):
-        self.job = engine._job_from_file(helpers.get_data_path(CONFIG_FILE), 'db')
+        self.job = engine._job_from_file(
+            helpers.get_data_path(CONFIG_FILE), 'db')
         status = 'running'
         self.job.set_status(status)
         self.assertEqual(status,
                          OqCalculation.objects.get(id=self.job.job_id).status)
 
     def test_get_status_from_db(self):
-        self.job = engine._job_from_file(helpers.get_data_path(CONFIG_FILE), 'db')
+        self.job = engine._job_from_file(
+            helpers.get_data_path(CONFIG_FILE), 'db')
         row = OqCalculation.objects.get(id=self.job.job_id)
 
         row.status = "failed"
         row.save()
-        self.assertEqual("failed", CalculationProxy.get_status_from_db(self.job.job_id))
+        self.assertEqual(
+            "failed", CalculationProxy.get_status_from_db(self.job.job_id))
 
         row.status = "running"
         row.save()
-        self.assertEqual("running", CalculationProxy.get_status_from_db(self.job.job_id))
+        self.assertEqual(
+            "running", CalculationProxy.get_status_from_db(self.job.job_id))
 
     def test_is_job_completed(self):
-        job_id = engine._job_from_file(helpers.get_data_path(CONFIG_FILE), 'db').job_id
+        job_id = engine._job_from_file(
+            helpers.get_data_path(CONFIG_FILE), 'db').job_id
         row = OqCalculation.objects.get(id=job_id)
         pairs = [('pending', False), ('running', False),
                  ('succeeded', True), ('failed', True)]
         for status, is_completed in pairs:
             row.status = status
             row.save()
-            self.assertEqual(CalculationProxy.is_job_completed(job_id), is_completed)
+            self.assertEqual(
+                CalculationProxy.is_job_completed(job_id), is_completed)
 
 
 class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
@@ -706,7 +714,6 @@ class RunJobTestCase(unittest.TestCase):
         self.job_profile, self.params, self.sections = (
             engine.import_job_profile(helpers.get_data_path(CONFIG_FILE)))
 
-
     def tearDown(self):
         self.init_logs_amqp_send.stop()
 
@@ -896,7 +903,7 @@ class RunJobTestCase(unittest.TestCase):
                         self.assertEquals(((1234, calculation.id), {}),
                                           supervise.call_args)
             finally:
-                engine._launch_calculation = before_launch 
+                engine._launch_calculation = before_launch
 
 
 class CalcStatsTestCase(unittest.TestCase):
@@ -922,8 +929,8 @@ class CalcStatsTestCase(unittest.TestCase):
             oq_job_profile=oq_job_profile, oq_calculation=oq_calculation)
 
     def test_record_initial_stats(self):
-        '''
-        Verify that :py:method:`openquake.job.CalculationProxy._record_initial_stats`
+        '''Verify that
+        :py:method:`openquake.job.CalculationProxy._record_initial_stats`
         reports initial calculation stats.
 
         As we add fields to the uiapi.calc_stats table, this test will need to
@@ -938,9 +945,9 @@ class CalcStatsTestCase(unittest.TestCase):
         self.assertEqual(1, actual_stats.realizations)
 
     def test_job_launch_calls_record_initial_stats(self):
-        '''
-        When a job is launched, make sure that
-        :py:method:`openquake.job.CalculationProxy._record_initial_stats` is called.
+        '''When a job is launched, make sure that
+        :py:method:`openquake.job.CalculationProxy._record_initial_stats`
+        is called.
         '''
         # Mock out pieces of the test job so it doesn't actually run.
         haz_execute = 'openquake.hazard.opensha.EventBasedMixin.execute'
