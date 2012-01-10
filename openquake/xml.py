@@ -79,7 +79,10 @@ RISK_LOSS_MAP_UNIT_ATTR = "unit"
 RISK_LOSS_MAP_ASSET_REF_ATTR = "assetRef"
 
 RISK_BCR_MAP_CONTAINER_TAG = "%sbenefitCostRatioMap" % NRML
-RISK_BCR_MAP_BCR_CONTAINER_TAG = "%sbenefitCostRatio" % NRML
+RISK_BCR_MAP_BCR_CONTAINER_TAG = "%sbenefitCostRatioValue" % NRML
+RISK_BCR_MAP_BCR_VALUE = "%sbenefitCostRatio" % NRML
+RISK_BCR_MAP_EAL_ORIGINAL_VALUE = "%sexpectedAnnualLossOriginal" % NRML
+RISK_BCR_MAP_EAL_RETROFITTED_VALUE = "%sexpectedAnnualLossRetrofitted" % NRML
 
 
 class XMLValidationError(Exception):

@@ -490,8 +490,8 @@ def compute_bcr_for_block(job_id, points, get_loss_curve,
         A list of tuples::
 
             [((site_lat, site_lon), [
-                ({'value': bcr}, assetID),
-                ({'value': bcr}, assetID),
+                ({'bcr': 1, 'eal_retrofitted': 2, 'eal_original': 3}, assetID),
+                ({'bcr': 3, 'eal_retrofitted': 4, 'eal_original': 5}, assetID),
                 ...]),
              ...]
     """
@@ -521,6 +521,9 @@ def compute_bcr_for_block(job_id, points, get_loss_curve,
             )
 
             key = (asset['lat'], asset['lon'])
-            result[key].append(({'value': bcr}, asset['assetID']))
+            result[key].append(({'bcr': bcr,
+                                 'eal_original': eal_original,
+                                 'eal_retrofitted': eal_retrofitted},
+                                asset['assetID']))
 
     return result.items()
