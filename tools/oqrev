@@ -39,6 +39,7 @@ The command line arguments are as follows:
     -L|--local          Do not fetch any remotes
     -P|--skip-pylint    Skip the pylint check of the branch under review
     -R|--repo=N         Specify the repo name e.g. "openquake-server"
+    -S|--skip-pyflakes  Skip the pyflakes check of the branch under review
     -8|--skip-pep8      Skip the pep8 step of the branch under review
     -C|--colordiff      Pipe the branch diff through the "colordiff"
                         tool
@@ -73,6 +74,7 @@ branch_reference=""
 fetch_remotes=1
 use_colordiff=0
 skip_pylint=0
+skip_pyflakes=0
 skip_pep8=0
 branch_name=""
 repo="openquake"
@@ -167,6 +169,9 @@ do
     -P|--skip-pylint)
         skip_pylint=1
         ;;
+    -S|--skip-pyflakes)
+        skip_pyflakes=1
+        ;;
     -8|--skip-pep8)
         skip_pep8=1
         ;;
@@ -194,11 +199,19 @@ if [ $skip_pylint -eq 0 ]; then
     fi
 fi
 
+if [ $skip_pyflakes -eq 0 ]; then
+    which pyflakes >/dev/null 2>&1
+    if [ $? -ne 0 ]; then
+        echo "Cannot find pyflakes .. Is it installed?"
+        skip_pyflakes=1
+    fi
+fi
+
 if [ $skip_pep8 -eq 0 ]; then
     which pep8 >/dev/null 2>&1
     if [ $? -ne 0 ]; then
         echo "Cannot find pep8 .. Is it installed?"
-        exit 9
+        exit 10
     fi
 fi
 
@@ -217,7 +230,7 @@ if [ $fetch_remotes -eq 1 ]; then
         git fetch $other_remote
         if [ $? -ne 0 ]; then
             echo "git failed to fetch $other_remote"
-            exit 10
+            exit 11
         fi
     fi
     if [ ! -z "$branch_remote" ]; then
@@ -225,7 +238,7 @@ if [ $fetch_remotes -eq 1 ]; then
         git fetch $branch_remote
         if [ $? -ne 0 ]; then
             echo "git failed to fetch $branch_remote"
-            exit 11
+            exit 12
         fi
     fi
 fi
@@ -238,7 +251,7 @@ if [ ! -z "$other_remote" ]; then
     git checkout -b ba $other_remote/$other_reference
     if [ $? -ne 0 ]; then
         echo "git failed to create a tracking branch for $other_remote/$other_reference"
-        exit 12
+        exit 13
     fi
     other_branch="ba"
 else
@@ -249,7 +262,7 @@ if [ ! -z "$branch_remote" ]; then
     git checkout -b bb $branch_remote/$branch_reference
     if [ $? -ne 0 ]; then
         echo "git failed to create a tracking branch for $branch_remote/$branch_reference"
-        exit 13
+        exit 14
     fi
     branch_branch="bb"
 else
@@ -311,6 +324,16 @@ if [ $skip_pep8 -eq 0 ] && [ $num_of_py_files -gt 0 ]; then
     echo ""
     # the SQL in the .py files in db/schema/upgrades confuses pep8
     git diff ${other_branch}...${branch_branch} --name-only --diff-filter=AM | grep py$ | grep -v db/schema/upgrades | xargs pep8 --repeat
+    echo ""
+    echo "Press <enter> to continue"
+    read
+fi
+
+if [ $skip_pyflakes -eq 0 ] && [ $num_of_py_files -gt 0 ]; then
+    echo "Running pyflakes on $branch_name.."
+    echo ""
+    # the SQL in the .py files in db/schema/upgrades confuses pyflakes
+    git diff ${other_branch}...${branch_branch} --name-only --diff-filter=AM | grep py$ | grep -v db/schema/upgrades | xargs pyflakes
     echo ""
     echo "Press <enter> to continue"
     read
