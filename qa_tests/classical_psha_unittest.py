@@ -22,7 +22,6 @@ import geohash
 import numpy
 import os
 import shutil
-import subprocess
 import unittest
 
 from nose.plugins.attrib import attr
@@ -93,21 +92,6 @@ def load_expected_map(path):
         map_data[shapes.Site(lat, lon)] = float(value)
 
     return map_data
-
-
-def run_job(config_file, **kw_params):
-    """Given a path to a config file, run openquake as a separate process using
-    `subprocess`.
-
-    This function blocks until the openquake job has concluded.
-
-    :returns:
-        The return code of the subprocess.
-    """
-    params = ["bin/openquake", "--config_file=" + config_file]
-    if kw_params:
-        params.extend(["--%s=%s" % p for p in kw_params.iteritems()])
-    return subprocess.call(params)
 
 
 def verify_hazcurve_results(
@@ -251,7 +235,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
     def test_peer_test_set_1_case_2(self):
         expected_results = load_exp_hazcurve_results("PeerTestSet1Case2")
 
-        run_job(helpers.demo_file(
+        helpers.run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case2", "config.gem")))
 
         self._assert_hazcurve_results_are(expected_results)
@@ -260,7 +244,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
     def test_peer_test_set_1_case_5(self):
         expected_results = load_exp_hazcurve_results("PeerTestSet1Case5")
 
-        run_job(helpers.demo_file(
+        helpers.run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case5", "config.gem")))
 
         self._assert_hazcurve_results_are(expected_results)
@@ -270,7 +254,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         expected_results = load_exp_hazcurve_results(
             "PeerTestSet1Case8a")
 
-        run_job(helpers.demo_file(
+        helpers.run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case8a", "config.gem")))
 
         self._assert_hazcurve_results_are(expected_results)
@@ -280,14 +264,14 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         expected_results = load_exp_hazcurve_results(
             "PeerTestSet1Case10")
 
-        run_job(helpers.demo_file(
+        helpers.run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case10", "config.gem")))
 
         self._assert_hazcurve_results_are(expected_results)
 
     @attr("qa")
     def test_hazard_map_test(self):
-        run_job(helpers.demo_file(
+        helpers.run_job(helpers.demo_file(
             os.path.join("HazardMapTest", "config.gem")))
 
         self.job = models.OqCalculation.objects.latest("id")
@@ -311,7 +295,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         exp_results_dir = os.path.join("complex_fault_demo_hazard",
                                        "expected_results")
 
-        run_job(job_cfg)
+        helpers.run_job(job_cfg)
 
         self.job = models.OqCalculation.objects.latest("id")
 
@@ -392,7 +376,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         exp_results_dir = os.path.join("complex_fault_demo_hazard",
                                        "expected_results")
 
-        run_job(job_cfg, output="xml")
+        helpers.run_job(job_cfg, output="xml")
 
         self.job = models.OqCalculation.objects.latest("id")
 
