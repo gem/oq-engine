@@ -35,12 +35,8 @@ from openquake import shapes
 from openquake.job import (
     Job, config, prepare_job, parse_config_file, prepare_config_parameters,
     get_source_models)
-from openquake.job.mixins import Mixin
 from openquake.job.params import config_text_to_list
 from openquake.db.models import OqCalculation, CalcStats, OqJobProfile
-from openquake.risk.job import general
-from openquake.risk.job.probabilistic import ProbabilisticEventMixin
-from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 
 from tests.utils import helpers
 from tests.utils.helpers import patch

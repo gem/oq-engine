@@ -20,7 +20,6 @@
 
 import os
 import re
-import urlparse
 
 from ConfigParser import ConfigParser
 from datetime import datetime
@@ -31,7 +30,6 @@ from lxml import etree
 
 from openquake import flags
 from openquake import kvs
-from openquake import logs
 from openquake import shapes
 from openquake import xml
 from openquake.parser import exposure
@@ -40,7 +38,6 @@ from openquake.db.models import (
     CharArrayField, InputSet, Input)
 from openquake.job import config as conf
 from openquake.job import params as job_params
-from openquake.job.mixins import Mixin
 from openquake.job.params import (
     PARAMS, CALCULATION_MODE, ENUM_MAP, PATH_PARAMS, INPUT_FILE_TYPES,
     ARRAY_RE)
