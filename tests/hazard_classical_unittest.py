@@ -476,7 +476,6 @@ class ClassicalExecuteTestCase(TestMixin, unittest.TestCase):
             """Do nothing."""
 
     def setUp(self):
-        base_path = os.path.abspath(demo_file('simple_fault_demo_hazard'))
         params = dict(
             CALCULATION_MODE='Hazard',
             NUMBER_OF_LOGIC_TREE_SAMPLES=2,
