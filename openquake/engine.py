@@ -113,10 +113,4 @@ def launch(a_job):
         calc_class = CALCS[job_type][calc_mode]
 
         calculator = calc_class(a_job)
-        # The mixin defines a preload decorator to handle the needed
-        # data for the tasks and decorates _execute(). the mixin's
-        # execute() method calls the expected tasks.
-        # TODO: Re-write this logging statement. It's stupid.
-        # logs.LOG.debug(
-        #     "Job %s Launching %s for %s" % (a_job.job_id, calc_class, key))
         calculator.execute()
