@@ -21,11 +21,11 @@
 class Calculator(object):
     """Base abstract class for all calculators."""
 
-    def __init__(self, job_profile):
+    def __init__(self, calc_proxy):
         """
-        :param job_profile: :class:`openquake.job.CalculationProxy` instance.
+        :param calc_proxy: :class:`openquake.job.CalculationProxy` instance.
         """
-        self.job_profile = job_profile
+        self.calc_proxy = calc_proxy
 
     def analyze(self):
         """Implement this method in subclasses to record pre-execution stats,

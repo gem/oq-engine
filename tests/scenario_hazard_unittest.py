@@ -50,7 +50,7 @@ def compute_ground_motion_field(self, _random_generator):
 
     hashmap = java.jclass("HashMap")()
 
-    for site in self.job_profile.sites_to_compute():
+    for site in self.calc_proxy.sites_to_compute():
         location = java.jclass("Location")(site.latitude, site.longitude)
         site = java.jclass("Site")(location)
         hashmap.put(site, 0.5)
@@ -71,14 +71,14 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
         kvs.get_client().flushall()
 
         base_path = helpers.testdata_path("scenario")
-        self.job_profile, self.params, self.sections = (
+        self.calc_proxy, self.params, self.sections = (
             engine.import_job_profile(SCENARIO_SMOKE_TEST))
-        calculation = OqCalculation(owner=self.job_profile.owner,
-                                    oq_job_profile=self.job_profile)
+        calculation = OqCalculation(owner=self.calc_proxy.owner,
+                                    oq_job_profile=self.calc_proxy)
         calculation.save()
         self.calc_proxy = CalculationProxy(
             self.params, calculation.id, sections=self.sections,
-            base_path=base_path, oq_job_profile=self.job_profile,
+            base_path=base_path, oq_job_profile=self.calc_proxy,
             oq_calculation=calculation)
 
         self.calc_proxy.params[NUMBER_OF_CALC_KEY] = "1"
@@ -108,8 +108,8 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
         """
 
         self.calc_proxy.params[NUMBER_OF_CALC_KEY] = "3"
-        self.job_profile.gmf_calculation_number = 3
-        self.job_profile.save()
+        self.calc_proxy.gmf_calculation_number = 3
+        self.calc_proxy.save()
 
         calculator = scenario.ScenarioEventBasedMixin(self.calc_proxy)
 

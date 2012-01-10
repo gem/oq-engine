@@ -189,26 +189,26 @@ class DisaggMixin(Calculator):
         """
         # matrix results for this job will go here:
         result_dir = DisaggMixin.create_result_dir(
-            config.get('nfs', 'base_dir'), self.job_profile.job_id)
+            config.get('nfs', 'base_dir'), self.calc_proxy.job_id)
 
-        realizations = self.job_profile['NUMBER_OF_LOGIC_TREE_SAMPLES']
-        poes = self.job_profile['POES']
-        sites = self.job_profile.sites_to_compute()
+        realizations = self.calc_proxy['NUMBER_OF_LOGIC_TREE_SAMPLES']
+        poes = self.calc_proxy['POES']
+        sites = self.calc_proxy.sites_to_compute()
 
         log_msg = ("Computing disaggregation for job_id=%s,  %s sites, "
             "%s realizations, and PoEs=%s")
-        log_msg %= (self.job_profile.job_id, len(sites), realizations, poes)
+        log_msg %= (self.calc_proxy.job_id, len(sites), realizations, poes)
         LOG.info(log_msg)
 
         full_disagg_results = self.distribute_disagg(sites, realizations, poes,
                                                      result_dir)
 
-        subset_types = self.job_profile['DISAGGREGATION_RESULTS']
+        subset_types = self.calc_proxy['DISAGGREGATION_RESULTS']
 
         subset_results = self.distribute_subsets(full_disagg_results,
                                                  subset_types, result_dir)
 
-        DisaggMixin.serialize_nrml(self.job_profile, subset_types,
+        DisaggMixin.serialize_nrml(self.calc_proxy, subset_types,
                                    subset_results)
 
     @staticmethod
@@ -278,25 +278,25 @@ class DisaggMixin(Calculator):
         task_data = []
 
         src_model_rnd = random.Random()
-        src_model_rnd.seed(self.job_profile['SOURCE_MODEL_LT_RANDOM_SEED'])
+        src_model_rnd.seed(self.calc_proxy['SOURCE_MODEL_LT_RANDOM_SEED'])
         gmpe_rnd = random.Random()
-        gmpe_rnd.seed(self.job_profile['GMPE_LT_RANDOM_SEED'])
+        gmpe_rnd.seed(self.calc_proxy['GMPE_LT_RANDOM_SEED'])
 
         for rlz in xrange(1, realizations + 1):  # 1 to N, inclusive
             # cache the source model and gmpe model in the KVS
             # so the Java code can access it
 
-            store_source_model(self.job_profile.job_id,
+            store_source_model(self.calc_proxy.job_id,
                                src_model_rnd.getrandbits(32),
-                               self.job_profile.params, self.calc)
-            store_gmpe_map(self.job_profile.job_id, gmpe_rnd.getrandbits(32),
+                               self.calc_proxy.params, self.calc)
+            store_gmpe_map(self.calc_proxy.job_id, gmpe_rnd.getrandbits(32),
                            self.calc)
 
             for poe in poes:
                 task_site_pairs = []
                 for site in sites:
                     a_task = compute_disagg_matrix_task.delay(
-                        self.job_profile.job_id, site, rlz, poe, result_dir)
+                        self.calc_proxy.job_id, site, rlz, poe, result_dir)
 
                     task_site_pairs.append((a_task, site))
 
@@ -314,7 +314,7 @@ class DisaggMixin(Calculator):
                         " for job %s with task_id=%s, realization=%s, PoE=%s,"
                         " site=%s has failed with the following error: %s")
                     msg %= (
-                        self.job_profile.job_id, a_task.task_id, rlz, poe,
+                        self.calc_proxy.job_id, a_task.task_id, rlz, poe,
                         site, a_task.result)
                     LOG.critical(msg)
                     raise RuntimeError(msg)
@@ -364,11 +364,11 @@ class DisaggMixin(Calculator):
                  ),
                 ]
         """
-        lat_bin_lims = self.job_profile[job_cfg.LAT_BIN_LIMITS]
-        lon_bin_lims = self.job_profile[job_cfg.LON_BIN_LIMITS]
-        mag_bin_lims = self.job_profile[job_cfg.MAG_BIN_LIMITS]
-        eps_bin_lims = self.job_profile[job_cfg.EPS_BIN_LIMITS]
-        dist_bin_lims = self.job_profile[job_cfg.DIST_BIN_LIMITS]
+        lat_bin_lims = self.calc_proxy[job_cfg.LAT_BIN_LIMITS]
+        lon_bin_lims = self.calc_proxy[job_cfg.LON_BIN_LIMITS]
+        mag_bin_lims = self.calc_proxy[job_cfg.MAG_BIN_LIMITS]
+        eps_bin_lims = self.calc_proxy[job_cfg.EPS_BIN_LIMITS]
+        dist_bin_lims = self.calc_proxy[job_cfg.DIST_BIN_LIMITS]
 
         rlz_poe_task_data = []
 
@@ -382,7 +382,7 @@ class DisaggMixin(Calculator):
                 target_file = os.path.join(target_dir, subset_file)
 
                 a_task = subsets.extract_subsets.delay(
-                    self.job_profile.job_id, site, matrix_path, lat_bin_lims,
+                    self.calc_proxy.job_id, site, matrix_path, lat_bin_lims,
                     lon_bin_lims, mag_bin_lims, eps_bin_lims, dist_bin_lims,
                     target_file, subset_types)
 
@@ -402,7 +402,7 @@ class DisaggMixin(Calculator):
                         "Matrix subset extraction task for job %s with"
                         " task_id=%s, realization=%s, PoE=%s, target_file=%s"
                         " has failed with the following error: %s")
-                    msg %= (self.job_profile.job_id, a_task.task_id, poe,
+                    msg %= (self.calc_proxy.job_id, a_task.task_id, poe,
                             target_file, a_task.result)
                     LOG.critical(msg)
                     raise RuntimeError(msg)
