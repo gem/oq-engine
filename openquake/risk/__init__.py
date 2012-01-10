@@ -20,5 +20,3 @@ Core computation methods for the risk 'engine'
 These include Classical PSHA-based risk analysis,
 and scenario analysis based on either a set of GMF files,
 or a single GMF file."""
-
-import job
