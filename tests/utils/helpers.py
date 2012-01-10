@@ -605,7 +605,7 @@ class DbTestMixin(TestMixin):
         input_set = models.InputSet(owner=owner)
         input_set.save()
 
-        oqp = models.OqParams()
+        oqp = models.OqJobProfile()
         oqp.calc_mode = "classical"
         oqp.job_type = ['hazard']
         oqp.input_set = input_set
@@ -660,7 +660,7 @@ class DbTestMixin(TestMixin):
         oqp.gmpe_lt_random_seed = 5
         oqp.save()
 
-        job = models.OqCalculation(oq_params=oqp, owner=owner)
+        job = models.OqCalculation(oq_job_profile=oqp, owner=owner)
         job.save()
 
         if create_job_path:
@@ -684,7 +684,7 @@ class DbTestMixin(TestMixin):
             test db will be dropped/recreated prior to the next db test suite
             run anyway.
         """
-        oqp = job.oq_params
+        oqp = job.oq_job_profile
         if oqp.input_set is not None:
             self.teardown_input_set(oqp.input_set,
                                     filesystem_only=filesystem_only)
@@ -781,3 +781,16 @@ class ConfigTestMixin(TestMixin):
         os.environ["OQ_SITE_CFG_PATH"] = site_path
         config.Config().cfg.clear()
         config.Config()._load_from_file()
+
+
+class RedisTestMixin(object):
+    """Redis-related utilities for testing."""
+
+    def connect(self, *args, **kwargs):
+        host = config.get("kvs", "host")
+        port = config.get("kvs", "port")
+        port = int(port) if port else 6379
+        stats_db = config.get("kvs", "stats_db")
+        stats_db = int(stats_db) if stats_db else 15
+        args = {"host": host, "port": port, "db": stats_db}
+        return redis.Redis(**args)
