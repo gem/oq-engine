@@ -23,7 +23,7 @@ class Calculator(object):
 
     def __init__(self, calc_proxy):
         """
-        :param calc_proxy: :class:`openquake.job.CalculationProxy` instance.
+        :param calc_proxy: :class:`openquake.engine.CalculationProxy` instance.
         """
         self.calc_proxy = calc_proxy
 

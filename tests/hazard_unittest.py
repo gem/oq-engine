@@ -37,9 +37,9 @@ from openquake import nrml
 from openquake import shapes
 from openquake import xml
 
+from openquake.engine import CalculationProxy
 from openquake.db.models import OqCalculation
 from openquake.hazard import calc as hazcalc
-from openquake.job import CalculationProxy
 from openquake.job.config import HazardMandatoryParamsValidator
 from openquake.job.config import PARAMS
 from openquake.kvs import tokens
