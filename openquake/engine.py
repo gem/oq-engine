@@ -53,7 +53,6 @@ from openquake.db.models import OqUser
 from openquake.hazard.calc import CALCULATORS as HAZ_CALCS
 from openquake.job.params import ARRAY_RE
 from openquake.job.params import CALCULATION_MODE
-from openquake.job.params import ENUM_MAP
 from openquake.job.params import INPUT_FILE_TYPES
 from openquake.job.params import PARAMS
 from openquake.job.params import PATH_PARAMS
@@ -350,39 +349,6 @@ def _read_sites_from_exposure(calc_proxy):
             sites.append(site)
 
     return sites
-
-
-def _prepare_config_parameters(params):
-    """
-    Pre-process configuration parameters removing unknown ones.
-    """
-
-    calc_mode = CALCULATION_MODE[params['CALCULATION_MODE']]
-    new_params = dict()
-
-    for name, value in params.items():
-        try:
-            param = PARAMS[name]
-        except KeyError:
-            print 'Ignoring unknown parameter %r' % name
-            continue
-
-        if calc_mode not in param.modes:
-            msg = "Ignoring %s in %s, it's meaningful only in "
-            msg %= (name, calc_mode)
-            print msg, ', '.join(param.modes)
-            continue
-
-        new_params[name] = value
-
-    # make file paths absolute
-    for name in PATH_PARAMS:
-        if name not in new_params:
-            continue
-
-        new_params[name] = os.path.join(params['BASE_PATH'], new_params[name])
-
-    return new_params
 
 
 def _job_from_file(config_file, output_type, owner_username='openquake'):
