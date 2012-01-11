@@ -71,14 +71,14 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
         kvs.get_client().flushall()
 
         base_path = helpers.testdata_path("scenario")
-        self.calc_proxy, self.params, self.sections = (
+        self.job_profile, self.params, self.sections = (
             engine.import_job_profile(SCENARIO_SMOKE_TEST))
-        calculation = OqCalculation(owner=self.calc_proxy.owner,
-                                    oq_job_profile=self.calc_proxy)
+        calculation = OqCalculation(owner=self.job_profile.owner,
+                                    oq_job_profile=self.job_profile)
         calculation.save()
         self.calc_proxy = CalculationProxy(
             self.params, calculation.id, sections=self.sections,
-            base_path=base_path, oq_job_profile=self.calc_proxy,
+            base_path=base_path, oq_job_profile=self.job_profile,
             oq_calculation=calculation)
 
         self.calc_proxy.params[NUMBER_OF_CALC_KEY] = "1"
@@ -108,8 +108,8 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
         """
 
         self.calc_proxy.params[NUMBER_OF_CALC_KEY] = "3"
-        self.calc_proxy.gmf_calculation_number = 3
-        self.calc_proxy.save()
+        self.job_profile.gmf_calculation_number = 3
+        self.job_profile.save()
 
         calculator = scenario.ScenarioEventBasedMixin(self.calc_proxy)
 

@@ -882,7 +882,7 @@ class RunJobTestCase(unittest.TestCase):
             shapes.Site(-118.186739, 33.779013)]
 
         self.assertEqual(expected_sites,
-            job.read_sites_from_exposure(test_job))
+            engine._read_sites_from_exposure(test_job))
 
     def test_supervisor_is_spawned(self):
         with patch('openquake.engine._job_from_file') as from_file:
