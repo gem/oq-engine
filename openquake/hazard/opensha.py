@@ -37,12 +37,10 @@ from celery.task import task
 from openquake import job
 from openquake import kvs
 from openquake import java
-from openquake import kvs
 from openquake import logs
 from openquake import shapes
 from openquake import xml
 
-from openquake.hazard.general import BasePSHAMixin, get_iml_list
 from openquake.hazard import classical_psha
 from openquake.hazard.general import BasePSHAMixin, get_iml_list
 from openquake.output import hazard as hazard_output
@@ -127,6 +125,8 @@ def generate_erf(job_id):
 @stats.progress_indicator
 def compute_ground_motion_fields(job_id, sites, history, realization, seed):
     """ Generate ground motion fields """
+    # To prevent a circular import,
+    # pylint: disable=W0404
     from openquake.hazard.calc import CALCULATORS
 
     utils_tasks.check_job_status(job_id)
@@ -143,6 +143,8 @@ def compute_ground_motion_fields(job_id, sites, history, realization, seed):
 @stats.progress_indicator
 def compute_hazard_curve(job_id, sites, realization):
     """ Generate hazard curve for a given site list. """
+    # To prevent a circular import,
+    # pylint: disable=W0404
     from openquake.hazard.calc import CALCULATORS
 
     utils_tasks.check_job_status(job_id)
@@ -297,8 +299,7 @@ class ClassicalMixin(BasePSHAMixin):
         gmpe_generator.seed(self.job_profile["GMPE_LT_RANDOM_SEED"])
 
         for realization in xrange(0, realizations):
-            stats.incr_counter(self.job_profile.job_id,
-                               "classical:do_curves:realization")
+            stats.pk_inc(self.job_profile.job_id, "hcls_crealization")
             LOG.info("Calculating hazard curves for realization %s"
                      % realization)
             self.store_source_model(source_model_generator.getrandbits(32))
@@ -313,8 +314,7 @@ class ClassicalMixin(BasePSHAMixin):
     def do_means(self, sites, realizations,
                  curve_serializer=None,
                  curve_task=compute_mean_curves,
-                 map_func=None,
-                 map_serializer=None):
+                 map_func=None, map_serializer=None):
         """Trigger the calculation of mean curves/maps, serialize as requested.
 
         The calculated mean curves/maps will only be serialized if the
@@ -439,16 +439,19 @@ class ClassicalMixin(BasePSHAMixin):
         LOG.info("Going to run classical PSHA hazard for %s realizations "
                  "and %s sites" % (realizations, len(sites)))
 
-        stats.set_total(self.job_profile.job_id, "classical:execute:sites",
-                        len(sites))
-        stats.set_total(
-            self.job_profile.job_id, "classical:execute:realizations",
-            realizations)
+        stats.pk_set(self.job_profile.job_id, "hcls_sites", len(sites))
+        stats.pk_set(self.job_profile.job_id, "hcls_realizations",
+                     realizations)
 
         block_size = config.hazard_block_size()
-        for start in xrange(0, len(sites), block_size):
-            end = start + block_size
+        stats.pk_set(self.job_profile.job_id, "hcls_block_size", block_size)
 
+        blocks = range(0, len(sites), block_size)
+        stats.pk_set(self.job_profile.job_id, "hcls_blocks", len(blocks))
+
+        for start in blocks:
+            stats.pk_inc(self.job_profile.job_id, "hcls_cblock")
+            end = start + block_size
             data = sites[start:end]
 
             self.do_curves(data, realizations,
@@ -467,7 +470,7 @@ class ClassicalMixin(BasePSHAMixin):
                 map_func=classical_psha.compute_quantile_hazard_maps,
                 map_serializer=self.serialize_quantile_hazard_map)
 
-            # Done with this chunk, purge intermediate results from kvs.
+            # Done with this block, purge intermediate results from kvs.
             release_data_from_kvs(self.job_profile.job_id, data, realizations,
                                   quantiles, self.poes_hazard_maps,
                                   kvs_keys_purged)
@@ -560,7 +563,6 @@ class ClassicalMixin(BasePSHAMixin):
         curve_writer = hazard_output.create_hazardcurve_writer(
             self.job_profile.job_id, self.job_profile.serialize_results_to,
             nrml_path)
-        hc_data = []
 
         sites = set(sites)
         accounted_for = set()
@@ -568,6 +570,7 @@ class ClassicalMixin(BasePSHAMixin):
         duration = dgen.next()
 
         while accounted_for != sites:
+            hc_data = []
             # Sleep a little before checking the availability of additional
             # hazard curve results.
             time.sleep(duration)
@@ -594,8 +597,8 @@ class ClassicalMixin(BasePSHAMixin):
             if not results_found:
                 # No results found, increase the sleep duration.
                 duration = dgen.next()
-
-        curve_writer.serialize(hc_data)
+            else:
+                curve_writer.serialize(hc_data)
 
         return nrml_path
 

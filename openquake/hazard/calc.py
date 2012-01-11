@@ -15,24 +15,19 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+"""Information about the calculators available for the Hazard engine."""
+
+
 from openquake.hazard.opensha import ClassicalMixin, EventBasedMixin
 from openquake.hazard.disagg.core import DisaggMixin
 from openquake.hazard.scenario import ScenarioEventBasedMixin
 
 
-CALCULATORS = dict()
-
-
-def _load_calcs():
-    calcs = {
-        'Classical': ClassicalMixin,
-        'Classical BCR': ClassicalMixin,
-        'Event Based': EventBasedMixin,
-        'Event Based BCR': EventBasedMixin,
-        'Disaggregation': DisaggMixin,
-        'Scenario': ScenarioEventBasedMixin,
-    }
-    CALCULATORS.update(calcs)
-
-
-_load_calcs()
+CALCULATORS = {
+    'Classical': ClassicalMixin,
+    'Classical BCR': ClassicalMixin,
+    'Event Based': EventBasedMixin,
+    'Event Based BCR': EventBasedMixin,
+    'Disaggregation': DisaggMixin,
+    'Scenario': ScenarioEventBasedMixin,
+}

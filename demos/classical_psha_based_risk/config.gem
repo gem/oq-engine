@@ -14,7 +14,6 @@ DEPTHTO1PT0KMPERSEC = 100.0
 VS30_TYPE = measured
 SOURCE_MODEL_LT_RANDOM_SEED = 23
 GMPE_LT_RANDOM_SEED = 5
-GMF_RANDOM_SEED = 3
 
 # file containing erf logic tree structure
 SOURCE_MODEL_LOGIC_TREE_FILE = source_model_logic_tree.xml
@@ -59,8 +58,6 @@ REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM = 5.0
 
 # Rock, Deep-Soil
 SADIGH_SITE_TYPE = Rock
-# if true compute ground motion fields using correlated model of Jayaram and Baker 2009
-GROUND_MOTION_CORRELATION = true
 
 # true or false
 INCLUDE_AREA_SOURCES = true
@@ -109,19 +106,12 @@ SUBDUCTION_RUPTURE_FLOATING_TYPE = Along strike and down dip
 
 # (used if Event Based approach is chosen)
 NUMBER_OF_LOGIC_TREE_SAMPLES = 1
-# (used if Event Based approach is chosen)
-NUMBER_OF_SEISMICITY_HISTORIES = 1
 
 # List of quantiles to compute (e.g. 0.25 0.50...)
 QUANTILE_LEVELS =
 
-# Compute mean hazard curve (true,false)
-COMPUTE_MEAN_HAZARD_CURVE = false
-
 # List of POEs to use for computing hazard maps
 POES = 0.1
-
-HAZARD_MAP_CPT = seminf-haxby.cpt
 
 [RISK]
 
