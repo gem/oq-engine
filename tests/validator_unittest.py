@@ -477,7 +477,7 @@ class DefaultValidatorsTestCase(unittest.TestCase):
             any(isinstance(v, DisaggregationValidator) for v in validators))
 
     def test_default_validators_classical_job(self):
-        """Test ot ensure that a classical always includes the
+        """Test to ensure that a classical always includes the
         :class:`openquake.job.config.ClassicalValidator`.
         """
         classical_risk_job_path = helpers.demo_file(
