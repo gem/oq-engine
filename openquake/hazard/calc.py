@@ -24,10 +24,10 @@ from openquake.hazard.scenario import ScenarioEventBasedMixin
 
 
 CALCULATORS = {
-    'Classical': ClassicalMixin,
-    'Classical BCR': ClassicalMixin,
-    'Event Based': EventBasedMixin,
-    'Event Based BCR': EventBasedMixin,
-    'Disaggregation': DisaggMixin,
-    'Scenario': ScenarioEventBasedMixin,
+    'classical': ClassicalMixin,
+    'classical_bcr': ClassicalMixin,
+    'event_based': EventBasedMixin,
+    'event_based_bcr': EventBasedMixin,
+    'disaggregation': DisaggMixin,
+    'scenario': ScenarioEventBasedMixin,
 }

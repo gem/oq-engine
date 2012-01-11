@@ -318,36 +318,3 @@ def read_sites_from_exposure(a_job):
             sites.append(site)
 
     return sites
-
-
-def prepare_config_parameters(params):
-    """
-    Pre-process configuration parameters removing unknown ones.
-    """
-
-    calc_mode = CALCULATION_MODE[params['CALCULATION_MODE']]
-    new_params = dict()
-
-    for name, value in params.items():
-        try:
-            param = PARAMS[name]
-        except KeyError:
-            print 'Ignoring unknown parameter %r' % name
-            continue
-
-        if calc_mode not in param.modes:
-            msg = "Ignoring %s in %s, it's meaningful only in "
-            msg %= (name, calc_mode)
-            print msg, ', '.join(param.modes)
-            continue
-
-        new_params[name] = value
-
-    # make file paths absolute
-    for name in PATH_PARAMS:
-        if name not in new_params:
-            continue
-
-        new_params[name] = os.path.join(params['BASE_PATH'], new_params[name])
-
-    return new_params
