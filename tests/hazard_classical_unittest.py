@@ -105,7 +105,6 @@ class DoCurvesTestCase(TestMixin, unittest.TestCase):
         for key in self.keys:
             TestStore.remove(key)
 
-
     def test_serializer_called_when_passed(self):
         """The passed serialization function is called for each realization."""
 
