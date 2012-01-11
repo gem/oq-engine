@@ -29,7 +29,6 @@ import json
 from openquake import java
 from openquake import kvs
 from openquake import shapes
-from openquake.hazard import job
 from openquake.hazard.general import BasePSHAMixin
 
 
@@ -214,7 +213,3 @@ def gmf_to_dict(hashmap, intensity_measure_type):
 
         gmv = {"site_lat": lat, "site_lon": lon, "mag": mag}
         yield gmv
-
-
-job.HazJobMixin.register(
-    "Scenario", ScenarioEventBasedMixin, order=2)
