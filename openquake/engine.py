@@ -418,7 +418,6 @@ def _store_input_parameters(params, calc_mode, job_profile):
         job_profile.damping = None
 
 
-<<<<<<< HEAD
 def run_calculation(job_profile, params, sections, output_type='db'):
     """Given an :class:`openquake.db.models.OqJobProfile` object, create a new
     :class:`openquake.db.models.OqCalculation` object and run the calculation.
