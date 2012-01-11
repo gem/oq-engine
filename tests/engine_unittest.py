@@ -28,6 +28,7 @@ from openquake.db.models import OqJobProfile
 from openquake.db.models import OqUser
 
 from tests.utils.helpers import demo_file
+from tests.utils.helpers import patch
 
 
 class EngineAPITestCase(unittest.TestCase):
@@ -223,3 +224,24 @@ class EngineAPITestCase(unittest.TestCase):
                 model_equals(exp_inp, act_inp,
                              ignore=('id', 'input_set_id', 'last_update',
                                      '_input_set_cache')))
+
+    def test_run_calculation_deletes_job_counters(self):
+        """This test ensures that
+        :function:`openquake.utils.stats.delete_job_counters` is called"""
+        cfg_path = demo_file('HazardMapTest/config.gem')
+
+        job_profile, params, sections = engine.import_job_profile(cfg_path)
+
+        # We don't want any of the supervisor/executor forking to happen; it's
+        # not necessary. Also, forking should not happen in the context of a
+        # test run.
+        with patch('os.fork', mocksignature=False) as fork_mock:
+            # Fake return val for fork:
+            fork_mock.return_value = 0
+            # And we don't actually want to run the calculation. 
+            with patch('openquake.engine._launch_calculation'):
+                with patch(
+                    'openquake.utils.stats.delete_job_counters') as djc_mock:
+                    engine.run_calculation(job_profile, params, sections)
+
+                    self.assertEquals(1, djc_mock.call_count)
