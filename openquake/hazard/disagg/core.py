@@ -28,18 +28,17 @@ from openquake import java
 from openquake import job
 from openquake import logs
 
-from openquake.hazard import job as haz_job
 from openquake.hazard import disagg
 from openquake.java import list_to_jdouble_array
 from openquake.job import config as job_cfg
 from openquake.output import hazard_disagg as hazard_output
 from openquake.utils import config
 
+from openquake.calculators.base import Calculator
 from openquake.hazard.disagg import subsets
 from openquake.hazard.general import (
     preload, generate_erf, generate_gmpe_map, set_gmpe_params,
     store_source_model, store_gmpe_map, get_iml_list)
-from openquake.job.mixins import Mixin
 from openquake.utils.tasks import check_job_status
 
 
@@ -159,7 +158,7 @@ def compute_disagg_matrix_task(job_id, site, realization, poe, result_dir):
     return compute_disagg_matrix(job_id, site, poe, result_dir)
 
 
-class DisaggMixin(Mixin):
+class DisaggMixin(Calculator):
     """The Python part of the Disaggregation calculator. This calculator
     computes disaggregation matrix results in the following manner:
 
@@ -456,6 +455,3 @@ class DisaggMixin(Mixin):
                 writer.write(site, node_data)
 
             writer.close()
-
-
-haz_job.HazJobMixin.register("Disaggregation", DisaggMixin)

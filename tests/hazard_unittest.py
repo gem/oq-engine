@@ -525,9 +525,9 @@ class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
             GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
-        self.job = self.create_job_with_mixin(self.params,
-                                              opensha.ClassicalMixin)
-        self.job_id = self.job.job_id
+        self.job_profile = helpers.create_job(self.params)
+        self.calculator = opensha.ClassicalMixin(self.job_profile)
+        self.job_id = self.job_profile.job_id
 
         self.expected_curve = numpy.array([9.9178000e-01, 9.8892000e-01,
                 9.6903000e-01, 9.4030000e-01, 8.8405000e-01, 7.8782000e-01,
@@ -539,16 +539,13 @@ class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
         # deleting server side cached data
         kvs.get_client().flushall()
 
-    def tearDown(self):
-        self.unload_job_mixin()
-
     def _store_dummy_hazard_curve(self, site):
         hazard_curve = [0.98161, 0.97837]
 
         self._store_hazard_curve_at(site, hazard_curve, 0)
 
     def test_no_quantiles_when_no_parameter_specified(self):
-        self.assertEqual([], self._mixin.quantile_levels)
+        self.assertEqual([], self.calculator.quantile_levels)
 
     def test_no_computation_when_the_parameter_is_empty(self):
         self._run([], 1, [])
@@ -566,23 +563,23 @@ class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.75)
 
     def test_computes_just_the_quantiles_in_range(self):
-        self.job.params[classical_psha.QUANTILE_PARAM_NAME] =\
-            '-0.33 0.00 0.25 0.50 0.75 1.00 1.10'
+        self.job_profile.params[classical_psha.QUANTILE_PARAM_NAME] = (
+            '-0.33 0.00 0.25 0.50 0.75 1.00 1.10')
 
         self.assertEqual([0.00, 0.25, 0.50, 0.75, 1.00],
-            self._mixin.quantile_levels)
+            self.calculator.quantile_levels)
 
     def test_just_numeric_values_are_allowed(self):
-        self.job.params[classical_psha.QUANTILE_PARAM_NAME] =\
-            '-0.33 0.00 XYZ 0.50 ;;; 1.00 BBB'
+        self.job_profile.params[classical_psha.QUANTILE_PARAM_NAME] = (
+            '-0.33 0.00 XYZ 0.50 ;;; 1.00 BBB')
 
-        self.assertEqual([0.00, 0.50, 1.00], self._mixin.quantile_levels)
+        self.assertEqual([0.00, 0.50, 1.00], self.calculator.quantile_levels)
 
     def test_accepts_also_signs(self):
-        self.job.params[classical_psha.QUANTILE_PARAM_NAME] =\
-            '-0.33 +0.0 XYZ +0.5 +1.00'
+        self.job_profile.params[classical_psha.QUANTILE_PARAM_NAME] = (
+            '-0.33 +0.0 XYZ +0.5 +1.00')
 
-        self.assertEqual([0.00, 0.50, 1.00], self._mixin.quantile_levels)
+        self.assertEqual([0.00, 0.50, 1.00], self.calculator.quantile_levels)
 
     def test_process_all_the_sites_given(self):
         self._store_dummy_hazard_curve(shapes.Site(1.5, 1.0))
@@ -701,7 +698,7 @@ class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
 
     def _run(self, sites, realizations, quantiles):
         classical_psha.compute_quantile_hazard_curves(
-                self.job.job_id, sites, realizations, quantiles)
+                self.job_profile.job_id, sites, realizations, quantiles)
 
     def _store_hazard_curve_at(self, site, curve, realization=0):
         kvs.set_value_json_encoded(
@@ -733,9 +730,9 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
                 2.8400e-01, 3.9700e-01, 5.5600e-01, 7.7800e-01, 1.0900e+00,
                 1.5200e+00, 2.1300e+00]
 
-        self.job = self.create_job_with_mixin(self.params,
-                                              opensha.ClassicalMixin)
-        self.job_id = self.job.job_id
+        self.job_profile = helpers.create_job(self.params)
+        self.calculator = opensha.ClassicalMixin(self.job_profile)
+        self.job_id = self.job_profile.job_id
 
         self.empty_mean_curve = []
 
@@ -751,11 +748,8 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
         self.site = shapes.Site(2.0, 5.0)
         self._store_curve_at(self.site, mean_curve)
 
-    def tearDown(self):
-        self.unload_job_mixin()
-
     def test_no_poes_when_no_parameter_specified(self):
-        self.assertEqual([], self._mixin.poes_hazard_maps)
+        self.assertEqual([], self.calculator.poes_hazard_maps)
 
     def test_no_computation_when_the_parameter_is_empty(self):
         self._run([])
@@ -855,8 +849,9 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
         kvs.set_value_json_encoded(key_5, curve_2)
         kvs.set_value_json_encoded(key_6, curve_2)
 
-        classical_psha.compute_quantile_hazard_maps(self.job.job_id, sites,
-            [0.25, 0.50, 0.75], self.imls, [0.10])
+        classical_psha.compute_quantile_hazard_maps(
+            self.job_profile.job_id, sites, [0.25, 0.50, 0.75], self.imls,
+            [0.10])
 
         # asserting imls have been produced for all poes and quantiles
         self.assertTrue(kvs.get_client().get(
@@ -891,7 +886,7 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
         if sites is None:
             sites = [self.site]
 
-        classical_psha.compute_mean_hazard_maps(self.job.job_id, sites,
+        classical_psha.compute_mean_hazard_maps(self.job_profile.job_id, sites,
                                                 self.imls, poes)
 
     def _no_stored_values_for(self, pattern):
@@ -922,12 +917,9 @@ class ParameterizeSitesTestCase(helpers.TestMixin, unittest.TestCase):
             GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
-        self.job = self.create_job_with_mixin(
-            self.params, opensha.ClassicalMixin)
-        self.job_id = self.job.job_id
-
-    def tearDown(self):
-        self.unload_job_mixin()
+        self.job_profile = helpers.create_job(self.params)
+        self.calculator = opensha.ClassicalMixin(self.job_profile)
+        self.job_id = self.job_profile.job_id
 
     def test_all_mandatory_params_covered(self):
         """Make sure we add defaults for all mandatory hazard parameters."""
@@ -937,7 +929,7 @@ class ParameterizeSitesTestCase(helpers.TestMixin, unittest.TestCase):
 
         # Parameterise a single site and see what we got.
         params_handled = set()
-        [jsite] = self._mixin.parameterize_sites([shapes.Site(3.0, 3.0)])
+        [jsite] = self.calculator.parameterize_sites([shapes.Site(3.0, 3.0)])
         param_name_iter = jsite.getParameterNamesIterator()
         while True:
             try:
