@@ -28,7 +28,6 @@ import os
 import random
 import redis
 import shutil
-import subprocess
 import tempfile
 import textwrap
 import time
@@ -186,18 +185,6 @@ class WordProducer(producer.FileProducer):
         for line in self.file:
             col, row, value = line.strip().split(' ', 2)
             yield ((int(col), int(row)), value)
-
-
-def guarantee_file(path, url):
-    """Based on flag, download test data file or raise error."""
-    if not os.path.isfile(path):
-        if not FLAGS.download_test_data:
-            raise Exception("Test data does not exist")
-        logs.LOG.info("Downloading test data for %s", path)
-        retcode = subprocess.call(["curl", url, "-o", path])
-        if retcode:
-            raise Exception(
-                "Test data could not be downloaded from %s" % (url))
 
 
 def timeit(method):

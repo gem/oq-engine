@@ -23,8 +23,72 @@
 
 import os
 
-from openquake.logs import LOG
-from openquake.job.mixins import Mixin
+from django.db import close_connection
+
+from openquake import logs
+
+from openquake.flags import FLAGS
+from openquake.job import Job
+from openquake.supervising import supervisor
+
+from openquake.db.models import OqCalculation
+from openquake.hazard.calc import CALCULATORS as HAZ_CALCS
+from openquake.risk.calc import CALCULATORS as RISK_CALCS
+
+
+CALCS = dict(hazard=HAZ_CALCS, risk=RISK_CALCS)
+
+
+def run_job(job_file, output_type):
+    """
+    Given a job_file, run the job.
+
+    :param job_file: the path of the configuration file for the job
+    :type job_file: string
+    :param output_type: the desired format for the results, one of 'db', 'xml'
+    :type output_type: string
+    """
+    a_job = Job.from_file(job_file, output_type)
+    a_job.set_status('running')
+
+    # closing all db connections to make sure they're not shared between
+    # supervisor and job executor processes. otherwise if one of them closes
+    # the connection it immediately becomes unavailable for other
+    close_connection()
+
+    job_pid = os.fork()
+    if not job_pid:
+        # job executor process
+        try:
+            logs.init_logs_amqp_send(level=FLAGS.debug, job_id=a_job.job_id)
+            launch(a_job)
+        except Exception, ex:
+            logs.LOG.critical("Job failed with exception: '%s'" % str(ex))
+            a_job.set_status('failed')
+            raise
+        else:
+            a_job.set_status('succeeded')
+        return
+
+    supervisor_pid = os.fork()
+    if not supervisor_pid:
+        # supervisor process
+        supervisor_pid = os.getpid()
+        job = OqCalculation.objects.get(id=a_job.job_id)
+        job.supervisor_pid = supervisor_pid
+        job.job_pid = job_pid
+        job.save()
+        supervisor.supervise(job_pid, a_job.job_id)
+        return
+
+    # parent process
+
+    # ignore Ctrl-C as well as supervisor process does. thus only
+    # job executor terminates on SIGINT
+    supervisor.ignore_sigint()
+    # wait till both child processes are done
+    os.waitpid(job_pid, 0)
+    os.waitpid(supervisor_pid, 0)
 
 
 def launch(a_job):
@@ -41,14 +105,12 @@ def launch(a_job):
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    for (key, mixin) in Mixin.ordered_mixins():
-        if not key.upper() in a_job.sections:
+    for job_type in ('hazard', 'risk'):
+        if not job_type.upper() in a_job.sections:
             continue
 
-        with Mixin(a_job, mixin):
-            # The mixin defines a preload decorator to handle the needed
-            # data for the tasks and decorates _execute(). the mixin's
-            # _execute() method calls the expected tasks.
-            LOG.debug(
-                "Job %s Launching %s for %s" % (a_job.job_id, mixin, key))
-            a_job.execute()
+        calc_mode = a_job['CALCULATION_MODE']
+        calc_class = CALCS[job_type][calc_mode]
+
+        calculator = calc_class(a_job)
+        calculator.execute()

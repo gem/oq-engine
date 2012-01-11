@@ -38,7 +38,7 @@ from openquake.risk.job import general
 LOGGER = logs.LOG
 
 
-class ScenarioEventBasedMixin:
+class ScenarioEventBasedMixin(general.RiskJobMixin):
     """Scenario Event Based method for performing risk calculations.
 
     Note that this mixin, during execution, will always be an instance of the
@@ -57,20 +57,20 @@ class ScenarioEventBasedMixin:
         tasks = []
 
         vuln_model = \
-            vulnerability.load_vuln_model_from_kvs(self.job_id)
+            vulnerability.load_vuln_model_from_kvs(self.job_profile.job_id)
 
-        epsilon_provider = general.EpsilonProvider(self.params)
+        epsilon_provider = general.EpsilonProvider(self.job_profile.params)
 
         sum_per_gmf = scenario.SumPerGroundMotionField(vuln_model,
                                                        epsilon_provider)
 
         region_loss_map_data = {}
 
-        for block_id in self.blocks_keys:
+        for block_id in self.job_profile.blocks_keys:
             LOGGER.debug("Dispatching task for block %s of %s"
-                % (block_id, len(self.blocks_keys)))
+                % (block_id, len(self.job_profile.blocks_keys)))
             a_task = general.compute_risk.delay(
-                self.job_id, block_id, vuln_model=vuln_model,
+                self.job_profile.job_id, block_id, vuln_model=vuln_model,
                 epsilon_provider=epsilon_provider)
             tasks.append(a_task)
 
@@ -97,11 +97,12 @@ class ScenarioEventBasedMixin:
 
         # serialize the loss map data to XML
         loss_map_path = os.path.join(
-            self['BASE_PATH'],
-            self['OUTPUT_DIR'],
-            'loss-map-%s.xml' % self.job_id)
+            self.job_profile['BASE_PATH'],
+            self.job_profile['OUTPUT_DIR'],
+            'loss-map-%s.xml' % self.job_profile.job_id)
         loss_map_writer = risk_output.create_loss_map_writer(
-            self.job_id, self.serialize_results_to, loss_map_path, True)
+            self.job_profile.job_id, self.job_profile.serialize_results_to,
+            loss_map_path, True)
 
         if loss_map_writer:
             LOGGER.debug("Starting serialization of the loss map...")
@@ -211,9 +212,9 @@ class ScenarioEventBasedMixin:
         """
         sum_per_gmf = scenario.SumPerGroundMotionField(vuln_model,
                                                        epsilon_provider)
-        for point in block.grid(self.region):
-            gmvs = load_gmvs_for_point(self.job_id, point)
-            assets = load_assets_for_point(self.job_id, point)
+        for point in block.grid(self.job_profile.region):
+            gmvs = load_gmvs_for_point(self.job_profile.job_id, point)
+            assets = load_assets_for_point(self.job_profile.job_id, point)
             for asset in assets:
                 # the SumPerGroundMotionField add() method expects a dict
                 # with a single key ('IMLs') and value set to the sequence of
@@ -262,12 +263,13 @@ class ScenarioEventBasedMixin:
         """
         loss_data = {}
 
-        for point in block.grid(self.region):
+        for point in block.grid(self.job_profile.region):
             # the mean and stddev calculation functions used below
             # require the gmvs to be wrapped in a dict with a single key:
             # 'IMLs'
-            gmvs = {'IMLs': load_gmvs_for_point(self.job_id, point)}
-            assets = load_assets_for_point(self.job_id, point)
+            gmvs = {'IMLs': load_gmvs_for_point(self.job_profile.job_id,
+                                                point)}
+            assets = load_assets_for_point(self.job_profile.job_id, point)
             for asset in assets:
                 vuln_function = \
                     vuln_model[asset['taxonomy']]
