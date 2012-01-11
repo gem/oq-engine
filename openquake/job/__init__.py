@@ -33,17 +33,19 @@ from openquake.parser import exposure
 from openquake.db.models import OqCalculation, CalcStats
 from openquake.job.params import CALCULATION_MODE
 from openquake.job.params import ENUM_MAP
-from openquake.job.params import PARAMS
-from openquake.job.params import PATH_PARAMS
 
 FLAGS = flags.FLAGS
 
 REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
 
 
+# Ignoring pylint for 'Too many instance attributes'
+# pylint: disable=R0902
 class CalculationProxy(object):
     """A job is a collection of parameters identified by a unique id."""
 
+    # Ignore pylint for 'Too many arguments'
+    # pylint: disable=R0913
     def __init__(self, params, calculation_id, sections=list(), base_path=None,
                  serialize_results_to=list(), oq_job_profile=None,
                  oq_calculation=None):
@@ -78,6 +80,9 @@ class CalculationProxy(object):
 
     @property
     def base_path(self):
+        """Directory where the calculation input files are location.
+
+        This location is used as a base directory for storing outputs."""
         if self._base_path is not None:
             return self._base_path
         else:
