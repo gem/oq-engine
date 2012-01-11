@@ -230,7 +230,7 @@ def _store_input_parameters(params, calc_mode, oqp):
 @transaction.commit_on_success(using='job_init')
 def prepare_job(params, sections):
     """
-    Create a new OqCalculation and fill in the related OpParams entry.
+    Create a new OqCalculation and fill in the related OqJobProfile entry.
 
     Returns the newly created job object.
 

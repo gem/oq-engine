@@ -42,7 +42,6 @@ from openquake import shapes
 from openquake import xml
 
 from openquake.hazard import classical_psha
-from openquake.hazard import job as hazard_job
 from openquake.hazard.general import BasePSHAMixin, get_iml_list
 from openquake.output import hazard as hazard_output
 from openquake.utils import config
@@ -424,7 +423,7 @@ class ClassicalMixin(BasePSHAMixin):
 
     @java.unpack_exception
     @create_java_cache
-    def execute(self, kvs_keys_purged=None):
+    def execute(self, kvs_keys_purged=None):  # pylint: disable=W0221
         """
         Trigger the calculation and serialization of hazard curves, mean hazard
         curves/maps and quantile curves.
@@ -901,9 +900,3 @@ class EventBasedMixin(BasePSHAMixin):
                 self.generate_gmpe_map(),
                 java.jclass("Random")(seed),
                 jpype.JBoolean(correlate))
-
-
-hazard_job.HazJobMixin.register("Event Based", EventBasedMixin)
-hazard_job.HazJobMixin.register("Event Based BCR", EventBasedMixin)
-hazard_job.HazJobMixin.register("Classical", ClassicalMixin)
-hazard_job.HazJobMixin.register("Classical BCR", ClassicalMixin)

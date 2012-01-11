@@ -1341,7 +1341,7 @@ class RiskJobGeneralTestCase(unittest.TestCase):
         self._make_job({})
         self._prepare_bcr_result()
 
-        mixin = RiskJobMixin(None, None)
+        mixin = RiskJobMixin(self.job)
         mixin.job_id = self.job_id
         mixin.blocks_keys = self.block_keys
 
@@ -1365,7 +1365,7 @@ class RiskJobGeneralTestCase(unittest.TestCase):
         self._make_job({})
         self._prepare_bcr_result()
 
-        mixin = RiskJobMixin(None, None)
+        mixin = RiskJobMixin(self.job)
         mixin.job_id = self.job_id
         mixin.blocks_keys = self.block_keys
 
