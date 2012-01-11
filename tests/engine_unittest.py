@@ -108,8 +108,8 @@ class EngineAPITestCase(unittest.TestCase):
             # point sources:
             include_grid_sources=False,
             treat_grid_source_as='pointsources',
-            grid_source_magnitude_scaling_relationship=
-                'W&C 1994 Mag-Length Rel.',
+            grid_source_magnitude_scaling_relationship=(
+                'W&C 1994 Mag-Length Rel.'),
             # simple faults:
             include_fault_source=True,
             fault_rupture_offset=1.0,
