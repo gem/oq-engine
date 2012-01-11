@@ -149,6 +149,10 @@ def compute_risk(job_id, block_id, **kwargs):
 class RiskJobMixin(Calculator):
     """A mixin proxy for Risk jobs."""
 
+    def execute(self):
+        """Calculation logic goes here; subclasses must implement this."""
+        raise NotImplementedError()
+
     def is_benefit_cost_ratio_mode(self):
         """
         Return True if current calculation mode is Benefit-Cost Ratio.

@@ -198,6 +198,10 @@ class BasePSHAMixin(Calculator):
             self.calc = logictree.LogicTreeProcessor(basepath, source_model_lt,
                                                      gmpe_lt)
 
+    def execute(self):
+        """Calculation logic goes here; subclasses must implement this."""
+        raise NotImplementedError()
+
     def store_source_model(self, seed):
         """Generates a source model from the source model logic tree."""
         store_source_model(self.job_profile.job_id, seed,
