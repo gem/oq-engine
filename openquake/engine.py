@@ -59,10 +59,8 @@ from openquake.job.params import PARAMS
 from openquake.job.params import PATH_PARAMS
 from openquake.risk.calc import CALCULATORS as RISK_CALCS
 
-
 CALCS = dict(hazard=HAZ_CALCS, risk=RISK_CALCS)
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
-REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
 
 
 class CalculationProxy(object):

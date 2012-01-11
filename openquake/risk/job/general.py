@@ -24,7 +24,6 @@ import os
 
 from scipy.stats import norm
 
-from openquake import job
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
@@ -150,10 +149,11 @@ class RiskJobMixin(Calculator):
     def partition(self):
         """Split the sites to compute in blocks and store
         them in the underlying KVS system."""
+        from openquake import engine
 
         sites = []
         self.calc_proxy.blocks_keys = []  # pylint: disable=W0201
-        sites = job.read_sites_from_exposure(self.calc_proxy)
+        sites = engine._read_sites_from_exposure(self.calc_proxy)
 
         block_count = 0
 

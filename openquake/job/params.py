@@ -85,6 +85,8 @@ ENUM_MAP = {
     '16 Spoked Line Sources': '16spokedsources',
 }
 
+REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
+
 CALCULATION_MODES = set(CALCULATION_MODE.values())
 PARAMS = {}
 PATH_PARAMS = ['VULNERABILITY', 'VULNERABILITY_RETROFITTED',
