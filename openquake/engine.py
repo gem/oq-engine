@@ -40,7 +40,6 @@ from openquake.flags import FLAGS
 from openquake.job import config as jobconf
 from openquake.job import Job
 from openquake.supervising import supervisor
-from openquake.utils import stats
 
 from openquake.db.models import (CharArrayField, FloatArrayField, Input,
                                  InputSet, OqCalculation, OqJobProfile, OqUser)
@@ -395,19 +394,6 @@ def _store_input_parameters(params, calc_mode, job_profile):
     if job_profile.imt != 'sa':
         job_profile.period = None
         job_profile.damping = None
-
-
-def run_calc(job_profile):
-    """Given an :class:`openquake.db.models.OqJobProfile` object, create a new
-    :class:`openquake.db.models.OqCalculation` object and run the calculation.
-
-    Returns the calculation object.
-
-    :param job_profile:
-        :class:`openquake.db.models.OqJobProfile` instance.
-    :returns:
-        :class:`openquake.db.models.OqCalculation` instance.
-    """
 
 
 def import_job_profile(path_to_cfg):
