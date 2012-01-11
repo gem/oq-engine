@@ -44,7 +44,7 @@ from openquake.supervising import supervisor
 from openquake.db.models import (CharArrayField, FloatArrayField, Input,
                                  InputSet, OqCalculation, OqJobProfile, OqUser)
 from openquake.job.params import (ARRAY_RE, CALCULATION_MODE, INPUT_FILE_TYPES,
-                                  PARAMS)
+                                  PARAMS, PATH_PARAMS)
 from openquake.hazard.calc import CALCULATORS as HAZ_CALCS
 from openquake.risk.calc import CALCULATORS as RISK_CALCS
 
@@ -52,83 +52,6 @@ from openquake.risk.calc import CALCULATORS as RISK_CALCS
 CALCS = dict(hazard=HAZ_CALCS, risk=RISK_CALCS)
 
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
-
-
-def run_job(job_file, output_type):
-    """
-    Given a job_file, run the job.
-
-    :param job_file: the path of the configuration file for the job
-    :type job_file: string
-    :param output_type: the desired format for the results, one of 'db', 'xml'
-    :type output_type: string
-    """
-    a_job = job_from_file(job_file, output_type)
-    a_job.set_status('running')
-
-    # closing all db connections to make sure they're not shared between
-    # supervisor and job executor processes. otherwise if one of them closes
-    # the connection it immediately becomes unavailable for other
-    close_connection()
-
-    job_pid = os.fork()
-    if not job_pid:
-        # job executor process
-        try:
-            logs.init_logs_amqp_send(level=FLAGS.debug, job_id=a_job.job_id)
-            launch(a_job)
-        except Exception, ex:
-            logs.LOG.critical("Job failed with exception: '%s'" % str(ex))
-            a_job.set_status('failed')
-            raise
-        else:
-            a_job.set_status('succeeded')
-        return
-
-    supervisor_pid = os.fork()
-    if not supervisor_pid:
-        # supervisor process
-        supervisor_pid = os.getpid()
-        job = OqCalculation.objects.get(id=a_job.job_id)
-        job.supervisor_pid = supervisor_pid
-        job.job_pid = job_pid
-        job.save()
-        supervisor.supervise(job_pid, a_job.job_id)
-        return
-
-    # parent process
-
-    # ignore Ctrl-C as well as supervisor process does. thus only
-    # job executor terminates on SIGINT
-    supervisor.ignore_sigint()
-    # wait till both child processes are done
-    os.waitpid(job_pid, 0)
-    os.waitpid(supervisor_pid, 0)
-
-
-def launch(a_job):
-    """Based on the behavior specified in the configuration, mix in the correct
-    behavior for job and execute it.
-
-    :param a_job:
-        :class:`openquake.job.Job` instance.
-    """
-    # TODO: This needs to be done as a pre-execution step of calculation.
-    a_job._record_initial_stats()  # pylint: disable=W0212
-
-    output_dir = os.path.join(a_job.base_path, a_job['OUTPUT_DIR'])
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    for job_type in ('hazard', 'risk'):
-        if not job_type.upper() in a_job.sections:
-            continue
-
-        calc_mode = a_job['CALCULATION_MODE']
-        calc_class = CALCS[job_type][calc_mode]
-
-        calculator = calc_class(a_job)
-        calculator.execute()
 
 
 def _job_from_file(config_file, output_type, owner_username='openquake'):
@@ -158,7 +81,7 @@ def _job_from_file(config_file, output_type, owner_username='openquake'):
     assert output_type in ('db', 'xml')
 
     params, sections = _parse_config_file(config_file)
-    params = prepare_config_parameters(params)
+    params, sections = prepare_config_parameters(params, sections)
     job_profile = _prepare_job(params, sections)
 
     validator = jobconf.default_validators(sections, params)
@@ -524,6 +447,8 @@ def _launch_calculation(calc_proxy, sections):
         if not job_type.upper() in sections:
             continue
 
+        print job_type
+        print calc_mode
         calc_class = CALCS[job_type][calc_mode]
 
         calculator = calc_class(calc_proxy)
@@ -548,7 +473,7 @@ def import_job_profile(path_to_cfg):
         clean.
     """
     params, sections = _parse_config_file(path_to_cfg)
-    params = prepare_config_parameters(params)
+    params, sections = prepare_config_parameters(params, sections)
 
     validator = jobconf.default_validators(sections, params)
     is_valid, errors = validator.is_valid()
