@@ -82,7 +82,7 @@ class ProbabilisticEventMixin(Mixin):
         curve = aggregate_curve.compute(self._tses(), self._time_span())
         aggregate_loss_curve.plot_aggregate_curve(self, curve)
 
-        general.write_output(self)
+        general.write_output(self.job_profile)
 
     def _tses(self):
         """Return the time representative of the Stochastic Event Set
