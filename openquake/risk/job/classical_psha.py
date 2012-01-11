@@ -88,7 +88,7 @@ class ClassicalPSHABasedMixin(general.RiskJobMixin):
         """
         Return True if current calculation mode is Benefit-Cost Ratio.
         """
-        return self.job_profile.params[job_config.CALCULATION_MODE] \
+        return self.calc_proxy.params[job_config.CALCULATION_MODE] \
                 == job_config.BCR_CLASSICAL_MODE
 
     def compute_risk(self, block_id):
@@ -132,10 +132,10 @@ class ClassicalPSHABasedMixin(general.RiskJobMixin):
                             loss_ratio_curve, asset)
 
                     for loss_poe in conditional_loss_poes(
-                        self.job_profile.params):
+                        self.calc_proxy.params):
 
                         compute_conditional_loss(
-                                self.job_profile.job_id, point.column,
+                                self.calc_proxy.job_id, point.column,
                                 point.row, loss_curve, asset, loss_poe)
 
         return True
