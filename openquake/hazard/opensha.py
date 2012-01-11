@@ -423,7 +423,7 @@ class ClassicalMixin(BasePSHAMixin):
 
     @java.unpack_exception
     @create_java_cache
-    def execute(self, kvs_keys_purged=None):
+    def execute(self, kvs_keys_purged=None):  # pylint: disable=W0221
         """
         Trigger the calculation and serialization of hazard curves, mean hazard
         curves/maps and quantile curves.
