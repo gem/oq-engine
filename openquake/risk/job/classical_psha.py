@@ -88,7 +88,7 @@ class ClassicalPSHABasedMixin(general.RiskJobMixin):
         """
         Return True if current calculation mode is Benefit-Cost Ratio.
         """
-        return self.params[job_config.CALCULATION_MODE] \
+        return self.job_profile.params[job_config.CALCULATION_MODE] \
                 == job_config.BCR_CLASSICAL_MODE
 
     def compute_risk(self, block_id):
