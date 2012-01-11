@@ -36,6 +36,7 @@ from openquake import shapes
 from openquake.engine import (_get_source_models, _parse_config_file,
                               prepare_config_parameters, _prepare_job)
 from openquake.job import CalculationProxy
+from openquake.job import config
 from openquake.job.params import config_text_to_list
 from openquake.db.models import OqCalculation, CalcStats, OqJobProfile, OqUser
 
@@ -248,7 +249,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             dir=gettempdir(), content=textwrap.dedent(content))
 
         params, sections = _parse_config_file(config_path)
-        params = prepare_config_parameters(params)
+        params, sections = prepare_config_parameters(params, sections)
 
         self.assertEquals(
             {'BASE_PATH': gettempdir(),
@@ -274,7 +275,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
         config_path = self.touch(content=textwrap.dedent(content))
 
         params, sections = _parse_config_file(config_path)
-        params = prepare_config_parameters(params)
+        params, sections = prepare_config_parameters(params, sections)
 
         self.assertEquals(
             {'BASE_PATH': gettempdir(),
