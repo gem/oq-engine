@@ -42,10 +42,10 @@ LOGGER = logs.LOG
 class ClassicalPSHABasedMixin:
     """Mixin for Classical PSHA Based Risk Job"""
 
-    @general.preload
-    @general.output
     def execute(self):
         """ execute -- general mixin entry point """
+        general.preload(self)
+
         celery_tasks = []
         for block_id in self.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s"
@@ -66,6 +66,11 @@ class ClassicalPSHABasedMixin:
                 # TODO(jmc): Cancel and respawn this task
                 return
 
+        if self.is_benefit_cost_ratio():
+            general.write_output_bcr(self)
+        else:
+            general.write_output(self)
+
     def _get_db_curve(self, site):
         """Read hazard curve data from the DB"""
         gh = geohash.encode(site.latitude, site.longitude, precision=12)
@@ -76,6 +81,13 @@ class ClassicalPSHABasedMixin:
             where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
 
         return Curve(zip(job.oq_job_profile.imls, hc.poes))
+
+    def is_benefit_cost_ratio(self):
+        """
+        Return True if current calculation mode is Benefit-Cost Ratio.
+        """
+        return self.params[job_config.CALCULATION_MODE] \
+                == job_config.BCR_CLASSICAL_MODE
 
     def compute_risk(self, block_id):
         """This task computes risk for a block of sites. It requires to have
@@ -88,10 +100,9 @@ class ClassicalPSHABasedMixin:
         Calls either :meth:`_compute_bcr` or :meth:`_compute_loss` depending
         on the calculation mode.
         """
-
-        if self.params[job_config.CALCULATION_MODE] \
-                == job_config.BCR_CLASSICAL_MODE:
+        if self.is_benefit_cost_ratio():
             return self._compute_bcr(block_id)
+
         else:
             return self._compute_loss(block_id)
 
@@ -130,8 +141,8 @@ class ClassicalPSHABasedMixin:
         Calculate and store in the kvs the benefit-cost ratio data for block.
 
         A value is stored with key :func:`openquake.kvs.tokens.bcr_block_key`.
-        See :func:`openquake.risk.general.compute_bcr_for_block` for return
-        value spec.
+        See :func:`openquake.risk.job.general.compute_bcr_for_block` for result
+        data structure spec.
         """
         result = []
 
