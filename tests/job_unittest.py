@@ -17,12 +17,13 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-from functools import partial
 import mock
 import os
-from tempfile import gettempdir
 import textwrap
 import unittest
+
+from functools import partial
+from tempfile import gettempdir
 
 from django.contrib.gis.geos.polygon import Polygon
 from django.contrib.gis.geos.collections import MultiPoint
@@ -253,7 +254,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             dir=gettempdir(), content=textwrap.dedent(content))
 
         params, sections = _parse_config_file(config_path)
-        params = _prepare_config_parameters(params)
+        params, sections = _prepare_config_parameters(params, sections)
 
         self.assertEquals(
             {'BASE_PATH': gettempdir(),
@@ -279,7 +280,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
         config_path = self.touch(content=textwrap.dedent(content))
 
         params, sections = _parse_config_file(config_path)
-        params = _prepare_config_parameters(params)
+        params, sections = _prepare_config_parameters(params, sections)
 
         self.assertEquals(
             {'BASE_PATH': gettempdir(),
@@ -885,7 +886,7 @@ class RunJobTestCase(unittest.TestCase):
             engine._read_sites_from_exposure(test_job))
 
     def test_supervisor_is_spawned(self):
-        with patch('openquake.engine._job_from_file') as from_file:
+        with patch('openquake.engine._job_from_file'):
 
             before_launch = engine._launch_calculation
             try:

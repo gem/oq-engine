@@ -28,7 +28,7 @@ from django.contrib.gis.db import models
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
 
-def model_equals(a, b, ignore=None):
+def model_equals(model_a, model_b, ignore=None):
     """Compare two Django model objects for equality. The two objects are
     considered equal if the values of the all of the fields of both models are
     equal.
@@ -36,9 +36,9 @@ def model_equals(a, b, ignore=None):
     If you want to ignore some attributes (such as `id`) and compare the rest
     of the attributes, you can specify a list or tuple of attributes to ignore.
 
-    :param a:
+    :param model_a:
         A :class:`django.db.models.Model` instance.
-    :param b:
+    :param model_b:
         A :class:`django.db.models.Model` instance.
     :param ignore:
         Optional. A list or tuple of attribute names (as strings) to ignore in
@@ -49,12 +49,12 @@ def model_equals(a, b, ignore=None):
         `True` if the contents each model object are equal, taking into account
         any ignores.
     """
-    if not a.__class__ == b.__class__:
+    if not model_a.__class__ == model_b.__class__:
         # Not the same class type; these are definitely not equal.
         return False
 
     # Now get each field name and compare the attributes in both objects.
-    for field_name in a.__dict__.keys():
+    for field_name in model_a.__dict__.keys():
         # Ignore _state; this is an ever-present attribute of the model
         # __dict__ which we don't care about. It doesn't affect our equality
         # comparison.
@@ -65,8 +65,8 @@ def model_equals(a, b, ignore=None):
         if ignore is not None and field_name in ignore:
             continue
 
-        a_val = getattr(a, field_name)
-        b_val = getattr(b, field_name)
+        a_val = getattr(model_a, field_name)
+        b_val = getattr(model_b, field_name)
 
         # If the attribute is a geometry object,
         # use the GEOSGeometry.equals method to compare:
