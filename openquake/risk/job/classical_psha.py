@@ -232,6 +232,3 @@ class ClassicalPSHABasedMixin(general.RiskJobMixin):
         kvs.get_client().set(loss_ratio_key, loss_ratio_curve.to_json())
 
         return loss_ratio_curve
-
-general.RiskJobMixin.register("Classical", ClassicalPSHABasedMixin)
-general.RiskJobMixin.register("Classical BCR", ClassicalPSHABasedMixin)

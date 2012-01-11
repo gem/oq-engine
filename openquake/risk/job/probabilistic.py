@@ -31,8 +31,6 @@ from openquake import kvs
 from openquake import logs
 from openquake import shapes
 
-from openquake.job.mixins import Mixin
-
 from openquake.risk import probabilistic_event_based as prob
 from openquake.parser import vulnerability
 
@@ -42,14 +40,16 @@ from openquake.risk.job import general
 from openquake.db import models
 from openquake.job import config as job_config
 
+from openquake.calculators.base import Calculator
+
 LOGGER = logs.LOG
 
 
-class ProbabilisticEventMixin(Mixin):
+class ProbabilisticEventMixin(Calculator):
     """Mixin for Probalistic Event Risk Job."""
 
-    def __init__(self, *args, **kwargs):
-        Mixin.__init__(self, *args, **kwargs)
+    def __init__(self, job_profile):
+        super(ProbabilisticEventMixin, self).__init__(job_profile)
         self.vuln_curves = None
 
     def execute(self):
@@ -387,7 +387,3 @@ class ProbabilisticEventMixin(Mixin):
         kvs.get_client().set(key, loss_curve.to_json())
 
         return loss_curve
-
-
-general.RiskJobMixin.register("Event Based", ProbabilisticEventMixin)
-general.RiskJobMixin.register("Event Based BCR", ProbabilisticEventMixin)
