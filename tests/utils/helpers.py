@@ -39,6 +39,7 @@ import numpy
 
 from django.core import exceptions
 
+from openquake import engine
 from openquake import flags
 from openquake import logs
 from openquake.job import Job
@@ -139,7 +140,7 @@ def job_from_file(config_file_path):
     a database.
     """
 
-    job = Job.from_file(config_file_path, 'xml')
+    job = engine.job_from_file(config_file_path, 'xml')
     cleanup_loggers()
 
     return job
@@ -592,62 +593,63 @@ class DbTestMixin(TestMixin):
         input_set = models.InputSet(owner=owner)
         input_set.save()
 
-        oqp = models.OqJobProfile()
-        oqp.calc_mode = "classical"
-        oqp.job_type = ['hazard']
-        oqp.input_set = input_set
-        oqp.region_grid_spacing = 0.01
-        oqp.min_magnitude = 5.0
-        oqp.investigation_time = 50.0
-        oqp.component = "gmroti50"
-        oqp.imt = "pga"
-        oqp.truncation_type = "twosided"
-        oqp.truncation_level = 3
-        oqp.reference_vs30_value = 760
-        oqp.imls = self.IMLS
-        oqp.poes = [0.01, 0.10]
-        oqp.realizations = 1
-        oqp.width_of_mfd_bin = 0.1
-        oqp.treat_grid_source_as = 'Point Sources'
-        oqp.treat_area_source_as = 'Point Sources'
-        oqp.subduction_rupture_floating_type = 'Along strike and down dip'
-        oqp.subduction_rupture_aspect_ratio = 1.5
-        oqp.subduction_fault_surface_discretization = 0.5
-        oqp.subduction_fault_rupture_offset = 10.0
-        oqp.subduction_fault_magnitude_scaling_sigma = 0.0
-        oqp.subduction_fault_magnitude_scaling_relationship = \
+        oqjp = models.OqJobProfile()
+        oqjp.owner = owner
+        oqjp.calc_mode = "classical"
+        oqjp.job_type = ['hazard']
+        oqjp.input_set = input_set
+        oqjp.region_grid_spacing = 0.01
+        oqjp.min_magnitude = 5.0
+        oqjp.investigation_time = 50.0
+        oqjp.component = "gmroti50"
+        oqjp.imt = "pga"
+        oqjp.truncation_type = "twosided"
+        oqjp.truncation_level = 3
+        oqjp.reference_vs30_value = 760
+        oqjp.imls = self.IMLS
+        oqjp.poes = [0.01, 0.10]
+        oqjp.realizations = 1
+        oqjp.width_of_mfd_bin = 0.1
+        oqjp.treat_grid_source_as = 'pointsources'
+        oqjp.treat_area_source_as = 'pointsources'
+        oqjp.subduction_rupture_floating_type = 'Along strike and down dip'
+        oqjp.subduction_rupture_aspect_ratio = 1.5
+        oqjp.subduction_fault_surface_discretization = 0.5
+        oqjp.subduction_fault_rupture_offset = 10.0
+        oqjp.subduction_fault_magnitude_scaling_sigma = 0.0
+        oqjp.subduction_fault_magnitude_scaling_relationship = \
             'W&C 1994 Mag-Length Rel.'
-        oqp.standard_deviation_type = 'total'
-        oqp.sadigh_site_type = 'Rock'
-        oqp.rupture_floating_type = 'Along strike and down dip'
-        oqp.rupture_aspect_ratio = 1.5
-        oqp.reference_depth_to_2pt5km_per_sec_param = 5.0
-        oqp.quantile_levels = [0.25, 0.50]
-        oqp.maximum_distance = 200
-        oqp.include_subductive_fault = True
-        oqp.include_subduction_fault_source = True
-        oqp.include_grid_sources = True
-        oqp.include_fault_source = True
-        oqp.include_area_sources = True
-        oqp.fault_surface_discretization = 1.0
-        oqp.fault_rupture_offset = 5.0
-        oqp.fault_magnitude_scaling_sigma = 0.0
-        oqp.fault_magnitude_scaling_relationship = 'W&C 1994 Mag-Length Rel.'
-        oqp.compute_mean_hazard_curve = True
-        oqp.area_source_magnitude_scaling_relationship = \
+        oqjp.standard_deviation_type = 'total'
+        oqjp.sadigh_site_type = 'Rock'
+        oqjp.rupture_floating_type = 'Along strike and down dip'
+        oqjp.rupture_aspect_ratio = 1.5
+        oqjp.reference_depth_to_2pt5km_per_sec_param = 5.0
+        oqjp.quantile_levels = [0.25, 0.50]
+        oqjp.maximum_distance = 200
+        oqjp.include_subductive_fault = True
+        oqjp.include_subduction_fault_source = True
+        oqjp.include_grid_sources = True
+        oqjp.include_fault_source = True
+        oqjp.include_area_sources = True
+        oqjp.fault_surface_discretization = 1.0
+        oqjp.fault_rupture_offset = 5.0
+        oqjp.fault_magnitude_scaling_sigma = 0.0
+        oqjp.fault_magnitude_scaling_relationship = 'W&C 1994 Mag-Length Rel.'
+        oqjp.compute_mean_hazard_curve = True
+        oqjp.area_source_magnitude_scaling_relationship = \
             'W&C 1994 Mag-Length Rel.'
-        oqp.area_source_discretization = 0.1
-        oqp.treat_area_source_as = 'pointsources'
-        oqp.subduction_rupture_floating_type = 'downdip'
-        oqp.rupture_floating_type = 'downdip'
-        oqp.sadigh_site_type = 'rock'
-        oqp.region = (
+        oqjp.area_source_discretization = 0.1
+        oqjp.treat_area_source_as = 'pointsources'
+        oqjp.subduction_rupture_floating_type = 'downdip'
+        oqjp.rupture_floating_type = 'downdip'
+        oqjp.sadigh_site_type = 'rock'
+        oqjp.region = (
             "POLYGON((-81.3 37.2, -80.63 38.04, -80.02 37.49, -81.3 37.2))")
-        oqp.source_model_lt_random_seed = 23
-        oqp.gmpe_lt_random_seed = 5
-        oqp.save()
+        oqjp.source_model_lt_random_seed = 23
+        oqjp.gmpe_lt_random_seed = 5
+        oqjp.save()
 
-        job = models.OqCalculation(oq_job_profile=oqp, owner=owner)
+        job = models.OqCalculation(oq_job_profile=oqjp, owner=owner)
         job.save()
 
         if create_job_path:
@@ -671,15 +673,15 @@ class DbTestMixin(TestMixin):
             test db will be dropped/recreated prior to the next db test suite
             run anyway.
         """
-        oqp = job.oq_job_profile
-        if oqp.input_set is not None:
-            self.teardown_input_set(oqp.input_set,
+        oqjp = job.oq_job_profile
+        if oqjp.input_set is not None:
+            self.teardown_input_set(oqjp.input_set,
                                     filesystem_only=filesystem_only)
         if filesystem_only:
             return
 
         job.delete()
-        oqp.delete()
+        oqjp.delete()
 
     def setup_output(self, job_to_use=None, output_type="hazard_map",
                      db_backed=True):
