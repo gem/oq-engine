@@ -89,11 +89,6 @@ SAMPLE_LOSS_MAP_NON_DET_DATA = [
 
 GML_ID_KEY = '{%s}id' % xml.GML_NS
 
-DEFAULT_METADATA = risk_output.LossMapXMLWriter.DEFAULT_METADATA
-
-DEFAULT_NON_DET_METADATA = \
-        risk_output.LossMapNonScenarioXMLWriter.DEFAULT_METADATA
-
 LOSS_MAP_NODE_ATTRS = ('endBranchLabel', 'lossCategory', 'unit')
 LOSS_MAP_NON_DET_NODE_ATTRS = ('endBranchLabel', 'lossCategory', 'unit',
     'timeSpan', 'poE')
@@ -147,7 +142,7 @@ class LossMapOutputTestCase(unittest.TestCase):
             for key, node in (
                 ('nrmlID', xml_writer.root_node),
                 ('riskResultID', xml_writer.risk_result_node),
-                ('lossMapID', xml_writer.loss_map_node)):
+                ('lossMapID', xml_writer.map_container)):
 
                 self.assertEqual(
                     loss_map_data[key],
@@ -155,15 +150,15 @@ class LossMapOutputTestCase(unittest.TestCase):
 
             if isinstance(xml_writer,
                     risk_output.LossMapNonScenarioXMLWriter):
-                loss_map_node_attrs = LOSS_MAP_NON_DET_NODE_ATTRS
+                map_container_attrs = LOSS_MAP_NON_DET_NODE_ATTRS
             else:
-                loss_map_node_attrs = LOSS_MAP_NODE_ATTRS
+                map_container_attrs = LOSS_MAP_NODE_ATTRS
 
             # Verify the <lossMap> attributes
-            for key in loss_map_node_attrs:
+            for key in map_container_attrs:
                 self.assertEqual(
                     loss_map_data[key],
-                    xml_writer.loss_map_node.attrib[key])
+                    xml_writer.map_container.attrib[key])
 
     def test_write_metadata_with_some_defaults(self):
         """
@@ -183,16 +178,16 @@ class LossMapOutputTestCase(unittest.TestCase):
             xml_writer.write_metadata(partial_meta)
 
             self.assertEqual(
-                DEFAULT_METADATA['nrmlID'],
+                'undefined',
                 xml_writer.root_node.attrib[GML_ID_KEY])
 
             self.assertEqual(
-                DEFAULT_METADATA['riskResultID'],
+                'undefined',
                 xml_writer.risk_result_node.attrib[GML_ID_KEY])
 
             self.assertEqual(
-                DEFAULT_METADATA['unit'],
-                xml_writer.loss_map_node.attrib['unit'])
+                'undefined',
+                xml_writer.map_container.attrib['unit'])
 
     def test_serialize_with_no_meta(self):
         """
@@ -205,30 +200,28 @@ class LossMapOutputTestCase(unittest.TestCase):
 
             if isinstance(xml_writer,
                     risk_output.LossMapNonScenarioXMLWriter):
-                loss_map_node_attrs = LOSS_MAP_NON_DET_NODE_ATTRS
+                map_container_attrs = LOSS_MAP_NON_DET_NODE_ATTRS
                 # everything but metadata
                 test_data = SAMPLE_LOSS_MAP_NON_DET_DATA[1:]
-                default_metadata = DEFAULT_NON_DET_METADATA
             else:
-                loss_map_node_attrs = LOSS_MAP_NODE_ATTRS
+                map_container_attrs = LOSS_MAP_NODE_ATTRS
                 # everything but metadata
                 test_data = SAMPLE_LOSS_MAP_DATA[1:]
-                default_metadata = DEFAULT_METADATA
 
             xml_writer.serialize(test_data)
 
             for key, node, in (
                 ('nrmlID', xml_writer.root_node),
                 ('riskResultID', xml_writer.risk_result_node),
-                ('lossMapID', xml_writer.loss_map_node)):
+                ('lossMapID', xml_writer.map_container)):
                 self.assertEqual(
-                    default_metadata[key],
+                    'undefined',
                     node.attrib[GML_ID_KEY])
 
-            for key in loss_map_node_attrs:
+            for key in map_container_attrs:
                 self.assertEqual(
-                    default_metadata[key],
-                    xml_writer.loss_map_node.attrib[key])
+                    'undefined',
+                    xml_writer.map_container.attrib[key])
 
     def test_loss_map_xml_content_is_correct(self):
         """
