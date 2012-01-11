@@ -39,7 +39,6 @@ class ModelEqualsTestCase(unittest.TestCase):
         self.o1 = Organization.objects.get(id=self.org.id)
         self.o2 = Organization.objects.get(id=self.org.id)
 
-
     def test_model_equals(self):
         self.assertTrue(model_equals(self.o1, self.o2))
 
@@ -80,8 +79,8 @@ class ModelEqualsTestCase(unittest.TestCase):
         self.o2._state = 'other_fake_state'
 
         # Sanity check: make sure _state is in the object dict.
-        self.assertTrue(self.o1.__dict__.has_key('_state'))
-        self.assertTrue(self.o2.__dict__.has_key('_state'))
+        self.assertTrue('_state' in self.o1.__dict__)
+        self.assertTrue('_state' in self.o2.__dict__)
 
         # Sanity check 2: Make sure the object dict _state is correctly set.
         self.assertEquals('fake_state', self.o1.__dict__['_state'])

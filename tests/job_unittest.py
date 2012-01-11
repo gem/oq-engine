@@ -158,22 +158,26 @@ class JobDbRecordTestCase(unittest.TestCase):
         self.job = None
 
     def test_job_db_record_for_output_type_db(self):
-        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE), 'db')
+        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE),
+                                        'db')
         OqCalculation.objects.get(id=self.job.job_id)
 
     def test_job_db_record_for_output_type_xml(self):
-        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE), 'xml')
+        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE),
+                                        'xml')
         OqCalculation.objects.get(id=self.job.job_id)
 
     def test_set_status(self):
-        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE), 'db')
+        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE),
+                                        'db')
         status = 'running'
         self.job.set_status(status)
         self.assertEqual(status,
                          OqCalculation.objects.get(id=self.job.job_id).status)
 
     def test_get_status_from_db(self):
-        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE), 'db')
+        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE),
+                                        'db')
         row = OqCalculation.objects.get(id=self.job.job_id)
 
         row.status = "failed"
@@ -185,7 +189,8 @@ class JobDbRecordTestCase(unittest.TestCase):
         self.assertEqual("running", Job.get_status_from_db(self.job.job_id))
 
     def test_is_job_completed(self):
-        job_id = engine.job_from_file(helpers.get_data_path(CONFIG_FILE), 'db').job_id
+        job_id = engine.job_from_file(helpers.get_data_path(CONFIG_FILE),
+                                      'db').job_id
         row = OqCalculation.objects.get(id=job_id)
         pairs = [('pending', False), ('running', False),
                  ('succeeded', True), ('failed', True)]
