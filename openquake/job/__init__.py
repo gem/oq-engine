@@ -25,16 +25,16 @@ from datetime import datetime
 from openquake import flags
 from openquake import kvs
 from openquake import shapes
-from openquake.parser import exposure
-from openquake.db.models import (OqCalculation, CalcStats)
 from openquake.job import config as conf
 from openquake.job import params as job_params
+from openquake.kvs import mark_job_as_current
+from openquake.logs import LOG
+from openquake.parser import exposure
+from openquake.db.models import OqCalculation, CalcStats
 from openquake.job.params import CALCULATION_MODE
 from openquake.job.params import ENUM_MAP
 from openquake.job.params import PARAMS
 from openquake.job.params import PATH_PARAMS
-from openquake.kvs import mark_job_as_current
-from openquake.logs import LOG
 
 FLAGS = flags.FLAGS
 

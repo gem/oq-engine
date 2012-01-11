@@ -15,8 +15,7 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-"""
-Core computation methods for the risk 'engine'
+"""Core computation methods for the risk 'engine'
 These include Classical PSHA-based risk analysis,
 and scenario analysis based on either a set of GMF files,
 or a single GMF file."""

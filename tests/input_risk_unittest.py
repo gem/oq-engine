@@ -21,12 +21,13 @@
 import unittest
 import os
 
-from openquake.output.hazard import *
 from openquake.input.exposure import ExposureDBWriter
+from openquake.output.hazard import GmfDBWriter
+from openquake.output.hazard import HazardCurveDBWriter
 from openquake.parser.exposure import ExposurePortfolioFile
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
-from openquake.shapes import Site, Region
+from openquake.shapes import Site
 
 from tests.utils import helpers
 
@@ -228,14 +229,14 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
                         key=lambda e: e.value)
 
         def _to_site(pg_point):
-            return shapes.Site(pg_point.x, pg_point.y)
+            return Site(pg_point.x, pg_point.y)
 
         self.assertEquals('asset_01', assets[0].asset_ref)
         self.assertEquals(150000, assets[0].value)
         self.assertEquals('RC/DMRF-D/LR',
                           assets[0].taxonomy)
         self.assertEquals('RC-LR-PC', assets[0].structure_type)
-        self.assertEquals(shapes.Site(9.15000, 45.16667),
+        self.assertEquals(Site(9.15000, 45.16667),
                           _to_site(assets[0].site))
 
         self.assertEquals('asset_02', assets[1].asset_ref)
@@ -243,7 +244,7 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals('RC/DMRF-D/LR',
                           assets[1].taxonomy)
         self.assertEquals('RC-HR-PC', assets[1].structure_type)
-        self.assertEquals(shapes.Site(9.15333, 45.12200),
+        self.assertEquals(Site(9.15333, 45.12200),
                           _to_site(assets[1].site))
 
         self.assertEquals('asset_03', assets[2].asset_ref)
@@ -251,5 +252,5 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals('RC/DMRF-D/LR',
                           assets[2].taxonomy)
         self.assertEquals('RC-LR-PC', assets[2].structure_type)
-        self.assertEquals(shapes.Site(9.14777, 45.17999),
+        self.assertEquals(Site(9.14777, 45.17999),
                           _to_site(assets[2].site))
