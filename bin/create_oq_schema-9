@@ -128,13 +128,13 @@ if [ "$table_spaces_only" == "off" ]; then
 
     # Drop database
     echo ".. Dropping database $db_name .."
-    sudo -u postgres psql -d postgres -c "DROP DATABASE IF EXISTS $db_name"
+    psql -d postgres -U $db_admin_user -c "DROP DATABASE IF EXISTS $db_name"
     # Drop table spaces..
     if [ "$check_table_spaces" == "on" ]; then
         for tspace in $tspace_list; do
             full_ts_name="${tspace}_ts"
             echo ".. Dropping table space $full_ts_name .."
-            sudo -u postgres psql -d postgres -c "DROP TABLESPACE IF EXISTS $full_ts_name"
+            psql -d postgres -U $db_admin_user -c "DROP TABLESPACE IF EXISTS $full_ts_name"
         done
     fi
 else
@@ -142,7 +142,7 @@ else
 fi
 
 echo -n ".. Current table spaces: "
-echo `sudo -u postgres psql -c '\db' -d postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }'`
+echo `psql -U $db_admin_user -c '\db' -d postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }'`
 
 if [ "$check_table_spaces" == "on" ]; then
     # Create table spaces if needed.
@@ -163,12 +163,12 @@ if [ "$check_table_spaces" == "on" ]; then
         fi
 
         # Create the actual table space.
-        ts_found=`sudo -u postgres psql -c '\db' -d postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $full_ts_name | wc -l`
+        ts_found=`psql -U $db_admin_user -c '\db' -d postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $full_ts_name | wc -l`
         if [ $ts_found -eq 0 ]; then
-            sudo -u postgres psql -d postgres -c "CREATE TABLESPACE $full_ts_name LOCATION '$full_tspace_path'"
+            psql -d postgres -U $db_admin_user -c "CREATE TABLESPACE $full_ts_name LOCATION '$full_tspace_path'"
             if [ "$table_spaces_only" == "on" ]; then
-                sudo -u postgres psql -d $db_name -c "DELETE FROM admin.revision_info WHERE artefact = 'openquake/${tspace}'"
-                sudo -u postgres psql -d $db_name -c "INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/${tspace}', '${oq_version}', 0)"
+                psql -U $db_admin_user -d $db_name -c "DELETE FROM admin.revision_info WHERE artefact = 'openquake/${tspace}'"
+                psql -U $db_admin_user -d $db_name -c "INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/${tspace}', '${oq_version}', 0)"
             fi
         fi
     done
@@ -184,51 +184,51 @@ set -e
 
 # Create the OpenQuake database
 echo ".. Creating database $db_name .."
-sudo -u postgres psql -d postgres -c "CREATE DATABASE $db_name"
+psql -d postgres -U $db_admin_user -c "CREATE DATABASE $db_name"
 
 postgis="/usr/share/postgresql/9.1/contrib/postgis-1.5"
 # Load the PostGIS stuff into the newly created OpenQuake database.
 echo ".. Loading postgis functions/data into $db_name .."
-sudo -u postgres psql $psql_batch_options -d $db_name -f $postgis/postgis.sql
+psql -U $db_admin_user $psql_batch_options -d $db_name -f $postgis/postgis.sql
 
-sudo -u postgres psql $psql_batch_options -d $db_name -f $postgis/spatial_ref_sys.sql
-sudo -u postgres psql $psql_batch_options -d $db_name -f /usr/share/postgresql/9.1/contrib/postgis_comments.sql
+psql -U $db_admin_user $psql_batch_options -d $db_name -f $postgis/spatial_ref_sys.sql
+psql -U $db_admin_user $psql_batch_options -d $db_name -f /usr/share/postgresql/9.1/contrib/postgis_comments.sql
 
 # Apply database function definitions if present.
 functions_file="$schema_path/functions.sql"
 if [ -r $functions_file ]; then
     echo ".. Running functions file: $functions_file .."
-    sudo -u postgres psql $psql_batch_options -d $db_name -f $functions_file
+    psql -U $db_admin_user $psql_batch_options -d $db_name -f $functions_file
 fi
 
 echo ".. Running schema definition file: $schema_file .."
-sudo -u postgres psql $psql_batch_options -d $db_name -f $schema_file
+psql -U $db_admin_user $psql_batch_options -d $db_name -f $schema_file
 
 # Load static data if present.
 load_file="$schema_path/load.sql"
 if [ -r $load_file ]; then
     echo ".. Loading static data from: $load_file .."
-    sudo -u postgres psql $psql_batch_options -d $db_name -f $load_file
+    psql -U $db_admin_user $psql_batch_options -d $db_name -f $load_file
 fi
 
 # Apply database schema/table comments if present.
 comments_file="$schema_path/comments.sql"
 if [ -r $comments_file ]; then
     echo ".. Running comments file: $comments_file .."
-    sudo -u postgres psql $psql_batch_options -d $db_name -f $comments_file
+    psql -U $db_admin_user $psql_batch_options -d $db_name -f $comments_file
 fi
 
 # Create OpenQuake database group if not present.
-oq_group_present=`sudo -u postgres psql -c '\dg' -d postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $db_group_name | wc -l`
+oq_group_present=`psql -U $db_admin_user -c '\dg' -d postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $db_group_name | wc -l`
 if [ $oq_group_present -eq 0 ]; then
-    sudo -u postgres psql -d postgres -c "CREATE ROLE $db_group_name"
+    psql -d postgres -U $db_admin_user -c "CREATE ROLE $db_group_name"
 fi
 
 # Create OpenQuake database users/roles if/as needed.
 for role in $db_roles; do
-    role_present=`sudo -u postgres psql -c '\dg' -d postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $role | wc -l`
+    role_present=`psql -U $db_admin_user -c '\dg' -d postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $role | wc -l`
     if [ $role_present -eq 0 ]; then
-        sudo -u postgres psql -d postgres -c "CREATE ROLE $role WITH LOGIN IN GROUP openquake"
+        psql -d postgres -U $db_admin_user -c "CREATE ROLE $role WITH LOGIN IN GROUP openquake"
     fi
 done
 
@@ -236,12 +236,12 @@ done
 security_file="$schema_path/security.sql"
 if [ -r $security_file ]; then
     echo ".. Running security settings file: $security_file .."
-    sudo -u postgres psql $psql_batch_options -d $db_name -f $security_file
+    psql -U $db_admin_user $psql_batch_options -d $db_name -f $security_file
 fi
 
 # Apply database table indexes if present.
 indexes_file="$schema_path/indexes.sql"
 if [ -r $indexes_file ]; then
     echo ".. Applying index definitions: $indexes_file .."
-    sudo -u postgres psql $psql_batch_options -d $db_name -f $indexes_file
+    psql -U $db_admin_user $psql_batch_options -d $db_name -f $indexes_file
 fi

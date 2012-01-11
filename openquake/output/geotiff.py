@@ -243,7 +243,8 @@ class GeoTiffFile(writer.FileWriter):
             self._write_html_wrapper()
 
         self.target = None  # This is required to flush the file
-        self.file.close()
+        if self.file:
+            self.file.close()
 
     def _write_html_wrapper(self):
         """Write an html wrapper that embeds the geotiff in an <img> tag.
@@ -331,7 +332,8 @@ class LossMapGeoTiffFile(GeoTiffFile):
         #     pass
 
         self.target = None  # This required to flush the file
-        self.file.close()
+        if self.file:
+            self.file.close()
 
     def _generate_colorscale(self):
         """

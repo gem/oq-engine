@@ -20,7 +20,6 @@
 
 import os
 import re
-import urlparse
 
 from ConfigParser import ConfigParser
 from datetime import datetime
@@ -31,12 +30,11 @@ from lxml import etree
 
 from openquake import flags
 from openquake import kvs
-from openquake import logs
 from openquake import shapes
 from openquake import xml
 from openquake.parser import exposure
 from openquake.db.models import (
-    OqCalculation, OqParams, OqUser, CalcStats, FloatArrayField,
+    OqCalculation, OqJobProfile, OqUser, CalcStats, FloatArrayField,
     CharArrayField, InputSet, Input)
 from openquake.job import config as conf
 from openquake.job import params as job_params
@@ -98,7 +96,10 @@ def parse_config_file(config_file):
 
 def prepare_config_parameters(params, sections):
     """
-    Pre-process configuration parameters removing unknown ones.
+    Pre-process configuration parameters to:
+        - remove unknown parameters
+        - expand file paths to make them absolute
+        - set default parameter values
     """
 
     calc_mode = CALCULATION_MODE[params['CALCULATION_MODE']]
@@ -125,6 +126,21 @@ def prepare_config_parameters(params, sections):
             continue
 
         new_params[name] = os.path.join(params['BASE_PATH'], new_params[name])
+
+    # Set default parameters (if applicable).
+    # TODO(LB): This probably isn't the best place for this code (since we may
+    # want to implement similar default param logic elsewhere). For now,
+    # though, it will have to do.
+
+    # If job is classical and hazard+risk:
+    if calc_mode == 'classical' and set(['HAZARD', 'RISK']).issubset(sections):
+        if params.get('COMPUTE_MEAN_HAZARD_CURVE'):
+            # If this param is already defined, display a message to the user
+            # that this config param is being ignored and set to the default:
+            print "Ignoring COMPUTE_MEAN_HAZARD_CURVE; defaulting to 'true'."
+        # The value is set to a string because validators still expected job
+        # config params to be strings at this point:
+        new_params['COMPUTE_MEAN_HAZARD_CURVE'] = 'true'
 
     return new_params, sections
 
@@ -235,7 +251,8 @@ def prepare_job(params, sections):
 
     job = OqCalculation(owner=owner, path=None)
 
-    oqp = OqParams(input_set=input_set, calc_mode=calc_mode, job_type=job_type)
+    oqp = OqJobProfile(input_set=input_set, calc_mode=calc_mode,
+                       job_type=job_type)
 
     _insert_input_files(params, input_set)
     _store_input_parameters(params, calc_mode, oqp)
