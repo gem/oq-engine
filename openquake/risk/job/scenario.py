@@ -46,9 +46,9 @@ class ScenarioEventBasedMixin(general.RiskJobMixin):
     params loaded from the job configuration file."""
 
     # pylint: disable=R0914
-    @general.preload
     def execute(self):
         """Entry point for triggering the computation."""
+        general.preload(self)
 
         LOGGER.debug("Executing scenario risk computation.")
         LOGGER.debug("This will calculate mean and standard deviation loss"

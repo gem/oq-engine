@@ -23,8 +23,6 @@ from openquake.db.models import model_equals
 from openquake.db.models import GmfData
 from openquake.db.models import Organization
 
-from tests.utils.helpers import skipit
-
 
 class ModelEqualsTestCase(unittest.TestCase):
     """Tests for :function:`model_equals`, a function to compare the contents

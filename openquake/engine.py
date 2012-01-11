@@ -412,7 +412,7 @@ def _job_from_file(config_file, output_type, owner_username='openquake'):
     assert output_type in ('db', 'xml')
 
     params, sections = _parse_config_file(config_file)
-    params = _prepare_config_parameters(params)
+    params, sections = _prepare_config_parameters(params, sections)
     job_profile = _prepare_job(params, sections)
 
     validator = jobconf.default_validators(sections, params)
@@ -487,6 +487,54 @@ def _parse_config_file(config_file):
     params['BASE_PATH'] = base_path
 
     return params, list(set(sections))
+
+
+def _prepare_config_parameters(params, sections):
+    """
+    Pre-process configuration parameters removing unknown ones.
+    """
+
+    calc_mode = CALCULATION_MODE[params['CALCULATION_MODE']]
+    new_params = dict()
+
+    for name, value in params.items():
+        try:
+            param = PARAMS[name]
+        except KeyError:
+            print 'Ignoring unknown parameter %r' % name
+            continue
+
+        if calc_mode not in param.modes:
+            msg = "Ignoring %s in %s, it's meaningful only in "
+            msg %= (name, calc_mode)
+            print msg, ', '.join(param.modes)
+            continue
+
+        new_params[name] = value
+
+    # make file paths absolute
+    for name in PATH_PARAMS:
+        if name not in new_params:
+            continue
+
+        new_params[name] = os.path.join(params['BASE_PATH'], new_params[name])
+
+    # Set default parameters (if applicable).
+    # TODO(LB): This probably isn't the best place for this code (since we may
+    # want to implement similar default param logic elsewhere). For now,
+    # though, it will have to do.
+
+    # If job is classical and hazard+risk:
+    if calc_mode == 'classical' and set(['HAZARD', 'RISK']).issubset(sections):
+        if params.get('COMPUTE_MEAN_HAZARD_CURVE'):
+            # If this param is already defined, display a message to the user
+            # that this config param is being ignored and set to the default:
+            print "Ignoring COMPUTE_MEAN_HAZARD_CURVE; defaulting to 'true'."
+        # The value is set to a string because validators still expected job
+        # config params to be strings at this point:
+        new_params['COMPUTE_MEAN_HAZARD_CURVE'] = 'true'
+
+    return new_params, sections
 
 
 def _insert_input_files(params, input_set):
@@ -717,7 +765,11 @@ def _launch_calculation(calc_proxy, sections):
         List of config file sections. Example::
             ['general', 'HAZARD', 'RISK']
     """
-    calc_proxy._record_initial_stats()  # move this to the job constructor
+    # This should be moved to the analyze() method of the base Calculator
+    # class, or something like that.
+    # Ignoring 'Access to a protected member'
+    # pylint: disable=W0212
+    calc_proxy._record_initial_stats()
     calc_proxy.to_kvs()
 
     output_dir = os.path.join(calc_proxy.base_path, calc_proxy['OUTPUT_DIR'])
@@ -730,6 +782,8 @@ def _launch_calculation(calc_proxy, sections):
         if not job_type.upper() in sections:
             continue
 
+        print job_type
+        print calc_mode
         calc_class = CALCS[job_type][calc_mode]
 
         calculator = calc_class(calc_proxy)
@@ -754,7 +808,7 @@ def import_job_profile(path_to_cfg):
         clean.
     """
     params, sections = _parse_config_file(path_to_cfg)
-    params = _prepare_config_parameters(params)
+    params, sections = prepare_config_parameters(params, sections)
 
     validator = jobconf.default_validators(sections, params)
     is_valid, errors = validator.is_valid()

@@ -18,6 +18,7 @@
                         <xs:element ref="lossCurveList"/>
                         <xs:element ref="lossRatioCurveList"/>
                         <xs:element ref="lossMap"/>
+                        <xs:element ref="benefitCostRatioMap"/>
                     </xs:choice>
                 </xs:sequence>
             </xs:extension>
