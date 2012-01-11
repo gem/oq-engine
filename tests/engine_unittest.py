@@ -103,8 +103,8 @@ class EngineAPITestCase(unittest.TestCase):
             include_area_sources=True,
             treat_area_source_as='pointsources',
             area_source_discretization=0.1,
-            area_source_magnitude_scaling_relationship=
-                'W&C 1994 Mag-Length Rel.',
+            area_source_magnitude_scaling_relationship=(
+                'W&C 1994 Mag-Length Rel.'),
             # point sources:
             include_grid_sources=False,
             treat_grid_source_as='pointsources',
