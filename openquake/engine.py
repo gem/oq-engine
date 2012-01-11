@@ -434,7 +434,11 @@ def _launch_calculation(calc_proxy, sections):
         List of config file sections. Example::
             ['general', 'HAZARD', 'RISK']
     """
-    calc_proxy._record_initial_stats()  # move this to the job constructor
+    # This should be moved to the analyze() method of the base Calculator
+    # class, or something like that.
+    # Ignoring 'Access to a protected member'
+    # pylint: disable=W0212
+    calc_proxy._record_initial_stats()
     calc_proxy.to_kvs()
 
     output_dir = os.path.join(calc_proxy.base_path, calc_proxy['OUTPUT_DIR'])
