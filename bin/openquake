@@ -82,19 +82,6 @@ flags.DEFINE_boolean('help', False, 'Show this help')
 flags.DEFINE_boolean('version', False, 'Show version information')
 
 
-def register_mixins():
-    from openquake.job import Job
-    from openquake.output import geotiff
-    from openquake.parser import exposure
-    from openquake.parser import vulnerability
-
-    from openquake.hazard import job as hazjob
-    from openquake.hazard import opensha
-    from openquake.hazard.disagg import core as disagg
-    from openquake.risk.job import general
-    from openquake.risk.job import probabilistic
-
-
 if __name__ == '__main__':
     if len(sys.argv) == 1:
         sys.argv.append('--help')
@@ -123,8 +110,8 @@ if __name__ == '__main__':
     # Generate output
 
     from openquake import job
-    register_mixins()
+    from openquake import engine
     try:
-        job.run_job(FLAGS.config_file, FLAGS.output_type)
+        engine.run_job(FLAGS.config_file, FLAGS.output_type)
     except job.config.ValidationException as e:
         print str(e)
