@@ -35,6 +35,8 @@ from openquake.job import config as job_config
 
 from openquake.risk.common import compute_loss_curve
 from openquake.risk.job import general
+from openquake.risk.job.general import (conditional_loss_poes,
+                                        compute_conditional_loss)
 
 LOGGER = logs.LOG
 
@@ -42,10 +44,10 @@ LOGGER = logs.LOG
 class ClassicalPSHABasedMixin(general.RiskJobMixin):
     """Mixin for Classical PSHA Based Risk Job"""
 
-    @general.preload
-    @general.output
     def execute(self):
         """ execute -- general mixin entry point """
+        general.preload(self)
+
         celery_tasks = []
         for block_id in self.calc_proxy.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s"
@@ -66,6 +68,11 @@ class ClassicalPSHABasedMixin(general.RiskJobMixin):
                 # TODO(jmc): Cancel and respawn this task
                 return
 
+        if self.is_benefit_cost_ratio():
+            general.write_output_bcr(self)
+        else:
+            general.write_output(self)
+
     def _get_db_curve(self, site):
         """Read hazard curve data from the DB"""
         gh = geohash.encode(site.latitude, site.longitude, precision=12)
@@ -76,6 +83,13 @@ class ClassicalPSHABasedMixin(general.RiskJobMixin):
             where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
 
         return Curve(zip(job.oq_job_profile.imls, hc.poes))
+
+    def is_benefit_cost_ratio(self):
+        """
+        Return True if current calculation mode is Benefit-Cost Ratio.
+        """
+        return self.job_profile.params[job_config.CALCULATION_MODE] \
+                == job_config.BCR_CLASSICAL_MODE
 
     def compute_risk(self, block_id):
         """This task computes risk for a block of sites. It requires to have
@@ -88,9 +102,7 @@ class ClassicalPSHABasedMixin(general.RiskJobMixin):
         Calls either :meth:`_compute_bcr` or :meth:`_compute_loss` depending
         on the calculation mode.
         """
-
-        if (self.calc_proxy.params[job_config.CALCULATION_MODE]
-            == job_config.BCR_CLASSICAL_MODE):
+        if self.is_benefit_cost_ratio():
             return self._compute_bcr(block_id)
         else:
             return self._compute_loss(block_id)
@@ -119,11 +131,11 @@ class ClassicalPSHABasedMixin(general.RiskJobMixin):
                     loss_curve = self.compute_loss_curve(point,
                             loss_ratio_curve, asset)
 
-                    for loss_poe in general.conditional_loss_poes(
-                        self.calc_proxy.params):
+                    for loss_poe in conditional_loss_poes(
+                        self.job_profile.params):
 
-                        general.compute_conditional_loss(
-                                self.calc_proxy.job_id, point.column,
+                        compute_conditional_loss(
+                                self.job_profile.job_id, point.column,
                                 point.row, loss_curve, asset, loss_poe)
 
         return True
@@ -133,11 +145,9 @@ class ClassicalPSHABasedMixin(general.RiskJobMixin):
         Calculate and store in the kvs the benefit-cost ratio data for block.
 
         A value is stored with key :func:`openquake.kvs.tokens.bcr_block_key`.
-        See :func:`openquake.risk.general.compute_bcr_for_block` for return
-        value spec.
+        See :func:`openquake.risk.job.general.compute_bcr_for_block` for result
+        data structure spec.
         """
-        result = []
-
         points = list(general.Block.from_kvs(block_id).grid(
             self.calc_proxy.region))
         hazard_curves = dict((point.site, self._get_db_curve(point.site))
@@ -150,14 +160,14 @@ class ClassicalPSHABasedMixin(general.RiskJobMixin):
                     vuln_function, hazard_curve)
             return compute_loss_curve(loss_ratio_curve, asset['assetValue'])
 
-        result = general.compute_bcr_for_block(self.calc_proxy.job_id, points,
+        bcr = general.compute_bcr_for_block(self.calc_proxy.job_id, points,
             get_loss_curve, float(self.calc_proxy.params['INTEREST_RATE']),
             float(self.calc_proxy.params['ASSET_LIFE_EXPECTANCY'])
         )
         bcr_block_key = kvs.tokens.bcr_block_key(self.calc_proxy.job_id,
                                                  block_id)
-        kvs.set_value_json_encoded(bcr_block_key, result)
-        LOGGER.debug('bcr result for block %s: %r', block_id, result)
+        kvs.set_value_json_encoded(bcr_block_key, bcr)
+        LOGGER.debug('bcr result for block %s: %r', block_id, bcr)
         return True
 
     def compute_loss_curve(self, point, loss_ratio_curve, asset):

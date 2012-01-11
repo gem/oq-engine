@@ -59,7 +59,6 @@ class SchemaValidationTestCase(unittest.TestCase):
             if os.path.isdir(example_path):
                 continue
             xml_doc = etree.parse(example_path)
-            loaded_xml = xml_doc.getroot()
             try:
                 xmlschema.assertValid(xml_doc)
             except etree.DocumentInvalid, e:

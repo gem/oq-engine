@@ -23,9 +23,7 @@ event based calculation.
 """
 
 import math
-import numpy
 import unittest
-import json
 
 from tests.utils import helpers
 from tests.utils.helpers import patch
