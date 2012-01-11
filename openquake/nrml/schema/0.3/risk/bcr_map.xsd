@@ -30,7 +30,7 @@
         <xs:complexContent>
             <xs:extension base="FieldNode">
                 <xs:sequence minOccurs="1" maxOccurs="unbounded">
-                    <xs:element name="benefitCostRatio" type="BCRType"/>
+                    <xs:element name="benefitCostRatioValue" type="BCRType"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
@@ -38,9 +38,9 @@
 
     <xs:complexType name="BCRType">
         <xs:sequence>
-            <xs:choice minOccurs="1" maxOccurs="1">
-                <xs:element name="value" type="NonNegativeDoubleType"/>
-            </xs:choice>
+            <xs:element name="ExpectedAnnualLossOriginal" type="NonNegativeDoubleType"/>
+            <xs:element name="ExpectedAnnualLossRetrofitted" type="NonNegativeDoubleType"/>
+            <xs:element name="benefitCostRatio" type="NonNegativeDoubleType"/>
         </xs:sequence>
         <xs:attribute name="assetRef" type="xs:ID" use="required"/>
     </xs:complexType>
