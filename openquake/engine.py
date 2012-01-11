@@ -808,7 +808,7 @@ def import_job_profile(path_to_cfg):
         clean.
     """
     params, sections = _parse_config_file(path_to_cfg)
-    params, sections = prepare_config_parameters(params, sections)
+    params, sections = _prepare_config_parameters(params, sections)
 
     validator = jobconf.default_validators(sections, params)
     is_valid, errors = validator.is_valid()
