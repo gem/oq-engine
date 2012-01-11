@@ -28,6 +28,57 @@ import redis
 from openquake.utils import config
 
 
+# Predefined kvs keys for calculator progress/statistics counters.
+# Calculators will maintain totals/incremental counter values of interest.
+# These can be used to provide feedback to the user and/or terminate the
+# job in case of failures. See e.g.
+#   https://bugs.launchpad.net/openquake/+bug/907703
+STATS_KEYS = {
+    # Classical PSHA kvs statistics db keys, "t" and "i" mark a totals
+    # and an incremental counter respectively.
+    "hcls_realizations": ("classical:realizations", "h", "t"),
+    "hcls_crealization": ("classical:crealization", "h", "i"),
+    "hcls_sites": ("classical:sites", "h", "t"),
+    "hcls_block_size": ("classical:block_size", "h", "t"),
+    "hcls_blocks": ("classical:blocks", "h", "t"),
+    "hcls_cblock": ("classical:cblock", "h", "i"),
+}
+
+
+def pk_set(job_id, skey, value):
+    """Set the value for a predefined statistics key.
+
+    :param int job_id: identifier of the job in question
+    :param string skey: predefined statistics key
+    :param value: the desired value
+    """
+    key = key_name(job_id, *STATS_KEYS[skey])
+    conn = _redis()
+    conn.set(key, value)
+
+
+def pk_inc(job_id, skey):
+    """Increment the value for a predefined statistics key.
+
+    :param int job_id: identifier of the job in question
+    :param string skey: predefined statistics key
+    """
+    key = key_name(job_id, *STATS_KEYS[skey])
+    conn = _redis()
+    conn.incr(key)
+
+
+def pk_get(job_id, skey):
+    """Get the value for a predefined statistics key.
+
+    :param int job_id: identifier of the job in question
+    :param string skey: predefined statistics key
+    """
+    key = key_name(job_id, *STATS_KEYS[skey])
+    conn = _redis()
+    return conn.get(key)
+
+
 def _redis():
     """Return a connection to the redis store."""
     host = config.get("kvs", "host")
@@ -39,14 +90,14 @@ def _redis():
     return redis.Redis(**args)
 
 
-def key_name(job_id, func, area="h", counter_type="i"):
+def key_name(job_id, fragment, area="h", counter_type="i"):
     """Return the redis key name for the given job/function.
 
     The areas in use are 'h' (for hazard) and 'r' (for risk).
     The counter types in use are 'i' (for incremental counters) and
     't' (for totals).
     """
-    return "oqs:%s:%s:%s:%s" % (job_id, area, counter_type, func)
+    return "oqs:%s:%s:%s:%s" % (job_id, area, counter_type, fragment)
 
 
 def progress_indicator(func):
@@ -92,9 +143,21 @@ def incr_counter(job_id, key):
     conn.incr(key)
 
 
-def delete_job_counters(job):
-    """Delete the progress indication counters for the given job."""
+def get_counter(job_id, key, counter_type="i"):
+    """Get the value for the given key.
+
+    The counter types in use are 'i' (for incremental counters) and
+    't' (for totals).
+    """
+    key = key_name(job_id, key, counter_type=counter_type)
     conn = _redis()
-    keys = conn.keys("oqs:%s*" % job)
+    value = conn.get(key)
+    return int(value) if value else value
+
+
+def delete_job_counters(job_id):
+    """Delete the progress indication counters for the given `job_id`."""
+    conn = _redis()
+    keys = conn.keys("oqs:%s*" % job_id)
     if keys:
         conn.delete(*keys)

@@ -28,7 +28,6 @@ import os
 import random
 import redis
 import shutil
-import subprocess
 import tempfile
 import textwrap
 import time
@@ -771,3 +770,16 @@ class ConfigTestMixin(TestMixin):
         os.environ["OQ_SITE_CFG_PATH"] = site_path
         config.Config().cfg.clear()
         config.Config()._load_from_file()
+
+
+class RedisTestMixin(object):
+    """Redis-related utilities for testing."""
+
+    def connect(self, *args, **kwargs):
+        host = config.get("kvs", "host")
+        port = config.get("kvs", "port")
+        port = int(port) if port else 6379
+        stats_db = config.get("kvs", "stats_db")
+        stats_db = int(stats_db) if stats_db else 15
+        args = {"host": host, "port": port, "db": stats_db}
+        return redis.Redis(**args)

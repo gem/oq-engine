@@ -709,7 +709,16 @@ CREATE TABLE uiapi.oq_job_profile (
         CONSTRAINT compute_mean_hazard_curve_is_set
         CHECK(
             ((calc_mode IN ('classical', 'classical_bcr'))
-             AND (compute_mean_hazard_curve IS NOT NULL))
+            AND
+            (
+                -- If the job is hazard+risk and classical,
+                -- make sure compute_mean_hazard_curve is TRUE.
+                ((ARRAY['hazard', 'risk']::VARCHAR[] <@ job_type) AND (compute_mean_hazard_curve = TRUE))
+                OR
+                -- If the job is just classical (and not hazard+risk),
+                -- just make sure compute_mean_hazard_curve is not null.
+                ((NOT ARRAY['hazard', 'risk']::VARCHAR[] <@ job_type) AND (compute_mean_hazard_curve IS NOT NULL))
+            ))
             OR
             ((calc_mode NOT IN ('classical', 'classical_bcr'))
              AND (compute_mean_hazard_curve IS NULL))),
