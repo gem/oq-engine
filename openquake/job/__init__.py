@@ -54,7 +54,6 @@ class Job(object):
         job = Job(params, job_id)
         return job
 
-
     @staticmethod
     def get_status_from_db(job_id):
         """

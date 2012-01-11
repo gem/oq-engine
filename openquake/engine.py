@@ -316,7 +316,6 @@ def _prepare_job(params, sections, owner_username='openquake'):
 
         return job_profile
 
-
     # TODO specify the owner as a command line parameter
     owner = OqUser.objects.get(user_name=owner_username)
 
