@@ -29,7 +29,7 @@ from openquake import logs
 from openquake.input import logictree
 from openquake.java import list_to_jdouble_array
 
-from openquake.job.mixins import Mixin
+from openquake.calculators.base import Calculator
 
 
 LOG = logs.LOG
@@ -180,11 +180,11 @@ def set_gmpe_params(gmpe_map, params):
         gmpe_map.put(tect_region, gmpe)
 
 
-class BasePSHAMixin(Mixin):
+class BasePSHAMixin(Calculator):
     """Contains common functionality for PSHA Mixins."""
 
-    def __init__(self, *args, **kwargs):
-        Mixin.__init__(self, *args, **kwargs)
+    def __init__(self, job_profile):
+        super(BasePSHAMixin, self).__init__(job_profile)
 
         basepath = self.job_profile.params.get('BASE_PATH')
 
@@ -197,6 +197,10 @@ class BasePSHAMixin(Mixin):
             gmpe_lt = self.job_profile.params.get('GMPE_LOGIC_TREE_FILE_PATH')
             self.calc = logictree.LogicTreeProcessor(basepath, source_model_lt,
                                                      gmpe_lt)
+
+    def execute(self):
+        """Calculation logic goes here; subclasses must implement this."""
+        raise NotImplementedError()
 
     def store_source_model(self, seed):
         """Generates a source model from the source model logic tree."""

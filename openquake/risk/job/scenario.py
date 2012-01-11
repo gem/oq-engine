@@ -338,6 +338,3 @@ def collect_block_data(loss_data, asset_site, asset_data):
     data = loss_data.get(asset_site, [])
     data.append(asset_data)
     loss_data[asset_site] = data
-
-
-general.RiskJobMixin.register("Scenario", ScenarioEventBasedMixin)
