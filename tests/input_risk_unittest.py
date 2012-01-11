@@ -21,14 +21,13 @@
 import unittest
 import os
 
-from openquake.job import Job
-from openquake.job.mixins import Mixin
-from openquake.output.hazard import *
 from openquake.input.exposure import ExposureDBWriter
+from openquake.output.hazard import GmfDBWriter
+from openquake.output.hazard import HazardCurveDBWriter
 from openquake.parser.exposure import ExposurePortfolioFile
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
-from openquake.shapes import Site, Region
+from openquake.shapes import Site
 
 from tests.utils import helpers
 
@@ -120,19 +119,20 @@ class HazardCurveDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def test_read_curve(self):
         """Verify _get_db_curve."""
-        with Mixin(helpers.create_job({}, job_id=self.job.id),
-                   ClassicalPSHABasedMixin) as mixin:
-            curve1 = mixin._get_db_curve(Site(-122.2, 37.5))
-            self.assertEquals(list(curve1.abscissae),
-                              [0.005, 0.007, 0.0098, 0.0137])
-            self.assertEquals(list(curve1.ordinates),
-                              [0.354, 0.114, 0.023, 0.002])
+        the_job = helpers.create_job({}, job_id=self.job.id)
+        calculator = ClassicalPSHABasedMixin(the_job)
 
-            curve2 = mixin._get_db_curve(Site(-122.1, 37.5))
-            self.assertEquals(list(curve2.abscissae),
-                              [0.005, 0.007, 0.0098, 0.0137])
-            self.assertEquals(list(curve2.ordinates),
-                              [0.454, 0.214, 0.123, 0.102])
+        curve1 = calculator._get_db_curve(Site(-122.2, 37.5))
+        self.assertEquals(list(curve1.abscissae),
+                          [0.005, 0.007, 0.0098, 0.0137])
+        self.assertEquals(list(curve1.ordinates),
+                          [0.354, 0.114, 0.023, 0.002])
+
+        curve2 = calculator._get_db_curve(Site(-122.1, 37.5))
+        self.assertEquals(list(curve2.abscissae),
+                          [0.005, 0.007, 0.0098, 0.0137])
+        self.assertEquals(list(curve2.ordinates),
+                          [0.454, 0.214, 0.123, 0.102])
 
 
 class GmfDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
@@ -157,42 +157,46 @@ class GmfDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
         params = {
             'REGION_VERTEX': '40,-117, 42,-117, 42,-116, 40,-116',
             'REGION_GRID_SPACING': '1.0'}
-        with Mixin(helpers.create_job(params, job_id=self.job.id),
-                   ProbabilisticEventMixin) as mixin:
-            keys = mixin._sites_to_gmf_keys([Site(-117, 40), Site(-116, 42)])
 
-            self.assertEquals(["0!0", "2!1"], keys)
+        the_job = helpers.create_job(params, job_id=self.job.id)
+        calculator = ProbabilisticEventMixin(the_job)
+
+        keys = calculator._sites_to_gmf_keys([Site(-117, 40), Site(-116, 42)])
+
+        self.assertEquals(["0!0", "2!1"], keys)
 
     def test_read_gmfs(self):
         """Verify _get_db_gmfs."""
         params = {
             'REGION_VERTEX': '40,-117, 42,-117, 42,-116, 40,-116',
             'REGION_GRID_SPACING': '1.0'}
-        with Mixin(helpers.create_job(params, job_id=self.job.id),
-                   ProbabilisticEventMixin) as mixin:
-            self.assertEquals(3, len(mixin._gmf_db_list(self.job.id)))
 
-            # only the keys in gmfs are used
-            gmfs = mixin._get_db_gmfs([], self.job.id)
-            self.assertEquals({}, gmfs)
+        the_job = helpers.create_job(params, job_id=self.job.id)
+        calculator = ProbabilisticEventMixin(the_job)
 
-            # only the keys in gmfs are used
-            sites = [Site(lon, lat)
-                            for lon in xrange(-117, -115)
-                            for lat in xrange(40, 43)]
-            gmfs = mixin._get_db_gmfs(sites, self.job.id)
-            # avoid rounding errors
-            for k, v in gmfs.items():
-                gmfs[k] = [round(i, 1) for i in v]
+        self.assertEquals(3, len(calculator._gmf_db_list(self.job.id)))
 
-            self.assertEquals({
-                    '0!0': [0.1, 0.5, 0.0],
-                    '0!1': [0.2, 0.6, 0.0],
-                    '1!0': [0.4, 0.8, 1.3],
-                    '1!1': [0.3, 0.7, 1.2],
-                    '2!0': [0.0, 0.0, 1.0],
-                    '2!1': [0.0, 0.0, 1.1],
-                    }, gmfs)
+        # only the keys in gmfs are used
+        gmfs = calculator._get_db_gmfs([], self.job.id)
+        self.assertEquals({}, gmfs)
+
+        # only the keys in gmfs are used
+        sites = [Site(lon, lat)
+                        for lon in xrange(-117, -115)
+                        for lat in xrange(40, 43)]
+        gmfs = calculator._get_db_gmfs(sites, self.job.id)
+        # avoid rounding errors
+        for k, v in gmfs.items():
+            gmfs[k] = [round(i, 1) for i in v]
+
+        self.assertEquals({
+                '0!0': [0.1, 0.5, 0.0],
+                '0!1': [0.2, 0.6, 0.0],
+                '1!0': [0.4, 0.8, 1.3],
+                '1!1': [0.3, 0.7, 1.2],
+                '2!0': [0.0, 0.0, 1.0],
+                '2!1': [0.0, 0.0, 1.1],
+                }, gmfs)
 
 
 class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
@@ -225,14 +229,14 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
                         key=lambda e: e.value)
 
         def _to_site(pg_point):
-            return shapes.Site(pg_point.x, pg_point.y)
+            return Site(pg_point.x, pg_point.y)
 
         self.assertEquals('asset_01', assets[0].asset_ref)
         self.assertEquals(150000, assets[0].value)
         self.assertEquals('RC/DMRF-D/LR',
                           assets[0].taxonomy)
         self.assertEquals('RC-LR-PC', assets[0].structure_type)
-        self.assertEquals(shapes.Site(9.15000, 45.16667),
+        self.assertEquals(Site(9.15000, 45.16667),
                           _to_site(assets[0].site))
 
         self.assertEquals('asset_02', assets[1].asset_ref)
@@ -240,7 +244,7 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals('RC/DMRF-D/LR',
                           assets[1].taxonomy)
         self.assertEquals('RC-HR-PC', assets[1].structure_type)
-        self.assertEquals(shapes.Site(9.15333, 45.12200),
+        self.assertEquals(Site(9.15333, 45.12200),
                           _to_site(assets[1].site))
 
         self.assertEquals('asset_03', assets[2].asset_ref)
@@ -248,5 +252,5 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.assertEquals('RC/DMRF-D/LR',
                           assets[2].taxonomy)
         self.assertEquals('RC-LR-PC', assets[2].structure_type)
-        self.assertEquals(shapes.Site(9.14777, 45.17999),
+        self.assertEquals(Site(9.14777, 45.17999),
                           _to_site(assets[2].site))
