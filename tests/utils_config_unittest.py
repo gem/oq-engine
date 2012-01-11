@@ -289,50 +289,38 @@ class IsReadableTestCase(TestMixin, unittest.TestCase):
         self.assertTrue(config.Config().is_readable())
 
 
-class HazardBlockSizeTestCase(ConfigTestMixin, unittest.TestCase):
+class HazardBlockSizeTestCase(unittest.TestCase):
     """Tests the behaviour of utils.config.hazard_block_size()."""
-
-    def setUp(self):
-        self.setup_config()
-
-    def tearDown(self):
-        self.teardown_config()
 
     def test_not_configured(self):
         """
         The hazard block size was not set in openquake.cfg, the default
         is returned.
         """
-        self.assertEqual(8192, config.hazard_block_size())
+        with patch("openquake.utils.config.get") as mget:
+            mget.return_value = None
+            self.assertEqual(8192, config.hazard_block_size())
 
     def test_not_configured_default_overriden(self):
         """
         The hazard block size was not set in openquake.cfg, the default
         is specified by the caller is returned.
         """
-        self.assertEqual(333, config.hazard_block_size(333))
+        with patch("openquake.utils.config.get") as mget:
+            mget.return_value = None
+            self.assertEqual(333, config.hazard_block_size(333))
 
     def test_configured(self):
         """The hazard block size *was* configured in openquake.cfg"""
-        content = '''
-            [hazard]
-            block_size=33'''
-        local_path = self.touch(content=textwrap.dedent(content))
-        os.environ["OQ_LOCAL_CFG_PATH"] = local_path
-        config.Config().cfg.clear()
-        config.Config()._load_from_file()
-        self.assertEqual(33, config.hazard_block_size())
+        with patch("openquake.utils.config.get") as mget:
+            mget.return_value = "33"
+            self.assertEqual(33, config.hazard_block_size())
 
     def test_configuration_invalid(self):
         """
         The hazard block size *was* configured in openquake.cfg but
         the setting is not a valid number.
         """
-        content = '''
-            [hazard]
-            block_size=not today!'''
-        site_path = self.touch(content=textwrap.dedent(content))
-        os.environ["OQ_SITE_CFG_PATH"] = site_path
-        config.Config().cfg.clear()
-        config.Config()._load_from_file()
-        self.assertRaises(ValueError, config.hazard_block_size)
+        with patch("openquake.utils.config.get") as mget:
+            mget.return_value = "not a number"
+            self.assertRaises(ValueError, config.hazard_block_size)

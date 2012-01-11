@@ -39,7 +39,6 @@ from openquake import xml
 from openquake.flags import FLAGS
 from openquake.job import config as jobconf
 from openquake.job import CalculationProxy
-from openquake.job import prepare_config_parameters
 from openquake.supervising import supervisor
 
 from openquake.db.models import (CharArrayField, FloatArrayField, Input,
@@ -53,6 +52,83 @@ from openquake.risk.calc import CALCULATORS as RISK_CALCS
 CALCS = dict(hazard=HAZ_CALCS, risk=RISK_CALCS)
 
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
+
+
+def run_job(job_file, output_type):
+    """
+    Given a job_file, run the job.
+
+    :param job_file: the path of the configuration file for the job
+    :type job_file: string
+    :param output_type: the desired format for the results, one of 'db', 'xml'
+    :type output_type: string
+    """
+    a_job = job_from_file(job_file, output_type)
+    a_job.set_status('running')
+
+    # closing all db connections to make sure they're not shared between
+    # supervisor and job executor processes. otherwise if one of them closes
+    # the connection it immediately becomes unavailable for other
+    close_connection()
+
+    job_pid = os.fork()
+    if not job_pid:
+        # job executor process
+        try:
+            logs.init_logs_amqp_send(level=FLAGS.debug, job_id=a_job.job_id)
+            launch(a_job)
+        except Exception, ex:
+            logs.LOG.critical("Job failed with exception: '%s'" % str(ex))
+            a_job.set_status('failed')
+            raise
+        else:
+            a_job.set_status('succeeded')
+        return
+
+    supervisor_pid = os.fork()
+    if not supervisor_pid:
+        # supervisor process
+        supervisor_pid = os.getpid()
+        job = OqCalculation.objects.get(id=a_job.job_id)
+        job.supervisor_pid = supervisor_pid
+        job.job_pid = job_pid
+        job.save()
+        supervisor.supervise(job_pid, a_job.job_id)
+        return
+
+    # parent process
+
+    # ignore Ctrl-C as well as supervisor process does. thus only
+    # job executor terminates on SIGINT
+    supervisor.ignore_sigint()
+    # wait till both child processes are done
+    os.waitpid(job_pid, 0)
+    os.waitpid(supervisor_pid, 0)
+
+
+def launch(a_job):
+    """Based on the behavior specified in the configuration, mix in the correct
+    behavior for job and execute it.
+
+    :param a_job:
+        :class:`openquake.job.Job` instance.
+    """
+    # TODO: This needs to be done as a pre-execution step of calculation.
+    a_job._record_initial_stats()  # pylint: disable=W0212
+
+    output_dir = os.path.join(a_job.base_path, a_job['OUTPUT_DIR'])
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    for job_type in ('hazard', 'risk'):
+        if not job_type.upper() in a_job.sections:
+            continue
+
+        calc_mode = a_job['CALCULATION_MODE']
+        calc_class = CALCS[job_type][calc_mode]
+
+        calculator = calc_class(a_job)
+        calculator.execute()
 
 
 def _job_from_file(config_file, output_type, owner_username='openquake'):
@@ -157,6 +233,54 @@ def _parse_config_file(config_file):
     params['BASE_PATH'] = base_path
 
     return params, list(set(sections))
+
+
+def prepare_config_parameters(params, sections):
+    """
+    Pre-process configuration parameters removing unknown ones.
+    """
+
+    calc_mode = CALCULATION_MODE[params['CALCULATION_MODE']]
+    new_params = dict()
+
+    for name, value in params.items():
+        try:
+            param = PARAMS[name]
+        except KeyError:
+            print 'Ignoring unknown parameter %r' % name
+            continue
+
+        if calc_mode not in param.modes:
+            msg = "Ignoring %s in %s, it's meaningful only in "
+            msg %= (name, calc_mode)
+            print msg, ', '.join(param.modes)
+            continue
+
+        new_params[name] = value
+
+    # make file paths absolute
+    for name in PATH_PARAMS:
+        if name not in new_params:
+            continue
+
+        new_params[name] = os.path.join(params['BASE_PATH'], new_params[name])
+
+    # Set default parameters (if applicable).
+    # TODO(LB): This probably isn't the best place for this code (since we may
+    # want to implement similar default param logic elsewhere). For now,
+    # though, it will have to do.
+
+    # If job is classical and hazard+risk:
+    if calc_mode == 'classical' and set(['HAZARD', 'RISK']).issubset(sections):
+        if params.get('COMPUTE_MEAN_HAZARD_CURVE'):
+            # If this param is already defined, display a message to the user
+            # that this config param is being ignored and set to the default:
+            print "Ignoring COMPUTE_MEAN_HAZARD_CURVE; defaulting to 'true'."
+        # The value is set to a string because validators still expected job
+        # config params to be strings at this point:
+        new_params['COMPUTE_MEAN_HAZARD_CURVE'] = 'true'
+
+    return new_params, sections
 
 
 def _insert_input_files(params, input_set):
@@ -294,6 +418,7 @@ def _store_input_parameters(params, calc_mode, job_profile):
         job_profile.damping = None
 
 
+<<<<<<< HEAD
 def run_calculation(job_profile, params, sections, output_type='db'):
     """Given an :class:`openquake.db.models.OqJobProfile` object, create a new
     :class:`openquake.db.models.OqCalculation` object and run the calculation.
