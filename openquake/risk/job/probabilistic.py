@@ -52,10 +52,9 @@ class ProbabilisticEventMixin(Calculator):
         super(ProbabilisticEventMixin, self).__init__(job_profile)
         self.vuln_curves = None
 
-    @general.preload
-    @general.output
     def execute(self):
         """Execute the job."""
+        general.preload(self)
 
         aggregate_curve = prob.AggregateLossCurve()
 
@@ -77,10 +76,13 @@ class ProbabilisticEventMixin(Calculator):
                 return
 
         if self.is_benefit_cost_ratio():
+            general.write_output_bcr(self)
             return
 
         curve = aggregate_curve.compute(self._tses(), self._time_span())
         aggregate_loss_curve.plot_aggregate_curve(self, curve)
+
+        general.write_output(self.job_profile)
 
     def _tses(self):
         """Return the time representative of the Stochastic Event Set
@@ -259,8 +261,8 @@ class ProbabilisticEventMixin(Calculator):
         Calculate and store in the kvs the benefit-cost ratio data for block.
 
         A value is stored with key :func:`openquake.kvs.tokens.bcr_block_key`.
-        See :func:`openquake.risk.general.compute_bcr_for_block` for return
-        value spec.
+        See :func:`openquake.risk.job.general.compute_bcr_for_block` for result
+        data structure spec.
         """
         self.slice_gmfs(block_id)
 

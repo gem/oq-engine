@@ -106,13 +106,13 @@ class EngineAPITestCase(unittest.TestCase):
             include_area_sources=True,
             treat_area_source_as='pointsources',
             area_source_discretization=0.1,
-            area_source_magnitude_scaling_relationship=
-                'W&C 1994 Mag-Length Rel.',
+            area_source_magnitude_scaling_relationship=(
+                'W&C 1994 Mag-Length Rel.'),
             # point sources:
             include_grid_sources=False,
             treat_grid_source_as='pointsources',
-            grid_source_magnitude_scaling_relationship=
-                'W&C 1994 Mag-Length Rel.',
+            grid_source_magnitude_scaling_relationship=(
+                'W&C 1994 Mag-Length Rel.'),
             # simple faults:
             include_fault_source=True,
             fault_rupture_offset=1.0,
@@ -125,8 +125,8 @@ class EngineAPITestCase(unittest.TestCase):
             include_subduction_fault_source=False,
             subduction_fault_rupture_offset=10.0,
             subduction_fault_surface_discretization=10.0,
-            subduction_fault_magnitude_scaling_relationship=
-                'W&C 1994 Mag-Length Rel.',
+            subduction_fault_magnitude_scaling_relationship=(
+                'W&C 1994 Mag-Length Rel.'),
             subduction_fault_magnitude_scaling_sigma=0.0,
             subduction_rupture_aspect_ratio=1.5,
             subduction_rupture_floating_type='downdip',

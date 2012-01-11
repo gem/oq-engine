@@ -27,7 +27,7 @@ from openquake.job.config import (
     DisaggregationValidator, HazardMandatoryParamsValidator,
     RiskMandatoryParamsValidator, ScenarioComputationValidator,
     UHSValidator, to_float_array, to_str_array, validate_numeric_sequence,
-    BCRValidator)
+    BCRValidator, ClassicalValidator)
 from tests.utils import helpers
 
 import unittest
@@ -474,8 +474,22 @@ class DefaultValidatorsTestCase(unittest.TestCase):
         validators = config.default_validators(da_job.sections, da_job.params)
 
         # test that the default validators include a DisaggregationValidator
-        self.assertTrue(any(
-            isinstance(v, DisaggregationValidator) for v in validators))
+        self.assertTrue(
+            any(isinstance(v, DisaggregationValidator) for v in validators))
+
+    def test_default_validators_classical_job(self):
+        """Test to ensure that a classical always includes the
+        :class:`openquake.job.config.ClassicalValidator`.
+        """
+        classical_risk_job_path = helpers.demo_file(
+            'classical_psha_based_risk/config.gem')
+        classical_risk_job = helpers.job_from_file(classical_risk_job_path)
+
+        validators = config.default_validators(classical_risk_job.sections,
+                                               classical_risk_job.params)
+
+        self.assertTrue(
+            any(isinstance(v, ClassicalValidator) for v in validators))
 
     def test_default_validators_scenario_job(self):
         """Test to ensure that a Scenario job always includes the
@@ -650,3 +664,35 @@ class ScenarioValidatorTestCase(unittest.TestCase):
         validator = ScenarioComputationValidator(sections, params)
 
         self.assertTrue(validator.is_valid()[0])
+
+
+class ClassicalValidatorTestCase(unittest.TestCase):
+    """Tests for :class:`openquake.job.config.ClassicalValidator`"""
+
+    SECTIONS = ['HAZARD', 'RISK']
+
+    # This is only bad for hazard+risk jobs; this perfectly valid
+    # for a hazard-only job:
+    PARAMS_1 = dict(COMPUTE_MEAN_HAZARD_CURVE='false')
+
+    PARAMS_2 = dict(COMPUTE_MEAN_HAZARD_CURVE='true')
+
+    def test_invalid_params_haz_plus_risk(self):
+        """Test validation on a hazard+risk config with known-bad parameters.
+        """
+        self.validator = ClassicalValidator(self.SECTIONS, self.PARAMS_1)
+        self.assertFalse(self.validator.is_valid()[0])
+
+    def test_valid_params_haz_plus_risk(self):
+        """Test validation on a hazard+risk config with known-good parameters.
+        """
+        self.validator = ClassicalValidator(self.SECTIONS, self.PARAMS_2)
+        self.assertTrue(self.validator.is_valid()[0])
+
+    def test_valid_params_haz_only(self):
+        """Both sets of parameters are valid for a hazard-only job config."""
+        self.validator = ClassicalValidator(['HAZARD'], self.PARAMS_1)
+        self.assertTrue(self.validator.is_valid()[0])
+
+        self.validator = ClassicalValidator(['HAZARD'], self.PARAMS_2)
+        self.assertTrue(self.validator.is_valid()[0])

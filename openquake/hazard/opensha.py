@@ -293,8 +293,7 @@ class ClassicalMixin(BasePSHAMixin):
         gmpe_generator.seed(self.calc_proxy["GMPE_LT_RANDOM_SEED"])
 
         for realization in xrange(0, realizations):
-            stats.incr_counter(self.calc_proxy.job_id,
-                               "classical:do_curves:realization")
+            stats.pk_inc(self.calc_proxy.job_id, "hcls_crealization")
             LOG.info("Calculating hazard curves for realization %s"
                      % realization)
             self.store_source_model(source_model_generator.getrandbits(32))
@@ -309,8 +308,7 @@ class ClassicalMixin(BasePSHAMixin):
     def do_means(self, sites, realizations,
                  curve_serializer=None,
                  curve_task=compute_mean_curves,
-                 map_func=None,
-                 map_serializer=None):
+                 map_func=None, map_serializer=None):
         """Trigger the calculation of mean curves/maps, serialize as requested.
 
         The calculated mean curves/maps will only be serialized if the
@@ -419,7 +417,7 @@ class ClassicalMixin(BasePSHAMixin):
 
     @java.unpack_exception
     @create_java_cache
-    def execute(self, kvs_keys_purged=None):
+    def execute(self, kvs_keys_purged=None):  # pylint: disable=W0221
         """
         Trigger the calculation and serialization of hazard curves, mean hazard
         curves/maps and quantile curves.
@@ -435,16 +433,19 @@ class ClassicalMixin(BasePSHAMixin):
         LOG.info("Going to run classical PSHA hazard for %s realizations "
                  "and %s sites" % (realizations, len(sites)))
 
-        stats.set_total(self.calc_proxy.job_id, "classical:execute:sites",
-                        len(sites))
-        stats.set_total(
-            self.calc_proxy.job_id, "classical:execute:realizations",
-            realizations)
+        stats.pk_set(self.calc_proxy.job_id, "hcls_sites", len(sites))
+        stats.pk_set(self.calc_proxy.job_id, "hcls_realizations",
+                     realizations)
 
         block_size = config.hazard_block_size()
-        for start in xrange(0, len(sites), block_size):
-            end = start + block_size
+        stats.pk_set(self.job_profile.job_id, "hcls_block_size", block_size)
 
+        blocks = range(0, len(sites), block_size)
+        stats.pk_set(self.job_profile.job_id, "hcls_blocks", len(blocks))
+
+        for start in blocks:
+            stats.pk_inc(self.job_profile.job_id, "hcls_cblock")
+            end = start + block_size
             data = sites[start:end]
 
             self.do_curves(data, realizations,
@@ -556,7 +557,6 @@ class ClassicalMixin(BasePSHAMixin):
         curve_writer = hazard_output.create_hazardcurve_writer(
             self.calc_proxy.job_id, self.calc_proxy.serialize_results_to,
             nrml_path)
-        hc_data = []
 
         sites = set(sites)
         accounted_for = set()
@@ -564,6 +564,7 @@ class ClassicalMixin(BasePSHAMixin):
         duration = dgen.next()
 
         while accounted_for != sites:
+            hc_data = []
             # Sleep a little before checking the availability of additional
             # hazard curve results.
             time.sleep(duration)
@@ -590,8 +591,8 @@ class ClassicalMixin(BasePSHAMixin):
             if not results_found:
                 # No results found, increase the sleep duration.
                 duration = dgen.next()
-
-        curve_writer.serialize(hc_data)
+            else:
+                curve_writer.serialize(hc_data)
 
         return nrml_path
 

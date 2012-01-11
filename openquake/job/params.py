@@ -25,8 +25,8 @@ import re
 
 from collections import namedtuple
 
-from openquake.utils.general import str2bool
 from openquake.db.models import OqJobProfile
+from openquake.utils.general import str2bool
 
 
 ARRAY_RE = re.compile('[\s,]+')
