@@ -21,6 +21,10 @@ import os
 import json
 import numpy
 import unittest
+import tempfile
+from StringIO import StringIO
+
+from lxml import etree
 
 from openquake import kvs
 from openquake import shapes
@@ -28,7 +32,7 @@ from openquake import shapes
 from openquake.output import hazard
 
 from openquake.risk.job import aggregate_loss_curve as aggregate
-from openquake.risk.job.general import Block
+from openquake.risk.job.general import Block, RiskJobMixin, write_output_bcr
 from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk import probabilistic_event_based as prob
@@ -684,14 +688,21 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         asset = {"taxonomy": "ID",
                  "assetID": 22.61,
                  "assetValue": 1,
-                 "retrofittingCost": 123.45}
+                 "retrofittingCost": 123.45,
+                 'lat': -1,
+                 'lon': -2}
         self._store_asset(asset, 10, 10)
 
         calculator.compute_risk(self.block_id)
 
         result_key = kvs.tokens.bcr_block_key(self.job_id, self.block_id)
         result = kvs.get_value_json_decoded(result_key)
-        self.assertEqual(result, [[10, 10, {u'22.61': 0.0}]])
+        expected_result = {'bcr': 0.0,
+                           'eal_original': 0.0,
+                           'eal_retrofitted': 0.0}
+        helpers.assertDeepAlmostEqual(
+            self, result, [[[-1, -2], [[expected_result, 22.61]]]]
+        )
 
 
 class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
@@ -972,14 +983,22 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         asset = {"taxonomy": "ID",
                  "assetID": 22.61,
                  "assetValue": 1,
-                 "retrofittingCost": 123.45}
+                 "retrofittingCost": 123.45,
+                 'lat': 12.34,
+                 'lon': 56.67}
+
         self._store_asset(asset, 10, 10)
 
         calculator.compute_risk(self.block_id)
 
         result_key = kvs.tokens.bcr_block_key(self.job_id, self.block_id)
-        result = kvs.get_value_json_decoded(result_key)
-        self.assertEqual(result, [[10, 10, {u'22.61': 0.0}]])
+        res = kvs.get_value_json_decoded(result_key)
+        expected_result = {'bcr': 0.0,
+                           'eal_original': 0.003032,
+                           'eal_retrofitted': 0.003032}
+        helpers.assertDeepAlmostEqual(
+            self, res, [[[12.34, 56.67], [[expected_result, 22.61]]]]
+        )
 
     def test_loss_ratio_curve_in_the_classical_psha_mixin(self):
 
@@ -1291,3 +1310,136 @@ class RiskCommonTestCase(unittest.TestCase):
                                     interest, life_expectancy,
                                     retrofitting_cost)
         self.assertAlmostEqual(result, expected_result, delta=1e-5)
+
+
+class RiskJobGeneralTestCase(unittest.TestCase):
+    def _make_job(self, params):
+        self.job = helpers.create_job(params, base_path=".")
+        self.job_id = self.job.job_id
+        self.job.to_kvs()
+
+    def _prepare_bcr_result(self):
+        self.block_keys = [19, 20]
+        kvs.set_value_json_encoded(kvs.tokens.bcr_block_key(self.job_id, 19), [
+            ((19.0, -1.1), [
+                ({'bcr': 35.1, 'eal_original': 12.34, 'eal_retrofitted': 4},
+                 'assetID-191'),
+                ({'bcr': 35.2, 'eal_original': 2.5, 'eal_retrofitted': 2.2},
+                 'assetID-192'),
+            ])
+        ])
+        kvs.set_value_json_encoded(kvs.tokens.bcr_block_key(self.job_id, 20), [
+            ((20.0, 2.3), [
+                ({'bcr': 35.1, 'eal_original': 1.23, 'eal_retrofitted': 0.3},
+                 'assetID-201'),
+                ({'bcr': 35.2, 'eal_original': 4, 'eal_retrofitted': 0.4},
+                 'assetID-202'),
+            ])
+        ])
+
+    def test_asset_bcr_per_site(self):
+        self._make_job({})
+        self._prepare_bcr_result()
+
+        mixin = RiskJobMixin(self.job)
+        mixin.job_id = self.job_id
+        mixin.blocks_keys = self.block_keys
+
+        bcr_per_site = mixin.asset_bcr_per_site()
+        self.assertEqual(bcr_per_site, [
+            (shapes.Site(-1.1, 19.0), [
+                [{u'bcr': 35.1, 'eal_original': 12.34, 'eal_retrofitted': 4},
+                 u'assetID-191'],
+                [{u'bcr': 35.2, 'eal_original': 2.5, 'eal_retrofitted': 2.2},
+                 u'assetID-192']
+            ]),
+            (shapes.Site(2.3, 20.0), [
+                [{u'bcr': 35.1, 'eal_original': 1.23, 'eal_retrofitted': 0.3},
+                 u'assetID-201'],
+                [{u'bcr': 35.2, 'eal_original': 4, 'eal_retrofitted': 0.4},
+                 u'assetID-202']
+            ])
+        ])
+
+    def test_write_output_bcr(self):
+        self._make_job({})
+        self._prepare_bcr_result()
+
+        mixin = RiskJobMixin(self.job)
+        mixin.job_id = self.job_id
+        mixin.blocks_keys = self.block_keys
+
+        expected_result = """\
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.3"
+      gml:id="undefined">
+  <riskResult gml:id="undefined">
+    <benefitCostRatioMap gml:id="undefined" endBranchLabel="undefined"
+                         lossCategory="undefined" unit="undefined"
+                         interestRate="0.12" assetLifeExpectancy="50">
+      <BCRNode gml:id="mn_1">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>-1.1 19.0</gml:pos>
+          </gml:Point>
+        </site>
+        <benefitCostRatioValue assetRef="assetID-191">
+          <expectedAnnualLossOriginal>12.34</expectedAnnualLossOriginal>
+          <expectedAnnualLossRetrofitted>4</expectedAnnualLossRetrofitted>
+          <benefitCostRatio>35.1</benefitCostRatio>
+        </benefitCostRatioValue>
+        <benefitCostRatioValue assetRef="assetID-192">
+          <expectedAnnualLossOriginal>2.5</expectedAnnualLossOriginal>
+          <expectedAnnualLossRetrofitted>2.2</expectedAnnualLossRetrofitted>
+          <benefitCostRatio>35.2</benefitCostRatio>
+        </benefitCostRatioValue>
+      </BCRNode>
+      <BCRNode gml:id="mn_2">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>2.3 20.0</gml:pos>
+          </gml:Point>
+        </site>
+        <benefitCostRatioValue assetRef="assetID-201">
+          <expectedAnnualLossOriginal>1.23</expectedAnnualLossOriginal>
+          <expectedAnnualLossRetrofitted>0.3</expectedAnnualLossRetrofitted>
+          <benefitCostRatio>35.1</benefitCostRatio>
+        </benefitCostRatioValue>
+        <benefitCostRatioValue assetRef="assetID-202">
+          <expectedAnnualLossOriginal>4</expectedAnnualLossOriginal>
+          <expectedAnnualLossRetrofitted>0.4</expectedAnnualLossRetrofitted>
+          <benefitCostRatio>35.2</benefitCostRatio>
+        </benefitCostRatioValue>
+      </BCRNode>
+    </benefitCostRatioMap>
+  </riskResult>
+</nrml>"""
+
+        output_dir = tempfile.mkdtemp()
+        try:
+            mixin.params = {'OUTPUT_DIR': output_dir,
+                            'INTEREST_RATE': '0.12',
+                            'ASSET_LIFE_EXPECTANCY': '50'}
+            mixin.base_path = '.'
+            mixin.serialize_results_to = None
+
+            resultfile = os.path.join(output_dir, 'bcr-map.xml')
+
+            try:
+                write_output_bcr(mixin)
+                result = open(resultfile).read()
+            finally:
+                if os.path.exists(resultfile):
+                    os.remove(resultfile)
+        finally:
+            os.rmdir(output_dir)
+
+        result = StringIO(result)
+        expected_result = StringIO(expected_result)
+
+        events1 = [(elem.tag, elem.attrib, elem.text)
+                   for (event, elem) in etree.iterparse(result)]
+        events2 = [(elem.tag, elem.attrib, elem.text)
+                   for (event, elem) in etree.iterparse(expected_result)]
+        self.assertEqual(events1, events2)
