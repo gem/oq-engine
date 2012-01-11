@@ -37,6 +37,11 @@ from openquake.engine import (get_source_models, parse_config_file,
 from openquake.job import Job, config
 from openquake.job.params import config_text_to_list
 from openquake.db.models import OqCalculation, CalcStats, OqJobProfile, OqUser
+from openquake.job import (
+    Job, config, prepare_job, parse_config_file, prepare_config_parameters,
+    get_source_models)
+from openquake.job.params import config_text_to_list
+from openquake.db.models import OqCalculation, CalcStats, OqJobProfile
 
 from tests.utils import helpers
 from tests.utils.helpers import patch
