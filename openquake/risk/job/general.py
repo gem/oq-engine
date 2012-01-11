@@ -42,59 +42,70 @@ LOG = logs.LOG
 BLOCK_SIZE = 100
 
 
-def preload(fn):
-    """Preload decorator."""
+def preload(mixin):
+    """
+    Define some preliminary steps needed before starting
+    the risk processing.
 
-    def preloader(self, *args, **kwargs):
-        """Define some preliminary steps needed before starting
-        the risk processing. The decorator:
-
-        * reads and stores in KVS the assets
-        * reads and stores in KVS the vulnerability model
-        * splits into blocks and stores in KVS the exposure sites
-        """
-
-        self.store_exposure_assets()
-        self.store_vulnerability_model()
-        self.partition()
-
-        return fn(self, *args, **kwargs)
-    return preloader
+    * read and store in KVS the assets
+    * read and store in KVS the vulnerability model
+    * split into blocks and store in KVS the exposure sites
+    """
+    mixin.store_exposure_assets()
+    mixin.store_vulnerability_model()
+    mixin.partition()
 
 
-def output(fn):
-    """ Decorator for output """
+def write_output(job_profile):
+    """
+    Write the output of a block to db/xml.
 
-    def output_writer(self, *args, **kwargs):
-        """ Write the output of a block to kvs. """
-        fn(self, *args, **kwargs)
+    :param job_profile:
+        :class:`openquake.job.Job` instance.
+    """
+    for block_id in job_profile.blocks_keys:
+        #pylint: disable=W0212
+        job_profile._write_output_for_block(job_profile.job_id, block_id)
 
-        for block_id in self.job_profile.blocks_keys:
-            #pylint: disable=W0212
-            self._write_output_for_block(self.job_profile.job_id, block_id)
+    for loss_poe in conditional_loss_poes(job_profile.params):
+        path = os.path.join(job_profile.base_path,
+                            job_profile.params['OUTPUT_DIR'],
+                            "losses_at-%s.xml" % loss_poe)
+        writer = risk_output.create_loss_map_writer(
+            job_profile.job_id, job_profile.serialize_results_to, path, False)
 
-        for loss_poe in conditional_loss_poes(self.job_profile.params):
-            path = os.path.join(self.job_profile.base_path,
-                                self.job_profile.params['OUTPUT_DIR'],
-                                "losses_at-%s.xml" % loss_poe)
-            writer = risk_output.create_loss_map_writer(
-                self.job_profile.job_id, self.job_profile.serialize_results_to,
-                path, False)
+        if writer:
+            metadata = {
+                "scenario": False,
+                "timeSpan": job_profile.params["INVESTIGATION_TIME"],
+                "poE": loss_poe,
+            }
 
-            if writer:
-                metadata = {
-                    "scenario": False,
-                    "timeSpan": self.job_profile.params["INVESTIGATION_TIME"],
-                    "poE": loss_poe,
-                }
-
-                data = [metadata] + self.asset_losses_per_site(
+            writer.serialize(
+                [metadata]
+                + job_profile.asset_losses_per_site(
                     loss_poe,
-                    self.grid_assets_iterator(self.job_profile.region.grid))
-                writer.serialize(data)
-                LOG.info('Loss Map is at: %s' % path)
+                    job_profile.grid_assets_iterator(job_profile.region.grid)))
+            LOG.info('Loss Map is at: %s' % path)
 
-    return output_writer
+
+def write_output_bcr(mixin):
+    """
+    Write BCR map in NRML format.
+    """
+    path = os.path.join(mixin.base_path,
+                        mixin.params['OUTPUT_DIR'],
+                        "bcr-map.xml")
+    writer = risk_output.create_bcr_map_writer(
+        mixin.job_id, mixin.serialize_results_to, path)
+
+    metadata = {
+        'interestRate': mixin.params['INTEREST_RATE'],
+        'assetLifeExpectancy': mixin.params['ASSET_LIFE_EXPECTANCY'],
+    }
+
+    writer.serialize([metadata] + mixin.asset_bcr_per_site())
+    LOG.info('BCR Map is at: %s' % path)
 
 
 def conditional_loss_poes(params):
@@ -124,6 +135,8 @@ def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
 @task
 def compute_risk(job_id, block_id, **kwargs):
     """ A task for computing risk, calls the mixed in compute_risk method """
+    # To prevent a circular import,
+    # pylint: disable=W0404
     from openquake.risk.calc import CALCULATORS
 
     check_job_status(job_id)
@@ -325,6 +338,22 @@ class RiskJobMixin(Calculator):
 
         return result.items()
 
+    def asset_bcr_per_site(self):
+        """
+        Fetch and return Benefit-Cost Ratio results computed by workers.
+
+        :return:
+            List of two-item tuples: site object and lists of BCR values per
+            asset in that site. See :func:`compute_bcr_for_block`.
+        """
+        data = []
+        for block_id in self.blocks_keys:
+            key = kvs.tokens.bcr_block_key(self.job_id, block_id)
+            block_data = kvs.get_value_json_decoded(key)
+            data += [(shapes.Site(latitude=lat, longitude=lon), payload)
+                     for ((lat, lon), payload) in block_data]
+        return data
+
 
 class EpsilonProvider(object):
     """
@@ -470,20 +499,22 @@ def compute_bcr_for_block(job_id, points, get_loss_curve,
         vulnerability function object and asset object and is supposed
         to return a loss curve.
     :return:
-        A list of three-item tuples, one tuple per point in the block. Each
-        tuple consists of point row, point column and a mapping of point's
-        asset ids to the BCR value.
+        A list of tuples::
+
+            [((site_lat, site_lon), [
+                ({'bcr': 1, 'eal_retrofitted': 2, 'eal_original': 3}, assetID),
+                ({'bcr': 3, 'eal_retrofitted': 4, 'eal_original': 5}, assetID),
+                ...]),
+             ...]
     """
     # too many local vars (16/15) -- pylint: disable=R0914
-    result = []
+    result = defaultdict(list)
 
     vuln_curves = vulnerability.load_vuln_model_from_kvs(job_id)
     vuln_curves_retrofitted = vulnerability.load_vuln_model_from_kvs(
         job_id, retrofitted=True)
 
     for point in points:
-        point_result = {}
-
         asset_key = kvs.tokens.asset_key(job_id, point.row, point.column)
 
         for asset in kvs.get_list_json_decoded(asset_key):
@@ -495,12 +526,16 @@ def compute_bcr_for_block(job_id, points, get_loss_curve,
             loss_curve = get_loss_curve(point, vuln_function, asset)
             eal_retrofitted = common.compute_mean_loss(loss_curve)
 
-            point_result[asset['assetID']] = common.compute_bcr(
+            bcr = common.compute_bcr(
                 eal_original, eal_retrofitted,
                 interest_rate, asset_life_expectancy,
                 asset['retrofittingCost']
             )
 
-        result.append((point.row, point.column, point_result))
+            key = (asset['lat'], asset['lon'])
+            result[key].append(({'bcr': bcr,
+                                 'eal_original': eal_original,
+                                 'eal_retrofitted': eal_retrofitted},
+                                asset['assetID']))
 
-    return result
+    return result.items()
