@@ -40,6 +40,7 @@ from openquake.flags import FLAGS
 from openquake.job import config as jobconf
 from openquake.job import CalculationProxy
 from openquake.supervising import supervisor
+from openquake.utils import stats
 
 from openquake.db.models import (CharArrayField, FloatArrayField, Input,
                                  InputSet, OqCalculation, OqJobProfile, OqUser)
@@ -372,6 +373,12 @@ def run_calculation(job_profile, params, sections, output_type='db'):
     calculation.status = 'running'
     calculation.save()
 
+    # Clear any counters for this calculation_id, prior to running the
+    # calculation.
+    # We do this just to make sure all of the counters behave properly and can
+    # provide accurate data about a calculation in-progress.
+    stats.delete_job_counters(calculation.id)
+
     serialize_results_to = ['db']
     if output_type == 'xml':
         serialize_results_to.append('xml')
@@ -447,12 +454,11 @@ def _launch_calculation(calc_proxy, sections):
 
     calc_mode = calc_proxy.oq_job_profile.calc_mode
 
+
     for job_type in ('hazard', 'risk'):
         if not job_type.upper() in sections:
             continue
 
-        print job_type
-        print calc_mode
         calc_class = CALCS[job_type][calc_mode]
 
         calculator = calc_class(calc_proxy)
