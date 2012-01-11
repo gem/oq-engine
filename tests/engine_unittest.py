@@ -122,8 +122,8 @@ class EngineAPITestCase(unittest.TestCase):
             include_subduction_fault_source=False,
             subduction_fault_rupture_offset=10.0,
             subduction_fault_surface_discretization=10.0,
-            subduction_fault_magnitude_scaling_relationship=
-                'W&C 1994 Mag-Length Rel.',
+            subduction_fault_magnitude_scaling_relationship=(
+                'W&C 1994 Mag-Length Rel.'),
             subduction_fault_magnitude_scaling_sigma=0.0,
             subduction_rupture_aspect_ratio=1.5,
             subduction_rupture_floating_type='downdip',
