@@ -17,12 +17,13 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-from functools import partial
 import mock
 import os
-from tempfile import gettempdir
 import textwrap
 import unittest
+
+from functools import partial
+from tempfile import gettempdir
 
 from django.contrib.gis.geos.polygon import Polygon
 from django.contrib.gis.geos.collections import MultiPoint
@@ -35,7 +36,6 @@ from openquake import shapes
 from openquake.engine import (_get_source_models, _parse_config_file,
                               prepare_config_parameters, _prepare_job)
 from openquake.job import CalculationProxy
-from openquake.job import config
 from openquake.job.params import config_text_to_list
 from openquake.db.models import OqCalculation, CalcStats, OqJobProfile, OqUser
 
@@ -158,6 +158,7 @@ class JobDbRecordTestCase(unittest.TestCase):
         self.job = None
 
     def test_job_db_record_for_output_type_db(self):
+<<<<<<< HEAD
         self.job = engine._job_from_file(
             helpers.get_data_path(CONFIG_FILE), 'db')
         OqCalculation.objects.get(id=self.job.job_id)
@@ -170,14 +171,33 @@ class JobDbRecordTestCase(unittest.TestCase):
     def test_set_status(self):
         self.job = engine._job_from_file(
             helpers.get_data_path(CONFIG_FILE), 'db')
+=======
+        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE),
+                                        'db')
+        OqCalculation.objects.get(id=self.job.job_id)
+
+    def test_job_db_record_for_output_type_xml(self):
+        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE),
+                                        'xml')
+        OqCalculation.objects.get(id=self.job.job_id)
+
+    def test_set_status(self):
+        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE),
+                                        'db')
+>>>>>>> engine-job-calc-api-1
         status = 'running'
         self.job.set_status(status)
         self.assertEqual(status,
                          OqCalculation.objects.get(id=self.job.job_id).status)
 
     def test_get_status_from_db(self):
+<<<<<<< HEAD
         self.job = engine._job_from_file(
             helpers.get_data_path(CONFIG_FILE), 'db')
+=======
+        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE),
+                                        'db')
+>>>>>>> engine-job-calc-api-1
         row = OqCalculation.objects.get(id=self.job.job_id)
 
         row.status = "failed"
@@ -191,8 +211,13 @@ class JobDbRecordTestCase(unittest.TestCase):
             "running", CalculationProxy.get_status_from_db(self.job.job_id))
 
     def test_is_job_completed(self):
+<<<<<<< HEAD
         job_id = engine._job_from_file(
             helpers.get_data_path(CONFIG_FILE), 'db').job_id
+=======
+        job_id = engine.job_from_file(helpers.get_data_path(CONFIG_FILE),
+                                      'db').job_id
+>>>>>>> engine-job-calc-api-1
         row = OqCalculation.objects.get(id=job_id)
         pairs = [('pending', False), ('running', False),
                  ('succeeded', True), ('failed', True)]

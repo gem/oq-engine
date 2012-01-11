@@ -448,6 +448,8 @@ class DisaggMixin(Calculator):
             writer = hazard_output.DisaggregationBinaryMatrixXMLWriter(
                 path, poe, imt, subset_types, end_branch_label=rlz)
 
+            writer.open()
+
             for site, gmv, matrix_path in data:
                 node_data = dict(groundMotionValue=gmv, path=matrix_path)
                 writer.write(site, node_data)
