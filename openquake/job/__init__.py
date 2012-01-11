@@ -19,20 +19,21 @@
 """A single hazard/risk job."""
 
 import os
-import urlparse
+import re
 
 from datetime import datetime
 
 from openquake import flags
 from openquake import kvs
-from openquake import logs
 from openquake import shapes
 from openquake.parser import exposure
 from openquake.db.models import (OqCalculation, CalcStats, FloatArrayField,
                                  CharArrayField, InputSet, Input)
 from openquake.job import config as conf
 from openquake.job import params as job_params
-from openquake.job.params import PARAMS, CALCULATION_MODE, ENUM_MAP
+from openquake.job.params import (
+    PARAMS, CALCULATION_MODE, ENUM_MAP, PATH_PARAMS, INPUT_FILE_TYPES,
+    ARRAY_RE)
 from openquake.kvs import mark_job_as_current
 from openquake.logs import LOG
 from openquake.utils import stats
