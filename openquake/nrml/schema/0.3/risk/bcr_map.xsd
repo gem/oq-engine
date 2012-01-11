@@ -38,8 +38,8 @@
 
     <xs:complexType name="BCRType">
         <xs:sequence>
-            <xs:element name="ExpectedAnnualLossOriginal" type="NonNegativeDoubleType"/>
-            <xs:element name="ExpectedAnnualLossRetrofitted" type="NonNegativeDoubleType"/>
+            <xs:element name="expectedAnnualLossOriginal" type="NonNegativeDoubleType"/>
+            <xs:element name="expectedAnnualLossRetrofitted" type="NonNegativeDoubleType"/>
             <xs:element name="benefitCostRatio" type="NonNegativeDoubleType"/>
         </xs:sequence>
         <xs:attribute name="assetRef" type="xs:ID" use="required"/>
