@@ -33,15 +33,6 @@ The :mod:`hazard` Module
     :show-inheritance:
 
 
-The :mod:`kml` Module
--------------------------
-
-.. automodule:: openquake.output.kml
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-
 The :mod:`risk` Module
 -------------------------
 
