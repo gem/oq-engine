@@ -56,33 +56,36 @@ def preload(mixin):
     mixin.partition()
 
 
-def write_output(mixin):
+def write_output(job_profile):
     """
     Write the output of a block to db/xml.
-    """
-    for block_id in mixin.blocks_keys:
-        #pylint: disable=W0212
-        mixin._write_output_for_block(mixin.job_id, block_id)
 
-    for loss_poe in conditional_loss_poes(mixin.params):
-        path = os.path.join(mixin.base_path,
-                            mixin.params['OUTPUT_DIR'],
+    :param job_profile:
+        :class:`openquake.job.Job` instance.
+    """
+    for block_id in job_profile.blocks_keys:
+        #pylint: disable=W0212
+        job_profile._write_output_for_block(job_profile.job_id, block_id)
+
+    for loss_poe in conditional_loss_poes(job_profile.params):
+        path = os.path.join(job_profile.base_path,
+                            job_profile.params['OUTPUT_DIR'],
                             "losses_at-%s.xml" % loss_poe)
         writer = risk_output.create_loss_map_writer(
-            mixin.job_id, mixin.serialize_results_to, path, False)
+            job_profile.job_id, job_profile.serialize_results_to, path, False)
 
         if writer:
             metadata = {
                 "scenario": False,
-                "timeSpan": mixin.params["INVESTIGATION_TIME"],
+                "timeSpan": job_profile.params["INVESTIGATION_TIME"],
                 "poE": loss_poe,
             }
 
             writer.serialize(
                 [metadata]
-                + mixin.asset_losses_per_site(
+                + job_profile.asset_losses_per_site(
                     loss_poe,
-                    mixin.grid_assets_iterator(mixin.region.grid)))
+                    job_profile.grid_assets_iterator(job_profile.region.grid)))
             LOG.info('Loss Map is at: %s' % path)
 
 
