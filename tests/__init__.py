@@ -22,8 +22,6 @@ from db_fields_unittest import *
 from db_loader_unittest import *
 from db_loader_unittest import *
 from db_routers_unittest import *
-from scenario_hazard_unittest import *
-from scenario_risk_unittest import *
 from disaggregation_unittest import *
 from disagg_subsets_unittest import *
 from hazard_classical_unittest import *
@@ -50,6 +48,8 @@ from producer_unittest import *
 from risk_job_unittest import *
 from risk_parser_unittest import *
 from risk_unittest import *
+from scenario_hazard_unittest import *
+from scenario_risk_unittest import *
 from schema_unittest import *
 from shapes_unittest import *
 from signalling_unittest import *
@@ -63,6 +63,7 @@ from utils_stats_unittest import *
 from utils_tasks_unittest import *
 from utils_version_unittest import *
 from validator_unittest import *
+from writer_unittest import *
 
 import glob
 import os
