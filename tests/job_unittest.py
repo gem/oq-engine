@@ -29,16 +29,20 @@ from django.contrib.gis.geos.polygon import Polygon
 from django.contrib.gis.geos.collections import MultiPoint
 
 from openquake import engine
-from openquake import job
 from openquake import kvs
 from openquake import flags
 from openquake import shapes
-from openquake.engine import (_get_source_models, _parse_config_file,
-                              prepare_config_parameters, _prepare_job)
-from openquake.job import CalculationProxy
+from openquake.engine import _get_source_models
+from openquake.engine import _parse_config_file
+from openquake.engine import _prepare_config_parameters
+from openquake.engine import _prepare_job
+from openquake.engine import CalculationProxy
 from openquake.job import config
 from openquake.job.params import config_text_to_list
-from openquake.db.models import OqCalculation, CalcStats, OqJobProfile, OqUser
+from openquake.db.models import CalcStats
+from openquake.db.models import OqCalculation
+from openquake.db.models import OqJobProfile
+from openquake.db.models import OqUser
 
 from tests.utils import helpers
 from tests.utils.helpers import patch
@@ -249,7 +253,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             dir=gettempdir(), content=textwrap.dedent(content))
 
         params, sections = _parse_config_file(config_path)
-        params, sections = prepare_config_parameters(params, sections)
+        params, sections = _prepare_config_parameters(params, sections)
 
         self.assertEquals(
             {'BASE_PATH': gettempdir(),
@@ -275,7 +279,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
         config_path = self.touch(content=textwrap.dedent(content))
 
         params, sections = _parse_config_file(config_path)
-        params, sections = prepare_config_parameters(params, sections)
+        params, sections = _prepare_config_parameters(params, sections)
 
         self.assertEquals(
             {'BASE_PATH': gettempdir(),
@@ -712,7 +716,7 @@ class RunJobTestCase(unittest.TestCase):
         self.job_from_file = engine._job_from_file
         self.init_logs_amqp_send = patch('openquake.logs.init_logs_amqp_send')
         self.init_logs_amqp_send.start()
-        self.job_profile, self.params, self.sections = (
+        self.calc_proxy, self.params, self.sections = (
             engine.import_job_profile(helpers.get_data_path(CONFIG_FILE)))
 
     def tearDown(self):
@@ -745,7 +749,7 @@ class RunJobTestCase(unittest.TestCase):
 
                 with patch('os.fork', mocksignature=False) as fork:
                     fork.return_value = 0
-                    engine.run_calculation(self.job_profile, self.params,
+                    engine.run_calculation(self.calc_proxy, self.params,
                                            self.sections)
 
             self.assertEquals(1, engine._launch_calculation.call_count)
@@ -778,7 +782,7 @@ class RunJobTestCase(unittest.TestCase):
                 with patch('os.fork', mocksignature=False) as fork:
                     fork.return_value = 0
                     self.assertRaises(Exception, engine.run_calculation,
-                                      self.job_profile, self.params,
+                                      self.calc_proxy, self.params,
                                       self.sections)
 
             self.assertEquals(1, engine._launch_calculation.call_count)
@@ -878,7 +882,7 @@ class RunJobTestCase(unittest.TestCase):
             shapes.Site(-118.186739, 33.779013)]
 
         self.assertEqual(expected_sites,
-            job.read_sites_from_exposure(test_job))
+            engine.read_sites_from_exposure(test_job))
 
     def test_supervisor_is_spawned(self):
         with patch('openquake.engine._job_from_file'):
@@ -894,7 +898,7 @@ class RunJobTestCase(unittest.TestCase):
                     fork.side_effect = fork_side_effect
                     superv_func = 'openquake.supervising.supervisor.supervise'
                     with patch(superv_func) as supervise:
-                        engine.run_calculation(self.job_profile,
+                        engine.run_calculation(self.calc_proxy,
                                                self.params,
                                                self.sections)
                         calculation = OqCalculation.objects.latest(
@@ -931,7 +935,7 @@ class CalcStatsTestCase(unittest.TestCase):
 
     def test_record_initial_stats(self):
         '''Verify that
-        :py:method:`openquake.job.CalculationProxy._record_initial_stats`
+        :py:method:`openquake.engine.CalculationProxy._record_initial_stats`
         reports initial calculation stats.
 
         As we add fields to the uiapi.calc_stats table, this test will need to
@@ -947,14 +951,14 @@ class CalcStatsTestCase(unittest.TestCase):
 
     def test_job_launch_calls_record_initial_stats(self):
         '''When a job is launched, make sure that
-        :py:method:`openquake.job.CalculationProxy._record_initial_stats`
+        :py:method:`openquake.engine.CalculationProxy._record_initial_stats`
         is called.
         '''
         # Mock out pieces of the test job so it doesn't actually run.
         haz_execute = 'openquake.hazard.opensha.EventBasedMixin.execute'
         risk_execute = (
             'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute')
-        record = 'openquake.job.CalculationProxy._record_initial_stats'
+        record = 'openquake.engine.CalculationProxy._record_initial_stats'
 
         with patch(haz_execute):
             with patch(risk_execute):
