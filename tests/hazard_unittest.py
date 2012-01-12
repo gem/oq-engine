@@ -30,21 +30,22 @@ import numpy
 import os
 import unittest
 
+from openquake import engine
 from openquake import kvs
 from openquake import logs
 from openquake import nrml
 from openquake import shapes
 from openquake import xml
 
-from openquake.job import mixins
+from openquake.db.models import OqCalculation
+from openquake.hazard import calc as hazcalc
+from openquake.job import CalculationProxy
 from openquake.job.config import HazardMandatoryParamsValidator
 from openquake.job.config import PARAMS
 from openquake.kvs import tokens
-from openquake.hazard import tasks
 from openquake.hazard import classical_psha
 from openquake.hazard import opensha
 from openquake.hazard import general as hazard_general
-import openquake.hazard.job
 
 from tests.utils import helpers
 
@@ -59,6 +60,13 @@ MEAN_GROUND_INTENSITY = (
 TEST_JOB_FILE = helpers.testdata_path('simplecase/config.gem')
 
 NRML_SCHEMA_PATH = nrml.nrml_schema_file()
+
+SIMPLE_FAULT_SRC_MODEL_LT = helpers.demo_file(
+    'simple_fault_demo_hazard/source_model_logic_tree.xml')
+SIMPLE_FAULT_GMPE_LT = helpers.demo_file(
+    'simple_fault_demo_hazard/gmpe_logic_tree.xml')
+SIMPLE_FAULT_BASE_PATH = os.path.abspath(
+    helpers.demo_file('simple_fault_demo_hazard'))
 
 
 def get_pattern(regexp):
@@ -77,7 +85,7 @@ def get_pattern(regexp):
     return values
 
 
-class HazardEngineTestCase(unittest.TestCase):
+class HazardEngineTestCase(helpers.TestMixin, unittest.TestCase):
     """The Hazard Engine is a JPype-based wrapper around OpenSHA-lite.
     Most data returned from the engine is via the KVS."""
 
@@ -94,7 +102,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
     def test_generate_hazard_curves_using_classical_psha(self):
 
-        def verify_realization_haz_curves_stored_to_kvs(hazengine, keys):
+        def verify_realization_haz_curves_stored_to_kvs(the_job, keys):
             """ This just tests to make sure there something in the KVS
             for each key in given list of keys. This does NOT test the
             actual results. """
@@ -102,66 +110,67 @@ class HazardEngineTestCase(unittest.TestCase):
             # results to verify they are correct
 
             realizations = int(
-                hazengine.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
+                the_job.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
 
             for realization in xrange(0, realizations):
-                for site in hazengine.sites_to_compute():
+                for site in the_job.sites_to_compute():
                     key = tokens.hazard_curve_poes_key(
-                        hazengine.job_id, realization, site)
+                        the_job.job_id, realization, site)
                     self.assertTrue(key in keys, "Missing key %s" % key)
 
-        def verify_mean_haz_curves_stored_to_kvs(hazengine, keys):
+        def verify_mean_haz_curves_stored_to_kvs(the_job, keys):
             """ Make sure that the keys and non-empty values for mean
             hazard curves have been written to KVS."""
 
-            if hazengine.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
+            if the_job.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
 
                 LOG.debug("verifying KVS entries for mean hazard curves")
-                for site in hazengine.sites_to_compute():
-                    key = tokens.mean_hazard_curve_key(hazengine.job_id, site)
+                for site in the_job.sites_to_compute():
+                    key = tokens.mean_hazard_curve_key(the_job.job_id, site)
                     self.assertTrue(key in keys, "Missing key %s" % key)
 
-        def verify_mean_haz_maps_stored_to_kvs(hazengine, keys):
+        def verify_mean_haz_maps_stored_to_kvs(the_job, calculator, keys):
             """ Make sure that the keys and non-empty values for mean
             hazard maps have been written to KVS."""
 
-            if (hazengine.params[classical_psha.POES_PARAM_NAME] != '' and
-                hazengine.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == \
+            if (the_job.params[classical_psha.POES_PARAM_NAME] != '' and
+                the_job.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == \
                 'true'):
 
                 LOG.debug("verifying KVS entries for mean hazard maps")
 
-                for poe in hazengine.poes_hazard_maps:
-                    for site in hazengine.sites_to_compute():
+                for poe in calculator.poes_hazard_maps:
+                    for site in the_job.sites_to_compute():
                         key = tokens.mean_hazard_map_key(
-                            hazengine.job_id, site, poe)
+                            the_job.job_id, site, poe)
                         self.assertTrue(key in keys, "Missing key %s" % key)
 
-        def verify_quantile_haz_curves_stored_to_kvs(hazengine, keys):
+        def verify_quantile_haz_curves_stored_to_kvs(the_job, calculator,
+                                                     keys):
             """ Make sure that the keys and non-empty values for quantile
             hazard curves have been written to KVS."""
 
-            quantiles = hazengine.quantile_levels
+            quantiles = calculator.quantile_levels
 
             LOG.debug("verifying KVS entries for quantile hazard curves, "\
                 "%s quantile values" % len(quantiles))
 
             for quantile in quantiles:
-                for site in hazengine.sites_to_compute():
+                for site in the_job.sites_to_compute():
                     key = tokens.quantile_hazard_curve_key(
-                        hazengine.job_id, site, quantile)
+                        the_job.job_id, site, quantile)
                     self.assertTrue(key in keys, "Missing key %s" % key)
 
-        def verify_quantile_haz_maps_stored_to_kvs(hazengine, keys):
+        def verify_quantile_haz_maps_stored_to_kvs(the_job, calculator, keys):
             """ Make sure that the keys and non-empty values for quantile
             hazard maps have been written to KVS."""
 
-            quantiles = hazengine.quantile_levels
+            quantiles = calculator.quantile_levels
 
-            if (hazengine.params[classical_psha.POES_PARAM_NAME] != '' and
+            if (the_job.params[classical_psha.POES_PARAM_NAME] != '' and
                 len(quantiles) > 0):
 
-                poes = hazengine.poes_hazard_maps
+                poes = calculator.poes_hazard_maps
 
                 LOG.debug("verifying KVS entries for quantile hazard maps, "\
                     "%s quantile values, %s PoEs" % (
@@ -169,24 +178,24 @@ class HazardEngineTestCase(unittest.TestCase):
 
                 for quantile in quantiles:
                     for poe in poes:
-                        for site in hazengine.sites_to_compute():
+                        for site in the_job.sites_to_compute():
                             key = tokens.quantile_hazard_map_key(
-                                hazengine.job_id, site, poe, quantile)
+                                the_job.job_id, site, poe, quantile)
                             self.assertTrue(
                                 key in keys, "Missing key %s" % key)
 
-        def verify_realization_haz_curves_stored_to_nrml(hazengine):
+        def verify_realization_haz_curves_stored_to_nrml(the_job, calculator):
             """Tests that a NRML file has been written for each realization,
             and that this file validates against the NRML schema.
             Does NOT test if results in NRML file are correct.
             """
             realizations = int(
-                hazengine.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
+                the_job.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
             for realization in xrange(0, realizations):
 
                 nrml_path = os.path.join(
                     "demos/classical_psha_simple/computed_output",
-                    hazengine.hazard_curve_filename(realization))
+                    calculator.hazard_curve_filename(realization))
 
                 LOG.debug("validating NRML file %s" % nrml_path)
 
@@ -195,16 +204,16 @@ class HazardEngineTestCase(unittest.TestCase):
                     "NRML instance file %s does not validate against schema" \
                     % nrml_path)
 
-        def verify_mean_haz_curves_stored_to_nrml(hazengine):
+        def verify_mean_haz_curves_stored_to_nrml(the_job, calculator):
             """Tests that a mean hazard curve NRML file has been written,
             and that this file validates against the NRML schema.
             Does NOT test if results in NRML file are correct.
             """
 
-            if hazengine.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
+            if the_job.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
                 nrml_path = os.path.join(
                     "demos/classical_psha_simple/computed_output",
-                    hazengine.mean_hazard_curve_filename())
+                    calculator.mean_hazard_curve_filename())
 
                 LOG.debug("validating NRML file %s" % nrml_path)
 
@@ -213,19 +222,19 @@ class HazardEngineTestCase(unittest.TestCase):
                     "NRML instance file %s does not validate against schema" \
                     % nrml_path)
 
-        def verify_mean_haz_maps_stored_to_nrml(hazengine):
+        def verify_mean_haz_maps_stored_to_nrml(the_job):
             """Tests that a mean hazard map NRML file has been written,
             and that this file validates against the NRML schema.
             Does NOT test if results in NRML file are correct.
             """
-            if (hazengine.params[classical_psha.POES_PARAM_NAME] != '' and
-                hazengine.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == \
+            if (the_job.params[classical_psha.POES_PARAM_NAME] != '' and
+                the_job.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == \
                 'true'):
 
-                for poe in hazengine.poes_hazard_maps:
+                for poe in calculator.poes_hazard_maps:
                     nrml_path = os.path.join(
                         "demos/classical_psha_simple/computed_output",
-                        hazengine.mean_hazard_map_filename(poe))
+                        calculator.mean_hazard_map_filename(poe))
 
                     LOG.debug("validating NRML file for mean hazard map %s" \
                         % nrml_path)
@@ -235,17 +244,17 @@ class HazardEngineTestCase(unittest.TestCase):
                         "NRML instance file %s does not validate against "\
                         "schema" % nrml_path)
 
-        def verify_quantile_haz_curves_stored_to_nrml(hazengine):
+        def verify_quantile_haz_curves_stored_to_nrml(the_job, calculator):
             """Tests that quantile hazard curve NRML files have been written,
             and that these file validate against the NRML schema.
             Does NOT test if results in NRML files are correct.
             """
 
-            for quantile in hazengine.quantile_levels:
+            for quantile in calculator.quantile_levels:
 
                 nrml_path = os.path.join(
                     "demos/classical_psha_simple/computed_output",
-                    hazengine.quantile_hazard_curve_filename(quantile))
+                    calculator.quantile_hazard_curve_filename(quantile))
 
                 LOG.debug("validating NRML file for quantile hazard curve: "\
                     "%s" % nrml_path)
@@ -255,22 +264,22 @@ class HazardEngineTestCase(unittest.TestCase):
                     "NRML instance file %s does not validate against schema" \
                     % nrml_path)
 
-        def verify_quantile_haz_maps_stored_to_nrml(hazengine):
+        def verify_quantile_haz_maps_stored_to_nrml(the_job, calculator):
             """Tests that quantile hazard map NRML files have been written,
             and that these file validate against the NRML schema.
             Does NOT test if results in NRML files are correct.
             """
 
-            quantiles = hazengine.quantile_levels
+            quantiles = calculator.quantile_levels
 
-            if (hazengine.params[classical_psha.POES_PARAM_NAME] != '' and
+            if (the_job.params[classical_psha.POES_PARAM_NAME] != '' and
                 len(quantiles) > 0):
 
-                for poe in hazengine.poes_hazard_maps:
+                for poe in calculator.poes_hazard_maps:
                     for quantile in quantiles:
                         nrml_path = os.path.join(
                             "demos/classical_psha_simple/computed_output",
-                            hazengine.quantile_hazard_map_filename(quantile,
+                            calculator.quantile_hazard_map_filename(quantile,
                                                                    poe))
 
                         LOG.debug("validating NRML file for quantile hazard "\
@@ -281,34 +290,48 @@ class HazardEngineTestCase(unittest.TestCase):
                             "NRML instance file %s does not validate against "\
                             "schema" % nrml_path)
 
-        hazengine = helpers.job_from_file(
-            helpers.testdata_path("classical_psha_simple/config.gem"))
+        base_path = helpers.testdata_path("classical_psha_simple")
+        path = helpers.testdata_path("classical_psha_simple/config.gem")
+        job_profile, params, sections = engine.import_job_profile(path)
 
-        with mixins.Mixin(hazengine, openquake.hazard.job.HazJobMixin):
-            used_keys = []
-            hazengine.execute(used_keys)
+        calculation = OqCalculation(owner=job_profile.owner)
+        calculation.oq_job_profile = job_profile
+        calculation.save()
 
-            verify_realization_haz_curves_stored_to_kvs(hazengine, used_keys)
-            verify_realization_haz_curves_stored_to_nrml(hazengine)
+        the_job = CalculationProxy(
+            params, calculation.id, sections=sections, base_path=base_path,
+            serialize_results_to=['db', 'xml'], oq_job_profile=job_profile,
+            oq_calculation=calculation)
+        the_job.to_kvs()
 
-            # hazard curves: check results of mean and quantile computation
-            verify_mean_haz_curves_stored_to_kvs(hazengine, used_keys)
-            verify_quantile_haz_curves_stored_to_kvs(hazengine, used_keys)
+        calc_mode = job_profile.calc_mode
+        calculator = hazcalc.CALCULATORS[calc_mode](the_job)
 
-            verify_mean_haz_curves_stored_to_nrml(hazengine)
-            verify_quantile_haz_curves_stored_to_nrml(hazengine)
+        used_keys = []
+        calculator.execute(used_keys)
 
-            # hazard maps: check results of mean and quantile computation
-            verify_mean_haz_maps_stored_to_kvs(hazengine, used_keys)
-            verify_quantile_haz_maps_stored_to_kvs(hazengine, used_keys)
+        verify_realization_haz_curves_stored_to_kvs(the_job, used_keys)
+        verify_realization_haz_curves_stored_to_nrml(the_job, calculator)
 
-            verify_mean_haz_maps_stored_to_nrml(hazengine)
-            verify_quantile_haz_maps_stored_to_nrml(hazengine)
+        # hazard curves: check results of mean and quantile computation
+        verify_mean_haz_curves_stored_to_kvs(the_job, used_keys)
+        verify_quantile_haz_curves_stored_to_kvs(the_job, calculator,
+                                                 used_keys)
+
+        verify_mean_haz_curves_stored_to_nrml(the_job, calculator)
+        verify_quantile_haz_curves_stored_to_nrml(the_job, calculator)
+
+        # hazard maps: check results of mean and quantile computation
+        verify_mean_haz_maps_stored_to_kvs(the_job, calculator, used_keys)
+        verify_quantile_haz_maps_stored_to_kvs(the_job, calculator, used_keys)
+
+        verify_mean_haz_maps_stored_to_nrml(the_job)
+        verify_quantile_haz_maps_stored_to_nrml(the_job, calculator)
 
     def test_basic_generate_erf_keeps_order(self):
         job_ids = [helpers.job_from_file(TEST_JOB_FILE).job_id
                    for _ in xrange(4)]
-        results = map(tasks.generate_erf.delay, job_ids)
+        results = map(opensha.generate_erf.delay, job_ids)
         self.assertEqual(job_ids, [result.get() for result in results])
 
     def test_generate_erf_returns_erf_via_kvs(self):
@@ -328,7 +351,7 @@ class HazardEngineTestCase(unittest.TestCase):
             keys.append(erf_key)
 
             # Spawn our tasks.
-            results.append(tasks.generate_erf.apply_async(args=[job_id]))
+            results.append(opensha.generate_erf.apply_async(args=[job_id]))
 
         helpers.wait_for_celery_tasks(results)
         result_values = dict(zip(keys, self.kvs_client.mget(keys)))
@@ -347,7 +370,7 @@ class HazardEngineTestCase(unittest.TestCase):
             mgm_key = tokens.mgm_key(job_id, block_id, site)
             self.kvs_client.set(mgm_key, MEAN_GROUND_INTENSITY)
 
-            results.append(tasks.compute_mgm_intensity.apply_async(
+            results.append(opensha.compute_mgm_intensity.apply_async(
                 args=[job_id, block_id, site]))
 
         helpers.wait_for_celery_tasks(results)
@@ -510,10 +533,15 @@ class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
                                              unittest.TestCase):
 
     def setUp(self):
-        self.params = {'CALCULATION_MODE': 'Hazard'}
-        self.job = self.create_job_with_mixin(self.params,
-                                              opensha.ClassicalMixin)
-        self.job_id = self.job.job_id
+        self.params = dict(
+            CALCULATION_MODE='Hazard',
+            SOURCE_MODEL_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_SRC_MODEL_LT,
+            GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
+            BASE_PATH=SIMPLE_FAULT_BASE_PATH)
+
+        self.job_profile = helpers.create_job(self.params)
+        self.calculator = opensha.ClassicalMixin(self.job_profile)
+        self.job_id = self.job_profile.job_id
 
         self.expected_curve = numpy.array([9.9178000e-01, 9.8892000e-01,
                 9.6903000e-01, 9.4030000e-01, 8.8405000e-01, 7.8782000e-01,
@@ -525,16 +553,13 @@ class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
         # deleting server side cached data
         kvs.get_client().flushall()
 
-    def tearDown(self):
-        self.unload_job_mixin()
-
     def _store_dummy_hazard_curve(self, site):
         hazard_curve = [0.98161, 0.97837]
 
         self._store_hazard_curve_at(site, hazard_curve, 0)
 
     def test_no_quantiles_when_no_parameter_specified(self):
-        self.assertEqual([], self.job.quantile_levels)
+        self.assertEqual([], self.calculator.quantile_levels)
 
     def test_no_computation_when_the_parameter_is_empty(self):
         self._run([], 1, [])
@@ -552,23 +577,23 @@ class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.75)
 
     def test_computes_just_the_quantiles_in_range(self):
-        self.job.params[classical_psha.QUANTILE_PARAM_NAME] =\
-            '-0.33 0.00 0.25 0.50 0.75 1.00 1.10'
+        self.job_profile.params[classical_psha.QUANTILE_PARAM_NAME] = (
+            '-0.33 0.00 0.25 0.50 0.75 1.00 1.10')
 
         self.assertEqual([0.00, 0.25, 0.50, 0.75, 1.00],
-            self.job.quantile_levels)
+            self.calculator.quantile_levels)
 
     def test_just_numeric_values_are_allowed(self):
-        self.job.params[classical_psha.QUANTILE_PARAM_NAME] =\
-            '-0.33 0.00 XYZ 0.50 ;;; 1.00 BBB'
+        self.job_profile.params[classical_psha.QUANTILE_PARAM_NAME] = (
+            '-0.33 0.00 XYZ 0.50 ;;; 1.00 BBB')
 
-        self.assertEqual([0.00, 0.50, 1.00], self.job.quantile_levels)
+        self.assertEqual([0.00, 0.50, 1.00], self.calculator.quantile_levels)
 
     def test_accepts_also_signs(self):
-        self.job.params[classical_psha.QUANTILE_PARAM_NAME] =\
-            '-0.33 +0.0 XYZ +0.5 +1.00'
+        self.job_profile.params[classical_psha.QUANTILE_PARAM_NAME] = (
+            '-0.33 +0.0 XYZ +0.5 +1.00')
 
-        self.assertEqual([0.00, 0.50, 1.00], self.job.quantile_levels)
+        self.assertEqual([0.00, 0.50, 1.00], self.calculator.quantile_levels)
 
     def test_process_all_the_sites_given(self):
         self._store_dummy_hazard_curve(shapes.Site(1.5, 1.0))
@@ -630,7 +655,7 @@ class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
                 hazard_curve_1, hazard_curve_2, hazard_curve_3,
                 hazard_curve_4, hazard_curve_5], 0.75)
 
-# TODO (ac): Check if this tolerance is enough
+        # TODO (ac): Check if this tolerance is enough
         self.assertTrue(numpy.allclose(
                 self.expected_curve, quantile_hazard_curve, atol=0.005))
 
@@ -687,7 +712,7 @@ class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
 
     def _run(self, sites, realizations, quantiles):
         classical_psha.compute_quantile_hazard_curves(
-                self.job.job_id, sites, realizations, quantiles)
+                self.job_profile.job_id, sites, realizations, quantiles)
 
     def _store_hazard_curve_at(self, site, curve, realization=0):
         kvs.set_value_json_encoded(
@@ -706,9 +731,12 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
                                                 unittest.TestCase):
 
     def setUp(self):
-        self.params = {
-            'CALCULATION_MODE': 'Hazard',
-            'REFERENCE_VS30_VALUE': 500}
+        self.params = dict(
+            CALCULATION_MODE='Hazard',
+            REFERENCE_VS30_VALUE=500,
+            SOURCE_MODEL_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_SRC_MODEL_LT,
+            GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
+            BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
         self.imls = [5.0000e-03, 7.0000e-03,
                 1.3700e-02, 1.9200e-02, 2.6900e-02, 3.7600e-02, 5.2700e-02,
@@ -716,9 +744,9 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
                 2.8400e-01, 3.9700e-01, 5.5600e-01, 7.7800e-01, 1.0900e+00,
                 1.5200e+00, 2.1300e+00]
 
-        self.job = self.create_job_with_mixin(self.params,
-                                              opensha.ClassicalMixin)
-        self.job_id = self.job.job_id
+        self.job_profile = helpers.create_job(self.params)
+        self.calculator = opensha.ClassicalMixin(self.job_profile)
+        self.job_id = self.job_profile.job_id
 
         self.empty_mean_curve = []
 
@@ -734,11 +762,8 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
         self.site = shapes.Site(2.0, 5.0)
         self._store_curve_at(self.site, mean_curve)
 
-    def tearDown(self):
-        self.unload_job_mixin()
-
     def test_no_poes_when_no_parameter_specified(self):
-        self.assertEqual([], self.job.poes_hazard_maps)
+        self.assertEqual([], self.calculator.poes_hazard_maps)
 
     def test_no_computation_when_the_parameter_is_empty(self):
         self._run([])
@@ -838,8 +863,9 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
         kvs.set_value_json_encoded(key_5, curve_2)
         kvs.set_value_json_encoded(key_6, curve_2)
 
-        classical_psha.compute_quantile_hazard_maps(self.job.job_id, sites,
-            [0.25, 0.50, 0.75], self.imls, [0.10])
+        classical_psha.compute_quantile_hazard_maps(
+            self.job_profile.job_id, sites, [0.25, 0.50, 0.75], self.imls,
+            [0.10])
 
         # asserting imls have been produced for all poes and quantiles
         self.assertTrue(kvs.get_client().get(
@@ -874,7 +900,7 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
         if sites is None:
             sites = [self.site]
 
-        classical_psha.compute_mean_hazard_maps(self.job.job_id, sites,
+        classical_psha.compute_mean_hazard_maps(self.job_profile.job_id, sites,
                                                 self.imls, poes)
 
     def _no_stored_values_for(self, pattern):
@@ -894,20 +920,20 @@ class ParameterizeSitesTestCase(helpers.TestMixin, unittest.TestCase):
     """Tests relating to BasePSHAMixin.parameterize_sites()."""
 
     def setUp(self):
-        self.params = {
-            "CALCULATION_MODE": "Hazard",
-            "REFERENCE_VS30_VALUE": 500,
-            "SADIGH_SITE_TYPE": "Rock",
-            "REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM": "5.0",
-            "DEPTHTO1PT0KMPERSEC": "33.33",
-            "VS30_TYPE": "measured"}
+        self.params = dict(
+            CALCULATION_MODE='Hazard',
+            REFERENCE_VS30_VALUE=500,
+            SADIGH_SITE_TYPE='Rock',
+            REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM='5.0',
+            DEPTHTO1PT0KMPERSEC='33.33',
+            VS30_TYPE='measured',
+            SOURCE_MODEL_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_SRC_MODEL_LT,
+            GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
+            BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
-        self.job = self.create_job_with_mixin(
-            self.params, opensha.ClassicalMixin)
-        self.job_id = self.job.job_id
-
-    def tearDown(self):
-        self.unload_job_mixin()
+        self.job_profile = helpers.create_job(self.params)
+        self.calculator = opensha.ClassicalMixin(self.job_profile)
+        self.job_id = self.job_profile.job_id
 
     def test_all_mandatory_params_covered(self):
         """Make sure we add defaults for all mandatory hazard parameters."""
@@ -917,7 +943,7 @@ class ParameterizeSitesTestCase(helpers.TestMixin, unittest.TestCase):
 
         # Parameterise a single site and see what we got.
         params_handled = set()
-        [jsite] = self.job.parameterize_sites([shapes.Site(3.0, 3.0)])
+        [jsite] = self.calculator.parameterize_sites([shapes.Site(3.0, 3.0)])
         param_name_iter = jsite.getParameterNamesIterator()
         while True:
             try:

@@ -28,7 +28,6 @@ import os
 import random
 import redis
 import shutil
-import subprocess
 import tempfile
 import textwrap
 import time
@@ -38,11 +37,13 @@ import guppy
 import mock as mock_module
 import numpy
 
+from gflags import DEFINE_boolean
 from django.core import exceptions
 
+from openquake import engine
 from openquake import flags
 from openquake import logs
-from openquake.job import Job
+from openquake.job import CalculationProxy
 from openquake import producer
 from openquake.utils import config
 from openquake.hazard.general import store_source_model, store_gmpe_map
@@ -51,7 +52,7 @@ from openquake.db import models
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_boolean('download_test_data', True,
+DEFINE_boolean('download_test_data', True,
         'Fetch test data files if needed')
 
 DATA_DIR = os.path.abspath(os.path.join(
@@ -133,14 +134,14 @@ def testdata_path(file_name):
 
 def job_from_file(config_file_path):
     """
-    Create a Job instance from the given configuration file.
+    Create a CalculationProxy instance from the given configuration file.
 
     The results are configured to go to XML files.  *No* database record will
     be stored for the job.  This allows running test on jobs without requiring
     a database.
     """
 
-    job = Job.from_file(config_file_path, 'xml')
+    job = engine._job_from_file(config_file_path, 'xml')
     cleanup_loggers()
 
     return job
@@ -149,7 +150,7 @@ def job_from_file(config_file_path):
 def create_job(params, **kwargs):
     job_id = kwargs.pop('job_id', 0)
 
-    return Job(params, job_id, **kwargs)
+    return CalculationProxy(params, job_id, **kwargs)
 
 
 def run_job(config_file, **kw_params):
@@ -173,7 +174,7 @@ def store_hazard_logic_trees(a_job):
     @preload decorator does.
 
     :param a_job:
-        :class:`openquake.job.Job` instance.
+        :class:`openquake.job.CalculationProxy` instance.
     """
     lt_proc = LogicTreeProcessor(
         a_job['BASE_PATH'],
@@ -201,18 +202,6 @@ class WordProducer(producer.FileProducer):
         for line in self.file:
             col, row, value = line.strip().split(' ', 2)
             yield ((int(col), int(row)), value)
-
-
-def guarantee_file(path, url):
-    """Based on flag, download test data file or raise error."""
-    if not os.path.isfile(path):
-        if not FLAGS.download_test_data:
-            raise Exception("Test data does not exist")
-        logs.LOG.info("Downloading test data for %s", path)
-        retcode = subprocess.call(["curl", url, "-o", path])
-        if retcode:
-            raise Exception(
-                "Test data could not be downloaded from %s" % (url))
 
 
 def timeit(method):
@@ -527,18 +516,18 @@ class TestMixin(object):
 
     def create_job_with_mixin(self, params, mixin_class):
         """
-        Create a Job and mixes in a Mixin.
+        Create a CalculationProxy and mixes in a Mixin.
 
         This method, and its double `unload_job_mixin`, when called in the
         setUp and tearDown of a TestCase respectively, have the effect of a
         `with mixin_class` spanning a single test.
 
-        :param params: Job parameters
+        :param params: CalculationProxy parameters
         :type params: :py:class:`dict`
         :param mixin_class: the mixin that will be mixed in the job
         :type mixin_class: :py:class:`openquake.job.Mixin`
-        :returns: a Job
-        :rtype: :py:class:`openquake.job.Job`
+        :returns: a CalculationProxy
+        :rtype: :py:class:`openquake.job.CalculationProxy`
         """
         # preserve some status to be used by unload
         self._calculation_mode = params.get('CALCULATION_MODE')
@@ -620,62 +609,63 @@ class DbTestMixin(TestMixin):
         input_set = models.InputSet(owner=owner)
         input_set.save()
 
-        oqp = models.OqJobProfile()
-        oqp.calc_mode = "classical"
-        oqp.job_type = ['hazard']
-        oqp.input_set = input_set
-        oqp.region_grid_spacing = 0.01
-        oqp.min_magnitude = 5.0
-        oqp.investigation_time = 50.0
-        oqp.component = "gmroti50"
-        oqp.imt = "pga"
-        oqp.truncation_type = "twosided"
-        oqp.truncation_level = 3
-        oqp.reference_vs30_value = 760
-        oqp.imls = self.IMLS
-        oqp.poes = [0.01, 0.10]
-        oqp.realizations = 1
-        oqp.width_of_mfd_bin = 0.1
-        oqp.treat_grid_source_as = 'Point Sources'
-        oqp.treat_area_source_as = 'Point Sources'
-        oqp.subduction_rupture_floating_type = 'Along strike and down dip'
-        oqp.subduction_rupture_aspect_ratio = 1.5
-        oqp.subduction_fault_surface_discretization = 0.5
-        oqp.subduction_fault_rupture_offset = 10.0
-        oqp.subduction_fault_magnitude_scaling_sigma = 0.0
-        oqp.subduction_fault_magnitude_scaling_relationship = \
+        oqjp = models.OqJobProfile()
+        oqjp.owner = owner
+        oqjp.calc_mode = "classical"
+        oqjp.job_type = ['hazard']
+        oqjp.input_set = input_set
+        oqjp.region_grid_spacing = 0.01
+        oqjp.min_magnitude = 5.0
+        oqjp.investigation_time = 50.0
+        oqjp.component = "gmroti50"
+        oqjp.imt = "pga"
+        oqjp.truncation_type = "twosided"
+        oqjp.truncation_level = 3
+        oqjp.reference_vs30_value = 760
+        oqjp.imls = self.IMLS
+        oqjp.poes = [0.01, 0.10]
+        oqjp.realizations = 1
+        oqjp.width_of_mfd_bin = 0.1
+        oqjp.treat_grid_source_as = 'pointsources'
+        oqjp.treat_area_source_as = 'pointsources'
+        oqjp.subduction_rupture_floating_type = 'Along strike and down dip'
+        oqjp.subduction_rupture_aspect_ratio = 1.5
+        oqjp.subduction_fault_surface_discretization = 0.5
+        oqjp.subduction_fault_rupture_offset = 10.0
+        oqjp.subduction_fault_magnitude_scaling_sigma = 0.0
+        oqjp.subduction_fault_magnitude_scaling_relationship = \
             'W&C 1994 Mag-Length Rel.'
-        oqp.standard_deviation_type = 'total'
-        oqp.sadigh_site_type = 'Rock'
-        oqp.rupture_floating_type = 'Along strike and down dip'
-        oqp.rupture_aspect_ratio = 1.5
-        oqp.reference_depth_to_2pt5km_per_sec_param = 5.0
-        oqp.quantile_levels = [0.25, 0.50]
-        oqp.maximum_distance = 200
-        oqp.include_subductive_fault = True
-        oqp.include_subduction_fault_source = True
-        oqp.include_grid_sources = True
-        oqp.include_fault_source = True
-        oqp.include_area_sources = True
-        oqp.fault_surface_discretization = 1.0
-        oqp.fault_rupture_offset = 5.0
-        oqp.fault_magnitude_scaling_sigma = 0.0
-        oqp.fault_magnitude_scaling_relationship = 'W&C 1994 Mag-Length Rel.'
-        oqp.compute_mean_hazard_curve = True
-        oqp.area_source_magnitude_scaling_relationship = \
+        oqjp.standard_deviation_type = 'total'
+        oqjp.sadigh_site_type = 'Rock'
+        oqjp.rupture_floating_type = 'Along strike and down dip'
+        oqjp.rupture_aspect_ratio = 1.5
+        oqjp.reference_depth_to_2pt5km_per_sec_param = 5.0
+        oqjp.quantile_levels = [0.25, 0.50]
+        oqjp.maximum_distance = 200
+        oqjp.include_subductive_fault = True
+        oqjp.include_subduction_fault_source = True
+        oqjp.include_grid_sources = True
+        oqjp.include_fault_source = True
+        oqjp.include_area_sources = True
+        oqjp.fault_surface_discretization = 1.0
+        oqjp.fault_rupture_offset = 5.0
+        oqjp.fault_magnitude_scaling_sigma = 0.0
+        oqjp.fault_magnitude_scaling_relationship = 'W&C 1994 Mag-Length Rel.'
+        oqjp.compute_mean_hazard_curve = True
+        oqjp.area_source_magnitude_scaling_relationship = \
             'W&C 1994 Mag-Length Rel.'
-        oqp.area_source_discretization = 0.1
-        oqp.treat_area_source_as = 'pointsources'
-        oqp.subduction_rupture_floating_type = 'downdip'
-        oqp.rupture_floating_type = 'downdip'
-        oqp.sadigh_site_type = 'rock'
-        oqp.region = (
+        oqjp.area_source_discretization = 0.1
+        oqjp.treat_area_source_as = 'pointsources'
+        oqjp.subduction_rupture_floating_type = 'downdip'
+        oqjp.rupture_floating_type = 'downdip'
+        oqjp.sadigh_site_type = 'rock'
+        oqjp.region = (
             "POLYGON((-81.3 37.2, -80.63 38.04, -80.02 37.49, -81.3 37.2))")
-        oqp.source_model_lt_random_seed = 23
-        oqp.gmpe_lt_random_seed = 5
-        oqp.save()
+        oqjp.source_model_lt_random_seed = 23
+        oqjp.gmpe_lt_random_seed = 5
+        oqjp.save()
 
-        job = models.OqCalculation(oq_job_profile=oqp, owner=owner)
+        job = models.OqCalculation(oq_job_profile=oqjp, owner=owner)
         job.save()
 
         if create_job_path:
@@ -699,15 +689,15 @@ class DbTestMixin(TestMixin):
             test db will be dropped/recreated prior to the next db test suite
             run anyway.
         """
-        oqp = job.oq_job_profile
-        if oqp.input_set is not None:
-            self.teardown_input_set(oqp.input_set,
+        oqjp = job.oq_job_profile
+        if oqjp.input_set is not None:
+            self.teardown_input_set(oqjp.input_set,
                                     filesystem_only=filesystem_only)
         if filesystem_only:
             return
 
         job.delete()
-        oqp.delete()
+        oqjp.delete()
 
     def setup_output(self, job_to_use=None, output_type="hazard_map",
                      db_backed=True):

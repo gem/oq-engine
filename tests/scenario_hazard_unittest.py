@@ -23,9 +23,7 @@ event based calculation.
 """
 
 import math
-import numpy
 import unittest
-import json
 
 from tests.utils import helpers
 from tests.utils.helpers import patch
@@ -35,7 +33,10 @@ from openquake import java
 from openquake import kvs
 from openquake import shapes
 
-from openquake.hazard import scenario as det
+from openquake.hazard import scenario
+from openquake.job import CalculationProxy
+
+from openquake.db.models import OqCalculation
 
 SCENARIO_SMOKE_TEST = helpers.testdata_path("scenario/config.gem")
 NUMBER_OF_CALC_KEY = "NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"
@@ -47,7 +48,7 @@ def compute_ground_motion_field(self, _random_generator):
 
     hashmap = java.jclass("HashMap")()
 
-    for site in self.sites_to_compute():
+    for site in self.job_profile.sites_to_compute():
         location = java.jclass("Location")(site.latitude, site.longitude)
         site = java.jclass("Site")(location)
         hashmap.put(site, 0.5)
@@ -67,76 +68,33 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
     def setUp(self):
         kvs.get_client().flushall()
 
-        self.job = helpers.job_from_file(SCENARIO_SMOKE_TEST)
+        base_path = helpers.testdata_path("scenario")
+        self.job_profile, self.params, self.sections = (
+            engine.import_job_profile(SCENARIO_SMOKE_TEST))
+        calculation = OqCalculation(owner=self.job_profile.owner,
+                                    oq_job_profile=self.job_profile)
+        calculation.save()
+        self.calc_proxy = CalculationProxy(
+            self.params, calculation.id, sections=self.sections,
+            base_path=base_path, oq_job_profile=self.job_profile,
+            oq_calculation=calculation)
 
-        self.job.params[NUMBER_OF_CALC_KEY] = "1"
+        self.calc_proxy.params[NUMBER_OF_CALC_KEY] = "1"
 
-        self.job.params['SERIALIZE_RESULTS_TO'] = 'xml'
+        self.calc_proxy.params['SERIALIZE_RESULTS_TO'] = 'xml'
 
         # saving the default java implementation
         self.default = (
-            det.ScenarioEventBasedMixin.compute_ground_motion_field)
+            scenario.ScenarioEventBasedMixin.compute_ground_motion_field)
 
-        self.grid = self.job.region.grid
+        self.grid = self.calc_proxy.region.grid
 
-        self.job.to_kvs()
+        self.calc_proxy.to_kvs()
 
     def tearDown(self):
         # restoring the default java implementation
-        det.ScenarioEventBasedMixin.compute_ground_motion_field = \
+        scenario.ScenarioEventBasedMixin.compute_ground_motion_field = \
             self.default
-
-        kvs.get_client().flushall()
-
-    def test_scenario_job_completes(self):
-        """The scenario calculator is triggered.
-
-        When CALCULATION_MODE is set to "Scenario" the scenario event
-        based calculator is triggered.
-        """
-
-        det.ScenarioEventBasedMixin.compute_ground_motion_field = \
-            compute_ground_motion_field
-
-        # KVS garbage collection is going to be called asynchronously by the
-        # job. We don't actually want that to happen in this test.
-        with patch('subprocess.Popen'):
-            # True, True means that both mixins (hazard and risk) are triggered
-            engine.launch(self.job)
-
-    def test_the_hazard_subsystem_stores_gmfs_for_all_the_sites(self):
-        """The hazard subsystem stores the computed gmfs in kvs.
-
-        For each site in the region, a ground motion value is store
-        in the underlying kvs system.
-        """
-
-        det.ScenarioEventBasedMixin.compute_ground_motion_field = \
-            compute_ground_motion_field
-
-        # KVS garbage collection is going to be called asynchronously by the
-        # job. We don't actually want that to happen in this test.
-        with patch('subprocess.Popen'):
-
-            engine.launch(self.job)
-            decoder = json.JSONDecoder()
-
-            for site in self.job.sites_to_compute():
-                point = self.grid.point_at(site)
-                key = kvs.tokens.ground_motion_values_key(
-                    self.job.job_id, point)
-
-                # just one calculation is triggered in this test case
-                print "key is %s" % key
-                self.assertEqual(1, self.kvs_client.llen(key))
-                gmv = decoder.decode(self.kvs_client.lpop(key))
-                self.assertEqual(0, self.kvs_client.llen(key))
-
-                self.assertTrue(
-                    numpy.allclose(site.latitude, gmv["site_lat"]))
-
-                self.assertTrue(
-                    numpy.allclose(site.longitude, gmv["site_lon"]))
 
     def test_multiple_computations_are_triggered(self):
         """The hazard subsystem is able to trigger multiple computations.
@@ -147,36 +105,19 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
         multiple times.
         """
 
-        det.ScenarioEventBasedMixin.compute_ground_motion_field = \
-            compute_ground_motion_field
+        self.calc_proxy.params[NUMBER_OF_CALC_KEY] = "3"
+        self.job_profile.gmf_calculation_number = 3
+        self.job_profile.save()
 
-        self.job.params["INTENSITY_MEASURE_TYPE"] = "MMI"
-        self.job.params[NUMBER_OF_CALC_KEY] = "3"
+        calculator = scenario.ScenarioEventBasedMixin(self.calc_proxy)
 
-        # KVS garbage collection is going to be called asynchronously by the
-        # job. We don't actually want that to happen in this test.
-        with patch('subprocess.Popen'):
+        with patch('openquake.hazard.scenario.ScenarioEventBasedMixin'
+                   '.compute_ground_motion_field') as compute_gmf_mock:
+            # the return value needs to be a Java HashMap
+            compute_gmf_mock.return_value = java.jclass('HashMap')()
+            calculator.execute()
 
-            engine.launch(self.job)
-            decoder = json.JSONDecoder()
-
-            for site in self.job.sites_to_compute():
-                point = self.grid.point_at(site)
-                key = kvs.tokens.ground_motion_values_key(
-                    self.job.job_id, point)
-
-                self.assertEqual(3, self.kvs_client.llen(key))
-                gmv = decoder.decode(self.kvs_client.lpop(key))
-                self.assertEqual(0.5, gmv["mag"])
-
-                # since the org.opensha.commons.geo.Location object
-                # stores lat/lon in radians, values are not
-                # exactly the same
-                self.assertTrue(
-                    numpy.allclose(site.latitude, gmv["site_lat"]))
-
-                self.assertTrue(
-                    numpy.allclose(site.longitude, gmv["site_lon"]))
+        self.assertEquals(3, compute_gmf_mock.call_count)
 
     def test_transforms_a_java_gmf_to_dict(self):
         location1 = java.jclass("Location")(1.0, 2.0)
@@ -193,33 +134,12 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
         hashmap.put(site2, 0.2)
         hashmap.put(site3, 0.3)
 
-        gmf_as_dict = det.gmf_to_dict(hashmap, "MMI")
+        gmf_as_dict = scenario.gmf_to_dict(hashmap, "MMI")
 
         for gmv in gmf_as_dict:
             self.assertTrue(gmv["mag"] in (0.1, 0.2, 0.3))
             self.assertTrue(gmv["site_lon"] in (2.0, 2.1, 2.2))
             self.assertTrue(gmv["site_lat"] in (1.0, 1.1, 1.2))
-
-    def test_the_number_of_calculation_must_be_greater_than_zero(self):
-        self.job.params[NUMBER_OF_CALC_KEY] = "0"
-        self.assertRaises(ValueError, engine.launch, self.job)
-
-        self.job.params[NUMBER_OF_CALC_KEY] = "-1"
-        self.assertRaises(ValueError, engine.launch, self.job)
-
-    def test_simple_computation_using_the_java_calculator(self):
-        # KVS garbage collection is going to be called asynchronously by the
-        # job. We don't actually want that to happen in this test.
-        with patch('subprocess.Popen'):
-
-            engine.launch(self.job)
-
-            for site in self.job.sites_to_compute():
-                point = self.grid.point_at(site)
-                key = kvs.tokens.ground_motion_values_key(
-                    self.job.job_id, point)
-
-                self.assertTrue(kvs.get_client().keys(key))
 
     def test_when_measure_type_is_not_mmi_exp_is_stored(self):
         location = java.jclass("Location")(1.0, 2.0)
@@ -228,7 +148,7 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
         hashmap = java.jclass("HashMap")()
         hashmap.put(site, 0.1)
 
-        for gmv in det.gmf_to_dict(hashmap, "PGA"):
+        for gmv in scenario.gmf_to_dict(hashmap, "PGA"):
             self.assertEqual(math.exp(0.1), gmv["mag"])
 
     def test_when_measure_type_is_mmi_we_store_as_is(self):
@@ -238,19 +158,17 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
         hashmap = java.jclass("HashMap")()
         hashmap.put(site, 0.1)
 
-        for gmv in det.gmf_to_dict(hashmap, "MMI"):
+        for gmv in scenario.gmf_to_dict(hashmap, "MMI"):
             self.assertEqual(0.1, gmv["mag"])
 
     def test_loads_the_rupture_model(self):
-        calculator = det.ScenarioEventBasedMixin(None, None)
-        calculator.params = self.job.params
+        calculator = scenario.ScenarioEventBasedMixin(self.calc_proxy)
 
         self.assertEqual("org.opensha.sha.earthquake.EqkRupture",
                          calculator.rupture_model.__class__.__name__)
 
     def test_the_same_calculator_is_used_between_multiple_invocations(self):
-        calculator = det.ScenarioEventBasedMixin(None, None)
-        calculator.params = self.job.params
+        calculator = scenario.ScenarioEventBasedMixin(self.calc_proxy)
 
         gmf_calculator1 = calculator.gmf_calculator([shapes.Site(1.0, 1.0)])
         gmf_calculator2 = calculator.gmf_calculator([shapes.Site(1.0, 1.0)])

@@ -23,8 +23,7 @@ gflags extensions.
 # pylint: disable=W0622,W0611
 
 from gflags import FLAGS
-from gflags import DEFINE_string, DEFINE_enum
-from gflags import DEFINE_boolean, DEFINE_integer
+from gflags import DEFINE_string
 
 DEFINE_string('debug', 'warn',
     'Turns on debug logging and verbose output.'

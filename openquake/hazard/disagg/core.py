@@ -28,18 +28,17 @@ from openquake import java
 from openquake import job
 from openquake import logs
 
-from openquake.hazard import job as haz_job
 from openquake.hazard import disagg
 from openquake.java import list_to_jdouble_array
 from openquake.job import config as job_cfg
 from openquake.output import hazard_disagg as hazard_output
 from openquake.utils import config
 
+from openquake.calculators.base import Calculator
 from openquake.hazard.disagg import subsets
 from openquake.hazard.general import (
     preload, generate_erf, generate_gmpe_map, set_gmpe_params,
     store_source_model, store_gmpe_map, get_iml_list)
-from openquake.job.mixins import Mixin
 from openquake.utils.tasks import check_job_status
 
 
@@ -68,7 +67,7 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
 
     :returns: 2-tuple of (ground_motion_value, path_to_h5_matrix_file)
     """
-    the_job = job.Job.from_kvs(job_id)
+    the_job = job.CalculationProxy.from_kvs(job_id)
 
     lat_bin_lims = the_job[job_cfg.LAT_BIN_LIMITS]
     lon_bin_lims = the_job[job_cfg.LON_BIN_LIMITS]
@@ -159,7 +158,7 @@ def compute_disagg_matrix_task(job_id, site, realization, poe, result_dir):
     return compute_disagg_matrix(job_id, site, poe, result_dir)
 
 
-class DisaggMixin(Mixin):
+class DisaggMixin(Calculator):
     """The Python part of the Disaggregation calculator. This calculator
     computes disaggregation matrix results in the following manner:
 
@@ -190,26 +189,27 @@ class DisaggMixin(Mixin):
         """
         # matrix results for this job will go here:
         result_dir = DisaggMixin.create_result_dir(
-            config.get('nfs', 'base_dir'), self.job_id)
+            config.get('nfs', 'base_dir'), self.job_profile.job_id)
 
-        realizations = self['NUMBER_OF_LOGIC_TREE_SAMPLES']
-        poes = self['POES']
-        sites = self.sites_to_compute()
+        realizations = self.job_profile['NUMBER_OF_LOGIC_TREE_SAMPLES']
+        poes = self.job_profile['POES']
+        sites = self.job_profile.sites_to_compute()
 
         log_msg = ("Computing disaggregation for job_id=%s,  %s sites, "
             "%s realizations, and PoEs=%s")
-        log_msg %= (self.job_id, len(sites), realizations, poes)
+        log_msg %= (self.job_profile.job_id, len(sites), realizations, poes)
         LOG.info(log_msg)
 
-        full_disagg_results = DisaggMixin.distribute_disagg(
-            self, sites, realizations, poes, result_dir)
+        full_disagg_results = self.distribute_disagg(sites, realizations, poes,
+                                                     result_dir)
 
-        subset_types = self['DISAGGREGATION_RESULTS']
+        subset_types = self.job_profile['DISAGGREGATION_RESULTS']
 
-        subset_results = DisaggMixin.distribute_subsets(
-            self, full_disagg_results, subset_types, result_dir)
+        subset_results = self.distribute_subsets(full_disagg_results,
+                                                 subset_types, result_dir)
 
-        DisaggMixin.serialize_nrml(self, subset_types, subset_results)
+        DisaggMixin.serialize_nrml(self.job_profile, subset_types,
+                                   subset_results)
 
     @staticmethod
     def create_result_dir(base_path, job_id):
@@ -231,15 +231,14 @@ class DisaggMixin(Mixin):
         os.makedirs(output_path)
         return output_path
 
-    @staticmethod
-    def distribute_disagg(the_job, sites, realizations, poes, result_dir):
+    def distribute_disagg(self, sites, realizations, poes, result_dir):
         """Compute disaggregation by splitting up the calculation over sites,
         realizations, and PoE values.
 
         :param the_job:
-            Job definition
+            CalculationProxy definition
         :type the_job:
-            :class:`openquake.job.Job` instance
+            :class:`openquake.job.CalculationProxy` instance
         :param sites:
             List of :class:`openquake.shapes.Site` objects
         :param poes:
@@ -279,24 +278,25 @@ class DisaggMixin(Mixin):
         task_data = []
 
         src_model_rnd = random.Random()
-        src_model_rnd.seed(the_job['SOURCE_MODEL_LT_RANDOM_SEED'])
+        src_model_rnd.seed(self.job_profile['SOURCE_MODEL_LT_RANDOM_SEED'])
         gmpe_rnd = random.Random()
-        gmpe_rnd.seed(the_job['GMPE_LT_RANDOM_SEED'])
+        gmpe_rnd.seed(self.job_profile['GMPE_LT_RANDOM_SEED'])
 
         for rlz in xrange(1, realizations + 1):  # 1 to N, inclusive
             # cache the source model and gmpe model in the KVS
             # so the Java code can access it
 
-            store_source_model(the_job.job_id, src_model_rnd.getrandbits(32),
-                               the_job.params, the_job.calc)
-            store_gmpe_map(the_job.job_id, gmpe_rnd.getrandbits(32),
-                           the_job.calc)
+            store_source_model(self.job_profile.job_id,
+                               src_model_rnd.getrandbits(32),
+                               self.job_profile.params, self.calc)
+            store_gmpe_map(self.job_profile.job_id, gmpe_rnd.getrandbits(32),
+                           self.calc)
 
             for poe in poes:
                 task_site_pairs = []
                 for site in sites:
                     a_task = compute_disagg_matrix_task.delay(
-                        the_job.job_id, site, rlz, poe, result_dir)
+                        self.job_profile.job_id, site, rlz, poe, result_dir)
 
                     task_site_pairs.append((a_task, site))
 
@@ -314,8 +314,8 @@ class DisaggMixin(Mixin):
                         " for job %s with task_id=%s, realization=%s, PoE=%s,"
                         " site=%s has failed with the following error: %s")
                     msg %= (
-                        the_job.job_id, a_task.task_id, rlz, poe, site,
-                        a_task.result)
+                        self.job_profile.job_id, a_task.task_id, rlz, poe,
+                        site, a_task.result)
                     LOG.critical(msg)
                     raise RuntimeError(msg)
                 else:
@@ -326,15 +326,12 @@ class DisaggMixin(Mixin):
 
         return full_da_results
 
-    @staticmethod
-    def distribute_subsets(the_job, full_disagg_results, subset_types,
+    def distribute_subsets(self, full_disagg_results, subset_types,
                            target_dir):
         """Given the results of the first phase of the disaggregation
         calculation, extract the matrix subsets (as requested in the job
         configuration).
 
-        :param the_job: job configuration
-        :type the_job: :class:`openquake.job.Job` instance
         :param full_disagg_results:
             Results of :method:`DisaggMixin.distribute_disagg`.
         :param subset_types:
@@ -367,11 +364,11 @@ class DisaggMixin(Mixin):
                  ),
                 ]
         """
-        lat_bin_lims = the_job[job_cfg.LAT_BIN_LIMITS]
-        lon_bin_lims = the_job[job_cfg.LON_BIN_LIMITS]
-        mag_bin_lims = the_job[job_cfg.MAG_BIN_LIMITS]
-        eps_bin_lims = the_job[job_cfg.EPS_BIN_LIMITS]
-        dist_bin_lims = the_job[job_cfg.DIST_BIN_LIMITS]
+        lat_bin_lims = self.job_profile[job_cfg.LAT_BIN_LIMITS]
+        lon_bin_lims = self.job_profile[job_cfg.LON_BIN_LIMITS]
+        mag_bin_lims = self.job_profile[job_cfg.MAG_BIN_LIMITS]
+        eps_bin_lims = self.job_profile[job_cfg.EPS_BIN_LIMITS]
+        dist_bin_lims = self.job_profile[job_cfg.DIST_BIN_LIMITS]
 
         rlz_poe_task_data = []
 
@@ -385,7 +382,7 @@ class DisaggMixin(Mixin):
                 target_file = os.path.join(target_dir, subset_file)
 
                 a_task = subsets.extract_subsets.delay(
-                    the_job.job_id, site, matrix_path, lat_bin_lims,
+                    self.job_profile.job_id, site, matrix_path, lat_bin_lims,
                     lon_bin_lims, mag_bin_lims, eps_bin_lims, dist_bin_lims,
                     target_file, subset_types)
 
@@ -405,8 +402,8 @@ class DisaggMixin(Mixin):
                         "Matrix subset extraction task for job %s with"
                         " task_id=%s, realization=%s, PoE=%s, target_file=%s"
                         " has failed with the following error: %s")
-                    msg %= (the_job.job_id, a_task.task_id, poe, target_file,
-                            a_task.result)
+                    msg %= (self.job_profile.job_id, a_task.task_id, poe,
+                            target_file, a_task.result)
                     LOG.critical(msg)
                     raise RuntimeError(msg)
                 else:
@@ -426,7 +423,7 @@ class DisaggMixin(Mixin):
         :param the_job:
             The job configuration.
         :type the_job:
-            :class:`openquake.job.Job` instance
+            :class:`openquake.job.CalculationProxy` instance
         :param subset_types:
             The matrix subset results requested in the job config.
         :param subsets_data:
@@ -458,6 +455,3 @@ class DisaggMixin(Mixin):
                 writer.write(site, node_data)
 
             writer.close()
-
-
-haz_job.HazJobMixin.register("Disaggregation", DisaggMixin)

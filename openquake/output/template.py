@@ -17,7 +17,6 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-
 """HTML template to embed geotiffs of GMF/Loss Ratio maps."""
 
 HTML_TEMPLATE_LOSSRATIO = """<!DOCTYPE html PUBLIC

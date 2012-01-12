@@ -110,7 +110,7 @@ class AMQPHandler(logging.Handler):  # pylint: disable=R0902
         """
         self._MDC.job_id = job_id
 
-    def emit(self, record):
+    def emit(self, record):  # pylint: disable=E0202
         # exc_info objects are not easily serializable
         # so we can not support "logger.exception()"
         assert not record.exc_info

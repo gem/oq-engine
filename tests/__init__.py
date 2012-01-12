@@ -24,7 +24,6 @@ from db_loader_unittest import *
 from db_routers_unittest import *
 from disaggregation_unittest import *
 from disagg_subsets_unittest import *
-from handlers_unittest import *
 from hazard_classical_unittest import *
 from hazard_nrml_unittest import *
 from hazard_unittest import *
@@ -64,6 +63,8 @@ from utils_stats_unittest import *
 from utils_tasks_unittest import *
 from utils_version_unittest import *
 from validator_unittest import *
+from models_unittest import *
+from engine_unittest import *
 from writer_unittest import *
 
 import glob
