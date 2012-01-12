@@ -19,12 +19,8 @@
 """Core functionality for Classical PSHA-based hazard calculations."""
 
 
-import functools
 import json
-import hashlib
-import math
 import multiprocessing
-import os
 import random
 import time
 
@@ -35,9 +31,7 @@ from celery.task import task
 from openquake import java
 from openquake import kvs
 from openquake import logs
-from openquake import shapes
 from openquake import xml
-
 from openquake.output import hazard as hazard_output
 from openquake.utils import config
 from openquake.utils import stats
@@ -71,40 +65,13 @@ def unwrap_validation_error(jpype, runtime_exception, path=None):
     raise runtime_exception
 
 
-@task
-@java.unpack_exception
-def generate_erf(job_id):
-    """
-    Stubbed ERF generator
-
-    Takes a job_id, returns a job_id.
-
-    Connects to the Java HazardEngine using hazardwrapper, waits for an ERF to
-    be generated, and then writes it to KVS.
-    """
-
-    # TODO(JM): implement real ERF computation
-
-    utils_tasks.check_job_status(job_id)
-    kvs.get_client().set(kvs.tokens.erf_key(job_id),
-                         json.JSONEncoder().encode([job_id]))
-
-    return job_id
-
-
 @task(ignore_result=True)
 @java.unpack_exception
 @stats.progress_indicator
 def compute_hazard_curve(job_id, sites, realization):
     """ Generate hazard curve for a given site list. """
-    # pylint: disable=W0404
-    from openquake.engine import CalculationProxy
-    from openquake.calculators.hazard import CALCULATORS
 
-    utils_tasks.check_job_status(job_id)
-    the_job = CalculationProxy.from_kvs(job_id)
-    calc_mode = the_job.oq_job_profile.calc_mode
-    calculator = CALCULATORS[calc_mode](the_job)
+    calculator = utils_tasks.calculator_for_task(job_id)
     keys = calculator.compute_hazard_curve(sites, realization)
     return keys
 
@@ -117,7 +84,9 @@ def compute_mgm_intensity(job_id, block_id, site_id):
     Compute mean ground intensity for a specific site.
     """
 
-    utils_tasks.check_job_status(job_id)
+    # We don't actually need the CalculationProxy returned by this function
+    # (yet) but this does check if the calculation is still in progress.
+    _ = utils_tasks.get_running_calculation(job_id)
     kvs_client = kvs.get_client()
 
     mgm_key = kvs.tokens.mgm_key(job_id, block_id, site_id)
@@ -132,7 +101,10 @@ def compute_mgm_intensity(job_id, block_id, site_id):
 def compute_mean_curves(job_id, sites, realizations):
     """Compute the mean hazard curve for each site given."""
 
-    utils_tasks.check_job_status(job_id)
+    # We don't actually need the CalculationProxy returned by this function
+    # (yet) but this does check if the calculation is still in progress.
+    _ = utils_tasks.get_running_calculation(job_id)
+
     HAZARD_LOG.info("Computing MEAN curves for %s sites (job_id %s)"
                     % (len(sites), job_id))
 
@@ -145,7 +117,10 @@ def compute_mean_curves(job_id, sites, realizations):
 def compute_quantile_curves(job_id, sites, realizations, quantiles):
     """Compute the quantile hazard curve for each site given."""
 
-    utils_tasks.check_job_status(job_id)
+    # We don't actually need the CalculationProxy returned by this function
+    # (yet) but this does check if the calculation is still in progress.
+    _ = utils_tasks.get_running_calculation(job_id)
+
     HAZARD_LOG.info("Computing QUANTILE curves for %s sites (job_id %s)"
                     % (len(sites), job_id))
 
