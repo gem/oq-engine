@@ -39,13 +39,13 @@ from openquake import xml
 
 from openquake.engine import CalculationProxy
 from openquake.db.models import OqCalculation
-from openquake.hazard import calc as hazcalc
 from openquake.job.config import HazardMandatoryParamsValidator
 from openquake.job.config import PARAMS
 from openquake.kvs import tokens
 from openquake.hazard import classical_psha
 from openquake.hazard import opensha
 from openquake.hazard import general as hazard_general
+from openquake.calculators.hazard import CALCULATORS
 
 from tests.utils import helpers
 
@@ -305,7 +305,7 @@ class HazardEngineTestCase(helpers.TestMixin, unittest.TestCase):
         the_job.to_kvs()
 
         calc_mode = job_profile.calc_mode
-        calculator = hazcalc.CALCULATORS[calc_mode](the_job)
+        calculator = CALCULATORS[calc_mode](the_job)
 
         used_keys = []
         calculator.execute(used_keys)
