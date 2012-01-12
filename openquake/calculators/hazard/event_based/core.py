@@ -39,7 +39,7 @@ LOG = logs.LOG
 @stats.progress_indicator
 def compute_ground_motion_fields(job_id, sites, history, realization, seed):
     """ Generate ground motion fields """
-    calculator = utils_tasks.calculator_for_task(job_id)
+    calculator = utils_tasks.calculator_for_task(job_id, 'hazard')
 
     calculator.compute_ground_motion_fields(
         sites, history, realization, seed)

@@ -135,7 +135,7 @@ def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
 def compute_risk(calculation_id, block_id, **kwargs):
     """ A task for computing risk, calls the mixed in compute_risk method """
 
-    calculator = calculator_for_task(calculation_id)
+    calculator = calculator_for_task(calculation_id, 'risk')
 
     return calculator.compute_risk(block_id, **kwargs)
 
