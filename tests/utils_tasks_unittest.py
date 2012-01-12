@@ -337,7 +337,7 @@ class CheckJobStatusTestCase(unittest.TestCase):
             owner=self.job_profile.owner,
             oq_job_profile=self.job_profile)
         self.calculation.save()
-        
+
     def test_not_completed(self):
         self.calculation.status = 'pending'
         self.calculation.save()
