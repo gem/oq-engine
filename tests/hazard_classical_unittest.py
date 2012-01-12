@@ -29,8 +29,7 @@ import unittest
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
-
-from openquake.hazard import opensha
+from openquake.calculators.hazard.classical import core as classical
 
 from tests.utils.helpers import (patch, TestMixin, TestStore, demo_file,
                                  create_job)
@@ -85,7 +84,7 @@ class DoCurvesTestCase(TestMixin, unittest.TestCase):
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
         self.calc_proxy = create_job(params)
-        self.calculator = opensha.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalMixin(self.calc_proxy)
 
         # Store the canned result data in the KVS.
         key = self.calc_proxy.job_id
@@ -146,7 +145,7 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
         self.calc_proxy = create_job(params)
-        self.calculator = opensha.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalMixin(self.calc_proxy)
 
     def tearDown(self):
         # Remove the canned result data from the KVS.
@@ -289,7 +288,7 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
         self.calc_proxy = create_job(params)
-        self.calculator = opensha.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalMixin(self.calc_proxy)
 
     def tearDown(self):
         # Remove the canned result data from the KVS.
@@ -415,7 +414,7 @@ class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
 
         self.calc_proxy = create_job(params)
 
-        self.calculator = opensha.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalMixin(self.calc_proxy)
 
     def test_number_of_tasks_with_param_not_set(self):
         """
@@ -487,7 +486,7 @@ class ClassicalExecuteTestCase(TestMixin, unittest.TestCase):
                    '38.0, -123.9, 38.0, -123.8, 38.0, -124.9, 38.0, -124.8'))
 
         self.calc_proxy = create_job(params)
-        self.calculator = opensha.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalMixin(self.calc_proxy)
 
         # Initialize the mixin instance.
         self.calculator.calc = self.FakeLogicTreeProcessor()
@@ -539,7 +538,8 @@ class ClassicalExecuteTestCase(TestMixin, unittest.TestCase):
         data_slices = [self.sites[:3], self.sites[3:6], self.sites[6:]]
         # Make sure no real logic is invoked.
         with patch("openquake.input.logictree.LogicTreeProcessor"):
-            with patch("openquake.hazard.opensha.release_data_from_kvs") as m:
+            with patch("openquake.calculators.hazard.classical.core"
+                       ".release_data_from_kvs") as m:
                 self.calculator.execute()
                 self.assertEqual(3, m.call_count)
                 for idx, data_len in enumerate([3, 3, 2]):
@@ -549,7 +549,7 @@ class ClassicalExecuteTestCase(TestMixin, unittest.TestCase):
 
 
 class ReleaseDataFromKvsTestCase(TestMixin, unittest.TestCase):
-    """Tests the behaviour of opensha.release_data_from_kvs()."""
+    """Tests the behaviour of classical.release_data_from_kvs()."""
 
     SITES = [shapes.Site(-118.3, 33.76), shapes.Site(-118.2, 33.76),
              shapes.Site(-118.1, 33.76), shapes.Site(-118.3, 33.86),
@@ -587,7 +587,7 @@ class ReleaseDataFromKvsTestCase(TestMixin, unittest.TestCase):
         self._populate_data_in_kvs(job_id, keys)
         self.assertEqual(sorted(k % job_id for k in keys),
                          sorted(self._keys_found(job_id, keys)))
-        opensha.release_data_from_kvs(job_id, *self.ARGS)
+        classical.release_data_from_kvs(job_id, *self.ARGS)
         self.assertFalse(self._keys_found(job_id, keys))
 
     def test_curve_data(self):
@@ -643,19 +643,19 @@ class ReleaseDataFromKvsTestCase(TestMixin, unittest.TestCase):
 
 
 class CreateJavaCacheTestCase(TestMixin, unittest.TestCase):
-    """Tests the behaviour of opensha.create_java_cache()."""
+    """Tests the behaviour of classical.create_java_cache()."""
 
     class Fake(object):
         """Fake calculator class."""
         def __init__(self):
             self.cache = None
 
-        @opensha.create_java_cache
+        @classical.create_java_cache
         def calculate1(self):
             """Fake calculator method."""
             return self.cache
 
-        @opensha.create_java_cache
+        @classical.create_java_cache
         def calculate2(self):
             """Fake calculator method."""
             return self.cache
