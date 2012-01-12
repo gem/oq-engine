@@ -29,6 +29,7 @@ import uuid
 
 from openquake import engine
 from openquake.utils import tasks
+from openquake.db.models import model_equals
 from openquake.db.models import OqCalculation
 
 from tests.utils.helpers import demo_file
@@ -326,31 +327,48 @@ class ParallelizeTestCase(unittest.TestCase):
             raise Exception("Exception not raised.")
 
 
-class CheckJobStatusTestCase(unittest.TestCase):
-    """Tests for :function:`openquake.utils.tasks.check_job_status`."""
+class GetRunningCalculationTestCase(unittest.TestCase):
+    """Tests for :function:`openquake.utils.tasks.get_running_calculation`."""
 
     def setUp(self):
-        self.job_profile, _params, _sections = engine.import_job_profile(
-            demo_file('simple_fault_demo_hazard/config.gem'))
+        self.job_profile, self.params, _sections = (
+            engine.import_job_profile(demo_file(
+                'simple_fault_demo_hazard/config.gem')))
+
+        self.params['debug'] = 'warn'
 
         self.calculation = OqCalculation(
             owner=self.job_profile.owner,
             oq_job_profile=self.job_profile)
         self.calculation.save()
 
-    def test_not_completed(self):
+        # Cache the calc proxy data into the kvs:
+        calc_proxy = engine.CalculationProxy(
+            self.params, self.calculation.id, oq_job_profile=self.job_profile,
+            oq_calculation=self.calculation)
+        calc_proxy.to_kvs()
+
+    def test_get_running_calculation(self):
         self.calculation.status = 'pending'
         self.calculation.save()
 
         # No 'JobCompletedError' should be raised.
-        tasks.check_job_status(self.calculation.id)
+        calc_proxy = tasks.get_running_calculation(self.calculation.id)
 
-    def test_completed_success(self):
+        self.assertEqual(self.params, calc_proxy.params)
+        self.assertTrue(model_equals(
+            self.job_profile, calc_proxy.oq_job_profile,
+            ignore=('_owner_cache',)))
+        self.assertTrue(model_equals(
+            self.calculation, calc_proxy.oq_calculation,
+            ignore=('_owner_cache',)))
+
+    def test_get_completed_calculation(self):
         self.calculation.status = 'succeeded'
         self.calculation.save()
 
         try:
-            tasks.check_job_status(self.calculation.id)
+            tasks.get_running_calculation(self.calculation.id)
         except tasks.JobCompletedError as exc:
             self.assertEqual(exc.message, self.calculation.id)
         else:
@@ -361,7 +379,7 @@ class CheckJobStatusTestCase(unittest.TestCase):
         self.calculation.save()
 
         try:
-            tasks.check_job_status(self.calculation.id)
+            tasks.get_running_calculation(self.calculation.id)
         except tasks.JobCompletedError as exc:
             self.assertEqual(exc.message, self.calculation.id)
         else:

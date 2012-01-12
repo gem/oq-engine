@@ -32,7 +32,7 @@ from openquake.job import config as job_cfg
 from openquake.output import hazard_disagg as hazard_output
 from openquake.utils import config
 from openquake.calculators.base import Calculator
-from openquake.utils.tasks import check_job_status
+from openquake.utils.tasks import get_running_calculation
 from openquake.calculators.hazard.disagg import FULL_DISAGG_MATRIX
 from openquake.calculators.hazard.disagg import subsets
 from openquake.calculators.hazard.general import generate_erf
@@ -49,7 +49,7 @@ LOG = logs.LOG
 
 # pylint: disable=R0914
 @java.unpack_exception
-def compute_disagg_matrix(job_id, site, poe, result_dir):
+def compute_disagg_matrix(calc_proxy, site, poe, result_dir):
     """ Compute a complete 5D Disaggregation matrix. This task leans heavily
     on the DisaggregationCalculator (in the OpenQuake Java lib) to handle this
     computation.
@@ -57,8 +57,9 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
     The 5D matrix returned from the java calculator will be saved to a file in
     HDF5 format.
 
-    :param job_id: id of the job record in the KVS
-    :type job_id: `str`
+    :param calc_proxy:
+        A :class:`openquake.engine.CalculationProxy` which holds all of the
+        data we need to run this computation.
     :param site: a single site of interest
     :type site: :class:`openquake.shapes.Site` instance`
     :param poe: Probability of Exceedence
@@ -69,14 +70,10 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
 
     :returns: 2-tuple of (ground_motion_value, path_to_h5_matrix_file)
     """
-    # pylint: disable=W0404
-    from openquake.engine import CalculationProxy
-    the_job = CalculationProxy.from_kvs(job_id)
-
-    lat_bin_lims = the_job[job_cfg.LAT_BIN_LIMITS]
-    lon_bin_lims = the_job[job_cfg.LON_BIN_LIMITS]
-    mag_bin_lims = the_job[job_cfg.MAG_BIN_LIMITS]
-    eps_bin_lims = the_job[job_cfg.EPS_BIN_LIMITS]
+    lat_bin_lims = calc_proxy[job_cfg.LAT_BIN_LIMITS]
+    lon_bin_lims = calc_proxy[job_cfg.LON_BIN_LIMITS]
+    mag_bin_lims = calc_proxy[job_cfg.MAG_BIN_LIMITS]
+    eps_bin_lims = calc_proxy[job_cfg.EPS_BIN_LIMITS]
 
     jd = list_to_jdouble_array
 
@@ -88,16 +85,16 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
         config.get('kvs', 'host'),
         int(config.get('kvs', 'port')))
 
-    erf = generate_erf(job_id, cache)
-    gmpe_map = generate_gmpe_map(job_id, cache)
-    set_gmpe_params(gmpe_map, the_job.params)
+    erf = generate_erf(calc_proxy.job_id, cache)
+    gmpe_map = generate_gmpe_map(calc_proxy.job_id, cache)
+    set_gmpe_params(gmpe_map, calc_proxy.params)
 
-    imls = get_iml_list(the_job['INTENSITY_MEASURE_LEVELS'],
-                        the_job['INTENSITY_MEASURE_TYPE'])
-    vs30_type = the_job['VS30_TYPE']
-    vs30_value = the_job['REFERENCE_VS30_VALUE']
-    depth_to_1pt0 = the_job['DEPTHTO1PT0KMPERSEC']
-    depth_to_2pt5 = the_job['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']
+    imls = get_iml_list(calc_proxy['INTENSITY_MEASURE_LEVELS'],
+                        calc_proxy['INTENSITY_MEASURE_TYPE'])
+    vs30_type = calc_proxy['VS30_TYPE']
+    vs30_value = calc_proxy['REFERENCE_VS30_VALUE']
+    depth_to_1pt0 = calc_proxy['DEPTHTO1PT0KMPERSEC']
+    depth_to_2pt5 = calc_proxy['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']
 
     matrix_result = disagg_calc.computeMatrix(
         site.latitude, site.longitude, erf, gmpe_map, poe, imls,
@@ -132,13 +129,14 @@ def save_5d_matrix_to_h5(directory, matrix):
 
 @task
 @java.unpack_exception
-def compute_disagg_matrix_task(job_id, site, realization, poe, result_dir):
+def compute_disagg_matrix_task(calculation_id, site, realization, poe,
+                               result_dir):
     """ Compute a complete 5D Disaggregation matrix. This task leans heavily
     on the DisaggregationCalculator (in the OpenQuake Java lib) to handle this
     computation.
 
-    :param job_id: id of the job record in the KVS
-    :type job_id: `str`
+    :param calculation_id: id of the calculation record in the KVS
+    :type calculation_id: `str`
     :param site: a single site of interest
     :type site: :class:`openquake.shapes.Site` instance`
     :param int realization: logic tree sample iteration number
@@ -150,16 +148,15 @@ def compute_disagg_matrix_task(job_id, site, realization, poe, result_dir):
 
     :returns: 2-tuple of (ground_motion_value, path_to_h5_matrix_file)
     """
-    # check and see if the job is still valid (i.e., not complete or failed)
-    check_job_status(job_id)
+    calc_proxy = get_running_calculation(calculation_id)
 
     log_msg = (
         "Computing full disaggregation matrix for job_id=%s, site=%s, "
         "realization=%s, PoE=%s. Matrix results will be serialized to `%s`.")
-    log_msg %= (job_id, site, realization, poe, result_dir)
+    log_msg %= (calc_proxy.job_id, site, realization, poe, result_dir)
     LOG.info(log_msg)
 
-    return compute_disagg_matrix(job_id, site, poe, result_dir)
+    return compute_disagg_matrix(calc_proxy, site, poe, result_dir)
 
 
 class DisaggMixin(Calculator):

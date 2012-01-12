@@ -82,7 +82,7 @@ class DisaggregationTaskTestCase(unittest.TestCase):
         result_dir = tempfile.gettempdir()
 
         gmv, matrix_path = disagg_core.compute_disagg_matrix(
-            the_job.job_id, site, poe, result_dir)
+            the_job, site, poe, result_dir)
 
         # Now test the following:
         # 1) The matrix file exists

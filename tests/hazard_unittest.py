@@ -327,35 +327,6 @@ class HazardEngineTestCase(helpers.TestMixin, unittest.TestCase):
         verify_mean_haz_maps_stored_to_nrml(the_job)
         verify_quantile_haz_maps_stored_to_nrml(the_job, calculator)
 
-    def test_basic_generate_erf_keeps_order(self):
-        job_ids = [helpers.job_from_file(TEST_JOB_FILE).job_id
-                   for _ in xrange(4)]
-        results = map(classical.generate_erf.delay, job_ids)
-        self.assertEqual(job_ids, [result.get() for result in results])
-
-    def test_generate_erf_returns_erf_via_kvs(self):
-        results = []
-        keys = []
-        expected_values = {}
-
-        job_ids = [helpers.job_from_file(TEST_JOB_FILE).job_id
-                   for _ in xrange(4)]
-        for job_id in job_ids:
-            erf_key = tokens.erf_key(job_id)
-
-            # Build the expected values
-            expected_values[erf_key] = json.JSONEncoder().encode([job_id])
-
-            # Get our result keys
-            keys.append(erf_key)
-
-            # Spawn our tasks.
-            results.append(classical.generate_erf.apply_async(args=[job_id]))
-
-        helpers.wait_for_celery_tasks(results)
-        result_values = dict(zip(keys, self.kvs_client.mget(keys)))
-        self.assertEqual(result_values, expected_values)
-
     def test_compute_mgm_intensity(self):
         results = []
         block_id = 8801
