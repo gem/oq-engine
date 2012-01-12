@@ -190,12 +190,12 @@ class RiskJobMixinTestCase(unittest.TestCase):
         params = {
             config.EXPOSURE: os.path.join(helpers.SCHEMA_EXAMPLES_DIR,
                                           EXPOSURE_TEST_FILE),
+            "BASE_PATH": "."
         }
         a_job = helpers.create_job(params)
 
         calculator = general.RiskJobMixin(a_job)
 
-        a_job.base_path = "."
         calculator.partition()
 
         expected = general.Block(

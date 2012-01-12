@@ -38,8 +38,9 @@ from openquake import xml
 
 from openquake.flags import FLAGS
 from openquake.job import config as jobconf
-from openquake.job import Job
+from openquake.job import CalculationProxy
 from openquake.supervising import supervisor
+from openquake.utils import stats
 
 from openquake.db.models import (CharArrayField, FloatArrayField, Input,
                                  InputSet, OqCalculation, OqJobProfile, OqUser)
@@ -54,86 +55,12 @@ CALCS = dict(hazard=HAZ_CALCS, risk=RISK_CALCS)
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 
 
-def run_job(job_file, output_type):
-    """
-    Given a job_file, run the job.
-
-    :param job_file: the path of the configuration file for the job
-    :type job_file: string
-    :param output_type: the desired format for the results, one of 'db', 'xml'
-    :type output_type: string
-    """
-    a_job = job_from_file(job_file, output_type)
-    a_job.set_status('running')
-
-    # closing all db connections to make sure they're not shared between
-    # supervisor and job executor processes. otherwise if one of them closes
-    # the connection it immediately becomes unavailable for other
-    close_connection()
-
-    job_pid = os.fork()
-    if not job_pid:
-        # job executor process
-        try:
-            logs.init_logs_amqp_send(level=FLAGS.debug, job_id=a_job.job_id)
-            launch(a_job)
-        except Exception, ex:
-            logs.LOG.critical("Job failed with exception: '%s'" % str(ex))
-            a_job.set_status('failed')
-            raise
-        else:
-            a_job.set_status('succeeded')
-        return
-
-    supervisor_pid = os.fork()
-    if not supervisor_pid:
-        # supervisor process
-        supervisor_pid = os.getpid()
-        job = OqCalculation.objects.get(id=a_job.job_id)
-        job.supervisor_pid = supervisor_pid
-        job.job_pid = job_pid
-        job.save()
-        supervisor.supervise(job_pid, a_job.job_id)
-        return
-
-    # parent process
-
-    # ignore Ctrl-C as well as supervisor process does. thus only
-    # job executor terminates on SIGINT
-    supervisor.ignore_sigint()
-    # wait till both child processes are done
-    os.waitpid(job_pid, 0)
-    os.waitpid(supervisor_pid, 0)
-
-
-def launch(a_job):
-    """Based on the behavior specified in the configuration, mix in the correct
-    behavior for job and execute it.
-
-    :param a_job:
-        :class:`openquake.job.Job` instance.
-    """
-    # TODO: This needs to be done as a pre-execution step of calculation.
-    a_job._record_initial_stats()  # pylint: disable=W0212
-
-    output_dir = os.path.join(a_job.base_path, a_job['OUTPUT_DIR'])
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-
-    for job_type in ('hazard', 'risk'):
-        if not job_type.upper() in a_job.sections:
-            continue
-
-        calc_mode = a_job['CALCULATION_MODE']
-        calc_class = CALCS[job_type][calc_mode]
-
-        calculator = calc_class(a_job)
-        calculator.execute()
-
-
-def job_from_file(config_file, output_type, owner_username='openquake'):
+def _job_from_file(config_file, output_type, owner_username='openquake'):
     """
     Create a job from external configuration files.
+
+    NOTE: This function is deprecated. Please use
+    :function:`openquake.engine.import_job_profile`.
 
     :param config_file:
         The external configuration file path
@@ -141,6 +68,9 @@ def job_from_file(config_file, output_type, owner_username='openquake'):
         Where to store results:
         * 'db' database
         * 'xml' XML files *plus* database
+    :param owner_username:
+        oq_user.user_name which defines the owner of all DB artifacts created
+        by this function.
     """
 
     # output_type can be set, in addition to 'db' and 'xml', also to
@@ -151,7 +81,7 @@ def job_from_file(config_file, output_type, owner_username='openquake'):
     # essentially a detail of our current tests and ci infrastructure.
     assert output_type in ('db', 'xml')
 
-    params, sections = parse_config_file(config_file)
+    params, sections = _parse_config_file(config_file)
     params, sections = prepare_config_parameters(params, sections)
     job_profile = _prepare_job(params, sections)
 
@@ -179,14 +109,15 @@ def job_from_file(config_file, output_type, owner_username='openquake'):
 
     base_path = params['BASE_PATH']
 
-    job = Job(params, calculation_id, sections=sections, base_path=base_path,
-              serialize_results_to=serialize_results_to)
+    job = CalculationProxy(params, calculation_id, sections=sections,
+                           base_path=base_path,
+                           serialize_results_to=serialize_results_to)
     job.to_kvs()
 
     return job
 
 
-def parse_config_file(config_file):
+def _parse_config_file(config_file):
     """
     We have a single configuration file which may contain a risk section and
     a hazard section. This input file must be in the ConfigParser format
@@ -216,7 +147,7 @@ def parse_config_file(config_file):
             # Handle includes.
             if RE_INCLUDE.match(key):
                 config_file = os.path.join(os.path.dirname(config_file), value)
-                new_params, new_sections = parse_config_file(config_file)
+                new_params, new_sections = _parse_config_file(config_file)
                 sections.extend(new_sections)
                 params.update(new_params)
             else:
@@ -290,7 +221,7 @@ def _insert_input_files(params, input_set):
 
     # insert soft-linked source models in input table
     if 'SOURCE_MODEL_LOGIC_TREE_FILE' in params:
-        for path in get_source_models(params['SOURCE_MODEL_LOGIC_TREE_FILE']):
+        for path in _get_source_models(params['SOURCE_MODEL_LOGIC_TREE_FILE']):
             in_model = Input(input_set=input_set, path=path,
                              input_type='source', size=os.path.getsize(path))
             in_model.save()
@@ -349,7 +280,7 @@ def _prepare_job(params, sections, owner_username='openquake'):
     return OqJobProfile.objects.get(id=job_profile.id)
 
 
-def get_source_models(logic_tree):
+def _get_source_models(logic_tree):
     """Returns the source models soft-linked by the given logic tree.
 
     :param str logic_tree: path to a source model logic tree file
@@ -411,6 +342,130 @@ def _store_input_parameters(params, calc_mode, job_profile):
         job_profile.damping = None
 
 
+def run_calculation(job_profile, params, sections, output_type='db'):
+    """Given an :class:`openquake.db.models.OqJobProfile` object, create a new
+    :class:`openquake.db.models.OqCalculation` object and run the calculation.
+
+    NOTE: The params and sections parameters are temporary but will be required
+    until we can run calculations purely using Django model objects as
+    calculator input.
+
+    Returns the calculation object when the calculation concludes.
+
+    :param job_profile:
+        :class:`openquake.db.models.OqJobProfile` instance.
+    :param params:
+        A dictionary of config parameters parsed from the calculation
+        config file.
+    :param sections:
+        A list of sections parsed from the calculation config file.
+    :param output_type:
+        'db' or 'xml' (defaults to 'db')
+
+    :returns:
+        :class:`openquake.db.models.OqCalculation` instance.
+    """
+    if not output_type in ('db', 'xml'):
+        raise RuntimeError("output_type must be 'db' or 'xml'")
+
+    calculation = OqCalculation(owner=job_profile.owner)
+    calculation.oq_job_profile = job_profile
+    calculation.status = 'running'
+    calculation.save()
+
+    # Clear any counters for this calculation_id, prior to running the
+    # calculation.
+    # We do this just to make sure all of the counters behave properly and can
+    # provide accurate data about a calculation in-progress.
+    stats.delete_job_counters(calculation.id)
+
+    serialize_results_to = ['db']
+    if output_type == 'xml':
+        serialize_results_to.append('xml')
+
+    calc_proxy = CalculationProxy(params, calculation.id, sections=sections,
+                                  serialize_results_to=serialize_results_to,
+                                  oq_job_profile=job_profile,
+                                  oq_calculation=calculation)
+
+    # closing all db connections to make sure they're not shared between
+    # supervisor and job executor processes. otherwise if one of them closes
+    # the connection it immediately becomes unavailable for other
+    close_connection()
+
+    calc_pid = os.fork()
+    if not calc_pid:
+        # calculation executor process
+        try:
+            logs.init_logs_amqp_send(level=FLAGS.debug, job_id=calculation.id)
+            _launch_calculation(calc_proxy, sections)
+        except Exception, ex:
+            logs.LOG.critical("Calculation failed with exception: '%s'"
+                              % str(ex))
+            calculation.status = 'failed'
+            calculation.save()
+            raise
+        else:
+            calculation.status = 'succeeded'
+            calculation.save()
+        return
+
+    supervisor_pid = os.fork()
+    if not supervisor_pid:
+        # supervisor process
+        supervisor_pid = os.getpid()
+        calculation.supervisor_pid = supervisor_pid
+        calculation.job_pid = calc_pid
+        calculation.save()
+        supervisor.supervise(calc_pid, calculation.id)
+        return
+
+    # parent process
+
+    # ignore Ctrl-C as well as supervisor process does. thus only
+    # job executor terminates on SIGINT
+    supervisor.ignore_sigint()
+    # wait till both child processes are done
+    os.waitpid(calc_pid, 0)
+    os.waitpid(supervisor_pid, 0)
+
+    return calculation
+
+
+def _launch_calculation(calc_proxy, sections):
+    """Instantiate calculator(s) and actually run the calculation.
+
+    :param calc_proxy:
+        :class:`openquake.job.CalculationProxy` instance.
+    :param sections:
+        List of config file sections. Example::
+            ['general', 'HAZARD', 'RISK']
+    """
+    # This should be moved to the analyze() method of the base Calculator
+    # class, or something like that.
+    # Ignoring 'Access to a protected member'
+    # pylint: disable=W0212
+    calc_proxy._record_initial_stats()
+    calc_proxy.to_kvs()
+
+    output_dir = os.path.join(calc_proxy.base_path, calc_proxy['OUTPUT_DIR'])
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    calc_mode = calc_proxy.oq_job_profile.calc_mode
+
+    for job_type in ('hazard', 'risk'):
+        if not job_type.upper() in sections:
+            continue
+
+        calc_class = CALCS[job_type][calc_mode]
+
+        calculator = calc_class(calc_proxy)
+        logs.LOG.debug("Launching calculation with id=%s and type='%s'"
+                       % (calc_proxy.job_id, job_type))
+        calculator.execute()
+
+
 def import_job_profile(path_to_cfg):
     """Given the path to a job config file, create a new
     :class:`openquake.db.models.OqJobProfile` and save it to the DB, and return
@@ -418,10 +473,15 @@ def import_job_profile(path_to_cfg):
 
     :param str path_to_cfg:
         Path to a job config file.
+
     :returns:
-        :class:`openquake.db.models.OqJobProfile` instance.
+        A tuple of :class:`openquake.db.models.OqJobProfile` instance,
+        params dict, and sections list.
+        NOTE: The params and sections are temporary. These should be removed
+        from the return value the future whenever possible to keep the API
+        clean.
     """
-    params, sections = parse_config_file(path_to_cfg)
+    params, sections = _parse_config_file(path_to_cfg)
     params, sections = prepare_config_parameters(params, sections)
 
     validator = jobconf.default_validators(sections, params)
@@ -431,4 +491,4 @@ def import_job_profile(path_to_cfg):
         raise jobconf.ValidationException(errors)
 
     job_profile = _prepare_job(params, sections)
-    return job_profile
+    return job_profile, params, sections

@@ -24,9 +24,9 @@ from openquake.risk.job.scenario import ScenarioEventBasedMixin
 
 
 CALCULATORS = {
-    'Classical': ClassicalPSHABasedMixin,
-    'Classical BCR': ClassicalPSHABasedMixin,
-    'Event Based': ProbabilisticEventMixin,
-    'Event Based BCR': ProbabilisticEventMixin,
-    'Scenario': ScenarioEventBasedMixin,
+    'classical': ClassicalPSHABasedMixin,
+    'classical_bcr': ClassicalPSHABasedMixin,
+    'event_based': ProbabilisticEventMixin,
+    'event_based_bcr': ProbabilisticEventMixin,
+    'scenario': ScenarioEventBasedMixin,
 }
