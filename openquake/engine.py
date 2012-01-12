@@ -243,7 +243,7 @@ class CalculationProxy(object):
             print "COMPUTE_HAZARD_AT_ASSETS_LOCATIONS selected, " \
                 "computing hazard on exposure sites..."
 
-            self.sites = _read_sites_from_exposure(self)
+            self.sites = read_sites_from_exposure(self)
         elif self.has(jobconf.SITES):
 
             coords = self._extract_coords(jobconf.SITES)
@@ -321,7 +321,7 @@ class CalculationProxy(object):
         calc_stats.save()
 
 
-def _read_sites_from_exposure(calc_proxy):
+def read_sites_from_exposure(calc_proxy):
     """Given the exposure model specified in the job config, read all sites
     which are located within the region of interest.
 
