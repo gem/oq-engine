@@ -73,7 +73,7 @@ class TruncatedGR(BaseMFD):
         return (10 ** (self.a_val - self.b_val * mag_lo)
                 - 10 ** (self.a_val - self.b_val * mag_hi))
 
-    def get_annual_occurence_rates(self):
+    def get_annual_occurrence_rates(self):
         """
         Calculate and return the occurrence rates histogram.
 
