@@ -88,7 +88,7 @@ class TruncatedGR(BaseMFD):
         if min_mag != max_mag:
             min_mag += self.bin_width / 2
             max_mag -= self.bin_width / 2
-        n_bins = round((min_mag - max_mag) / self.bin_width) + 1
+        n_bins = int(round((max_mag - min_mag) / self.bin_width)) + 1
         rates = []
         for i in xrange(n_bins):
             mag = min_mag + i * self.bin_width
