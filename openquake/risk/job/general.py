@@ -541,7 +541,7 @@ def compute_bcr_for_block(job_id, points, get_loss_curve,
                 asset['retrofittingCost']
             )
 
-            LOG.info('for asset %s EAL original = %f, ' \
+            LOG.info('for asset %s EAL original = %f, '
                      'EAL retrofitted = %f, BCR = %f',
                      asset['assetID'], eal_original, eal_retrofitted, bcr)
 
