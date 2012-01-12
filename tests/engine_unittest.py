@@ -238,7 +238,7 @@ class EngineAPITestCase(unittest.TestCase):
         with patch('os.fork', mocksignature=False) as fork_mock:
             # Fake return val for fork:
             fork_mock.return_value = 0
-            # And we don't actually want to run the calculation. 
+            # And we don't actually want to run the calculation.
             with patch('openquake.engine._launch_calculation'):
                 with patch(
                     'openquake.utils.stats.delete_job_counters') as djc_mock:
