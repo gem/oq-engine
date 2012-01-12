@@ -17,7 +17,9 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
+from collections import defaultdict
 from lxml import etree
+from nose.plugins.attrib import attr
 import geohash
 import numpy
 import os
@@ -25,10 +27,8 @@ import shutil
 import subprocess
 import unittest
 
-from nose.plugins.attrib import attr
-
-from openquake import shapes
 from openquake.db import models
+from openquake import shapes
 from openquake.utils import stats
 
 from tests.utils import helpers
@@ -414,6 +414,15 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         Run the `complex_fault_demo_hazard` demo and verify all of the
         generated NRML data.
         """
+
+        def filter_multi():
+            """Filter and return files that were written more than once."""
+            counts = defaultdict(int)
+            files = stats.kvs_op("lrange", key, 0, -1)
+            for file in files:
+                counts[file] += 1
+            return [(f, c) for f, c in counts.iteritems() if c > 1]
+
         job_cfg = helpers.demo_file(os.path.join(
             "complex_fault_demo_hazard", "config.gem"))
 
@@ -424,8 +433,10 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         key = stats.key_name(
             self.job.id, *stats.STATS_KEYS["hcls_xmlcurvewrites"])
         if key:
-            self.assertEqual([], stats.kvs_op("lrange", key, 0, -1))
+            multi_writes = filter_multi()
+            self.assertFalse(multi_writes, str(multi_writes))
         key = stats.key_name(
             self.job.id, *stats.STATS_KEYS["hcls_xmlmapwrites"])
         if key:
-            self.assertEqual([], stats.kvs_op("lrange", key, 0, -1))
+            multi_writes = filter_multi()
+            self.assertFalse(multi_writes, str(multi_writes))
