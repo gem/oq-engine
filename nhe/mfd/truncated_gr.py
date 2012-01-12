@@ -6,17 +6,21 @@ from nhe.mfd.base import BaseMFD, MFDError
 
 class TruncatedGR(BaseMFD):
     """
-    Gutenberg-Richter MFD is defined in a functional form.
+    Truncated Gutenberg-Richter MFD is defined in a functional form.
 
-    The occurrence rate for a specific bin (magnitude band) is defined as ::
+    The annual occurrence rate for a specific bin (magnitude band)
+    is defined as ::
 
         rate = 10 ** (a_val - b_val * mag_lo) - 10 ** (a_val - b_val * mag_hi)
 
     where
 
-    * ``a_val`` is the cumulative ``a`` value (``10 ** a_value`` is the number
-      of earthquakes per year with magnitude greater or equal to 0),
-    * ``b_val`` is Gutenberg-Richter ``b`` value,
+    * ``a_val`` is the cumulative ``a`` value (``10 ** a`` is the number
+      of earthquakes per year with magnitude greater than or equal to 0),
+    * ``b_val`` is Gutenberg-Richter ``b`` value -- the decay rate
+      of exponential distribution. It describes the relative size distribution
+      of earthquakes: a higher ``b`` value indicates a relatively larger
+      proportion of small events and vice versa.
     * ``mag_lo`` and ``mag_hi`` are lower and upper magnitudes of a specific
       bin respectively.
 
@@ -75,7 +79,7 @@ class TruncatedGR(BaseMFD):
 
     def get_annual_occurrence_rates(self):
         """
-        Calculate and return the occurrence rates histogram.
+        Calculate and return the annual occurrence rates histogram.
 
         The result histogram has only one bin if minimum and maximum magnitude
         values appear equal after rounding.
