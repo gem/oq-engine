@@ -28,17 +28,15 @@ from lxml import etree
 
 from openquake import kvs
 from openquake import shapes
-
 from openquake.output import hazard
-
-from openquake.risk.job import aggregate_loss_curve as aggregate
-from openquake.risk.job.general import Block, RiskJobMixin, write_output_bcr
-from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
-from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.risk import probabilistic_event_based as prob
 from openquake.risk import classical_psha_based as psha
 from openquake.risk import scenario
 from openquake.risk import common
+from openquake.risk.job import aggregate_loss_curve as aggregate
+from openquake.risk.job.general import Block, RiskJobMixin, write_output_bcr
+from openquake.risk.job.probabilistic import ProbabilisticEventMixin
+from openquake.calculators.risk.classical.core import ClassicalPSHABasedMixin
 
 from tests.utils import helpers
 
