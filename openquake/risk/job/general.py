@@ -168,7 +168,7 @@ class RiskJobMixin(Calculator):
 
         sites = []
         self.calc_proxy.blocks_keys = []  # pylint: disable=W0201
-        sites = engine._read_sites_from_exposure(self.calc_proxy)
+        sites = engine.read_sites_from_exposure(self.calc_proxy)
 
         block_count = 0
 
