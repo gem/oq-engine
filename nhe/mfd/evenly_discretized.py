@@ -13,14 +13,14 @@ class EvenlyDiscretized(BaseMFD):
         bin in the histogram.
     :param bin_width:
         See :class:`nhe.mfd.base.BaseMFD`.
-    :param occurence_rates:
+    :param occurrence_rates:
         The list of non-negative float values representing the actual
         occurrence rates. The resulting histogram has as many bins
         as this list length.
     """
-    def __init__(self, min_mag, bin_width, occurence_rates):
+    def __init__(self, min_mag, bin_width, occurrence_rates):
         self.min_mag = min_mag
-        self.occurence_rates = occurence_rates
+        self.occurrence_rates = occurrence_rates
         super(EvenlyDiscretized, self).__init__(bin_width=bin_width)
 
 
@@ -34,21 +34,21 @@ class EvenlyDiscretized(BaseMFD):
         """
         super(EvenlyDiscretized, self).check_constraints()
 
-        if not self.occurence_rates:
+        if not self.occurrence_rates:
             raise MFDError()
 
-        if not all(value >= 0 for value in self.occurence_rates):
+        if not all(value >= 0 for value in self.occurrence_rates):
             raise MFDError()
 
         if not self.min_mag > 0:
             raise MFDError()
 
 
-    def get_annual_occurence_rates(self):
+    def get_annual_occurrence_rates(self):
         """
         Returns the predefined occurrence rates.
         """
         return [
             (self.min_mag + i * self.bin_width, occurence_rate)
-            for i, occurence_rate in enumerate(self.occurence_rates)
+            for i, occurence_rate in enumerate(self.occurrence_rates)
         ]
