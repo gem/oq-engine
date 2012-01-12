@@ -32,11 +32,9 @@ from openquake import engine
 from openquake import java
 from openquake import kvs
 from openquake import shapes
-
 from openquake.engine import CalculationProxy
-from openquake.hazard import scenario
-
 from openquake.db.models import OqCalculation
+from openquake.calculators.hazard.scenario import core as scenario
 
 SCENARIO_SMOKE_TEST = helpers.testdata_path("scenario/config.gem")
 NUMBER_OF_CALC_KEY = "NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"
@@ -111,7 +109,8 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
 
         calculator = scenario.ScenarioEventBasedMixin(self.calc_proxy)
 
-        with patch('openquake.hazard.scenario.ScenarioEventBasedMixin'
+        with patch('openquake.calculators.hazard.scenario.core'
+                   '.ScenarioEventBasedMixin'
                    '.compute_ground_motion_field') as compute_gmf_mock:
             # the return value needs to be a Java HashMap
             compute_gmf_mock.return_value = java.jclass('HashMap')()
