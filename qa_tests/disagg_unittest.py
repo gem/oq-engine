@@ -19,7 +19,6 @@ import h5py
 import numpy
 import os
 import unittest
-import subprocess
 import shutil
 
 from nose.plugins.attrib import attr
@@ -91,11 +90,7 @@ class DisaggCalcQATestCase(unittest.TestCase, helpers.ConfigTestMixin):
 
     @attr('qa')
     def test_disagg(self):
-        import openquake
-        exepath = os.path.join(os.path.dirname(openquake.__file__), '..',
-                               'bin', 'openquake')
-        args = [exepath, '--config_file=%s' % DISAGG_DEMO_CONFIG]
-        subprocess.call(args)
+        helpers.run_job(DISAGG_DEMO_CONFIG)
 
         job_record = OqCalculation.objects.latest("id")
         self.assertEqual('succeeded', job_record.status)
