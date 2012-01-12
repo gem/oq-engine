@@ -207,18 +207,62 @@ class JobCompletedError(Exception):
     """
 
 
-def check_job_status(job_id):
-    """
-    Helper function which is intended to be run by celery task functions.
+def get_running_calculation(calculation_id):
+    """Helper function which is intended to be run by celery task functions.
 
+    Given the id of an in-progress calculation
+    (:class:`openquake.db.models.OqCalculation`), load all of the calculation
+    data from the database and KVS and return a
+    :class:`openquake.engine.CalculationProxy` object.
+
+    If the calculation is not currently running, a
+    :exception:`JobCompletedError` is raised.
+
+    :returns:
+        :class:`openquake.engine.CalculationProxy` object, representing an
+        in-progress calculation. This object is created from cached data in the
+        KVS as well as data stored in the relational database.
     :raises JobCompletedError:
         If :meth:`~openquake.engine.CalculationProxy.is_job_completed` returns
-        ``True`` for ``job_id``.
+        ``True`` for ``calculation_id``.
     """
     # pylint: disable=W0404
     from openquake.engine import CalculationProxy
-    job = CalculationProxy.from_kvs(job_id)
-    level = job.params.get('debug') if job and job.params else 'warn'
-    logs.init_logs_amqp_send(level=level, job_id=job_id)
-    if CalculationProxy.is_job_completed(job_id):
-        raise JobCompletedError(job_id)
+
+    if CalculationProxy.is_job_completed(calculation_id):
+        raise JobCompletedError(calculation_id)
+
+    calc_proxy = CalculationProxy.from_kvs(calculation_id)
+    if calc_proxy and calc_proxy.params:
+        level = calc_proxy.params.get('debug')
+    else:
+        level = 'warn'
+    logs.init_logs_amqp_send(level=level, job_id=calculation_id)
+
+    return calc_proxy
+
+
+def calculator_for_task(calculation_id):
+    """Given the id of an in-progress calculation
+    (:class:`openquake.db.models.OqCalculation`), load all of the calculation
+    data from the database and KVS and instantiate the calculator required for
+    a task's computation.
+
+    :returns:
+        An instance of a calculator classed. The type of calculator depends on
+        the job type (hazard or risk) and the calculation mode (classical,
+        event based, etc.).
+    :rtype:
+        Subclass of :class:`openquake.calculators.base.Calculator`.
+    :raises JobCompletedError:
+        If the specified calculation is not currently running.
+    """
+    # pylint: disable=W0404
+    from openquake.engine import CalculationProxy
+    from openquake.calculators.hazard import CALCULATORS
+
+    calc_proxy = get_running_calculation(calculation_id)
+    calc_mode = calc_proxy.oq_job_profile.calc_mode
+    calculator = CALCULATORS[calc_mode](calc_proxy)
+
+    return calculator

@@ -55,7 +55,7 @@ def touch_result_file(job_id, path, sites, n_samples, n_periods):
     :param int n_periods:
         Number of UHS periods (the x-dimension of each dataset).
     """
-    utils_tasks.check_job_status(job_id)
+    utils_tasks.get_running_calculation(job_id)
     # TODO: Generate the sites, instead of pumping them through rabbit?
     with h5py.File(path, 'w') as h5_file:
         for site in sites:

@@ -33,7 +33,7 @@ from openquake.parser import exposure
 from openquake.parser import vulnerability
 from openquake.risk import common
 from openquake.calculators.base import Calculator
-from openquake.utils.tasks import check_job_status
+from openquake.utils.tasks import calculator_for_task
 
 from celery.task import task
 
@@ -132,16 +132,10 @@ def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
 
 
 @task
-def compute_risk(job_id, block_id, **kwargs):
+def compute_risk(calculation_id, block_id, **kwargs):
     """ A task for computing risk, calls the mixed in compute_risk method """
-    # pylint: disable=W0404
-    from openquake.engine import CalculationProxy
-    from openquake.risk.calc import CALCULATORS
 
-    check_job_status(job_id)
-    the_job = CalculationProxy.from_kvs(job_id)
-    calc_mode = the_job.oq_job_profile.calc_mode
-    calculator = CALCULATORS[calc_mode](the_job)
+    calculator = calculator_for_task(calculation_id)
 
     return calculator.compute_risk(block_id, **kwargs)
 

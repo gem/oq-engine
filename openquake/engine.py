@@ -166,17 +166,6 @@ class CalculationProxy(object):
         """Returns the kvs key for this job."""
         return kvs.tokens.generate_job_key(self.job_id)
 
-    def set_status(self, status):
-        """
-        Set the status of the database record belonging to this job.
-
-        :param status: one of 'pending', 'running', 'succeeded', 'failed'
-        :type status: string
-        """
-        job = OqCalculation.objects.get(id=self.job_id)
-        job.status = status
-        job.save()
-
     @property
     def region(self):
         """Compute valid region with appropriate cell size from config file."""
