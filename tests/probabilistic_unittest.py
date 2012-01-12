@@ -75,7 +75,7 @@ class LossMapCurveSerialization(unittest.TestCase, helpers.TestMixin):
         self.calculator.partition = lambda: None
 
     def test_loss_map_serialized_if_conditional_loss_poes(self):
-        self.calculator.job_profile.params['CONDITIONAL_LOSS_POE'] = (
+        self.calculator.calc_proxy.params['CONDITIONAL_LOSS_POE'] = (
             '0.01 0.02')
 
         with helpers.patch('openquake.risk.job.probabilistic'
