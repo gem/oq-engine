@@ -19,12 +19,8 @@
 """Core functionality for Classical PSHA-based hazard calculations."""
 
 
-import functools
 import json
-import hashlib
-import math
 import multiprocessing
-import os
 import random
 import time
 
@@ -35,7 +31,6 @@ from celery.task import task
 from openquake import java
 from openquake import kvs
 from openquake import logs
-from openquake import shapes
 from openquake import xml
 
 from openquake.output import hazard as hazard_output
