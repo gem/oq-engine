@@ -56,8 +56,8 @@ from openquake.job.params import CALCULATION_MODE
 from openquake.job.params import INPUT_FILE_TYPES
 from openquake.job.params import PARAMS
 from openquake.job.params import PATH_PARAMS
-from openquake.risk.calc import CALCULATORS as RISK_CALCS
 from openquake.calculators.hazard import CALCULATORS as HAZ_CALCS
+from openquake.calculators.risk import CALCULATORS as RISK_CALCS
 
 CALCS = dict(hazard=HAZ_CALCS, risk=RISK_CALCS)
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
