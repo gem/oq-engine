@@ -42,7 +42,6 @@ from openquake.db.models import OqCalculation
 from openquake.job.config import HazardMandatoryParamsValidator
 from openquake.job.config import PARAMS
 from openquake.kvs import tokens
-from openquake.hazard import classical_psha
 from openquake.hazard import opensha
 from openquake.calculators.hazard import CALCULATORS
 from openquake.calculators.hazard import general as hazard_general
@@ -133,7 +132,7 @@ class HazardEngineTestCase(helpers.TestMixin, unittest.TestCase):
             """ Make sure that the keys and non-empty values for mean
             hazard maps have been written to KVS."""
 
-            if (the_job.params[classical_psha.POES_PARAM_NAME] != '' and
+            if (the_job.params[hazard_general.POES_PARAM_NAME] != '' and
                 the_job.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == \
                 'true'):
 
@@ -167,7 +166,7 @@ class HazardEngineTestCase(helpers.TestMixin, unittest.TestCase):
 
             quantiles = calculator.quantile_levels
 
-            if (the_job.params[classical_psha.POES_PARAM_NAME] != '' and
+            if (the_job.params[hazard_general.POES_PARAM_NAME] != '' and
                 len(quantiles) > 0):
 
                 poes = calculator.poes_hazard_maps
@@ -227,7 +226,7 @@ class HazardEngineTestCase(helpers.TestMixin, unittest.TestCase):
             and that this file validates against the NRML schema.
             Does NOT test if results in NRML file are correct.
             """
-            if (the_job.params[classical_psha.POES_PARAM_NAME] != '' and
+            if (the_job.params[hazard_general.POES_PARAM_NAME] != '' and
                 the_job.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == \
                 'true'):
 
@@ -272,7 +271,7 @@ class HazardEngineTestCase(helpers.TestMixin, unittest.TestCase):
 
             quantiles = calculator.quantile_levels
 
-            if (the_job.params[classical_psha.POES_PARAM_NAME] != '' and
+            if (the_job.params[hazard_general.POES_PARAM_NAME] != '' and
                 len(quantiles) > 0):
 
                 for poe in calculator.poes_hazard_maps:
@@ -457,7 +456,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
                 8.1923000e-03, 2.9157000e-03, 7.9955000e-04, 1.5233000e-04,
                 1.5582000e-05])
 
-        mean_hazard_curve = classical_psha.compute_mean_curve([
+        mean_hazard_curve = hazard_general.compute_mean_curve([
                 hazard_curve_1, hazard_curve_2, hazard_curve_3,
                 hazard_curve_4, hazard_curve_5])
 
@@ -516,7 +515,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(self.expected_mean_curve, result))
 
     def _run(self, sites, realizations):
-        classical_psha.compute_mean_hazard_curves(
+        hazard_general.compute_mean_hazard_curves(
                 self.job.job_id, sites, realizations)
 
     def _store_hazard_curve_at(self, site, curve, realization=0):
@@ -577,20 +576,20 @@ class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.75)
 
     def test_computes_just_the_quantiles_in_range(self):
-        self.calc_proxy.params[classical_psha.QUANTILE_PARAM_NAME] = (
+        self.calc_proxy.params[hazard_general.QUANTILE_PARAM_NAME] = (
             '-0.33 0.00 0.25 0.50 0.75 1.00 1.10')
 
         self.assertEqual([0.00, 0.25, 0.50, 0.75, 1.00],
             self.calculator.quantile_levels)
 
     def test_just_numeric_values_are_allowed(self):
-        self.calc_proxy.params[classical_psha.QUANTILE_PARAM_NAME] = (
+        self.calc_proxy.params[hazard_general.QUANTILE_PARAM_NAME] = (
             '-0.33 0.00 XYZ 0.50 ;;; 1.00 BBB')
 
         self.assertEqual([0.00, 0.50, 1.00], self.calculator.quantile_levels)
 
     def test_accepts_also_signs(self):
-        self.calc_proxy.params[classical_psha.QUANTILE_PARAM_NAME] = (
+        self.calc_proxy.params[hazard_general.QUANTILE_PARAM_NAME] = (
             '-0.33 +0.0 XYZ +0.5 +1.00')
 
         self.assertEqual([0.00, 0.50, 1.00], self.calculator.quantile_levels)
@@ -651,7 +650,7 @@ class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
                 8.1923000e-03, 2.9157000e-03, 7.9955000e-04, 1.5233000e-04,
                 1.5582000e-05])
 
-        quantile_hazard_curve = classical_psha.compute_quantile_curve([
+        quantile_hazard_curve = hazard_general.compute_quantile_curve([
                 hazard_curve_1, hazard_curve_2, hazard_curve_3,
                 hazard_curve_4, hazard_curve_5], 0.75)
 
@@ -711,7 +710,7 @@ class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
                                        atol=0.005))
 
     def _run(self, sites, realizations, quantiles):
-        classical_psha.compute_quantile_hazard_curves(
+        hazard_general.compute_quantile_hazard_curves(
                 self.calc_proxy.job_id, sites, realizations, quantiles)
 
     def _store_hazard_curve_at(self, site, curve, realization=0):
@@ -819,8 +818,8 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
                 numpy.array(im_level)))
 
     def test_quantile_hazard_maps_computation(self):
-        self.params[classical_psha.POES_PARAM_NAME] = "0.10"
-        self.params[classical_psha.QUANTILE_PARAM_NAME] = "0.25 0.50 0.75"
+        self.params[hazard_general.POES_PARAM_NAME] = "0.10"
+        self.params[hazard_general.QUANTILE_PARAM_NAME] = "0.25 0.50 0.75"
 
         curve_1 = [9.8784e-01, 9.8405e-01, 9.5719e-01, 9.1955e-01,
                 8.5019e-01, 7.4038e-01, 5.9153e-01, 4.2626e-01, 2.9755e-01,
@@ -863,7 +862,7 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
         kvs.set_value_json_encoded(key_5, curve_2)
         kvs.set_value_json_encoded(key_6, curve_2)
 
-        classical_psha.compute_quantile_hazard_maps(
+        hazard_general.compute_quantile_hazard_maps(
             self.calc_proxy.job_id, sites, [0.25, 0.50, 0.75], self.imls,
             [0.10])
 
@@ -900,7 +899,7 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
         if sites is None:
             sites = [self.site]
 
-        classical_psha.compute_mean_hazard_maps(self.calc_proxy.job_id, sites,
+        hazard_general.compute_mean_hazard_maps(self.calc_proxy.job_id, sites,
                                                 self.imls, poes)
 
     def _no_stored_values_for(self, pattern):
