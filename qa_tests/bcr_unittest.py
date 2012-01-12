@@ -64,7 +64,6 @@ class BCRQATestCase(unittest.TestCase):
         finally:
             shutil.rmtree(COMPUTED_OUTPUT)
 
-
     def _parse_bcr_map(self, filename):
         self.assertTrue(os.path.exists(filename))
         schema = etree.XMLSchema(file=nrml_schema_file())
