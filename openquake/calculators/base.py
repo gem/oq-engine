@@ -23,7 +23,7 @@ class Calculator(object):
 
     def __init__(self, job_profile):
         """
-        :param job_profile: :class:`openquake.job.Job` instance.
+        :param job_profile: :class:`openquake.job.CalculationProxy` instance.
         """
         self.job_profile = job_profile
 

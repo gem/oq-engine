@@ -256,6 +256,15 @@ class ScenarioComputationValidator(object):
             return (False, ["With SCENARIO calculations we"
                     + " only support hazard + risk jobs."])
 
+        try:
+            num_gmfs = self.params.get(
+                'NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS')
+            if num_gmfs is None or not int(num_gmfs) > 0:
+                return (False, ["NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"
+                                " parameter must be greater than 0."])
+        except ValueError, err:
+            return (False, [err.message])
+
         return (True, [])
 
 
@@ -562,24 +571,24 @@ def default_validators(sections, params):
 
     hazard = HazardMandatoryParamsValidator(sections, params)
     exposure = RiskMandatoryParamsValidator(sections, params)
-    scenario = ScenarioComputationValidator(sections, params)
     hazard_comp_type = ComputationTypeValidator(params)
     file_path = FilePathValidator(params)
     parameter = BasicParameterValidator(params)
 
     validators = ValidatorSet()
     validators.add(hazard_comp_type)
-    validators.add(scenario)
     validators.add(exposure)
     validators.add(parameter)
     validators.add(file_path)
     validators.add(hazard)
 
-    if params.get(CALCULATION_MODE) == DISAGGREGATION_MODE:
+    calc_mode = params.get(CALCULATION_MODE)
+    if calc_mode == DISAGGREGATION_MODE:
         validators.add(DisaggregationValidator(params))
-    elif params.get(CALCULATION_MODE) in (BCR_CLASSICAL_MODE,
-                                          BCR_EVENT_BASED_MODE):
+    elif calc_mode in (BCR_CLASSICAL_MODE, BCR_EVENT_BASED_MODE):
         validators.add(BCRValidator(params))
+    elif calc_mode == SCENARIO_MODE:
+        validators.add(ScenarioComputationValidator(sections, params))
 
     if params.get(CALCULATION_MODE) == CLASSICAL_MODE:
         validators.add(ClassicalValidator(sections, params))
