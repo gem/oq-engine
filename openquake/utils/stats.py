@@ -59,6 +59,19 @@ STATS_KEYS = {
 _KEY_TEMPLATE = "oqs/%s/%s/%s/%s"
 
 
+def kvs_op(dop, *kvs_args):
+    """Apply the kvs operation using the predefined key.
+
+    :param string dop: the kvs operation desired
+    :param tuple kvs_args: the positional arguments for the desired kvs
+        operation
+    :param value: whatever is retured by the kvs operation
+    """
+    conn = _redis()
+    op = getattr(conn, dop)
+    return op(*kvs_args)
+
+
 def pk_set(job_id, skey, value):
     """Set the value for a predefined statistics key.
 
@@ -69,8 +82,7 @@ def pk_set(job_id, skey, value):
     key = key_name(job_id, *STATS_KEYS[skey])
     if not key:
         return
-    conn = _redis()
-    conn.set(key, value)
+    kvs_op("set", key, value)
 
 
 def pk_inc(job_id, skey):
@@ -82,8 +94,7 @@ def pk_inc(job_id, skey):
     key = key_name(job_id, *STATS_KEYS[skey])
     if not key:
         return
-    conn = _redis()
-    conn.incr(key)
+    kvs_op("incr", key)
 
 
 def pk_get(job_id, skey):
@@ -95,8 +106,7 @@ def pk_get(job_id, skey):
     key = key_name(job_id, *STATS_KEYS[skey])
     if not key:
         return
-    conn = _redis()
-    return conn.get(key)
+    return kvs_op("get", key)
 
 
 def _redis():
@@ -165,15 +175,13 @@ class progress_indicator(object):
 def set_total(job_id, area, fragment, value):
     """Set a total value for the given key."""
     key = key_name(job_id, area, fragment, "t")
-    conn = _redis()
-    conn.set(key, value)
+    kvs_op("set", key, value)
 
 
 def incr_counter(job_id, area, fragment):
     """Increment the counter for the given key."""
     key = key_name(job_id, area, fragment, "i")
-    conn = _redis()
-    conn.incr(key)
+    kvs_op("incr", key)
 
 
 def get_counter(job_id, area, fragment, counter_type):
@@ -188,8 +196,7 @@ def get_counter(job_id, area, fragment, counter_type):
     key = key_name(job_id, area, fragment, counter_type)
     if not key:
         return
-    conn = _redis()
-    value = conn.get(key)
+    value = kvs_op("get", key)
     return int(value) if value else value
 
 

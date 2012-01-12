@@ -46,8 +46,7 @@ import logging
 
 from openquake.db import models
 from openquake import job, shapes, writer
-from openquake.utils import round_float
-from openquake.utils import stats
+from openquake.utils import general, round_float, stats
 from openquake.xml import NSMAP, NRML, GML
 
 
@@ -74,6 +73,14 @@ class HazardCurveXMLWriter(writer.FileWriter):
         self.hcnode_counter = 0
         self.hcfield_counter = 0
 
+    def _maintain_debug_stats(self):
+        if not stats.debug_stats_enabled():
+            return
+        key = stats.key_name(
+            general.get_job_id(), *stats.STATS_KEYS["hcls_xmlcurvewrites"])
+        if key:
+            stats.kvs_op("rpush", key, self.path)
+
     def close(self):
         """Override the default implementation writing all the
         collected lxml object model to the stream."""
@@ -84,6 +91,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
             raise RuntimeError(error_msg)
 
         if self.mode in [writer.MODE_END, writer.MODE_START_AND_END]:
+            self._maintain_debug_stats()
             self.file.write(etree.tostring(
                 self.nrml_el, pretty_print=True, xml_declaration=True,
                 encoding="UTF-8"))
@@ -282,10 +290,19 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
             self.hazard_map_tag, nsmap=NSMAP)
         self.parent_node.attrib['%sid' % GML] = self.HAZARD_MAP_DEFAULT_ID
 
+    def _maintain_debug_stats(self):
+        if not stats.debug_stats_enabled():
+            return
+        key = stats.key_name(
+            general.get_job_id(), *stats.STATS_KEYS["hcls_xmlmapwrites"])
+        if key:
+            stats.kvs_op("rpush", key, self.path)
+
     def write_footer(self):
         """Serialize tree to file."""
 
         if self.mode in [writer.MODE_END, writer.MODE_START_AND_END]:
+            self._maintain_debug_stats()
             if self._ensure_all_attributes_set():
                 et = etree.ElementTree(self.root_node)
                 et.write(self.file, pretty_print=True, xml_declaration=True,

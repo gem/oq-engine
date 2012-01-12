@@ -423,3 +423,12 @@ class PkGetTestCase(helpers.RedisTestMixin, unittest.TestCase):
         with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
             dse.return_value = False
             self.assertRaises(KeyError, stats.pk_get, job_id, pkey)
+
+
+class KvsOpTestCase(helpers.RedisTestMixin, unittest.TestCase):
+    """Tests the behaviour of utils.stats.pk_kvs_op()."""
+
+    def test_kvs_op_with_invalid_op(self):
+        """An `AttributeError` is raised for unknown kvs operations"""
+        self.assertRaises(AttributeError, stats.kvs_op, "no-such-op",
+                          "any-key-will-do")
