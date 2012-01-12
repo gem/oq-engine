@@ -17,28 +17,31 @@
 
 """Core functionality for the Disaggregation Hazard calculator."""
 
-from celery.task import task
 import h5py
 import numpy
 import os
 import random
 import uuid
 
+from celery.task import task
+
 from openquake import java
 from openquake import logs
-
-from openquake.hazard import disagg
 from openquake.java import list_to_jdouble_array
 from openquake.job import config as job_cfg
 from openquake.output import hazard_disagg as hazard_output
 from openquake.utils import config
-
 from openquake.calculators.base import Calculator
-from openquake.hazard.disagg import subsets
-from openquake.hazard.general import (
-    preload, generate_erf, generate_gmpe_map, set_gmpe_params,
-    store_source_model, store_gmpe_map, get_iml_list)
+from openquake.hazard.general import generate_erf
+from openquake.hazard.general import generate_gmpe_map
+from openquake.hazard.general import get_iml_list
+from openquake.hazard.general import preload
+from openquake.hazard.general import set_gmpe_params
+from openquake.hazard.general import store_gmpe_map
+from openquake.hazard.general import store_source_model
 from openquake.utils.tasks import check_job_status
+from openquake.calculators.hazard.disagg import FULL_DISAGG_MATRIX
+from openquake.calculators.hazard.disagg import subsets
 
 
 LOG = logs.LOG
@@ -122,7 +125,7 @@ def save_5d_matrix_to_h5(directory, matrix):
     file_path = os.path.join(directory, file_name)
 
     with h5py.File(file_path, 'w') as target:
-        target.create_dataset(disagg.FULL_DISAGG_MATRIX, data=matrix)
+        target.create_dataset(FULL_DISAGG_MATRIX, data=matrix)
 
     return file_path
 
