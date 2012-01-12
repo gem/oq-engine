@@ -222,7 +222,8 @@ class ConfigurationConstraintsTestCase(unittest.TestCase, helpers.TestMixin):
         sections = [config.RISK_SECTION,
                 config.HAZARD_SECTION, config.GENERAL_SECTION]
 
-        params = {config.CALCULATION_MODE: config.SCENARIO_MODE}
+        params = {config.CALCULATION_MODE: config.SCENARIO_MODE,
+                  'NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS': '1'}
 
         validator = config.ScenarioComputationValidator(sections, params)
 
@@ -490,6 +491,18 @@ class DefaultValidatorsTestCase(unittest.TestCase):
         self.assertTrue(
             any(isinstance(v, ClassicalValidator) for v in validators))
 
+    def test_default_validators_scenario_job(self):
+        """Test to ensure that a Scenario job always includes the
+        :class:`openquake.job.config.ScenarioComputationValidator`."""
+        scenario_job_path = helpers.demo_file('scenario_risk/config.gem')
+        scenario_job = helpers.job_from_file(scenario_job_path)
+
+        validators = config.default_validators(scenario_job.sections,
+                                               scenario_job.params)
+
+        self.assertTrue(any(
+            isinstance(v, ScenarioComputationValidator) for v in validators))
+
 
 class ValidatorsUtilsTestCase(unittest.TestCase):
     """Test for validator utility functions"""
@@ -627,6 +640,30 @@ class BCRValidatorTestCase(unittest.TestCase):
     def test_all_ok(self):
         validator = BCRValidator(self.GOOD_PARAMS)
         self.assertEqual(validator.is_valid(), (True, []))
+
+
+class ScenarioValidatorTestCase(unittest.TestCase):
+
+    def test_num_of_calculation_set_to_zero(self):
+        sections = ['general', 'HAZARD', 'RISK']
+        params = dict(NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS='0')
+        validator = ScenarioComputationValidator(sections, params)
+
+        self.assertFalse(validator.is_valid()[0])
+
+    def test_num_of_calculation_less_than_zero(self):
+        sections = ['general', 'HAZARD', 'RISK']
+        params = dict(NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS='-1')
+        validator = ScenarioComputationValidator(sections, params)
+
+        self.assertFalse(validator.is_valid()[0])
+
+    def test_num_of_calculation_greater_than_zeroo(self):
+        sections = ['general', 'HAZARD', 'RISK']
+        params = dict(NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS='1')
+        validator = ScenarioComputationValidator(sections, params)
+
+        self.assertTrue(validator.is_valid()[0])
 
 
 class ClassicalValidatorTestCase(unittest.TestCase):
