@@ -1,7 +1,3 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2010-2011, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify
@@ -19,34 +15,18 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-"""Runs a classical PSHA hazard computation
+"""Information about the calculators available for the Risk engine."""
 
-Expects to compute:
-    hazard curves in NRML
-    ground motion fields in GeoTIFF
 
-"""
+from openquake.risk.job.classical_psha import ClassicalPSHABasedMixin
+from openquake.risk.job.probabilistic import ProbabilisticEventMixin
+from openquake.risk.job.scenario import ScenarioEventBasedMixin
 
-import sys
 
-import openquake.hazard.job
-
-from openquake import flags
-from openquake import logs
-
-from openquake import job
-from openquake.job import mixins
-
-FLAGS = flags.FLAGS
-
-flags.DEFINE_string('config_file', 'openquake-config.gem',
-    'OpenQuake configuration file')
-
-if __name__ == '__main__':
-    args = FLAGS(sys.argv)
-    logs.init_logs()
-
-    engine = job.Job.from_file(FLAGS.config_file, 'xml')
-
-    with mixins.Mixin(engine, openquake.hazard.job.HazJobMixin):
-        engine.execute()
+CALCULATORS = {
+    'classical': ClassicalPSHABasedMixin,
+    'classical_bcr': ClassicalPSHABasedMixin,
+    'event_based': ProbabilisticEventMixin,
+    'event_based_bcr': ProbabilisticEventMixin,
+    'scenario': ScenarioEventBasedMixin,
+}

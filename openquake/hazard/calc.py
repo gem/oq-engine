@@ -15,15 +15,19 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-""" The hazard job mixin proxy. """
+"""Information about the calculators available for the Hazard engine."""
 
 
-from openquake.job.mixins import Mixin
+from openquake.hazard.opensha import ClassicalMixin, EventBasedMixin
+from openquake.hazard.disagg.core import DisaggMixin
+from openquake.hazard.scenario import ScenarioEventBasedMixin
 
 
-class HazJobMixin(Mixin):
-    """ Proxy mixin for mixing in hazard job behaviour """
-    mixins = {}
-
-
-Mixin.register("Hazard", HazJobMixin, order=1)
+CALCULATORS = {
+    'classical': ClassicalMixin,
+    'classical_bcr': ClassicalMixin,
+    'event_based': EventBasedMixin,
+    'event_based_bcr': EventBasedMixin,
+    'disaggregation': DisaggMixin,
+    'scenario': ScenarioEventBasedMixin,
+}
