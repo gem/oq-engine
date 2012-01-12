@@ -44,8 +44,8 @@ from openquake.job.config import PARAMS
 from openquake.kvs import tokens
 from openquake.hazard import classical_psha
 from openquake.hazard import opensha
-from openquake.hazard import general as hazard_general
 from openquake.calculators.hazard import CALCULATORS
+from openquake.calculators.hazard import general as hazard_general
 
 from tests.utils import helpers
 
@@ -969,7 +969,7 @@ class IMLTestCase(unittest.TestCase):
     def test_scaling_definitions(self):
         from openquake.db.models import OqJobProfile
         from openquake.job.params import ENUM_MAP
-        from openquake.hazard.general import IML_SCALING
+        from openquake.calculators.hazard.general import IML_SCALING
         enum_map_reversed = dict((val, key) for (key, val) in ENUM_MAP.items())
         imt_config_names = [enum_map_reversed[imt]
                             for (imt, imt_verbose) in OqJobProfile.IMT_CHOICES

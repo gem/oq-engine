@@ -23,7 +23,10 @@ Helper functions for our unit and smoke tests.
 
 
 import functools
+import guppy
 import logging
+import mock as mock_module
+import numpy
 import os
 import random
 import redis
@@ -34,10 +37,6 @@ import time
 import sys
 import subprocess
 
-import guppy
-import mock as mock_module
-import numpy
-
 from gflags import DEFINE_boolean
 from django.core import exceptions
 
@@ -45,11 +44,12 @@ from openquake import engine
 from openquake import flags
 from openquake import logs
 from openquake import producer
+from openquake.db import models
 from openquake.engine import CalculationProxy
 from openquake.utils import config
-from openquake.hazard.general import store_source_model, store_gmpe_map
 from openquake.input.logictree import LogicTreeProcessor
-from openquake.db import models
+from openquake.calculators.hazard.general import store_gmpe_map
+from openquake.calculators.hazard.general import store_source_model
 
 FLAGS = flags.FLAGS
 
