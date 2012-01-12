@@ -22,7 +22,6 @@ import geohash
 import numpy
 import os
 import shutil
-import subprocess
 import unittest
 
 from nose.plugins.attrib import attr
@@ -53,6 +52,10 @@ def load_exp_hazcurve_results(test_name):
     results = {}
 
     for result_file in results_files:
+        if not (result_file.startswith('site')
+                and result_file.endswith('.dat')):
+            continue
+
         path = os.path.join(results_dir, result_file)
 
         with open(path) as hazard_curve:
@@ -89,21 +92,6 @@ def load_expected_map(path):
         map_data[shapes.Site(lat, lon)] = float(value)
 
     return map_data
-
-
-def run_job(config_file, **kw_params):
-    """Given a path to a config file, run openquake as a separate process using
-    `subprocess`.
-
-    This function blocks until the openquake job has concluded.
-
-    :returns:
-        The return code of the subprocess.
-    """
-    params = ["bin/openquake", "--config_file=" + config_file]
-    if kw_params:
-        params.extend(["--%s=%s" % p for p in kw_params.iteritems()])
-    return subprocess.call(params)
 
 
 def verify_hazcurve_results(
@@ -247,7 +235,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
     def test_peer_test_set_1_case_2(self):
         expected_results = load_exp_hazcurve_results("PeerTestSet1Case2")
 
-        run_job(helpers.demo_file(
+        helpers.run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case2", "config.gem")))
 
         self._assert_hazcurve_results_are(expected_results)
@@ -256,7 +244,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
     def test_peer_test_set_1_case_5(self):
         expected_results = load_exp_hazcurve_results("PeerTestSet1Case5")
 
-        run_job(helpers.demo_file(
+        helpers.run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case5", "config.gem")))
 
         self._assert_hazcurve_results_are(expected_results)
@@ -266,7 +254,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         expected_results = load_exp_hazcurve_results(
             "PeerTestSet1Case8a")
 
-        run_job(helpers.demo_file(
+        helpers.run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case8a", "config.gem")))
 
         self._assert_hazcurve_results_are(expected_results)
@@ -276,14 +264,14 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         expected_results = load_exp_hazcurve_results(
             "PeerTestSet1Case10")
 
-        run_job(helpers.demo_file(
+        helpers.run_job(helpers.demo_file(
             os.path.join("PeerTestSet1Case10", "config.gem")))
 
         self._assert_hazcurve_results_are(expected_results)
 
     @attr("qa")
     def test_hazard_map_test(self):
-        run_job(helpers.demo_file(
+        helpers.run_job(helpers.demo_file(
             os.path.join("HazardMapTest", "config.gem")))
 
         self.job = models.OqCalculation.objects.latest("id")
@@ -307,7 +295,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         exp_results_dir = os.path.join("complex_fault_demo_hazard",
                                        "expected_results")
 
-        run_job(job_cfg)
+        helpers.run_job(job_cfg)
 
         self.job = models.OqCalculation.objects.latest("id")
 
@@ -342,6 +330,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
         self.job = models.OqCalculation.objects.latest("id")
 
+        errors = []
         for site, curve in expected_results.items():
             gh = geohash.encode(site.latitude, site.longitude, precision=12)
 
@@ -350,14 +339,30 @@ class ClassicalPSHACalculatorAssuranceTestCase(
                 hazard_curve__statistic_type="mean").extra(
                 where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
 
-            self._assert_curve_is(
-                curve, zip(self.job.oq_job_profile.imls, hc_db.poes), 0.005)
+            try:
+                self._assert_curve_is(
+                    curve, zip(self.job.oq_job_profile.imls, hc_db.poes),
+                    site, tolerance=0.005)
+            except AssertionError as exc:
+                errors.append(str(exc))
+        if errors:
+            raise AssertionError('\n' + '\n'.join(errors))
 
-    def _assert_curve_is(self, expected, actual, tolerance):
-        self.assertTrue(numpy.allclose(
-                numpy.array(expected), numpy.array(actual), atol=tolerance),
-                "Expected %s within a tolerance of %s, but was %s"
-                % (expected, tolerance, actual))
+    def _assert_curve_is(self, expected, actual, site, tolerance):
+        errors = []
+        for i in xrange(max(len(expected), len(actual))):
+            self.assertEqual(expected[i][0], actual[i][0])
+            exp_val, act_val = expected[i][1], actual[i][1]
+            msg = '{:<22} PoE {:5}: expected {:.2E} != actual {:.2E}'.format(
+                site, expected[i][0], exp_val, act_val
+            )
+            try:
+                self.assertAlmostEqual(act_val, exp_val, delta=tolerance,
+                                       msg=msg)
+            except AssertionError as exc:
+                errors.append(str(exc))
+        if errors:
+            raise AssertionError('\n'.join(errors))
 
     @attr("qa")
     def test_complex_fault_demo_hazard_nrml(self):
@@ -371,7 +376,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         exp_results_dir = os.path.join("complex_fault_demo_hazard",
                                        "expected_results")
 
-        run_job(job_cfg, output="xml")
+        helpers.run_job(job_cfg, output="xml")
 
         self.job = models.OqCalculation.objects.latest("id")
 
