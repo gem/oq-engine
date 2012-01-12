@@ -14,14 +14,6 @@ The :mod:`probabilistic_event_based` module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`classical_psha_based` module
---------------------------------------
-
-.. automodule:: openquake.risk.classical_psha_based
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 The :mod:`scenario_event_based` module
 --------------------------------------
 
