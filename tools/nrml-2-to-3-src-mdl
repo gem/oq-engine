@@ -1,0 +1,53 @@
+#!/bin/bash
+
+help() {
+cat <<HSD
+`basename $0` is a tool that helps converting NRML hazard source model
+files from revision 0.2 to revision 0.3
+
+       --file=F         Specify the path to the source model file
+    -h|--help           Show this help text
+       --tools=T        Specify the path to the tools directory with
+                        XSLT files [default: ./openquake/nrml/schema/0.3/tools]
+HSD
+exit 0
+}
+
+which xsltproc >/dev/null 2>&1
+if [ $? -ne 0 ]; then
+    echo "Cannot find xsltproc .. is it installed?"
+    echo 'If not, please install it as follows: "apt-get install xsltproc"'
+    exit 9
+fi
+
+if [ $# -eq 0 ]; then
+    help
+fi
+
+nrml_file=""
+tools_dir="`pwd`/openquake/nrml/schema/0.3/tools"
+
+for i in $*
+do
+    case $i in
+    --file=*)
+        nrml_file=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        ;;
+    -h|--help)
+        help
+        ;;
+    --tools=*)
+        tools_dir=`echo $i | sed 's/[-a-zA-Z0-9]*=//'`
+        ;;
+    *)
+        echo "Uknown option: " $i
+        exit 0
+        ;;
+    esac
+done
+
+cp $nrml_file /tmp/nrml_file
+xsltproc $tools_dir/source_model_and_rupture_0.2_to_0.3.xsl /tmp/nrml_file > $nrml_file
+
+echo "Done! You can see the differences as follows:"
+echo "  diff -u /tmp/nrml_file $nrml_file"
