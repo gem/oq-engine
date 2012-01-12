@@ -18,8 +18,8 @@
 
 
 from openquake.hazard.opensha import ClassicalMixin, EventBasedMixin
-from openquake.hazard.scenario import ScenarioEventBasedMixin
 from openquake.calculators.hazard.disagg.core import DisaggMixin
+from openquake.calculators.hazard.scenario.core import ScenarioEventBasedMixin
 
 
 CALCULATORS = {
