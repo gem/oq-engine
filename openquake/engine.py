@@ -454,7 +454,6 @@ def _launch_calculation(calc_proxy, sections):
 
     calc_mode = calc_proxy.oq_job_profile.calc_mode
 
-
     for job_type in ('hazard', 'risk'):
         if not job_type.upper() in sections:
             continue
