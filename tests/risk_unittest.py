@@ -1299,17 +1299,18 @@ class ScenarioEventBasedTestCase(unittest.TestCase):
 
 class RiskCommonTestCase(unittest.TestCase):
     def test_compute_bcr(self):
-        eal_orig = 12345.21
-        eal_retrofitted = 11042.84
-        retrofitting_cost = 721.9345
-        interest = 0.03
-        life_expectancy = 22
-        expected_result = 0.8716
+        # numbers are proven to be correct
+        eal_orig = 0.00838
+        eal_retrofitted = 0.00587
+        retrofitting_cost = 0.1
+        interest = 0.05
+        life_expectancy = 40
+        expected_result = 0.43405
 
         result = common.compute_bcr(eal_orig, eal_retrofitted,
                                     interest, life_expectancy,
                                     retrofitting_cost)
-        self.assertAlmostEqual(result, expected_result, delta=1e-5)
+        self.assertAlmostEqual(result, expected_result, delta=2e-5)
 
 
 class RiskJobGeneralTestCase(unittest.TestCase):
