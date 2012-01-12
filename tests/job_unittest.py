@@ -29,7 +29,6 @@ from django.contrib.gis.geos.polygon import Polygon
 from django.contrib.gis.geos.collections import MultiPoint
 
 from openquake import engine
-from openquake import job
 from openquake import kvs
 from openquake import flags
 from openquake import shapes

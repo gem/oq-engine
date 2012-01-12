@@ -134,6 +134,7 @@ def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
 @task
 def compute_risk(job_id, block_id, **kwargs):
     """ A task for computing risk, calls the mixed in compute_risk method """
+    # pylint: disable=W0404
     from openquake.engine import CalculationProxy
     from openquake.risk.calc import CALCULATORS
 
@@ -164,6 +165,7 @@ class RiskJobMixin(Calculator):
     def partition(self):
         """Split the sites to compute in blocks and store
         them in the underlying KVS system."""
+        # pylint: disable=W0404
         from openquake import engine
 
         sites = []

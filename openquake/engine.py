@@ -63,6 +63,8 @@ CALCS = dict(hazard=HAZ_CALCS, risk=RISK_CALCS)
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 
 
+# Silencing 'Too many instance attributes'
+# pylint: disable=R0902
 class CalculationProxy(object):
     """Contains everything a calculator needs to run a calculation. This
     includes: an :class:`OqJobProfile` object, an :class:`OqCalclation`, and a
@@ -74,6 +76,8 @@ class CalculationProxy(object):
     sites of interest for a calculation, querying the calculation status, etc.
     """
 
+    # Silencing 'Too many arguments'
+    # pylint: disable=R0913
     def __init__(self, params, calculation_id, sections=list(), base_path=None,
                  serialize_results_to=list(), oq_job_profile=None,
                  oq_calculation=None):
@@ -108,6 +112,10 @@ class CalculationProxy(object):
 
     @property
     def base_path(self):
+        """Directory containing the input files for this calculation.
+
+        The base_path also acts as the base directory for calculation outputs.
+        """
         if self._base_path is not None:
             return self._base_path
         else:
