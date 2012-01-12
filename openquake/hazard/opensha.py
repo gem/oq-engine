@@ -40,13 +40,11 @@ from openquake import logs
 from openquake import shapes
 from openquake import xml
 
-from openquake.hazard import classical_psha
 from openquake.output import hazard as hazard_output
 from openquake.utils import config
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
-from openquake.calculators.hazard.general import BasePSHAMixin
-from openquake.calculators.hazard.general import get_iml_list
+from openquake.calculators.hazard import general
 
 LOG = logs.LOG
 HAZARD_LOG = logs.HAZARD_LOG
@@ -182,7 +180,7 @@ def compute_mean_curves(job_id, sites, realizations):
     HAZARD_LOG.info("Computing MEAN curves for %s sites (job_id %s)"
                     % (len(sites), job_id))
 
-    return classical_psha.compute_mean_hazard_curves(job_id, sites,
+    return general.compute_mean_hazard_curves(job_id, sites,
                                                      realizations)
 
 
@@ -196,7 +194,7 @@ def compute_quantile_curves(job_id, sites, realizations, quantiles):
     HAZARD_LOG.info("Computing QUANTILE curves for %s sites (job_id %s)"
                     % (len(sites), job_id))
 
-    return classical_psha.compute_quantile_hazard_curves(
+    return general.compute_quantile_hazard_curves(
         job_id, sites, realizations, quantiles)
 
 
@@ -252,7 +250,7 @@ def release_data_from_kvs(job_id, sites, realizations, quantiles, poes,
 
 
 # pylint: disable=R0904
-class ClassicalMixin(BasePSHAMixin):
+class ClassicalMixin(general.BasePSHAMixin):
     """Classical PSHA method for performing Hazard calculations.
 
     Implements the JobMixin, which has a primary entry point of execute().
@@ -457,14 +455,14 @@ class ClassicalMixin(BasePSHAMixin):
             # mean curves
             self.do_means(data, realizations,
                 curve_serializer=self.serialize_mean_hazard_curves,
-                map_func=classical_psha.compute_mean_hazard_maps,
+                map_func=general.compute_mean_hazard_maps,
                 map_serializer=self.serialize_mean_hazard_map)
 
             # quantile curves
             quantiles = self.quantile_levels
             self.do_quantiles(data, realizations, quantiles,
                 curve_serializer=self.serialize_quantile_hazard_curves,
-                map_func=classical_psha.compute_quantile_hazard_maps,
+                map_func=general.compute_quantile_hazard_maps,
                 map_serializer=self.serialize_quantile_hazard_map)
 
             # Done with this chunk, purge intermediate results from kvs.
@@ -703,7 +701,7 @@ class ClassicalMixin(BasePSHAMixin):
                 self.parameterize_sites(sites),
                 self.generate_erf(),
                 self.generate_gmpe_map(),
-                get_iml_list(
+                general.get_iml_list(
                     self.calc_proxy.imls,
                     self.calc_proxy.params['INTENSITY_MEASURE_TYPE']),
                 self.calc_proxy['MAXIMUM_DISTANCE'])
@@ -774,7 +772,7 @@ class ClassicalMixin(BasePSHAMixin):
     def quantile_levels(self):
         "Returns the quantile levels specified in the config file of this job"
         return self.calc_proxy.extract_values_from_config(
-            classical_psha.QUANTILE_PARAM_NAME,
+            general.QUANTILE_PARAM_NAME,
             check_value=lambda v: v >= 0.0 and v <= 1.0)
 
     @property
@@ -784,11 +782,11 @@ class ClassicalMixin(BasePSHAMixin):
         specified in the config file of this job.
         """
         return self.calc_proxy.extract_values_from_config(
-            classical_psha.POES_PARAM_NAME,
+            general.POES_PARAM_NAME,
             check_value=lambda v: v >= 0.0 and v <= 1.0)
 
 
-class EventBasedMixin(BasePSHAMixin):
+class EventBasedMixin(general.BasePSHAMixin):
     """Probabilistic Event Based method for performing Hazard calculations.
 
     Implements the JobMixin, which has a primary entry point of execute().
