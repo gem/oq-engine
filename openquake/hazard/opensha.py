@@ -335,13 +335,13 @@ class ClassicalMixin(BasePSHAMixin):
         stats.pk_set(self.job_id, "hcls_realizations", realizations)
 
         block_size = config.hazard_block_size()
-        stats.pk_set(self.job_id, "hcls_block_size", block_size)
+        stats.pk_set(self.job_id, "block_size", block_size)
 
         blocks = range(0, len(sites), block_size)
-        stats.pk_set(self.job_id, "hcls_blocks", len(blocks))
+        stats.pk_set(self.job_id, "blocks", len(blocks))
 
         for start in blocks:
-            stats.pk_inc(self.job_id, "hcls_cblock")
+            stats.pk_inc(self.job_id, "cblock")
             end = start + block_size
             data = sites[start:end]
 
@@ -453,6 +453,10 @@ class ClassicalMixin(BasePSHAMixin):
             self.job_id, self.serialize_results_to, nrml_path)
 
         sites = set(sites)
+        stats.pk_set(self.job_id, "srl_items", len(sites))
+        stats.pk_set(self.job_id, "srl_done", 0)
+        progress_key = stats.key_name(
+            self.job_id, *stats.STATS_KEYS["srl_done"])
         accounted_for = set()
         dgen = duration_generator(0.1)
         duration = dgen.next()
@@ -485,7 +489,10 @@ class ClassicalMixin(BasePSHAMixin):
                 # No results found, increase the sleep duration.
                 duration = dgen.next()
             else:
+                batch_size = len(hc_data)
+                stats.pk_set(self.job_id, "srl_next", batch_size)
                 curve_writer.serialize(hc_data)
+                stats.kvs_op("incr_by", progress_key, batch_size)
 
         return nrml_path
 

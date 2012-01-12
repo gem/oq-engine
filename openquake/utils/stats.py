@@ -37,20 +37,35 @@ from openquake.utils import general
 STATS_KEYS = {
     # Predefined calculator statistics keys for the kvs.
     # The areas are as follows:
+    #   "g" : general
     #   "h" : hazard
     #   "r" : risk
     # The counter types are as follows:
     #   "d" : debug counter, turned off in production via openquake.cfg
     #   "i" : incremental counter
     #   "t" : totals counter
-    "hcls_realizations": ("h", "classical:realizations", "t"),
-    "hcls_crealization": ("h", "classical:crealization", "i"),
-    "hcls_sites": ("h", "classical:sites", "t"),
-    "hcls_block_size": ("h", "classical:block_size", "t"),
-    "hcls_blocks": ("h", "classical:blocks", "t"),
-    "hcls_cblock": ("h", "classical:cblock", "i"),
-    "hcls_xmlcurvewrites": ("h", "classical:debug:xmlcurvewrites", "d"),
-    "hcls_xmlmapwrites": ("h", "classical:debug:xmlmapwrites", "d"),
+    # The total number of realizations
+    "hcls_realizations": ("h", "cls:realizations", "t"),
+    # Current realization
+    "hcls_crealization": ("h", "cls:crealization", "i"),
+    # The total number of sites
+    "hcls_sites": ("h", "cls:sites", "t"),
+    # The block size to use
+    "block_size": ("g", "gen:block_size", "t"),
+    # The total number of blocks
+    "blocks": ("g", "gen:blocks", "t"),
+    # The current block
+    "cblock": ("g", "gen:cblock", "i"),
+    # The total number of items to serialize in the current block
+    "srl_items": ("g", "gen:srl_items", "t"),
+    # The number of items already serialized in the current block
+    "srl_done": ("g", "gen:srl_done", "i"),
+    # The number of items to be serialized next
+    "srl_next": ("g", "gen:srl_next", "t"),
+    # debug statistic: list of paths of hazard curves written to xml
+    "hcls_xmlcurvewrites": ("h", "cls:debug:xmlcurvewrites", "d"),
+    # debug statistic: list of paths of hazard maps written to xml
+    "hcls_xmlmapwrites": ("h", "cls:debug:xmlmapwrites", "d"),
 }
 
 
@@ -97,16 +112,17 @@ def pk_inc(job_id, skey):
     kvs_op("incr", key)
 
 
-def pk_get(job_id, skey):
+def pk_get(job_id, skey, cast2int=True):
     """Get the value for a predefined statistics key.
 
     :param int job_id: identifier of the job in question
     :param string skey: predefined statistics key
+    :param bool cast2int: whether the values should be cast to integers
     """
     key = key_name(job_id, *STATS_KEYS[skey])
     if not key:
         return
-    return kvs_op("get", key)
+    return int(kvs_op("get", key)) if cast2int else kvs_op("get", key)
 
 
 def _redis():

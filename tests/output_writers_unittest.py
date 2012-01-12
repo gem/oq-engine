@@ -192,8 +192,8 @@ class GetModeTestCase(helpers.RedisTestMixin, unittest.TestCase):
         job_id = 61
         args = (job_id, ["db", "xml"], "/path/1")
         stats.delete_job_counters(job_id)
-        stats.pk_set(job_id, "hcls_blocks", 3)
-        stats.pk_inc(job_id, "hcls_cblock")
+        stats.pk_set(job_id, "blocks", 3)
+        stats.pk_inc(job_id, "cblock")
         self.assertEqual(writer.MODE_START, hazard_output.get_mode(*args))
 
     def test_get_mode_in_the_middle(self):
@@ -204,9 +204,9 @@ class GetModeTestCase(helpers.RedisTestMixin, unittest.TestCase):
         job_id = 62
         args = (job_id, ["db", "xml"], "/path/2")
         stats.delete_job_counters(job_id)
-        stats.pk_set(job_id, "hcls_blocks", 3)
-        stats.pk_inc(job_id, "hcls_cblock")
-        stats.pk_inc(job_id, "hcls_cblock")
+        stats.pk_set(job_id, "blocks", 3)
+        stats.pk_inc(job_id, "cblock")
+        stats.pk_inc(job_id, "cblock")
         self.assertEqual(writer.MODE_IN_THE_MIDDLE,
                          hazard_output.get_mode(*args))
 
@@ -217,9 +217,9 @@ class GetModeTestCase(helpers.RedisTestMixin, unittest.TestCase):
         job_id = 63
         args = (job_id, ["db", "xml"], "/path/3")
         stats.delete_job_counters(job_id)
-        stats.pk_set(job_id, "hcls_blocks", 2)
-        stats.pk_inc(job_id, "hcls_cblock")
-        stats.pk_inc(job_id, "hcls_cblock")
+        stats.pk_set(job_id, "blocks", 2)
+        stats.pk_inc(job_id, "cblock")
+        stats.pk_inc(job_id, "cblock")
         self.assertEqual(writer.MODE_END, hazard_output.get_mode(*args))
 
     def test_get_mode_with_single_block(self):
@@ -229,8 +229,8 @@ class GetModeTestCase(helpers.RedisTestMixin, unittest.TestCase):
         job_id = 64
         args = (job_id, ["db", "xml"], "/path/4")
         stats.delete_job_counters(job_id)
-        stats.pk_set(job_id, "hcls_blocks", 1)
-        stats.pk_inc(job_id, "hcls_cblock")
+        stats.pk_set(job_id, "blocks", 1)
+        stats.pk_inc(job_id, "cblock")
         self.assertEqual(writer.MODE_START_AND_END,
                          hazard_output.get_mode(*args))
 

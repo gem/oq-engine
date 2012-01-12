@@ -84,11 +84,11 @@ class HazardCurveXMLWriter(writer.FileWriter):
         collected lxml object model to the stream."""
 
         if self.nrml_el is None:
-            error_msg = "You need to add at least a curve to build " \
-                        "a valid output!"
+            error_msg = ("You need to add at least a curve to build "
+                         "a valid output!")
             raise RuntimeError(error_msg)
 
-        if self.mode in [writer.MODE_END, writer.MODE_START_AND_END]:
+        if self.mode == writer.MODE_END:
             self._maintain_debug_stats()
             self.file.write(etree.tostring(
                 self.nrml_el, pretty_print=True, xml_declaration=True,
@@ -267,7 +267,7 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
     def write_header(self):
         """Header (i.e., common) information for all nodes."""
 
-        if self.mode not in [writer.MODE_START, writer.MODE_START_AND_END]:
+        if self.mode != writer.MODE_START:
             return
 
         self.root_node = etree.Element(self.root_tag, nsmap=NSMAP)
@@ -297,7 +297,7 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
     def write_footer(self):
         """Serialize tree to file."""
 
-        if self.mode in [writer.MODE_END, writer.MODE_START_AND_END]:
+        if self.mode == writer.MODE_END:
             self._maintain_debug_stats()
             if self._ensure_all_attributes_set():
                 et = etree.ElementTree(self.root_node)
@@ -427,7 +427,7 @@ class GMFXMLWriter(writer.XMLFileWriter):
     def write_header(self):
         """Write out the file header."""
 
-        if self.mode not in [writer.MODE_START, writer.MODE_START_AND_END]:
+        if self.mode != writer.MODE_START:
             return
 
         self.root_node = etree.Element(GMFXMLWriter.root_tag, nsmap=NSMAP)
@@ -469,7 +469,7 @@ class GMFXMLWriter(writer.XMLFileWriter):
 
     def write_footer(self):
         """Write out the file footer."""
-        if self.mode in [writer.MODE_END, writer.MODE_START_AND_END]:
+        if self.mode == writer.MODE_END:
             et = etree.ElementTree(self.root_node)
             et.write(self.file, pretty_print=True, xml_declaration=True,
                      encoding="UTF-8")
@@ -866,23 +866,41 @@ def get_mode(job_id, serialize_to, nrml_path):
     :param serialize_to: where to serialize
     :type serialize_to: list of strings, permitted values: 'db', 'xml'.
     :param string nrml_path: the full XML/NRML path.
-    :returns: one of: MODE_START, MODE_IN_THE_MIDDLE, MODE_END,
-        MODE_START_AND_END (single-stage serialization).
+    :returns: one of: MODE_START, MODE_IN_THE_MIDDLE, MODE_END
     """
-    mode = writer.MODE_START_AND_END
+    mode = None
     if 'xml' in serialize_to and nrml_path:
         # Figure out the mode, are we at the beginning, in the middle or at
         # the end of the XML file?
-        blocks = stats.pk_get(job_id, "hcls_blocks")
-        cblock = stats.pk_get(job_id, "hcls_cblock")
-        if blocks and cblock:
-            blocks = int(blocks)
-            cblock = int(cblock)
-            if blocks == 1:
-                pass    # MODE_START_AND_END
-            elif cblock == 1:
+        try:
+            blocks = stats.pk_get(job_id, "blocks")
+            cblock = stats.pk_get(job_id, "cblock")
+        except TypeError, exc:
+            LOGGER.error("No counter information re. blocks (%s)" % exc)
+            raise
+
+        if cblock > 1 and cblock < blocks:
+            return writer.MODE_IN_THE_MIDDLE
+
+        try:
+            total = stats.pk_get(job_id, "srl_items")
+            serialized = stats.pk_get(job_id, "srl_done")
+            to_be_serialized = stats.pk_get(job_id, "srl_next")
+        except TypeError, exc:
+            LOGGER.error(
+                "No counter information re. serialized items (%s)" % exc)
+            raise
+
+        if cblock == 1:
+            if serialized == 0:
+                # First block, nothing serialized yet.
                 mode = writer.MODE_START
-            elif cblock == blocks:
+            else:
+                mode = writer.MODE_IN_THE_MIDDLE
+        else:
+            items_left = total - serialized - to_be_serialized
+            if items_left == 0:
+                # Last block, last batch.
                 mode = writer.MODE_END
             else:
                 mode = writer.MODE_IN_THE_MIDDLE

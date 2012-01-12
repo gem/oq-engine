@@ -35,7 +35,6 @@ LOGGER = logging.getLogger('serializer')
 MODE_START = 1
 MODE_IN_THE_MIDDLE = 0
 MODE_END = -1
-MODE_START_AND_END = -2
 
 
 class FileWriter(object):
@@ -45,12 +44,11 @@ class FileWriter(object):
         self.path = path
         self.file = None
         self.root_node = None
-        self.mode = MODE_START_AND_END
+        self.mode = None
 
     def set_mode(self, mode):
         """Facilitate XML serialization in multiple stages."""
-        assert mode in [MODE_START, MODE_IN_THE_MIDDLE, MODE_END,
-                        MODE_START_AND_END]
+        assert mode in [MODE_START, MODE_IN_THE_MIDDLE, MODE_END]
         self.mode = mode
 
     def initialize(self):
@@ -59,7 +57,7 @@ class FileWriter(object):
 
     def open(self):
         """Get the file handle open for writing"""
-        if self.mode in [MODE_END, MODE_START_AND_END]:
+        if self.mode == MODE_END:
             self.file = open(self.path, "w")
 
     def write(self, point, value):

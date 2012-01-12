@@ -228,7 +228,7 @@ class PkSetTestCase(helpers.RedisTestMixin, unittest.TestCase):
     def test_pk_set_with_existing_total(self):
         """The value is set correctly for an existing predefined key."""
         job_id = 71
-        pkey = "hcls_blocks"
+        pkey = "blocks"
         key = stats.key_name(job_id, *stats.STATS_KEYS[pkey])
 
         stats.delete_job_counters(job_id)
@@ -239,7 +239,7 @@ class PkSetTestCase(helpers.RedisTestMixin, unittest.TestCase):
     def test_pk_set_with_existing_incremental(self):
         """The value is set correctly for an existing predefined key."""
         job_id = 72
-        pkey = "hcls_cblock"
+        pkey = "cblock"
         key = stats.key_name(job_id, *stats.STATS_KEYS[pkey])
 
         stats.delete_job_counters(job_id)
@@ -295,7 +295,7 @@ class PkIncTestCase(helpers.RedisTestMixin, unittest.TestCase):
     def test_pk_inc_with_existing_total(self):
         """The value is incremented for an existing predefined key."""
         job_id = 81
-        pkey = "hcls_blocks"
+        pkey = "blocks"
         key = stats.key_name(job_id, *stats.STATS_KEYS[pkey])
 
         stats.delete_job_counters(job_id)
@@ -306,7 +306,7 @@ class PkIncTestCase(helpers.RedisTestMixin, unittest.TestCase):
     def test_pk_inc_with_existing_incremental(self):
         """The value is incremented for an existing predefined key."""
         job_id = 82
-        pkey = "hcls_cblock"
+        pkey = "cblock"
         key = stats.key_name(job_id, *stats.STATS_KEYS[pkey])
 
         stats.delete_job_counters(job_id)
@@ -364,7 +364,7 @@ class PkGetTestCase(helpers.RedisTestMixin, unittest.TestCase):
     def test_pk_get_with_existing_total(self):
         """The correct value is obtained for an existing predefined key."""
         job_id = 91
-        pkey = "hcls_blocks"
+        pkey = "blocks"
         key = stats.key_name(job_id, *stats.STATS_KEYS[pkey])
 
         stats.delete_job_counters(job_id)
@@ -376,7 +376,7 @@ class PkGetTestCase(helpers.RedisTestMixin, unittest.TestCase):
     def test_pk_get_with_existing_incremental(self):
         """The correct value is obtained for an existing predefined key."""
         job_id = 92
-        pkey = "hcls_cblock"
+        pkey = "cblock"
         key = stats.key_name(job_id, *stats.STATS_KEYS[pkey])
 
         stats.delete_job_counters(job_id)
