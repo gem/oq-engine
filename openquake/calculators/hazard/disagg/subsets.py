@@ -23,8 +23,8 @@ import numpy
 from celery.task import task
 import h5py
 
-from openquake.hazard import disagg
 from openquake.shapes import hdistance
+from openquake.calculators.hazard.disagg import FULL_DISAGG_MATRIX
 
 # Disabling pylint checks: too many local vars, too many arguments,
 # unused argument.
@@ -286,7 +286,7 @@ def extract_subsets(
     assert not subsets - set(SUBSET_EXTRACTORS)
     assert subsets
     with h5py.File(full_matrix_path, 'r') as source:
-        full_matrix = source[disagg.FULL_DISAGG_MATRIX].value
+        full_matrix = source[FULL_DISAGG_MATRIX].value
     with h5py.File(target_path, 'w') as target:
         for subset_type in subsets:
             extractor = SUBSET_EXTRACTORS[subset_type]

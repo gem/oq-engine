@@ -24,10 +24,10 @@ import numpy
 
 from tests.utils import helpers
 
-from openquake.hazard import disagg
 from openquake.shapes import Site
 
-from openquake.hazard.disagg import subsets as disagg_subsets
+from openquake.calculators.hazard.disagg import FULL_DISAGG_MATRIX
+from openquake.calculators.hazard.disagg import subsets as disagg_subsets
 
 
 class SubsetExtractionTestCase(unittest.TestCase):
@@ -56,7 +56,7 @@ class SubsetExtractionTestCase(unittest.TestCase):
         cls.full_matrix_path = os.path.join(cls.tempdir, 'full-matrix.hdf5')
         full_matrix = h5py.File(cls.full_matrix_path, 'w')
         ds = cls.read_data_file(cls.FULL_MATRIX_DATA, cls.FULL_MATRIX_SHAPE)
-        full_matrix.create_dataset(disagg.FULL_DISAGG_MATRIX, data=ds)
+        full_matrix.create_dataset(FULL_DISAGG_MATRIX, data=ds)
 
     @classmethod
     def tearDownClass(cls):
@@ -119,7 +119,7 @@ class SubsetExtractionTestCase(unittest.TestCase):
                        [self.NLAT - 1, self.NLON - 1, self.NTRT])
 
     def test_full_matrix(self):
-        self._test_pmf(disagg.FULL_DISAGG_MATRIX,
+        self._test_pmf(FULL_DISAGG_MATRIX,
                        [self.NLAT - 1, self.NLON - 1, self.NMAG - 1,
                         self.NEPS - 1, self.NTRT])
 
@@ -130,7 +130,7 @@ class SubsetExtractionTestCase(unittest.TestCase):
                               [self.NMAG - 1, self.NDIST - 1, self.NEPS - 1]),
             'LatLonPMF': ('LatLonPMF.dat',
                           [self.NLAT - 1, self.NLON - 1]),
-            disagg.FULL_DISAGG_MATRIX: (self.FULL_MATRIX_DATA,
+            FULL_DISAGG_MATRIX: (self.FULL_MATRIX_DATA,
                                                  self.FULL_MATRIX_SHAPE)
         }
         disagg_subsets.extract_subsets(
