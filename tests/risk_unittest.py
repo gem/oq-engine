@@ -30,12 +30,12 @@ from openquake import kvs
 from openquake import shapes
 from openquake.output import hazard
 from openquake.risk import probabilistic_event_based as prob
-from openquake.risk import classical_psha_based as psha
 from openquake.risk import scenario
 from openquake.risk import common
 from openquake.risk.job import aggregate_loss_curve as aggregate
 from openquake.risk.job.general import Block, RiskJobMixin, write_output_bcr
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
+from openquake.calcualtors.risk.classical import core as classical_core
 from openquake.calculators.risk.classical.core import ClassicalPSHABasedMixin
 
 from tests.utils import helpers
@@ -713,7 +713,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         self.job = None
 
     def tearDown(self):
-        psha.STEPS_PER_INTERVAL = 5
+        classical_core.STEPS_PER_INTERVAL = 5
 
         if self.job:
             self.teardown_job(self.job)
@@ -745,16 +745,16 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         # pre computed values just use one intermediate
         # values between the imls
-        psha.STEPS_PER_INTERVAL = 2
+        classical_core.STEPS_PER_INTERVAL = 2
 
         imls = [0.1, 0.2, 0.4, 0.6]
         loss_ratios = [0.05, 0.08, 0.2, 0.4]
         covs = [0.5, 0.3, 0.2, 0.1]
         vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
 
-        lrem = psha._compute_lrem(vuln_function)
+        lrem = classical_core._compute_lrem(vuln_function)
 
-        lrem_po = psha._compute_lrem_po(vuln_function,
+        lrem_po = classical_core._compute_lrem_po(vuln_function,
                 lrem, hazard_curve)
 
         self.assertTrue(numpy.allclose(0.07, lrem_po[0][0], atol=0.005))
@@ -775,7 +775,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         imls = [0.05, 0.15, 0.3, 0.5, 0.7]
 
         self.assertTrue(numpy.allclose(numpy.array(expected_pes),
-                psha._compute_pes_from_imls(hazard_curve, imls),
+                classical_core._compute_pes_from_imls(hazard_curve, imls),
                 atol=0.00005))
 
     def test_pes_to_pos(self):
@@ -789,7 +789,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         pes = [0.05, 0.15, 0.3, 0.5, 0.7]
 
         self.assertTrue(numpy.allclose(expected_pos,
-                psha._convert_pes_to_pos(hazard_curve, pes),
+                classical_core._convert_pes_to_pos(hazard_curve, pes),
                 atol=0.00005))
 
     def test_bin_width_from_imls(self):
@@ -802,11 +802,11 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         expected_steps = [0.05, 0.15, 0.3, 0.5, 0.7]
 
         self.assertTrue(numpy.allclose(expected_steps,
-                psha._compute_imls(vuln_function)))
+                classical_core._compute_imls(vuln_function)))
 
     def test_end_to_end(self):
         # manually computed values by Vitor Silva
-        psha.STEPS_PER_INTERVAL = 2
+        classical_core.STEPS_PER_INTERVAL = 2
         hazard_curve = shapes.Curve([
               (0.01, 0.99), (0.08, 0.96),
               (0.17, 0.89), (0.26, 0.82),
@@ -818,7 +818,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         covs = [0.5, 0.3, 0.2, 0.1]
         vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
 
-        loss_ratio_curve = psha.compute_loss_ratio_curve(
+        loss_ratio_curve = classical_core.compute_loss_ratio_curve(
                 vuln_function, hazard_curve)
 
         lr_curve_expected = shapes.Curve([(0.0, 0.96),
@@ -833,27 +833,29 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
                     loss_ratio_curve.ordinate_for(x_value), atol=0.005))
 
     def test_splits_single_interval_with_no_steps_between(self):
-        self.assertTrue(numpy.allclose(numpy.array([1.0, 2.0]),
-                psha._split_loss_ratios([1.0, 2.0], 1)))
+        self.assertTrue(
+            numpy.allclose(numpy.array([1.0, 2.0]),
+                           classical_core._split_loss_ratios([1.0, 2.0], 1)))
 
     def test_splits_single_interval_with_a_step_between(self):
-        self.assertTrue(numpy.allclose(numpy.array([1.0, 1.5, 2.0]),
-                psha._split_loss_ratios([1.0, 2.0], 2)))
+        self.assertTrue(
+            numpy.allclose(numpy.array([1.0, 1.5, 2.0]),
+                           classical_core._split_loss_ratios([1.0, 2.0], 2)))
 
     def test_splits_single_interval_with_steps_between(self):
         self.assertTrue(numpy.allclose(numpy.array(
-                [1.0, 1.25, 1.50, 1.75, 2.0]),
-                psha._split_loss_ratios([1.0, 2.0], 4)))
+            [1.0, 1.25, 1.50, 1.75, 2.0]),
+            classical_core._split_loss_ratios([1.0, 2.0], 4)))
 
     def test_splits_multiple_intervals_with_a_step_between(self):
         self.assertTrue(numpy.allclose(numpy.array(
-                [1.0, 1.5, 2.0, 2.5, 3.0]),
-                psha._split_loss_ratios([1.0, 2.0, 3.0], steps=2)))
+            [1.0, 1.5, 2.0, 2.5, 3.0]),
+            classical_core._split_loss_ratios([1.0, 2.0, 3.0], steps=2)))
 
     def test_splits_multiple_intervals_with_steps_between(self):
         self.assertTrue(numpy.allclose(numpy.array(
-                [1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0]),
-                psha._split_loss_ratios([1.0, 2.0, 3.0], 4)))
+            [1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5, 2.75, 3.0]),
+            classical_core._split_loss_ratios([1.0, 2.0, 3.0], 4)))
 
     def test_loss_ratio_curve_is_none_with_unknown_vuln_function(self):
 
@@ -1017,7 +1019,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         # pre computed values just use one intermediate
         # values between the imls
-        psha.STEPS_PER_INTERVAL = 2
+        classical_core.STEPS_PER_INTERVAL = 2
 
         vuln_curves = {"ID": vuln_function}
 
@@ -1058,8 +1060,9 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
                 0.095479999999999995, 0.11585999999999999, 0.13624,
                 0.15661999999999998, 0.17699999999999999]
 
-        self.assertTrue(numpy.allclose(numpy.array(result),
-                psha._split_loss_ratios(loss_ratios)))
+        self.assertTrue(
+            numpy.allclose(numpy.array(result),
+                           classical_core._split_loss_ratios(loss_ratios)))
 
     def test_splits_with_real_values_from_taiwan(self):
         loss_ratios = [0.0, 1.877E-20, 8.485E-17, 8.427E-14,
@@ -1067,7 +1070,8 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
                 5.042E-05, 4.550E-04, 2.749E-03, 1.181E-02]
 
         # testing just the length of the result
-        self.assertEqual(56, len(psha._split_loss_ratios(loss_ratios)))
+        self.assertEqual(56,
+                         len(classical_core._split_loss_ratios(loss_ratios)))
 
     def test_ratio_is_zero_if_probability_is_too_high(self):
         loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
