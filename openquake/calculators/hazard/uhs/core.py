@@ -28,10 +28,12 @@ from openquake import java
 from openquake.engine import CalculationProxy
 from openquake.java import list_to_jdouble_array
 from openquake.logs import LOG
-from openquake.hazard.general import (
-    generate_erf, generate_gmpe_map, set_gmpe_params, get_iml_list)
 from openquake.utils import config
 from openquake.utils import tasks as utils_tasks
+from openquake.calculators.hazard.general import generate_erf
+from openquake.calculators.hazard.general import generate_gmpe_map
+from openquake.calculators.hazard.general import get_iml_list
+from openquake.calculators.hazard.general import set_gmpe_params
 
 
 @task(ignore_result=True)
