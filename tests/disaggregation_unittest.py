@@ -23,8 +23,8 @@ import tempfile
 import unittest
 
 from openquake import shapes
-from openquake.hazard import disagg
-from openquake.hazard.disagg import core as disagg_core
+from openquake.calculators.hazard.disagg import FULL_DISAGG_MATRIX
+from openquake.calculators.hazard.disagg import core as disagg_core
 
 from tests.utils import helpers
 
@@ -54,7 +54,7 @@ class DisaggregationFuncsTestCase(unittest.TestCase):
 
         # Okay, read the file and make sure the data was written properly:
         with h5py.File(file_path, 'r') as read_hdf:
-            actual_data = read_hdf[disagg.FULL_DISAGG_MATRIX].value
+            actual_data = read_hdf[FULL_DISAGG_MATRIX].value
 
         # the data should be the same as it was written:
         self.assertTrue((data == actual_data).all())
