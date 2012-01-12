@@ -353,7 +353,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         for i in xrange(max(len(expected), len(actual))):
             self.assertEqual(expected[i][0], actual[i][0])
             exp_val, act_val = expected[i][1], actual[i][1]
-            msg='{:<22} PoE {:5}: expected {:.2E} != actual {:.2E}'.format(
+            msg = '{:<22} PoE {:5}: expected {:.2E} != actual {:.2E}'.format(
                 site, expected[i][0], exp_val, act_val
             )
             try:
