@@ -14,19 +14,4 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-"""This package contains Hazard calculator classes and utilities."""
-
-
-from openquake.hazard.opensha import ClassicalMixin, EventBasedMixin
-from openquake.calculators.hazard.disagg.core import DisaggMixin
-from openquake.calculators.hazard.scenario.core import ScenarioEventBasedMixin
-
-
-CALCULATORS = {
-    'classical': ClassicalMixin,
-    'classical_bcr': ClassicalMixin,
-    'event_based': EventBasedMixin,
-    'event_based_bcr': EventBasedMixin,
-    'disaggregation': DisaggMixin,
-    'scenario': ScenarioEventBasedMixin,
-}
+"""Scenario hazard calculator."""
