@@ -520,6 +520,8 @@ class ClassicalMixin(general.BasePSHAMixin):
             self.serialize_hazard_curve(nrml_file, key_template,
                                         hc_attrib_update, sites)
 
+    # Silencing 'Too many local variables'
+    # pylint: disable=R0914
     def serialize_hazard_curve(self, nrml_file, key_template, hc_attrib_update,
                                sites):
         """
