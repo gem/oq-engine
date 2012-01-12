@@ -533,3 +533,37 @@ class PrepareKwargsTestCase(unittest.TestCase):
 
         self.assertEqual(dict(a=1, c=3, d=4),
                          tasks._prepare_kwargs("a", 1, dict(c=3, d=4), ath))
+
+
+class CalculatorForTaskTestCase(unittest.TestCase):
+    """Tests for :function:`openquake.utils.tasks.calculator_for_task`."""
+
+    def test_calculator_for_task(self):
+        """Load up a sample calculation (into the db and cache) and make sure
+        we can instantiate the correct calculator for a given calculation id.
+        """
+        from openquake.calculators.hazard.classical.core import ClassicalMixin
+        job_profile, params, sections = engine.import_job_profile(demo_file(
+            'simple_fault_demo_hazard/config.gem'))
+
+        calculation = OqCalculation(owner=job_profile.owner,
+                                    oq_job_profile=job_profile)
+        calculation.save()
+
+        calc_proxy = engine.CalculationProxy(params, calculation.id,
+                                             oq_job_profile=job_profile,
+                                             oq_calculation=calculation)
+        calc_proxy.to_kvs()
+
+        with patch(
+            'openquake.utils.tasks.get_running_calculation') as grc_mock:
+
+            # Loading of the CalculationProxy is done by
+            # `get_running_calculation`, which is covered by other tests.
+            # So, we just want to make sure that it's called here.
+            grc_mock.return_value = calc_proxy
+
+            calculator = tasks.calculator_for_task(calculation.id, 'hazard')
+
+            self.assertTrue(isinstance(calculator, ClassicalMixin))
+            self.assertEqual(1, grc_mock.call_count)
