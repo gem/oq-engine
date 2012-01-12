@@ -84,18 +84,18 @@ class DoCurvesTestCase(TestMixin, unittest.TestCase):
             GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
-        self.job_profile = create_job(params)
-        self.calculator = opensha.ClassicalMixin(self.job_profile)
+        self.calc_proxy = create_job(params)
+        self.calculator = opensha.ClassicalMixin(self.calc_proxy)
 
         # Store the canned result data in the KVS.
-        key = self.job_profile.job_id
+        key = self.calc_proxy.job_id
         for realization in xrange(2):
-            key = "%s/%s" % (self.job_profile.job_id, realization + 1)
+            key = "%s/%s" % (self.calc_proxy.job_id, realization + 1)
             TestStore.put(key, self.mock_results[realization])
             self.keys.append(key)
         LOG.debug("keys = '%s'" % self.keys)
 
-        self.job_profile.params = dict(NUMBER_OF_LOGIC_TREE_SAMPLES=2,
+        self.calc_proxy.params = dict(NUMBER_OF_LOGIC_TREE_SAMPLES=2,
                                  WIDTH_OF_MFD_BIN=1)
         self.calculator.calc = self.FakeLogicTreeProcessor()
         self.calculator.cache = dict()
@@ -145,8 +145,8 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
             GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
-        self.job_profile = create_job(params)
-        self.calculator = opensha.ClassicalMixin(self.job_profile)
+        self.calc_proxy = create_job(params)
+        self.calculator = opensha.ClassicalMixin(self.calc_proxy)
 
     def tearDown(self):
         # Remove the canned result data from the KVS.
@@ -165,7 +165,7 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
         # serializer function.
         fake_serializer.number_of_calls = 0
 
-        key = TestStore.put(self.job_profile.job_id, self.mock_results)
+        key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
         self.keys.append(key)
         self.calculator.do_means(self.sites, 1,
                         curve_serializer=fake_serializer,
@@ -186,7 +186,7 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
 
         fake_serializer.number_of_calls = 0
 
-        key = TestStore.put(self.job_profile.job_id, self.mock_results)
+        key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
         self.keys.append(key)
         self.calculator.do_means(self.sites, 1,
                         curve_serializer=lambda _: True,
@@ -210,9 +210,9 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
 
         fake_serializer.number_of_calls = 0
 
-        key = TestStore.put(self.job_profile.job_id, self.mock_results)
+        key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
         self.keys.append(key)
-        self.job_profile.params["POES"] = "0.6 0.8"
+        self.calc_proxy.params["POES"] = "0.6 0.8"
         self.calculator.do_means(self.sites, 1,
             curve_serializer=lambda _: True,
             curve_task=test_data_reflector,
@@ -229,9 +229,9 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
         for the specific assertion message.
         """
 
-        key = TestStore.put(self.job_profile.job_id, self.mock_results)
+        key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
         self.keys.append(key)
-        self.job_profile.params["POES"] = "0.6 0.8"
+        self.calc_proxy.params["POES"] = "0.6 0.8"
         self.assertRaises(
             AssertionError, self.calculator.do_means,
             self.sites, 1,
@@ -247,9 +247,9 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
         for the specific assertion message.
         """
 
-        key = TestStore.put(self.job_profile.job_id, self.mock_results)
+        key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
         self.keys.append(key)
-        self.job_profile.params["POES"] = "0.6 0.8"
+        self.calc_proxy.params["POES"] = "0.6 0.8"
         self.assertRaises(
             AssertionError, self.calculator.do_means,
             self.sites, 1,
@@ -257,7 +257,7 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
             map_serializer=lambda _: True, map_func=None)
 
     def test_no_do_means_if_disabled(self):
-        self.job_profile.params['COMPUTE_MEAN_HAZARD_CURVE'] = (
+        self.calc_proxy.params['COMPUTE_MEAN_HAZARD_CURVE'] = (
             'false')
         with patch('openquake.utils.tasks.distribute') as distribute:
             self.calculator.do_means(self.sites, 1,
@@ -288,8 +288,8 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
             GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
-        self.job_profile = create_job(params)
-        self.calculator = opensha.ClassicalMixin(self.job_profile)
+        self.calc_proxy = create_job(params)
+        self.calculator = opensha.ClassicalMixin(self.calc_proxy)
 
     def tearDown(self):
         # Remove the canned result data from the KVS.
@@ -305,7 +305,7 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
 
         fake_serializer.number_of_calls = 0
 
-        key = TestStore.put(self.job_profile.job_id, self.mock_results)
+        key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
         self.keys.append(key)
         self.calculator.do_quantiles(self.sites, 1, [0.2, 0.4],
                             curve_serializer=fake_serializer,
@@ -330,10 +330,10 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
                     "quantile_hazard_map!10!-122.8!38.0!0.4",
                     "quantile_hazard_map!10!-121.8!38.0!0.4"]
 
-        key = TestStore.put(self.job_profile.job_id,
+        key = TestStore.put(self.calc_proxy.job_id,
                             self.mock_results)
         self.keys.append(key)
-        self.job_profile.params["POES"] = "0.6 0.8"
+        self.calc_proxy.params["POES"] = "0.6 0.8"
         self.calculator.do_quantiles(
             self.sites, 1, [0.2, 0.4],
             curve_serializer=lambda _, __: True,
@@ -357,7 +357,7 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
 
         fake_serializer.number_of_calls = 0
 
-        key = TestStore.put(self.job_profile.job_id, self.mock_results)
+        key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
         self.keys.append(key)
         self.calculator.do_quantiles(self.sites, 1, [],
                             curve_serializer=lambda _: True,
@@ -374,9 +374,9 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
         for the specific assertion message.
         """
 
-        key = TestStore.put(self.job_profile.job_id, self.mock_results)
+        key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
         self.keys.append(key)
-        self.job_profile.params["POES"] = "0.6 0.8"
+        self.calc_proxy.params["POES"] = "0.6 0.8"
         self.assertRaises(
             AssertionError, self.calculator.do_quantiles,
             self.sites, 1, [0.5],
@@ -392,9 +392,9 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
         for the specific assertion message.
         """
 
-        key = TestStore.put(self.job_profile.job_id, self.mock_results)
+        key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
         self.keys.append(key)
-        self.job_profile.params["POES"] = "0.6 0.8"
+        self.calc_proxy.params["POES"] = "0.6 0.8"
         self.assertRaises(
             AssertionError, self.calculator.do_quantiles,
             self.sites, 1, [0.5],
@@ -413,16 +413,16 @@ class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
             GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
-        self.job_profile = create_job(params)
+        self.calc_proxy = create_job(params)
 
-        self.calculator = opensha.ClassicalMixin(self.job_profile)
+        self.calculator = opensha.ClassicalMixin(self.calc_proxy)
 
     def test_number_of_tasks_with_param_not_set(self):
         """
         When the `HAZARD_TASKS` parameter is not set the expected value is
         twice the number of CPUs/cores.
         """
-        self.job_profile.params = dict()
+        self.calc_proxy.params = dict()
         self.assertEqual(
             2 * multiprocessing.cpu_count(), self.calculator.number_of_tasks())
 
@@ -431,7 +431,7 @@ class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
         When the `HAZARD_TASKS` parameter *is* set and a valid integer its
         value will be returned.
         """
-        self.job_profile.params = dict(HAZARD_TASKS="5")
+        self.calc_proxy.params = dict(HAZARD_TASKS="5")
         self.assertEqual(5, self.calculator.number_of_tasks())
 
     def test_number_of_tasks_with_param_set_but_invalid(self):
@@ -439,7 +439,7 @@ class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
         When the `HAZARD_TASKS` parameter is set but not a valid integer a
         `ValueError` will be raised.
         """
-        self.job_profile.params = dict(HAZARD_TASKS="this-is-not-a-number")
+        self.calc_proxy.params = dict(HAZARD_TASKS="this-is-not-a-number")
         self.assertRaises(ValueError, self.calculator.number_of_tasks)
 
     def test_number_of_tasks_with_param_set_but_all_whitespace(self):
@@ -447,7 +447,7 @@ class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
         When the `HAZARD_TASKS` parameter is set to whitespace a
         `ValueError` will be raised.
         """
-        self.job_profile.params = dict(HAZARD_TASKS=" 	")
+        self.calc_proxy.params = dict(HAZARD_TASKS=" 	")
         self.assertRaises(ValueError, self.calculator.number_of_tasks)
 
 
@@ -486,8 +486,8 @@ class ClassicalExecuteTestCase(TestMixin, unittest.TestCase):
             SITES=('38.0, -121.9, 38.0, -121.8, 38.0, -122.9, 38.0, -122.8 '
                    '38.0, -123.9, 38.0, -123.8, 38.0, -124.9, 38.0, -124.8'))
 
-        self.job_profile = create_job(params)
-        self.calculator = opensha.ClassicalMixin(self.job_profile)
+        self.calc_proxy = create_job(params)
+        self.calculator = opensha.ClassicalMixin(self.calc_proxy)
 
         # Initialize the mixin instance.
         self.calculator.calc = self.FakeLogicTreeProcessor()
