@@ -25,8 +25,9 @@ import unittest
 from openquake import java
 from openquake.java import list_to_jdouble_array
 from openquake.shapes import Site
-from openquake.hazard.uhs.core import (
-    compute_uhs, touch_result_file, write_uhs_results)
+from openquake.calculators.hazard.uhs.core import compute_uhs
+from openquake.calculators.hazard.uhs.core import touch_result_file
+from openquake.calculators.hazard.uhs.core import write_uhs_results
 
 from tests.utils import helpers
 
