@@ -51,13 +51,13 @@ from openquake.db.models import OqCalculation
 from openquake.db.models import OqJobProfile
 from openquake.db.models import OqUser
 from openquake.utils import stats
-from openquake.hazard.calc import CALCULATORS as HAZ_CALCS
 from openquake.job.params import ARRAY_RE
 from openquake.job.params import CALCULATION_MODE
 from openquake.job.params import INPUT_FILE_TYPES
 from openquake.job.params import PARAMS
 from openquake.job.params import PATH_PARAMS
 from openquake.risk.calc import CALCULATORS as RISK_CALCS
+from openquake.calculators.hazard import CALCULATORS as HAZ_CALCS
 
 CALCS = dict(hazard=HAZ_CALCS, risk=RISK_CALCS)
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')

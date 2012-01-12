@@ -126,7 +126,7 @@ def compute_ground_motion_fields(job_id, sites, history, realization, seed):
     """ Generate ground motion fields """
     # pylint: disable=W0404
     from openquake.engine import CalculationProxy
-    from openquake.hazard.calc import CALCULATORS
+    from openquake.calculators.hazard import CALCULATORS
 
     utils_tasks.check_job_status(job_id)
     the_job = CalculationProxy.from_kvs(job_id)
@@ -144,7 +144,7 @@ def compute_hazard_curve(job_id, sites, realization):
     """ Generate hazard curve for a given site list. """
     # pylint: disable=W0404
     from openquake.engine import CalculationProxy
-    from openquake.hazard.calc import CALCULATORS
+    from openquake.calculators.hazard import CALCULATORS
 
     utils_tasks.check_job_status(job_id)
     the_job = CalculationProxy.from_kvs(job_id)
