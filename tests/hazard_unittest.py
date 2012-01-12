@@ -42,9 +42,9 @@ from openquake.db.models import OqCalculation
 from openquake.job.config import HazardMandatoryParamsValidator
 from openquake.job.config import PARAMS
 from openquake.kvs import tokens
-from openquake.hazard import opensha
 from openquake.calculators.hazard import CALCULATORS
 from openquake.calculators.hazard import general as hazard_general
+from openquake.calculators.hazard.classical import core as classical
 
 from tests.utils import helpers
 
@@ -330,7 +330,7 @@ class HazardEngineTestCase(helpers.TestMixin, unittest.TestCase):
     def test_basic_generate_erf_keeps_order(self):
         job_ids = [helpers.job_from_file(TEST_JOB_FILE).job_id
                    for _ in xrange(4)]
-        results = map(opensha.generate_erf.delay, job_ids)
+        results = map(classical.generate_erf.delay, job_ids)
         self.assertEqual(job_ids, [result.get() for result in results])
 
     def test_generate_erf_returns_erf_via_kvs(self):
@@ -350,7 +350,7 @@ class HazardEngineTestCase(helpers.TestMixin, unittest.TestCase):
             keys.append(erf_key)
 
             # Spawn our tasks.
-            results.append(opensha.generate_erf.apply_async(args=[job_id]))
+            results.append(classical.generate_erf.apply_async(args=[job_id]))
 
         helpers.wait_for_celery_tasks(results)
         result_values = dict(zip(keys, self.kvs_client.mget(keys)))
@@ -369,7 +369,7 @@ class HazardEngineTestCase(helpers.TestMixin, unittest.TestCase):
             mgm_key = tokens.mgm_key(job_id, block_id, site)
             self.kvs_client.set(mgm_key, MEAN_GROUND_INTENSITY)
 
-            results.append(opensha.compute_mgm_intensity.apply_async(
+            results.append(classical.compute_mgm_intensity.apply_async(
                 args=[job_id, block_id, site]))
 
         helpers.wait_for_celery_tasks(results)
@@ -539,7 +539,7 @@ class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
         self.calc_proxy = helpers.create_job(self.params)
-        self.calculator = opensha.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalMixin(self.calc_proxy)
         self.job_id = self.calc_proxy.job_id
 
         self.expected_curve = numpy.array([9.9178000e-01, 9.8892000e-01,
@@ -744,7 +744,7 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
                 1.5200e+00, 2.1300e+00]
 
         self.calc_proxy = helpers.create_job(self.params)
-        self.calculator = opensha.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalMixin(self.calc_proxy)
         self.job_id = self.calc_proxy.job_id
 
         self.empty_mean_curve = []
@@ -931,7 +931,7 @@ class ParameterizeSitesTestCase(helpers.TestMixin, unittest.TestCase):
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
         self.calc_proxy = helpers.create_job(self.params)
-        self.calculator = opensha.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalMixin(self.calc_proxy)
         self.job_id = self.calc_proxy.job_id
 
     def test_all_mandatory_params_covered(self):

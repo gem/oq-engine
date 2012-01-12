@@ -17,7 +17,8 @@
 """This package contains Hazard calculator classes and utilities."""
 
 
-from openquake.hazard.opensha import ClassicalMixin, EventBasedMixin
+from openquake.calculators.hazard.classical.core import ClassicalMixin
+from openquake.calculators.hazard.classical.core import EventBasedMixin
 from openquake.calculators.hazard.disagg.core import DisaggMixin
 from openquake.calculators.hazard.scenario.core import ScenarioEventBasedMixin
 
