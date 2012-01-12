@@ -20,6 +20,7 @@
 """Common code for the hazard calculators."""
 
 import functools
+import hashlib
 import json
 import math
 import numpy
@@ -32,6 +33,7 @@ from openquake import kvs
 from openquake.input import logictree
 from openquake.java import list_to_jdouble_array
 from openquake.logs import LOG
+from openquake.utils import config
 from openquake.calculators.base import Calculator
 
 
