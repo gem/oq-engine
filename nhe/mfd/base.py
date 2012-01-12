@@ -1,5 +1,6 @@
 """
-Module :mod:`mfd.base` defines base class for MFD and a base exception class.
+Module :mod:`nhe.mfd.base` defines base class for MFD and a base exception
+class.
 """
 import abc
 

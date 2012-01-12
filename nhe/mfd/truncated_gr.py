@@ -1,7 +1,7 @@
 """
-Module :mod:`mfd.truncated_gr` defines a Truncated Gutenberg-Richter MFD.
+Module :mod:`nhe.mfd.truncated_gr` defines a Truncated Gutenberg-Richter MFD.
 """
-from mfd.base import BaseMFD, MFDError
+from nhe.mfd.base import BaseMFD, MFDError
 
 
 class TruncatedGR(BaseMFD):
@@ -81,7 +81,7 @@ class TruncatedGR(BaseMFD):
         values appear equal after rounding.
 
         :returns:
-            See :meth:`mfd.BaseMFD.get_annual_occurence_rates`.
+            See :meth:`nhe.mfd.BaseMFD.get_annual_occurence_rates`.
         """
         min_mag = self.min_mag
         max_mag = self.max_mag

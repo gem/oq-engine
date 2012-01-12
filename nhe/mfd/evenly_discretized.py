@@ -1,7 +1,7 @@
 """
-Module :mod:`mfd.evenly_discretized` defines an evenly discretized MFD.
+Module :mod:`nhe.mfd.evenly_discretized` defines an evenly discretized MFD.
 """
-from mfd.base import BaseMFD, MFDError
+from nhe.mfd.base import BaseMFD, MFDError
 
 
 class EvenlyDiscretized(BaseMFD):
@@ -12,7 +12,7 @@ class EvenlyDiscretized(BaseMFD):
         Positive float value representing the middle point of the first
         bin in the histogram.
     :param bin_width:
-        See :class:`mfd.base.BaseMFD`.
+        See :class:`nhe.mfd.base.BaseMFD`.
     :param occurence_rates:
         The list of non-negative float values representing the actual
         occurrence rates. The resulting histogram has as many bins
