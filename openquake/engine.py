@@ -50,6 +50,7 @@ from openquake.db.models import InputSet
 from openquake.db.models import OqCalculation
 from openquake.db.models import OqJobProfile
 from openquake.db.models import OqUser
+from openquake.utils import stats
 from openquake.hazard.calc import CALCULATORS as HAZ_CALCS
 from openquake.job.params import ARRAY_RE
 from openquake.job.params import CALCULATION_MODE
@@ -551,10 +552,6 @@ def _prepare_job(params, sections, owner_username='openquake'):
         job_profile.owner = owner
         job_profile.save()
 
-        # Reset all progress indication counters for the job at hand.
-        # TODO: Put this back in, in the correct place.
-        # stats.delete_job_counters(job.id)
-
         return job_profile
 
     # TODO specify the owner as a command line parameter
@@ -669,6 +666,12 @@ def run_calculation(job_profile, params, sections, output_type='db'):
     calculation.status = 'running'
     calculation.save()
 
+    # Clear any counters for this calculation_id, prior to running the
+    # calculation.
+    # We do this just to make sure all of the counters behave properly and can
+    # provide accurate data about a calculation in-progress.
+    stats.delete_job_counters(calculation.id)
+
     serialize_results_to = ['db']
     if output_type == 'xml':
         serialize_results_to.append('xml')
@@ -748,8 +751,6 @@ def _launch_calculation(calc_proxy, sections):
         if not job_type.upper() in sections:
             continue
 
-        print job_type
-        print calc_mode
         calc_class = CALCS[job_type][calc_mode]
 
         calculator = calc_class(calc_proxy)
