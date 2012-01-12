@@ -52,6 +52,10 @@ Available Risk Analysis
 
 import sys
 
+from gflags import DEFINE_boolean
+from gflags import DEFINE_enum
+from gflags import DEFINE_string
+
 from openquake.utils import config
 
 
@@ -73,13 +77,13 @@ from openquake.utils import version as utils_version
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_string('config_file', 'openquake-config.gem',
+DEFINE_string('config_file', 'openquake-config.gem',
                     'OpenQuake configuration file')
-flags.DEFINE_enum('output_type', 'db', ['db', 'xml'],
+DEFINE_enum('output_type', 'db', ['db', 'xml'],
                   'Computation result output type')
 
-flags.DEFINE_boolean('help', False, 'Show this help')
-flags.DEFINE_boolean('version', False, 'Show version information')
+DEFINE_boolean('help', False, 'Show this help')
+DEFINE_boolean('version', False, 'Show version information')
 
 
 if __name__ == '__main__':
@@ -112,6 +116,9 @@ if __name__ == '__main__':
     from openquake import job
     from openquake import engine
     try:
-        engine.run_job(FLAGS.config_file, FLAGS.output_type)
+        job_profile, params, sections = engine.import_job_profile(
+            FLAGS.config_file)
+        engine.run_calculation(job_profile, params, sections,
+                               output_type=FLAGS.output_type)
     except job.config.ValidationException as e:
         print str(e)
