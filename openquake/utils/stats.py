@@ -54,6 +54,11 @@ STATS_KEYS = {
 }
 
 
+# Predefined key template, order of substitution variables:
+#   job_id, area, fragment, counter_type.
+_KEY_TEMPLATE = "oqs/%s/%s/%s/%s"
+
+
 def pk_set(job_id, skey, value):
     """Set the value for a predefined statistics key.
 
@@ -116,7 +121,7 @@ def key_name(job_id, area, fragment, counter_type):
     """
     if counter_type == "d" and not debug_stats_enabled():
         return None
-    return "oqs/%s/%s/%s/%s" % (job_id, area, fragment, counter_type)
+    return _KEY_TEMPLATE % (job_id, area, fragment, counter_type)
 
 
 class progress_indicator(object):

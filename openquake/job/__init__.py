@@ -43,12 +43,12 @@ from openquake.supervising import supervisor
 from openquake.job.handlers import resolve_handler
 from openquake.job import config as conf
 from openquake.job import params as job_params
-from openquake.job.mixins import Mixin
 from openquake.job.params import (
     PARAMS, CALCULATION_MODE, ENUM_MAP, PATH_PARAMS, INPUT_FILE_TYPES,
     ARRAY_RE)
 from openquake.kvs import mark_job_as_current
 from openquake.logs import LOG
+from openquake.utils import general
 from openquake.utils import stats
 
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
@@ -330,6 +330,9 @@ def prepare_job(params, sections):
 
     # Reset all progress indication counters for the job at hand.
     stats.delete_job_counters(job.id)
+
+    # Make the job ID generally available.
+    general.set_job_id(job.id)
 
     return job
 

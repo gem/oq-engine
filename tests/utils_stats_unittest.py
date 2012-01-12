@@ -255,17 +255,38 @@ class PkSetTestCase(helpers.RedisTestMixin, unittest.TestCase):
 
         self.assertRaises(KeyError, stats.pk_set, job_id, pkey, 737)
 
-    def test_pk_set_with_existing_debug_and_debug_stats_off(self):
-        """The value is set correctly for an existing predefined key."""
+    def test_pk_set_with_existing_debug_and_debug_stats_enabled(self):
+        """The value is set correctly for an existing debug counter."""
         job_id = 74
         pkey = "hcls_xmlcurvewrites"
+        stats.delete_job_counters(job_id)
         with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
             dse.return_value = True
-            key = stats.key_name(job_id, *stats.STATS_KEYS[pkey])
-            stats.delete_job_counters(job_id)
-            kvs = self.connect()
             stats.pk_set(job_id, pkey, 747)
+            key = stats.key_name(job_id, *stats.STATS_KEYS[pkey])
+            kvs = self.connect()
             self.assertEqual("747", kvs.get(key))
+
+    def test_pk_set_with_existing_debug_and_debug_stats_off(self):
+        """The debug counter value is not set when debug stats are off."""
+        job_id = 75
+        pkey = "hcls_xmlcurvewrites"
+        stats.delete_job_counters(job_id)
+        with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
+            dse.return_value = False
+            stats.pk_set(job_id, pkey, 757)
+            key = stats._KEY_TEMPLATE % ((job_id,) + stats.STATS_KEYS[pkey])
+            kvs = self.connect()
+            self.assertIs(None, kvs.get(key))
+
+    def test_pk_set_with_non_existent_debug_key(self):
+        """`KeyError` is raised for debug keys that are not in `STATS_KEYS`."""
+        job_id = 76
+        pkey = "To be or not to be!?"
+        stats.delete_job_counters(job_id)
+        with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
+            dse.return_value = False
+            self.assertRaises(KeyError, stats.pk_set, job_id, pkey, 737)
 
 
 class PkIncTestCase(helpers.RedisTestMixin, unittest.TestCase):
@@ -301,6 +322,41 @@ class PkIncTestCase(helpers.RedisTestMixin, unittest.TestCase):
 
         self.assertRaises(KeyError, stats.pk_inc, job_id, pkey)
 
+    def test_pk_inc_with_existing_debug_and_debug_stats_enabled(self):
+        """The value is incremented correctly for an existing debug counter."""
+        job_id = 84
+        pkey = "hcls_xmlcurvewrites"
+        stats.delete_job_counters(job_id)
+        with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
+            dse.return_value = True
+            stats.pk_inc(job_id, pkey)
+            key = stats.key_name(job_id, *stats.STATS_KEYS[pkey])
+            kvs = self.connect()
+            self.assertEqual("1", kvs.get(key))
+
+    def test_pk_inc_with_existing_debug_and_debug_stats_off(self):
+        """
+        The debug counter value is not incremented when debug stats are off.
+        """
+        job_id = 85
+        pkey = "hcls_xmlcurvewrites"
+        stats.delete_job_counters(job_id)
+        with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
+            dse.return_value = False
+            stats.pk_inc(job_id, pkey)
+            kvs = self.connect()
+            key = stats._KEY_TEMPLATE % ((job_id,) + stats.STATS_KEYS[pkey])
+            self.assertIs(None, kvs.get(key))
+
+    def test_pk_inc_with_non_existent_debug_key(self):
+        """`KeyError` is raised for debug keys that are not in `STATS_KEYS`."""
+        job_id = 86
+        pkey = "How hard can it be!?"
+        stats.delete_job_counters(job_id)
+        with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
+            dse.return_value = False
+            self.assertRaises(KeyError, stats.pk_inc, job_id, pkey)
+
 
 class PkGetTestCase(helpers.RedisTestMixin, unittest.TestCase):
     """Tests the behaviour of utils.stats.pk_get()."""
@@ -317,7 +373,7 @@ class PkGetTestCase(helpers.RedisTestMixin, unittest.TestCase):
         stats.pk_get(job_id, pkey)
         self.assertEqual("919", kvs.get(key))
 
-    def test_pk_get_with_existing_getremental(self):
+    def test_pk_get_with_existing_incremental(self):
         """The correct value is obtained for an existing predefined key."""
         job_id = 92
         pkey = "hcls_cblock"
@@ -334,5 +390,36 @@ class PkGetTestCase(helpers.RedisTestMixin, unittest.TestCase):
         job_id = 93
         pkey = "This is unlikely to exist"
         stats.delete_job_counters(job_id)
-
         self.assertRaises(KeyError, stats.pk_get, job_id, pkey)
+
+    def test_pk_get_with_existing_debug_and_debug_stats_enabled(self):
+        """The value is obtained correctly for an existing debug counter."""
+        job_id = 94
+        pkey = "hcls_xmlcurvewrites"
+        stats.delete_job_counters(job_id)
+        with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
+            dse.return_value = True
+            key = stats.key_name(job_id, *stats.STATS_KEYS[pkey])
+            kvs = self.connect()
+            kvs.set(key, 949)
+            self.assertEqual("949", stats.pk_get(job_id, pkey))
+
+    def test_pk_get_with_existing_debug_and_debug_stats_off(self):
+        """`None` is returned when debug stats are off."""
+        job_id = 95
+        pkey = "hcls_xmlcurvewrites"
+        stats.delete_job_counters(job_id)
+        with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
+            dse.return_value = False
+            key = stats._KEY_TEMPLATE % ((job_id,) + stats.STATS_KEYS[pkey])
+            kvs = self.connect()
+            kvs.set(key, 959)
+            self.assertIs(None, stats.pk_get(job_id, pkey))
+
+    def test_pk_get_with_non_existent_debug_key(self):
+        """`KeyError` is raised for debug keys that are not in `STATS_KEYS`."""
+        job_id = 96
+        pkey = "Not a key!?"
+        with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
+            dse.return_value = False
+            self.assertRaises(KeyError, stats.pk_get, job_id, pkey)
