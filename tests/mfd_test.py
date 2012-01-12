@@ -118,3 +118,14 @@ class TruncatedGRMFDGetRatesTestCase(unittest.TestCase):
         self._test(expected_rates=expected_rates, rate_tolerance=1e-14,
                    min_mag=6.49, max_mag=6.51, bin_width=0.1,
                    a_val=0.5, b_val=1.0)
+
+
+class TruncatedGRMFDRoundingTestCase(unittest.TestCase):
+    def test(self):
+        mfd = TruncatedGR(min_mag=0.61, max_mag=0.94, bin_width=0.1,
+                          a_val=1, b_val=2)
+        # mag values should be rounded to 0.6 and 0.9 and there
+        # should be three bins with the first having center at 0.65
+        min_mag, num_bins = mfd._get_min_mag_and_num_bins()
+        self.assertAlmostEqual(min_mag, 0.65)
+        self.assertEqual(num_bins, 3)

@@ -65,15 +65,42 @@ class TruncatedGR(BaseMFD):
 
     def _get_rate(self, mag):
         """
-        Calculate and return an occurrence rate for a specific bin.
+        Calculate and return an annual occurrence rate for a specific bin.
 
         :param mag:
             Magnitude value corresponding to the center of the bin of interest.
+        :returns:
+            Float number, the annual occurrence rate calculated using formula
+            described in :class:`TruncatedGR`.
         """
         mag_lo = mag - self.bin_width / 2
         mag_hi = mag + self.bin_width / 2
         return (10 ** (self.a_val - self.b_val * mag_lo)
                 - 10 ** (self.a_val - self.b_val * mag_hi))
+
+    def _get_min_mag_and_num_bins(self):
+        """
+        Estimate the number of bins in the histogram and return it
+        along with the first bin center abscissa (magnitude) value.
+
+        Rounds ``min_mag`` and ``max_mag`` with respect to ``bin_width``
+        to make the distance between them include even number of bins.
+
+        :returns:
+            A tuple of two items: first bin center and total number of bins.
+        """
+        min_mag = round(self.min_mag / self.bin_width) * self.bin_width
+        max_mag = round(self.max_mag / self.bin_width) * self.bin_width
+        if min_mag != max_mag:
+            min_mag += self.bin_width / 2
+            max_mag -= self.bin_width / 2
+        # here we use math round on the result of division and not just
+        # cast it to integer because for some magnitude values that can't
+        # be represented as an IEEE 754 double precisely the result can
+        # look like 7.999999999999 which would become 7 instead of 8
+        # being naively casted to int so we would lose the last bin.
+        num_bins = int(round((max_mag - min_mag) / self.bin_width)) + 1
+        return min_mag, num_bins
 
     def get_annual_occurrence_rates(self):
         """
@@ -85,15 +112,10 @@ class TruncatedGR(BaseMFD):
         :returns:
             See :meth:`nhe.mfd.BaseMFD.get_annual_occurence_rates`.
         """
-        min_mag = round(self.min_mag / self.bin_width) * self.bin_width
-        max_mag = round(self.max_mag / self.bin_width) * self.bin_width
-        if min_mag != max_mag:
-            min_mag += self.bin_width / 2
-            max_mag -= self.bin_width / 2
-        n_bins = int(round((max_mag - min_mag) / self.bin_width)) + 1
+        mag, num_bins = self._get_min_mag_and_num_bins()
         rates = []
-        for i in xrange(n_bins):
-            mag = min_mag + i * self.bin_width
+        for i in xrange(num_bins):
             rate = self._get_rate(mag)
             rates.append((mag, rate))
+            mag += self.bin_width
         return rates
