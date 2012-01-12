@@ -341,15 +341,9 @@ class CheckJobStatusTestCase(unittest.TestCase):
     def test_not_completed(self):
         self.calculation.status = 'pending'
         self.calculation.save()
-        with patch('openquake.engine.CalculationProxy'
-                   '.get_status_from_db') as status_mock:
-            status_mock.return_value = 'pending'
 
-            tasks.check_job_status(self.calculation.id)
-            # make sure both methods get called with the proper args
-            self.assertEqual(1, status_mock.call_count)
-            self.assertEqual(status_mock.call_args_list,
-                             [((self.calculation.id, ), {})])
+        # No 'JobCompletedError' should be raised.
+        tasks.check_job_status(self.calculation.id)
 
     def test_completed_success(self):
         self.calculation.status = 'succeeded'
