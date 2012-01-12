@@ -242,15 +242,19 @@ def get_running_calculation(calculation_id):
     return calc_proxy
 
 
-def calculator_for_task(calculation_id):
+def calculator_for_task(calculation_id, job_type):
     """Given the id of an in-progress calculation
     (:class:`openquake.db.models.OqCalculation`), load all of the calculation
     data from the database and KVS and instantiate the calculator required for
     a task's computation.
 
+    :param int calculation_id:
+        id of a in-progress calculation.
+    :params job_type:
+        'hazard' or 'risk'
     :returns:
         An instance of a calculator classed. The type of calculator depends on
-        the job type (hazard or risk) and the calculation mode (classical,
+        the ``job_type`` (hazard or risk) and the calculation mode (classical,
         event based, etc.).
     :rtype:
         Subclass of :class:`openquake.calculators.base.Calculator`.
@@ -258,11 +262,10 @@ def calculator_for_task(calculation_id):
         If the specified calculation is not currently running.
     """
     # pylint: disable=W0404
-    from openquake.engine import CalculationProxy
-    from openquake.calculators.hazard import CALCULATORS
+    from openquake.engine import CALCS
 
     calc_proxy = get_running_calculation(calculation_id)
     calc_mode = calc_proxy.oq_job_profile.calc_mode
-    calculator = CALCULATORS[calc_mode](calc_proxy)
+    calculator = CALCS[job_type][calc_mode](calc_proxy)
 
     return calculator
