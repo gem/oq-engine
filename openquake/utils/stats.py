@@ -210,4 +210,4 @@ def delete_job_counters(job_id):
 
 def debug_stats_enabled():
     """True if debug statistics counters are enabled."""
-    return general.flag_set("stats", "debug")
+    return general.flag_set("statistics", "debug")

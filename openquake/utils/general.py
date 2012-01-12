@@ -63,7 +63,7 @@ def str2bool(value):
 __the_job_id = -1
 
 
-def job_id():
+def get_job_id():
     """Return the job ID."""
     return __the_job_id
 

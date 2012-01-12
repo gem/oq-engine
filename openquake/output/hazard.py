@@ -74,8 +74,6 @@ class HazardCurveXMLWriter(writer.FileWriter):
         self.hcfield_counter = 0
 
     def _maintain_debug_stats(self):
-        if not stats.debug_stats_enabled():
-            return
         key = stats.key_name(
             general.get_job_id(), *stats.STATS_KEYS["hcls_xmlcurvewrites"])
         if key:
@@ -291,8 +289,6 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
         self.parent_node.attrib['%sid' % GML] = self.HAZARD_MAP_DEFAULT_ID
 
     def _maintain_debug_stats(self):
-        if not stats.debug_stats_enabled():
-            return
         key = stats.key_name(
             general.get_job_id(), *stats.STATS_KEYS["hcls_xmlmapwrites"])
         if key:
