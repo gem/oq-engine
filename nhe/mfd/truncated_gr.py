@@ -51,7 +51,7 @@ class TruncatedGR(BaseMFD):
         """
         super(TruncatedGR, self).check_constraints()
 
-        if not self.min_mag > 0:
+        if not self.min_mag >= 0:
             raise MFDError()
 
         if not self.max_mag >= self.min_mag:

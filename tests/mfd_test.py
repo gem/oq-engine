@@ -35,6 +35,10 @@ class EvenlyDiscretizedMFDConstraintsTestCase(BaseConstraintsTestCase):
 
 
 class EvenlyDiscretizedMFDGetRatesTestCase(unittest.TestCase):
+    def test_zero_min_width(self):
+        mfd = EvenlyDiscretized(min_mag=0, bin_width=1, occurrence_rates=[1])
+        self.assertEqual(mfd.get_annual_occurrence_rates(), [(0, 1)])
+
     def test(self):
         evenly_discretized = EvenlyDiscretized(
             min_mag=0.2, bin_width=0.3, occurrence_rates=[2.1, 2.4, 5.3]

@@ -40,7 +40,7 @@ class EvenlyDiscretized(BaseMFD):
         if not all(value >= 0 for value in self.occurrence_rates):
             raise MFDError()
 
-        if not self.min_mag > 0:
+        if not self.min_mag >= 0:
             raise MFDError()
 
 
