@@ -66,6 +66,7 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
 
     :returns: 2-tuple of (ground_motion_value, path_to_h5_matrix_file)
     """
+    # pylint: disable=W0404
     from openquake.engine import CalculationProxy
     the_job = CalculationProxy.from_kvs(job_id)
 
