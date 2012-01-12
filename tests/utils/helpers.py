@@ -32,6 +32,7 @@ import tempfile
 import textwrap
 import time
 import sys
+import subprocess
 
 import guppy
 import mock as mock_module
