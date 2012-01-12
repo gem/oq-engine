@@ -215,6 +215,7 @@ def check_job_status(job_id):
         If :meth:`~openquake.engine.CalculationProxy.is_job_completed` returns
         ``True`` for ``job_id``.
     """
+    # pylint: disable=W0404
     from openquake.engine import CalculationProxy
     job = CalculationProxy.from_kvs(job_id)
     level = job.params.get('debug') if job and job.params else 'warn'
