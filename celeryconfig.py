@@ -46,8 +46,8 @@ CELERY_RESULT_BACKEND = "amqp"
 
 
 CELERY_IMPORTS = (
-    "openquake.hazard.disagg.core",
-    "openquake.hazard.disagg.subsets",
+    "openquake.calculators.hazard.disagg.core",
+    "openquake.calculators.hazard.disagg.subsets",
     "openquake.hazard.opensha",
     "openquake.hazard.uhs.core",
     "openquake.risk.job.general",
