@@ -44,7 +44,6 @@ class TruncatedGR(BaseMFD):
         self.b_val = b_val
         super(TruncatedGR, self).__init__(bin_width=bin_width)
 
-
     def check_constraints(self):
         """
         Checks the following constraints:
@@ -63,7 +62,6 @@ class TruncatedGR(BaseMFD):
 
         if not self.b_val > 0:
             raise MFDError()
-
 
     def _get_rate(self, mag):
         """

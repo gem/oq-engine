@@ -21,11 +21,9 @@ class BaseMFD(object):
     """
     __metaclass__ = abc.ABCMeta
 
-
     def __init__(self, bin_width):
         self.bin_width = bin_width
         self.check_constraints()
-
 
     def check_constraints(self):
         """
@@ -42,7 +40,6 @@ class BaseMFD(object):
         """
         if not self.bin_width > 0:
             raise MFDError()
-
 
     @abc.abstractmethod
     def get_annual_occurrence_rates(self):

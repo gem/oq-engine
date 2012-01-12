@@ -23,7 +23,6 @@ class EvenlyDiscretized(BaseMFD):
         self.occurrence_rates = occurrence_rates
         super(EvenlyDiscretized, self).__init__(bin_width=bin_width)
 
-
     def check_constraints(self):
         """
         Checks the following constraints:
@@ -42,7 +41,6 @@ class EvenlyDiscretized(BaseMFD):
 
         if not self.min_mag >= 0:
             raise MFDError()
-
 
     def get_annual_occurrence_rates(self):
         """
