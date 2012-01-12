@@ -136,8 +136,7 @@ def compute_mean_curves(job_id, sites, realizations):
     HAZARD_LOG.info("Computing MEAN curves for %s sites (job_id %s)"
                     % (len(sites), job_id))
 
-    return general.compute_mean_hazard_curves(job_id, sites,
-                                                     realizations)
+    return general.compute_mean_hazard_curves(job_id, sites, realizations)
 
 
 @task(ignore_result=True)
@@ -150,8 +149,8 @@ def compute_quantile_curves(job_id, sites, realizations, quantiles):
     HAZARD_LOG.info("Computing QUANTILE curves for %s sites (job_id %s)"
                     % (len(sites), job_id))
 
-    return general.compute_quantile_hazard_curves(
-        job_id, sites, realizations, quantiles)
+    return general.compute_quantile_hazard_curves(job_id, sites, realizations,
+                                                  quantiles)
 
 
 def release_data_from_kvs(job_id, sites, realizations, quantiles, poes,
@@ -405,18 +404,21 @@ class ClassicalMixin(general.BasePSHAMixin):
             end = start + block_size
             data = sites[start:end]
 
-            self.do_curves(data, realizations,
+            self.do_curves(
+                data, realizations,
                 serializer=self.serialize_hazard_curve_of_realization)
 
             # mean curves
-            self.do_means(data, realizations,
+            self.do_means(
+                data, realizations,
                 curve_serializer=self.serialize_mean_hazard_curves,
                 map_func=general.compute_mean_hazard_maps,
                 map_serializer=self.serialize_mean_hazard_map)
 
             # quantile curves
             quantiles = self.quantile_levels
-            self.do_quantiles(data, realizations, quantiles,
+            self.do_quantiles(
+                data, realizations, quantiles,
                 curve_serializer=self.serialize_quantile_hazard_curves,
                 map_func=general.compute_quantile_hazard_maps,
                 map_serializer=self.serialize_quantile_hazard_map)
@@ -476,6 +478,8 @@ class ClassicalMixin(general.BasePSHAMixin):
             self.serialize_hazard_curve(nrml_file, key_template,
                                         hc_attrib_update, sites)
 
+    # Silencing 'Too many local variables'
+    # pylint: disable=R0914
     def serialize_hazard_curve(self, nrml_file, key_template, hc_attrib_update,
                                sites):
         """
@@ -705,7 +709,7 @@ class ClassicalMixin(general.BasePSHAMixin):
         return self._hazard_curve_filename('quantile-%.2f' % quantile)
 
     def _hazard_map_filename(self, filename_part):
-        "Helper to build the filenames of hazard maps"
+        """Helper to build the filenames of hazard maps"""
         return self.calc_proxy.build_nrml_path('%s-%s.xml'
                                     % (HAZARD_MAP_FILENAME_PREFIX,
                                        filename_part))
@@ -726,7 +730,9 @@ class ClassicalMixin(general.BasePSHAMixin):
 
     @property
     def quantile_levels(self):
-        "Returns the quantile levels specified in the config file of this job"
+        """Returns the quantile levels specified in the config file of this
+        job.
+        """
         return self.calc_proxy.extract_values_from_config(
             general.QUANTILE_PARAM_NAME,
             check_value=lambda v: v >= 0.0 and v <= 1.0)
