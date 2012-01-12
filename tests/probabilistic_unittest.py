@@ -22,7 +22,7 @@ import unittest
 
 from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 
-from tests.utils.helpers import patch
+from tests.utils import helpers
 
 
 NUMBER_OF_SAMPLES_FROM_CONFIG = "10"
@@ -33,61 +33,68 @@ class SamplesFromConfigTestCase(unittest.TestCase):
     for the probabilistic scenario from the configuration file."""
 
     def setUp(self):
-        self.mixin = ProbabilisticEventMixin()
+        self.calculator = ProbabilisticEventMixin(None)
 
     def test_without_parameter_we_use_the_default_value(self):
-        self.assertEqual(None, self.mixin._get_number_of_samples())
+        self.assertEqual(None, self.calculator._get_number_of_samples())
 
     def test_with_empty_parameter_we_use_the_default_value(self):
-        self.mixin.__dict__["PROB_NUM_OF_SAMPLES"] = ""
-        self.assertEqual(None, self.mixin._get_number_of_samples())
+        self.calculator.__dict__["PROB_NUM_OF_SAMPLES"] = ""
+        self.assertEqual(None, self.calculator._get_number_of_samples())
 
     def test_we_use_the_parameter_when_specified(self):
-        self.mixin.__dict__["PROB_NUM_OF_SAMPLES"] = \
+        self.calculator.__dict__["PROB_NUM_OF_SAMPLES"] = \
                 NUMBER_OF_SAMPLES_FROM_CONFIG
 
         self.assertEqual(int(NUMBER_OF_SAMPLES_FROM_CONFIG),
-                         self.mixin._get_number_of_samples())
+                         self.calculator._get_number_of_samples())
 
     def test_default_value_with_wrong_parameter(self):
-        self.mixin.__dict__["PROB_NUM_OF_SAMPLES"] = "this-is-wrong"
-        self.assertEqual(None, self.mixin._get_number_of_samples())
+        self.calculator.__dict__["PROB_NUM_OF_SAMPLES"] = "this-is-wrong"
+        self.assertEqual(None, self.calculator._get_number_of_samples())
 
 
-class LossMapCurveSerialization(unittest.TestCase):
+class LossMapCurveSerialization(unittest.TestCase, helpers.TestMixin):
+
     def setUp(self):
-        self.mixin = ProbabilisticEventMixin()
-        self.mixin.params = {
+        params = {
             'NUMBER_OF_SEISMICITY_HISTORIES': 0,
             'NUMBER_OF_LOGIC_TREE_SAMPLES': 0,
             'INVESTIGATION_TIME': 0.0,
             'OUTPUT_DIR': 'foo',
-            'CALCULATION_MODE': 'Event Based'
+            'CALCULATION_MODE': 'Event Based',
+            'BASE_PATH': '/tmp',
         }
-        self.mixin.serialize_results_to = ['db', 'xml']
-        self.mixin.job_id = -1
-        self.mixin.base_path = '/tmp'
-        self.mixin.blocks_keys = []
-        self.mixin.store_exposure_assets = lambda: None
-        self.mixin.store_vulnerability_model = lambda: None
-        self.mixin.partition = lambda: None
+        the_job = helpers.create_job(params)
+
+        self.calculator = ProbabilisticEventMixin(the_job)
+        the_job.serialize_results_to = ['db', 'xml']
+        the_job.blocks_keys = []
+        self.calculator.store_exposure_assets = lambda: None
+        self.calculator.store_vulnerability_model = lambda: None
+        self.calculator.partition = lambda: None
 
     def test_loss_map_serialized_if_conditional_loss_poes(self):
-        self.mixin.params['CONDITIONAL_LOSS_POE'] = '0.01 0.02'
+        self.calculator.job_profile.params['CONDITIONAL_LOSS_POE'] = (
+            '0.01 0.02')
 
-        with patch('openquake.risk.job.probabilistic'
+        with helpers.patch('openquake.risk.job.probabilistic'
                    '.aggregate_loss_curve.plot_aggregate_curve'):
-            with patch('openquake.output.risk.create_loss_map_writer') as clw:
+            with helpers.patch(
+                'openquake.output.risk.create_loss_map_writer') as clw:
+
                 clw.return_value = None
 
-                self.mixin.execute()
+                self.calculator.execute()
                 self.assertTrue(clw.called)
 
     def test_loss_map_not_serialized_unless_conditional_loss_poes(self):
-        with patch('openquake.risk.job.probabilistic'
+        with helpers.patch('openquake.risk.job.probabilistic'
                    '.aggregate_loss_curve.plot_aggregate_curve'):
-            with patch('openquake.output.risk.create_loss_map_writer') as clw:
+            with helpers.patch(
+                'openquake.output.risk.create_loss_map_writer') as clw:
+
                 clw.return_value = None
 
-                self.mixin.execute()
+                self.calculator.execute()
                 self.assertFalse(clw.called)

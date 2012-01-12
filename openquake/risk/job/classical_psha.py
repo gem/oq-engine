@@ -35,11 +35,13 @@ from openquake.job import config as job_config
 
 from openquake.risk.common import compute_loss_curve
 from openquake.risk.job import general
+from openquake.risk.job.general import (conditional_loss_poes,
+                                        compute_conditional_loss)
 
 LOGGER = logs.LOG
 
 
-class ClassicalPSHABasedMixin:
+class ClassicalPSHABasedMixin(general.RiskJobMixin):
     """Mixin for Classical PSHA Based Risk Job"""
 
     def execute(self):
@@ -47,11 +49,11 @@ class ClassicalPSHABasedMixin:
         general.preload(self)
 
         celery_tasks = []
-        for block_id in self.blocks_keys:
+        for block_id in self.job_profile.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s"
-                        % (block_id, len(self.blocks_keys)))
+                        % (block_id, len(self.job_profile.blocks_keys)))
             celery_tasks.append(
-                general.compute_risk.delay(self.job_id, block_id))
+                general.compute_risk.delay(self.job_profile.job_id, block_id))
 
         # task compute_risk has return value 'True' (writes its results to
         # kvs).
@@ -74,7 +76,7 @@ class ClassicalPSHABasedMixin:
     def _get_db_curve(self, site):
         """Read hazard curve data from the DB"""
         gh = geohash.encode(site.latitude, site.longitude, precision=12)
-        job = models.OqCalculation.objects.get(id=self.job_id)
+        job = models.OqCalculation.objects.get(id=self.job_profile.job_id)
         hc = models.HazardCurveData.objects.filter(
             hazard_curve__output__oq_calculation=job,
             hazard_curve__statistic_type='mean').extra(
@@ -86,7 +88,7 @@ class ClassicalPSHABasedMixin:
         """
         Return True if current calculation mode is Benefit-Cost Ratio.
         """
-        return self.params[job_config.CALCULATION_MODE] \
+        return self.job_profile.params[job_config.CALCULATION_MODE] \
                 == job_config.BCR_CLASSICAL_MODE
 
     def compute_risk(self, block_id):
@@ -102,7 +104,6 @@ class ClassicalPSHABasedMixin:
         """
         if self.is_benefit_cost_ratio():
             return self._compute_bcr(block_id)
-
         else:
             return self._compute_loss(block_id)
 
@@ -112,12 +113,13 @@ class ClassicalPSHABasedMixin:
         """
         block = general.Block.from_kvs(block_id)
 
-        vuln_curves = vulnerability.load_vuln_model_from_kvs(self.job_id)
+        vuln_curves = vulnerability.load_vuln_model_from_kvs(
+            self.job_profile.job_id)
 
-        for point in block.grid(self.region):
+        for point in block.grid(self.job_profile.region):
             hazard_curve = self._get_db_curve(point.site)
 
-            asset_key = kvs.tokens.asset_key(self.job_id,
+            asset_key = kvs.tokens.asset_key(self.job_profile.job_id,
                             point.row, point.column)
             for asset in kvs.get_list_json_decoded(asset_key):
                 LOGGER.debug("processing asset %s" % (asset))
@@ -129,10 +131,12 @@ class ClassicalPSHABasedMixin:
                     loss_curve = self.compute_loss_curve(point,
                             loss_ratio_curve, asset)
 
-                    for loss_poe in general.conditional_loss_poes(self.params):
-                        general.compute_conditional_loss(self.job_id,
-                                point.column, point.row, loss_curve, asset,
-                                loss_poe)
+                    for loss_poe in conditional_loss_poes(
+                        self.job_profile.params):
+
+                        compute_conditional_loss(
+                                self.job_profile.job_id, point.column,
+                                point.row, loss_curve, asset, loss_poe)
 
         return True
 
@@ -144,9 +148,8 @@ class ClassicalPSHABasedMixin:
         See :func:`openquake.risk.job.general.compute_bcr_for_block` for result
         data structure spec.
         """
-        result = []
-
-        points = list(general.Block.from_kvs(block_id).grid(self.region))
+        points = list(general.Block.from_kvs(block_id).grid(
+            self.job_profile.region))
         hazard_curves = dict((point.site, self._get_db_curve(point.site))
                              for point in points)
 
@@ -157,13 +160,14 @@ class ClassicalPSHABasedMixin:
                     vuln_function, hazard_curve)
             return compute_loss_curve(loss_ratio_curve, asset['assetValue'])
 
-        result = general.compute_bcr_for_block(self.job_id, points,
-            get_loss_curve, float(self.params['INTEREST_RATE']),
-            float(self.params['ASSET_LIFE_EXPECTANCY'])
+        bcr = general.compute_bcr_for_block(self.job_profile.job_id, points,
+            get_loss_curve, float(self.job_profile.params['INTEREST_RATE']),
+            float(self.job_profile.params['ASSET_LIFE_EXPECTANCY'])
         )
-        bcr_block_key = kvs.tokens.bcr_block_key(self.job_id, block_id)
-        kvs.set_value_json_encoded(bcr_block_key, result)
-        LOGGER.debug('bcr result for block %s: %r', block_id, result)
+        bcr_block_key = kvs.tokens.bcr_block_key(self.job_profile.job_id,
+                                                 block_id)
+        kvs.set_value_json_encoded(bcr_block_key, bcr)
+        LOGGER.debug('bcr result for block %s: %r', block_id, bcr)
         return True
 
     def compute_loss_curve(self, point, loss_ratio_curve, asset):
@@ -184,8 +188,8 @@ class ClassicalPSHABasedMixin:
         """
 
         loss_curve = compute_loss_curve(loss_ratio_curve, asset['assetValue'])
-        loss_key = kvs.tokens.loss_curve_key(self.job_id, point.row,
-            point.column, asset['assetID'])
+        loss_key = kvs.tokens.loss_curve_key(
+            self.job_profile.job_id, point.row, point.column, asset['assetID'])
 
         kvs.get_client().set(loss_key, loss_curve.to_json())
 
@@ -223,11 +227,8 @@ class ClassicalPSHABasedMixin:
             vuln_function, hazard_curve)
 
         loss_ratio_key = kvs.tokens.loss_ratio_key(
-            self.job_id, point.row, point.column, asset['assetID'])
+            self.job_profile.job_id, point.row, point.column, asset['assetID'])
 
         kvs.get_client().set(loss_ratio_key, loss_ratio_curve.to_json())
 
         return loss_ratio_curve
-
-general.RiskJobMixin.register("Classical", ClassicalPSHABasedMixin)
-general.RiskJobMixin.register("Classical BCR", ClassicalPSHABasedMixin)

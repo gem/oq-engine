@@ -30,8 +30,9 @@ from openquake import logs
 
 log = logs.LOG
 
-XML_TEST_DIRECTORY= 'examples'
+XML_TEST_DIRECTORY = 'examples'
 SCHEMA_FILE = 'nrml.xsd'
+
 
 class SchemaValidationTestCase(unittest.TestCase):
     """Confirm that all XML examples in openquake/nrml/schema/0.2/examples/
@@ -58,7 +59,6 @@ class SchemaValidationTestCase(unittest.TestCase):
             if os.path.isdir(example_path):
                 continue
             xml_doc = etree.parse(example_path)
-            loaded_xml = xml_doc.getroot()
             try:
                 xmlschema.assertValid(xml_doc)
             except etree.DocumentInvalid, e:

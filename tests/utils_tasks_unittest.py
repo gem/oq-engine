@@ -324,13 +324,13 @@ class ParallelizeTestCase(unittest.TestCase):
 
 class CheckJobStatusTestCase(unittest.TestCase):
     def test_not_completed(self):
-        with patch('openquake.job.Job.is_job_completed') as mock:
+        with patch('openquake.job.CalculationProxy.is_job_completed') as mock:
             mock.return_value = False
             tasks.check_job_status(42)
             self.assertEqual(mock.call_args_list, [((42, ), {})])
 
     def test_not_completed_with_true(self):
-        with patch('openquake.job.Job.is_job_completed') as mock:
+        with patch('openquake.job.CalculationProxy.is_job_completed') as mock:
             mock.return_value = True
             try:
                 tasks.check_job_status(31)

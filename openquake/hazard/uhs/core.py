@@ -26,7 +26,7 @@ from celery.task import task
 
 from openquake import java
 from openquake.java import list_to_jdouble_array
-from openquake.job import Job
+from openquake.job import CalculationProxy
 from openquake.logs import LOG
 from openquake.hazard.general import (
     generate_erf, generate_gmpe_map, set_gmpe_params, get_iml_list)
@@ -90,7 +90,7 @@ def compute_uhs_task(job_id, realization, site, result_dir):
     """
     utils_tasks.check_job_status(job_id)
 
-    the_job = Job.from_kvs(job_id)
+    the_job = CalculationProxy.from_kvs(job_id)
 
     log_msg = (
         "Computing UHS for job_id=%s, site=%s, realization=%s."
@@ -104,11 +104,11 @@ def compute_uhs_task(job_id, realization, site, result_dir):
 
 
 def compute_uhs(the_job, site):
-    """Given a `Job` and a site of interest, compute UHS. The Java
+    """Given a `CalculationProxy` and a site of interest, compute UHS. The Java
     `UHSCalculator` is called to do perform the core computation.
 
     :param the_job:
-        :class:`openquake.job.Job` instance.
+        :class:`openquake.job.CalculationProxy` instance.
     :param site:
         :class:`openquake.shapes.Site` instance.
     :returns:
