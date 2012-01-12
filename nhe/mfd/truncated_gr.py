@@ -34,8 +34,8 @@ class TruncatedGR(BaseMFD):
     both are divisible by ``bin_width``.
     """
     def __init__(self, min_mag, max_mag, a_val, b_val, bin_width):
-        self.min_mag = round(min_mag / bin_width) * bin_width
-        self.max_mag = round(max_mag / bin_width) * bin_width
+        self.min_mag = min_mag
+        self.max_mag = max_mag
         self.a_val = a_val
         self.b_val = b_val
         super(TruncatedGR, self).__init__(bin_width=bin_width)
@@ -83,8 +83,8 @@ class TruncatedGR(BaseMFD):
         :returns:
             See :meth:`nhe.mfd.BaseMFD.get_annual_occurence_rates`.
         """
-        min_mag = self.min_mag
-        max_mag = self.max_mag
+        min_mag = round(self.min_mag / self.bin_width) * self.bin_width
+        max_mag = round(self.max_mag / self.bin_width) * self.bin_width
         if min_mag != max_mag:
             min_mag += self.bin_width / 2
             max_mag -= self.bin_width / 2
