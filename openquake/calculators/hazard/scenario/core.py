@@ -29,7 +29,7 @@ import json
 from openquake import java
 from openquake import kvs
 from openquake import shapes
-from openquake.hazard.general import BasePSHAMixin
+from openquake.calculators.hazard.general import BasePSHAMixin
 
 
 class ScenarioEventBasedMixin(BasePSHAMixin):
