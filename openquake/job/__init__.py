@@ -25,28 +25,78 @@ from datetime import datetime
 from openquake import flags
 from openquake import kvs
 from openquake import shapes
-from openquake.parser import exposure
-from openquake.db.models import OqCalculation, CalcStats
 from openquake.job import config as conf
 from openquake.job import params as job_params
-from openquake.job.params import CALCULATION_MODE, ENUM_MAP
 from openquake.kvs import mark_job_as_current
 from openquake.logs import LOG
+from openquake.parser import exposure
+from openquake.db.models import OqCalculation, CalcStats
+from openquake.job.params import CALCULATION_MODE
+from openquake.job.params import ENUM_MAP
 
 FLAGS = flags.FLAGS
 
 REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
 
 
-class Job(object):
+# Ignoring pylint for 'Too many instance attributes'
+# pylint: disable=R0902
+class CalculationProxy(object):
     """A job is a collection of parameters identified by a unique id."""
+
+    # Ignore pylint for 'Too many arguments'
+    # pylint: disable=R0913
+    def __init__(self, params, calculation_id, sections=list(), base_path=None,
+                 serialize_results_to=list(), oq_job_profile=None,
+                 oq_calculation=None):
+        """
+        :param dict params: Dict of job config params.
+        :param int calculation_id:
+            ID of the corresponding oq_calculation db record.
+        :param list sections: List of config file sections. Example::
+            ['HAZARD', 'RISK']
+        :param str base_path: base directory containing job input files
+        :param oq_job_profile:
+            :class:`openquake.db.models.OqJobProfile` instance; database
+            representation of the job profile / calculation configuration.
+        :param oq_calculation:
+            :class:`openquake.db.models.OqCalculation` instance; database
+            representation of the runtime thing we refer to as the
+            'calculation'.
+        """
+        self._calculation_id = calculation_id
+        mark_job_as_current(calculation_id)  # enables KVS gc
+
+        self.sites = []
+        self.blocks_keys = []
+        self.params = params
+        self.sections = list(set(sections))
+        self.serialize_results_to = []
+        self._base_path = base_path
+        self.serialize_results_to = list(serialize_results_to)
+
+        self.oq_job_profile = oq_job_profile
+        self.oq_calculation = oq_calculation
+
+    @property
+    def base_path(self):
+        """Directory where the calculation input files are location.
+
+        This location is used as a base directory for storing outputs."""
+        if self._base_path is not None:
+            return self._base_path
+        else:
+            return self.params.get('BASE_PATH')
 
     @staticmethod
     def from_kvs(job_id):
         """Return the job in the underlying kvs system with the given id."""
         params = kvs.get_value_json_decoded(
             kvs.tokens.generate_job_key(job_id))
-        job = Job(params, job_id)
+        calculation = OqCalculation.objects.get(id=job_id)
+        job_profile = calculation.oq_job_profile
+        job = CalculationProxy(params, job_id, oq_job_profile=job_profile,
+                               oq_calculation=calculation)
         return job
 
     @staticmethod
@@ -65,28 +115,8 @@ class Job(object):
         of the job ``job_id`` is either 'succeeded' or 'failed'. Returns
         ``False`` otherwise.
         """
-        status = Job.get_status_from_db(job_id)
+        status = CalculationProxy.get_status_from_db(job_id)
         return status == 'succeeded' or status == 'failed'
-
-    def __init__(self, params, job_id, sections=list(), base_path=None,
-                 serialize_results_to=list()):
-        """
-        :param dict params: Dict of job config params.
-        :param int job_id: ID of the corresponding oq_calculation db record.
-        :param list sections: List of config file sections. Example::
-            ['HAZARD', 'RISK']
-        :param str base_path: base directory containing job input files
-        """
-        self._job_id = job_id
-        mark_job_as_current(job_id)  # enables KVS gc
-
-        self.sites = []
-        self.blocks_keys = []
-        self.params = params
-        self.sections = list(set(sections))
-        self.serialize_results_to = []
-        self.base_path = base_path
-        self.serialize_results_to = list(serialize_results_to)
 
     def has(self, name):
         """Return false if this job doesn't have the given parameter defined,
@@ -96,7 +126,7 @@ class Job(object):
     @property
     def job_id(self):
         """Return the id of this job."""
-        return self._job_id
+        return self._calculation_id
 
     @property
     def key(self):
@@ -254,9 +284,7 @@ class Job(object):
         Report initial job stats (such as start time) by adding a
         uiapi.calc_stats record to the db.
         '''
-        oq_calculation = OqCalculation.objects.get(id=self.job_id)
-
-        calc_stats = CalcStats(oq_calculation=oq_calculation)
+        calc_stats = CalcStats(oq_calculation=self.oq_calculation)
         calc_stats.start_time = datetime.utcnow()
         calc_stats.num_sites = len(self.sites_to_compute())
 
@@ -273,8 +301,8 @@ def read_sites_from_exposure(a_job):
     Given the exposure model specified in the job config, read all sites which
     are located within the region of interest.
 
-    :param a_job: a Job object with an EXPOSURE parameter defined
-    :type a_job: :py:class:`openquake.job.Job`
+    :param a_job: a CalculationProxy object with an EXPOSURE parameter defined
+    :type a_job: :py:class:`openquake.job.CalculationProxy`
 
     :returns: a list of :py:class:`openquake.shapes.Site` objects
     """

@@ -17,12 +17,13 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-from functools import partial
 import mock
 import os
-from tempfile import gettempdir
 import textwrap
 import unittest
+
+from functools import partial
+from tempfile import gettempdir
 
 from django.contrib.gis.geos.polygon import Polygon
 from django.contrib.gis.geos.collections import MultiPoint
@@ -32,10 +33,10 @@ from openquake import job
 from openquake import kvs
 from openquake import flags
 from openquake import shapes
-from openquake.engine import (get_source_models, parse_config_file,
+from openquake.engine import (_get_source_models, _parse_config_file,
                               prepare_config_parameters, _prepare_job)
+from openquake.job import CalculationProxy
 from openquake.job import config
-from openquake.job import Job
 from openquake.job.params import config_text_to_list
 from openquake.db.models import OqCalculation, CalcStats, OqJobProfile, OqUser
 
@@ -141,7 +142,7 @@ class JobTestCase(unittest.TestCase):
         try:
             self.job = helpers.job_from_file(
                 os.path.join(helpers.DATA_DIR, CONFIG_FILE))
-            job_from_kvs = Job.from_kvs(self.job.job_id)
+            job_from_kvs = CalculationProxy.from_kvs(self.job.job_id)
             self.assertEqual(flags.FLAGS.debug,
                              job_from_kvs.params.pop('debug'))
             self.assertEqual(self.job, job_from_kvs)
@@ -158,46 +159,49 @@ class JobDbRecordTestCase(unittest.TestCase):
         self.job = None
 
     def test_job_db_record_for_output_type_db(self):
-        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE),
-                                        'db')
+        self.job = engine._job_from_file(
+            helpers.get_data_path(CONFIG_FILE), 'db')
         OqCalculation.objects.get(id=self.job.job_id)
 
     def test_job_db_record_for_output_type_xml(self):
-        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE),
-                                        'xml')
+        self.job = engine._job_from_file(
+            helpers.get_data_path(CONFIG_FILE), 'xml')
         OqCalculation.objects.get(id=self.job.job_id)
 
     def test_set_status(self):
-        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE),
-                                        'db')
+        self.job = engine._job_from_file(
+            helpers.get_data_path(CONFIG_FILE), 'db')
         status = 'running'
         self.job.set_status(status)
         self.assertEqual(status,
                          OqCalculation.objects.get(id=self.job.job_id).status)
 
     def test_get_status_from_db(self):
-        self.job = engine.job_from_file(helpers.get_data_path(CONFIG_FILE),
-                                        'db')
+        self.job = engine._job_from_file(
+            helpers.get_data_path(CONFIG_FILE), 'db')
         row = OqCalculation.objects.get(id=self.job.job_id)
 
         row.status = "failed"
         row.save()
-        self.assertEqual("failed", Job.get_status_from_db(self.job.job_id))
+        self.assertEqual(
+            "failed", CalculationProxy.get_status_from_db(self.job.job_id))
 
         row.status = "running"
         row.save()
-        self.assertEqual("running", Job.get_status_from_db(self.job.job_id))
+        self.assertEqual(
+            "running", CalculationProxy.get_status_from_db(self.job.job_id))
 
     def test_is_job_completed(self):
-        job_id = engine.job_from_file(helpers.get_data_path(CONFIG_FILE),
-                                      'db').job_id
+        job_id = engine._job_from_file(
+            helpers.get_data_path(CONFIG_FILE), 'db').job_id
         row = OqCalculation.objects.get(id=job_id)
         pairs = [('pending', False), ('running', False),
                  ('succeeded', True), ('failed', True)]
         for status, is_completed in pairs:
             row.status = status
             row.save()
-            self.assertEqual(Job.is_job_completed(job_id), is_completed)
+            self.assertEqual(
+                CalculationProxy.is_job_completed(job_id), is_completed)
 
 
 class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
@@ -214,7 +218,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
         config_path = self.touch(
             dir=gettempdir(), content=textwrap.dedent(content))
 
-        params, sections = parse_config_file(config_path)
+        params, sections = _parse_config_file(config_path)
 
         self.assertEquals(
             {'BASE_PATH': gettempdir(),
@@ -226,7 +230,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
     def test_parse_missing_files(self):
         config_path = '/does/not/exist'
 
-        self.assertRaises(config.ValidationException, parse_config_file,
+        self.assertRaises(config.ValidationException, _parse_config_file,
                           config_path)
 
     def test_prepare_parameters(self):
@@ -244,7 +248,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
         config_path = self.touch(
             dir=gettempdir(), content=textwrap.dedent(content))
 
-        params, sections = parse_config_file(config_path)
+        params, sections = _parse_config_file(config_path)
         params, sections = prepare_config_parameters(params, sections)
 
         self.assertEquals(
@@ -270,7 +274,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             '''
         config_path = self.touch(content=textwrap.dedent(content))
 
-        params, sections = parse_config_file(config_path)
+        params, sections = _parse_config_file(config_path)
         params, sections = prepare_config_parameters(params, sections)
 
         self.assertEquals(
@@ -448,7 +452,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
         abs_path = partial(datapath, "classical_psha_simple")
 
         path = abs_path('source_model_logic_tree.xml')
-        models = get_source_models(path)
+        models = _get_source_models(path)
         expected_models = [abs_path('source_model1.xml'),
                            abs_path('source_model2.xml')]
 
@@ -705,80 +709,82 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
 class RunJobTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.job = None
-        self.job_from_file = engine.job_from_file
+        self.job_from_file = engine._job_from_file
         self.init_logs_amqp_send = patch('openquake.logs.init_logs_amqp_send')
         self.init_logs_amqp_send.start()
+        self.job_profile, self.params, self.sections = (
+            engine.import_job_profile(helpers.get_data_path(CONFIG_FILE)))
 
     def tearDown(self):
-        self.job = None
         self.init_logs_amqp_send.stop()
 
-    def _job_status(self):
-        return OqCalculation.objects.get(id=self.job.job_id).status
+    def _calculation_status(self):
+        return OqCalculation.objects.latest(field_name='last_update').status
 
     def test_successful_job_lifecycle(self):
 
         def test_status_running_and_succeed(*args):
-            self.assertEquals('running', self._job_status())
+            self.assertEquals('running', self._calculation_status())
 
             return []
 
         def patch_job_launch(*args, **kwargs):
             self.job = self.job_from_file(*args, **kwargs)
 
-            self.assertEquals('pending', self._job_status())
+            self.assertEquals('pending', self._calculation_status())
 
             return self.job
 
-        before_launch = engine.launch
+        before_launch = engine._launch_calculation
         try:
-            engine.launch = mock.Mock(
+            engine._launch_calculation = mock.Mock(
                 side_effect=test_status_running_and_succeed)
 
-            with patch('openquake.engine.job_from_file') as from_file:
+            with patch('openquake.engine._job_from_file') as from_file:
                 from_file.side_effect = patch_job_launch
 
                 with patch('os.fork', mocksignature=False) as fork:
                     fork.return_value = 0
-                    engine.run_job(helpers.get_data_path(CONFIG_FILE), 'db')
+                    engine.run_calculation(self.job_profile, self.params,
+                                           self.sections)
 
-            self.assertEquals(1, engine.launch.call_count)
-            self.assertEquals('succeeded', self._job_status())
+            self.assertEquals(1, engine._launch_calculation.call_count)
+            self.assertEquals('succeeded', self._calculation_status())
         finally:
-            engine.launch = before_launch
+            engine._launch_calculation = before_launch
 
     def test_failed_job_lifecycle(self):
 
         def test_status_running_and_fail(*args):
-            self.assertEquals('running', self._job_status())
+            self.assertEquals('running', self._calculation_status())
 
             raise Exception('OMG!')
 
         def patch_job_launch(*args, **kwargs):
             self.job = self.job_from_file(*args, **kwargs)
 
-            self.assertEquals('pending', self._job_status())
+            self.assertEquals('pending', self._calculation_status())
 
             return self.job
 
-        before_launch = engine.launch
+        before_launch = engine._launch_calculation
         try:
-            engine.launch = mock.Mock(
+            engine._launch_calculation = mock.Mock(
                 side_effect=test_status_running_and_fail)
 
-            with patch('openquake.engine.job_from_file') as from_file:
+            with patch('openquake.engine._job_from_file') as from_file:
                 from_file.side_effect = patch_job_launch
 
                 with patch('os.fork', mocksignature=False) as fork:
                     fork.return_value = 0
-                    self.assertRaises(Exception, engine.run_job,
-                                    helpers.get_data_path(CONFIG_FILE), 'db')
+                    self.assertRaises(Exception, engine.run_calculation,
+                                      self.job_profile, self.params,
+                                      self.sections)
 
-            self.assertEquals(1, engine.launch.call_count)
-            self.assertEquals('failed', self._job_status())
+            self.assertEquals(1, engine._launch_calculation.call_count)
+            self.assertEquals('failed', self._calculation_status())
         finally:
-            engine.launch = before_launch
+            engine._launch_calculation = before_launch
 
     def test_computes_sites_in_region_when_specified(self):
         """When we have hazard jobs only, and we specify a region,
@@ -875,30 +881,30 @@ class RunJobTestCase(unittest.TestCase):
             job.read_sites_from_exposure(test_job))
 
     def test_supervisor_is_spawned(self):
-        with patch('openquake.engine.job_from_file') as from_file:
+        with patch('openquake.engine._job_from_file'):
 
-            # replaces Job.launch with a mock
-            def patch_job_launch(*args, **kwargs):
-                self.job = self.job_from_file(*args, **kwargs)
-                self.job.launch = mock.Mock()
+            before_launch = engine._launch_calculation
+            try:
+                engine._launch_calculation = mock.Mock()
+                with patch('os.fork', mocksignature=False) as fork:
 
-                return self.job
+                    def fork_side_effect():
+                        fork.side_effect = lambda: 0
+                        return 1234
+                    fork.side_effect = fork_side_effect
+                    superv_func = 'openquake.supervising.supervisor.supervise'
+                    with patch(superv_func) as supervise:
+                        engine.run_calculation(self.job_profile,
+                                               self.params,
+                                               self.sections)
+                        calculation = OqCalculation.objects.latest(
+                            field_name='last_update')
 
-            from_file.side_effect = patch_job_launch
-
-            with patch('os.fork', mocksignature=False) as fork:
-
-                def fork_side_effect():
-                    fork.side_effect = lambda: 0
-                    return 1234
-                fork.side_effect = fork_side_effect
-                with patch('openquake.supervising.supervisor.supervise') \
-                        as supervise:
-                    engine.run_job(helpers.get_data_path(CONFIG_FILE), 'db')
-
-        self.assertEquals(1, supervise.call_count)
-        self.assertEquals(((1234, self.job.job_id), {}),
-                          supervise.call_args)
+                        self.assertEquals(1, supervise.call_count)
+                        self.assertEquals(((1234, calculation.id), {}),
+                                          supervise.call_args)
+            finally:
+                engine._launch_calculation = before_launch
 
 
 class CalcStatsTestCase(unittest.TestCase):
@@ -908,12 +914,24 @@ class CalcStatsTestCase(unittest.TestCase):
 
     def setUp(self):
         # Test 'event-based' job
-        self.eb_job = helpers.job_from_file(
-            helpers.testdata_path("simplecase/config.gem"))
+        cfg_path = helpers.testdata_path("simplecase/config.gem")
+        base_path = helpers.testdata_path("simplecase")
+
+        oq_job_profile, params, sections = engine.import_job_profile(cfg_path)
+
+        oq_calculation = OqCalculation(
+            owner=oq_job_profile.owner,
+            description='',
+            oq_job_profile=oq_job_profile)
+        oq_calculation.save()
+
+        self.eb_job = CalculationProxy(
+            params, oq_calculation.id, sections=sections, base_path=base_path,
+            oq_job_profile=oq_job_profile, oq_calculation=oq_calculation)
 
     def test_record_initial_stats(self):
-        '''
-        Verify that :py:method:`openquake.job.Job._record_initial_stats`
+        '''Verify that
+        :py:method:`openquake.job.CalculationProxy._record_initial_stats`
         reports initial calculation stats.
 
         As we add fields to the uiapi.calc_stats table, this test will need to
@@ -928,20 +946,21 @@ class CalcStatsTestCase(unittest.TestCase):
         self.assertEqual(1, actual_stats.realizations)
 
     def test_job_launch_calls_record_initial_stats(self):
-        '''
-        When a job is launched, make sure that
-        :py:method:`openquake.job.Job._record_initial_stats` is called.
+        '''When a job is launched, make sure that
+        :py:method:`openquake.job.CalculationProxy._record_initial_stats`
+        is called.
         '''
         # Mock out pieces of the test job so it doesn't actually run.
         haz_execute = 'openquake.hazard.opensha.EventBasedMixin.execute'
-        risk_execute = \
-            'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute'
-        record = 'openquake.job.Job._record_initial_stats'
+        risk_execute = (
+            'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute')
+        record = 'openquake.job.CalculationProxy._record_initial_stats'
 
         with patch(haz_execute):
             with patch(risk_execute):
                 with patch(record) as record_mock:
-                    engine.launch(self.eb_job)
+                    engine._launch_calculation(
+                        self.eb_job, ['general', 'HAZARD', 'RISK'])
 
                     self.assertEqual(1, record_mock.call_count)
 

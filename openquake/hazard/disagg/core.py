@@ -67,7 +67,7 @@ def compute_disagg_matrix(job_id, site, poe, result_dir):
 
     :returns: 2-tuple of (ground_motion_value, path_to_h5_matrix_file)
     """
-    the_job = job.Job.from_kvs(job_id)
+    the_job = job.CalculationProxy.from_kvs(job_id)
 
     lat_bin_lims = the_job[job_cfg.LAT_BIN_LIMITS]
     lon_bin_lims = the_job[job_cfg.LON_BIN_LIMITS]
@@ -236,9 +236,9 @@ class DisaggMixin(Calculator):
         realizations, and PoE values.
 
         :param the_job:
-            Job definition
+            CalculationProxy definition
         :type the_job:
-            :class:`openquake.job.Job` instance
+            :class:`openquake.job.CalculationProxy` instance
         :param sites:
             List of :class:`openquake.shapes.Site` objects
         :param poes:
@@ -423,7 +423,7 @@ class DisaggMixin(Calculator):
         :param the_job:
             The job configuration.
         :type the_job:
-            :class:`openquake.job.Job` instance
+            :class:`openquake.job.CalculationProxy` instance
         :param subset_types:
             The matrix subset results requested in the job config.
         :param subsets_data:

@@ -37,12 +37,13 @@ import guppy
 import mock as mock_module
 import numpy
 
+from gflags import DEFINE_boolean
 from django.core import exceptions
 
 from openquake import engine
 from openquake import flags
 from openquake import logs
-from openquake.job import Job
+from openquake.job import CalculationProxy
 from openquake import producer
 from openquake.utils import config
 from openquake.hazard.general import store_source_model, store_gmpe_map
@@ -51,7 +52,7 @@ from openquake.db import models
 
 FLAGS = flags.FLAGS
 
-flags.DEFINE_boolean('download_test_data', True,
+DEFINE_boolean('download_test_data', True,
         'Fetch test data files if needed')
 
 DATA_DIR = os.path.abspath(os.path.join(
@@ -133,14 +134,14 @@ def testdata_path(file_name):
 
 def job_from_file(config_file_path):
     """
-    Create a Job instance from the given configuration file.
+    Create a CalculationProxy instance from the given configuration file.
 
     The results are configured to go to XML files.  *No* database record will
     be stored for the job.  This allows running test on jobs without requiring
     a database.
     """
 
-    job = engine.job_from_file(config_file_path, 'xml')
+    job = engine._job_from_file(config_file_path, 'xml')
     cleanup_loggers()
 
     return job
@@ -149,7 +150,7 @@ def job_from_file(config_file_path):
 def create_job(params, **kwargs):
     job_id = kwargs.pop('job_id', 0)
 
-    return Job(params, job_id, **kwargs)
+    return CalculationProxy(params, job_id, **kwargs)
 
 
 def store_hazard_logic_trees(a_job):
@@ -158,7 +159,7 @@ def store_hazard_logic_trees(a_job):
     @preload decorator does.
 
     :param a_job:
-        :class:`openquake.job.Job` instance.
+        :class:`openquake.job.CalculationProxy` instance.
     """
     lt_proc = LogicTreeProcessor(
         a_job['BASE_PATH'],
@@ -500,18 +501,18 @@ class TestMixin(object):
 
     def create_job_with_mixin(self, params, mixin_class):
         """
-        Create a Job and mixes in a Mixin.
+        Create a CalculationProxy and mixes in a Mixin.
 
         This method, and its double `unload_job_mixin`, when called in the
         setUp and tearDown of a TestCase respectively, have the effect of a
         `with mixin_class` spanning a single test.
 
-        :param params: Job parameters
+        :param params: CalculationProxy parameters
         :type params: :py:class:`dict`
         :param mixin_class: the mixin that will be mixed in the job
         :type mixin_class: :py:class:`openquake.job.Mixin`
-        :returns: a Job
-        :rtype: :py:class:`openquake.job.Job`
+        :returns: a CalculationProxy
+        :rtype: :py:class:`openquake.job.CalculationProxy`
         """
         # preserve some status to be used by unload
         self._calculation_mode = params.get('CALCULATION_MODE')
