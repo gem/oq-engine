@@ -27,7 +27,6 @@ import itertools
 
 from celery.task.sets import TaskSet
 
-from openquake.job import CalculationProxy
 from openquake import logs
 
 
@@ -213,9 +212,11 @@ def check_job_status(job_id):
     Helper function which is intended to be run by celery task functions.
 
     :raises JobCompletedError:
-        If :meth:`~openquake.job.CalculationProxy.is_job_completed` returns
+        If :meth:`~openquake.engine.CalculationProxy.is_job_completed` returns
         ``True`` for ``job_id``.
     """
+    # pylint: disable=W0404
+    from openquake.engine import CalculationProxy
     job = CalculationProxy.from_kvs(job_id)
     level = job.params.get('debug') if job and job.params else 'warn'
     logs.init_logs_amqp_send(level=level, job_id=job_id)

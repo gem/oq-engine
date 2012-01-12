@@ -40,15 +40,18 @@ in the base class.
 GMFs are serialized per object (=Site) as implemented in the base class.
 """
 
-from collections import defaultdict
-from lxml import etree
 import logging
 
+from collections import defaultdict
+from lxml import etree
+
+from openquake import shapes
+from openquake import writer
 from openquake.db import models
-from openquake import job, shapes, writer
 from openquake.utils import round_float
 from openquake.utils import stats
 from openquake.xml import NSMAP, NRML, GML
+from openquake.job.params import REVERSE_ENUM_MAP
 
 
 LOGGER = logging.getLogger('hazard-serializer')
@@ -558,7 +561,7 @@ class HazardMapDBReader(object):
         for datum in hazard_map_data:
             values = {
                 'IML': datum.value,
-                'IMT': job.REVERSE_ENUM_MAP[params.imt],
+                'IMT': REVERSE_ENUM_MAP[params.imt],
                 'investigationTimeSpan': params.investigation_time,
                 'poE': hazard_map.poe,
                 'statistics': hazard_map.statistic_type,
@@ -683,7 +686,7 @@ class HazardCurveDBReader(object):
             common = {
                 'IMLValues': params.imls,
                 'investigationTimeSpan': params.investigation_time,
-                'IMT': job.REVERSE_ENUM_MAP[params.imt],
+                'IMT': REVERSE_ENUM_MAP[params.imt],
             }
 
             if hazard_curve_datum.end_branch_label is None:

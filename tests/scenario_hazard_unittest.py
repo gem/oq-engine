@@ -33,8 +33,8 @@ from openquake import java
 from openquake import kvs
 from openquake import shapes
 
+from openquake.engine import CalculationProxy
 from openquake.hazard import scenario
-from openquake.job import CalculationProxy
 
 from openquake.db.models import OqCalculation
 
@@ -48,7 +48,7 @@ def compute_ground_motion_field(self, _random_generator):
 
     hashmap = java.jclass("HashMap")()
 
-    for site in self.job_profile.sites_to_compute():
+    for site in self.calc_proxy.sites_to_compute():
         location = java.jclass("Location")(site.latitude, site.longitude)
         site = java.jclass("Site")(location)
         hashmap.put(site, 0.5)
