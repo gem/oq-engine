@@ -27,9 +27,13 @@ import unittest
 import time
 import uuid
 
+from openquake import engine
 from openquake.utils import tasks
+from openquake.db.models import OqCalculation
 
-from tests.utils.helpers import patch, TestStore
+from tests.utils.helpers import demo_file
+from tests.utils.helpers import patch
+from tests.utils.helpers import TestStore
 from tests.utils.tasks import (
     failing_task, ignore_result, just_say_hello, reflect_args,
     reflect_data_to_be_processed, single_arg_called_a,
@@ -323,24 +327,51 @@ class ParallelizeTestCase(unittest.TestCase):
 
 
 class CheckJobStatusTestCase(unittest.TestCase):
-    def test_not_completed(self):
-        with patch(
-            'openquake.engine.CalculationProxy.is_job_completed') as mock:
-            mock.return_value = False
-            tasks.check_job_status(42)
-            self.assertEqual(mock.call_args_list, [((42, ), {})])
+    """Tests for :function:`openquake.utils.tasks.check_job_status`."""
 
-    def test_not_completed_with_true(self):
-        with patch(
-            'openquake.engine.CalculationProxy.is_job_completed') as mock:
-            mock.return_value = True
-            try:
-                tasks.check_job_status(31)
-            except tasks.JobCompletedError as exc:
-                self.assertEqual(exc.message, 31)
-            else:
-                self.fail("JobCompletedError wasn't raised")
-            self.assertEqual(mock.call_args_list, [((31, ), {})])
+    def setUp(self):
+        self.job_profile, _params, _sections = engine.import_job_profile(
+            demo_file('simple_fault_demo_hazard/config.gem'))
+
+        self.calculation = OqCalculation(
+            owner=self.job_profile.owner,
+            oq_job_profile=self.job_profile)
+        self.calculation.save()
+        
+    def test_not_completed(self):
+        self.calculation.status = 'pending'
+        self.calculation.save()
+        with patch('openquake.engine.CalculationProxy'
+                   '.get_status_from_db') as status_mock:
+            status_mock.return_value = 'pending'
+
+            tasks.check_job_status(self.calculation.id)
+            # make sure both methods get called with the proper args
+            self.assertEqual(1, status_mock.call_count)
+            self.assertEqual(status_mock.call_args_list,
+                             [((self.calculation.id, ), {})])
+
+    def test_completed_success(self):
+        self.calculation.status = 'succeeded'
+        self.calculation.save()
+
+        try:
+            tasks.check_job_status(self.calculation.id)
+        except tasks.JobCompletedError as exc:
+            self.assertEqual(exc.message, self.calculation.id)
+        else:
+            self.fail("JobCompletedError wasn't raised")
+
+    def test_completed_failure(self):
+        self.calculation.status = 'failed'
+        self.calculation.save()
+
+        try:
+            tasks.check_job_status(self.calculation.id)
+        except tasks.JobCompletedError as exc:
+            self.assertEqual(exc.message, self.calculation.id)
+        else:
+            self.fail("JobCompletedError wasn't raised")
 
 
 class IgnoreResultsTestCase(unittest.TestCase):
