@@ -32,16 +32,16 @@ from openquake.job import config as job_cfg
 from openquake.output import hazard_disagg as hazard_output
 from openquake.utils import config
 from openquake.calculators.base import Calculator
-from openquake.hazard.general import generate_erf
-from openquake.hazard.general import generate_gmpe_map
-from openquake.hazard.general import get_iml_list
-from openquake.hazard.general import preload
-from openquake.hazard.general import set_gmpe_params
-from openquake.hazard.general import store_gmpe_map
-from openquake.hazard.general import store_source_model
 from openquake.utils.tasks import check_job_status
 from openquake.calculators.hazard.disagg import FULL_DISAGG_MATRIX
 from openquake.calculators.hazard.disagg import subsets
+from openquake.calculators.hazard.general import generate_erf
+from openquake.calculators.hazard.general import generate_gmpe_map
+from openquake.calculators.hazard.general import get_iml_list
+from openquake.calculators.hazard.general import preload
+from openquake.calculators.hazard.general import set_gmpe_params
+from openquake.calculators.hazard.general import store_gmpe_map
+from openquake.calculators.hazard.general import store_source_model
 
 
 LOG = logs.LOG

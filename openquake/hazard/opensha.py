@@ -41,11 +41,12 @@ from openquake import shapes
 from openquake import xml
 
 from openquake.hazard import classical_psha
-from openquake.hazard.general import BasePSHAMixin, get_iml_list
 from openquake.output import hazard as hazard_output
 from openquake.utils import config
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
+from openquake.calculators.hazard.general import BasePSHAMixin
+from openquake.calculators.hazard.general import get_iml_list
 
 LOG = logs.LOG
 HAZARD_LOG = logs.HAZARD_LOG
