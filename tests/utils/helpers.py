@@ -32,6 +32,7 @@ import tempfile
 import textwrap
 import time
 import sys
+import subprocess
 
 import guppy
 import mock as mock_module
@@ -151,6 +152,21 @@ def create_job(params, **kwargs):
     job_id = kwargs.pop('job_id', 0)
 
     return CalculationProxy(params, job_id, **kwargs)
+
+
+def run_job(config_file, **kw_params):
+    """Given a path to a config file, run openquake as a separate process using
+    `subprocess`.
+
+    This function blocks until the openquake job has concluded.
+
+    :returns:
+        The return code of the subprocess.
+    """
+    params = ["bin/openquake", "--config_file=" + config_file]
+    if kw_params:
+        params.extend(["--%s=%s" % p for p in kw_params.iteritems()])
+    return subprocess.call(params)
 
 
 def store_hazard_logic_trees(a_job):
