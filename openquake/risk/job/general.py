@@ -526,10 +526,14 @@ def compute_bcr_for_block(job_id, points, get_loss_curve,
         for asset in kvs.get_list_json_decoded(asset_key):
             vuln_function = vuln_curves[asset['taxonomy']]
             loss_curve = get_loss_curve(point, vuln_function, asset)
+            LOG.info('for asset %s loss_curve = %s',
+                     asset['assetID'], loss_curve)
             eal_original = common.compute_mean_loss(loss_curve)
 
             vuln_function = vuln_curves_retrofitted[asset['taxonomy']]
             loss_curve = get_loss_curve(point, vuln_function, asset)
+            LOG.info('for asset %s loss_curve retrofitted = %s',
+                     asset['assetID'], loss_curve)
             eal_retrofitted = common.compute_mean_loss(loss_curve)
 
             bcr = common.compute_bcr(
@@ -537,6 +541,10 @@ def compute_bcr_for_block(job_id, points, get_loss_curve,
                 interest_rate, asset_life_expectancy,
                 asset['retrofittingCost']
             )
+
+            LOG.info('for asset %s EAL original = %f, '
+                     'EAL retrofitted = %f, BCR = %f',
+                     asset['assetID'], eal_original, eal_retrofitted, bcr)
 
             key = (asset['lat'], asset['lon'])
             result[key].append(({'bcr': bcr,
