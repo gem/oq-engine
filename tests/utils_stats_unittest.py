@@ -38,13 +38,14 @@ class ProgressIndicatorTestCase(helpers.RedisTestMixin, unittest.TestCase):
         The success counter is incremented when the wrapped function
         terminates without raising an exception.
         """
+        area = "aaa"
 
-        @stats.progress_indicator
+        @stats.progress_indicator(area)
         def no_exception(job_id):
             return 999
 
         kvs = self.connect()
-        key = stats.key_name(11, no_exception.__name__)
+        key = stats.key_name(11, area, no_exception.__name__, "i")
         previous_value = kvs.get(key)
         previous_value = int(previous_value) if previous_value else 0
 
@@ -59,13 +60,15 @@ class ProgressIndicatorTestCase(helpers.RedisTestMixin, unittest.TestCase):
         The failure counter is incremented when the wrapped function
         terminates raises an exception.
         """
+        area = "bbb"
 
-        @stats.progress_indicator
+        @stats.progress_indicator(area)
         def raise_exception(job_id):
             raise NotImplementedError
 
         kvs = self.connect()
-        key = stats.key_name(22, raise_exception.__name__) + ":f"
+        key = stats.key_name(
+            22, area, raise_exception.__name__ + "-failures", "i")
         previous_value = kvs.get(key)
         previous_value = int(previous_value) if previous_value else 0
 
@@ -85,8 +88,8 @@ class SetTotalTestCase(helpers.RedisTestMixin, unittest.TestCase):
         """
         kvs = self.connect()
         # Specify a 'totals' counter type.
-        key = stats.key_name(33, "a/b/c", counter_type="t")
-        stats.set_total(33, "a/b/c", 123)
+        key = stats.key_name(33, "h", "a/b/c", "t")
+        stats.set_total(33, "h", "a/b/c", 123)
         self.assertEqual("123", kvs.get(key))
 
 
@@ -97,12 +100,12 @@ class IncrCounterTestCase(helpers.RedisTestMixin, unittest.TestCase):
         """
         The counter is incremented for the given key
         """
-        args = (44, "d/x/z")
+        args = (44, "h", "d/x/z", "i")
         kvs = self.connect()
         key = stats.key_name(*args)
         previous_value = kvs.get(key)
         previous_value = int(previous_value) if previous_value else 0
-        stats.incr_counter(*args)
+        stats.incr_counter(*args[:-1])
         value = int(kvs.get(key))
         self.assertEqual(1, (value - previous_value))
 
@@ -112,7 +115,7 @@ class GetCounterTestCase(helpers.RedisTestMixin, unittest.TestCase):
 
     def test_get_value_with_non_existent_incremental(self):
         """`None` is returned for a non-existent incremental counter."""
-        args = (55, "d/a/z")
+        args = (55, "h", "d/a/z", "i")
         key = stats.key_name(*args)
         kvs = self.connect()
         self.assertIs(None, kvs.get(key))
@@ -123,7 +126,7 @@ class GetCounterTestCase(helpers.RedisTestMixin, unittest.TestCase):
         The expected value is returned for an existent incremental counter.
         """
         value = "561"
-        args = (56, "d/b/z")
+        args = (56, "h", "d/b/z", "i")
         key = stats.key_name(*args)
         kvs = self.connect()
         kvs.set(key, value)
@@ -131,21 +134,55 @@ class GetCounterTestCase(helpers.RedisTestMixin, unittest.TestCase):
 
     def test_get_value_with_non_existent_total(self):
         """`None` is returned for a non-existent total counter."""
-        args = (57, "d/c/z")
-        key = stats.key_name(*args, counter_type="t")
+        args = (57, "h", "d/c/z", "t")
+        key = stats.key_name(*args)
         kvs = self.connect()
         self.assertIs(None, kvs.get(key))
-        self.assertIs(None, stats.get_counter(*args, counter_type="t"))
+        self.assertIs(None, stats.get_counter(*args))
 
     def test_get_value_with_existent_total(self):
         """The expected value is returned for an existent total counter."""
         value = "582"
-        args = (58, "d/d/z")
-        key = stats.key_name(*args, counter_type="t")
+        args = (58, "h", "d/d/z", "t")
+        key = stats.key_name(*args)
         kvs = self.connect()
         kvs.set(key, value)
-        self.assertEqual(
-            int(value), stats.get_counter(*args, counter_type="t"))
+        self.assertEqual(int(value), stats.get_counter(*args))
+
+    def test_get_value_with_debug_stats_disabled(self):
+        """`None` is returned for a debug counter if debug stats are off."""
+        args = (59, "h", "d/e/z", "d")
+        with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
+            dse.return_value = False
+            self.assertIs(None, stats.get_counter(*args))
+
+    def test_get_value_with_debug_stats_enabled(self):
+        """
+        The correct value is returned for a debug counter if debug stats are
+        enabled.
+        """
+        value = "603"
+        args = (60, "h", "d/f/z", "d")
+        with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
+            dse.return_value = True
+            key = stats.key_name(*args)
+            kvs = self.connect()
+            kvs.set(key, value)
+            self.assertEqual(int(value), stats.get_counter(*args))
+
+    def test_get_value_with_debug_stats_enabled_but_no_value(self):
+        """
+        `None` is returned for a debug counter if debug stats are enabled
+        but the counter has no value.
+        """
+        args = (61, "h", "d/g/z", "d")
+        stats.delete_job_counters(args[0])
+        with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
+            dse.return_value = True
+            key = stats.key_name(*args)
+            kvs = self.connect()
+            self.assertIs(None, kvs.get(key))
+            self.assertIs(None, stats.get_counter(*args))
 
 
 class DeleteJobCountersTestCase(helpers.RedisTestMixin, unittest.TestCase):
@@ -156,7 +193,7 @@ class DeleteJobCountersTestCase(helpers.RedisTestMixin, unittest.TestCase):
         The progress indication counters for a given job are deleted.
         """
         kvs = self.connect()
-        args = [(55, "a/b/c"), (55, "d/e/f")]
+        args = [(55, "h", "a/b/c"), (55, "h", "d/e/f")]
         for data in args:
             stats.incr_counter(*data)
         stats.delete_job_counters(55)
@@ -167,14 +204,14 @@ class DeleteJobCountersTestCase(helpers.RedisTestMixin, unittest.TestCase):
         The progress indication counters for a given job are reset.
         """
         kvs = self.connect()
-        args = [(66, "g/h/i"), (66, "j/k/l")]
+        args = [(66, "h", "g/h/i", "i"), (66, "h", "j/k/l", "i")]
         for data in args:
-            stats.incr_counter(*data)
+            stats.incr_counter(*data[:-1])
         stats.delete_job_counters(66)
         # The counters have been reset, after incrementing we expect them all
         # to have a value of "1".
         for data in args:
-            stats.incr_counter(*data)
+            stats.incr_counter(*data[:-1])
             self.assertEqual("1", kvs.get(stats.key_name(*data)))
 
     def test_delete_job_counters_copes_with_nonexistent_counters(self):
@@ -217,6 +254,18 @@ class PkSetTestCase(helpers.RedisTestMixin, unittest.TestCase):
         stats.delete_job_counters(job_id)
 
         self.assertRaises(KeyError, stats.pk_set, job_id, pkey, 737)
+
+    def test_pk_set_with_existing_debug_and_debug_stats_off(self):
+        """The value is set correctly for an existing predefined key."""
+        job_id = 74
+        pkey = "hcls_xmlcurvewrites"
+        with helpers.patch("openquake.utils.stats.debug_stats_enabled") as dse:
+            dse.return_value = True
+            key = stats.key_name(job_id, *stats.STATS_KEYS[pkey])
+            stats.delete_job_counters(job_id)
+            kvs = self.connect()
+            stats.pk_set(job_id, pkey, 747)
+            self.assertEqual("747", kvs.get(key))
 
 
 class PkIncTestCase(helpers.RedisTestMixin, unittest.TestCase):

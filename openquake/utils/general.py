@@ -57,3 +57,34 @@ class MemoizeMutable:
 def str2bool(value):
     """Convert a string representation of a boolean value to a bool."""
     return value.lower() in ("true", "yes", "t", "1")
+
+
+# The module private variable below will be used to store the job ID.
+__the_job_id = -1
+
+
+def job_id():
+    """Return the job ID."""
+    return __the_job_id
+
+
+def set_job_id(job_id):
+    """Set the job ID."""
+    global __the_job_id
+    __the_job_id = job_id
+
+
+def flag_set(section, setting):
+    """True if the given setting is enabled in openquake.cfg
+
+    :param string section: name of the configuration file section
+    :param string setting: name of the configuration file setting
+
+    :returns: True if the setting is enabled in openquake.cfg, False otherwise
+    """
+    from openquake.utils import config
+
+    setting = config.get(section, setting)
+    if setting is None:
+        return False
+    return str2bool(setting)

@@ -26,6 +26,7 @@ from functools import wraps
 import redis
 
 from openquake.utils import config
+from openquake.utils import general
 
 
 # Predefined kvs keys for calculator progress/statistics counters.
@@ -34,14 +35,22 @@ from openquake.utils import config
 # job in case of failures. See e.g.
 #   https://bugs.launchpad.net/openquake/+bug/907703
 STATS_KEYS = {
-    # Classical PSHA kvs statistics db keys, "t" and "i" mark a totals
-    # and an incremental counter respectively.
-    "hcls_realizations": ("classical:realizations", "h", "t"),
-    "hcls_crealization": ("classical:crealization", "h", "i"),
-    "hcls_sites": ("classical:sites", "h", "t"),
-    "hcls_block_size": ("classical:block_size", "h", "t"),
-    "hcls_blocks": ("classical:blocks", "h", "t"),
-    "hcls_cblock": ("classical:cblock", "h", "i"),
+    # Predefined calculator statistics keys for the kvs.
+    # The areas are as follows:
+    #   "h" : hazard
+    #   "r" : risk
+    # The counter types are as follows:
+    #   "d" : debug counter, turned off in production via openquake.cfg
+    #   "i" : incremental counter
+    #   "t" : totals counter
+    "hcls_realizations": ("h", "classical:realizations", "t"),
+    "hcls_crealization": ("h", "classical:crealization", "i"),
+    "hcls_sites": ("h", "classical:sites", "t"),
+    "hcls_block_size": ("h", "classical:block_size", "t"),
+    "hcls_blocks": ("h", "classical:blocks", "t"),
+    "hcls_cblock": ("h", "classical:cblock", "i"),
+    "hcls_xmlcurvewrites": ("h", "classical:debug:xmlcurvewrites", "d"),
+    "hcls_xmlmapwrites": ("h", "classical:debug:xmlmapwrites", "d"),
 }
 
 
@@ -53,6 +62,8 @@ def pk_set(job_id, skey, value):
     :param value: the desired value
     """
     key = key_name(job_id, *STATS_KEYS[skey])
+    if not key:
+        return
     conn = _redis()
     conn.set(key, value)
 
@@ -64,6 +75,8 @@ def pk_inc(job_id, skey):
     :param string skey: predefined statistics key
     """
     key = key_name(job_id, *STATS_KEYS[skey])
+    if not key:
+        return
     conn = _redis()
     conn.incr(key)
 
@@ -75,6 +88,8 @@ def pk_get(job_id, skey):
     :param string skey: predefined statistics key
     """
     key = key_name(job_id, *STATS_KEYS[skey])
+    if not key:
+        return
     conn = _redis()
     return conn.get(key)
 
@@ -90,19 +105,28 @@ def _redis():
     return redis.Redis(**args)
 
 
-def key_name(job_id, fragment, area="h", counter_type="i"):
+def key_name(job_id, area, fragment, counter_type):
     """Return the redis key name for the given job/function.
 
-    The areas in use are 'h' (for hazard) and 'r' (for risk).
-    The counter types in use are 'i' (for incremental counters) and
-    't' (for totals).
+    The areas in use are 'h' (for hazard) and 'r' (for risk). The counter
+    types in use are:
+        "d" : debug counter, turned off in production via openquake.cfg
+        "i" : incremental counter
+        "t" : totals counter
     """
-    return "oqs:%s:%s:%s:%s" % (job_id, area, counter_type, fragment)
+    if counter_type == "d" and not debug_stats_enabled():
+        return None
+    return "oqs/%s/%s/%s/%s" % (job_id, area, fragment, counter_type)
 
 
-def progress_indicator(func):
+class progress_indicator(object):
     """Count successful/failed invocations of the wrapped function."""
 
+    def __init__(self, area):
+        self.area = area
+        self.__name__ = "progress_indicator"
+
+    @staticmethod
     def find_job_id(*args, **kwargs):
         """Find and return the job_id."""
         if len(args) > 0:
@@ -110,46 +134,55 @@ def progress_indicator(func):
         else:
             return kwargs.get("job_id", -1)
 
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        """The actual decorator."""
-        # The first argument is always the job_id
-        job_id = find_job_id(*args, **kwargs)
-        key = key_name(job_id, func.__name__)
-        conn = _redis()
-        try:
-            result = func(*args, **kwargs)
-            conn.incr(key)
-            return result
-        except:
-            # Count failure
-            conn.incr(key + ":f")
-            raise
+    def __call__(self, func):
 
-    return wrapper
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            """The actual decorator."""
+            # The first argument is always the job_id
+            job_id = self.find_job_id(*args, **kwargs)
+            conn = _redis()
+            try:
+                result = func(*args, **kwargs)
+                key = key_name(job_id, self.area, func.__name__, "i")
+                conn.incr(key)
+                return result
+            except:
+                # Count failure
+                key = key_name(
+                    job_id, self.area, func.__name__ + "-failures", "i")
+                conn.incr(key)
+                raise
+
+        return wrapper
 
 
-def set_total(job_id, key, value):
+def set_total(job_id, area, fragment, value):
     """Set a total value for the given key."""
-    key = key_name(job_id, key, counter_type="t")
+    key = key_name(job_id, area, fragment, "t")
     conn = _redis()
     conn.set(key, value)
 
 
-def incr_counter(job_id, key):
+def incr_counter(job_id, area, fragment):
     """Increment the counter for the given key."""
-    key = key_name(job_id, key)
+    key = key_name(job_id, area, fragment, "i")
     conn = _redis()
     conn.incr(key)
 
 
-def get_counter(job_id, key, counter_type="i"):
+def get_counter(job_id, area, fragment, counter_type):
     """Get the value for the given key.
 
-    The counter types in use are 'i' (for incremental counters) and
-    't' (for totals).
+    The areas in use are 'h' (for hazard) and 'r' (for risk). The counter
+    types in use are:
+        "d" : debug counter, turned off in production via openquake.cfg
+        "i" : incremental counter
+        "t" : totals counter
     """
-    key = key_name(job_id, key, counter_type=counter_type)
+    key = key_name(job_id, area, fragment, counter_type)
+    if not key:
+        return
     conn = _redis()
     value = conn.get(key)
     return int(value) if value else value
@@ -158,6 +191,11 @@ def get_counter(job_id, key, counter_type="i"):
 def delete_job_counters(job_id):
     """Delete the progress indication counters for the given `job_id`."""
     conn = _redis()
-    keys = conn.keys("oqs:%s*" % job_id)
+    keys = conn.keys("oqs/%s*" % job_id)
     if keys:
         conn.delete(*keys)
+
+
+def debug_stats_enabled():
+    """True if debug statistics counters are enabled."""
+    return general.flag_set("stats", "debug")

@@ -183,7 +183,4 @@ def cache_gc(job_id):
 
 def cache_connections():
     """True if kvs connections should be cached."""
-    setting = config.get("kvs", "cache_connections")
-    if setting is None:
-        return False
-    return general.str2bool(setting)
+    return general.flag_set("kvs", "cache_connections")
