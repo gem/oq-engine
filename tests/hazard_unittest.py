@@ -510,7 +510,7 @@ class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
         self.calc_proxy = helpers.create_job(self.params)
-        self.calculator = classical.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
         self.job_id = self.calc_proxy.job_id
 
         self.expected_curve = numpy.array([9.9178000e-01, 9.8892000e-01,
@@ -715,7 +715,7 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
                 1.5200e+00, 2.1300e+00]
 
         self.calc_proxy = helpers.create_job(self.params)
-        self.calculator = classical.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
         self.job_id = self.calc_proxy.job_id
 
         self.empty_mean_curve = []
@@ -902,7 +902,7 @@ class ParameterizeSitesTestCase(helpers.TestMixin, unittest.TestCase):
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
         self.calc_proxy = helpers.create_job(self.params)
-        self.calculator = classical.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
         self.job_id = self.calc_proxy.job_id
 
     def test_all_mandatory_params_covered(self):
