@@ -133,7 +133,12 @@ def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
 
 @task
 def compute_risk(calculation_id, block_id, **kwargs):
-    """ A task for computing risk, calls the mixed in compute_risk method """
+    """A task for computing risk, calls the compute_risk method defined in the
+    chosen risk calculator.
+
+    The calculator used is determined by the calculation configuration's
+    calculation mode (i.e., classical, event_based, etc.).
+    """
 
     calculator = calculator_for_task(calculation_id, 'risk')
 
