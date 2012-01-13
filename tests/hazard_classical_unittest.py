@@ -47,7 +47,7 @@ SIMPLE_FAULT_BASE_PATH = os.path.abspath(demo_file('simple_fault_demo_hazard'))
 
 
 class DoCurvesTestCase(TestMixin, unittest.TestCase):
-    """Tests the behaviour of ClassicalMixin.do_curves()."""
+    """Tests the behaviour of ClassicalHazardCalculator.do_curves()."""
 
     def __init__(self, *args, **kwargs):
         super(DoCurvesTestCase, self).__init__(*args, **kwargs)
@@ -85,7 +85,7 @@ class DoCurvesTestCase(TestMixin, unittest.TestCase):
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
         self.calc_proxy = create_job(params)
-        self.calculator = classical.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
 
         # Store the canned result data in the KVS.
         key = self.calc_proxy.job_id
@@ -124,7 +124,7 @@ class DoCurvesTestCase(TestMixin, unittest.TestCase):
 
 
 class DoMeansTestCase(TestMixin, unittest.TestCase):
-    """Tests the behaviour of ClassicalMixin.do_means()."""
+    """Tests the behaviour of ClassicalHazardCalculator.do_means()."""
 
     def __init__(self, *args, **kwargs):
         super(DoMeansTestCase, self).__init__(*args, **kwargs)
@@ -146,7 +146,7 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
         self.calc_proxy = create_job(params)
-        self.calculator = classical.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
 
     def tearDown(self):
         # Remove the canned result data from the KVS.
@@ -267,7 +267,7 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
 
 
 class DoQuantilesTestCase(TestMixin, unittest.TestCase):
-    """Tests the behaviour of ClassicalMixin.do_quantiles()."""
+    """Tests the behaviour of ClassicalHazardCalculator.do_quantiles()."""
 
     def __init__(self, *args, **kwargs):
         super(DoQuantilesTestCase, self).__init__(*args, **kwargs)
@@ -289,7 +289,7 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
         self.calc_proxy = create_job(params)
-        self.calculator = classical.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
 
     def tearDown(self):
         # Remove the canned result data from the KVS.
@@ -404,7 +404,7 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
 
 
 class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
-    """Tests the behaviour of ClassicalMixin.number_of_tasks()."""
+    """Tests the behaviour of ClassicalHazardCalculator.number_of_tasks()."""
 
     def setUp(self):
         params = dict(
@@ -415,7 +415,7 @@ class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
 
         self.calc_proxy = create_job(params)
 
-        self.calculator = classical.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
 
     def test_number_of_tasks_with_param_not_set(self):
         """
@@ -452,7 +452,7 @@ class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
 
 
 class ClassicalExecuteTestCase(TestMixin, unittest.TestCase):
-    """Tests the behaviour of ClassicalMixin.execute()."""
+    """Tests the behaviour of ClassicalHazardCalculator.execute()."""
 
     def __init__(self, *args, **kwargs):
         super(ClassicalExecuteTestCase, self).__init__(*args, **kwargs)
@@ -487,7 +487,7 @@ class ClassicalExecuteTestCase(TestMixin, unittest.TestCase):
                    '38.0, -123.9, 38.0, -123.8, 38.0, -124.9, 38.0, -124.8'))
 
         self.calc_proxy = create_job(params)
-        self.calculator = classical.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
 
         # Initialize the mixin instance.
         self.calculator.calc = self.FakeLogicTreeProcessor()

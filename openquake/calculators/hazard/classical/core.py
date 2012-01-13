@@ -180,7 +180,7 @@ def release_data_from_kvs(job_id, sites, realizations, quantiles, poes,
 
 
 # pylint: disable=R0904
-class ClassicalMixin(general.BasePSHAMixin):
+class ClassicalHazardCalculator(general.BasePSHAMixin):
     """Classical PSHA method for performing Hazard calculations.
 
     Implements the JobMixin, which has a primary entry point of execute().
