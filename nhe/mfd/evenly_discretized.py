@@ -12,26 +12,26 @@ class EvenlyDiscretized(BaseMFD):
         Positive float value representing the middle point of the first
         bin in the histogram.
     :param bin_width:
-        See :class:`nhe.mfd.base.BaseMFD`.
+        A positive float value -- the width of a single histogram bin.
     :param occurrence_rates:
         The list of non-negative float values representing the actual
         annual occurrence rates. The resulting histogram has as many bins
         as this list length.
     """
-    def __init__(self, min_mag, bin_width, occurrence_rates):
-        self.min_mag = min_mag
-        self.occurrence_rates = occurrence_rates
-        super(EvenlyDiscretized, self).__init__(bin_width=bin_width)
+
+    PARAMETERS = ('min_mag', 'bin_width', 'occurrence_rates')
 
     def check_constraints(self):
         """
         Checks the following constraints:
 
+        * Bin width is positive.
         * Occurrence rates list is not empty.
         * Each number in occurrence rates list is non-negative.
         * Minimum magnitude is positive.
         """
-        super(EvenlyDiscretized, self).check_constraints()
+        if not self.bin_width > 0:
+            raise MFDError()
 
         if not self.occurrence_rates:
             raise MFDError()

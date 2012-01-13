@@ -32,27 +32,28 @@ class TruncatedGR(BaseMFD):
         The highest possible magnitude. The same as for ``min_mag``: the last
         bin in the histogram will correspond to the magnitude value equal to
         ``max_mag - bin_width / 2``.
+    :param bin_width:
+        A positive float value -- the width of a single histogram bin.
 
     Values for ``min_mag`` and ``max_mag`` don't have to be aligned with
     respect to ``bin_width``. They get rounded accordingly anyway so that
-    both are divisible by ``bin_width``.
+    both are divisible by ``bin_width`` just before converting a function
+    to a histogram. See :meth:`_get_min_mag_and_num_bins`.
     """
-    def __init__(self, min_mag, max_mag, a_val, b_val, bin_width):
-        self.min_mag = min_mag
-        self.max_mag = max_mag
-        self.a_val = a_val
-        self.b_val = b_val
-        super(TruncatedGR, self).__init__(bin_width=bin_width)
+
+    PARAMETERS = ('min_mag', 'max_mag', 'bin_width', 'a_val', 'b_val')
 
     def check_constraints(self):
         """
         Checks the following constraints:
 
+        * Bin width is positive.
         * Minimum magnitude is positive.
         * Maximum magnitude is equal or greater than minimum magnitude.
         * ``b`` value is positive.
         """
-        super(TruncatedGR, self).check_constraints()
+        if not self.bin_width > 0:
+            raise MFDError()
 
         if not self.min_mag >= 0:
             raise MFDError()
@@ -110,7 +111,7 @@ class TruncatedGR(BaseMFD):
         values appear equal after rounding.
 
         :returns:
-            See :meth:`nhe.mfd.BaseMFD.get_annual_occurence_rates`.
+            See :meth:`nhe.mfd.BaseMFD.get_annual_occurrence_rates`.
         """
         mag, num_bins = self._get_min_mag_and_num_bins()
         rates = []

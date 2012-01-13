@@ -14,32 +14,53 @@ class MFDError(Exception):
 class BaseMFD(object):
     """
     Abstract base class for Magnitude-Frequency Distribution function.
-
-    :param bin_width:
-        After all every MFD is treated as a histogram with a specific
-        bin width. This parameter defines that value.
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, bin_width):
-        self.bin_width = bin_width
+    #: The list of parameters names that are required by actual
+    #: MFD implementation. The property is required to be overridden.
+    #: Those and only those attributes that are listed here are allowed
+    #: and required as constructor's kwargs. See :meth:`set_parameters`.
+    PARAMETERS = abc.abstractproperty()
+
+    def __init__(self, **parameters):
+        self.set_parameters(parameters)
+
+    def set_parameters(self, parameters):
+        """
+        Assign parameters to object's attributes.
+
+        :param parameters:
+            The dictionary of parameters as passed to the constructor.
+        :raises MFDError:
+            If some actual parameters are missing in :attr:`PARAMETERS`
+            or if something from :attr:`PARAMETERS` is missing in actual
+            parameters.
+
+        Calls :meth:`check_constraints` once everything is assigned.
+        """
+        defined = set(parameters)
+        required = set(self.PARAMETERS)
+        unexpected = defined - required
+        missing = required - defined
+        if missing:
+            raise MFDError('These parameters are required but missing: %s'
+                           % ', '.join(missing))
+        if unexpected:
+            raise MFDError('These parameters are unexpected: %s'
+                           % ', ' .join(unexpected))
+        for param_name in self.PARAMETERS:
+            setattr(self, param_name, parameters[param_name])
         self.check_constraints()
 
+    @abc.abstractmethod
     def check_constraints(self):
         """
         Check MFD-specific constraints and raise :exc:`MFDError`
         in case of violation.
 
-        Base class implementation only checks that ``bin_width``
-        is more than 0.
-
-        .. note::
-            Subclasses willing to override this method
-            are supposed to call the superclass' method
-            before or after it's own implementation.
+        This method must be implemented by subclasses.
         """
-        if not self.bin_width > 0:
-            raise MFDError()
 
     @abc.abstractmethod
     def get_annual_occurrence_rates(self):
