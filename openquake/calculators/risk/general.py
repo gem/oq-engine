@@ -162,7 +162,7 @@ def compute_risk(calculation_id, block_id, **kwargs):
 
 
 class BaseRiskCalculator(Calculator):
-    """A mixin proxy for Risk jobs."""
+    """Base abstract class for Risk calculators."""
 
     def execute(self):
         """Calculation logic goes here; subclasses must implement this."""
