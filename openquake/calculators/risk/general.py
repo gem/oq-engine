@@ -420,7 +420,6 @@ class ProbabilisticRiskCalculator(BaseRiskCalculator):
         LOG.info('BCR Map is at: %s' % path)
 
 
-
 class EpsilonProvider(object):
     """
     Simple class for combining job configuration parameters and an `epsilon`
