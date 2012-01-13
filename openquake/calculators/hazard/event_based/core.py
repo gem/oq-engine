@@ -45,7 +45,7 @@ def compute_ground_motion_fields(job_id, sites, history, realization, seed):
         sites, history, realization, seed)
 
 
-class EventBasedMixin(general.BasePSHAMixin):
+class EventBasedHazardCalculator(general.BasePSHAMixin):
     """Probabilistic Event Based method for performing Hazard calculations.
 
     Implements the JobMixin, which has a primary entry point of execute().
