@@ -39,10 +39,10 @@ from openquake.shapes import Curve
 from openquake.risk.common import compute_loss_curve
 from openquake.risk.common import loop
 from openquake.risk.common import collect
-from openquake.risk.job import general
 from openquake.utils.general import MemoizeMutable
-from openquake.risk.job.general import conditional_loss_poes
-from openquake.risk.job.general import compute_conditional_loss
+from openquake.calculators.risk import general
+from openquake.calculators.risk.general import conditional_loss_poes
+from openquake.calculators.risk.general import compute_conditional_loss
 
 LOGGER = logs.LOG
 STEPS_PER_INTERVAL = 5

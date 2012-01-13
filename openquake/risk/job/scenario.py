@@ -32,7 +32,7 @@ from openquake import shapes
 from openquake.output import risk as risk_output
 from openquake.parser import vulnerability
 from openquake.risk import scenario
-from openquake.risk.job import general
+from openquake.calculators.risk import general
 
 
 LOGGER = logs.LOG

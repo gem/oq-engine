@@ -30,17 +30,13 @@ from celery.exceptions import TimeoutError
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
-
-from openquake.risk import probabilistic_event_based as prob
-from openquake.parser import vulnerability
-
-from openquake.risk.job import aggregate_loss_curve
-from openquake.risk.job import general
-
 from openquake.db import models
 from openquake.job import config as job_config
-
+from openquake.parser import vulnerability
+from openquake.risk import probabilistic_event_based as prob
+from openquake.risk.job import aggregate_loss_curve
 from openquake.calculators.base import Calculator
+from openquake.calculators.risk import general
 
 LOGGER = logs.LOG
 
