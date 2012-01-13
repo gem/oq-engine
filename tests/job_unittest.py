@@ -955,7 +955,7 @@ class CalcStatsTestCase(unittest.TestCase):
         is called.
         '''
         # Mock out pieces of the test job so it doesn't actually run.
-        haz_execute = ('openquake.calculators.hazard.classical.core'
+        haz_execute = ('openquake.calculators.hazard.event_based.core'
                        '.EventBasedMixin.execute')
         risk_execute = (
             'openquake.risk.job.probabilistic.ProbabilisticEventMixin.execute')
