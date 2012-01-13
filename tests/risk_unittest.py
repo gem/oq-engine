@@ -29,8 +29,8 @@ from lxml import etree
 from openquake import kvs
 from openquake import shapes
 from openquake.output import hazard
-from openquake.risk import scenario
 from openquake.calculators.risk.classical import core as classical_core
+from openquake.calculators.risk.event_based import core as eb_core
 from openquake.calculators.risk.general import _compute_conditional_loss
 from openquake.calculators.risk.general import _compute_cumulative_histogram
 from openquake.calculators.risk.general import _compute_loss_ratios_range
@@ -47,7 +47,7 @@ from openquake.calculators.risk.general import compute_mean_loss
 from openquake.calculators.risk.general import compute_bcr
 from openquake.calculators.risk.general import RiskJobMixin
 from openquake.calculators.risk.general import write_output_bcr
-from openquake.calculators.risk.event_based import core as eb_core
+from openquake.calculators.risk.scenario import core as scenario
 
 from tests.utils import helpers
 
