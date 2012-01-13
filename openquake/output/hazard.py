@@ -40,7 +40,7 @@ in the base class.
 GMFs are serialized per object (=Site) as implemented in the base class.
 """
 
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 from lxml import etree
 import logging
 
@@ -88,7 +88,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
                          "a valid output!")
             raise RuntimeError(error_msg)
 
-        if self.mode == writer.MODE_END:
+        if self.mode.end:
             self._maintain_debug_stats()
             self.file.write(etree.tostring(
                 self.nrml_el, pretty_print=True, xml_declaration=True,
@@ -267,7 +267,7 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
     def write_header(self):
         """Header (i.e., common) information for all nodes."""
 
-        if self.mode != writer.MODE_START:
+        if not self.mode.start:
             return
 
         self.root_node = etree.Element(self.root_tag, nsmap=NSMAP)
@@ -297,7 +297,7 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
     def write_footer(self):
         """Serialize tree to file."""
 
-        if self.mode == writer.MODE_END:
+        if self.mode.end:
             self._maintain_debug_stats()
             if self._ensure_all_attributes_set():
                 et = etree.ElementTree(self.root_node)
@@ -427,7 +427,7 @@ class GMFXMLWriter(writer.XMLFileWriter):
     def write_header(self):
         """Write out the file header."""
 
-        if self.mode != writer.MODE_START:
+        if not self.mode.start:
             return
 
         self.root_node = etree.Element(GMFXMLWriter.root_tag, nsmap=NSMAP)
@@ -469,7 +469,7 @@ class GMFXMLWriter(writer.XMLFileWriter):
 
     def write_footer(self):
         """Write out the file footer."""
-        if self.mode == writer.MODE_END:
+        if self.mode.end:
             et = etree.ElementTree(self.root_node)
             et.write(self.file, pretty_print=True, xml_declaration=True,
                      encoding="UTF-8")
@@ -866,7 +866,7 @@ def get_mode(job_id, serialize_to, nrml_path):
     :param serialize_to: where to serialize
     :type serialize_to: list of strings, permitted values: 'db', 'xml'.
     :param string nrml_path: the full XML/NRML path.
-    :returns: one of: MODE_START, MODE_IN_THE_MIDDLE, MODE_END
+    :returns: a py:class:`openquake.writer.SerializerMode` instance
     """
     mode = None
     if 'xml' in serialize_to and nrml_path:
@@ -879,31 +879,39 @@ def get_mode(job_id, serialize_to, nrml_path):
             LOGGER.error("No counter information re. blocks (%s)" % exc)
             raise
 
+        # Set all flags to False initially.
+        SerializerMode = namedtuple("SerializerMode", "start, middle, end")
+
         if cblock > 1 and cblock < blocks:
+            mode.middle = True
             return writer.MODE_IN_THE_MIDDLE
 
         try:
-            total = stats.pk_get(job_id, "srl_items")
-            serialized = stats.pk_get(job_id, "srl_done")
-            to_be_serialized = stats.pk_get(job_id, "srl_next")
+            total = stats.pk_get(job_id, "serialize_items")
+            serialized = stats.pk_get(job_id, "serialize_done")
+            to_be_serialized = stats.pk_get(job_id, "serialize_next")
         except TypeError, exc:
             LOGGER.error(
                 "No counter information re. serialized items (%s)" % exc)
             raise
 
+        # We are serializing data from the first block.
         if cblock == 1:
             if serialized == 0:
                 # First block, nothing serialized yet.
-                mode = writer.MODE_START
+                mode = SerializerMode(True, False, False)
             else:
-                mode = writer.MODE_IN_THE_MIDDLE
-        else:
+                mode = SerializerMode(False, True, False)
+
+        # We are serializing data from the last block.
+        if cblock == blocks:
             items_left = total - serialized - to_be_serialized
             if items_left == 0:
                 # Last block, last batch.
-                mode = writer.MODE_END
+                mode = SerializerMode(False, False, True)
             else:
-                mode = writer.MODE_IN_THE_MIDDLE
+                mode = SerializerMode(False, True, False)
+
     return mode
 
 

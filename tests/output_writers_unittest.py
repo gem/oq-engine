@@ -20,6 +20,7 @@
 Database related unit tests for hazard computations with the hazard engine.
 """
 
+from collections import namedtuple
 import itertools
 import mock
 import string
@@ -67,13 +68,18 @@ class CreateWriterTestBase(object):
     jobs = itertools.count(10)
     files = itertools.cycle(string.ascii_lowercase)
 
+    def _init_test(self, _job_id, _nrml_path):
+        """Test initialization_hook for derived classes."""
+
     def test_create_writer_with_xml(self):
         """
         A `*XMLWriter` instance is returned when the serialize_to parameter is
         set to 'xml'.
         """
-        writer = self.create_function(
-            self.jobs.next(), ['xml'], "/tmp/%s.xml" % self.files.next())
+        job_id = self.jobs.next()
+        nrml_path = "/tmp/%s.xml" % self.files.next()
+        self._init_test(job_id, nrml_path)
+        writer = self.create_function(job_id, ['xml'], nrml_path)
         self.assertTrue(isinstance(writer, self.xml_writer_class))
 
     def test_create_writer_with_db(self):
@@ -116,6 +122,13 @@ class SMWrapper(object):
 class CreateHazardmapWriterTestCase(unittest.TestCase, CreateWriterTestBase):
     """Tests for openquake.output.hazard.create_hazardmap_writer()."""
 
+    def _init_test(self, job_id, _):
+        stats.pk_set(job_id, "blocks", 3)
+        stats.pk_set(job_id, "cblock", 1)
+        stats.pk_set(job_id, "serialize_items", 5)
+        stats.pk_set(job_id, "serialize_done", 0)
+        stats.pk_set(job_id, "serialize_next", 1)
+
     create_function = SMWrapper(hazard_output.create_hazardmap_writer)
     xml_writer_class = hazard_output.HazardMapXMLWriter
     db_writer_class = hazard_output.HazardMapDBWriter
@@ -123,6 +136,13 @@ class CreateHazardmapWriterTestCase(unittest.TestCase, CreateWriterTestBase):
 
 class CreateHazardcurveWriterTestCase(unittest.TestCase, CreateWriterTestBase):
     """Tests for openquake.output.hazard.create_hazardcurve_writer()."""
+
+    def _init_test(self, job_id, _):
+        stats.pk_set(job_id, "blocks", 3)
+        stats.pk_set(job_id, "cblock", 1)
+        stats.pk_set(job_id, "serialize_items", 5)
+        stats.pk_set(job_id, "serialize_done", 0)
+        stats.pk_set(job_id, "serialize_next", 1)
 
     create_function = SMWrapper(hazard_output.create_hazardcurve_writer)
     xml_writer_class = hazard_output.HazardCurveXMLWriter
@@ -187,63 +207,145 @@ class GetModeTestCase(helpers.RedisTestMixin, unittest.TestCase):
 
     def test_get_mode_at_start(self):
         """
-        At the first block, get_mode() returns `MODE_START`.
+        At the first block, no data serialized yet, the mode
+        returned has only the 'start' flag set.
         """
         job_id = 61
         args = (job_id, ["db", "xml"], "/path/1")
         stats.delete_job_counters(job_id)
         stats.pk_set(job_id, "blocks", 3)
-        stats.pk_inc(job_id, "cblock")
-        self.assertEqual(writer.MODE_START, hazard_output.get_mode(*args))
+        stats.pk_set(job_id, "cblock", 1)
+        stats.pk_set(job_id, "serialize_done", 0)
+        self.assertEqual((True, False, False), hazard_output.get_mode(*args))
 
-    def test_get_mode_in_the_middle(self):
+    def test_get_mode_at_first_with_some_data_serialized(self):
         """
-        Between the first and the last block, get_mode() returns
-        `MODE_IN_THE_MIDDLE`.
+        At the first block, with some data serialized already, the mode
+        returned has only the 'middle' flag set.
         """
         job_id = 62
         args = (job_id, ["db", "xml"], "/path/2")
         stats.delete_job_counters(job_id)
         stats.pk_set(job_id, "blocks", 3)
-        stats.pk_inc(job_id, "cblock")
-        stats.pk_inc(job_id, "cblock")
-        self.assertEqual(writer.MODE_IN_THE_MIDDLE,
-                         hazard_output.get_mode(*args))
+        stats.pk_set(job_id, "cblock", 1)
+        stats.pk_set(job_id, "serialize_done", 1)
+        self.assertEqual((False, True, False), hazard_output.get_mode(*args))
 
-    def test_get_mode_at_the_end(self):
+    def test_get_mode_in_the_middle(self):
         """
-        For the last block, get_mode() returns `MODE_END`.
+        At a block in the middle, the mode returned has only the
+        'middle' flag set.
         """
         job_id = 63
         args = (job_id, ["db", "xml"], "/path/3")
         stats.delete_job_counters(job_id)
-        stats.pk_set(job_id, "blocks", 2)
-        stats.pk_inc(job_id, "cblock")
-        stats.pk_inc(job_id, "cblock")
-        self.assertEqual(writer.MODE_END, hazard_output.get_mode(*args))
+        stats.pk_set(job_id, "blocks", 3)
+        stats.pk_set(job_id, "cblock", 2)
+        self.assertEqual((False, True, False), hazard_output.get_mode(*args))
 
-    def test_get_mode_with_single_block(self):
+    def test_get_mode_at_the_end(self):
         """
-        For a single block, get_mode() returns `MODE_START_AND_END`.
+        At the last block, about to serialize the last batch of data, the mode
+        returned has only the 'end' flag set.
         """
         job_id = 64
         args = (job_id, ["db", "xml"], "/path/4")
         stats.delete_job_counters(job_id)
+        stats.pk_set(job_id, "blocks", 2)
+        stats.pk_set(job_id, "cblock", 2)
+        stats.pk_set(job_id, "serialize_items", 5)
+        stats.pk_set(job_id, "serialize_done", 2)
+        stats.pk_set(job_id, "serialize_next", 3)
+        self.assertEqual((False, False, True), hazard_output.get_mode(*args))
+
+    def test_get_mode_at_the_end_and_not_the_last_batch_of_data(self):
+        """
+        At the last block, about to serialize a batch of data but more remains,
+        the mode returned has only the 'middle' flag set.
+        """
+        job_id = 65
+        args = (job_id, ["db", "xml"], "/path/5")
+        stats.delete_job_counters(job_id)
+        stats.pk_set(job_id, "blocks", 2)
+        stats.pk_set(job_id, "cblock", 2)
+        stats.pk_set(job_id, "serialize_items", 5)
+        stats.pk_set(job_id, "serialize_done", 2)
+        stats.pk_set(job_id, "serialize_next", 2)
+        self.assertEqual((False, True, False), hazard_output.get_mode(*args))
+
+    def test_get_mode_with_single_block_at_start_and_multi_batch_start(self):
+        """
+        A single block with no data serialized yet. Data is serialized in
+        multiple batches and the next batch is not the last one.
+        The mode returned has only the 'start' flag set.
+        """
+        job_id = 66
+        args = (job_id, ["db", "xml"], "/path/6")
+        stats.delete_job_counters(job_id)
         stats.pk_set(job_id, "blocks", 1)
-        stats.pk_inc(job_id, "cblock")
-        self.assertEqual(writer.MODE_START_AND_END,
-                         hazard_output.get_mode(*args))
+        stats.pk_set(job_id, "cblock", 1)
+        stats.pk_set(job_id, "serialize_items", 5)
+        stats.pk_set(job_id, "serialize_done", 0)
+        stats.pk_set(job_id, "serialize_next", 2)
+        self.assertEqual((True, False, False), hazard_output.get_mode(*args))
+
+    def test_get_mode_with_single_block_at_start_and_single_batch(self):
+        """
+        A single block with no data serialized yet. The data is serialized
+        in a single batch.
+        The mode returned has the 'start' and the 'end' flag set.
+        """
+        job_id = 67
+        args = (job_id, ["db", "xml"], "/path/7")
+        stats.delete_job_counters(job_id)
+        stats.pk_set(job_id, "blocks", 1)
+        stats.pk_set(job_id, "cblock", 1)
+        stats.pk_set(job_id, "serialize_items", 5)
+        stats.pk_set(job_id, "serialize_done", 0)
+        stats.pk_set(job_id, "serialize_next", 5)
+        self.assertEqual((True, False, True), hazard_output.get_mode(*args))
+
+    def test_get_mode_with_single_block_at_start_and_multi_batch_middle(self):
+        """
+        A single block with some data serialized already. Data is serialized in
+        multiple batches and the next batch is *not* the last one.
+        The mode returned has only the 'middle' flag set.
+        """
+        job_id = 68
+        args = (job_id, ["db", "xml"], "/path/8")
+        stats.delete_job_counters(job_id)
+        stats.pk_set(job_id, "blocks", 1)
+        stats.pk_set(job_id, "cblock", 1)
+        stats.pk_set(job_id, "serialize_items", 5)
+        stats.pk_set(job_id, "serialize_done", 2)
+        stats.pk_set(job_id, "serialize_next", 2)
+        self.assertEqual((False, True, False), hazard_output.get_mode(*args))
+
+    def test_get_mode_with_single_block_at_start_and_multi_batch_end(self):
+        """
+        A single block with some data serialized already. Data is serialized in
+        multiple batches and the next batch *is* the last one.
+        The mode returned has only the 'end' flag set.
+        """
+        job_id = 69
+        args = (job_id, ["db", "xml"], "/path/9")
+        stats.delete_job_counters(job_id)
+        stats.pk_set(job_id, "blocks", 1)
+        stats.pk_set(job_id, "cblock", 1)
+        stats.pk_set(job_id, "serialize_items", 5)
+        stats.pk_set(job_id, "serialize_done", 3)
+        stats.pk_set(job_id, "serialize_next", 2)
+        self.assertEqual((False, False, True), hazard_output.get_mode(*args))
 
     def test_get_mode_with_no_xml(self):
         """
         When no XML serialization was requested, get_mode() returns
-        `MODE_START_AND_END` no matter what.
+        `None`.
         """
-        job_id = 65
-        args = (job_id, ["db"], "/path/5")
+        job_id = 70
+        args = (job_id, ["db"], "/path/70")
         stats.delete_job_counters(job_id)
-        self.assertEqual(writer.MODE_START_AND_END,
-                         hazard_output.get_mode(*args))
+        self.assertIs(None, hazard_output.get_mode(*args))
 
 
 class CreateWriterTestCase(unittest.TestCase):
@@ -268,6 +370,7 @@ class CreateWriterTestCase(unittest.TestCase):
     files = itertools.cycle(string.ascii_lowercase)
     dbs = itertools.count(1000)
     xmls = itertools.count(2000)
+    SM = SM("SerializerMode", "start, middle, end")
 
     def _init_curve(self):
         # Constructor for DB serializer.
@@ -358,8 +461,9 @@ class CreateWriterTestCase(unittest.TestCase):
         self._init_curve()
         job_id = self.jobs.next()
         nrml_path = self.files.next()
-        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
-                                              self.x, self.d, writer.MODE_START)
+        result = hazard_output._create_writer(
+            job_id, ["db", "xml"], nrml_path, self.x, self.d,
+            self.SM(True, False, False))
         self.assertEqual(1, self.d.call_count)
         self.assertEqual(1, self.x.call_count)
         xml_serializer = self.xmls.next() - 1
@@ -370,8 +474,9 @@ class CreateWriterTestCase(unittest.TestCase):
         # is returned.
         # This only works if the function under test is called with the same
         # 'job_id' and 'nrml_path'.
-        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
-                                              self.x, self.d, writer.MODE_END)
+        result = hazard_output._create_writer(
+            job_id, ["db", "xml"], nrml_path, self.x, self.d,
+            self.SM(False, False, True))
         self.assertEqual(2, self.d.call_count)
         self.assertEqual(1, self.x.call_count)
         self.assertEqual([self.dbs.next() - 1, xml_serializer],
@@ -384,8 +489,9 @@ class CreateWriterTestCase(unittest.TestCase):
         self._init_map()
         job_id = self.jobs.next()
         nrml_path = self.files.next()
-        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
-                                              self.x, self.d, writer.MODE_START)
+        result = hazard_output._create_writer(
+            job_id, ["db", "xml"], nrml_path, self.x, self.d,
+            self.SM(True, False, False))
         self.assertEqual(1, self.d.call_count)
         self.assertEqual(1, self.x.call_count)
         xml_serializer = self.xmls.next() - 1
@@ -396,8 +502,9 @@ class CreateWriterTestCase(unittest.TestCase):
         # is returned.
         # This only works if the function under test is called with the same
         # 'job_id' and 'nrml_path'.
-        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
-                                              self.x, self.d, writer.MODE_END)
+        result = hazard_output._create_writer(
+            job_id, ["db", "xml"], nrml_path, self.x, self.d,
+            self.SM(False, False, True))
         self.assertEqual(2, self.d.call_count)
         self.assertEqual(1, self.x.call_count)
         self.assertEqual([self.dbs.next() - 1, xml_serializer],

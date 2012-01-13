@@ -402,7 +402,7 @@ class PkGetTestCase(helpers.RedisTestMixin, unittest.TestCase):
             key = stats.key_name(job_id, *stats.STATS_KEYS[pkey])
             kvs = self.connect()
             kvs.set(key, 949)
-            self.assertEqual("949", stats.pk_get(job_id, pkey))
+            self.assertEqual(949, stats.pk_get(job_id, pkey))
 
     def test_pk_get_with_existing_debug_and_debug_stats_off(self):
         """`None` is returned when debug stats are off."""

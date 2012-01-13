@@ -453,10 +453,10 @@ class ClassicalMixin(BasePSHAMixin):
             self.job_id, self.serialize_results_to, nrml_path)
 
         sites = set(sites)
-        stats.pk_set(self.job_id, "srl_items", len(sites))
-        stats.pk_set(self.job_id, "srl_done", 0)
+        stats.pk_set(self.job_id, "serialize_items", len(sites))
+        stats.pk_set(self.job_id, "serialize_done", 0)
         progress_key = stats.key_name(
-            self.job_id, *stats.STATS_KEYS["srl_done"])
+            self.job_id, *stats.STATS_KEYS["serialize_done"])
         accounted_for = set()
         dgen = duration_generator(0.1)
         duration = dgen.next()
@@ -490,7 +490,7 @@ class ClassicalMixin(BasePSHAMixin):
                 duration = dgen.next()
             else:
                 batch_size = len(hc_data)
-                stats.pk_set(self.job_id, "srl_next", batch_size)
+                stats.pk_set(self.job_id, "serialize_next", batch_size)
                 curve_writer.serialize(hc_data)
                 stats.kvs_op("incr_by", progress_key, batch_size)
 

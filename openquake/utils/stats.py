@@ -57,11 +57,11 @@ STATS_KEYS = {
     # The current block
     "cblock": ("g", "gen:cblock", "i"),
     # The total number of items to serialize in the current block
-    "srl_items": ("g", "gen:srl_items", "t"),
+    "serialize_items": ("g", "gen:serialize_items", "t"),
     # The number of items already serialized in the current block
-    "srl_done": ("g", "gen:srl_done", "i"),
+    "serialize_done": ("g", "gen:serialize_done", "i"),
     # The number of items to be serialized next
-    "srl_next": ("g", "gen:srl_next", "t"),
+    "serialize_next": ("g", "gen:serialize_next", "t"),
     # debug statistic: list of paths of hazard curves written to xml
     "hcls_xmlcurvewrites": ("h", "cls:debug:xmlcurvewrites", "d"),
     # debug statistic: list of paths of hazard maps written to xml
