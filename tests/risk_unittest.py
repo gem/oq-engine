@@ -34,9 +34,9 @@ from openquake.risk import scenario
 from openquake.risk import common
 from openquake.risk.job import aggregate_loss_curve as aggregate
 from openquake.risk.job.general import Block, RiskJobMixin, write_output_bcr
-from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.calculators.risk.classical import core as classical_core
 from openquake.calculators.risk.classical.core import ClassicalPSHABasedMixin
+from openquake.calculators.risk.event_based.core import ProbabilisticEventMixin
 
 from tests.utils import helpers
 
