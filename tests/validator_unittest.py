@@ -119,7 +119,7 @@ class ConfigurationConstraintsTestCase(unittest.TestCase, helpers.TestMixin):
         sections = [
             config.RISK_SECTION, config.HAZARD_SECTION, config.GENERAL_SECTION]
 
-        dummy_exposure = self.touch()
+        dummy_exposure = helpers.touch()
 
         params = {}
 
@@ -287,7 +287,7 @@ class ConfigurationConstraintsTestCase(unittest.TestCase, helpers.TestMixin):
     def test_file_path_validation(self):
         # existing file
         params = dict()
-        params['EXPOSURE'] = self.touch()
+        params['EXPOSURE'] = helpers.touch()
 
         validator = config.FilePathValidator(params)
         self.assertTrue(validator.is_valid()[0])

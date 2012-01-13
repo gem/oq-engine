@@ -200,7 +200,7 @@ class JobDbRecordTestCase(unittest.TestCase):
                 CalculationProxy.is_job_completed(job_id), is_completed)
 
 
-class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
+class ConfigParseTestCase(unittest.TestCase):
     maxDiff = None
 
     def test_parse_file(self):
@@ -211,7 +211,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             [HAZARD]
             MINIMUM_MAGNITUDE = 5.0
             '''
-        config_path = self.touch(
+        config_path = helpers.touch(
             dir=gettempdir(), content=textwrap.dedent(content))
 
         params, sections = _parse_config_file(config_path)
@@ -241,7 +241,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             # not used for this calc mode
             COMPUTE_MEAN_HAZARD_CURVE = true
             '''
-        config_path = self.touch(
+        config_path = helpers.touch(
             dir=gettempdir(), content=textwrap.dedent(content))
 
         params, sections = _parse_config_file(config_path)
@@ -268,7 +268,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             EXPOSURE = /absolute/exposure.xml
             VULNERABILITY = vulnerability.xml
             '''
-        config_path = self.touch(content=textwrap.dedent(content))
+        config_path = helpers.touch(content=textwrap.dedent(content))
 
         params, sections = _parse_config_file(config_path)
         params, sections = _prepare_config_parameters(params, sections)
