@@ -43,6 +43,8 @@ class TruncatedGR(BaseMFD):
 
     PARAMETERS = ('min_mag', 'max_mag', 'bin_width', 'a_val', 'b_val')
 
+    MODIFICATIONS = set()
+
     def check_constraints(self):
         """
         Checks the following constraints:

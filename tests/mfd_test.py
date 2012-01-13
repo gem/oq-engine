@@ -13,6 +13,7 @@ class BaseMFDTestCase(unittest.TestCase):
 
 class BaseMFDSetParametersTestCase(BaseMFDTestCase):
     class BaseTestMFD(BaseMFD):
+        MODIFICATIONS = set()
         check_constraints_call_count = 0
         def check_constraints(self):
             self.check_constraints_call_count += 1

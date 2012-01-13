@@ -21,6 +21,8 @@ class EvenlyDiscretized(BaseMFD):
 
     PARAMETERS = ('min_mag', 'bin_width', 'occurrence_rates')
 
+    MODIFICATIONS = set()
+
     def check_constraints(self):
         """
         Checks the following constraints:
