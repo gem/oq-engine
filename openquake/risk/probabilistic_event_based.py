@@ -28,7 +28,7 @@ from numpy import zeros, array, linspace
 from numpy import histogram, where, mean
 
 from openquake import shapes
-from openquake.risk.common import collect, loop
+from openquake.calculators.risk.general import collect, loop
 
 DEFAULT_NUMBER_OF_SAMPLES = 25
 
