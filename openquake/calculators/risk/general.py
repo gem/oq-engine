@@ -368,8 +368,8 @@ class BaseRiskCalculator(Calculator):
             asset in that site. See :func:`compute_bcr_for_block`.
         """
         data = []
-        for block_id in self.blocks_keys:
-            key = kvs.tokens.bcr_block_key(self.job_id, block_id)
+        for block_id in self.calc_proxy.blocks_keys:
+            key = kvs.tokens.bcr_block_key(self.calc_proxy.job_id, block_id)
             block_data = kvs.get_value_json_decoded(key)
             data += [(shapes.Site(latitude=lat, longitude=lon), payload)
                      for ((lat, lon), payload) in block_data]

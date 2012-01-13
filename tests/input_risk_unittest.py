@@ -101,7 +101,7 @@ def GMF_DATA():
     ]
 
 
-class HazardCurveDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
+class HazardCurveDBReadTestCase(unittest.TestCase, helpers.DbTestCase):
     """
     Test the code to read hazard curves from DB.
     """
@@ -135,7 +135,7 @@ class HazardCurveDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
                           [0.454, 0.214, 0.123, 0.102])
 
 
-class GmfDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
+class GmfDBReadTestCase(unittest.TestCase, helpers.DbTestCase):
     """
     Test the code to read the ground motion fields from DB.
     """
@@ -199,7 +199,7 @@ class GmfDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
                 }, gmfs)
 
 
-class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
     """
     Test the code to serialize exposure model to DB.
     """

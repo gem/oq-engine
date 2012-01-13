@@ -125,7 +125,7 @@ def LOSS_MAP_DATA(assets, r1, r2):
     return data
 
 
-class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
@@ -163,7 +163,7 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
             hcr.deserialize(hcw.output.id)
 
 
-class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
@@ -184,7 +184,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
             hmw.serialize(data)
 
 
-class GmfDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+class GmfDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
@@ -205,7 +205,7 @@ class GmfDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
             gmfw.serialize(data)
 
 
-class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
@@ -226,7 +226,7 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
             lcw.serialize(data)
 
 
-class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)

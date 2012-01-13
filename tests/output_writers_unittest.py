@@ -182,7 +182,7 @@ class CreateRiskWriterTest(unittest.TestCase):
                 risk_output.LossMapDBWriter)
 
 
-class GetModeTestCase(helpers.RedisTestMixin, unittest.TestCase):
+class GetModeTestCase(helpers.RedisTestCase, unittest.TestCase):
     """Tests the behaviour of output.hazard.get_mode()."""
 
     def test_get_mode_at_start(self):
