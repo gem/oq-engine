@@ -22,7 +22,7 @@ from openquake.calculators.hazard.classical.core import (
 from openquake.calculators.hazard.disagg.core import DisaggMixin
 from openquake.calculators.hazard.event_based.core import (
     EventBasedHazardCalculator)
-from openquake.calculators.hazard.scenario.core import ScenarioEventBasedMixin
+from openquake.calculators.hazard.scenario.core import ScenarioHazardCalculator
 
 
 CALCULATORS = {
@@ -31,5 +31,5 @@ CALCULATORS = {
     'event_based': EventBasedHazardCalculator,
     'event_based_bcr': EventBasedHazardCalculator,
     'disaggregation': DisaggMixin,
-    'scenario': ScenarioEventBasedMixin,
+    'scenario': ScenarioHazardCalculator,
 }
