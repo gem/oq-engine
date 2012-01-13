@@ -23,6 +23,8 @@ Probabilistic Event Mixin: defines the behaviour of a Job. Calls the
 compute_risk task
 """
 
+import os
+
 from numpy import zeros
 
 from celery.exceptions import TimeoutError
@@ -33,10 +35,62 @@ from openquake import shapes
 from openquake.db import models
 from openquake.parser import vulnerability
 from openquake.risk import probabilistic_event_based as prob
-from openquake.risk.job import aggregate_loss_curve
+from openquake.output import curve
 from openquake.calculators.risk import general
 
 LOGGER = logs.LOG
+
+
+def _filename(job_id):
+    """Return the name of the generated file."""
+    return "%s-aggregate-loss-curve.svg" % job_id
+
+
+def _for_plotting(loss_curve, time_span):
+    """Translate a loss curve into a dictionary compatible to
+    the interface defined in CurvePlot.write."""
+    data = {}
+
+    data["AggregateLossCurve"] = {}
+    data["AggregateLossCurve"]["abscissa"] = tuple(loss_curve.abscissae)
+    data["AggregateLossCurve"]["ordinate"] = tuple(loss_curve.ordinates)
+    data["AggregateLossCurve"]["abscissa_property"] = "Economic Losses"
+    data["AggregateLossCurve"]["ordinate_property"] = \
+            "PoE in %s years" % (str(time_span))
+
+    data["AggregateLossCurve"]["curve_title"] = "Aggregate Loss Curve"
+
+    return data
+
+
+def plot_aggregate_curve(job, aggregate_curve):
+    """Plot an aggreate loss curve.
+
+    This function is triggered only if the AGGREGATE_LOSS_CURVE
+    parameter is specified in the configuration file.
+
+    :param job: the job the engine is currently processing.
+    :type job:
+        :py:class:`ProbabilisticEventMixin`
+    :param aggregate_curve: the aggregate curve to plot.
+    :type aggregate_curve: :py:class:`openquake.shapes.Curve`
+    """
+
+    if not job.has("AGGREGATE_LOSS_CURVE"):
+        LOGGER.debug("AGGREGATE_LOSS_CURVE parameter not specified, " \
+                "skipping aggregate loss curve computation...")
+
+        return
+
+    path = os.path.join(job.params["BASE_PATH"],
+            job.params["OUTPUT_DIR"], _filename(job.job_id))
+
+    plotter = curve.CurvePlot(path)
+    plotter.write(_for_plotting(aggregate_curve,
+            job.params["INVESTIGATION_TIME"]), autoscale_y=False)
+
+    plotter.close()
+    LOGGER.debug("Aggregate loss curve stored at %s" % path)
 
 
 class ProbabilisticEventMixin(general.ProbabilisticRiskCalculator):
@@ -74,7 +128,7 @@ class ProbabilisticEventMixin(general.ProbabilisticRiskCalculator):
             return
 
         curve = aggregate_curve.compute(self._tses(), self._time_span())
-        aggregate_loss_curve.plot_aggregate_curve(self, curve)
+        plot_aggregate_curve(self, curve)
 
         general.write_output(self.calc_proxy)
 
