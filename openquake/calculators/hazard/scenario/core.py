@@ -32,7 +32,7 @@ from openquake import shapes
 from openquake.calculators.hazard.general import BasePSHAMixin
 
 
-class ScenarioEventBasedMixin(BasePSHAMixin):
+class ScenarioHazardCalculator(BasePSHAMixin):
     """Scenario Event Based method for performing hazard calculations.
 
     Note that this mixin, during execution, will always be an instance of the
