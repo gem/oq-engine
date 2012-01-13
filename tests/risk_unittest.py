@@ -33,9 +33,10 @@ from openquake.risk import probabilistic_event_based as prob
 from openquake.risk import scenario
 from openquake.risk import common
 from openquake.risk.job import aggregate_loss_curve as aggregate
-from openquake.risk.job.general import Block, RiskJobMixin, write_output_bcr
 from openquake.calculators.risk.classical import core as classical_core
-from openquake.calculators.risk.classical.core import ClassicalPSHABasedMixin
+from openquake.calculators.risk.general import Block
+from openquake.calculators.risk.general import RiskJobMixin
+from openquake.calculators.risk.general import write_output_bcr
 from openquake.calculators.risk.event_based.core import ProbabilisticEventMixin
 
 from tests.utils import helpers
@@ -861,7 +862,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         # mixin "instance"
         the_job = helpers.create_job({})
-        calculator = ClassicalPSHABasedMixin(the_job)
+        calculator = classical_core.ClassicalPSHABasedMixin(the_job)
 
         # empty vuln curves
         vuln_curves = {}
@@ -939,7 +940,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         the_job = helpers.create_job(params, job_id=self.job_id)
 
-        calculator = ClassicalPSHABasedMixin(the_job)
+        calculator = classical_core.ClassicalPSHABasedMixin(the_job)
         calculator.vuln_curves = {"ID": self.vuln_function}
 
         block = Block.from_kvs(self.block_id)
@@ -977,7 +978,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         the_job = helpers.create_job(params, job_id=self.job_id)
 
-        calculator = ClassicalPSHABasedMixin(the_job)
+        calculator = classical_core.ClassicalPSHABasedMixin(the_job)
 
         Block.from_kvs(self.block_id)
         asset = {"taxonomy": "ID",
@@ -1004,7 +1005,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         # mixin "instance"
         the_job = helpers.create_job({}, job_id=1234)
-        calculator = ClassicalPSHABasedMixin(the_job)
+        calculator = classical_core.ClassicalPSHABasedMixin(the_job)
 
         hazard_curve = shapes.Curve([
               (0.01, 0.99), (0.08, 0.96),
