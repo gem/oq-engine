@@ -55,7 +55,7 @@ class SamplesFromConfigTestCase(unittest.TestCase):
         self.assertEqual(None, self.calculator._get_number_of_samples())
 
 
-class LossMapCurveSerialization(unittest.TestCase, helpers.TestMixin):
+class LossMapCurveSerialization(unittest.TestCase):
 
     def setUp(self):
         params = {

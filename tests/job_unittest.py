@@ -201,7 +201,6 @@ class JobDbRecordTestCase(unittest.TestCase):
 
 
 class ConfigParseTestCase(unittest.TestCase):
-    maxDiff = None
 
     def test_parse_file(self):
         content = '''
@@ -290,8 +289,7 @@ def datapath(test, path):
     return helpers.testdata_path("%s/%s" % (test, path))
 
 
-class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
-    maxDiff = None
+class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
 
     """
     Unit tests for the _prepare_job helper function, which creates a new

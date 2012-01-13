@@ -35,7 +35,6 @@ class VersionInfoTestCase(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(VersionInfoTestCase, self).__init__(*args, **kwargs)
-        self.maxDiff = None
 
     def test_info_with_major_number_only(self):
         """Only the major version number is set."""

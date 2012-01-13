@@ -309,7 +309,7 @@ class GetClientTestCase(unittest.TestCase):
         self.assertIs(obj1.connection_pool, obj2.connection_pool)
 
 
-class CacheConnectionsTestCase(helpers.ConfigTestMixin, unittest.TestCase):
+class CacheConnectionsTestCase(helpers.ConfigTestCase, unittest.TestCase):
     """
     Tests for cache_connections()
     """

@@ -155,7 +155,7 @@ def GMF_DATA():
     }
 
 
-class HazardMapDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
+class HazardMapDBBaseTestCase(unittest.TestCase, helpers.DbTestCase):
     """Common code for hazard map db reader/writer test"""
 
     def tearDown(self):
@@ -309,7 +309,7 @@ class HazardMapDBReaderTestCase(HazardMapDBBaseTestCase):
         return result
 
 
-class HazardCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
+class HazardCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestCase):
     """Common code for hazard curve db reader/writer test"""
     IMLS = [0.778, 1.09, 1.52, 2.13]
 
@@ -415,7 +415,7 @@ class HazardCurveDBReaderTestCase(HazardCurveDBBaseTestCase):
                           self.sort(_normalize(data)))
 
 
-class GmfDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
+class GmfDBBaseTestCase(unittest.TestCase, helpers.DbTestCase):
     """Common code for ground motion field db reader/writer test"""
     def tearDown(self):
         if hasattr(self, "job") and self.job:

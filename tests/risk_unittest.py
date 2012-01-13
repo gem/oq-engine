@@ -714,7 +714,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         )
 
 
-class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
+class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
     def _store_asset(self, asset, row, column):
         key = kvs.tokens.asset_key(self.job_id, row, column)
@@ -870,7 +870,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def test_loss_ratio_curve_is_none_with_unknown_vuln_function(self):
 
-        # mixin "instance"
         the_job = helpers.create_job({})
         calculator = classical_core.ClassicalRiskCalculator(the_job)
 
@@ -935,7 +934,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
                 kvs.tokens.vuln_key(self.job_id, retrofitted=True),
                 {"ID": self.vuln_function.to_json()})
 
-    def test_compute_risk_in_the_classical_psha_mixin(self):
+    def test_compute_risk_in_the_classical_psha_calculator(self):
         """
             tests ClassicalRiskCalculator.compute_risk by retrieving
             all the loss curves in the kvs and checks their presence
@@ -976,7 +975,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
                 self.assertTrue(kvs.get_client().get(loss_key))
 
-    def test_compute_bcr_in_the_classical_psha_mixin(self):
+    def test_compute_bcr_in_the_classical_psha_calculator(self):
         self._compute_risk_classical_psha_setup()
 
         params = dict(CALCULATION_MODE='Classical BCR',
@@ -1011,9 +1010,8 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
             self, res, [[[12.34, 56.67], [[expected_result, 22.61]]]]
         )
 
-    def test_loss_ratio_curve_in_the_classical_psha_mixin(self):
+    def test_loss_ratio_curve_in_the_classical_psha_calculator(self):
 
-        # mixin "instance"
         the_job = helpers.create_job({}, job_id=1234)
         calculator = classical_core.ClassicalRiskCalculator(the_job)
 
@@ -1332,7 +1330,7 @@ class RiskJobGeneralTestCase(unittest.TestCase):
         self.job.to_kvs()
 
     def _prepare_bcr_result(self):
-        self.block_keys = [19, 20]
+        self.job.blocks_keys = [19, 20]
         kvs.set_value_json_encoded(kvs.tokens.bcr_block_key(self.job_id, 19), [
             ((19.0, -1.1), [
                 ({'bcr': 35.1, 'eal_original': 12.34, 'eal_retrofitted': 4},
@@ -1354,11 +1352,9 @@ class RiskJobGeneralTestCase(unittest.TestCase):
         self._make_job({})
         self._prepare_bcr_result()
 
-        mixin = BaseRiskCalculator(self.job)
-        mixin.job_id = self.job_id
-        mixin.blocks_keys = self.block_keys
+        calc = BaseRiskCalculator(self.job)
 
-        bcr_per_site = mixin.asset_bcr_per_site()
+        bcr_per_site = calc.asset_bcr_per_site()
         self.assertEqual(bcr_per_site, [
             (shapes.Site(-1.1, 19.0), [
                 [{u'bcr': 35.1, 'eal_original': 12.34, 'eal_retrofitted': 4},
@@ -1378,9 +1374,7 @@ class RiskJobGeneralTestCase(unittest.TestCase):
         self._make_job({})
         self._prepare_bcr_result()
 
-        mixin = ProbabilisticRiskCalculator(self.job)
-        mixin.job_id = self.job_id
-        mixin.blocks_keys = self.block_keys
+        calc = ProbabilisticRiskCalculator(self.job)
 
         expected_result = """\
 <?xml version='1.0' encoding='UTF-8'?>
@@ -1431,15 +1425,15 @@ class RiskJobGeneralTestCase(unittest.TestCase):
 
         output_dir = tempfile.mkdtemp()
         try:
-            mixin.calc_proxy.params = {'OUTPUT_DIR': output_dir,
+            calc.calc_proxy.params = {'OUTPUT_DIR': output_dir,
                                        'INTEREST_RATE': '0.12',
                                        'ASSET_LIFE_EXPECTANCY': '50'}
-            mixin.calc_proxy._base_path = '.'
+            calc.calc_proxy._base_path = '.'
 
             resultfile = os.path.join(output_dir, 'bcr-map.xml')
 
             try:
-                mixin.write_output_bcr()
+                calc.write_output_bcr()
                 result = open(resultfile).read()
             finally:
                 if os.path.exists(resultfile):
