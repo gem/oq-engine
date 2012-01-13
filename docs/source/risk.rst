@@ -5,32 +5,3 @@ OpenQuake Computational Risk Engine
 ===================================
 
 The :mod:`openquake.risk` sub-package contains modules to compute risk with different scientific methods. Currently the engine supports the computation of loss ratios and loss curves with two different approaches, classical psha based and probabilistic event based.
-
-The :mod:`probabilistic_event_based` module
--------------------------------------------
-
-.. automodule:: openquake.risk.probabilistic_event_based
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`scenario_event_based` module
---------------------------------------
-
-.. automodule:: openquake.risk.scenario_event_based
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`common` module
-------------------------
-
-.. automodule:: openquake.risk.common
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`openquake.risk.job` sub-package
------------------------------------------
-
-TODO

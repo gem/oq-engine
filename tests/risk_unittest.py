@@ -29,14 +29,20 @@ from lxml import etree
 from openquake import kvs
 from openquake import shapes
 from openquake.output import hazard
-from openquake.risk import probabilistic_event_based as prob
 from openquake.risk import scenario
 from openquake.calculators.risk.classical import core as classical_core
 from openquake.calculators.risk.general import _compute_conditional_loss
+from openquake.calculators.risk.general import _compute_cumulative_histogram
+from openquake.calculators.risk.general import _compute_loss_ratios_range
 from openquake.calculators.risk.general import _compute_mid_mean_pe
 from openquake.calculators.risk.general import _compute_mid_po
+from openquake.calculators.risk.general import _compute_probs_of_exceedance
+from openquake.calculators.risk.general import _compute_rates_of_exceedance
+from openquake.calculators.risk.general import AggregateLossCurve
 from openquake.calculators.risk.general import Block
 from openquake.calculators.risk.general import compute_loss_curve
+from openquake.calculators.risk.general import compute_loss_ratio_curve
+from openquake.calculators.risk.general import compute_loss_ratios
 from openquake.calculators.risk.general import compute_mean_loss
 from openquake.calculators.risk.general import compute_bcr
 from openquake.calculators.risk.general import RiskJobMixin
@@ -249,12 +255,12 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         kvs.set_value_json_encoded(key, gmfs)
 
     def test_an_empty_function_produces_an_empty_set(self):
-        self.assertEqual(0, prob.compute_loss_ratios(
-                shapes.EMPTY_CURVE, self.gmfs, None, None).size)
+        self.assertEqual(0, compute_loss_ratios(shapes.EMPTY_CURVE, self.gmfs,
+                                                None, None).size)
 
     def test_an_empty_gmfs_produces_an_empty_set(self):
-        self.assertEqual(0, prob.compute_loss_ratios(
-                self.vuln_function_1, {"IMLs": ()}, None, None).size)
+        self.assertEqual(0, compute_loss_ratios(self.vuln_function_1,
+                                                {"IMLs": ()}, None, None).size)
 
     def test_with_valid_covs_we_sample_the_loss_ratios(self):
         """With valid covs we need to sample loss ratios.
@@ -279,9 +285,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         self.assertTrue(numpy.allclose(numpy.array([0.0722, 0.4106, 0.1800,
                 0.1710, 0.2508, 0.0395, 0.1145, 0.2883, 0.4734, 0.4885]),
-                prob.compute_loss_ratios(vuln_function, gmfs,
-                EpsilonProvider(expected_asset, epsilons),
-                expected_asset), atol=0.0001))
+                compute_loss_ratios(vuln_function, gmfs,
+                                    EpsilonProvider(expected_asset, epsilons),
+                                    expected_asset), atol=0.0001))
 
     def test_when_the_mean_is_zero_the_loss_ratio_is_zero(self):
         """In sampled based, when an interpolated mean loss ratio is zero,
@@ -305,9 +311,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         gmfs = {"IMLs": (0.1000, )}
 
-        self.assertEqual(0.0, prob.compute_loss_ratios(
-                vuln_function, gmfs, EpsilonProvider(
-                expected_asset, epsilons), expected_asset)[0])
+        self.assertEqual(0.0, compute_loss_ratios(
+            vuln_function, gmfs, EpsilonProvider(expected_asset, epsilons),
+            expected_asset)[0])
 
     def test_loss_ratios_boundaries(self):
         """Loss ratios generation given a GMFs and a vulnerability function.
@@ -325,12 +331,12 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         """
         # min IML in this case is 0.01
         self.assertTrue(numpy.allclose(numpy.array([0.0, 0.0, 0.0]),
-                prob.compute_loss_ratios(self.vuln_function_1,
+                compute_loss_ratios(self.vuln_function_1,
                 {"IMLs": (0.0001, 0.0002, 0.0003)}, None, None)))
 
         # max IML in this case is 0.52
         self.assertTrue(numpy.allclose(numpy.array([0.700, 0.700]),
-                prob.compute_loss_ratios(self.vuln_function_1,
+                compute_loss_ratios(self.vuln_function_1,
                 {"IMLs": (0.525, 0.530)}, None, None)))
 
     def test_loss_ratios_computation_using_gmfs(self):
@@ -418,7 +424,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         # the length of the result is the length of the gmf
         self.assertTrue(numpy.allclose(expected_loss_ratios,
-                prob.compute_loss_ratios(self.vuln_function_1,
+                compute_loss_ratios(self.vuln_function_1,
                 self.gmfs, None, None)))
 
     def test_loss_ratios_range_generation(self):
@@ -426,17 +432,17 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         expected_range = numpy.array([0.0, 0.5, 1.0, 1.5, 2.0])
 
         self.assertTrue(numpy.allclose(expected_range,
-                prob._compute_loss_ratios_range(loss_ratios, 5),
+                _compute_loss_ratios_range(loss_ratios, 5),
                 atol=0.0001))
 
     def test_builds_the_cumulative_histogram(self):
-        loss_ratios = prob.compute_loss_ratios(
+        loss_ratios = compute_loss_ratios(
                 self.vuln_function_1, self.gmfs, None, None)
 
-        loss_ratios_range = prob._compute_loss_ratios_range(loss_ratios)
+        loss_ratios_range = _compute_loss_ratios_range(loss_ratios)
 
         self.assertTrue(numpy.allclose(self.cum_histogram,
-                prob._compute_cumulative_histogram(
+                _compute_cumulative_histogram(
                 loss_ratios, loss_ratios_range)))
 
     def test_computes_the_rates_of_exceedance(self):
@@ -448,14 +454,14 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.00111111, 0.00111111, 0.00111111])
 
         self.assertTrue(numpy.allclose(expected_rates,
-                prob._compute_rates_of_exceedance(
+                _compute_rates_of_exceedance(
                 self.cum_histogram, self.gmfs["TSES"]), atol=0.01))
 
     def test_tses_is_not_supposed_to_be_zero_or_less(self):
-        self.assertRaises(ValueError, prob._compute_rates_of_exceedance,
+        self.assertRaises(ValueError, _compute_rates_of_exceedance,
                 self.cum_histogram, 0.0)
 
-        self.assertRaises(ValueError, prob._compute_rates_of_exceedance,
+        self.assertRaises(ValueError, _compute_rates_of_exceedance,
                 self.cum_histogram, -10.0)
 
     def test_computes_probs_of_exceedance(self):
@@ -466,8 +472,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.05404053, 0.05404053, 0.05404053, 0.05404053, 0.05404053]
 
         self.assertTrue(numpy.allclose(expected_probs,
-                prob._compute_probs_of_exceedance(
-                prob._compute_rates_of_exceedance(
+                _compute_probs_of_exceedance(
+                _compute_rates_of_exceedance(
                 self.cum_histogram, self.gmfs["TSES"]),
                 self.gmfs["TimeSpan"]), atol=0.0001))
 
@@ -477,7 +483,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.255765, 0.82622606), (0.426275, 0.77686984),
                 (0.596785, 0.52763345), (0.767295, 0.39346934)])
 
-        self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
+        self.assertEqual(expected_curve, compute_loss_ratio_curve(
                 self.vuln_function_2, self.gmfs_1,
                 None, None, number_of_samples=6))
 
@@ -485,7 +491,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.2640675, 0.917915), (0.4346125, 0.77686984),
                 (0.6051575, 0.52763345), (0.7757025, 0.22119922)])
 
-        self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
+        self.assertEqual(expected_curve, compute_loss_ratio_curve(
                 self.vuln_function_2, self.gmfs_2,
                 None, None, number_of_samples=6))
 
@@ -493,7 +499,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.2584, 0.89460078), (0.4121, 0.63212056),
                 (0.5658, 0.39346934), (0.7195, 0.39346934)])
 
-        self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
+        self.assertEqual(expected_curve, compute_loss_ratio_curve(
                 self.vuln_function_2, self.gmfs_3,
                 None, None, number_of_samples=6))
 
@@ -501,7 +507,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.25551, 0.93607214), (0.4209, 0.77686984),
                 (0.58629, 0.52763345), (0.75168, 0.39346934)])
 
-        self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
+        self.assertEqual(expected_curve, compute_loss_ratio_curve(
                 self.vuln_function_2, self.gmfs_4,
                 None, None, number_of_samples=6))
 
@@ -509,7 +515,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.23872, 0.95021293), (0.39655, 0.7134952),
                 (0.55438, 0.52763345), (0.71221, 0.39346934)])
 
-        self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
+        self.assertEqual(expected_curve, compute_loss_ratio_curve(
                 self.vuln_function_2, self.gmfs_5,
                 None, None, number_of_samples=6))
 
@@ -517,7 +523,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.2128575, 0.917915), (0.3540125, 0.82622606),
                 (0.4951675, 0.77686984), (0.6363225, 0.39346934)])
 
-        self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
+        self.assertEqual(expected_curve, compute_loss_ratio_curve(
                 self.vuln_function_2, self.gmfs_6,
                 None, None, number_of_samples=6))
 
@@ -525,7 +531,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         gmfs = dict(self.gmfs)
         gmfs["IMLs"] = ()
 
-        curve = prob.compute_loss_ratio_curve(
+        curve = compute_loss_ratio_curve(
                 self.vuln_function_1, gmfs, None, None)
 
         self.assertEqual(shapes.EMPTY_CURVE, curve)
@@ -545,35 +551,35 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.0, 0.0), (0.0, 0.0), (0.0, 0.0),
                 (0.0, 0.0), (0.0, 0.0), (0.0, 0.0)])
 
-        self.assertEqual(expected_curve, prob.compute_loss_ratio_curve(
+        self.assertEqual(expected_curve, compute_loss_ratio_curve(
                 self.vuln_function_1, gmfs, None, None))
 
     def test_an_empty_distribution_produces_an_empty_aggregate_curve(self):
         self.assertEqual(
-            shapes.EMPTY_CURVE, prob.AggregateLossCurve().compute(0, 0))
+            shapes.EMPTY_CURVE, AggregateLossCurve().compute(0, 0))
 
     def test_computes_the_aggregate_loss_curve(self):
         # no epsilon_provided is needed because the vulnerability
         # function has all the covs equal to zero
-        loss_ratios_1 = prob.compute_loss_ratios(
+        loss_ratios_1 = compute_loss_ratios(
             self.vuln_function_2, self.gmfs_1, None, self.asset_1)
 
-        loss_ratios_2 = prob.compute_loss_ratios(
+        loss_ratios_2 = compute_loss_ratios(
             self.vuln_function_2, self.gmfs_2, None, self.asset_2)
 
-        loss_ratios_3 = prob.compute_loss_ratios(
+        loss_ratios_3 = compute_loss_ratios(
             self.vuln_function_2, self.gmfs_3, None, self.asset_3)
 
-        loss_ratios_4 = prob.compute_loss_ratios(
+        loss_ratios_4 = compute_loss_ratios(
             self.vuln_function_2, self.gmfs_4, None, self.asset_4)
 
-        loss_ratios_5 = prob.compute_loss_ratios(
+        loss_ratios_5 = compute_loss_ratios(
             self.vuln_function_2, self.gmfs_5, None, self.asset_5)
 
-        loss_ratios_6 = prob.compute_loss_ratios(
+        loss_ratios_6 = compute_loss_ratios(
             self.vuln_function_2, self.gmfs_6, None, self.asset_6)
 
-        aggregate_curve = prob.AggregateLossCurve()
+        aggregate_curve = AggregateLossCurve()
 
         aggregate_curve.append(loss_ratios_1 * self.asset_1["assetValue"])
         aggregate_curve.append(loss_ratios_2 * self.asset_2["assetValue"])
@@ -598,7 +604,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 200, 50, number_of_samples=6))
 
     def test_no_losses_without_gmfs(self):
-        aggregate_curve = prob.AggregateLossCurve()
+        aggregate_curve = AggregateLossCurve()
         self.assertEqual(None, aggregate_curve.losses)
 
     def test_curve_to_plot_interface_translation(self):

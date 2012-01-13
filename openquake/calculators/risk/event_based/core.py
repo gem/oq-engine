@@ -34,7 +34,6 @@ from openquake import logs
 from openquake import shapes
 from openquake.db import models
 from openquake.parser import vulnerability
-from openquake.risk import probabilistic_event_based as prob
 from openquake.output import curve
 from openquake.calculators.risk import general
 
@@ -104,7 +103,7 @@ class ProbabilisticEventMixin(general.ProbabilisticRiskCalculator):
         """Execute the job."""
         general.preload(self)
 
-        aggregate_curve = prob.AggregateLossCurve()
+        aggregate_curve = general.AggregateLossCurve()
 
         tasks = []
         for block_id in self.calc_proxy.blocks_keys:
@@ -250,7 +249,7 @@ class ProbabilisticEventMixin(general.ProbabilisticRiskCalculator):
         block = general.Block.from_kvs(block_id)
 
         # aggregate the losses for this block
-        aggregate_curve = prob.AggregateLossCurve()
+        aggregate_curve = general.AggregateLossCurve()
 
         for point in block.grid(self.region):
             key = kvs.tokens.gmf_set_key(self.calc_proxy.job_id, point.column,
@@ -309,9 +308,9 @@ class ProbabilisticEventMixin(general.ProbabilisticRiskCalculator):
         def get_loss_curve(point, vuln_function, asset):
             "Compute loss curve basing on GMF data"
             gmf_slice = gmf_slices[point.site]
-            loss_ratios = prob.compute_loss_ratios(
+            loss_ratios = general.compute_loss_ratios(
                 vuln_function, gmf_slice, epsilon_provider, asset)
-            loss_ratio_curve = prob.compute_loss_ratio_curve(
+            loss_ratio_curve = general.compute_loss_ratio_curve(
                 vuln_function, gmf_slice, epsilon_provider, asset,
                 self._get_number_of_samples(), loss_ratios=loss_ratios)
             return loss_ratio_curve.rescale_abscissae(asset["assetValue"])
@@ -344,7 +343,7 @@ class ProbabilisticEventMixin(general.ProbabilisticRiskCalculator):
 
             return None
 
-        return prob.compute_loss_ratios(
+        return general.compute_loss_ratios(
             vuln_function, gmf_slice, epsilon_provider, asset)
 
     def compute_loss_ratio_curve(
@@ -363,7 +362,7 @@ class ProbabilisticEventMixin(general.ProbabilisticRiskCalculator):
 
         epsilon_provider = general.EpsilonProvider(self.calc_proxy.params)
 
-        loss_ratio_curve = prob.compute_loss_ratio_curve(
+        loss_ratio_curve = general.compute_loss_ratio_curve(
                 vuln_function, gmf_slice, epsilon_provider, asset,
                 self._get_number_of_samples(), loss_ratios=loss_ratios)
 
