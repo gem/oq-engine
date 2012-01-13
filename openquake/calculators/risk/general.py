@@ -360,6 +360,31 @@ class RiskJobMixin(Calculator):
         return data
 
 
+class ProbabilisticRiskCalculator(RiskJobMixin):
+    """Common base class for the Classical and Event-Based risk calculators."""
+
+    def compute_risk(self, block_id):
+        """Perform calculation and store the result in the kvs.
+
+        Calls either :meth:`_compute_bcr` or :meth:`_compute_loss` depending
+        on the calculation mode.
+        """
+        if self.is_benefit_cost_ratio_mode():
+            return self._compute_bcr(block_id)
+        else:
+            return self._compute_loss(block_id)
+
+    def _compute_bcr(self, _block_id):
+        """Compute Benefit-Cost Ratio for a block of sites. Implement this in
+        subclasses to provide the calculation-mode-specific logic."""
+        raise NotImplementedError()
+
+    def _compute_loss(self, _block_id):
+        """Compute loss for a block of sites. Implement this in
+        subclasses to provide the calculation-mode-specific logic."""
+        raise NotImplementedError()
+
+
 class EpsilonProvider(object):
     """
     Simple class for combining job configuration parameters and an `epsilon`
