@@ -16,7 +16,7 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-"""Mixin proxy for risk jobs, and associated Risk Job Mixin decorators."""
+"""Common functionality for Risk calculators."""
 
 import json
 import math
@@ -52,7 +52,7 @@ BLOCK_SIZE = 100
 DEFAULT_NUMBER_OF_SAMPLES = 25
 
 
-def preload(mixin):
+def preload(calculator):
     """
     Define some preliminary steps needed before starting
     the risk processing.
@@ -61,9 +61,9 @@ def preload(mixin):
     * read and store in KVS the vulnerability model
     * split into blocks and store in KVS the exposure sites
     """
-    mixin.store_exposure_assets()
-    mixin.store_vulnerability_model()
-    mixin.partition()
+    calculator.store_exposure_assets()
+    calculator.store_vulnerability_model()
+    calculator.partition()
 
 
 def write_output(job_profile):
@@ -99,23 +99,6 @@ def write_output(job_profile):
             LOG.info('Loss Map is at: %s' % path)
 
 
-def write_output_bcr(mixin):
-    """
-    Write BCR map in NRML format.
-    """
-    path = os.path.join(mixin.base_path,
-                        mixin.params['OUTPUT_DIR'],
-                        "bcr-map.xml")
-    writer = risk_output.create_bcr_map_writer(
-        mixin.job_id, mixin.serialize_results_to, path)
-
-    metadata = {
-        'interestRate': mixin.params['INTEREST_RATE'],
-        'assetLifeExpectancy': mixin.params['ASSET_LIFE_EXPECTANCY'],
-    }
-
-    writer.serialize([metadata] + mixin.asset_bcr_per_site())
-    LOG.info('BCR Map is at: %s' % path)
 
 
 def conditional_loss_poes(params):
@@ -178,7 +161,7 @@ def compute_risk(calculation_id, block_id, **kwargs):
     return calculator.compute_risk(block_id, **kwargs)
 
 
-class RiskJobMixin(Calculator):
+class BaseRiskCalculator(Calculator):
     """A mixin proxy for Risk jobs."""
 
     def execute(self):
@@ -393,7 +376,7 @@ class RiskJobMixin(Calculator):
         return data
 
 
-class ProbabilisticRiskCalculator(RiskJobMixin):
+class ProbabilisticRiskCalculator(BaseRiskCalculator):
     """Common base class for the Classical and Event-Based risk calculators."""
 
     def compute_risk(self, block_id):
@@ -416,6 +399,26 @@ class ProbabilisticRiskCalculator(RiskJobMixin):
         """Compute loss for a block of sites. Implement this in
         subclasses to provide the calculation-mode-specific logic."""
         raise NotImplementedError()
+
+    def write_output_bcr(self):
+        """
+        Write BCR map in NRML format.
+        """
+        path = os.path.join(self.calc_proxy.base_path,
+                            self.calc_proxy.params['OUTPUT_DIR'],
+                            "bcr-map.xml")
+        writer = risk_output.create_bcr_map_writer(
+            self.calc_proxy.job_id, self.calc_proxy.serialize_results_to, path)
+
+        metadata = {
+            'interestRate': self.calc_proxy.params['INTEREST_RATE'],
+            'assetLifeExpectancy': self.calc_proxy.params[
+                'ASSET_LIFE_EXPECTANCY'],
+        }
+
+        writer.serialize([metadata] + self.asset_bcr_per_site())
+        LOG.info('BCR Map is at: %s' % path)
+
 
 
 class EpsilonProvider(object):

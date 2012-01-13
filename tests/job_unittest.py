@@ -950,7 +950,7 @@ class CalcStatsTestCase(unittest.TestCase):
         haz_execute = ('openquake.calculators.hazard.event_based.core'
                        '.EventBasedHazardCalculator.execute')
         risk_execute = ('openquake.calculators.risk.event_based.core'
-                        '.ProbabilisticEventMixin.execute')
+                        '.EventBasedRiskCalculator.execute')
         record = 'openquake.engine.CalculationProxy._record_initial_stats'
 
         with patch(haz_execute):

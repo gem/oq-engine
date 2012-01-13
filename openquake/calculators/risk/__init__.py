@@ -18,15 +18,16 @@
 """Information about the calculators available for the Risk engine."""
 
 
-from openquake.calculators.risk.classical.core import ClassicalPSHABasedMixin
-from openquake.calculators.risk.event_based.core import ProbabilisticEventMixin
-from openquake.calculators.risk.scenario.core import ScenarioEventBasedMixin
+from openquake.calculators.risk.classical.core import ClassicalRiskCalculator
+from openquake.calculators.risk.event_based.core import (
+    EventBasedRiskCalculator)
+from openquake.calculators.risk.scenario.core import ScenarioRiskCalculator
 
 
 CALCULATORS = {
-    'classical': ClassicalPSHABasedMixin,
-    'classical_bcr': ClassicalPSHABasedMixin,
-    'event_based': ProbabilisticEventMixin,
-    'event_based_bcr': ProbabilisticEventMixin,
-    'scenario': ScenarioEventBasedMixin,
+    'classical': ClassicalRiskCalculator,
+    'classical_bcr': ClassicalRiskCalculator,
+    'event_based': EventBasedRiskCalculator,
+    'event_based_bcr': EventBasedRiskCalculator,
+    'scenario': ScenarioRiskCalculator,
 }

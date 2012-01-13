@@ -45,12 +45,8 @@ def compute_ground_motion_fields(job_id, sites, history, realization, seed):
         sites, history, realization, seed)
 
 
-class EventBasedHazardCalculator(general.BasePSHAMixin):
-    """Probabilistic Event Based method for performing Hazard calculations.
-
-    Implements the JobMixin, which has a primary entry point of execute().
-    Execute is responsible for dispatching celery tasks.
-    """
+class EventBasedHazardCalculator(general.BaseHazardCalculator):
+    """Probabilistic Event Based method for performing Hazard calculations."""
 
     @java.unpack_exception
     @general.create_java_cache

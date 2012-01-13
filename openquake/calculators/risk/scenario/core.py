@@ -37,7 +37,7 @@ from openquake.calculators.risk import general
 LOGGER = logs.LOG
 
 
-class ScenarioEventBasedMixin(general.RiskJobMixin):
+class ScenarioRiskCalculator(general.BaseRiskCalculator):
     """Scenario Event Based method for performing risk calculations.
 
     Note that this mixin, during execution, will always be an instance of the

@@ -39,14 +39,14 @@ from openquake.calculators.risk.general import _compute_mid_po
 from openquake.calculators.risk.general import _compute_probs_of_exceedance
 from openquake.calculators.risk.general import _compute_rates_of_exceedance
 from openquake.calculators.risk.general import AggregateLossCurve
+from openquake.calculators.risk.general import BaseRiskCalculator
 from openquake.calculators.risk.general import Block
 from openquake.calculators.risk.general import compute_loss_curve
 from openquake.calculators.risk.general import compute_loss_ratio_curve
 from openquake.calculators.risk.general import compute_loss_ratios
 from openquake.calculators.risk.general import compute_mean_loss
 from openquake.calculators.risk.general import compute_bcr
-from openquake.calculators.risk.general import RiskJobMixin
-from openquake.calculators.risk.general import write_output_bcr
+from openquake.calculators.risk.general import ProbabilisticRiskCalculator
 from openquake.calculators.risk.scenario import core as scenario
 
 from tests.utils import helpers
@@ -688,7 +688,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         the_job = helpers.create_job(params, job_id=self.job_id)
 
-        calculator = eb_core.ProbabilisticEventMixin(the_job)
+        calculator = eb_core.EventBasedRiskCalculator(the_job)
 
         self.block_id = kvs.tokens.risk_block_key(self.job_id, 7)
         SITE = shapes.Site(1.0, 1.0)
@@ -872,7 +872,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         # mixin "instance"
         the_job = helpers.create_job({})
-        calculator = classical_core.ClassicalPSHABasedMixin(the_job)
+        calculator = classical_core.ClassicalRiskCalculator(the_job)
 
         # empty vuln curves
         vuln_curves = {}
@@ -937,7 +937,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
     def test_compute_risk_in_the_classical_psha_mixin(self):
         """
-            tests ClassicalPSHABasedMixin.compute_risk by retrieving
+            tests ClassicalRiskCalculator.compute_risk by retrieving
             all the loss curves in the kvs and checks their presence
         """
 
@@ -950,7 +950,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         the_job = helpers.create_job(params, job_id=self.job_id)
 
-        calculator = classical_core.ClassicalPSHABasedMixin(the_job)
+        calculator = classical_core.ClassicalRiskCalculator(the_job)
         calculator.vuln_curves = {"ID": self.vuln_function}
 
         block = Block.from_kvs(self.block_id)
@@ -988,7 +988,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         the_job = helpers.create_job(params, job_id=self.job_id)
 
-        calculator = classical_core.ClassicalPSHABasedMixin(the_job)
+        calculator = classical_core.ClassicalRiskCalculator(the_job)
 
         Block.from_kvs(self.block_id)
         asset = {"taxonomy": "ID",
@@ -1015,7 +1015,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         # mixin "instance"
         the_job = helpers.create_job({}, job_id=1234)
-        calculator = classical_core.ClassicalPSHABasedMixin(the_job)
+        calculator = classical_core.ClassicalRiskCalculator(the_job)
 
         hazard_curve = shapes.Curve([
               (0.01, 0.99), (0.08, 0.96),
@@ -1354,7 +1354,7 @@ class RiskJobGeneralTestCase(unittest.TestCase):
         self._make_job({})
         self._prepare_bcr_result()
 
-        mixin = RiskJobMixin(self.job)
+        mixin = BaseRiskCalculator(self.job)
         mixin.job_id = self.job_id
         mixin.blocks_keys = self.block_keys
 
@@ -1378,7 +1378,7 @@ class RiskJobGeneralTestCase(unittest.TestCase):
         self._make_job({})
         self._prepare_bcr_result()
 
-        mixin = RiskJobMixin(self.job)
+        mixin = ProbabilisticRiskCalculator(self.job)
         mixin.job_id = self.job_id
         mixin.blocks_keys = self.block_keys
 
@@ -1431,16 +1431,15 @@ class RiskJobGeneralTestCase(unittest.TestCase):
 
         output_dir = tempfile.mkdtemp()
         try:
-            mixin.params = {'OUTPUT_DIR': output_dir,
-                            'INTEREST_RATE': '0.12',
-                            'ASSET_LIFE_EXPECTANCY': '50'}
-            mixin.base_path = '.'
-            mixin.serialize_results_to = None
+            mixin.calc_proxy.params = {'OUTPUT_DIR': output_dir,
+                                       'INTEREST_RATE': '0.12',
+                                       'ASSET_LIFE_EXPECTANCY': '50'}
+            mixin.calc_proxy._base_path = '.'
 
             resultfile = os.path.join(output_dir, 'bcr-map.xml')
 
             try:
-                write_output_bcr(mixin)
+                mixin.write_output_bcr()
                 result = open(resultfile).read()
             finally:
                 if os.path.exists(resultfile):

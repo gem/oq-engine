@@ -29,15 +29,11 @@ import json
 from openquake import java
 from openquake import kvs
 from openquake import shapes
-from openquake.calculators.hazard.general import BasePSHAMixin
+from openquake.calculators.hazard.general import BaseHazardCalculator
 
 
-class ScenarioHazardCalculator(BasePSHAMixin):
-    """Scenario Event Based method for performing hazard calculations.
-
-    Note that this mixin, during execution, will always be an instance of the
-    Job class, and thus has access to the self.params dict, full of config
-    params loaded from the job configuration file."""
+class ScenarioHazardCalculator(BaseHazardCalculator):
+    """Scenario Event Based method for performing hazard calculations."""
 
     @java.unpack_exception
     def execute(self):
