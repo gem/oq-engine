@@ -86,7 +86,7 @@ def compute_mgm_intensity(job_id, block_id, site_id):
 
     # We don't actually need the CalculationProxy returned by this function
     # (yet) but this does check if the calculation is still in progress.
-    _ = utils_tasks.get_running_calculation(job_id)
+    utils_tasks.get_running_calculation(job_id)
     kvs_client = kvs.get_client()
 
     mgm_key = kvs.tokens.mgm_key(job_id, block_id, site_id)
@@ -103,7 +103,7 @@ def compute_mean_curves(job_id, sites, realizations):
 
     # We don't actually need the CalculationProxy returned by this function
     # (yet) but this does check if the calculation is still in progress.
-    _ = utils_tasks.get_running_calculation(job_id)
+    utils_tasks.get_running_calculation(job_id)
 
     HAZARD_LOG.info("Computing MEAN curves for %s sites (job_id %s)"
                     % (len(sites), job_id))
@@ -119,7 +119,7 @@ def compute_quantile_curves(job_id, sites, realizations, quantiles):
 
     # We don't actually need the CalculationProxy returned by this function
     # (yet) but this does check if the calculation is still in progress.
-    _ = utils_tasks.get_running_calculation(job_id)
+    utils_tasks.get_running_calculation(job_id)
 
     HAZARD_LOG.info("Computing QUANTILE curves for %s sites (job_id %s)"
                     % (len(sites), job_id))
