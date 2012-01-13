@@ -32,12 +32,11 @@ from openquake.output import hazard
 from openquake.risk import probabilistic_event_based as prob
 from openquake.risk import scenario
 from openquake.risk import common
-from openquake.risk.job import aggregate_loss_curve as aggregate
 from openquake.calculators.risk.classical import core as classical_core
 from openquake.calculators.risk.general import Block
 from openquake.calculators.risk.general import RiskJobMixin
 from openquake.calculators.risk.general import write_output_bcr
-from openquake.calculators.risk.event_based.core import ProbabilisticEventMixin
+from openquake.calculators.risk.event_based import core as eb_core
 
 from tests.utils import helpers
 
@@ -232,7 +231,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
     def _delete_test_file(self):
         try:
             os.remove(os.path.join(helpers.OUTPUT_DIR,
-                    aggregate._filename(self.job_id)))
+                    eb_core._filename(self.job_id)))
         except OSError:
             pass
 
@@ -614,7 +613,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         expected_data["AggregateLossCurve"]["curve_title"] = \
             "Aggregate Loss Curve"
 
-        self.assertEqual(expected_data, aggregate._for_plotting(curve, 50.0))
+        self.assertEqual(expected_data, eb_core._for_plotting(curve, 50.0))
 
     def test_comp_agg_curve_calls_plotter(self):
         """
@@ -634,7 +633,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             'openquake.output.curve.CurvePlot.write') as write_mock:
             with helpers.patch(
                 'openquake.output.curve.CurvePlot.close') as close_mock:
-                aggregate.plot_aggregate_curve(self.job, curve)
+                eb_core.plot_aggregate_curve(self.job, curve)
 
                 # make sure write() and close() were both called
                 self.assertEqual(1, write_mock.call_count)
@@ -659,7 +658,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             'openquake.output.curve.CurvePlot.write') as write_mock:
             with helpers.patch(
                 'openquake.output.curve.CurvePlot.close') as close_mock:
-                aggregate.plot_aggregate_curve(self.job, curve)
+                eb_core.plot_aggregate_curve(self.job, curve)
 
                 # the plotter should not be called
                 self.assertEqual(0, write_mock.call_count)
@@ -678,7 +677,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         the_job = helpers.create_job(params, job_id=self.job_id)
 
-        calculator = ProbabilisticEventMixin(the_job)
+        calculator = eb_core.ProbabilisticEventMixin(the_job)
 
         self.block_id = kvs.tokens.risk_block_key(self.job_id, 7)
         SITE = shapes.Site(1.0, 1.0)
