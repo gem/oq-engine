@@ -45,10 +45,10 @@ class BaseMFD(object):
         missing = required - defined
         if missing:
             raise MFDError('These parameters are required but missing: %s'
-                           % ', '.join(missing))
+                           % ', '.join(sorted(missing)))
         if unexpected:
             raise MFDError('These parameters are unexpected: %s'
-                           % ', ' .join(unexpected))
+                           % ', ' .join(sorted(unexpected)))
         for param_name in self.PARAMETERS:
             setattr(self, param_name, parameters[param_name])
         self.check_constraints()

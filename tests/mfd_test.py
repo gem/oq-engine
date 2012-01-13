@@ -1,40 +1,78 @@
 import unittest
 
 from nhe.mfd import EvenlyDiscretized, MFDError, TruncatedGR
+from nhe.mfd.base import BaseMFD
 
 
-class BaseConstraintsTestCase(unittest.TestCase):
-    def assert_constraint_violation(self, mfd_class, *args, **kwargs):
-        self.assertRaises(MFDError, mfd_class, *args, **kwargs)
+class BaseMFDTestCase(unittest.TestCase):
+    def assert_mfd_error(self, mfd_class, *args, **kwargs):
+        with self.assertRaises(MFDError) as exc_catcher:
+            mfd_class(*args, **kwargs)
+        return exc_catcher.exception
 
 
-class EvenlyDiscretizedMFDConstraintsTestCase(BaseConstraintsTestCase):
+class BaseMFDSetParametersTestCase(BaseMFDTestCase):
+    class BaseTestMFD(BaseMFD):
+        check_constraints_call_count = 0
+        def check_constraints(self):
+            self.check_constraints_call_count += 1
+        def get_annual_occurrence_rates(self):
+            pass
+
+    def test_missing(self):
+        class TestMFD(self.BaseTestMFD):
+            PARAMETERS = ('foo', 'bar', 'baz')
+        exc = self.assert_mfd_error(TestMFD, foo=1)
+        self.assertEqual(exc.message,
+                         'These parameters are required but missing: bar, baz')
+
+    def test_unexpected(self):
+        class TestMFD(self.BaseTestMFD):
+            PARAMETERS = ('foo', 'bar')
+        exc = self.assert_mfd_error(TestMFD, foo=1, bar=2, baz=3)
+        self.assertEqual(exc.message, 'These parameters are unexpected: baz')
+
+    def test_check_constraints_is_called(self):
+        class TestMFD(self.BaseTestMFD):
+            PARAMETERS = ('foo', 'bar')
+        mfd = TestMFD(foo=1, bar=2)
+        self.assertEqual(mfd.check_constraints_call_count, 1)
+
+    def test_parameters_are_assigned(self):
+        class TestMFD(self.BaseTestMFD):
+            PARAMETERS = ('baz', 'quux')
+        mfd = TestMFD(baz=1, quux=True)
+        self.assertEqual(mfd.baz, 1)
+        self.assertEqual(mfd.quux, True)
+
+
+class EvenlyDiscretizedMFDConstraintsTestCase(BaseMFDTestCase):
     def test_empty_occurrence_rates(self):
-        self.assert_constraint_violation(
+        self.assert_mfd_error(
             EvenlyDiscretized,
             min_mag=1, bin_width=2, occurrence_rates=[]
         )
 
     def test_negative_occurrence_rate(self):
-        self.assert_constraint_violation(
+        self.assert_mfd_error(
             EvenlyDiscretized,
             min_mag=1, bin_width=2, occurrence_rates=[-0.1, 1]
         )
 
     def test_negative_minimum_magnitude(self):
-        self.assert_constraint_violation(
+        self.assert_mfd_error(
             EvenlyDiscretized,
             min_mag=-1, bin_width=2, occurrence_rates=[0.1, 1]
         )
 
     def test_negative_bin_width(self):
-        self.assert_constraint_violation(
+        self.assert_mfd_error(
             EvenlyDiscretized,
             min_mag=1, bin_width=-2, occurrence_rates=[0.1, 1]
         )
 
 
-class EvenlyDiscretizedMFDGetRatesTestCase(unittest.TestCase):
+class EvenlyDiscretizedMFDGetRatesTestCase(BaseMFDTestCase):
     def test_zero_min_width(self):
         mfd = EvenlyDiscretized(min_mag=0, bin_width=1, occurrence_rates=[1])
         self.assertEqual(mfd.get_annual_occurrence_rates(), [(0, 1)])
@@ -47,37 +85,37 @@ class EvenlyDiscretizedMFDGetRatesTestCase(unittest.TestCase):
                          [(0.2, 2.1), (0.5, 2.4), (0.8, 5.3)])
 
 
-class TruncatedGRConstraintsTestCase(BaseConstraintsTestCase):
+class TruncatedGRConstraintsTestCase(BaseMFDTestCase):
     def test_negative_min_mag(self):
-        self.assert_constraint_violation(
+        self.assert_mfd_error(
             TruncatedGR,
             min_mag=-1, max_mag=2, bin_width=0.4, a_val=1, b_val=2
         )
 
     def test_min_mag_higher_than_max_mag(self):
-        self.assert_constraint_violation(
+        self.assert_mfd_error(
             TruncatedGR,
             min_mag=2.4, max_mag=2, bin_width=0.4, a_val=1, b_val=2
         )
 
     def test_negative_bin_width(self):
-        self.assert_constraint_violation(
+        self.assert_mfd_error(
             TruncatedGR,
             min_mag=1, max_mag=2, bin_width=-0.4, a_val=1, b_val=2
         )
 
     def test_non_positive_b_val(self):
-        self.assert_constraint_violation(
+        self.assert_mfd_error(
             TruncatedGR,
             min_mag=1, max_mag=2, bin_width=0.4, a_val=1, b_val=-2
         )
-        self.assert_constraint_violation(
+        self.assert_mfd_error(
             TruncatedGR,
             min_mag=1, max_mag=2, bin_width=0.4, a_val=1, b_val=0
         )
 
 
-class TruncatedGRMFDGetRatesTestCase(unittest.TestCase):
+class TruncatedGRMFDGetRatesTestCase(BaseMFDTestCase):
     def _test(self, expected_rates, rate_tolerance, **kwargs):
         mfd = TruncatedGR(**kwargs)
         actual_rates = mfd.get_annual_occurrence_rates()
@@ -120,7 +158,7 @@ class TruncatedGRMFDGetRatesTestCase(unittest.TestCase):
                    a_val=0.5, b_val=1.0)
 
 
-class TruncatedGRMFDRoundingTestCase(unittest.TestCase):
+class TruncatedGRMFDRoundingTestCase(BaseMFDTestCase):
     def test(self):
         mfd = TruncatedGR(min_mag=0.61, max_mag=0.94, bin_width=0.1,
                           a_val=1, b_val=2)
