@@ -181,7 +181,7 @@ class BlockSplitterTestCase(unittest.TestCase):
         self.assertEqual(expected, counter)
 
 
-class RiskJobMixinTestCase(unittest.TestCase):
+class BaseRiskCalculatorTestCase(unittest.TestCase):
 
     def test_prepares_blocks_using_the_exposure(self):
         """The base risk mixin is able to read the exposure file,
@@ -194,7 +194,7 @@ class RiskJobMixinTestCase(unittest.TestCase):
         }
         a_job = helpers.create_job(params)
 
-        calculator = general.RiskJobMixin(a_job)
+        calculator = general.BaseRiskCalculator(a_job)
 
         calculator.partition()
 
@@ -228,7 +228,7 @@ class RiskJobMixinTestCase(unittest.TestCase):
             (shapes.Site(9.15, 45.16667), shapes.Site(9.14777, 45.17999)),
             None)
 
-        calculator = general.RiskJobMixin(a_job)
+        calculator = general.BaseRiskCalculator(a_job)
 
         calculator.partition()
 
@@ -276,7 +276,7 @@ class RiskMixinTestCase(unittest.TestCase):
             def row_col(item):
                 return item[0].row, item[0].column
 
-            calculator = general.RiskJobMixin(self.job)
+            calculator = general.BaseRiskCalculator(self.job)
 
             got = sorted(calculator.grid_assets_iterator(self.grid),
                          key=row_col)
@@ -319,7 +319,7 @@ class RiskMixinTestCase(unittest.TestCase):
                 (shapes.Site(10.1, 10.1),
                     [({'value': 0.123}, GRID_ASSETS[(1, 1)])])]
 
-            calculator = general.RiskJobMixin(self.job)
+            calculator = general.BaseRiskCalculator(self.job)
 
             self.assertEqual(
                 sorted(expected, key=coords),
