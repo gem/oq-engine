@@ -18,10 +18,14 @@
 
 """Mixin proxy for risk jobs, and associated Risk Job Mixin decorators."""
 
-from collections import defaultdict
 import json
 import os
 
+from collections import defaultdict
+from collections import OrderedDict
+
+from numpy import exp
+from numpy import mean
 from scipy.stats import norm
 
 from openquake import kvs
@@ -31,7 +35,6 @@ from openquake.job import config as job_config
 from openquake.output import risk as risk_output
 from openquake.parser import exposure
 from openquake.parser import vulnerability
-from openquake.risk import common
 from openquake.calculators.base import Calculator
 from openquake.utils.tasks import calculator_for_task
 
@@ -119,7 +122,7 @@ def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
     """Compute the conditional loss for a loss curve and Probability of
     Exceedance (PoE)."""
 
-    loss_conditional = common.compute_conditional_loss(
+    loss_conditional = _compute_conditional_loss(
         loss_curve, loss_poe)
 
     key = kvs.tokens.loss_key(
@@ -129,6 +132,28 @@ def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
             (loss_conditional, key))
 
     kvs.get_client().set(key, loss_conditional)
+
+
+def _compute_conditional_loss(curve, probability):
+    """Return the loss (or loss ratio) corresponding to the given
+    PoE (Probability of Exceendance).
+
+    Return the max loss (or loss ratio) if the given PoE is smaller
+    than the lowest PoE defined.
+
+    Return zero if the given PoE is greater than the
+    highest PoE defined.
+    """
+    # dups in the curve have to be skipped
+    loss_curve = shapes.Curve(unique_curve(curve))
+
+    if loss_curve.ordinate_out_of_bounds(probability):
+        if probability < loss_curve.y_values[-1]:
+            return loss_curve.x_values[-1]
+        else:
+            return 0.0
+
+    return loss_curve.abscissa_for(probability)
 
 
 @task
@@ -552,15 +577,15 @@ def compute_bcr_for_block(job_id, points, get_loss_curve,
             loss_curve = get_loss_curve(point, vuln_function, asset)
             LOG.info('for asset %s loss_curve = %s',
                      asset['assetID'], loss_curve)
-            eal_original = common.compute_mean_loss(loss_curve)
+            eal_original = compute_mean_loss(loss_curve)
 
             vuln_function = vuln_curves_retrofitted[asset['taxonomy']]
             loss_curve = get_loss_curve(point, vuln_function, asset)
             LOG.info('for asset %s loss_curve retrofitted = %s',
                      asset['assetID'], loss_curve)
-            eal_retrofitted = common.compute_mean_loss(loss_curve)
+            eal_retrofitted = compute_mean_loss(loss_curve)
 
-            bcr = common.compute_bcr(
+            bcr = compute_bcr(
                 eal_original, eal_retrofitted,
                 interest_rate, asset_life_expectancy,
                 asset['retrofittingCost']
@@ -577,3 +602,96 @@ def compute_bcr_for_block(job_id, points, get_loss_curve,
                                 asset['assetID']))
 
     return result.items()
+
+
+def compute_loss_curve(loss_ratio_curve, asset):
+    """Compute the loss curve for the given asset value.
+
+    A loss curve is obtained from a loss ratio curve by
+    multiplying each X value (loss ratio) for the given asset.
+    """
+
+    if not asset:
+        return shapes.EMPTY_CURVE
+
+    return loss_ratio_curve.rescale_abscissae(asset)
+
+
+def _compute_mid_mean_pe(loss_ratio_curve):
+    """Compute a new loss ratio curve taking the mean values."""
+
+    loss_ratios = loss_ratio_curve.abscissae
+    pes = loss_ratio_curve.ordinates
+
+    ratios = collect(loop(loss_ratios, lambda x, y: mean([x, y])))
+    mid_pes = collect(loop(pes, lambda x, y: mean([x, y])))
+
+    return shapes.Curve(zip(ratios, mid_pes))
+
+
+def _compute_mid_po(loss_ratio_pe_mid_curve):
+    """Compute a loss ratio curve that has PoOs
+    (Probabilities of Occurrence) as Y values."""
+
+    loss_ratios = loss_ratio_pe_mid_curve.abscissae
+    pes = loss_ratio_pe_mid_curve.ordinates
+
+    ratios = collect(loop(loss_ratios, lambda x, y: mean([x, y])))
+    pos = collect(loop(pes, lambda x, y: x - y))
+
+    return shapes.Curve(zip(ratios, pos))
+
+
+def compute_mean_loss(curve):
+    """Compute the mean loss (or loss ratio) for the given curve."""
+
+    mid_curve = _compute_mid_po(_compute_mid_mean_pe(curve))
+    return sum(i * j for i, j in zip(
+            mid_curve.abscissae, mid_curve.ordinates))
+
+
+def loop(elements, func, *args):
+    """Loop over the given elements, yielding func(current, next, *args)."""
+    for idx in xrange(elements.size - 1):
+        yield func(elements[idx], elements[idx + 1], *args)
+
+
+def collect(iterator):
+    """Simply collect the data taken from the given iterator."""
+    data = []
+
+    for element in iterator:
+        data.append(element)
+
+    return data
+
+
+def unique_curve(curve):
+    """ extracts unique values from a curve """
+    seen = OrderedDict()
+
+    for ordinate, abscissa in zip(curve.ordinates, curve.abscissae):
+        seen[ordinate] = abscissa
+
+    return zip(seen.values(), seen.keys())
+
+
+def compute_bcr(eal_original, eal_retrofitted, interest_rate,
+                asset_life_expectancy, retrofitting_cost):
+    """
+    Compute the Benefit-Cost Ratio.
+
+    BCR = (EALo - EALr)(1-exp(-r*t))/(r*C)
+
+    Where:
+
+    * BCR -- Benefit cost ratio
+    * EALo -- Expected annual loss for original asset
+    * EALr -- Expected annual loss for retrofitted asset
+    * r -- Interest rate
+    * t -- Life expectancy of the asset
+    * C -- Retrofitting cost
+    """
+    return ((eal_original - eal_retrofitted)
+            * (1 - exp(- interest_rate * asset_life_expectancy))
+            / (interest_rate * retrofitting_cost))

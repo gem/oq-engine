@@ -31,9 +31,14 @@ from openquake import shapes
 from openquake.output import hazard
 from openquake.risk import probabilistic_event_based as prob
 from openquake.risk import scenario
-from openquake.risk import common
 from openquake.calculators.risk.classical import core as classical_core
+from openquake.calculators.risk.general import _compute_conditional_loss
+from openquake.calculators.risk.general import _compute_mid_mean_pe
+from openquake.calculators.risk.general import _compute_mid_po
 from openquake.calculators.risk.general import Block
+from openquake.calculators.risk.general import compute_loss_curve
+from openquake.calculators.risk.general import compute_mean_loss
+from openquake.calculators.risk.general import compute_bcr
 from openquake.calculators.risk.general import RiskJobMixin
 from openquake.calculators.risk.general import write_output_bcr
 from openquake.calculators.risk.event_based import core as eb_core
@@ -719,18 +724,18 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
             self.teardown_job(self.job)
 
     def test_empty_loss_curve(self):
-        self.assertEqual(common.compute_loss_curve(shapes.EMPTY_CURVE, None),
+        self.assertEqual(compute_loss_curve(shapes.EMPTY_CURVE, None),
                 shapes.EMPTY_CURVE)
 
     def test_a_loss_curve_is_not_defined_when_the_asset_is_invalid(self):
-        self.assertEqual(common.compute_loss_curve(
+        self.assertEqual(compute_loss_curve(
                 shapes.Curve([(0.1, 1.0), (0.2, 2.0), (0.3, 3.0)]),
                 INVALID_ASSET_VALUE),
                 shapes.EMPTY_CURVE)
 
     def test_loss_curve_computation(self):
         loss_ratio_curve = shapes.Curve([(0.1, 1.0), (0.2, 2.0), (0.3, 3.0)])
-        loss_curve = common.compute_loss_curve(loss_ratio_curve, ASSET_VALUE)
+        loss_curve = compute_loss_curve(loss_ratio_curve, ASSET_VALUE)
 
         self.assertEqual(shapes.Curve([(0.1 * ASSET_VALUE, 1.0),
                 (0.2 * ASSET_VALUE, 2.0), (0.3 * ASSET_VALUE, 3.0)]),
@@ -1078,25 +1083,25 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
                 (0.27, 0.089), (0.30, 0.066)])
 
         self.assertEqual(0.0,
-                common.compute_conditional_loss(loss_curve, 0.200))
+                _compute_conditional_loss(loss_curve, 0.200))
 
     def test_ratio_is_max_if_probability_is_too_low(self):
         loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
                 (0.27, 0.089), (0.30, 0.066)])
 
         self.assertEqual(0.30,
-                common.compute_conditional_loss(loss_curve, 0.050))
+                _compute_conditional_loss(loss_curve, 0.050))
 
     def test_conditional_loss_duplicates(self):
-        # we feed compute_conditional_loss with some duplicated data to see if
+        # we feed _compute_conditional_loss with some duplicated data to see if
         # it's handled correctly
 
-        closs1 = common.compute_conditional_loss(shapes.Curve([(0.21, 0.131),
+        closs1 = _compute_conditional_loss(shapes.Curve([(0.21, 0.131),
         (0.24, 0.108), (0.27, 0.089), (0.30, 0.066)]), 0.100)
 
         # duplicated y values, different x values, (0.19, 0.131), (0.20, 0.131)
         #should be skipped
-        closs2 = common.compute_conditional_loss(shapes.Curve([(0.19, 0.131),
+        closs2 = _compute_conditional_loss(shapes.Curve([(0.19, 0.131),
             (0.20, 0.131), (0.21, 0.131), (0.24, 0.108), (0.27, 0.089),
             (0.30, 0.066)]), 0.100)
 
@@ -1106,7 +1111,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
         loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
                 (0.27, 0.089), (0.30, 0.066)])
 
-        self.assertAlmostEqual(0.2526, common.compute_conditional_loss(
+        self.assertAlmostEqual(0.2526, _compute_conditional_loss(
                 loss_curve, 0.100), 4)
 
     def test_loss_ratio_pe_mid_curve_computation(self):
@@ -1119,7 +1124,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
                 (0.2700, 0.0140), (0.3750, 0.0045)])
 
         self.assertEqual(expected_curve,
-                common._compute_mid_mean_pe(loss_ratio_curve))
+                _compute_mid_mean_pe(loss_ratio_curve))
 
     def test_loss_ratio_po_computation(self):
         loss_ratio_pe_mid_curve = shapes.Curve([(0.0300, 0.2330),
@@ -1131,7 +1136,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
                 (0.3225, 0.0095)])
 
         self.assertEqual(expected_curve,
-                common._compute_mid_po(loss_ratio_pe_mid_curve))
+                _compute_mid_po(loss_ratio_pe_mid_curve))
 
     def test_mean_loss_ratio_computation(self):
         loss_ratio_curve = shapes.Curve([(0, 0.3460), (0.06, 0.12),
@@ -1140,7 +1145,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestMixin):
 
         # TODO (ac): Check the difference between 0.023305 and 0.023673
         self.assertAlmostEqual(0.023305,
-                common.compute_mean_loss(loss_ratio_curve), 3)
+                               compute_mean_loss(loss_ratio_curve), 3)
 
 
 class ScenarioEventBasedTestCase(unittest.TestCase):
@@ -1309,9 +1314,8 @@ class RiskCommonTestCase(unittest.TestCase):
         life_expectancy = 40
         expected_result = 0.43405
 
-        result = common.compute_bcr(eal_orig, eal_retrofitted,
-                                    interest, life_expectancy,
-                                    retrofitting_cost)
+        result = compute_bcr(eal_orig, eal_retrofitted, interest,
+                             life_expectancy, retrofitting_cost)
         self.assertAlmostEqual(result, expected_result, delta=2e-5)
 
 
