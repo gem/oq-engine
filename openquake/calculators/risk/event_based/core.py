@@ -31,18 +31,16 @@ from openquake import kvs
 from openquake import logs
 from openquake import shapes
 from openquake.db import models
-from openquake.job import config as job_config
 from openquake.parser import vulnerability
 from openquake.risk import probabilistic_event_based as prob
 from openquake.risk.job import aggregate_loss_curve
-from openquake.calculators.base import Calculator
 from openquake.calculators.risk import general
 
 LOGGER = logs.LOG
 
 
-class ProbabilisticEventMixin(Calculator):
-    """Mixin for Probalistic Event Risk Job."""
+class ProbabilisticEventMixin(general.ProbabilisticRiskCalculator):
+    """Calculator for Event-Based Risk computations."""
 
     def __init__(self, job_profile):
         super(ProbabilisticEventMixin, self).__init__(job_profile)
@@ -71,7 +69,7 @@ class ProbabilisticEventMixin(Calculator):
                 # TODO(jmc): Cancel and respawn this task
                 return
 
-        if self.is_benefit_cost_ratio():
+        if self.is_benefit_cost_ratio_mode():
             general.write_output_bcr(self)
             return
 
@@ -167,13 +165,6 @@ class ProbabilisticEventMixin(Calculator):
 
         return gmfs
 
-    def is_benefit_cost_ratio(self):
-        """
-        Return True if current calculation mode is Benefit-Cost Ratio.
-        """
-        return (self.calc_proxy.params[job_config.CALCULATION_MODE]
-                == job_config.BCR_EVENT_BASED_MODE)
-
     def slice_gmfs(self, block_id):
         """Load and collate GMF values for all sites in this block. """
         block = general.Block.from_kvs(block_id)
@@ -187,18 +178,6 @@ class ProbabilisticEventMixin(Calculator):
             gmf = {"IMLs": gmf_slice, "TSES": self._tses(),
                     "TimeSpan": self._time_span()}
             kvs.set_value_json_encoded(key_gmf, gmf)
-
-    def compute_risk(self, block_id):
-        """
-        Perform calculation and store the result in the kvs.
-
-        Calls either :meth:`_compute_bcr` or :meth:`_compute_loss` depending
-        on the calculation mode.
-        """
-        if self.is_benefit_cost_ratio():
-            return self._compute_bcr(block_id)
-        else:
-            return self._compute_loss(block_id)
 
     def _compute_loss(self, block_id):
         """Compute risk for a block of sites, that means:
