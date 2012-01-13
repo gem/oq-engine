@@ -14,19 +14,4 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-
-"""Information about the calculators available for the Risk engine."""
-
-
-from openquake.calculators.risk.classical.core import ClassicalPSHABasedMixin
-from openquake.calculators.risk.event_based.core import ProbabilisticEventMixin
-from openquake.calculators.risk.scenario.core import ScenarioEventBasedMixin
-
-
-CALCULATORS = {
-    'classical': ClassicalPSHABasedMixin,
-    'classical_bcr': ClassicalPSHABasedMixin,
-    'event_based': ProbabilisticEventMixin,
-    'event_based_bcr': ProbabilisticEventMixin,
-    'scenario': ScenarioEventBasedMixin,
-}
+"""Scenario Risk calculator."""
