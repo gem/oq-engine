@@ -513,31 +513,14 @@ def touch(content=None, dir=None, prefix="tmp", suffix="tmp"):
     return path
 
 
-class DbTestMixin(object):
-    """Mixin class with various helper methods."""
+class DbTestCase(object):
+    """Class which contains various db-related testing helpers."""
 
     IMLS = [0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527,
             0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778]
 
     def default_user(self):
         return models.OqUser.objects.get(user_name="openquake")
-
-    def setup_upload(self, dbkey=None):
-        """Create an upload with associated inputs.
-
-        :param integer dbkey: if set use the upload record with given db key.
-        :returns: a :py:class:`db.models.Upload` instance
-        """
-        if dbkey:
-            return models.Upload.objects.get(id=dbkey)
-
-        user = models.OqUser.objects.get(user_name="openquake")
-        user.save()
-
-        upload = models.Upload(owner=user, path=tempfile.mkdtemp())
-        upload.save()
-
-        return upload
 
     def teardown_upload(self, upload, filesystem_only=True):
         """
@@ -669,28 +652,6 @@ class DbTestMixin(object):
         job.delete()
         oqjp.delete()
 
-    def setup_output(self, job_to_use=None, output_type="hazard_map",
-                     db_backed=True):
-        """Create an output object of the given type.
-
-        :param job_to_use: if set use the passed
-            :py:class:`db.models.OqCalculation` instance as opposed to
-            creating a new one.
-        :param str output_type: map type, one of "hazard_map", "loss_map"
-        :param bool db_backed: initialize the property of the newly created
-            :py:class:`db.models.Output` instance with this value.
-        :returns: a :py:class:`db.models.Output` instance
-        """
-        job = job_to_use if job_to_use else self.setup_classic_job()
-        output = models.Output(owner=job.owner, oq_calculation=job,
-                               output_type=output_type,
-                               db_backed=db_backed)
-        output.path = self.generate_output_path(job, output_type)
-        output.display_name = os.path.basename(output.path)
-        output.save()
-
-        return output
-
     def generate_output_path(self, job, output_type="hazard_map"):
         """Return a random output path for the given job."""
         path = touch(
@@ -718,11 +679,10 @@ class DbTestMixin(object):
             self.teardown_job(job, filesystem_only=filesystem_only)
 
 
-class ConfigTestMixin(object):
-    """
-    Mixin class for tests that require/manipulate the environment
-    and the configuration.
-    """
+class ConfigTestCase(object):
+    """Class which contains various configuration- and environment-related
+    testing helpers."""
+
     def setup_config(self):
         self.orig_env = os.environ.copy()
         os.environ.clear()
@@ -758,7 +718,7 @@ class ConfigTestMixin(object):
         config.Config()._load_from_file()
 
 
-class RedisTestMixin(object):
+class RedisTestCase(object):
     """Redis-related utilities for testing."""
 
     def connect(self, *args, **kwargs):

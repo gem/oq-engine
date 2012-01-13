@@ -65,7 +65,6 @@ class DistributeTestCase(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(DistributeTestCase, self).__init__(*args, **kwargs)
-        self.maxDiff = None
 
     def test_distribute_uses_the_specified_number_of_subtasks(self):
         """The specified number of subtasks is actually spawned."""
@@ -216,7 +215,6 @@ class ParallelizeTestCase(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(ParallelizeTestCase, self).__init__(*args, **kwargs)
-        self.maxDiff = None
 
     def test_parallelize_uses_the_specified_number_of_subtasks(self):
         """The specified number of subtasks is actually spawned."""

@@ -28,12 +28,12 @@ import unittest
 
 from openquake.utils import config
 
-from tests.utils.helpers import ConfigTestMixin
+from tests.utils.helpers import ConfigTestCase
 from tests.utils.helpers import patch
 from tests.utils.helpers import touch
 
 
-class ConfigTestCase(ConfigTestMixin, unittest.TestCase):
+class ConfigTestCase(ConfigTestCase, unittest.TestCase):
     """Tests the behaviour of the utils.config.Config class."""
 
     def setUp(self):

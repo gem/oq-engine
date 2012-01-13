@@ -223,7 +223,7 @@ def verify_hazmap_results(tc, job, expected_map, poe, statistic_type):
 
 
 class ClassicalPSHACalculatorAssuranceTestCase(
-    unittest.TestCase, helpers.DbTestMixin):
+    unittest.TestCase, helpers.DbTestCase):
 
     job = None
 
