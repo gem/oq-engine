@@ -887,7 +887,7 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
 
 
 class ParameterizeSitesTestCase(helpers.TestMixin, unittest.TestCase):
-    """Tests relating to BasePSHAMixin.parameterize_sites()."""
+    """Tests relating to BaseHazardCalculator.parameterize_sites()."""
 
     def setUp(self):
         self.params = dict(

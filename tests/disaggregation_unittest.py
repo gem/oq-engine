@@ -100,8 +100,10 @@ class DisaggregationTaskTestCase(unittest.TestCase):
         os.unlink(matrix_path)
 
 
-class DisaggMixinTestCase(unittest.TestCase):
-    """Test for the :class:`openquake.hazard.disagg.core.DisaggMixin`."""
+class DisaggHazardCalculatorTestCase(unittest.TestCase):
+    """Test for the
+    :class:`openquake.hazard.disagg.core.DisaggHazardCalculator`.
+    """
 
     def test_create_result_dir(self):
         """Test creation of the result_dir, the path for which is constructed
@@ -113,8 +115,8 @@ class DisaggMixinTestCase(unittest.TestCase):
         expected_dir = os.path.join(
             tempfile.gettempdir(), 'disagg-results', 'job-%s' % job_id)
 
-        result_dir = disagg_core.DisaggMixin.create_result_dir(base_path,
-                                                               job_id)
+        result_dir = disagg_core.DisaggHazardCalculator.create_result_dir(
+            base_path, job_id)
 
         self.assertEqual(expected_dir, result_dir)
         self.assertTrue(os.path.exists(result_dir))

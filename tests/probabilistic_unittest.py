@@ -20,7 +20,8 @@
 
 import unittest
 
-from openquake.calculators.risk.event_based.core import ProbabilisticEventMixin
+from openquake.calculators.risk.event_based.core import (
+    EventBasedRiskCalculator)
 
 from tests.utils import helpers
 
@@ -33,7 +34,7 @@ class SamplesFromConfigTestCase(unittest.TestCase):
     for the probabilistic scenario from the configuration file."""
 
     def setUp(self):
-        self.calculator = ProbabilisticEventMixin(None)
+        self.calculator = EventBasedRiskCalculator(None)
 
     def test_without_parameter_we_use_the_default_value(self):
         self.assertEqual(None, self.calculator._get_number_of_samples())
@@ -67,7 +68,7 @@ class LossMapCurveSerialization(unittest.TestCase, helpers.TestMixin):
         }
         the_job = helpers.create_job(params)
 
-        self.calculator = ProbabilisticEventMixin(the_job)
+        self.calculator = EventBasedRiskCalculator(the_job)
         the_job.serialize_results_to = ['db', 'xml']
         the_job.blocks_keys = []
         self.calculator.store_exposure_assets = lambda: None
