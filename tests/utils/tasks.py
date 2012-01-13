@@ -60,7 +60,9 @@ def test_async_data_reflector(job_id, *args, **kwargs):
 
 @task(ignore_result=True)
 def test_compute_hazard_curve(job_id, sites, realization):
-    """This task will be used to test :py:class`ClassicalMixin` code.
+    """This task will be used to test
+    :class`openquake.calculators.hazard.classical.core
+    .ClassicalHazardCalculator` code.
 
     The test setup code will prepare a result set for each `realization`.
     This task will fetch these canned result sets and throw them back
