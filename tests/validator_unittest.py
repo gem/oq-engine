@@ -113,7 +113,7 @@ class ValidatorSetTestCase(unittest.TestCase):
             self.assertEqual(validators[cnt], val)
 
 
-class ConfigurationConstraintsTestCase(unittest.TestCase, helpers.TestMixin):
+class ConfigurationConstraintsTestCase(unittest.TestCase):
 
     def test_risk_mandatory_parameters(self):
         sections = [

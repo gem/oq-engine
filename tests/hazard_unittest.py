@@ -84,7 +84,7 @@ def get_pattern(regexp):
     return values
 
 
-class HazardEngineTestCase(helpers.TestMixin, unittest.TestCase):
+class HazardEngineTestCase(unittest.TestCase):
     """The Hazard Engine is a JPype-based wrapper around OpenSHA-lite.
     Most data returned from the engine is via the KVS."""
 
@@ -499,8 +499,7 @@ class MeanHazardCurveComputationTestCase(unittest.TestCase):
                 self.job_id, site)) != None)
 
 
-class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
-                                             unittest.TestCase):
+class QuantileHazardCurveComputationTestCase(unittest.TestCase):
 
     def setUp(self):
         self.params = dict(
@@ -697,8 +696,7 @@ class QuantileHazardCurveComputationTestCase(helpers.TestMixin,
             self.job_id, site, value)))
 
 
-class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
-                                                unittest.TestCase):
+class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
 
     def setUp(self):
         self.params = dict(
@@ -886,7 +884,7 @@ class MeanQuantileHazardMapsComputationTestCase(helpers.TestMixin,
             self.job_id, site, poe)))
 
 
-class ParameterizeSitesTestCase(helpers.TestMixin, unittest.TestCase):
+class ParameterizeSitesTestCase(unittest.TestCase):
     """Tests relating to BaseHazardCalculator.parameterize_sites()."""
 
     def setUp(self):

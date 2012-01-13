@@ -38,11 +38,7 @@ LOGGER = logs.LOG
 
 
 class ScenarioRiskCalculator(general.BaseRiskCalculator):
-    """Scenario Event Based method for performing risk calculations.
-
-    Note that this mixin, during execution, will always be an instance of the
-    Job class, and thus has access to the self.params dict, full of config
-    params loaded from the job configuration file."""
+    """Scenario method for performing risk calculations."""
 
     # pylint: disable=R0914
     def execute(self):

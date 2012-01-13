@@ -159,7 +159,7 @@ class JavaExceptionTestCase(unittest.TestCase):
             self.assertTrue(len(e.trace) > 2)
 
 
-class GetJvmMaxMemTestcase(helpers.ConfigTestMixin, unittest.TestCase):
+class GetJvmMaxMemTestcase(helpers.ConfigTestCase, unittest.TestCase):
     """Tests related to the get_jvm_max_mem() function."""
 
     def setUp(self):
