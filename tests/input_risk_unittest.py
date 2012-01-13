@@ -26,8 +26,9 @@ from openquake.input.exposure import ExposureDBWriter
 from openquake.output.hazard import GmfDBWriter
 from openquake.output.hazard import HazardCurveDBWriter
 from openquake.parser.exposure import ExposurePortfolioFile
-from openquake.calculators.risk.classical.core import ClassicalPSHABasedMixin
-from openquake.calculators.risk.event_based.core import ProbabilisticEventMixin
+from openquake.calculators.risk.classical.core import ClassicalRiskCalculator
+from openquake.calculators.risk.event_based.core import (
+    EventBasedRiskCalculator)
 from tests.utils import helpers
 
 TEST_FILE = 'exposure-portfolio.xml'
@@ -119,7 +120,7 @@ class HazardCurveDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
     def test_read_curve(self):
         """Verify _get_db_curve."""
         the_job = helpers.create_job({}, job_id=self.job.id)
-        calculator = ClassicalPSHABasedMixin(the_job)
+        calculator = ClassicalRiskCalculator(the_job)
 
         curve1 = calculator._get_db_curve(Site(-122.2, 37.5))
         self.assertEquals(list(curve1.abscissae),
@@ -158,7 +159,7 @@ class GmfDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
             'REGION_GRID_SPACING': '1.0'}
 
         the_job = helpers.create_job(params, job_id=self.job.id)
-        calculator = ProbabilisticEventMixin(the_job)
+        calculator = EventBasedRiskCalculator(the_job)
 
         keys = calculator._sites_to_gmf_keys([Site(-117, 40), Site(-116, 42)])
 
@@ -171,7 +172,7 @@ class GmfDBReadTestCase(unittest.TestCase, helpers.DbTestMixin):
             'REGION_GRID_SPACING': '1.0'}
 
         the_job = helpers.create_job(params, job_id=self.job.id)
-        calculator = ProbabilisticEventMixin(the_job)
+        calculator = EventBasedRiskCalculator(the_job)
 
         self.assertEquals(3, len(calculator._gmf_db_list(self.job.id)))
 
