@@ -948,7 +948,7 @@ class CalcStatsTestCase(unittest.TestCase):
         '''
         # Mock out pieces of the test job so it doesn't actually run.
         haz_execute = ('openquake.calculators.hazard.event_based.core'
-                       '.EventBasedMixin.execute')
+                       '.EventBasedHazardCalculator.execute')
         risk_execute = ('openquake.calculators.risk.event_based.core'
                         '.ProbabilisticEventMixin.execute')
         record = 'openquake.engine.CalculationProxy._record_initial_stats'
