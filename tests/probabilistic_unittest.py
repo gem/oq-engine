@@ -20,7 +20,7 @@
 
 import unittest
 
-from openquake.risk.job.probabilistic import ProbabilisticEventMixin
+from openquake.calculators.risk.event_based.core import ProbabilisticEventMixin
 
 from tests.utils import helpers
 
@@ -78,8 +78,8 @@ class LossMapCurveSerialization(unittest.TestCase, helpers.TestMixin):
         self.calculator.calc_proxy.params['CONDITIONAL_LOSS_POE'] = (
             '0.01 0.02')
 
-        with helpers.patch('openquake.risk.job.probabilistic'
-                   '.aggregate_loss_curve.plot_aggregate_curve'):
+        with helpers.patch('openquake.calculators.risk.event_based.core'
+                           '.aggregate_loss_curve.plot_aggregate_curve'):
             with helpers.patch(
                 'openquake.output.risk.create_loss_map_writer') as clw:
 
@@ -89,8 +89,8 @@ class LossMapCurveSerialization(unittest.TestCase, helpers.TestMixin):
                 self.assertTrue(clw.called)
 
     def test_loss_map_not_serialized_unless_conditional_loss_poes(self):
-        with helpers.patch('openquake.risk.job.probabilistic'
-                   '.aggregate_loss_curve.plot_aggregate_curve'):
+        with helpers.patch('openquake.calculators.risk.event_based.core'
+                           '.aggregate_loss_curve.plot_aggregate_curve'):
             with helpers.patch(
                 'openquake.output.risk.create_loss_map_writer') as clw:
 

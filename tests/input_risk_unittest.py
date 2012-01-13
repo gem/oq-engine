@@ -26,9 +26,8 @@ from openquake.input.exposure import ExposureDBWriter
 from openquake.output.hazard import GmfDBWriter
 from openquake.output.hazard import HazardCurveDBWriter
 from openquake.parser.exposure import ExposurePortfolioFile
-from openquake.risk.job.probabilistic import ProbabilisticEventMixin
 from openquake.calculators.risk.classical.core import ClassicalPSHABasedMixin
-
+from openquake.calculators.risk.event_based.core import ProbabilisticEventMixin
 from tests.utils import helpers
 
 TEST_FILE = 'exposure-portfolio.xml'
