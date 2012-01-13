@@ -30,6 +30,7 @@ from openquake import kvs
 from openquake import logs
 from openquake import shapes
 from openquake.calculators.hazard.classical import core as classical
+from openquake.calculators.hazard.general import create_java_cache
 
 from tests.utils.helpers import (patch, TestMixin, TestStore, demo_file,
                                  create_job)
@@ -643,19 +644,20 @@ class ReleaseDataFromKvsTestCase(TestMixin, unittest.TestCase):
 
 
 class CreateJavaCacheTestCase(TestMixin, unittest.TestCase):
-    """Tests the behaviour of classical.create_java_cache()."""
+    """Tests the behaviour of
+    :function:`openquake.calculators.hazard.general.create_java_cache`."""
 
     class Fake(object):
         """Fake calculator class."""
         def __init__(self):
             self.cache = None
 
-        @classical.create_java_cache
+        @create_java_cache
         def calculate1(self):
             """Fake calculator method."""
             return self.cache
 
-        @classical.create_java_cache
+        @create_java_cache
         def calculate2(self):
             """Fake calculator method."""
             return self.cache
