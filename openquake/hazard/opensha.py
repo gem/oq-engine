@@ -21,6 +21,7 @@ Wrapper around the OpenSHA-lite java library.
 """
 
 
+from collections import namedtuple
 from itertools import izip
 import functools
 import hashlib
@@ -447,16 +448,19 @@ class ClassicalMixin(BasePSHAMixin):
                     value *= 2
                 yield value
 
+        # XML serialization context
+        XSC = namedtuple("XSC", "blocks, cblock, i_total, i_done, i_next")
+        blocks = stats.pk_get(self.job_id, "blocks")
+        cblock = stats.pk_get(self.job_id, "cblock")
+
         nrml_path = self.build_nrml_path(nrml_file)
 
         curve_writer = hazard_output.create_hazardcurve_writer(
             self.job_id, self.serialize_results_to, nrml_path)
 
         sites = set(sites)
-        stats.pk_set(self.job_id, "serialize_items", len(sites))
-        stats.pk_set(self.job_id, "serialize_done", 0)
-        progress_key = stats.key_name(
-            self.job_id, *stats.STATS_KEYS["serialize_done"])
+        i_total = len(sites)
+        i_done = 0
         accounted_for = set()
         dgen = duration_generator(0.1)
         duration = dgen.next()
@@ -489,10 +493,11 @@ class ClassicalMixin(BasePSHAMixin):
                 # No results found, increase the sleep duration.
                 duration = dgen.next()
             else:
-                batch_size = len(hc_data)
-                stats.pk_set(self.job_id, "serialize_next", batch_size)
+                i_next = len(hc_data)
+                hazard_output.SerializerContext().update(XSC(
+                    blocks, cblock, i_total, i_done, i_next))
                 curve_writer.serialize(hc_data)
-                stats.kvs_op("incr_by", progress_key, batch_size)
+                i_done += i_next
 
         return nrml_path
 
