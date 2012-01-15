@@ -79,6 +79,11 @@ class HazardCurveXMLWriter(writer.FileWriter):
         if key:
             stats.kvs_op("rpush", key, self.path)
 
+    def open(self):
+        """Make sure the mode is set before the base class' open is called."""
+        self.mode = SerializerContext().get_mode()
+        super(HazardCurveXMLWriter, self).open()
+
     def close(self):
         """Override the default implementation writing all the
         collected lxml object model to the stream."""
@@ -88,6 +93,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
                          "a valid output!")
             raise RuntimeError(error_msg)
 
+        self.mode = SerializerContext().get_mode()
         if self.mode.end:
             self._maintain_debug_stats()
             self.file.write(etree.tostring(
@@ -243,6 +249,11 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
         self.parent_node = None
         self.hazard_processing_node = None
 
+    def open(self):
+        """Make sure the mode is set before the base class' open is called."""
+        self.mode = SerializerContext().get_mode()
+        super(HazardMapXMLWriter, self).open()
+
     def write(self, point, val):
         """Writes hazard map for one site.
 
@@ -267,6 +278,7 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
     def write_header(self):
         """Header (i.e., common) information for all nodes."""
 
+        self.mode = SerializerContext().get_mode()
         if not self.mode.start:
             return
 
@@ -297,6 +309,7 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
     def write_footer(self):
         """Serialize tree to file."""
 
+        self.mode = SerializerContext().get_mode()
         if self.mode.end:
             self._maintain_debug_stats()
             if self._ensure_all_attributes_set():
@@ -427,9 +440,6 @@ class GMFXMLWriter(writer.XMLFileWriter):
     def write_header(self):
         """Write out the file header."""
 
-        if not self.mode.start:
-            return
-
         self.root_node = etree.Element(GMFXMLWriter.root_tag, nsmap=NSMAP)
 
         _set_gml_id(self.root_node, NRML_GML_ID)
@@ -469,10 +479,9 @@ class GMFXMLWriter(writer.XMLFileWriter):
 
     def write_footer(self):
         """Write out the file footer."""
-        if self.mode.end:
-            et = etree.ElementTree(self.root_node)
-            et.write(self.file, pretty_print=True, xml_declaration=True,
-                     encoding="UTF-8")
+        et = etree.ElementTree(self.root_node)
+        et.write(self.file, pretty_print=True, xml_declaration=True,
+                 encoding="UTF-8")
 
     def _append_site_node(self, point, val, parent_node):
         """Write a single GMFNode element."""
@@ -857,62 +866,6 @@ class GmfDBWriter(writer.DBWriter):
             location="POINT(%s %s)" % (point.point.x, point.point.y))
 
 
-def get_mode(job_id, serialize_to, nrml_path):
-    """Figure out the XML serialization mode.
-
-    This facilitates multi-stage XML serialization.
-
-    :param int job_id: the id of the job the data belongs to.
-    :param serialize_to: where to serialize
-    :type serialize_to: list of strings, permitted values: 'db', 'xml'.
-    :param string nrml_path: the full XML/NRML path.
-    :returns: a py:class:`openquake.writer.SerializerMode` instance
-    """
-    mode = None
-    if 'xml' in serialize_to and nrml_path:
-        # Figure out the mode, are we at the beginning, in the middle or at
-        # the end of the XML file?
-        try:
-            blocks = stats.pk_get(job_id, "blocks")
-            cblock = stats.pk_get(job_id, "cblock")
-        except TypeError, exc:
-            LOGGER.error("No counter information re. blocks (%s)" % exc)
-            raise
-
-        # Set all flags to False initially.
-        SerializerMode = namedtuple("SerializerMode", "start, middle, end")
-
-        if cblock > 1 and cblock < blocks:
-            mode.middle = True
-            return writer.MODE_IN_THE_MIDDLE
-
-        try:
-            total = stats.pk_get(job_id, "serialize_items")
-            serialized = stats.pk_get(job_id, "serialize_done")
-            to_be_serialized = stats.pk_get(job_id, "serialize_next")
-        except TypeError, exc:
-            LOGGER.error(
-                "No counter information re. serialized items (%s)" % exc)
-            raise
-
-        # We are serializing data from the first block.
-        if cblock == 1:
-            if serialized == 0:
-                # First block, nothing serialized yet.
-                mode = SerializerMode(True, False, False)
-            else:
-                mode = SerializerMode(False, True, False)
-
-        # We are serializing data from the last block.
-        if cblock == blocks:
-            items_left = total - serialized - to_be_serialized
-            if items_left == 0:
-                # Last block, last batch.
-                mode = SerializerMode(False, False, True)
-            else:
-                mode = SerializerMode(False, True, False)
-
-    return mode
 
 
 # Facilitate multi-stage XML serialization by using the same serializer
@@ -921,7 +874,7 @@ _XML_SERIALIZER_CACHE = defaultdict(lambda: None)
 
 
 def _create_writer(job_id, serialize_to, nrml_path, create_xml_writer,
-                   create_db_writer, mode=None):
+                   create_db_writer, multistage_serialization=False):
     """Common code for the functions below"""
 
     writers = []
@@ -932,12 +885,11 @@ def _create_writer(job_id, serialize_to, nrml_path, create_xml_writer,
         writers.append(create_db_writer(nrml_path, job_id))
 
     if 'xml' in serialize_to and nrml_path:
-        if mode is not None:
+        if multistage_serialization:
             obj = _XML_SERIALIZER_CACHE[(job_id, nrml_path)]
             if obj is None:
                 obj = create_xml_writer(nrml_path)
                 _XML_SERIALIZER_CACHE[(job_id, nrml_path)] = obj
-            obj.set_mode(mode)
         else:
             obj = create_xml_writer(nrml_path)
         writers.append(obj)
@@ -957,9 +909,8 @@ def create_hazardcurve_writer(job_id, serialize_to, nrml_path):
     :returns: an :py:class:`output.hazard.HazardCurveXMLWriter` or an
         :py:class:`output.hazard.HazardCurveDBWriter` instance.
     """
-    mode = get_mode(job_id, serialize_to, nrml_path)
     return _create_writer(job_id, serialize_to, nrml_path,
-                          HazardCurveXMLWriter, HazardCurveDBWriter, mode)
+                          HazardCurveXMLWriter, HazardCurveDBWriter, True)
 
 
 def create_hazardmap_writer(job_id, serialize_to, nrml_path):
@@ -974,9 +925,8 @@ def create_hazardmap_writer(job_id, serialize_to, nrml_path):
     :returns: an :py:class:`output.hazard.HazardMapXMLWriter` or an
         :py:class:`output.hazard.HazardMapDBWriter` instance.
     """
-    mode = get_mode(job_id, serialize_to, nrml_path)
     return _create_writer(job_id, serialize_to, nrml_path, HazardMapXMLWriter,
-                          HazardMapDBWriter, mode)
+                          HazardMapDBWriter, True)
 
 
 def create_gmf_writer(job_id, serialize_to, nrml_path):
@@ -993,3 +943,74 @@ def create_gmf_writer(job_id, serialize_to, nrml_path):
     """
     return _create_writer(
         job_id, serialize_to, nrml_path, GMFXMLWriter, GmfDBWriter)
+
+
+@general.singleton
+class SerializerContext(object):
+    """Used to facilitate multi-stage XML serialization."""
+    def __init__(self):
+        self.blocks = 0
+        self.cblock = 0
+        self.i_total = 0
+        self.i_done = 0
+        self.i_next = 0
+
+    def update(self, context):
+        """Updates the serialization context.
+
+        :param namedtuple context: a `namedtuple` with the following
+            five integers:
+                - blocks: overall number of blocks the calculation is divided
+                    into
+                - cblock: current block number (1 based)
+                - i_total: overall number of items to be serialized in the
+                    current block
+                - i_done: number of items already serialized in the
+                    current block
+                - i_next: number of items to be serialized next
+        """
+        self.blocks = context.blocks
+        self.cblock = context.cblock
+        self.i_total = context.i_total
+        self.i_done = context.i_done
+        self.i_next = context.i_next
+
+    def get_mode(self):
+        """Figure out the XML serialization mode.
+
+        The possible modes are:
+            - start
+            - middle
+            - end
+            - start and end (single pass serialization)
+
+        :returns: a `namedtuple` with three booleans: start, middle and end
+            that are set to reflect the current serialization mode.
+        """
+        # Figure out the mode, are we at the beginning, in the middle or at
+        # the end of the XML file?
+
+        SerializerMode = namedtuple("SerializerMode", "start, middle, end")
+
+        if self.cblock > 1 and self.cblock < self.blocks:
+            return SerializerMode(False, True, False)
+
+        start = middle = end = False
+        if self.cblock == 1:
+            # We are serializing data from the first block.
+            if self.i_done == 0:
+                # First block, nothing serialized yet.
+                start = True
+            else:
+                middle = True
+        if self.cblock == self.blocks:
+            # We are serializing data from the last block.
+            items_left = self.i_total - self.i_done - self.i_next
+            if items_left == 0:
+                # Last block, last batch.
+                middle = False
+                end = True
+            elif not start:
+                middle = True
+
+        return SerializerMode(start, middle, end)

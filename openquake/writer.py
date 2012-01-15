@@ -42,17 +42,13 @@ class FileWriter(object):
         self.root_node = None
         self.mode = None
 
-    def set_mode(self, mode):
-        """Facilitate XML serialization in multiple stages."""
-        self.mode = mode
-
     def initialize(self):
         """Initialization hook for derived classes."""
         pass
 
     def open(self):
         """Get the file handle open for writing"""
-        if self.mode.end:
+        if self.mode is None or self.mode.end:
             self.file = open(self.path, "w")
 
     def write(self, point, value):
