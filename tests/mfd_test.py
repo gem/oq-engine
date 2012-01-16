@@ -221,3 +221,15 @@ class TruncatedGRModificationsTestCase(BaseMFDTestCase):
         mfd._set_a(tmr)
         self.assertAlmostEqual(mfd.a_val, 4.4)
         self.assertEqual(mfd._get_total_moment_rate(), tmr)
+
+    def test_increment_maximum_magnitude(self):
+        mfd = TruncatedGR(min_mag=6.0, max_mag=7.0, bin_width=0.1,
+                          a_val=1.1, b_val=4.1)
+        old_tmr = mfd._get_total_moment_rate()
+        mfd.modify('increment_maximum_magnitude', {'value': 1})
+        self.assertEqual(mfd.max_mag, 8.0)
+        self.assertAlmostEqual(mfd._get_total_moment_rate(), old_tmr)
+        mfd.modify('increment_maximum_magnitude', {'value': -1})
+        self.assertAlmostEqual(mfd._get_total_moment_rate(), old_tmr)
+        self.assertEqual(mfd.max_mag, 7.0)
+        self.assertAlmostEqual(mfd.a_val, 1.1)
