@@ -77,22 +77,6 @@ def set_job_id(job_id):
     _THE_JOB_ID = job_id
 
 
-def flag_set(section, setting):
-    """True if the given setting is enabled in openquake.cfg
-
-    :param string section: name of the configuration file section
-    :param string setting: name of the configuration file setting
-
-    :returns: True if the setting is enabled in openquake.cfg, False otherwise
-    """
-    from openquake.utils import config
-
-    setting = config.get(section, setting)  # pylint: disable=W0404
-    if setting is None:
-        return False
-    return str2bool(setting)
-
-
 class AdHocObject(object):
     """Provides ad-hoc objects with a defined set of properties.
 

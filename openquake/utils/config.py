@@ -121,3 +121,19 @@ def hazard_block_size(default=8192):
         block_size = default
 
     return block_size
+
+
+def flag_set(section, setting):
+    """True if the given setting is enabled in openquake.cfg
+
+    :param string section: name of the configuration file section
+    :param string setting: name of the configuration file setting
+
+    :returns: True if the setting is enabled in openquake.cfg, False otherwise
+    """
+    from openquake.utils import config
+
+    setting = config.get(section, setting)
+    if setting is None:
+        return False
+    return general.str2bool(setting)

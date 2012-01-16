@@ -324,3 +324,53 @@ class HazardBlockSizeTestCase(unittest.TestCase):
         with patch("openquake.utils.config.get") as mget:
             mget.return_value = "not a number"
             self.assertRaises(ValueError, config.hazard_block_size)
+
+
+class FlagSetTestCase(ConfigTestMixin, unittest.TestCase):
+    """
+    Tests for openquake.utils.config.flag_set()
+    """
+
+    def setUp(self):
+        self.setup_config()
+
+    def tearDown(self):
+        self.teardown_config()
+
+    def test_flag_set_with_absent_key(self):
+        """
+        flag_set() returns False if the setting
+        is not present in the configuration file.
+        """
+        self.prepare_config("a")
+        self.assertFalse(config.flag_set("a", "z"))
+
+    def test_flag_set_with_number(self):
+        """
+        flag_set() returns False if the setting is present but
+        not equal to 'true'.
+        """
+        self.prepare_config("b", {"y": "123"})
+        self.assertFalse(config.flag_set("b", "y"))
+
+    def test_flag_set_with_text_but_not_true(self):
+        """
+        flag_set() returns False if the setting is present but
+        not equal to 'true'.
+        """
+        self.prepare_config("c", {"x": "blah"})
+        self.assertFalse(config.flag_set("c", "x"))
+
+    def test_flag_set_with_true(self):
+        """
+        flag_set() returns True if the setting is present and equal to 'true'.
+        """
+        self.prepare_config("d", {"w": "true"})
+        self.assertTrue(config.flag_set("d", "w"))
+
+    def test_flag_set_with_True(self):
+        """
+        flag_set() returns True if the setting is present and equal to 'true'.
+        """
+        self.prepare_config("e", {"v": " True 	 "})
+        self.assertTrue(config.flag_set("e", "v"))

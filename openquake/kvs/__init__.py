@@ -28,7 +28,6 @@ import redis
 from openquake import logs
 from openquake.kvs import tokens
 from openquake.utils import config
-from openquake.utils import general
 
 
 LOG = logs.LOG
@@ -183,4 +182,4 @@ def cache_gc(job_id):
 
 def cache_connections():
     """True if kvs connections should be cached."""
-    return general.flag_set("kvs", "cache_connections")
+    return config.flag_set("kvs", "cache_connections")

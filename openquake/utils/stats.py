@@ -26,7 +26,6 @@ from functools import wraps
 import redis
 
 from openquake.utils import config
-from openquake.utils import general
 
 
 # Predefined kvs keys for calculator progress/statistics counters.
@@ -220,4 +219,4 @@ def delete_job_counters(job_id):
 
 def debug_stats_enabled():
     """True if debug statistics counters are enabled."""
-    return general.flag_set("statistics", "debug")
+    return config.flag_set("statistics", "debug")
