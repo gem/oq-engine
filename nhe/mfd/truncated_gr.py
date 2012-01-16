@@ -51,7 +51,7 @@ class TruncatedGR(BaseMFD):
         """
         Checks the following constraints:
 
-        * Bin width is positive.
+        * Bin width is greater than 0 and less than 1.4.
         * Minimum magnitude is positive.
         * Maximum magnitude is greater than minimum magnitude
           by at least one bin width (or equal to that value).
@@ -66,7 +66,7 @@ class TruncatedGR(BaseMFD):
         if not self.max_mag >= self.min_mag + self.bin_width:
             raise MFDError()
 
-        if not self.b_val > 0:
+        if not 0 < self.b_val < 1.4:
             raise MFDError()
 
     def _get_rate(self, mag):
