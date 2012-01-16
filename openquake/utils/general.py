@@ -94,7 +94,11 @@ def flag_set(section, setting):
 
 
 class AdHocObject(object):
-    """Provides ad-hoc objects with a defined set of properties."""
+    """Provides ad-hoc objects with a defined set of properties.
+
+    These are underpinned by a `SortedDict` i.e. the properties appear
+    in order which makes it easier to use them in tests for example.
+    """
 
     def __init__(self, type_name, attrs, values=None, default=None):
         # Internal attribute data.
@@ -141,15 +145,15 @@ class AdHocObject(object):
         return  key in self.__dict__["_ia_data"]
 
     def keys(self):
-        """Return a list of all property names."""
+        """Return an ordered list of all property names."""
         return  self.__dict__["_ia_data"].keys()
 
     def values(self):
-        """Return a list of all property values."""
+        """Return an ordered list of all property values."""
         return  self.__dict__["_ia_data"].values()
 
     def items(self):
-        """Return a list of all name/property pairs."""
+        """Return an ordered list of all name/property pairs."""
         return  self.__dict__["_ia_data"].items()
 
     def get(self, key, default=None):
