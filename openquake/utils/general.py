@@ -167,6 +167,7 @@ class AdHocObject(object):
 
     def __repr__(self):
         """Called by the repr() built-in function and by string conversions."""
-        items = ["%s=%s" % data for data in self.__dict__["_ia_data"].items()]
-        return "AdHocObject('%s', [%s])" % (self.__dict__["_ia_type_name"],
-                                            ", ".join(items))
+        return "AdHocObject('%s', %s, values=%s)" % (
+            self.__dict__["_ia_type_name"],
+            str(self.__dict__["_ia_data"].keys()),
+            str(self.__dict__["_ia_data"].values()))

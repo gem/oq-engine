@@ -313,4 +313,6 @@ class AdHocObjectTestCase(unittest.TestCase):
     def test__repr(self):
         """The repr() data is correct."""
         aho = general.AdHocObject("Test23", "at au".split(), [-29, -30])
-        self.assertEqual("AdHocObject('Test23', [at=-29, au=-30])", repr(aho))
+        self.assertEqual(
+            "AdHocObject('Test23', ['at', 'au'], values=[-29, -30])",
+            repr(aho))
