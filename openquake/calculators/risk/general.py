@@ -66,39 +66,39 @@ def preload(calculator):
     calculator.partition()
 
 
-def write_output(job_profile):
+def write_output(calc):
     """
     Write the output of a block to db/xml.
 
-    :param job_profile:
-        :class:`openquake.job.Job` instance.
+    :param calc:
+        :class:`openquake.calculators.base.Calculator` instance.
     """
-    for block_id in job_profile.blocks_keys:
-        #pylint: disable=W0212
-        job_profile._write_output_for_block(job_profile.job_id, block_id)
+    calc_proxy = calc.calc_proxy
 
-    for loss_poe in conditional_loss_poes(job_profile.params):
-        path = os.path.join(job_profile.base_path,
-                            job_profile.params['OUTPUT_DIR'],
+    for block_id in calc.calc_proxy.blocks_keys:
+        #pylint: disable=W0212
+        calc._write_output_for_block(calc_proxy.job_id, block_id)
+
+    for loss_poe in conditional_loss_poes(calc_proxy.params):
+        path = os.path.join(calc_proxy.base_path,
+                            calc_proxy.params['OUTPUT_DIR'],
                             "losses_at-%s.xml" % loss_poe)
         writer = risk_output.create_loss_map_writer(
-            job_profile.job_id, job_profile.serialize_results_to, path, False)
+            calc_proxy.job_id, calc_proxy.serialize_results_to, path, False)
 
         if writer:
             metadata = {
                 "scenario": False,
-                "timeSpan": job_profile.params["INVESTIGATION_TIME"],
+                "timeSpan": calc_proxy.params["INVESTIGATION_TIME"],
                 "poE": loss_poe,
             }
 
             writer.serialize(
                 [metadata]
-                + job_profile.asset_losses_per_site(
+                + calc_proxy.asset_losses_per_site(
                     loss_poe,
-                    job_profile.grid_assets_iterator(job_profile.region.grid)))
+                    calc_proxy.grid_assets_iterator(calc_proxy.region.grid)))
             LOG.info('Loss Map is at: %s' % path)
-
-
 
 
 def conditional_loss_poes(params):
