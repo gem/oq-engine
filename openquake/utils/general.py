@@ -23,6 +23,8 @@ Utility functions of general interest.
 """
 
 import cPickle
+import itertools
+import pprint
 
 
 def singleton(cls):
@@ -88,3 +90,81 @@ def flag_set(section, setting):
     if setting is None:
         return False
     return str2bool(setting)
+
+
+class AdHocObject(object):
+    """Provides ad-hoc objects with a defined set of properties."""
+
+    def __init__(self, type_name, attrs, values=None, default=None):
+        # Internal attribute data.
+        self.__dict__["_ia_type_name"] = type_name
+        self.__dict__["_ia_attrs"] = attrs
+        if values:
+            self.__dict__["_ia_data"] = dict(zip(attrs, values))
+        else:
+            self.__dict__["_ia_data"] = dict(zip(attrs,
+                                                 itertools.repeat(default)))
+
+    def __getattr__(self, attr):
+        """Access a property by name object-style."""
+        if attr in self.__dict__["_ia_attrs"]:
+            return self.__dict__["_ia_data"].get(attr)
+        else:
+            raise AttributeError("'AdHocObject' object has no attribute '%s'" %
+                                 attr)
+
+    def __setattr__(self, attr, value):
+        """Set a property's value by name object-style."""
+        if attr in self.__dict__["_ia_attrs"]:
+            self.__dict__["_ia_data"][attr] = value
+        else:
+            raise AttributeError("'AdHocObject' object has no attribute '%s'" %
+                                 attr)
+
+    def __eq__(self, other):
+        """True if the two data dictionaries are equal."""
+        return  self.__dict__["_ia_data"] == other.__dict__["_ia_data"]
+
+    def __ne__(self, other):
+        """True if the two data dictionaries are *not* equal."""
+        return  not(self == other)
+
+    def __iter__(self):
+        """Return a dict-style iterator."""
+        return  self.__dict__["_ia_data"].iteritems()
+
+    def __contains__(self, key):
+        """True if object has a property called `key`."""
+        return  key in self.__dict__["_ia_data"]
+
+    def keys(self):
+        """Return a list of all property names."""
+        return  self.__dict__["_ia_data"].keys()
+
+    def values(self):
+        """Return a list of all property values."""
+        return  self.__dict__["_ia_data"].values()
+
+    def items(self):
+        """Return a list of all name/property pairs."""
+        return  self.__dict__["_ia_data"].items()
+
+    def get(self, key, default=None):
+        """Access a property by name."""
+        return  self.__dict__["_ia_data"].get(key, default)
+
+    def __setitem__(self, key, value):
+        """Set a property's value dict style."""
+        setattr(self, key, value)
+
+    def __str__(self):
+        """Called by the str() built-in function and by the print statement."""
+        return "%s, %s" % (self.__dict__["_ia_type_name"],
+                           pprint.pformat(self.__dict__["_ia_data"]))
+
+    def __repr__(self):
+        """Called by the repr() built-in function and by string conversions."""
+        items = ["%s=%s" % (k, self.__dict__["_ia_data"][k])
+                 for k in self.__dict__["_ia_attrs"]]
+        return "AdHocObject('%s', [%s])" % (self.__dict__["_ia_type_name"],
+                                            ", ".join(items))
