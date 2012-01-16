@@ -47,7 +47,7 @@ class Point(object):
         self.latitude = latitude
         self.longitude = longitude
 
-    def point_at(self, horizontal_distance, vertical_distance, azimuth):
+    def point_at(self, horizontal_distance, vertical_increment, azimuth):
         """
         Compute the point with given horizontal, vertical distances
         and azimuth from this point.
@@ -56,9 +56,11 @@ class Point(object):
             Horizontal distance, in km.
         :type horizontal_distance:
             float
-        :param vertical_distance:
-            Vertical distance, in km.
-        :type vertical_distance:
+        :param vertical_increment:
+            Vertical increment, in km. When positive, the new point
+            has a greater depth. When negative, the new point
+            has a smaller depth.
+        :type vertical_increment:
             float
         :type azimuth:
             Azimuth, in decimal degrees.
@@ -74,7 +76,7 @@ class Point(object):
         longitude, latitude, _ = pyproj.Geod(ellps="sphere").fwd(
             self.longitude, self.latitude, azimuth, horizontal_distance * 1e3)
 
-        return Point(longitude, latitude, self.depth + vertical_distance)
+        return Point(longitude, latitude, self.depth + vertical_increment)
 
     def azimuth(self, point):
         """
