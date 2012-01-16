@@ -84,6 +84,7 @@ class BaseMFD(object):
                            (modification, type(self).__name__))
         meth = getattr(self, 'modify_%s' % modification)
         meth(**parameters)
+        self.check_constraints()
 
     def reset(self):
         """

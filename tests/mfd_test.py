@@ -64,8 +64,10 @@ class BaseMFDModificationsTestCase(BaseMFDTestCase):
             def modify_foo(self, **kwargs):
                 self.foo_calls.append(kwargs)
         mfd = TestMFD()
+        self.assertEqual(mfd.check_constraints_call_count, 1)
         mfd.modify('foo', dict(a=1, b='2', c=True))
         self.assertEqual(mfd.foo_calls, [{'a': 1, 'b': '2', 'c': True}])
+        self.assertEqual(mfd.check_constraints_call_count, 2)
 
 
 class EvenlyDiscretizedMFDConstraintsTestCase(BaseMFDTestCase):
