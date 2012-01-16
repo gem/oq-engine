@@ -29,7 +29,6 @@ import unittest
 from openquake import writer
 from openquake.output import hazard as hazard_output
 from openquake.output import risk as risk_output
-from openquake.utils import stats
 
 from tests.utils import helpers
 

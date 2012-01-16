@@ -429,7 +429,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         run_job(job_cfg, output="xml")
 
         self.job = models.OqCalculation.objects.latest("id")
-        
+
         key = stats.key_name(
             self.job.id, *stats.STATS_KEYS["hcls_xmlcurvewrites"])
         if key:

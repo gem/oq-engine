@@ -866,8 +866,6 @@ class GmfDBWriter(writer.DBWriter):
             location="POINT(%s %s)" % (point.point.x, point.point.y))
 
 
-
-
 # Facilitate multi-stage XML serialization by using the same serializer
 # object for a given job and NRML path.
 _XML_SERIALIZER_CACHE = defaultdict(lambda: None)
