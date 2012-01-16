@@ -81,7 +81,7 @@ class BaseMFD(object):
         """
         if not modification in self.MODIFICATIONS:
             raise MFDError('Modification %s is not supported by %s' %
-                           modification, self)
+                           (modification, type(self).__name__))
         meth = getattr(self, 'modify_%s' % modification)
         meth(**parameters)
 
