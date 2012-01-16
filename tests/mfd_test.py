@@ -14,9 +14,9 @@ class BaseMFDTestCase(unittest.TestCase):
         def get_annual_occurrence_rates(self):
             pass
 
-    def assert_mfd_error(self, mfd_class, *args, **kwargs):
+    def assert_mfd_error(self, func, *args, **kwargs):
         with self.assertRaises(MFDError) as exc_catcher:
-            mfd_class(*args, **kwargs)
+            func(*args, **kwargs)
         return exc_catcher.exception
 
 
@@ -245,3 +245,11 @@ class TruncatedGRModificationsTestCase(BaseMFDTestCase):
         self.assertAlmostEqual(mfd._get_total_moment_rate(), old_tmr)
         self.assertEqual(mfd.max_mag, 7.0)
         self.assertAlmostEqual(mfd.a_val, -18.2)
+
+    def test_increment_maximum_magnitude_check_constraints(self):
+        mfd = TruncatedGR(min_mag=6.0, max_mag=7.0, bin_width=0.1,
+                          a_val=1, b_val=1)
+        self.assert_mfd_error(
+            mfd.modify,
+            'increment_maximum_magnitude', {'value': -1}
+        )

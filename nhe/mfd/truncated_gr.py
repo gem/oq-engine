@@ -170,4 +170,7 @@ class TruncatedGR(BaseMFD):
         """
         tmr = self._get_total_moment_rate()
         self.max_mag += value
+        # need to check constraints here because _set_a() would die
+        # if new max_mag <= min_mag.
+        self.check_constraints()
         self._set_a(tmr)
