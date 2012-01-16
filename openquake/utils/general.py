@@ -22,6 +22,7 @@
 Utility functions of general interest.
 """
 
+from collections import OrderedDict
 import cPickle
 import itertools
 import pprint
@@ -98,12 +99,12 @@ class AdHocObject(object):
     def __init__(self, type_name, attrs, values=None, default=None):
         # Internal attribute data.
         self.__dict__["_ia_type_name"] = type_name
-        self.__dict__["_ia_attrs"] = attrs
+        self.__dict__["_ia_attrs"] = set(attrs)
         if values:
-            self.__dict__["_ia_data"] = dict(zip(attrs, values))
+            self.__dict__["_ia_data"] = OrderedDict(zip(attrs, values))
         else:
-            self.__dict__["_ia_data"] = dict(zip(attrs,
-                                                 itertools.repeat(default)))
+            self.__dict__["_ia_data"] = OrderedDict(zip(attrs,
+                                                    itertools.repeat(default)))
 
     def __getattr__(self, attr):
         """Access a property by name object-style."""
@@ -160,11 +161,10 @@ class AdHocObject(object):
     def __str__(self):
         """Called by the str() built-in function and by the print statement."""
         return "%s, %s" % (self.__dict__["_ia_type_name"],
-                           pprint.pformat(self.__dict__["_ia_data"]))
+                           pprint.pformat(self.__dict__["_ia_data"].items()))
 
     def __repr__(self):
         """Called by the repr() built-in function and by string conversions."""
-        items = ["%s=%s" % (k, self.__dict__["_ia_data"][k])
-                 for k in self.__dict__["_ia_attrs"]]
+        items = ["%s=%s" % data for data in self.__dict__["_ia_data"].items()]
         return "AdHocObject('%s', [%s])" % (self.__dict__["_ia_type_name"],
                                             ", ".join(items))
