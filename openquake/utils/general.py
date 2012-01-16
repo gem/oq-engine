@@ -71,9 +71,9 @@ def get_job_id():
     return _THE_JOB_ID
 
 
-def set_job_id(job_id):    # pylint: disable=W0603
+def set_job_id(job_id):
     """Set the job ID."""
-    global _THE_JOB_ID
+    global _THE_JOB_ID  # pylint: disable=W0603
     _THE_JOB_ID = job_id
 
 
@@ -87,7 +87,7 @@ def flag_set(section, setting):
     """
     from openquake.utils import config
 
-    setting = config.get(section, setting)
+    setting = config.get(section, setting)  # pylint: disable=W0404
     if setting is None:
         return False
     return str2bool(setting)
