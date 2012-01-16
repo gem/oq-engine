@@ -21,7 +21,6 @@ Wrapper around the OpenSHA-lite java library.
 """
 
 
-from collections import namedtuple
 from itertools import izip
 import functools
 import hashlib
@@ -43,6 +42,7 @@ from openquake.hazard import job
 from openquake.hazard import tasks
 from openquake.output import hazard as hazard_output
 from openquake.utils import config
+from openquake.utils import general
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
 
@@ -449,9 +449,10 @@ class ClassicalMixin(BasePSHAMixin):
                 yield value
 
         # XML serialization context
-        XSC = namedtuple("XSC", "blocks, cblock, i_total, i_done, i_next")
-        blocks = stats.pk_get(self.job_id, "blocks")
-        cblock = stats.pk_get(self.job_id, "cblock")
+        xsc = general.AdHocObject(
+            "XSC", "blocks, cblock, i_total, i_done, i_next", default=0)
+        xsc.blocks = stats.pk_get(self.job_id, "blocks")
+        xsc.cblock = stats.pk_get(self.job_id, "cblock")
 
         nrml_path = self.build_nrml_path(nrml_file)
 
@@ -459,8 +460,8 @@ class ClassicalMixin(BasePSHAMixin):
             self.job_id, self.serialize_results_to, nrml_path)
 
         sites = set(sites)
-        i_total = len(sites)
-        i_done = 0
+        xsc.i_total = len(sites)
+        xsc.i_done = 0
         accounted_for = set()
         dgen = duration_generator(0.1)
         duration = dgen.next()
@@ -493,11 +494,10 @@ class ClassicalMixin(BasePSHAMixin):
                 # No results found, increase the sleep duration.
                 duration = dgen.next()
             else:
-                i_next = len(hc_data)
-                hazard_output.SerializerContext().update(XSC(
-                    blocks, cblock, i_total, i_done, i_next))
+                xsc.i_next = len(hc_data)
+                hazard_output.SerializerContext().update(xsc)
                 curve_writer.serialize(hc_data)
-                i_done += i_next
+                xsc.i_done += xsc.i_next
 
         return nrml_path
 

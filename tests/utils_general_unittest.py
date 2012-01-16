@@ -164,6 +164,21 @@ class AdHocObjectTestCase(unittest.TestCase):
         aho = general.AdHocObject("Test3", "g h i".split(), default=-1)
         self.assertEqual(dict(g=-1, h=-1, i=-1), aho._ia_data)
 
+    def test_init_with_string_and_no_default_or_data(self):
+        """All properties should be initialized with `None`."""
+        aho = general.AdHocObject("Test1a", "a1, b1, c1")
+        self.assertEqual(dict(a1=None, b1=None, c1=None), aho._ia_data)
+
+    def test_init_with_string_and_no_default_but_with_data(self):
+        """All properties should be initialized with the data supplied."""
+        aho = general.AdHocObject("Test2a", "d1, e1, f1", range(5, 8))
+        self.assertEqual(dict(d1=5, e1=6, f1=7), aho._ia_data)
+
+    def test_init_with_string_and_a_default_but_no_data(self):
+        """All properties should be initialized with the default supplied."""
+        aho = general.AdHocObject("Test3a", "g1, h1, i1", default=-1)
+        self.assertEqual(dict(g1=-1, h1=-1, i1=-1), aho._ia_data)
+
     def test_get_property_access_with_existing(self):
         """Getting for a predefined property works."""
         aho = general.AdHocObject("Test4", "j k".split(), default=-2)
