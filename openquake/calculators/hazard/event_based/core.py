@@ -39,14 +39,7 @@ LOG = logs.LOG
 @stats.progress_indicator
 def compute_ground_motion_fields(job_id, sites, history, realization, seed):
     """ Generate ground motion fields """
-    # pylint: disable=W0404
-    from openquake.engine import CalculationProxy
-    from openquake.calculators.hazard import CALCULATORS
-
-    utils_tasks.check_job_status(job_id)
-    the_job = CalculationProxy.from_kvs(job_id)
-    calc_mode = the_job.oq_job_profile.calc_mode
-    calculator = CALCULATORS[calc_mode](the_job)
+    calculator = utils_tasks.calculator_for_task(job_id, 'hazard')
 
     calculator.compute_ground_motion_fields(
         sites, history, realization, seed)

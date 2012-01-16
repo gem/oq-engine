@@ -172,14 +172,6 @@ class JobDbRecordTestCase(unittest.TestCase):
             helpers.get_data_path(CONFIG_FILE), 'xml')
         OqCalculation.objects.get(id=self.job.job_id)
 
-    def test_set_status(self):
-        self.job = engine._job_from_file(
-            helpers.get_data_path(CONFIG_FILE), 'db')
-        status = 'running'
-        self.job.set_status(status)
-        self.assertEqual(status,
-                         OqCalculation.objects.get(id=self.job.job_id).status)
-
     def test_get_status_from_db(self):
         self.job = engine._job_from_file(
             helpers.get_data_path(CONFIG_FILE), 'db')
