@@ -69,6 +69,17 @@ class BaseMFDModificationsTestCase(BaseMFDTestCase):
         self.assertEqual(mfd.foo_calls, [{'a': 1, 'b': '2', 'c': True}])
         self.assertEqual(mfd.check_constraints_call_count, 2)
 
+    def test_reset(self):
+        class TestMFD(self.BaseTestMFD):
+            PARAMETERS = ('abc', 'defg')
+        mfd = TestMFD(abc=1, defg=None)
+        mfd.abc = 3
+        mfd.defg = []
+        mfd.reset()
+        self.assertEqual(mfd.abc, 1)
+        self.assertEqual(mfd.defg, None)
+        self.assertEqual(mfd.check_constraints_call_count, 2)
+
 
 class EvenlyDiscretizedMFDConstraintsTestCase(BaseMFDTestCase):
     def test_empty_occurrence_rates(self):
