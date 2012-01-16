@@ -53,7 +53,8 @@ class TruncatedGR(BaseMFD):
 
         * Bin width is positive.
         * Minimum magnitude is positive.
-        * Maximum magnitude is equal or greater than minimum magnitude.
+        * Maximum magnitude is greater than minimum magnitude
+          by at least one bin width (or equal to that value).
         * ``b`` value is positive.
         """
         if not self.bin_width > 0:
@@ -62,7 +63,7 @@ class TruncatedGR(BaseMFD):
         if not self.min_mag >= 0:
             raise MFDError()
 
-        if not self.max_mag >= self.min_mag:
+        if not self.max_mag >= self.min_mag + self.bin_width:
             raise MFDError()
 
         if not self.b_val > 0:

@@ -149,6 +149,16 @@ class TruncatedGRConstraintsTestCase(BaseMFDTestCase):
             min_mag=1, max_mag=2, bin_width=0.4, a_val=1, b_val=0
         )
 
+    def test_equal_min_mag_and_max_mag(self):
+        self.assert_mfd_error(
+            TruncatedGR,
+            min_mag=6.5, max_mag=6.5, bin_width=0.1, a_val=0.5, b_val=1.0
+        )
+        self.assert_mfd_error(
+            TruncatedGR,
+            min_mag=6.7, max_mag=7.3, bin_width=1.0, a_val=0.5, b_val=1.0
+        )
+
 
 class TruncatedGRMFDGetRatesTestCase(BaseMFDTestCase):
     def _test(self, expected_rates, rate_tolerance, **kwargs):
@@ -178,18 +188,6 @@ class TruncatedGRMFDGetRatesTestCase(BaseMFDTestCase):
         ]
         self._test(expected_rates=expected_rates, rate_tolerance=1e-14,
                    min_mag=5.1, max_mag=7.9, bin_width=1.0,
-                   a_val=0.5, b_val=1.0)
-
-    def test_3_equal_min_mag_and_max_mag(self):
-        expected_rates = [(6.5, 2.307675159e-7)]
-        self._test(expected_rates=expected_rates, rate_tolerance=1e-14,
-                   min_mag=6.5, max_mag=6.5, bin_width=0.1,
-                   a_val=0.5, b_val=1.0)
-
-    def test_4_equal_min_mag_and_max_mag(self):
-        expected_rates = [(6.5, 2.307675159e-7)]
-        self._test(expected_rates=expected_rates, rate_tolerance=1e-14,
-                   min_mag=6.49, max_mag=6.51, bin_width=0.1,
                    a_val=0.5, b_val=1.0)
 
 
