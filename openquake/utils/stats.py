@@ -144,7 +144,7 @@ def key_name(job_id, area, fragment, counter_type):
     return _KEY_TEMPLATE % (job_id, area, fragment, counter_type)
 
 
-class progress_indicator(object):
+class progress_indicator(object):   # pylint: disable=C0103
     """Count successful/failed invocations of the wrapped function."""
 
     def __init__(self, area):

@@ -988,10 +988,10 @@ class SerializerContext(object):
         # Figure out the mode, are we at the beginning, in the middle or at
         # the end of the XML file?
 
-        SerializerMode = namedtuple("SerializerMode", "start, middle, end")
+        mode = namedtuple("SerializerMode", "start, middle, end")
 
         if self.cblock > 1 and self.cblock < self.blocks:
-            return SerializerMode(False, True, False)
+            return mode(False, True, False)
 
         start = middle = end = False
         if self.cblock == 1:
@@ -1011,4 +1011,4 @@ class SerializerContext(object):
             elif not start:
                 middle = True
 
-        return SerializerMode(start, middle, end)
+        return mode(start, middle, end)

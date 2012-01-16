@@ -63,18 +63,18 @@ def str2bool(value):
 
 
 # The module private variable below will be used to store the job ID.
-__the_job_id = -1
+_THE_JOB_ID = -1
 
 
 def get_job_id():
     """Return the job ID."""
-    return __the_job_id
+    return _THE_JOB_ID
 
 
-def set_job_id(job_id):
+def set_job_id(job_id):    # pylint: disable=W0603
     """Set the job ID."""
-    global __the_job_id
-    __the_job_id = job_id
+    global _THE_JOB_ID
+    _THE_JOB_ID = job_id
 
 
 def flag_set(section, setting):
