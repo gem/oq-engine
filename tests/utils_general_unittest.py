@@ -179,6 +179,11 @@ class AdHocObjectTestCase(unittest.TestCase):
         aho = general.AdHocObject("Test3a", "g1, h1, i1", default=-1)
         self.assertEqual(dict(g1=-1, h1=-1, i1=-1), aho._ia_data)
 
+    def test_with_string_init_get_property_access_with_existing(self):
+        """Getting for a predefined property works."""
+        aho = general.AdHocObject("Test4a", "jkl, hgf, bbb", default=-22)
+        self.assertEqual(-22, aho.hgf)
+
     def test_get_property_access_with_existing(self):
         """Getting for a predefined property works."""
         aho = general.AdHocObject("Test4", "j k".split(), default=-2)
@@ -193,6 +198,12 @@ class AdHocObjectTestCase(unittest.TestCase):
             pass
         else:
             self.fail("AttributeError not raised for non-existent property.""")
+
+    def test_with_string_init_set_property_access_with_existing(self):
+        """Setting a predefined property works."""
+        aho = general.AdHocObject("Test6a", "mno, pqr, sss", default=-44)
+        aho.mno = -55
+        self.assertEqual(-55, aho.mno)
 
     def test_set_property_access_with_existing(self):
         """Setting a predefined property works."""

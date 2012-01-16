@@ -99,9 +99,9 @@ class AdHocObject(object):
     def __init__(self, type_name, attrs, values=None, default=None):
         # Internal attribute data.
         self.__dict__["_ia_type_name"] = type_name
-        self.__dict__["_ia_attrs"] = set(attrs)
         if isinstance(attrs, basestring):
             attrs = [a.strip() for a in attrs.split(",")]
+        self.__dict__["_ia_attrs"] = set(attrs)
         if values:
             self.__dict__["_ia_data"] = OrderedDict(zip(attrs, values))
         else:
