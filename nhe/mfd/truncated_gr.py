@@ -1,6 +1,8 @@
 """
 Module :mod:`nhe.mfd.truncated_gr` defines a Truncated Gutenberg-Richter MFD.
 """
+import math
+
 from nhe.mfd.base import BaseMFD, MFDError
 
 
@@ -43,7 +45,7 @@ class TruncatedGR(BaseMFD):
 
     PARAMETERS = ('min_mag', 'max_mag', 'bin_width', 'a_val', 'b_val')
 
-    MODIFICATIONS = set()
+    MODIFICATIONS = set(('increment_maximum_magnitude', ))
 
     def check_constraints(self):
         """
@@ -122,3 +124,50 @@ class TruncatedGR(BaseMFD):
             rates.append((mag, rate))
             mag += self.bin_width
         return rates
+
+    def _get_total_moment_rate(self):
+        """
+        Calculate a total moment rate (total energy released per unit time) ::
+
+            TMR = (10**(ai+16.1)/bi) * (10**(bi*max_mag) - 10**(bi*min_mag))
+
+        where ``ai = a + Log10(b)`` and ``bi = 1.5 - b``.
+
+        :return:
+            Float, calculated TMR value.
+        """
+        ai = self.a_val + math.log10(self.b_val)
+        bi = 1.5 - self.b_val
+        tmr = ((10 ** (ai + 16.1) / bi) *
+               (10 ** (bi * self.max_mag) - 10 ** (bi * self.min_mag)))
+        return tmr
+
+    def _set_a(self, tmr):
+        """
+        Recalculate an ``a`` value preserving a total moment rate ``tmr`` ::
+
+            a = (log10((tmr * bi) / (10 ** (bi*max_mag) - 10 ** (bi*min_mag)))
+                 - 16.1 - log10(b))
+
+        where ``bi = 1.5 - b``.
+        """
+        bi = 1.5 - self.b_val
+        self.a_val = math.log10(
+            tmr * bi / (10 ** (bi * self.max_mag) - 10 ** (bi * self.min_mag))
+            - 16.1
+            - math.log10(self.b_val)
+        )
+
+    def modify_increment_maximum_magnitude(self, value):
+        """
+        Apply relative maximum magnitude modification.
+
+        :param value:
+            A float value to add to ``max_mag``.
+
+        The Gutenberg-Richter ``a`` value is :meth:`recalculated <_set_a>`
+        with respect to old :meth:`total moment rate <_get_total_moment_rate>`.
+        """
+        tmr = self._get_total_moment_rate()
+        self.max_mag += value
+        self._set_a(tmr)
