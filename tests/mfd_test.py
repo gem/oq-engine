@@ -202,3 +202,10 @@ class TruncatedGRMFDRoundingTestCase(BaseMFDTestCase):
         min_mag, num_bins = mfd._get_min_mag_and_num_bins()
         self.assertAlmostEqual(min_mag, 0.65)
         self.assertEqual(num_bins, 3)
+
+
+class TruncatedGRModificationsTestCase(BaseMFDTestCase):
+    def test_get_total_moment_rate(self):
+        mfd = TruncatedGR(min_mag=6.0, max_mag=8.0, bin_width=0.1,
+                          a_val=1.5, b_val=4.0)
+        self.assertAlmostEqual(mfd._get_total_moment_rate(), 636.96510317)

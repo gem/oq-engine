@@ -131,7 +131,7 @@ class TruncatedGR(BaseMFD):
 
             TMR = (10**(ai+16.1)/bi) * (10**(bi*max_mag) - 10**(bi*min_mag))
 
-        where ``ai = a + Log10(b)`` and ``bi = 1.5 - b``.
+        where ``ai = a + log10(b)`` and ``bi = 1.5 - b``.
 
         :return:
             Float, calculated TMR value.
