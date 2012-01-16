@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # encoding: utf-8
 """
 Module providing geographical classes and functions.
@@ -8,8 +7,12 @@ import numpy
 import pyproj
 import math
 
-
+# Tolerance used for latitude and longitude to identify
+# when two sites are equal (it corresponds to about 1 m at the equator)
 LAT_LON_TOLERANCE = 1e-5
+
+# Tolerance used for depth to identify
+# when two sites are equal (it corresponds to 1 m)
 DEPTH_TOLERANCE = 1e-3
 
 
@@ -27,7 +30,8 @@ class Point(object):
     :type latitude:
         float
     :param depth:
-        Point depth (default to 0.0), in km.
+        Point depth (default to 0.0), in km. Depth > 0 indicates a point
+        below the earth surface, and depth < 0 above the earth surface.
     :type depth:
         float
     """
@@ -60,6 +64,10 @@ class Point(object):
             Azimuth, in decimal degrees.
         :type azimuth:
             float
+        :returns:
+            The point at the given distances.
+        :rtype:
+            Instance of :class:`nhe.geo.Point`
         """
 
         # 1e-3 is needed to convert from km to m
@@ -77,6 +85,10 @@ class Point(object):
             Destination point.
         :type point:
             Instance of :class:`nhe.geo.Point`
+        :returns:
+            The azimuth.
+        :rtype:
+            float
         """
 
         forward_azimuth, _, _ = pyproj.Geod(ellps="sphere").inv(
@@ -93,6 +105,10 @@ class Point(object):
             Destination point.
         :type point:
             Instance of :class:`nhe.geo.Point`
+        :returns:
+            The horizontal distance.
+        :rtype:
+            float
         """
 
         _, _, horizontal_distance = pyproj.Geod(ellps="sphere").inv(
@@ -114,6 +130,10 @@ class Point(object):
             Destination point.
         :type point:
             Instance of :class:`nhe.geo.Point`
+        :returns:
+            The distance.
+        :rtype:
+            float
         """
 
         vertical_distance = point.depth - self.depth
@@ -148,6 +168,10 @@ class Point(object):
             Distance between points (in km).
         :type distance:
             float
+        :returns:
+            The list of equally spaced points.
+        :rtype:
+            list of :class:`nhe.geo.Point` instances
         """
 
         if self == point:
