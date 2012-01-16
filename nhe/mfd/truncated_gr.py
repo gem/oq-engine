@@ -153,11 +153,10 @@ class TruncatedGR(BaseMFD):
         where ``bi = 1.5 - b``.
         """
         bi = 1.5 - self.b_val
-        self.a_val = math.log10(
-            tmr * bi / (10 ** (bi * self.max_mag) - 10 ** (bi * self.min_mag))
-            - 16.1
-            - math.log10(self.b_val)
-        )
+        self.a_val = (math.log10(tmr * bi / (10 ** (bi * self.max_mag)
+                                             - 10 ** (bi * self.min_mag)))
+                      - 16.1
+                      - math.log10(self.b_val))
 
     def modify_increment_maximum_magnitude(self, value):
         """
