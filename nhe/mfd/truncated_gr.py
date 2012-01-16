@@ -51,11 +51,11 @@ class TruncatedGR(BaseMFD):
         """
         Checks the following constraints:
 
-        * Bin width is greater than 0 and less than 1.4.
+        * Bin width is greater than 0.
         * Minimum magnitude is positive.
         * Maximum magnitude is greater than minimum magnitude
           by at least one bin width (or equal to that value).
-        * ``b`` value is positive.
+        * ``b`` value is more than 0 and less than 1.4.
         """
         if not self.bin_width > 0:
             raise MFDError()
