@@ -140,9 +140,7 @@ def flag_set(section, setting):
 
     :returns: True if the setting is enabled in openquake.cfg, False otherwise
     """
-    from openquake.utils import config
-
-    setting = config.get(section, setting)
+    setting = get(section, setting)
     if setting is None:
         return False
     return general.str2bool(setting)
