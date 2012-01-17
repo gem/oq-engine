@@ -31,18 +31,16 @@ from scipy import sqrt, stats, log, exp
 
 from openquake import kvs
 from openquake import logs
-from openquake import shapes
 from openquake.db import models
-from openquake.job import config as job_config
 from openquake.parser import vulnerability
 from openquake.shapes import Curve
 from openquake.risk.common import compute_loss_curve
 from openquake.risk.common import loop
 from openquake.risk.common import collect
-from openquake.risk.job import general
 from openquake.utils.general import MemoizeMutable
-from openquake.risk.job.general import conditional_loss_poes
-from openquake.risk.job.general import compute_conditional_loss
+from openquake.calculators.risk import general
+from openquake.calculators.risk.general import conditional_loss_poes
+from openquake.calculators.risk.general import compute_conditional_loss
 
 LOGGER = logs.LOG
 STEPS_PER_INTERVAL = 5
@@ -68,7 +66,7 @@ def compute_loss_ratio_curve(vuln_function, hazard_curve):
     lrem_po = _compute_lrem_po(vuln_function, lrem, hazard_curve)
     loss_ratios = _generate_loss_ratios(vuln_function)
 
-    return shapes.Curve(zip(loss_ratios, lrem_po.sum(axis=1)))
+    return Curve(zip(loss_ratios, lrem_po.sum(axis=1)))
 
 
 def _compute_lrem_po(vuln_function, lrem, hazard_curve):
@@ -224,8 +222,8 @@ def _convert_pes_to_pos(hazard_curve, imls):
             lambda x, y: subtract(array(x), array(y))))
 
 
-class ClassicalPSHABasedMixin(general.RiskJobMixin):
-    """Mixin for Classical PSHA Based Risk Job"""
+class ClassicalPSHABasedMixin(general.ProbabilisticRiskCalculator):
+    """Calculator for Classical Risk computations."""
 
     def execute(self):
         """ execute -- general mixin entry point """
@@ -251,7 +249,7 @@ class ClassicalPSHABasedMixin(general.RiskJobMixin):
                 # TODO(jmc): Cancel and respawn this task
                 return
 
-        if self.is_benefit_cost_ratio():
+        if self.is_benefit_cost_ratio_mode():
             general.write_output_bcr(self)
         else:
             general.write_output(self)
@@ -266,29 +264,6 @@ class ClassicalPSHABasedMixin(general.RiskJobMixin):
             where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
 
         return Curve(zip(job.oq_job_profile.imls, hc.poes))
-
-    def is_benefit_cost_ratio(self):
-        """
-        Return True if current calculation mode is Benefit-Cost Ratio.
-        """
-        return self.calc_proxy.params[job_config.CALCULATION_MODE] \
-                == job_config.BCR_CLASSICAL_MODE
-
-    def compute_risk(self, block_id):
-        """This task computes risk for a block of sites. It requires to have
-        pre-initialized in kvs:
-         1) list of sites
-         2) exposure portfolio (=assets)
-         3) vulnerability
-         4) vulnerability for retrofitted asset portfolio (only for BCR mode)
-
-        Calls either :meth:`_compute_bcr` or :meth:`_compute_loss` depending
-        on the calculation mode.
-        """
-        if self.is_benefit_cost_ratio():
-            return self._compute_bcr(block_id)
-        else:
-            return self._compute_loss(block_id)
 
     def _compute_loss(self, block_id):
         """

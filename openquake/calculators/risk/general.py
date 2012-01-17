@@ -133,7 +133,12 @@ def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
 
 @task
 def compute_risk(calculation_id, block_id, **kwargs):
-    """ A task for computing risk, calls the mixed in compute_risk method """
+    """A task for computing risk, calls the compute_risk method defined in the
+    chosen risk calculator.
+
+    The calculator used is determined by the calculation configuration's
+    calculation mode (i.e., classical, event_based, etc.).
+    """
 
     calculator = calculator_for_task(calculation_id, 'risk')
 
@@ -353,6 +358,31 @@ class RiskJobMixin(Calculator):
             data += [(shapes.Site(latitude=lat, longitude=lon), payload)
                      for ((lat, lon), payload) in block_data]
         return data
+
+
+class ProbabilisticRiskCalculator(RiskJobMixin):
+    """Common base class for the Classical and Event-Based risk calculators."""
+
+    def compute_risk(self, block_id):
+        """Perform calculation and store the result in the kvs.
+
+        Calls either :meth:`_compute_bcr` or :meth:`_compute_loss` depending
+        on the calculation mode.
+        """
+        if self.is_benefit_cost_ratio_mode():
+            return self._compute_bcr(block_id)
+        else:
+            return self._compute_loss(block_id)
+
+    def _compute_bcr(self, _block_id):
+        """Compute Benefit-Cost Ratio for a block of sites. Implement this in
+        subclasses to provide the calculation-mode-specific logic."""
+        raise NotImplementedError()
+
+    def _compute_loss(self, _block_id):
+        """Compute loss for a block of sites. Implement this in
+        subclasses to provide the calculation-mode-specific logic."""
+        raise NotImplementedError()
 
 
 class EpsilonProvider(object):
