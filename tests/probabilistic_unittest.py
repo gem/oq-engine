@@ -79,7 +79,7 @@ class LossMapCurveSerialization(unittest.TestCase, helpers.TestMixin):
             '0.01 0.02')
 
         with helpers.patch('openquake.calculators.risk.event_based.core'
-                           '.aggregate_loss_curve.plot_aggregate_curve'):
+                           '.plot_aggregate_curve'):
             with helpers.patch(
                 'openquake.output.risk.create_loss_map_writer') as clw:
 
@@ -90,7 +90,7 @@ class LossMapCurveSerialization(unittest.TestCase, helpers.TestMixin):
 
     def test_loss_map_not_serialized_unless_conditional_loss_poes(self):
         with helpers.patch('openquake.calculators.risk.event_based.core'
-                           '.aggregate_loss_curve.plot_aggregate_curve'):
+                           '.plot_aggregate_curve'):
             with helpers.patch(
                 'openquake.output.risk.create_loss_map_writer') as clw:
 
