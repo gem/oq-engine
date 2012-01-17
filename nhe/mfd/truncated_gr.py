@@ -133,7 +133,7 @@ class TruncatedGR(BaseMFD):
         """
         Calculate a total moment rate (total energy released per unit time) ::
 
-            TMR = (10**(ai+16.1)/bi) * (10**(bi*max_mag) - 10**(bi*min_mag))
+            TMR = (10**(ai+16.05)/bi) * (10**(bi*max_mag) - 10**(bi*min_mag))
 
         where ``ai = a + log10(b)`` and ``bi = 1.5 - b``.
 
@@ -142,7 +142,7 @@ class TruncatedGR(BaseMFD):
         """
         ai = self.a_val + math.log10(self.b_val)
         bi = 1.5 - self.b_val
-        tmr = ((10 ** (ai + 16.1) / bi) *
+        tmr = ((10 ** (ai + 16.05) / bi) *
                (10 ** (bi * self.max_mag) - 10 ** (bi * self.min_mag)))
         return tmr
 
@@ -151,14 +151,14 @@ class TruncatedGR(BaseMFD):
         Recalculate an ``a`` value preserving a total moment rate ``tmr`` ::
 
             a = (log10((tmr * bi) / (10 ** (bi*max_mag) - 10 ** (bi*min_mag)))
-                 - 16.1 - log10(b))
+                 - 16.05 - log10(b))
 
         where ``bi = 1.5 - b``.
         """
         bi = 1.5 - self.b_val
         self.a_val = (math.log10(tmr * bi / (10 ** (bi * self.max_mag)
                                              - 10 ** (bi * self.min_mag)))
-                      - 16.1
+                      - 16.05
                       - math.log10(self.b_val))
 
     def modify_increment_max_mag(self, value):

@@ -216,13 +216,13 @@ class TruncatedGRModificationsTestCase(BaseMFDTestCase):
     def test_get_total_moment_rate(self):
         mfd = TruncatedGR(min_mag=6.0, max_mag=8.0, bin_width=0.1,
                           a_val=-23, b_val=0.4)
-        self.assertAlmostEqual(mfd._get_total_moment_rate(), 28.7024132)
+        self.assertAlmostEqual(mfd._get_total_moment_rate(), 25.5810527)
 
     def test_set_a(self):
         mfd = TruncatedGR(min_mag=6.0, max_mag=8.0, bin_width=0.1,
                           a_val=1.5, b_val=0.5)
         mfd._set_a(123.45)
-        self.assertAlmostEqual(mfd.a_val, -21.7031141)
+        self.assertAlmostEqual(mfd.a_val, -21.6531141)
 
     def test_set_a_and_get_total_moment_rate(self):
         mfd = TruncatedGR(min_mag=3.0, max_mag=4.0, bin_width=0.1,
