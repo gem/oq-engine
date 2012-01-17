@@ -35,7 +35,7 @@ EXPOSURE_TEST_FILE = "exposure-portfolio.xml"
 
 
 class EpsilonTestCase(unittest.TestCase):
-    """Tests the `epsilon` method in class `ProbabilisticEventMixin`"""
+    """Tests the `epsilon` method in class `EpsilonProvider`"""
 
     def setUp(self):
         self.exposure_parser = exposure.ExposurePortfolioFile(
@@ -181,11 +181,12 @@ class BlockSplitterTestCase(unittest.TestCase):
         self.assertEqual(expected, counter)
 
 
-class RiskJobMixinTestCase(unittest.TestCase):
+class BaseRiskCalculatorTestCase(unittest.TestCase):
 
     def test_prepares_blocks_using_the_exposure(self):
-        """The base risk mixin is able to read the exposure file,
-        split the sites into blocks and store them in KVS."""
+        """The base risk calculator is able to read the exposure file,
+        split the sites into blocks and store them in KVS.
+        """
 
         params = {
             config.EXPOSURE: os.path.join(helpers.SCHEMA_EXAMPLES_DIR,
@@ -194,7 +195,7 @@ class RiskJobMixinTestCase(unittest.TestCase):
         }
         a_job = helpers.create_job(params)
 
-        calculator = general.RiskJobMixin(a_job)
+        calculator = general.BaseRiskCalculator(a_job)
 
         calculator.partition()
 
@@ -208,9 +209,10 @@ class RiskJobMixinTestCase(unittest.TestCase):
             expected, general.Block.from_kvs(a_job.blocks_keys[0]))
 
     def test_prepares_blocks_using_the_exposure_and_filtering(self):
-        """When reading the exposure file, the mixin also provides filtering
-        on the region specified in the REGION_VERTEX and REGION_GRID_SPACING
-        paramaters."""
+        """When reading the exposure file, the calculator also provides
+        filtering on the region specified in the REGION_VERTEX and
+        REGION_GRID_SPACING paramaters.
+        """
 
         region_vertex = \
             "46.0, 9.14, 46.0, 9.15, 45.0, 9.15, 45.0, 9.14"
@@ -219,7 +221,6 @@ class RiskJobMixinTestCase(unittest.TestCase):
                 helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE),
                 config.INPUT_REGION: region_vertex,
                 config.REGION_GRID_SPACING: 0.1,
-                # the calculation mode is filled to let the mixin runs
                 config.CALCULATION_MODE: "Event Based"}
 
         a_job = helpers.create_job(params)
@@ -228,7 +229,7 @@ class RiskJobMixinTestCase(unittest.TestCase):
             (shapes.Site(9.15, 45.16667), shapes.Site(9.14777, 45.17999)),
             None)
 
-        calculator = general.RiskJobMixin(a_job)
+        calculator = general.BaseRiskCalculator(a_job)
 
         calculator.partition()
 
@@ -245,7 +246,7 @@ GRID_ASSETS = {
     (1, 1): {'assetID': 'asset_at_1_1', 'lat': 10.1, 'lon': 10.1}}
 
 
-class RiskMixinTestCase(unittest.TestCase):
+class RiskCalculatorTestCase(unittest.TestCase):
 
     def setUp(self):
         self.job = helpers.job_from_file(os.path.join(helpers.DATA_DIR,
@@ -276,7 +277,7 @@ class RiskMixinTestCase(unittest.TestCase):
             def row_col(item):
                 return item[0].row, item[0].column
 
-            calculator = general.RiskJobMixin(self.job)
+            calculator = general.BaseRiskCalculator(self.job)
 
             got = sorted(calculator.grid_assets_iterator(self.grid),
                          key=row_col)
@@ -319,7 +320,7 @@ class RiskMixinTestCase(unittest.TestCase):
                 (shapes.Site(10.1, 10.1),
                     [({'value': 0.123}, GRID_ASSETS[(1, 1)])])]
 
-            calculator = general.RiskJobMixin(self.job)
+            calculator = general.BaseRiskCalculator(self.job)
 
             self.assertEqual(
                 sorted(expected, key=coords),
