@@ -26,7 +26,7 @@ from openquake import kvs
 from openquake import shapes
 from openquake.job import config
 from openquake.parser import exposure
-from openquake.risk.job import general
+from openquake.calculators.risk import general
 
 from tests.utils import helpers
 

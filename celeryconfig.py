@@ -50,7 +50,7 @@ CELERY_IMPORTS = (
     "openquake.calculators.hazard.disagg.core",
     "openquake.calculators.hazard.disagg.subsets",
     "openquake.calculators.hazard.uhs.core",
-    "openquake.risk.job.general",
+    "openquake.calculators.risk.general",
     "tests.utils.tasks")
 
 os.environ["DJANGO_SETTINGS_MODULE"] = "openquake.settings"
