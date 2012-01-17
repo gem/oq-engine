@@ -369,13 +369,13 @@ class ClassicalMixin(general.BasePSHAMixin):
                      realizations)
 
         block_size = config.hazard_block_size()
-        stats.pk_set(self.calc_proxy.job_id, "hcls_block_size", block_size)
+        stats.pk_set(self.calc_proxy.job_id, "block_size", block_size)
 
         blocks = range(0, len(sites), block_size)
-        stats.pk_set(self.calc_proxy.job_id, "hcls_blocks", len(blocks))
+        stats.pk_set(self.calc_proxy.job_id, "blocks", len(blocks))
 
         for start in blocks:
-            stats.pk_inc(self.calc_proxy.job_id, "hcls_cblock")
+            stats.pk_inc(self.calc_proxy.job_id, "cblock")
             end = start + block_size
             data = sites[start:end]
 
