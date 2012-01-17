@@ -17,7 +17,7 @@
 
 # pylint: disable=W0232
 
-""" Mixin for Classical PSHA Risk Calculation """
+"""Core functionality for Classical Risk calculations."""
 
 import geohash
 
@@ -222,11 +222,11 @@ def _convert_pes_to_pos(hazard_curve, imls):
             lambda x, y: subtract(array(x), array(y))))
 
 
-class ClassicalPSHABasedMixin(general.ProbabilisticRiskCalculator):
+class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
     """Calculator for Classical Risk computations."""
 
     def execute(self):
-        """ execute -- general mixin entry point """
+        """Core Classical Risk calculation starts here."""
         general.preload(self)
 
         celery_tasks = []
@@ -331,10 +331,7 @@ class ClassicalPSHABasedMixin(general.ProbabilisticRiskCalculator):
     def compute_loss_curve(self, point, loss_ratio_curve, asset):
         """
         Computes the loss ratio and store it in kvs to provide
-        data to the @output decorator which does the serialization
-        in the RiskJobMixin, more details inside
-        openquake.risk.job.general.RiskJobMixin -- for details see
-        RiskJobMixin._write_output_for_block and the output decorator
+        data to the @output decorator which does the serialization.
 
         :param point: the point of the grid we want to compute
         :type point: :py:class:`openquake.shapes.GridPoint`

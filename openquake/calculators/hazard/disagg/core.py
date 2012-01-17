@@ -159,7 +159,7 @@ def compute_disagg_matrix_task(calculation_id, site, realization, poe,
     return compute_disagg_matrix(calc_proxy, site, poe, result_dir)
 
 
-class DisaggMixin(Calculator):
+class DisaggHazardCalculator(Calculator):
     """The Python part of the Disaggregation calculator. This calculator
     computes disaggregation matrix results in the following manner:
 
@@ -189,7 +189,7 @@ class DisaggMixin(Calculator):
         5) Finally, write an NRML/XML wrapper around the disagg. results.
         """
         # matrix results for this job will go here:
-        result_dir = DisaggMixin.create_result_dir(
+        result_dir = DisaggHazardCalculator.create_result_dir(
             config.get('nfs', 'base_dir'), self.calc_proxy.job_id)
 
         realizations = self.calc_proxy['NUMBER_OF_LOGIC_TREE_SAMPLES']
@@ -209,8 +209,8 @@ class DisaggMixin(Calculator):
         subset_results = self.distribute_subsets(full_disagg_results,
                                                  subset_types, result_dir)
 
-        DisaggMixin.serialize_nrml(self.calc_proxy, subset_types,
-                                   subset_results)
+        DisaggHazardCalculator.serialize_nrml(self.calc_proxy, subset_types,
+                                              subset_results)
 
     @staticmethod
     def create_result_dir(base_path, job_id):
@@ -219,7 +219,8 @@ class DisaggMixin(Calculator):
         constructed like so: <base_path>/disagg-results/job-<job_id>.
 
         For example:
-        >>> DisaggMixin.create_result_dir('/var/lib/openquake', 2847)
+        >>> DisaggHazardCalculator.create_result_dir(
+        ... '/var/lib/openquake', 2847)
         '/var/lib/openquake/disagg-results/job-2847'
 
         :param base_path: base result storage directory (a path to an NFS
@@ -334,7 +335,7 @@ class DisaggMixin(Calculator):
         configuration).
 
         :param full_disagg_results:
-            Results of :method:`DisaggMixin.distribute_disagg`.
+            Results of :method:`DisaggHazardCalculator.distribute_disagg`.
         :param subset_types:
             The matrix subset results requested in the job config.
         :param target_dir:
@@ -428,7 +429,7 @@ class DisaggMixin(Calculator):
         :param subset_types:
             The matrix subset results requested in the job config.
         :param subsets_data:
-            Results of :method:`DisaggMixin.distribute_subsets`.
+            Results of :method:`DisaggHazardCalculator.distribute_subsets`.
         """
         LOG.info("Serializing XML results for job=%s" % the_job.job_id)
         imt = the_job['INTENSITY_MEASURE_TYPE']

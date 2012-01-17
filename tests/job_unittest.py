@@ -200,8 +200,7 @@ class JobDbRecordTestCase(unittest.TestCase):
                 CalculationProxy.is_job_completed(job_id), is_completed)
 
 
-class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
-    maxDiff = None
+class ConfigParseTestCase(unittest.TestCase):
 
     def test_parse_file(self):
         content = '''
@@ -211,7 +210,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             [HAZARD]
             MINIMUM_MAGNITUDE = 5.0
             '''
-        config_path = self.touch(
+        config_path = helpers.touch(
             dir=gettempdir(), content=textwrap.dedent(content))
 
         params, sections = _parse_config_file(config_path)
@@ -241,7 +240,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             # not used for this calc mode
             COMPUTE_MEAN_HAZARD_CURVE = true
             '''
-        config_path = self.touch(
+        config_path = helpers.touch(
             dir=gettempdir(), content=textwrap.dedent(content))
 
         params, sections = _parse_config_file(config_path)
@@ -268,7 +267,7 @@ class ConfigParseTestCase(unittest.TestCase, helpers.TestMixin):
             EXPOSURE = /absolute/exposure.xml
             VULNERABILITY = vulnerability.xml
             '''
-        config_path = self.touch(content=textwrap.dedent(content))
+        config_path = helpers.touch(content=textwrap.dedent(content))
 
         params, sections = _parse_config_file(config_path)
         params, sections = _prepare_config_parameters(params, sections)
@@ -290,8 +289,7 @@ def datapath(test, path):
     return helpers.testdata_path("%s/%s" % (test, path))
 
 
-class PrepareJobTestCase(unittest.TestCase, helpers.DbTestMixin):
-    maxDiff = None
+class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
 
     """
     Unit tests for the _prepare_job helper function, which creates a new
@@ -948,9 +946,9 @@ class CalcStatsTestCase(unittest.TestCase):
         '''
         # Mock out pieces of the test job so it doesn't actually run.
         haz_execute = ('openquake.calculators.hazard.event_based.core'
-                       '.EventBasedMixin.execute')
+                       '.EventBasedHazardCalculator.execute')
         risk_execute = ('openquake.calculators.risk.event_based.core'
-                        '.ProbabilisticEventMixin.execute')
+                        '.EventBasedRiskCalculator.execute')
         record = 'openquake.engine.CalculationProxy._record_initial_stats'
 
         with patch(haz_execute):

@@ -180,12 +180,8 @@ def release_data_from_kvs(job_id, sites, realizations, quantiles, poes,
 
 
 # pylint: disable=R0904
-class ClassicalMixin(general.BasePSHAMixin):
-    """Classical PSHA method for performing Hazard calculations.
-
-    Implements the JobMixin, which has a primary entry point of execute().
-    Execute is responsible for dispatching celery tasks.
-    """
+class ClassicalHazardCalculator(general.BaseHazardCalculator):
+    """Classical PSHA method for performing Hazard calculations."""
 
     def number_of_tasks(self):
         """How many `celery` tasks should be used for the calculations?"""
