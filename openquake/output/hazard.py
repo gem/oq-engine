@@ -863,8 +863,8 @@ def get_mode(job_id, serialize_to, nrml_path):
     if 'xml' in serialize_to and nrml_path:
         # Figure out the mode, are we at the beginning, in the middle or at
         # the end of the XML file?
-        blocks = stats.pk_get(job_id, "hcls_blocks")
-        cblock = stats.pk_get(job_id, "hcls_cblock")
+        blocks = stats.pk_get(job_id, "blocks")
+        cblock = stats.pk_get(job_id, "cblock")
         if blocks and cblock:
             blocks = int(blocks)
             cblock = int(cblock)
