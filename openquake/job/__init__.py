@@ -48,7 +48,7 @@ from openquake.job.params import (
     ARRAY_RE)
 from openquake.kvs import mark_job_as_current
 from openquake.logs import LOG
-from openquake.utils import general
+from openquake.utils import config as utils_config
 from openquake.utils import stats
 
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
@@ -332,7 +332,7 @@ def prepare_job(params, sections):
     stats.delete_job_counters(job.id)
 
     # Make the job ID generally available.
-    general.set_job_id(job.id)
+    utils_config.Config().set_job_id(job.id)
 
     return job
 

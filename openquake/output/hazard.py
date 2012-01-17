@@ -46,7 +46,7 @@ import logging
 
 from openquake.db import models
 from openquake import job, shapes, writer
-from openquake.utils import general, round_float, stats
+from openquake.utils import config, general, round_float, stats
 from openquake.xml import NSMAP, NRML, GML
 
 
@@ -75,8 +75,8 @@ class HazardCurveXMLWriter(writer.FileWriter):
 
     def _maintain_debug_stats(self):
         """Capture the file written if debug statistics are turned on."""
-        key = stats.key_name(
-            general.get_job_id(), *stats.STATS_KEYS["hcls_xmlcurvewrites"])
+        key = stats.key_name(config.Config().get_job_id(),
+                             *stats.STATS_KEYS["hcls_xmlcurvewrites"])
         if key:
             stats.kvs_op("rpush", key, self.path)
 
@@ -303,8 +303,8 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
 
     def _maintain_debug_stats(self):
         """Capture the file written if debug statistics are turned on."""
-        key = stats.key_name(
-            general.get_job_id(), *stats.STATS_KEYS["hcls_xmlmapwrites"])
+        key = stats.key_name(config.Config().get_job_id(),
+                             *stats.STATS_KEYS["hcls_xmlmapwrites"])
         if key:
             stats.kvs_op("rpush", key, self.path)
 

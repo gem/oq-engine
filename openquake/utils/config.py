@@ -54,6 +54,7 @@ class Config(object):
 
     def __init__(self):
         self._load_from_file()
+        self.job_id = -1
 
     def get(self, name):
         """A dict with key/value pairs for the given `section` or `None`."""
@@ -80,6 +81,14 @@ class Config(object):
                 return True
         else:
             return False
+
+    def set_job_id(self, job_id):
+        """Sets the job identifier."""
+        self.job_id = job_id
+
+    def get_job_id(self):
+        """Gets the job identifier."""
+        return self.job_id
 
 
 def get_section(section):

@@ -62,21 +62,6 @@ def str2bool(value):
     return value.lower() in ("true", "yes", "t", "1")
 
 
-# The module private variable below will be used to store the job ID.
-_THE_JOB_ID = -1
-
-
-def get_job_id():
-    """Return the job ID."""
-    return _THE_JOB_ID
-
-
-def set_job_id(job_id):
-    """Set the job ID."""
-    global _THE_JOB_ID  # pylint: disable=W0603
-    _THE_JOB_ID = job_id
-
-
 class AdHocObject(object):
     """Provides ad-hoc objects with a defined set of properties.
 
