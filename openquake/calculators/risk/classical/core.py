@@ -34,13 +34,13 @@ from openquake import logs
 from openquake.db import models
 from openquake.parser import vulnerability
 from openquake.shapes import Curve
-from openquake.risk.common import compute_loss_curve
-from openquake.risk.common import loop
-from openquake.risk.common import collect
 from openquake.utils.general import MemoizeMutable
 from openquake.calculators.risk import general
-from openquake.calculators.risk.general import conditional_loss_poes
+from openquake.calculators.risk.general import collect
 from openquake.calculators.risk.general import compute_conditional_loss
+from openquake.calculators.risk.general import conditional_loss_poes
+from openquake.calculators.risk.general import compute_loss_curve
+from openquake.calculators.risk.general import loop
 
 LOGGER = logs.LOG
 STEPS_PER_INTERVAL = 5

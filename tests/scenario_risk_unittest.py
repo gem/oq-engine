@@ -26,7 +26,7 @@ import unittest
 
 from openquake import kvs
 from openquake import shapes
-from openquake.risk.job import scenario as risk_job_det
+from openquake.calculators.risk.scenario import core as scenario_core
 
 TEST_JOB_ID = "1234"
 TEST_REGION = shapes.Region.from_simple((0.1, 0.1), (0.2, 0.2))
@@ -38,9 +38,8 @@ class ScenarioRiskTestCase(unittest.TestCase):
     """
 
     def test_load_gmvs_for_point(self):
-        """
-        Exercises the function
-        :py:func:`openquake.risk.job.scenario.load_gmvs_for_point`.
+        """Exercises the function
+        :func:`openquake.calculators.risk.scenario.core.load_gmvs_for_point`.
         """
 
         # clear the kvs before running the test
@@ -67,7 +66,8 @@ class ScenarioRiskTestCase(unittest.TestCase):
             json_gmv = json.JSONEncoder().encode(gmv)
             kvs.get_client().rpush(gmvs_key, json_gmv)
 
-        actual_gmvs = risk_job_det.load_gmvs_for_point(TEST_JOB_ID, test_point)
+        actual_gmvs = scenario_core.load_gmvs_for_point(TEST_JOB_ID,
+                                                        test_point)
 
         # clear the kvs again before the test concludes
         kvs.get_client().flushall()
@@ -119,7 +119,7 @@ class ScenarioRiskTestCase(unittest.TestCase):
         # Now verify that the load_assets_for_point function returns
         # the appropriate data.
         actual_assets = (
-            risk_job_det.load_assets_for_point(TEST_JOB_ID, test_point))
+            scenario_core.load_assets_for_point(TEST_JOB_ID, test_point))
 
         kvs.get_client().flushall()
 
