@@ -287,10 +287,10 @@ class TruncatedGRModificationsTestCase(BaseMFDTestCase):
     def test_set_ab(self):
         mfd = TruncatedGR(min_mag=2.5, max_mag=3.5, bin_width=0.25,
                           a_val=1, b_val=1.3)
-        mfd.modify('set_ab', {'a_val': -4.2, 'b_val': 0.44})
+        mfd.modify('set_ab', {'a_val': -4.2, 'b_val': 1.45})
         self.assertEqual(mfd.max_mag, 3.5)
         self.assertEqual(mfd.a_val, -4.2)
-        self.assertEqual(mfd.b_val, 0.44)
+        self.assertEqual(mfd.b_val, 1.45)
         self.assertEqual(mfd.min_mag, 2.5)
 
     def test_set_ab_check_constraints(self):
