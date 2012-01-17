@@ -192,8 +192,8 @@ class GetModeTestCase(helpers.RedisTestMixin, unittest.TestCase):
         job_id = 61
         args = (job_id, ["db", "xml"], "/path/1")
         stats.delete_job_counters(job_id)
-        stats.set_total(job_id, stats.STATS_KEYS["hcls_blocks"][0], 3)
-        stats.incr_counter(job_id, stats.STATS_KEYS["hcls_cblock"][0])
+        stats.pk_set(job_id, "blocks", 3)
+        stats.pk_set(job_id, "cblock", 1)
         self.assertEqual(writer.MODE_START, hazard_output.get_mode(*args))
 
     def test_get_mode_in_the_middle(self):
@@ -204,9 +204,8 @@ class GetModeTestCase(helpers.RedisTestMixin, unittest.TestCase):
         job_id = 62
         args = (job_id, ["db", "xml"], "/path/2")
         stats.delete_job_counters(job_id)
-        stats.set_total(job_id, stats.STATS_KEYS["hcls_blocks"][0], 3)
-        stats.incr_counter(job_id, stats.STATS_KEYS["hcls_cblock"][0])
-        stats.incr_counter(job_id, stats.STATS_KEYS["hcls_cblock"][0])
+        stats.pk_set(job_id, "blocks", 3)
+        stats.pk_set(job_id, "cblock", 2)
         self.assertEqual(writer.MODE_IN_THE_MIDDLE,
                          hazard_output.get_mode(*args))
 
@@ -217,9 +216,8 @@ class GetModeTestCase(helpers.RedisTestMixin, unittest.TestCase):
         job_id = 63
         args = (job_id, ["db", "xml"], "/path/3")
         stats.delete_job_counters(job_id)
-        stats.set_total(job_id, stats.STATS_KEYS["hcls_blocks"][0], 2)
-        stats.incr_counter(job_id, stats.STATS_KEYS["hcls_cblock"][0])
-        stats.incr_counter(job_id, stats.STATS_KEYS["hcls_cblock"][0])
+        stats.pk_set(job_id, "blocks", 2)
+        stats.pk_set(job_id, "cblock", 2)
         self.assertEqual(writer.MODE_END, hazard_output.get_mode(*args))
 
     def test_get_mode_with_single_block(self):
@@ -229,8 +227,8 @@ class GetModeTestCase(helpers.RedisTestMixin, unittest.TestCase):
         job_id = 64
         args = (job_id, ["db", "xml"], "/path/4")
         stats.delete_job_counters(job_id)
-        stats.set_total(job_id, stats.STATS_KEYS["hcls_blocks"][0], 1)
-        stats.incr_counter(job_id, stats.STATS_KEYS["hcls_cblock"][0])
+        stats.pk_set(job_id, "blocks", 1)
+        stats.pk_set(job_id, "cblock", 1)
         self.assertEqual(writer.MODE_START_AND_END,
                          hazard_output.get_mode(*args))
 
@@ -358,8 +356,9 @@ class CreateWriterTestCase(unittest.TestCase):
         self._init_curve()
         job_id = self.jobs.next()
         nrml_path = self.files.next()
-        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
-                                              self.x, self.d, writer.MODE_START)
+        result = hazard_output._create_writer(
+            job_id, ["db", "xml"], nrml_path, self.x, self.d,
+            writer.MODE_START)
         self.assertEqual(1, self.d.call_count)
         self.assertEqual(1, self.x.call_count)
         xml_serializer = self.xmls.next() - 1
@@ -384,8 +383,9 @@ class CreateWriterTestCase(unittest.TestCase):
         self._init_map()
         job_id = self.jobs.next()
         nrml_path = self.files.next()
-        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
-                                              self.x, self.d, writer.MODE_START)
+        result = hazard_output._create_writer(
+            job_id, ["db", "xml"], nrml_path, self.x, self.d,
+            writer.MODE_START)
         self.assertEqual(1, self.d.call_count)
         self.assertEqual(1, self.x.call_count)
         xml_serializer = self.xmls.next() - 1
@@ -411,8 +411,9 @@ class CreateWriterTestCase(unittest.TestCase):
         self._init_curve()
         job_id = self.jobs.next()
         nrml_path = self.files.next()
-        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
-                                              self.x, self.d, writer.MODE_START)
+        result = hazard_output._create_writer(
+            job_id, ["db", "xml"], nrml_path, self.x, self.d,
+            writer.MODE_START)
         self.assertEqual(1, self.d.call_count)
         self.assertEqual(1, self.x.call_count)
         xml_serializer = self.xmls.next() - 1
@@ -437,8 +438,9 @@ class CreateWriterTestCase(unittest.TestCase):
         self._init_map()
         job_id = self.jobs.next()
         nrml_path = self.files.next()
-        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
-                                              self.x, self.d, writer.MODE_START)
+        result = hazard_output._create_writer(
+            job_id, ["db", "xml"], nrml_path, self.x, self.d,
+            writer.MODE_START)
         self.assertEqual(1, self.d.call_count)
         self.assertEqual(1, self.x.call_count)
         xml_serializer = self.xmls.next() - 1
