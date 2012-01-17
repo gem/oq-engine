@@ -67,7 +67,7 @@ def unwrap_validation_error(jpype, runtime_exception, path=None):
 
 @task(ignore_result=True)
 @java.unpack_exception
-@stats.progress_indicator
+@stats.progress_indicator("h")
 def compute_hazard_curve(job_id, sites, realization):
     """ Generate hazard curve for a given site list. """
 
@@ -78,7 +78,7 @@ def compute_hazard_curve(job_id, sites, realization):
 
 @task
 @java.unpack_exception
-@stats.progress_indicator
+@stats.progress_indicator("h")
 def compute_mgm_intensity(job_id, block_id, site_id):
     """
     Compute mean ground intensity for a specific site.
@@ -97,7 +97,7 @@ def compute_mgm_intensity(job_id, block_id, site_id):
 
 @task(ignore_result=True)
 @java.unpack_exception
-@stats.progress_indicator
+@stats.progress_indicator("h")
 def compute_mean_curves(job_id, sites, realizations):
     """Compute the mean hazard curve for each site given."""
 
@@ -113,7 +113,7 @@ def compute_mean_curves(job_id, sites, realizations):
 
 @task(ignore_result=True)
 @java.unpack_exception
-@stats.progress_indicator
+@stats.progress_indicator("h")
 def compute_quantile_curves(job_id, sites, realizations, quantiles):
     """Compute the quantile hazard curve for each site given."""
 
@@ -365,13 +365,13 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                      realizations)
 
         block_size = config.hazard_block_size()
-        stats.pk_set(self.calc_proxy.job_id, "hcls_block_size", block_size)
+        stats.pk_set(self.calc_proxy.job_id, "block_size", block_size)
 
         blocks = range(0, len(sites), block_size)
-        stats.pk_set(self.calc_proxy.job_id, "hcls_blocks", len(blocks))
+        stats.pk_set(self.calc_proxy.job_id, "blocks", len(blocks))
 
         for start in blocks:
-            stats.pk_inc(self.calc_proxy.job_id, "hcls_cblock")
+            stats.pk_inc(self.calc_proxy.job_id, "cblock")
             end = start + block_size
             data = sites[start:end]
 
