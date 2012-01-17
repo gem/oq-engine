@@ -18,9 +18,9 @@
 """Information about the calculators available for the Risk engine."""
 
 
-from openquake.risk.job.scenario import ScenarioEventBasedMixin
 from openquake.calculators.risk.classical.core import ClassicalPSHABasedMixin
 from openquake.calculators.risk.event_based.core import ProbabilisticEventMixin
+from openquake.calculators.risk.scenario.core import ScenarioEventBasedMixin
 
 
 CALCULATORS = {
