@@ -35,7 +35,7 @@ from openquake.utils import config
 #   https://bugs.launchpad.net/openquake/+bug/907703
 STATS_KEYS = {
     # Predefined calculator statistics keys for the kvs.
-    # The areas are as follows:
+    # The calculator/computation areas are as follows:
     #   "g" : general
     #   "h" : hazard
     #   "r" : risk
@@ -63,7 +63,7 @@ STATS_KEYS = {
 
 
 # Predefined key template, order of substitution variables:
-#   job_id, area, fragment, counter_type.
+#   job_id, computation area, key fragment, counter_type.
 _KEY_TEMPLATE = "oqs/%s/%s/%s/%s"
 
 
@@ -133,18 +133,21 @@ def _redis():
     return redis.Redis(**args)
 
 
-def key_name(job_id, area, fragment, counter_type):
+def key_name(job_id, area, key_fragment, counter_type):
     """Return the redis key name for the given job/function.
 
-    The areas in use are 'h' (for hazard) and 'r' (for risk). The counter
-    types in use are:
+    The calculator/computation areas are as follows:
+        "g" : general
+        "h" : hazard
+        "r" : risk
+    The counter types in use are:
         "d" : debug counter, turned off in production via openquake.cfg
         "i" : incremental counter
         "t" : totals counter
     """
     if counter_type == "d" and not debug_stats_enabled():
         return None
-    return _KEY_TEMPLATE % (job_id, area, fragment, counter_type)
+    return _KEY_TEMPLATE % (job_id, area, key_fragment, counter_type)
 
 
 class progress_indicator(object):   # pylint: disable=C0103
@@ -185,28 +188,31 @@ class progress_indicator(object):   # pylint: disable=C0103
         return wrapper
 
 
-def set_total(job_id, area, fragment, value):
+def set_total(job_id, area, key_fragment, value):
     """Set a total value for the given key."""
-    key = key_name(job_id, area, fragment, "t")
+    key = key_name(job_id, area, key_fragment, "t")
     kvs_op("set", key, value)
 
 
-def incr_counter(job_id, area, fragment):
+def incr_counter(job_id, area, key_fragment):
     """Increment the counter for the given key."""
-    key = key_name(job_id, area, fragment, "i")
+    key = key_name(job_id, area, key_fragment, "i")
     kvs_op("incr", key)
 
 
-def get_counter(job_id, area, fragment, counter_type):
+def get_counter(job_id, area, key_fragment, counter_type):
     """Get the value for the given key.
 
-    The areas in use are 'h' (for hazard) and 'r' (for risk). The counter
-    types in use are:
+    The calculator/computation areas are as follows:
+        "g" : general
+        "h" : hazard
+        "r" : risk
+    The types in use are:
         "d" : debug counter, turned off in production via openquake.cfg
         "i" : incremental counter
         "t" : totals counter
     """
-    key = key_name(job_id, area, fragment, counter_type)
+    key = key_name(job_id, area, key_fragment, counter_type)
     if not key:
         return
     value = kvs_op("get", key)
