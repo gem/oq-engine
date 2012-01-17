@@ -47,7 +47,8 @@ class TruncatedGR(BaseMFD):
 
     MODIFICATIONS = set(('increment_max_mag',
                          'set_max_mag',
-                         'increment_b'))
+                         'increment_b',
+                         'set_ab'))
 
     def check_constraints(self):
         """
@@ -184,7 +185,7 @@ class TruncatedGR(BaseMFD):
         :param value:
             A float value to assign to ``max_mag``.
 
-        No specific recalculation of other Gutenber-Richter parameters
+        No specific recalculation of other Gutenberg-Richter parameters
         is done after assigning a new value to ``max_mag``.
         """
         self.max_mag = value
@@ -204,3 +205,17 @@ class TruncatedGR(BaseMFD):
         self.b_val += value
         self.check_constraints()
         self._set_a(tmr)
+
+    def modify_set_ab(self, a_val, b_val):
+        """
+        Apply absolute ``a`` and ``b`` values modification.
+
+        :param a_val:
+            A float value to use as a new ``a_val``.
+        :param b_val:
+            A float value to use as a new ``b_val``.
+
+        No recalculation of other Gutenberg-Richter parameters is done.
+        """
+        self.b_val = b_val
+        self.a_val = a_val
