@@ -54,7 +54,7 @@ def compute_ground_motion_field(self, _random_generator):
     return hashmap
 
 
-class ScenarioEventBasedMixinTestCase(unittest.TestCase):
+class ScenarioHazardCalculatorTestCase(unittest.TestCase):
     """
     Tests for the Scenario Hazard engine.
     """
@@ -83,7 +83,7 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
 
         # saving the default java implementation
         self.default = (
-            scenario.ScenarioEventBasedMixin.compute_ground_motion_field)
+            scenario.ScenarioHazardCalculator.compute_ground_motion_field)
 
         self.grid = self.calc_proxy.region.grid
 
@@ -91,7 +91,7 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
 
     def tearDown(self):
         # restoring the default java implementation
-        scenario.ScenarioEventBasedMixin.compute_ground_motion_field = \
+        scenario.ScenarioHazardCalculator.compute_ground_motion_field = \
             self.default
 
     def test_multiple_computations_are_triggered(self):
@@ -107,10 +107,10 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
         self.job_profile.gmf_calculation_number = 3
         self.job_profile.save()
 
-        calculator = scenario.ScenarioEventBasedMixin(self.calc_proxy)
+        calculator = scenario.ScenarioHazardCalculator(self.calc_proxy)
 
         with patch('openquake.calculators.hazard.scenario.core'
-                   '.ScenarioEventBasedMixin'
+                   '.ScenarioHazardCalculator'
                    '.compute_ground_motion_field') as compute_gmf_mock:
             # the return value needs to be a Java HashMap
             compute_gmf_mock.return_value = java.jclass('HashMap')()
@@ -161,13 +161,13 @@ class ScenarioEventBasedMixinTestCase(unittest.TestCase):
             self.assertEqual(0.1, gmv["mag"])
 
     def test_loads_the_rupture_model(self):
-        calculator = scenario.ScenarioEventBasedMixin(self.calc_proxy)
+        calculator = scenario.ScenarioHazardCalculator(self.calc_proxy)
 
         self.assertEqual("org.opensha.sha.earthquake.EqkRupture",
                          calculator.rupture_model.__class__.__name__)
 
     def test_the_same_calculator_is_used_between_multiple_invocations(self):
-        calculator = scenario.ScenarioEventBasedMixin(self.calc_proxy)
+        calculator = scenario.ScenarioHazardCalculator(self.calc_proxy)
 
         gmf_calculator1 = calculator.gmf_calculator([shapes.Site(1.0, 1.0)])
         gmf_calculator2 = calculator.gmf_calculator([shapes.Site(1.0, 1.0)])

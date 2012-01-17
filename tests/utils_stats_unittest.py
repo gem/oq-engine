@@ -30,7 +30,7 @@ from openquake.utils import stats
 from tests.utils import helpers
 
 
-class ProgressIndicatorTestCase(helpers.RedisTestMixin, unittest.TestCase):
+class ProgressIndicatorTestCase(helpers.RedisTestCase, unittest.TestCase):
     """Tests the behaviour of utils.stats.progress_indicator()."""
 
     def test_success_stats(self):
@@ -79,7 +79,7 @@ class ProgressIndicatorTestCase(helpers.RedisTestMixin, unittest.TestCase):
         self.assertEqual(1, (value - previous_value))
 
 
-class SetTotalTestCase(helpers.RedisTestMixin, unittest.TestCase):
+class SetTotalTestCase(helpers.RedisTestCase, unittest.TestCase):
     """Tests the behaviour of utils.stats.set_total()."""
 
     def test_set_total(self):
@@ -93,7 +93,7 @@ class SetTotalTestCase(helpers.RedisTestMixin, unittest.TestCase):
         self.assertEqual("123", kvs.get(key))
 
 
-class IncrCounterTestCase(helpers.RedisTestMixin, unittest.TestCase):
+class IncrCounterTestCase(helpers.RedisTestCase, unittest.TestCase):
     """Tests the behaviour of utils.stats.incr_counter()."""
 
     def test_incr_counter(self):
@@ -110,7 +110,7 @@ class IncrCounterTestCase(helpers.RedisTestMixin, unittest.TestCase):
         self.assertEqual(1, (value - previous_value))
 
 
-class GetCounterTestCase(helpers.RedisTestMixin, unittest.TestCase):
+class GetCounterTestCase(helpers.RedisTestCase, unittest.TestCase):
     """Tests the behaviour of utils.stats.get_counter()."""
 
     def test_get_value_with_non_existent_incremental(self):
@@ -185,7 +185,7 @@ class GetCounterTestCase(helpers.RedisTestMixin, unittest.TestCase):
             self.assertIs(None, stats.get_counter(*args))
 
 
-class DeleteJobCountersTestCase(helpers.RedisTestMixin, unittest.TestCase):
+class DeleteJobCountersTestCase(helpers.RedisTestCase, unittest.TestCase):
     """Tests the behaviour of utils.stats.delete_job_counters()."""
 
     def test_delete_job_counters_deletes_counters_for_job(self):
@@ -222,7 +222,7 @@ class DeleteJobCountersTestCase(helpers.RedisTestMixin, unittest.TestCase):
         stats.delete_job_counters(sys.maxint)
 
 
-class PkSetTestCase(helpers.RedisTestMixin, unittest.TestCase):
+class PkSetTestCase(helpers.RedisTestCase, unittest.TestCase):
     """Tests the behaviour of utils.stats.pk_set()."""
 
     def test_pk_set_with_existing_total(self):
@@ -289,7 +289,7 @@ class PkSetTestCase(helpers.RedisTestMixin, unittest.TestCase):
             self.assertRaises(KeyError, stats.pk_set, job_id, pkey, 737)
 
 
-class PkIncTestCase(helpers.RedisTestMixin, unittest.TestCase):
+class PkIncTestCase(helpers.RedisTestCase, unittest.TestCase):
     """Tests the behaviour of utils.stats.pk_inc()."""
 
     def test_pk_inc_with_existing_total(self):
@@ -358,7 +358,7 @@ class PkIncTestCase(helpers.RedisTestMixin, unittest.TestCase):
             self.assertRaises(KeyError, stats.pk_inc, job_id, pkey)
 
 
-class PkGetTestCase(helpers.RedisTestMixin, unittest.TestCase):
+class PkGetTestCase(helpers.RedisTestCase, unittest.TestCase):
     """Tests the behaviour of utils.stats.pk_get()."""
 
     def test_pk_get_with_existing_total(self):

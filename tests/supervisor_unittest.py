@@ -21,7 +21,7 @@ import logging
 from datetime import datetime
 
 from tests.utils.helpers import patch, job_from_file, get_data_path
-from tests.utils.helpers import DbTestMixin, cleanup_loggers
+from tests.utils.helpers import DbTestCase, cleanup_loggers
 
 from openquake.db.models import OqCalculation, ErrorMsg, CalcStats
 from openquake.supervising import supervisor
@@ -31,7 +31,7 @@ from openquake.supervising import supersupervisor
 CONFIG_FILE = "config.gem"
 
 
-class SupervisorHelpersTestCase(DbTestMixin, unittest.TestCase):
+class SupervisorHelpersTestCase(DbTestCase, unittest.TestCase):
     def setUp(self):
         self.job = self.setup_classic_job(create_job_path=False)
 

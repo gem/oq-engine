@@ -491,84 +491,36 @@ class TestStore(object):
         return TestStore._conn.get(key)
 
 
-class TestMixin(object):
-    """Mixin class with various helper methods."""
+def touch(content=None, dir=None, prefix="tmp", suffix="tmp"):
+    """Create temporary file with the given content.
 
-    def touch(self, content=None, dir=None, prefix="tmp", suffix="tmp"):
-        """Create temporary file with the given content.
+    Please note: the temporary file must be deleted bu the caller.
 
-        Please note: the temporary file must be deleted bu the caller.
-
-        :param string content: the content to write to the temporary file.
-        :param string dir: directory where the file should be created
-        :param string prefix: file name prefix
-        :param string suffix: file name suffix
-        :returns: a string with the path to the temporary file
-        """
-        if dir is not None:
-            if not os.path.exists(dir):
-                os.makedirs(dir)
-        fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
-        if content:
-            fh = os.fdopen(fh, "w")
-            fh.write(content)
-            fh.close()
-        return path
-
-    def create_job_with_mixin(self, params, mixin_class):
-        """
-        Create a CalculationProxy and mixes in a Mixin.
-
-        This method, and its double `unload_job_mixin`, when called in the
-        setUp and tearDown of a TestCase respectively, have the effect of a
-        `with mixin_class` spanning a single test.
-
-        :param params: CalculationProxy parameters
-        :type params: :py:class:`dict`
-        :param mixin_class: the mixin that will be mixed in the job
-        :type mixin_class: :py:class:`openquake.job.Mixin`
-        :returns: a CalculationProxy
-        :rtype: :py:class:`openquake.engine.CalculationProxy`
-        """
-        # preserve some status to be used by unload
-        self._calculation_mode = params.get('CALCULATION_MODE')
-        self._job = create_job(params)
-        self._mixin = mixin_class(self._job, mixin_class)
-        return self._mixin._load()
-
-    def unload_job_mixin(self):
-        """
-        Remove from the job the Mixin mixed in by create_job_with_mixin.
-        """
-        self._job.params['CALCULATION_MODE'] = self._calculation_mode
-        self._mixin._unload()
+    :param string content: the content to write to the temporary file.
+    :param string dir: directory where the file should be created
+    :param string prefix: file name prefix
+    :param string suffix: file name suffix
+    :returns: a string with the path to the temporary file
+    """
+    if dir is not None:
+        if not os.path.exists(dir):
+            os.makedirs(dir)
+    fh, path = tempfile.mkstemp(dir=dir, prefix=prefix, suffix=suffix)
+    if content:
+        fh = os.fdopen(fh, "w")
+        fh.write(content)
+        fh.close()
+    return path
 
 
-class DbTestMixin(TestMixin):
-    """Mixin class with various helper methods."""
+class DbTestCase(object):
+    """Class which contains various db-related testing helpers."""
 
     IMLS = [0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527,
             0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778]
 
     def default_user(self):
         return models.OqUser.objects.get(user_name="openquake")
-
-    def setup_upload(self, dbkey=None):
-        """Create an upload with associated inputs.
-
-        :param integer dbkey: if set use the upload record with given db key.
-        :returns: a :py:class:`db.models.Upload` instance
-        """
-        if dbkey:
-            return models.Upload.objects.get(id=dbkey)
-
-        user = models.OqUser.objects.get(user_name="openquake")
-        user.save()
-
-        upload = models.Upload(owner=user, path=tempfile.mkdtemp())
-        upload.save()
-
-        return upload
 
     def teardown_upload(self, upload, filesystem_only=True):
         """
@@ -700,31 +652,9 @@ class DbTestMixin(TestMixin):
         job.delete()
         oqjp.delete()
 
-    def setup_output(self, job_to_use=None, output_type="hazard_map",
-                     db_backed=True):
-        """Create an output object of the given type.
-
-        :param job_to_use: if set use the passed
-            :py:class:`db.models.OqCalculation` instance as opposed to
-            creating a new one.
-        :param str output_type: map type, one of "hazard_map", "loss_map"
-        :param bool db_backed: initialize the property of the newly created
-            :py:class:`db.models.Output` instance with this value.
-        :returns: a :py:class:`db.models.Output` instance
-        """
-        job = job_to_use if job_to_use else self.setup_classic_job()
-        output = models.Output(owner=job.owner, oq_calculation=job,
-                               output_type=output_type,
-                               db_backed=db_backed)
-        output.path = self.generate_output_path(job, output_type)
-        output.display_name = os.path.basename(output.path)
-        output.save()
-
-        return output
-
     def generate_output_path(self, job, output_type="hazard_map"):
         """Return a random output path for the given job."""
-        path = self.touch(
+        path = touch(
             dir=os.path.join(job.path, "computed_output"), suffix=".xml",
             prefix="hzrd." if output_type == "hazard_map" else "loss.")
         return path
@@ -749,11 +679,10 @@ class DbTestMixin(TestMixin):
             self.teardown_job(job, filesystem_only=filesystem_only)
 
 
-class ConfigTestMixin(TestMixin):
-    """
-    Mixin class for tests that require/manipulate the environment
-    and the configuration.
-    """
+class ConfigTestCase(object):
+    """Class which contains various configuration- and environment-related
+    testing helpers."""
+
     def setup_config(self):
         self.orig_env = os.environ.copy()
         os.environ.clear()
@@ -783,13 +712,13 @@ class ConfigTestMixin(TestMixin):
                 %s""" % (section, data)
         else:
             content = ""
-        site_path = self.touch(content=textwrap.dedent(content))
+        site_path = touch(content=textwrap.dedent(content))
         os.environ["OQ_SITE_CFG_PATH"] = site_path
         config.Config().cfg.clear()
         config.Config()._load_from_file()
 
 
-class RedisTestMixin(object):
+class RedisTestCase(object):
     """Redis-related utilities for testing."""
 
     def connect(self, *args, **kwargs):
