@@ -126,7 +126,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         agg_curve = aggregate_curve.compute(self._tses(), self._time_span())
         plot_aggregate_curve(self, agg_curve)
 
-        general.write_output(self.calc_proxy)
+        general.write_output(self)
 
     def _tses(self):
         """Return the time representative of the Stochastic Event Set
