@@ -45,9 +45,9 @@ class TruncatedGR(BaseMFD):
 
     PARAMETERS = ('min_mag', 'max_mag', 'bin_width', 'a_val', 'b_val')
 
-    MODIFICATIONS = set(('increment_maximum_magnitude',
-                         'set_maximum_magnitude',
-                         'increment_b_val'))
+    MODIFICATIONS = set(('increment_max_mag',
+                         'set_max_mag',
+                         'increment_b'))
 
     def check_constraints(self):
         """
@@ -160,7 +160,7 @@ class TruncatedGR(BaseMFD):
                       - 16.1
                       - math.log10(self.b_val))
 
-    def modify_increment_maximum_magnitude(self, value):
+    def modify_increment_max_mag(self, value):
         """
         Apply relative maximum magnitude modification.
 
@@ -177,7 +177,7 @@ class TruncatedGR(BaseMFD):
         self.check_constraints()
         self._set_a(tmr)
 
-    def modify_set_maximum_magnitude(self, value):
+    def modify_set_max_mag(self, value):
         """
         Apply absolute maximum magnitude modification.
 
@@ -189,7 +189,7 @@ class TruncatedGR(BaseMFD):
         """
         self.max_mag = value
 
-    def modify_increment_b_val(self, value):
+    def modify_increment_b(self, value):
         """
         Apply relative ``b``-value modification.
 
@@ -197,7 +197,7 @@ class TruncatedGR(BaseMFD):
             A float value to add to ``b_val``.
 
         After changing ``b_val`` the ``a_val`` is recalculated the same
-        way as for :meth:`modify_increment_maximum_magnitude` (with
+        way as for :meth:`modify_increment_max_mag` (with
         respect to TMR).
         """
         tmr = self._get_total_moment_rate()

@@ -232,55 +232,49 @@ class TruncatedGRModificationsTestCase(BaseMFDTestCase):
         self.assertAlmostEqual(mfd.a_val, 4.4)
         self.assertEqual(mfd._get_total_moment_rate(), tmr)
 
-    def test_increment_maximum_magnitude(self):
+    def test_increment_max_mag(self):
         mfd = TruncatedGR(min_mag=6.0, max_mag=7.0, bin_width=0.1,
                           a_val=-18.2, b_val=0.41)
         old_tmr = mfd._get_total_moment_rate()
-        mfd.modify('increment_maximum_magnitude', {'value': 1})
+        mfd.modify('increment_max_mag', {'value': 1})
         self.assertEqual(mfd.max_mag, 8.0)
         self.assertEqual(mfd.b_val, 0.41)
         self.assertEqual(mfd.min_mag, 6.0)
         self.assertAlmostEqual(mfd._get_total_moment_rate(), old_tmr)
-        mfd.modify('increment_maximum_magnitude', {'value': -1})
+        mfd.modify('increment_max_mag', {'value': -1})
         self.assertAlmostEqual(mfd._get_total_moment_rate(), old_tmr)
         self.assertEqual(mfd.max_mag, 7.0)
         self.assertAlmostEqual(mfd.a_val, -18.2)
 
-    def test_increment_maximum_magnitude_check_constraints(self):
+    def test_increment_max_mag_check_constraints(self):
         mfd = TruncatedGR(min_mag=6.0, max_mag=7.0, bin_width=0.1,
                           a_val=1, b_val=1)
-        self.assert_mfd_error(
-            mfd.modify,
-            'increment_maximum_magnitude', {'value': -1}
-        )
+        self.assert_mfd_error(mfd.modify, 'increment_max_mag', {'value': -1})
 
-    def test_set_maximum_magnitude(self):
+    def test_set_max_mag(self):
         mfd = TruncatedGR(min_mag=3.5, max_mag=5.5, bin_width=0.5,
                           a_val=1, b_val=1.3)
-        mfd.modify('set_maximum_magnitude', {'value': 4.2})
+        mfd.modify('set_max_mag', {'value': 4.2})
         self.assertEqual(mfd.max_mag, 4.2)
         self.assertEqual(mfd.a_val, 1)
         self.assertEqual(mfd.b_val, 1.3)
         self.assertEqual(mfd.min_mag, 3.5)
 
-    def test_set_maximum_magnitude_check_constraints(self):
+    def test_set_max_mag_check_constraints(self):
         mfd = TruncatedGR(min_mag=3.5, max_mag=5.5, bin_width=0.5,
                           a_val=1, b_val=1.3)
-        self.assert_mfd_error(
-            mfd.modify,
-            'set_maximum_magnitude', {'value': 3.6}
-        )
+        self.assert_mfd_error(mfd.modify, 'set_max_mag', {'value': 3.6})
 
     def test_increment_b_val(self):
         mfd = TruncatedGR(min_mag=4.2, max_mag=6.6, bin_width=0.2,
                           a_val=-20.5, b_val=0.51)
         old_tmr = mfd._get_total_moment_rate()
-        mfd.modify('increment_b_val', {'value': 0.46})
+        mfd.modify('increment_b', {'value': 0.46})
         self.assertEqual(mfd.max_mag, 6.6)
         self.assertEqual(mfd.b_val, 0.51 + 0.46)
         self.assertEqual(mfd.min_mag, 4.2)
         self.assertAlmostEqual(mfd._get_total_moment_rate(), old_tmr)
-        mfd.modify('increment_b_val', {'value': -0.46})
+        mfd.modify('increment_b', {'value': -0.46})
         self.assertAlmostEqual(mfd._get_total_moment_rate(), old_tmr)
         self.assertEqual(mfd.b_val, 0.51)
         self.assertAlmostEqual(mfd.a_val, -20.5)
