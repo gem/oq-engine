@@ -21,9 +21,15 @@
 import os
 import unittest
 
-from openquake.output.hazard import *
+from openquake.db import models
 from openquake.shapes import Site
 from openquake.utils import round_float
+from openquake.output.hazard import GmfDBReader
+from openquake.output.hazard import GmfDBWriter
+from openquake.output.hazard import HazardCurveDBReader
+from openquake.output.hazard import HazardCurveDBWriter
+from openquake.output.hazard import HazardMapDBReader
+from openquake.output.hazard import HazardMapDBWriter
 
 from tests.utils import helpers
 
