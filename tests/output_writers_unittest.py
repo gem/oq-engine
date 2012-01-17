@@ -356,8 +356,9 @@ class CreateWriterTestCase(unittest.TestCase):
         self._init_curve()
         job_id = self.jobs.next()
         nrml_path = self.files.next()
-        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
-                                              self.x, self.d, writer.MODE_START)
+        result = hazard_output._create_writer(
+            job_id, ["db", "xml"], nrml_path, self.x, self.d,
+            writer.MODE_START)
         self.assertEqual(1, self.d.call_count)
         self.assertEqual(1, self.x.call_count)
         xml_serializer = self.xmls.next() - 1
@@ -382,8 +383,9 @@ class CreateWriterTestCase(unittest.TestCase):
         self._init_map()
         job_id = self.jobs.next()
         nrml_path = self.files.next()
-        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
-                                              self.x, self.d, writer.MODE_START)
+        result = hazard_output._create_writer(
+            job_id, ["db", "xml"], nrml_path, self.x, self.d,
+            writer.MODE_START)
         self.assertEqual(1, self.d.call_count)
         self.assertEqual(1, self.x.call_count)
         xml_serializer = self.xmls.next() - 1
@@ -409,8 +411,9 @@ class CreateWriterTestCase(unittest.TestCase):
         self._init_curve()
         job_id = self.jobs.next()
         nrml_path = self.files.next()
-        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
-                                              self.x, self.d, writer.MODE_START)
+        result = hazard_output._create_writer(
+            job_id, ["db", "xml"], nrml_path, self.x, self.d,
+            writer.MODE_START)
         self.assertEqual(1, self.d.call_count)
         self.assertEqual(1, self.x.call_count)
         xml_serializer = self.xmls.next() - 1
@@ -435,8 +438,9 @@ class CreateWriterTestCase(unittest.TestCase):
         self._init_map()
         job_id = self.jobs.next()
         nrml_path = self.files.next()
-        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
-                                              self.x, self.d, writer.MODE_START)
+        result = hazard_output._create_writer(
+            job_id, ["db", "xml"], nrml_path, self.x, self.d,
+            writer.MODE_START)
         self.assertEqual(1, self.d.call_count)
         self.assertEqual(1, self.x.call_count)
         xml_serializer = self.xmls.next() - 1
