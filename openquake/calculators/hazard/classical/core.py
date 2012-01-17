@@ -67,7 +67,7 @@ def unwrap_validation_error(jpype, runtime_exception, path=None):
 
 @task(ignore_result=True)
 @java.unpack_exception
-@stats.progress_indicator
+@stats.progress_indicator("h")
 def compute_hazard_curve(job_id, sites, realization):
     """ Generate hazard curve for a given site list. """
 
@@ -78,7 +78,7 @@ def compute_hazard_curve(job_id, sites, realization):
 
 @task
 @java.unpack_exception
-@stats.progress_indicator
+@stats.progress_indicator("h")
 def compute_mgm_intensity(job_id, block_id, site_id):
     """
     Compute mean ground intensity for a specific site.
@@ -97,7 +97,7 @@ def compute_mgm_intensity(job_id, block_id, site_id):
 
 @task(ignore_result=True)
 @java.unpack_exception
-@stats.progress_indicator
+@stats.progress_indicator("h")
 def compute_mean_curves(job_id, sites, realizations):
     """Compute the mean hazard curve for each site given."""
 
@@ -113,7 +113,7 @@ def compute_mean_curves(job_id, sites, realizations):
 
 @task(ignore_result=True)
 @java.unpack_exception
-@stats.progress_indicator
+@stats.progress_indicator("h")
 def compute_quantile_curves(job_id, sites, realizations, quantiles):
     """Compute the quantile hazard curve for each site given."""
 
