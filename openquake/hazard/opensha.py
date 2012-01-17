@@ -436,7 +436,7 @@ class ClassicalMixin(BasePSHAMixin):
         :type sites: list of :py:class:`openquake.shapes.Site`
         """
 
-        def duration_generator(value):
+        def pause_generator(value):
             """
             Returns the initial value when called for the first time and
             the double value upon each subsequent invocation.
@@ -464,21 +464,22 @@ class ClassicalMixin(BasePSHAMixin):
         xsc.i_total = len(sites)
         xsc.i_done = 0
         accounted_for = set()
-        dgen = duration_generator(0.1)
-        duration = dgen.next()
+        min_pause = 0.1
+        pgen = pause_generator(min_pause)
+        pause = pgen.next()
 
         while accounted_for != sites:
             hc_data = []
             # Sleep a little before checking the availability of additional
             # hazard curve results.
-            time.sleep(duration)
+            time.sleep(pause)
             results_found = 0
             for site in sites:
-                key = key_template % hash(site)
-                value = kvs.get_value_json_decoded(key)
-                if value is None or site in accounted_for:
-                    # The curve for this site is not ready yet. Proceed to
-                    # the next.
+                if site in accounted_for:
+                    continue
+                value = kvs.get_value_json_decoded(key_template % hash(site))
+                if value is None:
+                    # No value yet, proceed to next site.
                     continue
                 # Use hazard curve ordinate values (PoE) from KVS and abscissae
                 # from the IML list in config.
@@ -493,12 +494,14 @@ class ClassicalMixin(BasePSHAMixin):
                 results_found += 1
             if not results_found:
                 # No results found, increase the sleep duration.
-                duration = dgen.next()
+                pause = pgen.next()
             else:
                 xsc.i_next = len(hc_data)
                 hazard_output.SerializerContext().update(xsc)
                 curve_writer.serialize(hc_data)
                 xsc.i_done += xsc.i_next
+                pause *= 0.8
+                pause = min_pause if pause < min_pause else pause
 
         return nrml_path
 
