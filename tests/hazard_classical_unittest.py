@@ -32,7 +32,7 @@ from openquake import shapes
 from openquake.calculators.hazard.classical import core as classical
 from openquake.calculators.hazard.general import create_java_cache
 
-from tests.utils.helpers import (patch, TestMixin, TestStore, demo_file,
+from tests.utils.helpers import (patch, TestStore, demo_file,
                                  create_job)
 from tests.utils.tasks import (
     test_async_data_reflector, test_compute_hazard_curve, test_data_reflector)
@@ -46,8 +46,8 @@ SIMPLE_FAULT_GMPE_LT = demo_file(
 SIMPLE_FAULT_BASE_PATH = os.path.abspath(demo_file('simple_fault_demo_hazard'))
 
 
-class DoCurvesTestCase(TestMixin, unittest.TestCase):
-    """Tests the behaviour of ClassicalMixin.do_curves()."""
+class DoCurvesTestCase(unittest.TestCase):
+    """Tests the behaviour of ClassicalHazardCalculator.do_curves()."""
 
     def __init__(self, *args, **kwargs):
         super(DoCurvesTestCase, self).__init__(*args, **kwargs)
@@ -85,7 +85,7 @@ class DoCurvesTestCase(TestMixin, unittest.TestCase):
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
         self.calc_proxy = create_job(params)
-        self.calculator = classical.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
 
         # Store the canned result data in the KVS.
         key = self.calc_proxy.job_id
@@ -123,8 +123,8 @@ class DoCurvesTestCase(TestMixin, unittest.TestCase):
         self.assertEqual(2, fake_serializer.number_of_calls)
 
 
-class DoMeansTestCase(TestMixin, unittest.TestCase):
-    """Tests the behaviour of ClassicalMixin.do_means()."""
+class DoMeansTestCase(unittest.TestCase):
+    """Tests the behaviour of ClassicalHazardCalculator.do_means()."""
 
     def __init__(self, *args, **kwargs):
         super(DoMeansTestCase, self).__init__(*args, **kwargs)
@@ -146,7 +146,7 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
         self.calc_proxy = create_job(params)
-        self.calculator = classical.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
 
     def tearDown(self):
         # Remove the canned result data from the KVS.
@@ -266,8 +266,8 @@ class DoMeansTestCase(TestMixin, unittest.TestCase):
         self.assertEqual(distribute.call_count, 0)
 
 
-class DoQuantilesTestCase(TestMixin, unittest.TestCase):
-    """Tests the behaviour of ClassicalMixin.do_quantiles()."""
+class DoQuantilesTestCase(unittest.TestCase):
+    """Tests the behaviour of ClassicalHazardCalculator.do_quantiles()."""
 
     def __init__(self, *args, **kwargs):
         super(DoQuantilesTestCase, self).__init__(*args, **kwargs)
@@ -289,7 +289,7 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
         self.calc_proxy = create_job(params)
-        self.calculator = classical.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
 
     def tearDown(self):
         # Remove the canned result data from the KVS.
@@ -403,8 +403,8 @@ class DoQuantilesTestCase(TestMixin, unittest.TestCase):
             map_serializer=lambda _, __, ___: True, map_func=None)
 
 
-class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
-    """Tests the behaviour of ClassicalMixin.number_of_tasks()."""
+class NumberOfTasksTestCase(unittest.TestCase):
+    """Tests the behaviour of ClassicalHazardCalculator.number_of_tasks()."""
 
     def setUp(self):
         params = dict(
@@ -415,7 +415,7 @@ class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
 
         self.calc_proxy = create_job(params)
 
-        self.calculator = classical.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
 
     def test_number_of_tasks_with_param_not_set(self):
         """
@@ -451,8 +451,8 @@ class NumberOfTasksTestCase(TestMixin, unittest.TestCase):
         self.assertRaises(ValueError, self.calculator.number_of_tasks)
 
 
-class ClassicalExecuteTestCase(TestMixin, unittest.TestCase):
-    """Tests the behaviour of ClassicalMixin.execute()."""
+class ClassicalExecuteTestCase(unittest.TestCase):
+    """Tests the behaviour of ClassicalHazardCalculator.execute()."""
 
     def __init__(self, *args, **kwargs):
         super(ClassicalExecuteTestCase, self).__init__(*args, **kwargs)
@@ -487,9 +487,8 @@ class ClassicalExecuteTestCase(TestMixin, unittest.TestCase):
                    '38.0, -123.9, 38.0, -123.8, 38.0, -124.9, 38.0, -124.8'))
 
         self.calc_proxy = create_job(params)
-        self.calculator = classical.ClassicalMixin(self.calc_proxy)
+        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
 
-        # Initialize the mixin instance.
         self.calculator.calc = self.FakeLogicTreeProcessor()
         self.calculator.cache = dict()
         for method in ["do_curves", "do_means", "do_quantiles"]:
@@ -549,7 +548,7 @@ class ClassicalExecuteTestCase(TestMixin, unittest.TestCase):
                     self.assertEqual(data_slices[idx], args[1])
 
 
-class ReleaseDataFromKvsTestCase(TestMixin, unittest.TestCase):
+class ReleaseDataFromKvsTestCase(unittest.TestCase):
     """Tests the behaviour of classical.release_data_from_kvs()."""
 
     SITES = [shapes.Site(-118.3, 33.76), shapes.Site(-118.2, 33.76),
@@ -643,7 +642,7 @@ class ReleaseDataFromKvsTestCase(TestMixin, unittest.TestCase):
         self._test(keys, 5)
 
 
-class CreateJavaCacheTestCase(TestMixin, unittest.TestCase):
+class CreateJavaCacheTestCase(unittest.TestCase):
     """Tests the behaviour of
     :function:`openquake.calculators.hazard.general.create_java_cache`."""
 

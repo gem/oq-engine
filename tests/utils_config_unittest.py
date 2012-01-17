@@ -28,10 +28,12 @@ import unittest
 
 from openquake.utils import config
 
-from tests.utils.helpers import ConfigTestMixin, TestMixin, patch
+from tests.utils.helpers import ConfigTestCase
+from tests.utils.helpers import patch
+from tests.utils.helpers import touch
 
 
-class ConfigTestCase(ConfigTestMixin, unittest.TestCase):
+class ConfigTestCase(ConfigTestCase, unittest.TestCase):
     """Tests the behaviour of the utils.config.Config class."""
 
     def setUp(self):
@@ -85,7 +87,7 @@ class ConfigTestCase(ConfigTestMixin, unittest.TestCase):
 
             [B]
             b=2'''
-        site_path = self.touch(content=textwrap.dedent(content))
+        site_path = touch(content=textwrap.dedent(content))
         os.environ["OQ_SITE_CFG_PATH"] = site_path
         config.Config().cfg.clear()
         config.Config()._load_from_file()
@@ -102,7 +104,7 @@ class ConfigTestCase(ConfigTestMixin, unittest.TestCase):
 
             [D]
             d=4'''
-        local_path = self.touch(content=textwrap.dedent(content))
+        local_path = touch(content=textwrap.dedent(content))
         os.environ["OQ_LOCAL_CFG_PATH"] = local_path
         config.Config().cfg.clear()
         config.Config()._load_from_file()
@@ -121,7 +123,7 @@ class ConfigTestCase(ConfigTestMixin, unittest.TestCase):
 
             [B]
             b=2'''
-        site_path = self.touch(content=textwrap.dedent(content))
+        site_path = touch(content=textwrap.dedent(content))
         os.environ["OQ_SITE_CFG_PATH"] = site_path
         content = '''
             [C]
@@ -130,7 +132,7 @@ class ConfigTestCase(ConfigTestMixin, unittest.TestCase):
 
             [D]
             d=4'''
-        local_path = self.touch(content=textwrap.dedent(content))
+        local_path = touch(content=textwrap.dedent(content))
         os.environ["OQ_LOCAL_CFG_PATH"] = local_path
         config.Config().cfg.clear()
         config.Config()._load_from_file()
@@ -153,7 +155,7 @@ class ConfigTestCase(ConfigTestMixin, unittest.TestCase):
 
             [B]
             b=2'''
-        site_path = self.touch(content=textwrap.dedent(content))
+        site_path = touch(content=textwrap.dedent(content))
         os.environ["OQ_SITE_CFG_PATH"] = site_path
         content = '''
             [A]
@@ -163,7 +165,7 @@ class ConfigTestCase(ConfigTestMixin, unittest.TestCase):
             [D]
             c=d-1
             d=4'''
-        local_path = self.touch(content=textwrap.dedent(content))
+        local_path = touch(content=textwrap.dedent(content))
         os.environ["OQ_LOCAL_CFG_PATH"] = local_path
         config.Config().cfg.clear()
         config.Config()._load_from_file()
@@ -190,7 +192,7 @@ class ConfigTestCase(ConfigTestMixin, unittest.TestCase):
             [E]
             f=6
             g=h'''
-        site_path = self.touch(content=textwrap.dedent(content))
+        site_path = touch(content=textwrap.dedent(content))
         os.environ["OQ_SITE_CFG_PATH"] = site_path
         config.Config().cfg.clear()
         config.Config()._load_from_file()
@@ -253,7 +255,7 @@ class GetTestCase(unittest.TestCase):
             self.assertEqual([("arghh",), {}], mock.call_args)
 
 
-class IsReadableTestCase(TestMixin, unittest.TestCase):
+class IsReadableTestCase(unittest.TestCase):
     """Tests the behaviour of utils.config.Config.is_readable()."""
 
     def setUp(self):
