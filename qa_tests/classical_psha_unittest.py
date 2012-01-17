@@ -411,8 +411,8 @@ class ClassicalPSHACalculatorAssuranceTestCase(
     @attr("qa")
     def test_complex_fault_demo_hazard_nrml_written_once(self):
         """
-        Run the `complex_fault_demo_hazard` demo and verify all of the
-        generated NRML data.
+        Run the `complex_fault_demo_hazard` demo and verify that the
+        NRML files are written only once.
         """
 
         def filter_multi():

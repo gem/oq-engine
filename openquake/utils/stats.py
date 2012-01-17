@@ -115,7 +115,11 @@ def pk_get(job_id, skey, cast2int=True):
     key = key_name(job_id, *STATS_KEYS[skey])
     if not key:
         return
-    return int(kvs_op("get", key)) if cast2int else kvs_op("get", key)
+    value = kvs_op("get", key)
+    if cast2int:
+        return int(value) if value else 0
+    else:
+        return value
 
 
 def _redis():
