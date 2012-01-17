@@ -425,7 +425,7 @@ class PkGetTestCase(helpers.RedisTestCase, unittest.TestCase):
             self.assertRaises(KeyError, stats.pk_get, job_id, pkey)
 
 
-class KvsOpTestCase(helpers.RedisTestMixin, unittest.TestCase):
+class KvsOpTestCase(helpers.RedisTestCase, unittest.TestCase):
     """Tests the behaviour of utils.stats.pk_kvs_op()."""
 
     def test_kvs_op_with_invalid_op(self):
