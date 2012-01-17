@@ -11,9 +11,13 @@ class BaseMSR(object):
     __metaclass__ = abc.ABCMeta
 
     @abc.abstractmethod
-    def get_median_area(self, mag):
+    def get_median_area(self, mag, rake):
         """
         Return median area (in square km) from magnitude ``mag``.
 
         To be overridden by subclasses.
+
+        :param rake:
+            Rake angle (the rupture propagation direction) in degrees,
+            from -180 to 180.
         """
