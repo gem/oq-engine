@@ -49,7 +49,7 @@ STATS_KEYS = {
     "hcls_crealization": ("h", "cls:crealization", "i"),
     # The total number of sites
     "hcls_sites": ("h", "cls:sites", "t"),
-    # The block size to use
+    # The block size used
     "block_size": ("g", "gen:block_size", "t"),
     # The total number of blocks
     "blocks": ("g", "gen:blocks", "t"),
