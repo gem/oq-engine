@@ -73,7 +73,7 @@ def kvs_op(dop, *kvs_args):
     :param string dop: the kvs operation desired
     :param tuple kvs_args: the positional arguments for the desired kvs
         operation
-    :param value: whatever is retured by the kvs operation
+    :returns: whatever is retured by the kvs operation
     """
     conn = _redis()
     op = getattr(conn, dop)
