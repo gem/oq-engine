@@ -193,6 +193,7 @@ class ClassicalMixin(BasePSHAMixin):
         gmpe_generator = random.Random()
         gmpe_generator.seed(self["GMPE_LT_RANDOM_SEED"])
 
+        stats.pk_set(self.job_id, "hcls_crealization", 0)
         for realization in xrange(0, realizations):
             stats.pk_inc(self.job_id, "hcls_crealization")
             LOG.info("Calculating hazard curves for realization %s"
