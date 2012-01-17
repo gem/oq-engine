@@ -17,17 +17,19 @@
 """This package contains Hazard calculator classes and utilities."""
 
 
-from openquake.calculators.hazard.classical.core import ClassicalMixin
-from openquake.calculators.hazard.disagg.core import DisaggMixin
-from openquake.calculators.hazard.event_based.core import EventBasedMixin
-from openquake.calculators.hazard.scenario.core import ScenarioEventBasedMixin
+from openquake.calculators.hazard.classical.core import (
+    ClassicalHazardCalculator)
+from openquake.calculators.hazard.disagg.core import DisaggHazardCalculator
+from openquake.calculators.hazard.event_based.core import (
+    EventBasedHazardCalculator)
+from openquake.calculators.hazard.scenario.core import ScenarioHazardCalculator
 
 
 CALCULATORS = {
-    'classical': ClassicalMixin,
-    'classical_bcr': ClassicalMixin,
-    'event_based': EventBasedMixin,
-    'event_based_bcr': EventBasedMixin,
-    'disaggregation': DisaggMixin,
-    'scenario': ScenarioEventBasedMixin,
+    'classical': ClassicalHazardCalculator,
+    'classical_bcr': ClassicalHazardCalculator,
+    'event_based': EventBasedHazardCalculator,
+    'event_based_bcr': EventBasedHazardCalculator,
+    'disaggregation': DisaggHazardCalculator,
+    'scenario': ScenarioHazardCalculator,
 }

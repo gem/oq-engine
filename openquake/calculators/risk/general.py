@@ -16,7 +16,7 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-"""Mixin proxy for risk jobs, and associated Risk Job Mixin decorators."""
+"""Common functionality for Risk calculators."""
 
 import json
 import math
@@ -52,7 +52,7 @@ BLOCK_SIZE = 100
 DEFAULT_NUMBER_OF_SAMPLES = 25
 
 
-def preload(mixin):
+def preload(calculator):
     """
     Define some preliminary steps needed before starting
     the risk processing.
@@ -61,61 +61,44 @@ def preload(mixin):
     * read and store in KVS the vulnerability model
     * split into blocks and store in KVS the exposure sites
     """
-    mixin.store_exposure_assets()
-    mixin.store_vulnerability_model()
-    mixin.partition()
+    calculator.store_exposure_assets()
+    calculator.store_vulnerability_model()
+    calculator.partition()
 
 
-def write_output(job_profile):
+def write_output(calc):
     """
     Write the output of a block to db/xml.
 
-    :param job_profile:
-        :class:`openquake.job.Job` instance.
+    :param calc:
+        :class:`openquake.calculators.base.Calculator` instance.
     """
-    for block_id in job_profile.blocks_keys:
-        #pylint: disable=W0212
-        job_profile._write_output_for_block(job_profile.job_id, block_id)
+    calc_proxy = calc.calc_proxy
 
-    for loss_poe in conditional_loss_poes(job_profile.params):
-        path = os.path.join(job_profile.base_path,
-                            job_profile.params['OUTPUT_DIR'],
+    for block_id in calc.calc_proxy.blocks_keys:
+        #pylint: disable=W0212
+        calc._write_output_for_block(calc_proxy.job_id, block_id)
+
+    for loss_poe in conditional_loss_poes(calc_proxy.params):
+        path = os.path.join(calc_proxy.base_path,
+                            calc_proxy.params['OUTPUT_DIR'],
                             "losses_at-%s.xml" % loss_poe)
         writer = risk_output.create_loss_map_writer(
-            job_profile.job_id, job_profile.serialize_results_to, path, False)
+            calc_proxy.job_id, calc_proxy.serialize_results_to, path, False)
 
         if writer:
             metadata = {
                 "scenario": False,
-                "timeSpan": job_profile.params["INVESTIGATION_TIME"],
+                "timeSpan": calc_proxy.params["INVESTIGATION_TIME"],
                 "poE": loss_poe,
             }
 
             writer.serialize(
                 [metadata]
-                + job_profile.asset_losses_per_site(
+                + calc_proxy.asset_losses_per_site(
                     loss_poe,
-                    job_profile.grid_assets_iterator(job_profile.region.grid)))
+                    calc_proxy.grid_assets_iterator(calc_proxy.region.grid)))
             LOG.info('Loss Map is at: %s' % path)
-
-
-def write_output_bcr(mixin):
-    """
-    Write BCR map in NRML format.
-    """
-    path = os.path.join(mixin.base_path,
-                        mixin.params['OUTPUT_DIR'],
-                        "bcr-map.xml")
-    writer = risk_output.create_bcr_map_writer(
-        mixin.job_id, mixin.serialize_results_to, path)
-
-    metadata = {
-        'interestRate': mixin.params['INTEREST_RATE'],
-        'assetLifeExpectancy': mixin.params['ASSET_LIFE_EXPECTANCY'],
-    }
-
-    writer.serialize([metadata] + mixin.asset_bcr_per_site())
-    LOG.info('BCR Map is at: %s' % path)
 
 
 def conditional_loss_poes(params):
@@ -178,8 +161,8 @@ def compute_risk(calculation_id, block_id, **kwargs):
     return calculator.compute_risk(block_id, **kwargs)
 
 
-class RiskJobMixin(Calculator):
-    """A mixin proxy for Risk jobs."""
+class BaseRiskCalculator(Calculator):
+    """Base abstract class for Risk calculators."""
 
     def execute(self):
         """Calculation logic goes here; subclasses must implement this."""
@@ -385,15 +368,15 @@ class RiskJobMixin(Calculator):
             asset in that site. See :func:`compute_bcr_for_block`.
         """
         data = []
-        for block_id in self.blocks_keys:
-            key = kvs.tokens.bcr_block_key(self.job_id, block_id)
+        for block_id in self.calc_proxy.blocks_keys:
+            key = kvs.tokens.bcr_block_key(self.calc_proxy.job_id, block_id)
             block_data = kvs.get_value_json_decoded(key)
             data += [(shapes.Site(latitude=lat, longitude=lon), payload)
                      for ((lat, lon), payload) in block_data]
         return data
 
 
-class ProbabilisticRiskCalculator(RiskJobMixin):
+class ProbabilisticRiskCalculator(BaseRiskCalculator):
     """Common base class for the Classical and Event-Based risk calculators."""
 
     def compute_risk(self, block_id):
@@ -416,6 +399,25 @@ class ProbabilisticRiskCalculator(RiskJobMixin):
         """Compute loss for a block of sites. Implement this in
         subclasses to provide the calculation-mode-specific logic."""
         raise NotImplementedError()
+
+    def write_output_bcr(self):
+        """
+        Write BCR map in NRML format.
+        """
+        path = os.path.join(self.calc_proxy.base_path,
+                            self.calc_proxy.params['OUTPUT_DIR'],
+                            "bcr-map.xml")
+        writer = risk_output.create_bcr_map_writer(
+            self.calc_proxy.job_id, self.calc_proxy.serialize_results_to, path)
+
+        metadata = {
+            'interestRate': self.calc_proxy.params['INTEREST_RATE'],
+            'assetLifeExpectancy': self.calc_proxy.params[
+                'ASSET_LIFE_EXPECTANCY'],
+        }
+
+        writer.serialize([metadata] + self.asset_bcr_per_site())
+        LOG.info('BCR Map is at: %s' % path)
 
 
 class EpsilonProvider(object):

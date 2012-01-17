@@ -32,9 +32,14 @@
 
 import unittest
 
-from openquake.output.hazard import *
-from openquake.output.risk import *
-from openquake.shapes import Site, Curve
+from openquake.shapes import Curve
+from openquake.shapes import Site
+from openquake.output.hazard import GmfDBWriter
+from openquake.output.hazard import HazardCurveDBReader
+from openquake.output.hazard import HazardCurveDBWriter
+from openquake.output.hazard import HazardMapDBWriter
+from openquake.output.risk import LossCurveDBWriter
+from openquake.output.risk import LossMapDBWriter
 
 from tests.utils import helpers
 
@@ -125,7 +130,7 @@ def LOSS_MAP_DATA(assets, r1, r2):
     return data
 
 
-class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
@@ -163,7 +168,7 @@ class HazardCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
             hcr.deserialize(hcw.output.id)
 
 
-class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
@@ -184,7 +189,7 @@ class HazardMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
             hmw.serialize(data)
 
 
-class GmfDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+class GmfDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
@@ -205,7 +210,7 @@ class GmfDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
             gmfw.serialize(data)
 
 
-class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)
@@ -226,7 +231,7 @@ class LossCurveDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
             lcw.serialize(data)
 
 
-class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestMixin):
+class LossMapDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
     def tearDown(self):
         if hasattr(self, "job") and self.job:
             self.teardown_job(self.job)

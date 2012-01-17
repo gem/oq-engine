@@ -73,7 +73,7 @@ RISK_LOSS_CURVE_DATA = [
 ]
 
 
-class LossCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
+class LossCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestCase):
     """Common code for loss curve db reader/writer test"""
     def tearDown(self):
         if hasattr(self, "job") and self.job:
@@ -215,7 +215,7 @@ SAMPLE_NONSCENARIO_LOSS_MAP_DATA = [
     (SITE_B, [(SITE_B_NONSCENARIO_LOSS_ONE, SITE_B_ASSET_ONE)])]
 
 
-class LossMapDBBaseTestCase(unittest.TestCase, helpers.DbTestMixin):
+class LossMapDBBaseTestCase(unittest.TestCase, helpers.DbTestCase):
     """Common code for loss map DB reader/writer test"""
     def tearDown(self):
         if hasattr(self, "job") and self.job:

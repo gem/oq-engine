@@ -18,10 +18,7 @@
 
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-"""
-Probabilistic Event Mixin: defines the behaviour of a Job. Calls the
-compute_risk task
-"""
+"""Core functionality for Event-Based Risk calculations."""
 
 import os
 
@@ -70,7 +67,7 @@ def plot_aggregate_curve(job, aggregate_curve):
 
     :param job: the job the engine is currently processing.
     :type job:
-        :py:class:`ProbabilisticEventMixin`
+        :py:class:`EventBasedRiskCalculator`
     :param aggregate_curve: the aggregate curve to plot.
     :type aggregate_curve: :py:class:`openquake.shapes.Curve`
     """
@@ -92,11 +89,11 @@ def plot_aggregate_curve(job, aggregate_curve):
     LOGGER.debug("Aggregate loss curve stored at %s" % path)
 
 
-class ProbabilisticEventMixin(general.ProbabilisticRiskCalculator):
+class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
     """Calculator for Event-Based Risk computations."""
 
     def __init__(self, job_profile):
-        super(ProbabilisticEventMixin, self).__init__(job_profile)
+        super(EventBasedRiskCalculator, self).__init__(job_profile)
         self.vuln_curves = None
 
     def execute(self):
@@ -126,10 +123,10 @@ class ProbabilisticEventMixin(general.ProbabilisticRiskCalculator):
             general.write_output_bcr(self)
             return
 
-        curve = aggregate_curve.compute(self._tses(), self._time_span())
-        plot_aggregate_curve(self, curve)
+        agg_curve = aggregate_curve.compute(self._tses(), self._time_span())
+        plot_aggregate_curve(self, agg_curve)
 
-        general.write_output(self.calc_proxy)
+        general.write_output(self)
 
     def _tses(self):
         """Return the time representative of the Stochastic Event Set

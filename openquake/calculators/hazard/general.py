@@ -210,21 +210,19 @@ def set_gmpe_params(gmpe_map, params):
         gmpe_map.put(tect_region, gmpe)
 
 
-class BasePSHAMixin(Calculator):
-    """Contains common functionality for PSHA Mixins."""
+class BaseHazardCalculator(Calculator):
+    """Contains common functionality for Hazard calculators"""
 
     def __init__(self, job_profile):
-        super(BasePSHAMixin, self).__init__(job_profile)
+        super(BaseHazardCalculator, self).__init__(job_profile)
 
         basepath = self.calc_proxy.params.get('BASE_PATH')
 
-        # TODO(LB):
-        # This is temporary until the base calculator class is created
-        # and everything is cleaned up.
         if not self.calc_proxy['CALCULATION_MODE'] == 'Scenario':
             source_model_lt = self.calc_proxy.params.get(
                 'SOURCE_MODEL_LOGIC_TREE_FILE_PATH')
             gmpe_lt = self.calc_proxy.params.get('GMPE_LOGIC_TREE_FILE_PATH')
+            # TODO: This should probably be moved into a `pre_execute` method.
             self.calc = logictree.LogicTreeProcessor(basepath, source_model_lt,
                                                      gmpe_lt)
 
