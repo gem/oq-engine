@@ -45,7 +45,8 @@ class TruncatedGR(BaseMFD):
 
     PARAMETERS = ('min_mag', 'max_mag', 'bin_width', 'a_val', 'b_val')
 
-    MODIFICATIONS = set(('increment_maximum_magnitude', ))
+    MODIFICATIONS = set(('increment_maximum_magnitude',
+                         'set_maximum_magnitude',))
 
     def check_constraints(self):
         """
@@ -174,3 +175,15 @@ class TruncatedGR(BaseMFD):
         # if new max_mag <= min_mag.
         self.check_constraints()
         self._set_a(tmr)
+
+    def modify_set_maximum_magnitude(self, value):
+        """
+        Apply absolute maximum magnitude modification.
+
+        :param value:
+            A float value to assign to ``max_mag``.
+
+        No specific recalculation of other Gutenber-Richter parameters
+        is done after assigning a new value to ``max_mag``.
+        """
+        self.max_mag = value

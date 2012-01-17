@@ -253,3 +253,20 @@ class TruncatedGRModificationsTestCase(BaseMFDTestCase):
             mfd.modify,
             'increment_maximum_magnitude', {'value': -1}
         )
+
+    def test_set_maximum_magnitude(self):
+        mfd = TruncatedGR(min_mag=3.5, max_mag=5.5, bin_width=0.5,
+                          a_val=1, b_val=1.3)
+        mfd.modify('set_maximum_magnitude', {'value': 4.2})
+        self.assertEqual(mfd.max_mag, 4.2)
+        self.assertEqual(mfd.a_val, 1)
+        self.assertEqual(mfd.b_val, 1.3)
+        self.assertEqual(mfd.min_mag, 3.5)
+
+    def test_set_maximum_magnitude_check_constraints(self):
+        mfd = TruncatedGR(min_mag=3.5, max_mag=5.5, bin_width=0.5,
+                          a_val=1, b_val=1.3)
+        self.assert_mfd_error(
+            mfd.modify,
+            'set_maximum_magnitude', {'value': 3.6}
+        )
