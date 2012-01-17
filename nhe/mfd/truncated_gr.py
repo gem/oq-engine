@@ -138,13 +138,14 @@ class TruncatedGR(BaseMFD):
         where ``ai = a + log10(b)`` and ``bi = 1.5 - b``.
 
         :return:
-            Float, calculated TMR value.
+            Float, calculated TMR value in Newton per year.
         """
         ai = self.a_val + math.log10(self.b_val)
         bi = 1.5 - self.b_val
         tmr = ((10 ** (ai + 16.05) / bi) *
                (10 ** (bi * self.max_mag) - 10 ** (bi * self.min_mag)))
-        return tmr
+        # adjust value for units to be Newton/Year
+        return tmr * 1e-7
 
     def _set_a(self, tmr):
         """
@@ -156,7 +157,7 @@ class TruncatedGR(BaseMFD):
         where ``bi = 1.5 - b``.
         """
         bi = 1.5 - self.b_val
-        self.a_val = (math.log10(tmr * bi / (10 ** (bi * self.max_mag)
+        self.a_val = (math.log10(tmr / 1e-7 * bi / (10 ** (bi * self.max_mag)
                                              - 10 ** (bi * self.min_mag)))
                       - 16.05
                       - math.log10(self.b_val))
