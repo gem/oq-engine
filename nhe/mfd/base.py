@@ -104,7 +104,7 @@ class BaseMFD(object):
     @abc.abstractmethod
     def get_annual_occurrence_rates(self):
         """
-        Return an MFD histogram.
+        Return an MFD annual occurrence rates histogram.
 
         This method must be implemented by subclasses.
 
@@ -113,5 +113,7 @@ class BaseMFD(object):
             ``(magnitude, occurrence_rate)``. Each pair represents
             a single bin of the histogram with ``magnitude`` being
             the center of the bin. Magnitude values are monotonically
-            increasing by value of bin width.
+            increasing by value of bin width. ``occurence_rate``
+            represents the number of events per year with magnitude
+            that falls in between bin's boundaries.
         """

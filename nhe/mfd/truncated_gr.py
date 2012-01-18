@@ -93,7 +93,7 @@ class TruncatedGR(BaseMFD):
         along with the first bin center abscissa (magnitude) value.
 
         Rounds ``min_mag`` and ``max_mag`` with respect to ``bin_width``
-        to make the distance between them include even number of bins.
+        to make the distance between them include integer number of bins.
 
         :returns:
             A tuple of two items: first bin center and total number of bins.
