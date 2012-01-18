@@ -7,6 +7,8 @@ import numpy
 import pyproj
 import math
 
+from shapely.geometry import LineString
+
 # Tolerance used for latitude and longitude to identify
 # when two sites are equal (it corresponds to about 1 m at the equator)
 LAT_LON_TOLERANCE = 1e-5
@@ -150,9 +152,9 @@ class Point(object):
         return self.__str__()
 
     def __eq__(self, other):
-        return numpy.allclose([self.longitude, self.latitude], [other.longitude,
-                other.latitude], LAT_LON_TOLERANCE) and numpy.allclose(
-                self.depth, other.depth, DEPTH_TOLERANCE)
+        return numpy.allclose([self.longitude, self.latitude],
+                [other.longitude, other.latitude], LAT_LON_TOLERANCE) and \
+                numpy.allclose(self.depth, other.depth, DEPTH_TOLERANCE)
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -212,6 +214,10 @@ class Line(object):
     This class represents a geographical line, which is basically
     a sequence of geographical points.
 
+    To create a line you need to provide at least two different
+    points, and the points should not intersect themself (depth
+    is not taken into account for the time being).
+
     :param points:
         The sequence of points definining this line.
     :type points:
@@ -219,6 +225,8 @@ class Line(object):
     """
 
     def __init__(self, points):
+        self.points = points
+        
         if len(points) < 2:
             raise RuntimeError("Two points are needed to create a line!")
 
@@ -226,8 +234,8 @@ class Line(object):
             raise RuntimeError(
                 "Two different points are needed to create a line!")
 
-# TODO(ac): Check that the line does not intersect itself
-        self._points = points
+        if self._intersect_itself():
+            raise RuntimeError("Line intersects itself!")
 
     def __eq__(self, other):
         return self.points == other.points
@@ -235,18 +243,22 @@ class Line(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
-    @property
-    def points(self):
+    def _intersect_itself(self):
         """
-        Return the sequence of points defined in this line.
+        Check if this line intersects itself.
         
         :returns:
-            The sequence of points defined in this line.
+            True if this line intersects itself, false otherwise.
         :rtype:
-            list of :class:`nhe.geo.Point` instances
+            boolean
         """
-# TODO(ac): Should we return a copy of the points?
-        return self._points
+
+        values = []
+
+        for point in self.points:
+            values.append((point.longitude, point.latitude))
+
+        return not LineString(values).is_simple
 
     def resample(self, section_length):
         """
@@ -270,13 +282,13 @@ class Line(object):
         # (because it's already contained in the previous set of
         # resampled points).
 
-        resampled_points.extend(self._points[0].equally_spaced_points(
-                self._points[1], section_length))
+        resampled_points.extend(self.points[0].equally_spaced_points(
+                self.points[1], section_length))
 
         # Skip the first point, it's already resampled
-        for i in range(2, len(self._points)):
+        for i in range(2, len(self.points)):
             points = resampled_points[-1].equally_spaced_points(
-                    self._points[i], section_length)
+                    self.points[i], section_length)
 
             resampled_points.extend(points[1: ])
 

@@ -120,3 +120,19 @@ class LineTestCase(unittest.TestCase):
 
         self.assertRaises(RuntimeError, geo.Line,
                 [geo.Point(0.0, 0.0, 0.0), geo.Point(0.0, 0.0, 0.0)])
+
+    def test_must_not_intersect_itself(self):
+        p1 = geo.Point(0.0, 0.0)
+        p2 = geo.Point(0.0, 1.0)
+        p3 = geo.Point(1.0, 1.0)
+        p4 = geo.Point(0.0, 0.5)
+        
+        self.assertRaises(RuntimeError, geo.Line, [p1, p2, p3, p4])
+
+        # doesn't take into account depth
+        p1 = geo.Point(0.0, 0.0, 1.0)
+        p2 = geo.Point(0.0, 1.0, 1.0)
+        p3 = geo.Point(1.0, 1.0, 1.0)
+        p4 = geo.Point(0.0, 0.5, 1.5)
+
+        self.assertRaises(RuntimeError, geo.Line, [p1, p2, p3, p4])
