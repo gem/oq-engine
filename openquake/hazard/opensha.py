@@ -21,6 +21,7 @@ Wrapper around the OpenSHA-lite java library.
 """
 
 
+from collections import namedtuple
 from itertools import izip
 import functools
 import hashlib
@@ -450,10 +451,9 @@ class ClassicalMixin(BasePSHAMixin):
                 yield value
 
         # XML serialization context
-        xsc = general.AdHocObject(
-            "XSC", "blocks, cblock, i_total, i_done, i_next", default=0)
-        xsc.blocks = stats.pk_get(self.job_id, "blocks")
-        xsc.cblock = stats.pk_get(self.job_id, "cblock")
+        xsc = namedtuple("XSC", "blocks, cblock, i_total, i_done, i_next")(
+                         stats.pk_get(self.job_id, "blocks"),
+                         stats.pk_get(self.job_id, "cblock"), len(sites), 0, 0)
 
         nrml_path = self.build_nrml_path(nrml_file)
 
@@ -461,8 +461,6 @@ class ClassicalMixin(BasePSHAMixin):
             self.job_id, self.serialize_results_to, nrml_path)
 
         sites = set(sites)
-        xsc.i_total = len(sites)
-        xsc.i_done = 0
         accounted_for = set()
         min_pause = 0.1
         pgen = pause_generator(min_pause)
@@ -496,10 +494,10 @@ class ClassicalMixin(BasePSHAMixin):
                 # No results found, increase the sleep duration.
                 pause = pgen.next()
             else:
-                xsc.i_next = len(hc_data)
-                hazard_output.SerializerContext().update(xsc)
+                hazard_output.SerializerContext().update(
+                    xsc._replace(i_next=len(hc_data)))
                 curve_writer.serialize(hc_data)
-                xsc.i_done += xsc.i_next
+                xsc = xsc._replace(i_done=xsc.i_done+len(hc_data))
                 pause *= 0.8
                 pause = min_pause if pause < min_pause else pause
 
