@@ -103,6 +103,8 @@ NUMBER_OF_LOGIC_TREE_SAMPLES = 1
 # Compute mean hazard curve
 COMPUTE_MEAN_HAZARD_CURVE = true
 
+QUANTILE_LEVELS =
+
 [RISK]
 
 # file containing the exposure in nrml format
