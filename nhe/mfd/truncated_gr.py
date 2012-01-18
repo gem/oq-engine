@@ -142,10 +142,9 @@ class TruncatedGR(BaseMFD):
         """
         ai = self.a_val + math.log10(self.b_val)
         bi = 1.5 - self.b_val
-        tmr = ((10 ** (ai + 16.05) / bi) *
+        tmr = ((10 ** (ai + 9.05) / bi) *
                (10 ** (bi * self.max_mag) - 10 ** (bi * self.min_mag)))
-        # adjust value for units to be Newton/Year
-        return tmr * 1e-7
+        return tmr
 
     def _set_a(self, tmr):
         """
@@ -157,9 +156,9 @@ class TruncatedGR(BaseMFD):
         where ``bi = 1.5 - b``.
         """
         bi = 1.5 - self.b_val
-        self.a_val = (math.log10(tmr / 1e-7 * bi / (10 ** (bi * self.max_mag)
+        self.a_val = (math.log10(tmr * bi / (10 ** (bi * self.max_mag)
                                              - 10 ** (bi * self.min_mag)))
-                      - 16.05
+                      - 9.05
                       - math.log10(self.b_val))
 
     def modify_increment_max_mag(self, value):
