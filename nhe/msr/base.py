@@ -13,7 +13,7 @@ class BaseMSR(object):
     @abc.abstractmethod
     def get_median_area(self, mag, rake):
         """
-        Return median area (in square km) from magnitude ``mag``.
+        Return median area (in square km) from magnitude ``mag`` and ``rake``.
 
         To be overridden by subclasses.
 
