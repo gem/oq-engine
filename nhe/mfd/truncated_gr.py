@@ -141,7 +141,8 @@ class TruncatedGR(BaseMFD):
             TMR = (10 ** ai) * (max_mag - min_mag)
 
         :returns:
-            Float, calculated TMR value in Newton per year.
+            Float, calculated TMR value in ``N * m / year``
+            (Newton-meter per year).
         """
         ai = 9.05 + self.a_val + math.log10(self.b_val)
         bi = 1.5 - self.b_val
