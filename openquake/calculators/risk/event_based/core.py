@@ -120,13 +120,13 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                 return
 
         if self.is_benefit_cost_ratio_mode():
-            general.write_output_bcr(self)
+            self.write_output_bcr()
             return
 
         agg_curve = aggregate_curve.compute(self._tses(), self._time_span())
         plot_aggregate_curve(self, agg_curve)
 
-        general.write_output(self)
+        self.write_output()
 
     def _tses(self):
         """Return the time representative of the Stochastic Event Set
