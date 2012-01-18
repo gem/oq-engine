@@ -199,9 +199,85 @@ class Point(object):
 
         locations = int(round(total_distance / distance) + 1)
 
-        for _ in xrange(locations):
+        for _ in xrange(1, locations):
             last = points[-1]
             points.append(last.point_at(
                     horizontal_increment, vertical_increment, azimuth))
 
         return points
+
+
+class Line(object):
+    """
+    This class represents a geographical line, which is basically
+    a sequence of geographical points.
+
+    :param points:
+        The sequence of points definining this line.
+    :type points:
+        list of :class:`nhe.geo.Point` instances
+    """
+
+    def __init__(self, points):
+        if len(points) < 2:
+            raise RuntimeError("Two points are needed to create a line!")
+
+        if len(points) == 2 and points[0] == points[1]:
+            raise RuntimeError(
+                "Two different points are needed to create a line!")
+
+# TODO(ac): Check that the line does not intersect itself
+        self._points = points
+
+    def __eq__(self, other):
+        return self.points == other.points
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    @property
+    def points(self):
+        """
+        Return the sequence of points defined in this line.
+        
+        :returns:
+            The sequence of points defined in this line.
+        :rtype:
+            list of :class:`nhe.geo.Point` instances
+        """
+# TODO(ac): Should we return a copy of the points?
+        return self._points
+
+    def resample(self, section_length):
+        """
+        Resample this line into sections.
+
+        :param section_length:
+            The length of the section.
+        :type section_length:
+            float
+        :returns:
+            A new line resampled into sections based on the given length.
+        :rtype:
+            An instance of :class:`nhe.geo.Line`
+        """
+
+        resampled_points = []
+
+        # 1. Resample the first section. 2. Loop over the remaining points
+        # in the fault trace and resample the remaining sections.
+        # 3. Extend the list with the resampled points, except the first one
+        # (because it's already contained in the previous set of
+        # resampled points).
+
+        resampled_points.extend(self._points[0].equally_spaced_points(
+                self._points[1], section_length))
+
+        # Skip the first point, it's already resampled
+        for i in range(2, len(self._points)):
+            points = resampled_points[-1].equally_spaced_points(
+                    self._points[i], section_length)
+
+            resampled_points.extend(points[1: ])
+
+        return Line(resampled_points)

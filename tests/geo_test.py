@@ -39,8 +39,9 @@ class PointTestCase(unittest.TestCase):
         p1 = geo.Point(0.0, 0.0)
         p2 = geo.Point(0.190775520815, 0.190774854966)
         
-        points = p1.equally_spaced_points(p2, 10.0)
-        
+        points = p1.equally_spaced_points(p2, 10.0)        
+        self.assertEqual(4, len(points))
+
         self.assertEqual(p1, points[0]) # first point is the start point
         self.assertEqual(p2, points[3]) # last point is the end point
 
@@ -55,6 +56,7 @@ class PointTestCase(unittest.TestCase):
         p2 = geo.Point(0.134898484431, 0.134898249018, 21.2132034356)
 
         points = p1.equally_spaced_points(p2, 10.0)
+        self.assertEqual(4, len(points))
 
         self.assertEqual(p1, points[0]) # first point is the start point
         self.assertEqual(p2, points[3]) # last point is the end point
@@ -93,3 +95,28 @@ class PointTestCase(unittest.TestCase):
 
         geo.Point(0.0, 90.0, 0.0)
         geo.Point(0.0, -90.0, 0.0)
+
+class LineTestCase(unittest.TestCase):
+
+    def test_resample(self):
+        p1 = geo.Point(0.0, 0.0, 0.0)
+        p2 = geo.Point(0.0, 0.127183341091, 14.1421356237)
+        p3 = geo.Point(0.134899286793, 0.262081472606, 35.3553390593)
+
+        resampled = geo.Line([p1, p2, p3]).resample(10.0)
+
+        p1 = geo.Point(0.0, 0.0, 0.0)
+        p2 = geo.Point(0.0, 0.0635916705456, 7.07106781187)
+        p3 = geo.Point(0.0, 0.127183341091, 14.1421356237)
+        p4 = geo.Point(0.0449662998195, 0.172149398777, 21.2132034356)
+        p5 = geo.Point(0.0899327195183, 0.217115442616, 28.2842712475)
+        p6 = geo.Point(0.134899286793, 0.262081472606, 35.3553390593)
+
+        expected = geo.Line([p1, p2, p3, p4, p5, p6])        
+        self.assertEqual(expected, resampled)
+
+    def test_two_different_points_needed(self):
+        self.assertRaises(RuntimeError, geo.Line, [geo.Point(0.0, 0.0, 0.0)])
+
+        self.assertRaises(RuntimeError, geo.Line,
+                [geo.Point(0.0, 0.0, 0.0), geo.Point(0.0, 0.0, 0.0)])
