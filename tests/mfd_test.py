@@ -149,16 +149,6 @@ class TruncatedGRConstraintsTestCase(BaseMFDTestCase):
             min_mag=1, max_mag=2, bin_width=0.4, a_val=1, b_val=0
         )
 
-    def test_too_high_b_val(self):
-        self.assert_mfd_error(
-            TruncatedGR,
-            min_mag=1, max_mag=2, bin_width=0.4, a_val=1, b_val=2.0
-        )
-        self.assert_mfd_error(
-            TruncatedGR,
-            min_mag=1, max_mag=2, bin_width=0.4, a_val=1, b_val=1.5
-        )
-
     def test_equal_min_mag_and_max_mag(self):
         self.assert_mfd_error(
             TruncatedGR,
@@ -218,11 +208,22 @@ class TruncatedGRModificationsTestCase(BaseMFDTestCase):
                           a_val=-17.2, b_val=0.4)
         self.assertAlmostEqual(mfd._get_total_moment_rate(), 1.6140553)
 
+    def test_get_total_moment_rate_when_b_equal_to_1_5(self):
+        mfd = TruncatedGR(min_mag=6.0, max_mag=8.0, bin_width=0.1,
+                          a_val=-9.4, b_val=1.5)
+        self.assertAlmostEqual(mfd._get_total_moment_rate(),  1.3400508)
+
     def test_set_a(self):
         mfd = TruncatedGR(min_mag=6.0, max_mag=8.0, bin_width=0.1,
                           a_val=1.5, b_val=0.5)
         mfd._set_a(123.45)
         self.assertAlmostEqual(mfd.a_val, -14.6531141)
+
+    def test_set_a_when_b_equal_to_1_5(self):
+        mfd = TruncatedGR(min_mag=6.0, max_mag=8.0, bin_width=0.1,
+                          a_val=1.5, b_val=1.5)
+        mfd._set_a(12.45)
+        self.assertAlmostEqual(mfd.a_val, -8.4319519)
 
     def test_set_a_and_get_total_moment_rate(self):
         mfd = TruncatedGR(min_mag=3.0, max_mag=4.0, bin_width=0.1,
@@ -230,6 +231,14 @@ class TruncatedGRModificationsTestCase(BaseMFDTestCase):
         tmr = mfd._get_total_moment_rate()
         mfd._set_a(tmr)
         self.assertAlmostEqual(mfd.a_val, 4.4)
+        self.assertEqual(mfd._get_total_moment_rate(), tmr)
+
+    def test_set_a_and_get_total_moment_rate_when_b_equal_to_1_5(self):
+        mfd = TruncatedGR(min_mag=2.4, max_mag=5.6, bin_width=0.4,
+                          a_val=-0.44, b_val=1.5)
+        tmr = mfd._get_total_moment_rate()
+        mfd._set_a(tmr)
+        self.assertAlmostEqual(mfd.a_val, -0.44)
         self.assertEqual(mfd._get_total_moment_rate(), tmr)
 
     def test_increment_max_mag(self):
@@ -269,12 +278,12 @@ class TruncatedGRModificationsTestCase(BaseMFDTestCase):
         mfd = TruncatedGR(min_mag=4.2, max_mag=6.6, bin_width=0.2,
                           a_val=-20.5, b_val=0.51)
         old_tmr = mfd._get_total_moment_rate()
-        mfd.modify('increment_b', {'value': 0.46})
+        mfd.modify('increment_b', {'value': 1.46})
         self.assertEqual(mfd.max_mag, 6.6)
-        self.assertEqual(mfd.b_val, 0.51 + 0.46)
+        self.assertEqual(mfd.b_val, 0.51 + 1.46)
         self.assertEqual(mfd.min_mag, 4.2)
         self.assertAlmostEqual(mfd._get_total_moment_rate(), old_tmr)
-        mfd.modify('increment_b', {'value': -0.46})
+        mfd.modify('increment_b', {'value': -1.46})
         self.assertAlmostEqual(mfd._get_total_moment_rate(), old_tmr)
         self.assertEqual(mfd.b_val, 0.51)
         self.assertAlmostEqual(mfd.a_val, -20.5)
@@ -282,7 +291,10 @@ class TruncatedGRModificationsTestCase(BaseMFDTestCase):
     def test_increment_b_check_constraints(self):
         mfd = TruncatedGR(min_mag=6.0, max_mag=7.0, bin_width=0.1,
                           a_val=1, b_val=1)
-        self.assert_mfd_error(mfd.modify, 'increment_b', {'value': 0.51})
+        self.assert_mfd_error(mfd.modify, 'increment_b', {'value': -1})
+        mfd = TruncatedGR(min_mag=6.0, max_mag=7.0, bin_width=0.1,
+                          a_val=1, b_val=1)
+        self.assert_mfd_error(mfd.modify, 'increment_b', {'value': -2})
 
     def test_set_ab(self):
         mfd = TruncatedGR(min_mag=2.5, max_mag=3.5, bin_width=0.25,

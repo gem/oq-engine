@@ -58,7 +58,7 @@ class TruncatedGR(BaseMFD):
         * Minimum magnitude is positive.
         * Maximum magnitude is greater than minimum magnitude
           by at least one bin width (or equal to that value).
-        * ``b`` value is more than 0 and less than 1.5.
+        * ``b`` value is positive.
         """
         if not self.bin_width > 0:
             raise MFDError()
@@ -69,7 +69,7 @@ class TruncatedGR(BaseMFD):
         if not self.max_mag >= self.min_mag + self.bin_width:
             raise MFDError()
 
-        if not 0 < self.b_val < 1.5:
+        if not 0 < self.b_val:
             raise MFDError()
 
     def _get_rate(self, mag):
@@ -133,33 +133,45 @@ class TruncatedGR(BaseMFD):
         """
         Calculate total moment rate (total energy released per unit time) ::
 
-            TMR = (10**(ai+16.05)/bi) * (10**(bi*max_mag) - 10**(bi*min_mag))
+            TMR = ((10**ai) / bi) * (10 ** (bi*max_mag) - 10 ** (bi*min_mag))
 
-        where ``ai = a + log10(b)`` and ``bi = 1.5 - b``.
+        where ``ai = a + log10(b) + 9.05`` and ``bi = 1.5 - b``.
+        In case of ``bi == 0`` the following formula is applied::
 
-        :return:
+            TMR = (10 ** ai) * (max_mag - min_mag)
+
+        :returns:
             Float, calculated TMR value in Newton per year.
         """
-        ai = self.a_val + math.log10(self.b_val)
+        ai = 9.05 + self.a_val + math.log10(self.b_val)
         bi = 1.5 - self.b_val
-        tmr = ((10 ** (ai + 9.05) / bi) *
-               (10 ** (bi * self.max_mag) - 10 ** (bi * self.min_mag)))
-        return tmr
+        if bi == 0.0:
+            return (10 ** ai) * (self.max_mag - self.min_mag)
+        else:
+            return (((10 ** ai) / bi) *
+                    (10 ** (bi * self.max_mag) - 10 ** (bi * self.min_mag)))
 
     def _set_a(self, tmr):
         """
         Recalculate an ``a`` value preserving a total moment rate ``tmr`` ::
 
             a = (log10((tmr * bi) / (10 ** (bi*max_mag) - 10 ** (bi*min_mag)))
-                 - 16.05 - log10(b))
+                 - 9.05 - log10(b))
 
-        where ``bi = 1.5 - b``.
+        where ``bi = 1.5 - b``. If ``bi == 0`` the following formula is used:
+
+            a = log10(tmr / (max_mag - min_mag)) - 9.05 - log10(b)
         """
         bi = 1.5 - self.b_val
-        self.a_val = (math.log10(tmr * bi / (10 ** (bi * self.max_mag)
-                                             - 10 ** (bi * self.min_mag)))
-                      - 9.05
-                      - math.log10(self.b_val))
+        if bi == 0.0:
+            self.a_val = (math.log10(tmr / (self.max_mag - self.min_mag))
+                          - 9.05
+                          - math.log10(self.b_val))
+        else:
+            self.a_val = (math.log10(tmr * bi / (10 ** (bi * self.max_mag)
+                                                 - 10 ** (bi * self.min_mag)))
+                          - 9.05
+                          - math.log10(self.b_val))
 
     def modify_increment_max_mag(self, value):
         """
