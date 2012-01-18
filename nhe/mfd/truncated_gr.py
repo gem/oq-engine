@@ -131,7 +131,7 @@ class TruncatedGR(BaseMFD):
 
     def _get_total_moment_rate(self):
         """
-        Calculate a total moment rate (total energy released per unit time) ::
+        Calculate total moment rate (total energy released per unit time) ::
 
             TMR = (10**(ai+16.05)/bi) * (10**(bi*max_mag) - 10**(bi*min_mag))
 

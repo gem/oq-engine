@@ -72,7 +72,7 @@ class BaseMFD(object):
         Any number of modifications can be reverted with a single call
         to :meth:`reset`.
 
-        :param modifictaion:
+        :param modification:
             String name representing the type of modification.
         :param parameters:
             Dictionary of parameters needed for modification.
