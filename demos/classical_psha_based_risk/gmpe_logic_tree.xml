@@ -3,16 +3,13 @@
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.3"
       gml:id="n1">
-    <logicTree logicTreeID='lt1'>
+    <logicTree logicTreeID="lt1">
         <logicTreeBranchingLevel branchingLevelID="bl1">
-            <logicTreeBranchSet uncertaintyType="gmpeModel" branchSetID="bs1"
-                    applyToTectonicRegionType="Active Shallow Crust">
-
+            <logicTreeBranchSet uncertaintyType="gmpeModel" applyToTectonicRegionType="Active Shallow Crust" branchSetID="bs1">
                 <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>BA_2008_AttenRel</uncertaintyModel>
+                    <uncertaintyModel>SadighEtAl_1997_AttenRel</uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                 </logicTreeBranch>
-
             </logicTreeBranchSet>
         </logicTreeBranchingLevel>
     </logicTree>
