@@ -206,7 +206,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                 key = kvs.tokens.stochastic_set_key(
                     self.calc_proxy.job_id, i, j)
                 fieldset = shapes.FieldSet.from_json(kvs.get(key),
-                    self.region.grid)
+                    self.calc_proxy.region.grid)
 
                 for field in fieldset:
                     for key in gmfs.keys():
@@ -248,7 +248,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         # aggregate the losses for this block
         aggregate_curve = general.AggregateLossCurve()
 
-        for point in block.grid(self.region):
+        for point in block.grid(self.calc_proxy.region):
             key = kvs.tokens.gmf_set_key(self.calc_proxy.job_id, point.column,
                                          point.row)
             gmf_slice = kvs.get_value_json_decoded(key)
@@ -309,7 +309,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                 vuln_function, gmf_slice, epsilon_provider, asset)
             loss_ratio_curve = general.compute_loss_ratio_curve(
                 vuln_function, gmf_slice, epsilon_provider, asset,
-                self._get_number_of_samples(), loss_ratios=loss_ratios)
+                None, loss_ratios=loss_ratios)
             return loss_ratio_curve.rescale_abscissae(asset["assetValue"])
 
         result = general.compute_bcr_for_block(self.calc_proxy.job_id, points,
@@ -361,7 +361,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
 
         loss_ratio_curve = general.compute_loss_ratio_curve(
                 vuln_function, gmf_slice, epsilon_provider, asset,
-                self._get_number_of_samples(), loss_ratios=loss_ratios)
+                None, loss_ratios=loss_ratios)
 
         # NOTE (jmc): Early exit if the loss ratio is all zeros
         if not False in (loss_ratio_curve.ordinates == 0.0):
@@ -376,26 +376,6 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                 (loss_ratio_curve, key))
 
         return loss_ratio_curve
-
-    def _get_number_of_samples(self):
-        """Return the number of samples used to compute the loss ratio
-        curve specified by the PROB_NUM_OF_SAMPLES parameter.
-
-        Return None if the parameter is not specified, or empty or
-        the value can't be casted to int.
-        """
-
-        number_of_samples = None
-        raw_value = getattr(self, "PROB_NUM_OF_SAMPLES", None)
-
-        if raw_value:
-            try:
-                number_of_samples = int(raw_value)
-            except ValueError:
-                LOGGER.error("PROB_NUM_OF_SAMPLES %s can't be converted "
-                             "to int, using default value..." % raw_value)
-
-        return number_of_samples
 
     def compute_loss_curve(self, column, row, loss_ratio_curve, asset):
         """Compute the loss curve for a single asset."""
