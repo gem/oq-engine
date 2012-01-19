@@ -417,7 +417,7 @@ class ClassicalMixin(BasePSHAMixin):
                                         hc_attrib_update, sites)
 
     def serialize_hazard_curve(self, nrml_file, key_template, hc_attrib_update,
-                               sites):
+                               sites):  # pylint: disable=W0212
         """
         Serialize the hazard curves of a set of sites.
 
@@ -496,7 +496,7 @@ class ClassicalMixin(BasePSHAMixin):
                 hazard_output.SerializerContext().update(
                     xsc._replace(i_next=len(hc_data)))
                 curve_writer.serialize(hc_data)
-                xsc = xsc._replace(i_done = xsc.i_done + len(hc_data))
+                xsc = xsc._replace(i_done=xsc.i_done + len(hc_data))
                 pause *= 0.8
                 pause = min_pause if pause < min_pause else pause
 
