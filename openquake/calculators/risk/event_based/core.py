@@ -105,7 +105,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         tasks = []
         for block_id in self.calc_proxy.blocks_keys:
             LOGGER.debug("Starting task block, block_id = %s of %s"
-                    % (block_id, len(self.blocks_keys)))
+                    % (block_id, len(self.calc_proxy.blocks_keys)))
 
             tasks.append(general.compute_risk.delay(self.calc_proxy.job_id,
                                                     block_id))
