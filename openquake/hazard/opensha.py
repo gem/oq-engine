@@ -416,8 +416,9 @@ class ClassicalMixin(BasePSHAMixin):
             self.serialize_hazard_curve(nrml_file, key_template,
                                         hc_attrib_update, sites)
 
+    # pylint: disable=W0212
     def serialize_hazard_curve(self, nrml_file, key_template, hc_attrib_update,
-                               sites):  # pylint: disable=W0212
+                               sites):
         """
         Serialize the hazard curves of a set of sites.
 
