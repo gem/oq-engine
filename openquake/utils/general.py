@@ -22,10 +22,7 @@
 Utility functions of general interest.
 """
 
-from collections import OrderedDict
 import cPickle
-import itertools
-import pprint
 
 
 def singleton(cls):

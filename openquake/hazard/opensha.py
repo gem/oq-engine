@@ -43,7 +43,6 @@ from openquake.hazard import job
 from openquake.hazard import tasks
 from openquake.output import hazard as hazard_output
 from openquake.utils import config
-from openquake.utils import general
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
 
@@ -497,7 +496,7 @@ class ClassicalMixin(BasePSHAMixin):
                 hazard_output.SerializerContext().update(
                     xsc._replace(i_next=len(hc_data)))
                 curve_writer.serialize(hc_data)
-                xsc = xsc._replace(i_done=xsc.i_done+len(hc_data))
+                xsc = xsc._replace(i_done = xsc.i_done + len(hc_data))
                 pause *= 0.8
                 pause = min_pause if pause < min_pause else pause
 
