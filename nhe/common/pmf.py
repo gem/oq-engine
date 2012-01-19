@@ -11,7 +11,7 @@ class PMF(object):
     :param data:
         The PMF data in a form of list of tuples. Each tuple must contain
         two items with the first item being the probability of the implied
-        random value to take value of the second item.
+        random variable to take value of the second item.
 
         There must be at least one tuple in the list. All probabilities
         must sum up to 1. In order to guarantee that regardless of float
@@ -22,7 +22,7 @@ class PMF(object):
         those can be objects of any (mixed or homogeneous) type.
 
     :raises RuntimeError:
-        If probabilities do not sum to 1.
+        If probabilities do not sum up to 1.
     """
 
     __slots__ = ('data', )
