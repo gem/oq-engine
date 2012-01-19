@@ -32,9 +32,6 @@ OUTPUT_DIR = computed_output
 MINIMUM_MAGNITUDE = 5.0
 # years
 INVESTIGATION_TIME = 50.0
-# 50
-# maximum integration distance (km)
-MAXIMUM_DISTANCE = 100.0
 # bin width of the magnitude frequency distribution
 WIDTH_OF_MFD_BIN = 0.1
 
@@ -119,8 +116,6 @@ SUBDUCTION_RUPTURE_FLOATING_TYPE = Along strike and down dip
 NUMBER_OF_LOGIC_TREE_SAMPLES = 5
 # (used if probabilistic event based approach is chosen)
 NUMBER_OF_SEISMICITY_HISTORIES = 5
-
-HAZARD_MAP_CPT = seminf-haxby.cpt
 
 [RISK]
 
