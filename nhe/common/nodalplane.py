@@ -8,8 +8,8 @@ class NodalPlane(object):
     direction.
 
     :param strike:
-        Angle between fault source direction and the North direction (defined
-        between 0 and 360 degrees).
+        Angle between line created by the intersection of rupture plane
+        and the North direction (defined between 0 and 360 degrees).
     :param dip:
         Angle between earth surface and fault plane (defined between 0 and 90
         degrees).
