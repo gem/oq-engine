@@ -59,31 +59,34 @@ def _for_plotting(loss_curve, time_span):
     return data
 
 
-def plot_aggregate_curve(job, aggregate_curve):
+def plot_aggregate_curve(calculator, aggregate_curve):
     """Plot an aggreate loss curve.
 
     This function is triggered only if the AGGREGATE_LOSS_CURVE
     parameter is specified in the configuration file.
 
-    :param job: the job the engine is currently processing.
-    :type job:
-        :py:class:`EventBasedRiskCalculator`
+    :param calculator: 
+        :py:class:`EventBasedRiskCalculator` instance for an in-progress
+        calculation.
     :param aggregate_curve: the aggregate curve to plot.
     :type aggregate_curve: :py:class:`openquake.shapes.Curve`
     """
 
-    if not job.has("AGGREGATE_LOSS_CURVE"):
+    if not calculator.calc_proxy.has("AGGREGATE_LOSS_CURVE"):
         LOGGER.debug("AGGREGATE_LOSS_CURVE parameter not specified, " \
                 "skipping aggregate loss curve computation...")
 
         return
 
-    path = os.path.join(job.params["BASE_PATH"],
-            job.params["OUTPUT_DIR"], _filename(job.job_id))
+    path = os.path.join(
+            calculator.calc_proxy.params["BASE_PATH"],
+            calculator.calc_proxy.params["OUTPUT_DIR"],
+            _filename(calculator.calc_proxy.job_id))
 
     plotter = curve.CurvePlot(path)
     plotter.write(_for_plotting(aggregate_curve,
-            job.params["INVESTIGATION_TIME"]), autoscale_y=False)
+            calculator.calc_proxy.params["INVESTIGATION_TIME"]),
+            autoscale_y=False)
 
     plotter.close()
     LOGGER.debug("Aggregate loss curve stored at %s" % path)

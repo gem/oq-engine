@@ -637,6 +637,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         :py:class:`openquake.output.curve.CurvePlot` will be mocked to perform
         this test.
         """
+        calculator = eb_core.EventBasedRiskCalculator(self.job)
 
         curve = shapes.Curve([(0.1, 0.5), (0.2, 0.5), (0.3, 0.5)])
 
@@ -644,7 +645,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             'openquake.output.curve.CurvePlot.write') as write_mock:
             with helpers.patch(
                 'openquake.output.curve.CurvePlot.close') as close_mock:
-                eb_core.plot_aggregate_curve(self.job, curve)
+                eb_core.plot_aggregate_curve(calculator, curve)
 
                 # make sure write() and close() were both called
                 self.assertEqual(1, write_mock.call_count)
@@ -662,6 +663,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         this test.
         """
         del self.params["AGGREGATE_LOSS_CURVE"]
+        calculator = eb_core.EventBasedRiskCalculator(self.job)
 
         curve = shapes.Curve([(0.1, 0.5), (0.2, 0.5), (0.3, 0.5)])
 
@@ -669,7 +671,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             'openquake.output.curve.CurvePlot.write') as write_mock:
             with helpers.patch(
                 'openquake.output.curve.CurvePlot.close') as close_mock:
-                eb_core.plot_aggregate_curve(self.job, curve)
+                eb_core.plot_aggregate_curve(calculator, curve)
 
                 # the plotter should not be called
                 self.assertEqual(0, write_mock.call_count)
