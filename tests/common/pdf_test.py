@@ -4,6 +4,10 @@ from nhe.common.pdf import Poisson
 
 
 class PoissonPDFTestCase(unittest.TestCase):
+    def test_non_positive_time_span(self):
+        self.assertRaises(RuntimeError, Poisson, -1)
+        self.assertRaises(RuntimeError, Poisson, 0)
+
     def test_get_probability(self):
         pdf = Poisson(time_span=50)
         self.assertEqual(pdf.get_probability(occurrence_rate=10), 1)
