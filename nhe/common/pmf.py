@@ -22,7 +22,8 @@ class PMF(object):
         those can be objects of any (mixed or homogeneous) type.
 
     :raises RuntimeError:
-        If probabilities do not sum up to 1.
+        If probabilities do not sum up to 1 or there is zero or negative
+        probability.
     """
 
     __slots__ = ('data', )
@@ -30,4 +31,6 @@ class PMF(object):
     def __init__(self, data):
         if not data or (sum(prob for (prob, value) in data) != 1.0):
             raise RuntimeError('values do not sum up to 1.0')
+        if any(prob <= 0 for (prob, value) in data):
+            raise RuntimeError('probability is not positive')
         self.data = data
