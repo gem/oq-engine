@@ -23,11 +23,11 @@ class NodalPlane(object):
 
     def __init__(self, strike, dip, rake):
         if not 0 <= strike <= 360:
-            raise RuntimeError('strike is out of range 0..360')
-        if not 0 <= dip <= 90:
-            raise RuntimeError('dip is out of range 0..90')
+            raise RuntimeError('strike is out of range [0, 360]')
+        if not 0 < dip <= 90:
+            raise RuntimeError('dip is out of range (0, 90]')
         if not -180 <= rake <= 180:
-            raise RuntimeError('rake is out of range -180..180')
+            raise RuntimeError('rake is out of range [-180, 180]')
         self.strike = strike
         self.dip = dip
         self.rake = rake

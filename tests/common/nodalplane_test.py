@@ -11,19 +11,20 @@ class NodalPlaneTestCase(unittest.TestCase):
                         ae.exception.message)
 
     def test_strike_out_of_range(self):
-        self._test_broken_input('strike', strike=-0.1, dip=0, rake=0)
-        self._test_broken_input('strike', strike=360.1, dip=0, rake=0)
+        self._test_broken_input('strike', strike=-0.1, dip=1, rake=0)
+        self._test_broken_input('strike', strike=360.1, dip=1, rake=0)
 
     def test_dip_out_of_range(self):
         self._test_broken_input('dip', strike=0, dip=-0.1, rake=0)
+        self._test_broken_input('dip', strike=0, dip=0, rake=0)
         self._test_broken_input('dip', strike=0, dip=90.1, rake=0)
 
     def test_rake_out_of_range(self):
-        self._test_broken_input('rake', strike=0, dip=0, rake=-180.1)
-        self._test_broken_input('rake', strike=0, dip=0, rake=180.1)
+        self._test_broken_input('rake', strike=0, dip=1, rake=-180.1)
+        self._test_broken_input('rake', strike=0, dip=1, rake=180.1)
 
     def test_corner_cases(self):
-        np = NodalPlane(strike=0, dip=0, rake=-180)
-        self.assertEqual((np.strike, np.dip, np.rake), (0, 0, -180))
+        np = NodalPlane(strike=0, dip=0.001, rake=-180)
+        self.assertEqual((np.strike, np.dip, np.rake), (0, 0.001, -180))
         np = NodalPlane(strike=360, dip=90, rake=+180)
         self.assertEqual((np.strike, np.dip, np.rake), (360, 90, +180))
