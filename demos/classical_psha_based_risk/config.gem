@@ -2,7 +2,8 @@
 
 CALCULATION_MODE = Classical
 
-SITES = 38.225,-122.000
+REGION_VERTEX = 38.225,-122.000, 38.225,-122.000, 38.225,-122.000
+REGION_GRID_SPACING = 0.1
 
 [HAZARD]
 
@@ -99,8 +100,9 @@ SUBDUCTION_RUPTURE_FLOATING_TYPE = Along strike and down dip
 
 NUMBER_OF_LOGIC_TREE_SAMPLES = 1
 
-# Compute mean hazard curve
-COMPUTE_MEAN_HAZARD_CURVE = true
+QUANTILE_LEVELS =
+
+POES =
 
 [RISK]
 
@@ -109,12 +111,7 @@ EXPOSURE = exposure.xml
 
 # files containing the vulnerability functions
 VULNERABILITY = vulnerability.xml
-VULNERABILITY_RETROFITTED = vulnerability-retrofitted.xml
 
 LOSS_CURVES_OUTPUT_PREFIX = losscurves
 
 RISK_CELL_SIZE = 0.05
-
-INTEREST_RATE = 0.05
-ASSET_LIFE_EXPECTANCY = 40
-
