@@ -19,6 +19,8 @@ import numpy
 import os
 import unittest
 
+from nose.plugins.attrib import attr
+
 from openquake.db.models import LossCurveData
 from openquake.db.models import OqCalculation
 
@@ -28,6 +30,7 @@ from tests.utils import helpers
 class ClassicalRiskQATestCase(unittest.TestCase):
     """Single site QA tests for the Classical Risk calculator."""
 
+    @attr('qa')
     def test_classical_psha_based_risk(self):
         """Run the full hazard+risk job, serialize all results to the db,
         and verify them against expected values."""
