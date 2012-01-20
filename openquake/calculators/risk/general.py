@@ -365,18 +365,14 @@ class ProbabilisticRiskCalculator(BaseRiskCalculator):
         subclasses to provide the calculation-mode-specific logic."""
         raise NotImplementedError()
 
-    def write_output(calc):
+    def write_output(self):
+        """Write the output of a block to db/xml.
         """
-        Write the output of a block to db/xml.
+        calc_proxy = self.calc_proxy
 
-        :param calc:
-            :class:`openquake.calculators.base.Calculator` instance.
-        """
-        calc_proxy = calc.calc_proxy
-
-        for block_id in calc.calc_proxy.blocks_keys:
+        for block_id in calc_proxy.blocks_keys:
             #pylint: disable=W0212
-            calc._write_output_for_block(calc_proxy.job_id, block_id)
+            self._write_output_for_block(calc_proxy.job_id, block_id)
 
         for loss_poe in conditional_loss_poes(calc_proxy.params):
             path = os.path.join(calc_proxy.base_path,
