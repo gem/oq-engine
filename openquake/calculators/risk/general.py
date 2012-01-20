@@ -66,41 +66,6 @@ def preload(calculator):
     calculator.partition()
 
 
-def write_output(calc):
-    """
-    Write the output of a block to db/xml.
-
-    :param calc:
-        :class:`openquake.calculators.base.Calculator` instance.
-    """
-    calc_proxy = calc.calc_proxy
-
-    for block_id in calc.calc_proxy.blocks_keys:
-        #pylint: disable=W0212
-        calc._write_output_for_block(calc_proxy.job_id, block_id)
-
-    for loss_poe in conditional_loss_poes(calc_proxy.params):
-        path = os.path.join(calc_proxy.base_path,
-                            calc_proxy.params['OUTPUT_DIR'],
-                            "losses_at-%s.xml" % loss_poe)
-        writer = risk_output.create_loss_map_writer(
-            calc_proxy.job_id, calc_proxy.serialize_results_to, path, False)
-
-        if writer:
-            metadata = {
-                "scenario": False,
-                "timeSpan": calc_proxy.params["INVESTIGATION_TIME"],
-                "poE": loss_poe,
-            }
-
-            writer.serialize(
-                [metadata]
-                + calc_proxy.asset_losses_per_site(
-                    loss_poe,
-                    calc_proxy.grid_assets_iterator(calc_proxy.region.grid)))
-            LOG.info('Loss Map is at: %s' % path)
-
-
 def conditional_loss_poes(params):
     """Return the PoE(s) specified in the configuration file used to
     compute the conditional loss."""
@@ -399,6 +364,38 @@ class ProbabilisticRiskCalculator(BaseRiskCalculator):
         """Compute loss for a block of sites. Implement this in
         subclasses to provide the calculation-mode-specific logic."""
         raise NotImplementedError()
+
+    def write_output(self):
+        """Write the output of a block to db/xml.
+        """
+        calc_proxy = self.calc_proxy
+
+        for block_id in calc_proxy.blocks_keys:
+            #pylint: disable=W0212
+            self._write_output_for_block(calc_proxy.job_id, block_id)
+
+        for loss_poe in conditional_loss_poes(calc_proxy.params):
+            path = os.path.join(calc_proxy.base_path,
+                                calc_proxy.params['OUTPUT_DIR'],
+                                "losses_at-%s.xml" % loss_poe)
+            writer = risk_output.create_loss_map_writer(
+                calc_proxy.job_id, calc_proxy.serialize_results_to, path,
+                False)
+
+            if writer:
+                metadata = {
+                    "scenario": False,
+                    "timeSpan": calc_proxy.params["INVESTIGATION_TIME"],
+                    "poE": loss_poe,
+                }
+
+                writer.serialize(
+                    [metadata]
+                    + calc_proxy.asset_losses_per_site(
+                        loss_poe,
+                        calc_proxy.grid_assets_iterator(
+                            calc_proxy.region.grid)))
+                LOG.info('Loss Map is at: %s' % path)
 
     def write_output_bcr(self):
         """

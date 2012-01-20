@@ -250,9 +250,9 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
                 return
 
         if self.is_benefit_cost_ratio_mode():
-            general.write_output_bcr(self)
+            self.write_output_bcr()
         else:
-            general.write_output(self)
+            self.write_output()
 
     def _get_db_curve(self, site):
         """Read hazard curve data from the DB"""
