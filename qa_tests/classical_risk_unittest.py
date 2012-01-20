@@ -15,6 +15,7 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+import numpy
 import os
 import unittest
 
@@ -31,49 +32,47 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         """Run the full hazard+risk job, serialize all results to the db,
         and verify them against expected values."""
 
-        self.maxDiff =None
-
         expected_lc_poes = [
-            0.03881,
-            0.03879,
-            0.03793,
-            0.03485,
-            0.03059,
-            0.02644,
-            0.02282,
-            0.01975,
-            0.01717,
-            0.01501,
-            0.01323,
-            0.01054,
-            0.00862,
-            0.00713,
-            0.00591,
-            0.00491,
-            0.00353,
-            0.00274,
-            0.00219,
-            0.00168,
-            0.00119,
-            0.00051,
-            0.00026,
-            0.00019,
-            0.00015,
-            0.00009,
-            0.00005,
-            0.00003,
+            0.03944,
+            0.03943,
+            0.03857,
+            0.03548,
+            0.03123,
+            0.02708,
+            0.02346,
+            0.02039,
+            0.01780,
+            0.01565,
+            0.01386,
+            0.01118,
+            0.00926,
+            0.00776,
+            0.00654,
+            0.00555,
+            0.00417,
+            0.00338,
+            0.00283,
+            0.00231,
+            0.00182,
+            0.00114,
+            0.00089,
+            0.00082,
+            0.00069,
+            0.00039,
+            0.00024,
+            0.00013,
+            0.00006,
+            0.00002,
             0.00001,
-            0.00001,
-            0.00000, 
         ]
 
         helpers.run_job(helpers.demo_file(
-            os.path.join('classical_psha_based_risk', 'config.gem')),
-            debug='debug')
+            os.path.join('classical_psha_based_risk', 'config.gem')))
 
         calculation = OqCalculation.objects.latest('id')
 
         loss_curve = LossCurveData.objects.get(
             loss_curve__output__oq_calculation=calculation.id)
 
-        self.assertEqual(expected_lc_poes, loss_curve.poes)
+        self.assertTrue(numpy.allclose(expected_lc_poes, loss_curve.poes,
+                                       atol=0.0009))
