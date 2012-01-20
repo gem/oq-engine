@@ -151,14 +151,14 @@ if [ "$check_table_spaces" == "on" ]; then
         full_tspace_path="$tspace_path/$full_ts_name"
 
         # Create table space path if needed.
-        sudo test -d "$full_tspace_path"
+        test -d "$full_tspace_path"
         if [ $? -ne 0 ]; then
             echo ".. Creating table space path $full_tspace_path .."
-            sudo mkdir -p $full_tspace_path
+            mkdir -p $full_tspace_path
             if [ $this_is_linux -eq 1 ]; then
-                sudo chown -R postgres.postgres $full_tspace_path
+                chown -R postgres.postgres $full_tspace_path
             else
-                sudo chown -R postgres $full_tspace_path
+                chown -R postgres $full_tspace_path
             fi
         fi
 
