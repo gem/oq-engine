@@ -312,7 +312,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                 vuln_function, gmf_slice, epsilon_provider, asset)
             loss_ratio_curve = general.compute_loss_ratio_curve(
                 vuln_function, gmf_slice, epsilon_provider, asset,
-                None, loss_ratios=loss_ratios)
+                loss_ratios=loss_ratios)
             return loss_ratio_curve.rescale_abscissae(asset["assetValue"])
 
         result = general.compute_bcr_for_block(self.calc_proxy.job_id, points,
@@ -364,7 +364,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
 
         loss_ratio_curve = general.compute_loss_ratio_curve(
                 vuln_function, gmf_slice, epsilon_provider, asset,
-                None, loss_ratios=loss_ratios)
+                loss_ratios=loss_ratios)
 
         # NOTE (jmc): Early exit if the loss ratio is all zeros
         if not False in (loss_ratio_curve.ordinates == 0.0):
