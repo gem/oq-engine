@@ -65,7 +65,7 @@ def plot_aggregate_curve(calculator, aggregate_curve):
     This function is triggered only if the AGGREGATE_LOSS_CURVE
     parameter is specified in the configuration file.
 
-    :param calculator: 
+    :param calculator:
         :py:class:`EventBasedRiskCalculator` instance for an in-progress
         calculation.
     :param aggregate_curve: the aggregate curve to plot.
