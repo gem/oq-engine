@@ -40,22 +40,20 @@ GML = 'http://www.opengis.net/gml'
 
 class BCRQATestCase(unittest.TestCase):
 
-    # TODO: fix the code and remove @skipit
-    @helpers.skipit
     @attr('qa')
     def test_bcr(self):
         expected_result = {
         #    site location
             (-122.0, 38.225): {
                 # assetRef  eal_orig  eal_retrof  bcr
-                    'a1':   (0.00838,  0.00587,  0.43405)
+                    'a1':   (0.009379,  0.006586,  0.483091)
             }
         }
         delta = 1e-5
 
-        helpers.run_job(CONFIG)
-        job_record = OqCalculation.objects.latest("id")
-        self.assertEqual('succeeded', job_record.status)
+        helpers.run_job(CONFIG, debug='debug')
+        calc_record = OqCalculation.objects.latest("id")
+        self.assertEqual('succeeded', calc_record.status)
 
         result = self._parse_bcr_map(RESULT)
         try:
