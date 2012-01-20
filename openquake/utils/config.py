@@ -82,14 +82,6 @@ class Config(object):
         else:
             return False
 
-    def set_job_id(self, job_id):
-        """Sets the job identifier."""
-        self.job_id = job_id
-
-    def get_job_id(self):
-        """Gets the job identifier."""
-        return self.job_id
-
 
 def get_section(section):
     """A dictionary of key/value pairs for the given `section` or `None`."""
@@ -133,7 +125,7 @@ def hazard_block_size(default=8192):
 
 
 def flag_set(section, setting):
-    """True if the given setting is enabled in openquake.cfg
+    """True if the given boolean setting is enabled in openquake.cfg
 
     :param string section: name of the configuration file section
     :param string setting: name of the configuration file setting

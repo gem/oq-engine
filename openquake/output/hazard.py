@@ -75,7 +75,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
 
     def _maintain_debug_stats(self):
         """Capture the file written if debug statistics are turned on."""
-        key = stats.key_name(config.Config().get_job_id(),
+        key = stats.key_name(config.Config().job_id,
                              *stats.STATS_KEYS["hcls_xmlcurvewrites"])
         if key:
             stats.kvs_op("rpush", key, self.path)
@@ -303,7 +303,7 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
 
     def _maintain_debug_stats(self):
         """Capture the file written if debug statistics are turned on."""
-        key = stats.key_name(config.Config().get_job_id(),
+        key = stats.key_name(config.Config().job_id,
                              *stats.STATS_KEYS["hcls_xmlmapwrites"])
         if key:
             stats.kvs_op("rpush", key, self.path)

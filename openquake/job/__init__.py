@@ -332,7 +332,7 @@ def prepare_job(params, sections):
     stats.delete_job_counters(job.id)
 
     # Make the job ID generally available.
-    utils_config.Config().set_job_id(job.id)
+    utils_config.Config().job_id = job.id
 
     return job
 

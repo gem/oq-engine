@@ -40,6 +40,7 @@ class FileWriter(object):
         self.path = path
         self.file = None
         self.root_node = None
+        # Either none or a namedtuple with 3 booleans: (start, middle, end)
         self.mode = None
 
     def initialize(self):
