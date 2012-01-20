@@ -78,7 +78,8 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                 self.store_gmpe_map(gmpe_generator.getrandbits(32))
                 pending_tasks.append(
                     compute_ground_motion_fields.delay(
-                        self.calc_proxy.job_id, self.sites_to_compute(),
+                        self.calc_proxy.job_id,
+                        self.calc_proxy.sites_to_compute(),
                         i, j, gmf_generator.getrandbits(32)))
 
             for each_task in pending_tasks:
