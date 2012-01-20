@@ -2,7 +2,7 @@
 
 import unittest
 
-from nhe import geo
+from nhe.common import geo
 
 
 class PointTestCase(unittest.TestCase):
