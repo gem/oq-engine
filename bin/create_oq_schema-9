@@ -24,8 +24,15 @@ if [ $# -eq 0 ]; then
     help
 fi
 
+if [ "$(id -u)" != "0" ]; then
+    echo ""
+    echo "!! This script should be run as root." 1>&2
+    echo "!! Press <enter> to continue, or <ctrl>-C to abort"
+    read
+fi
+
 # Openquake version
-oq_version="0.4.6"
+oq_version="0.5.0"
 
 # Stop at the first error in a batch to give a chance to see the error message
 psql_batch_options='--set ON_ERROR_STOP=1'
