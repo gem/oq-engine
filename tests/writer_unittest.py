@@ -20,6 +20,7 @@
 Tests related to the various Writer base classes.
 """
 
+from collections import namedtuple
 import mock
 import unittest
 
@@ -28,6 +29,8 @@ from openquake import writer
 
 class FileWriterTestCase(unittest.TestCase):
     """Tests related to the `FileWriter` abstract base class."""
+
+    SerializerMode = namedtuple("SerializerMode", "start, middle, end")
 
     def test_open_with_mode_not_set(self):
         """
@@ -42,50 +45,52 @@ class FileWriterTestCase(unittest.TestCase):
 
     def test_open_with_mode_start(self):
         """
-        open() will not open the file in mode `MODE_START`.
+        open() will not open the file if we are at the start of a multi-stage
+        serialization.
         """
         path = "/tmp/b"
         # Only mock the open() built-in in the writer module.
         with mock.patch("openquake.writer.open", create=True) as mock_open:
             fw = writer.FileWriter(path)
-            fw.set_mode(writer.MODE_START)
+            fw.mode = self.SerializerMode(True, False, False)
             fw.open()
             self.assertEqual(0, mock_open.call_count)
 
     def test_open_with_mode_start_and_end(self):
         """
-        open() will open and truncate the file if the mode passed was
-        `MODE_START_AND_END`.
+        open() will open and truncate the file in the case of a single pass
+        serialization.
         """
         path = "/tmp/c"
         # Only mock the open() built-in in the writer module.
         with mock.patch("openquake.writer.open", create=True) as mock_open:
             fw = writer.FileWriter(path)
-            fw.set_mode(writer.MODE_START_AND_END)
+            fw.mode = self.SerializerMode(True, False, True)
             fw.open()
             self.assertEqual((path, "w"), mock_open.call_args[0])
 
     def test_open_with_mode_in_the_middle(self):
         """
-        open() will not open the file in mode `MODE_IN_THE_MIDDLE`.
+        open() will not open the file in the middle of a multi-stage
+        serialization.
         """
         path = "/tmp/d"
         # Only mock the open() built-in in the writer module.
         with mock.patch("openquake.writer.open", create=True) as mock_open:
             fw = writer.FileWriter(path)
-            fw.set_mode(writer.MODE_IN_THE_MIDDLE)
+            fw.mode = self.SerializerMode(False, True, False)
             fw.open()
             self.assertEqual(0, mock_open.call_count)
 
     def test_open_with_mode_end(self):
         """
-        open() will open and truncate the file if the mode passed was
-        `MODE_END`.
+        open() will open and truncate the file if we are at the very end
+        of a multi-stage serialization.
         """
         path = "/tmp/e"
         # Only mock the open() built-in in the writer module.
         with mock.patch("openquake.writer.open", create=True) as mock_open:
             fw = writer.FileWriter(path)
-            fw.set_mode(writer.MODE_END)
+            fw.mode = self.SerializerMode(False, False, True)
             fw.open()
             self.assertEqual((path, "w"), mock_open.call_args[0])
