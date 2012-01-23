@@ -50,10 +50,12 @@ class PointSource(SeismicSource):
                                        longitude=self.location.longitude,
                                        depth=hc_depth)
                     occurrence_rate = mag_occ_rate * np_prob * hc_prob
-                    prob = temporal_occurrence_model.get_rate(occurrence_rate)
-                    surface = self.get_rupture_surface(mag, np, hc_depth)
+                    probability = temporal_occurrence_model.get_probability(
+                        occurrence_rate
+                    )
+                    surface = self.get_rupture_surface(mag, np, hypocenter)
                     rupture = Rupture(self, mag, np.rake, hypocenter,
-                                      prob, surface)
+                                      probability, surface)
                     yield rupture
 
     def _get_rupture_dimensions(self, mag, nodal_plane):
@@ -109,7 +111,7 @@ class PointSource(SeismicSource):
             azimuth=azimuth_down
         )
         right_top = right_bottom.point_at(horizontal_distance=rup_proj_width,
-                                          vertical_increment=rup_proj_height,
+                                          vertical_increment=-rup_proj_height,
                                           azimuth=azimuth_up)
         left_top = right_top.point_at(horizontal_distance=rup_length,
                                       vertical_increment=0,
@@ -119,4 +121,4 @@ class PointSource(SeismicSource):
                                             azimuth=azimuth_left)
 
         return EvenlyGriddedSurface(left_top, right_top, right_bottom,
-                                    left_bottom)
+                                    left_bottom, rup_length, rup_width)
