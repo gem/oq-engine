@@ -42,6 +42,15 @@ class BCRQATestCase(unittest.TestCase):
 
     @attr('qa')
     def test_bcr(self):
+        # Verify the EAL (Original and Retrofitted) and BCR values to
+        # hand-computed results.
+
+        # For the EAL values, a delta of 0.0009 (3 decimal places of precision)
+        # is considered reasonable.
+
+        # For the BCR, a delta of 0.009 (2 decimal places of precision) is
+        # considered reasonable.
+
         expected_result = {
         #    site location
             (-122.0, 38.225): {
@@ -51,16 +60,43 @@ class BCRQATestCase(unittest.TestCase):
         }
         delta = 1e-5
 
-        helpers.run_job(CONFIG, debug='debug')
+        helpers.run_job(CONFIG)
         calc_record = OqCalculation.objects.latest("id")
         self.assertEqual('succeeded', calc_record.status)
 
         result = self._parse_bcr_map(RESULT)
+
         try:
-            helpers.assertDeepAlmostEqual(self, expected_result, result,
-                                          delta=delta)
+            self._assert_bcr_results_equal(expected_result, result)
         finally:
             shutil.rmtree(COMPUTED_OUTPUT)
+
+    def _assert_bcr_results_equal(self, expected, actual, eal_delta=0.0009,
+                                  bcr_delta=0.009):
+        """Given a pair of dicts assert that they are equal.
+
+        Result values do not have to be exact and the following default deltas
+        are used:
+
+        For EAL values, a delta of
+        0.0009 (3 decimal places of precision) is allowed. For BCR values, a
+        delta of 0.009 (2 decimal places of precision) is allowed."""
+        self.assertEqual(len(expected), len(actual))
+
+        for site, exp_value in expected.items():
+            for asset_ref, (eal_orig, eal_retrof, bcr) in exp_value.items():
+
+                act_eal_orig, act_eal_retrof, act_bcr = (
+                    actual[site][asset_ref])
+
+                # Verify 'EAL, Original'
+                self.assertAlmostEqual(eal_orig, act_eal_orig,
+                                       delta=eal_delta)
+                # Verify 'EAL, Retrofitted'
+                self.assertAlmostEqual(eal_retrof, act_eal_retrof,
+                                       delta=eal_delta)
+                # Verify BCR
+                self.assertAlmostEqual(bcr, act_bcr, delta=bcr_delta)
 
     def _parse_bcr_map(self, filename):
         self.assertTrue(os.path.exists(filename))
