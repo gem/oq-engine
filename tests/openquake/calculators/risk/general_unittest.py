@@ -19,7 +19,6 @@ import unittest
 
 from openquake.engine import CalculationProxy
 from openquake.engine import import_job_profile
-from openquake.writer import CompositeWriter
 from openquake.db.models import OqCalculation
 from openquake.output.risk import LossMapDBWriter
 from openquake.output.risk import LossMapNonScenarioXMLWriter
