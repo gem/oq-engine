@@ -58,7 +58,6 @@ class BCRQATestCase(unittest.TestCase):
                     'a1':   (0.009379,  0.006586,  0.483091)
             }
         }
-        delta = 1e-5
 
         helpers.run_job(CONFIG)
         calc_record = OqCalculation.objects.latest("id")
