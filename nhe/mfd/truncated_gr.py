@@ -82,8 +82,8 @@ class TruncatedGR(BaseMFD):
             Float number, the annual occurrence rate calculated using formula
             described in :class:`TruncatedGR`.
         """
-        mag_lo = mag - self.bin_width / 2
-        mag_hi = mag + self.bin_width / 2
+        mag_lo = mag - self.bin_width / 2.0
+        mag_hi = mag + self.bin_width / 2.0
         return (10 ** (self.a_val - self.b_val * mag_lo)
                 - 10 ** (self.a_val - self.b_val * mag_hi))
 
@@ -101,8 +101,8 @@ class TruncatedGR(BaseMFD):
         min_mag = round(self.min_mag / self.bin_width) * self.bin_width
         max_mag = round(self.max_mag / self.bin_width) * self.bin_width
         if min_mag != max_mag:
-            min_mag += self.bin_width / 2
-            max_mag -= self.bin_width / 2
+            min_mag += self.bin_width / 2.0
+            max_mag -= self.bin_width / 2.0
         # here we use math round on the result of division and not just
         # cast it to integer because for some magnitude values that can't
         # be represented as an IEEE 754 double precisely the result can
