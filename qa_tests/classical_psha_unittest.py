@@ -431,7 +431,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         job_cfg = helpers.demo_file(os.path.join(
             "complex_fault_demo_hazard", "config.gem"))
 
-        run_job(job_cfg, output="xml")
+        helpers.run_job(job_cfg, output="xml")
 
         self.job = models.OqCalculation.objects.latest("id")
 
