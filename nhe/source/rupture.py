@@ -43,11 +43,14 @@ class PointSurface(object):
 
 
 class EvenlyGriddedSurface(object):
-    def __init__(self, top_left, top_right, bottom_right, bottom_left):
+    def __init__(self, top_left, top_right, bottom_right, bottom_left,
+                 length, width):
         self.top_left = top_left
         self.top_right = top_right
         self.bottom_right = bottom_right
         self.bottom_left = bottom_left
+        self.length = length
+        self.width = width
 
     def get_mesh(self, mesh_spacing):
         mesh = []
