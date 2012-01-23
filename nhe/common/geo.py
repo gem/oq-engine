@@ -214,9 +214,9 @@ class Line(object):
     This class represents a geographical line, which is basically
     a sequence of geographical points.
 
-    To create a line you need to provide at least two different
-    points, and the points should not intersect themself (depth
-    is not taken into account for the time being).
+    A line is defined by at least two different points. The surface
+    projection of a line cannot intersect itself (depth dimension
+    is neglected to check if a line intersects itself or not).
 
     :param points:
         The sequence of points definining this line.
@@ -264,8 +264,31 @@ class Line(object):
         """
         Resample this line into sections.
 
+        The first point in the resampled line corresponds
+        to the first point in the original line.
+
+        Starting from the first point in the original line, a line
+        segment is defined as the line connecting the last point in the
+        resampled line and the next point in the original line.
+        The line segment is then split into sections of length equal to
+        ``section_length``. The resampled line is obtained
+        by concatenating all sections.
+
+        The number of sections in a line segment is calculated as follows:
+        ``round(segment_length / section_length)``.
+
+        Note that the resulting line has a length that is an exact multiple of
+        ``section_length``, therefore its length is in general smaller
+        or greater (depending on the rounding) than the length
+        of the original line.
+
+        For a straight line, the difference between the resulting length
+        and the original length is at maximum half of the ``section_length``.
+        For a curved line, the difference my be larger,
+        because of corners getting cut.
+
         :param section_length:
-            The length of the section.
+            The length of the section, in km.
         :type section_length:
             float
         :returns:
@@ -277,7 +300,7 @@ class Line(object):
         resampled_points = []
 
         # 1. Resample the first section. 2. Loop over the remaining points
-        # in the fault trace and resample the remaining sections.
+        # in the line and resample the remaining sections.
         # 3. Extend the list with the resampled points, except the first one
         # (because it's already contained in the previous set of
         # resampled points).
