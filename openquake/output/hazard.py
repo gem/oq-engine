@@ -20,24 +20,6 @@
 """
 This module provides classes that serialize hazard-related objects
 to NRML format.
-
-* Hazard curves:
-
-For the serialization of hazard curves, it currently takes
-all the lxml object model in memory
-due to the fact that curves can be grouped by IDmodel and
-IML. Couldn't find a way to do so writing an object at a
-time without making a restriction to the order on which
-objects are received.
-
-* Hazard maps:
-
-Hazard maps are serialized per object (=Site) as implemented
-in the base class.
-
-* Ground Motion Fields (GMFs):
-
-GMFs are serialized per object (=Site) as implemented in the base class.
 """
 
 import logging
@@ -92,8 +74,7 @@ class HazardCurveXMLWriter(writer.FileWriter):
         super(HazardCurveXMLWriter, self).open()
 
     def close(self):
-        """Override the default implementation writing all the
-        collected lxml object model to the stream."""
+        """Write all the collected lxml object model to the stream."""
 
         if self.nrml_el is None:
             error_msg = ("You need to add at least a curve to build "
@@ -111,10 +92,8 @@ class HazardCurveXMLWriter(writer.FileWriter):
     def write(self, point, values):
         """Write a hazard curve.
 
-        point must be of type shapes.Site
-        values is a dictionary that matches the one produced by the
-        parser nrml.NrmlFile
-        """
+        point must be of type shapes.Site values is a dictionary that matches
+        the one produced by the parser nrml.NrmlFile."""
 
         # if we are writing the first hazard curve, create wrapping elements
         if self.nrml_el is None:
@@ -129,15 +108,15 @@ class HazardCurveXMLWriter(writer.FileWriter):
             self.result_el = etree.SubElement(self.nrml_el,
                 "%shazardResult" % NRML)
 
-            _set_gml_id(self.result_el, _gml_id("hazres_id", values,
-                    HAZARDRESULT_GML_ID))
+            _set_gml_id(self.result_el,
+                        _gml_id("hazres_id", values, HAZARDRESULT_GML_ID))
 
             # nrml:config
             config_el = etree.SubElement(self.result_el, "%sconfig" % NRML)
 
             # nrml:hazardProcessing
-            hazard_processing_el = etree.SubElement(config_el,
-                "%shazardProcessing" % NRML)
+            hazard_processing_el = etree.SubElement(
+                config_el, "%shazardProcessing" % NRML)
 
             # the following XML attributes are all optional
             _set_optional_attributes(hazard_processing_el, values,
@@ -146,16 +125,16 @@ class HazardCurveXMLWriter(writer.FileWriter):
         # check if we have hazard curves for an end branch label, or
         # for mean/median/quantile
         if 'endBranchLabel' in values and 'statistics' in values:
-            error_msg = "hazardCurveField cannot have both an end branch " \
-                        "and a statistics label"
+            error_msg = ("hazardCurveField cannot have both an end branch "
+                         "and a statistics label")
             raise ValueError(error_msg)
         elif 'endBranchLabel' in values:
             curve_label = values['endBranchLabel']
         elif 'statistics' in values:
             curve_label = values['statistics']
         else:
-            error_msg = "hazardCurveField has to have either an end branch " \
-                        "or a statistics label"
+            error_msg = ("hazardCurveField has to have either an end branch "
+                         "or a statistics label")
             raise ValueError(error_msg)
 
         if curve_label in self.curves_per_branch_label:
@@ -383,14 +362,12 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
             if ('statistics' in self.parent_node.attrib or
                 'quantileValue' in self.parent_node.attrib):
 
-                error_msg = "attribute endBranchLabel cannot be used " \
-                            "together with statistics/quantileValue"
+                error_msg = ("attribute endBranchLabel cannot be used "
+                             "together with statistics/quantileValue")
                 raise ValueError(error_msg)
-
         elif 'statistics' not in self.parent_node.attrib:
-
-            error_msg = "either attribute endBranchLabel or attribute " \
-                        "statistics has to be set"
+            error_msg = ("either attribute endBranchLabel or attribute "
+                         "statistics has to be set")
             raise ValueError(error_msg)
 
         return True
@@ -449,7 +426,6 @@ class GMFXMLWriter(writer.XMLFileWriter):
         """Write out the file header."""
 
         self.root_node = etree.Element(GMFXMLWriter.root_tag, nsmap=NSMAP)
-
         _set_gml_id(self.root_node, NRML_GML_ID)
 
         hazard_result_node = etree.SubElement(
@@ -482,7 +458,6 @@ class GMFXMLWriter(writer.XMLFileWriter):
         self.parent_node = etree.SubElement(
                 ground_motion_field_set_node,
                 GMFXMLWriter.field_tag, nsmap=NSMAP)
-
         _set_gml_id(self.parent_node, GMF_GML_ID)
 
     def write_footer(self):
@@ -496,7 +471,6 @@ class GMFXMLWriter(writer.XMLFileWriter):
 
         gmf_node = etree.SubElement(
                 parent_node, GMFXMLWriter.node_tag, nsmap=NSMAP)
-
         _set_gml_id(gmf_node, "node%s" % self.node_counter)
 
         site_node = etree.SubElement(
@@ -514,7 +488,6 @@ class GMFXMLWriter(writer.XMLFileWriter):
                 gmf_node, GMFXMLWriter.ground_motion_attr, nsmap=NSMAP)
 
         ground_motion_node.text = str(val[self.ground_motion_attr])
-
         self.node_counter += 1
 
 
@@ -629,7 +602,6 @@ class HazardMapDBWriter(writer.DBWriter):
     with the assumption that the poE, statistic and quantile value is
     the same for all items.
     """
-
     def __init__(self, nrml_path, oq_calculation_id):
         super(HazardMapDBWriter, self).__init__(nrml_path, oq_calculation_id)
 
@@ -694,7 +666,6 @@ class HazardCurveDBReader(object):
     structure that can be passed to
     :func:`HazardCurveXMLWriter.serialize` to produce an XML file.
     """
-
     def deserialize(self, output_id):  # pylint: disable=R0201
         """
         Read a the given hazard curve from the database.
@@ -755,7 +726,6 @@ class HazardCurveDBWriter(writer.DBWriter):
            'quantileValue': 0.6,
            'statistics': 'quantile'})]
     """
-
     def __init__(self, nrml_path, oq_calculation_id):
         super(HazardCurveDBWriter, self).__init__(nrml_path, oq_calculation_id)
 
@@ -817,7 +787,6 @@ class GmfDBReader(object):
     that can be passed to :func:`GMFXMLWriter.serialize` to
     produce an XML file.
     """
-
     @staticmethod
     def deserialize(output_id):
         """
