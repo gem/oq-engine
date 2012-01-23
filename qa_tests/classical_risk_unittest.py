@@ -73,6 +73,7 @@ class ClassicalRiskQATestCase(unittest.TestCase):
             os.path.join('classical_psha_based_risk', 'config.gem')))
 
         calculation = OqCalculation.objects.latest('id')
+        self.assertEqual('succeeded', calculation.status)
 
         loss_curve = LossCurveData.objects.get(
             loss_curve__output__oq_calculation=calculation.id)
