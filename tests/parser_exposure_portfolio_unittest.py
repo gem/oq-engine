@@ -85,7 +85,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
                                 'downtown Pavia',
              'assetID': 'asset_02',
              'assetCategory': 'buildings',
-             'taxonomy': 'RC/DMRF-D/LR',
+             'taxonomy': 'RC/DMRF-D/HR',
              'structureCategory': 'RC-HR-PC',
              'assetValue': 250000.0,
              'unit': 'EUR',
