@@ -24,6 +24,7 @@ import multiprocessing
 import random
 import time
 
+from collections import namedtuple
 from itertools import izip
 
 from celery.task import task
@@ -219,6 +220,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         gmpe_generator = random.Random()
         gmpe_generator.seed(self.calc_proxy["GMPE_LT_RANDOM_SEED"])
 
+        stats.pk_set(self.calc_proxy.job_id, "hcls_crealization", 0)
         for realization in xrange(0, realizations):
             stats.pk_inc(self.calc_proxy.job_id, "hcls_crealization")
             LOG.info("Calculating hazard curves for realization %s"
@@ -450,7 +452,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                                         hc_attrib_update, sites)
 
     # Silencing 'Too many local variables'
-    # pylint: disable=R0914
+    # pylint: disable=R0914,W0212
     def serialize_hazard_curve(self, nrml_file, key_template, hc_attrib_update,
                                sites):
         """
@@ -471,7 +473,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         :type sites: list of :py:class:`openquake.shapes.Site`
         """
 
-        def duration_generator(value):
+        def pause_generator(value):
             """
             Returns the initial value when called for the first time and
             the double value upon each subsequent invocation.
@@ -484,6 +486,12 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                     value *= 2
                 yield value
 
+        # XML serialization context
+        xsc = namedtuple("XSC", "blocks, cblock, i_total, i_done, i_next")(
+                         stats.pk_get(self.calc_proxy.job_id, "blocks"),
+                         stats.pk_get(self.calc_proxy.job_id, "cblock"),
+                         len(sites), 0, 0)
+
         nrml_path = self.calc_proxy.build_nrml_path(nrml_file)
 
         curve_writer = hazard_output.create_hazardcurve_writer(
@@ -492,21 +500,22 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
 
         sites = set(sites)
         accounted_for = set()
-        dgen = duration_generator(0.1)
-        duration = dgen.next()
+        min_pause = 0.1
+        pgen = pause_generator(min_pause)
+        pause = pgen.next()
 
         while accounted_for != sites:
             hc_data = []
             # Sleep a little before checking the availability of additional
             # hazard curve results.
-            time.sleep(duration)
+            time.sleep(pause)
             results_found = 0
             for site in sites:
-                key = key_template % hash(site)
-                value = kvs.get_value_json_decoded(key)
-                if value is None or site in accounted_for:
-                    # The curve for this site is not ready yet. Proceed to
-                    # the next.
+                if site in accounted_for:
+                    continue
+                value = kvs.get_value_json_decoded(key_template % hash(site))
+                if value is None:
+                    # No value yet, proceed to next site.
                     continue
                 # Use hazard curve ordinate values (PoE) from KVS and abscissae
                 # from the IML list in config.
@@ -521,10 +530,15 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 accounted_for.add(site)
                 results_found += 1
             if not results_found:
-                # No results found, increase the sleep duration.
-                duration = dgen.next()
+                # No results found, increase the sleep pause.
+                pause = pgen.next()
             else:
+                hazard_output.SerializerContext().update(
+                    xsc._replace(i_next=len(hc_data)))
                 curve_writer.serialize(hc_data)
+                xsc = xsc._replace(i_done=xsc.i_done + len(hc_data))
+                pause *= 0.8
+                pause = min_pause if pause < min_pause else pause
 
         return nrml_path
 

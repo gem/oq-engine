@@ -33,17 +33,24 @@ from openquake.utils import config
 # These can be used to provide feedback to the user and/or terminate the
 # job in case of failures. See e.g.
 #   https://bugs.launchpad.net/openquake/+bug/907703
+
+# Please note: counters apply to certain computation areas. At this point
+# there are as follows.
+#   "g" : general
+#   "h" : hazard
+#   "r" : risk
+
+# Also, we distinguish the following types of statistics counters:
+#   "d" : debug counter, turned off in production via openquake.cfg
+#   "i" : incremental counter
+#   "t" : counts totals
+
+# Last but not least: some counters are only used by specific calculators,
+# e.g.
+#   "hcls": classical PSHA
+
 STATS_KEYS = {
     # Predefined calculator statistics keys for the kvs.
-    # The calculator/computation areas are as follows:
-    #   "g" : general
-    #   "h" : hazard
-    #   "r" : risk
-    # The counter types are as follows:
-    #   "d" : debug counter, turned off in production via openquake.cfg
-    #   "i" : incremental counter
-    #   "t" : totals counter
-    # The total number of realizations
     "hcls_realizations": ("h", "cls:realizations", "t"),
     # Current realization
     "hcls_crealization": ("h", "cls:crealization", "i"),
@@ -111,6 +118,7 @@ def pk_get(job_id, skey, cast2int=True):
     :param int job_id: identifier of the job in question
     :param string skey: predefined statistics key
     :param bool cast2int: whether the values should be cast to integers
+    :returns: `None` or counter value
     """
     key = key_name(job_id, *STATS_KEYS[skey])
     if not key:
@@ -134,16 +142,22 @@ def _redis():
 
 
 def key_name(job_id, area, key_fragment, counter_type):
-    """Return the redis key name for the given job/function.
+    """Return `None` or the full predefined statistics key.
 
-    The calculator/computation areas are as follows:
+    `None` is returned for unknown predefined statistics keys and for debug
+    statistics counters if these have been turned off.
+
+    :param int job_id: identifier of the job in question
+    :param str area: computation area, one of:
         "g" : general
         "h" : hazard
         "r" : risk
-    The counter types in use are:
+    :param string key_fragment: a part of the predefined statistics key
+    :param str counter_type: counter type, one of:
         "d" : debug counter, turned off in production via openquake.cfg
         "i" : incremental counter
-        "t" : totals counter
+        "t" : counts totals
+    :returns: `None` or the full predefined statistics key
     """
     if counter_type == "d" and not debug_stats_enabled():
         return None
@@ -154,6 +168,7 @@ class progress_indicator(object):   # pylint: disable=C0103
     """Count successful/failed invocations of the wrapped function."""
 
     def __init__(self, area):
+        """Captures the computation area parameter."""
         self.area = area
         self.__name__ = "progress_indicator"
 
@@ -166,7 +181,7 @@ class progress_indicator(object):   # pylint: disable=C0103
             return kwargs.get("job_id", -1)
 
     def __call__(self, func):
-
+        """The actual decorator."""
         @wraps(func)
         def wrapper(*args, **kwargs):
             """The actual decorator."""
@@ -189,13 +204,30 @@ class progress_indicator(object):   # pylint: disable=C0103
 
 
 def set_total(job_id, area, key_fragment, value):
-    """Set a total value for the given key."""
+    """Set a total value for the given key.
+
+    :param int job_id: identifier of the job in question
+    :param str area: computation area, one of:
+        "g" : general
+        "h" : hazard
+        "r" : risk
+    :param string key_fragment: a part of the predefined statistics key
+    :param valye: the value that should be set.
+    """
     key = key_name(job_id, area, key_fragment, "t")
     kvs_op("set", key, value)
 
 
 def incr_counter(job_id, area, key_fragment):
-    """Increment the counter for the given key."""
+    """Increment the counter for the given key.
+
+    :param int job_id: identifier of the job in question
+    :param str area: computation area, one of:
+        "g" : general
+        "h" : hazard
+        "r" : risk
+    :param string key_fragment: a part of the predefined statistics key
+    """
     key = key_name(job_id, area, key_fragment, "i")
     kvs_op("incr", key)
 
@@ -203,14 +235,17 @@ def incr_counter(job_id, area, key_fragment):
 def get_counter(job_id, area, key_fragment, counter_type):
     """Get the value for the given key.
 
-    The calculator/computation areas are as follows:
+    :param int job_id: identifier of the job in question
+    :param str area: computation area, one of:
         "g" : general
         "h" : hazard
         "r" : risk
-    The types in use are:
+    :param string key_fragment: a part of the predefined statistics key
+    :param str counter_type: counter type, one of:
         "d" : debug counter, turned off in production via openquake.cfg
         "i" : incremental counter
-        "t" : totals counter
+        "t" : counts totals
+    :returns: `None` or the statistics key value
     """
     key = key_name(job_id, area, key_fragment, counter_type)
     if not key:
