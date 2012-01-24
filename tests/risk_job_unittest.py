@@ -51,11 +51,10 @@ class EpsilonTestCase(unittest.TestCase):
         samples = []
         for _, asset in self.exposure_parser:
             sample = self.epsilon_provider.epsilon(asset)
-            self.assertTrue(
-                sample not in samples,
-                "%s is already in %s" % (sample, samples))
-            self.assertTrue(
-                isinstance(sample, float), "Invalid sample (%s)" % sample)
+            self.assertTrue(sample not in samples,
+                            "%s is already in %s" % (sample, samples))
+            self.assertTrue(isinstance(sample, float),
+                            "Invalid sample (%s)" % sample)
             samples.append(sample)
 
     def test_correlated(self):
@@ -63,28 +62,27 @@ class EpsilonTestCase(unittest.TestCase):
 
         A sample should be drawn whenever an asset with a new building typology
         is encountered. Assets of the same typology should share sample values.
-        Please not that building typologies and structure categories are
-        roughly equivalent.
+        Please not that building typologies and taxonomies are roughly
+        equivalent.
         """
         samples = dict()
         self.epsilon_provider.__dict__["ASSET_CORRELATION"] = "perfect"
         for _, asset in self.exposure_parser:
             sample = self.epsilon_provider.epsilon(asset)
-            category = asset["structureCategory"]
-            # This is either the first time we see this structure category or
-            # the sample is identical to the one originally drawn for this
-            # structure category.
-            if category not in samples:
-                samples[category] = sample
+            taxonomy = asset["taxonomy"]
+            # This is either the first time we see this taxonomy or the sample
+            # is identical to the one originally drawn for this taxonomy.
+            if taxonomy not in samples:
+                samples[taxonomy] = sample
             else:
-                self.assertTrue(sample == samples[category])
-        # Make sure we used at least two structure categories in this helpers.
+                self.assertTrue(sample == samples[taxonomy])
+        # Make sure we used at least two taxonomies in this test.
         self.assertTrue(len(samples.keys()) > 1)
         # Are all samples valid values?
-        for category, sample in samples.iteritems():
+        for taxonomy, sample in samples.iteritems():
             self.assertTrue(
                 isinstance(sample, float),
-                "Invalid sample (%s) for category %s" % (sample, category))
+                "Invalid sample (%s) for taxonomy %s" % (sample, taxonomy))
 
     def test_incorrect_configuration_setting(self):
         """The correctness of the asset correlation configuration is enforced.
@@ -97,11 +95,11 @@ class EpsilonTestCase(unittest.TestCase):
             self.assertRaises(ValueError, self.epsilon_provider.epsilon, asset)
             break
 
-    def test_correlated_with_no_structure_category(self):
-        """For correlated jobs assets require a structure category property."""
+    def test_correlated_with_no_taxonomy(self):
+        """For correlated jobs assets require a taxonomy property."""
         self.epsilon_provider.__dict__["ASSET_CORRELATION"] = "perfect"
         for _, asset in self.exposure_parser:
-            del asset["structureCategory"]
+            del asset["taxonomy"]
             self.assertRaises(ValueError, self.epsilon_provider.epsilon, asset)
             break
 
