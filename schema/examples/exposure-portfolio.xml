@@ -35,7 +35,7 @@
                     </gml:Point>
                 </site>
 
-                <taxonomy>RC/DMRF-D/LR</taxonomy>
+                <taxonomy>RC/DMRF-D/HR</taxonomy>
                 <structureCategory>RC-HR-PC</structureCategory>
                 <assetValue>250000</assetValue>
                 <retrofittingCost>1</retrofittingCost>
