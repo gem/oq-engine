@@ -69,11 +69,11 @@ def unwrap_validation_error(jpype, runtime_exception, path=None):
 @task(ignore_result=True)
 @java.unpack_exception
 @stats.progress_indicator("h")
-def compute_hazard_curve(job_id, sites, realization):
-    """ Generate hazard curve for a given site list. """
+def compute_hazard_curve(job_id, site, realization):
+    """ Generate hazard curve for the given site. """
 
     calculator = utils_tasks.calculator_for_task(job_id, 'hazard')
-    keys = calculator.compute_hazard_curve(sites, realization)
+    keys = calculator.compute_hazard_curve([site], realization)
     return keys
 
 
