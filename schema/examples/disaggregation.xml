@@ -3,7 +3,7 @@
       xmlns="http://openquake.org/xmlns/nrml/0.3"
       gml:id="IDXXX">
     <disaggregationResultField poE="0.1" IMT="PGA" endBranchLabel="1" gml:id="ID000">
-        <disaggregationResultTypes>MagPMF MagDistPMF MagDistEpsPMF LatLonMagEpsPMF FullDisaggMatrix</disaggregationResultTypes> 
+        <disaggregationResultTypes>MagPMF MagDistPMF MagDistEpsPMF LatLonMagEpsPMF FullDisaggMatrix</disaggregationResultTypes>
         <disaggregationResultNode gml:id="ID001">
             <site>
                 <gml:Point gml:id="ID002">

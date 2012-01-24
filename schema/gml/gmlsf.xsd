@@ -4,13 +4,13 @@
    xmlns:gml="http://www.opengis.net/gml"
    xmlns:xlink="http://www.w3.org/1999/xlink"
    xmlns="http://www.w3.org/2001/XMLSchema"
-   elementFormDefault="qualified" 
+   elementFormDefault="qualified"
    version="1.0.1">
    <annotation>
       <appinfo source="urn:opengis:specification:gml:schema-xsd:gmlsf:1.0.0">gmlsf.xsd</appinfo>
       <documentation>
          GML 3.1.1 Simplified Features profile Levels 0 and 1.
-         
+
          Copyright (c) 2006,2010 Open Geospatial Consortium, Inc. All Rights Reserved.
          To obtain additional rights of use, visit http://www.opengeospatial.org/legal/ .
       </documentation>
@@ -85,7 +85,7 @@
       <annotation>
          <documentation>
             A property that has a collection of points as its value
-            domain shall contain an appropriate geometry element
+            domain shall contain an appropriate geometry elemen
             encapsulated in an element of this type.
          </documentation>
       </annotation>
@@ -153,7 +153,7 @@
       <annotation>
          <documentation>
             A property that has a collection of surfaces as its value
-            domain shall contain an appropriate geometry element
+            domain shall contain an appropriate geometry elemen
             encapsulated in an element of this type.
          </documentation>
       </annotation>
@@ -188,10 +188,10 @@
          <documentation>
             Curve is a 1-dimensional primitive. Curves are continuous,
             connected, and have a measurable length in terms of the
-            coordinate system. 
+            coordinate system.
             A curve is composed of one or more curve segments.
             The curve segments are connected to one another, with the
-            end point of each segment except the last being the start
+            end point of each segment except the last being the star
             point of the next segment in the segment list.
             The orientation of the curve is positive.
          </documentation>
@@ -361,7 +361,7 @@
             a set of boundary curves and an underlying surface to
             which these curves adhere. The curves are coplanar and
             the polygon uses planar interpolation in its interior.
-            Implements GM_Polygon of ISO 19107. 
+            Implements GM_Polygon of ISO 19107.
          </documentation>
       </annotation>
       <complexContent>
@@ -477,7 +477,7 @@
    <complexType name="AbstractSurfaceType">
       <annotation>
          <documentation>
-            An abstraction of a surface to support the different
+            An abstraction of a surface to support the differen
             levels of complexity. A surface is always a continuous
             region of a plane.
          </documentation>
@@ -490,8 +490,8 @@
    <complexType name="SurfacePropertyType">
       <annotation>
          <documentation>
-            A property that has a surface as its value domain shall contain 
-            an appropriate geometry element encapsulated in an element
+            A property that has a surface as its value domain shall contain
+            an appropriate geometry element encapsulated in an elemen
             of this type.
          </documentation>
       </annotation>
@@ -509,7 +509,7 @@
          <documentation>
             A Polygon is a special surface that is defined by a single
             surface patch. The boundary of this patch is coplanar and
-            the polygon uses planar interpolation in its interior. It
+            the polygon uses planar interpolation in its interior. I
             is backwards compatible with the Polygon of GML 2.
          </documentation>
       </annotation>
@@ -567,7 +567,7 @@
       <annotation>
          <documentation>
             A LinearRing is defined by four or more coordinate tuples,
-            with linear interpolation between them; the first and last
+            with linear interpolation between them; the first and las
             coordinates must be coincident.
          </documentation>
       </annotation>
@@ -581,7 +581,7 @@
                         specifiy the coordinates of the control points,
                         if all control points are in the same coordinate
                         reference systems and belong to this ring only.
-                        The number of direct positions in the list must
+                        The number of direct positions in the list mus
                         be at least four.
                      </documentation>
                   </annotation>
@@ -603,7 +603,7 @@
             The "_Geometry" element is the abstract head of the
             substituition group for all geometry elements of GML 3.
             This includes pre-defined and user-defined geometry elements.
-            Any geometry element must be a direct or indirect
+            Any geometry element must be a direct or indirec
             extension/restriction  of AbstractGeometryType
             and must be directly or indirectly in the substitution
             group of "_Geometry".
@@ -614,7 +614,7 @@
    <complexType name="GeometryPropertyType">
       <annotation>
          <documentation>
-            A geometric property shall contain any geometry element
+            A geometric property shall contain any geometry elemen
             encapsulated in an element of this type.
          </documentation>
       </annotation>
@@ -650,7 +650,7 @@
                      attribute is given, the CRS must be specified as part of
                      the larger context this geometry element is part of, e.g.
                      a geometric element like point, curve, etc. It is expected
-                     that this attribute will be specified at the direct
+                     that this attribute will be specified at the direc
                      position level only in rare cases.
                   </documentation>
                </annotation>
@@ -674,7 +674,7 @@
       <annotation>
          <documentation>
             This is the abstract root type of the geometric primitives.
-            A geometric primitive is a geometric object that is not
+            A geometric primitive is a geometric object that is no
             decomposed further into other primitives in the system.
             All primitives are oriented in the direction implied by
             the sequence of their coordinate tuples.
@@ -709,8 +709,8 @@
    <complexType name="PointPropertyType">
       <annotation>
          <documentation>
-            A property that has a point as its value domain shall contain 
-            an appropriate geometry element encapsulated in an element
+            A property that has a point as its value domain shall contain
+            an appropriate geometry element encapsulated in an elemen
             of this type.
          </documentation>
       </annotation>
@@ -748,7 +748,7 @@
       <annotation>
          <documentation>
             A property that has a curve as its value domain shall contain
-            an appropriate geometry element encapsulated in an element
+            an appropriate geometry element encapsulated in an elemen
             of this type.
          </documentation>
       </annotation>
@@ -788,7 +788,7 @@
       <annotation>
          <documentation>
             DirectPosition instances hold the coordinates for one position
-            in the coordinate reference system (CRS) referenced in a 
+            in the coordinate reference system (CRS) referenced in a
             larger element. In this case, the CRS shall be assumed to be
             the value referenced in the containing object's CRS.
          </documentation>
@@ -996,7 +996,7 @@
          <documentation>
             Database handle for the object.  It is of XML type ID,
             so is constrained to be unique in the XML document within
-            which it occurs.  An external identifier for the object
+            which it occurs.  An external identifier for the objec
             in the form of a URI may be constructed using standard XML
             and XPointer methods.  This is done by concatenating the
             URI for the document, a fragment separator, and the value
@@ -1049,7 +1049,7 @@
    <simpleType name="doubleList">
       <annotation>
          <documentation>
-            XML List based on XML Schema double type.  An element
+            XML List based on XML Schema double type.  An elemen
             of this type contains a space-separated list of double
             values
          </documentation>
