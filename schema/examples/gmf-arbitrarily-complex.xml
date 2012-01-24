@@ -1,23 +1,23 @@
 <?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" 
+<nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.3"
       gml:id="n1">
-      
+     
     <!-- hazardResult is a gml:Feature -->
     <hazardResult gml:id="hr1">
         <config>
             <hazardProcessing investigationTimeSpan="50.0"/>
         </config>
-        
+       
         <!-- groundMotionFieldSet is a gml:Feature -->
         <groundMotionFieldSet gml:id="gmfs_1">
-            
+           
             <gml:description>Optional description element</gml:description>
             <GMPEParameters IMT="PGA"/>
-            
+           
             <!-- arbitrarilyComplexRupture is a gml:Feature -->
             <arbitrarilyComplexRupture gml:id="acr_1">
-                
+               
                 <!-- non-geospatial properties -->
                 <magnitude type="Mw">8.0</magnitude>
                 <tectonicRegion>Active Shallow Crust</tectonicRegion>
@@ -48,10 +48,10 @@
                     </gml:Surface>
                 </ruptureSurface>
             </arbitrarilyComplexRupture>
-            
+           
             <!-- gmf is a gml:Feature -->
             <GMF gml:id="gmf_1" ruptureReference="acr_1">
-                
+               
                 <!-- GMFNode is a gml:Feature -->
                 <GMFNode gml:id="s_1">
                     <site>
@@ -61,7 +61,7 @@
                     </site>
                     <groundMotion>0.2</groundMotion>
                 </GMFNode>
-                
+               
                 <GMFNode gml:id="s_2">
                     <site>
                         <gml:Point srsName="epsg:4326">
@@ -70,10 +70,10 @@
                     </site>
                     <groundMotion>0.3</groundMotion>
                 </GMFNode>
-                
+               
             </GMF>
-            
+           
         </groundMotionFieldSet>
-        
+       
     </hazardResult>
 </nrml>

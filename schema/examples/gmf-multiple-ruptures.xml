@@ -2,20 +2,20 @@
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.3"
       gml:id="n1">
-    
+   
     <hazardResult gml:id="hr1">
         <config>
             <hazardProcessing investigationTimeSpan="50.0"/>
         </config>
-        
+       
         <groundMotionFieldSet gml:id="gmfs_1">
-        
+       
             <gml:description>Optional description element</gml:description>
-            
+           
             <GMPEParameters IMT="PGA"/>
-            
+           
             <pointRupture gml:id="pr_1">
-                
+               
                 <magnitude type="Mw">6.5</magnitude>
                 <tectonicRegion>Active Shallow Crust</tectonicRegion>
                 <strike>0.0</strike>
@@ -28,9 +28,9 @@
                     </gml:Point>
                 </hypocenterLocation>
             </pointRupture>
-            
+           
             <pointRupture gml:id="pr_2">
-                
+               
                 <magnitude type="Mw">7.5</magnitude>
                 <tectonicRegion>Active Shallow Crust</tectonicRegion>
                 <strike>0.0</strike>
@@ -43,7 +43,7 @@
                     </gml:Point>
                 </hypocenterLocation>
             </pointRupture>
-            
+           
             <GMF gml:id="gmf_1" ruptureReference="pr_1">
                 <GMFNode gml:id="gmf_1_1">
                     <site>
@@ -62,7 +62,7 @@
                     <groundMotion>0.3</groundMotion>
                 </GMFNode>
             </GMF>
-            
+           
             <GMF gml:id="gmf_2" ruptureReference="pr_2">
                 <GMFNode gml:id="gmf_2_1">
                     <site>
@@ -82,6 +82,6 @@
                 </GMFNode>
             </GMF>
         </groundMotionFieldSet>
-        
+       
     </hazardResult>
 </nrml>

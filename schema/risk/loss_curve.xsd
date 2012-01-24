@@ -38,7 +38,7 @@
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
- 
+
     <xs:complexType name="LossRatioCurve">
         <xs:sequence>
             <xs:element name="lossRatio" type="NormalizedDoubleList" minOccurs="0" maxOccurs="unbounded"/>

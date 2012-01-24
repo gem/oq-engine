@@ -19,7 +19,7 @@
                       have a value domain of 0 or 1
             Level 1 = complex-valued properties with no restriction on
                       minOccurs and maxOccurs
-            Level 2 = no restrictions on type of non-spatial scalar properties 
+            Level 2 = no restrictions on type of non-spatial scalar properties
                       but must only support spatial properties declared in
                       clause 8
          </documentation>
