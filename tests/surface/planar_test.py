@@ -75,3 +75,26 @@ class PlanarSurfaceGetMeshTestCase(unittest.TestCase):
     def test_7_rupture_8(self):
         self._test(test_data.TEST_7_RUPTURE_8_CORNERS, mesh_spacing=1,
                    expected_mesh=test_data.TEST_7_RUPTURE_8_MESH)
+
+
+class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):
+    def test_1(self):
+        surface = PlanarSurface(*test_data.TEST_7_RUPTURE_6_CORNERS)
+        self.assertAlmostEqual(8.01185807319,
+                               surface.get_min_distance(Point(0, 0), 1))
+
+    def test_2(self):
+        surface = PlanarSurface(*test_data.TEST_7_RUPTURE_6_CORNERS)
+        self.assertAlmostEqual(40.1213469552,
+                               surface.get_min_distance(Point(-0.25, 0.25), 1))
+
+    def test_3(self):
+        surface = PlanarSurface(*test_data.TEST_7_RUPTURE_2_CORNERS)
+        self.assertAlmostEqual(7.01186304977,
+                               surface.get_min_distance(Point(0, 0), 1))
+
+    def test_4(self):
+        surface = PlanarSurface(*test_data.TEST_7_RUPTURE_2_CORNERS)
+        self.assertAlmostEqual(55.6159561536,
+                               surface.get_min_distance(Point(-0.3, 0.4), 1))
+
