@@ -27,7 +27,7 @@
     </xsl:template>
 
     <!-- Replaces a focal mechanism (containing strike, dip, and rake) with
-         more primitive elements: <strike>, <dip>, and <rake>.
+         more primitive elements: <strike>, <dip>, and <rake>. 
 
          This also helps remove our dependency on QuakeML. -->
     <xsl:template match="//nrml_02:focalMechanism">
@@ -36,7 +36,7 @@
         </strike>
 
         <dip xmlns="http://openquake.org/xmlns/nrml/0.3">
-            <xsl:value-of select="./qml:nodalPlanes/qml:nodalPlane1/qml:dip/qml:value"/>
+            <xsl:value-of select="./qml:nodalPlanes/qml:nodalPlane1/qml:dip/qml:value"/> 
         </dip>
 
         <rake xmlns="http://openquake.org/xmlns/nrml/0.3">

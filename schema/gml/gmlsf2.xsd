@@ -73,7 +73,7 @@
                between resources; such links can be used to reference
                remote properties.
                A simple link element can be used to implement pointer
-               functionality, and this functionality has been buil
+               functionality, and this functionality has been built
                into various GML 3 elements by including the
                gml:AssociationAttributeGroup.
             </documentation>
@@ -106,7 +106,7 @@
       <annotation>
          <documentation>
             A property that has a collection of points as its value
-            domain can either be an appropriate geometry elemen
+            domain can either be an appropriate geometry element
             encapsulated in an element of this type or an XLink
             reference to a remote geometry element (where remote
             includes geometry elements located elsewhere in the
@@ -221,7 +221,7 @@
       <annotation>
          <documentation>
             A property that has a collection of surfaces as its value
-            domain can either be an appropriate geometry elemen
+            domain can either be an appropriate geometry element
             encapsulated in an element of this type or an XLink
             reference to a remote geometry element (where remote
             includes geometry elements located elsewhere in the
@@ -246,7 +246,7 @@
                between resources; such links can be used to reference
                remote properties.
         A simple link element can be used to implement pointer
-               functionality, and this functionality has been buil
+               functionality, and this functionality has been built
                into various GML 3 elements by including the
                gml:AssociationAttributeGroup.
             </documentation>
@@ -282,10 +282,10 @@
          <documentation>
             Curve is a 1-dimensional primitive. Curves are continuous,
             connected, and have a measurable length in terms of the
-            coordinate system.
+            coordinate system. 
             A curve is composed of one or more curve segments.
             The curve segments are connected to one another, with the
-            end point of each segment except the last being the star
+            end point of each segment except the last being the start
             point of the next segment in the segment list.
             The orientation of the curve is positive.
          </documentation>
@@ -456,7 +456,7 @@
             a set of boundary curves and an underlying surface to
             which these curves adhere. The curves are coplanar and
             the polygon uses planar interpolation in its interior.
-            Implements GM_Polygon of ISO 19107.
+            Implements GM_Polygon of ISO 19107. 
          </documentation>
       </annotation>
       <complexContent>
@@ -572,7 +572,7 @@
    <complexType name="AbstractSurfaceType">
       <annotation>
          <documentation>
-            An abstraction of a surface to support the differen
+            An abstraction of a surface to support the different
             levels of complexity. A surface is always a continuous
             region of a plane.
          </documentation>
@@ -605,7 +605,7 @@
                resources (including those elsewhere in the same document).
                A simple link element can be constructed by including a
                specific set of XLink attributes. The XML Linking Language
-               (XLink) is currently a Proposed Recommendation of the World
+               (XLink) is currently a Proposed Recommendation of the World 
                Wide Web Consortium. XLink allows elements to be inserted
                into XML documents so as to create sophisticated links
                between resources; such links can be used to reference
@@ -627,7 +627,7 @@
          <documentation>
             A Polygon is a special surface that is defined by a single
             surface patch. The boundary of this patch is coplanar and
-            the polygon uses planar interpolation in its interior. I
+            the polygon uses planar interpolation in its interior. It
             is backwards compatible with the Polygon of GML 2.
          </documentation>
       </annotation>
@@ -685,7 +685,7 @@
       <annotation>
          <documentation>
             A LinearRing is defined by four or more coordinate tuples,
-            with linear interpolation between them; the first and las
+            with linear interpolation between them; the first and last
             coordinates must be coincident.
          </documentation>
       </annotation>
@@ -699,7 +699,7 @@
                         specifiy the coordinates of the control points,
                         if all control points are in the same coordinate
                         reference systems and belong to this ring only.
-                        The number of direct positions in the list mus
+                        The number of direct positions in the list must
                         be at least four.
                      </documentation>
                   </annotation>
@@ -721,7 +721,7 @@
             The "_Geometry" element is the abstract head of the
             substituition group for all geometry elements of GML 3.
             This includes pre-defined and user-defined geometry elements.
-            Any geometry element must be a direct or indirec
+            Any geometry element must be a direct or indirect
             extension/restriction  of AbstractGeometryType
             and must be directly or indirectly in the substitution
             group of "_Geometry".
@@ -732,7 +732,7 @@
    <complexType name="GeometryPropertyType">
       <annotation>
          <documentation>
-            A geometric property can either be any geometry elemen
+            A geometric property can either be any geometry element
             encapsulated in an element of this type or an XLink
             reference to a remote geometry element (where remote
             includes geometry elements located elsewhere in the same
@@ -791,7 +791,7 @@
                      attribute is given, the CRS must be specified as part of
                      the larger context this geometry element is part of, e.g.
                      a geometric element like point, curve, etc. It is expected
-                     that this attribute will be specified at the direc
+                     that this attribute will be specified at the direct
                      position level only in rare cases.
                   </documentation>
                </annotation>
@@ -815,7 +815,7 @@
       <annotation>
          <documentation>
             This is the abstract root type of the geometric primitives.
-            A geometric primitive is a geometric object that is no
+            A geometric primitive is a geometric object that is not
             decomposed further into other primitives in the system.
             All primitives are oriented in the direction implied by
             the sequence of their coordinate tuples.
@@ -851,7 +851,7 @@
       <annotation>
          <documentation>
             A property that has a point as its value domain can either
-            be an appropriate geometry element encapsulated in an elemen
+            be an appropriate geometry element encapsulated in an element
             of this type or an XLink reference to a remote geometry
             element (where remote includes geometry elements located
             elsewhere in the same document). Either the reference or the
@@ -928,7 +928,7 @@
                xlinks.xsd). XLink is used in GML to reference remote
                resources (including those elsewhere in the same document).
                A simple link element can be constructed by including a
-               specific set of XLink attributes.
+               specific set of XLink attributes. 
 
                The XML Linking Language (XLink) is currently a Proposed
                Recommendation of the World Wide Web Consortium. XLink
@@ -974,7 +974,7 @@
       <annotation>
          <documentation>
             DirectPosition instances hold the coordinates for one position
-            in the coordinate reference system (CRS) referenced in a
+            in the coordinate reference system (CRS) referenced in a 
             larger element. In this case, the CRS shall be assumed to be
             the value referenced in the containing object's CRS.
          </documentation>
@@ -1175,14 +1175,14 @@
    </complexType>
    <!-- =========================================================== -->
    <!-- ==========================================================
- global attribute, attribute group and element declarations
+ global attribute, attribute group and element declarations 
  =============================================================  -->
    <attribute name="id" type="ID">
       <annotation>
          <documentation>
             Database handle for the object.  It is of XML type ID,
             so is constrained to be unique in the XML document within
-            which it occurs.  An external identifier for the objec
+            which it occurs.  An external identifier for the object
             in the form of a URI may be constructed using standard XML
             and XPointer methods.  This is done by concatenating the
             URI for the document, a fragment separator, and the value
@@ -1235,7 +1235,7 @@
    <simpleType name="doubleList">
       <annotation>
          <documentation>
-            XML List based on XML Schema double type.  An elemen
+            XML List based on XML Schema double type.  An element
             of this type contains a space-separated list of double
             values
          </documentation>

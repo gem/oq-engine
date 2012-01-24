@@ -14,7 +14,7 @@
             <xs:element name="hazardProcessing" type="HazardProcessing" minOccurs="0" maxOccurs="1"/>
         </xs:sequence>
     </xs:complexType>
-   
+    
     <xs:complexType name="IMLType">
         <xs:simpleContent>
             <xs:extension base="gml:doubleList">
@@ -42,7 +42,7 @@
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>
-   
+    
     <xs:simpleType name="MagnitudeType">
         <xs:restriction base="xs:string">
             <xs:enumeration value="Mb"/> <!-- body wave magnitude -->
@@ -52,7 +52,7 @@
             <xs:enumeration value="Mw"/> <!-- moment magnitude -->
         </xs:restriction>
     </xs:simpleType>
-   
+    
     <xs:complexType name="MagnitudeList">
         <xs:simpleContent>
             <xs:extension base="gml:doubleList">
@@ -60,13 +60,13 @@
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>
-   
+    
     <xs:simpleType name="ProbabilisticDistributionType">
         <xs:restriction base="xs:string">
             <xs:enumeration value="LN"/>
         </xs:restriction>
     </xs:simpleType>
-   
+    
     <xs:simpleType name="StatisticalSummary">
         <xs:restriction base="xs:string">
             <xs:enumeration value="mean"/>
@@ -74,12 +74,12 @@
             <xs:enumeration value="quantile"/>
         </xs:restriction>
     </xs:simpleType>
-   
+    
     <xs:attributeGroup name="QuantileGroup">
         <xs:attribute name="statistics" type="StatisticalSummary"/>
         <xs:attribute name="quantileValue" type="NormalizedDoubleType"/>
     </xs:attributeGroup>
-   
+    
     <xs:complexType name="EvenlyDiscretizedDistribution">
         <xs:annotation>
             <xs:documentation>Describes an evenly discretized distribution.</xs:documentation>
@@ -88,7 +88,7 @@
             <xs:extension base="gml:doubleList">
                 <xs:attribute name="minVal" type="xs:double" use="required"/>
                 <xs:attribute name="binSize" type="NonNegativeDoubleType" use="required"/>
-               
+                
                 <!-- NOTE: removed attribute 'binCount', since it's given implicitly throgh the
                     number of values given in the element -->
             </xs:extension>
@@ -104,7 +104,7 @@
             <xs:element name="ordinate" type="gml:doubleList"/>
         </xs:sequence>
     </xs:complexType>
-   
+    
     <xs:element name="fieldNode" type="FieldNode" substitutionGroup="gml:_Feature" abstract="true"/>
     <xs:complexType name="FieldNode" abstract="true">
         <xs:complexContent>
@@ -115,7 +115,7 @@
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
-   
+    
     <!-- NOTE: site is the head of a substitution group -->
     <xs:element name="site" type="gml:PointPropertyType"/>
 
@@ -139,5 +139,5 @@
 	<xs:simpleType name="NormalizedDoubleList">
         <xs:list itemType="NormalizedDoubleType"/>
     </xs:simpleType>
-   
+    
 </xs:schema>
