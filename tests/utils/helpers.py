@@ -63,7 +63,7 @@ OUTPUT_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '../data/output'))
 
 SCHEMA_DIR = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), '../../openquake/nrml/schema/0.3'))
+    os.path.dirname(__file__), '../../openquake/nrml/schema/'))
 
 SCHEMA_EXAMPLES_DIR = os.path.abspath(os.path.join(
     SCHEMA_DIR, 'examples'))
