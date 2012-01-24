@@ -1,15 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:gml="http://www.opengis.net/gml"
-           xmlns:nrml="http://openquake.org/xmlns/nrml/0.2"
-           xmlns="http://openquake.org/xmlns/nrml/0.2"
-           targetNamespace="http://openquake.org/xmlns/nrml/0.2"
+           xmlns:nrml="http://openquake.org/xmlns/nrml/0.3"
+           xmlns="http://openquake.org/xmlns/nrml/0.3"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
            elementFormDefault="qualified"
            xml:lang="en">
 
-    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gmlsf.xsd"/>
-
-    <!-- ============================================================= -->
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="./gml/gmlsf.xsd"/>
 
     <xs:complexType name="Config">
         <xs:sequence>
@@ -17,8 +15,6 @@
         </xs:sequence>
     </xs:complexType>
     
-	<!-- ============================================================= -->
-
     <xs:complexType name="IMLType">
         <xs:simpleContent>
             <xs:extension base="gml:doubleList">
@@ -29,29 +25,31 @@
 
     <xs:simpleType name="IMTType">
         <xs:restriction base="xs:string">
-            <xs:enumeration value="PGA"/>
-            <xs:enumeration value="PGV"/>
-            <xs:enumeration value="PGD"/>
-            <xs:enumeration value="SA"/>
-            <xs:enumeration value="MMI"/>
+            <xs:enumeration value="PGA"/> <!-- peak ground acceleration -->
+            <xs:enumeration value="SA"/> <!-- spectral acceleration -->
+            <xs:enumeration value="PGV"/> <!-- peak ground velocity -->
+            <xs:enumeration value="PGD"/> <!-- peak ground displacement -->
+            <xs:enumeration value="IA"/> <!-- arias intensity -->
+            <xs:enumeration value="RSD"/> <!-- relative significant duration -->
+            <xs:enumeration value="MMI"/> <!-- modified mercalli intensity -->
         </xs:restriction>
     </xs:simpleType>
 
     <xs:complexType name="Magnitude">
         <xs:simpleContent>
-            <xs:extension base="xs:double">
-                <!-- NOTE: using free-text field for magnitude type, like in QuakeML -->
-                <xs:attribute name="type" type="xs:string"/>
+            <xs:extension base="NonNegativeDoubleType">
+                <xs:attribute name="type" type="MagnitudeType"/>
             </xs:extension>
         </xs:simpleContent>
     </xs:complexType>
     
-    <!-- TODO: add magnitude types (Taxonomy&Ontology group), possibly IASPEI-defined list -->
-    <!-- NOTE: not used at the moment -->
     <xs:simpleType name="MagnitudeType">
         <xs:restriction base="xs:string">
-            <xs:enumeration value="ML"/>
-            <xs:enumeration value="Mw"/>
+            <xs:enumeration value="Mb"/> <!-- body wave magnitude -->
+            <xs:enumeration value="Md"/> <!-- duration magnitude -->
+            <xs:enumeration value="ML"/> <!-- local magnitude -->
+            <xs:enumeration value="Ms"/> <!-- surface wave magnitude -->
+            <xs:enumeration value="Mw"/> <!-- moment magnitude -->
         </xs:restriction>
     </xs:simpleType>
     
@@ -82,14 +80,11 @@
         <xs:attribute name="quantileValue" type="NormalizedDoubleType"/>
     </xs:attributeGroup>
     
-    <!-- ============================================================= -->
-
     <xs:complexType name="EvenlyDiscretizedDistribution">
         <xs:annotation>
             <xs:documentation>Describes an evenly discretized distribution.</xs:documentation>
         </xs:annotation>
         <xs:simpleContent>
-            <!-- NOTE: removed child element 'distributionValues', since it's not required -->
             <xs:extension base="gml:doubleList">
                 <xs:attribute name="minVal" type="xs:double" use="required"/>
                 <xs:attribute name="binSize" type="NonNegativeDoubleType" use="required"/>
@@ -110,8 +105,6 @@
         </xs:sequence>
     </xs:complexType>
     
-    <!-- ============================================================= -->
-    
     <xs:element name="fieldNode" type="FieldNode" substitutionGroup="gml:_Feature" abstract="true"/>
     <xs:complexType name="FieldNode" abstract="true">
         <xs:complexContent>
@@ -125,38 +118,6 @@
     
     <!-- NOTE: site is the head of a substitution group -->
     <xs:element name="site" type="gml:PointPropertyType"/>
-    
-    <!-- ============================================================= -->
-    
-    <!-- NOTE: not used at the moment -->
-	<xs:simpleType name="paramType">
-		<xs:annotation>
-			<xs:documentation>Labels that can be used to describe the parameters to be used in NRML.</xs:documentation>
-		</xs:annotation>
-		<xs:restriction base="xs:string">
-			<xs:enumeration value="adimensional"/>
-			<xs:enumeration value="aGR"/>
-			<xs:enumeration value="bGR"/>
-			<xs:enumeration value="lon"/>
-			<xs:enumeration value="lat"/>
-			<xs:enumeration value="mmi"/>
-			<xs:enumeration value="m_max"/>
-			<xs:enumeration value="occ"/>
-			<xs:enumeration value="prb_occ"/>
-			<xs:enumeration value="prb_exc"/>
-			<xs:enumeration value="prb_nex"/>
-			<xs:enumeration value="pga"/>
-			<xs:enumeration value="pgv"/>
-			<xs:enumeration value="pgd"/>
-			<xs:enumeration value="rate"/>
-			<xs:enumeration value="sa"/>
-			<xs:enumeration value="sv"/>
-			<xs:enumeration value="sd"/>
-			<xs:enumeration value="si"/>
-		</xs:restriction>
-	</xs:simpleType>
-	
-    <!-- ============================================================= -->
 
 	<xs:simpleType name="NonNegativeDoubleType">
 		<xs:restriction base="xs:double">
