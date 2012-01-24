@@ -403,54 +403,6 @@ class DoQuantilesTestCase(unittest.TestCase):
             map_serializer=lambda _, __, ___: True, map_func=None)
 
 
-class NumberOfTasksTestCase(unittest.TestCase):
-    """Tests the behaviour of ClassicalHazardCalculator.number_of_tasks()."""
-
-    def setUp(self):
-        params = dict(
-            CALCULATION_MODE='Hazard',
-            SOURCE_MODEL_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_SRC_MODEL_LT,
-            GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
-            BASE_PATH=SIMPLE_FAULT_BASE_PATH)
-
-        self.calc_proxy = create_job(params)
-
-        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
-
-    def test_number_of_tasks_with_param_not_set(self):
-        """
-        When the `HAZARD_TASKS` parameter is not set the expected value is
-        twice the number of CPUs/cores.
-        """
-        self.calc_proxy.params = dict()
-        self.assertEqual(
-            2 * multiprocessing.cpu_count(), self.calculator.number_of_tasks())
-
-    def test_number_of_tasks_with_param_set_and_valid(self):
-        """
-        When the `HAZARD_TASKS` parameter *is* set and a valid integer its
-        value will be returned.
-        """
-        self.calc_proxy.params = dict(HAZARD_TASKS="5")
-        self.assertEqual(5, self.calculator.number_of_tasks())
-
-    def test_number_of_tasks_with_param_set_but_invalid(self):
-        """
-        When the `HAZARD_TASKS` parameter is set but not a valid integer a
-        `ValueError` will be raised.
-        """
-        self.calc_proxy.params = dict(HAZARD_TASKS="this-is-not-a-number")
-        self.assertRaises(ValueError, self.calculator.number_of_tasks)
-
-    def test_number_of_tasks_with_param_set_but_all_whitespace(self):
-        """
-        When the `HAZARD_TASKS` parameter is set to whitespace a
-        `ValueError` will be raised.
-        """
-        self.calc_proxy.params = dict(HAZARD_TASKS=" 	")
-        self.assertRaises(ValueError, self.calculator.number_of_tasks)
-
-
 class ClassicalExecuteTestCase(unittest.TestCase):
     """Tests the behaviour of ClassicalHazardCalculator.execute()."""
 

@@ -184,11 +184,6 @@ def release_data_from_kvs(job_id, sites, realizations, quantiles, poes,
 class ClassicalHazardCalculator(general.BaseHazardCalculator):
     """Classical PSHA method for performing Hazard calculations."""
 
-    def number_of_tasks(self):
-        """How many `celery` tasks should be used for the calculations?"""
-        value = self.calc_proxy["HAZARD_TASKS"]
-        return 2 * multiprocessing.cpu_count() if value is None else int(value)
-
     def do_curves(self, sites, realizations, serializer=None,
                   the_task=compute_hazard_curve):
         """Trigger the calculation of hazard curves, serialize as requested.
@@ -229,7 +224,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             self.store_gmpe_map(source_model_generator.getrandbits(32))
 
             utils_tasks.distribute(
-                self.number_of_tasks(), the_task, ("sites", sites),
+                the_task, ("sites", sites),
                 dict(job_id=self.calc_proxy.job_id, realization=realization),
                 flatten_results=True, ath=serializer)
 
@@ -271,7 +266,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         LOG.info("Computing mean hazard curves")
 
         utils_tasks.distribute(
-            self.number_of_tasks(), curve_task, ("sites", sites),
+            curve_task, ("sites", sites),
             dict(job_id=self.calc_proxy.job_id, realizations=realizations),
             flatten_results=True, ath=curve_serializer)
 
@@ -325,7 +320,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         LOG.info("Computing quantile hazard curves")
 
         utils_tasks.distribute(
-            self.number_of_tasks(), curve_task, ("sites", sites),
+            curve_task, ("sites", sites),
             dict(job_id=self.calc_proxy.job_id, realizations=realizations,
                  quantiles=quantiles),
             flatten_results=True, ath=curve_serializer)
