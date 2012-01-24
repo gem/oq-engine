@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.3"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
+    <xs:element name="lossCurveList" type="AssetList" substitutionGroup="gml:_Feature"/>
+    <xs:element name="lossRatioCurveList" type="AssetList" substitutionGroup="gml:_Feature"/>
+
+    <xs:complexType name="AssetList">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element ref="asset" minOccurs="0" maxOccurs="unbounded"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <!-- 'asset' is the top-level for a loss curve or loss ratio curve node.
+         Each 'asset' contains site geometry and a loss curve or loss ratio curve. -->
+    <!-- NOTE(LB): I think this kind of a strange concept; why is an 'asset' a container for a 'loss curve'?
+         I get the sense that this was not thought out very well. -->
+    <xs:element name="asset" type="LossCurveAsset" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="LossCurveAsset">
+        <xs:complexContent>
+            <xs:extension base="FieldNode">
+                <xs:sequence>
+                    <xs:choice minOccurs="0" maxOccurs="2">
+                        <xs:element name="lossRatioCurves" type="LossRatioCurves"/>
+                        <xs:element name="lossCurves" type="LossCurves"/>
+                    </xs:choice>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="LossRatioCurve">
+        <xs:sequence>
+            <xs:element name="lossRatio" type="NormalizedDoubleList" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="poE" type="NormalizedDoubleList" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="endBranchLabel" type="xs:string"/>
+    </xs:complexType>
+
+    <xs:complexType name="LossCurve">
+        <xs:sequence>
+            <xs:element name="loss" type="NonNegativeDoubleList" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="poE" type="NormalizedDoubleList" minOccurs="0" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="endBranchLabel" type="xs:string"/>
+    </xs:complexType>
+
+    <xs:complexType name="LossRatioCurves">
+        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+            <xs:element name="lossRatioCurve" type="LossRatioCurve"/>
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="LossCurves">
+        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+            <xs:element name="lossCurve" type="LossCurve"/>
+        </xs:sequence>
+    </xs:complexType>
+
+</xs:schema>

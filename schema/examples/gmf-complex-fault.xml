@@ -1,23 +1,23 @@
 <?xml version='1.0' encoding='utf-8'?>
-<nrml xmlns:gml="http://www.opengis.net/gml" 
-      xmlns="http://openquake.org/xmlns/nrml/0.2"
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.3"
       gml:id="n1">
-      
+
     <!-- hazardResult is a gml:Feature -->
     <hazardResult gml:id="hr1">
         <config>
             <hazardProcessing investigationTimeSpan="50.0"/>
         </config>
-        
+
         <!-- groundMotionFieldSet is a gml:Feature -->
         <groundMotionFieldSet gml:id="gmfs_1">
-            
+
             <gml:description>Optional description element</gml:description>
             <GMPEParameters IMT="PGA"/>
-            
+
             <!-- complexFaultRupture is a gml:Feature -->
             <complexFaultRupture gml:id="cfr_1">
-                
+
                 <!-- non-geospatial properties -->
                 <magnitude type="Mw">9.0</magnitude>
                 <tectonicRegion>Subduction Interface</tectonicRegion>
@@ -25,10 +25,10 @@
 
                 <!-- geospatial property: restriction of gml:MultiGeometry (aggregate) -->
                 <complexFaultGeometry>
-                    
+
                     <!-- restriction of gml:MultiCurve -->
                     <faultEdges>
-                    
+
                         <!-- restriction of gml:curveMember -->
                         <faultTopEdge>
                             <gml:LineString srsName="urn:ogc:def:crs:EPSG::4979">
@@ -39,7 +39,7 @@
                                 </gml:posList>
                             </gml:LineString>
                         </faultTopEdge>
-                        
+
                         <!-- restriction of gml:curveMember -->
                         <faultBottomEdge>
                             <gml:LineString srsName="urn:ogc:def:crs:EPSG::4979">
@@ -53,9 +53,9 @@
                     </faultEdges>
                 </complexFaultGeometry>
             </complexFaultRupture>
-            
+
             <GMF gml:id="gmf_1" ruptureReference="cfr_1">
-                
+
                 <GMFNode gml:id="s_1">
                     <site>
                         <gml:Point srsName="epsg:4326">
@@ -64,7 +64,7 @@
                     </site>
                     <groundMotion>0.2</groundMotion>
                 </GMFNode>
-                
+
                 <GMFNode gml:id="s_2">
                     <site>
                         <gml:Point srsName="epsg:4326">
@@ -73,9 +73,9 @@
                     </site>
                     <groundMotion>0.3</groundMotion>
                 </GMFNode>
-                
+
             </GMF>
         </groundMotionFieldSet>
-        
+
     </hazardResult>
 </nrml>

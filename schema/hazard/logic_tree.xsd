@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.3"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
+    <xs:simpleType name="LogicTreeBranchUncertaintyType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="gmpeModel"/>
+            <xs:enumeration value="sourceModel"/>
+            <xs:enumeration value="maxMagGRRelative"/>
+            <xs:enumeration value="bGRRelative"/>
+            <xs:enumeration value="abGRAbsolute"/>
+            <xs:enumeration value="maxMagGRAbsolute"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="SourceType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="area"/>
+            <xs:enumeration value="point"/>
+            <xs:enumeration value="simpleFault"/>
+            <xs:enumeration value="complexFault"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="CorrelationType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="none"/>
+            <xs:enumeration value="full"/>
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:complexType name="LogicTreeBranch">
+        <xs:sequence>
+            <xs:element name="uncertaintyModel" type="xs:string"/>
+            <xs:element name="uncertaintyWeight" type="NonNegativeDoubleType"/>
+        </xs:sequence>
+        <xs:attribute name="branchID" type="xs:ID" use="required">
+        </xs:attribute>
+    </xs:complexType>
+    <!-- a LogicTreeBranch is defined by an uncertainityModel (a string specifying a specific realization of
+        the epistemic uncertainty of type uncertaintyType; e.g. it can be the file path of a source model file,
+        or it can be a numeric value specifying a particular parameter value, etc.. )-->
+
+    <xs:complexType name="LogicTreeBranchSet">
+        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+            <xs:element name="logicTreeBranch" type="LogicTreeBranch" />
+        </xs:sequence>
+        <xs:attribute name="branchSetID" type="xs:ID" use="required"></xs:attribute>
+        <xs:attribute name="uncertaintyType" type="LogicTreeBranchUncertaintyType" use="required"/>
+        <xs:attribute name="applyToBranches" type="gml:NCNameList" use="optional" default="ALL"></xs:attribute>
+        <xs:attribute name="applyToSources" type="gml:NCNameList" use="optional"></xs:attribute>
+        <xs:attribute name="applyToSourceType" type="SourceType" use="optional"></xs:attribute>
+        <xs:attribute name="applyToTectonicRegionType" type="TectonicRegion" use="optional"></xs:attribute>
+    </xs:complexType>
+    <!-- a LogicTreeBranchSet is defined as a sequence of LogicTreeBranch elements. A branch set has two required
+    attributes (ID and uncertaintyType (defining the type of epistemic uncertainty the branch set is defining)).
+    Optional attributes are:
+    - applyToBranches: to be used to specify to which LogicTreeBranch elements (one or more),
+    in the previous branching level, the branch set is linked to. The default is the keyword ALL, which means
+    that a branch set is by default linked to all branches in the previous branching level.
+    - applyToSources: it can be used in the Source Model Logic Tree definition, it allows to specify to which source in a source model the
+    uncertainty applies to.
+    - applyToSourceType: it can be used in the Source Model Logic Tree definition, it allows to specify to which source type
+    (area, point, simple fault, complex fault) the uncertainty applies to.
+    - applyToTectonicRegionType: it can be used in both the Source Model and GMPE Logic Tree definition, it allows to specify to which tectonic
+    region type (Active Shallow Crust, Stable Shallow Crust, etc.) the uncertainty applies to.-->
+
+    <xs:complexType name="LogicTreeBranchingLevel">
+        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+            <xs:element name="logicTreeBranchSet" type="LogicTreeBranchSet"></xs:element>
+        </xs:sequence>
+        <xs:attribute name="branchingLevelID" type="xs:ID" use="required"></xs:attribute>
+    </xs:complexType>
+    <!-- a LogicTreeBranchingLevel is defined as a sequence of LogicTreeBranchSet elements. Each LogicTreeBranchSe
+    defines a particular epistemic uncertainty inside a branching level.-->
+
+    <xs:complexType name="LogicTree">
+        <xs:sequence minOccurs="1" maxOccurs="unbounded">
+            <xs:element name="logicTreeBranchingLevel" type="LogicTreeBranchingLevel"/>
+        </xs:sequence>
+        <xs:attribute name="logicTreeID" type="xs:ID" use="required"/>
+    </xs:complexType>
+    <!-- a LogicTree is defined as a sequence of LogicTreeBranchingLevel elements. The position in the sequence
+    specifies in which level of the tree the branching level is located. That is,
+    the first LogicTreeBranchingLevel element in the sequence represents the first branching level in the tree,
+    the second element the second branching level in the tree, and so on.-->
+
+    <xs:element name="logicTree" type="LogicTree"/>
+
+</xs:schema>

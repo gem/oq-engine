@@ -1,0 +1,165 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.3"
+      gml:id="IDXXX">
+    <disaggregationResultField poE="0.1" IMT="PGA" endBranchLabel="1" gml:id="ID000">
+        <disaggregationResultTypes>MagPMF MagDistPMF MagDistEpsPMF LatLonMagEpsPMF FullDisaggMatrix</disaggregationResultTypes>
+        <disaggregationResultNode gml:id="ID001">
+            <site>
+                <gml:Point gml:id="ID002">
+                        <gml:pos>0.0 0.0</gml:pos>
+                </gml:Point>
+            </site>
+            <disaggregationMatrixSet groundMotionValue="0.25">
+                <disaggregationMatrix disaggregationPMFType="MagPMF">
+                    <disaggregationMatrixValue magnitudeBin="5.0 6.0">
+                        <PMFValue>0.5712358122430375</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="6.0 7.0">
+                        <PMFValue>0.29011581094474054</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="7.0 8.0">
+                        <PMFValue>0.11426899352410452</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="8.0 9.0">
+                        <PMFValue>0.024379383288120258</PMFValue>
+                    </disaggregationMatrixValue>
+                </disaggregationMatrix>
+                <disaggregationMatrix disaggregationPMFType="MagDistPMF">
+                    <disaggregationMatrixValue magnitudeBin="5.0 6.0" distanceBin="0.0 20.0">
+                        <PMFValue>0.5119738341488401</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="5.0 6.0" distanceBin="20.0 40.0">
+                        <PMFValue>0.059017845649720894</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="5.0 6.0" distanceBin="40.0 60.0">
+                        <PMFValue>2.4413244447648748E-4</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="6.0 7.0" distanceBin="0.0 20.0">
+                        <PMFValue>0.1260826589262519</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="6.0 7.0" distanceBin="20.0 40.0">
+                        <PMFValue>0.14179662905319743</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="6.0 7.0" distanceBin="40.0 60.0">
+                        <PMFValue>0.021143296784018918</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="7.0 8.0" distanceBin="0.0 20.0">
+                        <PMFValue>0.0222956256157868</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="7.0 8.0" distanceBin="20.0 40.0">
+                        <PMFValue>0.06261187407114774</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="7.0 8.0" distanceBin="40.0 60.0">
+                        <PMFValue>0.026172273253654746</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="8.0 9.0" distanceBin="0.0 20.0">
+                        <PMFValue>0.002410856483027559</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="8.0 9.0" distanceBin="20.0 40.0">
+                        <PMFValue>0.011386898679088028</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="8.0 9.0" distanceBin="40.0 60.0">
+                        <PMFValue>0.008865269078930038</PMFValue>
+                    </disaggregationMatrixValue>
+                </disaggregationMatrix>
+                <disaggregationMatrix disaggregationPMFType="MagDistEpsPMF">
+                    <disaggregationMatrixValue magnitudeBin="5.0 6.0" distanceBin="0.0 20.0" epsilonBin="-1.5 -0.5">
+                        <PMFValue>0.07347313940931072</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="5.0 6.0" distanceBin="0.0 20.0" epsilonBin="-1.5 -0.5">
+                        <PMFValue>0.0</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="5.0 6.0" distanceBin="40.0 60.0" epsilonBin="-1.5 -0.5">
+                        <PMFValue>0.0</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="6.0 7.0" distanceBin="0.0 20.0" epsilonBin="-1.5 -0.5">
+                        <PMFValue>0.07877863624842021</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="6.0 7.0" distanceBin="20.0 40.0" epsilonBin="-1.5 -0.5">
+                        <PMFValue>0.0</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="6.0 7.0" distanceBin="40.0 60.0" epsilonBin="-1.5 -0.5">
+                        <PMFValue>0.0</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="7.0 8.0" distanceBin="0.0 20.0" epsilonBin="-1.5 -0.5">
+                        <PMFValue>0.00931680853091606</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="7.0 8.0" distanceBin="20.0 40.0" epsilonBin="-1.5 -0.5">
+                        <PMFValue>0.0</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="7.0 8.0" distanceBin="40.0 60.0" epsilonBin="-1.5 -0.5">
+                        <PMFValue>0.0</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="8.0 9.0" distanceBin="0.0 20.0" epsilonBin="-1.5 -0.5">
+                        <PMFValue>0.0011254862137668473</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="8.0 9.0" distanceBin="20.0 40.0" epsilonBin="-1.5 -0.5">
+                        <PMFValue>4.268519846775424E-4</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="8.0 9.0" distanceBin="40.0 60.0" epsilonBin="-1.5 -0.5">
+                        <PMFValue>0.0</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="5.0 6.0" distanceBin="0.0 20.0" epsilonBin="-0.5 0.5">
+                        <PMFValue>0.4007774720000059</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="5.0 6.0" distanceBin="0.0 20.0" epsilonBin="-0.5 0.5">
+                        <PMFValue>0.0</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="5.0 6.0" distanceBin="40.0 60.0" epsilonBin="-0.5 0.5">
+                        <PMFValue>0.0</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="6.0 7.0" distanceBin="0.0 20.0" epsilonBin="-0.5 0.5">
+                        <PMFValue>0.007674859547269292</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="6.0 7.0" distanceBin="20.0 40.0" epsilonBin="-0.5 0.5">
+                        <PMFValue>0.0076743607416970856</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="6.0 7.0" distanceBin="40.0 60.0" epsilonBin="-0.5 0.5">
+                        <PMFValue>0.0</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="7.0 8.0" distanceBin="0.0 20.0" epsilonBin="-0.5 0.5">
+                        <PMFValue>0.01178525598425748</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="7.0 8.0" distanceBin="20.0 40.0" epsilonBin="-0.5 0.5">
+                        <PMFValue>0.019903935764837406</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="7.0 8.0" distanceBin="40.0 60.0" epsilonBin="-0.5 0.5">
+                        <PMFValue>0.0</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="8.0 9.0" distanceBin="0.0 20.0" epsilonBin="-0.5 0.5">
+                        <PMFValue>0.0012853702692607117</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="8.0 9.0" distanceBin="20.0 40.0" epsilonBin="-0.5 0.5">
+                        <PMFValue>0.009263963836460708</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue magnitudeBin="8.0 9.0" distanceBin="40.0 60.0" epsilonBin="-0.5 0.5">
+                        <PMFValue>0.0019997196454611906</PMFValue>
+                    </disaggregationMatrixValue>
+                </disaggregationMatrix>
+                <disaggregationMatrix disaggregationPMFType="LatLonMagEpsPMF">
+                    <disaggregationMatrixValue latitudeBin="-0.6 -0.3" longitudeBin="-0.6 -0.3" magnitudeBin="5.0 6.0" epsilonBin="-0.5 0.5">
+                        <PMFValue>0.0</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue latitudeBin="-0.6 -0.3" longitudeBin="-0.3 -0.1" magnitudeBin="5.0 6.0" epsilonBin="-0.5 0.5">
+                        <PMFValue>0.00465311226798915</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue latitudeBin="-0.6 -0.3" longitudeBin="-0.1 0.1" magnitudeBin="5.0 6.0" epsilonBin="-0.5 0.5">
+                        <PMFValue>0.009308218812576716</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue latitudeBin="-0.6 -0.3" longitudeBin="0.1 0.3" magnitudeBin="5.0 6.0" epsilonBin="-0.5 0.5">
+                        <PMFValue>0.0</PMFValue>
+                    </disaggregationMatrixValue>
+                </disaggregationMatrix>
+                <disaggregationMatrix disaggregationPMFType="FullDisaggMatrix">
+                    <disaggregationMatrixValue latitudeBin="-0.6 -0.3" longitudeBin="-0.6 -0.3" magnitudeBin="5.0 6.0" epsilonBin="-0.5 0.5" tectonicRegionTypeBin="Active Shallow Crust">
+                        <PMFValue>0.00004353335</PMFValue>
+                    </disaggregationMatrixValue>
+                    <disaggregationMatrixValue latitudeBin="-0.6 -0.3" longitudeBin="-0.3 -0.1" magnitudeBin="5.0 6.0" epsilonBin="-0.5 0.5" tectonicRegionTypeBin="Stable Shallow Crust">
+                        <PMFValue>0.0</PMFValue>
+                    </disaggregationMatrixValue>
+                </disaggregationMatrix>
+            </disaggregationMatrixSet>
+        </disaggregationResultNode>
+    </disaggregationResultField>
+</nrml>

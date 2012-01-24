@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.3"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
+    <xs:element name="benefitCostRatioMap" type="benefitCostRatioMap" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="benefitCostRatioMap">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element ref="BCRNode" minOccurs="1" maxOccurs="unbounded"/>
+                </xs:sequence>
+                <xs:attribute name="calculator" type="xs:string"/>
+                <xs:attribute name="endBranchLabel" type="xs:string"/>
+                <xs:attribute name="lossCategory" type="LossCategory"/>
+                <xs:attribute name="unit" type="AssetValueUnit"/>
+                <xs:attribute name="interestRate" type="xs:double"/>
+                <xs:attribute name="assetLifeExpectancy" type="xs:double"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="BCRNode" type="BCRNodeType" substitutionGroup="fieldNode"/>
+    <xs:complexType name="BCRNodeType">
+        <xs:complexContent>
+            <xs:extension base="FieldNode">
+                <xs:sequence minOccurs="1" maxOccurs="unbounded">
+                    <xs:element name="benefitCostRatioValue" type="BCRType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="BCRType">
+        <xs:sequence>
+            <xs:element name="expectedAnnualLossOriginal" type="NonNegativeDoubleType"/>
+            <xs:element name="expectedAnnualLossRetrofitted" type="NonNegativeDoubleType"/>
+            <xs:element name="benefitCostRatio" type="NonNegativeDoubleType"/>
+        </xs:sequence>
+        <xs:attribute name="assetRef" type="xs:ID" use="required"/>
+    </xs:complexType>
+
+</xs:schema>
