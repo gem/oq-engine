@@ -42,6 +42,7 @@ class PlanarSurface(BaseSurface):
         Implements a numerical approach to :meth:`distance calculation
         <nhe.surface.base.BaseSurface.get_min_distance>`.
         """
+        # TODO: unittest
         mesh = self.get_mesh(discretization)
         return min(min(point.distance(mesh_point) for mesh_point in row)
                    for row in mesh)
