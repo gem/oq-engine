@@ -194,7 +194,8 @@ class GetModeTestCase(helpers.RedisTestCase, unittest.TestCase):
         At the first block, no data serialized yet, the mode
         returned has only the 'start' flag set.
         """
-        hazard_output.SerializerContext().update(self.XSC(3, 1, 5, 0, 2))
+        hazard_output.SerializerContext().update(
+            self.XSC(blocks=3, cblock=1, i_total=5, i_done=0, i_next=2))
         self.assertEqual((True, False, False),
                          hazard_output.SerializerContext().get_mode())
 
@@ -203,7 +204,8 @@ class GetModeTestCase(helpers.RedisTestCase, unittest.TestCase):
         At the first block, with some data serialized already, the mode
         returned has only the 'middle' flag set.
         """
-        hazard_output.SerializerContext().update(self.XSC(3, 1, 5, 1, 2))
+        hazard_output.SerializerContext().update(
+            self.XSC(blocks=3, cblock=1, i_total=5, i_done=1, i_next=2))
         self.assertEqual((False, True, False),
                          hazard_output.SerializerContext().get_mode())
 
@@ -212,7 +214,8 @@ class GetModeTestCase(helpers.RedisTestCase, unittest.TestCase):
         At a block in the middle, the mode returned has only the
         'middle' flag set.
         """
-        hazard_output.SerializerContext().update(self.XSC(3, 2, 5, 1, 2))
+        hazard_output.SerializerContext().update(
+            self.XSC(blocks=3, cblock=2, i_total=5, i_done=1, i_next=2))
         self.assertEqual((False, True, False),
                          hazard_output.SerializerContext().get_mode())
 
@@ -221,7 +224,8 @@ class GetModeTestCase(helpers.RedisTestCase, unittest.TestCase):
         At the last block, about to serialize the last batch of data, the
         mode returned has only the 'end' flag set.
         """
-        hazard_output.SerializerContext().update(self.XSC(2, 2, 5, 1, 4))
+        hazard_output.SerializerContext().update(
+            self.XSC(blocks=2, cblock=2, i_total=5, i_done=1, i_next=4))
         self.assertEqual((False, False, True),
                          hazard_output.SerializerContext().get_mode())
 
@@ -230,7 +234,8 @@ class GetModeTestCase(helpers.RedisTestCase, unittest.TestCase):
         At the last block, about to serialize a batch of data but more
         remains, the mode returned has only the 'middle' flag set.
         """
-        hazard_output.SerializerContext().update(self.XSC(2, 2, 6, 1, 4))
+        hazard_output.SerializerContext().update(
+            self.XSC(blocks=2, cblock=2, i_total=6, i_done=1, i_next=4))
         self.assertEqual((False, True, False),
                          hazard_output.SerializerContext().get_mode())
 
@@ -240,7 +245,8 @@ class GetModeTestCase(helpers.RedisTestCase, unittest.TestCase):
         multiple batches and the next batch is not the last one.
         The mode returned has only the 'start' flag set.
         """
-        hazard_output.SerializerContext().update(self.XSC(1, 1, 5, 0, 2))
+        hazard_output.SerializerContext().update(
+            self.XSC(blocks=1, cblock=1, i_total=5, i_done=0, i_next=2))
         self.assertEqual((True, False, False),
                          hazard_output.SerializerContext().get_mode())
 
@@ -250,7 +256,8 @@ class GetModeTestCase(helpers.RedisTestCase, unittest.TestCase):
         in a single batch.
         The mode returned has the 'start' and the 'end' flag set.
         """
-        hazard_output.SerializerContext().update(self.XSC(1, 1, 5, 0, 5))
+        hazard_output.SerializerContext().update(
+            self.XSC(blocks=1, cblock=1, i_total=5, i_done=0, i_next=5))
         self.assertEqual((True, False, True),
                          hazard_output.SerializerContext().get_mode())
 
@@ -260,7 +267,8 @@ class GetModeTestCase(helpers.RedisTestCase, unittest.TestCase):
         multiple batches and the next batch is *not* the last one.
         The mode returned has only the 'middle' flag set.
         """
-        hazard_output.SerializerContext().update(self.XSC(1, 1, 5, 2, 2))
+        hazard_output.SerializerContext().update(
+            self.XSC(blocks=1, cblock=1, i_total=5, i_done=2, i_next=2))
         self.assertEqual((False, True, False),
                          hazard_output.SerializerContext().get_mode())
 
@@ -270,7 +278,8 @@ class GetModeTestCase(helpers.RedisTestCase, unittest.TestCase):
         multiple batches and the next batch *is* the last one.
         The mode returned has only the 'end' flag set.
         """
-        hazard_output.SerializerContext().update(self.XSC(1, 1, 5, 3, 2))
+        hazard_output.SerializerContext().update(
+            self.XSC(blocks=1, cblock=1, i_total=5, i_done=3, i_next=2))
         self.assertEqual((False, False, True),
                          hazard_output.SerializerContext().get_mode())
 
