@@ -226,7 +226,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             utils_tasks.distribute(
                 the_task, ("sites", sites),
                 dict(job_id=self.calc_proxy.job_id, realization=realization),
-                flatten_results=True, ath=serializer)
+                ath=serializer)
 
     # pylint: disable=R0913
     def do_means(self, sites, realizations,
@@ -268,7 +268,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         utils_tasks.distribute(
             curve_task, ("sites", sites),
             dict(job_id=self.calc_proxy.job_id, realizations=realizations),
-            flatten_results=True, ath=curve_serializer)
+            ath=curve_serializer)
 
         if self.poes_hazard_maps:
             assert map_func, "No calculation function for mean hazard maps set"
@@ -323,7 +323,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             curve_task, ("sites", sites),
             dict(job_id=self.calc_proxy.job_id, realizations=realizations,
                  quantiles=quantiles),
-            flatten_results=True, ath=curve_serializer)
+            ath=curve_serializer)
 
         if self.poes_hazard_maps:
             assert map_func, "No calculation function for quantile maps set."
