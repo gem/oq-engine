@@ -15,8 +15,8 @@ class PlanarSurface(BaseSurface):
         assert (top_left.depth == top_right.depth
                 and bottom_left.depth == bottom_right.depth), \
                "top and bottom edges must be parallel to the earth surface"
-        assert (top_left.azimuth(top_right)
-                - bottom_left.azimuth(bottom_right)) < 1, \
+        assert abs(top_left.azimuth(top_right)
+                   - bottom_left.azimuth(bottom_right)) < 1, \
                "top and bottom edges must be parallel"
         self.top_left = top_left
         self.top_right = top_right
