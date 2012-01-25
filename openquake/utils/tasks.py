@@ -20,7 +20,6 @@
 
 """Utility functions related to splitting work into tasks."""
 
-
 import itertools
 from celery.task.sets import TaskSet
 
@@ -31,7 +30,9 @@ def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None,
                flatten_results=False):
     """Runs `task_func` for each of the given data items.
 
-    Each subtask operates on a single `data` item.
+    Each subtask operates on an item drawn from `data`. It is up to
+    the caller to provide a collection that yields data as expected
+    by the task function.
 
     Please note that for tasks with ignore_result=True
         - no results are returned
@@ -46,7 +47,7 @@ def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None,
     :param task_func: A `celery` task callable.
     :param str name: The name of the `task_func` parameter used to pass the
         data item.
-    :param data: The `data` on which the subtasks are to operate
+    :param data: The data on which the subtasks are to operate.
     :param dict tf_args: The remaining (keyword) parameters for `task_func`
     :param ath: an asynchronous task handler function, may only be specified
         for a task whose results are ignored.
@@ -61,10 +62,12 @@ def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None,
 
     subtask = task_func.subtask
     if tf_args:
-        subtasks = [subtask(**dict(tf_args.items() + [(name, [item])]))
+        subtasks = [subtask(**dict(tf_args.items() + [(name, item)]))
                     for item in data]
     else:
-        subtasks = [subtask(**{name: [item]}) for item in data]
+        subtasks = [subtask(**{name: item}) for item in data]
+
+    logs.HAZARD_LOG.debug("-#subtasks: %s" % len(subtasks))
 
     result = TaskSet(tasks=subtasks).apply_async()
     if task_func.ignore_result:
