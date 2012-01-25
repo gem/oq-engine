@@ -9,7 +9,8 @@ class PlanarSurface(BaseSurface):
     Planar rectangular surface with two sides parallel to the Earth surface.
 
     Parameters are four points defining the surface corners in clockwise
-    direction starting from top left corner.
+    direction starting from top left corner. Top and bottom edges
+    of the polygon must be parallel to earth surface and to each other.
     """
     def __init__(self, top_left, top_right, bottom_right, bottom_left):
         assert (top_left.depth == top_right.depth
