@@ -21,7 +21,7 @@
 """Utility functions related to splitting work into tasks."""
 
 
-from itertools import chain
+import itertools
 from celery.task.sets import TaskSet
 
 from openquake import logs
@@ -74,7 +74,7 @@ def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None):
             sample = results[0]
             if (isinstance(sample, list) or isinstance(sample, tuple)
                 or isinstance(sample, set)):
-                    results = list(chain(*results))
+                    results = list(itertools.chain(*results))
         return results
 
 
