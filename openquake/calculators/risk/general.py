@@ -441,9 +441,8 @@ class EpsilonProvider(object):
         the same standard normal distribution sample.
 
         Two assets are considered to be of the same building typology if their
-        structure category is the same. The asset's `structureCategory` is
-        only needed for correlated jobs and unlikely to be available for
-        uncorrelated ones.
+        taxonomy is the same. The asset's `taxonomy` is only needed for
+        correlated jobs and unlikely to be available for uncorrelated ones.
         """
         correlation = getattr(self, "ASSET_CORRELATION", None)
         if not correlation:
@@ -458,14 +457,13 @@ class EpsilonProvider(object):
                 # These are two references for the same dictionary.
                 samples = self.samples = dict()
 
-            category = asset.get("structureCategory")
-            if category is None:
-                raise ValueError(
-                    "Asset %s has no structure category" % asset["assetID"])
+            taxonomy = asset.get("taxonomy")
+            if taxonomy is None:
+                raise ValueError("Asset %s has no taxonomy" % asset["assetID"])
 
-            if category not in samples:
-                samples[category] = norm.rvs(loc=0, scale=1)
-            return samples[category]
+            if taxonomy not in samples:
+                samples[taxonomy] = norm.rvs(loc=0, scale=1)
+            return samples[taxonomy]
 
 
 class Block(object):
