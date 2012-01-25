@@ -18,44 +18,19 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-"""
-Utility functions related to splitting work into tasks.
-"""
+"""Utility functions related to splitting work into tasks."""
 
-import inspect
-import itertools
 
+from itertools import chain
 from celery.task.sets import TaskSet
 
 from openquake import logs
 
 
-def _prepare_kwargs(name, data, other_args, func=None):
-    """
-    Construct the (full) set of keyword parameters for the task to be
-    invoked and/or its associated asynchronous task handler function.
+def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None):
+    """Runs `task_func` for each of the given data items.
 
-    If a `func` is passed it will be inspected and only parameters it is
-    prepared to receive will be included in the resulting `dict`.
-
-    """
-    params = dict(other_args, **{name: data}) if other_args else {name: data}
-    if func:
-        # A function was passed, remove params it is not prepared to receive.
-        func_params = inspect.getargspec(func).args
-        filtered_params = [(k, params[k]) for k in params if k in func_params]
-        params = dict(filtered_params)
-    return params
-
-
-def distribute(a_task, (name, data), other_args=None, ath=None):
-    """Runs `a_task` for each of the given data items.
-
-    The given `data` is portioned across the subtasks in the task set.
-    The results returned by the subtasks are returned in a list e.g.:
-        [result1, result2, ..]
-
-    If each subtask returns a list that will result in list of lists.
+    Each subtask operates on a single `data` item.
 
     Please note that for tasks with ignore_result=True
         - no results are returned
@@ -67,12 +42,10 @@ def distribute(a_task, (name, data), other_args=None, ath=None):
           It can be used to check/wait for task results as appropriate
           and is likely to execute in parallel with longer running tasks.
 
-    :param a_task: A `celery` task callable.
-    :param str name: The parameter name under which the portioned `data` is to
-        be passed to `a_task`.
-    :param data: The `data` that is to be portioned and passed to the subtasks
-        for processing.
-    :param dict other_args: The remaining (keyword) parameters that are to be
+    :param task_func: A `celery` task callable.
+    :param str name: how the data item should be passed to `task_func`
+    :param data: The `data` on which the subtasks will operate
+    :param dict tf_args: The remaining (keyword) parameters that are to be
         passed to the subtasks.
     :param ath: an asynchronous task handler function, may only be specified
         for a task whose results are ignored.
@@ -81,20 +54,27 @@ def distribute(a_task, (name, data), other_args=None, ath=None):
     """
     logs.HAZARD_LOG.debug("-data_length: %s" % len(data))
 
-    subtasks = [a_task.subtask(**_prepare_kwargs(name, item, other_args))
-                for item in data]
+    subtask = task_func.subtask
+    if tf_args:
+        subtasks = [subtask(**dict(tf_args.items() + [(name, [item])]))
+                    for item in data]
+    else:
+        subtasks = [subtask(**{name: [item]}) for item in data]
 
-    logs.HAZARD_LOG.debug("-#subtasks: %s" % len(subtasks))
     result = TaskSet(tasks=subtasks).apply_async()
-    if a_task.ignore_result:
+    if task_func.ignore_result:
         # Did the user specify an asynchronous task handler function?
         if ath:
-            params = _prepare_kwargs(name, data, other_args, ath)
-            return ath(**params)
+            return ath(**ath_args)
     else:
         # Only called when we expect result messages to come back.
         results = result.join_native()
         _check_exception(results)
+        if results:
+            sample = results[0]
+            if (isinstance(sample, list) or isinstance(sample, tuple)
+                or isinstance(sample, set)):
+                    results = list(chain(*results))
         return results
 
 
