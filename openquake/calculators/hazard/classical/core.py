@@ -20,7 +20,6 @@
 
 
 import json
-import multiprocessing
 import random
 import time
 
@@ -70,7 +69,7 @@ def unwrap_validation_error(jpype, runtime_exception, path=None):
 @java.unpack_exception
 @stats.progress_indicator("h")
 def compute_hazard_curve(job_id, sites, realization):
-    """ Generate hazard curve for a given site list. """
+    """ Generate hazard curve for the given site list."""
 
     calculator = utils_tasks.calculator_for_task(job_id, 'hazard')
     keys = calculator.compute_hazard_curve(sites, realization)
@@ -81,9 +80,7 @@ def compute_hazard_curve(job_id, sites, realization):
 @java.unpack_exception
 @stats.progress_indicator("h")
 def compute_mgm_intensity(job_id, block_id, site_id):
-    """
-    Compute mean ground intensity for a specific site.
-    """
+    """Compute mean ground intensity for a specific site."""
 
     # We don't actually need the CalculationProxy returned by this function
     # (yet) but this does check if the calculation is still in progress.
@@ -184,11 +181,6 @@ def release_data_from_kvs(job_id, sites, realizations, quantiles, poes,
 class ClassicalHazardCalculator(general.BaseHazardCalculator):
     """Classical PSHA method for performing Hazard calculations."""
 
-    def number_of_tasks(self):
-        """How many `celery` tasks should be used for the calculations?"""
-        value = self.calc_proxy["HAZARD_TASKS"]
-        return 2 * multiprocessing.cpu_count() if value is None else int(value)
-
     def do_curves(self, sites, realizations, serializer=None,
                   the_task=compute_hazard_curve):
         """Trigger the calculation of hazard curves, serialize as requested.
@@ -221,6 +213,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         gmpe_generator.seed(self.calc_proxy["GMPE_LT_RANDOM_SEED"])
 
         stats.pk_set(self.calc_proxy.job_id, "hcls_crealization", 0)
+
         for realization in xrange(0, realizations):
             stats.pk_inc(self.calc_proxy.job_id, "hcls_crealization")
             LOG.info("Calculating hazard curves for realization %s"
@@ -228,16 +221,17 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             self.store_source_model(source_model_generator.getrandbits(32))
             self.store_gmpe_map(source_model_generator.getrandbits(32))
 
+            tf_args = dict(job_id=self.calc_proxy.job_id,
+                           realization=realization)
+            ath_args = dict(sites=sites, realization=realization)
             utils_tasks.distribute(
-                self.number_of_tasks(), the_task, ("sites", sites),
-                dict(job_id=self.calc_proxy.job_id, realization=realization),
-                flatten_results=True, ath=serializer)
+                the_task, ("sites", [[s] for s in sites]), tf_args=tf_args,
+                ath=serializer, ath_args=ath_args)
 
     # pylint: disable=R0913
-    def do_means(self, sites, realizations,
-                 curve_serializer=None,
-                 curve_task=compute_mean_curves,
-                 map_func=None, map_serializer=None):
+    def do_means(self, sites, realizations, curve_serializer=None,
+                 curve_task=compute_mean_curves, map_func=None,
+                 map_serializer=None):
         """Trigger the calculation of mean curves/maps, serialize as requested.
 
         The calculated mean curves/maps will only be serialized if the
@@ -270,10 +264,12 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         # Compute and serialize the mean curves.
         LOG.info("Computing mean hazard curves")
 
+        tf_args = dict(job_id=self.calc_proxy.job_id,
+                       realizations=realizations)
+        ath_args = dict(sites=sites)
         utils_tasks.distribute(
-            self.number_of_tasks(), curve_task, ("sites", sites),
-            dict(job_id=self.calc_proxy.job_id, realizations=realizations),
-            flatten_results=True, ath=curve_serializer)
+            curve_task, ("sites", [[s] for s in sites]), tf_args=tf_args,
+            ath=curve_serializer, ath_args=ath_args)
 
         if self.poes_hazard_maps:
             assert map_func, "No calculation function for mean hazard maps set"
@@ -282,14 +278,14 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             LOG.info("Computing/serializing mean hazard maps")
             map_func(self.calc_proxy.job_id, sites, self.calc_proxy.imls,
                      self.poes_hazard_maps)
+            LOG.debug(">> mean maps!")
             map_serializer(sites, self.poes_hazard_maps)
 
     # pylint: disable=R0913
-    def do_quantiles(self, sites, realizations, quantiles,
-                     curve_serializer=None,
-                     curve_task=compute_quantile_curves,
-                     map_func=None,
-                     map_serializer=None):
+    def do_quantiles(
+        self, sites, realizations, quantiles, curve_serializer=None,
+        curve_task=compute_quantile_curves, map_func=None,
+        map_serializer=None):
         """Trigger the calculation/serialization of quantile curves/maps.
 
         The calculated quantile curves/maps will only be serialized if the
@@ -324,11 +320,12 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         # compute and serialize quantile hazard curves
         LOG.info("Computing quantile hazard curves")
 
+        tf_args = dict(job_id=self.calc_proxy.job_id,
+                       realizations=realizations, quantiles=quantiles)
+        ath_args = dict(sites=sites, quantiles=quantiles)
         utils_tasks.distribute(
-            self.number_of_tasks(), curve_task, ("sites", sites),
-            dict(job_id=self.calc_proxy.job_id, realizations=realizations,
-                 quantiles=quantiles),
-            flatten_results=True, ath=curve_serializer)
+            curve_task, ("sites", [[s] for s in sites]), tf_args=tf_args,
+            ath=curve_serializer, ath_args=ath_args)
 
         if self.poes_hazard_maps:
             assert map_func, "No calculation function for quantile maps set."
@@ -342,6 +339,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             LOG.info("Serializing quantile maps for %s values"
                      % len(quantiles))
             for quantile in quantiles:
+                LOG.debug(">> quantile maps!")
                 map_serializer(sites, self.poes_hazard_maps, quantile)
 
     @java.unpack_exception
@@ -377,10 +375,12 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             end = start + block_size
             data = sites[start:end]
 
+            LOG.debug("> curves!")
             self.do_curves(
                 data, realizations,
                 serializer=self.serialize_hazard_curve_of_realization)
 
+            LOG.debug("> means!")
             # mean curves
             self.do_means(
                 data, realizations,
@@ -388,6 +388,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 map_func=general.compute_mean_hazard_maps,
                 map_serializer=self.serialize_mean_hazard_map)
 
+            LOG.debug("> quantiles!")
             # quantile curves
             quantiles = self.quantile_levels
             self.do_quantiles(
@@ -396,7 +397,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 map_func=general.compute_quantile_hazard_maps,
                 map_serializer=self.serialize_quantile_hazard_map)
 
-            # Done with this chunk, purge intermediate results from kvs.
+            # Done with this block, purge intermediate results from kvs.
             release_data_from_kvs(self.calc_proxy.job_id, data, realizations,
                                   quantiles, self.poes_hazard_maps,
                                   kvs_keys_purged)
@@ -631,6 +632,13 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             hm_attrib.update(hm_attrib_update)
             hm_data.append((site, hm_attrib))
 
+        LOG.debug(">> path: %s" % nrml_path)
+        # XML serialization context
+        xsc = namedtuple("XSC", "blocks, cblock, i_total, i_done, i_next")(
+                         stats.pk_get(self.calc_proxy.job_id, "blocks"),
+                         stats.pk_get(self.calc_proxy.job_id, "cblock"),
+                         len(sites), 0, len(hm_data))
+        hazard_output.SerializerContext().update(xsc)
         map_writer.serialize(hm_data)
 
         return nrml_path
