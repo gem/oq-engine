@@ -35,7 +35,7 @@ SCHEMA_FILE = 'nrml.xsd'
 
 
 class SchemaValidationTestCase(unittest.TestCase):
-    """Confirm that all XML examples in openquake/nrml/schema/0.2/examples/
+    """Confirm that all XML examples in openquake/nrml/schema/examples/
     match schema."""
 
     def setUp(self):
