@@ -51,7 +51,8 @@ def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None):
         for a task whose results are ignored.
     :param dict ath_args: The keyword parameters for `ath`
     :returns: A list where each element is a result returned by a subtask.
-        If an `ath` function is passed we return whatever it returns.
+        If an `ath` function is passed we return whatever it returns, `None`
+        otherwise.
     """
     logs.HAZARD_LOG.debug("-data_length: %s" % len(data))
 
@@ -66,15 +67,17 @@ def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None):
     if task_func.ignore_result:
         # Did the user specify an asynchronous task handler function?
         if ath:
-            return ath(**ath_args)
+            if ath_args:
+                return ath(**ath_args)
+            else:
+                return ath()
     else:
         # Only called when we expect result messages to come back.
         results = result.join_native()
         _check_exception(results)
         if results:
             sample = results[0]
-            if (isinstance(sample, list) or isinstance(sample, tuple)
-                or isinstance(sample, set)):
+            if isinstance(sample, (list, tuple, set)):
                 results = list(itertools.chain(*results))
         return results
 
