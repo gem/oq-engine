@@ -23,6 +23,11 @@ class PointTestCase(unittest.TestCase):
 
         self.assertAlmostEqual(44.9989091554, p1.azimuth(p2))
 
+    def test_azimuth_over_180_degree(self):
+        p1 = geo.Point(0.0, 0.0)
+        p2 = geo.Point(0.5, 0.5)
+        self.assertAlmostEqual(225.0010908, p2.azimuth(p1))
+
     def test_horizontal_distance(self):
         p1 = geo.Point(0.0, 0.0)
         p2 = geo.Point(0.5, 0.5)
