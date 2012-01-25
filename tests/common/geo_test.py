@@ -115,11 +115,19 @@ class LineTestCase(unittest.TestCase):
         expected = geo.Line([p1, p2, p3, p4, p5, p6])        
         self.assertEqual(expected, resampled)
 
+    def test_remove_adjacent_duplicates(self):
+        p1 = geo.Point(0.0, 0.0, 0.0)
+        p2 = geo.Point(0.0, 1.0, 0.0)
+        p3 = geo.Point(0.0, 1.0, 0.0)
+        p4 = geo.Point(0.0, 2.0, 0.0)
+        p5 = geo.Point(0.0, 3.0, 0.0)
+        p6 = geo.Point(0.0, 3.0, 0.0)
+
+        expected = [p1, p2, p4, p5]
+        self.assertEquals(expected, geo.Line([p1, p2, p3, p4, p5, p6]).points)
+
     def test_two_different_points_needed(self):
         self.assertRaises(RuntimeError, geo.Line, [geo.Point(0.0, 0.0, 0.0)])
-
-        self.assertRaises(RuntimeError, geo.Line,
-                [geo.Point(0.0, 0.0, 0.0), geo.Point(0.0, 0.0, 0.0)])
 
     def test_must_not_intersect_itself(self):
         p1 = geo.Point(0.0, 0.0)

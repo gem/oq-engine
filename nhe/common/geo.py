@@ -226,13 +226,11 @@ class Line(object):
 
     def __init__(self, points):
         self.points = points
-        
+
+        self._remove_duplicates()
+
         if len(points) < 2:
             raise RuntimeError("Two points are needed to create a line!")
-
-        if len(points) == 2 and points[0] == points[1]:
-            raise RuntimeError(
-                "Two different points are needed to create a line!")
 
         if self._intersect_itself():
             raise RuntimeError("Line intersects itself!")
@@ -242,6 +240,19 @@ class Line(object):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def _remove_duplicates(self):
+        """
+        Remove adjacent duplicates.
+        """
+        
+        points = []
+
+        for point in self.points:
+            if point not in points:
+                points.append(point)
+        
+        self.points = points
 
     def _intersect_itself(self):
         """
