@@ -43,12 +43,12 @@ def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None):
           and is likely to execute in parallel with longer running tasks.
 
     :param task_func: A `celery` task callable.
-    :param str name: how the data item should be passed to `task_func`
-    :param data: The `data` on which the subtasks will operate
-    :param dict tf_args: The remaining (keyword) parameters that are to be
-        passed to the subtasks.
+    :param str name: How the data item should be passed to `task_func`
+    :param data: The `data` on which the subtasks are to operate
+    :param dict tf_args: The remaining (keyword) parameters for `task_func`
     :param ath: an asynchronous task handler function, may only be specified
         for a task whose results are ignored.
+    :param dict ath_args: The remaining (keyword) parameters for `ath`
     :returns: A list where each element is a result returned by a subtask.
         If an `ath` function is passed we return whatever it returns.
     """
