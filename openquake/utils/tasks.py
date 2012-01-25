@@ -43,7 +43,8 @@ def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None):
           and is likely to execute in parallel with longer running tasks.
 
     :param task_func: A `celery` task callable.
-    :param str name: How the data item should be passed to `task_func`
+    :param str name: The name of the `task_func` parameter used to pass the
+        data item.
     :param data: The `data` on which the subtasks are to operate
     :param dict tf_args: The remaining (keyword) parameters for `task_func`
     :param ath: an asynchronous task handler function, may only be specified
