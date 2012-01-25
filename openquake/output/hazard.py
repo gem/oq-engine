@@ -265,6 +265,8 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
         """Header (i.e., common) information for all nodes."""
 
         self.mode = SerializerContext().get_mode()
+        LOGGER.debug("hazard map, write header!")
+        LOGGER.debug(self.mode)
         if not self.mode.start:
             return
 
@@ -944,6 +946,7 @@ class SerializerContext(object):
                     current block
                 - i_next: number of items to be serialized next
         """
+        LOGGER.debug(context)
         self.blocks = context.blocks
         self.cblock = context.cblock
         self.i_total = context.i_total
