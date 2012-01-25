@@ -36,7 +36,7 @@ from tests.utils.helpers import demo_file
 from tests.utils.helpers import patch
 from tests.utils.helpers import TestStore
 from tests.utils.tasks import (
-    failing_task, ignore_result, just_say_hello, reflect_args,
+    failing_task, ignore_result, just_say_1, just_say_hello, reflect_args,
     reflect_data_to_be_processed, single_arg_called_a)
 
 
@@ -55,14 +55,20 @@ class DistributeTestCase(unittest.TestCase):
         result = tasks.distribute(just_say_hello, ("data", range(5)))
         self.assertEqual(expected, result)
 
+    def test_distribute_with_task_returning_single_item(self):
+        """distribute() copes with tasks that return a single item."""
+        expected = [1] * 5
+        result = tasks.distribute(just_say_1, ("data", range(5)))
+        self.assertEqual(expected, result)
+
     def test_distribute_with_no_other_args(self):
         """The subtask is only invoked with the data to be processed."""
         # We expect the subtasks to see no positional arguments. The
         # data to be processed is passed in the keyword arguments.
         expected = [
-            ((), {"data_to_process": 100}), ((), {"data_to_process": 101})]
+            (), {"data_to_process": [11]}, (), {"data_to_process": [12]}]
         result = tasks.distribute(
-            reflect_args, ("data_to_process", [100, 101]))
+            reflect_args, ("data_to_process", [11, 12]))
         self.assertEqual(expected, result)
 
     def test_distribute_with_other_args(self):
@@ -72,18 +78,18 @@ class DistributeTestCase(unittest.TestCase):
         """
         # The keyword arguments below will be passed to the celery subtasks in
         # addition to the data that is to be processed.
-        other_args = {"1+1": 2, "2/1": 1}
+        tf_args = {"1+1": 2, "2/1": 1}
 
         # We expect the subtasks to see the following positional and keyword
         # arguments respectively.
         expected = [
-            ((), {"data_to_process": 88, "1+1": 2, "2/1": 1}),
-            ((), {"data_to_process": 99, "1+1": 2, "2/1": 1})]
+            (), {"data_to_process": [13], "1+1": 2, "2/1": 1},
+            (), {"data_to_process": [14], "1+1": 2, "2/1": 1}]
 
         # Two subtasks will be spawned and just return the arguments they
         # received.
-        result = tasks.distribute(reflect_args, ("data_to_process", [88, 99]),
-                                  other_args=other_args)
+        result = tasks.distribute(reflect_args, ("data_to_process", [13, 14]),
+                                  tf_args=tf_args)
         self.assertEqual(expected, result)
 
     def test_distribute_with_keyword_argument_not_expected_by_task(self):
@@ -122,7 +128,7 @@ class DistributeTestCase(unittest.TestCase):
             tasks.distribute(failing_task, ("data", range(5)))
         except Exception, exc:
             # The exception is raised by the first task.
-            self.assertEqual(0, exc.args[0])
+            self.assertEqual([0], exc.args[0])
         else:
             raise Exception("Exception not raised.")
 
@@ -198,10 +204,6 @@ class IgnoreResultsTestCase(unittest.TestCase):
     Tests the behaviour of utils.tasks.distribute() with tasks whose results
     are ignored.
     """
-
-    def __init__(self, *args, **kwargs):
-        super(IgnoreResultsTestCase, self).__init__(*args, **kwargs)
-
     def setUp(self):
         # Make sure we have no obsolete test data in the kvs.
         kvs = TestStore.kvs()
@@ -271,75 +273,13 @@ class IgnoreResultsTestCase(unittest.TestCase):
         values = [value(uid) for uid in keys]
         data = zip(keys, values)
 
-        result = tasks.distribute(ignore_result, ("data", data), ath=ath)
+        args = ("data", data)
+        result = tasks.distribute(ignore_result, args, ath=ath,
+                                  ath_args=dict(data=data))
         self.assertEqual(sorted(keys), sorted(result))
 
         for key, value in data:
             self.assertEqual(value.upper(), TestStore.get(key))
-
-
-class PrepareKwargsTestCase(unittest.TestCase):
-    """
-    Tests the behaviour of utils.tasks._prepare_kwargs().
-    """
-
-    def test_prepare_kwargs_with_data_only(self):
-        """Simplest case: no other args and no function passed"""
-        self.assertEqual(dict(a=1), tasks._prepare_kwargs("a", 1, None))
-
-    def test_prepare_kwargs_with_other_data(self):
-        """Pass `other_args` that is not `None`."""
-        self.assertEqual(dict(a=1, c=3, d=4),
-                         tasks._prepare_kwargs("a", 1, dict(c=3, d=4)))
-
-    def test_prepare_kwargs_with_data_only_and_func_params_mismatch(self):
-        """A function is passed, its params do not match."""
-
-        def ath(x):
-            pass
-
-        self.assertEqual(dict(), tasks._prepare_kwargs("a", 1, None, ath))
-
-    def test_prepare_kwargs_with_data_only_and_func_params_match(self):
-        """A function is passed, its params *do* match."""
-
-        def ath(a):
-            pass
-
-        self.assertEqual(dict(a=1), tasks._prepare_kwargs("a", 1, None, ath))
-
-    def test_prepare_kwargs_with_func_params_mismatch(self):
-        """
-        Other args and a function is passed, the latter's params do not match.
-        """
-
-        def ath(x):
-            pass
-
-        self.assertEqual(dict(),
-                         tasks._prepare_kwargs("a", 1, dict(c=3, d=4), ath))
-
-    def test_prepare_kwargs_with_func_params_match(self):
-        """
-        Other args and a function is passed, the latter's params *do* match.
-        """
-
-        def ath(a, d):
-            pass
-
-        self.assertEqual(dict(a=1, d=4),
-                         tasks._prepare_kwargs("a", 1, dict(c=3, d=4), ath))
-
-    def test_prepare_kwargs_with_full_func_params_match(self):
-        """
-        Other args and a function is passed, the latter's params all match.
-        """
-
-        def ath(a, c, d):
-            pass
-
-        self.assertEqual(dict(a=1, c=3, d=4),
-                         tasks._prepare_kwargs("a", 1, dict(c=3, d=4), ath))
 
 
 class CalculatorForTaskTestCase(unittest.TestCase):
