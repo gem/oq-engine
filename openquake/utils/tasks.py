@@ -48,7 +48,7 @@ def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None):
     :param dict tf_args: The remaining (keyword) parameters for `task_func`
     :param ath: an asynchronous task handler function, may only be specified
         for a task whose results are ignored.
-    :param dict ath_args: The remaining (keyword) parameters for `ath`
+    :param dict ath_args: The keyword parameters for `ath`
     :returns: A list where each element is a result returned by a subtask.
         If an `ath` function is passed we return whatever it returns.
     """
