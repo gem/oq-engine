@@ -66,7 +66,7 @@ class DistributeTestCase(unittest.TestCase):
         # We expect the subtasks to see no positional arguments. The
         # data to be processed is passed in the keyword arguments.
         expected = [
-            (), {"data_to_process": [11]}, (), {"data_to_process": [12]}]
+            (), {"data_to_process": 11}, (), {"data_to_process": 12}]
         result = tasks.distribute(reflect_args, ("data_to_process", [11, 12]),
                                   flatten_results=True)
         self.assertEqual(expected, result)
@@ -88,7 +88,8 @@ class DistributeTestCase(unittest.TestCase):
 
         # Two subtasks will be spawned and just return the arguments they
         # received.
-        result = tasks.distribute(reflect_args, ("data_to_process", [13, 14]),
+        result = tasks.distribute(reflect_args,
+                                  ("data_to_process", [[13], [14]]),
                                   tf_args=tf_args)
         self.assertEqual(expected, result)
 
@@ -128,7 +129,7 @@ class DistributeTestCase(unittest.TestCase):
             tasks.distribute(failing_task, ("data", range(5)))
         except Exception, exc:
             # The exception is raised by the first task.
-            self.assertEqual([0], exc.args[0])
+            self.assertEqual(0, exc.args[0])
         else:
             raise Exception("Exception not raised.")
 
@@ -143,7 +144,7 @@ class DistributeTestCase(unittest.TestCase):
         """Results are returned in the right order."""
         expected = [[i] for i in range(7)]
         result = tasks.distribute(reflect_data_to_be_processed,
-                                  ("data", range(7)))
+                                  ("data", [[i] for i in range(7)]))
         self.assertEqual(expected, result)
 
 
@@ -236,7 +237,7 @@ class IgnoreResultsTestCase(unittest.TestCase):
         values = [value(uid) for uid in keys]
         data = zip(keys, values)
 
-        result = tasks.distribute(ignore_result, ("data", data))
+        result = tasks.distribute(ignore_result, ("data", [[d] for d in data]))
         # An empty list is returned for tasks with ignore_result=True
         # and no asynchronous task handler function.
         self.assertEqual(False, bool(result))
@@ -280,7 +281,7 @@ class IgnoreResultsTestCase(unittest.TestCase):
         values = [value(uid) for uid in keys]
         data = zip(keys, values)
 
-        args = ("data", data)
+        args = ("data", [[d] for d in data])
         result = tasks.distribute(ignore_result, args, ath=ath,
                                   ath_args=dict(data=data))
         self.assertEqual(sorted(keys), sorted(result))
