@@ -111,8 +111,9 @@ class PlanarSurfaceGetMeshTestCase(unittest.TestCase):
                    expected_mesh=test_data.TEST_5_MESH)
 
     def test_6(self):
-        self._test(test_data.TEST_6_CORNERS, mesh_spacing=10,
-                   expected_mesh=test_data.TEST_6_MESH)
+        corners = [Point(0, 0, 9)] * 4
+        mesh = [[(0, 0, 9)]]
+        self._test(corners, mesh_spacing=1, expected_mesh=mesh)
 
     def test_7_rupture_1(self):
         self._test(test_data.TEST_7_RUPTURE_1_CORNERS, mesh_spacing=1,
