@@ -134,7 +134,7 @@ def reflect_data_to_be_processed(data):
 @task(ignore_result=True)
 def ignore_result(data):
     """Write the data using the given test store key."""
-    key, value = data
+    key, value = data[0]
     helpers.TestStore.set(key, value)
     # Results will be ignored.
     return data

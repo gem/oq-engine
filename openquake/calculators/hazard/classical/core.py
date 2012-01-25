@@ -226,7 +226,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             tf_args = dict(job_id=self.calc_proxy.job_id,
                            realization=realization)
             ath_args = dict(sites=sites, realization=realization)
-            utils_tasks.distribute(the_task, ("site", sites), tf_args=tf_args,
+            utils_tasks.distribute(the_task, ("sites", sites), tf_args=tf_args,
                                    ath=serializer, ath_args=ath_args)
 
     # pylint: disable=R0913
@@ -321,8 +321,8 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
 
         tf_args = dict(job_id=self.calc_proxy.job_id,
                        realizations=realizations, quantiles=quantiles)
-        ath_args = dict(sites=sites, **tf_args)
-        utils_tasks.distribute(curve_task, ("site", sites), tf_args=tf_args,
+        ath_args = dict(sites=sites, quantiles=quantiles)
+        utils_tasks.distribute(curve_task, ("sites", sites), tf_args=tf_args,
                                ath=curve_serializer, ath_args=ath_args)
 
         if self.poes_hazard_maps:
