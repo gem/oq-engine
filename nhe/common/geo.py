@@ -152,6 +152,9 @@ class Point(object):
         return self.__str__()
 
     def __eq__(self, other):
+        if other == None:
+            return False
+        
         return numpy.allclose([self.longitude, self.latitude],
                 [other.longitude, other.latitude], LAT_LON_TOLERANCE) and \
                 numpy.allclose(self.depth, other.depth, DEPTH_TOLERANCE)
@@ -245,13 +248,15 @@ class Line(object):
         """
         Remove adjacent duplicates.
         """
-        
+
+        last = None
         points = []
 
         for point in self.points:
-            if point not in points:
+            if point != last:
+                last = point
                 points.append(point)
-        
+       
         self.points = points
 
     def _intersect_itself(self):
