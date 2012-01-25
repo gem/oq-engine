@@ -32,11 +32,6 @@ from openquake.db import models
 
 LOGGER = logging.getLogger('serializer')
 
-MODE_START = 1
-MODE_IN_THE_MIDDLE = 0
-MODE_END = -1
-MODE_START_AND_END = -2
-
 
 class FileWriter(object):
     """Simple output half of the codec process."""
@@ -45,13 +40,8 @@ class FileWriter(object):
         self.path = path
         self.file = None
         self.root_node = None
-        self.mode = MODE_START_AND_END
-
-    def set_mode(self, mode):
-        """Facilitate XML serialization in multiple stages."""
-        assert mode in [MODE_START, MODE_IN_THE_MIDDLE, MODE_END,
-                        MODE_START_AND_END]
-        self.mode = mode
+        # Either none or a namedtuple with 3 booleans: (start, middle, end)
+        self.mode = None
 
     def initialize(self):
         """Initialization hook for derived classes."""
@@ -59,7 +49,7 @@ class FileWriter(object):
 
     def open(self):
         """Get the file handle open for writing"""
-        if self.mode in [MODE_END, MODE_START_AND_END]:
+        if self.mode is None or self.mode.end:
             self.file = open(self.path, "w")
 
     def write(self, point, value):
