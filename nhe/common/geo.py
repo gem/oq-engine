@@ -223,7 +223,7 @@ class Line(object):
     is neglected to check if a line intersects itself or not).
 
     :param points:
-        The sequence of points definining this line.
+        The sequence of points defining this line.
     :type points:
         list of :class:`nhe.geo.Point` instances
     """
