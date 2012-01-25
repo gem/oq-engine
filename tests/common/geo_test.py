@@ -20,7 +20,7 @@ class PointTestCase(unittest.TestCase):
     def test_azimuth(self):
         p1 = geo.Point(0.0, 0.0)
         p2 = geo.Point(0.5, 0.5)
-        
+
         self.assertAlmostEqual(44.9989091554, p1.azimuth(p2))
 
     def test_horizontal_distance(self):
@@ -32,14 +32,14 @@ class PointTestCase(unittest.TestCase):
     def test_distance(self):
         p1 = geo.Point(0.0, 0.0, 0.0)
         p2 = geo.Point(0.5, 0.5, 5.0)
-        
+
         self.assertAlmostEqual(78.7849704355, p1.distance(p2))
-        
+
     def test_equally_spaced_points_1(self):
         p1 = geo.Point(0.0, 0.0)
         p2 = geo.Point(0.190775520815, 0.190774854966)
-        
-        points = p1.equally_spaced_points(p2, 10.0)        
+
+        points = p1.equally_spaced_points(p2, 10.0)
         self.assertEqual(4, len(points))
 
         self.assertEqual(p1, points[0]) # first point is the start point
@@ -81,7 +81,7 @@ class PointTestCase(unittest.TestCase):
         self.assertEqual(1, len(points))
         self.assertEqual(p1, points[0])
         self.assertEqual(p2, points[0])
-    
+
     def test_longitude_inside_range(self):
         self.assertRaises(RuntimeError, geo.Point, 180.1, 0.0, 0.0)
         self.assertRaises(RuntimeError, geo.Point, -180.1, 0.0, 0.0)
@@ -95,6 +95,7 @@ class PointTestCase(unittest.TestCase):
 
         geo.Point(0.0, 90.0, 0.0)
         geo.Point(0.0, -90.0, 0.0)
+
 
 class LineTestCase(unittest.TestCase):
 
@@ -112,7 +113,7 @@ class LineTestCase(unittest.TestCase):
         p5 = geo.Point(0.0899327195183, 0.217115442616, 28.2842712475)
         p6 = geo.Point(0.134899286793, 0.262081472606, 35.3553390593)
 
-        expected = geo.Line([p1, p2, p3, p4, p5, p6])        
+        expected = geo.Line([p1, p2, p3, p4, p5, p6])
         self.assertEqual(expected, resampled)
 
     def test_remove_adjacent_duplicates(self):
@@ -134,7 +135,7 @@ class LineTestCase(unittest.TestCase):
         p2 = geo.Point(0.0, 1.0)
         p3 = geo.Point(1.0, 1.0)
         p4 = geo.Point(0.0, 0.5)
-        
+
         self.assertRaises(RuntimeError, geo.Line, [p1, p2, p3, p4])
 
         # doesn't take into account depth

@@ -53,7 +53,7 @@ class Point(object):
         """
         Compute the point with given horizontal, vertical distances
         and azimuth from this point.
-        
+
         :param horizontal_distance:
             Horizontal distance, in km.
         :type horizontal_distance:
@@ -117,18 +117,18 @@ class Point(object):
 
         _, _, horizontal_distance = pyproj.Geod(ellps="sphere").inv(
             self.longitude, self.latitude, point.longitude, point.latitude)
-        
+
         # 1e-3 is needed to convert from m to km
-        return horizontal_distance * 1e-3 
+        return horizontal_distance * 1e-3
 
     def distance(self, point):
         """
         Compute the distance (in km) between this point and the given point.
 
-        Distance is calculated using pythagoras theorem, where the hypotenuse is
-        the distance and the other two sides are the horizontal distance
-        (great circle distance) and vertical distance (depth difference between
-        the two locations).
+        Distance is calculated using pythagoras theorem, where the
+        hypotenuse is the distance and the other two sides are the
+        horizontal distance (great circle distance) and vertical
+        distance (depth difference between the two locations).
 
         :param point:
             Destination point.
@@ -154,7 +154,7 @@ class Point(object):
     def __eq__(self, other):
         if other == None:
             return False
-        
+
         return numpy.allclose([self.longitude, self.latitude],
                 [other.longitude, other.latitude], LAT_LON_TOLERANCE) and \
                 numpy.allclose(self.depth, other.depth, DEPTH_TOLERANCE)
@@ -195,7 +195,8 @@ class Point(object):
         sign = 1
 
         if point.depth != self.depth:
-            # if positive -> pointing downwards, if negative -> pointing upwards
+            # if positive -> pointing downwards
+            # if negative -> pointing upwards
             sign = (point.depth - self.depth) / math.fabs(
                     point.depth - self.depth)
 
@@ -256,13 +257,13 @@ class Line(object):
             if point != last:
                 last = point
                 points.append(point)
-       
+
         self.points = points
 
     def _intersect_itself(self):
         """
         Check if this line intersects itself.
-        
+
         :returns:
             True if this line intersects itself, false otherwise.
         :rtype:
@@ -329,6 +330,6 @@ class Line(object):
             points = resampled_points[-1].equally_spaced_points(
                     self.points[i], section_length)
 
-            resampled_points.extend(points[1: ])
+            resampled_points.extend(points[1:])
 
         return Line(resampled_points)
