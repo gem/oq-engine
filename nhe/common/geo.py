@@ -7,6 +7,8 @@ import numpy
 import pyproj
 import math
 
+from shapely.geometry import LineString
+
 # Tolerance used for latitude and longitude to identify
 # when two sites are equal (it corresponds to about 1 m at the equator)
 LAT_LON_TOLERANCE = 1e-5
@@ -51,7 +53,7 @@ class Point(object):
         """
         Compute the point with given horizontal, vertical distances
         and azimuth from this point.
-        
+
         :param horizontal_distance:
             Horizontal distance, in km.
         :type horizontal_distance:
@@ -115,18 +117,18 @@ class Point(object):
 
         _, _, horizontal_distance = pyproj.Geod(ellps="sphere").inv(
             self.longitude, self.latitude, point.longitude, point.latitude)
-        
+
         # 1e-3 is needed to convert from m to km
-        return horizontal_distance * 1e-3 
+        return horizontal_distance * 1e-3
 
     def distance(self, point):
         """
         Compute the distance (in km) between this point and the given point.
 
-        Distance is calculated using pythagoras theorem, where the hypotenuse is
-        the distance and the other two sides are the horizontal distance
-        (great circle distance) and vertical distance (depth difference between
-        the two locations).
+        Distance is calculated using pythagoras theorem, where the
+        hypotenuse is the distance and the other two sides are the
+        horizontal distance (great circle distance) and vertical
+        distance (depth difference between the two locations).
 
         :param point:
             Destination point.
@@ -150,9 +152,12 @@ class Point(object):
         return self.__str__()
 
     def __eq__(self, other):
-        return numpy.allclose([self.longitude, self.latitude], [other.longitude,
-                other.latitude], LAT_LON_TOLERANCE) and numpy.allclose(
-                self.depth, other.depth, DEPTH_TOLERANCE)
+        if other == None:
+            return False
+
+        return numpy.allclose([self.longitude, self.latitude],
+                [other.longitude, other.latitude], LAT_LON_TOLERANCE) and \
+                numpy.allclose(self.depth, other.depth, DEPTH_TOLERANCE)
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -190,7 +195,8 @@ class Point(object):
         sign = 1
 
         if point.depth != self.depth:
-            # if positive -> pointing downwards, if negative -> pointing upwards
+            # if positive -> pointing downwards
+            # if negative -> pointing upwards
             sign = (point.depth - self.depth) / math.fabs(
                     point.depth - self.depth)
 
@@ -199,9 +205,140 @@ class Point(object):
 
         locations = int(round(total_distance / distance) + 1)
 
-        for _ in xrange(locations):
+        for _ in xrange(1, locations):
             last = points[-1]
             points.append(last.point_at(
                     horizontal_increment, vertical_increment, azimuth))
 
         return points
+
+
+class Line(object):
+    """
+    This class represents a geographical line, which is basically
+    a sequence of geographical points.
+
+    A line is defined by at least one point. The surface projection
+    of a line cannot intersect itself (depth dimension is neglected
+    to check if a line intersects itself or not).
+
+    :param points:
+        The sequence of points defining this line.
+    :type points:
+        list of :class:`nhe.geo.Point` instances
+    """
+
+    def __init__(self, points):
+        self.points = points
+
+        self._remove_duplicates()
+
+        if len(self.points) < 1:
+            raise RuntimeError("One point needed to create a line!")
+
+        if self._intersect_itself():
+            raise RuntimeError("Line intersects itself!")
+
+    def __eq__(self, other):
+        return self.points == other.points
+
+    def __ne__(self, other):
+        return not self.__eq__(other)
+
+    def __len__(self):
+        return len(self.points)
+
+    def _remove_duplicates(self):
+        """
+        Remove adjacent duplicates.
+        """
+
+        last = None
+        points = []
+
+        for point in self.points:
+            if point != last:
+                last = point
+                points.append(point)
+
+        self.points = points
+
+    def _intersect_itself(self):
+        """
+        Check if this line intersects itself.
+
+        :returns:
+            True if this line intersects itself, false otherwise.
+        :rtype:
+            boolean
+        """
+
+        if len(self.points) < 2:
+            return False
+
+        values = []
+
+        for point in self.points:
+            values.append((point.longitude, point.latitude))
+
+        return not LineString(values).is_simple
+
+    def resample(self, section_length):
+        """
+        Resample this line into sections.
+
+        The first point in the resampled line corresponds
+        to the first point in the original line.
+
+        Starting from the first point in the original line, a line
+        segment is defined as the line connecting the last point in the
+        resampled line and the next point in the original line.
+        The line segment is then split into sections of length equal to
+        ``section_length``. The resampled line is obtained
+        by concatenating all sections.
+
+        The number of sections in a line segment is calculated as follows:
+        ``round(segment_length / section_length)``.
+
+        Note that the resulting line has a length that is an exact multiple of
+        ``section_length``, therefore its length is in general smaller
+        or greater (depending on the rounding) than the length
+        of the original line.
+
+        For a straight line, the difference between the resulting length
+        and the original length is at maximum half of the ``section_length``.
+        For a curved line, the difference my be larger,
+        because of corners getting cut.
+
+        :param section_length:
+            The length of the section, in km.
+        :type section_length:
+            float
+        :returns:
+            A new line resampled into sections based on the given length.
+        :rtype:
+            An instance of :class:`nhe.geo.Line`
+        """
+
+        if len(self.points) < 2:
+            return Line(self.points)
+
+        resampled_points = []
+
+        # 1. Resample the first section. 2. Loop over the remaining points
+        # in the line and resample the remaining sections.
+        # 3. Extend the list with the resampled points, except the first one
+        # (because it's already contained in the previous set of
+        # resampled points).
+
+        resampled_points.extend(self.points[0].equally_spaced_points(
+                self.points[1], section_length))
+
+        # Skip the first point, it's already resampled
+        for i in range(2, len(self.points)):
+            points = resampled_points[-1].equally_spaced_points(
+                    self.points[i], section_length)
+
+            resampled_points.extend(points[1:])
+
+        return Line(resampled_points)
