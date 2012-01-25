@@ -218,9 +218,9 @@ class Line(object):
     This class represents a geographical line, which is basically
     a sequence of geographical points.
 
-    A line is defined by at least two different points. The surface
-    projection of a line cannot intersect itself (depth dimension
-    is neglected to check if a line intersects itself or not).
+    A line is defined by at least one point. The surface projection
+    of a line cannot intersect itself (depth dimension is neglected
+    to check if a line intersects itself or not).
 
     :param points:
         The sequence of points defining this line.
@@ -233,8 +233,8 @@ class Line(object):
 
         self._remove_duplicates()
 
-        if len(points) < 2:
-            raise RuntimeError("Two points are needed to create a line!")
+        if len(self.points) < 1:
+            raise RuntimeError("One point needed to create a line!")
 
         if self._intersect_itself():
             raise RuntimeError("Line intersects itself!")
@@ -244,6 +244,9 @@ class Line(object):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def __len__(self):
+        return len(self.points)
 
     def _remove_duplicates(self):
         """
@@ -269,6 +272,9 @@ class Line(object):
         :rtype:
             boolean
         """
+
+        if len(self.points) < 2:
+            return False
 
         values = []
 
@@ -313,6 +319,9 @@ class Line(object):
         :rtype:
             An instance of :class:`nhe.geo.Line`
         """
+
+        if len(self.points) < 2:
+            return Line(self.points)
 
         resampled_points = []
 
