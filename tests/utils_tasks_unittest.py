@@ -132,8 +132,8 @@ class DistributeTestCase(unittest.TestCase):
         else:
             raise Exception("Exception not raised.")
 
-    def test_distribute_returns_results_in_right_order(self):
-        """Results are returned in the right order and flattened by default."""
+    def test_distribute_returns_results_in_right_order_when_flattened(self):
+        """Results are returned in the right order when flattened."""
         expected = range(7)
         result = tasks.distribute(reflect_data_to_be_processed,
                                   ("data", range(7)), flatten_results=True)
