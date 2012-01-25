@@ -20,7 +20,6 @@
 
 
 import json
-import multiprocessing
 import random
 import time
 
@@ -69,11 +68,11 @@ def unwrap_validation_error(jpype, runtime_exception, path=None):
 @task(ignore_result=True)
 @java.unpack_exception
 @stats.progress_indicator("h")
-def compute_hazard_curve(job_id, site, realization):
+def compute_hazard_curve(job_id, sites, realization):
     """ Generate hazard curve for the given site. """
 
     calculator = utils_tasks.calculator_for_task(job_id, 'hazard')
-    keys = calculator.compute_hazard_curve([site], realization)
+    keys = calculator.compute_hazard_curve(sites, realization)
     return keys
 
 
@@ -216,6 +215,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         gmpe_generator.seed(self.calc_proxy["GMPE_LT_RANDOM_SEED"])
 
         stats.pk_set(self.calc_proxy.job_id, "hcls_crealization", 0)
+
         for realization in xrange(0, realizations):
             stats.pk_inc(self.calc_proxy.job_id, "hcls_crealization")
             LOG.info("Calculating hazard curves for realization %s"
@@ -223,16 +223,16 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             self.store_source_model(source_model_generator.getrandbits(32))
             self.store_gmpe_map(source_model_generator.getrandbits(32))
 
-            utils_tasks.distribute(
-                the_task, ("sites", sites),
-                dict(job_id=self.calc_proxy.job_id, realization=realization),
-                ath=serializer)
+            tf_args = dict(job_id=self.calc_proxy.job_id,
+                           realization=realization)
+            ath_args = dict(sites=sites, realization=realization)
+            utils_tasks.distribute(the_task, ("site", sites), tf_args=tf_args,
+                                   ath=serializer, ath_args=ath_args)
 
     # pylint: disable=R0913
-    def do_means(self, sites, realizations,
-                 curve_serializer=None,
-                 curve_task=compute_mean_curves,
-                 map_func=None, map_serializer=None):
+    def do_means(self, sites, realizations, curve_serializer=None,
+                 curve_task=compute_mean_curves, map_func=None,
+                 map_serializer=None):
         """Trigger the calculation of mean curves/maps, serialize as requested.
 
         The calculated mean curves/maps will only be serialized if the
@@ -265,10 +265,11 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         # Compute and serialize the mean curves.
         LOG.info("Computing mean hazard curves")
 
-        utils_tasks.distribute(
-            curve_task, ("sites", sites),
-            dict(job_id=self.calc_proxy.job_id, realizations=realizations),
-            ath=curve_serializer)
+        tf_args = dict(job_id=self.calc_proxy.job_id,
+                       realizations=realizations)
+        ath_args = dict(sites=sites)
+        utils_tasks.distribute(curve_task, ("sites", sites), tf_args=tf_args,
+                               ath=curve_serializer, ath_args=ath_args)
 
         if self.poes_hazard_maps:
             assert map_func, "No calculation function for mean hazard maps set"
@@ -280,11 +281,10 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             map_serializer(sites, self.poes_hazard_maps)
 
     # pylint: disable=R0913
-    def do_quantiles(self, sites, realizations, quantiles,
-                     curve_serializer=None,
-                     curve_task=compute_quantile_curves,
-                     map_func=None,
-                     map_serializer=None):
+    def do_quantiles(
+        self, sites, realizations, quantiles, curve_serializer=None,
+        curve_task=compute_quantile_curves, map_func=None,
+        map_serializer=None):
         """Trigger the calculation/serialization of quantile curves/maps.
 
         The calculated quantile curves/maps will only be serialized if the
@@ -319,11 +319,11 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         # compute and serialize quantile hazard curves
         LOG.info("Computing quantile hazard curves")
 
-        utils_tasks.distribute(
-            curve_task, ("sites", sites),
-            dict(job_id=self.calc_proxy.job_id, realizations=realizations,
-                 quantiles=quantiles),
-            ath=curve_serializer)
+        tf_args = dict(job_id=self.calc_proxy.job_id,
+                       realizations=realizations, quantiles=quantiles)
+        ath_args = dict(sites=sites, **tf_args)
+        utils_tasks.distribute(curve_task, ("site", sites), tf_args=tf_args,
+                               ath=curve_serializer, ath_args=ath_args)
 
         if self.poes_hazard_maps:
             assert map_func, "No calculation function for quantile maps set."

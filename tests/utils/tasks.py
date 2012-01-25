@@ -87,6 +87,12 @@ def just_say_hello(*args, **kwargs):
 
 
 @task
+def just_say_1(*args, **kwargs):
+    """Merely returns 'hello'."""
+    return 1
+
+
+@task
 def single_arg_called_a(a):
     """Takes a single argument called `a` and merely returns `True`."""
     return True
