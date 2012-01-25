@@ -5,6 +5,50 @@ from nhe.surface.planar import PlanarSurface
 import _planar_test_data as test_data
 
 
+class PlanarSurfaceCreationTestCase(unittest.TestCase):
+    def assert_failed_creation(self, corners, exc, msg):
+        with self.assertRaises(exc) as ae:
+            PlanarSurface(*corners)
+        self.assertEqual(ae.exception.message, msg)
+
+    def test_top_edge_depth_differs(self):
+        corners = [Point(0, -1, 0.3), Point(0, 1, 0.30001),
+                   Point(0, 1, 0.5), Point(0, -1, 0.5)]
+        self.assert_failed_creation(corners, RuntimeError,
+            'top and bottom edges must be parallel to the earth surface'
+        )
+
+    def test_bottom_edge_depth_differs(self):
+        corners = [Point(0, -1, 0.3), Point(0, 1, 0.3),
+                   Point(0, 1, 0.5), Point(0, -1, 0.499999)]
+        self.assert_failed_creation(corners, RuntimeError,
+            'top and bottom edges must be parallel to the earth surface'
+        )
+
+    def test_twisted_surface(self):
+        corners = [Point(0, -1, 1), Point(0, 1, 1),
+                   Point(0, -1, 2), Point(0, 1, 2)]
+        self.assert_failed_creation(corners, RuntimeError,
+            'top and bottom edges must be parallel'
+        )
+
+    def test_edges_not_parallel(self):
+        corners = [Point(0, -1, 1), Point(0, 1, 1),
+                   Point(-0.3, 1, 2), Point(0.3, -1, 2)]
+        self.assert_failed_creation(corners, RuntimeError,
+            'top and bottom edges must be parallel'
+        )
+
+    def test_edges_not_parallel_within_tolerance(self):
+        top_left, top_right = Point(0, -1, 1), Point(0, 1, 1)
+        bottom_right, bottom_left = Point(-0.003, 1, 2), Point(0.003, -1, 2)
+        surface = PlanarSurface(top_left, top_right, bottom_right, bottom_left)
+        self.assertEqual(surface.top_left, top_left)
+        self.assertEqual(surface.top_right, top_right)
+        self.assertEqual(surface.bottom_left, bottom_left)
+        self.assertEqual(surface.bottom_right, bottom_right)
+
+
 class PlanarSurfaceGetMeshTestCase(unittest.TestCase):
     def _test(self, corner_points, mesh_spacing, expected_mesh):
         surface = PlanarSurface(*corner_points)

@@ -11,14 +11,20 @@ class PlanarSurface(BaseSurface):
     Parameters are four points defining the surface corners in clockwise
     direction starting from top left corner. Top and bottom edges
     of the polygon must be parallel to earth surface and to each other.
+
+    :raises RuntimeError:
+        If either top or bottom points differ in depth or if top edge
+        is not parallel to the bottom edge (the tolerance of one degree
+        applies).
     """
     def __init__(self, top_left, top_right, bottom_right, bottom_left):
-        assert (top_left.depth == top_right.depth
-                and bottom_left.depth == bottom_right.depth), \
-               "top and bottom edges must be parallel to the earth surface"
-        assert abs(top_left.azimuth(top_right)
-                   - bottom_left.azimuth(bottom_right)) < 1, \
-               "top and bottom edges must be parallel"
+        if not (top_left.depth == top_right.depth
+                and bottom_left.depth == bottom_right.depth):
+            raise RuntimeError("top and bottom edges must be parallel "
+                               "to the earth surface")
+        if not (abs(top_left.azimuth(top_right)
+                    - bottom_left.azimuth(bottom_right)) < 1):
+            raise RuntimeError("top and bottom edges must be parallel")
         self.top_left = top_left
         self.top_right = top_right
         self.bottom_right = bottom_right
