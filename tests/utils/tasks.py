@@ -88,7 +88,7 @@ def just_say_hello(*args, **kwargs):
 
 @task
 def just_say_1(*args, **kwargs):
-    """Merely returns 'hello'."""
+    """Merely returns 1."""
     return 1
 
 
