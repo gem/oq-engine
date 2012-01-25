@@ -108,7 +108,7 @@ class DoCurvesTestCase(unittest.TestCase):
     def test_serializer_called_when_passed(self):
         """The passed serialization function is called for each realization."""
 
-        def fake_serializer(sites, realization):
+        def fake_serializer(sites, **kwargs):
             """Fake serialization function to be used in this test."""
             self.assertEqual(self.sites, sites)
 
@@ -156,7 +156,7 @@ class DoMeansTestCase(unittest.TestCase):
     def test_curve_serializer_called_when_passed(self):
         """The passed mean curve serialization function is called."""
 
-        def fake_serializer(sites):
+        def fake_serializer(sites, **kwargs):
             """Fake serialization function to be used in this test."""
             self.assertEqual(self.sites, sites)
             fake_serializer.number_of_calls += 1
@@ -167,9 +167,9 @@ class DoMeansTestCase(unittest.TestCase):
 
         key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
         self.keys.append(key)
-        self.calculator.do_means(self.sites, 1,
-                        curve_serializer=fake_serializer,
-                        curve_task=test_async_data_reflector)
+        self.calculator.do_means(
+            self.sites, 1, curve_serializer=fake_serializer,
+            curve_task=test_async_data_reflector)
         self.assertEqual(1, fake_serializer.number_of_calls)
 
     def test_map_serializer_not_called_unless_configured(self):
@@ -299,7 +299,7 @@ class DoQuantilesTestCase(unittest.TestCase):
     def test_curve_serializer_called_when_passed(self):
         """The passed quantile curve serialization function is called."""
 
-        def fake_serializer(sites, quantiles):
+        def fake_serializer(**kwargs):
             """Fake serialization function to be used in this test."""
             fake_serializer.number_of_calls += 1
 
@@ -307,9 +307,9 @@ class DoQuantilesTestCase(unittest.TestCase):
 
         key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
         self.keys.append(key)
-        self.calculator.do_quantiles(self.sites, 1, [0.2, 0.4],
-                            curve_serializer=fake_serializer,
-                            curve_task=test_async_data_reflector)
+        self.calculator.do_quantiles(
+            self.sites, 1, [0.2, 0.4], curve_serializer=fake_serializer,
+            curve_task=test_async_data_reflector)
         # The serializer is called only once (for all quantiles).
         self.assertEqual(1, fake_serializer.number_of_calls)
 
