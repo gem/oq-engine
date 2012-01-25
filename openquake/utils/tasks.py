@@ -74,7 +74,7 @@ def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None):
             sample = results[0]
             if (isinstance(sample, list) or isinstance(sample, tuple)
                 or isinstance(sample, set)):
-                    results = list(itertools.chain(*results))
+                results = list(itertools.chain(*results))
         return results
 
 
