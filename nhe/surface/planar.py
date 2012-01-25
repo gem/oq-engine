@@ -57,8 +57,22 @@ class PlanarSurface(BaseSurface):
 
     def get_mesh(self, mesh_spacing):
         """
-        See :meth:`nhe.surface.base.BaseSurface.get_mesh`.
+        Create and return an uniformly-spaced mesh covering the surface plane.
+
+        See :meth:`nhe.surface.base.BaseSurface.get_mesh` for parameter
+        and return value definitions.
+
+        If both the width and length of the rupture are smaller than
+        the requested mesh spacing the returned mesh contains only
+        one point which is the rupture's centroid.
         """
+        if self.length < mesh_spacing and self.width < mesh_spacing:
+            diag_length = (self.width ** 2 + self.length ** 2) ** 0.5
+            diag_line = self.top_left.equally_spaced_points(self.bottom_right,
+                                                            diag_length / 2)
+            assert len(diag_line) == 3
+            return [[diag_line[1]]]
+
         mesh = []
         l_line = self.top_left.equally_spaced_points(self.bottom_left,
                                                      mesh_spacing)
