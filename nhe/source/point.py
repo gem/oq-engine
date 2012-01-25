@@ -4,8 +4,8 @@ Module :mod:`nhe.source.point` defines :class:`PointSource`.
 import math
 
 from nhe.common.geo import Point
-from nhe.source.base import SeismicSource, SourceError
-from nhe.source.rupture import Rupture, EvenlyGriddedSurface
+from nhe.surface.planar import PlanarSurface
+from nhe.source.base import SeismicSource, SourceError, Rupture
 
 
 class PointSource(SeismicSource):
@@ -108,7 +108,7 @@ class PointSource(SeismicSource):
         :param hypocenter:
             Point representing rupture's hypocenter.
         :returns:
-            Instance of :class:`nhe.source.rupture.EvenlyGriddedSurface`.
+            Instance of :class:`nhe.surface.planar.PlanarSurface`.
         """
         assert self.upper_seismogenic_depth <= hypocenter.depth \
                and self.lower_seismogenic_depth >= hypocenter.depth
@@ -189,5 +189,4 @@ class PointSource(SeismicSource):
                                             vertical_increment=0,
                                             azimuth=azimuth_left)
 
-        return EvenlyGriddedSurface(left_top, right_top, right_bottom,
-                                    left_bottom, rup_length, rup_width)
+        return PlanarSurface(left_top, right_top, right_bottom, left_bottom)

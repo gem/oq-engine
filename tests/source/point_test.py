@@ -39,6 +39,17 @@ class PointSourceRuptureReshapingTestCase(unittest.TestCase):
         self.assertEqual(rupture.rake, -123.23)
         return rupture
 
+    def _check_dimensions(self, surface, length, width, delta=1e-3):
+        length_top = surface.top_left.distance(surface.top_right)
+        length_bottom = surface.bottom_left.distance(surface.bottom_right)
+        self.assertAlmostEqual(length_top, length_bottom, delta=delta)
+        self.assertAlmostEqual(length_top, length, delta=delta)
+
+        width_left = surface.top_left.distance(surface.bottom_left)
+        width_right = surface.top_right.distance(surface.bottom_right)
+        self.assertAlmostEqual(width_left, width_right, delta=delta)
+        self.assertAlmostEqual(width_right, width, delta=delta)
+
     def test_1_rupture_is_inside(self):
         rupture = self._get_rupture(min_mag=5, max_mag=6, hypocenter_depth=8,
                                     aspect_ratio=1, dip=30)
@@ -47,8 +58,7 @@ class PointSourceRuptureReshapingTestCase(unittest.TestCase):
         self.assertAlmostEqual(rupture.probability, 0.0440025182)
 
         surface = rupture.surface
-        self.assertAlmostEqual(surface.length, 5.623413252)
-        self.assertAlmostEqual(surface.width, 5.623413252)
+        self._check_dimensions(surface, 5.623413252, 5.623413252)
         self.assertAlmostEqual(0, surface.top_left.distance(Point(
             -0.0333647435005, -0.00239548066924, 6.59414668702
         )))
@@ -70,8 +80,7 @@ class PointSourceRuptureReshapingTestCase(unittest.TestCase):
         self.assertAlmostEqual(rupture.probability, 0.0440025182)
 
         surface = rupture.surface
-        self.assertAlmostEqual(surface.length, 5.623413252)
-        self.assertAlmostEqual(surface.width, 5.623413252)
+        self._check_dimensions(surface, 5.623413252, 5.623413252)
         self.assertAlmostEqual(0, surface.top_left.distance(Point(
             -0.0288945127134, -0.0068657114195, 2.0
         )))
@@ -91,8 +100,7 @@ class PointSourceRuptureReshapingTestCase(unittest.TestCase):
         self.assertEqual(rupture.hypocenter, Point(0, 0, 15))
 
         surface = rupture.surface
-        self.assertAlmostEqual(surface.length, 5.623413252)
-        self.assertAlmostEqual(surface.width, 5.623413252)
+        self._check_dimensions(surface, 5.623413252, 5.623413252)
         self.assertAlmostEqual(0, surface.top_left.distance(Point(
             -0.0378349744035, 0.00207474995049, 13.188293374
         )))
@@ -113,8 +121,9 @@ class PointSourceRuptureReshapingTestCase(unittest.TestCase):
         self.assertEqual(rupture.hypocenter, Point(0, 0, 9))
 
         surface = rupture.surface
-        self.assertAlmostEqual(surface.length, 112.93848786315641)
-        self.assertAlmostEqual(surface.width, 28)
+        # in this test we need to increase the tolerance because the rupture
+        # created is rather big and float imprecision starts to be noticeable
+        self._check_dimensions(surface, 112.93848786315641, 28, delta=2e-3)
 
         self.assertAlmostEqual(0, surface.top_left.distance(Point(
             -0.436201680751, -0.281993828512, 2.0
@@ -135,8 +144,7 @@ class PointSourceRuptureReshapingTestCase(unittest.TestCase):
         self.assertEqual(rupture.hypocenter, Point(0, 0, 9))
 
         surface = rupture.surface
-        self.assertAlmostEqual(surface.length, 7.9527072876705063)
-        self.assertAlmostEqual(surface.width, 3.9763536438352536)
+        self._check_dimensions(surface, 7.9527072876705063, 3.9763536438352536)
 
         self.assertAlmostEqual(0, surface.top_left.distance(Point(
             -0.0252862987308, -0.0252862962683, 7.01182317808

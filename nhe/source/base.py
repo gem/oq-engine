@@ -48,3 +48,36 @@ class SeismicSource(object):
         :returns:
             Generator of instances of :class:`nhe.source.rupture.Rupture`.
         """
+
+
+class Rupture(object):
+    """
+    Probabilistic rupture object represents a single earthquake rupture
+    associated to a probability of occurrence value.
+
+    :param source:
+        Seismic source the rupture belongs to. An instance of one of subclasses
+        of :class:`nhe.source.base.SeismicSource`.
+    :param mag:
+        Magnitude of the rupture.
+    :param rake:
+        Rupture propagation direction in degrees.
+    :param hypocenter:
+        A :class:`~nhe.common.geo.Point`, rupture's hypocenter.
+    :param probability:
+        A probability of the rupture to occur within some time span. The value
+        should take into account the probabilities of these exact nodal plane,
+        magnitude and hypocenter, as well as a probability of occurrence within
+        a given time span (obtained from :mod:`temporal occurrence model
+        <nhe.common.tom>`).
+    """
+    def __init__(self, source, mag, rake, hypocenter, probability, surface):
+        assert mag > 0
+        assert hypocenter.depth > 0
+        assert 0 < probability <= 1
+        self.source = source
+        self.mag = mag
+        self.rake = rake
+        self.hypocenter = hypocenter
+        self.probability = probability
+        self.surface = surface
