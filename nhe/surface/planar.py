@@ -15,17 +15,41 @@ class PlanarSurface(BaseSurface):
 
     :raises RuntimeError:
         If either top or bottom points differ in depth or if top edge
-        is not parallel to the bottom edge (the tolerance of one degree
-        applies).
+        is not parallel to the bottom edge, or if top edge differs
+        in length from the bottom one.
     """
+    #: The maximum angle between top and bottom edges for them
+    #: to be considered parallel, in degrees.
+    ANGLE_TOLERANCE = 0.1
+    #: Maximum difference between lengths of top and bottom edges
+    #: in kilometers.
+    LENGTH_TOLERANCE = 1e-3
+
     def __init__(self, top_left, top_right, bottom_right, bottom_left):
         if not (top_left.depth == top_right.depth
                 and bottom_left.depth == bottom_right.depth):
             raise RuntimeError("top and bottom edges must be parallel "
                                "to the earth surface")
-        if not (abs(top_left.azimuth(top_right)
-                    - bottom_left.azimuth(bottom_right)) < 1):
+
+        top_azimuth = top_left.azimuth(top_right)
+        bottom_azimuth = bottom_left.azimuth(bottom_right)
+        azimuth_diff = abs(top_azimuth - bottom_azimuth)
+        if azimuth_diff > 180:
+            azimuth_diff = abs(360 - azimuth_diff)
+        if not (azimuth_diff < self.ANGLE_TOLERANCE):
             raise RuntimeError("top and bottom edges must be parallel")
+
+        top_length = top_left.distance(top_right)
+        bottom_length = bottom_left.distance(bottom_right)
+        if not abs(top_length - bottom_length) < self.LENGTH_TOLERANCE:
+            raise RuntimeError("top and bottom edges must have "
+                               "the same length")
+        self.length = top_length
+
+        # we don't need to check if left edge has the same length
+        # as right one because previous checks guarantee that.
+        self.width = top_left.distance(bottom_left)
+
         self.top_left = top_left
         self.top_right = top_right
         self.bottom_right = bottom_right
@@ -33,8 +57,22 @@ class PlanarSurface(BaseSurface):
 
     def get_mesh(self, mesh_spacing):
         """
-        See :meth:`nhe.surface.base.BaseSurface.get_mesh`.
+        Create and return an uniformly-spaced mesh covering the surface plane.
+
+        See :meth:`nhe.surface.base.BaseSurface.get_mesh` for parameter
+        and return value definitions.
+
+        If both the width and length of the rupture are smaller than
+        the requested mesh spacing the returned mesh contains only
+        one point which is the rupture's centroid.
         """
+        if self.length < mesh_spacing and self.width < mesh_spacing:
+            diag_length = (self.width ** 2 + self.length ** 2) ** 0.5
+            diag_line = self.top_left.equally_spaced_points(self.bottom_right,
+                                                            diag_length / 2)
+            assert len(diag_line) == 3
+            return [[diag_line[1]]]
+
         mesh = []
         l_line = self.top_left.equally_spaced_points(self.bottom_left,
                                                      mesh_spacing)

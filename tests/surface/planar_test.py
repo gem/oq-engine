@@ -39,14 +39,41 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
             'top and bottom edges must be parallel'
         )
 
+    def test_top_edge_shorter_than_bottom_edge(self):
+        corners = [Point(0, -1, 1), Point(0, 1, 1),
+                   Point(0, 1.2, 2), Point(0, -1.2, 2)]
+        self.assert_failed_creation(corners, RuntimeError,
+            'top and bottom edges must have the same length'
+        )
+
+    def assert_successfull_creation(self, tl, tr, br, bl):
+        surface = PlanarSurface(tl, tr, br, bl)
+        self.assertEqual(surface.top_left, tl)
+        self.assertEqual(surface.top_right, tr)
+        self.assertEqual(surface.bottom_left, bl)
+        self.assertEqual(surface.bottom_right, br)
+
     def test_edges_not_parallel_within_tolerance(self):
-        top_left, top_right = Point(0, -1, 1), Point(0, 1, 1)
-        bottom_right, bottom_left = Point(-0.003, 1, 2), Point(0.003, -1, 2)
-        surface = PlanarSurface(top_left, top_right, bottom_right, bottom_left)
-        self.assertEqual(surface.top_left, top_left)
-        self.assertEqual(surface.top_right, top_right)
-        self.assertEqual(surface.bottom_left, bottom_left)
-        self.assertEqual(surface.bottom_right, bottom_right)
+        self.assert_successfull_creation(
+            Point(0, -1, 1), Point(0, 1, 1),
+            Point(-0.0003, 1, 2), Point(0.0003, -1, 2)
+        )
+
+    def test_edges_azimuths_cross_north_direction(self):
+        self.assert_successfull_creation(
+            Point(-0.0001, 0, 1), Point(0.0001, -1, 1),
+            Point(-0.0001, -1, 2), Point(0.0001, 0, 2)
+        )
+        self.assert_successfull_creation(
+            Point(0.0001, 0, 1), Point(-0.0001, -1, 1),
+            Point(0.0001, -1, 2), Point(-0.0001, 0, 2)
+        )
+
+    def test_edges_differ_in_length_within_tolerance(self):
+        self.assert_successfull_creation(
+            Point(0, -1, 1), Point(0, 1, 1),
+            Point(0, 1.000001, 2), Point(0, -1, 2)
+        )
 
 
 class PlanarSurfaceGetMeshTestCase(unittest.TestCase):
@@ -84,9 +111,8 @@ class PlanarSurfaceGetMeshTestCase(unittest.TestCase):
                    expected_mesh=test_data.TEST_5_MESH)
 
     def test_6(self):
-        corners = [Point(0, 0, 9)] * 4
-        mesh = [[(0, 0, 9)]]
-        self._test(corners, mesh_spacing=1, expected_mesh=mesh)
+        self._test(test_data.TEST_6_CORNERS, mesh_spacing=10,
+                   expected_mesh=test_data.TEST_6_MESH)
 
     def test_7_rupture_1(self):
         self._test(test_data.TEST_7_RUPTURE_1_CORNERS, mesh_spacing=1,
