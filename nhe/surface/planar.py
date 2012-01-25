@@ -37,12 +37,3 @@ class PlanarSurface(BaseSurface):
             right = r_line[i]
             mesh.append(left.equally_spaced_points(right, mesh_spacing))
         return mesh
-
-    def get_min_distance(self, point, discretization):
-        """
-        Implements a numerical approach to :meth:`distance calculation
-        <nhe.surface.base.BaseSurface.get_min_distance>`.
-        """
-        mesh = self.get_mesh(discretization)
-        return min(min(point.distance(mesh_point) for mesh_point in row)
-                   for row in mesh)

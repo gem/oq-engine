@@ -8,12 +8,11 @@ class BaseSurface(object):
     """
     Base class for earthquake rupture surface.
 
-    Subclasses must implement methods :meth:`get_min_distance`
-    and :meth:`get_mesh`.
+    Subclasses must implement :meth:`get_mesh` and can (for the sake
+    of performance) implement :meth:`get_min_distance`.
     """
     __metaclass__ = abc.ABCMeta
 
-    @abc.abstractmethod
     def get_min_distance(self, point, discretization):
         """
         Compute and return the minimum distance from the surface to ``point``.
@@ -29,7 +28,12 @@ class BaseSurface(object):
             if perfectly correct calculation is possible and feasible.
         :returns:
             Distance in km.
+
+        Base class implementation does a numerical approach -- finds
+        a minimum distance from each point of the :meth:`mesh <get_mesh>`.
         """
+        return min(min(point.distance(mesh_point) for mesh_point in row)
+                   for row in self.get_mesh(discretization))
 
     @abc.abstractmethod
     def get_mesh(self, mesh_spacing):
