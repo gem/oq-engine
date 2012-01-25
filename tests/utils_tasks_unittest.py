@@ -67,8 +67,8 @@ class DistributeTestCase(unittest.TestCase):
         # data to be processed is passed in the keyword arguments.
         expected = [
             (), {"data_to_process": [11]}, (), {"data_to_process": [12]}]
-        result = tasks.distribute(
-            reflect_args, ("data_to_process", [11, 12]))
+        result = tasks.distribute(reflect_args, ("data_to_process", [11, 12]),
+                                  flatten_results=True)
         self.assertEqual(expected, result)
 
     def test_distribute_with_other_args(self):
@@ -83,8 +83,8 @@ class DistributeTestCase(unittest.TestCase):
         # We expect the subtasks to see the following positional and keyword
         # arguments respectively.
         expected = [
-            (), {"data_to_process": [13], "1+1": 2, "2/1": 1},
-            (), {"data_to_process": [14], "1+1": 2, "2/1": 1}]
+            ((), {"data_to_process": [13], "1+1": 2, "2/1": 1}),
+            ((), {"data_to_process": [14], "1+1": 2, "2/1": 1})]
 
         # Two subtasks will be spawned and just return the arguments they
         # received.
