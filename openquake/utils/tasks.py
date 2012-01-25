@@ -27,7 +27,8 @@ from celery.task.sets import TaskSet
 from openquake import logs
 
 
-def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None):
+def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None,
+               flatten_results=True):
     """Runs `task_func` for each of the given data items.
 
     Each subtask operates on a single `data` item.
@@ -50,6 +51,8 @@ def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None):
     :param ath: an asynchronous task handler function, may only be specified
         for a task whose results are ignored.
     :param dict ath_args: The keyword parameters for `ath`
+    :param bool flatten_results: If set, the results will be returned as a
+        single list (as opposed to [[results1], [results2], ..]).
     :returns: A list where each element is a result returned by a subtask.
         If an `ath` function is passed we return whatever it returns, `None`
         otherwise.
@@ -75,7 +78,7 @@ def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None):
         # Only called when we expect result messages to come back.
         results = result.join_native()
         _check_exception(results)
-        if results:
+        if results and flatten_results:
             sample = results[0]
             if isinstance(sample, (list, tuple, set)):
                 results = list(itertools.chain(*results))
