@@ -28,7 +28,7 @@ from openquake import logs
 
 
 def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None,
-               flatten_results=True):
+               flatten_results=False):
     """Runs `task_func` for each of the given data items.
 
     Each subtask operates on a single `data` item.

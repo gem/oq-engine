@@ -135,15 +135,15 @@ class DistributeTestCase(unittest.TestCase):
     def test_distribute_returns_results_in_right_order(self):
         """Results are returned in the right order and flattened by default."""
         expected = range(7)
-        result = tasks.distribute(
-            reflect_data_to_be_processed, ("data", range(7)))
+        result = tasks.distribute(reflect_data_to_be_processed,
+                                  ("data", range(7)), flatten_results=True)
         self.assertEqual(expected, result)
 
     def test_distribute_returns_results_wo_flattening(self):
         """Results are returned in the right order."""
         expected = [[i] for i in range(7)]
         result = tasks.distribute(reflect_data_to_be_processed,
-                                  ("data", range(7)), flatten_results=False)
+                                  ("data", range(7)))
         self.assertEqual(expected, result)
 
 
