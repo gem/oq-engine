@@ -11,10 +11,14 @@
     <xs:element name="aggregateLossCurve" type="AggregateLossCurve" substitutionGroup="gml:_Feature"/>
 
     <xs:complexType name="AggregateLossCurve">
-        <xs:sequence>
-            <xs:element name="loss" type="NonNegativeDoubleList" minOccurs="1" maxOccurs="1"/>
-            <xs:element name="poE" type="NormalizedDoubleList" minOccurs="1" maxOccurs="1"/>
-        </xs:sequence>
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="loss" type="NonNegativeDoubleList" minOccurs="1" maxOccurs="1"/>
+                    <xs:element name="poE" type="NormalizedDoubleList" minOccurs="1" maxOccurs="1"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
     </xs:complexType>
 
 </xs:schema>
