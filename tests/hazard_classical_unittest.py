@@ -22,7 +22,6 @@ Unit tests for classic PSHA hazard computations with the hazard engine.
 """
 
 import mock
-import multiprocessing
 import os
 import unittest
 
