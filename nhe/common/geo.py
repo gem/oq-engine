@@ -90,13 +90,16 @@ class Point(object):
         :type point:
             Instance of :class:`nhe.geo.Point`
         :returns:
-            The azimuth.
+            The azimuth, value in a range ``[0, 360)``.
         :rtype:
             float
         """
 
         forward_azimuth, _, _ = pyproj.Geod(ellps="sphere").inv(
             self.longitude, self.latitude, point.longitude, point.latitude)
+
+        if forward_azimuth < 0:
+            return 360 + forward_azimuth
 
         return forward_azimuth
 
