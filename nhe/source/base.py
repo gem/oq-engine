@@ -43,7 +43,8 @@ class SeismicSource(object):
     @abc.abstractmethod
     def iter_ruptures(self, temporal_occurrence_model):
         """
-        Get a generator object that yields ruptures the source consists of.
+        Get a generator object that yields probabilistic ruptures the source
+        consists of.
 
         :param temporal_occurrence_model:
             Temporal occurrence model (supposedly
