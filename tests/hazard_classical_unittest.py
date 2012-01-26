@@ -22,7 +22,6 @@ Unit tests for classic PSHA hazard computations with the hazard engine.
 """
 
 import mock
-import multiprocessing
 import os
 import unittest
 
@@ -108,7 +107,7 @@ class DoCurvesTestCase(unittest.TestCase):
     def test_serializer_called_when_passed(self):
         """The passed serialization function is called for each realization."""
 
-        def fake_serializer(sites, realization):
+        def fake_serializer(sites, **kwargs):
             """Fake serialization function to be used in this test."""
             self.assertEqual(self.sites, sites)
 
@@ -156,7 +155,7 @@ class DoMeansTestCase(unittest.TestCase):
     def test_curve_serializer_called_when_passed(self):
         """The passed mean curve serialization function is called."""
 
-        def fake_serializer(sites):
+        def fake_serializer(sites, **kwargs):
             """Fake serialization function to be used in this test."""
             self.assertEqual(self.sites, sites)
             fake_serializer.number_of_calls += 1
@@ -167,9 +166,9 @@ class DoMeansTestCase(unittest.TestCase):
 
         key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
         self.keys.append(key)
-        self.calculator.do_means(self.sites, 1,
-                        curve_serializer=fake_serializer,
-                        curve_task=test_async_data_reflector)
+        self.calculator.do_means(
+            self.sites, 1, curve_serializer=fake_serializer,
+            curve_task=test_async_data_reflector)
         self.assertEqual(1, fake_serializer.number_of_calls)
 
     def test_map_serializer_not_called_unless_configured(self):
@@ -299,7 +298,7 @@ class DoQuantilesTestCase(unittest.TestCase):
     def test_curve_serializer_called_when_passed(self):
         """The passed quantile curve serialization function is called."""
 
-        def fake_serializer(sites, quantiles):
+        def fake_serializer(**kwargs):
             """Fake serialization function to be used in this test."""
             fake_serializer.number_of_calls += 1
 
@@ -307,9 +306,9 @@ class DoQuantilesTestCase(unittest.TestCase):
 
         key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
         self.keys.append(key)
-        self.calculator.do_quantiles(self.sites, 1, [0.2, 0.4],
-                            curve_serializer=fake_serializer,
-                            curve_task=test_async_data_reflector)
+        self.calculator.do_quantiles(
+            self.sites, 1, [0.2, 0.4], curve_serializer=fake_serializer,
+            curve_task=test_async_data_reflector)
         # The serializer is called only once (for all quantiles).
         self.assertEqual(1, fake_serializer.number_of_calls)
 
@@ -401,54 +400,6 @@ class DoQuantilesTestCase(unittest.TestCase):
             curve_serializer=lambda _, __: True,
             curve_task=test_data_reflector,
             map_serializer=lambda _, __, ___: True, map_func=None)
-
-
-class NumberOfTasksTestCase(unittest.TestCase):
-    """Tests the behaviour of ClassicalHazardCalculator.number_of_tasks()."""
-
-    def setUp(self):
-        params = dict(
-            CALCULATION_MODE='Hazard',
-            SOURCE_MODEL_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_SRC_MODEL_LT,
-            GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
-            BASE_PATH=SIMPLE_FAULT_BASE_PATH)
-
-        self.calc_proxy = create_job(params)
-
-        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
-
-    def test_number_of_tasks_with_param_not_set(self):
-        """
-        When the `HAZARD_TASKS` parameter is not set the expected value is
-        twice the number of CPUs/cores.
-        """
-        self.calc_proxy.params = dict()
-        self.assertEqual(
-            2 * multiprocessing.cpu_count(), self.calculator.number_of_tasks())
-
-    def test_number_of_tasks_with_param_set_and_valid(self):
-        """
-        When the `HAZARD_TASKS` parameter *is* set and a valid integer its
-        value will be returned.
-        """
-        self.calc_proxy.params = dict(HAZARD_TASKS="5")
-        self.assertEqual(5, self.calculator.number_of_tasks())
-
-    def test_number_of_tasks_with_param_set_but_invalid(self):
-        """
-        When the `HAZARD_TASKS` parameter is set but not a valid integer a
-        `ValueError` will be raised.
-        """
-        self.calc_proxy.params = dict(HAZARD_TASKS="this-is-not-a-number")
-        self.assertRaises(ValueError, self.calculator.number_of_tasks)
-
-    def test_number_of_tasks_with_param_set_but_all_whitespace(self):
-        """
-        When the `HAZARD_TASKS` parameter is set to whitespace a
-        `ValueError` will be raised.
-        """
-        self.calc_proxy.params = dict(HAZARD_TASKS=" 	")
-        self.assertRaises(ValueError, self.calculator.number_of_tasks)
 
 
 class ClassicalExecuteTestCase(unittest.TestCase):

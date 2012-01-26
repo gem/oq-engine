@@ -168,22 +168,6 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
         validator = config.default_validators(sections, params)
         self.assertTrue(validator.is_valid()[0])
 
-    def test_hazard_tasks(self):
-        """
-        The `HAZARD_TASKS` parameter is not ignored for classical PSHA
-        calculations.
-        """
-        sections = [config.HAZARD_SECTION]
-
-        params = {config.CALCULATION_MODE: "CLASSICAL",
-                  config.SITES: "37.9, -121.9",
-                  config.DEPTHTO1PT0KMPERSEC: "33.33",
-                  config.VS30_TYPE: "measured",
-                  config.HAZARD_TASKS: "96"}
-
-        validator = config.default_validators(sections, params)
-        self.assertTrue(validator.is_valid()[0])
-
     def test_mandatory_hazard_params_without_java_names(self):
         """
         All mandatory hazard parameters must have the 'java_name' property

@@ -87,6 +87,12 @@ def just_say_hello(*args, **kwargs):
 
 
 @task
+def just_say_1(*args, **kwargs):
+    """Merely returns 1."""
+    return 1
+
+
+@task
 def single_arg_called_a(a):
     """Takes a single argument called `a` and merely returns `True`."""
     return True
@@ -122,13 +128,6 @@ def failing_jtask_task(data):
 @task
 def reflect_data_to_be_processed(data):
     """Merely returns the data received."""
-    return data
-
-
-@task
-def reflect_data_with_task_index(data, task_index):
-    """Returns the data received with the `task_index` appended."""
-    data.append(task_index)
     return data
 
 
