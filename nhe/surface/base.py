@@ -6,7 +6,7 @@ import abc
 
 class BaseSurface(object):
     """
-    Base class for earthquake rupture surface.
+    Base class for surface in 3D-space.
 
     Subclasses must implement :meth:`get_mesh` and can (for the sake
     of performance) implement :meth:`get_min_distance`.
@@ -19,9 +19,9 @@ class BaseSurface(object):
 
         :param discretization:
             The minimum precision the calculation should be done with.
-            This represents the maximum mesh spacing for the case when
-            the actual implementation uses a numerical approach (like
-            creating the :meth:`mesh <get_mesh>` and computing distances
+            This represents the mesh spacing for the case when the actual
+            implementation uses a numerical approach (like creating
+            the :meth:`mesh <get_mesh>` and computing distances
             to each point of the mesh). The value is in km. The actual
             implementation is free to provide the result with higher
             precision or ignore that parameter's value altogether
