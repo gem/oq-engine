@@ -3,7 +3,7 @@ from decimal import Decimal
 
 from nhe.const import TRT
 from nhe.source.point import PointSource
-from nhe.source.base import ProbabilisticRupture
+from nhe.source.base import ProbabilisticRupture, SourceError
 from nhe.mfd import TruncatedGR, EvenlyDiscretized
 from nhe.msr import Peer
 from nhe.common.geo import Point
@@ -14,7 +14,82 @@ from nhe.common.tom import PoissonTOM
 from tests.surface import _planar_test_data as planar_surface_test_data
 
 
-class PointSourceRuptureReshapingTestCase(unittest.TestCase):
+class PointSourceCreationTestCase(unittest.TestCase):
+    def make_point_source(self, **kwargs):
+        default_arguments = {
+            'source_id': 'source_id', 'name': 'source name',
+            'tectonic_region_type': TRT.SUBDUCTION_INTRASLAB,
+            'mfd': TruncatedGR(a_val=1, b_val=2, min_mag=3,
+                               max_mag=5, bin_width=1),
+            'location': Point(1.2, 3.4, 5.6),
+            'nodal_plane_distribution': PMF([(1, NodalPlane(1, 2, 3))]),
+            'hypocenter_distribution': PMF([(1, 4)]),
+            'upper_seismogenic_depth': 1.3,
+            'lower_seismogenic_depth': 4.9,
+            'magnitude_scaling_relationship': Peer(),
+            'rupture_aspect_ratio': 1.333
+        }
+        default_arguments.update(kwargs)
+        kwargs = default_arguments
+        source = PointSource(**kwargs)
+        for key in kwargs:
+            self.assertIs(getattr(source, key), kwargs[key])
+
+    def assert_failed_creation(self, exc, msg, **kwargs):
+        with self.assertRaises(exc) as ae:
+            self.make_point_source(**kwargs)
+        self.assertEqual(ae.exception.message, msg)
+
+    def test_wrong_trt(self):
+        self.assert_failed_creation(SourceError,
+            "unknown tectonic region type 'Sand'",
+            tectonic_region_type='Sand'
+        )
+
+    def test_negative_upper_seismogenic_depth(self):
+        self.assert_failed_creation(SourceError,
+            'upper seismogenic depth must be non-negative',
+            upper_seismogenic_depth=-0.1
+        )
+
+    def test_lower_depth_above_upper_depth(self):
+        self.assert_failed_creation(SourceError,
+            'lower seismogenic depth must be below upper seismogenic depth',
+            upper_seismogenic_depth=10, lower_seismogenic_depth=8
+        )
+
+    def test_lower_depth_equal_to_upper_depth(self):
+        self.assert_failed_creation(SourceError,
+            'lower seismogenic depth must be below upper seismogenic depth',
+            upper_seismogenic_depth=10, lower_seismogenic_depth=10
+        )
+
+    def test_hypocenter_depth_out_of_seismogenic_layer(self):
+        self.assert_failed_creation(SourceError,
+            'depths of all hypocenters must be in between '
+            'lower and upper seismogenic depths',
+            upper_seismogenic_depth=3, lower_seismogenic_depth=8,
+            hypocenter_distribution=PMF([(Decimal('0.3'), 4),
+                                         (Decimal('0.7'), 8.001)])
+        )
+
+    def test_negative_aspect_ratio(self):
+        self.assert_failed_creation(SourceError,
+            'rupture aspect ratio must be positive',
+            rupture_aspect_ratio=-1
+        )
+
+    def test_zero_aspect_ratio(self):
+        self.assert_failed_creation(SourceError,
+            'rupture aspect ratio must be positive',
+            rupture_aspect_ratio=0
+        )
+
+    def test_successfull_creation(self):
+        self.make_point_source()
+
+
+class PointSourceIterRupturesTestCase(unittest.TestCase):
     def _get_rupture(self, min_mag, max_mag, hypocenter_depth,
                      aspect_ratio, dip):
         source_id = name = 'test-source'

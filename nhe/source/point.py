@@ -13,16 +13,17 @@ class PointSource(SeismicSource):
     Point source typology represents seismicity on a single geographical
     location.
     """
-    def __init__(self, source_id, name, trt, mfd,
+    def __init__(self, source_id, name, tectonic_region_type, mfd,
                  location, nodal_plane_distribution, hypocenter_distribution,
                  upper_seismogenic_depth, lower_seismogenic_depth,
                  magnitude_scaling_relationship, rupture_aspect_ratio):
-        super(PointSource, self).__init__(source_id, name, trt, mfd)
+        super(PointSource, self).__init__(source_id, name,
+                                          tectonic_region_type, mfd)
 
         if upper_seismogenic_depth < 0:
             raise SourceError('upper seismogenic depth must be non-negative')
 
-        if lower_seismogenic_depth < upper_seismogenic_depth:
+        if not lower_seismogenic_depth > upper_seismogenic_depth:
             raise SourceError('lower seismogenic depth must be below '
                               'upper seismogenic depth')
 

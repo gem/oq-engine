@@ -21,7 +21,7 @@ class SeismicSource(object):
         within the source model.
     :param name:
         String, a human-readable name of the source.
-    :param trt:
+    :param tectonic_region_type:
         Source's tectonic regime. See :class:`const.TRT`.
     :param mfd:
         Magnitude-Frequency distribution for the source. See :mod:`nhe.mfd`.
@@ -30,12 +30,13 @@ class SeismicSource(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    def __init__(self, source_id, name, trt, mfd):
-        if not const.TRT.is_valid(trt):
-            raise SourceError('unknown tectonic region type %s' % trt)
+    def __init__(self, source_id, name, tectonic_region_type, mfd):
+        if not const.TRT.is_valid(tectonic_region_type):
+            raise SourceError('unknown tectonic region type %r' %
+                              tectonic_region_type)
         self.source_id = source_id
         self.name = name
-        self.tectonic_region_type = trt
+        self.tectonic_region_type = tectonic_region_type
         self.mfd = mfd
 
     @abc.abstractmethod
@@ -80,7 +81,7 @@ class Rupture(object):
         if not hypocenter.depth > 0:
             raise SourceError('rupture hypocenter must have positive depth')
         if not const.TRT.is_valid(tectonic_region_type):
-            raise SourceError('unknown tectonic region type %s' %
+            raise SourceError('unknown tectonic region type %r' %
                               tectonic_region_type)
         self.tectonic_region_type = tectonic_region_type
         self.mag = mag
