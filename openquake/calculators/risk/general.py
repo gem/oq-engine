@@ -155,7 +155,7 @@ class BaseRiskCalculator(Calculator):
         block_count = 0
 
         for block in split_into_blocks(self.calc_proxy.job_id, sites):
-            self.calc_proxy.blocks_keys.append(block.id)
+            self.calc_proxy.blocks_keys.append(block.block_id)
             block.to_kvs()
 
             block_count += 1
@@ -469,9 +469,17 @@ class EpsilonProvider(object):
 class Block(object):
     """A block is a collection of sites to compute."""
 
-    def __init__(self, sites, block_id):
-        self.sites = tuple(sites)
+    def __init__(self, calculation_id, block_id, sites):
+        self.calculation_id = calculation_id
         self.block_id = block_id
+        self.sites = tuple(sites)
+
+    def __eq__(self, other):
+        """Compares calculation_id, block_id, and site lists to determine
+        equality."""
+        return (self.calculation_id == other.calculation_id
+                and self.block_id == other.block_id
+                and self.sites == other.sites)
 
     def grid(self, region):
         """Provide an iterator across the unique grid points within a region,
@@ -484,21 +492,20 @@ class Block(object):
                 used_points.append(point)
                 yield point
 
-    def __eq__(self, other):
-        return self.sites == other.sites
-
     @classmethod
-    def from_kvs(cls, block_id):
+    def from_kvs(cls, calculation_id, block_id):
         """Return the block in the underlying KVS system with the given id."""
 
-        raw_sites = kvs.get_value_json_decoded(block_id)
+        block_key = kvs.tokens.risk_block_key(calculation_id, block_id)
+
+        raw_sites = kvs.get_value_json_decoded(block_key)
 
         sites = []
 
         for raw_site in raw_sites:
             sites.append(shapes.Site(raw_site[0], raw_site[1]))
 
-        return Block(sites, block_id)
+        return Block(calculation_id, block_id, sites)
 
     def to_kvs(self):
         """Store this block into the underlying KVS system."""
@@ -508,45 +515,34 @@ class Block(object):
         for site in self.sites:
             raw_sites.append(site.coords)
 
-        kvs.set_value_json_encoded(self.id, raw_sites)
+        block_key = kvs.tokens.risk_block_key(self.calculation_id,
+                                              self.block_id)
 
-    @property
-    def id(self):  # pylint: disable=C0103
-        """Return the id of this block."""
-        return self.block_id
+        kvs.set_value_json_encoded(block_key, raw_sites)
 
 
-def split_into_blocks(job_id, sites, block_size=BLOCK_SIZE):
-    """Split the set of sites into blocks. Provide an iterator
-    to the blocks.
+def split_into_blocks(calculation_id, sites, block_size=BLOCK_SIZE):
+    """Creates a generator for splitting a list of sites into
+    :class:`openquake.calculators.risk.general.Block`s.
 
-    :param job_id: the id for this job
-    :param sites: the sites to be splitted.
-    :type sites: :py:class:`list`
-    :param sites_per_block: the number of sites per block.
-    :type sites_per_block: integer
-    :returns: for each call on this iterator, the next block is returned.
-    :rtype: :py:class:`openquake.risk.general.Block`
+    :param calculation_id:
+        The id for the current calculation.
+    :param sites:
+        `list` of :class:`openquake.shapes.Site` objects to be split
+        into blocks.
+    :param int block_size:
+        The maximum size for each block.
+    :returns:
+        For each call to this generator, the next block is returned.
+    :rtype:
+        :class:`openquake.calculators.risk.general.Block`
     """
+    if block_size < 1:
+        raise RuntimeError("block_size should be at least 1.")
 
-    block_sites = []
-    block_count = 0
-
-    for site in sites:
-        block_sites.append(site)
-
-        if len(block_sites) == block_size:
-            block_id = kvs.tokens.risk_block_key(job_id, block_count)
-            yield(Block(block_sites, block_id))
-
-            block_sites = []
-            block_count += 1
-
-    if not block_sites:
-        return
-
-    block_id = kvs.tokens.risk_block_key(job_id, block_count)
-    yield(Block(block_sites, block_id))
+    for block_id, i in enumerate(xrange(0, len(sites), block_size)):
+        yield Block(calculation_id, block_id=block_id,
+                    sites=sites[i:i + block_size])
 
 
 def compute_bcr_for_block(job_id, points, get_loss_curve,
