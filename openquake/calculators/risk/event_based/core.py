@@ -220,7 +220,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
 
     def slice_gmfs(self, block_id):
         """Load and collate GMF values for all sites in this block. """
-        block = general.Block.from_kvs(block_id)
+        block = general.Block.from_kvs(self.calc_proxy.job_id, block_id)
         gmfs = self._get_db_gmfs(block.sites, self.calc_proxy.job_id)
 
         for key, gmf_slice in gmfs.items():
@@ -294,8 +294,8 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         """
         self.slice_gmfs(block_id)
 
-        points = list(general.Block.from_kvs(block_id).grid(
-            self.calc_proxy.region))
+        points = list(general.Block.from_kvs(
+            self.calc_proxy.job_id, block_id).grid(self.calc_proxy.region))
         gmf_slices = dict(
             (point.site, kvs.get_value_json_decoded(
                  kvs.tokens.gmf_set_key(self.calc_proxy.job_id, point.column,

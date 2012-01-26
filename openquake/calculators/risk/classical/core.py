@@ -269,7 +269,7 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
         """
         Calculate and store in the kvs the loss data.
         """
-        block = general.Block.from_kvs(block_id)
+        block = general.Block.from_kvs(self.calc_proxy.job_id, block_id)
 
         vuln_curves = vulnerability.load_vuln_model_from_kvs(
             self.calc_proxy.job_id)
@@ -306,8 +306,9 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
         See :func:`openquake.risk.job.general.compute_bcr_for_block` for result
         data structure spec.
         """
-        points = list(general.Block.from_kvs(block_id).grid(
-            self.calc_proxy.region))
+        calc_proxy = self.calc_proxy
+        points = list(general.Block.from_kvs(
+            calc_proxy.job_id, block_id).grid(calc_proxy.region))
         hazard_curves = dict((point.site, self._get_db_curve(point.site))
                              for point in points)
 
@@ -318,11 +319,11 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
                     vuln_function, hazard_curve)
             return compute_loss_curve(loss_ratio_curve, asset['assetValue'])
 
-        bcr = general.compute_bcr_for_block(self.calc_proxy.job_id, points,
-            get_loss_curve, float(self.calc_proxy.params['INTEREST_RATE']),
-            float(self.calc_proxy.params['ASSET_LIFE_EXPECTANCY'])
+        bcr = general.compute_bcr_for_block(calc_proxy.job_id, points,
+            get_loss_curve, float(calc_proxy.params['INTEREST_RATE']),
+            float(calc_proxy.params['ASSET_LIFE_EXPECTANCY'])
         )
-        bcr_block_key = kvs.tokens.bcr_block_key(self.calc_proxy.job_id,
+        bcr_block_key = kvs.tokens.bcr_block_key(calc_proxy.job_id,
                                                  block_id)
         kvs.set_value_json_encoded(bcr_block_key, bcr)
         LOGGER.debug('bcr result for block %s: %r', block_id, bcr)
