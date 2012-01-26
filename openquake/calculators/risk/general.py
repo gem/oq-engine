@@ -206,12 +206,14 @@ class BaseRiskCalculator(Calculator):
         """
 
         if kwargs['curve_mode'] == 'loss_ratio':
-            serialize_filename = "%s-block-%s.xml" % (
+            serialize_filename = "%s-block-#%s-block#%s.xml" % (
                 self.calc_proxy.params["LOSS_CURVES_OUTPUT_PREFIX"],
+                self.calc_proxy.job_id,
                 block_id)
         elif kwargs['curve_mode'] == 'loss':
-            serialize_filename = "%s-loss-block-%s.xml" % (
+            serialize_filename = "%s-loss-block-#%s-block#%s.xml" % (
                 self.calc_proxy.params["LOSS_CURVES_OUTPUT_PREFIX"],
+                self.calc_proxy.job_id,
                 block_id)
 
         serialize_path = os.path.join(self.calc_proxy.base_path,
@@ -492,8 +494,8 @@ class Block(object):
                 used_points.append(point)
                 yield point
 
-    @classmethod
-    def from_kvs(cls, calculation_id, block_id):
+    @staticmethod
+    def from_kvs(calculation_id, block_id):
         """Return the block in the underlying KVS system with the given id."""
 
         block_key = kvs.tokens.risk_block_key(calculation_id, block_id)
