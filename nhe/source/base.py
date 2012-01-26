@@ -58,8 +58,9 @@ class Rupture(object):
 
     :param mag:
         Magnitude of the rupture.
-    :param rake:
-        Rupture propagation direction in degrees.
+    :param nodal_plane:
+        An instance of :class:`nhe.common.nodalplane.NodalPlane` describing
+        the orientation of the rupture and it's propagation direction.
     :param tectonic_region_type:
         Rupture's tectonic regime. One of constants in :class:`nhe.const.TRT`.
     :param hypocenter:
@@ -72,7 +73,8 @@ class Rupture(object):
         If magnitude value is not positive, hypocenter is above the earth
         surface or tectonic region type is unknown.
     """
-    def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface):
+    def __init__(self, mag, nodal_plane, tectonic_region_type,
+                 hypocenter, surface):
         if not mag > 0:
             raise SourceError('magnitude must be positive')
         if not hypocenter.depth > 0:
@@ -82,7 +84,7 @@ class Rupture(object):
                               tectonic_region_type)
         self.tectonic_region_type = tectonic_region_type
         self.mag = mag
-        self.rake = rake
+        self.nodal_plane = nodal_plane
         self.hypocenter = hypocenter
         self.surface = surface
 
@@ -101,12 +103,13 @@ class ProbabilisticRupture(Rupture):
     :raises SourceError:
         If occurrence rate is not positive.
     """
-    def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
+    def __init__(self, mag, nodal_plane, tectonic_region_type,
+                 hypocenter, surface,
                  occurrence_rate, temporal_occurrence_model):
         if not occurrence_rate > 0:
             raise SourceError('occurrence rate must be positive')
         super(ProbabilisticRupture, self).__init__(
-            mag, rake, tectonic_region_type, hypocenter, surface
+            mag, nodal_plane, tectonic_region_type, hypocenter, surface
         )
         self.temporal_occurrence_model = temporal_occurrence_model
         self.occurrence_rate = occurrence_rate

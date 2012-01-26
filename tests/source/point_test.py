@@ -41,7 +41,7 @@ class PointSourceRuptureReshapingTestCase(unittest.TestCase):
         [rupture] = ruptures
         self.assertIs(rupture.temporal_occurrence_model, tom)
         self.assertIs(rupture.tectonic_region_type, trt)
-        self.assertEqual(rupture.rake, -123.23)
+        self.assertEqual(rupture.nodal_plane, nodal_plane)
         return rupture
 
     def _check_dimensions(self, surface, length, width, delta=1e-3):
@@ -167,68 +167,78 @@ class PointSourceRuptureReshapingTestCase(unittest.TestCase):
     def test_7_many_ruptures(self):
         source_id = name = 'test7-source'
         trt = TRT.VOLCANIC
-        mfd = EvenlyDiscretized(min_mag=4.5, bin_width=1,
-                                occurrence_rates=[9e-3, 9e-4])
-        location = Point(0, 0)
-
-        nodal_plane1 = NodalPlane(strike=45, dip=90, rake=0)
-        nodal_plane2 = NodalPlane(strike=0, dip=45, rake=10)
-        nodal_plane_distribution = PMF([
-            (Decimal('0.3'), nodal_plane1), (Decimal('0.7'), nodal_plane2)
-        ])
-        hypocenter_distribution = PMF([
-            (Decimal('0.8'), 9.0), (Decimal('0.2'), 10.0)
-        ])
+        mag1 = 4.5
+        mag2 = 5.5
+        mag1_rate = 9e-3
+        mag2_rate = 9e-4
+        hypocenter1 = 9.0
+        hypocenter2 = 10.0
+        hypocenter1_weight = Decimal('0.8')
+        hypocenter2_weight = Decimal('0.2')
+        nodalplane1 = NodalPlane(strike=45, dip=90, rake=0)
+        nodalplane2 = NodalPlane(strike=0, dip=45, rake=10)
+        nodalplane1_weight = Decimal('0.3')
+        nodalplane2_weight = Decimal('0.7')
         upper_seismogenic_depth = 2
         lower_seismogenic_depth = 16
-        magnitude_scaling_relationship = Peer()
         rupture_aspect_ratio = 2
+        location = Point(0, 0)
+        magnitude_scaling_relationship = Peer()
+        tom = PoissonTOM(time_span=50)
+
+        mfd = EvenlyDiscretized(min_mag=mag1, bin_width=(mag2 - mag1),
+                                occurrence_rates=[mag1_rate, mag2_rate])
+        nodal_plane_distribution = PMF([(nodalplane1_weight, nodalplane1),
+                                        (nodalplane2_weight, nodalplane2)])
+        hypocenter_distribution = PMF([(hypocenter1_weight, hypocenter1),
+                                       (hypocenter2_weight, hypocenter2)])
         point_source = PointSource(
             source_id, name, trt, mfd,
             location, nodal_plane_distribution, hypocenter_distribution,
             upper_seismogenic_depth, lower_seismogenic_depth,
             magnitude_scaling_relationship, rupture_aspect_ratio
         )
-        tom = PoissonTOM(time_span=50)
         actual_ruptures = list(point_source.iter_ruptures(tom))
         self.assertEqual(len(actual_ruptures), 8)
         expected_ruptures = {
-            (4.5, 0, 9.0): (
+            (mag1, nodalplane1, hypocenter1): (
+                # probabilistic rupture's occurrence rate
                 9e-3 * 0.3 * 0.8,
+                # rupture surface corners
                 planar_surface_test_data.TEST_7_RUPTURE_1_CORNERS
             ),
-            (5.5, 0, 9.0): (
+            (mag2, nodalplane1, hypocenter1): (
                 9e-4 * 0.3 * 0.8,
                 planar_surface_test_data.TEST_7_RUPTURE_2_CORNERS
             ),
-            (4.5, 10, 9.0): (
+            (mag1, nodalplane2, hypocenter1): (
                 9e-3 * 0.7 * 0.8,
                 planar_surface_test_data.TEST_7_RUPTURE_3_CORNERS
             ),
-            (5.5, 10, 9.0): (
+            (mag2, nodalplane2, hypocenter1): (
                 9e-4 * 0.7 * 0.8,
                 planar_surface_test_data.TEST_7_RUPTURE_4_CORNERS
             ),
-            (4.5, 0, 10.0): (
+            (mag1, nodalplane1, hypocenter2): (
                 9e-3 * 0.3 * 0.2,
                 planar_surface_test_data.TEST_7_RUPTURE_5_CORNERS
             ),
-            (5.5, 0, 10.0): (
+            (mag2, nodalplane1, hypocenter2): (
                 9e-4 * 0.3 * 0.2,
                 planar_surface_test_data.TEST_7_RUPTURE_6_CORNERS
             ),
-            (4.5, 10, 10.0): (
+            (mag1, nodalplane2, hypocenter2): (
                 9e-3 * 0.7 * 0.2,
                 planar_surface_test_data.TEST_7_RUPTURE_7_CORNERS
             ),
-            (5.5, 10, 10.0): (
+            (mag2, nodalplane2, hypocenter2): (
                 9e-4 * 0.7 * 0.2,
                 planar_surface_test_data.TEST_7_RUPTURE_8_CORNERS
             )
         }
         for actual_rupture in actual_ruptures:
             expected_occurrence_rate, expected_corners = expected_ruptures[
-                (actual_rupture.mag, actual_rupture.rake,
+                (actual_rupture.mag, actual_rupture.nodal_plane,
                  actual_rupture.hypocenter.depth)
             ]
             self.assertTrue(isinstance(actual_rupture, ProbabilisticRupture))
