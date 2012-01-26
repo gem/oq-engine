@@ -274,9 +274,8 @@ class PythonAMQPLogTestCase(unittest.TestCase):
                 if self.stop_on_timeout:
                     raise StopIteration()
 
-        logsource = _AMQPLogSource('oq.testlogger.#', timeout=0.1)
+        logsource = _AMQPLogSource('oq.testlogger.#', timeout=1.0)
         logsource_thread = threading.Thread(target=logsource.run)
-        logsource_thread.start()
         handler = logging.handlers.BufferingHandler(float('inf'))
         logger = logging.getLogger('oq.testlogger')
         logger.addHandler(handler)
@@ -294,6 +293,7 @@ class PythonAMQPLogTestCase(unittest.TestCase):
             )
             self.producer.publish(msg.copy(),
                                   routing_key='oq.testlogger.sublogger')
+            logsource_thread.start()
             timeout.wait()
             timeout.clear()
             # raising minimum level to make sure that info message
