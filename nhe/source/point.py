@@ -12,6 +12,33 @@ class PointSource(SeismicSource):
     """
     Point source typology represents seismicity on a single geographical
     location.
+
+    :param location:
+        :class:`~nhe.common.geo.Point` object representing the location
+        of the seismic source. The depth value of that point is ignored.
+    :param nodal_plane_distribution:
+        :class:`~nhe.common.pmf.PMF` object with values that are instances
+        of :class:`nhe.common.nodalplane.NodalPlane`. Shows the distribution
+        of probability for rupture to have the certain nodal plane.
+    :param hypocenter_distribution:
+        :class:`~nhe.common.pmf.PMF` with values being float numbers in km
+        representing the depth of the hypocenter. Latitude and longitude
+        of the hypocenter is always set to ones of ``location``.
+    :param upper_seismogenic_depth:
+        Minimum depth an earthquake rupture can reach, in km.
+    :param lower_seismogenic_depth:
+        Maximum depth an earthquake rupture can reach, in km.
+    :param magnitude_scaling_relationship:
+        Instance of subclass of :class:`nhe.msr.base.BaseMSR` to describe
+        how does the area of the rupture depend on magnitude and rake.
+    :param rupture_aspect_ratio:
+        Float number representing how much source's ruptures are more wide
+        than tall. Aspect ratio of 1 means ruptures have square shape,
+        value below 1 means ruptures stretch vertically more than horizontally
+        and vice versa.
+
+    See also :class:`nhe.source.base.SeismicSource` for description of other
+    parameters.
     """
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  location, nodal_plane_distribution, hypocenter_distribution,
@@ -44,6 +71,12 @@ class PointSource(SeismicSource):
         self.rupture_aspect_ratio = rupture_aspect_ratio
 
     def iter_ruptures(self, temporal_occurrence_model):
+        """
+        See :meth:`nhe.source.base.SeismicSource.iter_ruptures`.
+
+        Generate one rupture for each combination of magnitude, nodal plane
+        and hypocenter depth.
+        """
         for (mag, mag_occ_rate) in self.mfd.get_annual_occurrence_rates():
             for (np_prob, np) in self.nodal_plane_distribution.data:
                 for (hc_prob, hc_depth) in self.hypocenter_distribution.data:
