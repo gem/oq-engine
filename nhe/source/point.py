@@ -91,7 +91,7 @@ class PointSource(SeismicSource):
                                        depth=hc_depth)
                     occurrence_rate = (mag_occ_rate
                                        * float(np_prob) * float(hc_prob))
-                    surface = self.get_rupture_surface(mag, np, hypocenter)
+                    surface = self._get_rupture_surface(mag, np, hypocenter)
                     yield ProbabilisticRupture(
                         mag, np, self.tectonic_region_type, hypocenter,
                         surface, occurrence_rate, temporal_occurrence_model
@@ -134,7 +134,7 @@ class PointSource(SeismicSource):
             rup_length = area / rup_width
         return rup_length, rup_width
 
-    def get_rupture_surface(self, mag, nodal_plane, hypocenter):
+    def _get_rupture_surface(self, mag, nodal_plane, hypocenter):
         """
         Create and return rupture surface object with given properties.
 
