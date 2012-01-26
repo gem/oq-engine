@@ -391,9 +391,9 @@ class ProbabilisticRiskCalculator(BaseRiskCalculator):
 
                 writer.serialize(
                     [metadata]
-                    + calc_proxy.asset_losses_per_site(
+                    + self.asset_losses_per_site(
                         loss_poe,
-                        calc_proxy.grid_assets_iterator(
+                        self.grid_assets_iterator(
                             calc_proxy.region.grid)))
                 LOG.info('Loss Map is at: %s' % path)
 
