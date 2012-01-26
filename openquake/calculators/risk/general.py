@@ -250,7 +250,7 @@ class BaseRiskCalculator(Calculator):
         """ Given a job and a block, write out a plotted curve """
         loss_ratio_curves = []
         loss_curves = []
-        block = Block.from_kvs(block_id)
+        block = Block.from_kvs(job_id, block_id)
         for point, asset in self.grid_assets_iterator(
                 block.grid(self.calc_proxy.region)):
             site = shapes.Site(asset['lon'], asset['lat'])
