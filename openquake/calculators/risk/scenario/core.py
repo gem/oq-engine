@@ -178,7 +178,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         vuln_model = kwargs['vuln_model']
         epsilon_provider = kwargs['epsilon_provider']
 
-        block = general.Block.from_kvs(block_id)
+        block = general.Block.from_kvs(self.calc_proxy.job_id, block_id)
 
         block_losses = self._compute_loss_for_block(
             block, vuln_model, epsilon_provider)
