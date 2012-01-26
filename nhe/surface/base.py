@@ -41,7 +41,7 @@ class BaseSurface(object):
         Create and return the mesh of points covering the surface.
 
         :param mesh_spacing:
-            The maximum distance between two adjacent points in the mesh
+            The desired distance between two adjacent points in the mesh
             in both horizontal and vertical directions, in km.
         :returns:
             A list of lists of points. First list representing the first
