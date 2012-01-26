@@ -2,7 +2,8 @@ import unittest
 
 from nhe.const import TRT
 from nhe.source.point import PointSource
-from nhe.mfd import TruncatedGR
+from nhe.source.base import ProbabilisticRupture
+from nhe.mfd import TruncatedGR, EvenlyDiscretized
 from nhe.msr import Peer
 from nhe.common.geo import Point
 from nhe.common.pmf import PMF
@@ -35,7 +36,8 @@ class PointSourceRuptureReshapingTestCase(unittest.TestCase):
         ruptures = list(point_source.iter_ruptures(tom))
         self.assertEqual(len(ruptures), 1)
         [rupture] = ruptures
-        self.assertIs(rupture.source, point_source)
+        self.assertIs(rupture.temporal_occurrence_model, tom)
+        self.assertIs(rupture.tectonic_region_type, trt)
         self.assertEqual(rupture.rake, -123.23)
         return rupture
 
@@ -55,7 +57,7 @@ class PointSourceRuptureReshapingTestCase(unittest.TestCase):
                                     aspect_ratio=1, dip=30)
         self.assertEqual(rupture.mag, 5.5)
         self.assertEqual(rupture.hypocenter, Point(0, 0, 8))
-        self.assertAlmostEqual(rupture.probability, 0.0440025182)
+        self.assertAlmostEqual(rupture.occurrence_rate, 0.0009)
 
         surface = rupture.surface
         self._check_dimensions(surface, 5.623413252, 5.623413252)
@@ -77,7 +79,7 @@ class PointSourceRuptureReshapingTestCase(unittest.TestCase):
                                     aspect_ratio=1, dip=30)
         self.assertEqual(rupture.mag, 5.5)
         self.assertEqual(rupture.hypocenter, Point(0, 0, 3))
-        self.assertAlmostEqual(rupture.probability, 0.0440025182)
+        self.assertAlmostEqual(rupture.occurrence_rate, 0.0009)
 
         surface = rupture.surface
         self._check_dimensions(surface, 5.623413252, 5.623413252)

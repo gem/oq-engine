@@ -5,7 +5,7 @@ import math
 
 from nhe.common.geo import Point
 from nhe.surface.planar import PlanarSurface
-from nhe.source.base import SeismicSource, SourceError, Rupture
+from nhe.source.base import SeismicSource, SourceError, ProbabilisticRupture
 
 
 class PointSource(SeismicSource):
@@ -49,14 +49,13 @@ class PointSource(SeismicSource):
                     hypocenter = Point(latitude=self.location.latitude,
                                        longitude=self.location.longitude,
                                        depth=hc_depth)
-                    occurrence_rate = mag_occ_rate * np_prob * hc_prob
-                    probability = temporal_occurrence_model.get_probability(
-                        occurrence_rate
-                    )
+                    occurrence_rate = (mag_occ_rate
+                                       * float(np_prob) * float(hc_prob))
                     surface = self.get_rupture_surface(mag, np, hypocenter)
-                    rupture = Rupture(self, mag, np.rake, hypocenter,
-                                      probability, surface)
-                    yield rupture
+                    yield ProbabilisticRupture(
+                        mag, np.rake, self.tectonic_region_type, hypocenter,
+                        surface, occurrence_rate, temporal_occurrence_model
+                    )
 
     def _get_rupture_dimensions(self, mag, nodal_plane):
         """

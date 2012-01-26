@@ -44,40 +44,69 @@ class SeismicSource(object):
         Get a generator object that yields ruptures the source consists of.
 
         :param temporal_occurrence_model:
-            An instance of :class:`nhe.common.tom.PoissonTOM`.
+            Temporal occurrence model (supposedly
+            :class:`nhe.common.tom.PoissonTOM`). It is passed intact
+            to the probabilistic rupture constructor.
         :returns:
-            Generator of instances of :class:`nhe.source.rupture.Rupture`.
+            Generator of instances of :class:`ProbabilisticRupture`.
         """
 
 
 class Rupture(object):
     """
-    Probabilistic rupture object represents a single earthquake rupture
-    associated to a probability of occurrence value.
+    Rupture object represents a single earthquake rupture.
 
-    :param source:
-        Seismic source the rupture belongs to. An instance of one of subclasses
-        of :class:`nhe.source.base.SeismicSource`.
     :param mag:
         Magnitude of the rupture.
     :param rake:
         Rupture propagation direction in degrees.
+    :param tectonic_region_type:
+        Rupture's tectonic regime. One of constants in :class:`nhe.const.TRT`.
     :param hypocenter:
         A :class:`~nhe.common.geo.Point`, rupture's hypocenter.
-    :param probability:
-        A probability of the rupture to occur within some time span. The value
-        should take into account the probabilities of these exact nodal plane,
-        magnitude and hypocenter, as well as a probability of occurrence within
-        a given time span (obtained from :mod:`temporal occurrence model
-        <nhe.common.tom>`).
+    :param surface:
+        An instance of subclass of :class:`nhe.surface.base.BaseSurface`.
+        Object representing the rupture surface geometry.
+
+    :raises SourceError:
+        If magnitude value is not positive, hypocenter is above the earth
+        surface or tectonic region type is unknown.
     """
-    def __init__(self, source, mag, rake, hypocenter, probability, surface):
-        assert mag > 0
-        assert hypocenter.depth > 0
-        assert 0 < probability <= 1
-        self.source = source
+    def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface):
+        if not mag > 0:
+            raise SourceError('magnitude must be positive')
+        if not hypocenter.depth > 0:
+            raise SourceError('rupture hypocenter must have positive depth')
+        if not const.TRT.is_valid(tectonic_region_type):
+            raise SourceError('unknown tectonic region type %s' %
+                              tectonic_region_type)
+        self.tectonic_region_type = tectonic_region_type
         self.mag = mag
         self.rake = rake
         self.hypocenter = hypocenter
-        self.probability = probability
         self.surface = surface
+
+
+class ProbabilisticRupture(Rupture):
+    """
+    :class:`Rupture` associated with an occurrence rate and a temporal
+    occurrence model.
+
+    :param occurrence_rate:
+        Number of times rupture happens per year.
+    :param temporal_occurrence_model:
+        Temporal occurrence model assigned for this rupture. Should
+        be an instance of :class:`nhe.common.tom.PoissonTOM`.
+
+    :raises SourceError:
+        If occurrence rate is not positive.
+    """
+    def __init__(self, mag, rake, tectonic_region_type, hypocenter, surface,
+                 occurrence_rate, temporal_occurrence_model):
+        if not occurrence_rate > 0:
+            raise SourceError('occurrence rate must be positive')
+        super(ProbabilisticRupture, self).__init__(
+            mag, rake, tectonic_region_type, hypocenter, surface
+        )
+        self.temporal_occurrence_model = temporal_occurrence_model
+        self.occurrence_rate = occurrence_rate
