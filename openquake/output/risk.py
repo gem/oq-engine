@@ -864,7 +864,8 @@ def create_loss_curve_writer(job_id, serialize_to, nrml_path, curve_mode):
     writers = []
 
     if 'db' in serialize_to:
-        assert job_id, "No job_id supplied"
+        if job_id is None:
+            raise RuntimeError("No job_id supplied")
         job_id = int(job_id)
 
         if curve_mode == 'loss':
