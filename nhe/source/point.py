@@ -39,6 +39,12 @@ class PointSource(SeismicSource):
 
     See also :class:`nhe.source.base.SeismicSource` for description of other
     parameters.
+
+    :raises nhe.source.base.SourceError:
+        If upper seismogenic depth is negative or below lower seismogenic
+        depth, if rupture aspect ratio is not positive and if one or more
+        of hypocenter depth values is shallower than upper seismogenic depth
+        or deeper than lower seismogenic depth.
     """
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  location, nodal_plane_distribution, hypocenter_distribution,
