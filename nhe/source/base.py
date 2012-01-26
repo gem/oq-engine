@@ -8,7 +8,8 @@ from nhe import const
 
 class SourceError(Exception):
     """
-
+    An error happened during creation of seismic source or earthquake rupture
+    object.
     """
 
 class SeismicSource(object):
