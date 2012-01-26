@@ -1,4 +1,5 @@
 import unittest
+from decimal import Decimal
 
 from nhe.const import TRT
 from nhe.source.point import PointSource
@@ -9,6 +10,8 @@ from nhe.common.geo import Point
 from nhe.common.pmf import PMF
 from nhe.common.nodalplane import NodalPlane
 from nhe.common.tom import PoissonTOM
+
+from tests.surface import _planar_test_data as planar_surface_test_data
 
 
 class PointSourceRuptureReshapingTestCase(unittest.TestCase):
@@ -160,3 +163,83 @@ class PointSourceRuptureReshapingTestCase(unittest.TestCase):
         self.assertAlmostEqual(0, surface.bottom_right.distance(Point(
             0.0252862987308, 0.0252862962683, 10.9881768219
         )))
+
+    def test_7_many_ruptures(self):
+        source_id = name = 'test7-source'
+        trt = TRT.VOLCANIC
+        mfd = EvenlyDiscretized(min_mag=4.5, bin_width=1,
+                                occurrence_rates=[9e-3, 9e-4])
+        location = Point(0, 0)
+
+        nodal_plane1 = NodalPlane(strike=45, dip=90, rake=0)
+        nodal_plane2 = NodalPlane(strike=0, dip=45, rake=10)
+        nodal_plane_distribution = PMF([
+            (Decimal('0.3'), nodal_plane1), (Decimal('0.7'), nodal_plane2)
+        ])
+        hypocenter_distribution = PMF([
+            (Decimal('0.8'), 9.0), (Decimal('0.2'), 10.0)
+        ])
+        upper_seismogenic_depth = 2
+        lower_seismogenic_depth = 16
+        magnitude_scaling_relationship = Peer()
+        rupture_aspect_ratio = 2
+        point_source = PointSource(
+            source_id, name, trt, mfd,
+            location, nodal_plane_distribution, hypocenter_distribution,
+            upper_seismogenic_depth, lower_seismogenic_depth,
+            magnitude_scaling_relationship, rupture_aspect_ratio
+        )
+        tom = PoissonTOM(time_span=50)
+        actual_ruptures = list(point_source.iter_ruptures(tom))
+        self.assertEqual(len(actual_ruptures), 8)
+        expected_ruptures = {
+            (4.5, 0, 9.0): (
+                9e-3 * 0.3 * 0.8,
+                planar_surface_test_data.TEST_7_RUPTURE_1_CORNERS
+            ),
+            (5.5, 0, 9.0): (
+                9e-4 * 0.3 * 0.8,
+                planar_surface_test_data.TEST_7_RUPTURE_2_CORNERS
+            ),
+            (4.5, 10, 9.0): (
+                9e-3 * 0.7 * 0.8,
+                planar_surface_test_data.TEST_7_RUPTURE_3_CORNERS
+            ),
+            (5.5, 10, 9.0): (
+                9e-4 * 0.7 * 0.8,
+                planar_surface_test_data.TEST_7_RUPTURE_4_CORNERS
+            ),
+            (4.5, 0, 10.0): (
+                9e-3 * 0.3 * 0.2,
+                planar_surface_test_data.TEST_7_RUPTURE_5_CORNERS
+            ),
+            (5.5, 0, 10.0): (
+                9e-4 * 0.3 * 0.2,
+                planar_surface_test_data.TEST_7_RUPTURE_6_CORNERS
+            ),
+            (4.5, 10, 10.0): (
+                9e-3 * 0.7 * 0.2,
+                planar_surface_test_data.TEST_7_RUPTURE_7_CORNERS
+            ),
+            (5.5, 10, 10.0): (
+                9e-4 * 0.7 * 0.2,
+                planar_surface_test_data.TEST_7_RUPTURE_8_CORNERS
+            )
+        }
+        for actual_rupture in actual_ruptures:
+            expected_occurrence_rate, expected_corners = expected_ruptures[
+                (actual_rupture.mag, actual_rupture.rake,
+                 actual_rupture.hypocenter.depth)
+            ]
+            self.assertTrue(isinstance(actual_rupture, ProbabilisticRupture))
+            self.assertEqual(actual_rupture.occurrence_rate,
+                             expected_occurrence_rate)
+            self.assertIs(actual_rupture.temporal_occurrence_model, tom)
+            self.assertEqual(actual_rupture.tectonic_region_type, trt)
+            surface = actual_rupture.surface
+
+            tl, tr, br, bl = expected_corners
+            self.assertAlmostEqual(0, tl.distance(surface.top_left))
+            self.assertAlmostEqual(0, tr.distance(surface.top_right))
+            self.assertAlmostEqual(0, bl.distance(surface.bottom_left))
+            self.assertAlmostEqual(0, br.distance(surface.bottom_right))
