@@ -692,9 +692,10 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         calculator = eb_core.EventBasedRiskCalculator(the_job)
 
-        self.block_id = kvs.tokens.risk_block_key(self.job_id, 7)
+        self.block_id = 7
         SITE = shapes.Site(1.0, 1.0)
-        Block((SITE, SITE), self.block_id).to_kvs()
+        block = Block(self.job_id, self.block_id, (SITE, SITE))
+        block.to_kvs()
 
         asset = {"taxonomy": "ID",
                  "assetID": 22.61,
@@ -922,8 +923,8 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         self.region = shapes.RegionConstraint.from_simple(
                 (0.0, 0.0), (2.0, 2.0))
 
-        self.block_id = kvs.tokens.risk_block_key(self.job_id, 7)
-        block = Block((SITE, SITE), self.block_id)
+        self.block_id = 7
+        block = Block(self.job_id, self.block_id, (SITE, SITE))
         block.to_kvs()
 
         writer = hazard.HazardCurveDBWriter('test_path.xml', self.job_id)
@@ -954,7 +955,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         calculator = classical_core.ClassicalRiskCalculator(the_job)
         calculator.vuln_curves = {"ID": self.vuln_function}
 
-        block = Block.from_kvs(self.block_id)
+        block = Block.from_kvs(self.job_id, self.block_id)
 
         asset = {"taxonomy": "ID",
                  "assetID": 22.61, "assetValue": 1}
@@ -991,7 +992,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
         calculator = classical_core.ClassicalRiskCalculator(the_job)
 
-        Block.from_kvs(self.block_id)
+        Block.from_kvs(self.job_id, self.block_id)
         asset = {"taxonomy": "ID",
                  "assetID": 22.61,
                  "assetValue": 1,
