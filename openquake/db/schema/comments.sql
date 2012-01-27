@@ -326,6 +326,7 @@ COMMENT ON COLUMN uiapi.oq_job_profile.imt IS 'Intensity measure type, one of:
     - Arias Intensity (ia)
     - relative significant duration (rsd)
     - Modified Mercalli Intensity';
+COMMENT ON COLUMN uiapi.oq_job_profile.lrem_steps_per_interval IS 'Loss Ration Exceedence Matrix steps per interval. Only used for Classical/Classical BCR Risk calculations.';
 COMMENT ON COLUMN uiapi.oq_job_profile.poes IS 'Probabilities of exceedence';
 COMMENT ON COLUMN uiapi.oq_job_profile.region IS 'Region of interest for the calculation (Polygon)';
 COMMENT ON COLUMN uiapi.oq_job_profile.region_grid_spacing IS 'Desired cell size (in degrees), used when splitting up the region of interest. This effectively defines the resolution of the calculation. (Smaller grid spacing means more sites and thus more calculations.)';
