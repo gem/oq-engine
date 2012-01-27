@@ -323,8 +323,7 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
             get_loss_curve, float(calc_proxy.params['INTEREST_RATE']),
             float(calc_proxy.params['ASSET_LIFE_EXPECTANCY'])
         )
-        bcr_block_key = kvs.tokens.bcr_block_key(calc_proxy.job_id,
-                                                 block_id)
+        bcr_block_key = kvs.tokens.bcr_block_key(calc_proxy.job_id, block_id)
         kvs.set_value_json_encoded(bcr_block_key, bcr)
         LOGGER.debug('bcr result for block %s: %r', block_id, bcr)
         return True
