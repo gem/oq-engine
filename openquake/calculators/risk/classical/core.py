@@ -43,10 +43,9 @@ from openquake.calculators.risk.general import compute_loss_curve
 from openquake.calculators.risk.general import loop
 
 LOGGER = logs.LOG
-STEPS_PER_INTERVAL = 5
 
 
-def compute_loss_ratio_curve(vuln_function, hazard_curve):
+def compute_loss_ratio_curve(vuln_function, hazard_curve, steps):
     """Compute a loss ratio curve for a specific hazard curve (e.g., site),
     by applying a given vulnerability function.
 
@@ -60,11 +59,13 @@ def compute_loss_ratio_curve(vuln_function, hazard_curve):
     :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
     :param hazard_curve: the hazard curve used to compute the curve.
     :type hazard_curve: :py:class:`openquake.shapes.Curve`
+    :param int steps:
+        Number of steps between loss ratios.
     """
 
-    lrem = _compute_lrem(vuln_function)
+    lrem = _compute_lrem(vuln_function, steps)
     lrem_po = _compute_lrem_po(vuln_function, lrem, hazard_curve)
-    loss_ratios = _generate_loss_ratios(vuln_function)
+    loss_ratios = _generate_loss_ratios(vuln_function, steps)
 
     return Curve(zip(loss_ratios, lrem_po.sum(axis=1)))
 
@@ -93,36 +94,42 @@ def _compute_lrem_po(vuln_function, lrem, hazard_curve):
     return lrem_po
 
 
-def _generate_loss_ratios(vuln_function):
+def _generate_loss_ratios(vuln_function, steps):
     """Generate the set of loss ratios used to compute the LREM
     (Loss Ratio Exceedance Matrix).
 
-    :param vuln_function: the vulnerability function where the
-        loss ratios are taken from.
-    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
+    :param vuln_function:
+        The vulnerability function where the loss ratios are taken from.
+    :type vuln_function:
+        :class:`openquake.shapes.VulnerabilityFunction`
+    :param int steps:
+        Number of steps between loss ratios.
     """
 
     # we manually add 0.0 as first loss ratio and 1.0 as last loss ratio
     loss_ratios = concatenate(
         (array([0.0]), vuln_function.loss_ratios, array([1.0])))
 
-    return _split_loss_ratios(loss_ratios)
+    return _split_loss_ratios(loss_ratios, steps)
 
 
 @MemoizeMutable
-def _compute_lrem(vuln_function, distribution=None):
+def _compute_lrem(vuln_function, steps, distribution=None):
     """Compute the LREM (Loss Ratio Exceedance Matrix).
 
-    :param vuln_function: the vulnerability function used
-        to compute the LREM.
-    :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
+    :param vuln_function:
+        The vulnerability function used to compute the LREM.
+    :type vuln_function:
+        :class:`openquake.shapes.VulnerabilityFunction`
+    :param int steps:
+        Number of steps between loss ratios.
     """
 
     if distribution is None:
         # this is so we can memoize the thing
         distribution = stats.lognorm
 
-    loss_ratios = _generate_loss_ratios(vuln_function)
+    loss_ratios = _generate_loss_ratios(vuln_function, steps)
     # LREM has number of rows equal to the number of loss ratios
     # and number of columns equal to the number if imls
     lrem = empty((loss_ratios.size, vuln_function.imls.size), float)
@@ -142,7 +149,7 @@ def _compute_lrem(vuln_function, distribution=None):
     return lrem
 
 
-def _split_loss_ratios(loss_ratios, steps=None):
+def _split_loss_ratios(loss_ratios, steps):
     """Split the loss ratios, producing a new set of loss ratios.
 
     :param loss_ratios: the loss ratios to be splitted.
@@ -155,10 +162,6 @@ def _split_loss_ratios(loss_ratios, steps=None):
         steps = 3 produces [1.0, 1.33, 1.66, 2.0]
     :type steps: integer
     """
-
-    if steps is None:
-        steps = STEPS_PER_INTERVAL
-
     splitted_ratios = set()
 
     for interval in loop(array(loss_ratios), linspace, steps + 1):
@@ -314,9 +317,11 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
 
         def get_loss_curve(point, vuln_function, asset):
             "Compute loss curve basing on hazard curve"
+            job_profile = self.calc_proxy.oq_job_profile
             hazard_curve = hazard_curves[point.site]
             loss_ratio_curve = compute_loss_ratio_curve(
-                    vuln_function, hazard_curve)
+                    vuln_function, hazard_curve,
+                    job_profile.lrem_steps_per_interval)
             return compute_loss_curve(loss_ratio_curve, asset['assetValue'])
 
         bcr = general.compute_bcr_for_block(calc_proxy.job_id, points,
@@ -378,8 +383,9 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
 
             return None
 
+        lrem_steps = self.calc_proxy.oq_job_profile.lrem_steps_per_interval
         loss_ratio_curve = compute_loss_ratio_curve(
-            vuln_function, hazard_curve)
+            vuln_function, hazard_curve, lrem_steps)
 
         loss_ratio_key = kvs.tokens.loss_ratio_key(
             self.calc_proxy.job_id, point.row, point.column, asset['assetID'])
