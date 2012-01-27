@@ -554,6 +554,36 @@ class ClassicalValidator(object):
         return (valid, errors)
 
 
+class ClassicalRiskValidator(object):
+    """Validator for Classical/Classical BCR Risk job configs."""
+
+    LREM_STEPS_ERROR = ('LREM_STEPS_PER_INTERVAL must be defined as an integer'
+                        ' >= 1 in Classical/Classical BCR Hazard+Risk'
+                        ' calculations.')
+
+    def __init__(self, params):
+        self.params = params
+
+    def is_valid(self):
+        """Make the following calculation configuration checks:
+            * Check that LREM_STEPS_PER_INTERVAL is defined.
+            * Check that LREM_STEPS_PER_INTERVAL is an int >= 1.
+        """
+        lrem_steps = self.params.get('LREM_STEPS_PER_INTERVAL')
+
+        if lrem_steps is None:
+            return (False, [self.LREM_STEPS_ERROR])
+
+        try:
+            if int(lrem_steps) < 1:
+                return (False, [self.LREM_STEPS_ERROR])
+        except ValueError:
+            return (False, [self.LREM_STEPS_ERROR])
+
+        # No validation issues; configuration is good.
+        return (True, [])
+
+
 def default_validators(sections, params):
     """Create the set of default validators for a job.
 
@@ -591,5 +621,10 @@ def default_validators(sections, params):
 
     if params.get(CALCULATION_MODE) == CLASSICAL_MODE:
         validators.add(ClassicalValidator(sections, params))
+
+    # Validator only for Classical/Classical BCR Hazard+Risk:
+    if (params.get(CALCULATION_MODE) in (BCR_CLASSICAL_MODE, CLASSICAL_MODE)
+        and set([HAZARD_SECTION, RISK_SECTION]).issubset(sections)):
+        validators.add(ClassicalRiskValidator(params))
 
     return validators
