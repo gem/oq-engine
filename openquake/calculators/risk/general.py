@@ -483,14 +483,20 @@ class Block(object):
         """
         self.calculation_id = calculation_id
         self.block_id = block_id
-        self.sites = sites
+        self._sites = sites
 
     def __eq__(self, other):
-        """Compares calculation_id, block_id, and site lists to determine
-        equality."""
+        """Compares calculation_id, and block_id.
+
+        This is a shallow comparison; site lists are not compared."""
         return (self.calculation_id == other.calculation_id
-                and self.block_id == other.block_id
-                and self.sites == other.sites)
+                and self.block_id == other.block_id)
+
+    @property
+    def sites(self):
+        """The `list` of :class:`openquake.shapes.Site` objects contained by
+        this Block."""
+        return self._sites
 
     def grid(self, region):
         """Provide an iterator across the unique grid points within a region,
