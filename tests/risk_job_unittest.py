@@ -106,14 +106,14 @@ class EpsilonTestCase(unittest.TestCase):
 
 
 class BlockTestCase(unittest.TestCase):
-
-    def setUp(self):
-        self.site = shapes.Site(1.0, 1.0)
+    """Tests for the :class:`openquake.calculators.risk.general.Block` class.
+    """
 
     def test_eq(self):
         # Test the __eq__ method.
+        # __eq__ is a shallow test and only compares ids.
         block1 = Block(7, 0, [shapes.Site(1.0, 1.0)])
-        block2 = Block(7, 0, [shapes.Site(1.0, 1.0)])
+        block2 = Block(7, 0, [shapes.Site(1.0, 0.0)])
 
         self.assertTrue(block1 == block2)
 
@@ -127,18 +127,20 @@ class BlockTestCase(unittest.TestCase):
         block2 = Block(7, 1, [shapes.Site(1.0, 1.0)])
         self.assertFalse(block1 == block2)
 
-        block1 = Block(7, 0, [shapes.Site(1.0, 1.0)])
-        block2 = Block(7, 0, [shapes.Site(1.1, 1.0)])
-        self.assertFalse(block1 == block2)
-
-    def test_can_serialize_a_block_into_kvs(self):
+    def test_block_kvs_serialization(self):
+        # Test that a Block is properly serialized/deserialized from the cache.
         calculation_id = 7
         block_id = 0
-        block = Block(calculation_id, block_id, [self.site, self.site])
-        block.to_kvs()
+        expected_block = Block(calculation_id, block_id,
+                               [shapes.Site(1.0, 1.0), shapes.Site(2.0, 2.0)])
+        expected_block.to_kvs()
 
-        self.assertEqual(
-            block, general.Block.from_kvs(calculation_id, block.block_id))
+        actual_block = Block.from_kvs(calculation_id, block_id)
+
+        self.assertEqual(expected_block, actual_block)
+        # The sites are not compared in Block.__eq__; we need to check those
+        # also.
+        self.assertEqual(expected_block.sites, actual_block.sites)
 
 
 class BlockSplitterTestCase(unittest.TestCase):
