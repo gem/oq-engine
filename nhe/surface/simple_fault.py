@@ -4,6 +4,7 @@ Module :mod:`nhe.surface.simple_fault` contains :class:`SimpleFaultSurface`.
 """
 
 import math
+import numpy
 
 from nhe.surface.base import BaseSurface
 from nhe.common import geo
@@ -32,8 +33,11 @@ class SimpleFaultSurface(BaseSurface):
 
         _ensure(0.0 < dip <= 90.0, "Dip must be between 0.0 and 90.0!")
 
+        _ensure(lower_seismo_depth >= upper_seismo_depth,
+                "Lower seismo depth must be >= than upper seismo dept!")
+
         _ensure(upper_seismo_depth >= 0.0,
-                "Upper seismogenic depth must be >= 0.0!")
+                "Upper seismo depth must be >= 0.0!")
 
         self.dip = dip
         self.fault_trace = fault_trace
@@ -46,12 +50,6 @@ class SimpleFaultSurface(BaseSurface):
         """
 
         _ensure(mesh_spacing > 0.0, "Mesh spacing must be > 0.0!")
-
-        fault_width = (self.lower_seismo_depth - \
-                self.upper_seismo_depth) / math.sin(self.dip)
-
-        _ensure(fault_width >= mesh_spacing,
-                "Fault width must be >= than mesh_spacing!")
 
         # Loops over points in the top edge, for each point
         # on the top edge compute corresponding point on the bottom edge, then
@@ -66,8 +64,9 @@ class SimpleFaultSurface(BaseSurface):
         azimuth = strike + 90.0
 
         mesh = []
+        top_edge = self._fault_top_edge(mesh_spacing)
 
-        for point in self._fault_top_edge(mesh_spacing):
+        for point in top_edge:
 
             bottom = point.point_at(
                 horizontal_distance, vertical_distance, azimuth)
@@ -75,7 +74,13 @@ class SimpleFaultSurface(BaseSurface):
             points = point.equally_spaced_points(bottom, mesh_spacing)
             mesh.extend(points)
 
-        return mesh
+        # number of rows corresponds to number of points along dip
+        # number of columns corresponds to number of points along strike
+        surface = numpy.array(mesh)
+        surface = surface.reshape(len(top_edge), len(mesh) / len(top_edge))
+        surface = numpy.transpose(surface)
+
+        return surface.to_list()
 
     def _fault_top_edge(self, mesh_spacing):
         top_edge = []
