@@ -1021,36 +1021,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
             self, res, [[[12.34, 56.67], [[expected_result, 22.61]]]]
         )
 
-    def test_loss_ratio_curve_in_the_classical_psha_calculator(self):
-
-        the_job = helpers.create_job({}, job_id=1234)
-        calculator = classical_core.ClassicalRiskCalculator(the_job)
-
-        hazard_curve = shapes.Curve([
-              (0.01, 0.99), (0.08, 0.96),
-              (0.17, 0.89), (0.26, 0.82),
-              (0.36, 0.70), (0.55, 0.40),
-              (0.70, 0.01)])
-
-        imls = [0.1, 0.2, 0.4, 0.6]
-        loss_ratios = [0.05, 0.08, 0.2, 0.4]
-        covs = [0.5, 0.3, 0.2, 0.1]
-        vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
-
-        # pre computed values just use one intermediate
-        # values between the imls
-        # TODO: fix this test and refactor and stuff
-        # classical_core.STEPS_PER_INTERVAL = 2
-        lrem_steps = 2
-
-        vuln_curves = {"ID": vuln_function}
-
-        asset = {"taxonomy": "ID", "assetID": 1}
-
-        self.assertTrue(calculator.compute_loss_ratio_curve(
-                        shapes.GridPoint(None, 10, 20),
-                        asset, hazard_curve, vuln_curves) is not None)
-
     def test_splits_with_real_values_from_turkey(self):
         loss_ratios = [0.0, 1.96E-15, 2.53E-12, 8.00E-10, 8.31E-08, 3.52E-06,
                 7.16E-05, 7.96E-04, 5.37E-03, 2.39E-02, 7.51E-02, 1.77E-01]
