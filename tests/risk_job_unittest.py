@@ -27,6 +27,7 @@ from openquake import shapes
 from openquake.job import config
 from openquake.parser import exposure
 from openquake.calculators.risk import general
+from openquake.calculators.risk.general import Block
 
 from tests.utils import helpers
 
@@ -105,15 +106,41 @@ class EpsilonTestCase(unittest.TestCase):
 
 
 class BlockTestCase(unittest.TestCase):
+    """Tests for the :class:`openquake.calculators.risk.general.Block` class.
+    """
 
-    def setUp(self):
-        self.site = shapes.Site(1.0, 1.0)
+    def test_eq(self):
+        # Test the __eq__ method.
+        # __eq__ is a shallow test and only compares ids.
+        block1 = Block(7, 0, [shapes.Site(1.0, 1.0)])
+        block2 = Block(7, 0, [shapes.Site(1.0, 0.0)])
 
-    def test_can_serialize_a_block_into_kvs(self):
-        block = general.Block((self.site, self.site), 'test_block_id')
-        block.to_kvs()
+        self.assertTrue(block1 == block2)
 
-        self.assertEqual(block, general.Block.from_kvs(block.id))
+    def test_not_eq(self):
+        # Test __eq__ with 2 Blocks that should not be equal
+        block1 = Block(7, 0, [shapes.Site(1.0, 1.0)])
+        block2 = Block(8, 0, [shapes.Site(1.0, 1.0)])
+        self.assertFalse(block1 == block2)
+
+        block1 = Block(7, 0, [shapes.Site(1.0, 1.0)])
+        block2 = Block(7, 1, [shapes.Site(1.0, 1.0)])
+        self.assertFalse(block1 == block2)
+
+    def test_block_kvs_serialization(self):
+        # Test that a Block is properly serialized/deserialized from the cache.
+        calculation_id = 7
+        block_id = 0
+        expected_block = Block(calculation_id, block_id,
+                               [shapes.Site(1.0, 1.0), shapes.Site(2.0, 2.0)])
+        expected_block.to_kvs()
+
+        actual_block = Block.from_kvs(calculation_id, block_id)
+
+        self.assertEqual(expected_block, actual_block)
+        # The sites are not compared in Block.__eq__; we need to check those
+        # also.
+        self.assertEqual(expected_block.sites, actual_block.sites)
 
 
 class BlockSplitterTestCase(unittest.TestCase):
@@ -122,61 +149,90 @@ class BlockSplitterTestCase(unittest.TestCase):
         self.site_1 = shapes.Site(1.0, 1.0)
         self.site_2 = shapes.Site(2.0, 1.0)
         self.site_3 = shapes.Site(3.0, 1.0)
+        self.site_4 = shapes.Site(4.0, 1.0)
+        self.site_5 = shapes.Site(5.0, 1.0)
+        self.site_6 = shapes.Site(6.0, 1.0)
+        self.site_7 = shapes.Site(7.0, 1.0)
+        self.site_8 = shapes.Site(8.0, 1.0)
 
-    def test_an_empty_set_produces_no_blocks(self):
-        self._assert_number_of_blocks_is((), expected=0, block_size=1)
+        self.all_sites = [
+            self.site_1,
+            self.site_2,
+            self.site_3,
+            self.site_4,
+            self.site_5,
+            self.site_6,
+            self.site_7,
+            self.site_8
+        ]
 
-    def test_splits_the_set_into_a_single_block(self):
-        self._assert_number_of_blocks_is(
-            (self.site_1, ), expected=1, block_size=3)
+        self.calculation_id = 7
 
-        self._assert_number_of_blocks_is(
-            (self.site_1, self.site_1), expected=1, block_size=3)
+    def test_split_into_blocks(self):
+        # Test a typical split case.
+        # We will use a block size of 3, which will
+        # give us 2 blocks of 3 sites and 1 block of 2 sites.
+        expected = [
+            Block(self.calculation_id, 0, self.all_sites[:3]),
+            Block(self.calculation_id, 1, self.all_sites[3:6]),
+            Block(self.calculation_id, 2, self.all_sites[6:])
+        ]
 
-        self._assert_number_of_blocks_is(
-            (self.site_1, self.site_1, self.site_1), expected=1, block_size=3)
+        actual = [block for block in general.split_into_blocks(
+            self.calculation_id, self.all_sites, block_size=3)]
 
-    def test_splits_the_set_into_multiple_blocks(self):
-        self._assert_number_of_blocks_is(
-            (self.site_1, self.site_1), expected=2, block_size=1)
+        self.assertEqual(expected, actual)
 
-        self._assert_number_of_blocks_is(
-            (self.site_1, self.site_1, self.site_1), expected=2, block_size=2)
+    def test_split_block_size_eq_1(self):
+        # Test splitting when block_size==1.
+        expected = [Block(self.calculation_id, i, [self.all_sites[i]])
+            for i in xrange(len(self.all_sites))]
 
-    def test_generates_the_correct_blocks(self):
-        expected = (
-            general.Block((self.site_1, self.site_2, self.site_3), None), )
+        actual = [block for block in general.split_into_blocks(
+            self.calculation_id, self.all_sites, block_size=1)]
 
-        self._assert_blocks_are(
-            expected, (self.site_1, self.site_2, self.site_3), block_size=3)
+        self.assertEqual(expected, actual)
 
-        expected = (
-            general.Block((self.site_1, self.site_2), None),
-            general.Block((self.site_3, ), None))
+    def test_split_empty_site_list(self):
+        # If `split_into_blocks` is given an empty site list, the generator
+        # shouldn't yield anything.
+        actual = [block for block in general.split_into_blocks(
+            self.calculation_id, [])]
 
-        self._assert_blocks_are(
-            expected, (self.site_1, self.site_2, self.site_3), block_size=2)
+        self.assertEqual([], actual)
 
-    def _check_block_key(self, job_id, block):
-        self.assertTrue(kvs.tokens.generate_job_key(job_id) in block.id,
-                        "Job id %s contained in key %s" % (
-                job_id, block.id))
+    def test_split_block_size_eq_to_site_list_size(self):
+        # If the block size is equal to the input site list size,
+        # the generator should just yield a single block containing all of the
+        # sites.
+        actual = [block for block in general.split_into_blocks(
+            self.calculation_id, self.all_sites, block_size=8)]
 
-    def _assert_blocks_are(self, expected, sites, block_size):
-        for idx, block in enumerate(
-            general.split_into_blocks(123, sites, block_size)):
+        self.assertEqual(
+            [Block(self.calculation_id, 0, self.all_sites)],
+            actual)
 
-            self._check_block_key(123, block)
-            self.assertEqual(expected[idx], block)
+    def test_split_block_size_gt_site_list_size(self):
+        # If the block size is greater than the input site list size,
+        # the generator should just yield a single block containing all of the
+        # sites.
+        actual = [block for block in general.split_into_blocks(
+            self.calculation_id, self.all_sites, block_size=9)]
 
-    def _assert_number_of_blocks_is(self, sites, expected, block_size):
-        counter = 0
+        self.assertEqual(
+            [Block(self.calculation_id, 0, self.all_sites)],
+            actual)
 
-        for block in general.split_into_blocks(123, sites, block_size):
-            counter += 1
-            self._check_block_key(123, block)
+    def test_split_block_size_lt_1(self):
+        # If the specified block_size is less than 1, this is invalid.
+        # We expect a RuntimeError to be raised.
+        gen = general.split_into_blocks(self.calculation_id, self.all_sites,
+                                        block_size=0)
+        self.assertRaises(RuntimeError, gen.next)
 
-        self.assertEqual(expected, counter)
+        gen = general.split_into_blocks(self.calculation_id, self.all_sites,
+                                        block_size=-1)
+        self.assertRaises(RuntimeError, gen.next)
 
 
 class BaseRiskCalculatorTestCase(unittest.TestCase):
@@ -197,14 +253,17 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
 
         calculator.partition()
 
-        expected = general.Block(
-            (shapes.Site(9.15000, 45.16667), shapes.Site(9.15333, 45.12200),
-             shapes.Site(9.14777, 45.17999)), None)
+        sites = [shapes.Site(9.15000, 45.16667),
+                 shapes.Site(9.15333, 45.12200),
+                 shapes.Site(9.14777, 45.17999)]
+
+        expected = general.Block(a_job.job_id, 0, sites)
 
         self.assertEqual(1, len(a_job.blocks_keys))
 
         self.assertEqual(
-            expected, general.Block.from_kvs(a_job.blocks_keys[0]))
+            expected, general.Block.from_kvs(a_job.job_id,
+                                             a_job.blocks_keys[0]))
 
     def test_prepares_blocks_using_the_exposure_and_filtering(self):
         """When reading the exposure file, the calculator also provides
@@ -223,9 +282,9 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
 
         a_job = helpers.create_job(params)
 
-        expected_block = general.Block(
-            (shapes.Site(9.15, 45.16667), shapes.Site(9.14777, 45.17999)),
-            None)
+        sites = [shapes.Site(9.15, 45.16667), shapes.Site(9.14777, 45.17999)]
+
+        expected_block = general.Block(a_job.job_id, 0, sites)
 
         calculator = general.BaseRiskCalculator(a_job)
 
@@ -234,7 +293,8 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
         self.assertEqual(1, len(a_job.blocks_keys))
 
         self.assertEqual(
-            expected_block, general.Block.from_kvs(a_job.blocks_keys[0]))
+            expected_block,
+            general.Block.from_kvs(a_job.job_id, a_job.blocks_keys[0]))
 
 
 GRID_ASSETS = {

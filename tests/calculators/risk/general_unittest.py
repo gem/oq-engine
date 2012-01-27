@@ -15,6 +15,7 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+import os
 import unittest
 
 from openquake.engine import CalculationProxy
@@ -49,6 +50,7 @@ class ProbabilisticRiskCalculatorTestCase(unittest.TestCase):
 
         calculation = OqCalculation(owner=job_profile.owner,
                                     oq_job_profile=job_profile)
+        calculation.save()
 
         calc_proxy = CalculationProxy(
             params, calculation.id, sections=sections,
@@ -77,3 +79,62 @@ class ProbabilisticRiskCalculatorTestCase(unittest.TestCase):
                 isinstance(w, LossMapDBWriter) for w in writers))
             self.assertTrue(any(
                 isinstance(w, LossMapNonScenarioXMLWriter) for w in writers))
+
+
+class BaseRiskCalculator(unittest.TestCase):
+    """Tests for
+    :class:`openquake.calculators.risk.general.BaseRiskCalculator`.
+    """
+
+    def test__serialize_xml_filenames(self):
+        # Test that the file names of the loss XML artifacts are correct.
+        # See https://bugs.launchpad.net/openquake/+bug/894706.
+        expected_lrc_file_name = (
+            'losscurves-block-#%(calculation_id)s-block#%(block)s.xml')
+        expected_lr_file_name = (
+            'losscurves-loss-block-#%(calculation_id)s-block#%(block)s.xml')
+
+        cfg_file = demo_file('classical_psha_based_risk/config.gem')
+
+        job_profile, params, sections = import_job_profile(cfg_file)
+
+        calculation = OqCalculation(owner=job_profile.owner,
+                                    oq_job_profile=job_profile)
+        calculation.save()
+
+        calc_proxy = CalculationProxy(
+            params, calculation.id, sections=sections,
+            serialize_results_to=['xml', 'db'], oq_job_profile=job_profile,
+            oq_calculation=calculation)
+
+        calculator = ClassicalRiskCalculator(calc_proxy)
+
+        with patch('openquake.writer.FileWriter.serialize'):
+            # The 'curves' key in the kwargs just needs to be present;
+            # because of the serialize mock in place above, it doesn't need
+            # to have a real value.
+
+            # First, we test loss ratio curve output,
+            # then we'll do the same test for loss curve output.
+
+            # We expect to get a single file path back.
+            [file_path] = calculator._serialize(
+                0, **dict(curve_mode='loss_ratio', curves=[]))
+
+            _dir, file_name = os.path.split(file_path)
+
+            self.assertEqual(
+                expected_lrc_file_name % dict(calculation_id=calculation.id,
+                                              block=0),
+                file_name)
+
+            # The same test again, except for loss curves this time.
+            [file_path] = calculator._serialize(
+                0, **dict(curve_mode='loss', curves=[]))
+
+            _dir, file_name = os.path.split(file_path)
+
+            self.assertEqual(
+                expected_lr_file_name % dict(calculation_id=calculation.id,
+                                             block=0),
+                file_name)
