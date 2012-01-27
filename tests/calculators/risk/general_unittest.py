@@ -137,5 +137,5 @@ class BaseRiskCalculator(unittest.TestCase):
 
             self.assertEqual(
                 expected_lr_file_name % dict(calculation_id=calculation.id,
-                                              block=0),
+                                             block=0),
                 file_name)
