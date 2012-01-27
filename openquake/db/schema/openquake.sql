@@ -813,6 +813,19 @@ CREATE TABLE uiapi.oq_job_profile (
             OR
             ((calc_mode NOT IN ('classical_bcr', 'event_based_bcr'))
              AND interest_rate IS NULL)),
+    -- Loss Ratio Exceedence Matrix steps per interval
+    -- Only used for Classical/Classical BCR Risk calculations.
+    lrem_steps_per_interval integer
+        CONSTRAINT lrem_steps_is_set
+        CHECK (
+            -- If this is a Classical or Classical BCR Hazard+Risk calculation,
+            -- lrem_steps_per_interval needs to set.
+            ((ARRAY['hazard', 'risk']::VARCHAR[] <@ job_type)
+             AND (calc_mode IN ('classical', 'classical_bcr'))
+             AND lrem_steps_per_interval IS NOT NULL)
+            OR
+            -- In any other case, it is not used.
+            (lrem_steps_per_interval IS NULL)),
     loss_curves_output_prefix VARCHAR,
     maximum_distance float
         CONSTRAINT maximum_distance_is_set
