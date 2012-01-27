@@ -18,6 +18,8 @@
 
 """Common functionality for Risk calculators."""
 
+# Silence 'Too many lines in module'
+# pylint: disable=C0302
 import json
 import math
 import os
