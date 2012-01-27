@@ -147,6 +147,18 @@ class Point(object):
         horizontal_distance = self.horizontal_distance(point)
         return math.sqrt(horizontal_distance ** 2 + vertical_distance ** 2)
 
+    def on_surface(self):
+        """
+        Check if this point is defined on the surface (depth is 0.0).
+
+        :returns:
+            True if this point is on the surface, false otherwise.
+        :rtype:
+            boolean
+        """
+
+        return self.depth == 0.0
+
     def __str__(self):
         return "<Latitude=%.13f, Longitude=%.13f, Depth=%.13f>" % (
                 self.latitude, self.longitude, self.depth)
@@ -285,6 +297,23 @@ class Line(object):
             values.append((point.longitude, point.latitude))
 
         return not LineString(values).is_simple
+
+    def on_surface(self):
+        """
+        Check if this line is defined on the surface (i.e. all points
+        are on the surfance, depth=0.0).
+
+        :returns:
+            True if this line is on the surface, false otherwise.
+        :rtype:
+            boolean
+        """
+
+        for point in self.points:
+            if not point.on_surface():
+                return False
+
+        return True
 
     def resample(self, section_length):
         """
