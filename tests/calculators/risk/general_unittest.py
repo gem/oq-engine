@@ -94,7 +94,6 @@ class BaseRiskCalculator(unittest.TestCase):
         expected_lr_file_name = (
             'losscurves-loss-block-#%(calculation_id)s-block#%(block)s.xml')
 
-
         cfg_file = demo_file('classical_psha_based_risk/config.gem')
 
         job_profile, params, sections = import_job_profile(cfg_file)
