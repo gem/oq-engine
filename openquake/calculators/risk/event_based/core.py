@@ -246,7 +246,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         self.vuln_curves = vulnerability.load_vuln_model_from_kvs(
             self.calc_proxy.job_id)
 
-        block = general.Block.from_kvs(block_id)
+        block = general.Block.from_kvs(self.calc_proxy.job_id, block_id)
 
         # aggregate the losses for this block
         aggregate_curve = general.AggregateLossCurve()
