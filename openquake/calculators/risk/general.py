@@ -472,9 +472,18 @@ class Block(object):
     """A block is a collection of sites to compute."""
 
     def __init__(self, calculation_id, block_id, sites):
+        """
+        :param int calculation_id:
+            The id of a current calculation.
+        :param int block_id:
+            Sequence number of the site block (from 0 to N-1, where N is the
+            number of blocks).
+        :param sites:
+            `list` of :class:`openquake.shapes.Site` objects.
+        """
         self.calculation_id = calculation_id
         self.block_id = block_id
-        self.sites = tuple(sites)
+        self.sites = sites
 
     def __eq__(self, other):
         """Compares calculation_id, block_id, and site lists to determine
