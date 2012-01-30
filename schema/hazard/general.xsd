@@ -164,4 +164,14 @@
         </xs:restriction>
     </xs:simpleType>
 
+    <xs:complexType name="AreaBoundary">
+        <xs:complexContent>
+            <xs:restriction base="gml:SurfacePropertyType">
+                <xs:sequence>
+                    <xs:element ref="gml:Polygon"/>
+                </xs:sequence>
+            </xs:restriction>
+        </xs:complexContent>
+    </xs:complexType>
+
 </xs:schema>

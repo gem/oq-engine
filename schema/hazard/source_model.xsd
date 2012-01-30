@@ -112,16 +112,6 @@
         </xs:complexContent>
     </xs:complexType>
 
-    <xs:complexType name="AreaBoundary">
-        <xs:complexContent>
-            <xs:restriction base="gml:SurfacePropertyType">
-                <xs:sequence>
-                    <xs:element ref="gml:Polygon"/>
-                </xs:sequence>
-            </xs:restriction>
-        </xs:complexContent>
-    </xs:complexType>
-
     <!-- Point Source -->
     <xs:element name="pointSource" type="PointSource" substitutionGroup="_seismicSource"/>
     <xs:complexType name="PointSource">
