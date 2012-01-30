@@ -464,6 +464,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         params['VULNERABILITY'] = abs_path("vulnerability.xml")
         params['SOURCE_MODEL_LT_RANDOM_SEED'] = '23'
         params['GMPE_LT_RANDOM_SEED'] = '5'
+        params['LREM_STEPS_PER_INTERVAL'] = '5'
 
         self.job = _prepare_job(params, ['HAZARD', 'RISK'])
         self.calculation.oq_job_profile = self.job
@@ -514,6 +515,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         '''
         params = self.BASE_CLASSICAL_PARAMS.copy()
         params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
+        params['LREM_STEPS_PER_INTERVAL'] = '5'
 
         self.job = _prepare_job(params, ['HAZARD', 'RISK'])
         self.calculation.oq_job_profile = self.job
