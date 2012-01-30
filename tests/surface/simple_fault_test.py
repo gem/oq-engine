@@ -33,9 +33,12 @@ class SimpleFaultSurfaceTestCase(utils.SurfaceTestCase):
                 self.fault_trace, -0.1, None, 90.0)
 
         SimpleFaultSurface(self.fault_trace, 0.0, 1.0, 90.0)
-        SimpleFaultSurface(self.fault_trace, 1.0, 1.0, 90.0)
+        SimpleFaultSurface(self.fault_trace, 1.0, 1.1, 90.0)
 
     def test_upper_lower_seismo_values(self):
+        self.assertRaises(RuntimeError, SimpleFaultSurface,
+                self.fault_trace, 1.0, 1.0, 90.0)
+
         self.assertRaises(RuntimeError, SimpleFaultSurface,
                 self.fault_trace, 1.0, 0.9, 90.0)
 
@@ -79,17 +82,6 @@ class SimpleFaultSurfaceTestCase(utils.SurfaceTestCase):
                 2.12132034356, 4.2426406871192848, 45.0)
 
         self.assert_mesh_is(fault, 1.0, test_data.TEST_2_MESH)
-
-    def test_get_mesh_3(self):
-        p1 = geo.Point(0.0, 0.0, 0.0)
-        p2 = geo.Point(0.0, 0.0359728811759, 0.0)
-        p3 = geo.Point(0.0190775080917, 0.0550503815182, 0.0)
-        p4 = geo.Point(0.03974514139, 0.0723925718856, 0.0)
-
-        fault = SimpleFaultSurface(geo.Line([p1, p2, p3, p4]),
-                2.12132034356, 2.12132034356, 45.0)
-
-        self.assert_mesh_is(fault, 1.0, test_data.TEST_3_MESH)
 
     def test_get_mesh_4(self):
         p1 = geo.Point(0.0, 0.0, 0.0)

@@ -40,7 +40,8 @@ class SimpleFaultSurface(BaseSurface):
     :type lower_seismo_depth:
         float
     :param dip:
-        Dip angle, in degrees.
+        Dip angle (i.e. angle between fault surface
+        and earth surface), in degrees.
     :type dip:
         float
     """
@@ -56,8 +57,8 @@ class SimpleFaultSurface(BaseSurface):
 
         _ensure(0.0 < dip <= 90.0, "Dip must be between 0.0 and 90.0!")
 
-        _ensure(lower_seismo_depth >= upper_seismo_depth,
-                "Lower seismo depth must be >= than upper seismo dept!")
+        _ensure(lower_seismo_depth > upper_seismo_depth,
+                "Lower seismo depth must be > than upper seismo dept!")
 
         _ensure(upper_seismo_depth >= 0.0,
                 "Upper seismo depth must be >= 0.0!")
