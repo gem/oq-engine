@@ -23,7 +23,7 @@ def _ensure(expr, msg):
 class SimpleFaultSurface(BaseSurface):
     """
     Represent a fault surface as regular (uniformly spaced) 3D mesh of points.
-    
+
     :param fault_trace:
         Geographical line representing the intersection between
         the fault surface and the earth surface.
@@ -108,7 +108,7 @@ class SimpleFaultSurface(BaseSurface):
     def _fault_top_edge(self, mesh_spacing):
         """
         Line representing the fault top edge.
-        
+
         It's obtained by translating the fault trace from the earth surface
         to the upper seismogenic depth, with an inclination equal to
         the dip angle, and along a direction perpendicular the fault strike

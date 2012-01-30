@@ -24,7 +24,7 @@ class SimpleFaultSurfaceTestCase(utils.SurfaceTestCase):
 
         self.assertRaises(RuntimeError, SimpleFaultSurface,
                 self.fault_trace, 0.0, 1.0, 90.1)
-        
+
         SimpleFaultSurface(self.fault_trace, 0.0, 1.0, 0.1)
         SimpleFaultSurface(self.fault_trace, 0.0, 1.0, 90.0)
 
@@ -48,7 +48,7 @@ class SimpleFaultSurfaceTestCase(utils.SurfaceTestCase):
 
     def test_mesh_spacing_range(self):
         surface = SimpleFaultSurface(self.fault_trace, 0.0, 1.0, 90.0)
-        
+
         self.assertRaises(RuntimeError, surface.get_mesh, 0.0)
         self.assertRaises(RuntimeError, surface.get_mesh, -0.1)
 
@@ -66,9 +66,9 @@ class SimpleFaultSurfaceTestCase(utils.SurfaceTestCase):
 
         fault = SimpleFaultSurface(
             geo.Line([p1, p2, p3, p4]), 0.0, 4.2426406871192848, 45.0)
-        
+
         self.assert_mesh_is(fault, 1.0, test_data.TEST_1_MESH)
-    
+
     def test_get_mesh_2(self):
         p1 = geo.Point(0.0, 0.0, 0.0)
         p2 = geo.Point(0.0, 0.0359728811759, 0.0)
