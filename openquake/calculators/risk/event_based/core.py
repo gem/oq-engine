@@ -369,8 +369,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         loss_histogram_bins = calc_proxy.oq_job_profile.loss_histogram_bins
         loss_ratio_curve = general.compute_loss_ratio_curve(
             vuln_function, gmf_slice, epsilon_provider, asset,
-            calc_proxy.oq_job_profile.loss_histogram_bins,
-            loss_ratios=loss_ratios)
+            loss_histogram_bins, loss_ratios=loss_ratios)
 
         # NOTE (jmc): Early exit if the loss ratio is all zeros
         if not False in (loss_ratio_curve.ordinates == 0.0):
