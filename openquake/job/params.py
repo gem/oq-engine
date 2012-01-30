@@ -349,6 +349,8 @@ define_param('INVESTIGATION_TIME', 'investigation_time', default=0.0,
                     'classical_bcr', 'event_based_bcr'),
              to_job=float)
 define_param('LOSS_CURVES_OUTPUT_PREFIX', 'loss_curves_output_prefix')
+define_param('LREM_STEPS_PER_INTERVAL', 'lrem_steps_per_interval',
+             modes=('classical', 'classical_bcr'), to_job=int)
 define_param('MAXIMUM_DISTANCE', 'maximum_distance', to_job=float,
              modes=('classical', 'disaggregation', 'uhs',
                     'classical_bcr', 'event_based_bcr'))
