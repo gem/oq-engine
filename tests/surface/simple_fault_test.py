@@ -68,3 +68,47 @@ class SimpleFaultSurfaceTestCase(utils.SurfaceTestCase):
             geo.Line([p1, p2, p3, p4]), 0.0, 4.2426406871192848, 45.0)
         
         self.assert_mesh_is(fault, 1.0, test_data.TEST_1_MESH)
+    
+    def test_get_mesh_2(self):
+        p1 = geo.Point(0.0, 0.0, 0.0)
+        p2 = geo.Point(0.0, 0.0359728811759, 0.0)
+        p3 = geo.Point(0.0190775080917, 0.0550503815182, 0.0)
+        p4 = geo.Point(0.03974514139, 0.0723925718856, 0.0)
+
+        fault = SimpleFaultSurface(geo.Line([p1, p2, p3, p4]),
+                2.12132034356, 4.2426406871192848, 45.0)
+
+        self.assert_mesh_is(fault, 1.0, test_data.TEST_2_MESH)
+
+    def test_get_mesh_3(self):
+        p1 = geo.Point(0.0, 0.0, 0.0)
+        p2 = geo.Point(0.0, 0.0359728811759, 0.0)
+        p3 = geo.Point(0.0190775080917, 0.0550503815182, 0.0)
+        p4 = geo.Point(0.03974514139, 0.0723925718856, 0.0)
+
+        fault = SimpleFaultSurface(geo.Line([p1, p2, p3, p4]),
+                2.12132034356, 2.12132034356, 45.0)
+
+        self.assert_mesh_is(fault, 1.0, test_data.TEST_3_MESH)
+
+    def test_get_mesh_4(self):
+        p1 = geo.Point(0.0, 0.0, 0.0)
+        p2 = geo.Point(0.0, 0.0359728811759, 0.0)
+        p3 = geo.Point(0.0190775080917, 0.0550503815182, 0.0)
+        p4 = geo.Point(0.03974514139, 0.0723925718856, 0.0)
+
+        fault = SimpleFaultSurface(geo.Line([p1, p2, p3, p4]),
+                0.0, 4.0, 90.0)
+
+        self.assert_mesh_is(fault, 1.0, test_data.TEST_4_MESH)
+
+    @unittest.skip("line intersection must be fixed first")
+    def test_get_mesh_5(self):
+        p1 = geo.Point(179.9, 0.0)
+        p2 = geo.Point(180.0, 0.0)
+        p3 = geo.Point(-179.9, 0.0)
+
+        fault = SimpleFaultSurface(geo.Line([p1, p2, p3]),
+                1.0, 6.0, 90.0)
+
+        self.assert_mesh_is(fault, 1.0, test_data.TEST_5_MESH)
