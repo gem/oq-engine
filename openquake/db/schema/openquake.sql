@@ -818,14 +818,23 @@ CREATE TABLE uiapi.oq_job_profile (
     lrem_steps_per_interval integer
         CONSTRAINT lrem_steps_is_set
         CHECK (
-            -- If this is a Classical or Classical BCR Hazard+Risk calculation,
-            -- lrem_steps_per_interval needs to set.
-            ((ARRAY['hazard', 'risk']::VARCHAR[] <@ job_type)
-             AND (calc_mode IN ('classical', 'classical_bcr'))
-             AND lrem_steps_per_interval IS NOT NULL)
+            (calc_mode in ('classical', 'classical_bcr'))
+            AND
+            (
+                -- If this is a Classical or Classical BCR Risk calculation,
+                -- lrem_steps_per_interval needs to set.
+                ((ARRAY['risk']::VARCHAR[] <@ job_type)
+                 AND (lrem_steps_per_interval IS NOT NULL))
+                OR
+                -- If it's not a Risk calculation, it should be NULL.
+                ((NOT ARRAY['risk']::VARCHAR[] <@ job_type)
+                 AND (lrem_steps_per_interval IS NULL))
+            )
             OR
-            -- In any other case, it is not used.
-            (lrem_steps_per_interval IS NULL)),
+            (
+                (calc_mode NOT IN ('classical', 'classical_bcr'))
+                AND (lrem_steps_per_interval IS NULL)
+            )),
     loss_curves_output_prefix VARCHAR,
     maximum_distance float
         CONSTRAINT maximum_distance_is_set
