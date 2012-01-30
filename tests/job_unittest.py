@@ -629,6 +629,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         params['EXPOSURE'] = abs_path("small_exposure.xml")
         params['VULNERABILITY'] = abs_path("vulnerability.xml")
         params['GMF_RANDOM_SEED'] = '1'
+        params['LOSS_HISTOGRAM_BINS'] = '25'
 
         self.job = _prepare_job(params, ['HAZARD', 'RISK'])
         self.job.oq_job_profile = self._reload_params()
@@ -677,6 +678,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
 
         params = self.BASE_EVENT_BASED_PARAMS.copy()
         params['SITES'] = '33.88, -118.3, 33.88, -118.06, 33.76, -118.06'
+        params['LOSS_HISTOGRAM_BINS'] = '25'
 
         self.job = _prepare_job(params, ['HAZARD', 'RISK'])
         self.job.oq_job_profile = self._reload_params()

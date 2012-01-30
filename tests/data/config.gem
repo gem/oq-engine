@@ -140,3 +140,4 @@ LOSS_MAP = loss_map.tiff
 # name of the loss ratio map file to generate
 LOSS_RATIO_MAP = loss_ratio_map.tiff
 # The '#' character and the ';' are used to start a single line comment
+LOSS_HISTOGRAM_BINS = 25

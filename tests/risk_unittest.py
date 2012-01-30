@@ -24,8 +24,10 @@ import unittest
 import tempfile
 from StringIO import StringIO
 
+from django.contrib.gis.geos import GEOSGeometry
 from lxml import etree
 
+from openquake import engine
 from openquake import kvs
 from openquake import shapes
 from openquake.output import hazard
@@ -438,8 +440,10 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
     def test_builds_the_cumulative_histogram(self):
         loss_ratios = compute_loss_ratios(
                 self.vuln_function_1, self.gmfs, None, None)
+        loss_histogram_bins = 25
 
-        loss_ratios_range = _compute_loss_ratios_range(loss_ratios)
+        loss_ratios_range = _compute_loss_ratios_range(
+            loss_ratios, loss_histogram_bins)
 
         self.assertTrue(numpy.allclose(self.cum_histogram,
                 _compute_cumulative_histogram(
@@ -485,7 +489,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         self.assertEqual(expected_curve, compute_loss_ratio_curve(
                 self.vuln_function_2, self.gmfs_1,
-                None, None, number_of_samples=6))
+                None, None, 6))
 
         expected_curve = shapes.Curve([(0.0935225, 0.99326205),
                 (0.2640675, 0.917915), (0.4346125, 0.77686984),
@@ -493,7 +497,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         self.assertEqual(expected_curve, compute_loss_ratio_curve(
                 self.vuln_function_2, self.gmfs_2,
-                None, None, number_of_samples=6))
+                None, None, 6))
 
         expected_curve = shapes.Curve([(0.1047, 0.99326205),
                 (0.2584, 0.89460078), (0.4121, 0.63212056),
@@ -501,7 +505,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         self.assertEqual(expected_curve, compute_loss_ratio_curve(
                 self.vuln_function_2, self.gmfs_3,
-                None, None, number_of_samples=6))
+                None, None, 6))
 
         expected_curve = shapes.Curve([(0.09012, 0.99326205),
                 (0.25551, 0.93607214), (0.4209, 0.77686984),
@@ -509,7 +513,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         self.assertEqual(expected_curve, compute_loss_ratio_curve(
                 self.vuln_function_2, self.gmfs_4,
-                None, None, number_of_samples=6))
+                None, None, 6))
 
         expected_curve = shapes.Curve([(0.08089, 0.99326205),
                 (0.23872, 0.95021293), (0.39655, 0.7134952),
@@ -517,7 +521,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         self.assertEqual(expected_curve, compute_loss_ratio_curve(
                 self.vuln_function_2, self.gmfs_5,
-                None, None, number_of_samples=6))
+                None, None, 6))
 
         expected_curve = shapes.Curve([(0.0717025, 0.99326205),
                 (0.2128575, 0.917915), (0.3540125, 0.82622606),
@@ -525,14 +529,14 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
 
         self.assertEqual(expected_curve, compute_loss_ratio_curve(
                 self.vuln_function_2, self.gmfs_6,
-                None, None, number_of_samples=6))
+                None, None, 6))
 
     def test_with_not_earthquakes_we_have_an_empty_curve(self):
         gmfs = dict(self.gmfs)
         gmfs["IMLs"] = ()
 
         curve = compute_loss_ratio_curve(
-                self.vuln_function_1, gmfs, None, None)
+                self.vuln_function_1, gmfs, None, None, 25)
 
         self.assertEqual(shapes.EMPTY_CURVE, curve)
 
@@ -552,11 +556,11 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (0.0, 0.0), (0.0, 0.0), (0.0, 0.0)])
 
         self.assertEqual(expected_curve, compute_loss_ratio_curve(
-                self.vuln_function_1, gmfs, None, None))
+                self.vuln_function_1, gmfs, None, None, 25))
 
     def test_an_empty_distribution_produces_an_empty_aggregate_curve(self):
         self.assertEqual(
-            shapes.EMPTY_CURVE, AggregateLossCurve().compute(0, 0))
+            shapes.EMPTY_CURVE, AggregateLossCurve().compute(0, 0, 25))
 
     def test_computes_the_aggregate_loss_curve(self):
         # no epsilon_provided is needed because the vulnerability
@@ -601,7 +605,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 (239.56063147, 0.52763345), (306.23850182, 0.22119922)])
 
         self.assertEqual(expected_curve, aggregate_curve.compute(
-                200, 50, number_of_samples=6))
+                200, 50, 6))
 
     def test_no_losses_without_gmfs(self):
         aggregate_curve = AggregateLossCurve()
@@ -678,19 +682,31 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 self.assertEqual(0, close_mock.call_count)
 
     def test_compute_bcr(self):
-        params = self.params.copy()
+        cfg_path = helpers.demo_file(
+            'probabilistic_event_based_risk/config.gem')
+        job_profile, params, sections = engine.import_job_profile(cfg_path)
+        job_profile.calc_mode = 'event_based_bcr'
+        job_profile.interest_rate = 0.05
+        job_profile.asset_life_expectancy = 50
+        job_profile.region = GEOSGeometry(shapes.polygon_ewkt_from_coords(
+            '0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 2.0, 0.0'))
+        job_profile.region_grid_spacing = 0.1
+        job_profile.maximum_distance = 200.0
+        job_profile.gmf_random_seed = None
+        job_profile.save()
+
         params.update(dict(CALCULATION_MODE='Event Based BCR',
                            INTEREST_RATE='0.05',
                            ASSET_LIFE_EXPECTANCY='50',
-                           NUMBER_OF_SEISMICITY_HISTORIES='1',
-                           NUMBER_OF_LOGIC_TREE_SAMPLES='1',
+                           MAXIMUM_DISTANCE='200.0',
                            REGION_VERTEX=('0.0, 0.0, 0.0, 2.0, '
                                           '2.0, 2.0, 2.0, 0.0'),
                            REGION_GRID_SPACING='0.1'))
 
-        the_job = helpers.create_job(params, job_id=self.job_id)
+        calc_proxy = engine.CalculationProxy(
+            params, self.job_id, sections=sections, oq_job_profile=job_profile)
 
-        calculator = eb_core.EventBasedRiskCalculator(the_job)
+        calculator = eb_core.EventBasedRiskCalculator(calc_proxy)
 
         self.block_id = 7
         SITE = shapes.Site(1.0, 1.0)
