@@ -21,6 +21,29 @@ def _ensure(expr, msg):
 
 
 class SimpleFaultSurface(BaseSurface):
+    """
+    Represent a fault surface as regular (uniformly spaced) 3D mesh of points.
+    
+    :param fault_trace:
+        Geographical line representing the intersection between
+        the fault surface and the earth surface.
+    :type fault_trace:
+        instance of :class:`nhe.geo.Line`
+    :param upper_seismo_depth:
+        Minimum depth ruptures can reach, in km (i.e. depth
+        to fault's top edge).
+    :type upper_seismo_depth:
+        float
+    :param lower_seismo_depth:
+        Maximum depth ruptures can reach, in km (i.e. depth
+        to fault's bottom edge).
+    :type lower_seismo_depth:
+        float
+    :param dip:
+        Dip angle, in degrees.
+    :type dip:
+        float
+    """
 
     def __init__(self, fault_trace, upper_seismo_depth,
             lower_seismo_depth, dip):
@@ -83,6 +106,26 @@ class SimpleFaultSurface(BaseSurface):
         return surface.tolist()
 
     def _fault_top_edge(self, mesh_spacing):
+        """
+        Line representing the fault top edge.
+        
+        It's obtained by translating the fault trace from the earth surface
+        to the upper seismogenic depth, with an inclination equal to
+        the dip angle, and along a direction perpendicular the fault strike
+        (computed as the azimuth between the fault trace's first
+        and last points). The line is then resampled in equal length segments
+        (length equal to ``mesh_spacing``).
+
+        :param mesh_spacing:
+            Spacing between mesh points, in km.
+        :type mesh_spacing:
+            float
+        :returns:
+            The fault top edge.
+        :rtype:
+            instance of :class:`nhe.geo.Line`
+        """
+
         top_edge = []
         horizontal_distance = 0.0
 
