@@ -168,3 +168,4 @@ AGGREGATE_LOSS_CURVE = true
 
 # uncomment this if you want to compute hazard only on sites defined in the exposure
 # COMPUTE_HAZARD_AT_ASSETS_LOCATIONS = true
+LOSS_HISTOGRAM_BINS = 25
