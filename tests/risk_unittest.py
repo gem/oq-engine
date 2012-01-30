@@ -24,8 +24,10 @@ import unittest
 import tempfile
 from StringIO import StringIO
 
+from django.contrib.gis.geos import GEOSGeometry
 from lxml import etree
 
+from openquake import engine
 from openquake import kvs
 from openquake import shapes
 from openquake.output import hazard
@@ -724,11 +726,11 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         kvs.get_client().rpush(key, json.JSONEncoder().encode(asset))
 
     def setUp(self):
-        self.job = None
+        self.block_id = 7
+        self.job = self.setup_classic_job()
+        self.job_id = self.job.id
 
     def tearDown(self):
-        classical_core.STEPS_PER_INTERVAL = 5
-
         if self.job:
             self.teardown_job(self.job)
 
@@ -759,14 +761,14 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
         # pre computed values just use one intermediate
         # values between the imls
-        classical_core.STEPS_PER_INTERVAL = 2
+        lrem_steps = 2
 
         imls = [0.1, 0.2, 0.4, 0.6]
         loss_ratios = [0.05, 0.08, 0.2, 0.4]
         covs = [0.5, 0.3, 0.2, 0.1]
         vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
 
-        lrem = classical_core._compute_lrem(vuln_function)
+        lrem = classical_core._compute_lrem(vuln_function, lrem_steps)
 
         lrem_po = classical_core._compute_lrem_po(vuln_function,
                 lrem, hazard_curve)
@@ -820,7 +822,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
     def test_end_to_end(self):
         # manually computed values by Vitor Silva
-        classical_core.STEPS_PER_INTERVAL = 2
+        lrem_steps = 2
         hazard_curve = shapes.Curve([
               (0.01, 0.99), (0.08, 0.96),
               (0.17, 0.89), (0.26, 0.82),
@@ -833,7 +835,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
 
         loss_ratio_curve = classical_core.compute_loss_ratio_curve(
-                vuln_function, hazard_curve)
+                vuln_function, hazard_curve, lrem_steps)
 
         lr_curve_expected = shapes.Curve([(0.0, 0.96),
                 (0.025, 0.96), (0.05, 0.91), (0.065, 0.87),
@@ -864,7 +866,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
     def test_splits_multiple_intervals_with_a_step_between(self):
         self.assertTrue(numpy.allclose(numpy.array(
             [1.0, 1.5, 2.0, 2.5, 3.0]),
-            classical_core._split_loss_ratios([1.0, 2.0, 3.0], steps=2)))
+            classical_core._split_loss_ratios([1.0, 2.0, 3.0], 2)))
 
     def test_splits_multiple_intervals_with_steps_between(self):
         self.assertTrue(numpy.allclose(numpy.array(
@@ -890,8 +892,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         # deletes all keys from kvs
         kvs.get_client().flushall()
 
-        self.job = self.setup_classic_job()
-
         # at the moment the hazard part doesn't do exp on the 'x'
         # so it's done on the risk part. To adapt the calculation
         # we do the reverse of the exp, i.e. log(x)
@@ -915,15 +915,12 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         self.vuln_function_2 = shapes.VulnerabilityFunction(imls_2,
             loss_ratios_2, covs_2)
 
-        self.job_id = self.job.id
-
         self.asset_1 = {"taxonomy": "ID",
                 "assetValue": 124.27}
 
         self.region = shapes.RegionConstraint.from_simple(
                 (0.0, 0.0), (2.0, 2.0))
 
-        self.block_id = 7
         block = Block(self.job_id, self.block_id, (SITE, SITE))
         block.to_kvs()
 
@@ -943,16 +940,22 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
             all the loss curves in the kvs and checks their presence
         """
 
+        cls_risk_cfg = helpers.demo_file(
+            'classical_psha_based_risk/config.gem')
+        job_profile, params, sections = engine.import_job_profile(cls_risk_cfg)
+
+        # We need to adjust a few of the parameters for this test:
+        params['REGION_VERTEX'] = '0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 2.0, 0.0'
+        job_profile.region = GEOSGeometry(shapes.polygon_ewkt_from_coords(
+            params['REGION_VERTEX']))
+        job_profile.save()
+
+        calc_proxy = engine.CalculationProxy(
+            params, self.job_id, sections=sections, oq_job_profile=job_profile)
+
         self._compute_risk_classical_psha_setup()
 
-        params = dict(CALCULATION_MODE='Classical',
-                      REGION_VERTEX=('0.0, 0.0, 0.0, 2.0, '
-                                     '2.0, 2.0, 2.0, 0.0'),
-                      REGION_GRID_SPACING='0.1')
-
-        the_job = helpers.create_job(params, job_id=self.job_id)
-
-        calculator = classical_core.ClassicalRiskCalculator(the_job)
+        calculator = classical_core.ClassicalRiskCalculator(calc_proxy)
         calculator.vuln_curves = {"ID": self.vuln_function}
 
         block = Block.from_kvs(self.job_id, self.block_id)
@@ -965,7 +968,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         # computes the loss curves and puts them in kvs
         self.assertTrue(calculator.compute_risk(self.block_id))
 
-        for point in block.grid(the_job.region):
+        for point in block.grid(calc_proxy.region):
             asset_key = kvs.tokens.asset_key(self.job_id, point.row,
                 point.column)
             for asset in kvs.get_list_json_decoded(asset_key):
@@ -981,16 +984,21 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
     def test_compute_bcr_in_the_classical_psha_calculator(self):
         self._compute_risk_classical_psha_setup()
 
-        params = dict(CALCULATION_MODE='Classical BCR',
-                      INTEREST_RATE='0.05',
-                      ASSET_LIFE_EXPECTANCY='50',
-                      REGION_VERTEX=('0.0, 0.0, 0.0, 2.0, '
-                                     '2.0, 2.0, 2.0, 0.0'),
-                      REGION_GRID_SPACING='0.1')
+        bcr_config = helpers.demo_file('benefit_cost_ratio/config.gem')
+        job_profile, params, sections = engine.import_job_profile(bcr_config)
 
-        the_job = helpers.create_job(params, job_id=self.job_id)
+        # We need to adjust a few of the parameters for this test:
+        params['ASSET_LIFE_EXPECTANCY'] = '50'
+        job_profile.asset_life_expectancy = 50
+        params['REGION_VERTEX'] = '0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 2.0, 0.0'
+        job_profile.region = GEOSGeometry(shapes.polygon_ewkt_from_coords(
+            params['REGION_VERTEX']))
+        job_profile.save()
 
-        calculator = classical_core.ClassicalRiskCalculator(the_job)
+        calc_proxy = engine.CalculationProxy(
+            params, self.job_id, sections=sections, oq_job_profile=job_profile)
+
+        calculator = classical_core.ClassicalRiskCalculator(calc_proxy)
 
         Block.from_kvs(self.job_id, self.block_id)
         asset = {"taxonomy": "ID",
@@ -1012,34 +1020,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         helpers.assertDeepAlmostEqual(
             self, res, [[[12.34, 56.67], [[expected_result, 22.61]]]]
         )
-
-    def test_loss_ratio_curve_in_the_classical_psha_calculator(self):
-
-        the_job = helpers.create_job({}, job_id=1234)
-        calculator = classical_core.ClassicalRiskCalculator(the_job)
-
-        hazard_curve = shapes.Curve([
-              (0.01, 0.99), (0.08, 0.96),
-              (0.17, 0.89), (0.26, 0.82),
-              (0.36, 0.70), (0.55, 0.40),
-              (0.70, 0.01)])
-
-        imls = [0.1, 0.2, 0.4, 0.6]
-        loss_ratios = [0.05, 0.08, 0.2, 0.4]
-        covs = [0.5, 0.3, 0.2, 0.1]
-        vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
-
-        # pre computed values just use one intermediate
-        # values between the imls
-        classical_core.STEPS_PER_INTERVAL = 2
-
-        vuln_curves = {"ID": vuln_function}
-
-        asset = {"taxonomy": "ID", "assetID": 1}
-
-        self.assertTrue(calculator.compute_loss_ratio_curve(
-                        shapes.GridPoint(None, 10, 20),
-                        asset, hazard_curve, vuln_curves) is not None)
 
     def test_splits_with_real_values_from_turkey(self):
         loss_ratios = [0.0, 1.96E-15, 2.53E-12, 8.00E-10, 8.31E-08, 3.52E-06,
@@ -1074,7 +1054,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
         self.assertTrue(
             numpy.allclose(numpy.array(result),
-                           classical_core._split_loss_ratios(loss_ratios)))
+                           classical_core._split_loss_ratios(loss_ratios, 5)))
 
     def test_splits_with_real_values_from_taiwan(self):
         loss_ratios = [0.0, 1.877E-20, 8.485E-17, 8.427E-14,
@@ -1082,8 +1062,8 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
                 5.042E-05, 4.550E-04, 2.749E-03, 1.181E-02]
 
         # testing just the length of the result
-        self.assertEqual(56,
-                         len(classical_core._split_loss_ratios(loss_ratios)))
+        self.assertEqual(
+            56, len(classical_core._split_loss_ratios(loss_ratios, 5)))
 
     def test_ratio_is_zero_if_probability_is_too_high(self):
         loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
