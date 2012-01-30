@@ -814,6 +814,25 @@ CREATE TABLE uiapi.oq_job_profile (
             ((calc_mode NOT IN ('classical_bcr', 'event_based_bcr'))
              AND interest_rate IS NULL)),
     loss_curves_output_prefix VARCHAR,
+    -- Number of bins in the compute loss histogram.
+    -- For Event-Based Risk calculations only.
+    loss_histogram_bins INTEGER
+        CONSTRAINT loss_histogram_bins_is_set
+        CHECK (
+            (calc_mode in ('event_based', 'event_based_bcr'))
+            AND
+            (
+                ((ARRAY['risk']::VARCHAR[] <@ job_type)
+                 AND (loss_histogram_bins is NOT NULL))
+                OR
+                ((NOT ARRAY['risk']::VARCHAR[] <@ job_type)
+                 AND (loss_histogram_bins IS NULL))
+            )
+            OR
+            (
+                (calc_mode NOT IN ('event_based', 'event_based_bcr')
+                 AND (loss_histogram_bins IS NULL))
+            )),
     maximum_distance float
         CONSTRAINT maximum_distance_is_set
         CHECK(

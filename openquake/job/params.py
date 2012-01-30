@@ -349,6 +349,8 @@ define_param('INVESTIGATION_TIME', 'investigation_time', default=0.0,
                     'classical_bcr', 'event_based_bcr'),
              to_job=float)
 define_param('LOSS_CURVES_OUTPUT_PREFIX', 'loss_curves_output_prefix')
+define_param('LOSS_HISTOGRAM_BINS', 'loss_histogram_bins',
+             modes=('event_based', 'event_based_bcr'), to_job=int)
 define_param('MAXIMUM_DISTANCE', 'maximum_distance', to_job=float,
              modes=('classical', 'disaggregation', 'uhs',
                     'classical_bcr', 'event_based_bcr'))
