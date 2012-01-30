@@ -645,6 +645,7 @@ class OqJobProfile(models.Model):
     include_fault_source = models.NullBooleanField(null=True)
     include_grid_sources = models.NullBooleanField(null=True)
     include_subduction_fault_source = models.NullBooleanField(null=True)
+    lrem_steps_per_interval = models.IntegerField(null=True)
     loss_curves_output_prefix = models.TextField(null=True)
     # Only used for Event-Based Risk calculations.
     loss_histogram_bins = models.IntegerField(null=True)

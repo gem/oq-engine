@@ -158,3 +158,5 @@ RISK_CELL_SIZE = 0.0005
 
 # uncomment this if you want to compute the aggregate loss curve
 AGGREGATE_LOSS_CURVE = 1
+
+LREM_STEPS_PER_INTERVAL = 5
