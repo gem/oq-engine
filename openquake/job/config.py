@@ -33,6 +33,7 @@ CALCULATION_MODE = "CALCULATION_MODE"
 BCR_CLASSICAL_MODE = "Classical BCR"
 BCR_EVENT_BASED_MODE = "Event Based BCR"
 CLASSICAL_MODE = "Classical"
+EVENT_BASED_MODE = "Event Based"
 DISAGGREGATION_MODE = "Disaggregation"
 SCENARIO_MODE = "Scenario"
 UHS_MODE = "UHS"
@@ -555,7 +556,7 @@ class ClassicalValidator(object):
 
 
 class ClassicalRiskValidator(object):
-    """Validator for Classical/Classical BCR Risk job configs."""
+    """Validator for Classical/Classical BCR Risk calculation configs."""
 
     LREM_STEPS_ERROR = ('LREM_STEPS_PER_INTERVAL must be defined as an integer'
                         ' >= 1 in Classical/Classical BCR Hazard+Risk'
@@ -581,6 +582,36 @@ class ClassicalRiskValidator(object):
             return (False, [self.LREM_STEPS_ERROR])
 
         # No validation issues; configuration is good.
+        return (True, [])
+
+
+class EventBasedRiskValidator(object):
+    """Validator for Event-Based/Event-Based BCR Risk calculation configs."""
+
+    LOSS_HISTOGRAM_BINS_ERROR = ('LOSS_HISTOGRAM_BINS must be defined as an'
+                                 ' integer >= 1 in Event-Based/Event-Based'
+                                 ' BCR calculations.')
+
+    def __init__(self, params):
+        self.params = params
+
+    def is_valid(self):
+        """Make the following calculation configuration checks:
+            * Check that LOSS_HISTOGRAM_BINS is defined.
+            * Check that LOSS_HISTOGRAM_BINS is an int >= 1.
+        """
+        hgram_bins = self.params.get('LOSS_HISTOGRAM_BINS')
+
+        if hgram_bins is None:
+            return (False, [self.LOSS_HISTOGRAM_BINS_ERROR])
+
+        try:
+            if int(hgram_bins) < 1:
+                return (False, [self.LOSS_HISTOGRAM_BINS_ERROR])
+
+        except ValueError:
+            return (False, [self.LOSS_HISTOGRAM_BINS_ERROR])
+
         return (True, [])
 
 
@@ -622,9 +653,15 @@ def default_validators(sections, params):
     if params.get(CALCULATION_MODE) == CLASSICAL_MODE:
         validators.add(ClassicalValidator(sections, params))
 
-    # Validator only for Classical/Classical BCR Hazard+Risk:
+    # Validator only for Classical/Classical BCR Risk:
     if (params.get(CALCULATION_MODE) in (BCR_CLASSICAL_MODE, CLASSICAL_MODE)
         and set([HAZARD_SECTION, RISK_SECTION]).issubset(sections)):
         validators.add(ClassicalRiskValidator(params))
+
+    # Validator only for Event-Based/Event-Based BCR Risk:
+    if (params.get(CALCULATION_MODE) in (BCR_EVENT_BASED_MODE,
+                                         EVENT_BASED_MODE)
+        and set([HAZARD_SECTION, RISK_SECTION]).issubset(sections)):
+        validators.add(EventBasedRiskValidator(params))
 
     return validators
