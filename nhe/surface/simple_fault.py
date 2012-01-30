@@ -80,7 +80,7 @@ class SimpleFaultSurface(BaseSurface):
         surface = surface.reshape(len(top_edge), len(mesh) / len(top_edge))
         surface = numpy.transpose(surface)
 
-        return surface.to_list()
+        return surface.tolist()
 
     def _fault_top_edge(self, mesh_spacing):
         top_edge = []

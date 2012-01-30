@@ -260,6 +260,9 @@ class Line(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def __getitem__(self, key):
+        return self.points.__getitem__(key)
+
     def __len__(self):
         return len(self.points)
 

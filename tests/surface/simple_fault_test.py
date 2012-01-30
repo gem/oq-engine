@@ -5,8 +5,11 @@ import unittest
 from nhe.common import geo
 from nhe.surface.simple_fault import SimpleFaultSurface
 
+import _simple_fault_test_data as test_data
+import utils
 
-class SimpleFaultSurfaceTestCase(unittest.TestCase):
+
+class SimpleFaultSurfaceTestCase(utils.SurfaceTestCase):
 
     def setUp(self):
         self.fault_trace = geo.Line(
@@ -54,3 +57,14 @@ class SimpleFaultSurfaceTestCase(unittest.TestCase):
 
         self.assertRaises(RuntimeError, SimpleFaultSurface,
                 fault_trace, 0.0, 1.0, 90.0)
+
+    def test_get_mesh_1(self):
+        p1 = geo.Point(0.0, 0.0, 0.0)
+        p2 = geo.Point(0.0, 0.0359728811759, 0.0)
+        p3 = geo.Point(0.0190775080917, 0.0550503815182, 0.0)
+        p4 = geo.Point(0.03974514139, 0.0723925718856, 0.0)
+
+        fault = SimpleFaultSurface(
+            geo.Line([p1, p2, p3, p4]), 0.0, 4.2426406871192848, 45.0)
+        
+        self.assert_mesh_is(fault, 1.0, test_data.TEST_1_MESH)
