@@ -22,12 +22,19 @@ This module tests the logic related to the engine configuration
 and its validation.
 """
 
+from openquake import engine
 from openquake.job import config
-from openquake.job.config import (
-    DisaggregationValidator, HazardMandatoryParamsValidator,
-    RiskMandatoryParamsValidator, ScenarioComputationValidator,
-    UHSValidator, to_float_array, to_str_array, validate_numeric_sequence,
-    BCRValidator, ClassicalValidator)
+from openquake.job.config import BCRValidator
+from openquake.job.config import ClassicalValidator
+from openquake.job.config import ClassicalRiskValidator
+from openquake.job.config import DisaggregationValidator
+from openquake.job.config import HazardMandatoryParamsValidator
+from openquake.job.config import RiskMandatoryParamsValidator
+from openquake.job.config import ScenarioComputationValidator
+from openquake.job.config import UHSValidator
+from openquake.job.config import to_float_array
+from openquake.job.config import to_str_array
+from openquake.job.config import validate_numeric_sequence
 from tests.utils import helpers
 
 import unittest
@@ -487,6 +494,30 @@ class DefaultValidatorsTestCase(unittest.TestCase):
         self.assertTrue(any(
             isinstance(v, ScenarioComputationValidator) for v in validators))
 
+    def test_default_validators_classical_risk(self):
+        # For Classical Hazard+Risk calculations, ensure that a
+        # `ClassicalRiskValidator` is included in the default validators.
+        cfg_path = helpers.demo_file('classical_psha_based_risk/config.gem')
+
+        job_profile, params, sections = engine.import_job_profile(cfg_path)
+
+        validators = config.default_validators(sections, params)
+
+        self.assertTrue(any(
+            isinstance(v, ClassicalRiskValidator) for v in validators))
+
+    def test_default_validators_classical_bcr_risk(self):
+        # For Classical BCR Hazard+Risk calculations, ensure that a
+        # `ClassicalRiskValidator` is included in the default validators.
+        cfg_path = helpers.demo_file('benefit_cost_ratio/config.gem')
+
+        job_profile, params, sections = engine.import_job_profile(cfg_path)
+
+        validators = config.default_validators(sections, params)
+
+        self.assertTrue(any(
+            isinstance(v, ClassicalRiskValidator) for v in validators))
+
 
 class ValidatorsUtilsTestCase(unittest.TestCase):
     """Test for validator utility functions"""
@@ -680,3 +711,36 @@ class ClassicalValidatorTestCase(unittest.TestCase):
 
         self.validator = ClassicalValidator(['HAZARD'], self.PARAMS_2)
         self.assertTrue(self.validator.is_valid()[0])
+
+
+class ClassicalRiskValidatorTestCase(unittest.TestCase):
+    """Tests for the :class:`openquake.job.config.ClassicalRiskValidator`.
+    """
+
+    def test_lrem_steps_defined_valid_value(self):
+        # The config should be considered valid if LREM_STEPS_PER_INTERVAL is
+        # defined and has a valid value.
+        # The value must be >= 1
+        val = ClassicalRiskValidator(dict(LREM_STEPS_PER_INTERVAL=1))
+        self.assertTrue(val.is_valid()[0])
+
+        val = ClassicalRiskValidator(dict(LREM_STEPS_PER_INTERVAL=2))
+        self.assertTrue(val.is_valid()[0])
+
+    def test_lrem_steps_defined_invalid_value(self):
+        # LREM_STEPS_PER_INTERVAL values < 1 are not allowed.
+        val = ClassicalRiskValidator(dict(LREM_STEPS_PER_INTERVAL=0))
+        self.assertFalse(val.is_valid()[0])
+
+        val = ClassicalRiskValidator(dict(LREM_STEPS_PER_INTERVAL=-1))
+        self.assertFalse(val.is_valid()[0])
+
+    def test_lrem_steps_not_defined(self):
+        val = ClassicalRiskValidator(dict())
+        self.assertFalse(val.is_valid()[0])
+
+    def test_lrem_steps_invalid_type(self):
+        # An invalid type, in this case, is something that can't be cast to an
+        # `int`.
+        val = ClassicalRiskValidator(dict(LREM_STEPS_PER_INTERVAL='one'))
+        self.assertFalse(val.is_valid()[0])
