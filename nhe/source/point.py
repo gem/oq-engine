@@ -83,11 +83,15 @@ class PointSource(SeismicSource):
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
         """
+        return self._iter_ruptures_at_location(temporal_occurrence_model,
+                                               self.location)
+
+    def _iter_ruptures_at_location(self, temporal_occurrence_model, location):
         for (mag, mag_occ_rate) in self.mfd.get_annual_occurrence_rates():
             for (np_prob, np) in self.nodal_plane_distribution.data:
                 for (hc_prob, hc_depth) in self.hypocenter_distribution.data:
-                    hypocenter = Point(latitude=self.location.latitude,
-                                       longitude=self.location.longitude,
+                    hypocenter = Point(latitude=location.latitude,
+                                       longitude=location.longitude,
                                        depth=hc_depth)
                     occurrence_rate = (mag_occ_rate
                                        * float(np_prob) * float(hc_prob))
