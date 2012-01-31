@@ -43,6 +43,9 @@ from openquake.calculators.risk.general import _compute_rates_of_exceedance
 from openquake.calculators.risk.general import AggregateLossCurve
 from openquake.calculators.risk.general import BaseRiskCalculator
 from openquake.calculators.risk.general import Block
+from openquake.calculators.risk.general import _compute_alphas
+from openquake.calculators.risk.general import _compute_betas
+from openquake.calculators.risk.general import compute_beta_distributions
 from openquake.calculators.risk.general import compute_loss_curve
 from openquake.calculators.risk.general import compute_loss_ratio_curve
 from openquake.calculators.risk.general import compute_loss_ratios
@@ -1292,6 +1295,11 @@ class ScenarioEventBasedTestCase(unittest.TestCase):
 
 
 class RiskCommonTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.mean_loss_ratios = [0.050, 0.100, 0.200, 0.400, 0.800]
+        self.stdevs = [0.025, 0.040, 0.060, 0.080, 0.080]
+
     def test_compute_bcr(self):
         # numbers are proven to be correct
         eal_orig = 0.00838
@@ -1304,6 +1312,70 @@ class RiskCommonTestCase(unittest.TestCase):
         result = compute_bcr(eal_orig, eal_retrofitted, interest,
                              life_expectancy, retrofitting_cost)
         self.assertAlmostEqual(result, expected_result, delta=2e-5)
+
+    def test_compute_alphas(self):
+        # expected alphas provided by Vitor
+
+        expected_alphas = [3.750, 5.525, 8.689, 14.600, 19.200]
+
+        self.assertTrue(numpy.allclose(_compute_alphas(self.mean_loss_ratios,
+            self.stdevs), expected_alphas, atol=0.0002))
+
+    def test_compute_betas(self):
+        # expected betas provided by Vitor
+
+        expected_betas = [71.250, 49.725, 34.756, 21.900, 4.800]
+
+        self.assertTrue(numpy.allclose(_compute_betas(self.mean_loss_ratios,
+             self.stdevs), expected_betas, atol=0.0001))
+
+    def test_compute_beta_dist(self):
+
+        # expected beta distributions provided by Vitor
+
+        lrems = [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1,
+            0.12, 0.14, 0.16, 0.18, 0.2, 0.24, 0.28, 0.32, 0.36, 0.4, 0.48,
+            0.56, 0.64, 0.72, 0.8, 0.84, 0.86, 0.88, 0.9, 1]
+
+        expected_beta_distributions = [
+            1.0, 1.0, 1.0 ,1.0, 1.0,
+            0.99, 1.0, 1.0, 1.0, 1.0,
+            0.918, 0.998, 1.0, 1.0, 1.0,
+            0.776, 0.989, 1.0, 1.0, 1.0,
+            0.603, 0.963, 1.0, 1, 1.0,
+            0.436, 0.916, 1.0, 1, 1.0,
+            0.298, 0.846, 0.999, 1.0, 1.0,
+            0.193, 0.757, 0.996, 1.0, 1.0,
+            0.12, 0.657, 0.992, 1.0, 1.0,
+            0.072, 0.553, 0.983, 1.0, 1.0,
+            0.042, 0.452, 0.97, 1.0, 1.0,
+            0.013, 0.279, 0.921, 1.0, 1.0,
+            0.004, 0.156, 0.841, 1.0, 1.0,
+            0.001, 0.081, 0.731, 1.0, 1.0,
+            0, 0.038, 0.602, 0.999, 1.0,
+            0, 0.017, 0.47, 0.997, 1.0,
+            0, 0.003, 0.241, 0.982, 1.0,
+            0, 0, 0.1, 0.936, 1.0,
+            0, 0, 0.033, 0.838, 1.0,
+            0, 0, 0.009, 0.682, 1.0,
+            0, 0, 0.002, 0.491, 1.0,
+            0, 0, 0, 0.162, 1.0,
+            0, 0, 0, 0.026, 0.995,
+            0, 0, 0, 0.002, 0.963,
+            0, 0, 0, 0, 0.84,
+            0, 0, 0, 0, 0.541,
+            0, 0, 0, 0, 0.341,
+            0, 0, 0, 0, 0.245,
+            0, 0, 0, 0, 0.159,
+            0, 0, 0, 0, 0.09,
+            0, 0, 0, 0, 0]
+
+
+        beta_distributions = compute_beta_distributions(self.mean_loss_ratios,
+            self.stdevs, lrems)
+        self.assertTrue(numpy.allclose(beta_distributions,
+                expected_beta_distributions, atol=0.0005))
+
 
 
 class RiskJobGeneralTestCase(unittest.TestCase):
