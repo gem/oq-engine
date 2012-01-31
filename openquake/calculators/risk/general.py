@@ -944,8 +944,8 @@ def _compute_betas(mean_loss_ratios, stdevs):
 
 def compute_beta_distributions(mean_loss_ratios, stdevs, lrems):
     """
-    Given mean_loss_ratios, stdevs and lrems computes beta distributions
-    by using scipy.stats.beta
+    This function computes the Probabilities of exceedance of the Loss
+    Ratio Exceedance Matrix
 
     :param mean_loss_ratios: a list of mean loss ratio floats
     :type mean_loss_ratios: list
