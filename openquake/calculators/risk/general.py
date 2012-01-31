@@ -918,6 +918,7 @@ def _compute_alphas(mean_loss_ratios, stdevs):
                 mean_loss_ratio ** 2)
                 for mean_loss_ratio, stdev in itertools.izip(mean_loss_ratios,
                 stdevs)]
+
     return alphas
 
 
