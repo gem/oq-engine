@@ -191,3 +191,44 @@ class LineTestCase(unittest.TestCase):
         p4 = geo.Point(0.0, 0.5, 1.5)
 
         self.assertRaises(RuntimeError, geo.Line, [p1, p2, p3, p4])
+
+
+class PolygonDiscretizeTestCase(unittest.TestCase):
+    # TODO: more tests
+    def test(self):
+        MESH_SPACING = 10
+        tl = geo.Point(60, 60)
+        tr = geo.Point(70, 60)
+        br = geo.Point(70, 50)
+        bottom_middle = [geo.Point(lon, 50) for lon in xrange(69, 59, -1)]
+        bl = geo.Point(60, 50)
+        poly = geo.Polygon([tl, tr, br] + bottom_middle + [bl])
+        mesh = list(poly.discretize(mesh_spacing=MESH_SPACING))
+
+        southernst = northest = mesh[0]
+        for point in mesh:
+            if point.latitude > northest.latitude:
+                northest = point
+            if point.latitude < southernst.latitude:
+                southernst = point
+
+        self.assertTrue(64.6 < northest.longitude < 65.4)
+        self.assertTrue(60 < northest.latitude < 60.1)
+        self.assertTrue(southernst.longitude < 60.2
+                        or southernst.longitude > 69.8)
+        self.assertTrue(50 < southernst.latitude < 50.05)
+
+        for i, point in enumerate(mesh):
+            if i == len(mesh) - 1:
+                # the point is last
+                break
+            next_point = mesh[i + 1]
+            if next_point.longitude < point.longitude:
+                self.assertAlmostEqual(
+                    point.distance(geo.Point(point.longitude,
+                                             next_point.latitude)),
+                    MESH_SPACING, places=0
+                )
+                continue
+            dist = point.distance(next_point)
+            self.assertAlmostEqual(MESH_SPACING, dist, places=0)

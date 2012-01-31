@@ -7,7 +7,7 @@ import numpy
 import pyproj
 import math
 
-from shapely.geometry import LineString
+import shapely.geometry
 
 # Tolerance used for latitude and longitude to identify
 # when two sites are equal (it corresponds to about 1 m at the equator)
@@ -284,7 +284,7 @@ class Line(object):
         for point in self.points:
             values.append((point.longitude, point.latitude))
 
-        return not LineString(values).is_simple
+        return not shapely.geometry.LineString(values).is_simple
 
     def resample(self, section_length):
         """
@@ -345,3 +345,128 @@ class Line(object):
             resampled_points.extend(points[1:])
 
         return Line(resampled_points)
+
+
+def get_longitudal_extent(lon1, lon2):
+    """
+    Return the distance between two longitude values as an angular measure.
+    Parameters represent two longitude values in degrees.
+
+    :return:
+        Float, the angle between ``lon1`` and ``lon2`` in degrees. Value
+        is positive if ``lon2`` is on the east from ``lon1`` and negative
+        otherwise. Absolute value of the result doesn't exceed 180 for
+        valid parameters values.
+
+    >>> get_longitudal_extent(10, 20)
+    10
+    >>> get_longitudal_extent(20, 10)
+    -10
+    >>> get_longitudal_extent(-10, -15)
+    -5
+    >>> get_longitudal_extent(-120, 30)
+    150
+    >>> get_longitudal_extent(-178.3, 177.7)
+    -4.0
+    >>> get_longitudal_extent(178.3, -177.7)
+    4.0
+    >>> get_longitudal_extent(95, -180 + 94)
+    179
+    >>> get_longitudal_extent(95, -180 + 96)
+    -179
+    """
+    extent = lon2 - lon1
+    if extent > 180:
+        extent = -360 + extent
+    elif extent < -180:
+        extent = 360 + extent
+    return extent
+
+
+class Polygon(object):
+    """
+    Polygon objects represent an area on the Earth surface.
+
+    :param points:
+        The list of :class:`Point` objects defining the polygon vertices.
+        The points are connected by great circle arcs in order of appearance.
+        Polygon segment should not cross another polygon segment. At least
+        three points must be defined.
+    """
+    LONGITUDAL_DISCRETIZATION = 1
+
+    def __init__(self, points):
+        # TODO: unittest this
+        if not len(points) >= 3:
+            raise RuntimeError('polygon must have at least 3 points')
+        # verify this points define a correct line which doesn't
+        # intersect itself (and also get the list of points this
+        # is freed of duplicates)
+        points = Line(points).points
+        # verify this the polygon doesn't intersect itself after
+        # being closed
+        Line(points[1:] + [points[0]])
+
+        self.lons = numpy.array([point.longitude for point in points])
+        self.lats = numpy.array([point.latitude for point in points])
+        self.num_points = len(points)
+
+    def discretize(self, mesh_spacing):
+        """
+        Get a generator of uniformly spaced points inside the polygon area
+        with distance of ``mesh_spacing`` km between.
+        """
+        # cast from km to m
+        mesh_spacing *= 1e3
+
+        geod = pyproj.Geod(ellps='sphere')
+
+        # TODO: document this
+        resampled_lons = [self.lons[0]]
+        resampled_lats = [self.lats[0]]
+        for i in xrange(self.num_points):
+            next_point = (i + 1) % self.num_points
+            lon1, lat1 = self.lons[i], self.lats[i]
+            lon2, lat2 = self.lons[next_point], self.lats[next_point]
+            longitudal_extent = get_longitudal_extent(lon1, lon2)
+            num_segemnts = longitudal_extent / self.LONGITUDAL_DISCRETIZATION
+            if num_segemnts <= 1:
+                resampled_lons.append(lon2)
+                resampled_lats.append(lat2)
+            else:
+                lons, lats = geod._npts(lon1, lat1, lon2, lat2, num_segemnts)
+                resampled_lons.extend(lons)
+                resampled_lats.extend(lats)
+        resampled_lons = numpy.array(resampled_lons)
+        resampled_lats = numpy.array(resampled_lats)
+
+        # find the bounding box of a polygon in a spherical coordinates
+        left_lon = numpy.min(resampled_lons)
+        right_lon = numpy.max(resampled_lons)
+        if get_longitudal_extent(left_lon, right_lon) < 0:
+            left_lon, right_lon = right_lon, left_lon
+        bottom_lat = numpy.min(resampled_lats)
+        top_lat = numpy.max(resampled_lats)
+
+        # create a projection this is attached to a polygon.
+        proj = pyproj.Proj(proj='stere', lat_0=resampled_lats[0],
+                           lon_0=resampled_lons[0])
+
+        # project polygon vertices to the Cartesian space and create
+        # a shapely polygon object
+        xx, yy = proj(resampled_lons, resampled_lats)
+        polygon2d = shapely.geometry.Polygon(zip(xx, yy))
+
+        del xx, yy, resampled_lats, resampled_lons
+
+        # TODO: document this
+        latitude = top_lat
+        while latitude > bottom_lat:
+            longitude = left_lon
+            while get_longitudal_extent(longitude, right_lon) > 0:
+                x, y = proj(longitude, latitude)
+                if polygon2d.contains(shapely.geometry.Point(x, y)):
+                    yield Point(longitude, latitude)
+                longitude, _, _ = geod.fwd(longitude, latitude,
+                                           90, mesh_spacing)
+            _, latitude, _ = geod.fwd(left_lon, latitude, 180, mesh_spacing)
