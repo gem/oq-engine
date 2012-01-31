@@ -10,27 +10,6 @@
     <!-- We need general.xsd for fault geometry definitions. -->
     <xs:include schemaLocation="./general.xsd"/>
 
-    <xs:simpleType name="Strike">
-        <xs:restriction base="xs:double">
-            <xs:minInclusive value="0.0"/>
-            <xs:maxInclusive value="360.0"/>
-        </xs:restriction>
-    </xs:simpleType>
-
-    <xs:simpleType name="Dip">
-        <xs:restriction base="xs:double">
-            <xs:minInclusive value="0.0"/>
-            <xs:maxInclusive value="90.0"/>
-        </xs:restriction>
-    </xs:simpleType>
-
-    <xs:simpleType name="Rake">
-        <xs:restriction base="xs:double">
-            <xs:minInclusive value="-180.0"/>
-            <xs:maxInclusive value="+180.0"/>
-        </xs:restriction>
-    </xs:simpleType>
-
     <xs:simpleType name="TectonicRegion">
         <xs:restriction base="xs:string">
             <xs:enumeration value="Active Shallow Crust"/>
@@ -130,16 +109,6 @@
                     <xs:group ref="RuptureRateandDepthGroup"/>
                 </xs:sequence>
             </xs:extension>
-        </xs:complexContent>
-    </xs:complexType>
-
-    <xs:complexType name="AreaBoundary">
-        <xs:complexContent>
-            <xs:restriction base="gml:SurfacePropertyType">
-                <xs:sequence>
-                    <xs:element ref="gml:Polygon"/>
-                </xs:sequence>
-            </xs:restriction>
         </xs:complexContent>
     </xs:complexType>
 

@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.3"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+    <xs:include schemaLocation="./general.xsd"/>
+
+    <!-- Top-level container for Raw Fault Sources. -->
+    <xs:element name="rawSourceModel" type="RawSourceModel" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="RawSourceModel">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="rawFaultSource" type="RawFaultSource" minOccurs="0" maxOccurs="unbounded"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <!-- Raw Fault Source element. -->
+    <xs:complexType name="RawFaultSource">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="name" type="xs:string"/>
+                    <xs:element name="strike" type="Strike"/>
+                    <xs:element name="dip" type="Dip"/>
+                    <xs:element name="rake" type="Rake"/>
+                    <xs:element name="upperSeismogenicDepth" type="NonNegativeDoubleType"/>
+                    <xs:element name="lowerSeismogenicDepth" type="NonNegativeDoubleType"/>
+                    <xs:element name="magnitude" type="Magnitude"/>
+                    <xs:element name="minMagnitude" type="Magnitude"/>
+                    <xs:element name="maxMagnitude" type="Magnitude"/>
+                    <xs:element ref="faultTopEdge"/>
+                    <xs:element ref="faultBottomEdge"/>
+                    <xs:element name="areaBoundary" type="AreaBoundary"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+</xs:schema>

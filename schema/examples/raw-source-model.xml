@@ -1,0 +1,93 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.3"
+      gml:id="n1">
+    <rawSourceModel gml:id="rsm1">
+        <rawFaultSource gml:id="rfs1">
+            <name>Some Raw Fault Source</name>
+            <strike>0.0</strike>
+            <dip>90.0</dip>
+            <rake>0.0</rake>
+            <upperSeismogenicDepth>0.0</upperSeismogenicDepth>
+            <lowerSeismogenicDepth>19.5</lowerSeismogenicDepth>
+            <magnitude>5.0</magnitude>
+            <minMagnitude>5.0</minMagnitude>
+            <maxMagnitude>7.0</maxMagnitude>
+            <faultTopEdge>
+                <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                    <gml:posList>
+                        -124.704  40.363  0.5493260E+01
+                        -124.977  41.214  0.4988560E+01
+                        -125.140  42.096  0.4897340E+01
+                    </gml:posList>
+                </gml:LineString>
+            </faultTopEdge>
+            <faultBottomEdge>
+                <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                    <gml:posList>
+                        -123.829  40.347  0.2038490E+02
+                        -124.137  41.218  0.1741390E+02
+                        -124.252  42.115  0.1752740E+02
+                    </gml:posList>
+                </gml:LineString>
+            </faultBottomEdge>
+            <areaBoundary>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing srsName="urn:ogc:def:crs:EPSG::4326">
+                            <gml:posList>
+                                -122.5 37.5
+                                -121.5 37.5
+                                -121.5 38.5
+                                -122.5 38.5
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+            </areaBoundary>
+        </rawFaultSource>
+        <rawFaultSource gml:id="rfs2">
+            <name>Some Other Raw Fault Source</name>
+            <strike>0.0</strike>
+            <dip>90.0</dip>
+            <rake>0.0</rake>
+            <upperSeismogenicDepth>0.0</upperSeismogenicDepth>
+            <lowerSeismogenicDepth>19.5</lowerSeismogenicDepth>
+            <magnitude>5.0</magnitude>
+            <minMagnitude>5.0</minMagnitude>
+            <maxMagnitude>7.0</maxMagnitude>
+            <faultTopEdge>
+                <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                    <gml:posList>
+                        -124.704  40.363  0.5493260E+01
+                        -124.977  41.214  0.4988560E+01
+                        -125.140  42.096  0.4897340E+01
+                    </gml:posList>
+                </gml:LineString>
+            </faultTopEdge>
+            <faultBottomEdge>
+                <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                    <gml:posList>
+                        -123.829  40.347  0.2038490E+02
+                        -124.137  41.218  0.1741390E+02
+                        -124.252  42.115  0.1752740E+02
+                    </gml:posList>
+                </gml:LineString>
+            </faultBottomEdge>
+            <areaBoundary>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing srsName="urn:ogc:def:crs:EPSG::4326">
+                            <gml:posList>
+                                -122.5 37.5
+                                -121.5 37.5
+                                -121.5 38.5
+                                -122.5 38.5
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+            </areaBoundary>
+        </rawFaultSource>
+    </rawSourceModel>
+</nrml>

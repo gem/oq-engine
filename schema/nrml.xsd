@@ -18,6 +18,7 @@
     <xs:include schemaLocation="./hazard/hazard_curve.xsd"/>
     <xs:include schemaLocation="./hazard/hazard_map.xsd"/>
     <xs:include schemaLocation="./hazard/logic_tree.xsd"/>
+    <xs:include schemaLocation="./hazard/raw_source_model.xsd"/>
     <xs:include schemaLocation="./hazard/rupture.xsd"/>
     <xs:include schemaLocation="./hazard/source_model.xsd"/>
     <xs:include schemaLocation="./hazard/uhs.xsd"/>
@@ -50,6 +51,7 @@
                         <xs:element ref="logicTree"/>
                         <xs:element ref="disaggregationResultField"/>
                         <xs:element ref="uhsResultSet"/>
+                        <xs:element ref="rawSourceModel"/>
                     </xs:choice>
                 </xs:sequence>
             </xs:extension>
