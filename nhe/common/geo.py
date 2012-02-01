@@ -444,9 +444,10 @@ class Polygon(object):
                 resampled_lons.append(lon2)
                 resampled_lats.append(lat2)
             else:
-                lons, lats = geod._npts(lon1, lat1, lon2, lat2, num_segments)
-                resampled_lons.extend(lons)
-                resampled_lats.extend(lats)
+                for lon, lat in geod.npts(lon1, lat1, lon2, lat2,
+                                          num_segments):
+                    resampled_lons.append(lon)
+                    resampled_lats.append(lat)
         resampled_lons = numpy.array(resampled_lons)
         resampled_lats = numpy.array(resampled_lats)
 
