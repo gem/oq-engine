@@ -2,4 +2,6 @@
 # First, purge all .pyc files to clean the source tree,
 # in case some modules were deleted or removed.
 find . -name "*.pyc" -delete
-(export DJANGO_SETTINGS_MODULE="openquake.settings"; nosetests "$@" `find tests/ -name "*_unittest.py"` 2>&1 | tee last_test_run.log)
+# We look for tests by recursively searching into the tests/ dir,
+# in addition to doctests within the openquake codebase.
+(export DJANGO_SETTINGS_MODULE="openquake.settings"; nosetests --with-doctest "$@" `find tests/ -name "*_unittest.py"` openquake 2>&1 | tee last_test_run.log)
