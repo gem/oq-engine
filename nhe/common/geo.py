@@ -348,7 +348,7 @@ class Line(object):
         return Line(resampled_points)
 
 
-def get_longitudal_extent(lon1, lon2):
+def get_longitudinal_extent(lon1, lon2):
     """
     Return the distance between two longitude values as an angular measure.
     Parameters represent two longitude values in degrees.
@@ -359,21 +359,21 @@ def get_longitudal_extent(lon1, lon2):
         otherwise. Absolute value of the result doesn't exceed 180 for
         valid parameters values.
 
-    >>> get_longitudal_extent(10, 20)
+    >>> get_longitudinal_extent(10, 20)
     10
-    >>> get_longitudal_extent(20, 10)
+    >>> get_longitudinal_extent(20, 10)
     -10
-    >>> get_longitudal_extent(-10, -15)
+    >>> get_longitudinal_extent(-10, -15)
     -5
-    >>> get_longitudal_extent(-120, 30)
+    >>> get_longitudinal_extent(-120, 30)
     150
-    >>> get_longitudal_extent(-178.3, 177.7)
+    >>> get_longitudinal_extent(-178.3, 177.7)
     -4.0
-    >>> get_longitudal_extent(178.3, -177.7)
+    >>> get_longitudinal_extent(178.3, -177.7)
     4.0
-    >>> get_longitudal_extent(95, -180 + 94)
+    >>> get_longitudinal_extent(95, -180 + 94)
     179
-    >>> get_longitudal_extent(95, -180 + 96)
+    >>> get_longitudinal_extent(95, -180 + 96)
     -179
     """
     extent = lon2 - lon1
@@ -439,8 +439,8 @@ class Polygon(object):
             next_point = (i + 1) % self.num_points
             lon1, lat1 = self.lons[i], self.lats[i]
             lon2, lat2 = self.lons[next_point], self.lats[next_point]
-            longitudal_extent = get_longitudal_extent(lon1, lon2)
-            num_segments = longitudal_extent / self.LONGITUDAL_DISCRETIZATION
+            longitudinal_extent = get_longitudinal_extent(lon1, lon2)
+            num_segments = longitudinal_extent / self.LONGITUDAL_DISCRETIZATION
             if num_segments <= 1:
                 resampled_lons.append(lon2)
                 resampled_lats.append(lat2)
@@ -455,7 +455,7 @@ class Polygon(object):
         # find the bounding box of a polygon in a spherical coordinates
         left_lon = numpy.min(resampled_lons)
         right_lon = numpy.max(resampled_lons)
-        if get_longitudal_extent(left_lon, right_lon) < 0:
+        if get_longitudinal_extent(left_lon, right_lon) < 0:
             # the polygon crosses the international date line (meridian 180).
             # the actual left longitude is the lowest positive longitude
             # and right one is the highest negative.
@@ -488,7 +488,7 @@ class Polygon(object):
         latitude = top_lat
         while latitude > bottom_lat:
             longitude = left_lon
-            while get_longitudal_extent(longitude, right_lon) > 0:
+            while get_longitudinal_extent(longitude, right_lon) > 0:
                 # we use Cartesian space just for checking if a point
                 # is inside of the polygon.
                 x, y = proj(longitude, latitude)

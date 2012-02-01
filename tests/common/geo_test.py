@@ -257,9 +257,9 @@ class PolygonDiscretizeTestCase(unittest.TestCase):
 
         west = east = mesh[0]
         for point in mesh:
-            if geo.get_longitudal_extent(point.longitude, west.longitude) > 0:
+            if geo.get_longitudinal_extent(point.longitude, west.longitude) > 0:
                 west = point
-            if geo.get_longitudal_extent(point.longitude, east.longitude) < 0:
+            if geo.get_longitudinal_extent(point.longitude, east.longitude) < 0:
                 east = point
 
         self.assertLess(west.longitude, 177.15)
