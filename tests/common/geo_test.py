@@ -192,6 +192,16 @@ class LineTestCase(unittest.TestCase):
 
         self.assertRaises(RuntimeError, geo.Line, [p1, p2, p3, p4])
 
+    def test_invalid_line_crossing_international_date_line(self):
+        broken_points = [geo.Point(178, 0), geo.Point(178, 10),
+                         geo.Point(-178, 0), geo.Point(170, 5)]
+        self.assertRaises(RuntimeError, geo.Line, broken_points)
+
+    def test_valid_line_crossing_international_date_line(self):
+        points = [geo.Point(178, 0), geo.Point(178, 10),
+                  geo.Point(179, 5), geo.Point(-178, 5)]
+        geo.Line(points)
+
 
 class PolygonDiscretizeTestCase(unittest.TestCase):
     # TODO: more tests

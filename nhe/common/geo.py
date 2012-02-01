@@ -275,16 +275,17 @@ class Line(object):
         :rtype:
             boolean
         """
-
         if len(self.points) < 2:
             return False
 
-        values = []
+        lats = numpy.array([point.latitude for point in self.points])
+        lons = numpy.array([point.longitude for point in self.points])
 
-        for point in self.points:
-            values.append((point.longitude, point.latitude))
+        proj = pyproj.Proj(proj='stere', lat_0=lats[0], lon_0=lons[0])
+        xx, yy = proj(lons, lats)
 
-        return not shapely.geometry.LineString(values).is_simple
+        linestring = shapely.geometry.LineString(zip(xx, yy))
+        return not linestring.is_simple
 
     def resample(self, section_length):
         """
