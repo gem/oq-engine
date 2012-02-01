@@ -399,11 +399,11 @@ class Polygon(object):
         # TODO: unittest this
         if not len(points) >= 3:
             raise RuntimeError('polygon must have at least 3 points')
-        # verify this points define a correct line which doesn't
-        # intersect itself (and also get the list of points this
+        # verify that points define a correct line which doesn't
+        # intersect itself (and also get the list of points that
         # is freed of duplicates)
         points = Line(points).points
-        # verify this the polygon doesn't intersect itself after
+        # verify that the polygon doesn't intersect itself after
         # being closed
         Line(points[1:] + [points[0]])
 
