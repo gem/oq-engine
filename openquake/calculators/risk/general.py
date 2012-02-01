@@ -21,11 +21,14 @@
 # Silence 'Too many lines in module'
 # pylint: disable=C0302
 import json
+import itertools
 import math
 import os
 
 from collections import defaultdict
 from collections import OrderedDict
+
+from scipy.stats import beta
 
 from numpy import array
 from numpy import exp
@@ -895,6 +898,77 @@ def _compute_probs_of_exceedance(rates_of_exceedance, time_span):
 
     poe = lambda rate: 1 - math.exp((rate * -1) * time_span)
     return array([poe(rate) for rate in rates_of_exceedance])
+
+
+def _compute_alphas(mean_loss_ratios, stdevs):
+    """
+    Compute alphas to be used in compute_beta_distributions
+
+    :param mean_loss_ratios: a list of mean loss ratio floats
+    :type mean_loss_ratios: list
+
+    :param stdevs: a list of standard deviation floats
+    :type stdevs: list
+
+
+    :returns: list of alphas
+    """
+
+    alphas = [(((1 - mean_loss_ratio) / stdev ** 2 - 1 / mean_loss_ratio) *
+                mean_loss_ratio ** 2)
+                for mean_loss_ratio, stdev in itertools.izip(mean_loss_ratios,
+                stdevs)]
+
+    return alphas
+
+
+def _compute_betas(mean_loss_ratios, stdevs):
+    """
+    Compute betas to be used in compute_beta_distributions
+
+    :param mean_loss_ratios: a list of mean loss ratio floats
+    :type mean_loss_ratios: list
+
+    :param stdevs: a list of standard deviations float
+    :type stdevs: list
+
+    :returns: list of betas
+    """
+    betas = [(((1 - mean_loss_ratio) / stdev ** 2 - 1 / mean_loss_ratio) *
+        (mean_loss_ratio - mean_loss_ratio ** 2))
+        for mean_loss_ratio, stdev in itertools.izip(
+            mean_loss_ratios, stdevs)]
+
+    return betas
+
+
+def compute_beta_distributions(mean_loss_ratios, stdevs, lrems):
+    """
+    This function computes the Probabilities of exceedance of the Loss
+    Ratio Exceedance Matrix
+
+    :param mean_loss_ratios: a list of mean loss ratio floats
+    :type mean_loss_ratios: list
+
+    :param stdevs: a list of standard deviation floats
+    :type stdevs: list
+
+    :param lrems: a list of lrem floats
+    :type lrems: list
+
+    :returns: list of beta distributions
+    """
+    alphas = _compute_alphas(mean_loss_ratios, stdevs)
+    betas = _compute_betas(mean_loss_ratios, stdevs)
+
+    bt = beta(alphas, betas)
+
+    beta_distributions = []
+
+    for x in lrems:
+        beta_distributions.extend(1 - bt.cdf(x))
+
+    return beta_distributions
 
 
 def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
