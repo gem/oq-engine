@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.3"
+      gml:id="n1">
+
+    <riskResult gml:id="rr1">
+        <config/>
+        <!-- There is only a single aggregate loss curve per calculation. -->
+        <aggregateLossCurve gml:id="alc1">
+          <loss>0.0 100.0 200.0</loss>
+          <poE>0.4 0.2 0.1</poE>
+        </aggregateLossCurve>
+    </riskResult>
+</nrml>
