@@ -220,7 +220,7 @@ class DisaggHazardCalculator(Calculator):
 
         For example:
         >>> DisaggHazardCalculator.create_result_dir(
-        ... '/tmp/openquake/disagg-results', 123456789)
+        ... '/tmp/openquake', 123456789)
         '/tmp/openquake/disagg-results/job-123456789'
 
         :param base_path: base result storage directory (a path to an NFS
