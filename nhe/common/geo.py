@@ -444,8 +444,11 @@ class Polygon(object):
         left_lon = numpy.min(resampled_lons)
         right_lon = numpy.max(resampled_lons)
         if get_longitudal_extent(left_lon, right_lon) < 0:
-            # TODO: test and fix this
-            left_lon, right_lon = right_lon, left_lon
+            # the polygon crosses the international date line (meridian 180).
+            # the actual left longitude is the lowest positive longitude
+            # and right one is the highest negative.
+            left_lon = min(lon for lon in resampled_lons if lon > 0)
+            right_lon = max(lon for lon in resampled_lons if lon < 0)
         bottom_lat = numpy.min(resampled_lats)
         top_lat = numpy.max(resampled_lats)
 

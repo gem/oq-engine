@@ -227,8 +227,31 @@ class PolygonDiscretizeTestCase(unittest.TestCase):
                 self.assertAlmostEqual(
                     point.distance(geo.Point(point.longitude,
                                              next_point.latitude)),
-                    MESH_SPACING, places=0
+                    MESH_SPACING, places=4
                 )
                 continue
             dist = point.distance(next_point)
-            self.assertAlmostEqual(MESH_SPACING, dist, places=0)
+            self.assertAlmostEqual(MESH_SPACING, dist, places=4)
+
+    def test_polygon_on_international_date_line(self):
+        MESH_SPACING = 10
+        bl = geo.Point(175, 40)
+        bml = geo.Point(179, 40)
+        bmr = geo.Point(-179, 40)
+        br = geo.Point(-175, 40)
+        tr = geo.Point(-175, 50)
+        tmr = geo.Point(-179, 50)
+        tml = geo.Point(179, 50)
+        tl = geo.Point(175, 50)
+        poly = geo.Polygon([bl, bml, bmr, br, tr, tmr, tml, tl])
+        mesh = list(poly.discretize(mesh_spacing=MESH_SPACING))
+
+        west = east = mesh[0]
+        for point in mesh:
+            if geo.get_longitudal_extent(point.longitude, west.longitude) > 0:
+                west = point
+            if geo.get_longitudal_extent(point.longitude, east.longitude) < 0:
+                east = point
+
+        self.assertLess(west.longitude, 175.15)
+        self.assertGreater(east.longitude, -175.15)
