@@ -195,35 +195,34 @@ class LineTestCase(unittest.TestCase):
 
 class PolygonDiscretizeTestCase(unittest.TestCase):
     # TODO: more tests
-    def test(self):
+    def test_uniform_mesh_spacing(self):
         MESH_SPACING = 10
         tl = geo.Point(60, 60)
         tr = geo.Point(70, 60)
-        br = geo.Point(70, 50)
-        bottom_middle = [geo.Point(lon, 50) for lon in xrange(69, 59, -1)]
-        bl = geo.Point(60, 50)
-        poly = geo.Polygon([tl, tr, br] + bottom_middle + [bl])
+        bottom_line = [geo.Point(lon, 55) for lon in xrange(70, 59, -1)]
+        poly = geo.Polygon([tl, tr] + bottom_line)
         mesh = list(poly.discretize(mesh_spacing=MESH_SPACING))
 
-        southernst = northest = mesh[0]
+        northest = mesh[0]
         for point in mesh:
             if point.latitude > northest.latitude:
                 northest = point
-            if point.latitude < southernst.latitude:
-                southernst = point
 
+        # the point with the highest latitude should be somewhere
+        # in the middle longitudinally (in between meridians 60
+        # and 70) and be above 60th parallel.
         self.assertTrue(64.6 < northest.longitude < 65.4)
         self.assertTrue(60 < northest.latitude < 60.1)
-        self.assertTrue(southernst.longitude < 60.2
-                        or southernst.longitude > 69.8)
-        self.assertTrue(50 < southernst.latitude < 50.05)
 
         for i, point in enumerate(mesh):
             if i == len(mesh) - 1:
-                # the point is last
+                # the point is last in the mesh
                 break
             next_point = mesh[i + 1]
             if next_point.longitude < point.longitude:
+                # this is the next row (down along the meridian).
+                # let's check that the new row stands exactly
+                # mesh spacing kilometers below the previous one.
                 self.assertAlmostEqual(
                     point.distance(geo.Point(point.longitude,
                                              next_point.latitude)),
@@ -235,14 +234,14 @@ class PolygonDiscretizeTestCase(unittest.TestCase):
 
     def test_polygon_on_international_date_line(self):
         MESH_SPACING = 10
-        bl = geo.Point(175, 40)
+        bl = geo.Point(177, 40)
         bml = geo.Point(179, 40)
         bmr = geo.Point(-179, 40)
-        br = geo.Point(-175, 40)
-        tr = geo.Point(-175, 50)
-        tmr = geo.Point(-179, 50)
-        tml = geo.Point(179, 50)
-        tl = geo.Point(175, 50)
+        br = geo.Point(-177, 40)
+        tr = geo.Point(-177, 45)
+        tmr = geo.Point(-179, 45)
+        tml = geo.Point(179, 45)
+        tl = geo.Point(177, 45)
         poly = geo.Polygon([bl, bml, bmr, br, tr, tmr, tml, tl])
         mesh = list(poly.discretize(mesh_spacing=MESH_SPACING))
 
@@ -253,5 +252,5 @@ class PolygonDiscretizeTestCase(unittest.TestCase):
             if geo.get_longitudal_extent(point.longitude, east.longitude) < 0:
                 east = point
 
-        self.assertLess(west.longitude, 175.15)
-        self.assertGreater(east.longitude, -175.15)
+        self.assertLess(west.longitude, 177.15)
+        self.assertGreater(east.longitude, -177.15)
