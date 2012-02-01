@@ -421,7 +421,17 @@ class Polygon(object):
 
         geod = pyproj.Geod(ellps='sphere')
 
-        # TODO: document this
+        # in order to find the higher and lower latitudes that the
+        # polygon touches we need to connect vertices by great circle
+        # arcs. if two points lie on the same parallel, the points
+        # in between that are forming the great circle arc deviate
+        # in latitude and are closer to pole than parallel corner
+        # points lie on (except the special case of equator). we need
+        # to break all longitudinally extended line to smaller pieces
+        # so we would not miss the area in between the great circle
+        # arc that connects two points and a parallel they share.
+        # we don't need to resample latitudinally-extended lines
+        # because all meridians are great circles.
         resampled_lons = [self.lons[0]]
         resampled_lats = [self.lats[0]]
         for i in xrange(self.num_points):
@@ -452,7 +462,11 @@ class Polygon(object):
         bottom_lat = numpy.min(resampled_lats)
         top_lat = numpy.max(resampled_lats)
 
-        # create a projection this is attached to a polygon.
+        # create a projection that is attached to a polygon. here we use
+        # stereographic projection because it is defined for any center
+        # latitude and longitude. it is prone to distortions, but we don't
+        # care since we don't measure distances, areas or angles on the
+        # projection plane.
         proj = pyproj.Proj(proj='stere', lat_0=resampled_lats[0],
                            lon_0=resampled_lons[0])
 
@@ -463,14 +477,24 @@ class Polygon(object):
 
         del xx, yy, resampled_lats, resampled_lons
 
-        # TODO: document this
+        # we cover the bounding box (in spherical coordinates) from highest
+        # to lowest latitude and from left to right by longitude. we step
+        # by mesh spacing distance (linear measure). we check each point
+        # if it is inside the polygon and yield the point object, if so.
+        # this way we produce an uniformly-spaced mesh regardless of the
+        # latitude.
         latitude = top_lat
         while latitude > bottom_lat:
             longitude = left_lon
             while get_longitudal_extent(longitude, right_lon) > 0:
+                # we use Cartesian space just for checking if a point
+                # is inside of the polygon.
                 x, y = proj(longitude, latitude)
                 if polygon2d.contains(shapely.geometry.Point(x, y)):
                     yield Point(longitude, latitude)
+
+                # move by mesh spacing along parallel in inner loop...
                 longitude, _, _ = geod.fwd(longitude, latitude,
                                            90, mesh_spacing)
+            # ... and by the same distance along meridian in outer one
             _, latitude, _ = geod.fwd(left_lon, latitude, 180, mesh_spacing)
