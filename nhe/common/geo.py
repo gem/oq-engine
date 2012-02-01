@@ -429,12 +429,12 @@ class Polygon(object):
             lon1, lat1 = self.lons[i], self.lats[i]
             lon2, lat2 = self.lons[next_point], self.lats[next_point]
             longitudal_extent = get_longitudal_extent(lon1, lon2)
-            num_segemnts = longitudal_extent / self.LONGITUDAL_DISCRETIZATION
-            if num_segemnts <= 1:
+            num_segments = longitudal_extent / self.LONGITUDAL_DISCRETIZATION
+            if num_segments <= 1:
                 resampled_lons.append(lon2)
                 resampled_lats.append(lat2)
             else:
-                lons, lats = geod._npts(lon1, lat1, lon2, lat2, num_segemnts)
+                lons, lats = geod._npts(lon1, lat1, lon2, lat2, num_segments)
                 resampled_lons.extend(lons)
                 resampled_lats.extend(lats)
         resampled_lons = numpy.array(resampled_lons)
@@ -444,6 +444,7 @@ class Polygon(object):
         left_lon = numpy.min(resampled_lons)
         right_lon = numpy.max(resampled_lons)
         if get_longitudal_extent(left_lon, right_lon) < 0:
+            # TODO: test and fix this
             left_lon, right_lon = right_lon, left_lon
         bottom_lat = numpy.min(resampled_lats)
         top_lat = numpy.max(resampled_lats)
