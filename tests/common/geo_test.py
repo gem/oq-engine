@@ -87,6 +87,10 @@ class PointTestCase(unittest.TestCase):
         self.assertEqual(p1, points[0])
         self.assertEqual(p2, points[0])
 
+    def test_equally_spaced_points_last_point(self):
+        points = geo.Point(0, 50).equally_spaced_points(geo.Point(10, 50), 10)
+        self.assertAlmostEqual(points[-1].latitude, 50, places=2)
+
     def test_longitude_inside_range(self):
         self.assertRaises(RuntimeError, geo.Point, 180.1, 0.0, 0.0)
         self.assertRaises(RuntimeError, geo.Point, -180.1, 0.0, 0.0)

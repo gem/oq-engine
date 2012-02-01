@@ -183,34 +183,31 @@ class Point(object):
         :rtype:
             list of :class:`nhe.geo.Point` instances
         """
+        points = [self]
 
         if self == point:
-            return [self]
-
-        points = []
-        points.append(self)
+            return points
 
         total_distance = self.distance(point)
         horizontal_distance = self.horizontal_distance(point)
         azimuth = self.azimuth(point)
 
-        bearing_angle = math.asin(horizontal_distance / total_distance)
-        sign = 1
+        bearing_angle = math.acos(horizontal_distance / total_distance)
 
-        if point.depth != self.depth:
-            # if positive -> pointing downwards
-            # if negative -> pointing upwards
-            sign = (point.depth - self.depth) / math.fabs(
-                    point.depth - self.depth)
+        vertical_increment_step = distance * math.sin(bearing_angle)
+        horizontal_increment_step = distance * math.cos(bearing_angle)
 
-        vertical_increment = sign * distance * math.cos(bearing_angle)
-        horizontal_increment = distance * math.sin(bearing_angle)
+        if self.depth > point.depth:
+            # the depth is decreasing
+            horizontal_increment_step *= -1
 
         locations = int(round(total_distance / distance) + 1)
 
+        horizontal_increment = vertical_increment = 0
         for _ in xrange(1, locations):
-            last = points[-1]
-            points.append(last.point_at(
+            horizontal_increment += horizontal_increment_step
+            vertical_increment += vertical_increment_step
+            points.append(self.point_at(
                     horizontal_increment, vertical_increment, azimuth))
 
         return points
