@@ -52,6 +52,8 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
         self.assertEqual(surface.top_right, tr)
         self.assertEqual(surface.bottom_left, bl)
         self.assertEqual(surface.bottom_right, br)
+        self.assertAlmostEqual(surface.length, tl.distance(tr))
+        self.assertAlmostEqual(surface.width, tl.distance(bl))
 
     def test_edges_not_parallel_within_tolerance(self):
         self.assert_successfull_creation(
