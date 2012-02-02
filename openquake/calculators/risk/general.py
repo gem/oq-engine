@@ -54,8 +54,6 @@ from celery.task import task
 LOG = logs.LOG
 BLOCK_SIZE = 100
 
-DEFAULT_NUMBER_OF_SAMPLES = 25
-
 
 def preload(calculator):
     """
@@ -594,7 +592,6 @@ def compute_bcr_for_block(job_id, points, get_loss_curve,
 
     for point in points:
         asset_key = kvs.tokens.asset_key(job_id, point.row, point.column)
-
         for asset in kvs.get_list_json_decoded(asset_key):
             vuln_function = vuln_curves[asset['taxonomy']]
             loss_curve = get_loss_curve(point, vuln_function, asset)
@@ -844,7 +841,7 @@ def _mean_based(vuln_function, ground_motion_field_set):
     return array(loss_ratios)
 
 
-def _compute_loss_ratios_range(loss_ratios, number_of_samples=None):
+def _compute_loss_ratios_range(loss_ratios, loss_histogram_bins):
     """Compute the range of loss ratios used to build the loss ratio curve.
 
     The range is obtained by computing the set of evenly spaced numbers
@@ -852,16 +849,10 @@ def _compute_loss_ratios_range(loss_ratios, number_of_samples=None):
 
     :param loss_ratios: the set of loss ratios used.
     :type loss_ratios: numpy.ndarray
-    :param number_of_samples: the number of samples used when computing
-        the range of loss ratios. The default value is
-        :py:data:`.DEFAULT_NUMBER_OF_SAMPLES`.
-    :type number_of_samples: integer
+    :param int loss_histogram_bins:
+        The number of bins to use in the computed loss histogram.
     """
-
-    if number_of_samples is None:
-        number_of_samples = DEFAULT_NUMBER_OF_SAMPLES
-
-    return linspace(loss_ratios.min(), loss_ratios.max(), number_of_samples)
+    return linspace(loss_ratios.min(), loss_ratios.max(), loss_histogram_bins)
 
 
 def _compute_cumulative_histogram(loss_ratios, loss_ratios_range):
@@ -972,7 +963,7 @@ def compute_beta_distributions(mean_loss_ratios, stdevs, lrems):
 
 
 def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
-        epsilon_provider, asset, number_of_samples=None, loss_ratios=None):
+        epsilon_provider, asset, loss_histogram_bins, loss_ratios=None):
     """Compute a loss ratio curve using the probabilistic event based approach.
 
     A loss ratio curve is a function that has loss ratios as X values
@@ -994,10 +985,8 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
     :param asset: the asset used to compute the loss ratios.
     :type asset: :py:class:`dict` as provided by
         :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
-    :param number_of_samples: the number of samples used when computing
-        the range of loss ratios. The default value is
-        :py:data:`.DEFAULT_NUMBER_OF_SAMPLES`.
-    :type number_of_samples: integer
+    :param int loss_histogram_bins:
+        The number of bins to use in the computed loss histogram.
     """
 
     # with no gmfs (no earthquakes), an empty curve is enough
@@ -1009,7 +998,7 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
             vuln_function, ground_motion_field_set, epsilon_provider, asset)
 
     loss_ratios_range = _compute_loss_ratios_range(
-            loss_ratios, number_of_samples)
+            loss_ratios, loss_histogram_bins)
 
     probs_of_exceedance = _compute_probs_of_exceedance(
             _compute_rates_of_exceedance(_compute_cumulative_histogram(
@@ -1054,24 +1043,22 @@ class AggregateLossCurve(object):
         associated, false otherwise."""
         return self.losses is None
 
-    def compute(self, tses, time_span, number_of_samples=None):
+    def compute(self, tses, time_span, loss_histogram_bins):
         """Compute the aggregate loss curve.
 
         :param tses: time representative of the Stochastic Event Set.
         :type tses: float
         :param time_span: time span parameter.
         :type time_span: float
-        :param number_of_samples: the number of samples used when computing
-            the range of losses. The default value is
-            :py:data:`.DEFAULT_NUMBER_OF_SAMPLES`.
-        :type number_of_samples: integer
+        :param int loss_histogram_bins:
+            The number of bins to use in the computed loss histogram.
         """
 
         if self.empty:
             return shapes.EMPTY_CURVE
 
         losses = self.losses
-        loss_range = _compute_loss_ratios_range(losses, number_of_samples)
+        loss_range = _compute_loss_ratios_range(losses, loss_histogram_bins)
 
         probs_of_exceedance = _compute_probs_of_exceedance(
                 _compute_rates_of_exceedance(_compute_cumulative_histogram(

@@ -28,6 +28,7 @@ from openquake.job.config import BCRValidator
 from openquake.job.config import ClassicalValidator
 from openquake.job.config import ClassicalRiskValidator
 from openquake.job.config import DisaggregationValidator
+from openquake.job.config import EventBasedRiskValidator
 from openquake.job.config import HazardMandatoryParamsValidator
 from openquake.job.config import RiskMandatoryParamsValidator
 from openquake.job.config import ScenarioComputationValidator
@@ -518,6 +519,35 @@ class DefaultValidatorsTestCase(unittest.TestCase):
         self.assertTrue(any(
             isinstance(v, ClassicalRiskValidator) for v in validators))
 
+    def test_default_validators_event_based_risk(self):
+        # For Event-Based Risk calculations, ensure that a
+        # `EventBasedRiskValidator` is included in the default validators.
+        cfg_path = helpers.demo_file(
+            'probabilistic_event_based_risk/config.gem')
+
+        job_profile, params, sections = engine.import_job_profile(cfg_path)
+
+        validators = config.default_validators(sections, params)
+
+        self.assertTrue(any(
+            isinstance(v, EventBasedRiskValidator) for v in validators))
+
+    # Currently skipped because we do not have a set of demo files for
+    # Event-Based BCR Risk.
+    @helpers.skipit
+    def test_default_validators_event_based_bcr_risk(self):
+        # For Event-Based BCR Risk calculations, ensure that a
+        # `EventBasedRiskValidator` is included in the default validators.
+        cfg_path = helpers.demo_file(
+            'event_based_bcr_risk/config.gem')
+
+        job_profile, params, sections = engine.import_job_profile(cfg_path)
+
+        validators = config.default_validators(sections, params)
+
+        self.assertTrue(any(
+            isinstance(v, EventBasedRiskValidator) for v in validators))
+
 
 class ValidatorsUtilsTestCase(unittest.TestCase):
     """Test for validator utility functions"""
@@ -743,4 +773,36 @@ class ClassicalRiskValidatorTestCase(unittest.TestCase):
         # An invalid type, in this case, is something that can't be cast to an
         # `int`.
         val = ClassicalRiskValidator(dict(LREM_STEPS_PER_INTERVAL='one'))
+        self.assertFalse(val.is_valid()[0])
+
+
+class EventBasedRiskValidatorTestCase(unittest.TestCase):
+    """Tests for the :class:`openquake.job.config.EventBasedRiskValidator`.
+    """
+
+    def test_hgram_bins_defined_valid_value(self):
+        # The config should be considerd valid if LOSS_HISTOGRAM_BINS is
+        # define and has a valid value.
+        # The value must be >= 1.
+        val = EventBasedRiskValidator(dict(LOSS_HISTOGRAM_BINS=1))
+        self.assertTrue(val.is_valid()[0])
+
+        val = EventBasedRiskValidator(dict(LOSS_HISTOGRAM_BINS=2))
+        self.assertTrue(val.is_valid()[0])
+
+    def test_hgram_bins_defined_invalid_value(self):
+        val = EventBasedRiskValidator(dict(LOSS_HISTOGRAM_BINS=0))
+        self.assertFalse(val.is_valid()[0])
+
+        val = EventBasedRiskValidator(dict(LOSS_HISTOGRAM_BINS=-1))
+        self.assertFalse(val.is_valid()[0])
+
+    def test_hgram_bins_not_defined(self):
+        val = EventBasedRiskValidator(dict())
+        self.assertFalse(val.is_valid()[0])
+
+    def test_hgram_bins_invalid_type(self):
+        # An invalid type, in this case, is something that can't be cast to an
+        # `int`.
+        val = EventBasedRiskValidator(dict(LOSS_HISTOGRAM_BINS='one'))
         self.assertFalse(val.is_valid()[0])
