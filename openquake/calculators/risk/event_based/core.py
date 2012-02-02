@@ -126,7 +126,9 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
             self.write_output_bcr()
             return
 
-        agg_curve = aggregate_curve.compute(self._tses(), self._time_span())
+        agg_curve = aggregate_curve.compute(
+            self._tses(), self._time_span(),
+            self.calc_proxy.oq_job_profile.loss_histogram_bins)
         plot_aggregate_curve(self, agg_curve)
 
         self.write_output()
@@ -312,6 +314,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                 vuln_function, gmf_slice, epsilon_provider, asset)
             loss_ratio_curve = general.compute_loss_ratio_curve(
                 vuln_function, gmf_slice, epsilon_provider, asset,
+                self.calc_proxy.oq_job_profile.loss_histogram_bins,
                 loss_ratios=loss_ratios)
             return loss_ratio_curve.rescale_abscissae(asset["assetValue"])
 
@@ -349,6 +352,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
     def compute_loss_ratio_curve(
             self, col, row, asset, gmf_slice, loss_ratios):
         """Compute the loss ratio curve for a single asset."""
+        calc_proxy = self.calc_proxy
 
         vuln_function = self.vuln_curves.get(
             asset["taxonomy"], None)
@@ -360,11 +364,12 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
 
             return None
 
-        epsilon_provider = general.EpsilonProvider(self.calc_proxy.params)
+        epsilon_provider = general.EpsilonProvider(calc_proxy.params)
 
+        loss_histogram_bins = calc_proxy.oq_job_profile.loss_histogram_bins
         loss_ratio_curve = general.compute_loss_ratio_curve(
-                vuln_function, gmf_slice, epsilon_provider, asset,
-                loss_ratios=loss_ratios)
+            vuln_function, gmf_slice, epsilon_provider, asset,
+            loss_histogram_bins, loss_ratios=loss_ratios)
 
         # NOTE (jmc): Early exit if the loss ratio is all zeros
         if not False in (loss_ratio_curve.ordinates == 0.0):
