@@ -845,7 +845,8 @@ CREATE TABLE uiapi.oq_job_profile (
             AND
             (
                 ((ARRAY['risk']::VARCHAR[] <@ job_type)
-                 AND (loss_histogram_bins is NOT NULL))
+                 AND (loss_histogram_bins is NOT NULL)
+                 AND (loss_histogram_bins >= 1))
                 OR
                 ((NOT ARRAY['risk']::VARCHAR[] <@ job_type)
                  AND (loss_histogram_bins IS NULL))
