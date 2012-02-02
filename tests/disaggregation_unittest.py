@@ -124,3 +124,35 @@ class DisaggHazardCalculatorTestCase(unittest.TestCase):
 
         # clean up: delete the result_dir containing the job info
         os.rmdir(result_dir)
+
+    def test_create_result_dir_already_exists(self):
+        # Test create_result_dir when the target directory already exists.
+        tmp_dir = tempfile.mkdtemp()
+        job_id = 1234
+
+        expected_dir = os.path.join(tmp_dir, 'disagg-results',
+                                    'job-%s' % job_id)
+        os.makedirs(expected_dir)
+
+        result_dir = disagg_core.DisaggHazardCalculator.create_result_dir(
+            tmp_dir, job_id)
+
+        self.assertEqual(expected_dir, result_dir)
+        self.assertTrue(os.path.exists(result_dir))
+        self.assertTrue(os.path.isdir(result_dir))
+
+    def test_create_result_dir_already_exists_as_file(self):
+        # Test create_result_dir when a file exists where we're attempting to
+        # create a directory.
+        tmp_dir = tempfile.mkdtemp()
+        job_id = 1234
+
+        file_path = os.path.join(tmp_dir, 'disagg-results', 'job-%s' % job_id)
+
+        # 'touch' the file
+        os.makedirs(os.path.dirname(file_path))
+        open(file_path, 'w').close()
+
+        self.assertRaises(
+            OSError, disagg_core.DisaggHazardCalculator.create_result_dir,
+            tmp_dir, job_id)
