@@ -17,6 +17,7 @@
 
 """Core functionality for the Disaggregation Hazard calculator."""
 
+import errno
 import h5py
 import numpy
 import os
@@ -230,7 +231,16 @@ class DisaggHazardCalculator(Calculator):
         """
         output_path = os.path.join(
             base_path, 'disagg-results', 'job-%s' % job_id)
-        os.makedirs(output_path)
+        try:
+            os.makedirs(output_path)
+        except OSError, err:
+            # If the path already exists, make sure it's a dir.
+            if err.errno == errno.EEXIST:
+                # If it isn't a dir, this is a problem.
+                if not os.path.isdir(output_path):
+                    raise
+            else:
+                raise
         return output_path
 
     def distribute_disagg(self, sites, realizations, poes, result_dir):
