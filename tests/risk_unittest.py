@@ -1292,6 +1292,7 @@ class ScenarioEventBasedTestCase(unittest.TestCase):
 
 
 class RiskCommonTestCase(unittest.TestCase):
+
     def test_compute_bcr(self):
         # numbers are proven to be correct
         eal_orig = 0.00838
