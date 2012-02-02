@@ -9,13 +9,17 @@ import math
 
 import shapely.geometry
 
-# Tolerance used for latitude and longitude to identify
-# when two sites are equal (it corresponds to about 1 m at the equator)
+#: Tolerance used for latitude and longitude to identify
+#: when two sites are equal (it corresponds to about 1 m at the equator)
 LAT_LON_TOLERANCE = 1e-5
 
-# Tolerance used for depth to identify
-# when two sites are equal (it corresponds to 1 m)
+#: Tolerance used for depth to identify
+#: when two sites are equal (it corresponds to 1 m)
 DEPTH_TOLERANCE = 1e-3
+
+#: Geod object to be used whenever we need to deal with
+#: spherical coordinates.
+GEOD = pyproj.Geod(ellps='sphere')
 
 
 class Point(object):
@@ -73,11 +77,9 @@ class Point(object):
         :rtype:
             Instance of :class:`nhe.geo.Point`
         """
-
         # 1e-3 is needed to convert from km to m
-        longitude, latitude, _ = pyproj.Geod(ellps="sphere").fwd(
-            self.longitude, self.latitude, azimuth, horizontal_distance * 1e3)
-
+        longitude, latitude, _ = GEOD.fwd(self.longitude, self.latitude,
+                                          azimuth, horizontal_distance * 1e3)
         return Point(longitude, latitude, self.depth + vertical_increment)
 
     def azimuth(self, point):
@@ -94,10 +96,8 @@ class Point(object):
         :rtype:
             float
         """
-
-        forward_azimuth, _, _ = pyproj.Geod(ellps="sphere").inv(
-            self.longitude, self.latitude, point.longitude, point.latitude)
-
+        forward_azimuth, _, _ = GEOD.inv(self.longitude, self.latitude,
+                                         point.longitude, point.latitude)
         if forward_azimuth < 0:
             return 360 + forward_azimuth
 
@@ -117,10 +117,8 @@ class Point(object):
         :rtype:
             float
         """
-
-        _, _, horizontal_distance = pyproj.Geod(ellps="sphere").inv(
-            self.longitude, self.latitude, point.longitude, point.latitude)
-
+        _, _, horizontal_distance = GEOD.inv(self.longitude, self.latitude,
+                                             point.longitude, point.latitude)
         # 1e-3 is needed to convert from m to km
         return horizontal_distance * 1e-3
 
@@ -417,8 +415,6 @@ class Polygon(object):
         # cast from km to m
         mesh_spacing *= 1e3
 
-        geod = pyproj.Geod(ellps='sphere')
-
         # in order to find the higher and lower latitudes that the
         # polygon touches we need to connect vertices by great circle
         # arcs. if two points lie on the same parallel, the points
@@ -442,7 +438,7 @@ class Polygon(object):
                 resampled_lons.append(lon2)
                 resampled_lats.append(lat2)
             else:
-                for lon, lat in geod.npts(lon1, lat1, lon2, lat2,
+                for lon, lat in GEOD.npts(lon1, lat1, lon2, lat2,
                                           num_segments):
                     resampled_lons.append(lon)
                     resampled_lats.append(lat)
@@ -493,7 +489,7 @@ class Polygon(object):
                     yield Point(longitude, latitude)
 
                 # move by mesh spacing along parallel in inner loop...
-                longitude, _, _ = geod.fwd(longitude, latitude,
+                longitude, _, _ = GEOD.fwd(longitude, latitude,
                                            90, mesh_spacing)
             # ... and by the same distance along meridian in outer one
-            _, latitude, _ = geod.fwd(left_lon, latitude, 180, mesh_spacing)
+            _, latitude, _ = GEOD.fwd(left_lon, latitude, 180, mesh_spacing)
