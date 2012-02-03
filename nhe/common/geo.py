@@ -434,13 +434,27 @@ def _get_spherical_bounding_box(lons, lats):
         A tuple of four items. These items represent western, eastern,
         northern and southern borders of the bounding box respectively.
         Values are floats in decimal degrees.
+    :raises RuntimeError:
+        If points collection has the longitudinal extent of more than
+        180 degrees (it is impossible to define a single hemisphere
+        bound to poles that would contain the whole collection).
 
-    >>> _get_spherical_bounding_box([10, -10], [50, 60])
+    >>> gsbb = _get_spherical_bounding_box; gsbb([10, -10], [50, 60])
     (-10, 10, 60, 50)
-    >>> _get_spherical_bounding_box([20], [-40])
+    >>> gsbb([20], [-40])
     (20, 20, -40, -40)
-    >>> _get_spherical_bounding_box([-20, 180, 179, 178], [-1, -2, 1, 2])
+    >>> gsbb([-20, 180, 179, 178], [-1, -2, 1, 2])
     (178, -20, 2, -2)
+
+    >>> gsbb([-45, -135, 135, 45], [80] * 4)
+    Traceback (most recent call last):
+        ...
+    RuntimeError: points collection has longitudinal extent wider than 180 deg
+
+    >>> gsbb([0, 10, -175], [0, 0, 0])
+    Traceback (most recent call last):
+        ...
+    RuntimeError: points collection has longitudinal extent wider than 180 deg
     """
     north, south = numpy.max(lats), numpy.min(lats)
     west, east = numpy.min(lons), numpy.max(lons)
@@ -450,6 +464,11 @@ def _get_spherical_bounding_box(lons, lats):
         # longitude and east one is the highest negative.
         west = min(lon for lon in lons if lon > 0)
         east = max(lon for lon in lons if lon < 0)
+        if not all ((_get_longitudinal_extent(west, lon) >= 0
+                     and _get_longitudinal_extent(lon, east) >= 0)
+                    for lon in lons):
+            raise RuntimeError('points collection has longitudinal extent '
+                               'wider than 180 deg')
     return west, east, north, south
 
 
