@@ -207,6 +207,49 @@ class LineTestCase(unittest.TestCase):
         geo.Line(points)
 
 
+class PolygonCreationTestCase(unittest.TestCase):
+    def assert_failed_creation(self, points, exc, msg):
+        with self.assertRaises(exc) as ae:
+            geo.Polygon(points)
+        self.assertEqual(ae.exception.message, msg)
+
+    def test_less_than_three_points(self):
+        msg = 'polygon must have at least 3 unique vertices'
+        self.assert_failed_creation([], RuntimeError, msg)
+        self.assert_failed_creation([geo.Point(1, 1)], RuntimeError, msg)
+        self.assert_failed_creation([geo.Point(1, 1),
+                                     geo.Point(2, 1)], RuntimeError, msg)
+
+    def test_less_than_three_unique_points(self):
+        msg = 'polygon must have at least 3 unique vertices'
+        points = [geo.Point(1, 2)] * 3 + [geo.Point(4, 5)]
+        self.assert_failed_creation(points, RuntimeError, msg)
+
+    def test_intersects_itself(self):
+        msg = 'polygon perimeter intersects itself'
+        points = [geo.Point(0, 0), geo.Point(0, 1),
+                  geo.Point(1, 1), geo.Point(-1, 0)]
+        self.assert_failed_creation(points, RuntimeError, msg)
+
+    def test_intersects_itself_being_closed(self):
+        msg = 'polygon perimeter intersects itself'
+        points = [geo.Point(0, 0), geo.Point(0, 1),
+                  geo.Point(1, 0), geo.Point(1, 1)]
+        self.assert_failed_creation(points, RuntimeError, msg)
+
+    def test_valid_points(self):
+        points = [geo.Point(170, -10), geo.Point(170, 10), geo.Point(176, 0),
+                  geo.Point(-170, -5), geo.Point(-175, -10),
+                  geo.Point(-178, -6)]
+        polygon = geo.Polygon(points)
+        self.assertEqual(polygon.num_points, 6)
+        self.assertEqual(list(polygon.lons),
+                         [170,  170,  176, -170, -175, -178])
+        self.assertEqual(list(polygon.lats), [-10, 10, 0, -5, -10, -6])
+        self.assertEqual(polygon.lons.dtype, 'float')
+        self.assertEqual(polygon.lats.dtype, 'float')
+
+
 class PolygonDiscretizeTestCase(unittest.TestCase):
     # TODO: more tests
     def test_uniform_mesh_spacing(self):
@@ -261,9 +304,11 @@ class PolygonDiscretizeTestCase(unittest.TestCase):
 
         west = east = mesh[0]
         for point in mesh:
-            if geo.get_longitudinal_extent(point.longitude, west.longitude) > 0:
+            if geo._get_longitudinal_extent(point.longitude,
+                                            west.longitude) > 0:
                 west = point
-            if geo.get_longitudinal_extent(point.longitude, east.longitude) < 0:
+            if geo._get_longitudinal_extent(point.longitude,
+                                            east.longitude) < 0:
                 east = point
 
         self.assertLess(west.longitude, 177.15)
