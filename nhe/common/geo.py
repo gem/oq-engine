@@ -44,10 +44,10 @@ class Point(object):
 
     def __init__(self, longitude, latitude, depth=0.0):
         if longitude < -180.0 or longitude > 180.0:
-            raise RuntimeError("Longitude %.13f outside range!" % longitude)
+            raise RuntimeError("Longitude %.5f outside range!" % longitude)
 
         if latitude < -90.0 or latitude > 90.0:
-            raise RuntimeError("Latitude %.13f outside range!" % latitude)
+            raise RuntimeError("Latitude %.5f outside range!" % latitude)
 
         self.depth = depth
         self.latitude = latitude
@@ -146,10 +146,20 @@ class Point(object):
         return math.sqrt(horizontal_distance ** 2 + vertical_distance ** 2)
 
     def __str__(self):
-        return "<Latitude=%.13f, Longitude=%.13f, Depth=%.13f>" % (
+        """
+        >>> str(Point(1, 2, 3))
+        '<Latitude=2.00000, Longitude=1.00000, Depth=3.000>'
+        >>> str(Point(1.0 / 3.0, -39.999999999, 1.3333333333))
+        '<Latitude=-40.00000, Longitude=0.33333, Depth=1.333>'
+        """
+        return "<Latitude=%.5f, Longitude=%.5f, Depth=%.3f>" % (
                 self.latitude, self.longitude, self.depth)
 
     def __repr__(self):
+        """
+        >>> str(Point(1, 2, 3)) == repr(Point(1, 2, 3))
+        True
+        """
         return self.__str__()
 
     def __eq__(self, other):
@@ -197,7 +207,7 @@ class Point(object):
 
         if self.depth > point.depth:
             # the depth is decreasing
-            horizontal_increment_step *= -1
+            vertical_increment_step *= -1
 
         locations = int(round(total_distance / distance) + 1)
 
@@ -238,9 +248,21 @@ class Line(object):
             raise RuntimeError("Line intersects itself!")
 
     def __eq__(self, other):
+        """
+        >>> points = [Point(1, 2), Point(3, 4)]; Line(points) == Line(points)
+        True
+        >>> Line(points) == Line(list(reversed(points)))
+        False
+        """
         return self.points == other.points
 
     def __ne__(self, other):
+        """
+        >>> Line([Point(1, 2)]) != Line([Point(1, 2)])
+        False
+        >>> Line([Point(1, 2)]) != Line([Point(2, 1)])
+        True
+        """
         return not self.__eq__(other)
 
     def __len__(self):
