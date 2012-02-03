@@ -258,8 +258,7 @@ class PolygonCreationTestCase(unittest.TestCase):
 
 
 class PolygonDiscretizeTestCase(unittest.TestCase):
-    # TODO: more tests
-    def test_uniform_mesh_spacing(self):
+    def test_mesh_spacing_uniformness(self):
         MESH_SPACING = 10
         tl = geo.Point(60, 60)
         tr = geo.Point(70, 60)
@@ -320,3 +319,26 @@ class PolygonDiscretizeTestCase(unittest.TestCase):
 
         self.assertLess(west.longitude, 177.15)
         self.assertGreater(east.longitude, -177.15)
+
+    def test_no_points_outside_of_polygon(self):
+        dist = 1e-4
+        points = [
+            geo.Point(0, 0),
+            geo.Point(dist * 4.5, 0),
+            geo.Point(dist * 4.5, -dist * 4.5),
+            geo.Point(dist * 3.5, -dist * 4.5),
+            geo.Point(dist * (4.5 - 0.8), -dist * 1.5),
+            geo.Point(0, -dist * 1.5)
+        ]
+        poly = geo.Polygon(points)
+        mesh = list(poly.discretize(mesh_spacing=1.1e-2))
+        self.assertEqual(mesh, [
+            geo.Point(dist, -dist),
+            geo.Point(dist * 2, -dist),
+            geo.Point(dist * 3, -dist),
+            geo.Point(dist * 4, -dist),
+
+            geo.Point(dist * 4, -dist * 2),
+            geo.Point(dist * 4, -dist * 3),
+            geo.Point(dist * 4, -dist * 4),
+        ])

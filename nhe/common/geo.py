@@ -44,10 +44,10 @@ class Point(object):
 
     def __init__(self, longitude, latitude, depth=0.0):
         if longitude < -180.0 or longitude > 180.0:
-            raise RuntimeError("Longitude %.5f outside range!" % longitude)
+            raise RuntimeError("Longitude %.6f outside range!" % longitude)
 
         if latitude < -90.0 or latitude > 90.0:
-            raise RuntimeError("Latitude %.5f outside range!" % latitude)
+            raise RuntimeError("Latitude %.6f outside range!" % latitude)
 
         self.depth = depth
         self.latitude = latitude
@@ -148,11 +148,11 @@ class Point(object):
     def __str__(self):
         """
         >>> str(Point(1, 2, 3))
-        '<Latitude=2.00000, Longitude=1.00000, Depth=3.000>'
+        '<Latitude=2.000000, Longitude=1.000000, Depth=3.0000>'
         >>> str(Point(1.0 / 3.0, -39.999999999, 1.6666666666))
-        '<Latitude=-40.00000, Longitude=0.33333, Depth=1.667>'
+        '<Latitude=-40.000000, Longitude=0.333333, Depth=1.6667>'
         """
-        return "<Latitude=%.5f, Longitude=%.5f, Depth=%.3f>" % (
+        return "<Latitude=%.6f, Longitude=%.6f, Depth=%.4f>" % (
                 self.latitude, self.longitude, self.depth)
 
     def __repr__(self):
@@ -163,12 +163,29 @@ class Point(object):
         return self.__str__()
 
     def __eq__(self, other):
+        """
+        >>> Point(1e-4, 1e-4) == Point(0, 0)
+        False
+        >>> Point(1e-5, 1e-5) == Point(0, 0)
+        True
+        >>> Point(0, 0, 1) == Point(0, 0, 0)
+        False
+        >>> Point(4, 5, 1e-3) == Point(4, 5, 0)
+        True
+        """
         if other == None:
             return False
 
-        return numpy.allclose([self.longitude, self.latitude],
-                [other.longitude, other.latitude], LAT_LON_TOLERANCE) and \
-                numpy.allclose(self.depth, other.depth, DEPTH_TOLERANCE)
+        coord1 = [self.longitude, self.latitude]
+        coord2 = [other.longitude, other.latitude]
+        # need to disable relative comparison to make __eq__() depend only
+        # on the distance between points and not on distance to equator
+        # or Greenwich meridian.
+        if not numpy.allclose(coord1, coord2, atol=LAT_LON_TOLERANCE, rtol=0):
+            return False
+        if not abs(self.depth - other.depth) <= DEPTH_TOLERANCE:
+            return False
+        return True
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -336,6 +353,9 @@ def _clean_points(points):
 
     >>> a, b, c = Point(1, 2, 3), Point(3, 4, 5), Point(5, 6, 7)
     >>> _clean_points([a, a, a, b, a, c, c]) == [a, b, a, c]
+    True
+    >>> a, b, c = Point(1e-4, 1e-4), Point(0, 0), Point(1e-5, 1e-5)
+    >>> _clean_points([a, b, c]) == [a, b]
     True
     """
     if not points:
