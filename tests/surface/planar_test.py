@@ -158,7 +158,7 @@ class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):
 
     def test_2(self):
         surface = PlanarSurface(*test_data.TEST_7_RUPTURE_6_CORNERS)
-        self.assertAlmostEqual(40.1213469552,
+        self.assertAlmostEqual(40.1213468,
                                surface.get_min_distance(Point(-0.25, 0.25), 1))
 
     def test_3(self):
@@ -168,6 +168,6 @@ class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):
 
     def test_4(self):
         surface = PlanarSurface(*test_data.TEST_7_RUPTURE_2_CORNERS)
-        self.assertAlmostEqual(55.6159561536,
+        self.assertAlmostEqual(55.6159556,
                                surface.get_min_distance(Point(-0.3, 0.4), 1))
 
