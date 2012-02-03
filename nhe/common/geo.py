@@ -149,8 +149,8 @@ class Point(object):
         """
         >>> str(Point(1, 2, 3))
         '<Latitude=2.00000, Longitude=1.00000, Depth=3.000>'
-        >>> str(Point(1.0 / 3.0, -39.999999999, 1.3333333333))
-        '<Latitude=-40.00000, Longitude=0.33333, Depth=1.333>'
+        >>> str(Point(1.0 / 3.0, -39.999999999, 1.6666666666))
+        '<Latitude=-40.00000, Longitude=0.33333, Depth=1.667>'
         """
         return "<Latitude=%.5f, Longitude=%.5f, Depth=%.3f>" % (
                 self.latitude, self.longitude, self.depth)
@@ -333,6 +333,10 @@ def _clean_points(points):
     """
     Given a list of :class:`Point` objects, return a new list with adjacent
     duplicate points removed.
+
+    >>> a, b, c = Point(1, 2, 3), Point(3, 4, 5), Point(5, 6, 7)
+    >>> _clean_points([a, a, a, b, a, c, c]) == [a, b, a, c]
+    True
     """
     if not points:
         return points
@@ -354,15 +358,17 @@ def _line_intersects_itself(lons, lats, closed_shape=False):
     longitudes and latitudes (depth is not taken into account).
 
     :param closed_shape:
-        If ``True`` the line will be checked for twice: first time
-        with its original shape and second time with the points sequence
-        being shifted by one point (the last point becomes first, the
-        first turns second and so on). This is useful for checking
-        that the sequence of points defines a valid :class:`Polygon`.
+        If ``True`` the line will be checked twice: first time with its
+        original shape and second time with the points sequence being
+        shifted by one point (the last point becomes first, the first
+        turns second and so on). This is useful for checking that
+        the sequence of points defines a valid :class:`Polygon`.
     """
     assert len(lons) == len(lats)
 
-    if len(lons) < 2:
+    if len(lons) <= 3:
+        # line can not intersect itself unless there are
+        # at least four points
         return False
 
     west, east, north, south = _get_spherical_bounding_box(lons, lats)
@@ -418,6 +424,17 @@ def _get_longitudinal_extent(lon1, lon2):
 
 def _get_spherical_bounding_box(lons, lats):
     """
+    Given a collection of points find and return the bounding box,
+    as a pair of longitudes and a pair of latitudes.
+
+    Parameters define longitudes and latitudes of a point collection
+    respectively in a form of lists or numpy arrays.
+
+    :return:
+        A tuple of four items. These items represent western, eastern,
+        northern and southern borders of the bounding box respectively.
+        Values are floats in decimal degrees.
+
     >>> _get_spherical_bounding_box([10, -10], [50, 60])
     (-10, 10, 60, 50)
     >>> _get_spherical_bounding_box([20], [-40])
@@ -438,6 +455,24 @@ def _get_spherical_bounding_box(lons, lats):
 
 def _get_stereographic_projection(west, east, north, south):
     """
+    Create and return a projection object for a given bounding box.
+
+    Parameters define a bounding box in a spherical coordinates of the
+    collection of points that is about to be projected. The center point
+    of the projection (coordinates (0, 0) in Cartesian space) is set
+    to the middle point of that bounding box. The resulting projection
+    is defined for spherical coordinates that are not further from the
+    bounding box center than 90 degree on the great circle arc.
+
+    The result projection is of type Oblique Stereographic, see
+    http://www.remotesensing.org/geotiff/proj_list/oblique_stereographic.html.
+
+    This projection is prone to distance, area and angle distortions
+    everywhere outside of the center point, but still can be used for
+    checking shapes: verifying if line intersects itself (like in
+    :func:`_line_intersects_itself`) or if point is inside of a polygon
+    (like in :meth:`Polygon.discretize`).
+
     >>> t = lambda *co: sorted(_get_stereographic_projection(*co).srs.split())
     >>> t(10, 16, -20, 30)
     ['+lat_0=5.0', '+lon_0=13.0', '+proj=stere', '+units=m']
@@ -462,8 +497,13 @@ class Polygon(object):
         The points are connected by great circle arcs in order of appearance.
         Polygon segment should not cross another polygon segment. At least
         three points must be defined.
+    :raises RuntimeError:
+        If ``points`` contains less than three unique points or if polygon
+        perimeter intersects itself.
     """
-    LONGITUDAL_DISCRETIZATION = 1
+    #: The angular measure of longitudinally-extended lines resampling
+    #: in decimal degrees. See :meth:`_get_resampled_coordinates`.
+    LONGITUDINAL_DISCRETIZATION = 1
 
     def __init__(self, points):
         points = _clean_points(points)
@@ -506,8 +546,8 @@ class Polygon(object):
             next_point = (i + 1) % self.num_points
             lon1, lat1 = self.lons[i], self.lats[i]
             lon2, lat2 = self.lons[next_point], self.lats[next_point]
-            longitudinal_extent = _get_longitudinal_extent(lon1, lon2)
-            num_segments = longitudinal_extent / self.LONGITUDAL_DISCRETIZATION
+            lon_extent = _get_longitudinal_extent(lon1, lon2)
+            num_segments = lon_extent / self.LONGITUDINAL_DISCRETIZATION
             if num_segments <= 1:
                 resampled_lons.append(lon2)
                 resampled_lats.append(lat2)
@@ -532,15 +572,11 @@ class Polygon(object):
         # find the bounding box of a polygon in a spherical coordinates:
         west, east, north, south = _get_spherical_bounding_box(lons, lats)
 
-        # create a projection that is attached to a polygon. here we use
-        # stereographic projection because it is defined for any center
-        # latitude and longitude. it is prone to distortions, but we don't
-        # care since we don't measure distances, areas or angles on the
-        # projection plane.
+        # create a projection that is centered in a polygon center:
         proj = _get_stereographic_projection(west, east, north, south)
 
         # project polygon vertices to the Cartesian space and create
-        # a shapely polygon object
+        # a shapely polygon object:
         xx, yy = proj(lons, lats)
         polygon2d = shapely.geometry.Polygon(zip(xx, yy))
 
