@@ -32,6 +32,7 @@ from numpy import sin, cos, arctan2, sqrt, radians
 
 from shapely import geometry
 from scipy.interpolate import interp1d
+from scipy import sqrt, log, exp
 
 from openquake import java
 from openquake.utils import round_float
@@ -721,6 +722,11 @@ class VulnerabilityFunction(object):
         """
         return len(self.imls) == 0
 
+    @property
+    def stddevs(self):
+        return [cov * loss_ratio for cov, loss_ratio in izip(self.covs,
+            self.loss_ratios)]
+
     def loss_ratio_for(self, iml):
         """
         Given 1 or more IML values, interpolate the corresponding loss ratio
@@ -778,7 +784,8 @@ class VulnerabilityFunction(object):
         """
         as_dict = {}
 
-        for iml, loss_ratio, cov in self:
+        for iml, loss_ratio, cov in izip(self.imls, self.loss_ratios,
+                self.covs):
             as_dict[str(iml)] = [loss_ratio, cov]
 
         return json.JSONEncoder().encode(as_dict)
