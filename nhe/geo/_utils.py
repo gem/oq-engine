@@ -1,5 +1,6 @@
 """
-
+Package-private module :mod:`nhe.geo._utils` contains functions that are
+common to several geographical primitives.
 """
 import numpy
 import pyproj
