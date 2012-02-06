@@ -22,11 +22,17 @@ import shutil
 import tempfile
 import unittest
 
+from openquake import engine
 from openquake import java
 from openquake.java import list_to_jdouble_array
 from openquake.shapes import Site
+from openquake.db.models import OqCalculation
+from openquake.db.models import Output
+from openquake.db.models import UhSpectra
+from openquake.db.models import UhSpectrum
 from openquake.calculators.hazard.uhs.core import compute_uhs
 from openquake.calculators.hazard.uhs.core import touch_result_file
+from openquake.calculators.hazard.uhs.core import write_uh_spectra
 from openquake.calculators.hazard.uhs.core import write_uhs_results
 
 from tests.utils import helpers
@@ -106,6 +112,44 @@ class UHSCoreTestCase(unittest.TestCase):
             self.assertEquals(self.UHS_RESULTS[i][0], poe)
             self.assertTrue(numpy.allclose(self.UHS_RESULTS[i][1],
                                            [x.value for x in uhs]))
+
+    def test_write_uh_spectra(self):
+        # Test the writing of the intial database records for UHS results.
+        # The function under test (`write_uh_spectra`) should write:
+        #   - 1 uiapi.output record
+        #   - 1 hzrdr.uh_spectra record
+        #   - 1 hzrdr.uh_spectrum record per PoE defined in the oq_job_profile
+        uhs_cfg = helpers.demo_file('uhs/config.gem')
+        job_profile, params, sections = engine.import_job_profile(uhs_cfg)
+        calculation = OqCalculation(
+            owner=job_profile.owner,
+            oq_job_profile=job_profile)
+        calculation.save()
+
+        calc_proxy = engine.CalculationProxy(
+            params, calculation.id, sections=sections,
+            serialize_results_to=['db'], oq_job_profile=job_profile,
+            oq_calculation=calculation)
+
+        # Call the function under test:
+        write_uh_spectra(calc_proxy)
+
+        # Now check that the expected records were indeed created.
+        output = Output.objects.get(oq_calculation=calculation.id)
+        self.assertEqual('uh_spectra', output.output_type)
+
+        uh_spectra = UhSpectra.objects.get(output=output.id)
+        self.assertEqual(job_profile.investigation_time, uh_spectra.timespan)
+        self.assertEqual(job_profile.realizations, uh_spectra.realizations)
+        self.assertEqual(job_profile.uhs_periods, uh_spectra.periods)
+
+        uh_spectrums = UhSpectrum.objects.filter(uh_spectra=uh_spectra.id)
+        # We just want to make sure there is one record in hzrdr.uh_spectrum
+        # per PoE.
+        self.assertEqual(
+            set(job_profile.poes), set([x.poe for x in uh_spectrums]))
+        
+        
 
     def test_write_uhs_results(self):
         """Given some mocked up UHS calc results, write them to some temporary
