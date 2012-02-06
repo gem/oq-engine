@@ -3,6 +3,7 @@ import unittest
 import numpy
 
 from nhe import geo
+from nhe.geo import _utils as geo_utils
 
 
 class PointTestCase(unittest.TestCase):
@@ -332,11 +333,11 @@ class PolygonDiscretizeTestCase(unittest.TestCase):
 
         west = east = mesh[0]
         for point in mesh:
-            if geo._get_longitudinal_extent(point.longitude,
-                                            west.longitude) > 0:
+            if geo_utils.get_longitudinal_extent(point.longitude,
+                                                 west.longitude) > 0:
                 west = point
-            if geo._get_longitudinal_extent(point.longitude,
-                                            east.longitude) < 0:
+            if geo_utils.get_longitudinal_extent(point.longitude,
+                                                 east.longitude) < 0:
                 east = point
 
         self.assertLess(west.longitude, 177.15)
