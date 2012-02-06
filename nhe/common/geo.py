@@ -478,6 +478,7 @@ def _get_spherical_bounding_box(lons, lats):
     """
     north, south = numpy.max(lats), numpy.min(lats)
     west, east = numpy.min(lons), numpy.max(lons)
+    assert (-180 < west <= 180) and (-180 < east <= 180)
     if _get_longitudinal_extent(west, east) < 0:
         # points are lying on both sides of the international date line
         # (meridian 180). the actual west longitude is the lowest positive
@@ -564,7 +565,7 @@ class Polygon(object):
 
         :return:
             A tuple of two numpy arrays: longitudes and latitudes
-            of resampled vertices.
+            of resampled vertices. The last point repeats the first one.
 
         In order to find the higher and lower latitudes that the polygon
         touches we need to connect vertices by great circle arcs. If two
@@ -585,16 +586,27 @@ class Polygon(object):
             next_point = (i + 1) % self.num_points
             lon1, lat1 = self.lons[i], self.lats[i]
             lon2, lat2 = self.lons[next_point], self.lats[next_point]
-            lon_extent = _get_longitudinal_extent(lon1, lon2)
-            num_segments = lon_extent / self.LONGITUDINAL_DISCRETIZATION
-            if num_segments <= 1:
-                resampled_lons.append(lon2)
-                resampled_lats.append(lat2)
-            else:
-                for lon, lat in GEOD.npts(lon1, lat1, lon2, lat2,
-                                          num_segments):
+            lon_extent = abs(_get_longitudinal_extent(lon1, lon2))
+            num_points = int(lon_extent / self.LONGITUDINAL_DISCRETIZATION) - 1
+            if num_points > 0:
+                for lon, lat in GEOD.npts(lon1, lat1, lon2, lat2, num_points):
+                    # sometimes pyproj geod object may return values
+                    # that are slightly out of range and that can
+                    # break _get_spherical_bounding_box().
+                    if lon <= -180:
+                        lon += 360
+                    elif lon > 180:
+                        lon -= 360
+                    assert -90 <= lat <= 90
                     resampled_lons.append(lon)
                     resampled_lats.append(lat)
+            # since npts() accepts the last argument as the number of points
+            # in the middle, we need to add the last point unconditionally
+            resampled_lons.append(lon2)
+            resampled_lats.append(lat2)
+        # we don't cut off the last point so it repeats the first one.
+        # shapely polygon is ok with that (we even save it from extra
+        # work of copying the last point for us).
         return numpy.array(resampled_lons), numpy.array(resampled_lats)
 
     def discretize(self, mesh_spacing):
