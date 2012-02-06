@@ -758,6 +758,7 @@ class Output(models.Model):
         (u'loss_map', u'Loss Map'),
         (u'collapse_map', u'Collapse map'),
         (u'bcr_distribution', u'Benefit-cost ratio distribution'),
+        (u'uh_spectra', u'Uniform Hazard Spectra'),
     )
     output_type = models.TextField(choices=OUTPUT_TYPE_CHOICES)
     # Number of bytes in the file:
@@ -861,6 +862,50 @@ class GmfData(models.Model):
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdr\".\"gmf_data'
+
+
+class UhSpectra(models.Model):
+    """Uniform Hazard Spectra
+
+    A Collection of Uniform Hazard Spectrum which share a set of periods.
+    A UH Spectrum has a PoE (Probability of Exceedence) and is conceptually
+    composed of a set of 2D matrices, 1 matrix per site/point of interest.
+    Each 2D matrix has a number of row equal to ``realizations`` and a number
+    of columns equal to the number of ``periods``.
+    """
+    output = models.ForeignKey('Output')
+    timespan = models.FloatField()
+    realizations = models.IntegerField()
+    periods = FloatArrayField()
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'hzrdr\".\"uh_spectra'
+
+class UhSpectrum(models.Model):
+    """Uniform Hazard Spectrum
+
+    * "Uniform" meaning "the same PoE"
+    * "Spectrum" because it covers a range/band of periods/frequencies
+    """
+    uh_spectra = models.ForeignKey('UhSpectra')
+    poe = models.FloatField()
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'hzrdr\".\"uh_spectrum'
+
+class UhSpectrumData(models.Model):
+    """Uniform Hazard Spectrum Data
+
+    A single "row" of data in a UHS matrix for a specific site/point of
+    interest.
+    """
+    uh_spectrum = models.ForeignKey('UhSpectrum')
+    realization = models.IntegerField()
+    sa_values = FloatArrayField()
+    location = models.PointField(srid=4326)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'hzrdr\".\"uh_spectrum_data'
 
 
 ## Tables in the 'riskr' schema.
