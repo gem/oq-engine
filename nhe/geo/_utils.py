@@ -6,6 +6,10 @@ import numpy
 import pyproj
 import shapely.geometry
 
+#: Geod object to be used whenever we need to deal with
+#: spherical coordinates.
+GEOD = pyproj.Geod(ellps='sphere')
+
 
 def clean_points(points):
     """

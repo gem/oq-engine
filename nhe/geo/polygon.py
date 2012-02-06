@@ -4,8 +4,8 @@ Module :mod:`nhe.geo.polygon` defines :class:`Polygon`.
 import numpy
 import shapely.geometry
 
-from nhe.geo import GEOD
 from nhe.geo.point import Point
+from nhe.geo._utils import GEOD
 from nhe.geo import _utils as utils
 
 

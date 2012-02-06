@@ -5,7 +5,7 @@ import math
 
 import numpy
 
-from nhe.geo import GEOD
+from nhe.geo._utils import GEOD
 
 
 #: Tolerance used for latitude and longitude to identify when two points
