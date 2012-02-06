@@ -803,17 +803,17 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
             [0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000]]
 
         mean_loss_ratios = [0.050, 0.100, 0.200, 0.400, 0.800]
-        covs = [0.500, 0.400, 0.300, 0.200 , 0.100]
+        covs = [0.500, 0.400, 0.300, 0.200, 0.100]
         imls = [0.100, 0.200, 0.300, 0.450, 0.600]
+
         vuln_function = shapes.VulnerabilityFunction(imls,
                 mean_loss_ratios, covs)
         # computes lrem with probabilisticDistribution='BT' (Beta Distribution)
         # set in the Vulnerabilty Function
         lrem = classical_core._compute_lrem(vuln_function, 5, 'BT')
 
-        helpers.assertDeepAlmostEqual(self, lrem,
-            expected_beta_distributions, delta=0.0005)
-
+        helpers.assertDeepAlmostEqual(self, expected_beta_distributions,
+            lrem, delta=0.0005)
 
     def test_lrem_po_computation(self):
         hazard_curve = shapes.Curve([
