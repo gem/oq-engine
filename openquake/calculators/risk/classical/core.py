@@ -112,7 +112,6 @@ def _generate_loss_ratios(vuln_function, steps):
     return _split_loss_ratios(loss_ratios, steps)
 
 
-
 @MemoizeMutable
 def _compute_lrem(vuln_function, steps, distribution='LN'):
     """Compute the LREM (Loss Ratio Exceedance Matrix).
@@ -129,18 +128,16 @@ def _compute_lrem(vuln_function, steps, distribution='LN'):
                     'BT': general.BetaDistribution}.get(distribution,
                         general.Lognorm)
 
-
     loss_ratios = _generate_loss_ratios(vuln_function, steps)
 
     # LREM has number of rows equal to the number of loss ratios
     # and number of columns equal to the number if imls
     lrem = empty((loss_ratios.size, vuln_function.imls.size), float)
 
-
     for col, _ in enumerate(vuln_function):
         for row, loss_ratio in enumerate(loss_ratios):
-            lrem[row][col] = distribution.survival_function(loss_ratio, col=col,
-                vf=vuln_function)
+            lrem[row][col] = distribution.survival_function(loss_ratio,
+                col=col, vf=vuln_function)
 
     return lrem
 
@@ -378,7 +375,6 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
                 asset["assetID"]))
 
             return None
-
 
         lrem_steps = self.calc_proxy.oq_job_profile.lrem_steps_per_interval
         loss_ratio_curve = compute_loss_ratio_curve(

@@ -906,7 +906,7 @@ def compute_alpha(mean_loss_ratio, stddev):
     :returns: computed alpha value
     """
 
-    alpha  = (((1 - mean_loss_ratio) / stddev ** 2 - 1 / mean_loss_ratio) *
+    alpha = (((1 - mean_loss_ratio) / stddev ** 2 - 1 / mean_loss_ratio) *
                 mean_loss_ratio ** 2)
     return alpha
 
@@ -952,7 +952,6 @@ class Lognorm(object):
         vuln_function = kwargs.get('vf')
         position = kwargs.get('col')
 
-
         vf_loss_ratio = vuln_function.loss_ratios[position]
 
         stddev = vuln_function.covs[position] * vf_loss_ratio
@@ -993,6 +992,7 @@ class BetaDistribution(object):
         return stats.beta.sf(loss_ratio,
                 compute_alpha(loss_ratio, stddev),
                 compute_beta(loss_ratio, stddev))
+
 
 def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
         epsilon_provider, asset, loss_histogram_bins, loss_ratios=None):
