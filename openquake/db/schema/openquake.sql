@@ -1242,7 +1242,7 @@ ALTER TABLE hzrdr.gmf_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE hzrdr.uh_spectra (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
-    timespan float CONSTRAINT valid_uhs_timespan
+    timespan float NOT NULL CONSTRAINT valid_uhs_timespan
         CHECK (timespan > 0.0),
     realizations INTEGER NOT NULL CONSTRAINT uh_spectra_realizations_is_set
         CHECK (realizations >= 1),
