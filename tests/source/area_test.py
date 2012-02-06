@@ -34,9 +34,24 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
         return source
 
     def test_1(self):
-        source = self.make_point_source(
-            Polygon([Point(-2, -2), Point(0, -2), Point(0, 0), Point(-2, 0)]),
-            discretization=70
-        )
+        source = self.make_point_source(Polygon([Point(-2, -2), Point(0, -2),
+                                                 Point(0, 0), Point(-2, 0)]),
+                                        discretization=66.7)
         ruptures = list(source.iter_ruptures(PoissonTOM(50)))
-        self.assertEqual(len(ruptures), 8 * 2)
+        self.assertEqual(len(ruptures), 9 * 2)
+        # resulting 3x3 mesh has points in these coordinates:
+        lons = [-1.4, -0.8, -0.2]
+        lats = [-0.6, -1.2, -1.8]
+        ruptures_iter = iter(ruptures)
+        for lat in lats:
+            for lon in lons:
+                r1 = next(ruptures_iter)
+                r2 = next(ruptures_iter)
+                for rupture in [r1, r2]:
+                    self.assertAlmostEqual(rupture.hypocenter.longitude,
+                                           lon, delta=1e-3)
+                    self.assertAlmostEqual(rupture.hypocenter.latitude,
+                                           lat, delta=1e-3)
+                self.assertEqual(r1.mag, 5.5)
+                self.assertEqual(r2.mag, 6.5)
+        self.assertEqual(len(ruptures), 9 * 2)
