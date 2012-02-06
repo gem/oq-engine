@@ -3,7 +3,7 @@ Module :mod:`nhe.source.point` defines :class:`PointSource`.
 """
 import math
 
-from nhe.common.geo import Point
+from nhe.geo import Point
 from nhe.surface.planar import PlanarSurface
 from nhe.source.base import SeismicSource, SourceError, ProbabilisticRupture
 
@@ -14,7 +14,7 @@ class PointSource(SeismicSource):
     location.
 
     :param location:
-        :class:`~nhe.common.geo.Point` object representing the location
+        :class:`~nhe.geo.Point` object representing the location
         of the seismic source. The depth value of that point is ignored.
     :param nodal_plane_distribution:
         :class:`~nhe.common.pmf.PMF` object with values that are instances

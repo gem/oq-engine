@@ -1,6 +1,6 @@
 import unittest
 
-from nhe.common.geo import Point
+from nhe.geo import Point
 from nhe.surface.planar import PlanarSurface
 import _planar_test_data as test_data
 

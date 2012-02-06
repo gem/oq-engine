@@ -6,7 +6,7 @@ from nhe.source.point import PointSource
 from nhe.source.base import ProbabilisticRupture, SourceError
 from nhe.mfd import TruncatedGR, EvenlyDiscretized
 from nhe.msr import Peer
-from nhe.common.geo import Point
+from nhe.geo import Point
 from nhe.common.pmf import PMF
 from nhe.common.nodalplane import NodalPlane
 from nhe.common.tom import PoissonTOM
