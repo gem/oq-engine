@@ -18,7 +18,6 @@
 import h5py
 import numpy
 import os
-import shutil
 import tempfile
 import unittest
 
@@ -30,10 +29,11 @@ from openquake.db.models import OqCalculation
 from openquake.db.models import Output
 from openquake.db.models import UhSpectra
 from openquake.db.models import UhSpectrum
+from openquake.db.models import UhSpectrumData
 from openquake.calculators.hazard.uhs.core import compute_uhs
 from openquake.calculators.hazard.uhs.core import touch_result_file
 from openquake.calculators.hazard.uhs.core import write_uh_spectra
-from openquake.calculators.hazard.uhs.core import write_uhs_results
+from openquake.calculators.hazard.uhs.core import write_uhs_spectrum_data
 
 from tests.utils import helpers
 
@@ -53,14 +53,29 @@ class UHSCoreTestCase(unittest.TestCase):
                 0.6185688023781438,
                 0.11843417899553109])]
 
-    def test_touch_result_file(self):
-        """Call the :function:`openquake.hazard.uhs.core.touch_result_file` and
-        verify that the result file is properly created with the correct number
-        of datasets.
+    def setUp(self):
+        # Create OqJobProfile, OqCalculation, and CalculationProxy objects
+        # which can be used for several of the tests:
+        self.job_profile, params, sections = engine.import_job_profile(
+            UHS_DEMO_CONFIG_FILE)
+        self.calculation = OqCalculation(
+            owner=self.job_profile.owner,
+            oq_job_profile=self.job_profile)
+        self.calculation.save()
 
-        We also want to verify the name (since it is associated with a specific
-        site of interest) as well as the size and datatype of each dataset.
-        """
+        self.calc_proxy = engine.CalculationProxy(
+            params, self.calculation.id, sections=sections,
+            serialize_results_to=['db'], oq_job_profile=self.job_profile,
+            oq_calculation=self.calculation)
+
+    def test_touch_result_file(self):
+        # Call the :function:`openquake.hazard.uhs.core.touch_result_file` and
+        # verify that the result file is properly created with the correct
+        # number of datasets.
+
+        # We also want to verify the name (since it is associated with a
+        # specific site of interest) as well as the size and datatype of each
+        # dataset.
         _, path = tempfile.mkstemp()
 
         fake_job_id = 1  # The job_id doesn't matter in this test.
@@ -91,12 +106,12 @@ class UHSCoreTestCase(unittest.TestCase):
         os.unlink(path)
 
     def test_compute_uhs(self):
-        """Test the :function:`openquake.hazard.uhs.core.compute_uhs`
-        function. This function makes use of the Java `UHSCalculator` and
-        performs the main UHS computation.
+        # Test the :function:`openquake.hazard.uhs.core.compute_uhs`
+        # function. This function makes use of the Java `UHSCalculator` and
+        # performs the main UHS computation.
 
-        The results of the computation are a sequence of Java `UHSResult`
-        objects."""
+        # The results of the computation are a sequence of Java `UHSResult`
+        # objects.
         the_job = helpers.job_from_file(UHS_DEMO_CONFIG_FILE)
 
         site = Site(0.0, 0.0)
@@ -119,72 +134,56 @@ class UHSCoreTestCase(unittest.TestCase):
         #   - 1 uiapi.output record
         #   - 1 hzrdr.uh_spectra record
         #   - 1 hzrdr.uh_spectrum record per PoE defined in the oq_job_profile
-        uhs_cfg = helpers.demo_file('uhs/config.gem')
-        job_profile, params, sections = engine.import_job_profile(uhs_cfg)
-        calculation = OqCalculation(
-            owner=job_profile.owner,
-            oq_job_profile=job_profile)
-        calculation.save()
-
-        calc_proxy = engine.CalculationProxy(
-            params, calculation.id, sections=sections,
-            serialize_results_to=['db'], oq_job_profile=job_profile,
-            oq_calculation=calculation)
 
         # Call the function under test:
-        write_uh_spectra(calc_proxy)
+        write_uh_spectra(self.calc_proxy)
 
         # Now check that the expected records were indeed created.
-        output = Output.objects.get(oq_calculation=calculation.id)
+        output = Output.objects.get(oq_calculation=self.calculation.id)
         self.assertEqual('uh_spectra', output.output_type)
 
         uh_spectra = UhSpectra.objects.get(output=output.id)
-        self.assertEqual(job_profile.investigation_time, uh_spectra.timespan)
-        self.assertEqual(job_profile.realizations, uh_spectra.realizations)
-        self.assertEqual(job_profile.uhs_periods, uh_spectra.periods)
+        self.assertEqual(
+            self.job_profile.investigation_time, uh_spectra.timespan)
+        self.assertEqual(
+            self.job_profile.realizations, uh_spectra.realizations)
+        self.assertEqual(self.job_profile.uhs_periods, uh_spectra.periods)
 
         uh_spectrums = UhSpectrum.objects.filter(uh_spectra=uh_spectra.id)
         # We just want to make sure there is one record in hzrdr.uh_spectrum
         # per PoE.
         self.assertEqual(
-            set(job_profile.poes), set([x.poe for x in uh_spectrums]))
-        
-        
+            set(self.job_profile.poes), set([x.poe for x in uh_spectrums]))
 
-    def test_write_uhs_results(self):
-        """Given some mocked up UHS calc results, write them to some temporary
-        HDF5 files. We need to verify that the result file paths are correct,
-        as well as the contents.
 
-        The results should be written to separate directories (depending on the
-        PoE)."""
-        # Both result files should have the same file name,
-        # just a different directory location.
-        expected_file_name = 'sample:1-lon:0.0-lat:0.0.h5'
+    def test_write_uhs_spectrum_data(self):
+        # To start with, we need to write the 'container' records for the UHS
+        # results:
+        write_uh_spectra(self.calc_proxy)
 
         uhs_results = []  # The results we want to write to HDF5
         uhs_result = java.jvm().JClass('org.gem.calc.UHSResult')
 
+        # Build up a result list that we can pass to the function under test:
         for poe, uhs in self.UHS_RESULTS:
             uhs_results.append(uhs_result(poe, list_to_jdouble_array(uhs)))
 
-        result_dir = tempfile.mkdtemp()
+        realization = 0
+        test_site = Site(0.0, 0.0)
 
-        result_files = write_uhs_results(result_dir, 1, Site(0.0, 0.0),
-                                         uhs_results)
+        write_uhs_spectrum_data(
+            self.calc_proxy, realization, test_site, uhs_results)
 
-        for i, res_file in enumerate(result_files):
-            print res_file
-            self.assertTrue(os.path.exists(res_file))
+        uhs_data = UhSpectrumData.objects.filter(
+            uh_spectrum__uh_spectra__output__oq_calculation=(
+            self.calculation.id))
 
-            expected_dir = os.path.join(result_dir,
-                                        'poe:%s' % self.UHS_RESULTS[i][0])
-            actual_dir, actual_file_name = os.path.split(res_file)
-            self.assertEquals(expected_dir, actual_dir)
-            self.assertEquals(expected_file_name, actual_file_name)
+        self.assertEqual(len(self.UHS_RESULTS), len(uhs_data))
+        self.assertTrue(all([x.realization == 0 for x in uhs_data]))
 
-            with h5py.File(res_file, 'r') as h5_file:
-                self.assertTrue(numpy.allclose(self.UHS_RESULTS[i][1],
-                                               h5_file['uhs'].value))
-
-        shutil.rmtree(result_dir)
+        uhs_results_dict = dict(self.UHS_RESULTS)  # keyed by PoE
+        for uhs_datum in uhs_data:
+            self.assertTrue(
+                numpy.allclose(uhs_results_dict[uhs_datum.uh_spectrum.poe],
+                               uhs_datum.sa_values))
+            self.assertEqual(test_site.point.to_wkt(), uhs_datum.location.wkt)
