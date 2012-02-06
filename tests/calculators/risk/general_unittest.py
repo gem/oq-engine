@@ -15,6 +15,7 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+import itertools
 import os
 import numpy
 import unittest
@@ -25,13 +26,15 @@ from openquake.db.models import OqCalculation
 from openquake.output.risk import LossMapDBWriter
 from openquake.output.risk import LossMapNonScenarioXMLWriter
 from openquake.calculators.risk.classical.core import ClassicalRiskCalculator
-from openquake.calculators.risk.general import _compute_alphas
-from openquake.calculators.risk.general import _compute_betas
-from openquake.calculators.risk.general import compute_beta_distributions
+from openquake.calculators.risk.classical.core import _generate_loss_ratios
+from openquake.calculators.risk.general import compute_alpha
+from openquake.calculators.risk.general import compute_beta
+from openquake.calculators.risk.general import BetaDistribution
+from openquake import shapes
 
 from tests.utils.helpers import demo_file
 from tests.utils.helpers import patch
-
+from tests.utils.helpers import assertDeepAlmostEqual
 
 class ProbabilisticRiskCalculatorTestCase(unittest.TestCase):
     """Tests for
@@ -149,67 +152,76 @@ class BetaDistributionTestCase(unittest.TestCase):
 
     def setUp(self):
         self.mean_loss_ratios = [0.050, 0.100, 0.200, 0.400, 0.800]
-        self.stdevs = [0.025, 0.040, 0.060, 0.080, 0.080]
+        self.stddevs = [0.025, 0.040, 0.060, 0.080, 0.080]
+        self.covs = [0.500, 0.400, 0.300, 0.200 , 0.100]
+        self.imls = [0.100, 0.200, 0.300, 0.450, 0.600]
+
 
     def test_compute_alphas(self):
         # expected alphas provided by Vitor
 
         expected_alphas = [3.750, 5.525, 8.689, 14.600, 19.200]
 
-        self.assertTrue(numpy.allclose(_compute_alphas(self.mean_loss_ratios,
-            self.stdevs), expected_alphas, atol=0.0002))
+        alphas = [compute_alpha(mean_loss_ratio, stdev) for  mean_loss_ratio,
+                stdev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
+        self.assertTrue(numpy.allclose(alphas, expected_alphas, atol=0.0002))
 
     def test_compute_betas(self):
         # expected betas provided by Vitor
 
         expected_betas = [71.250, 49.725, 34.756, 21.900, 4.800]
 
-        self.assertTrue(numpy.allclose(_compute_betas(self.mean_loss_ratios,
-             self.stdevs), expected_betas, atol=0.0001))
+        betas = [compute_beta(mean_loss_ratio, stdev) for  mean_loss_ratio,
+                stdev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
+        self.assertTrue(numpy.allclose(betas, expected_betas, atol=0.0001))
 
     def test_compute_beta_dist(self):
 
-        # lrems provided by Vitor
-        lrems = [0, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07, 0.08, 0.09, 0.1,
-            0.12, 0.14, 0.16, 0.18, 0.2, 0.24, 0.28, 0.32, 0.36, 0.4, 0.48,
-            0.56, 0.64, 0.72, 0.8, 0.84, 0.86, 0.88, 0.9, 1]
-
         # expected beta distributions provided by Vitor
         expected_beta_distributions = [
-            1.0, 1.0, 1.0, 1.0, 1.0,
-            0.99, 1.0, 1.0, 1.0, 1.0,
-            0.918, 0.998, 1.0, 1.0, 1.0,
-            0.776, 0.989, 1.0, 1.0, 1.0,
-            0.603, 0.963, 1.0, 1, 1.0,
-            0.436, 0.916, 1.0, 1, 1.0,
-            0.298, 0.846, 0.999, 1.0, 1.0,
-            0.193, 0.757, 0.996, 1.0, 1.0,
-            0.12, 0.657, 0.992, 1.0, 1.0,
-            0.072, 0.553, 0.983, 1.0, 1.0,
-            0.042, 0.452, 0.97, 1.0, 1.0,
-            0.013, 0.279, 0.921, 1.0, 1.0,
-            0.004, 0.156, 0.841, 1.0, 1.0,
-            0.001, 0.081, 0.731, 1.0, 1.0,
-            0, 0.038, 0.602, 0.999, 1.0,
-            0, 0.017, 0.47, 0.997, 1.0,
-            0, 0.003, 0.241, 0.982, 1.0,
-            0, 0, 0.1, 0.936, 1.0,
-            0, 0, 0.033, 0.838, 1.0,
-            0, 0, 0.009, 0.682, 1.0,
-            0, 0, 0.002, 0.491, 1.0,
-            0, 0, 0, 0.162, 1.0,
-            0, 0, 0, 0.026, 0.995,
-            0, 0, 0, 0.002, 0.963,
-            0, 0, 0, 0, 0.84,
-            0, 0, 0, 0, 0.541,
-            0, 0, 0, 0, 0.341,
-            0, 0, 0, 0, 0.245,
-            0, 0, 0, 0, 0.159,
-            0, 0, 0, 0, 0.09,
-            0, 0, 0, 0, 0]
+            [1.0000000, 1.0000000, 1.0000000, 1.0000000, 1.0000000],
+            [0.9895151, 0.9999409, 1.0000000, 1.0000000, 1.0000000],
+            [0.9175720, 0.9981966, 0.9999997, 1.0000000, 1.0000000],
+            [0.7764311, 0.9887521, 0.9999922, 1.0000000, 1.0000000],
+            [0.6033381, 0.9633258, 0.9999305, 1.0000000, 1.0000000],
+            [0.4364471, 0.9160514, 0.9996459, 1.0000000, 1.0000000],
+            [0.2975979, 0.8460938, 0.9987356, 1.0000000, 1.0000000],
+            [0.1931667, 0.7574557, 0.9964704, 1.0000000, 1.0000000],
+            [0.1202530, 0.6571491, 0.9917729, 0.9999999, 1.0000000],
+            [0.0722091, 0.5530379, 0.9832939, 0.9999997, 1.0000000],
+            [0.0420056, 0.4521525, 0.9695756, 0.9999988, 1.0000000],
+            [0.0130890, 0.2790107, 0.9213254, 0.9999887, 1.0000000],
+            [0.0037081, 0.1564388, 0.8409617, 0.9999306, 1.0000000],
+            [0.0009665, 0.0805799, 0.7311262, 0.9996882, 1.0000000],
+            [0.0002335, 0.0384571, 0.6024948, 0.9988955, 1.0000000],
+            [0.0000526, 0.0171150, 0.4696314, 0.9967629, 1.0000000],
+            [0.0000022, 0.0027969, 0.2413923, 0.9820831, 1.0000000],
+            [0.0000001, 0.0003598, 0.0998227, 0.9364072, 1.0000000],
+            [0.0000000, 0.0000367, 0.0334502, 0.8381920, 0.9999995],
+            [0.0000000, 0.0000030, 0.0091150, 0.6821293, 0.9999959],
+            [0.0000000, 0.0000002, 0.0020162, 0.4909782, 0.9999755],
+            [0.0000000, 0.0000000, 0.0000509, 0.1617086, 0.9995033],
+            [0.0000000, 0.0000000, 0.0000005, 0.0256980, 0.9945488],
+            [0.0000000, 0.0000000, 0.0000000, 0.0016231, 0.9633558],
+            [0.0000000, 0.0000000, 0.0000000, 0.0000288, 0.8399534],
+            [0.0000000, 0.0000000, 0.0000000, 0.0000001, 0.5409583],
+            [0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.3413124],
+            [0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.1589844],
+            [0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0421052],
+            [0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0027925],
+            [0.0000000, 0.0000000, 0.0000000, 0.0000000, 0.0000000]]
 
-        beta_distributions = compute_beta_distributions(self.mean_loss_ratios,
-            self.stdevs, lrems)
+        vuln_function = shapes.VulnerabilityFunction(self.imls,
+                            self.mean_loss_ratios, self.covs)
 
-        self.assertTrue(numpy.allclose(beta_distributions,
-                expected_beta_distributions, atol=0.0005))
+        # steps = 5
+        loss_ratios = _generate_loss_ratios(vuln_function, 5)
+        lrem = numpy.empty((len(loss_ratios), vuln_function.imls.size), float)
+
+        for col, _ in enumerate(vuln_function):
+            for row, loss_ratio in enumerate(loss_ratios):
+                lrem[row][col] = BetaDistribution.survival_function(loss_ratio,
+                    col=col, vf=vuln_function, )
+
+        assertDeepAlmostEqual(self, lrem,
+            expected_beta_distributions, delta=0.0005)

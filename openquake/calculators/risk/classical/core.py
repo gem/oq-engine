@@ -27,8 +27,6 @@ from numpy import empty, linspace
 from numpy import array, concatenate
 from numpy import subtract, mean
 
-from scipy import sqrt, stats, log, exp
-
 from openquake import kvs
 from openquake import logs
 from openquake.db import models
@@ -45,7 +43,8 @@ from openquake.calculators.risk.general import loop
 LOGGER = logs.LOG
 
 
-def compute_loss_ratio_curve(vuln_function, hazard_curve, steps):
+def compute_loss_ratio_curve(vuln_function, hazard_curve, steps,
+        distribution=None):
     """Compute a loss ratio curve for a specific hazard curve (e.g., site),
     by applying a given vulnerability function.
 
@@ -63,7 +62,7 @@ def compute_loss_ratio_curve(vuln_function, hazard_curve, steps):
         Number of steps between loss ratios.
     """
 
-    lrem = _compute_lrem(vuln_function, steps)
+    lrem = _compute_lrem(vuln_function, steps, distribution)
     lrem_po = _compute_lrem_po(vuln_function, lrem, hazard_curve)
     loss_ratios = _generate_loss_ratios(vuln_function, steps)
 
@@ -113,8 +112,9 @@ def _generate_loss_ratios(vuln_function, steps):
     return _split_loss_ratios(loss_ratios, steps)
 
 
+
 @MemoizeMutable
-def _compute_lrem(vuln_function, steps, distribution=None):
+def _compute_lrem(vuln_function, steps, distribution='LN'):
     """Compute the LREM (Loss Ratio Exceedance Matrix).
 
     :param vuln_function:
@@ -125,26 +125,22 @@ def _compute_lrem(vuln_function, steps, distribution=None):
         Number of steps between loss ratios.
     """
 
-    if distribution is None:
-        # this is so we can memoize the thing
-        distribution = stats.lognorm
+    distribution = {'LN': general.Lognorm,
+                    'BT': general.BetaDistribution}.get(distribution,
+                        general.Lognorm)
+
 
     loss_ratios = _generate_loss_ratios(vuln_function, steps)
+
     # LREM has number of rows equal to the number of loss ratios
     # and number of columns equal to the number if imls
     lrem = empty((loss_ratios.size, vuln_function.imls.size), float)
 
-    for idx, value in enumerate(vuln_function):
-        mean_val, cov = value[1:]
 
-        stddev = cov * mean_val
-        variance = stddev ** 2.0
-        mu = log(mean_val ** 2.0 / sqrt(variance + mean_val ** 2.0))
-        sigma = sqrt(log((variance / mean_val ** 2.0) + 1.0))
-
-        for row, value in enumerate(lrem):
-            lrem[row][idx] = distribution.sf(loss_ratios[row],
-                    sigma, scale=exp(mu))
+    for col, _ in enumerate(vuln_function):
+        for row, loss_ratio in enumerate(loss_ratios):
+            lrem[row][col] = distribution.survival_function(loss_ratio, col=col,
+                vf=vuln_function)
 
     return lrem
 
@@ -383,9 +379,11 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
 
             return None
 
+
         lrem_steps = self.calc_proxy.oq_job_profile.lrem_steps_per_interval
         loss_ratio_curve = compute_loss_ratio_curve(
-            vuln_function, hazard_curve, lrem_steps)
+            vuln_function, hazard_curve, lrem_steps,
+            self.calc_proxy.params.get("probabilisticDistribution"))
 
         loss_ratio_key = kvs.tokens.loss_ratio_key(
             self.calc_proxy.job_id, point.row, point.column, asset['assetID'])
