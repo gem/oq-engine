@@ -1,7 +1,7 @@
 """
-Module :mod:`nhe.surface.planar` contains :class:`PlanarSurface`.
+Module :mod:`nhe.geo.surface.planar` contains :class:`PlanarSurface`.
 """
-from nhe.surface.base import BaseSurface
+from nhe.geo.surface.base import BaseSurface
 
 
 class PlanarSurface(BaseSurface):

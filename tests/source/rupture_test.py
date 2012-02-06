@@ -2,9 +2,9 @@ import unittest
 
 from nhe import const
 from nhe.geo import Point
+from nhe.geo.surface.planar import PlanarSurface
 from nhe.common.nodalplane import NodalPlane
 from nhe.common.tom import PoissonTOM
-from nhe.surface.planar import PlanarSurface
 from nhe.source.base import Rupture, ProbabilisticRupture, SourceError
 
 

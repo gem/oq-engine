@@ -69,7 +69,7 @@ class Rupture(object):
     :param hypocenter:
         A :class:`~nhe.geo.point.Point`, rupture's hypocenter.
     :param surface:
-        An instance of subclass of :class:`nhe.surface.base.BaseSurface`.
+        An instance of subclass of :class:`~nhe.geo.surface.base.BaseSurface`.
         Object representing the rupture surface geometry.
 
     :raises SourceError:

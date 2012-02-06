@@ -4,7 +4,7 @@ Module :mod:`nhe.source.point` defines :class:`PointSource`.
 import math
 
 from nhe.geo import Point
-from nhe.surface.planar import PlanarSurface
+from nhe.geo.surface.planar import PlanarSurface
 from nhe.source.base import SeismicSource, SourceError, ProbabilisticRupture
 
 
@@ -147,7 +147,7 @@ class PointSource(SeismicSource):
         :param hypocenter:
             Point representing rupture's hypocenter.
         :returns:
-            Instance of :class:`nhe.surface.planar.PlanarSurface`.
+            Instance of :class:`~nhe.geo.surface.planar.PlanarSurface`.
         """
         assert self.upper_seismogenic_depth <= hypocenter.depth \
                and self.lower_seismogenic_depth >= hypocenter.depth

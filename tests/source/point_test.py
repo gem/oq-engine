@@ -11,7 +11,7 @@ from nhe.common.pmf import PMF
 from nhe.common.nodalplane import NodalPlane
 from nhe.common.tom import PoissonTOM
 
-from tests.surface import _planar_test_data as planar_surface_test_data
+from tests.geo.surface import _planar_test_data as planar_surface_test_data
 
 
 class PointSourceCreationTestCase(unittest.TestCase):
