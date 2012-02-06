@@ -9,8 +9,8 @@ import shapely.geometry
 
 def clean_points(points):
     """
-    Given a list of :class:`nhe.geo.Point` objects, return a new list with
-    adjacent duplicate points removed.
+    Given a list of :class:`~nhe.geo.point.Point` objects, return a new list
+    with adjacent duplicate points removed.
 
     >>> from nhe.geo import Point
     >>> a, b, c = Point(1, 2, 3), Point(3, 4, 5), Point(5, 6, 7)
