@@ -60,12 +60,23 @@ CREATE INDEX uiapi_output_owner_id_idx on uiapi.output(owner_id);
 CREATE INDEX uiapi_upload_owner_id_idx on uiapi.upload(owner_id);
 
 -- uiapi indexes on foreign keys
+CREATE INDEX uiapi_oq_job_profile_input_set_id_idx on uiapi.oq_job_profile(input_set_id);
+
+-- hzrdr indices on foreign keys
+-- hazard map
 CREATE INDEX hzrdr_hazard_map_output_id_idx on hzrdr.hazard_map(output_id);
 CREATE INDEX hzrdr_hazard_map_data_hazard_map_id_idx on hzrdr.hazard_map_data(hazard_map_id);
+-- hazard curve
 CREATE INDEX hzrdr_hazard_curve_output_id_idx on hzrdr.hazard_curve(output_id);
 CREATE INDEX hzrdr_hazard_curve_data_hazard_curve_id_idx on hzrdr.hazard_curve_data(hazard_curve_id);
+-- gmf
 CREATE INDEX hzrdr_gmf_data_output_id_idx on hzrdr.gmf_data(output_id);
-CREATE INDEX uiapi_oq_job_profile_input_set_id_idx on uiapi.oq_job_profile(input_set_id);
+-- uhs
+CREATE INDEX hzrdr_uh_spectra_output_id_idx on hzrdr.uh_spectra(output_id);
+CREATE INDEX hzrdr_uh_spectrum_uh_spectra_id_idx on hzrdr.uh_spectrum(uh_spectra_id);
+CREATE INDEX hzrdr_uh_spectrum_data_uh_spectrum_id_idx on hzrdr.uh_spectrum_data(uh_spectrum_id);
+
+-- riskr indexes
 CREATE INDEX riskr_loss_map_output_id_idx on riskr.loss_map(output_id);
 CREATE INDEX riskr_loss_map_data_loss_map_id_idx on riskr.loss_map_data(loss_map_id);
 CREATE INDEX riskr_loss_curve_output_id_idx on riskr.loss_curve(output_id);
