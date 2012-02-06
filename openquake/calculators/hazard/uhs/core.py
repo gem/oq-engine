@@ -23,6 +23,8 @@ import numpy
 import os
 
 from celery.task import task
+from django.db import transaction
+from django.contrib.gis.geos.geometry import GEOSGeometry
 
 from openquake import java
 from openquake.engine import CalculationProxy
@@ -41,7 +43,7 @@ from openquake.calculators.hazard.general import set_gmpe_params
 
 
 @task(ignore_result=True)
-def touch_result_file(job_id, path, sites, n_samples, n_periods):
+def touch_result_file(job_id, path, sites, realizations, n_periods):
     """Given a path (including the file name), create an empty HDF5 result file
     containing 1 empty data set for each site. Each dataset will be a matrix
     with the number of rows = number of samples and number of cols = number of
@@ -54,7 +56,7 @@ def touch_result_file(job_id, path, sites, n_samples, n_periods):
         result file should be created.
     :param sites:
         List of :class:`openquake.shapes.Site` objects.
-    :param int n_samples:
+    :param int realizations:
         Number of logic tree samples (the y-dimension of each dataset).
     :param int n_periods:
         Number of UHS periods (the x-dimension of each dataset).
@@ -64,7 +66,7 @@ def touch_result_file(job_id, path, sites, n_samples, n_periods):
     with h5py.File(path, 'w') as h5_file:
         for site in sites:
             ds_name = 'lon:%s-lat:%s' % (site.longitude, site.latitude)
-            ds_shape = (n_samples, n_periods)
+            ds_shape = (realizations, n_periods)
             h5_file.create_dataset(ds_name, dtype=numpy.float64,
                                    shape=ds_shape)
 
@@ -96,17 +98,17 @@ def compute_uhs_task(job_id, realization, site, result_dir):
     """
     utils_tasks.check_job_status(job_id)
 
-    the_job = CalculationProxy.from_kvs(job_id)
+    calc_proxy = CalculationProxy.from_kvs(job_id)
 
     log_msg = (
         "Computing UHS for job_id=%s, site=%s, realization=%s."
         " UHS results will be serialized to `%s`.")
-    log_msg %= (the_job.job_id, site, realization, result_dir)
+    log_msg %= (calc_proxy.job_id, site, realization, result_dir)
     LOG.info(log_msg)
 
-    uhs_results = compute_uhs(the_job, site)
+    uhs_results = compute_uhs(calc_proxy, site)
 
-    return write_uhs_results(result_dir, realization, site, uhs_results)
+    return write_uhs_spectrum_data(calc_proxy, realization, site, uhs_results)
 
 
 def compute_uhs(the_job, site):
@@ -148,10 +150,24 @@ def compute_uhs(the_job, site):
 
     return uhs_results
 
-# @commit('oq_result_writer')
+@transaction.commit_on_success(using='reslt_writer')
 def write_uh_spectra(calc_proxy):
-    """Write the top-level uhs container to the database."""
-    # write uh_spectra and uh_spectrum records
+    """Write the top-level Uniform Hazard Spectra calculation results records
+    to the database.
+
+    In the workflow of the UHS calculator, this should be written prior to the
+    execution of the main calculation. (See
+    :class:`openquake.calculators.base.Calculator.pre_execute`.)
+
+    This function writes:
+    * 1 record to uiapi.output
+    * 1 record to hzrdr.uh_spectra
+    * 1 record to hzrdr.uh_spectrum, per PoE defined in the calculation config
+
+    :param calc_proxy:
+        :class:`openquake.engine.CalculationProxy` instance for the current
+        UHS calculation.
+    """
     oq_job_profile = calc_proxy.oq_job_profile
     oq_calculation = calc_proxy.oq_calculation
 
@@ -175,6 +191,7 @@ def write_uh_spectra(calc_proxy):
         uh_spectrum.save()
             
 
+@transaction.commit_on_success(using='reslt_writer')
 def write_uhs_spectrum_data(calc_proxy, realization, site, uhs_results):
     """Write UHS results for a single ``site`` and ``realization`` to the
     database.
@@ -192,65 +209,24 @@ def write_uhs_spectrum_data(calc_proxy, realization, site, uhs_results):
         List of `UHSResult` jpype Java objects, one for each PoE defined in the
         calculation configuration.
     """
-    # query the db for for the uh_spectrum records we need (1 per PoE)
-    # write the related records to the uh_spectrum_data table
-    # (and set appropriate FK references)
-    # this function should get called by the @task compute_uhs_task (more
-    # directly, by the the compute_uhs() function)
+    # Get the top-level uh_spectra record for this calculation:
+    oq_calculation = calc_proxy.oq_calculation
+    uh_spectra = UhSpectra.objects.get(
+        output__oq_calculation=oq_calculation.id)
 
-
-def write_uhs_results(result_dir, realization, site, uhs_results):
-    """Write intermediate (temporary) UHS results to the specified directory.
-    Results will later be collected and written to the final results file(s).
-
-    :param result_dir:
-        NFS result directory path. For each poe, a subfolder will be created to
-        contain intermediate calculation results. (Each call to this task will
-        generate 1 result file per poe).
-    :param int realization:
-        Logic tree sample number.
-    :param site:
-        :class:`openquake.shapes.Site` associated with the results.
-    :param uhs_results:
-        A sequence of `UHSResult` jpype Java objects.
-    :returns:
-        A list of the resulting file names (1 per poe).
-    """
-    result_files = []
+    location = GEOSGeometry(site.point.to_wkt())
 
     for result in uhs_results:
         poe = result.getPoe()
-        uhs = result.getUhs()  # This is a Java Double[]
+        # Get the uh_spectrum record to which the current result belongs.
+        # Remember, each uh_spectrum record is associated with a partiuclar
+        # PoE.
+        uh_spectrum = UhSpectrum.objects.get(uh_spectra=uh_spectra.id, poe=poe)
 
-        # We want intermediate calc results to be organized by PoE,
-        # so that they can be collected and reduced into a single result file
-        # per PoE.
-        # Having results separated this way means that a result collector
-        # is simply assigned a directory to poll and grabs any result files
-        # that it finds (without having to do much/any fitering or searching).
-        poe_path = os.path.join(result_dir, 'poe:%s' % poe)
-        if not os.path.exists(poe_path):
-            os.makedirs(poe_path)
+        # getUhs() yields a Java Double[] of SA (Spectral Acceleration) values
+        sa_values = [x.value for x in result.getUhs()]
 
-        # Initially, prepend the file name with an underscore.
-        # When the file done being written to, rename it and remove the
-        # underscore.
-        file_name = '_sample:%s-lon:%s-lat:%s.h5'
-        file_name %= (realization, site.longitude, site.latitude)
-        file_path = os.path.join(poe_path, file_name)
-
-        with h5py.File(file_path, 'w') as h5_file:
-            h5_file.create_dataset(
-                'uhs',
-                # We have to get the primitive 'value' for each Double in the
-                # Double[]
-                data=numpy.array([x.value for x in uhs], dtype=numpy.float64))
-
-        # We're done writing so we can rename it. This is an indicator to
-        # result collector code that these results are ready to be collected.
-        complete_file_path = os.path.join(poe_path, file_name[1:])
-        os.rename(file_path, complete_file_path)
-
-        result_files.append(complete_file_path)
-
-    return result_files
+        uh_spectrum_data = UhSpectrumData(
+            uh_spectrum=uh_spectrum, realization=realization,
+            sa_values=sa_values, location=location)
+        uh_spectrum_data.save()
