@@ -36,6 +36,7 @@ from tests.utils.helpers import demo_file
 from tests.utils.helpers import patch
 from tests.utils.helpers import assertDeepAlmostEqual
 
+
 class ProbabilisticRiskCalculatorTestCase(unittest.TestCase):
     """Tests for
     :class:`openquake.calculators.risk.general.ProbabilisticRiskCalculator`.
@@ -153,17 +154,16 @@ class BetaDistributionTestCase(unittest.TestCase):
     def setUp(self):
         self.mean_loss_ratios = [0.050, 0.100, 0.200, 0.400, 0.800]
         self.stddevs = [0.025, 0.040, 0.060, 0.080, 0.080]
-        self.covs = [0.500, 0.400, 0.300, 0.200 , 0.100]
+        self.covs = [0.500, 0.400, 0.300, 0.200, 0.100]
         self.imls = [0.100, 0.200, 0.300, 0.450, 0.600]
-
 
     def test_compute_alphas(self):
         # expected alphas provided by Vitor
 
         expected_alphas = [3.750, 5.525, 8.689, 14.600, 19.200]
 
-        alphas = [compute_alpha(mean_loss_ratio, stdev) for  mean_loss_ratio,
-                stdev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
+        alphas = [compute_alpha(mean_loss_ratio, stddev) for  mean_loss_ratio,
+                stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
         self.assertTrue(numpy.allclose(alphas, expected_alphas, atol=0.0002))
 
     def test_compute_betas(self):
@@ -171,8 +171,8 @@ class BetaDistributionTestCase(unittest.TestCase):
 
         expected_betas = [71.250, 49.725, 34.756, 21.900, 4.800]
 
-        betas = [compute_beta(mean_loss_ratio, stdev) for  mean_loss_ratio,
-                stdev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
+        betas = [compute_beta(mean_loss_ratio, stddev) for  mean_loss_ratio,
+                stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
         self.assertTrue(numpy.allclose(betas, expected_betas, atol=0.0001))
 
     def test_compute_beta_dist(self):
@@ -216,12 +216,13 @@ class BetaDistributionTestCase(unittest.TestCase):
 
         # steps = 5
         loss_ratios = _generate_loss_ratios(vuln_function, 5)
+
         lrem = numpy.empty((len(loss_ratios), vuln_function.imls.size), float)
 
         for col, _ in enumerate(vuln_function):
             for row, loss_ratio in enumerate(loss_ratios):
                 lrem[row][col] = BetaDistribution.survival_function(loss_ratio,
-                    col=col, vf=vuln_function, )
+                    col=col, vf=vuln_function)
 
-        assertDeepAlmostEqual(self, lrem,
-            expected_beta_distributions, delta=0.0005)
+        assertDeepAlmostEqual(self, expected_beta_distributions,
+            lrem, delta=0.0005)
