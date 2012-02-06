@@ -30,6 +30,10 @@ from openquake.java import list_to_jdouble_array
 from openquake.logs import LOG
 from openquake.utils import config
 from openquake.utils import tasks as utils_tasks
+from openquake.db.models import Output
+from openquake.db.models import UhSpectra
+from openquake.db.models import UhSpectrum
+from openquake.db.models import UhSpectrumData
 from openquake.calculators.hazard.general import generate_erf
 from openquake.calculators.hazard.general import generate_gmpe_map
 from openquake.calculators.hazard.general import get_iml_list
@@ -143,6 +147,56 @@ def compute_uhs(the_job, site):
         the_job['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM'])
 
     return uhs_results
+
+# @commit('oq_result_writer')
+def write_uh_spectra(calc_proxy):
+    """Write the top-level uhs container to the database."""
+    # write uh_spectra and uh_spectrum records
+    oq_job_profile = calc_proxy.oq_job_profile
+    oq_calculation = calc_proxy.oq_calculation
+
+    output = Output(
+        owner=oq_calculation.owner,
+        oq_calculation=oq_calculation,
+        display_name='UH Spectra for calculation id %s' % oq_calculation.id,
+        db_backed=True,
+        output_type='uh_spectra')
+    output.save()
+
+    uh_spectra = UhSpectra(
+        output=output,
+        timespan=oq_job_profile.investigation_time,
+        realizations=oq_job_profile.realizations,
+        periods=oq_job_profile.uhs_periods)
+    uh_spectra.save()
+
+    for poe in oq_job_profile.poes:
+        uh_spectrum = UhSpectrum(uh_spectra=uh_spectra, poe=poe)
+        uh_spectrum.save()
+            
+
+def write_uhs_spectrum_data(calc_proxy, realization, site, uhs_results):
+    """Write UHS results for a single ``site`` and ``realization`` to the
+    database.
+
+    :param calc_proxy:
+        :class:`openquake.engine.CalculationProxy` instance for a UHS
+        calculation.
+    :param int realization:
+       The realization number (from 0 to N, where N is the number of logic tree
+        samples defined in the calculation config) for which these results have
+        been computed.
+    :param site:
+        :class:`openquake.shapes.Site` instance.
+    :param uhs_results:
+        List of `UHSResult` jpype Java objects, one for each PoE defined in the
+        calculation configuration.
+    """
+    # query the db for for the uh_spectrum records we need (1 per PoE)
+    # write the related records to the uh_spectrum_data table
+    # (and set appropriate FK references)
+    # this function should get called by the @task compute_uhs_task (more
+    # directly, by the the compute_uhs() function)
 
 
 def write_uhs_results(result_dir, realization, site, uhs_results):
