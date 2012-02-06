@@ -1,6 +1,6 @@
-# encoding: utf-8
-
 import unittest
+
+import numpy
 
 from nhe.common import geo
 
@@ -257,25 +257,47 @@ class PolygonCreationTestCase(unittest.TestCase):
         self.assertEqual(polygon.lats.dtype, 'float')
 
 
+class PolygonResampleSegmentsTestCase(unittest.TestCase):
+    def test_1(self):
+        poly = geo.Polygon([geo.Point(-2, -2), geo.Point(0, -2),
+                            geo.Point(0, 0), geo.Point(-2, 0)])
+        lons, lats = poly._get_resampled_coordinates()
+        expected_lons = [-2, -1,  0,  0, -1, -2, -2]
+        expected_lats = [-2, -2, -2,  0,  0,  0, -2]
+        self.assertTrue(
+            numpy.allclose(lons, expected_lons, atol=1e-3, rtol=0),
+            msg='%s != %s' % (lons, expected_lons)
+        )
+        self.assertTrue(
+            numpy.allclose(lats, expected_lats, atol=1e-3, rtol=0),
+            msg='%s != %s' % (lats, expected_lats)
+        )
+
+    def test_international_date_line(self):
+        poly = geo.Polygon([
+            geo.Point(177, 40), geo.Point(179, 40), geo.Point(-179, 40),
+            geo.Point(-177, 40),
+            geo.Point(-177, 43), geo.Point(-179, 43), geo.Point(179, 43),
+            geo.Point(177, 43)
+        ])
+        lons, lats = poly._get_resampled_coordinates()
+        self.assertTrue(all(-180 < lon <= 180 for lon in lons))
+        expected_lons = [177, 178, 179, 180, -179, -178, -177,
+                         -177, -178, -179, 180, 179, 178, 177, 177]
+        self.assertTrue(
+            numpy.allclose(lons, expected_lons, atol=1e-4, rtol=0),
+            msg='%s != %s' % (lons, expected_lons)
+        )
+
+
 class PolygonDiscretizeTestCase(unittest.TestCase):
     def test_mesh_spacing_uniformness(self):
         MESH_SPACING = 10
         tl = geo.Point(60, 60)
         tr = geo.Point(70, 60)
-        bottom_line = [geo.Point(lon, 55) for lon in xrange(70, 59, -1)]
+        bottom_line = [geo.Point(lon, 58) for lon in xrange(70, 59, -1)]
         poly = geo.Polygon([tl, tr] + bottom_line)
         mesh = list(poly.discretize(mesh_spacing=MESH_SPACING))
-
-        northest = mesh[0]
-        for point in mesh:
-            if point.latitude > northest.latitude:
-                northest = point
-
-        # the point with the highest latitude should be somewhere
-        # in the middle longitudinally (in between meridians 60
-        # and 70) and be above 60th parallel.
-        self.assertTrue(64.6 < northest.longitude < 65.4)
-        self.assertTrue(60 < northest.latitude < 60.1)
 
         for i, point in enumerate(mesh):
             if i == len(mesh) - 1:
@@ -301,10 +323,10 @@ class PolygonDiscretizeTestCase(unittest.TestCase):
         bml = geo.Point(179, 40)
         bmr = geo.Point(-179, 40)
         br = geo.Point(-177, 40)
-        tr = geo.Point(-177, 45)
-        tmr = geo.Point(-179, 45)
-        tml = geo.Point(179, 45)
-        tl = geo.Point(177, 45)
+        tr = geo.Point(-177, 43)
+        tmr = geo.Point(-179, 43)
+        tml = geo.Point(179, 43)
+        tl = geo.Point(177, 43)
         poly = geo.Polygon([bl, bml, bmr, br, tr, tmr, tml, tl])
         mesh = list(poly.discretize(mesh_spacing=MESH_SPACING))
 
@@ -342,3 +364,20 @@ class PolygonDiscretizeTestCase(unittest.TestCase):
             geo.Point(dist * 4, -dist * 3),
             geo.Point(dist * 4, -dist * 4),
         ])
+
+    def test_longitudinally_extended_boundary(self):
+        points = [geo.Point(lon, -60) for lon in xrange(-10, 11)]
+        points += [geo.Point(10, -60.1), geo.Point(-10, -60.1)]
+        poly = geo.Polygon(points)
+        mesh = list(poly.discretize(mesh_spacing=10.62))
+
+        south = mesh[0]
+        for point in mesh:
+            if point.latitude < south.latitude:
+                south = point
+
+        # the point with the lowest latitude should be somewhere
+        # in the middle longitudinally (around Greenwich meridian)
+        # and be below -60th parallel.
+        self.assertTrue(-0.1 < south.longitude < 0.1)
+        self.assertTrue(-60.5 < south.latitude < -60.4)
