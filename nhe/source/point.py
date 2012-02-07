@@ -89,7 +89,22 @@ class PointSource(SeismicSource):
 
     def _iter_ruptures_at_location(self, mfd, temporal_occurrence_model,
                                    location):
-        # TODO: document
+        """
+        The common part of :meth:`iter_ruptures` shared between point source
+        and :class:`~nhe.source.area.AreaSource`.
+
+        :param mfd:
+            Magnitude-frequency distribution for calculating occurrence rates.
+            For point source it is the one that was provided to constructor,
+            for area source it is rescaled with respect to number of locations.
+        :param temporal_occurrence_model:
+            The same object as given to :meth:`iter_ruptures`.
+        :param location:
+            A :class:`~nhe.geo.point.Point` object representing the hypocenter
+            location. As for ``mfd``, it is the one provided to constructor
+            in case of :class:`PointSource`, and for area source the location
+            points are taken from polygon discretization.
+        """
         for (mag, mag_occ_rate) in mfd.get_annual_occurrence_rates():
             for (np_prob, np) in self.nodal_plane_distribution.data:
                 for (hc_prob, hc_depth) in self.hypocenter_distribution.data:

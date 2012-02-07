@@ -43,6 +43,10 @@ class AreaSource(PointSource):
         parameter ``area_discretization`` is used as polygon's griding
         spacing (not to be confused with rupture surface's
         :meth:`mesh_spacing <nhe.surface.base.BaseSurface.get_mesh>`).
+
+        The MFD that is used to calculate ruptures' occurrence rates
+        is :meth:`rescaled <nhe.mfd.base.BaseMFD.get_rescaled_mfd>`
+        with respect to number of points the polygon discretizes to.
         """
         locations = list(self.polygon.discretize(self.area_discretization))
         mfd = self.mfd.get_rescaled_mfd(scaling_factor=1.0 / len(locations))
