@@ -245,7 +245,6 @@ CREATE OR REPLACE FUNCTION check_exposure_model() RETURNS TRIGGER
 LANGUAGE plpgsql AS
 $$
 DECLARE
-    emdl oqmif.exposure_model%ROWTYPE;
     exception_msg TEXT := '';
 BEGIN
     -- area_type is optional unless
@@ -261,6 +260,18 @@ BEGIN
     --     * recoType is set to "per_area"
     IF NEW.area_unit IS NULL AND (NEW.stco_type = 'per_area' OR NEW.reco_type = 'per_area') THEN
         exception_msg := format_exc(TG_OP, 'area_unit is mandatory for stco_type <' || NEW.stco_type || '>, reco_type <', || NEW.reco_type || '>', TG_TABLE_NAME);
+        RAISE '%s', exception_msg;
+    END IF;
+
+    -- contents cost unit is mandatory if contents cost type is set
+    IF NEW.coco_unit IS NULL AND NEW.coco_type IS NOT NULL THEN
+        exception_msg := format_exc(TG_OP, 'coco_unit is mandatory for coco_type <' || NEW.coco_type || '>', TG_TABLE_NAME);
+        RAISE '%s', exception_msg;
+    END IF;
+
+    -- retrofitting cost unit is mandatory if retrofitting cost type is set
+    IF NEW.reco_unit IS NULL AND NEW.reco_type IS NOT NULL THEN
+        exception_msg := format_exc(TG_OP, 'reco_unit is mandatory for reco_type <' || NEW.reco_type || '>', TG_TABLE_NAME);
         RAISE '%s', exception_msg;
     END IF;
 
