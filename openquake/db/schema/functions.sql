@@ -241,6 +241,39 @@ COMMENT ON FUNCTION refresh_last_update() IS
 'Refresh the ''last_update'' time stamp whenever a row is updated.';
 
 
+CREATE OR REPLACE FUNCTION check_exposure_model() RETURNS TRIGGER
+LANGUAGE plpgsql AS
+$$
+DECLARE
+    emdl oqmif.exposure_model%ROWTYPE;
+    exception_msg TEXT := '';
+BEGIN
+    -- area_type is optional unless
+    --     * stcoType is set to "per_area" or
+    --     * recoType is set to "per_area"
+    IF NEW.area_type IS NULL AND (NEW.stco_type = 'per_area' OR NEW.reco_type = 'per_area') THEN
+        exception_msg := format_exc(TG_OP, 'area_type is mandatory for stco_type <' || NEW.stco_type || '>, reco_type <', || NEW.reco_type || '>', TG_TABLE_NAME);
+        RAISE '%s', exception_msg;
+    END IF;
+
+    -- area_unit is optional unless
+    --     * stcoType is set to "per_area" or
+    --     * recoType is set to "per_area"
+    IF NEW.area_unit IS NULL AND (NEW.stco_type = 'per_area' OR NEW.reco_type = 'per_area') THEN
+        exception_msg := format_exc(TG_OP, 'area_unit is mandatory for stco_type <' || NEW.stco_type || '>, reco_type <', || NEW.reco_type || '>', TG_TABLE_NAME);
+        RAISE '%s', exception_msg;
+    END IF;
+
+    IF TG_OP = 'UPDATE' THEN
+        NEW.last_update := timezone('UTC'::text, now());
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION check_exposure_model() IS
+'Make sure the inserted or modified exposure model record is consistent.';
+
 CREATE OR REPLACE FUNCTION check_exposure_data() RETURNS TRIGGER
 LANGUAGE plpgsql AS
 $$
@@ -262,7 +295,7 @@ BEGIN
     --     * we compute fatalities or
     --     * stcoType differs from "aggregated" or
     --     * recoType differs from "aggregated"
-    IF NEW.number_of_units IS NULL AND (emdl.category = 'population' OR stco_type != 'aggregated' OR reco_type != 'aggregated') THEN
+    IF NEW.number_of_units IS NULL AND (emdl.category = 'population' OR emdl.stco_type != 'aggregated' OR emdl.reco_type != 'aggregated') THEN
         exception_msg := format_exc(TG_OP, 'number is mandatory for category <' || emdl.category || '>, stco_type <' || emdl.stco_type || '>, reco_type <', || emdl.reco_type || '>' ,TG_TABLE_NAME);
         RAISE '%s', exception_msg;
     END IF;
@@ -271,7 +304,7 @@ BEGIN
     -- area is optional unless
     --     * stcoType is set to "per_area" or
     --     * recoType is set to "per_area"
-    IF NEW.area IS NULL AND (stco_type = 'per_area' OR reco_type = 'per_area') THEN
+    IF NEW.area IS NULL AND (emdl.stco_type = 'per_area' OR emdl.reco_type = 'per_area') THEN
         exception_msg := format_exc(TG_OP, 'area is mandatory for stco_type <' || emdl.stco_type || '>, reco_type <', || emdl.reco_type || '>', TG_TABLE_NAME);
         RAISE '%s', exception_msg;
     END IF;
@@ -279,7 +312,7 @@ BEGIN
     -- retrofitting cost: optional unless
     --     * we compute BCR ("impossible" to check here)
     --     * recoType is defined
-    IF NEW.reco IS NULL AND reco_type IS NOT NULL THEN
+    IF NEW.reco IS NULL AND emdl.reco_type IS NOT NULL THEN
         exception_msg := format_exc(TG_OP, 'retrofitting cost is mandatory for reco_type <', || emdl.reco_type || '>', TG_TABLE_NAME);
         RAISE '%s', exception_msg;
     END IF;
@@ -315,6 +348,10 @@ FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
 CREATE TRIGGER hzrdi_complex_fault_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON hzrdi.complex_fault
 FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
+
+CREATE TRIGGER oqmif_exposure_model_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON oqmif.exposure_model
+FOR EACH ROW EXECUTE PROCEDURE check_exposure_model();
 
 CREATE TRIGGER oqmif_exposure_data_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON oqmif.exposure_data
