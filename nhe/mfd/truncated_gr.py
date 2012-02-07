@@ -130,14 +130,8 @@ class TruncatedGR(BaseMFD):
         return rates
 
     def get_rescaled_mfd(self, scaling_factor):
-        # TODO: document
-        if scaling_factor <= 0:
-            raise MFDError('scaling factor must be positive')
-        new_a_val = self.a_val + math.log10(scaling_factor)
-        return type(self)(
-            a_val=new_a_val, b_val=self.b_val, min_mag=self.min_mag,
-            max_mag=self.max_mag, bin_width=self.bin_width
-        )
+        # TODO: implement, test, document
+        raise NotImplementedError()
 
     def _get_total_moment_rate(self):
         """
