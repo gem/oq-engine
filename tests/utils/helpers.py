@@ -522,7 +522,8 @@ class DbTestCase(object):
     def default_user(self):
         return models.OqUser.objects.get(user_name="openquake")
 
-    def teardown_upload(self, upload, filesystem_only=True):
+    @staticmethod
+    def teardown_upload(upload, filesystem_only=True):
         """
         Tear down the file system (and potentially db) artefacts for the
         given upload.
@@ -539,15 +540,17 @@ class DbTestCase(object):
             return
         upload.delete()
 
-    def teardown_input_set(self, input_set, filesystem_only):
+    @staticmethod
+    def teardown_input_set(input_set, filesystem_only):
         if input_set.upload is not None:
-            self.teardown_upload(input_set.upload,
-                                 filesystem_only=filesystem_only)
+            DbTestCase.teardown_upload(input_set.upload,
+                                       filesystem_only=filesystem_only)
         if filesystem_only:
             return
         input_set.delete()
 
-    def setup_classic_job(self, create_job_path=True, upload_id=None):
+    @staticmethod
+    def setup_classic_job(create_job_path=True, upload_id=None):
         """Create a classic job with associated upload and inputs.
 
         :param integer upload_id: if set use upload record with given db key.
@@ -575,7 +578,7 @@ class DbTestCase(object):
         oqjp.truncation_type = "twosided"
         oqjp.truncation_level = 3
         oqjp.reference_vs30_value = 760
-        oqjp.imls = self.IMLS
+        oqjp.imls = DbTestCase.IMLS
         oqjp.poes = [0.01, 0.10]
         oqjp.realizations = 1
         oqjp.width_of_mfd_bin = 0.1
@@ -630,7 +633,8 @@ class DbTestCase(object):
 
         return job
 
-    def teardown_job(self, job, filesystem_only=True):
+    @staticmethod
+    def teardown_job(job, filesystem_only=True):
         """
         Tear down the file system (and potentially db) artefacts for the
         given job.
@@ -644,8 +648,8 @@ class DbTestCase(object):
         """
         oqjp = job.oq_job_profile
         if oqjp.input_set is not None:
-            self.teardown_input_set(oqjp.input_set,
-                                    filesystem_only=filesystem_only)
+            DbTestCase.teardown_input_set(oqjp.input_set,
+                                          filesystem_only=filesystem_only)
         if filesystem_only:
             return
 
