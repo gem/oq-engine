@@ -1348,25 +1348,27 @@ ALTER TABLE riskr.bcr_distribution_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE oqmif.exposure_model (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
+    -- Associates the risk exposure model with an input file
+    input_id INTEGER,
     name VARCHAR NOT NULL,
     description VARCHAR,
     -- e.g. "buildings", "bridges" etc.
     category VARCHAR NOT NULL,
 
     -- area type
-    area_type VARCHAR NOT NULL,
+    area_type VARCHAR,
     -- area unit
-    area_unit VARCHAR NOT NULL,
+    area_unit VARCHAR,
 
     -- contents cost type
-    coco_type VARCHAR NOT NULL,
+    coco_type VARCHAR,
     -- contents cost unit
-    coco_unit VARCHAR NOT NULL,
+    coco_unit VARCHAR,
 
     -- retrofitting cost type
-    reco_type VARCHAR NOT NULL,
+    reco_type VARCHAR,
     -- retrofitting cost unit
-    reco_unit VARCHAR NOT NULL,
+    reco_unit VARCHAR,
 
     -- structural cost type
     stco_type VARCHAR NOT NULL,
@@ -1425,6 +1427,8 @@ CREATE TABLE oqmif.occupancy (
 CREATE TABLE riski.vulnerability_model (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
+    -- Associates the risk vulnerability model with an input file
+    input_id INTEGER,
     name VARCHAR NOT NULL,
     description VARCHAR,
     imt VARCHAR NOT NULL CONSTRAINT imt_value
@@ -1588,9 +1592,16 @@ FOREIGN KEY (oq_calculation_id) REFERENCES uiapi.oq_calculation(id) ON DELETE CA
 ALTER TABLE oqmif.exposure_model ADD CONSTRAINT oqmif_exposure_model_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
+ALTER TABLE oqmif.exposure_model ADD CONSTRAINT oqmif_exposure_model_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
+
 ALTER TABLE riski.vulnerability_model ADD CONSTRAINT
 riski_vulnerability_model_owner_fk FOREIGN KEY (owner_id) REFERENCES
 admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE riski.vulnerability_model ADD CONSTRAINT
+riski_vulnerability_model_input_fk FOREIGN KEY (input_id) REFERENCES
+uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE hzrdr.hazard_map
 ADD CONSTRAINT hzrdr_hazard_map_output_fk
