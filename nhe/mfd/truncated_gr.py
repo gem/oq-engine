@@ -130,16 +130,7 @@ class TruncatedGR(BaseMFD):
         return rates
 
     def get_rescaled_mfd(self, scaling_factor):
-        """
-        Returns a new instance of :class:`TruncatedGR` with "a" value adjusted
-        with respect to the ``scaling_factor``.
-
-        The new MFD has the same parameters except ``a`` value. The new ``a``
-        value is computed as a sum of the old one and a decimal logarithm
-        of the ``scaling_factor``.
-
-        See also :meth:`nhe.mfd.base.BaseMFD.get_rescaled_mfd`.
-        """
+        # TODO: document
         if scaling_factor <= 0:
             raise MFDError('scaling factor must be positive')
         new_a_val = self.a_val + math.log10(scaling_factor)
