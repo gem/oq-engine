@@ -38,9 +38,11 @@ class AreaSource(PointSource):
         Ruptures of area source are just a union of ruptures
         of those point sources. The actual positions of the implied
         point sources form a uniformly spaced grid on the polygon.
-        Polygon's method :meth:`~nhe.common.geo.Polygon.discretize`
+        Polygon's method :meth:`~nhe.geo.polygon.Polygon.discretize`
         is used for finding point sources location. Constructor's
-        parameter ``area_discretization`` is used as mesh spacing.
+        parameter ``area_discretization`` is used as polygon's griding
+        spacing (not to be confused with rupture surface's
+        :meth:`mesh_spacing <nhe.surface.base.BaseSurface.get_mesh>`).
         """
         for location in self.polygon.discretize(self.area_discretization):
             ruptures_at_location = self._iter_ruptures_at_location(
