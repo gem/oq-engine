@@ -201,15 +201,15 @@ psql -U $db_admin_user $psql_batch_options -d $db_name -f $postgis/postgis.sql
 psql -U $db_admin_user $psql_batch_options -d $db_name -f $postgis/spatial_ref_sys.sql
 psql -U $db_admin_user $psql_batch_options -d $db_name -f /usr/share/postgresql/9.1/contrib/postgis_comments.sql
 
+echo ".. Running schema definition file: $schema_file .."
+psql -U $db_admin_user $psql_batch_options -d $db_name -f $schema_file
+
 # Apply database function definitions if present.
 functions_file="$schema_path/functions.sql"
 if [ -r $functions_file ]; then
     echo ".. Running functions file: $functions_file .."
     psql -U $db_admin_user $psql_batch_options -d $db_name -f $functions_file
 fi
-
-echo ".. Running schema definition file: $schema_file .."
-psql -U $db_admin_user $psql_batch_options -d $db_name -f $schema_file
 
 # Load static data if present.
 load_file="$schema_path/load.sql"
