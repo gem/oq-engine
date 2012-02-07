@@ -1036,6 +1036,19 @@ class ExposureModel(models.Model):
         db_table = 'oqmif\".\"exposure_model'
 
 
+class Occupancy(models.Model):
+    '''
+    Asset occupancy data
+    '''
+
+    exposure_data = models.ForeignKey("ExposureData")
+    description = models.TextField()
+    occupants = models.IntegerField()
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'oqmif\".\"occupancy'
+
+
 class ExposureData(models.Model):
     '''
     Per-asset risk exposure data
