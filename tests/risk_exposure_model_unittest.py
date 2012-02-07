@@ -82,3 +82,47 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
+
+    def test_exposure_model_with_no_area_type_stco_per_area(self):
+        # area type not set but structural cost type is 'per_area'
+        #   -> exception
+        emdl_input = models.Input(
+            input_type="exposure", input_set=self.job.oq_job_profile.input_set,
+            size=123, path="/tmp/fake-exposure-path")
+        emdl = models.ExposureModel(
+            input=emdl_input, owner=self.job.owner,
+            name="no_area_type_stco_per_area")
+        emdl.stco_type = "per_area"
+        emdl.stco_unit = "USD"
+        try:
+            emdl.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "INSERT: error: area_type is mandatory for stco_type=per_area "
+                "(exposure_model)", de.args[0].strip())
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_exposure_model_with_no_area_type_and_reco_stco_per_area(self):
+        # area type not set but retrofitting and structural cost type is
+        # 'per_area' -> exception
+        emdl_input = models.Input(
+            input_type="exposure", input_set=self.job.oq_job_profile.input_set,
+            size=123, path="/tmp/fake-exposure-path")
+        emdl = models.ExposureModel(
+            input=emdl_input, owner=self.job.owner,
+            name="no_area_type_stco_per_area")
+        emdl.reco_type = "per_area"
+        emdl.reco_unit = "CHF"
+        emdl.stco_type = "per_area"
+        emdl.stco_unit = "GBP"
+        try:
+            emdl.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "INSERT: error: area_type is mandatory for reco_type=per_area,"
+                " stco_type=per_area (exposure_model)", de.args[0].strip())
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
