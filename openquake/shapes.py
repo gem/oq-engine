@@ -32,7 +32,6 @@ from numpy import sin, cos, arctan2, sqrt, radians
 
 from shapely import geometry
 from scipy.interpolate import interp1d
-from scipy import sqrt, log, exp
 
 from openquake import java
 from openquake.utils import round_float
@@ -724,6 +723,9 @@ class VulnerabilityFunction(object):
 
     @property
     def stddevs(self):
+        """
+            Convenience method: returns a list of calculated Standard Deviations
+        """
         return [cov * loss_ratio for cov, loss_ratio in izip(self.covs,
             self.loss_ratios)]
 
