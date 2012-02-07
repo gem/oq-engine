@@ -3,7 +3,7 @@ import unittest
 from nhe.const import TRT
 from nhe.msr import Peer
 from nhe.mfd import TruncatedGR
-from nhe.common.geo import Point, Polygon
+from nhe.geo import Point, Polygon
 from nhe.common.pmf import PMF
 from nhe.common.nodalplane import NodalPlane
 from nhe.common.tom import PoissonTOM
