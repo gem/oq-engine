@@ -44,9 +44,11 @@ class AreaSource(PointSource):
         spacing (not to be confused with rupture surface's
         :meth:`mesh_spacing <nhe.surface.base.BaseSurface.get_mesh>`).
         """
-        for location in self.polygon.discretize(self.area_discretization):
+        locations = list(self.polygon.discretize(self.area_discretization))
+        mfd = self.mfd.get_rescaled_mfd(scaling_factor=1.0 / len(locations))
+        for location in locations:
             ruptures_at_location = self._iter_ruptures_at_location(
-                temporal_occurrence_model, location
+                mfd, temporal_occurrence_model, location
             )
             for rupture in ruptures_at_location:
                 yield rupture

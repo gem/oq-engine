@@ -2,7 +2,7 @@ import unittest
 
 from nhe.const import TRT
 from nhe.msr import Peer
-from nhe.mfd import TruncatedGR
+from nhe.mfd import TruncatedGR, EvenlyDiscretized
 from nhe.geo import Point, Polygon
 from nhe.common.pmf import PMF
 from nhe.common.nodalplane import NodalPlane
@@ -11,7 +11,7 @@ from nhe.source.area import AreaSource
 
 
 class AreaSourceIterRupturesTestCase(unittest.TestCase):
-    def make_point_source(self, polygon, discretization, **kwargs):
+    def make_area_source(self, polygon, discretization, **kwargs):
         default_arguments = {
             'source_id': 'source_id', 'name': 'area source name',
             'tectonic_region_type': TRT.VOLCANIC,
@@ -33,10 +33,10 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
             self.assertIs(getattr(source, key), kwargs[key])
         return source
 
-    def test_1(self):
-        source = self.make_point_source(Polygon([Point(-2, -2), Point(0, -2),
-                                                 Point(0, 0), Point(-2, 0)]),
-                                        discretization=66.7)
+    def test_implied_point_sources(self):
+        source = self.make_area_source(Polygon([Point(-2, -2), Point(0, -2),
+                                                Point(0, 0), Point(-2, 0)]),
+                                       discretization=66.7)
         ruptures = list(source.iter_ruptures(PoissonTOM(50)))
         self.assertEqual(len(ruptures), 9 * 2)
         # resulting 3x3 mesh has points in these coordinates:
@@ -55,3 +55,15 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
                 self.assertEqual(r1.mag, 5.5)
                 self.assertEqual(r2.mag, 6.5)
         self.assertEqual(len(ruptures), 9 * 2)
+
+    def test_mfd_rescaling(self):
+        mfd = EvenlyDiscretized(min_mag=4, bin_width=1, occurrence_rates=[3])
+        polygon = Polygon([Point(0, 0), Point(0, -0.2248),
+                           Point(-0.2248, -0.2248), Point(-0.2248, 0)])
+        source = self.make_area_source(polygon, discretization=10, mfd=mfd)
+        self.assertIs(source.mfd, mfd)
+        ruptures = list(source.iter_ruptures(PoissonTOM(1)))
+        self.assertEqual(len(ruptures), 4)
+        for rupture in ruptures:
+            self.assertNotEqual(rupture.occurrence_rate, 3)
+            self.assertEqual(rupture.occurrence_rate, 3.0 / 4.0)
