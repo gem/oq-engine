@@ -192,3 +192,35 @@ class TruncatedGRModificationsTestCase(BaseMFDTestCase):
         mfd = TruncatedGR(min_mag=6.0, max_mag=7.0, bin_width=0.1,
                           a_val=1, b_val=1)
         self.assert_mfd_error(mfd.modify, 'set_ab', {'a_val': 0, 'b_val': 0})
+
+
+class TruncatedGRMFDGetRescaledMFDTestCase(BaseMFDTestCase):
+    def test_invalid_scaling_factor(self):
+        mfd = TruncatedGR(min_mag=1, max_mag=5, bin_width=2, a_val=1, b_val=2)
+        exc1 = self.assert_mfd_error(mfd.get_rescaled_mfd, scaling_factor=0)
+        exc2 = self.assert_mfd_error(mfd.get_rescaled_mfd, scaling_factor=-0.1)
+        self.assertEqual(exc1.message, 'scaling factor must be positive')
+        self.assertEqual(exc1.message, exc2.message)
+
+    def test_diminishing(self):
+        mfd = TruncatedGR(min_mag=3, max_mag=5, bin_width=2, a_val=1, b_val=2)
+        mfd2 = mfd.get_rescaled_mfd(0.5)
+        self.assertIsNot(mfd, mfd2)
+        self.assertEqual(mfd2.min_mag, 3)
+        self.assertEqual(mfd2.max_mag, 5)
+        self.assertEqual(mfd2.bin_width, 2)
+        self.assertEqual(mfd2.b_val, 2)
+        self.assertNotEqual(mfd2.a_val, 1)
+        self.assertAlmostEqual(mfd2.a_val, 0.69897)
+        [(mag1, rate1)] = mfd.get_annual_occurrence_rates()
+        [(mag2, rate2)] = mfd2.get_annual_occurrence_rates()
+        self.assertEqual(mag1, mag2)
+        self.assertAlmostEqual(rate1 * 0.5, rate2)
+
+    def test_increasing(self):
+        mfd = TruncatedGR(min_mag=2, max_mag=3, bin_width=1, a_val=2, b_val=1)
+        mfd2 = mfd.get_rescaled_mfd(2)
+        [(mag1, rate1)] = mfd.get_annual_occurrence_rates()
+        [(mag2, rate2)] = mfd2.get_annual_occurrence_rates()
+        self.assertEqual(mag1, mag2)
+        self.assertAlmostEqual(rate1 * 2, rate2)
