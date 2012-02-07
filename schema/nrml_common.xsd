@@ -64,6 +64,7 @@
     <xs:simpleType name="ProbabilisticDistributionType">
         <xs:restriction base="xs:string">
             <xs:enumeration value="LN"/>
+            <xs:enumeration value="BT"/>
         </xs:restriction>
     </xs:simpleType>
 
