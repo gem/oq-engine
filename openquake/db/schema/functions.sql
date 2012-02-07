@@ -245,36 +245,76 @@ CREATE OR REPLACE FUNCTION check_exposure_model() RETURNS TRIGGER
 LANGUAGE plpgsql AS
 $$
 DECLARE
+    whats_wrong TEXT := '';
     exception_msg TEXT := '';
 BEGIN
     -- area_type is optional unless
     --     * stcoType is set to "per_area" or
     --     * recoType is set to "per_area"
     --     * cocoType is set to "per_area"
-    IF NEW.area_type IS NULL AND (NEW.coco_type = 'per_area' OR NEW.stco_type = 'per_area' OR NEW.reco_type = 'per_area') THEN
-        exception_msg := format_exc(TG_OP, 'area_type is mandatory for stco_type <' || NEW.stco_type || '>, reco_type <', || NEW.reco_type || '>, coco_type <', || NEW.coco_type || '>', TG_TABLE_NAME);
-        RAISE '%s', exception_msg;
+    IF NEW.area_type IS NULL AND NEW.coco_type = 'per_area' THEN
+        whats_wrong = 'coco_type=per_area';
+    END IF;
+    IF NEW.area_type IS NULL AND NEW.reco_type = 'per_area' THEN
+        IF whats_wrong <> '' THEN
+            whats_wrong = whats_wrong || ', reco_type=per_area';
+        ELSE
+            whats_wrong = 'reco_type=per_area';
+        END IF;
+    END IF;
+    IF NEW.area_type IS NULL AND NEW.stco_type = 'per_area' THEN
+        IF whats_wrong <> '' THEN
+            whats_wrong = whats_wrong || ', stco_type=per_area';
+        ELSE
+            whats_wrong = 'stco_type=per_area';
+        END IF;
+    END IF;
+    IF whats_wrong <> '' THEN
+        exception_msg := format_exc(TG_OP, 'area_type is mandatory for ' || whats_wrong, TG_TABLE_NAME);
+        RAISE '%', exception_msg;
     END IF;
 
     -- area_unit is optional unless
     --     * stcoType is set to "per_area" or
     --     * recoType is set to "per_area"
     --     * cocoType is set to "per_area"
-    IF NEW.area_unit IS NULL AND (NEW.coco_type = 'per_area' OR NEW.stco_type = 'per_area' OR NEW.reco_type = 'per_area') THEN
-        exception_msg := format_exc(TG_OP, 'area_unit is mandatory for stco_type <' || NEW.stco_type || '>, reco_type <', || NEW.reco_type || '>, coco_type <', || NEW.coco_type || '>', TG_TABLE_NAME);
-        RAISE '%s', exception_msg;
+    IF NEW.area_unit IS NULL AND NEW.coco_unit = 'per_area' THEN
+        whats_wrong = 'coco_unit=per_area';
+    END IF;
+    IF NEW.area_unit IS NULL AND NEW.reco_unit = 'per_area' THEN
+        IF whats_wrong <> '' THEN
+            whats_wrong = whats_wrong || ', reco_unit=per_area';
+        ELSE
+            whats_wrong = 'reco_unit=per_area';
+        END IF;
+    END IF;
+    IF NEW.area_unit IS NULL AND NEW.stco_unit = 'per_area' THEN
+        IF whats_wrong <> '' THEN
+            whats_wrong = whats_wrong || ', stco_unit=per_area';
+        ELSE
+            whats_wrong = 'stco_unit=per_area';
+        END IF;
+    END IF;
+    IF whats_wrong <> '' THEN
+        exception_msg := format_exc(TG_OP, 'area_unit is mandatory for ' || whats_wrong, TG_TABLE_NAME);
+        RAISE '%', exception_msg;
+    END IF;
+
+    IF whats_wrong <> '' THEN
+        exception_msg := format_exc(TG_OP, 'area_unit is mandatory for ' || whats_wrong, TG_TABLE_NAME);
+        RAISE '%', exception_msg;
     END IF;
 
     -- contents cost unit is mandatory if contents cost type is set
     IF NEW.coco_unit IS NULL AND NEW.coco_type IS NOT NULL THEN
         exception_msg := format_exc(TG_OP, 'coco_unit is mandatory for coco_type <' || NEW.coco_type || '>', TG_TABLE_NAME);
-        RAISE '%s', exception_msg;
+        RAISE '%', exception_msg;
     END IF;
 
     -- retrofitting cost unit is mandatory if retrofitting cost type is set
     IF NEW.reco_unit IS NULL AND NEW.reco_type IS NOT NULL THEN
         exception_msg := format_exc(TG_OP, 'reco_unit is mandatory for reco_type <' || NEW.reco_type || '>', TG_TABLE_NAME);
-        RAISE '%s', exception_msg;
+        RAISE '%', exception_msg;
     END IF;
 
     IF TG_OP = 'UPDATE' THEN
@@ -301,7 +341,7 @@ BEGIN
      -- assetCategory will be set to "population"
     IF NEW.stco IS NULL AND emdl.category != 'population' THEN
         exception_msg := format_exc(TG_OP, 'structural cost mandatory for category <' || emdl.category || '>', TG_TABLE_NAME);
-        RAISE '%s', exception_msg;
+        RAISE '%', exception_msg;
     END IF;
 
     -- number is optional unless
@@ -310,8 +350,8 @@ BEGIN
     --     * recoType differs from "aggregated"
     --     * cocoType differs from "aggregated"
     IF NEW.number_of_units IS NULL AND (emdl.category = 'population' OR emdl.coco_type != 'aggregated' OR emdl.stco_type != 'aggregated' OR emdl.reco_type != 'aggregated') THEN
-        exception_msg := format_exc(TG_OP, 'number is mandatory for category <' || emdl.category || '>, stco_type <' || emdl.stco_type || '>, reco_type <', || emdl.reco_type || '>, coco_type <', || emdl.coco_type || '>', TG_TABLE_NAME);
-        RAISE '%s', exception_msg;
+        exception_msg := format_exc(TG_OP, 'number is mandatory for category <' || emdl.category || '>, stco_type <' || emdl.stco_type || '>, reco_type <' || emdl.reco_type || '>, coco_type <' || emdl.coco_type || '>', TG_TABLE_NAME);
+        RAISE '%', exception_msg;
     END IF;
 
 
@@ -320,16 +360,16 @@ BEGIN
     --     * recoType is set to "per_area"
     --     * cocoType is set to "per_area"
     IF NEW.area IS NULL AND (emdl.coco_type = 'per_area' OR emdl.stco_type = 'per_area' OR emdl.reco_type = 'per_area') THEN
-        exception_msg := format_exc(TG_OP, 'area_unit is mandatory for stco_type <' || emdl.stco_type || '>, reco_type <', || emdl.reco_type || '>, coco_type <', || emdl.coco_type || '>', TG_TABLE_NAME);
-        RAISE '%s', exception_msg;
+        exception_msg := format_exc(TG_OP, 'area_unit is mandatory for stco_type <' || emdl.stco_type || '>, reco_type <' || emdl.reco_type || '>, coco_type <' || emdl.coco_type || '>', TG_TABLE_NAME);
+        RAISE '%', exception_msg;
     END IF;
 
     -- retrofitting cost: optional unless
     --     * we compute BCR ("impossible" to check here)
     --     * recoType is defined
     IF NEW.reco IS NULL AND emdl.reco_type IS NOT NULL THEN
-        exception_msg := format_exc(TG_OP, 'retrofitting cost is mandatory for reco_type <', || emdl.reco_type || '>', TG_TABLE_NAME);
-        RAISE '%s', exception_msg;
+        exception_msg := format_exc(TG_OP, 'retrofitting cost is mandatory for reco_type <' || emdl.reco_type || '>', TG_TABLE_NAME);
+        RAISE '%', exception_msg;
     END IF;
 
     IF TG_OP = 'UPDATE' THEN
