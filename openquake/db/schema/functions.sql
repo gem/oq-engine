@@ -250,16 +250,18 @@ BEGIN
     -- area_type is optional unless
     --     * stcoType is set to "per_area" or
     --     * recoType is set to "per_area"
-    IF NEW.area_type IS NULL AND (NEW.stco_type = 'per_area' OR NEW.reco_type = 'per_area') THEN
-        exception_msg := format_exc(TG_OP, 'area_type is mandatory for stco_type <' || NEW.stco_type || '>, reco_type <', || NEW.reco_type || '>', TG_TABLE_NAME);
+    --     * cocoType is set to "per_area"
+    IF NEW.area_type IS NULL AND (NEW.coco_type = 'per_area' OR NEW.stco_type = 'per_area' OR NEW.reco_type = 'per_area') THEN
+        exception_msg := format_exc(TG_OP, 'area_type is mandatory for stco_type <' || NEW.stco_type || '>, reco_type <', || NEW.reco_type || '>, coco_type <', || NEW.coco_type || '>', TG_TABLE_NAME);
         RAISE '%s', exception_msg;
     END IF;
 
     -- area_unit is optional unless
     --     * stcoType is set to "per_area" or
     --     * recoType is set to "per_area"
-    IF NEW.area_unit IS NULL AND (NEW.stco_type = 'per_area' OR NEW.reco_type = 'per_area') THEN
-        exception_msg := format_exc(TG_OP, 'area_unit is mandatory for stco_type <' || NEW.stco_type || '>, reco_type <', || NEW.reco_type || '>', TG_TABLE_NAME);
+    --     * cocoType is set to "per_area"
+    IF NEW.area_unit IS NULL AND (NEW.coco_type = 'per_area' OR NEW.stco_type = 'per_area' OR NEW.reco_type = 'per_area') THEN
+        exception_msg := format_exc(TG_OP, 'area_unit is mandatory for stco_type <' || NEW.stco_type || '>, reco_type <', || NEW.reco_type || '>, coco_type <', || NEW.coco_type || '>', TG_TABLE_NAME);
         RAISE '%s', exception_msg;
     END IF;
 
@@ -306,8 +308,9 @@ BEGIN
     --     * we compute fatalities or
     --     * stcoType differs from "aggregated" or
     --     * recoType differs from "aggregated"
-    IF NEW.number_of_units IS NULL AND (emdl.category = 'population' OR emdl.stco_type != 'aggregated' OR emdl.reco_type != 'aggregated') THEN
-        exception_msg := format_exc(TG_OP, 'number is mandatory for category <' || emdl.category || '>, stco_type <' || emdl.stco_type || '>, reco_type <', || emdl.reco_type || '>' ,TG_TABLE_NAME);
+    --     * cocoType differs from "aggregated"
+    IF NEW.number_of_units IS NULL AND (emdl.category = 'population' OR emdl.coco_type != 'aggregated' OR emdl.stco_type != 'aggregated' OR emdl.reco_type != 'aggregated') THEN
+        exception_msg := format_exc(TG_OP, 'number is mandatory for category <' || emdl.category || '>, stco_type <' || emdl.stco_type || '>, reco_type <', || emdl.reco_type || '>, coco_type <', || emdl.coco_type || '>', TG_TABLE_NAME);
         RAISE '%s', exception_msg;
     END IF;
 
@@ -315,8 +318,9 @@ BEGIN
     -- area is optional unless
     --     * stcoType is set to "per_area" or
     --     * recoType is set to "per_area"
-    IF NEW.area IS NULL AND (emdl.stco_type = 'per_area' OR emdl.reco_type = 'per_area') THEN
-        exception_msg := format_exc(TG_OP, 'area is mandatory for stco_type <' || emdl.stco_type || '>, reco_type <', || emdl.reco_type || '>', TG_TABLE_NAME);
+    --     * cocoType is set to "per_area"
+    IF NEW.area IS NULL AND (emdl.coco_type = 'per_area' OR emdl.stco_type = 'per_area' OR emdl.reco_type = 'per_area') THEN
+        exception_msg := format_exc(TG_OP, 'area_unit is mandatory for stco_type <' || emdl.stco_type || '>, reco_type <', || emdl.reco_type || '>, coco_type <', || emdl.coco_type || '>', TG_TABLE_NAME);
         RAISE '%s', exception_msg;
     END IF;
 
