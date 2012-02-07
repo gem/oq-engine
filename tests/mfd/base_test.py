@@ -13,8 +13,6 @@ class BaseMFDTestCase(unittest.TestCase):
             self.check_constraints_call_count += 1
         def get_annual_occurrence_rates(self):
             pass
-        def get_rescaled_mfd(self, scaling_rate):
-            pass
 
     def assert_mfd_error(self, func, *args, **kwargs):
         with self.assertRaises(MFDError) as exc_catcher:

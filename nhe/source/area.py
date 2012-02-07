@@ -44,15 +44,14 @@ class AreaSource(PointSource):
         spacing (not to be confused with rupture surface's
         :meth:`mesh_spacing <nhe.surface.base.BaseSurface.get_mesh>`).
 
-        The MFD that is used to calculate ruptures' occurrence rates
-        is :meth:`rescaled <nhe.mfd.base.BaseMFD.get_rescaled_mfd>`
-        with respect to number of points the polygon discretizes to.
+        The ruptures' occurrence rates are rescaled with respect to number
+        of points the polygon discretizes to.
         """
         locations = list(self.polygon.discretize(self.area_discretization))
-        mfd = self.mfd.get_rescaled_mfd(scaling_factor=1.0 / len(locations))
+        rate_scaling_factor = 1.0 / len(locations)
         for location in locations:
             ruptures_at_location = self._iter_ruptures_at_location(
-                mfd, temporal_occurrence_model, location
+                temporal_occurrence_model, location, rate_scaling_factor
             )
             for rupture in ruptures_at_location:
                 yield rupture

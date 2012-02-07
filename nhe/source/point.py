@@ -83,29 +83,30 @@ class PointSource(SeismicSource):
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
         """
-        return self._iter_ruptures_at_location(self.mfd,
-                                               temporal_occurrence_model,
+        return self._iter_ruptures_at_location(temporal_occurrence_model,
                                                self.location)
 
-    def _iter_ruptures_at_location(self, mfd, temporal_occurrence_model,
-                                   location):
+    def _iter_ruptures_at_location(self, temporal_occurrence_model, location,
+                                   rate_scaling_factor=1):
         """
         The common part of :meth:`iter_ruptures` shared between point source
         and :class:`~nhe.source.area.AreaSource`.
 
-        :param mfd:
-            Magnitude-frequency distribution for calculating occurrence rates.
-            For point source it is the one that was provided to constructor,
-            for area source it is rescaled with respect to number of locations.
         :param temporal_occurrence_model:
             The same object as given to :meth:`iter_ruptures`.
         :param location:
             A :class:`~nhe.geo.point.Point` object representing the hypocenter
-            location. As for ``mfd``, it is the one provided to constructor
-            in case of :class:`PointSource`, and for area source the location
-            points are taken from polygon discretization.
+            location. In case of :class:`PointSource` it is the one provided
+            to constructor, and for area source the location points are taken
+            from polygon discretization.
+        :param rate_scaling_factor:
+            Positive float number to multiply occurrence rates by. It is used
+            by area source to scale the occurrence rates with respect
+            to number of locations. Point sources use no scaling
+            (``rate_scaling_factor = 1``).
         """
-        for (mag, mag_occ_rate) in mfd.get_annual_occurrence_rates():
+        assert 0 < rate_scaling_factor
+        for (mag, mag_occ_rate) in self.mfd.get_annual_occurrence_rates():
             for (np_prob, np) in self.nodal_plane_distribution.data:
                 for (hc_prob, hc_depth) in self.hypocenter_distribution.data:
                     hypocenter = Point(latitude=location.latitude,
@@ -113,6 +114,7 @@ class PointSource(SeismicSource):
                                        depth=hc_depth)
                     occurrence_rate = (mag_occ_rate
                                        * float(np_prob) * float(hc_prob))
+                    occurrence_rate *= rate_scaling_factor
                     surface = self._get_rupture_surface(mag, np, hypocenter)
                     yield ProbabilisticRupture(
                         mag, np, self.tectonic_region_type, hypocenter,

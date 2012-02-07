@@ -56,7 +56,7 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
                 self.assertEqual(r2.mag, 6.5)
         self.assertEqual(len(ruptures), 9 * 2)
 
-    def test_mfd_rescaling(self):
+    def test_occurrence_rate_rescaling(self):
         mfd = EvenlyDiscretized(min_mag=4, bin_width=1, occurrence_rates=[3])
         polygon = Polygon([Point(0, 0), Point(0, -0.2248),
                            Point(-0.2248, -0.2248), Point(-0.2248, 0)])
