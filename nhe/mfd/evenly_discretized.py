@@ -60,8 +60,7 @@ class EvenlyDiscretized(BaseMFD):
 
         See also :meth:`nhe.mfd.base.BaseMFD.get_rescaled_mfd`.
         """
-        if scaling_factor <= 0:
-            raise MFDError('scaling factor must be positive')
+        # TODO: test
         return type(self)(
             min_mag=self.min_mag, bin_width=self.bin_width,
             occurrence_rates=[rate * scaling_factor
