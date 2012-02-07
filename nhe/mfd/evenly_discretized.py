@@ -52,3 +52,17 @@ class EvenlyDiscretized(BaseMFD):
             (self.min_mag + i * self.bin_width, occurence_rate)
             for i, occurence_rate in enumerate(self.occurrence_rates)
         ]
+
+    def get_rescaled_mfd(self, scaling_factor):
+        """
+        Returns the new :class:`EvenlyDiscretized` with rates being multiplied
+        by ``scaling_factor``.
+
+        See also :meth:`nhe.mfd.base.BaseMFD.get_rescaled_mfd`.
+        """
+        # TODO: test
+        return type(self)(
+            min_mag=self.min_mag, bin_width=self.bin_width,
+            occurrence_rates=[rate * scaling_factor
+                              for rate in self.occurrence_rates]
+        )
