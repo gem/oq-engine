@@ -117,3 +117,25 @@ class BaseMFD(object):
             represents the number of events per year with magnitude
             that falls in between bin's boundaries.
         """
+
+    @abc.abstractmethod
+    def get_rescaled_mfd(self, scaling_factor):
+        """
+        Return a new MFD object with all the occurrence rates rescaled
+        with respect to ``scaling_factor``.
+
+        :param scaling_factor:
+            A positive float number. Values more than 1 mean the occurrence
+            rates get increased, and if scaling factor is between 0 and 1
+            rates are conversely decreasing.
+        :return:
+            A new MFD object of the same kind.
+        :raises MFDError:
+            If scaling factor is not positive.
+
+        It is important that all the modifications (see :meth:`modify`)
+        are taken into account but it becomes impossible to :meth:`reset`
+        the new MFD and return it to the original shape of the original
+        MFD. However the new MFD can be modified as usual and reseted
+        thereafter to the state it was returned from this method in.
+        """
