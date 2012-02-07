@@ -1,14 +1,14 @@
 """
-Module :mod:`nhe.surface.planar` contains :class:`PlanarSurface`.
+Module :mod:`nhe.geo.surface.planar` contains :class:`PlanarSurface`.
 """
-from nhe.surface.base import BaseSurface
+from nhe.geo.surface.base import BaseSurface
 
 
 class PlanarSurface(BaseSurface):
     """
     Planar rectangular surface with two sides parallel to the Earth surface.
 
-    Parameters are four points (instances of :class:`nhe.common.geo.Point`)
+    Parameters are four points (instances of :class:`~nhe.geo.point.Point`)
     defining the surface corners in clockwise direction starting from top
     left corner. Top and bottom edges of the polygon must be parallel
     to earth surface and to each other.

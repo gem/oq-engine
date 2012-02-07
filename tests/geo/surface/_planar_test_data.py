@@ -1,4 +1,4 @@
-from nhe.common.geo import Point
+from nhe.geo import Point
 
 
 TEST_2_CORNERS = [

@@ -67,9 +67,9 @@ class Rupture(object):
     :param tectonic_region_type:
         Rupture's tectonic regime. One of constants in :class:`nhe.const.TRT`.
     :param hypocenter:
-        A :class:`~nhe.common.geo.Point`, rupture's hypocenter.
+        A :class:`~nhe.geo.point.Point`, rupture's hypocenter.
     :param surface:
-        An instance of subclass of :class:`nhe.surface.base.BaseSurface`.
+        An instance of subclass of :class:`~nhe.geo.surface.base.BaseSurface`.
         Object representing the rupture surface geometry.
 
     :raises SourceError:

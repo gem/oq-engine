@@ -1,5 +1,5 @@
 """
-Module :mod:`nhe.surface.base` implements :class:`BaseSurface`.
+Module :mod:`nhe.geo.surface.base` implements :class:`BaseSurface`.
 """
 import abc
 
