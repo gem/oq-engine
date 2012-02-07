@@ -1401,7 +1401,7 @@ CREATE TABLE oqmif.exposure_data (
     taxonomy VARCHAR NOT NULL,
 
     -- structural cost
-    stco float,
+    stco float NOT NULL DEFAULT 0.0,
     -- retrofitting cost
     reco float,
     -- contents cost
