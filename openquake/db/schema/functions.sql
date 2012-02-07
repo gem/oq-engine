@@ -278,26 +278,23 @@ BEGIN
     --     * stcoType is set to "per_area" or
     --     * recoType is set to "per_area"
     --     * cocoType is set to "per_area"
-    IF NEW.area_unit IS NULL AND NEW.coco_unit = 'per_area' THEN
-        whats_wrong = 'coco_unit=per_area';
+    whats_wrong = '';
+    IF NEW.area_unit IS NULL AND NEW.coco_type = 'per_area' THEN
+        whats_wrong = 'coco_type=per_area';
     END IF;
-    IF NEW.area_unit IS NULL AND NEW.reco_unit = 'per_area' THEN
+    IF NEW.area_unit IS NULL AND NEW.reco_type = 'per_area' THEN
         IF whats_wrong <> '' THEN
-            whats_wrong = whats_wrong || ', reco_unit=per_area';
+            whats_wrong = whats_wrong || ', reco_type=per_area';
         ELSE
-            whats_wrong = 'reco_unit=per_area';
+            whats_wrong = 'reco_type=per_area';
         END IF;
     END IF;
-    IF NEW.area_unit IS NULL AND NEW.stco_unit = 'per_area' THEN
+    IF NEW.area_unit IS NULL AND NEW.stco_type = 'per_area' THEN
         IF whats_wrong <> '' THEN
-            whats_wrong = whats_wrong || ', stco_unit=per_area';
+            whats_wrong = whats_wrong || ', stco_type=per_area';
         ELSE
-            whats_wrong = 'stco_unit=per_area';
+            whats_wrong = 'stco_type=per_area';
         END IF;
-    END IF;
-    IF whats_wrong <> '' THEN
-        exception_msg := format_exc(TG_OP, 'area_unit is mandatory for ' || whats_wrong, TG_TABLE_NAME);
-        RAISE '%', exception_msg;
     END IF;
 
     IF whats_wrong <> '' THEN
