@@ -172,3 +172,31 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
+
+    def test_exposure_model_with_coco_type_but_no_coco_unit(self):
+        # contents cost type set but contents cost unit not set
+        #   -> exception
+        self.mdl.coco_type = "aggregated"
+        try:
+            self.mdl.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "INSERT: error: coco_unit is mandatory for coco_type "
+                "<aggregated> (exposure_model)", de.args[0].strip())
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_exposure_model_with_reco_type_but_no_reco_unit(self):
+        # retrofitting cost type set but retrofitting cost unit not set
+        #   -> exception
+        self.mdl.reco_type = "aggregated"
+        try:
+            self.mdl.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "INSERT: error: reco_unit is mandatory for reco_type "
+                "<aggregated> (exposure_model)", de.args[0].strip())
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
