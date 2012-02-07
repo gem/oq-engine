@@ -45,7 +45,7 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             input_type="exposure", input_set=self.job.oq_job_profile.input_set,
             size=123, path="/tmp/fake-exposure-path")
         self.mdl = models.ExposureModel(input=emdl_input, owner=self.job.owner,
-                                    name="no_area_type_coco_per_area")
+                                        name="no_area_type_coco_per_area")
 
     def test_exposure_model_with_no_area_type_coco_per_area(self):
         # area type not set but contents cost type is 'per_area' -> exception
@@ -103,6 +103,71 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
         except DatabaseError, de:
             self.assertEqual(
                 "INSERT: error: area_type is mandatory for reco_type=per_area,"
+                " stco_type=per_area (exposure_model)", de.args[0].strip())
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_exposure_model_with_no_area_unit_coco_per_area(self):
+        # area unit not set but contents cost type is 'per_area' -> exception
+        self.mdl.coco_type = "per_area"
+        self.mdl.coco_unit = "EUR"
+        self.mdl.area_type = "per_asset"
+        try:
+            self.mdl.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "INSERT: error: area_unit is mandatory for coco_type=per_area "
+                "(exposure_model)", de.args[0].strip())
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_exposure_model_with_no_area_unit_reco_per_area(self):
+        # area unit not set but retrofitting cost type is 'per_area'
+        #   -> exception
+        self.mdl.reco_type = "per_area"
+        self.mdl.reco_unit = "USD"
+        self.mdl.area_type = "per_asset"
+        try:
+            self.mdl.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "INSERT: error: area_unit is mandatory for reco_type=per_area "
+                "(exposure_model)", de.args[0].strip())
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_exposure_model_with_no_area_unit_stco_per_area(self):
+        # area unit not set but structural cost type is 'per_area'
+        #   -> exception
+        self.mdl.stco_type = "per_area"
+        self.mdl.stco_unit = "USD"
+        self.mdl.area_type = "per_asset"
+        try:
+            self.mdl.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "INSERT: error: area_unit is mandatory for stco_type=per_area "
+                "(exposure_model)", de.args[0].strip())
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_exposure_model_with_no_area_unit_and_reco_stco_per_area(self):
+        # area unit not set but retrofitting and structural cost type is
+        # 'per_area' -> exception
+        self.mdl.reco_type = "per_area"
+        self.mdl.reco_unit = "CHF"
+        self.mdl.stco_type = "per_area"
+        self.mdl.stco_unit = "GBP"
+        self.mdl.area_type = "per_asset"
+        try:
+            self.mdl.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "INSERT: error: area_unit is mandatory for reco_type=per_area,"
                 " stco_type=per_area (exposure_model)", de.args[0].strip())
             transaction.rollback()
         else:
