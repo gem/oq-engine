@@ -30,30 +30,29 @@ from openquake.db import models
 class ExposureModelTestCase(TestCase, helpers.DbTestCase):
     """Test the exposure_model database constraints."""
 
-    isolation_level = -1
     job = None
 
     @classmethod
     def setUpClass(cls):
         cls.job = cls.setup_classic_job()
 
-
     @classmethod
     def tearDownClass(cls):
         cls.teardown_job(cls.job)
 
-    def test_exposure_model_with_no_area_type_coco_per_area(self):
-        # area type not set but contents cost type is 'per_area' -> exception
+    def setUp(self):
         emdl_input = models.Input(
             input_type="exposure", input_set=self.job.oq_job_profile.input_set,
             size=123, path="/tmp/fake-exposure-path")
-        emdl = models.ExposureModel(
-            input=emdl_input, owner=self.job.owner,
-            name="no_area_type_coco_per_area")
-        emdl.coco_type = "per_area"
-        emdl.coco_unit = "EUR"
+        self.mdl = models.ExposureModel(input=emdl_input, owner=self.job.owner,
+                                    name="no_area_type_coco_per_area")
+
+    def test_exposure_model_with_no_area_type_coco_per_area(self):
+        # area type not set but contents cost type is 'per_area' -> exception
+        self.mdl.coco_type = "per_area"
+        self.mdl.coco_unit = "EUR"
         try:
-            emdl.save()
+            self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
                 "INSERT: error: area_type is mandatory for coco_type=per_area "
@@ -65,16 +64,10 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
     def test_exposure_model_with_no_area_type_reco_per_area(self):
         # area type not set but retrofitting cost type is 'per_area'
         #   -> exception
-        emdl_input = models.Input(
-            input_type="exposure", input_set=self.job.oq_job_profile.input_set,
-            size=123, path="/tmp/fake-exposure-path")
-        emdl = models.ExposureModel(
-            input=emdl_input, owner=self.job.owner,
-            name="no_area_type_reco_per_area")
-        emdl.reco_type = "per_area"
-        emdl.reco_unit = "USD"
+        self.mdl.reco_type = "per_area"
+        self.mdl.reco_unit = "USD"
         try:
-            emdl.save()
+            self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
                 "INSERT: error: area_type is mandatory for reco_type=per_area "
@@ -86,16 +79,10 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
     def test_exposure_model_with_no_area_type_stco_per_area(self):
         # area type not set but structural cost type is 'per_area'
         #   -> exception
-        emdl_input = models.Input(
-            input_type="exposure", input_set=self.job.oq_job_profile.input_set,
-            size=123, path="/tmp/fake-exposure-path")
-        emdl = models.ExposureModel(
-            input=emdl_input, owner=self.job.owner,
-            name="no_area_type_stco_per_area")
-        emdl.stco_type = "per_area"
-        emdl.stco_unit = "USD"
+        self.mdl.stco_type = "per_area"
+        self.mdl.stco_unit = "USD"
         try:
-            emdl.save()
+            self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
                 "INSERT: error: area_type is mandatory for stco_type=per_area "
@@ -107,18 +94,12 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
     def test_exposure_model_with_no_area_type_and_reco_stco_per_area(self):
         # area type not set but retrofitting and structural cost type is
         # 'per_area' -> exception
-        emdl_input = models.Input(
-            input_type="exposure", input_set=self.job.oq_job_profile.input_set,
-            size=123, path="/tmp/fake-exposure-path")
-        emdl = models.ExposureModel(
-            input=emdl_input, owner=self.job.owner,
-            name="no_area_type_stco_per_area")
-        emdl.reco_type = "per_area"
-        emdl.reco_unit = "CHF"
-        emdl.stco_type = "per_area"
-        emdl.stco_unit = "GBP"
+        self.mdl.reco_type = "per_area"
+        self.mdl.reco_unit = "CHF"
+        self.mdl.stco_type = "per_area"
+        self.mdl.stco_unit = "GBP"
         try:
-            emdl.save()
+            self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
                 "INSERT: error: area_type is mandatory for reco_type=per_area,"
