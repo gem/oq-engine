@@ -129,10 +129,6 @@ class TruncatedGR(BaseMFD):
             mag += self.bin_width
         return rates
 
-    def get_rescaled_mfd(self, scaling_factor):
-        # TODO: implement, test, document
-        raise NotImplementedError()
-
     def _get_total_moment_rate(self):
         """
         Calculate total moment rate (total energy released per unit time) ::
