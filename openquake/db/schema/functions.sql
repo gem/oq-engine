@@ -239,3 +239,115 @@ $$;
 
 COMMENT ON FUNCTION refresh_last_update() IS
 'Refresh the ''last_update'' time stamp whenever a row is updated.';
+
+
+CREATE OR REPLACE FUNCTION check_exposure_data() RETURNS TRIGGER
+LANGUAGE plpgsql AS
+$$
+DECLARE
+    emdl oqmif.exposure_model%ROWTYPE;
+    exception_msg TEXT := '';
+BEGIN
+    SELECT * INTO emdl FROM oqmif.exposure_model WHERE id = NEW.exposure_model_id;
+
+     -- structural cost:
+     -- mandatory unless we compute fatalities in which case
+     -- assetCategory will be set to "population"
+    IF NEW.stco IS NULL AND emdl.category != 'population' THEN
+        exception_msg := format_exc(TG_OP, 'structural cost mandatory for category <' || emdl.category || '>', TG_TABLE_NAME);
+        RAISE '%s', exception_msg;
+    END IF;
+
+    -- number is optional unless
+    --     * we compute fatalities or
+    --     * stcoType differs from "aggregated" or
+    --     * recoType differs from "aggregated"
+    IF NEW.number_of_units IS NULL AND (emdl.category = 'population' OR stco_type != 'aggregated' OR reco_type != 'aggregated') THEN
+        exception_msg := format_exc(TG_OP, 'number is mandatory for category <' || emdl.category || '>, stco_type <' || emdl.stco_type || '>, reco_type <', || emdl.reco_type || '>' ,TG_TABLE_NAME);
+        RAISE '%s', exception_msg;
+    END IF;
+
+
+    -- area is optional unless
+    --     * stcoType is set to "per_area" or
+    --     * recoType is set to "per_area"
+    IF NEW.area IS NULL AND (stco_type = 'per_area' OR reco_type = 'per_area') THEN
+        exception_msg := format_exc(TG_OP, 'area is mandatory for stco_type <' || emdl.stco_type || '>, reco_type <', || emdl.reco_type || '>', TG_TABLE_NAME);
+        RAISE '%s', exception_msg;
+    END IF;
+
+    -- retrofitting cost: optional unless
+    --     * we compute BCR ("impossible" to check here)
+    --     * recoType is defined
+    IF NEW.reco IS NULL AND reco_type IS NOT NULL THEN
+        exception_msg := format_exc(TG_OP, 'retrofitting cost is mandatory for reco_type <', || emdl.reco_type || '>', TG_TABLE_NAME);
+        RAISE '%s', exception_msg;
+    END IF;
+
+    IF TG_OP = 'UPDATE' THEN
+        NEW.last_update := timezone('UTC'::text, now());
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+COMMENT ON FUNCTION check_exposure_data() IS
+'Make sure the inserted or modified exposure data is consistent.';
+
+
+
+CREATE TRIGGER hzrdi_rupture_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON hzrdi.rupture
+FOR EACH ROW EXECUTE PROCEDURE check_rupture_sources();
+
+CREATE TRIGGER hzrdi_source_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON hzrdi.source
+FOR EACH ROW EXECUTE PROCEDURE check_source_sources();
+
+CREATE TRIGGER hzrdi_r_rate_mdl_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON hzrdi.r_rate_mdl
+FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
+
+CREATE TRIGGER hzrdi_simple_fault_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON hzrdi.simple_fault
+FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
+
+CREATE TRIGGER hzrdi_complex_fault_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON hzrdi.complex_fault
+FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
+
+CREATE TRIGGER oqmif_exposure_data_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON oqmif.exposure_data
+FOR EACH ROW EXECUTE PROCEDURE check_exposure_data();
+
+CREATE TRIGGER eqcat_magnitude_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON eqcat.magnitude
+FOR EACH ROW EXECUTE PROCEDURE check_magnitude_data();
+
+CREATE TRIGGER admin_organization_refresh_last_update_trig BEFORE UPDATE ON admin.organization FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER admin_oq_user_refresh_last_update_trig BEFORE UPDATE ON admin.oq_user FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER eqcat_catalog_refresh_last_update_trig BEFORE UPDATE ON eqcat.catalog FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER eqcat_surface_refresh_last_update_trig BEFORE UPDATE ON eqcat.surface FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER hzrdi_fault_edge_refresh_last_update_trig BEFORE UPDATE ON hzrdi.fault_edge FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER hzrdi_mfd_evd_refresh_last_update_trig BEFORE UPDATE ON hzrdi.mfd_evd FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER hzrdi_mfd_tgr_refresh_last_update_trig BEFORE UPDATE ON hzrdi.mfd_tgr FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER hzrdi_r_depth_distr_refresh_last_update_trig BEFORE UPDATE ON hzrdi.r_depth_distr FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER hzrdi_focal_mechanism_refresh_last_update_trig BEFORE UPDATE ON hzrdi.focal_mechanism FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER oqmif_exposure_model_refresh_last_update_trig BEFORE UPDATE ON oqmif.exposure_model FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER oqmif_exposure_data_refresh_last_update_trig BEFORE UPDATE ON oqmif.exposure_data FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER riski_vulnerability_function_refresh_last_update_trig BEFORE UPDATE ON riski.vulnerability_function FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER riski_vulnerability_model_refresh_last_update_trig BEFORE UPDATE ON riski.vulnerability_model FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER uiapi_input_set_refresh_last_update_trig BEFORE UPDATE ON uiapi.input_set FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();

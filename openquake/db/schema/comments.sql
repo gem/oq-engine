@@ -193,10 +193,7 @@ COMMENT ON COLUMN hzrdr.hazard_map_data.value IS 'IML value for this location';
 COMMENT ON TABLE oqmif.exposure_data IS 'Per-asset risk exposure data';
 COMMENT ON COLUMN oqmif.exposure_data.exposure_model_id IS 'Foreign key to the exposure model';
 COMMENT ON COLUMN oqmif.exposure_data.asset_ref IS 'A unique identifier (within the exposure model) for the asset at hand';
-COMMENT ON COLUMN oqmif.exposure_data.value IS 'The value of the asset at hand';
 COMMENT ON COLUMN oqmif.exposure_data.taxonomy IS 'A reference to the taxonomy that should be used for the asset at hand';
-COMMENT ON COLUMN oqmif.exposure_data.structure_type IS 'An optional structure type for the asset at hand';
-COMMENT ON COLUMN oqmif.exposure_data.retrofitting_cost IS 'An optional cost of retrofitting for the asset at hand';
 COMMENT ON COLUMN oqmif.exposure_data.last_update IS 'Date/time of the last change of the exposure data for the asset at hand';
 
 
@@ -205,7 +202,6 @@ COMMENT ON COLUMN oqmif.exposure_model.owner_id IS 'The foreign key to the user 
 COMMENT ON COLUMN oqmif.exposure_model.name IS 'The exposure model name';
 COMMENT ON COLUMN oqmif.exposure_model.description IS 'An optional description of the risk exposure model at hand';
 COMMENT ON COLUMN oqmif.exposure_model.category IS 'The risk category modelled';
-COMMENT ON COLUMN oqmif.exposure_model.unit IS 'The unit of measurement for the exposure data in the model at hand';
 COMMENT ON COLUMN oqmif.exposure_model.last_update IS 'Date/time of the last change of the model at hand';
 
 
