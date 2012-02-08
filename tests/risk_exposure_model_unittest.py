@@ -23,8 +23,11 @@ from django.test import TestCase
 from django.db import transaction
 from django.db.utils import DatabaseError
 
-from tests.utils import helpers
+
+from openquake import shapes
 from openquake.db import models
+
+from tests.utils import helpers
 
 
 class ExposureModelTestCase(TestCase, helpers.DbTestCase):
@@ -45,7 +48,8 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             input_type="exposure", input_set=self.job.oq_job_profile.input_set,
             size=123, path="/tmp/fake-exposure-path")
         self.mdl = models.ExposureModel(input=emdl_input, owner=self.job.owner,
-                                        name="no_area_type_coco_per_area")
+                                        name="exposure-model-testing",
+                                        category="economic loss")
 
     def test_exposure_model_with_no_area_type_coco_per_area(self):
         # area type not set but contents cost type is 'per_area' -> exception
@@ -200,3 +204,68 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
+
+    def test_exposure_model_with_stco_type_but_no_stco_unit(self):
+        # structural cost type set but structural cost unit not set
+        #   -> exception
+        self.mdl.stco_type = "aggregated"
+        try:
+            self.mdl.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "INSERT: error: stco_unit is mandatory for stco_type "
+                "<aggregated> (exposure_model)", de.args[0].strip())
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_exposure_model_with_no_stco_type_and_not_population(self):
+        # structural cost type set must be set unless we are calculating
+        # exposure in terms of population    -> exception
+        self.mdl.category = "economic loss"
+        try:
+            self.mdl.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "INSERT: error: stco_type is mandatory for category <economic"
+                " loss> (exposure_model)", de.args[0].strip())
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+
+class ExposureDataTestCase(TestCase, helpers.DbTestCase):
+    """Test the exposure_data database constraints."""
+
+    job = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.job = cls.setup_classic_job()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.teardown_job(cls.job)
+
+    def setUp(self):
+        emdl_input = models.Input(
+            input_type="exposure", input_set=self.job.oq_job_profile.input_set,
+            size=123, path="/tmp/fake-exposure-path")
+        self.mdl = models.ExposureModel(input=emdl_input, owner=self.job.owner,
+                                        name="exposure-data-testing",
+                                        category="economic loss")
+
+    def test_exposure_data_with_no_stco_and_population(self):
+        # the structural cost needs not be present when we calculate exposure
+        # in terms of population
+        self.mdl.coco_type = "aggregated"
+        self.mdl.coco_unit = "EUR"
+        self.mdl.category = "population"
+        self.mdl.save()
+        site = shapes.Site(-122.5000, 37.5000)
+
+        edata = models.ExposureData(
+            exposure_model=self.mdl, asset_ref=helpers.random_string(),
+            taxonomy=helpers.random_string(), number_of_units=111,
+            site="POINT(%s %s)" % (site.point.x, site.point.y))
+        edata.save()
