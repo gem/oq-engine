@@ -1020,9 +1020,9 @@ class ExposureModel(models.Model):
         (u'per_area', u'Per area economic value'),
         (u'per_asset', u'Per asset economic value'),
     )
-    stco_type = models.TextField(default="aggregated", choices=COST_CHOICES,
+    stco_type = models.TextField(null=True, choices=COST_CHOICES,
                                  help_text="structural cost type")
-    stco_unit = models.TextField(help_text="structural cost unit")
+    stco_unit = models.TextField(null=True, help_text="structural cost unit")
     reco_type = models.TextField(null=True, choices=COST_CHOICES,
                                  help_text="retrofitting cost type")
     reco_unit = models.TextField(null=True, help_text="retrofitting cost unit")
@@ -1057,15 +1057,13 @@ class ExposureData(models.Model):
     exposure_model = models.ForeignKey("ExposureModel")
     asset_ref = models.TextField()
     taxonomy = models.TextField()
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
     site = models.PointField(srid=4326)
 
-    stco = models.FloatField(help_text="structural cost")
-
+    stco = models.FloatField(null=True, help_text="structural cost")
     reco = models.FloatField(null=True, help_text="retrofitting cost")
     coco = models.FloatField(null=True, help_text="contents cost")
 
-    number = models.FloatField(
+    number_of_units = models.FloatField(
         null=True, help_text="number of assets or area units")
     area = models.FloatField(null=True)
 
@@ -1073,6 +1071,8 @@ class ExposureData(models.Model):
         null=True, help_text="insurance coverage limit")
     coco_deductible = models.FloatField(
         null=True, help_text="insurance deductible")
+
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     @property
     def value(self):

@@ -31,33 +31,32 @@ import os
 import random
 import redis
 import shutil
+import string
+import subprocess
+import sys
 import tempfile
 import textwrap
 import time
-import sys
-import subprocess
 
-from gflags import DEFINE_boolean
 from django.core import exceptions
+from gflags import DEFINE_boolean
 
+from openquake.calculators.hazard.general import store_gmpe_map
+from openquake.calculators.hazard.general import store_source_model
+from openquake.db import models
+from openquake.engine import CalculationProxy
 from openquake import engine
 from openquake import flags
 from openquake import logs
 from openquake import producer
-from openquake.db import models
-from openquake.engine import CalculationProxy
-from openquake.utils import config
 from openquake.input.logictree import LogicTreeProcessor
-from openquake.calculators.hazard.general import store_gmpe_map
-from openquake.calculators.hazard.general import store_source_model
+from openquake.utils import config
 
 FLAGS = flags.FLAGS
 
-DEFINE_boolean('download_test_data', True,
-        'Fetch test data files if needed')
+DEFINE_boolean('download_test_data', True, 'Fetch test data files if needed')
 
-DATA_DIR = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), '../data'))
+DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data'))
 
 OUTPUT_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '../data/output'))
@@ -65,8 +64,7 @@ OUTPUT_DIR = os.path.abspath(os.path.join(
 SCHEMA_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '../../openquake/nrml/schema/'))
 
-SCHEMA_EXAMPLES_DIR = os.path.abspath(os.path.join(
-    SCHEMA_DIR, 'examples'))
+SCHEMA_EXAMPLES_DIR = os.path.abspath(os.path.join(SCHEMA_DIR, 'examples'))
 
 WAIT_TIME_STEP_FOR_TASK_SECS = 0.5
 MAX_WAIT_LOOPS = 10
@@ -733,3 +731,12 @@ class RedisTestCase(object):
         stats_db = int(stats_db) if stats_db else 15
         args = {"host": host, "port": port, "db": stats_db}
         return redis.Redis(**args)
+
+
+def random_string(length=16):
+    """Generate a random string of the given length."""
+    result = ""
+    while len(result) < length:
+        result += random.choice(string.uppercase + string.lowercase +
+                                string.digits)
+    return result
