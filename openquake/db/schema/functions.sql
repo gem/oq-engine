@@ -314,6 +314,19 @@ BEGIN
         RAISE '%', exception_msg;
     END IF;
 
+    -- structural cost type is mandatory unless we calculate exposure in terms
+    -- of population
+    IF NEW.stco_type IS NULL AND NEW.category <> 'population' THEN
+        exception_msg := format_exc(TG_OP, 'stco_type is mandatory for category <' || NEW.category || '>', TG_TABLE_NAME);
+        RAISE '%', exception_msg;
+    END IF;
+
+    -- structural cost unit is mandatory if structural cost type is set
+    IF NEW.stco_unit IS NULL AND NEW.stco_type IS NOT NULL THEN
+        exception_msg := format_exc(TG_OP, 'stco_unit is mandatory for stco_type <' || NEW.stco_type || '>', TG_TABLE_NAME);
+        RAISE '%', exception_msg;
+    END IF;
+
     IF TG_OP = 'UPDATE' THEN
         NEW.last_update := timezone('UTC'::text, now());
     END IF;
@@ -330,8 +343,11 @@ $$
 DECLARE
     emdl oqmif.exposure_model%ROWTYPE;
     exception_msg TEXT := '';
+    whats_wrong TEXT := '';
 BEGIN
     SELECT * INTO emdl FROM oqmif.exposure_model WHERE id = NEW.exposure_model_id;
+
+    RAISE INFO '%', emdl;
 
      -- structural cost:
      -- mandatory unless we compute fatalities in which case
@@ -347,18 +363,62 @@ BEGIN
     --     * recoType differs from "aggregated"
     --     * cocoType differs from "aggregated"
     IF NEW.number_of_units IS NULL AND (emdl.category = 'population' OR emdl.coco_type != 'aggregated' OR emdl.stco_type != 'aggregated' OR emdl.reco_type != 'aggregated') THEN
-        exception_msg := format_exc(TG_OP, 'number is mandatory for category <' || emdl.category || '>, stco_type <' || emdl.stco_type || '>, reco_type <' || emdl.reco_type || '>, coco_type <' || emdl.coco_type || '>', TG_TABLE_NAME);
+        IF emdl.category IS NOT NULL THEN
+            whats_wrong = 'category=' || emdl.category;
+        END IF;
+        IF emdl.reco_type IS NOT NULL THEN
+            IF whats_wrong <> '' THEN
+                whats_wrong = whats_wrong || ', reco_type=' || emdl.reco_type;
+            ELSE
+                whats_wrong = 'reco_type=' || emdl.reco_type;
+            END IF;
+        END IF;
+        IF emdl.coco_type IS NOT NULL THEN
+            IF whats_wrong <> '' THEN
+                whats_wrong = whats_wrong || ', coco_type=' || emdl.coco_type;
+            ELSE
+                whats_wrong = 'coco_type=' || emdl.coco_type;
+            END IF;
+        END IF;
+        IF emdl.stco_type IS NOT NULL THEN
+            IF whats_wrong <> '' THEN
+                whats_wrong = whats_wrong || ', stco_type=' || emdl.stco_type;
+            ELSE
+                whats_wrong = 'stco_type=' || emdl.stco_type;
+            END IF;
+        END IF;
+        exception_msg := format_exc(TG_OP, 'number_of_units is mandatory for ' || whats_wrong, TG_TABLE_NAME);
         RAISE '%', exception_msg;
     END IF;
-
 
     -- area is optional unless
     --     * stcoType is set to "per_area" or
     --     * recoType is set to "per_area"
     --     * cocoType is set to "per_area"
     IF NEW.area IS NULL AND (emdl.coco_type = 'per_area' OR emdl.stco_type = 'per_area' OR emdl.reco_type = 'per_area') THEN
-        exception_msg := format_exc(TG_OP, 'area_unit is mandatory for stco_type <' || emdl.stco_type || '>, reco_type <' || emdl.reco_type || '>, coco_type <' || emdl.coco_type || '>', TG_TABLE_NAME);
         RAISE '%', exception_msg;
+        IF emdl.reco_type IS NOT NULL THEN
+            IF whats_wrong <> '' THEN
+                whats_wrong = whats_wrong || ', reco_type=' || emdl.reco_type;
+            ELSE
+                whats_wrong = 'reco_type=' || emdl.reco_type;
+            END IF;
+        END IF;
+        IF emdl.coco_type IS NOT NULL THEN
+            IF whats_wrong <> '' THEN
+                whats_wrong = whats_wrong || ', coco_type=' || emdl.coco_type;
+            ELSE
+                whats_wrong = 'coco_type=' || emdl.coco_type;
+            END IF;
+        END IF;
+        IF emdl.stco_type IS NOT NULL THEN
+            IF whats_wrong <> '' THEN
+                whats_wrong = whats_wrong || ', stco_type=' || emdl.stco_type;
+            ELSE
+                whats_wrong = 'stco_type=' || emdl.stco_type;
+            END IF;
+        END IF;
+        exception_msg := format_exc(TG_OP, 'area is mandatory for ' || whats_wrong, TG_TABLE_NAME);
     END IF;
 
     -- retrofitting cost: optional unless
@@ -378,7 +438,6 @@ $$;
 
 COMMENT ON FUNCTION check_exposure_data() IS
 'Make sure the inserted or modified exposure data is consistent.';
-
 
 
 CREATE TRIGGER hzrdi_rupture_before_insert_update_trig

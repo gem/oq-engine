@@ -1378,12 +1378,11 @@ CREATE TABLE oqmif.exposure_model (
     reco_unit VARCHAR,
 
     -- structural cost type
-    stco_type VARCHAR NOT NULL DEFAULT 'aggregated' CONSTRAINT stco_type_vale
+    stco_type VARCHAR CONSTRAINT stco_type_vale
         CHECK(stco_type = 'per_asset' OR stco_type = 'per_area'
               OR stco_type = 'aggregated'),
     -- structural cost unit
-    stco_unit VARCHAR NOT NULL,
-
+    stco_unit VARCHAR,
 
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
@@ -1401,7 +1400,7 @@ CREATE TABLE oqmif.exposure_data (
     taxonomy VARCHAR NOT NULL,
 
     -- structural cost
-    stco float NOT NULL DEFAULT 0.0,
+    stco float,
     -- retrofitting cost
     reco float,
     -- contents cost
