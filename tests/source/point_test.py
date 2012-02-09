@@ -4,7 +4,7 @@ from decimal import Decimal
 from nhe.const import TRT
 from nhe.source.point import PointSource
 from nhe.source.base import ProbabilisticRupture, SourceError
-from nhe.mfd import TruncatedGR, EvenlyDiscretized
+from nhe.mfd import TruncatedGR, EvenlyDiscretizedMFD
 from nhe.msr import Peer
 from nhe.geo import Point
 from nhe.common.pmf import PMF
@@ -263,8 +263,8 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         magnitude_scaling_relationship = Peer()
         tom = PoissonTOM(time_span=50)
 
-        mfd = EvenlyDiscretized(min_mag=mag1, bin_width=(mag2 - mag1),
-                                occurrence_rates=[mag1_rate, mag2_rate])
+        mfd = EvenlyDiscretizedMFD(min_mag=mag1, bin_width=(mag2 - mag1),
+                                   occurrence_rates=[mag1_rate, mag2_rate])
         nodal_plane_distribution = PMF([(nodalplane1_weight, nodalplane1),
                                         (nodalplane2_weight, nodalplane2)])
         hypocenter_distribution = PMF([(hypocenter1_weight, hypocenter1),

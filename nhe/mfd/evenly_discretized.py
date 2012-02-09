@@ -4,7 +4,7 @@ Module :mod:`nhe.mfd.evenly_discretized` defines an evenly discretized MFD.
 from nhe.mfd.base import BaseMFD, MFDError
 
 
-class EvenlyDiscretized(BaseMFD):
+class EvenlyDiscretizedMFD(BaseMFD):
     """
     Evenly discretized MFD is defined as a precalculated histogram.
 

@@ -2,7 +2,7 @@ import unittest
 
 from nhe.const import TRT
 from nhe.msr import Peer
-from nhe.mfd import TruncatedGR, EvenlyDiscretized
+from nhe.mfd import TruncatedGR, EvenlyDiscretizedMFD
 from nhe.geo import Point, Polygon
 from nhe.common.pmf import PMF
 from nhe.common.nodalplane import NodalPlane
@@ -57,7 +57,8 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
         self.assertEqual(len(ruptures), 9 * 2)
 
     def test_occurrence_rate_rescaling(self):
-        mfd = EvenlyDiscretized(min_mag=4, bin_width=1, occurrence_rates=[3])
+        mfd = EvenlyDiscretizedMFD(min_mag=4, bin_width=1,
+                                   occurrence_rates=[3])
         polygon = Polygon([Point(0, 0), Point(0, -0.2248),
                            Point(-0.2248, -0.2248), Point(-0.2248, 0)])
         source = self.make_area_source(polygon, discretization=10, mfd=mfd)
