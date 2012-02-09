@@ -363,24 +363,24 @@ BEGIN
     --     * recoType differs from "aggregated"
     --     * cocoType differs from "aggregated"
     IF NEW.number_of_units IS NULL AND (emdl.category = 'population' OR emdl.coco_type != 'aggregated' OR emdl.stco_type != 'aggregated' OR emdl.reco_type != 'aggregated') THEN
-        IF emdl.category IS NOT NULL THEN
+        IF emdl.category IS NOT NULL AND emdl.category = 'population' THEN
             whats_wrong = 'category=' || emdl.category;
         END IF;
-        IF emdl.reco_type IS NOT NULL THEN
+        IF emdl.reco_type IS NOT NULL AND emdl.reco_type <> 'aggregated' THEN
             IF whats_wrong <> '' THEN
                 whats_wrong = whats_wrong || ', reco_type=' || emdl.reco_type;
             ELSE
                 whats_wrong = 'reco_type=' || emdl.reco_type;
             END IF;
         END IF;
-        IF emdl.coco_type IS NOT NULL THEN
+        IF emdl.coco_type IS NOT NULL AND emdl.coco_type <> 'aggregated' THEN
             IF whats_wrong <> '' THEN
                 whats_wrong = whats_wrong || ', coco_type=' || emdl.coco_type;
             ELSE
                 whats_wrong = 'coco_type=' || emdl.coco_type;
             END IF;
         END IF;
-        IF emdl.stco_type IS NOT NULL THEN
+        IF emdl.stco_type IS NOT NULL AND emdl.stco_type <> 'aggregated' THEN
             IF whats_wrong <> '' THEN
                 whats_wrong = whats_wrong || ', stco_type=' || emdl.stco_type;
             ELSE
@@ -426,6 +426,13 @@ BEGIN
     --     * recoType is defined
     IF NEW.reco IS NULL AND emdl.reco_type IS NOT NULL THEN
         exception_msg := format_exc(TG_OP, 'retrofitting cost is mandatory for reco_type <' || emdl.reco_type || '>', TG_TABLE_NAME);
+        RAISE '%', exception_msg;
+    END IF;
+
+    -- contents cost: optional unless
+    --     * cocoType is defined
+    IF NEW.coco IS NULL AND emdl.coco_type IS NOT NULL THEN
+        exception_msg := format_exc(TG_OP, 'retrofitting cost is mandatory for coco_type <' || emdl.coco_type || '>', TG_TABLE_NAME);
         RAISE '%', exception_msg;
     END IF;
 
