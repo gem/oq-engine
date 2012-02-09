@@ -1,6 +1,5 @@
 import unittest
 
-from nhe.mfd import MFDError
 from nhe.mfd.base import BaseMFD
 
 
@@ -15,7 +14,7 @@ class BaseMFDTestCase(unittest.TestCase):
             pass
 
     def assert_mfd_error(self, func, *args, **kwargs):
-        with self.assertRaises(MFDError) as exc_catcher:
+        with self.assertRaises(ValueError) as exc_catcher:
             func(*args, **kwargs)
         return exc_catcher.exception
 

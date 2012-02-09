@@ -3,7 +3,7 @@ Module :mod:`nhe.mfd.truncated_gr` defines a Truncated Gutenberg-Richter MFD.
 """
 import math
 
-from nhe.mfd.base import BaseMFD, MFDError
+from nhe.mfd.base import BaseMFD
 
 
 class TruncatedGRMFD(BaseMFD):
@@ -61,16 +61,16 @@ class TruncatedGRMFD(BaseMFD):
         * ``b`` value is positive.
         """
         if not self.bin_width > 0:
-            raise MFDError()
+            raise ValueError()
 
         if not self.min_mag >= 0:
-            raise MFDError()
+            raise ValueError()
 
         if not self.max_mag >= self.min_mag + self.bin_width:
-            raise MFDError()
+            raise ValueError()
 
         if not 0 < self.b_val:
-            raise MFDError()
+            raise ValueError()
 
     def _get_rate(self, mag):
         """

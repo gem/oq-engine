@@ -1,7 +1,7 @@
 """
 Module :mod:`nhe.mfd.evenly_discretized` defines an evenly discretized MFD.
 """
-from nhe.mfd.base import BaseMFD, MFDError
+from nhe.mfd.base import BaseMFD
 
 
 class EvenlyDiscretizedMFD(BaseMFD):
@@ -33,16 +33,16 @@ class EvenlyDiscretizedMFD(BaseMFD):
         * Minimum magnitude is positive.
         """
         if not self.bin_width > 0:
-            raise MFDError()
+            raise ValueError()
 
         if not self.occurrence_rates:
-            raise MFDError()
+            raise ValueError()
 
         if not all(value >= 0 for value in self.occurrence_rates):
-            raise MFDError()
+            raise ValueError()
 
         if not self.min_mag >= 0:
-            raise MFDError()
+            raise ValueError()
 
     def get_annual_occurrence_rates(self):
         """

@@ -7,6 +7,5 @@ Package `mfd` contains the basic class for MFD --
 :class:`nhe.mfd.evenly_discretized.EvenlyDiscretizedMFD`
 and :class:`nhe.mfd.truncated_gr.TruncatedGRMFD`.
 """
-from nhe.mfd.base import MFDError
 from nhe.mfd.evenly_discretized import EvenlyDiscretizedMFD
 from nhe.mfd.truncated_gr import TruncatedGRMFD
