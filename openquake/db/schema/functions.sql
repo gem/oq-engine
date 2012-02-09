@@ -354,7 +354,7 @@ AS $$
         raise Exception(fmt("structural cost is mandatory for category <%s>" %
                             emdl["category"]))
 
-    if NEW["number_of_assets"] is None:
+    if NEW["number_of_units"] is None:
         violations = []
         if emdl["category"] == "population":
             violations.append(("category", "population"))
@@ -365,7 +365,7 @@ AS $$
                 emdl["area_type"] == "per_asset")):
                 violations.append((key, emdl[key]))
         if violations:
-            raise Exception(fmt("number_of_assets is mandatory for <%s>" %
+            raise Exception(fmt("number_of_units is mandatory for <%s>" %
                                 ", ".join("%s=%s" % v for v in violations)))
 
     if NEW["area"] is None:
@@ -379,118 +379,19 @@ AS $$
         if violations:
             raise Exception(fmt("area is mandatory for <%s>" %
                                 ", ".join("%s=%s" % v for v in violations)))
+    if NEW["reco"] is None and emdl["reco_type"] is not None:
+        raise Exception(fmt("retrofitting cost is mandatory for <reco_type=%s>"
+                            % emdl["reco_type"]))
+    if NEW["stco"] is None and emdl["stco_type"] is not None:
+        raise Exception(fmt("structural cost is mandatory for <stco_type=%s>"
+                            % emdl["stco_type"]))
+
 
     return "OK"
 $$ LANGUAGE plpythonu;
 
 
-CREATE OR REPLACE FUNCTION check_exposure_data() RETURNS TRIGGER
-LANGUAGE plpgsql AS
-$$
-DECLARE
-    emdl oqmif.exposure_model%ROWTYPE;
-    exception_msg TEXT := '';
-    whats_wrong TEXT := '';
-BEGIN
-    SELECT * INTO emdl FROM oqmif.exposure_model WHERE id = NEW.exposure_model_id;
-
-    RAISE INFO '%', emdl;
-
-     -- structural cost:
-     -- mandatory unless we compute fatalities in which case
-     -- assetCategory will be set to "population"
-    IF NEW.stco IS NULL AND emdl.category != 'population' THEN
-        exception_msg := format_exc(TG_OP, 'structural cost mandatory for category <' || emdl.category || '>', TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    END IF;
-
-    -- number of assets is optional unless
-    --     * we compute fatalities or
-    --     * stcoType differs from "aggregated" or
-    --     * recoType differs from "aggregated"
-    --     * cocoType differs from "aggregated"
-    IF NEW.number_of_assets IS NULL AND (emdl.category = 'population' OR emdl.coco_type != 'aggregated' OR emdl.stco_type != 'aggregated' OR emdl.reco_type != 'aggregated') THEN
-        IF emdl.category IS NOT NULL AND emdl.category = 'population' THEN
-            whats_wrong = 'category=' || emdl.category;
-        END IF;
-        IF emdl.reco_type IS NOT NULL AND emdl.reco_type <> 'aggregated' THEN
-            IF whats_wrong <> '' THEN
-                whats_wrong = whats_wrong || ', reco_type=' || emdl.reco_type;
-            ELSE
-                whats_wrong = 'reco_type=' || emdl.reco_type;
-            END IF;
-        END IF;
-        IF emdl.coco_type IS NOT NULL AND emdl.coco_type <> 'aggregated' THEN
-            IF whats_wrong <> '' THEN
-                whats_wrong = whats_wrong || ', coco_type=' || emdl.coco_type;
-            ELSE
-                whats_wrong = 'coco_type=' || emdl.coco_type;
-            END IF;
-        END IF;
-        IF emdl.stco_type IS NOT NULL AND emdl.stco_type <> 'aggregated' THEN
-            IF whats_wrong <> '' THEN
-                whats_wrong = whats_wrong || ', stco_type=' || emdl.stco_type;
-            ELSE
-                whats_wrong = 'stco_type=' || emdl.stco_type;
-            END IF;
-        END IF;
-        exception_msg := format_exc(TG_OP, 'number_of_assets is mandatory for <' || whats_wrong || '>', TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    END IF;
-
-    -- area is optional unless
-    --     * stcoType is set to "per_area" or
-    --     * recoType is set to "per_area"
-    --     * cocoType is set to "per_area"
-    IF NEW.area IS NULL AND (emdl.coco_type = 'per_area' OR emdl.stco_type = 'per_area' OR emdl.reco_type = 'per_area') THEN
-        IF emdl.reco_type IS NOT NULL AND emdl.reco_type = 'per_area' THEN
-            IF whats_wrong <> '' THEN
-                whats_wrong = whats_wrong || ', reco_type=' || emdl.reco_type;
-            ELSE
-                whats_wrong = 'reco_type=' || emdl.reco_type;
-            END IF;
-        END IF;
-        IF emdl.coco_type IS NOT NULL AND emdl.coco_type = 'per_area' THEN
-            IF whats_wrong <> '' THEN
-                whats_wrong = whats_wrong || ', coco_type=' || emdl.coco_type;
-            ELSE
-                whats_wrong = 'coco_type=' || emdl.coco_type;
-            END IF;
-        END IF;
-        IF emdl.stco_type IS NOT NULL AND emdl.stco_type = 'per_area' THEN
-            IF whats_wrong <> '' THEN
-                whats_wrong = whats_wrong || ', stco_type=' || emdl.stco_type;
-            ELSE
-                whats_wrong = 'stco_type=' || emdl.stco_type;
-            END IF;
-        END IF;
-        exception_msg := format_exc(TG_OP, 'area is mandatory for <' || whats_wrong || '>', TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    END IF;
-
-    -- retrofitting cost: optional unless
-    --     * we compute BCR ("impossible" to check here)
-    --     * recoType is defined
-    IF NEW.reco IS NULL AND emdl.reco_type IS NOT NULL THEN
-        exception_msg := format_exc(TG_OP, 'retrofitting cost is mandatory for reco_type <' || emdl.reco_type || '>', TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    END IF;
-
-    -- contents cost: optional unless
-    --     * cocoType is defined
-    IF NEW.coco IS NULL AND emdl.coco_type IS NOT NULL THEN
-        exception_msg := format_exc(TG_OP, 'retrofitting cost is mandatory for coco_type <' || emdl.coco_type || '>', TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    END IF;
-
-    IF TG_OP = 'UPDATE' THEN
-        NEW.last_update := timezone('UTC'::text, now());
-    END IF;
-    RETURN NEW;
-END;
-$$;
-
-COMMENT ON FUNCTION check_exposure_data() IS
+COMMENT ON FUNCTION pcheck_exposure_data() IS
 'Make sure the inserted or modified exposure data is consistent.';
 
 
