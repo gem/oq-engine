@@ -108,7 +108,7 @@ def compute_uhs_task(job_id, realization, site, result_dir):
 
     uhs_results = compute_uhs(calc_proxy, site)
 
-    return write_uhs_spectrum_data(calc_proxy, realization, site, uhs_results)
+    write_uhs_spectrum_data(calc_proxy, realization, site, uhs_results)
 
 
 def compute_uhs(the_job, site):
