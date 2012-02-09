@@ -2,7 +2,7 @@ import unittest
 
 from nhe.const import TRT
 from nhe.msr import Peer
-from nhe.mfd import TruncatedGR, EvenlyDiscretizedMFD
+from nhe.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from nhe.geo import Point, Polygon
 from nhe.common.pmf import PMF
 from nhe.common.nodalplane import NodalPlane
@@ -15,8 +15,8 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
         default_arguments = {
             'source_id': 'source_id', 'name': 'area source name',
             'tectonic_region_type': TRT.VOLCANIC,
-            'mfd': TruncatedGR(a_val=3, b_val=1, min_mag=5,
-                               max_mag=7, bin_width=1),
+            'mfd': TruncatedGRMFD(a_val=3, b_val=1, min_mag=5,
+                                  max_mag=7, bin_width=1),
             'nodal_plane_distribution': PMF([(1, NodalPlane(1, 2, 3))]),
             'hypocenter_distribution': PMF([(1, 4)]),
             'upper_seismogenic_depth': 1.3,

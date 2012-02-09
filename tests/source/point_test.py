@@ -4,7 +4,7 @@ from decimal import Decimal
 from nhe.const import TRT
 from nhe.source.point import PointSource
 from nhe.source.base import ProbabilisticRupture, SourceError
-from nhe.mfd import TruncatedGR, EvenlyDiscretizedMFD
+from nhe.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from nhe.msr import Peer
 from nhe.geo import Point
 from nhe.common.pmf import PMF
@@ -19,8 +19,8 @@ class PointSourceCreationTestCase(unittest.TestCase):
         default_arguments = {
             'source_id': 'source_id', 'name': 'source name',
             'tectonic_region_type': TRT.SUBDUCTION_INTRASLAB,
-            'mfd': TruncatedGR(a_val=1, b_val=2, min_mag=3,
-                               max_mag=5, bin_width=1),
+            'mfd': TruncatedGRMFD(a_val=1, b_val=2, min_mag=3,
+                                  max_mag=5, bin_width=1),
             'location': Point(1.2, 3.4, 5.6),
             'nodal_plane_distribution': PMF([(1, NodalPlane(1, 2, 3))]),
             'hypocenter_distribution': PMF([(1, 4)]),
@@ -94,8 +94,8 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
                      aspect_ratio, dip):
         source_id = name = 'test-source'
         trt = TRT.ACTIVE_SHALLOW_CRUST
-        mfd = TruncatedGR(a_val=2, b_val=1, min_mag=min_mag, max_mag=max_mag,
-                          bin_width=1)
+        mfd = TruncatedGRMFD(a_val=2, b_val=1, min_mag=min_mag,
+                             max_mag=max_mag, bin_width=1)
         location = Point(0, 0)
         nodal_plane = NodalPlane(strike=45, dip=dip, rake=-123.23)
         nodal_plane_distribution = PMF([(1, nodal_plane)])

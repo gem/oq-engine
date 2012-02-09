@@ -6,7 +6,7 @@ import math
 from nhe.mfd.base import BaseMFD, MFDError
 
 
-class TruncatedGR(BaseMFD):
+class TruncatedGRMFD(BaseMFD):
     """
     Truncated Gutenberg-Richter MFD is defined in a functional form.
 
@@ -80,7 +80,7 @@ class TruncatedGR(BaseMFD):
             Magnitude value corresponding to the center of the bin of interest.
         :returns:
             Float number, the annual occurrence rate calculated using formula
-            described in :class:`TruncatedGR`.
+            described in :class:`TruncatedGRMFD`.
         """
         mag_lo = mag - self.bin_width / 2.0
         mag_hi = mag + self.bin_width / 2.0
