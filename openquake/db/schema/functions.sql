@@ -357,12 +357,12 @@ BEGIN
         RAISE '%', exception_msg;
     END IF;
 
-    -- number is optional unless
+    -- number of assets is optional unless
     --     * we compute fatalities or
     --     * stcoType differs from "aggregated" or
     --     * recoType differs from "aggregated"
     --     * cocoType differs from "aggregated"
-    IF NEW.number_of_units IS NULL AND (emdl.category = 'population' OR emdl.coco_type != 'aggregated' OR emdl.stco_type != 'aggregated' OR emdl.reco_type != 'aggregated') THEN
+    IF NEW.number_of_assets IS NULL AND (emdl.category = 'population' OR emdl.coco_type != 'aggregated' OR emdl.stco_type != 'aggregated' OR emdl.reco_type != 'aggregated') THEN
         IF emdl.category IS NOT NULL AND emdl.category = 'population' THEN
             whats_wrong = 'category=' || emdl.category;
         END IF;
@@ -387,7 +387,7 @@ BEGIN
                 whats_wrong = 'stco_type=' || emdl.stco_type;
             END IF;
         END IF;
-        exception_msg := format_exc(TG_OP, 'number_of_units is mandatory for ' || whats_wrong, TG_TABLE_NAME);
+        exception_msg := format_exc(TG_OP, 'number_of_assets is mandatory for <' || whats_wrong || '>', TG_TABLE_NAME);
         RAISE '%', exception_msg;
     END IF;
 
@@ -396,29 +396,29 @@ BEGIN
     --     * recoType is set to "per_area"
     --     * cocoType is set to "per_area"
     IF NEW.area IS NULL AND (emdl.coco_type = 'per_area' OR emdl.stco_type = 'per_area' OR emdl.reco_type = 'per_area') THEN
-        RAISE '%', exception_msg;
-        IF emdl.reco_type IS NOT NULL THEN
+        IF emdl.reco_type IS NOT NULL AND emdl.reco_type = 'per_area' THEN
             IF whats_wrong <> '' THEN
                 whats_wrong = whats_wrong || ', reco_type=' || emdl.reco_type;
             ELSE
                 whats_wrong = 'reco_type=' || emdl.reco_type;
             END IF;
         END IF;
-        IF emdl.coco_type IS NOT NULL THEN
+        IF emdl.coco_type IS NOT NULL AND emdl.coco_type = 'per_area' THEN
             IF whats_wrong <> '' THEN
                 whats_wrong = whats_wrong || ', coco_type=' || emdl.coco_type;
             ELSE
                 whats_wrong = 'coco_type=' || emdl.coco_type;
             END IF;
         END IF;
-        IF emdl.stco_type IS NOT NULL THEN
+        IF emdl.stco_type IS NOT NULL AND emdl.stco_type = 'per_area' THEN
             IF whats_wrong <> '' THEN
                 whats_wrong = whats_wrong || ', stco_type=' || emdl.stco_type;
             ELSE
                 whats_wrong = 'stco_type=' || emdl.stco_type;
             END IF;
         END IF;
-        exception_msg := format_exc(TG_OP, 'area is mandatory for ' || whats_wrong, TG_TABLE_NAME);
+        exception_msg := format_exc(TG_OP, 'area is mandatory for <' || whats_wrong || '>', TG_TABLE_NAME);
+        RAISE '%', exception_msg;
     END IF;
 
     -- retrofitting cost: optional unless

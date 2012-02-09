@@ -1406,8 +1406,7 @@ CREATE TABLE oqmif.exposure_data (
     -- contents cost
     coco float,
 
-    -- number of assets/area units etc.
-    number_of_units float,
+    number_of_assets float,
     area float,
 
     -- insurance coverage limit
