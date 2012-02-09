@@ -337,6 +337,41 @@ $$;
 COMMENT ON FUNCTION check_exposure_model() IS
 'Make sure the inserted or modified exposure model record is consistent.';
 
+
+CREATE OR REPLACE FUNCTION pcheck_exposure_data()
+  RETURNS TRIGGER
+AS $$
+    def fmt(err):
+        return "%s (%s)" % (err, TD["table_name"])
+
+    NEW = TD["new"]
+    q = ("SELECT * FROM oqmif.exposure_model WHERE id = %s" %
+         NEW["exposure_model_id"])
+    [emdl] = plpy.execute(q)
+    plpy.info("emdl: %s" % emdl)
+
+    if NEW["stco"] is None and emdl["category"] != "population":
+        raise Exception(fmt("structural cost is mandatory for category <%s>" %
+                            emdl["category"]))
+
+    if NEW["number_of_assets"] is None:
+        violations = []
+        if emdl["category"] == "population":
+            violations.append(("category", "population"))
+        for key in ["coco_type", "reco_type", "stco_type"]:
+            if NEW.get(key) is None or NEW[key] == "aggregated":
+                continue
+            if (NEW[key] == "per_asset" or (NEW[key] == "per_area" and
+                NEW["area_type"] == "per_asset")):
+                violations.append((key, NEW[key]))
+        if violations:
+            raise Exception(fmt("number_of_assets is mandatory for <%s>" %
+                                ", ".join("%s=%s" % v for v in violations)))
+
+    return "OK"
+$$ LANGUAGE plpythonu;
+
+
 CREATE OR REPLACE FUNCTION check_exposure_data() RETURNS TRIGGER
 LANGUAGE plpgsql AS
 $$
@@ -473,7 +508,7 @@ FOR EACH ROW EXECUTE PROCEDURE check_exposure_model();
 
 CREATE TRIGGER oqmif_exposure_data_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON oqmif.exposure_data
-FOR EACH ROW EXECUTE PROCEDURE check_exposure_data();
+FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_data();
 
 CREATE TRIGGER eqcat_magnitude_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON eqcat.magnitude
