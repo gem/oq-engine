@@ -1,6 +1,6 @@
 import unittest
 
-from nhe.common.tom import PoissonTOM
+from nhe.tom import PoissonTOM
 
 
 class PoissonTOMTestCase(unittest.TestCase):

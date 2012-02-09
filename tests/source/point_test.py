@@ -9,7 +9,7 @@ from nhe.msr import PeerMSR
 from nhe.geo import Point
 from nhe.pmf import PMF
 from nhe.source.nodalplane import NodalPlane
-from nhe.common.tom import PoissonTOM
+from nhe.tom import PoissonTOM
 
 from tests.geo.surface import _planar_test_data as planar_surface_test_data
 

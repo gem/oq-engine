@@ -48,7 +48,7 @@ class SeismicSource(object):
 
         :param temporal_occurrence_model:
             Temporal occurrence model (supposedly
-            :class:`nhe.common.tom.PoissonTOM`). It is passed intact
+            :class:`nhe.tom.PoissonTOM`). It is passed intact
             to the probabilistic rupture constructor.
         :returns:
             Generator of instances of :class:`ProbabilisticRupture`.
@@ -101,7 +101,7 @@ class ProbabilisticRupture(Rupture):
         Number of times rupture happens per year.
     :param temporal_occurrence_model:
         Temporal occurrence model assigned for this rupture. Should
-        be an instance of :class:`nhe.common.tom.PoissonTOM`.
+        be an instance of :class:`nhe.tom.PoissonTOM`.
 
     :raises SourceError:
         If occurrence rate is not positive.
