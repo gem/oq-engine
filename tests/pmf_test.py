@@ -2,7 +2,7 @@ from decimal import Decimal
 
 import unittest
 
-from nhe.common.pmf import PMF
+from nhe.pmf import PMF
 
 
 class PMFTestCase(unittest.TestCase):

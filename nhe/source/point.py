@@ -17,11 +17,11 @@ class PointSource(SeismicSource):
         :class:`~nhe.geo.Point` object representing the location
         of the seismic source. The depth value of that point is ignored.
     :param nodal_plane_distribution:
-        :class:`~nhe.common.pmf.PMF` object with values that are instances
+        :class:`~nhe.pmf.PMF` object with values that are instances
         of :class:`nhe.common.nodalplane.NodalPlane`. Shows the distribution
         of probability for rupture to have the certain nodal plane.
     :param hypocenter_distribution:
-        :class:`~nhe.common.pmf.PMF` with values being float numbers in km
+        :class:`~nhe.pmf.PMF` with values being float numbers in km
         representing the depth of the hypocenter. Latitude and longitude
         of the hypocenter is always set to ones of ``location``.
     :param upper_seismogenic_depth:

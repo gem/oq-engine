@@ -7,7 +7,7 @@ from nhe.source.base import ProbabilisticRupture, SourceError
 from nhe.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from nhe.msr import PeerMSR
 from nhe.geo import Point
-from nhe.common.pmf import PMF
+from nhe.pmf import PMF
 from nhe.common.nodalplane import NodalPlane
 from nhe.common.tom import PoissonTOM
 

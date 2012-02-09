@@ -1,5 +1,5 @@
 """
-Module :mod:`nhe.common.pmf` implements :class:`PMF`.
+Module :mod:`nhe.pmf` implements :class:`PMF`.
 """
 
 
