@@ -2,7 +2,8 @@ import unittest
 
 from nhe.geo import Point
 from nhe.geo.surface.planar import PlanarSurface
-import _planar_test_data as test_data
+
+from tests.geo.surface import _planar_test_data as test_data
 
 
 class PlanarSurfaceCreationTestCase(unittest.TestCase):
