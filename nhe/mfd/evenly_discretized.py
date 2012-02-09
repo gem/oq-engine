@@ -33,16 +33,16 @@ class EvenlyDiscretizedMFD(BaseMFD):
         * Minimum magnitude is positive.
         """
         if not self.bin_width > 0:
-            raise ValueError()
+            raise ValueError('bin width must be positive')
 
         if not self.occurrence_rates:
-            raise ValueError()
+            raise ValueError('at least one bin must be specified')
 
-        if not all(value >= 0 for value in self.occurrence_rates):
-            raise ValueError()
+        if not all(value > 0 for value in self.occurrence_rates):
+            raise ValueError('all occurrence rates must be positive')
 
         if not self.min_mag >= 0:
-            raise ValueError()
+            raise ValueError('minimum magnitude must be non-negative')
 
     def get_annual_occurrence_rates(self):
         """
