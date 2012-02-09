@@ -157,6 +157,8 @@ class UHSCoreTestCase(unittest.TestCase):
 
 
     def test_write_uhs_spectrum_data(self):
+        # Test `write_uhs_spectrum_data`.
+
         # To start with, we need to write the 'container' records for the UHS
         # results:
         write_uh_spectra(self.calc_proxy)
@@ -171,6 +173,7 @@ class UHSCoreTestCase(unittest.TestCase):
         realization = 0
         test_site = Site(0.0, 0.0)
 
+        # Call the function under test
         write_uhs_spectrum_data(
             self.calc_proxy, realization, test_site, uhs_results)
 
