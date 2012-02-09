@@ -59,8 +59,8 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
-                "INSERT: error: area_type is mandatory for coco_type=per_area "
-                "(exposure_model)", de.args[0].strip())
+                "Exception: area_type is mandatory for <coco_type=per_area> "
+                "(exposure_model)", de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
@@ -74,8 +74,8 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
-                "INSERT: error: area_type is mandatory for reco_type=per_area "
-                "(exposure_model)", de.args[0].strip())
+                "Exception: area_type is mandatory for <reco_type=per_area> "
+                "(exposure_model)", de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
@@ -89,8 +89,8 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
-                "INSERT: error: area_type is mandatory for stco_type=per_area "
-                "(exposure_model)", de.args[0].strip())
+                "Exception: area_type is mandatory for <stco_type=per_area> "
+                "(exposure_model)", de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
@@ -106,14 +106,17 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
-                "INSERT: error: area_type is mandatory for reco_type=per_area,"
-                " stco_type=per_area (exposure_model)", de.args[0].strip())
+                "Exception: area_type is mandatory for <reco_type=per_area, "
+                "stco_type=per_area> (exposure_model)",
+                de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
 
     def test_exposure_model_with_no_area_unit_coco_per_area(self):
         # area unit not set but contents cost type is 'per_area' -> exception
+        self.mdl.stco_type = "per_asset"
+        self.mdl.stco_unit = "GBP"
         self.mdl.coco_type = "per_area"
         self.mdl.coco_unit = "EUR"
         self.mdl.area_type = "per_asset"
@@ -121,8 +124,9 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
-                "INSERT: error: area_unit is mandatory for coco_type=per_area "
-                "(exposure_model)", de.args[0].strip())
+                "Exception: area_unit is mandatory for <coco_type=per_area> "
+                "(exposure_model)",
+                de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
@@ -137,8 +141,9 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
-                "INSERT: error: area_unit is mandatory for reco_type=per_area "
-                "(exposure_model)", de.args[0].strip())
+                "Exception: area_unit is mandatory for <reco_type=per_area> "
+                "(exposure_model)",
+                de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
@@ -153,8 +158,9 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
-                "INSERT: error: area_unit is mandatory for stco_type=per_area "
-                "(exposure_model)", de.args[0].strip())
+                "Exception: area_unit is mandatory for <stco_type=per_area> "
+                "(exposure_model)",
+                de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
@@ -171,8 +177,9 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
-                "INSERT: error: area_unit is mandatory for reco_type=per_area,"
-                " stco_type=per_area (exposure_model)", de.args[0].strip())
+                "Exception: area_unit is mandatory for <reco_type=per_area, "
+                "stco_type=per_area> (exposure_model)",
+                de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
@@ -180,13 +187,16 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
     def test_exposure_model_with_coco_type_but_no_coco_unit(self):
         # contents cost type set but contents cost unit not set
         #   -> exception
+        self.mdl.stco_type = "per_asset"
+        self.mdl.stco_unit = "GBP"
         self.mdl.coco_type = "aggregated"
         try:
             self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
-                "INSERT: error: coco_unit is mandatory for coco_type "
-                "<aggregated> (exposure_model)", de.args[0].strip())
+                "Exception: contents cost unit is mandatory for "
+                "<coco_type=aggregated> (exposure_model)",
+                de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
@@ -199,8 +209,9 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
-                "INSERT: error: reco_unit is mandatory for reco_type "
-                "<aggregated> (exposure_model)", de.args[0].strip())
+                "Exception: retrofitting cost unit is mandatory for "
+                "<reco_type=aggregated> (exposure_model)",
+                de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
@@ -213,8 +224,9 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
-                "INSERT: error: stco_unit is mandatory for stco_type "
-                "<aggregated> (exposure_model)", de.args[0].strip())
+                "Exception: structural cost unit is mandatory for "
+                "<stco_type=aggregated> (exposure_model)",
+                de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
@@ -227,8 +239,9 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
-                "INSERT: error: stco_type is mandatory for category <economic"
-                " loss> (exposure_model)", de.args[0].strip())
+                "Exception: structural cost type is mandatory for "
+                "<category=economic loss> (exposure_model)",
+                de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")

@@ -241,100 +241,52 @@ COMMENT ON FUNCTION refresh_last_update() IS
 'Refresh the ''last_update'' time stamp whenever a row is updated.';
 
 
-CREATE OR REPLACE FUNCTION check_exposure_model() RETURNS TRIGGER
-LANGUAGE plpgsql AS
-$$
-DECLARE
-    whats_wrong TEXT := '';
-    exception_msg TEXT := '';
-BEGIN
-    -- area_type is optional unless
-    --     * stcoType is set to "per_area" or
-    --     * recoType is set to "per_area"
-    --     * cocoType is set to "per_area"
-    IF NEW.area_type IS NULL AND NEW.coco_type = 'per_area' THEN
-        whats_wrong = 'coco_type=per_area';
-    END IF;
-    IF NEW.area_type IS NULL AND NEW.reco_type = 'per_area' THEN
-        IF whats_wrong <> '' THEN
-            whats_wrong = whats_wrong || ', reco_type=per_area';
-        ELSE
-            whats_wrong = 'reco_type=per_area';
-        END IF;
-    END IF;
-    IF NEW.area_type IS NULL AND NEW.stco_type = 'per_area' THEN
-        IF whats_wrong <> '' THEN
-            whats_wrong = whats_wrong || ', stco_type=per_area';
-        ELSE
-            whats_wrong = 'stco_type=per_area';
-        END IF;
-    END IF;
-    IF whats_wrong <> '' THEN
-        exception_msg := format_exc(TG_OP, 'area_type is mandatory for ' || whats_wrong, TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    END IF;
+CREATE OR REPLACE FUNCTION pcheck_exposure_model()
+  RETURNS TRIGGER
+AS $$
+    def fmt(err):
+        return "%s (%s)" % (err, TD["table_name"])
 
-    -- area_unit is optional unless
-    --     * stcoType is set to "per_area" or
-    --     * recoType is set to "per_area"
-    --     * cocoType is set to "per_area"
-    whats_wrong = '';
-    IF NEW.area_unit IS NULL AND NEW.coco_type = 'per_area' THEN
-        whats_wrong = 'coco_type=per_area';
-    END IF;
-    IF NEW.area_unit IS NULL AND NEW.reco_type = 'per_area' THEN
-        IF whats_wrong <> '' THEN
-            whats_wrong = whats_wrong || ', reco_type=per_area';
-        ELSE
-            whats_wrong = 'reco_type=per_area';
-        END IF;
-    END IF;
-    IF NEW.area_unit IS NULL AND NEW.stco_type = 'per_area' THEN
-        IF whats_wrong <> '' THEN
-            whats_wrong = whats_wrong || ', stco_type=per_area';
-        ELSE
-            whats_wrong = 'stco_type=per_area';
-        END IF;
-    END IF;
+    NEW = TD["new"]
 
-    IF whats_wrong <> '' THEN
-        exception_msg := format_exc(TG_OP, 'area_unit is mandatory for ' || whats_wrong, TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    END IF;
+    if NEW["area_type"] is None:
+        violations = []
+        for key in ["coco_type", "reco_type", "stco_type"]:
+            if NEW.get(key) is not None and NEW[key] == "per_area":
+                violations.append((key, NEW[key]))
+        if violations:
+            raise Exception(fmt("area_type is mandatory for <%s>" %
+                                ", ".join("%s=%s" % v for v in violations)))
 
-    -- contents cost unit is mandatory if contents cost type is set
-    IF NEW.coco_unit IS NULL AND NEW.coco_type IS NOT NULL THEN
-        exception_msg := format_exc(TG_OP, 'coco_unit is mandatory for coco_type <' || NEW.coco_type || '>', TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    END IF;
+    if NEW["area_unit"] is None:
+        violations = []
+        for key in ["coco_type", "reco_type", "stco_type"]:
+            if NEW.get(key) is not None and NEW[key] == "per_area":
+                violations.append((key, NEW[key]))
+        if violations:
+            raise Exception(fmt("area_unit is mandatory for <%s>" %
+                                ", ".join("%s=%s" % v for v in violations)))
 
-    -- retrofitting cost unit is mandatory if retrofitting cost type is set
-    IF NEW.reco_unit IS NULL AND NEW.reco_type IS NOT NULL THEN
-        exception_msg := format_exc(TG_OP, 'reco_unit is mandatory for reco_type <' || NEW.reco_type || '>', TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    END IF;
+    if NEW["coco_unit"] is None and NEW["coco_type"] is not None:
+        raise Exception(fmt("contents cost unit is mandatory for "
+                            "<coco_type=%s>" % NEW["coco_type"]))
+    if NEW["reco_unit"] is None and NEW["reco_type"] is not None:
+        raise Exception(fmt("retrofitting cost unit is mandatory for "
+                            "<reco_type=%s>" % NEW["reco_type"]))
+    if NEW["stco_unit"] is None and NEW["stco_type"] is not None:
+        raise Exception(fmt("structural cost unit is mandatory for "
+                            "<stco_type=%s>" % NEW["stco_type"]))
+    if NEW["stco_type"] is None and NEW["category"] != "population":
+        raise Exception(fmt("structural cost type is mandatory for "
+                            "<category=%s>" % NEW["category"]))
+    if NEW["area_unit"] is None and NEW["area_type"] is not None:
+        raise Exception(fmt("area unit is mandatory for "
+                            "<area_type=%s>" % NEW["area_type"]))
+    return "OK"
+$$ LANGUAGE plpythonu;
 
-    -- structural cost type is mandatory unless we calculate exposure in terms
-    -- of population
-    IF NEW.stco_type IS NULL AND NEW.category <> 'population' THEN
-        exception_msg := format_exc(TG_OP, 'stco_type is mandatory for category <' || NEW.category || '>', TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    END IF;
 
-    -- structural cost unit is mandatory if structural cost type is set
-    IF NEW.stco_unit IS NULL AND NEW.stco_type IS NOT NULL THEN
-        exception_msg := format_exc(TG_OP, 'stco_unit is mandatory for stco_type <' || NEW.stco_type || '>', TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    END IF;
-
-    IF TG_OP = 'UPDATE' THEN
-        NEW.last_update := timezone('UTC'::text, now());
-    END IF;
-    RETURN NEW;
-END;
-$$;
-
-COMMENT ON FUNCTION check_exposure_model() IS
+COMMENT ON FUNCTION pcheck_exposure_model() IS
 'Make sure the inserted or modified exposure model record is consistent.';
 
 
@@ -371,10 +323,7 @@ AS $$
     if NEW["area"] is None:
         violations = []
         for key in ["coco_type", "reco_type", "stco_type"]:
-            if emdl.get(key) is None or emdl[key] != "per_area":
-                continue
-            if (emdl[key] == "per_asset" or (emdl[key] == "per_area" and
-                emdl["area_type"] == "per_asset")):
+            if emdl.get(key) is not None and emdl[key] == "per_area":
                 violations.append((key, emdl[key]))
         if violations:
             raise Exception(fmt("area is mandatory for <%s>" %
@@ -417,7 +366,7 @@ FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
 
 CREATE TRIGGER oqmif_exposure_model_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON oqmif.exposure_model
-FOR EACH ROW EXECUTE PROCEDURE check_exposure_model();
+FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_model();
 
 CREATE TRIGGER oqmif_exposure_data_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON oqmif.exposure_data
