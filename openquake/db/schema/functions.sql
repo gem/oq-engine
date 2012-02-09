@@ -279,9 +279,6 @@ AS $$
     if NEW["stco_type"] is None and NEW["category"] != "population":
         raise Exception(fmt("structural cost type is mandatory for "
                             "<category=%s>" % NEW["category"]))
-    if NEW["area_unit"] is None and NEW["area_type"] is not None:
-        raise Exception(fmt("area unit is mandatory for "
-                            "<area_type=%s>" % NEW["area_type"]))
     return "OK"
 $$ LANGUAGE plpythonu;
 
