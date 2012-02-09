@@ -18,7 +18,7 @@ class PointSource(SeismicSource):
         of the seismic source. The depth value of that point is ignored.
     :param nodal_plane_distribution:
         :class:`~nhe.pmf.PMF` object with values that are instances
-        of :class:`nhe.common.nodalplane.NodalPlane`. Shows the distribution
+        of :class:`nhe.source.nodalplane.NodalPlane`. Shows the distribution
         of probability for rupture to have the certain nodal plane.
     :param hypocenter_distribution:
         :class:`~nhe.pmf.PMF` with values being float numbers in km
@@ -127,7 +127,7 @@ class PointSource(SeismicSource):
         for given magnitude ``mag`` and nodal plane.
 
         :param nodal_plane:
-            Instance of :class:`nhe.common.nodalplane.NodalPlane`.
+            Instance of :class:`nhe.source.nodalplane.NodalPlane`.
         :returns:
             Tuple of two items: rupture length in width in km.
 
@@ -166,7 +166,7 @@ class PointSource(SeismicSource):
             Magnitude value, used to calculate rupture dimensions,
             see :meth:`_get_rupture_dimensions`.
         :param nodal_plane:
-            Instance of :class:`nhe.common.nodalplane.NodalPlane`
+            Instance of :class:`nhe.source.nodalplane.NodalPlane`
             describing the rupture orientation.
         :param hypocenter:
             Point representing rupture's hypocenter.

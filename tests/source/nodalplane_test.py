@@ -1,6 +1,6 @@
 import unittest
 
-from nhe.common.nodalplane import NodalPlane
+from nhe.source.nodalplane import NodalPlane
 
 
 class NodalPlaneTestCase(unittest.TestCase):

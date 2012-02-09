@@ -1,5 +1,5 @@
 """
-Module :mod:`nhe.common.nodalplane` implements :class:`NodalPlane`.
+Module :mod:`nhe.source.nodalplane` implements :class:`NodalPlane`.
 """
 
 class NodalPlane(object):

@@ -62,7 +62,7 @@ class Rupture(object):
     :param mag:
         Magnitude of the rupture.
     :param nodal_plane:
-        An instance of :class:`nhe.common.nodalplane.NodalPlane` describing
+        An instance of :class:`nhe.source.nodalplane.NodalPlane` describing
         the orientation of the rupture and it's propagation direction.
     :param tectonic_region_type:
         Rupture's tectonic regime. One of constants in :class:`nhe.const.TRT`.

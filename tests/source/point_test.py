@@ -8,7 +8,7 @@ from nhe.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from nhe.msr import PeerMSR
 from nhe.geo import Point
 from nhe.pmf import PMF
-from nhe.common.nodalplane import NodalPlane
+from nhe.source.nodalplane import NodalPlane
 from nhe.common.tom import PoissonTOM
 
 from tests.geo.surface import _planar_test_data as planar_surface_test_data

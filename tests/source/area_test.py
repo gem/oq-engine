@@ -5,7 +5,7 @@ from nhe.msr import PeerMSR
 from nhe.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from nhe.geo import Point, Polygon
 from nhe.pmf import PMF
-from nhe.common.nodalplane import NodalPlane
+from nhe.source.nodalplane import NodalPlane
 from nhe.common.tom import PoissonTOM
 from nhe.source.area import AreaSource
 
