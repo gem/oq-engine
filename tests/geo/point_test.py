@@ -97,15 +97,15 @@ class PointTestCase(unittest.TestCase):
         self.assertAlmostEqual(points[-1].latitude, 50, places=2)
 
     def test_longitude_inside_range(self):
-        self.assertRaises(RuntimeError, geo.Point, 180.1, 0.0, 0.0)
-        self.assertRaises(RuntimeError, geo.Point, -180.1, 0.0, 0.0)
+        self.assertRaises(ValueError, geo.Point, 180.1, 0.0, 0.0)
+        self.assertRaises(ValueError, geo.Point, -180.1, 0.0, 0.0)
 
         geo.Point(180.0, 0.0)
         geo.Point(-180.0, 0.0)
 
     def test_latitude_inside_range(self):
-        self.assertRaises(RuntimeError, geo.Point, 0.0, 90.1, 0.0)
-        self.assertRaises(RuntimeError, geo.Point, 0.0, -90.1, 0.0)
+        self.assertRaises(ValueError, geo.Point, 0.0, 90.1, 0.0)
+        self.assertRaises(ValueError, geo.Point, 0.0, -90.1, 0.0)
 
         geo.Point(0.0, 90.0, 0.0)
         geo.Point(0.0, -90.0, 0.0)

@@ -95,7 +95,7 @@ def get_spherical_bounding_box(lons, lats):
         A tuple of four items. These items represent western, eastern,
         northern and southern borders of the bounding box respectively.
         Values are floats in decimal degrees.
-    :raises RuntimeError:
+    :raises ValueError:
         If points collection has the longitudinal extent of more than
         180 degrees (it is impossible to define a single hemisphere
         bound to poles that would contain the whole collection).
@@ -112,8 +112,8 @@ def get_spherical_bounding_box(lons, lats):
         if not all ((get_longitudinal_extent(west, lon) >= 0
                      and get_longitudinal_extent(lon, east) >= 0)
                     for lon in lons):
-            raise RuntimeError('points collection has longitudinal extent '
-                               'wider than 180 deg')
+            raise ValueError('points collection has longitudinal extent '
+                             'wider than 180 deg')
     return west, east, north, south
 
 

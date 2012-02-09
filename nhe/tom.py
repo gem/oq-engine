@@ -11,12 +11,12 @@ class PoissonTOM(object):
 
     :param time_span:
         The time interval of interest, in years.
-    :raises RuntimeError:
+    :raises ValueError:
         If ``time_span`` is not positive.
     """
     def __init__(self, time_span):
         if time_span <= 0:
-            raise RuntimeError('time_span must be positive')
+            raise ValueError('time_span must be positive')
         self.time_span = time_span
 
     def get_probability(self, occurrence_rate):

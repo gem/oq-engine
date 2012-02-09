@@ -38,10 +38,10 @@ class Point(object):
     """
     def __init__(self, longitude, latitude, depth=0.0):
         if longitude < -180.0 or longitude > 180.0:
-            raise RuntimeError("Longitude %.6f outside range!" % longitude)
+            raise ValueError("Longitude %.6f outside range!" % longitude)
 
         if latitude < -90.0 or latitude > 90.0:
-            raise RuntimeError("Latitude %.6f outside range!" % latitude)
+            raise ValueError("Latitude %.6f outside range!" % latitude)
 
         self.depth = depth
         self.latitude = latitude

@@ -64,7 +64,7 @@ class LineTestCase(unittest.TestCase):
         self.assertEqual(geo.Line([p1]), geo.Line([p1]).resample(10.0))
 
     def test_one_point_needed(self):
-        self.assertRaises(RuntimeError, geo.Line, [])
+        self.assertRaises(ValueError, geo.Line, [])
 
     def test_remove_adjacent_duplicates(self):
         p1 = geo.Point(0.0, 0.0, 0.0)
@@ -83,7 +83,7 @@ class LineTestCase(unittest.TestCase):
         p3 = geo.Point(1.0, 1.0)
         p4 = geo.Point(0.0, 0.5)
 
-        self.assertRaises(RuntimeError, geo.Line, [p1, p2, p3, p4])
+        self.assertRaises(ValueError, geo.Line, [p1, p2, p3, p4])
 
         # doesn't take into account depth
         p1 = geo.Point(0.0, 0.0, 1.0)
@@ -91,12 +91,12 @@ class LineTestCase(unittest.TestCase):
         p3 = geo.Point(1.0, 1.0, 1.0)
         p4 = geo.Point(0.0, 0.5, 1.5)
 
-        self.assertRaises(RuntimeError, geo.Line, [p1, p2, p3, p4])
+        self.assertRaises(ValueError, geo.Line, [p1, p2, p3, p4])
 
     def test_invalid_line_crossing_international_date_line(self):
         broken_points = [geo.Point(178, 0), geo.Point(178, 10),
                          geo.Point(-178, 0), geo.Point(170, 5)]
-        self.assertRaises(RuntimeError, geo.Line, broken_points)
+        self.assertRaises(ValueError, geo.Line, broken_points)
 
     def test_valid_line_crossing_international_date_line(self):
         points = [geo.Point(178, 0), geo.Point(178, 10),

@@ -14,35 +14,35 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
     def test_top_edge_depth_differs(self):
         corners = [Point(0, -1, 0.3), Point(0, 1, 0.30001),
                    Point(0, 1, 0.5), Point(0, -1, 0.5)]
-        self.assert_failed_creation(corners, RuntimeError,
+        self.assert_failed_creation(corners, ValueError,
             'top and bottom edges must be parallel to the earth surface'
         )
 
     def test_bottom_edge_depth_differs(self):
         corners = [Point(0, -1, 0.3), Point(0, 1, 0.3),
                    Point(0, 1, 0.5), Point(0, -1, 0.499999)]
-        self.assert_failed_creation(corners, RuntimeError,
+        self.assert_failed_creation(corners, ValueError,
             'top and bottom edges must be parallel to the earth surface'
         )
 
     def test_twisted_surface(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(0, -1, 2), Point(0, 1, 2)]
-        self.assert_failed_creation(corners, RuntimeError,
+        self.assert_failed_creation(corners, ValueError,
             'top and bottom edges must be parallel'
         )
 
     def test_edges_not_parallel(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(-0.3, 1, 2), Point(0.3, -1, 2)]
-        self.assert_failed_creation(corners, RuntimeError,
+        self.assert_failed_creation(corners, ValueError,
             'top and bottom edges must be parallel'
         )
 
     def test_top_edge_shorter_than_bottom_edge(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(0, 1.2, 2), Point(0, -1.2, 2)]
-        self.assert_failed_creation(corners, RuntimeError,
+        self.assert_failed_creation(corners, ValueError,
             'top and bottom edges must have the same length'
         )
 

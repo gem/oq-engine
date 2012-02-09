@@ -99,7 +99,7 @@ class GetSphericalBoundingBox(unittest.TestCase):
     def test_too_wide_longitudinal_extent(self):
         for lons, lats in [([-45, -135, 135, 45], [80] * 4),
                            ([0, 10, -175], [0] * 4)]:
-            with self.assertRaises(RuntimeError) as ae:
+            with self.assertRaises(ValueError) as ae:
                 self.func(lons, lats)
                 self.assertEqual(ae.exception.message,
                                  'points collection has longitudinal '
