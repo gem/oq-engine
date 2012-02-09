@@ -378,7 +378,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
     def test_exposure_data_with_no_number_and_coco_reco_not_aggregated(self):
         # the 'number_of_assets' datum must be present when the contents
         # and retrofitting cost type is not 'aggregated'.
-        self.mdl.area_type = "aggregated"
+        self.mdl.area_type = "per_asset"
         self.mdl.area_unit = "sqm"
         self.mdl.reco_type = "per_area"
         self.mdl.reco_unit = "YEN"
@@ -395,7 +395,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         except DatabaseError, de:
             self.assertEqual(
                 "Exception: number_of_assets is mandatory for "
-                "<reco_type=per_area, coco_type=per_asset> (exposure_data)",
+                "<coco_type=per_asset, reco_type=per_area> (exposure_data)",
                 de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
