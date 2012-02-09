@@ -254,18 +254,118 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         self.mdl = models.ExposureModel(input=emdl_input, owner=self.job.owner,
                                         name="exposure-data-testing",
                                         category="economic loss")
+        self.mdl.stco_type = "aggregated"
+        self.mdl.stco_unit = "EUR"
 
     def test_exposure_data_with_no_stco_and_population(self):
         # the structural cost needs not be present when we calculate exposure
         # in terms of population
-        self.mdl.coco_type = "aggregated"
-        self.mdl.coco_unit = "EUR"
         self.mdl.category = "population"
         self.mdl.save()
         site = shapes.Site(-122.5000, 37.5000)
-
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), number_of_units=111,
             site="POINT(%s %s)" % (site.point.x, site.point.y))
         edata.save()
+
+    def test_exposure_data_with_no_stco_and_category_not_population(self):
+        # the structural cost must be present when we calculate exposure
+        # in terms other than population.
+        self.mdl.save()
+        site = shapes.Site(-122.4000, 37.6000)
+        edata = models.ExposureData(
+            exposure_model=self.mdl, asset_ref=helpers.random_string(),
+            taxonomy=helpers.random_string(), number_of_units=111,
+            site="POINT(%s %s)" % (site.point.x, site.point.y))
+        try:
+            edata.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "INSERT: error: structural cost mandatory for category "
+                "<economic loss> (exposure_data)", de.args[0].strip())
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_exposure_data_with_no_number_and_population(self):
+        # the 'number_of_units' datum must be present when we calculate
+        # exposure in terms of population
+        self.mdl.category = "population"
+        self.mdl.save()
+        site = shapes.Site(-122.3000, 37.7000)
+        edata = models.ExposureData(
+            exposure_model=self.mdl, asset_ref=helpers.random_string(),
+            taxonomy=helpers.random_string(),
+            site="POINT(%s %s)" % (site.point.x, site.point.y))
+        try:
+            edata.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "INSERT: error: number_of_units is mandatory for "
+                "category=population (exposure_data)", de.args[0].strip())
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_exposure_data_with_no_number_and_stco_type_not_aggregated(self):
+        # the 'number_of_units' datum must be present when the structural
+        # cost type is not 'aggregated'.
+        self.mdl.stco_type = "per_asset"
+        self.mdl.save()
+        site = shapes.Site(-122.2000, 37.8000)
+        edata = models.ExposureData(
+            exposure_model=self.mdl, asset_ref=helpers.random_string(),
+            taxonomy=helpers.random_string(), stco=11.0,
+            site="POINT(%s %s)" % (site.point.x, site.point.y))
+        try:
+            edata.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "INSERT: error: number_of_units is mandatory for "
+                "stco_type=per_asset (exposure_data)", de.args[0].strip())
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_exposure_data_with_no_number_and_reco_type_not_aggregated(self):
+        # the 'number_of_units' datum must be present when the retrofitting
+        # cost type is not 'aggregated'.
+        self.mdl.reco_type = "per_asset"
+        self.mdl.reco_unit = "GBP"
+        self.mdl.save()
+        site = shapes.Site(-122.2000, 37.9000)
+        edata = models.ExposureData(
+            exposure_model=self.mdl, asset_ref=helpers.random_string(),
+            taxonomy=helpers.random_string(), stco=12.0, reco=13.0,
+            site="POINT(%s %s)" % (site.point.x, site.point.y))
+        try:
+            edata.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "INSERT: error: number_of_units is mandatory for "
+                "reco_type=per_asset (exposure_data)", de.args[0].strip())
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_exposure_data_with_no_number_and_coco_type_not_aggregated(self):
+        # the 'number_of_units' datum must be present when the contents
+        # cost type is not 'aggregated'.
+        self.mdl.coco_type = "per_asset"
+        self.mdl.coco_unit = "YEN"
+        self.mdl.save()
+        site = shapes.Site(-122.0000, 38.0000)
+        edata = models.ExposureData(
+            exposure_model=self.mdl, asset_ref=helpers.random_string(),
+            taxonomy=helpers.random_string(), stco=14.0, coco=15.0,
+            site="POINT(%s %s)" % (site.point.x, site.point.y))
+        try:
+            edata.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "INSERT: error: number_of_units is mandatory for "
+                "coco_type=per_asset (exposure_data)", de.args[0].strip())
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
