@@ -244,10 +244,17 @@ COMMENT ON FUNCTION refresh_last_update() IS
 CREATE OR REPLACE FUNCTION pcheck_exposure_model()
   RETURNS TRIGGER
 AS $$
+    NEW = TD["new"]
+
     def fmt(err):
         return "%s (%s)" % (err, TD["table_name"])
 
-    NEW = TD["new"]
+    def check_xor(a, b):
+        """Raise exception if only one of the items is defined."""
+        if not ((NEW[a] and NEW[b]) or (not NEW[a] and not NEW[b])):
+            raise Exception(fmt("%s (%s) and %s (%s) must both be either "
+                                "defined or undefined" %
+                                (a, NEW[a], b, NEW[b])))
 
     if NEW["area_type"] is None:
         violations = []
@@ -267,15 +274,9 @@ AS $$
             raise Exception(fmt("area_unit is mandatory for <%s>" %
                                 ", ".join("%s=%s" % v for v in violations)))
 
-    if NEW["coco_unit"] is None and NEW["coco_type"] is not None:
-        raise Exception(fmt("contents cost unit is mandatory for "
-                            "<coco_type=%s>" % NEW["coco_type"]))
-    if NEW["reco_unit"] is None and NEW["reco_type"] is not None:
-        raise Exception(fmt("retrofitting cost unit is mandatory for "
-                            "<reco_type=%s>" % NEW["reco_type"]))
-    if NEW["stco_unit"] is None and NEW["stco_type"] is not None:
-        raise Exception(fmt("structural cost unit is mandatory for "
-                            "<stco_type=%s>" % NEW["stco_type"]))
+    check_xor("coco_unit", "coco_type")
+    check_xor("reco_unit", "reco_type")
+    check_xor("stco_unit", "stco_type")
     if NEW["stco_type"] is None and NEW["category"] != "population":
         raise Exception(fmt("structural cost type is mandatory for "
                             "<category=%s>" % NEW["category"]))
