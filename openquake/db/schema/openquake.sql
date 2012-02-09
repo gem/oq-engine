@@ -1364,23 +1364,23 @@ CREATE TABLE oqmif.exposure_model (
     area_unit VARCHAR,
 
     -- contents cost type
-    coco_type VARCHAR CONSTRAINT coco_type_vale
+    coco_type VARCHAR CONSTRAINT coco_type_value
         CHECK(coco_type IS NULL OR coco_type = 'per_asset'
               OR coco_type = 'per_area' OR coco_type = 'aggregated'),
     -- contents cost unit
     coco_unit VARCHAR,
 
     -- retrofitting cost type
-    reco_type VARCHAR CONSTRAINT reco_type_vale
+    reco_type VARCHAR CONSTRAINT reco_type_value
         CHECK(reco_type IS NULL OR reco_type = 'per_asset'
               OR reco_type = 'per_area' OR reco_type = 'aggregated'),
     -- retrofitting cost unit
     reco_unit VARCHAR,
 
     -- structural cost type
-    stco_type VARCHAR CONSTRAINT stco_type_vale
-        CHECK(stco_type = 'per_asset' OR stco_type = 'per_area'
-              OR stco_type = 'aggregated'),
+    stco_type VARCHAR CONSTRAINT stco_type_value
+        CHECK(stco_type IS NULL OR stco_type = 'per_asset'
+              OR stco_type = 'per_area' OR stco_type = 'aggregated'),
     -- structural cost unit
     stco_unit VARCHAR,
 
