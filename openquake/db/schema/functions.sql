@@ -297,7 +297,6 @@ AS $$
     q = ("SELECT * FROM oqmif.exposure_model WHERE id = %s" %
          NEW["exposure_model_id"])
     [emdl] = plpy.execute(q)
-    plpy.info("emdl: %s" % emdl)
 
     if NEW["stco"] is None and emdl["category"] != "population":
         raise Exception(fmt("structural cost is mandatory for category <%s>" %
