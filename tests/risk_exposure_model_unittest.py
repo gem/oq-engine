@@ -282,8 +282,9 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
             edata.save()
         except DatabaseError, de:
             self.assertEqual(
-                "INSERT: error: structural cost mandatory for category "
-                "<economic loss> (exposure_data)", de.args[0].strip())
+                "Exception: structural cost is mandatory for category "
+                "<economic loss> (exposure_data)",
+                de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
@@ -302,8 +303,9 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
             edata.save()
         except DatabaseError, de:
             self.assertEqual(
-                "INSERT: error: number_of_assets is mandatory for "
-                "<category=population> (exposure_data)", de.args[0].strip())
+                "Exception: number_of_assets is mandatory for "
+                "<category=population> (exposure_data)",
+                de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
@@ -322,8 +324,9 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
             edata.save()
         except DatabaseError, de:
             self.assertEqual(
-                "INSERT: error: number_of_assets is mandatory for "
-                "<stco_type=per_asset> (exposure_data)", de.args[0].strip())
+                "Exception: number_of_assets is mandatory for "
+                "<stco_type=per_asset> (exposure_data)",
+                de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
@@ -343,8 +346,9 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
             edata.save()
         except DatabaseError, de:
             self.assertEqual(
-                "INSERT: error: number_of_assets is mandatory for "
-                "<reco_type=per_asset> (exposure_data)", de.args[0].strip())
+                "Exception: number_of_assets is mandatory for "
+                "<reco_type=per_asset> (exposure_data)",
+                de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
@@ -364,8 +368,9 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
             edata.save()
         except DatabaseError, de:
             self.assertEqual(
-                "INSERT: error: number_of_assets is mandatory for "
-                "<coco_type=per_asset> (exposure_data)", de.args[0].strip())
+                "Exception: number_of_assets is mandatory for "
+                "<coco_type=per_asset> (exposure_data)",
+                de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
@@ -389,9 +394,9 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
             edata.save()
         except DatabaseError, de:
             self.assertEqual(
-                "INSERT: error: number_of_assets is mandatory for "
+                "Exception: number_of_assets is mandatory for "
                 "<reco_type=per_area, coco_type=per_asset> (exposure_data)",
-                de.args[0].strip())
+                de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
