@@ -359,13 +359,25 @@ AS $$
         if emdl["category"] == "population":
             violations.append(("category", "population"))
         for key in ["coco_type", "reco_type", "stco_type"]:
-            if NEW.get(key) is None or NEW[key] == "aggregated":
+            if emdl.get(key) is None or emdl[key] == "aggregated":
                 continue
-            if (NEW[key] == "per_asset" or (NEW[key] == "per_area" and
-                NEW["area_type"] == "per_asset")):
-                violations.append((key, NEW[key]))
+            if (emdl[key] == "per_asset" or (emdl[key] == "per_area" and
+                emdl["area_type"] == "per_asset")):
+                violations.append((key, emdl[key]))
         if violations:
             raise Exception(fmt("number_of_assets is mandatory for <%s>" %
+                                ", ".join("%s=%s" % v for v in violations)))
+
+    if NEW["area"] is None:
+        violations = []
+        for key in ["coco_type", "reco_type", "stco_type"]:
+            if emdl.get(key) is None or emdl[key] != "per_area":
+                continue
+            if (emdl[key] == "per_asset" or (emdl[key] == "per_area" and
+                emdl["area_type"] == "per_asset")):
+                violations.append((key, emdl[key]))
+        if violations:
+            raise Exception(fmt("area is mandatory for <%s>" %
                                 ", ".join("%s=%s" % v for v in violations)))
 
     return "OK"
