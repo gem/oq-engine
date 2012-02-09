@@ -5,7 +5,6 @@ from nhe.geo import Point
 from nhe.geo.surface.planar import PlanarSurface
 from nhe.source.nodalplane import NodalPlane
 from nhe.tom import PoissonTOM
-from nhe.source.base import SourceError
 from nhe.source.rupture import Rupture, ProbabilisticRupture
 
 
@@ -33,37 +32,37 @@ class RuptureCreationTestCase(unittest.TestCase):
         self.assertEqual(ae.exception.message, msg)
 
     def test_wrong_trt(self):
-        self.assert_failed_creation(Rupture, SourceError,
+        self.assert_failed_creation(Rupture, ValueError,
             "unknown tectonic region type 'Swamp'",
             tectonic_region_type='Swamp'
         )
 
     def test_negative_magnitude(self):
-        self.assert_failed_creation(Rupture, SourceError,
+        self.assert_failed_creation(Rupture, ValueError,
             'magnitude must be positive',
             mag=-1
         )
 
     def test_zero_magnitude(self):
-        self.assert_failed_creation(Rupture, SourceError,
+        self.assert_failed_creation(Rupture, ValueError,
             'magnitude must be positive',
             mag=0
         )
 
     def test_hypocenter_in_the_air(self):
-        self.assert_failed_creation(Rupture, SourceError,
+        self.assert_failed_creation(Rupture, ValueError,
             'rupture hypocenter must have positive depth',
             hypocenter=Point(0, 1, -0.1)
         )
 
     def test_probabilistic_rupture_negative_occurrence_rate(self):
-        self.assert_failed_creation(ProbabilisticRupture, SourceError,
+        self.assert_failed_creation(ProbabilisticRupture, ValueError,
             'occurrence rate must be positive',
             occurrence_rate=-1, temporal_occurrence_model=PoissonTOM(10)
         )
 
     def test_probabilistic_rupture_zero_occurrence_rate(self):
-        self.assert_failed_creation(ProbabilisticRupture, SourceError,
+        self.assert_failed_creation(ProbabilisticRupture, ValueError,
             'occurrence rate must be positive',
             occurrence_rate=0, temporal_occurrence_model=PoissonTOM(10)
         )

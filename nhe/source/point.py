@@ -5,7 +5,7 @@ import math
 
 from nhe.geo import Point
 from nhe.geo.surface.planar import PlanarSurface
-from nhe.source.base import SeismicSource, SourceError
+from nhe.source.base import SeismicSource
 from nhe.source.rupture import ProbabilisticRupture
 
 
@@ -41,7 +41,7 @@ class PointSource(SeismicSource):
     See also :class:`nhe.source.base.SeismicSource` for description of other
     parameters.
 
-    :raises nhe.source.base.SourceError:
+    :raises ValueError:
         If upper seismogenic depth is negative or below lower seismogenic
         depth, if rupture aspect ratio is not positive and if one or more
         of hypocenter depth values is shallower than upper seismogenic depth
@@ -55,19 +55,19 @@ class PointSource(SeismicSource):
                                           tectonic_region_type, mfd)
 
         if upper_seismogenic_depth < 0:
-            raise SourceError('upper seismogenic depth must be non-negative')
+            raise ValueError('upper seismogenic depth must be non-negative')
 
         if not lower_seismogenic_depth > upper_seismogenic_depth:
-            raise SourceError('lower seismogenic depth must be below '
-                              'upper seismogenic depth')
+            raise ValueError('lower seismogenic depth must be below '
+                             'upper seismogenic depth')
 
         if not all(upper_seismogenic_depth <= depth <= lower_seismogenic_depth
                    for (prob, depth) in hypocenter_distribution.data):
-            raise SourceError('depths of all hypocenters must be in between '
-                              'lower and upper seismogenic depths')
+            raise ValueError('depths of all hypocenters must be in between '
+                             'lower and upper seismogenic depths')
 
         if not rupture_aspect_ratio > 0:
-            raise SourceError('rupture aspect ratio must be positive')
+            raise ValueError('rupture aspect ratio must be positive')
 
         self.location = location
         self.nodal_plane_distribution = nodal_plane_distribution

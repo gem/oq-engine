@@ -3,7 +3,6 @@ Module :mod:`nhe.source.rupture` defines classes :class:`Rupture`
 and its subclass :class:`ProbabilisticRupture`.
 """
 from nhe import const
-from nhe.source.base import SourceError
 
 
 class Rupture(object):
@@ -23,19 +22,19 @@ class Rupture(object):
         An instance of subclass of :class:`~nhe.geo.surface.base.BaseSurface`.
         Object representing the rupture surface geometry.
 
-    :raises SourceError:
+    :raises ValueError:
         If magnitude value is not positive, hypocenter is above the earth
         surface or tectonic region type is unknown.
     """
     def __init__(self, mag, nodal_plane, tectonic_region_type,
                  hypocenter, surface):
         if not mag > 0:
-            raise SourceError('magnitude must be positive')
+            raise ValueError('magnitude must be positive')
         if not hypocenter.depth > 0:
-            raise SourceError('rupture hypocenter must have positive depth')
+            raise ValueError('rupture hypocenter must have positive depth')
         if not const.TRT.is_valid(tectonic_region_type):
-            raise SourceError('unknown tectonic region type %r' %
-                              tectonic_region_type)
+            raise ValueError('unknown tectonic region type %r' %
+                             tectonic_region_type)
         self.tectonic_region_type = tectonic_region_type
         self.mag = mag
         self.nodal_plane = nodal_plane
@@ -54,14 +53,14 @@ class ProbabilisticRupture(Rupture):
         Temporal occurrence model assigned for this rupture. Should
         be an instance of :class:`nhe.tom.PoissonTOM`.
 
-    :raises SourceError:
+    :raises ValueError:
         If occurrence rate is not positive.
     """
     def __init__(self, mag, nodal_plane, tectonic_region_type,
                  hypocenter, surface,
                  occurrence_rate, temporal_occurrence_model):
         if not occurrence_rate > 0:
-            raise SourceError('occurrence rate must be positive')
+            raise ValueError('occurrence rate must be positive')
         super(ProbabilisticRupture, self).__init__(
             mag, nodal_plane, tectonic_region_type, hypocenter, surface
         )

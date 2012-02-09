@@ -3,7 +3,6 @@ from decimal import Decimal
 
 from nhe.const import TRT
 from nhe.source.point import PointSource
-from nhe.source.base import SourceError
 from nhe.source.rupture import ProbabilisticRupture
 from nhe.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from nhe.msr import PeerMSR
@@ -42,31 +41,31 @@ class PointSourceCreationTestCase(unittest.TestCase):
         self.assertEqual(ae.exception.message, msg)
 
     def test_wrong_trt(self):
-        self.assert_failed_creation(SourceError,
+        self.assert_failed_creation(ValueError,
             "unknown tectonic region type 'Sand'",
             tectonic_region_type='Sand'
         )
 
     def test_negative_upper_seismogenic_depth(self):
-        self.assert_failed_creation(SourceError,
+        self.assert_failed_creation(ValueError,
             'upper seismogenic depth must be non-negative',
             upper_seismogenic_depth=-0.1
         )
 
     def test_lower_depth_above_upper_depth(self):
-        self.assert_failed_creation(SourceError,
+        self.assert_failed_creation(ValueError,
             'lower seismogenic depth must be below upper seismogenic depth',
             upper_seismogenic_depth=10, lower_seismogenic_depth=8
         )
 
     def test_lower_depth_equal_to_upper_depth(self):
-        self.assert_failed_creation(SourceError,
+        self.assert_failed_creation(ValueError,
             'lower seismogenic depth must be below upper seismogenic depth',
             upper_seismogenic_depth=10, lower_seismogenic_depth=10
         )
 
     def test_hypocenter_depth_out_of_seismogenic_layer(self):
-        self.assert_failed_creation(SourceError,
+        self.assert_failed_creation(ValueError,
             'depths of all hypocenters must be in between '
             'lower and upper seismogenic depths',
             upper_seismogenic_depth=3, lower_seismogenic_depth=8,
@@ -75,13 +74,13 @@ class PointSourceCreationTestCase(unittest.TestCase):
         )
 
     def test_negative_aspect_ratio(self):
-        self.assert_failed_creation(SourceError,
+        self.assert_failed_creation(ValueError,
             'rupture aspect ratio must be positive',
             rupture_aspect_ratio=-1
         )
 
     def test_zero_aspect_ratio(self):
-        self.assert_failed_creation(SourceError,
+        self.assert_failed_creation(ValueError,
             'rupture aspect ratio must be positive',
             rupture_aspect_ratio=0
         )
