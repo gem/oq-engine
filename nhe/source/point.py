@@ -5,7 +5,8 @@ import math
 
 from nhe.geo import Point
 from nhe.geo.surface.planar import PlanarSurface
-from nhe.source.base import SeismicSource, SourceError, ProbabilisticRupture
+from nhe.source.base import SeismicSource, SourceError
+from nhe.source.rupture import ProbabilisticRupture
 
 
 class PointSource(SeismicSource):
