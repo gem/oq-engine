@@ -194,8 +194,8 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
-                "Exception: contents cost unit is mandatory for "
-                "<coco_type=aggregated> (exposure_model)",
+                "Exception: coco_unit (None) and coco_type (aggregated) must "
+                "both be either defined or undefined (exposure_model)",
                 de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
@@ -209,8 +209,8 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
-                "Exception: retrofitting cost unit is mandatory for "
-                "<reco_type=aggregated> (exposure_model)",
+                "Exception: reco_unit (None) and reco_type (aggregated) must "
+                "both be either defined or undefined (exposure_model)",
                 de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
@@ -224,8 +224,8 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
-                "Exception: structural cost unit is mandatory for "
-                "<stco_type=aggregated> (exposure_model)",
+                "Exception: stco_unit (None) and stco_type (aggregated) must "
+                "both be either defined or undefined (exposure_model)",
                 de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
