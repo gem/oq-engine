@@ -1,7 +1,7 @@
 import unittest
 
 from nhe.const import TRT
-from nhe.msr import Peer
+from nhe.msr import PeerMSR
 from nhe.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from nhe.geo import Point, Polygon
 from nhe.common.pmf import PMF
@@ -21,7 +21,7 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
             'hypocenter_distribution': PMF([(1, 4)]),
             'upper_seismogenic_depth': 1.3,
             'lower_seismogenic_depth': 4.9,
-            'magnitude_scaling_relationship': Peer(),
+            'magnitude_scaling_relationship': PeerMSR(),
             'rupture_aspect_ratio': 1.333,
             'polygon': polygon,
             'area_discretization': discretization

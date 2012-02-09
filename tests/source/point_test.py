@@ -5,7 +5,7 @@ from nhe.const import TRT
 from nhe.source.point import PointSource
 from nhe.source.base import ProbabilisticRupture, SourceError
 from nhe.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
-from nhe.msr import Peer
+from nhe.msr import PeerMSR
 from nhe.geo import Point
 from nhe.common.pmf import PMF
 from nhe.common.nodalplane import NodalPlane
@@ -26,7 +26,7 @@ class PointSourceCreationTestCase(unittest.TestCase):
             'hypocenter_distribution': PMF([(1, 4)]),
             'upper_seismogenic_depth': 1.3,
             'lower_seismogenic_depth': 4.9,
-            'magnitude_scaling_relationship': Peer(),
+            'magnitude_scaling_relationship': PeerMSR(),
             'rupture_aspect_ratio': 1.333
         }
         default_arguments.update(kwargs)
@@ -102,7 +102,7 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         hypocenter_distribution = PMF([(1, hypocenter_depth)])
         upper_seismogenic_depth = 2
         lower_seismogenic_depth = 16
-        magnitude_scaling_relationship = Peer()
+        magnitude_scaling_relationship = PeerMSR()
         rupture_aspect_ratio = aspect_ratio
         point_source = PointSource(
             source_id, name, trt, mfd,
@@ -260,7 +260,7 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         lower_seismogenic_depth = 16
         rupture_aspect_ratio = 2
         location = Point(0, 0)
-        magnitude_scaling_relationship = Peer()
+        magnitude_scaling_relationship = PeerMSR()
         tom = PoissonTOM(time_span=50)
 
         mfd = EvenlyDiscretizedMFD(min_mag=mag1, bin_width=(mag2 - mag1),
