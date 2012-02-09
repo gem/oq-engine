@@ -1063,7 +1063,8 @@ class ExposureData(models.Model):
     reco = models.FloatField(null=True, help_text="retrofitting cost")
     coco = models.FloatField(null=True, help_text="contents cost")
 
-    number_of_assets = models.FloatField(null=True)
+    number_of_units = models.FloatField(
+        null=True, help_text="number of assets, people etc.")
     area = models.FloatField(null=True)
 
     coco_limit = models.FloatField(
