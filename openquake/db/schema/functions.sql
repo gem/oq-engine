@@ -244,7 +244,7 @@ COMMENT ON FUNCTION refresh_last_update() IS
 CREATE OR REPLACE FUNCTION pcheck_exposure_model()
   RETURNS TRIGGER
 AS $$
-    NEW = TD["new"]
+    NEW = TD["new"] # new data resulting from insert or update
 
     def fmt(err):
         return "%s (%s)" % (err, TD["table_name"])
@@ -294,7 +294,9 @@ AS $$
     def fmt(err):
         return "%s (%s)" % (err, TD["table_name"])
 
-    NEW = TD["new"]
+    NEW = TD["new"] # new data resulting from insert or update
+
+    # get the associated exposure model record
     q = ("SELECT * FROM oqmif.exposure_model WHERE id = %s" %
          NEW["exposure_model_id"])
     [emdl] = plpy.execute(q)
