@@ -4,7 +4,7 @@ Module :mod:`nhe.geo.polygon` defines :class:`Polygon`.
 import numpy
 import shapely.geometry
 
-from nhe.geo.point import Point
+from nhe.geo.mesh import Mesh
 from nhe.geo._utils import GEOD
 from nhe.geo import _utils as utils
 
@@ -93,8 +93,13 @@ class Polygon(object):
 
     def discretize(self, mesh_spacing):
         """
-        Get a generator of uniformly spaced points inside the polygon area
+        Get a mesh of uniformly spaced points inside the polygon area
         with distance of ``mesh_spacing`` km between.
+
+        :returns:
+            An instance of :class:`~nhe.geo.mesh.Mesh` that holds
+            the points data. Mesh is created with no depth information
+            (all the points are on the Earth surface).
         """
         # cast from km to m
         mesh_spacing *= 1e3
@@ -113,7 +118,8 @@ class Polygon(object):
         xx, yy = proj(lons, lats)
         polygon2d = shapely.geometry.Polygon(zip(xx, yy))
 
-        del xx, yy, lats, lons
+        lons = []
+        lats = []
 
         # we cover the bounding box (in spherical coordinates) from highest
         # to lowest latitude and from left to right by longitude. we step
@@ -129,10 +135,16 @@ class Polygon(object):
                 # is inside of the polygon.
                 x, y = proj(longitude, latitude)
                 if polygon2d.contains(shapely.geometry.Point(x, y)):
-                    yield Point(longitude, latitude)
+                    lons.append(longitude)
+                    lats.append(latitude)
 
                 # move by mesh spacing along parallel in inner loop...
                 longitude, _, _ = GEOD.fwd(longitude, latitude,
                                            90, mesh_spacing)
             # ... and by the same distance along meridian in outer one
             _, latitude, _ = GEOD.fwd(west, latitude, 180, mesh_spacing)
+
+        lons = numpy.array(lons)
+        lats = numpy.array(lats)
+
+        return Mesh(lons, lats, depths=None)
