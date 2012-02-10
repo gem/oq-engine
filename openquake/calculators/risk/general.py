@@ -1073,7 +1073,7 @@ def per_asset_value(edata, cost_type="stco"):
     Calculate per asset value by considering the given exposure data (`edata`)
     and desired cost type (`cost_type`):
 
-        case 1: structural cost type: aggregated: 
+        case 1: structural cost type: aggregated:
             structural cost = economic value
         case 2: structural cost type: per asset:
             structural cost * number (of assets) = economic value
