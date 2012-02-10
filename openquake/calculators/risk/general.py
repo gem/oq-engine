@@ -1065,3 +1065,27 @@ class AggregateLossCurve(object):
                 losses, loss_range), tses), time_span)
 
         return _generate_curve(loss_range, probs_of_exceedance)
+
+
+def per_asset_value(edata, cost_type="stco"):
+    """Return per asset value for the given exposure data set and cost type.
+
+    Calculate per asset value by considering the given exposure data (`edata`)
+    and desired cost type (`cost_type`):
+
+        case 1: structural cost type: aggregated: 
+            structural cost = economic value
+        case 2: structural cost type: per asset:
+            structural cost * number (of assets) = economic value
+        case 3: structural cost type: per area and area type: aggregated:
+            structural cost * area = economic value
+        case 4: structural cost type: per area and area type: per asset:
+            structural cost * area * number = economic value
+
+    The same "formula" applies to contenst/retrofitting cost analogously.
+
+    :param edata: the :class:`openquake.db.models.ExposureData` instance of
+        interest
+    :param str cost_type: one of stco (structural cost), reco (retrofitting
+        cost), coco (contents cost)
+    """
