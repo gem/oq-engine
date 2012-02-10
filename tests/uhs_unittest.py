@@ -155,7 +155,6 @@ class UHSCoreTestCase(unittest.TestCase):
         self.assertEqual(
             set(self.job_profile.poes), set([x.poe for x in uh_spectrums]))
 
-
     def test_write_uhs_spectrum_data(self):
         # Test `write_uhs_spectrum_data`.
 
