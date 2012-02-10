@@ -326,7 +326,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), number_of_units=111,
-            site="POINT(%s %s)" % (site.point.x, site.point.y))
+            site=site.point.to_wkt())
         edata.save()
 
     def test_exposure_data_with_no_stco_and_category_not_population(self):
@@ -337,7 +337,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), number_of_units=111,
-            site="POINT(%s %s)" % (site.point.x, site.point.y))
+            site=site.point.to_wkt())
         try:
             edata.save()
         except DatabaseError, de:
@@ -358,7 +358,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(),
-            site="POINT(%s %s)" % (site.point.x, site.point.y))
+            site=site.point.to_wkt())
         try:
             edata.save()
         except DatabaseError, de:
@@ -379,7 +379,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=11.0,
-            site="POINT(%s %s)" % (site.point.x, site.point.y))
+            site=site.point.to_wkt())
         try:
             edata.save()
         except DatabaseError, de:
@@ -401,7 +401,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=12.0, reco=13.0,
-            site="POINT(%s %s)" % (site.point.x, site.point.y))
+            site=site.point.to_wkt())
         try:
             edata.save()
         except DatabaseError, de:
@@ -423,7 +423,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=14.0, coco=15.0,
-            site="POINT(%s %s)" % (site.point.x, site.point.y))
+            site=site.point.to_wkt())
         try:
             edata.save()
         except DatabaseError, de:
@@ -449,7 +449,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=16.0, coco=17.0,
-            site="POINT(%s %s)" % (site.point.x, site.point.y))
+            site=site.point.to_wkt())
         try:
             edata.save()
         except DatabaseError, de:
@@ -471,7 +471,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=18.0, number_of_units=22,
-            site="POINT(%s %s)" % (site.point.x, site.point.y))
+            site=site.point.to_wkt())
         try:
             edata.save()
         except DatabaseError, de:
@@ -493,7 +493,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=19.0, number_of_units=23,
-            site="POINT(%s %s)" % (site.point.x, site.point.y))
+            site=site.point.to_wkt())
         try:
             edata.save()
         except DatabaseError, de:
@@ -514,7 +514,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), number_of_units=24,
-            site="POINT(%s %s)" % (site.point.x, site.point.y))
+            site=site.point.to_wkt())
         try:
             edata.save()
         except DatabaseError, de:
@@ -537,7 +537,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=20.0,
-            site="POINT(%s %s)" % (site.point.x, site.point.y))
+            site=site.point.to_wkt())
         try:
             edata.save()
         except DatabaseError, de:
@@ -560,7 +560,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=21.0,
-            site="POINT(%s %s)" % (site.point.x, site.point.y))
+            site=site.point.to_wkt())
         try:
             edata.save()
         except DatabaseError, de:
@@ -583,7 +583,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), stco=22.0,
-            site="POINT(%s %s)" % (site.point.x, site.point.y))
+            site=site.point.to_wkt())
         try:
             edata.save()
         except DatabaseError, de:
