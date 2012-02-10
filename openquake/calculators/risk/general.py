@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2010-2011, GEM Foundation.
+# Copyright (c) 2010-2012, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License version 3
@@ -20,15 +20,16 @@
 
 # Silence 'Too many lines in module'
 # pylint: disable=C0302
+
 import json
-import itertools
 import math
 import os
 
 from collections import defaultdict
 from collections import OrderedDict
 
-from scipy.stats import beta
+from scipy import stats
+from scipy import sqrt, log
 
 from numpy import array
 from numpy import exp
@@ -891,75 +892,103 @@ def _compute_probs_of_exceedance(rates_of_exceedance, time_span):
     return array([poe(rate) for rate in rates_of_exceedance])
 
 
-def _compute_alphas(mean_loss_ratios, stdevs):
+def compute_alpha(mean_loss_ratio, stddev):
     """
-    Compute alphas to be used in compute_beta_distributions
+    Compute alpha value
 
-    :param mean_loss_ratios: a list of mean loss ratio floats
-    :type mean_loss_ratios: list
+    :param mean_loss_ratio: current loss ratio
+    :type mean_loss_ratio: float
 
-    :param stdevs: a list of standard deviation floats
-    :type stdevs: list
+    :param stdev: current standard deviation
+    :type stdev: float
 
 
-    :returns: list of alphas
+    :returns: computed alpha value
     """
 
-    alphas = [(((1 - mean_loss_ratio) / stdev ** 2 - 1 / mean_loss_ratio) *
+    return (((1 - mean_loss_ratio) / stddev ** 2 - 1 / mean_loss_ratio) *
                 mean_loss_ratio ** 2)
-                for mean_loss_ratio, stdev in itertools.izip(mean_loss_ratios,
-                stdevs)]
-
-    return alphas
 
 
-def _compute_betas(mean_loss_ratios, stdevs):
+def compute_beta(mean_loss_ratio, stddev):
     """
-    Compute betas to be used in compute_beta_distributions
+    Compute beta value
 
-    :param mean_loss_ratios: a list of mean loss ratio floats
-    :type mean_loss_ratios: list
+    :param mean_loss_ratio: current loss ratio
+    :type mean_loss_ratio: float
 
-    :param stdevs: a list of standard deviations float
-    :type stdevs: list
+    :param stdev: current standard deviation
+    :type stdev: float
 
-    :returns: list of betas
+
+    :returns: computed beta value
     """
-    betas = [(((1 - mean_loss_ratio) / stdev ** 2 - 1 / mean_loss_ratio) *
+
+    return (((1 - mean_loss_ratio) / stddev ** 2 - 1 / mean_loss_ratio) *
         (mean_loss_ratio - mean_loss_ratio ** 2))
-        for mean_loss_ratio, stdev in itertools.izip(
-            mean_loss_ratios, stdevs)]
-
-    return betas
 
 
-def compute_beta_distributions(mean_loss_ratios, stdevs, lrems):
-    """
-    This function computes the Probabilities of exceedance of the Loss
-    Ratio Exceedance Matrix
+class Lognorm(object):
+    """ Simple Wrapper to use in a generic way survival functions """
+    @staticmethod
+    def survival_function(loss_ratio, **kwargs):
+        """
+            Static method that prepares the calculation parameters
+            to be passed to stats.lognorm.sf
 
-    :param mean_loss_ratios: a list of mean loss ratio floats
-    :type mean_loss_ratios: list
+            :param loss_ratio: current loss ratio
+            :type loss_ratio: float
 
-    :param stdevs: a list of standard deviation floats
-    :type stdevs: list
+            :param kwargs: convenience dictionary
+            :type kwargs: :py:class:`dict` with the following
+                keys:
+                    **vf** - vulnerability function as provided by
+                            :py:class:`openquake.shapes.VulnerabilityFunction`
+                    **col** - matrix column number
+        """
+        vuln_function = kwargs.get('vf')
+        position = kwargs.get('col')
 
-    :param lrems: a list of lrem floats
-    :type lrems: list
+        vf_loss_ratio = vuln_function.loss_ratios[position]
 
-    :returns: list of beta distributions
-    """
-    alphas = _compute_alphas(mean_loss_ratios, stdevs)
-    betas = _compute_betas(mean_loss_ratios, stdevs)
+        stddev = vuln_function.covs[position] * vf_loss_ratio
 
-    bt = beta(alphas, betas)
+        variance = stddev ** 2.0
 
-    beta_distributions = []
+        sigma = sqrt(log((variance / vf_loss_ratio ** 2.0) + 1.0))
+        mu = exp(log(vf_loss_ratio ** 2.0 /
+            sqrt(variance + vf_loss_ratio ** 2.0)))
 
-    for x in lrems:
-        beta_distributions.extend(1 - bt.cdf(x))
+        return stats.lognorm.sf(loss_ratio, sigma, scale=mu)
 
-    return beta_distributions
+
+class BetaDistribution(object):
+    """ Simple Wrapper to use in a generic way Beta Distributions """
+    @staticmethod
+    def survival_function(loss_ratio, **kwargs):
+        """
+            Static method that prepares the calculation parameters
+            to be passed to stats.beta.sf
+
+
+            :param loss_ratio: current loss ratio
+            :type loss_ratio: float
+
+            :param kwargs: convenience dictionary
+            :type kwargs: :py:class:`dict` with the following
+                keys:
+                    **vf** - vulnerability function as provided by
+                            :py:class:`openquake.shapes.VulnerabilityFunction`
+                    **col** - matrix column number
+        """
+        vuln_function = kwargs.get('vf')
+        col = kwargs.get('col')
+        vf_loss_ratio = vuln_function.loss_ratios[col]
+        stddev = vuln_function.stddevs[col]
+
+        return stats.beta.sf(loss_ratio,
+                compute_alpha(vf_loss_ratio, stddev),
+                compute_beta(vf_loss_ratio, stddev))
 
 
 def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
