@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2010-2011, GEM Foundation.
+# Copyright (c) 2010-2012, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License version 3
@@ -881,6 +881,7 @@ class UhSpectra(models.Model):
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdr\".\"uh_spectra'
 
+
 class UhSpectrum(models.Model):
     """Uniform Hazard Spectrum
 
@@ -892,6 +893,7 @@ class UhSpectrum(models.Model):
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdr\".\"uh_spectrum'
+
 
 class UhSpectrumData(models.Model):
     """Uniform Hazard Spectrum Data
