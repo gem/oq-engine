@@ -489,10 +489,10 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         self.mdl.coco_type = "per_asset"
         self.mdl.coco_unit = "MUR"
         self.mdl.save()
-        site = shapes.Site(-121.8000, 38.2000)
+        site = shapes.Site(-121.7000, 38.3000)
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
-            taxonomy=helpers.random_string(), stco=18.0, number_of_units=23,
+            taxonomy=helpers.random_string(), stco=19.0, number_of_units=23,
             site="POINT(%s %s)" % (site.point.x, site.point.y))
         try:
             edata.save()
@@ -510,7 +510,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         # is set.
         self.mdl.category = "population"
         self.mdl.save()
-        site = shapes.Site(-121.8000, 38.2000)
+        site = shapes.Site(-121.6000, 38.4000)
         edata = models.ExposureData(
             exposure_model=self.mdl, asset_ref=helpers.random_string(),
             taxonomy=helpers.random_string(), number_of_units=24,
@@ -521,6 +521,75 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
             self.assertEqual(
                 "Exception: structural cost is mandatory for "
                 "<stco_type=aggregated> (exposure_data)",
+                de.args[0].split('\n', 1)[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_exposure_reco_type_per_area_but_no_area_value(self):
+        # the area must be set if the retrofitting cost type is 'per_area'
+        self.mdl.reco_type = "per_area"
+        self.mdl.reco_unit = "NPR"
+        self.mdl.area_type = "aggregated"
+        self.mdl.area_unit = "PKR"
+        self.mdl.save()
+        site = shapes.Site(-121.5000, 38.5000)
+        edata = models.ExposureData(
+            exposure_model=self.mdl, asset_ref=helpers.random_string(),
+            taxonomy=helpers.random_string(), stco=20.0,
+            site="POINT(%s %s)" % (site.point.x, site.point.y))
+        try:
+            edata.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "Exception: area is mandatory for <reco_type=per_area> "
+                "(exposure_data)",
+                de.args[0].split('\n', 1)[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_exposure_coco_type_per_area_but_no_area_value(self):
+        # the area must be set if the contents cost type is 'per_area'
+        self.mdl.coco_type = "per_area"
+        self.mdl.coco_unit = "SCR"
+        self.mdl.area_type = "aggregated"
+        self.mdl.area_unit = "LKR"
+        self.mdl.save()
+        site = shapes.Site(-121.4000, 38.6000)
+        edata = models.ExposureData(
+            exposure_model=self.mdl, asset_ref=helpers.random_string(),
+            taxonomy=helpers.random_string(), stco=21.0,
+            site="POINT(%s %s)" % (site.point.x, site.point.y))
+        try:
+            edata.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "Exception: area is mandatory for <coco_type=per_area> "
+                "(exposure_data)",
+                de.args[0].split('\n', 1)[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_exposure_stco_type_per_area_but_no_area_value(self):
+        # the area must be set if the structural cost type is 'per_area'
+        self.mdl.stco_type = "per_area"
+        self.mdl.stco_unit = "IDR"
+        self.mdl.area_type = "aggregated"
+        self.mdl.area_unit = "ATS"
+        self.mdl.save()
+        site = shapes.Site(-121.3000, 38.7000)
+        edata = models.ExposureData(
+            exposure_model=self.mdl, asset_ref=helpers.random_string(),
+            taxonomy=helpers.random_string(), stco=22.0,
+            site="POINT(%s %s)" % (site.point.x, site.point.y))
+        try:
+            edata.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "Exception: area is mandatory for <stco_type=per_area> "
+                "(exposure_data)",
                 de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
