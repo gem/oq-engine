@@ -881,6 +881,7 @@ class UhSpectra(models.Model):
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdr\".\"uh_spectra'
 
+
 class UhSpectrum(models.Model):
     """Uniform Hazard Spectrum
 
@@ -892,6 +893,7 @@ class UhSpectrum(models.Model):
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdr\".\"uh_spectrum'
+
 
 class UhSpectrumData(models.Model):
     """Uniform Hazard Spectrum Data
