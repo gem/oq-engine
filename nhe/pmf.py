@@ -1,5 +1,5 @@
 """
-Module :mod:`nhe.common.pmf` implements :class:`PMF`.
+Module :mod:`nhe.pmf` implements :class:`PMF`.
 """
 
 
@@ -21,7 +21,7 @@ class PMF(object):
         The type of values (second items in tuples) is not strictly defined,
         those can be objects of any (mixed or homogeneous) type.
 
-    :raises RuntimeError:
+    :raises ValueError:
         If probabilities do not sum up to 1 or there is zero or negative
         probability.
     """
@@ -30,7 +30,7 @@ class PMF(object):
 
     def __init__(self, data):
         if not data or (sum(prob for (prob, value) in data) != 1.0):
-            raise RuntimeError('values do not sum up to 1.0')
+            raise ValueError('values do not sum up to 1.0')
         if any(prob <= 0 for (prob, value) in data):
-            raise RuntimeError('probability is not positive')
+            raise ValueError('probability is not positive')
         self.data = data

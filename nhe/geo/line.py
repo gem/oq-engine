@@ -23,12 +23,12 @@ class Line(object):
         self.points = utils.clean_points(points)
 
         if len(self.points) < 1:
-            raise RuntimeError("One point needed to create a line!")
+            raise ValueError("One point needed to create a line!")
 
         lats = [point.latitude for point in self.points]
         lons = [point.longitude for point in self.points]
         if utils.line_intersects_itself(lons, lats):
-            raise RuntimeError("Line intersects itself!")
+            raise ValueError("Line intersects itself!")
 
     def __eq__(self, other):
         """

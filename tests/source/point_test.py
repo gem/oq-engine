@@ -3,13 +3,13 @@ from decimal import Decimal
 
 from nhe.const import TRT
 from nhe.source.point import PointSource
-from nhe.source.base import ProbabilisticRupture, SourceError
-from nhe.mfd import TruncatedGR, EvenlyDiscretized
-from nhe.msr import Peer
+from nhe.source.rupture import ProbabilisticRupture
+from nhe.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
+from nhe.msr import PeerMSR
 from nhe.geo import Point
-from nhe.common.pmf import PMF
-from nhe.common.nodalplane import NodalPlane
-from nhe.common.tom import PoissonTOM
+from nhe.pmf import PMF
+from nhe.source.nodalplane import NodalPlane
+from nhe.tom import PoissonTOM
 
 from tests.geo.surface import _planar_test_data as planar_surface_test_data
 
@@ -19,14 +19,14 @@ class PointSourceCreationTestCase(unittest.TestCase):
         default_arguments = {
             'source_id': 'source_id', 'name': 'source name',
             'tectonic_region_type': TRT.SUBDUCTION_INTRASLAB,
-            'mfd': TruncatedGR(a_val=1, b_val=2, min_mag=3,
-                               max_mag=5, bin_width=1),
+            'mfd': TruncatedGRMFD(a_val=1, b_val=2, min_mag=3,
+                                  max_mag=5, bin_width=1),
             'location': Point(1.2, 3.4, 5.6),
             'nodal_plane_distribution': PMF([(1, NodalPlane(1, 2, 3))]),
             'hypocenter_distribution': PMF([(1, 4)]),
             'upper_seismogenic_depth': 1.3,
             'lower_seismogenic_depth': 4.9,
-            'magnitude_scaling_relationship': Peer(),
+            'magnitude_scaling_relationship': PeerMSR(),
             'rupture_aspect_ratio': 1.333
         }
         default_arguments.update(kwargs)
@@ -41,31 +41,31 @@ class PointSourceCreationTestCase(unittest.TestCase):
         self.assertEqual(ae.exception.message, msg)
 
     def test_wrong_trt(self):
-        self.assert_failed_creation(SourceError,
+        self.assert_failed_creation(ValueError,
             "unknown tectonic region type 'Sand'",
             tectonic_region_type='Sand'
         )
 
     def test_negative_upper_seismogenic_depth(self):
-        self.assert_failed_creation(SourceError,
+        self.assert_failed_creation(ValueError,
             'upper seismogenic depth must be non-negative',
             upper_seismogenic_depth=-0.1
         )
 
     def test_lower_depth_above_upper_depth(self):
-        self.assert_failed_creation(SourceError,
+        self.assert_failed_creation(ValueError,
             'lower seismogenic depth must be below upper seismogenic depth',
             upper_seismogenic_depth=10, lower_seismogenic_depth=8
         )
 
     def test_lower_depth_equal_to_upper_depth(self):
-        self.assert_failed_creation(SourceError,
+        self.assert_failed_creation(ValueError,
             'lower seismogenic depth must be below upper seismogenic depth',
             upper_seismogenic_depth=10, lower_seismogenic_depth=10
         )
 
     def test_hypocenter_depth_out_of_seismogenic_layer(self):
-        self.assert_failed_creation(SourceError,
+        self.assert_failed_creation(ValueError,
             'depths of all hypocenters must be in between '
             'lower and upper seismogenic depths',
             upper_seismogenic_depth=3, lower_seismogenic_depth=8,
@@ -74,13 +74,13 @@ class PointSourceCreationTestCase(unittest.TestCase):
         )
 
     def test_negative_aspect_ratio(self):
-        self.assert_failed_creation(SourceError,
+        self.assert_failed_creation(ValueError,
             'rupture aspect ratio must be positive',
             rupture_aspect_ratio=-1
         )
 
     def test_zero_aspect_ratio(self):
-        self.assert_failed_creation(SourceError,
+        self.assert_failed_creation(ValueError,
             'rupture aspect ratio must be positive',
             rupture_aspect_ratio=0
         )
@@ -94,15 +94,15 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
                      aspect_ratio, dip):
         source_id = name = 'test-source'
         trt = TRT.ACTIVE_SHALLOW_CRUST
-        mfd = TruncatedGR(a_val=2, b_val=1, min_mag=min_mag, max_mag=max_mag,
-                          bin_width=1)
+        mfd = TruncatedGRMFD(a_val=2, b_val=1, min_mag=min_mag,
+                             max_mag=max_mag, bin_width=1)
         location = Point(0, 0)
         nodal_plane = NodalPlane(strike=45, dip=dip, rake=-123.23)
         nodal_plane_distribution = PMF([(1, nodal_plane)])
         hypocenter_distribution = PMF([(1, hypocenter_depth)])
         upper_seismogenic_depth = 2
         lower_seismogenic_depth = 16
-        magnitude_scaling_relationship = Peer()
+        magnitude_scaling_relationship = PeerMSR()
         rupture_aspect_ratio = aspect_ratio
         point_source = PointSource(
             source_id, name, trt, mfd,
@@ -260,11 +260,11 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         lower_seismogenic_depth = 16
         rupture_aspect_ratio = 2
         location = Point(0, 0)
-        magnitude_scaling_relationship = Peer()
+        magnitude_scaling_relationship = PeerMSR()
         tom = PoissonTOM(time_span=50)
 
-        mfd = EvenlyDiscretized(min_mag=mag1, bin_width=(mag2 - mag1),
-                                occurrence_rates=[mag1_rate, mag2_rate])
+        mfd = EvenlyDiscretizedMFD(min_mag=mag1, bin_width=(mag2 - mag1),
+                                   occurrence_rates=[mag1_rate, mag2_rate])
         nodal_plane_distribution = PMF([(nodalplane1_weight, nodalplane1),
                                         (nodalplane2_weight, nodalplane2)])
         hypocenter_distribution = PMF([(hypocenter1_weight, hypocenter1),

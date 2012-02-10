@@ -18,7 +18,7 @@ class Polygon(object):
         The points are connected by great circle arcs in order of appearance.
         Polygon segment should not cross another polygon segment. At least
         three points must be defined.
-    :raises RuntimeError:
+    :raises ValueError:
         If ``points`` contains less than three unique points or if polygon
         perimeter intersects itself.
     """
@@ -30,7 +30,7 @@ class Polygon(object):
         points = utils.clean_points(points)
 
         if not len(points) >= 3:
-            raise RuntimeError('polygon must have at least 3 unique vertices')
+            raise ValueError('polygon must have at least 3 unique vertices')
 
         self.lons = numpy.array([float(point.longitude) for point in points])
         self.lats = numpy.array([float(point.latitude) for point in points])
@@ -38,7 +38,7 @@ class Polygon(object):
 
         if utils.line_intersects_itself(self.lons, self.lats,
                                         closed_shape=True):
-            raise RuntimeError('polygon perimeter intersects itself')
+            raise ValueError('polygon perimeter intersects itself')
 
     def _get_resampled_coordinates(self):
         """

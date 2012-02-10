@@ -14,27 +14,27 @@ class PolygonCreationTestCase(unittest.TestCase):
 
     def test_less_than_three_points(self):
         msg = 'polygon must have at least 3 unique vertices'
-        self.assert_failed_creation([], RuntimeError, msg)
-        self.assert_failed_creation([geo.Point(1, 1)], RuntimeError, msg)
+        self.assert_failed_creation([], ValueError, msg)
+        self.assert_failed_creation([geo.Point(1, 1)], ValueError, msg)
         self.assert_failed_creation([geo.Point(1, 1),
-                                     geo.Point(2, 1)], RuntimeError, msg)
+                                     geo.Point(2, 1)], ValueError, msg)
 
     def test_less_than_three_unique_points(self):
         msg = 'polygon must have at least 3 unique vertices'
         points = [geo.Point(1, 2)] * 3 + [geo.Point(4, 5)]
-        self.assert_failed_creation(points, RuntimeError, msg)
+        self.assert_failed_creation(points, ValueError, msg)
 
     def test_intersects_itself(self):
         msg = 'polygon perimeter intersects itself'
         points = [geo.Point(0, 0), geo.Point(0, 1),
                   geo.Point(1, 1), geo.Point(-1, 0)]
-        self.assert_failed_creation(points, RuntimeError, msg)
+        self.assert_failed_creation(points, ValueError, msg)
 
     def test_intersects_itself_being_closed(self):
         msg = 'polygon perimeter intersects itself'
         points = [geo.Point(0, 0), geo.Point(0, 1),
                   geo.Point(1, 0), geo.Point(1, 1)]
-        self.assert_failed_creation(points, RuntimeError, msg)
+        self.assert_failed_creation(points, ValueError, msg)
 
     def test_valid_points(self):
         points = [geo.Point(170, -10), geo.Point(170, 10), geo.Point(176, 0),

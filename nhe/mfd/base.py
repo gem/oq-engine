@@ -1,14 +1,7 @@
 """
-Module :mod:`nhe.mfd.base` defines base class for MFD and a base exception
-class.
+Module :mod:`nhe.mfd.base` defines base class for MFD -- :class:`BaseMFD`.
 """
 import abc
-
-
-class MFDError(Exception):
-    """
-    An error happened during MFD constraint check or modification.
-    """
 
 
 class BaseMFD(object):
@@ -39,7 +32,7 @@ class BaseMFD(object):
 
         :param parameters:
             The dictionary of parameters as passed to the constructor.
-        :raises MFDError:
+        :raises ValueError:
             If some actual parameters are missing in :attr:`PARAMETERS`
             or if something from :attr:`PARAMETERS` is missing in actual
             parameters.
@@ -51,11 +44,11 @@ class BaseMFD(object):
         unexpected = defined - required
         missing = required - defined
         if missing:
-            raise MFDError('These parameters are required but missing: %s'
-                           % ', '.join(sorted(missing)))
+            raise ValueError('These parameters are required but missing: %s'
+                             % ', '.join(sorted(missing)))
         if unexpected:
-            raise MFDError('These parameters are unexpected: %s'
-                           % ', ' .join(sorted(unexpected)))
+            raise ValueError('These parameters are unexpected: %s'
+                             % ', ' .join(sorted(unexpected)))
         for param_name in self.PARAMETERS:
             setattr(self, param_name, parameters[param_name])
         self.check_constraints()
@@ -76,12 +69,12 @@ class BaseMFD(object):
             String name representing the type of modification.
         :param parameters:
             Dictionary of parameters needed for modification.
-        :raises MFDError:
+        :raises ValueError:
             If ``modification`` is missing from :attr:`MODIFICATIONS`.
         """
         if not modification in self.MODIFICATIONS:
-            raise MFDError('Modification %s is not supported by %s' %
-                           (modification, type(self).__name__))
+            raise ValueError('Modification %s is not supported by %s' %
+                             (modification, type(self).__name__))
         meth = getattr(self, 'modify_%s' % modification)
         meth(**parameters)
         self.check_constraints()
@@ -95,7 +88,7 @@ class BaseMFD(object):
     @abc.abstractmethod
     def check_constraints(self):
         """
-        Check MFD-specific constraints and raise :exc:`MFDError`
+        Check MFD-specific constraints and raise :exc:`ValueError`
         in case of violation.
 
         This method must be implemented by subclasses.

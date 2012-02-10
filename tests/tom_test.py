@@ -1,12 +1,12 @@
 import unittest
 
-from nhe.common.tom import PoissonTOM
+from nhe.tom import PoissonTOM
 
 
 class PoissonTOMTestCase(unittest.TestCase):
     def test_non_positive_time_span(self):
-        self.assertRaises(RuntimeError, PoissonTOM, -1)
-        self.assertRaises(RuntimeError, PoissonTOM, 0)
+        self.assertRaises(ValueError, PoissonTOM, -1)
+        self.assertRaises(ValueError, PoissonTOM, 0)
 
     def test_get_probability(self):
         pdf = PoissonTOM(time_span=50)

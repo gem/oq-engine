@@ -4,9 +4,8 @@ A Magnitude Frequency Distribution (MFD) is a function that describes the rate
 
 Package `mfd` contains the basic class for MFD --
 :class:`nhe.mfd.base.BaseMFD`, and two actual implementations:
-:class:`nhe.mfd.evenly_discretized.EvenlyDiscretized`
-and :class:`nhe.mfd.truncated_gr.TruncatedGR`.
+:class:`nhe.mfd.evenly_discretized.EvenlyDiscretizedMFD`
+and :class:`nhe.mfd.truncated_gr.TruncatedGRMFD`.
 """
-from nhe.mfd.base import MFDError
-from nhe.mfd.evenly_discretized import EvenlyDiscretized
-from nhe.mfd.truncated_gr import TruncatedGR
+from nhe.mfd.evenly_discretized import EvenlyDiscretizedMFD
+from nhe.mfd.truncated_gr import TruncatedGRMFD

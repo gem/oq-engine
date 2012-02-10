@@ -1,10 +1,10 @@
 """
-Module :mod:`nhe.msr.peer` implements :class:`Peer`.
+Module :mod:`nhe.msr.peer` implements :class:`PeerMSR`.
 """
 from nhe.msr.base import BaseMSR
 
 
-class Peer(BaseMSR):
+class PeerMSR(BaseMSR):
     """
     Magnitude-Scaling Relationship defined for PEER PSHA test cases.
 

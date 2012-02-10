@@ -1,11 +1,11 @@
 import unittest
 
-from nhe.common.nodalplane import NodalPlane
+from nhe.source.nodalplane import NodalPlane
 
 
 class NodalPlaneTestCase(unittest.TestCase):
     def _test_broken_input(self, broken_parameter, **kwargs):
-        with self.assertRaises(RuntimeError) as ae:
+        with self.assertRaises(ValueError) as ae:
             NodalPlane(**kwargs)
         self.assertTrue(ae.exception.message.startswith(broken_parameter),
                         ae.exception.message)

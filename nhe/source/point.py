@@ -5,7 +5,8 @@ import math
 
 from nhe.geo import Point
 from nhe.geo.surface.planar import PlanarSurface
-from nhe.source.base import SeismicSource, SourceError, ProbabilisticRupture
+from nhe.source.base import SeismicSource
+from nhe.source.rupture import ProbabilisticRupture
 
 
 class PointSource(SeismicSource):
@@ -17,11 +18,11 @@ class PointSource(SeismicSource):
         :class:`~nhe.geo.Point` object representing the location
         of the seismic source. The depth value of that point is ignored.
     :param nodal_plane_distribution:
-        :class:`~nhe.common.pmf.PMF` object with values that are instances
-        of :class:`nhe.common.nodalplane.NodalPlane`. Shows the distribution
+        :class:`~nhe.pmf.PMF` object with values that are instances
+        of :class:`nhe.source.nodalplane.NodalPlane`. Shows the distribution
         of probability for rupture to have the certain nodal plane.
     :param hypocenter_distribution:
-        :class:`~nhe.common.pmf.PMF` with values being float numbers in km
+        :class:`~nhe.pmf.PMF` with values being float numbers in km
         representing the depth of the hypocenter. Latitude and longitude
         of the hypocenter is always set to ones of ``location``.
     :param upper_seismogenic_depth:
@@ -40,7 +41,7 @@ class PointSource(SeismicSource):
     See also :class:`nhe.source.base.SeismicSource` for description of other
     parameters.
 
-    :raises nhe.source.base.SourceError:
+    :raises ValueError:
         If upper seismogenic depth is negative or below lower seismogenic
         depth, if rupture aspect ratio is not positive and if one or more
         of hypocenter depth values is shallower than upper seismogenic depth
@@ -54,19 +55,19 @@ class PointSource(SeismicSource):
                                           tectonic_region_type, mfd)
 
         if upper_seismogenic_depth < 0:
-            raise SourceError('upper seismogenic depth must be non-negative')
+            raise ValueError('upper seismogenic depth must be non-negative')
 
         if not lower_seismogenic_depth > upper_seismogenic_depth:
-            raise SourceError('lower seismogenic depth must be below '
-                              'upper seismogenic depth')
+            raise ValueError('lower seismogenic depth must be below '
+                             'upper seismogenic depth')
 
         if not all(upper_seismogenic_depth <= depth <= lower_seismogenic_depth
                    for (prob, depth) in hypocenter_distribution.data):
-            raise SourceError('depths of all hypocenters must be in between '
-                              'lower and upper seismogenic depths')
+            raise ValueError('depths of all hypocenters must be in between '
+                             'lower and upper seismogenic depths')
 
         if not rupture_aspect_ratio > 0:
-            raise SourceError('rupture aspect ratio must be positive')
+            raise ValueError('rupture aspect ratio must be positive')
 
         self.location = location
         self.nodal_plane_distribution = nodal_plane_distribution
@@ -127,7 +128,7 @@ class PointSource(SeismicSource):
         for given magnitude ``mag`` and nodal plane.
 
         :param nodal_plane:
-            Instance of :class:`nhe.common.nodalplane.NodalPlane`.
+            Instance of :class:`nhe.source.nodalplane.NodalPlane`.
         :returns:
             Tuple of two items: rupture length in width in km.
 
@@ -166,7 +167,7 @@ class PointSource(SeismicSource):
             Magnitude value, used to calculate rupture dimensions,
             see :meth:`_get_rupture_dimensions`.
         :param nodal_plane:
-            Instance of :class:`nhe.common.nodalplane.NodalPlane`
+            Instance of :class:`nhe.source.nodalplane.NodalPlane`
             describing the rupture orientation.
         :param hypocenter:
             Point representing rupture's hypocenter.
