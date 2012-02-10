@@ -122,10 +122,13 @@ def _compute_lrem(vuln_function, steps, distribution='LN'):
         :class:`openquake.shapes.VulnerabilityFunction`
     :param int steps:
         Number of steps between loss ratios.
+    :param str: The distribution type:
+                'LN' LogNormal
+                'BT' BetaDistribution
     """
 
-    distribution = {'LN': general.Lognorm,
-                    'BT': general.BetaDistribution}.get(distribution,
+    dist = {'LN': general.Lognorm,
+            'BT': general.BetaDistribution}.get(distribution,
                         general.Lognorm)
 
     loss_ratios = _generate_loss_ratios(vuln_function, steps)
@@ -136,7 +139,7 @@ def _compute_lrem(vuln_function, steps, distribution='LN'):
 
     for col, _ in enumerate(vuln_function):
         for row, loss_ratio in enumerate(loss_ratios):
-            lrem[row][col] = distribution.survival_function(loss_ratio,
+            lrem[row][col] = dist.survival_function(loss_ratio,
                 col=col, vf=vuln_function)
 
     return lrem
