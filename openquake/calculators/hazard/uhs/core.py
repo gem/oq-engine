@@ -87,9 +87,7 @@ def compute_uhs_task(job_id, realization, site):
     :param site:
         The site of interest (a :class:`openquake.shapes.Site` object).
     """
-    utils_tasks.check_job_status(job_id)
-
-    calc_proxy = CalculationProxy.from_kvs(job_id)
+    calc_proxy = utils_tasks.get_running_calculation(job_id)
 
     log_msg = (
         "Computing UHS for job_id=%s, site=%s, realization=%s."

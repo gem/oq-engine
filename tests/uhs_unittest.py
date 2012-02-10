@@ -31,6 +31,7 @@ from openquake.db.models import UhSpectra
 from openquake.db.models import UhSpectrum
 from openquake.db.models import UhSpectrumData
 from openquake.calculators.hazard.uhs.core import compute_uhs
+from openquake.calculators.hazard.uhs.core import compute_uhs_task
 from openquake.calculators.hazard.uhs.core import touch_result_file
 from openquake.calculators.hazard.uhs.core import write_uh_spectra
 from openquake.calculators.hazard.uhs.core import write_uhs_spectrum_data
@@ -189,3 +190,24 @@ class UHSCoreTestCase(unittest.TestCase):
                 numpy.allclose(uhs_results_dict[uhs_datum.uh_spectrum.poe],
                                uhs_datum.sa_values))
             self.assertEqual(test_site.point.to_wkt(), uhs_datum.location.wkt)
+
+    def test_compute_uhs_task_calls_compute_and_write(self):
+        # The celery task `compute_uhs_task` basically just calls a few other
+        # functions to do the calculation and write results. Those functions
+        # have their own test coverage; in this test, we just want to make
+        # sure they get called.
+
+        # To start with, we need to write the UHS 'container' records:
+        write_uh_spectra(self.calc_proxy)
+
+        uhs_core_base = 'openquake.calculators.hazard.uhs.core'
+        cmpt_uhs = '%s.%s' % (uhs_core_base, 'compute_uhs')
+        write_uhs_data = '%s.%s' % (uhs_core_base, 'write_uhs_spectrum_data')
+        with helpers.patch(cmpt_uhs) as compute_mock:
+            with helpers.patch(write_uhs_data) as write_mock:
+                # Call the function under test as a normal function, not a
+                # @task:
+                compute_uhs_task(self.calc_proxy.job_id, 0, Site(0.0, 0.0))
+
+                self.assertEqual(1, compute_mock.call_count)
+                self.assertEqual(1, write_mock.call_count)
