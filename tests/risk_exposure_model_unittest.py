@@ -116,7 +116,7 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
     def test_exposure_model_with_no_area_unit_coco_per_area(self):
         # area unit not set but contents cost type is 'per_area' -> exception
         self.mdl.stco_type = "per_asset"
-        self.mdl.stco_unit = "GBP"
+        self.mdl.stco_unit = "LTL"
         self.mdl.coco_type = "per_area"
         self.mdl.coco_unit = "BZD"
         self.mdl.area_type = "per_asset"
@@ -171,7 +171,7 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
         self.mdl.reco_type = "per_area"
         self.mdl.reco_unit = "CHF"
         self.mdl.stco_type = "per_area"
-        self.mdl.stco_unit = "GBP"
+        self.mdl.stco_unit = "AZM"
         self.mdl.area_type = "per_asset"
         try:
             self.mdl.save()
@@ -188,7 +188,7 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
         # contents cost type set but contents cost unit not set
         #   -> exception
         self.mdl.stco_type = "per_asset"
-        self.mdl.stco_unit = "GBP"
+        self.mdl.stco_unit = "TMM"
         self.mdl.coco_type = "aggregated"
         try:
             self.mdl.save()
@@ -395,7 +395,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         # the 'number_of_units' datum must be present when the retrofitting
         # cost type is not 'aggregated'.
         self.mdl.reco_type = "per_asset"
-        self.mdl.reco_unit = "GBP"
+        self.mdl.reco_unit = "LSM"
         self.mdl.save()
         site = shapes.Site(-122.2000, 37.9000)
         edata = models.ExposureData(
@@ -417,7 +417,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         # the 'number_of_units' datum must be present when the contents
         # cost type is not 'aggregated'.
         self.mdl.coco_type = "per_asset"
-        self.mdl.coco_unit = "YEN"
+        self.mdl.coco_unit = "SUR"
         self.mdl.save()
         site = shapes.Site(-122.0000, 38.0000)
         edata = models.ExposureData(
@@ -441,9 +441,9 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         self.mdl.area_type = "per_asset"
         self.mdl.area_unit = "sqm"
         self.mdl.reco_type = "per_area"
-        self.mdl.reco_unit = "YEN"
+        self.mdl.reco_unit = "TJR"
         self.mdl.coco_type = "per_asset"
-        self.mdl.coco_unit = "YEN"
+        self.mdl.coco_unit = "MVR"
         self.mdl.save()
         site = shapes.Site(-121.9000, 38.1000)
         edata = models.ExposureData(
@@ -465,7 +465,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
         # the retrofitting cost must be present if the retrofitting cost type
         # is set.
         self.mdl.reco_type = "per_asset"
-        self.mdl.reco_unit = "YEN"
+        self.mdl.reco_unit = "INR"
         self.mdl.save()
         site = shapes.Site(-121.8000, 38.2000)
         edata = models.ExposureData(
@@ -478,6 +478,49 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
             self.assertEqual(
                 "Exception: retrofitting cost is mandatory for "
                 "<reco_type=per_asset> (exposure_data)",
+                de.args[0].split('\n', 1)[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_exposure_coco_type_but_no_coco_value(self):
+        # the contents cost must be present if the contents cost type
+        # is set.
+        self.mdl.coco_type = "per_asset"
+        self.mdl.coco_unit = "MUR"
+        self.mdl.save()
+        site = shapes.Site(-121.8000, 38.2000)
+        edata = models.ExposureData(
+            exposure_model=self.mdl, asset_ref=helpers.random_string(),
+            taxonomy=helpers.random_string(), stco=18.0, number_of_units=23,
+            site="POINT(%s %s)" % (site.point.x, site.point.y))
+        try:
+            edata.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "Exception: contents cost is mandatory for "
+                "<coco_type=per_asset> (exposure_data)",
+                de.args[0].split('\n', 1)[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_exposure_stco_type_but_no_stco_value(self):
+        # the structural cost must be present if the structural cost type
+        # is set.
+        self.mdl.category = "population"
+        self.mdl.save()
+        site = shapes.Site(-121.8000, 38.2000)
+        edata = models.ExposureData(
+            exposure_model=self.mdl, asset_ref=helpers.random_string(),
+            taxonomy=helpers.random_string(), number_of_units=24,
+            site="POINT(%s %s)" % (site.point.x, site.point.y))
+        try:
+            edata.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "Exception: structural cost is mandatory for "
+                "<stco_type=aggregated> (exposure_data)",
                 de.args[0].split('\n', 1)[0])
             transaction.rollback()
         else:
