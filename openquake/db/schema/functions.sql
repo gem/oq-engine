@@ -327,6 +327,9 @@ AS $$
         if violations:
             raise Exception(fmt("area is mandatory for <%s>" %
                                 ", ".join("%s=%s" % v for v in violations)))
+    if NEW["coco"] is None and emdl["coco_type"] is not None:
+        raise Exception(fmt("contents cost is mandatory for <coco_type=%s>"
+                            % emdl["coco_type"]))
     if NEW["reco"] is None and emdl["reco_type"] is not None:
         raise Exception(fmt("retrofitting cost is mandatory for <reco_type=%s>"
                             % emdl["reco_type"]))
