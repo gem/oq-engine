@@ -1132,7 +1132,7 @@ CREATE TABLE uiapi.output (
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
         CHECK(output_type IN ('unknown', 'hazard_curve', 'hazard_map',
             'gmf', 'loss_curve', 'loss_map', 'collapse_map',
-            'bcr_distribution')),
+            'bcr_distribution', 'uh_spectra')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
     -- The full path of the shapefile generated for a hazard or loss map
@@ -1232,8 +1232,55 @@ SELECT AddGeometryColumn('hzrdr', 'gmf_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE hzrdr.gmf_data ALTER COLUMN location SET NOT NULL;
 
 
--- Loss map data.
+-- Uniform Hazard Spectra
+--
+-- A collection of Uniform Hazard Spectrum which share a set of periods.
+-- A UH Spectrum has a PoE (Probability of Exceedence) and is conceptually
+-- composed of a set of 2D matrices, 1 matrix per site/point of interest.
+-- Each 2D matrix has a number of rows equal to `realizations` and a number of
+-- columns equal to the number of `periods`.
+CREATE TABLE hzrdr.uh_spectra (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL,
+    timespan float NOT NULL CONSTRAINT valid_uhs_timespan
+        CHECK (timespan > 0.0),
+    realizations INTEGER NOT NULL CONSTRAINT uh_spectra_realizations_is_set
+        CHECK (realizations >= 1),
+    -- There should be at least 1 period value defined.
+    periods float[] NOT NULL CONSTRAINT uh_spectra_periods_is_set
+        CHECK ((periods <> '{}'))
+) TABLESPACE hzrdr_ts;
 
+
+-- Uniform Hazard Spectrum
+--
+-- * "Uniform" meaning "the same PoE"
+-- * "Spectrum" because it covers a range/band of periods/frequencies
+CREATE TABLE hzrdr.uh_spectrum (
+    id SERIAL PRIMARY KEY,
+    uh_spectra_id INTEGER NOT NULL,
+    poe float NOT NULL CONSTRAINT uh_spectrum_poe_is_set
+        CHECK ((poe >= 0.0) AND (poe <= 1.0))
+) TABLESPACE hzrdr_ts;
+
+
+-- Uniform Hazard Spectrum Data
+--
+-- A single "row" of data in a UHS matrix for a specific site/point of interest.
+CREATE TABLE hzrdr.uh_spectrum_data (
+    id SERIAL PRIMARY KEY,
+    uh_spectrum_id INTEGER NOT NULL, -- Unique -> (uh_spectrum_id, realization, location)
+    -- logic tree sample number for this calculation result,
+    -- from 0 to N
+    realization INTEGER NOT NULL,
+    sa_values float[] NOT NULL CONSTRAINT sa_values_is_set
+        CHECK ((sa_values <> '{}'))
+) TABLESPACE hzrdr_ts;
+SELECT AddGeometryColumn('hzrdr', 'uh_spectrum_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE hzrdr.uh_spectrum_data ALTER COLUMN location SET NOT NULL;
+
+
+-- Loss map data.
 CREATE TABLE riskr.loss_map (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL, -- FK to output.id
@@ -1584,6 +1631,22 @@ FOREIGN KEY (hazard_curve_id) REFERENCES hzrdr.hazard_curve(id) ON DELETE CASCAD
 ALTER TABLE hzrdr.gmf_data
 ADD CONSTRAINT hzrdr_gmf_data_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+-- UHS:
+-- uh_spectra -> output FK
+ALTER TABLE hzrdr.uh_spectra
+ADD CONSTRAINT hzrdr_uh_spectra_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+-- uh_spectrum -> uh_spectra FK
+ALTER TABLE hzrdr.uh_spectrum
+ADD CONSTRAINT hzrdr_uh_spectrum_uh_spectra_fk
+FOREIGN KEY (uh_spectra_id) REFERENCES hzrdr.uh_spectra(id) ON DELETE CASCADE;
+
+-- uh_spectrum_data -> uh_spectrum FK
+ALTER TABLE hzrdr.uh_spectrum_data
+ADD CONSTRAINT hzrdr_uh_spectrum_data_uh_spectrum_fk
+FOREIGN KEY (uh_spectrum_id) REFERENCES hzrdr.uh_spectrum(id) ON DELETE CASCADE;
 
 ALTER TABLE riskr.loss_map
 ADD CONSTRAINT riskr_loss_map_output_fk
