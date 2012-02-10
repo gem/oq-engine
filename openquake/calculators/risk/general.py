@@ -1096,10 +1096,10 @@ class AggregateLossCurve(object):
         return _generate_curve(loss_range, probs_of_exceedance)
 
 
-def per_asset_value(edata):
+def per_asset_value(exd):
     """Return per-asset value for the given exposure data set.
 
-    Calculate per asset value by considering the given exposure data (`edata`)
+    Calculate per asset value by considering the given exposure data (`exd`)
     as follows:
 
         case 1: cost type: aggregated:
@@ -1113,11 +1113,21 @@ def per_asset_value(edata):
 
     The same "formula" applies to contenst/retrofitting cost analogously.
 
-    :param edata: a named tuple with the following properties:
+    :param exd: a named tuple with the following properties:
         - cost
         - cost_type
         - area
         - area_type
         - number_of_units
-    :returns: the per-asset value as a floating point number
+    :returns: the per-asset value as a `float` (-1.0 indicates failure)
     """
+    if exd.cost_type == "aggregated":
+        return exd.cost
+    elif exd.cost_type == "per_asset":
+        return exd.cost * exd.number_of_units
+    elif exd.cost_type == "per_area":
+        if exd.area_type == "aggregated":
+            return exd.cost * exd.area
+        elif exd.area_type == "per_asset":
+            return exd.cost * exd.area * exd.number_of_units
+    return -1.0
