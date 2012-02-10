@@ -157,7 +157,7 @@ def write_uh_spectra(calc_proxy):
 
     In the workflow of the UHS calculator, this should be written prior to the
     execution of the main calculation. (See
-    :class:`openquake.calculators.base.Calculator.pre_execute`.)
+    :method:`openquake.calculators.base.Calculator.pre_execute`.)
 
     This function writes:
     * 1 record to uiapi.output
