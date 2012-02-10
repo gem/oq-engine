@@ -737,6 +737,5 @@ def random_string(length=16):
     """Generate a random string of the given length."""
     result = ""
     while len(result) < length:
-        result += random.choice(string.uppercase + string.lowercase +
-                                string.digits)
+        result += random.choice(string.letters + string.digits)
     return result
