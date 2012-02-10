@@ -23,6 +23,7 @@
 from openquake.utils import config
 
 
+DEBUG = True
 DB_SECTION = config.get_section('database')
 
 

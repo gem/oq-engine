@@ -31,33 +31,32 @@ import os
 import random
 import redis
 import shutil
+import string
+import subprocess
+import sys
 import tempfile
 import textwrap
 import time
-import sys
-import subprocess
 
-from gflags import DEFINE_boolean
 from django.core import exceptions
+from gflags import DEFINE_boolean
 
+from openquake.calculators.hazard.general import store_gmpe_map
+from openquake.calculators.hazard.general import store_source_model
+from openquake.db import models
+from openquake.engine import CalculationProxy
 from openquake import engine
 from openquake import flags
 from openquake import logs
 from openquake import producer
-from openquake.db import models
-from openquake.engine import CalculationProxy
-from openquake.utils import config
 from openquake.input.logictree import LogicTreeProcessor
-from openquake.calculators.hazard.general import store_gmpe_map
-from openquake.calculators.hazard.general import store_source_model
+from openquake.utils import config
 
 FLAGS = flags.FLAGS
 
-DEFINE_boolean('download_test_data', True,
-        'Fetch test data files if needed')
+DEFINE_boolean('download_test_data', True, 'Fetch test data files if needed')
 
-DATA_DIR = os.path.abspath(os.path.join(
-    os.path.dirname(__file__), '../data'))
+DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data'))
 
 OUTPUT_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '../data/output'))
@@ -65,8 +64,7 @@ OUTPUT_DIR = os.path.abspath(os.path.join(
 SCHEMA_DIR = os.path.abspath(os.path.join(
     os.path.dirname(__file__), '../../openquake/nrml/schema/'))
 
-SCHEMA_EXAMPLES_DIR = os.path.abspath(os.path.join(
-    SCHEMA_DIR, 'examples'))
+SCHEMA_EXAMPLES_DIR = os.path.abspath(os.path.join(SCHEMA_DIR, 'examples'))
 
 WAIT_TIME_STEP_FOR_TASK_SECS = 0.5
 MAX_WAIT_LOOPS = 10
@@ -522,7 +520,8 @@ class DbTestCase(object):
     def default_user(self):
         return models.OqUser.objects.get(user_name="openquake")
 
-    def teardown_upload(self, upload, filesystem_only=True):
+    @staticmethod
+    def teardown_upload(upload, filesystem_only=True):
         """
         Tear down the file system (and potentially db) artefacts for the
         given upload.
@@ -539,15 +538,17 @@ class DbTestCase(object):
             return
         upload.delete()
 
-    def teardown_input_set(self, input_set, filesystem_only):
+    @staticmethod
+    def teardown_input_set(input_set, filesystem_only):
         if input_set.upload is not None:
-            self.teardown_upload(input_set.upload,
-                                 filesystem_only=filesystem_only)
+            DbTestCase.teardown_upload(input_set.upload,
+                                       filesystem_only=filesystem_only)
         if filesystem_only:
             return
         input_set.delete()
 
-    def setup_classic_job(self, create_job_path=True, upload_id=None):
+    @staticmethod
+    def setup_classic_job(create_job_path=True, upload_id=None):
         """Create a classic job with associated upload and inputs.
 
         :param integer upload_id: if set use upload record with given db key.
@@ -575,7 +576,7 @@ class DbTestCase(object):
         oqjp.truncation_type = "twosided"
         oqjp.truncation_level = 3
         oqjp.reference_vs30_value = 760
-        oqjp.imls = self.IMLS
+        oqjp.imls = DbTestCase.IMLS
         oqjp.poes = [0.01, 0.10]
         oqjp.realizations = 1
         oqjp.width_of_mfd_bin = 0.1
@@ -630,7 +631,8 @@ class DbTestCase(object):
 
         return job
 
-    def teardown_job(self, job, filesystem_only=True):
+    @staticmethod
+    def teardown_job(job, filesystem_only=True):
         """
         Tear down the file system (and potentially db) artefacts for the
         given job.
@@ -644,8 +646,8 @@ class DbTestCase(object):
         """
         oqjp = job.oq_job_profile
         if oqjp.input_set is not None:
-            self.teardown_input_set(oqjp.input_set,
-                                    filesystem_only=filesystem_only)
+            DbTestCase.teardown_input_set(oqjp.input_set,
+                                          filesystem_only=filesystem_only)
         if filesystem_only:
             return
 
@@ -729,3 +731,11 @@ class RedisTestCase(object):
         stats_db = int(stats_db) if stats_db else 15
         args = {"host": host, "port": port, "db": stats_db}
         return redis.Redis(**args)
+
+
+def random_string(length=16):
+    """Generate a random string of the given length."""
+    result = ""
+    while len(result) < length:
+        result += random.choice(string.letters + string.digits)
+    return result

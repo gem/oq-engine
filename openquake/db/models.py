@@ -1052,14 +1052,48 @@ class ExposureModel(models.Model):
     '''
 
     owner = models.ForeignKey("OqUser")
+    input = models.ForeignKey("Input")
     name = models.TextField()
     description = models.TextField(null=True)
     category = models.TextField()
-    unit = models.TextField()
+    AREA_CHOICES = (
+        (u'aggregated', u'Aggregated area value'),
+        (u'per_asset', u'Per asset area value'),
+    )
+    area_type = models.TextField(null=True, choices=AREA_CHOICES)
+    area_unit = models.TextField(null=True)
+    COST_CHOICES = (
+        (u'aggregated', u'Aggregated economic value'),
+        (u'per_area', u'Per area economic value'),
+        (u'per_asset', u'Per asset economic value'),
+    )
+    stco_type = models.TextField(null=True, choices=COST_CHOICES,
+                                 help_text="structural cost type")
+    stco_unit = models.TextField(null=True, help_text="structural cost unit")
+    reco_type = models.TextField(null=True, choices=COST_CHOICES,
+                                 help_text="retrofitting cost type")
+    reco_unit = models.TextField(null=True, help_text="retrofitting cost unit")
+    coco_type = models.TextField(null=True, choices=COST_CHOICES,
+                                 help_text="contents cost type")
+    coco_unit = models.TextField(null=True, help_text="contents cost unit")
+
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'oqmif\".\"exposure_model'
+
+
+class Occupancy(models.Model):
+    '''
+    Asset occupancy data
+    '''
+
+    exposure_data = models.ForeignKey("ExposureData")
+    description = models.TextField()
+    occupants = models.IntegerField()
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'oqmif\".\"occupancy'
 
 
 class ExposureData(models.Model):
@@ -1069,12 +1103,35 @@ class ExposureData(models.Model):
 
     exposure_model = models.ForeignKey("ExposureModel")
     asset_ref = models.TextField()
-    value = models.FloatField()
     taxonomy = models.TextField()
-    structure_type = models.TextField(null=True)
-    retrofitting_cost = models.FloatField(null=True)
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
     site = models.PointField(srid=4326)
+
+    stco = models.FloatField(null=True, help_text="structural cost")
+    reco = models.FloatField(null=True, help_text="retrofitting cost")
+    coco = models.FloatField(null=True, help_text="contents cost")
+
+    number_of_units = models.FloatField(
+        null=True, help_text="number of assets, people etc.")
+    area = models.FloatField(null=True)
+
+    coco_limit = models.FloatField(
+        null=True, help_text="insurance coverage limit")
+    coco_deductible = models.FloatField(
+        null=True, help_text="insurance deductible")
+
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    @property
+    def value(self):
+        """
+        https://bugs.launchpad.net/openquake/+bug/927525
+        """
+
+    @property
+    def retrofitting_cost(self):
+        """
+        https://bugs.launchpad.net/openquake/+bug/927525
+        """
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'oqmif\".\"exposure_data'
@@ -1089,6 +1146,7 @@ class VulnerabilityModel(models.Model):
     '''
 
     owner = models.ForeignKey("OqUser")
+    input = models.ForeignKey("Input")
     name = models.TextField()
     description = models.TextField(null=True)
     imt = models.TextField(choices=OqJobProfile.IMT_CHOICES)
