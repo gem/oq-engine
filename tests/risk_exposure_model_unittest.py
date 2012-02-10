@@ -231,6 +231,51 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
         else:
             self.fail("DatabaseError not raised")
 
+    def test_exposure_model_with_coco_unit_but_no_coco_type(self):
+        # contents cost unit set but contents cost type not set
+        #   -> exception
+        self.mdl.coco_unit = "EUR"
+        try:
+            self.mdl.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "Exception: coco_unit (EUR) and coco_type (None) must both be "
+                "either defined or undefined (exposure_model)",
+                de.args[0].split('\n', 1)[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_exposure_model_with_reco_unit_but_no_reco_type(self):
+        # retrofitting cost unit set but retrofitting cost type not set
+        #   -> exception
+        self.mdl.reco_unit = "EUR"
+        try:
+            self.mdl.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "Exception: reco_unit (EUR) and reco_type (None) must both be "
+                "either defined or undefined (exposure_model)",
+                de.args[0].split('\n', 1)[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_exposure_model_with_stco_unit_but_no_stco_type(self):
+        # structural cost unit set but structural cost type not set
+        #   -> exception
+        self.mdl.stco_unit = "EUR"
+        try:
+            self.mdl.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                "Exception: stco_unit (EUR) and stco_type (None) must both be "
+                "either defined or undefined (exposure_model)",
+                de.args[0].split('\n', 1)[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
     def test_exposure_model_with_no_stco_type_and_not_population(self):
         # structural cost type set must be set unless we are calculating
         # exposure in terms of population    -> exception
