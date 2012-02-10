@@ -1496,4 +1496,3 @@ class RiskJobGeneralTestCase(unittest.TestCase):
         events2 = [(elem.tag, elem.attrib, elem.text)
                    for (event, elem) in etree.iterparse(expected_result)]
         self.assertEqual(events1, events2)
-        self.assertEqual(events1, events2)
