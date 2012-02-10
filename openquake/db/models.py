@@ -23,9 +23,47 @@
 Model representations of the OpenQuake DB tables.
 '''
 
+from collections import namedtuple
 from datetime import datetime
 from django.contrib.gis.db import models
 from django.contrib.gis.geos.geometry import GEOSGeometry
+
+
+def per_asset_value(exd):
+    """Return per-asset value for the given exposure data set.
+
+    Calculate per asset value by considering the given exposure data (`exd`)
+    as follows:
+
+        case 1: cost type: aggregated:
+            cost = economic value
+        case 2: cost type: per asset:
+            cost * number (of assets) = economic value
+        case 3: cost type: per area and area type: aggregated:
+            cost * area = economic value
+        case 4: cost type: per area and area type: per asset:
+            cost * area * number = economic value
+
+    The same "formula" applies to contenst/retrofitting cost analogously.
+
+    :param exd: a named tuple with the following properties:
+        - cost
+        - cost_type
+        - area
+        - area_type
+        - number_of_units
+    :returns: the per-asset value as a `float` (-1.0 indicates failure)
+    """
+    if exd.cost_type == "aggregated":
+        return exd.cost
+    elif exd.cost_type == "per_asset":
+        return exd.cost * exd.number_of_units
+    elif exd.cost_type == "per_area":
+        if exd.area_type == "aggregated":
+            return exd.cost * exd.area
+        elif exd.area_type == "per_asset":
+            return exd.cost * exd.area * exd.number_of_units
+    return -1.0
 
 
 def model_equals(model_a, model_b, ignore=None):
@@ -1054,6 +1092,9 @@ class ExposureData(models.Model):
     Per-asset risk exposure data
     '''
 
+    REXD = namedtuple(
+        "REXD", "cost, cost_type, area, area_type, number_of_units")
+
     exposure_model = models.ForeignKey("ExposureModel")
     asset_ref = models.TextField()
     taxonomy = models.TextField()
@@ -1076,15 +1117,19 @@ class ExposureData(models.Model):
 
     @property
     def value(self):
-        """
-        https://bugs.launchpad.net/openquake/+bug/927525
-        """
+        """The structural per-asset value."""
+        exd = self.REXD(cost=self.stco, cost_type=self.stco_type,
+                        area=self.area, area_type=self.area_type,
+                        number_of_units=self.number_of_units)
+        return per_asset_value(exd)
 
     @property
     def retrofitting_cost(self):
-        """
-        https://bugs.launchpad.net/openquake/+bug/927525
-        """
+        """The retrofitting per-asset value."""
+        exd = self.REXD(cost=self.reco, cost_type=self.reco_type,
+                        area=self.area, area_type=self.area_type,
+                        number_of_units=self.number_of_units)
+        return per_asset_value(exd)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'oqmif\".\"exposure_data'

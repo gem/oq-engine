@@ -17,7 +17,6 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-from collections import namedtuple
 from django.contrib.gis.geos import GEOSGeometry
 from lxml import etree
 from StringIO import StringIO
@@ -45,7 +44,6 @@ from openquake.calculators.risk.general import _compute_mid_po
 from openquake.calculators.risk.general import _compute_probs_of_exceedance
 from openquake.calculators.risk.general import _compute_rates_of_exceedance
 from openquake.calculators.risk.general import ProbabilisticRiskCalculator
-from openquake.calculators.risk.general import per_asset_value
 from openquake.calculators.risk.scenario import core as scenario
 from openquake import engine
 from openquake import kvs
@@ -1497,46 +1495,3 @@ class RiskJobGeneralTestCase(unittest.TestCase):
         events2 = [(elem.tag, elem.attrib, elem.text)
                    for (event, elem) in etree.iterparse(expected_result)]
         self.assertEqual(events1, events2)
-
-
-class PerAssetValueTestCase(unittest.TestCase):
-    """Test and exercise the per_asset_value() function."""
-
-    # risk exposure data
-    REXD = namedtuple(
-        "REXD", "cost, cost_type, area, area_type, number_of_units")
-
-    def test_per_asset_value_with_cost_type_aggreggated(self):
-        # When the cost type is 'aggregated' per_asset_value() simply returns
-        # the cost value.
-        exd = self.REXD(cost=22.0, cost_type="aggregated", area=0.0,
-                        area_type="aggregated", number_of_units=0.0)
-        self.assertEqual(exd.cost, per_asset_value(exd))
-
-    def test_per_asset_value_with_cost_type_per_asset(self):
-        # When the cost type is 'per_asset' per_asset_value() returns:
-        # cost * number_of_units
-        exd = self.REXD(cost=23.0, cost_type="per_asset", area=0.0,
-                        area_type="aggregated", number_of_units=2.0)
-        self.assertEqual(exd.cost * exd.number_of_units, per_asset_value(exd))
-
-    def test_per_asset_value_with_cost_type_per_area_and_aggregated(self):
-        # When the cost type is 'per_area' and the area type is 'aggregated'
-        # per_asset_value() returns: cost * area
-        exd = self.REXD(cost=24.0, cost_type="per_area", area=3.0,
-                        area_type="aggregated", number_of_units=0.0)
-        self.assertEqual(exd.cost * exd.area, per_asset_value(exd))
-
-    def test_per_asset_value_with_cost_type_per_area_and_per_asset(self):
-        # When the cost type is 'per_area' and the area type is 'per_asset'
-        # per_asset_value() returns: cost * area * number_of_units
-        exd = self.REXD(cost=25.0, cost_type="per_area", area=4.0,
-                        area_type="per_asset", number_of_units=5.0)
-        self.assertEqual(exd.cost * exd.area * exd.number_of_units,
-                         per_asset_value(exd))
-
-    def test_per_asset_value_with_invalid_exposure_data(self):
-        # When the exposure data is invalid per_asset_value() returns: -1.0
-        exd = self.REXD(cost=26.0, cost_type="too-expensive", area=0.0,
-                        area_type="rough", number_of_units=0.0)
-        self.assertEqual(-1.0, per_asset_value(exd))
