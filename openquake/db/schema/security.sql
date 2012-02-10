@@ -1,7 +1,7 @@
 /*
   Roles and permissions for the OpenQuake database.
 
-    Copyright (c) 2010-2011, GEM Foundation.
+    Copyright (c) 2010-2012, GEM Foundation.
 
     OpenQuake database is made available under the Open Database License:
     http://opendatacommons.org/licenses/odbl/1.0/. Any rights in individual
