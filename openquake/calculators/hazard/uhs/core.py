@@ -20,7 +20,6 @@
 
 import h5py
 import numpy
-import os
 
 from celery.task import task
 from django.db import transaction
@@ -73,14 +72,12 @@ def touch_result_file(job_id, path, sites, realizations, n_periods):
 
 @task(ignore_results=True)
 @java.unpack_exception
-def compute_uhs_task(job_id, realization, site, result_dir):
+def compute_uhs_task(job_id, realization, site):
     """Compute Uniform Hazard Spectra for a given site of interest and 1 or
     more Probability of Exceedance values. The bulk of the computation will
     be done by utilizing the `UHSCalculator` class in the Java code.
 
-    UHS results (for each poe) will be written as a 1D array into temporary
-    HDF5 files. (The files will later be collected and 'reduced' into final
-    result files.)
+    UHS results will be written directly to the database.
 
     :param int job_id:
         ID of the job record in the DB/KVS.
@@ -89,12 +86,6 @@ def compute_uhs_task(job_id, realization, site, result_dir):
         NUMBER_OF_LOGIC_TREE_SAMPLES param defined in the job config.
     :param site:
         The site of interest (a :class:`openquake.shapes.Site` object).
-    :param result_dir:
-        NFS result directory path. For each poe, a subfolder will be created to
-        contain intermediate calculation results. (Each call to this task will
-        generate 1 result file per poe.)
-    :returns:
-        A list of the resulting file names (1 per poe).
     """
     utils_tasks.check_job_status(job_id)
 
@@ -102,8 +93,8 @@ def compute_uhs_task(job_id, realization, site, result_dir):
 
     log_msg = (
         "Computing UHS for job_id=%s, site=%s, realization=%s."
-        " UHS results will be serialized to `%s`.")
-    log_msg %= (calc_proxy.job_id, site, realization, result_dir)
+        " UHS results will be serialized to the database.")
+    log_msg %= (calc_proxy.job_id, site, realization)
     LOG.info(log_msg)
 
     uhs_results = compute_uhs(calc_proxy, site)
@@ -150,6 +141,7 @@ def compute_uhs(the_job, site):
 
     return uhs_results
 
+
 @transaction.commit_on_success(using='reslt_writer')
 def write_uh_spectra(calc_proxy):
     """Write the top-level Uniform Hazard Spectra calculation results records
@@ -189,7 +181,7 @@ def write_uh_spectra(calc_proxy):
     for poe in oq_job_profile.poes:
         uh_spectrum = UhSpectrum(uh_spectra=uh_spectra, poe=poe)
         uh_spectrum.save()
-            
+
 
 @transaction.commit_on_success(using='reslt_writer')
 def write_uhs_spectrum_data(calc_proxy, realization, site, uhs_results):
