@@ -54,7 +54,7 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
     def test_exposure_model_with_no_area_type_coco_per_area(self):
         # area type not set but contents cost type is 'per_area' -> exception
         self.mdl.coco_type = "per_area"
-        self.mdl.coco_unit = "EUR"
+        self.mdl.coco_unit = "BBD"
         try:
             self.mdl.save()
         except DatabaseError, de:
@@ -84,7 +84,7 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
         # area type not set but structural cost type is 'per_area'
         #   -> exception
         self.mdl.stco_type = "per_area"
-        self.mdl.stco_unit = "USD"
+        self.mdl.stco_unit = "MGF"
         try:
             self.mdl.save()
         except DatabaseError, de:
@@ -118,7 +118,7 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
         self.mdl.stco_type = "per_asset"
         self.mdl.stco_unit = "GBP"
         self.mdl.coco_type = "per_area"
-        self.mdl.coco_unit = "EUR"
+        self.mdl.coco_unit = "BZD"
         self.mdl.area_type = "per_asset"
         try:
             self.mdl.save()
@@ -135,7 +135,7 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
         # area unit not set but retrofitting cost type is 'per_area'
         #   -> exception
         self.mdl.reco_type = "per_area"
-        self.mdl.reco_unit = "USD"
+        self.mdl.reco_unit = "RWF"
         self.mdl.area_type = "per_asset"
         try:
             self.mdl.save()
@@ -152,7 +152,7 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
         # area unit not set but structural cost type is 'per_area'
         #   -> exception
         self.mdl.stco_type = "per_area"
-        self.mdl.stco_unit = "USD"
+        self.mdl.stco_unit = "XOF"
         self.mdl.area_type = "per_asset"
         try:
             self.mdl.save()
@@ -234,12 +234,12 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
     def test_exposure_model_with_coco_unit_but_no_coco_type(self):
         # contents cost unit set but contents cost type not set
         #   -> exception
-        self.mdl.coco_unit = "EUR"
+        self.mdl.coco_unit = "BMD"
         try:
             self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
-                "Exception: coco_unit (EUR) and coco_type (None) must both be "
+                "Exception: coco_unit (BMD) and coco_type (None) must both be "
                 "either defined or undefined (exposure_model)",
                 de.args[0].split('\n', 1)[0])
             transaction.rollback()
@@ -249,12 +249,12 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
     def test_exposure_model_with_reco_unit_but_no_reco_type(self):
         # retrofitting cost unit set but retrofitting cost type not set
         #   -> exception
-        self.mdl.reco_unit = "EUR"
+        self.mdl.reco_unit = "CAD"
         try:
             self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
-                "Exception: reco_unit (EUR) and reco_type (None) must both be "
+                "Exception: reco_unit (CAD) and reco_type (None) must both be "
                 "either defined or undefined (exposure_model)",
                 de.args[0].split('\n', 1)[0])
             transaction.rollback()
@@ -264,12 +264,12 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
     def test_exposure_model_with_stco_unit_but_no_stco_type(self):
         # structural cost unit set but structural cost type not set
         #   -> exception
-        self.mdl.stco_unit = "EUR"
+        self.mdl.stco_unit = "FJD"
         try:
             self.mdl.save()
         except DatabaseError, de:
             self.assertEqual(
-                "Exception: stco_unit (EUR) and stco_type (None) must both be "
+                "Exception: stco_unit (FJD) and stco_type (None) must both be "
                 "either defined or undefined (exposure_model)",
                 de.args[0].split('\n', 1)[0])
             transaction.rollback()
@@ -313,7 +313,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
                                         name="exposure-data-testing",
                                         category="economic loss")
         self.mdl.stco_type = "aggregated"
-        self.mdl.stco_unit = "EUR"
+        self.mdl.stco_unit = "GYD"
 
     def test_exposure_data_with_no_stco_and_population(self):
         # the structural cost needs not be present when we calculate exposure
