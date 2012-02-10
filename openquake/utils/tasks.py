@@ -97,7 +97,7 @@ def _check_exception(results):
 
 class JobCompletedError(Exception):
     """
-    Exception to be thrown by :func:`check_job_status`
+    Exception to be thrown by :func:`get_running_calculation`
     in case of dealing with already completed job.
     """
 

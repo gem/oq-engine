@@ -18,16 +18,23 @@
 import h5py
 import numpy
 import os
-import shutil
 import tempfile
 import unittest
 
+from openquake import engine
 from openquake import java
 from openquake.java import list_to_jdouble_array
 from openquake.shapes import Site
+from openquake.db.models import OqCalculation
+from openquake.db.models import Output
+from openquake.db.models import UhSpectra
+from openquake.db.models import UhSpectrum
+from openquake.db.models import UhSpectrumData
 from openquake.calculators.hazard.uhs.core import compute_uhs
+from openquake.calculators.hazard.uhs.core import compute_uhs_task
 from openquake.calculators.hazard.uhs.core import touch_result_file
-from openquake.calculators.hazard.uhs.core import write_uhs_results
+from openquake.calculators.hazard.uhs.core import write_uh_spectra
+from openquake.calculators.hazard.uhs.core import write_uhs_spectrum_data
 
 from tests.utils import helpers
 
@@ -47,14 +54,29 @@ class UHSCoreTestCase(unittest.TestCase):
                 0.6185688023781438,
                 0.11843417899553109])]
 
-    def test_touch_result_file(self):
-        """Call the :function:`openquake.hazard.uhs.core.touch_result_file` and
-        verify that the result file is properly created with the correct number
-        of datasets.
+    def setUp(self):
+        # Create OqJobProfile, OqCalculation, and CalculationProxy objects
+        # which can be used for several of the tests:
+        self.job_profile, params, sections = engine.import_job_profile(
+            UHS_DEMO_CONFIG_FILE)
+        self.calculation = OqCalculation(
+            owner=self.job_profile.owner,
+            oq_job_profile=self.job_profile)
+        self.calculation.save()
 
-        We also want to verify the name (since it is associated with a specific
-        site of interest) as well as the size and datatype of each dataset.
-        """
+        self.calc_proxy = engine.CalculationProxy(
+            params, self.calculation.id, sections=sections,
+            serialize_results_to=['db'], oq_job_profile=self.job_profile,
+            oq_calculation=self.calculation)
+
+    def test_touch_result_file(self):
+        # Call the :function:`openquake.hazard.uhs.core.touch_result_file` and
+        # verify that the result file is properly created with the correct
+        # number of datasets.
+
+        # We also want to verify the name (since it is associated with a
+        # specific site of interest) as well as the size and datatype of each
+        # dataset.
         _, path = tempfile.mkstemp()
 
         fake_job_id = 1  # The job_id doesn't matter in this test.
@@ -85,12 +107,12 @@ class UHSCoreTestCase(unittest.TestCase):
         os.unlink(path)
 
     def test_compute_uhs(self):
-        """Test the :function:`openquake.hazard.uhs.core.compute_uhs`
-        function. This function makes use of the Java `UHSCalculator` and
-        performs the main UHS computation.
+        # Test the :function:`openquake.hazard.uhs.core.compute_uhs`
+        # function. This function makes use of the Java `UHSCalculator` and
+        # performs the main UHS computation.
 
-        The results of the computation are a sequence of Java `UHSResult`
-        objects."""
+        # The results of the computation are a sequence of Java `UHSResult`
+        # objects.
         the_job = helpers.job_from_file(UHS_DEMO_CONFIG_FILE)
 
         site = Site(0.0, 0.0)
@@ -107,40 +129,85 @@ class UHSCoreTestCase(unittest.TestCase):
             self.assertTrue(numpy.allclose(self.UHS_RESULTS[i][1],
                                            [x.value for x in uhs]))
 
-    def test_write_uhs_results(self):
-        """Given some mocked up UHS calc results, write them to some temporary
-        HDF5 files. We need to verify that the result file paths are correct,
-        as well as the contents.
+    def test_write_uh_spectra(self):
+        # Test the writing of the intial database records for UHS results.
+        # The function under test (`write_uh_spectra`) should write:
+        #   - 1 uiapi.output record
+        #   - 1 hzrdr.uh_spectra record
+        #   - 1 hzrdr.uh_spectrum record per PoE defined in the oq_job_profile
 
-        The results should be written to separate directories (depending on the
-        PoE)."""
-        # Both result files should have the same file name,
-        # just a different directory location.
-        expected_file_name = 'sample:1-lon:0.0-lat:0.0.h5'
+        # Call the function under test:
+        write_uh_spectra(self.calc_proxy)
+
+        # Now check that the expected records were indeed created.
+        output = Output.objects.get(oq_calculation=self.calculation.id)
+        self.assertEqual('uh_spectra', output.output_type)
+
+        uh_spectra = UhSpectra.objects.get(output=output.id)
+        self.assertEqual(
+            self.job_profile.investigation_time, uh_spectra.timespan)
+        self.assertEqual(
+            self.job_profile.realizations, uh_spectra.realizations)
+        self.assertEqual(self.job_profile.uhs_periods, uh_spectra.periods)
+
+        uh_spectrums = UhSpectrum.objects.filter(uh_spectra=uh_spectra.id)
+        # We just want to make sure there is one record in hzrdr.uh_spectrum
+        # per PoE.
+        self.assertEqual(
+            set(self.job_profile.poes), set([x.poe for x in uh_spectrums]))
+
+    def test_write_uhs_spectrum_data(self):
+        # Test `write_uhs_spectrum_data`.
+
+        # To start with, we need to write the 'container' records for the UHS
+        # results:
+        write_uh_spectra(self.calc_proxy)
 
         uhs_results = []  # The results we want to write to HDF5
         uhs_result = java.jvm().JClass('org.gem.calc.UHSResult')
 
+        # Build up a result list that we can pass to the function under test:
         for poe, uhs in self.UHS_RESULTS:
             uhs_results.append(uhs_result(poe, list_to_jdouble_array(uhs)))
 
-        result_dir = tempfile.mkdtemp()
+        realization = 0
+        test_site = Site(0.0, 0.0)
 
-        result_files = write_uhs_results(result_dir, 1, Site(0.0, 0.0),
-                                         uhs_results)
+        # Call the function under test
+        write_uhs_spectrum_data(
+            self.calc_proxy, realization, test_site, uhs_results)
 
-        for i, res_file in enumerate(result_files):
-            print res_file
-            self.assertTrue(os.path.exists(res_file))
+        uhs_data = UhSpectrumData.objects.filter(
+            uh_spectrum__uh_spectra__output__oq_calculation=(
+            self.calculation.id))
 
-            expected_dir = os.path.join(result_dir,
-                                        'poe:%s' % self.UHS_RESULTS[i][0])
-            actual_dir, actual_file_name = os.path.split(res_file)
-            self.assertEquals(expected_dir, actual_dir)
-            self.assertEquals(expected_file_name, actual_file_name)
+        self.assertEqual(len(self.UHS_RESULTS), len(uhs_data))
+        self.assertTrue(all([x.realization == 0 for x in uhs_data]))
 
-            with h5py.File(res_file, 'r') as h5_file:
-                self.assertTrue(numpy.allclose(self.UHS_RESULTS[i][1],
-                                               h5_file['uhs'].value))
+        uhs_results_dict = dict(self.UHS_RESULTS)  # keyed by PoE
+        for uhs_datum in uhs_data:
+            self.assertTrue(
+                numpy.allclose(uhs_results_dict[uhs_datum.uh_spectrum.poe],
+                               uhs_datum.sa_values))
+            self.assertEqual(test_site.point.to_wkt(), uhs_datum.location.wkt)
 
-        shutil.rmtree(result_dir)
+    def test_compute_uhs_task_calls_compute_and_write(self):
+        # The celery task `compute_uhs_task` basically just calls a few other
+        # functions to do the calculation and write results. Those functions
+        # have their own test coverage; in this test, we just want to make
+        # sure they get called.
+
+        # To start with, we need to write the UHS 'container' records:
+        write_uh_spectra(self.calc_proxy)
+
+        uhs_core_base = 'openquake.calculators.hazard.uhs.core'
+        cmpt_uhs = '%s.%s' % (uhs_core_base, 'compute_uhs')
+        write_uhs_data = '%s.%s' % (uhs_core_base, 'write_uhs_spectrum_data')
+        with helpers.patch(cmpt_uhs) as compute_mock:
+            with helpers.patch(write_uhs_data) as write_mock:
+                # Call the function under test as a normal function, not a
+                # @task:
+                compute_uhs_task(self.calc_proxy.job_id, 0, Site(0.0, 0.0))
+
+                self.assertEqual(1, compute_mock.call_count)
+                self.assertEqual(1, write_mock.call_count)
