@@ -1248,7 +1248,7 @@ CREATE TABLE hzrdr.uh_spectra (
         CHECK (realizations >= 1),
     -- There should be at least 1 period value defined.
     periods float[] NOT NULL CONSTRAINT uh_spectra_periods_is_set
-        CHECK ((array_length(periods, 1) > 0))
+        CHECK ((periods <> '{}'))
 ) TABLESPACE hzrdr_ts;
 
 
@@ -1260,7 +1260,7 @@ CREATE TABLE hzrdr.uh_spectrum (
     id SERIAL PRIMARY KEY,
     uh_spectra_id INTEGER NOT NULL,
     poe float NOT NULL CONSTRAINT uh_spectrum_poe_is_set
-        CHECK ((poe >= 0.0) OR (poe <= 1.0))
+        CHECK ((poe >= 0.0) AND (poe <= 1.0))
 ) TABLESPACE hzrdr_ts;
 
 
@@ -1274,7 +1274,7 @@ CREATE TABLE hzrdr.uh_spectrum_data (
     -- from 0 to N
     realization INTEGER NOT NULL,
     sa_values float[] NOT NULL CONSTRAINT sa_values_is_set
-        CHECK ((array_length(sa_values, 1) > 0))
+        CHECK ((sa_values <> '{}'))
 ) TABLESPACE hzrdr_ts;
 SELECT AddGeometryColumn('hzrdr', 'uh_spectrum_data', 'location', 4326, 'POINT', 2);
 ALTER TABLE hzrdr.uh_spectrum_data ALTER COLUMN location SET NOT NULL;
