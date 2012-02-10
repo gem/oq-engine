@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
 
-# Copyright (c) 2010-2011, GEM Foundation.
+# Copyright (c) 2010-2012, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify
 # it under the terms of the GNU Lesser General Public License version 3
@@ -721,6 +721,15 @@ class VulnerabilityFunction(object):
         """
         return len(self.imls) == 0
 
+    @property
+    def stddevs(self):
+        """
+            Convenience method: returns a list of calculated
+            Standard Deviations
+        """
+        return [cov * loss_ratio for cov, loss_ratio in izip(self.covs,
+            self.loss_ratios)]
+
     def loss_ratio_for(self, iml):
         """
         Given 1 or more IML values, interpolate the corresponding loss ratio
@@ -778,7 +787,8 @@ class VulnerabilityFunction(object):
         """
         as_dict = {}
 
-        for iml, loss_ratio, cov in self:
+        for iml, loss_ratio, cov in izip(self.imls, self.loss_ratios,
+                self.covs):
             as_dict[str(iml)] = [loss_ratio, cov]
 
         return json.JSONEncoder().encode(as_dict)
