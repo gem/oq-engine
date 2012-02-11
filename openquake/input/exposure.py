@@ -65,14 +65,14 @@ class ExposureDBWriter(object):
                 owner=self.owner,
                 description=values.get('listDescription'),
                 category=values['assetCategory'],
-                unit=values['unit'])
+                stco_type="aggregated",
+                stco_unit=values['unit'])
             self.model.save()
 
         data = models.ExposureData(
             exposure_model=self.model, asset_ref=values['assetID'],
-            value=values['assetValue'],
+            stco=values['assetValue'],
             taxonomy=values['taxonomy'],
-            structure_type=values['structureCategory'],
             site="POINT(%s %s)" % (point.point.x, point.point.y),
-            retrofitting_cost=None)
+            reco=values['retrofittingCost'])
         data.save()

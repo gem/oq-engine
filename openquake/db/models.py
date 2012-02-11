@@ -1118,17 +1118,19 @@ class ExposureData(models.Model):
     @property
     def value(self):
         """The structural per-asset value."""
-        exd = self.REXD(cost=self.stco, cost_type=self.stco_type,
-                        area=self.area, area_type=self.area_type,
-                        number_of_units=self.number_of_units)
+        exd = self.REXD(
+            cost=self.stco, cost_type=self.exposure_model.stco_type,
+            area=self.area, area_type=self.exposure_model.area_type,
+            number_of_units=self.number_of_units)
         return per_asset_value(exd)
 
     @property
     def retrofitting_cost(self):
         """The retrofitting per-asset value."""
-        exd = self.REXD(cost=self.reco, cost_type=self.reco_type,
-                        area=self.area, area_type=self.area_type,
-                        number_of_units=self.number_of_units)
+        exd = self.REXD(
+            cost=self.reco, cost_type=self.exposure_model.reco_type,
+            area=self.area, area_type=self.exposure_model.area_type,
+            number_of_units=self.number_of_units)
         return per_asset_value(exd)
 
     class Meta:  # pylint: disable=C0111,W0232
