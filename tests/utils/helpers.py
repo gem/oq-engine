@@ -547,8 +547,8 @@ class DbTestCase(object):
             return
         input_set.delete()
 
-    @staticmethod
-    def setup_classic_job(create_job_path=True, upload_id=None):
+    @classmethod
+    def setup_classic_job(cls, create_job_path=True, upload_id=None):
         """Create a classic job with associated upload and inputs.
 
         :param integer upload_id: if set use upload record with given db key.
@@ -576,7 +576,7 @@ class DbTestCase(object):
         oqjp.truncation_type = "twosided"
         oqjp.truncation_level = 3
         oqjp.reference_vs30_value = 760
-        oqjp.imls = DbTestCase.IMLS
+        oqjp.imls = cls.IMLS
         oqjp.poes = [0.01, 0.10]
         oqjp.realizations = 1
         oqjp.width_of_mfd_bin = 0.1
