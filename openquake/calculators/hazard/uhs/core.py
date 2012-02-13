@@ -30,6 +30,7 @@ from openquake.engine import CalculationProxy
 from openquake.java import list_to_jdouble_array
 from openquake.logs import LOG
 from openquake.utils import config
+from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
 from openquake.db.models import Output
 from openquake.db.models import UhSpectra
@@ -71,6 +72,7 @@ def touch_result_file(job_id, path, sites, realizations, n_periods):
 
 
 @task(ignore_results=True)
+@stats.progress_indicator('h')
 @java.unpack_exception
 def compute_uhs_task(job_id, realization, site):
     """Compute Uniform Hazard Spectra for a given site of interest and 1 or
