@@ -63,7 +63,7 @@ def per_asset_value(exd):
             return exd.cost * exd.area
         elif exd.area_type == "per_asset":
             return exd.cost * exd.area * exd.number_of_units
-    return -1.0
+    raise ValueError("Invalid input: '%s'" % str(exd))
 
 
 def model_equals(model_a, model_b, ignore=None):
