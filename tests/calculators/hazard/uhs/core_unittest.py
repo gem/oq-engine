@@ -34,6 +34,7 @@ from openquake.utils import stats
 from openquake.calculators.hazard.uhs.core import compute_uhs
 from openquake.calculators.hazard.uhs.core import compute_uhs_task
 from openquake.calculators.hazard.uhs.core import touch_result_file
+from openquake.calculators.hazard.uhs.core import UHSCalculator
 from openquake.calculators.hazard.uhs.core import write_uh_spectra
 from openquake.calculators.hazard.uhs.core import write_uhs_spectrum_data
 
@@ -247,3 +248,34 @@ class UHSTaskProgressIndicatorTestCase(UHSBaseTestCase):
 
                 compute_uhs_task(self.calc_proxy.job_id, realization, site)
                 self.assertEqual(2, get_counter())
+
+
+class UHSCalculatorTestCase(UHSBaseTestCase):
+    """Tests for :class:`openquake.calculators.hazard.uhs.core.UHSCalculator`.
+    """
+
+    def test_analyze(self):
+        # Test that `analyze` sets the task total counter with the correct
+        # value
+        # First, check that the total counter doesn't exist.
+        task_total = lambda: stats.get_counter(
+            self.calc_proxy.job_id, 'h', 'uhs:tasks', 't')
+        self.assertIsNone(task_total())
+
+        calc = UHSCalculator(self.calc_proxy)
+
+        calc.analyze()
+
+        # In this test file, there is only 1 realization and 1 site.
+        # So, the expected total is 1.
+        self.assertEqual(1, task_total())
+
+    def test_pre_execute(self):
+        # Simply tests that `pre_execute` calls `write_uh_spectra`.
+        # That's all for now.
+        calc = UHSCalculator(None)
+
+        with helpers.patch(
+            '%s.write_uh_spectra' % self.UHS_CORE_MODULE) as write_mock:
+            calc.pre_execute()
+            self.assertEqual(1, write_mock.call_count)
