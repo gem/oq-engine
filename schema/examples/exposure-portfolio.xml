@@ -7,10 +7,18 @@
     <exposurePortfolio gml:id="ep1">
         <config/>
 
-        <!-- for attributes assetType and lossType, classification from the
-             Taxonomy and Ontology working group is needed -->
-        <!-- exposureList is a gml:Feature -->
-        <exposureList gml:id="PAV01" assetCategory="buildings" unit="EUR">
+        <!--
+             coco: contents type
+             reco: retrofitting type
+             stco: structural type
+
+             area type is one of: aggregated, per_asset
+             cost type is one of: aggregated, per_area, per_asset
+
+             limit: (contents cost) insurance coverage limit
+             deductible: (contents cost) insurance deductible
+        -->
+        <exposureList gml:id="PAV01" assetCategory="buildings" recoType="aggregated" recoUnit="EUR" stcoType="aggregated" stcoUnit="EUR">
 
             <gml:description>Collection of existing building in downtown Pavia</gml:description>
 
@@ -23,9 +31,8 @@
                 </site>
 
                 <taxonomy>RC/DMRF-D/LR</taxonomy>
-                <structureCategory>RC-LR-PC</structureCategory>
-                <assetValue>150000</assetValue>
-                <retrofittingCost>1</retrofittingCost>
+                <stco>150000</stco>
+                <reco>1</reco>
             </assetDefinition>
 
             <assetDefinition gml:id="asset_02">
@@ -36,9 +43,10 @@
                 </site>
 
                 <taxonomy>RC/DMRF-D/HR</taxonomy>
-                <structureCategory>RC-HR-PC</structureCategory>
-                <assetValue>250000</assetValue>
-                <retrofittingCost>1</retrofittingCost>
+                <stco>250000</stco>
+                <reco>1</reco>
+                <occupancy description="day">12</occupancy>
+                <occupancy description="night">50</occupancy>
             </assetDefinition>
 
             <assetDefinition gml:id="asset_03">
@@ -49,9 +57,10 @@
                 </site>
 
                 <taxonomy>RC/DMRF-D/LR</taxonomy>
-                <structureCategory>RC-LR-PC</structureCategory>
-                <assetValue>500000</assetValue>
-                <retrofittingCost>1</retrofittingCost>
+                <stco>500000</stco>
+                <reco>1</reco>
+                <occupancy description="day">36</occupancy>
+                <occupancy description="night">5</occupancy>
             </assetDefinition>
 
         </exposureList>
