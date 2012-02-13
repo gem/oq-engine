@@ -8,8 +8,9 @@ class BaseSurface(object):
     """
     Base class for surface in 3D-space.
 
-    Subclasses must implement :meth:`get_mesh` and can (for the sake
-    of performance) implement :meth:`get_min_distance`.
+    Subclasses must implement :meth:`get_mesh`, :meth:`get_strike` and
+    :meth:`get_dip`, and can (for the sake of performance) override
+    :meth:`get_min_distance`.
     """
     __metaclass__ = abc.ABCMeta
 
@@ -37,4 +38,20 @@ class BaseSurface(object):
 
         :returns:
             An instance of :class:`nhe.geo.mesh.Mesh`.
+        """
+
+    @abc.abstractmethod
+    def get_strike(self):
+        """
+        Return surface's strike as decimal degrees in a range ``[0, 360)``.
+
+        The actual definition of the strike might depend on surface geometry.
+        """
+
+    @abc.abstractmethod
+    def get_dip(self):
+        """
+        Return surface's dip as decimal degrees in a range ``(0, 90]``.
+
+        The actual definition of the dip might depend on surface geometry.
         """

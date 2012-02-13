@@ -94,3 +94,15 @@ class PlanarSurface(BaseSurface):
             right = r_line[i]
             points.extend(left.equally_spaced_points(right, self.mesh_spacing))
         return Mesh.from_points_list(points)
+
+    def get_strike(self):
+        """
+        Return strike value that was provided to the constructor.
+        """
+        return self.strike
+
+    def get_dip(self):
+        """
+        Return dip value that was provided to the constructor.
+        """
+        return self.dip
