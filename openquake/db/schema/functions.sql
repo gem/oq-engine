@@ -239,3 +239,169 @@ $$;
 
 COMMENT ON FUNCTION refresh_last_update() IS
 'Refresh the ''last_update'' time stamp whenever a row is updated.';
+
+
+CREATE OR REPLACE FUNCTION pcheck_exposure_model()
+  RETURNS TRIGGER
+AS $$
+    NEW = TD["new"] # new data resulting from insert or update
+
+    def fmt(err):
+        return "%s (%s)" % (err, TD["table_name"])
+
+    def check_xor(a, b):
+        """Raise exception if only one of the items is defined."""
+        if not ((NEW[a] and NEW[b]) or (not NEW[a] and not NEW[b])):
+            raise Exception(fmt("%s (%s) and %s (%s) must both be either "
+                                "defined or undefined" %
+                                (a, NEW[a], b, NEW[b])))
+
+    if NEW["area_type"] is None:
+        violations = []
+        for key in ["coco_type", "reco_type", "stco_type"]:
+            if NEW.get(key) is not None and NEW[key] == "per_area":
+                violations.append((key, NEW[key]))
+        if violations:
+            raise Exception(fmt("area_type is mandatory for <%s>" %
+                                ", ".join("%s=%s" % v for v in violations)))
+
+    if NEW["area_unit"] is None:
+        violations = []
+        for key in ["coco_type", "reco_type", "stco_type"]:
+            if NEW.get(key) is not None and NEW[key] == "per_area":
+                violations.append((key, NEW[key]))
+        if violations:
+            raise Exception(fmt("area_unit is mandatory for <%s>" %
+                                ", ".join("%s=%s" % v for v in violations)))
+
+    check_xor("coco_unit", "coco_type")
+    check_xor("reco_unit", "reco_type")
+    check_xor("stco_unit", "stco_type")
+    if NEW["stco_type"] is None and NEW["category"] != "population":
+        raise Exception(fmt("structural cost type is mandatory for "
+                            "<category=%s>" % NEW["category"]))
+    return "OK"
+$$ LANGUAGE plpythonu;
+
+
+COMMENT ON FUNCTION pcheck_exposure_model() IS
+'Make sure the inserted or modified exposure model record is consistent.';
+
+
+CREATE OR REPLACE FUNCTION pcheck_exposure_data()
+  RETURNS TRIGGER
+AS $$
+    def fmt(err):
+        return "%s (%s)" % (err, TD["table_name"])
+
+    NEW = TD["new"] # new data resulting from insert or update
+
+    # get the associated exposure model record
+    q = ("SELECT * FROM oqmif.exposure_model WHERE id = %s" %
+         NEW["exposure_model_id"])
+    [emdl] = plpy.execute(q)
+
+    if NEW["stco"] is None and emdl["category"] != "population":
+        raise Exception(fmt("structural cost is mandatory for category <%s>" %
+                            emdl["category"]))
+
+    if NEW["number_of_units"] is None:
+        violations = []
+        if emdl["category"] == "population":
+            violations.append(("category", "population"))
+        for key in ["coco_type", "reco_type", "stco_type"]:
+            if emdl.get(key) is None or emdl[key] == "aggregated":
+                continue
+            if (emdl[key] == "per_asset" or (emdl[key] == "per_area" and
+                emdl["area_type"] == "per_asset")):
+                violations.append((key, emdl[key]))
+        if violations:
+            raise Exception(fmt("number_of_units is mandatory for <%s>" %
+                                ", ".join("%s=%s" % v for v in violations)))
+
+    if NEW["area"] is None:
+        violations = []
+        for key in ["coco_type", "reco_type", "stco_type"]:
+            if emdl.get(key) is not None and emdl[key] == "per_area":
+                violations.append((key, emdl[key]))
+        if violations:
+            raise Exception(fmt("area is mandatory for <%s>" %
+                                ", ".join("%s=%s" % v for v in violations)))
+    if NEW["coco"] is None and emdl["coco_type"] is not None:
+        raise Exception(fmt("contents cost is mandatory for <coco_type=%s>"
+                            % emdl["coco_type"]))
+    if NEW["reco"] is None and emdl["reco_type"] is not None:
+        raise Exception(fmt("retrofitting cost is mandatory for <reco_type=%s>"
+                            % emdl["reco_type"]))
+    if NEW["stco"] is None and emdl["stco_type"] is not None:
+        raise Exception(fmt("structural cost is mandatory for <stco_type=%s>"
+                            % emdl["stco_type"]))
+
+
+    return "OK"
+$$ LANGUAGE plpythonu;
+
+
+COMMENT ON FUNCTION pcheck_exposure_data() IS
+'Make sure the inserted or modified exposure data is consistent.';
+
+
+CREATE TRIGGER hzrdi_rupture_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON hzrdi.rupture
+FOR EACH ROW EXECUTE PROCEDURE check_rupture_sources();
+
+CREATE TRIGGER hzrdi_source_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON hzrdi.source
+FOR EACH ROW EXECUTE PROCEDURE check_source_sources();
+
+CREATE TRIGGER hzrdi_r_rate_mdl_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON hzrdi.r_rate_mdl
+FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
+
+CREATE TRIGGER hzrdi_simple_fault_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON hzrdi.simple_fault
+FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
+
+CREATE TRIGGER hzrdi_complex_fault_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON hzrdi.complex_fault
+FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
+
+CREATE TRIGGER oqmif_exposure_model_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON oqmif.exposure_model
+FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_model();
+
+CREATE TRIGGER oqmif_exposure_data_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON oqmif.exposure_data
+FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_data();
+
+CREATE TRIGGER eqcat_magnitude_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON eqcat.magnitude
+FOR EACH ROW EXECUTE PROCEDURE check_magnitude_data();
+
+CREATE TRIGGER admin_organization_refresh_last_update_trig BEFORE UPDATE ON admin.organization FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER admin_oq_user_refresh_last_update_trig BEFORE UPDATE ON admin.oq_user FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER eqcat_catalog_refresh_last_update_trig BEFORE UPDATE ON eqcat.catalog FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER eqcat_surface_refresh_last_update_trig BEFORE UPDATE ON eqcat.surface FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER hzrdi_fault_edge_refresh_last_update_trig BEFORE UPDATE ON hzrdi.fault_edge FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER hzrdi_mfd_evd_refresh_last_update_trig BEFORE UPDATE ON hzrdi.mfd_evd FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER hzrdi_mfd_tgr_refresh_last_update_trig BEFORE UPDATE ON hzrdi.mfd_tgr FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER hzrdi_r_depth_distr_refresh_last_update_trig BEFORE UPDATE ON hzrdi.r_depth_distr FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER hzrdi_focal_mechanism_refresh_last_update_trig BEFORE UPDATE ON hzrdi.focal_mechanism FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER oqmif_exposure_model_refresh_last_update_trig BEFORE UPDATE ON oqmif.exposure_model FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER oqmif_exposure_data_refresh_last_update_trig BEFORE UPDATE ON oqmif.exposure_data FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER riski_vulnerability_function_refresh_last_update_trig BEFORE UPDATE ON riski.vulnerability_function FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER riski_vulnerability_model_refresh_last_update_trig BEFORE UPDATE ON riski.vulnerability_model FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
+
+CREATE TRIGGER uiapi_input_set_refresh_last_update_trig BEFORE UPDATE ON uiapi.input_set FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
