@@ -201,9 +201,6 @@ class UHSCoreTestCase(UHSBaseTestCase):
         # have their own test coverage; in this test, we just want to make
         # sure they get called.
 
-        # To start with, we need to write the UHS 'container' records:
-        write_uh_spectra(self.calc_proxy)
-
         uhs_core_base = 'openquake.calculators.hazard.uhs.core'
         cmpt_uhs = '%s.%s' % (uhs_core_base, 'compute_uhs')
         write_uhs_data = '%s.%s' % (uhs_core_base, 'write_uhs_spectrum_data')
