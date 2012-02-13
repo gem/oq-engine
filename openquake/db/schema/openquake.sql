@@ -1400,15 +1400,16 @@ CREATE TABLE oqmif.exposure_data (
     taxonomy VARCHAR NOT NULL,
 
     -- structural cost
-    stco float,
+    stco float CONSTRAINT stco_value CHECK(stco >= 0.0),
     -- retrofitting cost
-    reco float,
+    reco float CONSTRAINT reco_value CHECK(reco >= 0.0),
     -- contents cost
-    coco float,
+    coco float CONSTRAINT coco_value CHECK(coco >= 0.0),
 
     -- number of assets, people etc.
-    number_of_units float,
-    area float,
+    number_of_units float CONSTRAINT number_of_units_value
+        CHECK(number_of_units >= 0.0),
+    area float CONSTRAINT area_value CHECK(area >= 0.0),
 
     -- insurance coverage limit
     coco_limit float,
