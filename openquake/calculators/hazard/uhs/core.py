@@ -31,6 +31,7 @@ from openquake.logs import LOG
 from openquake.utils import config
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
+from openquake.calculators.base import Calculator
 from openquake.db.models import Output
 from openquake.db.models import UhSpectra
 from openquake.db.models import UhSpectrum
@@ -221,3 +222,21 @@ def write_uhs_spectrum_data(calc_proxy, realization, site, uhs_results):
             uh_spectrum=uh_spectrum, realization=realization,
             sa_values=sa_values, location=location)
         uh_spectrum_data.save()
+
+
+class UHSCalculator(Calculator):
+    """Uniform Hazard Spectra calculator"""
+
+    def analyze(self):
+        """Set the task total counter."""
+        task_total = (self.calc_proxy.oq_job_profile.realizations
+                      * len(self.calc_proxy.sites_to_compute()))
+        stats.set_total(self.calc_proxy.job_id, 'h', 'uhs:tasks', task_total)
+
+    def pre_execute(self):
+        """Writes initial DB 'container' records for the calculation results.
+        """
+        write_uh_spectra(self.calc_proxy)
+
+    def execute(self):
+        pass
