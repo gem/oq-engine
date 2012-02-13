@@ -19,6 +19,7 @@ class NodalPlaneTestCase(unittest.TestCase):
     def test_strike_out_of_range(self):
         self._test_broken_input('strike', strike=-0.1, dip=1, rake=0)
         self._test_broken_input('strike', strike=360.1, dip=1, rake=0)
+        self._test_broken_input('strike', strike=360, dip=1, rake=0)
 
     def test_dip_out_of_range(self):
         self._test_broken_input('dip', strike=0, dip=-0.1, rake=0)
@@ -33,5 +34,5 @@ class NodalPlaneTestCase(unittest.TestCase):
     def test_corner_cases(self):
         np = NodalPlane(strike=0, dip=0.001, rake=-180 + 1e-5)
         self.assertEqual((np.strike, np.dip, np.rake), (0, 0.001, -180 + 1e-5))
-        np = NodalPlane(strike=360, dip=90, rake=+180)
-        self.assertEqual((np.strike, np.dip, np.rake), (360, 90, +180))
+        np = NodalPlane(strike=360 - 1e-5, dip=90, rake=+180)
+        self.assertEqual((np.strike, np.dip, np.rake), (360 - 1e-5, 90, +180))

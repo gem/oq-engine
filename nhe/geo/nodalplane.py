@@ -41,11 +41,11 @@ class NodalPlane(object):
     @classmethod
     def check_strike(cls, strike):
         """
-        Check if ``strike`` is in range ``[0, 360]``
+        Check if ``strike`` is in range ``[0, 360)``
         and raise ``ValueError`` otherwise.
         """
-        if not 0 <= strike <= 360:
-            raise ValueError('strike is out of range [0, 360]')
+        if not 0 <= strike < 360:
+            raise ValueError('strike is out of range [0, 360)')
 
     @classmethod
     def check_rake(cls, rake):
