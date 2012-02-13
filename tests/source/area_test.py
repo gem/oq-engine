@@ -24,7 +24,8 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
             'magnitude_scaling_relationship': PeerMSR(),
             'rupture_aspect_ratio': 1.333,
             'polygon': polygon,
-            'area_discretization': discretization
+            'area_discretization': discretization,
+            'rupture_mesh_spacing': 12.33
         }
         default_arguments.update(kwargs)
         kwargs = default_arguments
@@ -36,7 +37,8 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
     def test_implied_point_sources(self):
         source = self.make_area_source(Polygon([Point(-2, -2), Point(0, -2),
                                                 Point(0, 0), Point(-2, 0)]),
-                                       discretization=66.7)
+                                       discretization=66.7,
+                                       rupture_mesh_spacing=5)
         ruptures = list(source.iter_ruptures(PoissonTOM(50)))
         self.assertEqual(len(ruptures), 9 * 2)
         # resulting 3x3 mesh has points in these coordinates:
@@ -52,6 +54,7 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
                                            lon, delta=1e-3)
                     self.assertAlmostEqual(rupture.hypocenter.latitude,
                                            lat, delta=1e-3)
+                    self.assertEqual(rupture.surface.mesh_spacing, 5)
                 self.assertEqual(r1.mag, 5.5)
                 self.assertEqual(r2.mag, 6.5)
         self.assertEqual(len(ruptures), 9 * 2)

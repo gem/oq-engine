@@ -13,7 +13,7 @@ class AreaSource(PointSource):
         An instance of :class:`nhe.common.geo.Polygon` that defines
         source's area.
     :param area_discretization:
-        Float number, polygon discretization spacing in kilometers.
+        Float number, polygon area discretization spacing in kilometers.
         See :meth:`iter_ruptures`.
 
     Other parameters (except ``location``) are the same as for
@@ -41,8 +41,9 @@ class AreaSource(PointSource):
         Polygon's method :meth:`~nhe.geo.polygon.Polygon.discretize`
         is used for creating a mesh of points on the source's area.
         Constructor's parameter ``area_discretization`` is used as
-        polygon's mesh spacing (not to be confused with rupture surface's
-        :meth:`mesh_spacing <nhe.surface.base.BaseSurface.get_mesh>`).
+        polygon's discretization spacing (not to be confused with
+        rupture surface's mesh spacing which is as well provided
+        to the constructor).
 
         The ruptures' occurrence rates are rescaled with respect to number
         of points the polygon discretizes to.
