@@ -26,6 +26,7 @@ from django.db import transaction
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
 from openquake import java
+from openquake.input import logictree
 from openquake.java import list_to_jdouble_array
 from openquake.logs import LOG
 from openquake.utils import config
@@ -39,6 +40,8 @@ from openquake.db.models import UhSpectrumData
 from openquake.calculators.hazard.general import generate_erf
 from openquake.calculators.hazard.general import generate_gmpe_map
 from openquake.calculators.hazard.general import get_iml_list
+from openquake.calculators.hazard.general import store_source_model
+from openquake.calculators.hazard.general import store_gmpe_map
 from openquake.calculators.hazard.general import set_gmpe_params
 
 
@@ -227,6 +230,9 @@ def write_uhs_spectrum_data(calc_proxy, realization, site, uhs_results):
 class UHSCalculator(Calculator):
     """Uniform Hazard Spectra calculator"""
 
+    # LogicTreeProcessor for sampling the source model and gmpe logic trees.
+    lt_processor = None
+
     def analyze(self):
         """Set the task total counter."""
         task_total = (self.calc_proxy.oq_job_profile.realizations
@@ -234,9 +240,40 @@ class UHSCalculator(Calculator):
         stats.set_total(self.calc_proxy.job_id, 'h', 'uhs:tasks', task_total)
 
     def pre_execute(self):
-        """Writes initial DB 'container' records for the calculation results.
+        """Performs the following pre-execution tasks:
+
+        - write initial DB 'container' records for the calculation results
+        - instantiate a :class:`openquake.input.logictree.LogicTreeProcessor`
+          for sampling source model and gmpe logic trees
         """
         write_uh_spectra(self.calc_proxy)
 
+        source_model_lt = self.calc_proxy.params.get(
+            'SOURCE_MODEL_LOGIC_TREE_FILE_PATH')
+        gmpe_lt = self.calc_proxy.params.get('GMPE_LOGIC_TREE_FILE_PATH')
+        basepath = self.calc_proxy.params.get('BASE_PATH')
+        self.lt_processor = logictree.LogicTreeProcessor(
+            basepath, source_model_lt, gmpe_lt)
+
     def execute(self):
-        pass
+
+        calc_proxy = self.calc_proxy
+        job_profile = calc_proxy.oq_job_profile
+
+        src_model_rnd = random.Random(job_profile.source_model_lt_random_seed)
+        gmpe_rnd = random.Random(job_profile.gmpe_lt_random_seed)
+
+        for rlz in xrange(calc_proxy.oq_job_profile.realizations):
+
+            # Sample the gmpe and source models:
+            store_source_model(
+                calc_proxy.job_id, src_model_rnd.getrandbits(32),
+                calc_proxy.params, self.lt_processor)
+            store_gmpe_map(
+                calc_proxy.job_id, gmpe_rnd.getrandbits(32), self.lt_processor)
+
+            distribute(
+                compute_uhs_task, ('site', calc_proxy.sites_to_compute(),
+                tf_args=None, ath=None, ath_args=None)
+            # Notes: the async task handler could probably just operate by
+            # checking counters.
