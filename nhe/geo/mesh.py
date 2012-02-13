@@ -21,6 +21,9 @@ class Mesh(object):
         Either ``None``, which means that all points the mesh consists
         of are lying on the earth surface (have zero depth) or numpy
         array of the same shape as previous two.
+
+    Mesh object can also be created from a collection of points, see
+    :meth:`from_points_list`.
     """
     def __init__(self, lons, lats, depths):
         assert (isinstance(lons, numpy.ndarray)
@@ -32,6 +35,29 @@ class Mesh(object):
         self.lons = lons
         self.lats = lats
         self.depths = depths
+
+    @classmethod
+    def from_points_list(cls, points):
+        """
+        Create a mesh object from a collection of points.
+
+        :param point:
+            List of :class:`~nhe.geo.point.Point` objects.
+        :returns:
+            An instance of :class:`Mesh` with one-dimensional arrays
+            of coordinates from ``points``.
+        """
+        lons = numpy.zeros(len(points), dtype=float)
+        lats = lons.copy()
+        depths = lons.copy()
+        for i in xrange(len(points)):
+            lons[i] = points[i].longitude
+            lats[i] = points[i].latitude
+            depths[i] = points[i].depth
+        if not depths.any():
+            # all points have zero depth, no need to waste memory
+            depths = None
+        return cls(lons, lats, depths)
 
     def __iter__(self):
         """

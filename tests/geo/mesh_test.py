@@ -49,6 +49,21 @@ class MeshCreationTestCase(_BaseMeshTestCase):
                           numpy.array([[1], [2]]), numpy.array([[2], [3]]),
                           numpy.array([0, 1]))
 
+    def test_from_points_list_no_depth(self):
+        points = [Point(0, 1), Point(2, 3), Point(5, 7)]
+        mesh = Mesh.from_points_list(points)
+        self.assertTrue((mesh.lons == [0, 2, 5]).all())
+        self.assertTrue((mesh.lats == [1, 3, 7]).all())
+        self.assertEqual(mesh.lons.dtype, numpy.float)
+        self.assertEqual(mesh.lats.dtype, numpy.float)
+        self.assertIs(mesh.depths, None)
+
+    def test_from_points_list_with_depth(self):
+        points = [Point(0, 1, 2), Point(2, 3, 4), Point(5, 7, 10)]
+        mesh = Mesh.from_points_list(points)
+        self.assertTrue((mesh.depths == [2, 4, 10]).all())
+        self.assertEqual(mesh.depths.dtype, numpy.float)
+
 
 class MeshIterTestCase(_BaseMeshTestCase):
     def test_1d(self):
