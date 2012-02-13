@@ -6,9 +6,8 @@ from nhe.source.point import PointSource
 from nhe.source.rupture import ProbabilisticRupture
 from nhe.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from nhe.msr import PeerMSR
-from nhe.geo import Point, PlanarSurface
+from nhe.geo import Point, PlanarSurface, NodalPlane
 from nhe.pmf import PMF
-from nhe.source.nodalplane import NodalPlane
 from nhe.tom import PoissonTOM
 
 from tests.geo.surface import _planar_test_data as planar_surface_test_data

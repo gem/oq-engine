@@ -3,7 +3,7 @@ import unittest
 from nhe import const
 from nhe.geo import Point
 from nhe.geo.surface.planar import PlanarSurface
-from nhe.source.nodalplane import NodalPlane
+from nhe.geo.nodalplane import NodalPlane
 from nhe.tom import PoissonTOM
 from nhe.source.rupture import Rupture, ProbabilisticRupture
 

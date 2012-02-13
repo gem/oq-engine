@@ -3,9 +3,8 @@ import unittest
 from nhe.const import TRT
 from nhe.msr import PeerMSR
 from nhe.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
-from nhe.geo import Point, Polygon
+from nhe.geo import Point, Polygon, NodalPlane
 from nhe.pmf import PMF
-from nhe.source.nodalplane import NodalPlane
 from nhe.tom import PoissonTOM
 from nhe.source.area import AreaSource
 
