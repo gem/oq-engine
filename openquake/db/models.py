@@ -52,7 +52,8 @@ def per_asset_value(exd):
         - area
         - area_type
         - number_of_units
-    :returns: the per-asset value as a `float` (-1.0 indicates failure)
+    :returns: the per-asset value as a `float`
+    :raises: `ValueError` in case of a malformed (risk exposure data) input
     """
     if exd.cost_type == "aggregated":
         return exd.cost
