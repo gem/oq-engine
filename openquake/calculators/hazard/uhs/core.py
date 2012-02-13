@@ -26,7 +26,6 @@ from django.db import transaction
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
 from openquake import java
-from openquake.engine import CalculationProxy
 from openquake.java import list_to_jdouble_array
 from openquake.logs import LOG
 from openquake.utils import config

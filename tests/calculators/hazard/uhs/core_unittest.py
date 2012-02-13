@@ -230,8 +230,8 @@ class UHSTaskProgressIndicatorTestCase(UHSBaseTestCase):
         cmpt_uhs = '%s.%s' % (self.UHS_CORE_MODULE, 'compute_uhs')
         write_uhs_data = '%s.%s' % (self.UHS_CORE_MODULE,
                                     'write_uhs_spectrum_data')
-        with helpers.patch(cmpt_uhs) as compute_mock:
-            with helpers.patch(write_uhs_data) as write_mock:
+        with helpers.patch(cmpt_uhs):
+            with helpers.patch(write_uhs_data):
 
                 get_counter = lambda: stats.get_counter(
                     self.calc_proxy.job_id, 'h', 'compute_uhs_task', 'i')
