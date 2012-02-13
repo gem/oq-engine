@@ -57,7 +57,6 @@ from signalling_unittest import *
 from supervisor_unittest import *
 from tools_dbmaint_unittest import *
 from tools_oqbugs_unittest import *
-from uhs_unittest import *
 from utils_config_unittest import *
 from utils_general_unittest import *
 from utils_stats_unittest import *
