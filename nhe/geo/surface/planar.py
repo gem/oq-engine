@@ -3,6 +3,7 @@ Module :mod:`nhe.geo.surface.planar` contains :class:`PlanarSurface`.
 """
 from nhe.geo.surface.base import BaseSurface
 from nhe.geo.mesh import Mesh
+from nhe.geo.nodalplane import NodalPlane
 
 
 class PlanarSurface(BaseSurface):
@@ -12,11 +13,21 @@ class PlanarSurface(BaseSurface):
     :param mesh_spacing:
         The desired distance between two adjacent points in the surface mesh
         in both horizontal and vertical directions, in km.
+    :param strike:
+        Strike of the surface is the azimuth from ``top_left`` to ``top_right``
+        points.
+    :param dip:
+        Dip is the angle between the surface itself and the earth surface.
 
     Other parameters are points (instances of :class:`~nhe.geo.point.Point`)
     defining the surface corners in clockwise direction starting from top
     left corner. Top and bottom edges of the polygon must be parallel
     to earth surface and to each other.
+
+    See :class:`~nhe.geo.nodalplane.NodalPlane` for more detailed definition
+    of ``strike`` and ``dip``. Note that these parameters are supposed
+    to match the factual surface geometry (defined by corner points), but
+    this is not enforced or even checked.
 
     :raises ValueError:
         If either top or bottom points differ in depth or if top edge
@@ -30,7 +41,7 @@ class PlanarSurface(BaseSurface):
     #: in kilometers.
     LENGTH_TOLERANCE = 1e-3
 
-    def __init__(self, mesh_spacing,
+    def __init__(self, mesh_spacing, strike, dip,
                  top_left, top_right, bottom_right, bottom_left):
         if not (top_left.depth == top_right.depth
                 and bottom_left.depth == bottom_right.depth):
@@ -55,6 +66,11 @@ class PlanarSurface(BaseSurface):
         if not mesh_spacing > 0:
             raise ValueError("mesh spacing must be positive")
         self.mesh_spacing = mesh_spacing
+
+        NodalPlane.check_dip(dip)
+        NodalPlane.check_strike(strike)
+        self.dip = dip
+        self.strike = strike
 
         # we don't need to check if left edge has the same length
         # as right one because previous checks guarantee that.

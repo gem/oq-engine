@@ -255,5 +255,6 @@ class PointSource(SeismicSource):
                                             vertical_increment=0,
                                             azimuth=azimuth_left)
 
-        return PlanarSurface(self.rupture_mesh_spacing, left_top, right_top,
+        return PlanarSurface(self.rupture_mesh_spacing, nodal_plane.strike,
+                             nodal_plane.dip, left_top, right_top,
                              right_bottom, left_bottom)

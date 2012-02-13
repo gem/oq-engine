@@ -15,7 +15,7 @@ class RuptureCreationTestCase(unittest.TestCase):
             'nodal_plane': NodalPlane(1, 2, 3),
             'tectonic_region_type': const.TRT.STABLE_CONTINENTAL,
             'hypocenter': Point(5, 6, 7),
-            'surface': PlanarSurface(10,
+            'surface': PlanarSurface(10, 11, 12,
                 Point(0, 0, 1), Point(1, 0, 1),
                 Point(1, 0, 2), Point(0, 0, 2)
             )
