@@ -8,11 +8,14 @@ class BaseSurface(object):
     """
     Base class for surface in 3D-space.
 
-    Subclasses must implement :meth:`get_mesh`, :meth:`get_strike` and
+    Subclasses must implement :meth:`_create_mesh`, :meth:`get_strike` and
     :meth:`get_dip`, and can (for the sake of performance) override
     :meth:`get_min_distance`.
     """
     __metaclass__ = abc.ABCMeta
+
+    def __init__(self):
+        self._mesh = None
 
     def get_min_distance(self, point):
         """
@@ -31,8 +34,19 @@ class BaseSurface(object):
         """
         return self.get_mesh().get_min_distance(point)
 
-    @abc.abstractmethod
     def get_mesh(self):
+        """
+        Return surface's mesh.
+
+        Uses :meth:`_create_mesh` for creating the mesh for the first time.
+        All subsequent calls to :meth:`get_mesh` return the same mesh object.
+        """
+        if self._mesh is None:
+            self._mesh = self._create_mesh()
+        return self._mesh
+
+    @abc.abstractmethod
+    def _create_mesh(self):
         """
         Create and return the mesh of points covering the surface.
 

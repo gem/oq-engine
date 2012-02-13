@@ -43,6 +43,7 @@ class PlanarSurface(BaseSurface):
 
     def __init__(self, mesh_spacing, strike, dip,
                  top_left, top_right, bottom_right, bottom_left):
+        super(PlanarSurface, self).__init__()
         if not (top_left.depth == top_right.depth
                 and bottom_left.depth == bottom_right.depth):
             raise ValueError("top and bottom edges must be parallel "
@@ -81,9 +82,9 @@ class PlanarSurface(BaseSurface):
         self.bottom_right = bottom_right
         self.bottom_left = bottom_left
 
-    def get_mesh(self):
+    def _create_mesh(self):
         """
-        See :meth:`nhe.surface.base.BaseSurface.get_mesh`.
+        See :meth:`nhe.surface.base.BaseSurface._create_mesh`.
         """
         points = []
         l_line = self.top_left.equally_spaced_points(self.bottom_left,

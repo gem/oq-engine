@@ -120,6 +120,7 @@ class PlanarSurfaceGetMeshTestCase(unittest.TestCase):
         dip = 90
         surface = PlanarSurface(mesh_spacing, strike, dip, *corner_points)
         mesh = surface.get_mesh()
+        self.assertIs(mesh, surface.get_mesh())
         expected_mesh = list(itertools.chain(*expected_mesh))
         self.assertEqual(len(mesh), len(expected_mesh))
         self.assertIsInstance(mesh, Mesh)
