@@ -637,4 +637,4 @@ class PerAssetValueTestCase(TestCase):
         # When the exposure data is invalid per_asset_value() returns: -1.0
         exd = self.REXD(cost=26.0, cost_type="too-expensive", area=0.0,
                         area_type="rough", number_of_units=0.0)
-        self.assertEqual(-1.0, models.per_asset_value(exd))
+        self.assertRaises(ValueError, models.per_asset_value, exd)
