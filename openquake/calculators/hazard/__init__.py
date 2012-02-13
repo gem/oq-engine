@@ -23,6 +23,7 @@ from openquake.calculators.hazard.disagg.core import DisaggHazardCalculator
 from openquake.calculators.hazard.event_based.core import (
     EventBasedHazardCalculator)
 from openquake.calculators.hazard.scenario.core import ScenarioHazardCalculator
+from openquake.calculators.hazard.uhs.core import UHSCalculator
 
 
 CALCULATORS = {
@@ -32,4 +33,5 @@ CALCULATORS = {
     'event_based_bcr': EventBasedHazardCalculator,
     'disaggregation': DisaggHazardCalculator,
     'scenario': ScenarioHazardCalculator,
+    'uhs': UHSCalculator,
 }
