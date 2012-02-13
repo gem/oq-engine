@@ -104,3 +104,18 @@ class Mesh(object):
         Return the number of points in the mesh.
         """
         return self.lons.size
+
+    def get_min_distance(self, point):
+        """
+        Compute and return the minimum distance from the mesh to ``point``.
+
+        :returns:
+            Distance in km.
+
+        Method doesn't make any assumptions on arrangement of the points
+        and instead calculates the distance from each point of the mesh
+        to the target point and returns the lowest found. Therefore,
+        the method's time complexity grows linearly with the number
+        of points in the mesh.
+        """
+        return min(point.distance(mesh_point) for mesh_point in self)

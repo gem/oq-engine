@@ -20,11 +20,15 @@ class BaseSurface(object):
         :returns:
             Distance in km.
 
-        Base class implementation does a numerical approach -- finds
-        a minimum distance from each point of the :meth:`mesh <get_mesh>`.
+        Base class implementation calls the :meth:`corresponding
+        <nhe.geo.mesh.Mesh.get_min_distance>` method of the
+        surface's :meth:`mesh <get_mesh>`.
+
+        Subclasses may override this method in order to make use
+        of knowledge of a specific surface shape and thus perform
+        better.
         """
-        return min(point.distance(mesh_point)
-                   for mesh_point in self.get_mesh())
+        return self.get_mesh().get_min_distance(point)
 
     @abc.abstractmethod
     def get_mesh(self):

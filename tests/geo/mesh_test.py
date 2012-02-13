@@ -144,3 +144,12 @@ class MeshSlicingTestCase(_BaseMeshTestCase):
             mesh[1]
         with self.assertRaises(AssertionError):
             mesh[1:, 5]
+
+
+class MeshGetMinDistanceTestCase(unittest.TestCase):
+    def test_1(self):
+        mesh = Mesh.from_points_list([Point(0, 0), Point(0, 1), Point(0, 2)])
+        self.assertEqual(mesh.get_min_distance(Point(1, 1)),
+                         Point(1, 1).distance(Point(0, 1)))
+        self.assertEqual(mesh.get_min_distance(Point(-1, 0)),
+                         Point(-1, 0).distance(Point(0, 0)))
