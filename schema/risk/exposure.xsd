@@ -29,7 +29,17 @@
                     <xs:element ref="assetDefinition" minOccurs="0" maxOccurs="unbounded"/>
                 </xs:sequence>
                 <xs:attribute name="assetCategory" type="AssetCategory" use="required"/>
-                <xs:attribute name="unit" type="AssetValueUnit"/>
+                <xs:attribute name="areaType" type="AreaType"/>
+                <xs:attribute name="areaUnit" type="AssetValueUnit"/>
+                    <!-- contents cost type and unit -->
+                <xs:attribute name="cocoType" type="CostType"/>
+                <xs:attribute name="cocoUnit" type="AssetValueUnit"/>
+                    <!-- retrofitting cost type and unit -->
+                <xs:attribute name="recoType" type="CostType"/>
+                <xs:attribute name="recoUnit" type="AssetValueUnit"/>
+                    <!-- structural cost type and unit -->
+                <xs:attribute name="stcoType" type="CostType"/>
+                <xs:attribute name="stcoUnit" type="AssetValueUnit"/>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
@@ -40,9 +50,20 @@
             <xs:extension base="FieldNode">
                 <xs:sequence>
                     <xs:element name="taxonomy" type="xs:string"/>
-                    <xs:element name="structureCategory" type="xs:string"/>
-                    <xs:element name="assetValue" type="AssetValue"/>
-                    <xs:element name="retrofittingCost" type="xs:double"/>
+
+                    <!-- contents cost -->
+                    <xs:element name="coco" type="AssetValue"/>
+                    <!-- retrofitting cost -->
+                    <xs:element name="reco" type="AssetValue"/>
+                    <!-- structural cost -->
+                    <xs:element name="stco" type="AssetValue"/>
+                    <xs:element name="area" type="xs:double"/>
+                    <xs:element name="number" type="xs:double"/>
+                    <!-- insurance deductible -->
+                    <xs:element name="deductible" type="xs:double"/>
+                    <!-- insurance coverage limit -->
+                    <xs:element name="limit" type="xs:double"/>
+                    <xs:element name="occupants" type="OccupantsType"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
@@ -54,4 +75,25 @@
         </xs:simpleContent>
     </xs:complexType>
 
+    <xs:complexType name="OccupantsType">
+        <xs:simpleContent>
+            <xs:extension base="xs:integer">
+                <xs:attribute name="description" type="xs:string" use="required"/>
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:simpleType name="CostType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="aggregated"/>
+            <xs:enumeration value="per_area"/>
+            <xs:enumeration value="per_asset"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="AreaType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="aggregated"/>
+            <xs:enumeration value="per_asset"/>
+        </xs:restriction>
+    </xs:simpleType>
 </xs:schema>
