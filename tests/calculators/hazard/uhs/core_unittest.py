@@ -30,6 +30,7 @@ from openquake.db.models import Output
 from openquake.db.models import UhSpectra
 from openquake.db.models import UhSpectrum
 from openquake.db.models import UhSpectrumData
+from openquake.utils import stats
 from openquake.calculators.hazard.uhs.core import compute_uhs
 from openquake.calculators.hazard.uhs.core import compute_uhs_task
 from openquake.calculators.hazard.uhs.core import touch_result_file
@@ -42,17 +43,11 @@ from tests.utils import helpers
 UHS_DEMO_CONFIG_FILE = helpers.demo_file('uhs/config.gem')
 
 
-class UHSCoreTestCase(unittest.TestCase):
-    """Tests for core UHS tasks and other functions."""
+class UHSBaseTestCase(unittest.TestCase):
+    """Shared functionality for UHS test cases."""
 
-    # Sample UHS result data
-    UHS_RESULTS = [
-        (0.1, [0.2774217067746703,
-               0.32675005743942004,
-               0.05309858927852786]),
-        (0.02, [0.5667404129191248,
-                0.6185688023781438,
-                0.11843417899553109])]
+    # Used for mocking
+    UHS_CORE_MODULE = 'openquake.calculators.hazard.uhs.core'
 
     def setUp(self):
         # Create OqJobProfile, OqCalculation, and CalculationProxy objects
@@ -68,6 +63,19 @@ class UHSCoreTestCase(unittest.TestCase):
             params, self.calculation.id, sections=sections,
             serialize_results_to=['db'], oq_job_profile=self.job_profile,
             oq_calculation=self.calculation)
+
+
+class UHSCoreTestCase(UHSBaseTestCase):
+    """Tests for core UHS tasks and other functions."""
+
+    # Sample UHS result data
+    UHS_RESULTS = [
+        (0.1, [0.2774217067746703,
+               0.32675005743942004,
+               0.05309858927852786]),
+        (0.02, [0.5667404129191248,
+                0.6185688023781438,
+                0.11843417899553109])]
 
     def test_touch_result_file(self):
         # Call the :function:`openquake.hazard.uhs.core.touch_result_file` and
@@ -197,12 +205,9 @@ class UHSCoreTestCase(unittest.TestCase):
         # have their own test coverage; in this test, we just want to make
         # sure they get called.
 
-        # To start with, we need to write the UHS 'container' records:
-        write_uh_spectra(self.calc_proxy)
-
-        uhs_core_base = 'openquake.calculators.hazard.uhs.core'
-        cmpt_uhs = '%s.%s' % (uhs_core_base, 'compute_uhs')
-        write_uhs_data = '%s.%s' % (uhs_core_base, 'write_uhs_spectrum_data')
+        cmpt_uhs = '%s.%s' % (self.UHS_CORE_MODULE, 'compute_uhs')
+        write_uhs_data = '%s.%s' % (self.UHS_CORE_MODULE,
+                                    'write_uhs_spectrum_data')
         with helpers.patch(cmpt_uhs) as compute_mock:
             with helpers.patch(write_uhs_data) as write_mock:
                 # Call the function under test as a normal function, not a
@@ -211,3 +216,34 @@ class UHSCoreTestCase(unittest.TestCase):
 
                 self.assertEqual(1, compute_mock.call_count)
                 self.assertEqual(1, write_mock.call_count)
+
+
+class UHSTaskProgressIndicatorTestCase(UHSBaseTestCase):
+    """Tests progress indicator behavior for UHS @task functions."""
+
+    def test_compute_uhs_task_pi(self):
+        # Test that progress indicators are working properly for
+        # `compute_uhs_task`.
+
+        # Mock out the two 'heavy' functions called by this task;
+        # we don't need to do these and we don't want to waste the cycles.
+        cmpt_uhs = '%s.%s' % (self.UHS_CORE_MODULE, 'compute_uhs')
+        write_uhs_data = '%s.%s' % (self.UHS_CORE_MODULE,
+                                    'write_uhs_spectrum_data')
+        with helpers.patch(cmpt_uhs):
+            with helpers.patch(write_uhs_data):
+
+                get_counter = lambda: stats.get_counter(
+                    self.calc_proxy.job_id, 'h', 'compute_uhs_task', 'i')
+
+                # First, check that the counter for `compute_uhs_task` is
+                # `None`:
+                self.assertIsNone(get_counter())
+
+                realization = 0
+                site = Site(0.0, 0.0)
+                compute_uhs_task(self.calc_proxy.job_id, realization, site)
+                self.assertEqual(1, get_counter())
+
+                compute_uhs_task(self.calc_proxy.job_id, realization, site)
+                self.assertEqual(2, get_counter())
