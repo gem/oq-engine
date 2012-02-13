@@ -17,39 +17,38 @@
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
-import os
-import json
-import numpy
-import unittest
-import tempfile
-from StringIO import StringIO
-
 from django.contrib.gis.geos import GEOSGeometry
 from lxml import etree
+from StringIO import StringIO
+import json
+import numpy
+import os
+import tempfile
+import unittest
 
-from openquake import engine
-from openquake import kvs
-from openquake import shapes
-from openquake.output import hazard
 from openquake.calculators.risk.classical import core as classical_core
 from openquake.calculators.risk.event_based import core as eb_core
+from openquake.calculators.risk.general import AggregateLossCurve
+from openquake.calculators.risk.general import BaseRiskCalculator
+from openquake.calculators.risk.general import Block
+from openquake.calculators.risk.general import compute_bcr
 from openquake.calculators.risk.general import _compute_conditional_loss
 from openquake.calculators.risk.general import _compute_cumulative_histogram
+from openquake.calculators.risk.general import compute_loss_curve
+from openquake.calculators.risk.general import compute_loss_ratio_curve
+from openquake.calculators.risk.general import compute_loss_ratios
 from openquake.calculators.risk.general import _compute_loss_ratios_range
+from openquake.calculators.risk.general import compute_mean_loss
 from openquake.calculators.risk.general import _compute_mid_mean_pe
 from openquake.calculators.risk.general import _compute_mid_po
 from openquake.calculators.risk.general import _compute_probs_of_exceedance
 from openquake.calculators.risk.general import _compute_rates_of_exceedance
-from openquake.calculators.risk.general import AggregateLossCurve
-from openquake.calculators.risk.general import BaseRiskCalculator
-from openquake.calculators.risk.general import Block
-from openquake.calculators.risk.general import compute_loss_curve
-from openquake.calculators.risk.general import compute_loss_ratio_curve
-from openquake.calculators.risk.general import compute_loss_ratios
-from openquake.calculators.risk.general import compute_mean_loss
-from openquake.calculators.risk.general import compute_bcr
 from openquake.calculators.risk.general import ProbabilisticRiskCalculator
 from openquake.calculators.risk.scenario import core as scenario
+from openquake import engine
+from openquake import kvs
+from openquake import shapes
+from openquake.output import hazard
 
 from tests.utils import helpers
 
@@ -1495,5 +1494,4 @@ class RiskJobGeneralTestCase(unittest.TestCase):
                    for (event, elem) in etree.iterparse(result)]
         events2 = [(elem.tag, elem.attrib, elem.text)
                    for (event, elem) in etree.iterparse(expected_result)]
-        self.assertEqual(events1, events2)
         self.assertEqual(events1, events2)
