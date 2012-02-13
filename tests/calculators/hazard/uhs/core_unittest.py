@@ -30,6 +30,7 @@ from openquake.db.models import Output
 from openquake.db.models import UhSpectra
 from openquake.db.models import UhSpectrum
 from openquake.db.models import UhSpectrumData
+from openquake.utils import stats
 from openquake.calculators.hazard.uhs.core import compute_uhs
 from openquake.calculators.hazard.uhs.core import compute_uhs_task
 from openquake.calculators.hazard.uhs.core import touch_result_file
@@ -44,6 +45,9 @@ UHS_DEMO_CONFIG_FILE = helpers.demo_file('uhs/config.gem')
 
 class UHSBaseTestCase(unittest.TestCase):
     """Shared functionality for UHS test cases."""
+
+    # Used for mocking
+    UHS_CORE_MODULE = 'openquake.calculators.hazard.uhs.core'
 
     def setUp(self):
         # Create OqJobProfile, OqCalculation, and CalculationProxy objects
@@ -201,9 +205,9 @@ class UHSCoreTestCase(UHSBaseTestCase):
         # have their own test coverage; in this test, we just want to make
         # sure they get called.
 
-        uhs_core_base = 'openquake.calculators.hazard.uhs.core'
-        cmpt_uhs = '%s.%s' % (uhs_core_base, 'compute_uhs')
-        write_uhs_data = '%s.%s' % (uhs_core_base, 'write_uhs_spectrum_data')
+        cmpt_uhs = '%s.%s' % (self.UHS_CORE_MODULE, 'compute_uhs')
+        write_uhs_data = '%s.%s' % (self.UHS_CORE_MODULE,
+                                    'write_uhs_spectrum_data')
         with helpers.patch(cmpt_uhs) as compute_mock:
             with helpers.patch(write_uhs_data) as write_mock:
                 # Call the function under test as a normal function, not a
@@ -218,4 +222,28 @@ class UHSTaskProgressIndicatorTestCase(UHSBaseTestCase):
     """Tests progress indicator behavior for UHS @task functions."""
 
     def test_compute_uhs_task_pi(self):
-        pass
+        # Test that progress indicators are working properly for
+        # `compute_uhs_task`.
+
+        # Mock out the two 'heavy' functions called by this task;
+        # we don't need to do these and we don't want to waste the cycles.
+        cmpt_uhs = '%s.%s' % (self.UHS_CORE_MODULE, 'compute_uhs')
+        write_uhs_data = '%s.%s' % (self.UHS_CORE_MODULE,
+                                    'write_uhs_spectrum_data')
+        with helpers.patch(cmpt_uhs) as compute_mock:
+            with helpers.patch(write_uhs_data) as write_mock:
+
+                get_counter = lambda: stats.get_counter(
+                    self.calc_proxy.job_id, 'h', 'compute_uhs_task', 'i')
+
+                # First, check that the counter for `compute_uhs_task` is
+                # `None`:
+                self.assertIsNone(get_counter())
+
+                realization = 0
+                site = Site(0.0, 0.0)
+                compute_uhs_task(self.calc_proxy.job_id, realization, site)
+                self.assertEqual(1, get_counter())
+
+                compute_uhs_task(self.calc_proxy.job_id, realization, site)
+                self.assertEqual(2, get_counter())
