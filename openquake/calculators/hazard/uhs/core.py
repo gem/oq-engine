@@ -20,6 +20,7 @@
 
 import h5py
 import numpy
+import random
 
 from celery.task import task
 from django.db import transaction
@@ -272,8 +273,10 @@ class UHSCalculator(Calculator):
             store_gmpe_map(
                 calc_proxy.job_id, gmpe_rnd.getrandbits(32), self.lt_processor)
 
+            tf_args = dict(job_id=calc_proxy.job_id, realization=rlz)
+
             distribute(
-                compute_uhs_task, ('site', calc_proxy.sites_to_compute(),
-                tf_args=None, ath=None, ath_args=None)
+                compute_uhs_task, ('site', calc_proxy.sites_to_compute()),
+                tf_args=tf_args, ath=lambda x: x, ath_args=dict())
             # Notes: the async task handler could probably just operate by
             # checking counters.
