@@ -42,17 +42,8 @@ from tests.utils import helpers
 UHS_DEMO_CONFIG_FILE = helpers.demo_file('uhs/config.gem')
 
 
-class UHSCoreTestCase(unittest.TestCase):
-    """Tests for core UHS tasks and other functions."""
-
-    # Sample UHS result data
-    UHS_RESULTS = [
-        (0.1, [0.2774217067746703,
-               0.32675005743942004,
-               0.05309858927852786]),
-        (0.02, [0.5667404129191248,
-                0.6185688023781438,
-                0.11843417899553109])]
+class UHSBaseTestCase(unittest.TestCase):
+    """Shared functionality for UHS test cases."""
 
     def setUp(self):
         # Create OqJobProfile, OqCalculation, and CalculationProxy objects
@@ -68,6 +59,19 @@ class UHSCoreTestCase(unittest.TestCase):
             params, self.calculation.id, sections=sections,
             serialize_results_to=['db'], oq_job_profile=self.job_profile,
             oq_calculation=self.calculation)
+
+
+class UHSCoreTestCase(UHSBaseTestCase):
+    """Tests for core UHS tasks and other functions."""
+
+    # Sample UHS result data
+    UHS_RESULTS = [
+        (0.1, [0.2774217067746703,
+               0.32675005743942004,
+               0.05309858927852786]),
+        (0.02, [0.5667404129191248,
+                0.6185688023781438,
+                0.11843417899553109])]
 
     def test_touch_result_file(self):
         # Call the :function:`openquake.hazard.uhs.core.touch_result_file` and
@@ -211,3 +215,10 @@ class UHSCoreTestCase(unittest.TestCase):
 
                 self.assertEqual(1, compute_mock.call_count)
                 self.assertEqual(1, write_mock.call_count)
+
+
+class UHSTaskProgressIndicatorTestCase(UHSBaseTestCase):
+    """Tests progress indicator behavior for UHS @task functions."""
+
+    def test_compute_uhs_task_pi(self):
+        pass
