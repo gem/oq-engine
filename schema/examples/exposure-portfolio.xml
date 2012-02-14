@@ -18,7 +18,7 @@
              limit: (contents cost) insurance coverage limit
              deductible: (contents cost) insurance deductible
         -->
-        <exposureList gml:id="PAV01" assetCategory="buildings" recoType="aggregated" recoUnit="EUR" stcoType="aggregated" stcoUnit="EUR">
+        <exposureList gml:id="PAV01" areaType="per_asset" areaUnit="CHF" assetCategory="buildings" cocoType="per_area" recoType="aggregated" recoUnit="EUR" stcoType="aggregated" stcoUnit="EUR">
 
             <gml:description>Collection of existing building in downtown Pavia</gml:description>
 
@@ -30,7 +30,11 @@
                     </gml:Point>
                 </site>
 
-                <coco>2000</coco>
+                <area>120</area>
+                <coco>12.95</coco>
+                <deductible>55</deductible>
+                <limit>999</limit>
+                <number>7</number>
                 <reco>109876</reco>
                 <stco>150000</stco>
                 <taxonomy>RC/DMRF-D/LR</taxonomy>
