@@ -279,3 +279,19 @@ class UHSCalculatorTestCase(UHSBaseTestCase):
             '%s.write_uh_spectra' % self.UHS_CORE_MODULE) as write_mock:
             calc.pre_execute()
             self.assertEqual(1, write_mock.call_count)
+
+
+class UHSTaskHandlerTestCase(unittest.TestCase):
+    """Tests for functionality realted to the asynchronous task handler code,
+    which is used by the mini-framework
+    :function:`openquake.utils.tasks.distribute`.
+    """
+
+    def test__remaining_tasks_in_block(self):
+        # Tasks should be submitted to works for one block (of sites) at a
+        # time. For each block, we want to look at Redis counters to determine
+        # when the block is finished calculating.
+        # `_remaining_tasks_in_block` is generator that yields the remaining
+        # number of tasks in a block. When there are no more tasks left in the
+        # block, a `StopIteration` is raised.
+        pass
