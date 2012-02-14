@@ -139,6 +139,30 @@ class RectangularMesh(Mesh):
         super(RectangularMesh, self).__init__(lons, lats, depths)
         assert lons.ndim == 2
 
+    @classmethod
+    def from_points_list(cls, points):
+        """
+        Create a rectangular mesh object from a list of lists of points.
+        Lists in a list are supposed to have the same length.
+
+        :param point:
+            List of lists of :class:`~nhe.geo.point.Point` objects.
+        """
+        assert points and points[0]
+        lons = numpy.zeros((len(points), len(points[0])), dtype=float)
+        lats = lons.copy()
+        depths = lons.copy()
+        num_cols = len(points[0])
+        for i, row in enumerate(points):
+            assert len(row) == num_cols
+            for j, point in enumerate(row):
+                lons[i][j] = point.longitude
+                lats[i][j] = point.latitude
+                depths[i][j] = point.depth
+        if not depths.any():
+            depths = None
+        return cls(lons, lats, depths)
+
     def _get_bounding_mesh(self, with_depths=True):
         """
         Create and return a :class:`Mesh` object that contains a subset

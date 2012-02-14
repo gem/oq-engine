@@ -171,6 +171,30 @@ class RectangularMeshCreationTestCase(unittest.TestCase):
             RectangularMesh(numpy.array([0, -1]), numpy.array([2, 10]),
                             numpy.array([5, 44]))
 
+    def test_from_points_list(self):
+        lons = [[0, 1], [2, 3], [4, 5]]
+        lats = [[1, 2], [-1, -2], [10, 20]]
+        depths = [[11.1, 11.2], [11.3, 11.4], [11.5, 11.6]]
+        points = [
+            [Point(lons[i][j], lats[i][j], depths[i][j])
+             for j in xrange(len(lons[i]))]
+            for i in xrange(len(lons))
+        ]
+        mesh = RectangularMesh.from_points_list(points)
+        self.assertTrue((mesh.lons == lons).all())
+        self.assertTrue((mesh.lats == lats).all())
+        self.assertTrue((mesh.depths == depths).all())
+
+        points = [
+            [Point(lons[i][j], lats[i][j], depth=0)
+             for j in xrange(len(lons[i]))]
+            for i in xrange(len(lons))
+        ]
+        mesh = RectangularMesh.from_points_list(points)
+        self.assertTrue((mesh.lons == lons).all())
+        self.assertTrue((mesh.lats == lats).all())
+        self.assertIsNone(mesh.depths)
+
 
 class RectangularMeshBoundingMeshTestCase(unittest.TestCase):
     def test_single_row(self):
