@@ -3,7 +3,7 @@ import unittest
 
 from nhe.geo import Point
 from nhe.geo.surface.planar import PlanarSurface
-from nhe.geo.mesh import Mesh
+from nhe.geo.mesh import RectangularMesh
 
 from tests.geo.surface import _planar_test_data as test_data
 
@@ -123,7 +123,7 @@ class PlanarSurfaceGetMeshTestCase(unittest.TestCase):
         self.assertIs(mesh, surface.get_mesh())
         expected_mesh = list(itertools.chain(*expected_mesh))
         self.assertEqual(len(mesh), len(expected_mesh))
-        self.assertIsInstance(mesh, Mesh)
+        self.assertIsInstance(mesh, RectangularMesh)
         for i, point in enumerate(mesh):
             expected_point = Point(*expected_mesh[i])
             distance = expected_point.distance(point) * 1e3
