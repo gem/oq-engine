@@ -1,9 +1,13 @@
 """
 Module :mod:`nhe.geo.mesh` defines :class:`Mesh`.
 """
+import itertools
+
 import numpy
+import shapely.geometry
 
 from nhe.geo.point import Point
+from nhe.geo import _utils as geo_utils
 
 
 class Mesh(object):
@@ -85,7 +89,7 @@ class Mesh(object):
             to cut the portion of coordinates (and depths if it is available)
             arrays. These arrays are then used for creating a new mesh.
         :returns:
-            A new :class:`Mesh` object that borrows a portion of geometry
+            A new object of the same type that borrows a portion of geometry
             from this mesh (doesn't copy the array, just references it).
         """
         assert (isinstance(item, slice) or
@@ -119,3 +123,70 @@ class Mesh(object):
         of points in the mesh.
         """
         return min(point.distance(mesh_point) for mesh_point in self)
+
+
+class RectangularMesh(Mesh):
+    def __init__(self, lons, lats, depths):
+        super(RectangularMesh, self).__init__(lons, lats, depths)
+        assert lons.ndim == 2
+
+    def _get_bounding_mesh(self, with_depths=True):
+        if self.depths is None:
+            with_depths = False
+        depths = None
+
+        if 1 in self.lons.shape:
+            lons, lats = self.lons.flatten(), self.lats.flatten()
+            if with_depths:
+                depths = self.depths.flatten()
+        else:
+            num_points = sum(self.lons.shape) * 2 - 4
+            transposed_lons = self.lons.transpose()
+            lons = numpy.fromiter(itertools.chain(
+                self.lons[0],
+                transposed_lons[-1][1:-1],
+                self.lons[-1][::-1],
+                transposed_lons[0][-2:0:-1]
+            ), dtype=float, count=num_points)
+            transposed_lats = self.lats.transpose()
+            lats = numpy.fromiter(itertools.chain(
+                self.lats[0],
+                transposed_lats[-1][1:-1],
+                self.lats[-1][::-1],
+                transposed_lats[0][-2:0:-1]
+            ), dtype=float, count=num_points)
+            if with_depths:
+                transposed_depths = self.depths.transpose()
+                depths = numpy.fromiter(itertools.chain(
+                    self.depths[0],
+                    transposed_depths[-1][1:-1],
+                    self.depths[-1][::-1],
+                    transposed_depths[0][-2:0:-1]
+                ), dtype=float, count=num_points)
+        return Mesh(lons, lats, depths)
+
+    def get_joyner_boore_distance(self, point):
+        """
+        Compute and return Joyner-Boore distance to ``point``.
+        Point's depth is ignored.
+
+        :returns:
+            Distance in km. Value is considered to be zero if ``point``
+            lies inside the polygon enveloping the projection of the mesh.
+        """
+        bounding_mesh = self._get_bounding_mesh(with_depths=False)
+        lons, lats = bounding_mesh.lons, bounding_mesh.lats
+        proj = geo_utils.get_stereographic_projection(
+            *geo_utils.get_spherical_bounding_box(lons, lats)
+        )
+        point_2d = shapely.geometry.Point(*proj(point.longitude,
+                                                point.latitude))
+        xx, yy = proj(lons, lats)
+        mesh_2d = shapely.geometry.Polygon(
+            numpy.array([xx, yy], dtype=float).transpose().copy()
+        )
+        if mesh_2d.contains(point_2d):
+            return 0
+        else:
+            return bounding_mesh.get_min_distance(Point(point.longitude,
+                                                        point.latitude))

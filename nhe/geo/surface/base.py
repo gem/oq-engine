@@ -34,6 +34,9 @@ class BaseSurface(object):
         """
         return self.get_mesh().get_min_distance(point)
 
+    def get_joyner_boore_distance(self, point):
+        return self.get_mesh().get_joyner_boore_distance()
+
     def get_mesh(self):
         """
         Return surface's mesh.

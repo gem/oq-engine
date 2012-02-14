@@ -3,7 +3,7 @@ import unittest
 import numpy
 
 from nhe.geo.point import Point
-from nhe.geo.mesh import Mesh
+from nhe.geo.mesh import Mesh, RectangularMesh
 
 
 class _BaseMeshTestCase(unittest.TestCase):
@@ -145,6 +145,12 @@ class MeshSlicingTestCase(_BaseMeshTestCase):
         with self.assertRaises(AssertionError):
             mesh[1:, 5]
 
+    def test_preserving_the_type(self):
+        lons = lats = numpy.array(range(100)).reshape((10, 10))
+        mesh = RectangularMesh(lons, lats, depths=None)
+        submesh = mesh[1:2, 3:4]
+        self.assertIsInstance(submesh, RectangularMesh)
+
 
 class MeshGetMinDistanceTestCase(unittest.TestCase):
     def test_1(self):
@@ -153,3 +159,98 @@ class MeshGetMinDistanceTestCase(unittest.TestCase):
                          Point(1, 1).distance(Point(0, 1)))
         self.assertEqual(mesh.get_min_distance(Point(-1, 0)),
                          Point(-1, 0).distance(Point(0, 0)))
+
+
+class RectangularMeshCreationTestCase(unittest.TestCase):
+    def test_wrong_shape(self):
+        with self.assertRaises(AssertionError):
+            RectangularMesh(numpy.array([0, 1, 2]),
+                            numpy.array([0, 0, 0]), None)
+            RectangularMesh(numpy.array([0, -1]), numpy.array([2, 10]),
+                            numpy.array([5, 44]))
+
+
+class RectangularMeshBoundingMeshTestCase(unittest.TestCase):
+    def test_single_row(self):
+        lons = numpy.array([[0, 1, 2, 3, 4, 5]])
+        lats = numpy.array([[-1, -2, -3, -4, -5, -6]])
+        mesh = RectangularMesh(lons, lats, depths=None)
+        bounding_mesh = mesh._get_bounding_mesh()
+        self.assertIsInstance(bounding_mesh, Mesh)
+        self.assertTrue((bounding_mesh.lons == lons[0]).all())
+        self.assertTrue((bounding_mesh.lats == lats[0]).all())
+        self.assertIsNone(bounding_mesh.depths)
+
+        depths = numpy.array([[10, 11, 12, 13, 14, 15]])
+        mesh = RectangularMesh(lons, lats, depths)
+        bounding_mesh = mesh._get_bounding_mesh()
+        self.assertIsNotNone(bounding_mesh.depths)
+        self.assertTrue((bounding_mesh.depths == depths[0]).all())
+
+        bounding_mesh = mesh._get_bounding_mesh(with_depths=False)
+        self.assertIsNone(bounding_mesh.depths)
+
+    def test_single_column(self):
+        lons = numpy.array([[0], [1], [2], [3], [4], [5]])
+        lats = numpy.array([[-1], [-2], [-3], [-4], [-5], [-6]])
+        mesh = RectangularMesh(lons, lats, depths=None)
+        bounding_mesh = mesh._get_bounding_mesh()
+        self.assertTrue((bounding_mesh.lons == lons.flatten()).all())
+        self.assertTrue((bounding_mesh.lats == lats.flatten()).all())
+        self.assertIsNone(bounding_mesh.depths)
+
+        depths = numpy.array([[10], [11], [12], [13], [14], [15]])
+        mesh = RectangularMesh(lons, lats, depths)
+        bounding_mesh = mesh._get_bounding_mesh()
+        self.assertIsNotNone(bounding_mesh.depths)
+        self.assertTrue((bounding_mesh.depths == depths.flatten()).all())
+
+        bounding_mesh = mesh._get_bounding_mesh(with_depths=False)
+        self.assertIsNone(bounding_mesh.depths)
+
+    def test_rectangular(self):
+        lons = numpy.array(range(100)).reshape((10, 10))
+        lats = numpy.negative(lons)
+
+        mesh = RectangularMesh(lons, lats, depths=None)
+        bounding_mesh = mesh._get_bounding_mesh()
+        expected_lons = numpy.array([
+            0, 1, 2, 3, 4, 5, 6, 7, 8, 9,
+            19, 29, 39, 49, 59, 69, 79, 89,
+            99, 98, 97, 96, 95, 94, 93, 92, 91,
+            90, 80, 70, 60, 50, 40, 30, 20, 10
+        ])
+        expected_lats = numpy.negative(expected_lons)
+        self.assertTrue((bounding_mesh.lons == expected_lons).all())
+        self.assertTrue((bounding_mesh.lats == expected_lats).all())
+        self.assertIsNone(bounding_mesh.depths)
+
+        depths = lons + 10
+        mesh = RectangularMesh(lons, lats, depths)
+        expected_depths = expected_lons + 10
+        bounding_mesh = mesh._get_bounding_mesh()
+        self.assertIsNotNone(bounding_mesh.depths)
+        self.assertTrue((bounding_mesh.depths
+                         == expected_depths.flatten()).all())
+
+        bounding_mesh = mesh._get_bounding_mesh(with_depths=False)
+        self.assertIsNone(bounding_mesh.depths)
+
+
+class RectangularMeshJoynerBooreDistanceTestCase(unittest.TestCase):
+    def test(self):
+        lons = numpy.array([numpy.arange(-1, 1.2, 0.2)] * 11)
+        lats = lons.transpose() + 1
+        depths = lats + 10
+        mesh = RectangularMesh(lons, lats, depths)
+
+        check = lambda lon, lat, depth, expected_distance: \
+            self.assertAlmostEqual(
+                mesh.get_joyner_boore_distance(Point(lon, lat, depth)),
+                expected_distance
+            )
+
+        check(lon=0, lat=0, depth=0, expected_distance=0)
+        check(lon=1, lat=1, depth=0, expected_distance=0)
+        check(lon=0.6, lat=-1, depth=0, expected_distance=111.1948743)
+        check(lon=-0.8, lat=2.1, depth=10, expected_distance=11.1194874)
