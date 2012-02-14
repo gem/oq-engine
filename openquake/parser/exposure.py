@@ -119,8 +119,14 @@ class ExposurePortfolioFile(producer.FileProducer):
                 asset_category = str(element.get('assetCategory'))
                 self._current_meta['assetCategory'] = asset_category
 
-                unit = str(element.get('unit'))
-                self._current_meta['unit'] = unit
+                # type and unit for area, contents cost, retrofitting cost
+                # and structural cost.
+                attrs = ("areaType", "areaUnit", "cocoType", "cocoUnit",
+                         "recoType", "recoUnit", "stcoType", "stcoUnit")
+                for attr_name in attrs:
+                    attr_value = element.get(attr_name)
+                    if attr_value is not None:
+                        self._current_meta[attr_name] = attr_value
 
             elif event == 'start' and level < 2:
                 # check that the first child of the root element is an
@@ -145,27 +151,26 @@ class ExposurePortfolioFile(producer.FileProducer):
         # consider all attributes of assetDefinition element as mandatory
 
         site_attributes['assetID'] = element.get('%sid' % GML)
-        asset_value = element.find('%sassetValue' % NRML)
-        try:
-            site_attributes['assetValue'] = float(asset_value.text)
-        except Exception:
-            error_str = 'element assetDefinition: no valid assetValue'
-            raise ValueError(error_str)
-        site_attributes['retrofittingCost'] = float(
-            element.find('%sretrofittingCost' % NRML).text
-        )
+        attrs = (('coco', float), ('reco', float), ('stco', float),
+                 ('area', float), ('number', float), ('limit', float),
+                 ('deductible', float))
+        for (attr_name, attr_type) in attrs:
+            attr_value = element.find('%s%s' % (NRML, attr_name)).text
+            if attr_value is not None:
+                site_attributes[attr_name] = attr_type(attr_value)
 
-        # all of these attributes are in the NRML namespace
-        for (required_attr, attr_type) in (('taxonomy', str),
-                                   ('structureCategory', str)):
+        for (required_attr, attr_type) in (('taxonomy', str),):
             attr_value = element.find('%s%s' % (NRML, required_attr)).text
             if attr_value is not None:
-                site_attributes[required_attr] = \
-                    attr_type(attr_value)
+                site_attributes[required_attr] = attr_type(attr_value)
             else:
-                error_str = "element assetDefinition: missing required " \
-                    "attribute %s" % required_attr
+                error_str = ("element assetDefinition: missing required "
+                             "attribute %s" % required_attr)
                 raise ValueError(error_str)
+
+        occupants = element.find('%soccupants' % NRML)
+        while occupants is not None:
+            pass
 
         site_attributes.update(self._current_meta)
 
