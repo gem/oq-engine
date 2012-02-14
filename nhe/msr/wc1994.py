@@ -1,10 +1,10 @@
 """
-Module :mod:`nhe.msr.wc1994` implements :class:`WC1994`.
+Module :mod:`nhe.msr.wc1994` implements :class:`WC1994MSR`.
 """
 from nhe.msr.base import BaseMSR
 
 
-class WC1994(BaseMSR):
+class WC1994MSR(BaseMSR):
     """
     Wells and Coppersmith magnitude -- rupture area relationships,
     see 1994, Bull. Seism. Soc. Am., pages 974-2002.

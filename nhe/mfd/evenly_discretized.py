@@ -1,10 +1,10 @@
 """
 Module :mod:`nhe.mfd.evenly_discretized` defines an evenly discretized MFD.
 """
-from nhe.mfd.base import BaseMFD, MFDError
+from nhe.mfd.base import BaseMFD
 
 
-class EvenlyDiscretized(BaseMFD):
+class EvenlyDiscretizedMFD(BaseMFD):
     """
     Evenly discretized MFD is defined as a precalculated histogram.
 
@@ -33,16 +33,16 @@ class EvenlyDiscretized(BaseMFD):
         * Minimum magnitude is positive.
         """
         if not self.bin_width > 0:
-            raise MFDError()
+            raise ValueError('bin width must be positive')
 
         if not self.occurrence_rates:
-            raise MFDError()
+            raise ValueError('at least one bin must be specified')
 
-        if not all(value >= 0 for value in self.occurrence_rates):
-            raise MFDError()
+        if not all(value > 0 for value in self.occurrence_rates):
+            raise ValueError('all occurrence rates must be positive')
 
         if not self.min_mag >= 0:
-            raise MFDError()
+            raise ValueError('minimum magnitude must be non-negative')
 
     def get_annual_occurrence_rates(self):
         """

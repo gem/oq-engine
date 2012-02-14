@@ -2,7 +2,7 @@
 
 import unittest
 
-from nhe.common import geo
+from nhe import geo
 
 
 class SurfaceTestCase(unittest.TestCase):

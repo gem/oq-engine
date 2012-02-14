@@ -1,6 +1,6 @@
 import unittest
 
-from nhe.msr import Peer, WC1994
+from nhe.msr import PeerMSR, WC1994MSR
 
 
 class BaseMSRTestCase(unittest.TestCase):
@@ -15,16 +15,16 @@ class BaseMSRTestCase(unittest.TestCase):
                                expected_value)
 
 
-class PeerMSRTestCase(BaseMSRTestCase):
-    MSR_CLASS = Peer
+class PeerMSRMSRTestCase(BaseMSRTestCase):
+    MSR_CLASS = PeerMSR
 
     def test_median_area(self):
         self._test_get_median_area(4.3, None, 1.9952623)
         self._test_get_median_area(5.1, 0, 12.5892541)
 
 
-class WC1994TestCase(BaseMSRTestCase):
-    MSR_CLASS = WC1994
+class WC1994MSRTestCase(BaseMSRTestCase):
+    MSR_CLASS = WC1994MSR
 
     def test_case_all(self):
         self._test_get_median_area(2.2, None, 0.0325087)

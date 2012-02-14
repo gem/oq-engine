@@ -3,10 +3,10 @@ Module :mod:`nhe.mfd.truncated_gr` defines a Truncated Gutenberg-Richter MFD.
 """
 import math
 
-from nhe.mfd.base import BaseMFD, MFDError
+from nhe.mfd.base import BaseMFD
 
 
-class TruncatedGR(BaseMFD):
+class TruncatedGRMFD(BaseMFD):
     """
     Truncated Gutenberg-Richter MFD is defined in a functional form.
 
@@ -61,16 +61,17 @@ class TruncatedGR(BaseMFD):
         * ``b`` value is positive.
         """
         if not self.bin_width > 0:
-            raise MFDError()
+            raise ValueError('bin width must be positive')
 
         if not self.min_mag >= 0:
-            raise MFDError()
+            raise ValueError('minimum magnitude must be non-negative')
 
         if not self.max_mag >= self.min_mag + self.bin_width:
-            raise MFDError()
+            raise ValueError('maximum magnitude must be higher than minimum '
+                             'magnitude by bin width at least')
 
         if not 0 < self.b_val:
-            raise MFDError()
+            raise ValueError('b value must be non-negative')
 
     def _get_rate(self, mag):
         """
@@ -80,10 +81,10 @@ class TruncatedGR(BaseMFD):
             Magnitude value corresponding to the center of the bin of interest.
         :returns:
             Float number, the annual occurrence rate calculated using formula
-            described in :class:`TruncatedGR`.
+            described in :class:`TruncatedGRMFD`.
         """
-        mag_lo = mag - self.bin_width / 2
-        mag_hi = mag + self.bin_width / 2
+        mag_lo = mag - self.bin_width / 2.0
+        mag_hi = mag + self.bin_width / 2.0
         return (10 ** (self.a_val - self.b_val * mag_lo)
                 - 10 ** (self.a_val - self.b_val * mag_hi))
 
@@ -101,8 +102,8 @@ class TruncatedGR(BaseMFD):
         min_mag = round(self.min_mag / self.bin_width) * self.bin_width
         max_mag = round(self.max_mag / self.bin_width) * self.bin_width
         if min_mag != max_mag:
-            min_mag += self.bin_width / 2
-            max_mag -= self.bin_width / 2
+            min_mag += self.bin_width / 2.0
+            max_mag -= self.bin_width / 2.0
         # here we use math round on the result of division and not just
         # cast it to integer because for some magnitude values that can't
         # be represented as an IEEE 754 double precisely the result can
