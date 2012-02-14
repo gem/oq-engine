@@ -207,3 +207,29 @@ class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):
         surface = PlanarSurface(1, 2, 3, *test_data.TEST_7_RUPTURE_2_CORNERS)
         self.assertAlmostEqual(55.6159556,
                                surface.get_min_distance(Point(-0.3, 0.4)))
+
+
+class PlanarSurfaceGetJoynerBooreDistanceTestCase(unittest.TestCase):
+    def test_point_inside(self):
+        corners = [Point(-1, -1, 1), Point(1, -1, 1),
+                   Point(1, 1, 2), Point(-1, 1, 2)]
+        surface = PlanarSurface(10, 0, 45, *corners)
+        self.assertEqual(surface.get_joyner_boore_distance(Point(0, 0)), 0)
+        self.assertEqual(surface.get_joyner_boore_distance(Point(0, 0, 20)), 0)
+        self.assertEqual(surface.get_joyner_boore_distance(Point(0.1, 0.3)), 0)
+
+    def test_point_on_the_border(self):
+        corners = [Point(0.1, -0.1, 1), Point(-0.1, -0.1, 1),
+                   Point(-0.1, 0.1, 2), Point(0.1, 0.1, 2)]
+        surface = PlanarSurface(1, 0, 45, *corners)
+        ae = self.assertEqual
+        ae(surface.get_joyner_boore_distance(Point(-0.1, 0.04)), 0)
+        ae(surface.get_joyner_boore_distance(Point(0.1, 0.03)), 0)
+
+    def test_point_outside(self):
+        corners = [Point(0.1, -0.1, 1), Point(-0.1, -0.1, 1),
+                   Point(-0.1, 0.1, 2), Point(0.1, 0.1, 2)]
+        surface = PlanarSurface(1, 0, 45, *corners)
+        aae = self.assertAlmostEqual
+        aae(surface.get_joyner_boore_distance(Point(-0.2, -0.2)), 15.8951556)
+        aae(surface.get_joyner_boore_distance(Point(1, 1, 1)), 141.708801)

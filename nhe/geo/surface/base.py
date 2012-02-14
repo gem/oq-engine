@@ -10,7 +10,7 @@ class BaseSurface(object):
 
     Subclasses must implement :meth:`_create_mesh`, :meth:`get_strike` and
     :meth:`get_dip`, and can (for the sake of performance) override
-    :meth:`get_min_distance`.
+    :meth:`get_min_distance` and :meth:`get_joyner_boore_distance`.
     """
     __metaclass__ = abc.ABCMeta
 
@@ -35,7 +35,16 @@ class BaseSurface(object):
         return self.get_mesh().get_min_distance(point)
 
     def get_joyner_boore_distance(self, point):
-        return self.get_mesh().get_joyner_boore_distance()
+        """
+        Compute and return Joyner-Boore distance to ``point``.
+
+        :returns:
+            The closest distance between the point and the surface projection.
+
+        Base class calls surface mesh's method
+        :meth:`~nhe.geo.mesh.RectangularMesh.get_joyner_boore_distance`.
+        """
+        return self.get_mesh().get_joyner_boore_distance(point)
 
     def get_mesh(self):
         """

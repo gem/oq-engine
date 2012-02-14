@@ -236,7 +236,9 @@ class RectangularMesh(Mesh):
         mesh_2d = shapely.geometry.Polygon(
             numpy.array([xx, yy], dtype=float).transpose().copy()
         )
-        if mesh_2d.contains(point_2d) or mesh_2d.touches(point_2d):
+        if mesh_2d.contains(point_2d) or mesh_2d.distance(point_2d) < 500:
+            # if the point is closer than half km to the mesh, or lies
+            # inside, return zero distance.
             return 0
         else:
             return bounding_mesh.get_min_distance(Point(point.longitude,
