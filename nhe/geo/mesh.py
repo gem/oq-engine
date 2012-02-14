@@ -144,6 +144,10 @@ class RectangularMesh(Mesh):
         Create and return a :class:`Mesh` object that contains a subset
         of points of this mesh. Only those points that lie on the borders
         of the rectangular mesh are included in the result one.
+
+        :param with_depths:
+            If set ``False`` the new mesh will have depths array
+            set to ``None``.
         """
         if self.depths is None:
             with_depths = False
