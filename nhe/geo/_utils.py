@@ -142,3 +142,19 @@ def get_stereographic_projection(west, east, north, south):
     if middle_lon > 180:
         middle_lon = middle_lon - 360
     return pyproj.Proj(proj='stere', lat_0=middle_lat, lon_0=middle_lon)
+
+
+def get_middle_point(lon1, lat1, lon2, lat2):
+    """
+    Given two points return the point exactly in the middle lying on the same
+    great circle arc.
+
+    Parameters are point coordinates in degrees.
+
+    :returns:
+        Tuple of longitude and latitude of the point in the middle.
+    """
+    [[lon, lat]] = GEOD.npts(lon1, lat1, lon2, lat2, 1)
+    if lon <= -180:
+        lon += 180
+    return lon, lat

@@ -121,3 +121,31 @@ class GetStereographicProjectionTestCase(unittest.TestCase):
     def test_international_date_line(self):
         self._test((177.6, -175.8, -10, 10),
                    ['+lat_0=0.0', '+lon_0=-179.1', '+proj=stere', '+units=m'])
+
+
+class GetMiddlePointTestCase(unittest.TestCase):
+    def test_same_points(self):
+        self.assertEqual(
+            geo.Point(*utils.get_middle_point(1.2, -1.4, 1.2, -1.4)),
+            geo.Point(1.2, -1.4)
+        )
+        self.assertEqual(
+            geo.Point(*utils.get_middle_point(-150.33, 22.1, -150.33, 22.1)),
+            geo.Point(-150.33, 22.1)
+        )
+
+    def test_differnet_point(self):
+        self.assertEqual(
+            geo.Point(*utils.get_middle_point(0, 0, 0.2, -0.2)),
+            geo.Point(0.1, -0.1),
+        )
+        self.assertEqual(
+            geo.Point(*utils.get_middle_point(20, 40, 20.02, 40)),
+            geo.Point(20.01, 40)
+        )
+
+    def test_international_date_line(self):
+        self.assertEqual(
+            geo.Point(*utils.get_middle_point(-178, 10, 178, -10)),
+            geo.Point(180, 0)
+        )
