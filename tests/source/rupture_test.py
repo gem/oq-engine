@@ -3,7 +3,7 @@ import unittest
 from nhe import const
 from nhe.geo import Point
 from nhe.geo.surface.planar import PlanarSurface
-from nhe.source.nodalplane import NodalPlane
+from nhe.geo.nodalplane import NodalPlane
 from nhe.tom import PoissonTOM
 from nhe.source.rupture import Rupture, ProbabilisticRupture
 
@@ -15,7 +15,7 @@ class RuptureCreationTestCase(unittest.TestCase):
             'nodal_plane': NodalPlane(1, 2, 3),
             'tectonic_region_type': const.TRT.STABLE_CONTINENTAL,
             'hypocenter': Point(5, 6, 7),
-            'surface': PlanarSurface(
+            'surface': PlanarSurface(10, 11, 12,
                 Point(0, 0, 1), Point(1, 0, 1),
                 Point(1, 0, 2), Point(0, 0, 2)
             )

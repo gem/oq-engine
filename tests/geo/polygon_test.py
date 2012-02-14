@@ -89,7 +89,9 @@ class PolygonDiscretizeTestCase(unittest.TestCase):
         tr = geo.Point(70, 60)
         bottom_line = [geo.Point(lon, 58) for lon in xrange(70, 59, -1)]
         poly = geo.Polygon([tl, tr] + bottom_line)
-        mesh = list(poly.discretize(mesh_spacing=MESH_SPACING))
+        mesh = poly.discretize(mesh_spacing=MESH_SPACING)
+        self.assertIsInstance(mesh, geo.Mesh)
+        mesh = list(mesh)
 
         for i, point in enumerate(mesh):
             if i == len(mesh) - 1:

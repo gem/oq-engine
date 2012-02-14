@@ -6,9 +6,8 @@ from nhe.source.point import PointSource
 from nhe.source.rupture import ProbabilisticRupture
 from nhe.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from nhe.msr import PeerMSR
-from nhe.geo import Point
+from nhe.geo import Point, PlanarSurface, NodalPlane
 from nhe.pmf import PMF
-from nhe.source.nodalplane import NodalPlane
 from nhe.tom import PoissonTOM
 
 from tests.geo.surface import _planar_test_data as planar_surface_test_data
@@ -27,7 +26,8 @@ class PointSourceCreationTestCase(unittest.TestCase):
             'upper_seismogenic_depth': 1.3,
             'lower_seismogenic_depth': 4.9,
             'magnitude_scaling_relationship': PeerMSR(),
-            'rupture_aspect_ratio': 1.333
+            'rupture_aspect_ratio': 1.333,
+            'rupture_mesh_spacing': 1.234
         }
         default_arguments.update(kwargs)
         kwargs = default_arguments
@@ -51,6 +51,11 @@ class PointSourceCreationTestCase(unittest.TestCase):
             'upper seismogenic depth must be non-negative',
             upper_seismogenic_depth=-0.1
         )
+
+    def test_non_positive_rupture_mesh_spacing(self):
+        msg = 'rupture mesh spacing must be positive'
+        self.assert_failed_creation(ValueError, msg, rupture_mesh_spacing=-0.1)
+        self.assert_failed_creation(ValueError, msg, rupture_mesh_spacing=0)
 
     def test_lower_depth_above_upper_depth(self):
         self.assert_failed_creation(ValueError,
@@ -91,7 +96,7 @@ class PointSourceCreationTestCase(unittest.TestCase):
 
 class PointSourceIterRupturesTestCase(unittest.TestCase):
     def _get_rupture(self, min_mag, max_mag, hypocenter_depth,
-                     aspect_ratio, dip):
+                     aspect_ratio, dip, rupture_mesh_spacing):
         source_id = name = 'test-source'
         trt = TRT.ACTIVE_SHALLOW_CRUST
         mfd = TruncatedGRMFD(a_val=2, b_val=1, min_mag=min_mag,
@@ -105,7 +110,7 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         magnitude_scaling_relationship = PeerMSR()
         rupture_aspect_ratio = aspect_ratio
         point_source = PointSource(
-            source_id, name, trt, mfd,
+            source_id, name, trt, mfd, rupture_mesh_spacing,
             location, nodal_plane_distribution, hypocenter_distribution,
             upper_seismogenic_depth, lower_seismogenic_depth,
             magnitude_scaling_relationship, rupture_aspect_ratio
@@ -117,6 +122,8 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         self.assertIs(rupture.temporal_occurrence_model, tom)
         self.assertIs(rupture.tectonic_region_type, trt)
         self.assertEqual(rupture.nodal_plane, nodal_plane)
+        self.assertIsInstance(rupture.surface, PlanarSurface)
+        self.assertEqual(rupture.surface.mesh_spacing, rupture_mesh_spacing)
         return rupture
 
     def _check_dimensions(self, surface, length, width, delta=1e-3):
@@ -134,7 +141,8 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
 
     def test_1_rupture_is_inside(self):
         rupture = self._get_rupture(min_mag=5, max_mag=6, hypocenter_depth=8,
-                                    aspect_ratio=1, dip=30)
+                                    aspect_ratio=1, dip=30,
+                                    rupture_mesh_spacing=1)
         self.assertEqual(rupture.mag, 5.5)
         self.assertEqual(rupture.hypocenter, Point(0, 0, 8))
         self.assertAlmostEqual(rupture.occurrence_rate, 0.0009)
@@ -156,7 +164,8 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
 
     def test_2_rupture_shallower_than_upper_seismogenic_depth(self):
         rupture = self._get_rupture(min_mag=5, max_mag=6, hypocenter_depth=3,
-                                    aspect_ratio=1, dip=30)
+                                    aspect_ratio=1, dip=30,
+                                    rupture_mesh_spacing=10)
         self.assertEqual(rupture.mag, 5.5)
         self.assertEqual(rupture.hypocenter, Point(0, 0, 3))
         self.assertAlmostEqual(rupture.occurrence_rate, 0.0009)
@@ -178,7 +187,8 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
 
     def test_3_rupture_deeper_than_lower_seismogenic_depth(self):
         rupture = self._get_rupture(min_mag=5, max_mag=6, hypocenter_depth=15,
-                                    aspect_ratio=1, dip=30)
+                                    aspect_ratio=1, dip=30,
+                                    rupture_mesh_spacing=10)
         self.assertEqual(rupture.hypocenter, Point(0, 0, 15))
 
         surface = rupture.surface
@@ -198,7 +208,8 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
 
     def test_4_rupture_wider_than_seismogenic_layer(self):
         rupture = self._get_rupture(min_mag=7, max_mag=8, hypocenter_depth=9,
-                                    aspect_ratio=1, dip=30)
+                                    aspect_ratio=1, dip=30,
+                                    rupture_mesh_spacing=10)
         self.assertEqual(rupture.mag, 7.5)
         self.assertEqual(rupture.hypocenter, Point(0, 0, 9))
 
@@ -222,7 +233,8 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
 
     def test_5_vertical_rupture(self):
         rupture = self._get_rupture(min_mag=5, max_mag=6, hypocenter_depth=9,
-                                    aspect_ratio=2, dip=90)
+                                    aspect_ratio=2, dip=90,
+                                    rupture_mesh_spacing=4)
         self.assertEqual(rupture.hypocenter, Point(0, 0, 9))
 
         surface = rupture.surface
@@ -259,6 +271,7 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         upper_seismogenic_depth = 2
         lower_seismogenic_depth = 16
         rupture_aspect_ratio = 2
+        rupture_mesh_spacing = 0.5
         location = Point(0, 0)
         magnitude_scaling_relationship = PeerMSR()
         tom = PoissonTOM(time_span=50)
@@ -270,10 +283,10 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         hypocenter_distribution = PMF([(hypocenter1_weight, hypocenter1),
                                        (hypocenter2_weight, hypocenter2)])
         point_source = PointSource(
-            source_id, name, trt, mfd,
+            source_id, name, trt, mfd, rupture_mesh_spacing,
             location, nodal_plane_distribution, hypocenter_distribution,
             upper_seismogenic_depth, lower_seismogenic_depth,
-            magnitude_scaling_relationship, rupture_aspect_ratio
+            magnitude_scaling_relationship, rupture_aspect_ratio,
         )
         actual_ruptures = list(point_source.iter_ruptures(tom))
         self.assertEqual(len(actual_ruptures), 8)

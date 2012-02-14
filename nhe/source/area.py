@@ -13,7 +13,7 @@ class AreaSource(PointSource):
         An instance of :class:`nhe.common.geo.Polygon` that defines
         source's area.
     :param area_discretization:
-        Float number, polygon discretization spacing in kilometers.
+        Float number, polygon area discretization spacing in kilometers.
         See :meth:`iter_ruptures`.
 
     Other parameters (except ``location``) are the same as for
@@ -37,19 +37,20 @@ class AreaSource(PointSource):
         (see :mod:`nhe.source.point`) with uniform parameters.
         Ruptures of area source are just a union of ruptures
         of those point sources. The actual positions of the implied
-        point sources form a uniformly spaced grid on the polygon.
+        point sources form a uniformly spaced mesh on the polygon.
         Polygon's method :meth:`~nhe.geo.polygon.Polygon.discretize`
-        is used for finding point sources location. Constructor's
-        parameter ``area_discretization`` is used as polygon's griding
-        spacing (not to be confused with rupture surface's
-        :meth:`mesh_spacing <nhe.surface.base.BaseSurface.get_mesh>`).
+        is used for creating a mesh of points on the source's area.
+        Constructor's parameter ``area_discretization`` is used as
+        polygon's discretization spacing (not to be confused with
+        rupture surface's mesh spacing which is as well provided
+        to the constructor).
 
         The ruptures' occurrence rates are rescaled with respect to number
         of points the polygon discretizes to.
         """
-        locations = list(self.polygon.discretize(self.area_discretization))
-        rate_scaling_factor = 1.0 / len(locations)
-        for location in locations:
+        polygon_mesh = self.polygon.discretize(self.area_discretization)
+        rate_scaling_factor = 1.0 / len(polygon_mesh)
+        for location in polygon_mesh:
             ruptures_at_location = self._iter_ruptures_at_location(
                 temporal_occurrence_model, location, rate_scaling_factor
             )

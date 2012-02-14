@@ -48,11 +48,13 @@ class PointSource(SeismicSource):
         or deeper than lower seismogenic depth.
     """
     def __init__(self, source_id, name, tectonic_region_type, mfd,
+                 rupture_mesh_spacing,
                  location, nodal_plane_distribution, hypocenter_distribution,
                  upper_seismogenic_depth, lower_seismogenic_depth,
                  magnitude_scaling_relationship, rupture_aspect_ratio):
         super(PointSource, self).__init__(source_id, name,
-                                          tectonic_region_type, mfd)
+                                          tectonic_region_type, mfd,
+                                          rupture_mesh_spacing)
 
         if upper_seismogenic_depth < 0:
             raise ValueError('upper seismogenic depth must be non-negative')
@@ -253,4 +255,6 @@ class PointSource(SeismicSource):
                                             vertical_increment=0,
                                             azimuth=azimuth_left)
 
-        return PlanarSurface(left_top, right_top, right_bottom, left_bottom)
+        return PlanarSurface(self.rupture_mesh_spacing, nodal_plane.strike,
+                             nodal_plane.dip, left_top, right_top,
+                             right_bottom, left_bottom)
