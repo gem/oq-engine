@@ -13,7 +13,7 @@ class CleanPointTestCase(unittest.TestCase):
                          [a, b, a, c])
 
     def test_close_duplicates(self):
-        a, b, c = geo.Point(1e-4, 1e-4), geo.Point(0, 0), geo.Point(1e-5, 1e-5)
+        a, b, c = geo.Point(1e-4, 1e-4), geo.Point(0, 0), geo.Point(1e-6, 1e-6)
         self.assertEqual(utils.clean_points([a, b, c]), [a, b])
 
 
