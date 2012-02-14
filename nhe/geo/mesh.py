@@ -1,5 +1,6 @@
 """
-Module :mod:`nhe.geo.mesh` defines :class:`Mesh`.
+Module :mod:`nhe.geo.mesh` defines classes :class:`Mesh` and its subclass
+:class:`RectangularMesh`.
 """
 import itertools
 
@@ -126,26 +127,48 @@ class Mesh(object):
 
 
 class RectangularMesh(Mesh):
+    """
+    A specification of :class:`Mesh` that requires coordinate arrays
+    to be two-dimensional.
+
+    Rectangular mesh is meant to represent not just an unordered collection
+    of points but rather a sort of table of points, where index of the point
+    in a mesh is related to it's position with respect to neighbouring points.
+    """
     def __init__(self, lons, lats, depths):
         super(RectangularMesh, self).__init__(lons, lats, depths)
         assert lons.ndim == 2
 
     def _get_bounding_mesh(self, with_depths=True):
+        """
+        Create and return a :class:`Mesh` object that contains a subset
+        of points of this mesh. Only those points that lie on the borders
+        of the rectangular mesh are included in the result one.
+        """
         if self.depths is None:
             with_depths = False
         depths = None
 
         if 1 in self.lons.shape:
+            # the original mesh either has one row or one column of points.
+            # the result mesh should have the same points.
             lons, lats = self.lons.flatten(), self.lats.flatten()
             if with_depths:
                 depths = self.depths.flatten()
         else:
+            # number of points in the resulting mesh is two times width
+            # plus two times height minus 4 (don't count corners twice).
             num_points = sum(self.lons.shape) * 2 - 4
             transposed_lons = self.lons.transpose()
+            # the resulting coordinates are composed of four parts:
             lons = numpy.fromiter(itertools.chain(
+                # the first row,
                 self.lons[0],
+                # the last column (excluding two corner points),
                 transposed_lons[-1][1:-1],
+                # the last row (in backward direction),
                 self.lons[-1][::-1],
+                # and the first column (backwards, excluding corner points).
                 transposed_lons[0][-2:0:-1]
             ), dtype=float, count=num_points)
             transposed_lats = self.lats.transpose()

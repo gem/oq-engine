@@ -250,7 +250,7 @@ class RectangularMeshJoynerBooreDistanceTestCase(unittest.TestCase):
                 expected_distance
             )
 
-        check(lon=0, lat=0, depth=0, expected_distance=0)
+        check(lon=0, lat=0.5, depth=0, expected_distance=0)
         check(lon=1, lat=1, depth=0, expected_distance=0)
         check(lon=0.6, lat=-1, depth=0, expected_distance=111.1948743)
         check(lon=-0.8, lat=2.1, depth=10, expected_distance=11.1194874)
