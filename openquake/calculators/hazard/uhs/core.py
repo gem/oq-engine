@@ -228,6 +228,42 @@ def write_uhs_spectrum_data(calc_proxy, realization, site, uhs_results):
         uh_spectrum_data.save()
 
 
+def remaining_tasks_in_block(job_id, num_tasks):
+    """
+
+    :param int job_id:
+        ID of the current calculation.
+    :param int num_tasks:
+        Number of :function:`compute_uhs_task` tasks in this block.
+    :yields: Foo
+    :raises: Bar
+    """
+    get_counter = lambda: stats.get_counter(job_id, 'h', 'compute_uhs_tasks',
+                                            'i')
+    start_count = get_counter() or 0
+    running_total = start_count
+
+    target = start_count + num_tasks
+    while running_total < target:
+        yield target - running_total  # remaining
+        running_total = get_counter() or 0
+
+
+def uhs_task_handler(job_id, num_tasks):
+    """Async task handler for counting calculation results and determining when
+    a batch of tasks is complete."""
+    remaining_gen = remaining_tasks_in_block(job_id, num_tasks)
+
+    while True:
+        import time
+        time.sleep(0.5)
+        try:
+            remaining_gen.next()
+        except StopIteration:
+            # No more tasks remaining in this batch.
+            break
+
+
 class UHSCalculator(Calculator):
     """Uniform Hazard Spectra calculator"""
 
@@ -280,3 +316,6 @@ class UHSCalculator(Calculator):
                 tf_args=tf_args, ath=lambda x: x, ath_args=dict())
             # Notes: the async task handler could probably just operate by
             # checking counters.
+
+    def post_execute(self):
+        stats.delete_job_counters(self.calc_proxy.job_id)
