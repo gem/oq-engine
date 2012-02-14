@@ -52,22 +52,22 @@
                     <xs:element name="taxonomy" type="xs:string"/>
 
                     <!-- contents cost -->
-                    <xs:element name="coco" type="AssetValue"/>
+                    <xs:element name="coco" minOccurs="0" maxOccurs="1" type="AssetValue"/>
                     <!-- retrofitting cost -->
-                    <xs:element name="reco" type="AssetValue"/>
+                    <xs:element name="reco" minOccurs="0" maxOccurs="1" type="AssetValue"/>
                     <!-- structural cost -->
-                    <xs:element name="stco" type="AssetValue"/>
+                    <xs:element name="stco" minOccurs="0" maxOccurs="1" type="AssetValue"/>
 
-                    <xs:element name="area" type="NonNegativeDoubleType"/>
+                    <xs:element name="area" minOccurs="0" maxOccurs="1" type="NonNegativeDoubleType"/>
                     <!-- number of assets, people etc. -->
-                    <xs:element name="number" type="NonNegativeDoubleType"/>
+                    <xs:element name="number" minOccurs="0" maxOccurs="1" type="NonNegativeDoubleType"/>
 
                     <!-- insurance deductible -->
-                    <xs:element name="deductible" type="NonNegativeDoubleType"/>
+                    <xs:element name="deductible" minOccurs="0" maxOccurs="1" type="NonNegativeDoubleType"/>
                     <!-- insurance coverage limit -->
-                    <xs:element name="limit" type="NonNegativeDoubleType"/>
+                    <xs:element name="limit" minOccurs="0" maxOccurs="1" type="NonNegativeDoubleType"/>
 
-                    <xs:element name="occupants" type="OccupantsType"/>
+                    <xs:element name="occupants" minOccurs="0" maxOccurs="1" type="OccupantsType"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
