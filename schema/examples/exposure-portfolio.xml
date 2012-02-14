@@ -30,9 +30,10 @@
                     </gml:Point>
                 </site>
 
-                <taxonomy>RC/DMRF-D/LR</taxonomy>
-                <stco>150000</stco>
+                <coco>2</coco>
                 <reco>1</reco>
+                <stco>150000</stco>
+                <taxonomy>RC/DMRF-D/LR</taxonomy>
             </assetDefinition>
 
             <assetDefinition gml:id="asset_02">
@@ -42,11 +43,11 @@
                     </gml:Point>
                 </site>
 
-                <taxonomy>RC/DMRF-D/HR</taxonomy>
-                <stco>250000</stco>
+                <occupants description="day">12</occupants>
+                <occupants description="night">50</occupants>
                 <reco>1</reco>
-                <occupancy description="day">12</occupancy>
-                <occupancy description="night">50</occupancy>
+                <stco>250000</stco>
+                <taxonomy>RC/DMRF-D/HR</taxonomy>
             </assetDefinition>
 
             <assetDefinition gml:id="asset_03">
@@ -56,11 +57,11 @@
                     </gml:Point>
                 </site>
 
-                <taxonomy>RC/DMRF-D/LR</taxonomy>
-                <stco>500000</stco>
+                <occupants description="day">36</occupants>
+                <occupants description="night">5</occupants>
                 <reco>1</reco>
-                <occupancy description="day">36</occupancy>
-                <occupancy description="night">5</occupancy>
+                <stco>500000</stco>
+                <taxonomy>RC/DMRF-D/LR</taxonomy>
             </assetDefinition>
 
         </exposureList>

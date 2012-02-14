@@ -49,26 +49,22 @@
         <xs:complexContent>
             <xs:extension base="FieldNode">
                 <xs:sequence>
-                    <xs:element name="taxonomy" type="xs:string"/>
-
+                    <xs:element name="area" minOccurs="0" maxOccurs="1" type="NonNegativeDoubleType"/>
                     <!-- contents cost -->
                     <xs:element name="coco" minOccurs="0" maxOccurs="1" type="AssetValue"/>
-                    <!-- retrofitting cost -->
-                    <xs:element name="reco" minOccurs="0" maxOccurs="1" type="AssetValue"/>
-                    <!-- structural cost -->
-                    <xs:element name="stco" minOccurs="0" maxOccurs="1" type="AssetValue"/>
-
-                    <xs:element name="area" minOccurs="0" maxOccurs="1" type="NonNegativeDoubleType"/>
-                    <!-- number of assets, people etc. -->
-                    <xs:element name="number" minOccurs="0" maxOccurs="1" type="NonNegativeDoubleType"/>
-
                     <!-- insurance deductible -->
                     <xs:element name="deductible" minOccurs="0" maxOccurs="1" type="NonNegativeDoubleType"/>
                     <!-- insurance coverage limit -->
                     <xs:element name="limit" minOccurs="0" maxOccurs="1" type="NonNegativeDoubleType"/>
-
-                    <xs:element name="occupants" minOccurs="0" maxOccurs="1" type="OccupantsType"/>
-                </xs:sequence>
+                    <!-- number of assets, people etc. -->
+                    <xs:element name="number" minOccurs="0" maxOccurs="1" type="NonNegativeDoubleType"/>
+                    <xs:element name="occupants" minOccurs="0" maxOccurs="unbounded" type="OccupantsType"/>
+                    <!-- retrofitting cost -->
+                    <xs:element name="reco" minOccurs="0" maxOccurs="1" type="AssetValue"/>
+                    <!-- structural cost -->
+                    <xs:element name="stco" minOccurs="0" maxOccurs="1" type="AssetValue"/>
+                    <xs:element name="taxonomy" type="xs:string"/>
+            </xs:sequence>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
