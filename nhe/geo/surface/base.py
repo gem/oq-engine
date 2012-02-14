@@ -54,7 +54,7 @@ class BaseSurface(object):
         Create and return the mesh of points covering the surface.
 
         :returns:
-            An instance of :class:`nhe.geo.mesh.Mesh`.
+            An instance of :class:`nhe.geo.mesh.RectangularMesh`.
         """
 
     @abc.abstractmethod
