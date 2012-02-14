@@ -30,8 +30,8 @@
                     </gml:Point>
                 </site>
 
-                <coco>2</coco>
-                <reco>1</reco>
+                <coco>2000</coco>
+                <reco>109876</reco>
                 <stco>150000</stco>
                 <taxonomy>RC/DMRF-D/LR</taxonomy>
             </assetDefinition>
@@ -45,7 +45,7 @@
 
                 <occupants description="day">12</occupants>
                 <occupants description="night">50</occupants>
-                <reco>1</reco>
+                <reco>205432</reco>
                 <stco>250000</stco>
                 <taxonomy>RC/DMRF-D/HR</taxonomy>
             </assetDefinition>
@@ -57,9 +57,9 @@
                     </gml:Point>
                 </site>
 
-                <occupants description="day">36</occupants>
-                <occupants description="night">5</occupants>
-                <reco>1</reco>
+                <occupants description="early morning">36</occupants>
+                <occupants description="late afternoon">5</occupants>
+                <reco>495432</reco>
                 <stco>500000</stco>
                 <taxonomy>RC/DMRF-D/LR</taxonomy>
             </assetDefinition>
