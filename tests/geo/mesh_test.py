@@ -5,6 +5,8 @@ import numpy
 from nhe.geo.point import Point
 from nhe.geo.mesh import Mesh, RectangularMesh
 
+from tests.geo import _mesh_test_data
+
 
 class _BaseMeshTestCase(unittest.TestCase):
     def _make_mesh(self, lons, lats, depths=None):
@@ -238,7 +240,7 @@ class RectangularMeshBoundingMeshTestCase(unittest.TestCase):
 
 
 class RectangularMeshJoynerBooreDistanceTestCase(unittest.TestCase):
-    def test(self):
+    def test_simple(self):
         lons = numpy.array([numpy.arange(-1, 1.2, 0.2)] * 11)
         lats = lons.transpose() + 1
         depths = lats + 10
@@ -254,3 +256,31 @@ class RectangularMeshJoynerBooreDistanceTestCase(unittest.TestCase):
         check(lon=1, lat=1, depth=0, expected_distance=0)
         check(lon=0.6, lat=-1, depth=0, expected_distance=111.1948743)
         check(lon=-0.8, lat=2.1, depth=10, expected_distance=11.1194874)
+
+    def test_vertical_mesh(self):
+        lons = numpy.array([[0, 1], [1, 0]])
+        lats = numpy.array([[0, 0], [0, 0]])
+        depths = numpy.array([[1, 1], [2, 2]])
+        mesh = RectangularMesh(lons, lats, depths)
+        self.assertEqual(mesh.get_joyner_boore_distance(Point(0.5, 0, 0)), 0)
+
+    def _test(self, points, site, expected_distance):
+        lons, lats, depths = numpy.array(points).transpose()
+        lons = lons.transpose()
+        lats = lats.transpose()
+        depths = depths.transpose()
+        mesh = RectangularMesh(lons, lats, depths)
+        distance = mesh.get_joyner_boore_distance(Point(*site))
+        self.assertAlmostEqual(distance, expected_distance, places=4)
+
+    def test3(self):
+        self._test(_mesh_test_data.TEST3_MESH, _mesh_test_data.TEST3_SITE,
+                   _mesh_test_data.TEST3_JB_DISTANCE)
+
+    def test4(self):
+        self._test(_mesh_test_data.TEST4_MESH, _mesh_test_data.TEST4_SITE,
+                   _mesh_test_data.TEST4_JB_DISTANCE)
+
+    def test5(self):
+        self._test(_mesh_test_data.TEST5_MESH, _mesh_test_data.TEST5_SITE,
+                   _mesh_test_data.TEST5_JB_DISTANCE)

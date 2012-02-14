@@ -212,7 +212,7 @@ class RectangularMesh(Mesh):
         mesh_2d = shapely.geometry.Polygon(
             numpy.array([xx, yy], dtype=float).transpose().copy()
         )
-        if mesh_2d.contains(point_2d):
+        if mesh_2d.contains(point_2d) or mesh_2d.touches(point_2d):
             return 0
         else:
             return bounding_mesh.get_min_distance(Point(point.longitude,
