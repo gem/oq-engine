@@ -233,3 +233,53 @@ class PlanarSurfaceGetJoynerBooreDistanceTestCase(unittest.TestCase):
         aae = self.assertAlmostEqual
         aae(surface.get_joyner_boore_distance(Point(-0.2, -0.2)), 15.8951556)
         aae(surface.get_joyner_boore_distance(Point(1, 1, 1)), 141.708801)
+
+
+class PlanarSurfaceGetRXDistanceTestCase(unittest.TestCase):
+    def _test1to7surface(self):
+        corners = [Point(0, 0, 8), Point(-0.1, 0, 8),
+                   Point(-0.1, 0, 9), Point(0, 0, 9)]
+        surface = PlanarSurface(1, 90, 60, *corners)
+        return surface
+
+    def test1(self):
+        surface = self._test1to7surface()
+        self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, 0.05)),
+                               -5.559752615413244, places=3)
+
+    def test2(self):
+        surface = self._test1to7surface()
+        self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, -0.05)),
+                               5.559752615413244, places=3)
+
+    def test3(self):
+        surface = self._test1to7surface()
+        self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, 0)),
+                               0, places=3)
+
+    def test4(self):
+        surface = self._test1to7surface()
+        self.assertAlmostEqual(surface.get_rx_distance(Point(0.2, 0)),
+                               0, places=3)
+
+    def test5(self):
+        surface = self._test1to7surface()
+        self.assertAlmostEqual(surface.get_rx_distance(Point(-0.2, 0)),
+                               0, places=3)
+
+    def test6(self):
+        surface = self._test1to7surface()
+        self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, -1)),
+                               111.19505230826488, places=3)
+
+    def test7(self):
+        surface = self._test1to7surface()
+        self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, -10)),
+                               1111.9505230826487, places=2)
+
+    def test8(self):
+        corners = [Point(-0.05, -0.05, 8), Point(0.05, 0.05, 8),
+                   Point(0.05, 0.05, 9), Point(-0.05, -0.05, 9)]
+        surface = PlanarSurface(1, 45, 60, *corners)
+        self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, 0)),
+                               3.9313415355436705, places=3)
