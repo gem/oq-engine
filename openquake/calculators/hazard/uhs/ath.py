@@ -80,3 +80,17 @@ def remaining_tasks_in_block(job_id, num_tasks, start_count):
     target = start_count + num_tasks
     while running_total() < target:
         yield target - running_total()  # remaining
+
+
+def uhs_task_handler(job_id, num_tasks, start_count):
+    """Async task handler for counting calculation results and determining when
+    a batch of tasks is complete."""
+    remaining_gen = remaining_tasks_in_block(job_id, num_tasks, start_count)
+
+    while True:
+        time.sleep(0.5)
+        try:
+            remaining_gen.next()
+        except StopIteration:
+            # No more tasks remaining in this batch.
+            break
