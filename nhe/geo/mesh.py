@@ -2,8 +2,6 @@
 Module :mod:`nhe.geo.mesh` defines classes :class:`Mesh` and its subclass
 :class:`RectangularMesh`.
 """
-import itertools
-
 import numpy
 import shapely.geometry
 
@@ -175,46 +173,35 @@ class RectangularMesh(Mesh):
         """
         if self.depths is None:
             with_depths = False
-        depths = None
 
         if 1 in self.lons.shape:
             # the original mesh either has one row or one column of points.
             # the result mesh should have the same points.
-            lons, lats = self.lons.flatten(), self.lats.flatten()
-            if with_depths:
-                depths = self.depths.flatten()
-        else:
-            # number of points in the resulting mesh is two times width
-            # plus two times height minus 4 (don't count corners twice).
-            num_points = sum(self.lons.shape) * 2 - 4
-            transposed_lons = self.lons.transpose()
+            return Mesh(self.lons.flatten(), self.lats.flatten(),
+                        self.depths.flatten() if with_depths else None)
+
+        # we need to perform the same operations on all three coordinate
+        # components (lons, lats and depths).
+        components_bounding = []
+        components_all = [self.lons, self.lats]
+        if with_depths:
+            components_all.append(self.depths)
+        for coords in components_all:
+            transposed = coords.transpose()
             # the resulting coordinates are composed of four parts:
-            lons = numpy.fromiter(itertools.chain(
+            components_bounding.append(numpy.concatenate((
                 # the first row,
-                self.lons[0],
+                coords[0],
                 # the last column (excluding two corner points),
-                transposed_lons[-1][1:-1],
+                transposed[-1][1:-1],
                 # the last row (in backward direction),
-                self.lons[-1][::-1],
+                coords[-1][::-1],
                 # and the first column (backwards, excluding corner points).
-                transposed_lons[0][-2:0:-1]
-            ), dtype=float, count=num_points)
-            transposed_lats = self.lats.transpose()
-            lats = numpy.fromiter(itertools.chain(
-                self.lats[0],
-                transposed_lats[-1][1:-1],
-                self.lats[-1][::-1],
-                transposed_lats[0][-2:0:-1]
-            ), dtype=float, count=num_points)
-            if with_depths:
-                transposed_depths = self.depths.transpose()
-                depths = numpy.fromiter(itertools.chain(
-                    self.depths[0],
-                    transposed_depths[-1][1:-1],
-                    self.depths[-1][::-1],
-                    transposed_depths[0][-2:0:-1]
-                ), dtype=float, count=num_points)
-        return Mesh(lons, lats, depths)
+                transposed[0][-2:0:-1]
+            )))
+        if not with_depths:
+            components_bounding.append(None)
+        return Mesh(*components_bounding)
 
     def get_joyner_boore_distance(self, point):
         """
