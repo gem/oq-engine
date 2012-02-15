@@ -244,7 +244,7 @@ class UHSTaskProgressIndicatorTestCase(UHSBaseTestCase):
 
                 realization = 0
                 site = Site(0.0, 0.0)
-                # execute the task a plain old function
+                # execute the task as a plain old function
                 compute_uhs_task(self.job_id, realization, site)
                 self.assertEqual(1, get_counter())
 
