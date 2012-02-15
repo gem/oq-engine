@@ -154,6 +154,8 @@ def get_middle_point(lon1, lat1, lon2, lat2):
     :returns:
         Tuple of longitude and latitude of the point in the middle.
     """
+    if lon1 == lon2 and lat1 == lat2:
+        return lon1, lat1
     [[lon, lat]] = GEOD.npts(lon1, lat1, lon2, lat2, 1)
     if lon <= -180:
         lon += 180
