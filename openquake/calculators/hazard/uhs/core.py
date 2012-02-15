@@ -27,23 +27,25 @@ from django.db import transaction
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
 from openquake import java
+from openquake.calculators.base import Calculator
+from openquake.calculators.hazard.general import generate_erf
+from openquake.calculators.hazard.general import generate_gmpe_map
+from openquake.calculators.hazard.general import get_iml_list
+from openquake.calculators.hazard.general import set_gmpe_params
+from openquake.calculators.hazard.general import store_gmpe_map
+from openquake.calculators.hazard.general import store_source_model
+from openquake.calculators.hazard.uhs.ath import completed_task_count
+from openquake.calculators.hazard.uhs.ath import uhs_task_handler
+from openquake.db.models import Output
+from openquake.db.models import UhSpectra
+from openquake.db.models import UhSpectrum
+from openquake.db.models import UhSpectrumData
 from openquake.input import logictree
 from openquake.java import list_to_jdouble_array
 from openquake.logs import LOG
 from openquake.utils import config
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
-from openquake.calculators.base import Calculator
-from openquake.db.models import Output
-from openquake.db.models import UhSpectra
-from openquake.db.models import UhSpectrum
-from openquake.db.models import UhSpectrumData
-from openquake.calculators.hazard.general import generate_erf
-from openquake.calculators.hazard.general import generate_gmpe_map
-from openquake.calculators.hazard.general import get_iml_list
-from openquake.calculators.hazard.general import store_source_model
-from openquake.calculators.hazard.general import store_gmpe_map
-from openquake.calculators.hazard.general import set_gmpe_params
 
 
 @task(ignore_result=True)
@@ -275,9 +277,13 @@ class UHSCalculator(Calculator):
 
             tf_args = dict(job_id=calc_proxy.job_id, realization=rlz)
 
+            num_tasks_completed = completed_task_count(self.calc_proxy.job_id)
+            ath_args = dict(job_id=self.calc_proxy.job_id, num_tasks=None,
+                            start_count=num_tasks_completed)
+
             distribute(
                 compute_uhs_task, ('site', calc_proxy.sites_to_compute()),
-                tf_args=tf_args, ath=lambda x: x, ath_args=dict())
+                tf_args=tf_args, ath=uhs_task_handler, ath_args=ath_args)
             # Notes: the async task handler could probably just operate by
             # checking counters.
 
