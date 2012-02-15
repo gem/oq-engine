@@ -64,6 +64,7 @@ class UHSBaseTestCase(unittest.TestCase):
             params, self.calculation.id, sections=sections,
             serialize_results_to=['db'], oq_job_profile=self.job_profile,
             oq_calculation=self.calculation)
+        self.calc_proxy.to_kvs()
         self.job_id = self.calc_proxy.job_id
 
 

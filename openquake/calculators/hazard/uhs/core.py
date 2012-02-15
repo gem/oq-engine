@@ -46,6 +46,7 @@ from openquake.logs import LOG
 from openquake.utils import config
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
+from openquake.utils.general import block_splitter
 
 
 @task(ignore_result=True)
@@ -252,16 +253,20 @@ class UHSCalculator(Calculator):
         write_uh_spectra(self.calc_proxy)
 
         source_model_lt = self.calc_proxy.params.get(
-            'SOURCE_MODEL_LOGIC_TREE_FILE')
-        gmpe_lt = self.calc_proxy.params.get('GMPE_LOGIC_TREE_FILE')
+            'SOURCE_MODEL_LOGIC_TREE_FILE_PATH')
+        gmpe_lt = self.calc_proxy.params.get('GMPE_LOGIC_TREE_FILE_PATH')
         basepath = self.calc_proxy.params.get('BASE_PATH')
         self.lt_processor = logictree.LogicTreeProcessor(
             basepath, source_model_lt, gmpe_lt)
 
     def execute(self):
-
+        """Loop over realizations (logic tree samples), split the geometry of
+        interest into blocks of sites, and distribute Celery tasks to carry out
+        the UHS computation.
+        """
         calc_proxy = self.calc_proxy
         all_sites = calc_proxy.sites_to_compute()
+        site_block_size = config.hazard_block_size()
         job_profile = calc_proxy.oq_job_profile
 
         src_model_rnd = random.Random(job_profile.source_model_lt_random_seed)
@@ -276,17 +281,22 @@ class UHSCalculator(Calculator):
             store_gmpe_map(
                 calc_proxy.job_id, gmpe_rnd.getrandbits(32), self.lt_processor)
 
-            tf_args = dict(job_id=calc_proxy.job_id, realization=rlz)
+            for site_block in block_splitter(all_sites, site_block_size):
 
-            num_tasks_completed = completed_task_count(self.calc_proxy.job_id)
-            ath_args = dict(job_id=self.calc_proxy.job_id, num_tasks=None,
-                            start_count=num_tasks_completed)
+                tf_args = dict(job_id=calc_proxy.job_id, realization=rlz)
 
-            distribute(
-                compute_uhs_task, ('site', calc_proxy.sites_to_compute()),
-                tf_args=tf_args, ath=uhs_task_handler, ath_args=ath_args)
-            # Notes: the async task handler could probably just operate by
-            # checking counters.
+                num_tasks_completed = completed_task_count(calc_proxy.job_id)
+
+                ath_args = dict(job_id=calc_proxy.job_id,
+                                num_tasks=len(site_block),
+                                start_count=num_tasks_completed)
+
+                utils_tasks.distribute(
+                    compute_uhs_task, ('site', site_block), tf_args=tf_args,
+                    ath=uhs_task_handler, ath_args=ath_args)
 
     def post_execute(self):
+        """Clean up stats counters."""
+        # TODO: export these counters to the database before deleting them
+        # See bug https://bugs.launchpad.net/openquake/+bug/925946.
         stats.delete_job_counters(self.calc_proxy.job_id)
