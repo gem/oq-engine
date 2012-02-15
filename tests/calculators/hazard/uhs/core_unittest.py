@@ -307,3 +307,6 @@ class UHSCalculatorTestCase(UHSBaseTestCase):
             '%s.write_uh_spectra' % self.UHS_CORE_MODULE) as write_mock:
             calc.pre_execute()
             self.assertEqual(1, write_mock.call_count)
+
+
+
