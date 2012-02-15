@@ -308,3 +308,58 @@ class RectangularMeshJoynerBooreDistanceTestCase(unittest.TestCase):
     def test5(self):
         self._test(_mesh_test_data.TEST5_MESH, _mesh_test_data.TEST5_SITE,
                    _mesh_test_data.TEST5_JB_DISTANCE)
+
+
+class RectangularMeshGetCentroidTestCase(unittest.TestCase):
+    def test_odd_rows_odd_columns_no_depths(self):
+        lons = numpy.array([numpy.arange(-1, 1.2, 0.2)] * 11)
+        lats = lons.transpose() * 10
+        mesh = RectangularMesh(lons, lats, depths=None)
+        self.assertEqual(mesh.get_middle_point(), Point(0, 0, 0))
+
+    def test_odd_rows_odd_columns_with_depths(self):
+        lons = numpy.array([numpy.arange(-1, 1.2, 0.2)] * 11)
+        lats = lons.transpose() * 10
+        depths = lats + 10
+        mesh = RectangularMesh(lons, lats, depths)
+        self.assertEqual(mesh.get_middle_point(), Point(0, 0, 10))
+
+    def test_odd_rows_even_columns_no_depths(self):
+        lons = numpy.array([[10, 20, 30, 40]])
+        lats = numpy.array([[30] * 4])
+        mesh = RectangularMesh(lons, lats, depths=None)
+        self.assertEqual(mesh.get_middle_point(), Point(25, 30.094679))
+
+    def test_odd_rows_even_columns_with_depths(self):
+        lons = numpy.array([[0, 20, 30, 90]])
+        lats = numpy.array([[30] * 4])
+        depths = numpy.array([[2, 7, 8, 10]])
+        mesh = RectangularMesh(lons, lats, depths=depths)
+        self.assertEqual(mesh.get_middle_point(), Point(25, 30.094679, 7.5))
+
+    def test_even_rows_odd_columns_no_depths(self):
+        lons = numpy.array([[-1, 0, 1, 2, 3], [-1.5, 0.5, 1.5, 2.5, 3.5]])
+        lats = numpy.array([[-0.01] * 5, [-0.015] * 5])
+        mesh = RectangularMesh(lons, lats, depths=None)
+        self.assertEqual(mesh.get_middle_point(), Point(1.25, -0.0125, 0))
+
+    def test_even_rows_odd_columns_with_depth(self):
+        lons = numpy.array([[20], [21]])
+        lats = numpy.array([[-1], [1]])
+        depths = numpy.array([[11.1], [11.3]])
+        mesh = RectangularMesh(lons, lats, depths=depths)
+        self.assertEqual(mesh.get_middle_point(), Point(20.5, 0, 11.2))
+
+    def test_even_rows_even_columns_no_depths(self):
+        lons = numpy.array([[10, 20], [10.002, 20.002]])
+        lats = numpy.array([[10, -10], [8, -8]])
+        mesh = RectangularMesh(lons, lats, depths=None)
+        self.assertEqual(mesh.get_middle_point(), Point(15.001, 0))
+
+    def test_even_rows_even_columns_with_depths(self):
+        lons = numpy.array([[10, 20], [12, 22]])
+        lats = numpy.array([[10, -10], [8, -9]])
+        depths = numpy.array([[2, 3], [4, 5]])
+        mesh = RectangularMesh(lons, lats, depths=depths)
+        self.assertEqual(mesh.get_middle_point(),
+                         Point(15.996712, -0.250993, 3.5))

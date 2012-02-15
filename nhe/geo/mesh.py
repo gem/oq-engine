@@ -230,3 +230,51 @@ class RectangularMesh(Mesh):
         else:
             return bounding_mesh.get_min_distance(Point(point.longitude,
                                                         point.latitude))
+
+    def get_middle_point(self):
+        """
+        Return the middle point of the mesh.
+
+        :returns:
+            An instance of :class:`~nhe.geo.point.Point`.
+
+        The middle point is taken from the middle row and a middle column
+        of the mesh if there are odd number of both. Otherwise the geometric
+        mean point of two or four middle points.
+        """
+        num_rows, num_cols = self.lons.shape
+        mid_row = num_rows // 2
+        depth = 0
+        if num_rows & 1 == 1:
+            # there are odd number of rows
+            mid_col = num_cols // 2
+            if num_cols & 1 == 1:
+                # odd number of columns, we can easily take
+                # the middle point
+                if self.depths is not None:
+                    depth = self.depths[mid_row][mid_col]
+                return Point(self.lons[mid_row][mid_col],
+                             self.lats[mid_row][mid_col], depth)
+            else:
+                # even number of columns, need to take two middle
+                # points on the middle row
+                lon1, lon2 = self.lons[mid_row][mid_col - 1 : mid_col + 1]
+                lat1, lat2 = self.lats[mid_row][mid_col - 1 : mid_col + 1]
+                if self.depths is not None:
+                    depth1 = self.depths[mid_row][mid_col - 1]
+                    depth2 = self.depths[mid_row][mid_col]
+        else:
+            # there are even number of rows. take the row just above
+            # and the one just below the middle and find middle point
+            # of each
+            submesh1 = self[mid_row - 1 : mid_row]
+            submesh2 = self[mid_row : mid_row + 1]
+            p1, p2 = submesh1.get_middle_point(), submesh2.get_middle_point()
+            lon1, lat1, depth1 = p1.longitude, p1.latitude, p1.depth
+            lon2, lat2, depth2 = p2.longitude, p2.latitude, p2.depth
+
+        # we need to find the middle between two points
+        if self.depths is not None:
+            depth = (depth1 + depth2) / 2.0
+        lon, lat = geo_utils.get_middle_point(lon1, lat1, lon2, lat2)
+        return Point(lon, lat, depth)
