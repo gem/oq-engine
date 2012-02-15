@@ -23,7 +23,7 @@ from tests.calculators.hazard.uhs.core_unittest import UHSBaseTestCase
 
 
 class UHSTaskHandlerTestCase(UHSBaseTestCase):
-    """Tests for functionality realted to the asynchronous task handler code,
+    """Tests for functionality related to the asynchronous task handler code,
     which is used by the mini-framework
     :function:`openquake.utils.tasks.distribute`.
     """
