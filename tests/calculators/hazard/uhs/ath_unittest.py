@@ -37,7 +37,7 @@ class UHSTaskHandlerTestCase(UHSBaseTestCase):
         stats.incr_counter(self.job_id, 'h', 'compute_uhs_task')
         self.assertEqual(1, completed_task_count(self.job_id))
 
-    def test_complete_task_count_success(self):
+    def test_complete_task_count_failures(self):
         stats.incr_counter(self.job_id, 'h', 'compute_uhs_task-failures')
         self.assertEqual(1, completed_task_count(self.job_id))
 
