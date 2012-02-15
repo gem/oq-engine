@@ -308,3 +308,14 @@ class UHSCalculatorTestCase(UHSBaseTestCase):
             '%s.write_uh_spectra' % self.UHS_CORE_MODULE) as write_mock:
             calc.pre_execute()
             self.assertEqual(1, write_mock.call_count)
+
+    def test_post_execute(self):
+        calc = UHSCalculator(self.calc_proxy)
+
+        expected_call_args = ((self.job_id,), {})
+
+        with helpers.patch(
+            'openquake.utils.stats.delete_job_counters') as del_mock:
+            calc.post_execute()
+            self.assertEqual(1, del_mock.call_count)
+            self.assertEqual(expected_call_args, del_mock.call_args)
