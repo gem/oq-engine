@@ -25,6 +25,7 @@ Test related to code in openquake/utils/general.py
 import unittest
 
 from openquake.utils import general
+from openquake.utils.general import block_splitter
 
 
 class SingletonTestCase(unittest.TestCase):
@@ -90,3 +91,37 @@ class MemoizerTestCase(unittest.TestCase):
 
         # should be called only one time
         self.assertEqual(self.counter, 1)
+
+
+class BlockSplitterTestCase(unittest.TestCase):
+    """Tests for :function:`openquake.utils.general.block_splitter`."""
+
+    DATA = range(10)
+
+    def test_block_splitter(self):
+        expected = [
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+            [9],
+        ]
+        actual = [x for x in block_splitter(self.DATA, 3)]
+        self.assertEqual(expected, actual)
+
+    def test_block_splitter_block_size_eq_data_len(self):
+        expected = [self.DATA]
+        actual = [x for x in block_splitter(self.DATA, 10)]
+        self.assertEqual(expected, actual)
+
+    def test_block_splitter_block_size_gt_data_len(self):
+        expected = [self.DATA]
+        actual = [x for x in block_splitter(self.DATA, 11)]
+        self.assertEqual(expected, actual)
+
+    def test_block_splitter_zero_block_size(self):
+        gen = block_splitter(self.DATA, 0)
+        self.assertRaises(ValueError, gen.next)
+
+    def test_block_splitter_block_size_lt_zero(self):
+        gen = block_splitter(self.DATA, -1)
+        self.assertRaises(ValueError, gen.next)
