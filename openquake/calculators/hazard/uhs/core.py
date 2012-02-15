@@ -20,30 +20,26 @@
 
 import h5py
 import numpy
-import random
 
 from celery.task import task
 from django.db import transaction
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
 from openquake import java
-from openquake.input import logictree
+from openquake.calculators.base import Calculator
+from openquake.calculators.hazard.general import generate_erf
+from openquake.calculators.hazard.general import generate_gmpe_map
+from openquake.calculators.hazard.general import get_iml_list
+from openquake.calculators.hazard.general import set_gmpe_params
+from openquake.db.models import Output
+from openquake.db.models import UhSpectra
+from openquake.db.models import UhSpectrum
+from openquake.db.models import UhSpectrumData
 from openquake.java import list_to_jdouble_array
 from openquake.logs import LOG
 from openquake.utils import config
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
-from openquake.calculators.base import Calculator
-from openquake.db.models import Output
-from openquake.db.models import UhSpectra
-from openquake.db.models import UhSpectrum
-from openquake.db.models import UhSpectrumData
-from openquake.calculators.hazard.general import generate_erf
-from openquake.calculators.hazard.general import generate_gmpe_map
-from openquake.calculators.hazard.general import get_iml_list
-from openquake.calculators.hazard.general import store_source_model
-from openquake.calculators.hazard.general import store_gmpe_map
-from openquake.calculators.hazard.general import set_gmpe_params
 
 
 @task(ignore_result=True)
@@ -228,42 +224,6 @@ def write_uhs_spectrum_data(calc_proxy, realization, site, uhs_results):
         uh_spectrum_data.save()
 
 
-def remaining_tasks_in_block(job_id, num_tasks):
-    """
-
-    :param int job_id:
-        ID of the current calculation.
-    :param int num_tasks:
-        Number of :function:`compute_uhs_task` tasks in this block.
-    :yields: Foo
-    :raises: Bar
-    """
-    get_counter = lambda: stats.get_counter(job_id, 'h', 'compute_uhs_tasks',
-                                            'i')
-    start_count = get_counter() or 0
-    running_total = start_count
-
-    target = start_count + num_tasks
-    while running_total < target:
-        yield target - running_total  # remaining
-        running_total = get_counter() or 0
-
-
-def uhs_task_handler(job_id, num_tasks):
-    """Async task handler for counting calculation results and determining when
-    a batch of tasks is complete."""
-    remaining_gen = remaining_tasks_in_block(job_id, num_tasks)
-
-    while True:
-        import time
-        time.sleep(0.5)
-        try:
-            remaining_gen.next()
-        except StopIteration:
-            # No more tasks remaining in this batch.
-            break
-
-
 class UHSCalculator(Calculator):
     """Uniform Hazard Spectra calculator"""
 
@@ -284,38 +244,3 @@ class UHSCalculator(Calculator):
           for sampling source model and gmpe logic trees
         """
         write_uh_spectra(self.calc_proxy)
-
-        source_model_lt = self.calc_proxy.params.get(
-            'SOURCE_MODEL_LOGIC_TREE_FILE_PATH')
-        gmpe_lt = self.calc_proxy.params.get('GMPE_LOGIC_TREE_FILE_PATH')
-        basepath = self.calc_proxy.params.get('BASE_PATH')
-        self.lt_processor = logictree.LogicTreeProcessor(
-            basepath, source_model_lt, gmpe_lt)
-
-    def execute(self):
-
-        calc_proxy = self.calc_proxy
-        job_profile = calc_proxy.oq_job_profile
-
-        src_model_rnd = random.Random(job_profile.source_model_lt_random_seed)
-        gmpe_rnd = random.Random(job_profile.gmpe_lt_random_seed)
-
-        for rlz in xrange(calc_proxy.oq_job_profile.realizations):
-
-            # Sample the gmpe and source models:
-            store_source_model(
-                calc_proxy.job_id, src_model_rnd.getrandbits(32),
-                calc_proxy.params, self.lt_processor)
-            store_gmpe_map(
-                calc_proxy.job_id, gmpe_rnd.getrandbits(32), self.lt_processor)
-
-            tf_args = dict(job_id=calc_proxy.job_id, realization=rlz)
-
-            distribute(
-                compute_uhs_task, ('site', calc_proxy.sites_to_compute()),
-                tf_args=tf_args, ath=lambda x: x, ath_args=dict())
-            # Notes: the async task handler could probably just operate by
-            # checking counters.
-
-    def post_execute(self):
-        stats.delete_job_counters(self.calc_proxy.job_id)
