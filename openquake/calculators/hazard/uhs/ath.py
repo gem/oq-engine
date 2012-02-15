@@ -19,6 +19,8 @@
 :function:`openquake.utils.tasks.distribute` for more information.
 """
 
+import time
+
 from openquake.utils import stats
 
 
@@ -80,13 +82,12 @@ def remaining_tasks_in_block(job_id, num_tasks, start_count):
         yield target - running_total()  # remaining
 
 
-def uhs_task_handler(job_id, num_tasks):
+def uhs_task_handler(job_id, num_tasks, start_count):
     """Async task handler for counting calculation results and determining when
     a batch of tasks is complete."""
-    remaining_gen = remaining_tasks_in_block(job_id, num_tasks)
+    remaining_gen = remaining_tasks_in_block(job_id, num_tasks, start_count)
 
     while True:
-        import time
         time.sleep(0.5)
         try:
             remaining_gen.next()
