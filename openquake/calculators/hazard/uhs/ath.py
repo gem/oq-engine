@@ -19,8 +19,6 @@
 :function:`openquake.utils.tasks.distribute` for more information.
 """
 
-import time
-
 from openquake.utils import stats
 
 
