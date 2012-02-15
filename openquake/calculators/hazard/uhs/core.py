@@ -20,6 +20,7 @@
 
 import h5py
 import numpy
+import random
 
 from celery.task import task
 from django.db import transaction
@@ -31,10 +32,14 @@ from openquake.calculators.hazard.general import generate_erf
 from openquake.calculators.hazard.general import generate_gmpe_map
 from openquake.calculators.hazard.general import get_iml_list
 from openquake.calculators.hazard.general import set_gmpe_params
+from openquake.calculators.hazard.general import store_gmpe_map
+from openquake.calculators.hazard.general import store_source_model
+from openquake.calculators.hazard.uhs.ath import completed_task_count
 from openquake.db.models import Output
 from openquake.db.models import UhSpectra
 from openquake.db.models import UhSpectrum
 from openquake.db.models import UhSpectrumData
+from openquake.input import logictree
 from openquake.java import list_to_jdouble_array
 from openquake.logs import LOG
 from openquake.utils import config
