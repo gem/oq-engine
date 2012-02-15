@@ -35,6 +35,7 @@ from openquake.calculators.hazard.general import set_gmpe_params
 from openquake.calculators.hazard.general import store_gmpe_map
 from openquake.calculators.hazard.general import store_source_model
 from openquake.calculators.hazard.uhs.ath import completed_task_count
+from openquake.calculators.hazard.uhs.ath import uhs_task_handler
 from openquake.db.models import Output
 from openquake.db.models import UhSpectra
 from openquake.db.models import UhSpectrum
@@ -249,3 +250,42 @@ class UHSCalculator(Calculator):
           for sampling source model and gmpe logic trees
         """
         write_uh_spectra(self.calc_proxy)
+
+        source_model_lt = self.calc_proxy.params.get(
+            'SOURCE_MODEL_LOGIC_TREE_FILE')
+        gmpe_lt = self.calc_proxy.params.get('GMPE_LOGIC_TREE_FILE')
+        basepath = self.calc_proxy.params.get('BASE_PATH')
+        self.lt_processor = logictree.LogicTreeProcessor(
+            basepath, source_model_lt, gmpe_lt)
+
+    def execute(self):
+
+        calc_proxy = self.calc_proxy
+        job_profile = calc_proxy.oq_job_profile
+
+        src_model_rnd = random.Random(job_profile.source_model_lt_random_seed)
+        gmpe_rnd = random.Random(job_profile.gmpe_lt_random_seed)
+
+        for rlz in xrange(calc_proxy.oq_job_profile.realizations):
+
+            # Sample the gmpe and source models:
+            store_source_model(
+                calc_proxy.job_id, src_model_rnd.getrandbits(32),
+                calc_proxy.params, self.lt_processor)
+            store_gmpe_map(
+                calc_proxy.job_id, gmpe_rnd.getrandbits(32), self.lt_processor)
+
+            tf_args = dict(job_id=calc_proxy.job_id, realization=rlz)
+
+            num_tasks_completed = completed_task_count(self.calc_proxy.job_id)
+            ath_args = dict(job_id=self.calc_proxy.job_id, num_tasks=None,
+                            start_count=num_tasks_completed)
+
+            distribute(
+                compute_uhs_task, ('site', calc_proxy.sites_to_compute()),
+                tf_args=tf_args, ath=uhs_task_handler, ath_args=ath_args)
+            # Notes: the async task handler could probably just operate by
+            # checking counters.
+
+    def post_execute(self):
+        stats.delete_job_counters(self.calc_proxy.job_id)
