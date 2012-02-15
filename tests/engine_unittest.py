@@ -24,6 +24,7 @@ from openquake import engine
 from openquake.db.models import model_equals
 from openquake.db.models import Input
 from openquake.db.models import InputSet
+from openquake.db.models import OqCalculation
 from openquake.db.models import OqJobProfile
 from openquake.db.models import OqUser
 
@@ -245,3 +246,53 @@ class EngineAPITestCase(unittest.TestCase):
                     engine.run_calculation(job_profile, params, sections)
 
                     self.assertEquals(1, djc_mock.call_count)
+
+
+class EngineLaunchCalcTestCase(unittest.TestCase):
+    """Tests for :func:`openquake.engine._launch_calculation`."""
+
+    def test__launch_calculation_calls_core_calc_methods(self):
+        # The `Calculator` interface defines 4 general methods:
+        # - analyze
+        # - pre_execute
+        # - execute
+        # - post_execute
+        # When `_launch_calculation` is called, each of these methods should be
+        # called once per job type (hazard, risk).
+
+        # Calculation setup:
+        cfg_file = demo_file('classical_psha_based_risk/config.gem')
+
+        job_profile, params, sections = engine.import_job_profile(cfg_file)
+        calculation = OqCalculation(owner=job_profile.owner,
+                                    oq_job_profile=job_profile)
+        calculation.save()
+
+        calc_proxy = engine.CalculationProxy(
+            params, calculation.id, sections=sections,
+            serialize_results_to=['xml', 'db'],
+            oq_job_profile=job_profile, oq_calculation=calculation)
+
+        # Mocking setup:
+        cls_haz_calc = ('openquake.calculators.hazard.classical.core'
+                        '.ClassicalHazardCalculator')
+        cls_risk_calc = ('openquake.calculators.risk.classical.core'
+                         '.ClassicalRiskCalculator')
+        methods = ('analyze', 'pre_execute', 'execute', 'post_execute')
+        haz_patchers = [patch('%s.%s' % (cls_haz_calc, m)) for m in methods]
+        risk_patchers = [patch('%s.%s' % (cls_risk_calc, m)) for m in methods]
+
+        haz_mocks = [p.start() for p in haz_patchers]
+        risk_mocks = [p.start() for p in risk_patchers]
+
+        # Call the function under test:
+        engine._launch_calculation(calc_proxy, sections)
+
+        self.assertTrue(all(x.call_count == 1 for x in haz_mocks))
+        self.assertTrue(all(x.call_count == 1 for x in risk_mocks))
+
+        # Tear down the mocks:
+        for p in haz_patchers:
+            p.stop()
+        for p in risk_patchers:
+            p.stop()
