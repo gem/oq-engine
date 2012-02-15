@@ -228,25 +228,62 @@ def write_uhs_spectrum_data(calc_proxy, realization, site, uhs_results):
         uh_spectrum_data.save()
 
 
-def remaining_tasks_in_block(job_id, num_tasks):
+def completed_task_count(job_id):
+    """Given the ID of a currently running calculation, query the stats
+    counters Redis to get the number of completed :function:`compute_uhs_task`
+    task executions.
+
+    Successful and failed executions are included in the count.
+
+    :param int job_id:
+        ID of the current calculation.
+    :returns:
+        Number of completed :function:`compute_uhs_task` task executions so
+        far.
     """
+    success_count = stats.get_counter(job_id, 'h', 'compute_uhs_task', 'i')
+    fail_count = stats.get_counter(
+        job_id, 'h', 'compute_uhs_task-failures', 'i')
+
+    return (success_count or 0) + (fail_count or 0)
+
+
+def remaining_tasks_in_block(job_id, num_tasks, start_count):
+    """Figures out the numbers of remaining tasks in the current block. This
+    should only be called during an active calculation.
+
+    Given the ID of a currently running calculation, query the stats
+    counters in Redis and determine when N :function:`compute_uhs_task` tasks
+    have been completed (where N is ``num_tasks``).
+
+    The count includes successful task executions as well as failures.
+
+    This function is implemented as a generator which yields the remainging
+    number of tasks to be execute in this block. When the target number of
+    tasks is reached, a :exception:`StopIteration` is raised.
 
     :param int job_id:
         ID of the current calculation.
     :param int num_tasks:
         Number of :function:`compute_uhs_task` tasks in this block.
-    :yields: Foo
-    :raises: Bar
+    :param int start_count:
+        The starting total of :function:`compute_uhs_task` tasks completed.
+
+        At the beginning of the calculation, this will be 0 of course. At the
+        beginning of subsequent blocks, it needs to be computed _before_
+        starting both the block calculation and the async task handler (to
+        avoid a possible race condition with the task counters).
+    :yields:
+        The remaining number of tasks to be executed in this block.
+    :raises:
+        :exception:`StopIteration` when all block tasks are complete
+        (successful or not).
     """
-    get_counter = lambda: stats.get_counter(job_id, 'h', 'compute_uhs_tasks',
-                                            'i')
-    start_count = get_counter() or 0
-    running_total = start_count
+    running_total = lambda: completed_task_count(job_id) or 0
 
     target = start_count + num_tasks
-    while running_total < target:
-        yield target - running_total  # remaining
-        running_total = get_counter() or 0
+    while running_total() < target:
+        yield target - running_total()  # remaining
 
 
 def uhs_task_handler(job_id, num_tasks):
@@ -286,8 +323,8 @@ class UHSCalculator(Calculator):
         write_uh_spectra(self.calc_proxy)
 
         source_model_lt = self.calc_proxy.params.get(
-            'SOURCE_MODEL_LOGIC_TREE_FILE_PATH')
-        gmpe_lt = self.calc_proxy.params.get('GMPE_LOGIC_TREE_FILE_PATH')
+            'SOURCE_MODEL_LOGIC_TREE_FILE')
+        gmpe_lt = self.calc_proxy.params.get('GMPE_LOGIC_TREE_FILE')
         basepath = self.calc_proxy.params.get('BASE_PATH')
         self.lt_processor = logictree.LogicTreeProcessor(
             basepath, source_model_lt, gmpe_lt)
