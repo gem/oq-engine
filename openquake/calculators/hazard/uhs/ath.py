@@ -52,7 +52,7 @@ def remaining_tasks_in_block(job_id, num_tasks, start_count):
 
     The count includes successful task executions as well as failures.
 
-    This function is implemented as a generator which yields the remainging
+    This function is implemented as a generator which yields the remaining
     number of tasks to be execute in this block. When the target number of
     tasks is reached, a :exception:`StopIteration` is raised.
 
