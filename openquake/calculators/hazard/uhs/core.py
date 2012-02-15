@@ -261,6 +261,7 @@ class UHSCalculator(Calculator):
     def execute(self):
 
         calc_proxy = self.calc_proxy
+        all_sites = calc_proxy.sites_to_compute()
         job_profile = calc_proxy.oq_job_profile
 
         src_model_rnd = random.Random(job_profile.source_model_lt_random_seed)
