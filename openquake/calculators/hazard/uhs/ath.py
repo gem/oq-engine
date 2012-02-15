@@ -24,8 +24,8 @@ from openquake.utils import stats
 
 def completed_task_count(job_id):
     """Given the ID of a currently running calculation, query the stats
-    counters Redis to get the number of completed :function:`compute_uhs_task`
-    task executions.
+    counters in Redis to get the number of completed
+    :function:`compute_uhs_task` task executions.
 
     Successful and failed executions are included in the count.
 
@@ -73,8 +73,6 @@ def remaining_tasks_in_block(job_id, num_tasks, start_count):
         :exception:`StopIteration` when all block tasks are complete
         (successful or not).
     """
-    running_total = lambda: completed_task_count(job_id) or 0
-
     target = start_count + num_tasks
-    while running_total() < target:
-        yield target - running_total()  # remaining
+    while completed_task_count(job_id) < target:
+        yield target - completed_task_count(job_id)  # number remaining

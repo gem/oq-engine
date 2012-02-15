@@ -16,7 +16,7 @@
 
 
 from openquake.calculators.hazard.uhs.ath import completed_task_count
-from openquake.calculators.hazard.uhs.ath import remaining_tasks_in_block 
+from openquake.calculators.hazard.uhs.ath import remaining_tasks_in_block
 from openquake.utils import stats
 
 from tests.calculators.hazard.uhs.core_unittest import UHSBaseTestCase
@@ -37,7 +37,7 @@ class UHSTaskHandlerTestCase(UHSBaseTestCase):
         stats.incr_counter(self.job_id, 'h', 'compute_uhs_task')
         self.assertEqual(1, completed_task_count(self.job_id))
 
-    def test_complete_task_count_failures(self):
+    def test_complete_task_count_success(self):
         stats.incr_counter(self.job_id, 'h', 'compute_uhs_task-failures')
         self.assertEqual(1, completed_task_count(self.job_id))
 
