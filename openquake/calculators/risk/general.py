@@ -56,20 +56,6 @@ LOG = logs.LOG
 BLOCK_SIZE = 100
 
 
-def preload(calculator):
-    """
-    Define some preliminary steps needed before starting
-    the risk processing.
-
-    * read and store in KVS the assets
-    * read and store in KVS the vulnerability model
-    * split into blocks and store in KVS the exposure sites
-    """
-    calculator.store_exposure_assets()
-    calculator.store_vulnerability_model()
-    calculator.partition()
-
-
 def conditional_loss_poes(params):
     """Return the PoE(s) specified in the configuration file used to
     compute the conditional loss."""
@@ -145,6 +131,12 @@ class BaseRiskCalculator(Calculator):
             job_config.BCR_CLASSICAL_MODE,
             job_config.BCR_EVENT_BASED_MODE
         )
+
+    def pre_execute(self):
+        """Make sure the exposure and vulnerability data is in the database."""
+        self.store_exposure_assets()
+        self.store_vulnerability_model()
+        self.partition()
 
     def partition(self):
         """Split the sites to compute in blocks and store

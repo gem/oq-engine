@@ -226,8 +226,6 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
 
     def execute(self):
         """Core Classical Risk calculation starts here."""
-        general.preload(self)
-
         celery_tasks = []
         for block_id in self.calc_proxy.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s"
