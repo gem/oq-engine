@@ -121,12 +121,18 @@ def get_orthographic_projection(west, east, north, south):
     """
     Create and return a projection object for a given bounding box.
 
-    Parameters define a bounding box in a spherical coordinates of the
-    collection of points that is about to be projected. The center point
-    of the projection (coordinates (0, 0) in Cartesian space) is set
-    to the middle point of that bounding box. The resulting projection
-    is defined for spherical coordinates that are not further from the
-    bounding box center than 90 degree on the great circle arc.
+    :returns:
+        A pyproj's projection object. See
+        `http://pyproj.googlecode.com/svn/trunk/docs/pyproj.Proj-class.html`_.
+
+    Parameters are given as floats, representing decimal degrees (first two
+    are longitudes and last two are latitudes). They define a bounding box
+    in a spherical coordinates of the collection of points that is about
+    to be projected. The center point of the projection (coordinates (0, 0)
+    in Cartesian space) is set to the middle point of that bounding box.
+    The resulting projection is defined for spherical coordinates that are
+    not further from the bounding box center than 90 degree on the great
+    circle arc.
 
     The result projection is of type `Orthographic
     <http://www.remotesensing.org/geotiff/proj_list/orthographic.html>`_.
