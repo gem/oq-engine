@@ -230,17 +230,16 @@ class RectangularMesh(Mesh):
         if with_depths:
             components_all.append(self.depths)
         for coords in components_all:
-            transposed = coords.transpose()
             # the resulting coordinates are composed of four parts:
             components_bounding.append(numpy.concatenate((
                 # the first row,
                 coords[0],
                 # the last column (excluding two corner points),
-                transposed[-1][1:-1],
+                coords[1:-1, -1],
                 # the last row (in backward direction),
                 coords[-1][::-1],
                 # and the first column (backwards, excluding corner points).
-                transposed[0][-2:0:-1]
+                coords[-2:0:-1, 0]
             )))
         if not with_depths:
             components_bounding.append(None)
