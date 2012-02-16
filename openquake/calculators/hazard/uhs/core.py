@@ -26,19 +26,20 @@ from django.db import transaction
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
 from openquake import java
+from openquake.calculators.base import Calculator
+from openquake.calculators.hazard.general import generate_erf
+from openquake.calculators.hazard.general import generate_gmpe_map
+from openquake.calculators.hazard.general import get_iml_list
+from openquake.calculators.hazard.general import set_gmpe_params
+from openquake.db.models import Output
+from openquake.db.models import UhSpectra
+from openquake.db.models import UhSpectrum
+from openquake.db.models import UhSpectrumData
 from openquake.java import list_to_jdouble_array
 from openquake.logs import LOG
 from openquake.utils import config
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
-from openquake.db.models import Output
-from openquake.db.models import UhSpectra
-from openquake.db.models import UhSpectrum
-from openquake.db.models import UhSpectrumData
-from openquake.calculators.hazard.general import generate_erf
-from openquake.calculators.hazard.general import generate_gmpe_map
-from openquake.calculators.hazard.general import get_iml_list
-from openquake.calculators.hazard.general import set_gmpe_params
 
 
 @task(ignore_result=True)
@@ -221,3 +222,25 @@ def write_uhs_spectrum_data(calc_proxy, realization, site, uhs_results):
             uh_spectrum=uh_spectrum, realization=realization,
             sa_values=sa_values, location=location)
         uh_spectrum_data.save()
+
+
+class UHSCalculator(Calculator):
+    """Uniform Hazard Spectra calculator"""
+
+    # LogicTreeProcessor for sampling the source model and gmpe logic trees.
+    lt_processor = None
+
+    def analyze(self):
+        """Set the task total counter."""
+        task_total = (self.calc_proxy.oq_job_profile.realizations
+                      * len(self.calc_proxy.sites_to_compute()))
+        stats.set_total(self.calc_proxy.job_id, 'h', 'uhs:tasks', task_total)
+
+    def pre_execute(self):
+        """Performs the following pre-execution tasks:
+
+        - write initial DB 'container' records for the calculation results
+        - instantiate a :class:`openquake.input.logictree.LogicTreeProcessor`
+          for sampling source model and gmpe logic trees
+        """
+        write_uh_spectra(self.calc_proxy)
