@@ -203,8 +203,19 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
     """
     Test the code to serialize exposure model to DB.
     """
+    job = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.job = cls.setup_classic_job()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.teardown_job(cls.job)
+
     def setUp(self):
-        self.writer = ExposureDBWriter(self.default_user())
+        self.writer = ExposureDBWriter(self.job.oq_job_profile.input_set,
+                                       "demos/c_psha_risk/exposure.xml")
 
     def test_read_exposure(self):
         path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, TEST_FILE)
@@ -219,10 +230,12 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertFalse(model is None)
 
         # check model fields
-        self.assertEquals('Collection of existing building in downtown Pavia',
+        self.assertEquals("Collection of existing building in downtown Pavia",
                           model.description)
-        self.assertEquals('buildings', model.category)
-        self.assertEquals('EUR', model.stco_unit)
+        self.assertEquals("buildings", model.category)
+        self.assertEquals("CHF", model.coco_unit)
+        self.assertEquals("EUR", model.reco_unit)
+        self.assertEquals("USD", model.stco_unit)
 
         # check asset instances
         assets = sorted(model.exposuredata_set.all(), key=lambda e: e.value)
@@ -230,17 +243,17 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         def _to_site(pg_point):
             return Site(pg_point.x, pg_point.y)
 
-        self.assertEquals('asset_01', assets[0].asset_ref)
+        self.assertEquals("asset_01", assets[0].asset_ref)
         self.assertEquals(150000, assets[0].value)
-        self.assertEquals('RC/DMRF-D/LR', assets[0].taxonomy)
+        self.assertEquals("RC/DMRF-D/LR", assets[0].taxonomy)
         self.assertEquals(Site(9.15000, 45.16667), _to_site(assets[0].site))
 
-        self.assertEquals('asset_02', assets[1].asset_ref)
+        self.assertEquals("asset_02", assets[1].asset_ref)
         self.assertEquals(250000, assets[1].value)
-        self.assertEquals('RC/DMRF-D/HR', assets[1].taxonomy)
+        self.assertEquals("RC/DMRF-D/HR", assets[1].taxonomy)
         self.assertEquals(Site(9.15333, 45.12200), _to_site(assets[1].site))
 
-        self.assertEquals('asset_03', assets[2].asset_ref)
+        self.assertEquals("asset_03", assets[2].asset_ref)
         self.assertEquals(500000, assets[2].value)
-        self.assertEquals('RC/DMRF-D/LR', assets[2].taxonomy)
+        self.assertEquals("RC/DMRF-D/LR", assets[2].taxonomy)
         self.assertEquals(Site(9.14777, 45.17999), _to_site(assets[2].site))
