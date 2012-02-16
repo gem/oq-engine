@@ -563,6 +563,18 @@ class DbTestCase(object):
         input_set = models.InputSet(owner=owner)
         input_set.save()
 
+        # Insert input model files
+        inputs = [
+            ("lt_source", "demos/c_psha_risk/source_model_logic_tree.xml"),
+            ("exposure", "demos/c_psha_risk/exposure.xml"),
+            ("lt_gmpe", "demos/c_psha_risk/gmpe_logic_tree.xml"),
+            ("vulnerability", "demos/c_psha_risk/vulnerability.xml"),
+            ("source", "demos/c_psha_risk/source_model.xml")]
+        for imt, imp in inputs:
+            iobj = models.Input(input_set=input_set, path=imp, input_type=imt,
+                                size=random.randint(1024, 16*1024))
+            iobj.save()
+
         oqjp = models.OqJobProfile()
         oqjp.owner = owner
         oqjp.calc_mode = "classical"
