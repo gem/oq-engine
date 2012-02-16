@@ -83,6 +83,8 @@ class UniformHazardSpectraQATest(unittest.TestCase):
         uh_spectra = UhSpectra.objects.get(
             output__oq_calculation=calculation.id)
 
+        self.assertEqual(1, uh_spectra.realizations)
+
         for poe, data in exp_results.items():
             uh_spectrum = UhSpectrum.objects.get(poe=poe,
                                                  uh_spectra=uh_spectra.id)
