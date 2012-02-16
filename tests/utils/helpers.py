@@ -548,12 +548,15 @@ class DbTestCase(object):
         input_set.delete()
 
     @classmethod
-    def setup_classic_job(cls, create_job_path=True, upload_id=None):
+    def setup_classic_job(cls, create_job_path=True, upload_id=None,
+                          inputs=None):
         """Create a classic job with associated upload and inputs.
 
-        :param integer upload_id: if set use upload record with given db key.
         :param bool create_job_path: if set the path for the job will be
             created and captured in the job record
+        :param integer upload_id: if set use upload record with given db key.
+        :param list inputs: a list of 2-tuples where the first and the second
+            element are the input type and path respectively
         :returns: a :py:class:`db.models.OqCalculation` instance
         """
         assert upload_id is None  # temporary
@@ -564,16 +567,12 @@ class DbTestCase(object):
         input_set.save()
 
         # Insert input model files
-        inputs = [
-            ("lt_source", "demos/c_psha_risk/source_model_logic_tree.xml"),
-            ("exposure", "demos/c_psha_risk/exposure.xml"),
-            ("lt_gmpe", "demos/c_psha_risk/gmpe_logic_tree.xml"),
-            ("vulnerability", "demos/c_psha_risk/vulnerability.xml"),
-            ("source", "demos/c_psha_risk/source_model.xml")]
-        for imt, imp in inputs:
-            iobj = models.Input(input_set=input_set, path=imp, input_type=imt,
-                                size=random.randint(1024, 16*1024))
-            iobj.save()
+        if inputs:
+            for imt, imp in inputs:
+                iobj = models.Input(input_set=input_set, path=imp,
+                                    input_type=imt,
+                                    size=random.randint(1024, 16*1024))
+                iobj.save()
 
         oqjp = models.OqJobProfile()
         oqjp.owner = owner
