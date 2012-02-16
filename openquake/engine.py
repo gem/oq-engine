@@ -68,7 +68,7 @@ RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 # pylint: disable=R0902
 class CalculationProxy(object):
     """Contains everything a calculator needs to run a calculation. This
-    includes: an :class:`OqJobProfile` object, an :class:`OqCalclation`, and a
+    includes: an :class:`OqJobProfile` object, an :class:`OqCalculation`, and a
     dictionary of all of the calculation config params (which is a basically a
     duplication of the :class:`OqJobProfile` member; in the future we would
     like to remove this duplication).

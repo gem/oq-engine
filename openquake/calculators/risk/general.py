@@ -21,15 +21,14 @@
 # Silence 'Too many lines in module'
 # pylint: disable=C0302
 
+
+from collections import defaultdict
+from collections import OrderedDict
 import json
 import math
 import os
 
-from collections import defaultdict
-from collections import OrderedDict
-
-from scipy import stats
-from scipy import sqrt, log
+from celery.task import task
 
 from numpy import array
 from numpy import exp
@@ -38,19 +37,21 @@ from numpy import linspace
 from numpy import mean
 from numpy import where
 from numpy import zeros
+from scipy import sqrt, log
+from scipy import stats
 from scipy.stats import norm
 
+from openquake.calculators.base import Calculator
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
+from openquake.input.exposure import ExposureDBWriter
 from openquake.job import config as job_config
 from openquake.output import risk as risk_output
 from openquake.parser import exposure
 from openquake.parser import vulnerability
-from openquake.calculators.base import Calculator
 from openquake.utils.tasks import calculator_for_task
 
-from celery.task import task
 
 LOG = logs.LOG
 BLOCK_SIZE = 100
@@ -119,6 +120,9 @@ def compute_risk(calculation_id, block_id, **kwargs):
 class BaseRiskCalculator(Calculator):
     """Base abstract class for Risk calculators."""
 
+    def __init__(self, job_profile):
+        self.job_profile = job_profile
+
     def execute(self):
         """Calculation logic goes here; subclasses must implement this."""
         raise NotImplementedError()
@@ -160,24 +164,14 @@ class BaseRiskCalculator(Calculator):
                 len(sites), block_count)
 
     def store_exposure_assets(self):
-        """Load exposure assets and write them to KVS."""
+        """Load exposure assets and write them to database."""
 
         exposure_parser = exposure.ExposurePortfolioFile(
             os.path.join(self.calc_proxy.base_path,
                          self.calc_proxy.params[job_config.EXPOSURE]))
 
-        region = self.calc_proxy.region
-
-        for site, asset in exposure_parser.filter(region):
-            # TODO(ac): This is kludgey (?)
-            asset["lat"] = site.latitude
-            asset["lon"] = site.longitude
-            gridpoint = region.grid.point_at(site)
-
-            asset_key = kvs.tokens.asset_key(
-                self.calc_proxy.job_id, gridpoint.row, gridpoint.column)
-
-            kvs.get_client().rpush(asset_key, json.JSONEncoder().encode(asset))
+        writer = ExposureDBWriter()
+        writer.serialize(exposure_parser)
 
     def store_vulnerability_model(self):
         """ load vulnerability and write to kvs """
