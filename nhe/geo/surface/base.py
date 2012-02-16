@@ -24,6 +24,7 @@ class BaseSurface(object):
     def get_min_distance(self, point):
         """
         Compute and return the minimum distance from the surface to ``point``.
+        This distance is sometimes called ``Rrup``.
 
         :returns:
             Distance in km.
@@ -40,10 +41,12 @@ class BaseSurface(object):
 
     def get_joyner_boore_distance(self, point):
         """
-        Compute and return Joyner-Boore distance to ``point``.
+        Compute and return Joyner-Boore (also known as ``Rjb``) distance
+        to ``point``.
 
         :returns:
-            The closest distance between the point and the surface projection.
+            The closest distance between the projections of the point
+            and the surface to the earth surface.
 
         Base class calls surface mesh's method
         :meth:`~nhe.geo.mesh.RectangularMesh.get_joyner_boore_distance`.
@@ -52,7 +55,16 @@ class BaseSurface(object):
 
     def get_rx_distance(self, point):
         """
-        Compute RX distance between ``point`` and surface's great circle arc.
+        Compute distance between ``point`` and surface's great circle arc.
+
+        Distance is measured perpendicular to the rupture strike, from
+        the surface projection of the updip edge of the rupture, with
+        the down dip direction being positive (this distance is usually
+        called ``Rx``).
+
+        In other words, is the horizontal distance to top edge of rupture
+        measured perpendicular to the strike. Values on the hanging wall
+        are positive, values on the footwall are negative.
 
         :returns:
             Distance in km.
@@ -68,7 +80,7 @@ class BaseSurface(object):
         # the projection of vector directed from top edge centroid
         # pointing to the target point to the line perpendicular to the
         # surface plane. Better way would be using spherical law of cosines
-        # but that would require expressing distances in angular measures.
+        # but that would require expressing distances in angular units.
         top_edge_centroid = self._get_top_edge_centroid()
         azimuth_to_target, _, distance_to_target = geo_utils.GEOD.inv(
             top_edge_centroid.longitude, top_edge_centroid.latitude,
