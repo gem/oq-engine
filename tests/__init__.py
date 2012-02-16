@@ -45,7 +45,6 @@ from parser_hazard_map_unittest import *
 from parser_vulnerability_model_unittest import *
 from probabilistic_unittest import *
 from producer_unittest import *
-from risk_exposure_model_unittest import *
 from risk_job_unittest import *
 from risk_parser_unittest import *
 from risk_unittest import *
@@ -63,7 +62,6 @@ from utils_stats_unittest import *
 from utils_tasks_unittest import *
 from utils_version_unittest import *
 from validator_unittest import *
-from models_unittest import *
 from engine_unittest import *
 from writer_unittest import *
 
