@@ -148,9 +148,9 @@ class ExposurePortfolioFile(producer.FileProducer):
         """Build a dict of all node attributes"""
         site_attributes = {}
 
-        # consider all attributes of assetDefinition element as mandatory
-
         site_attributes['assetID'] = element.get('%sid' % GML)
+
+        # Optional elements
         attrs = (('coco', float), ('reco', float), ('stco', float),
                  ('area', float), ('number', float), ('limit', float),
                  ('deductible', float))
@@ -159,6 +159,7 @@ class ExposurePortfolioFile(producer.FileProducer):
             if attr_value is not None:
                 site_attributes[attr_name] = attr_type(attr_value)
 
+        # Mandatory elements
         for (required_attr, attr_type) in (('taxonomy', str),):
             attr_value = element.find('%s%s' % (NRML, required_attr)).text
             if attr_value is not None:
