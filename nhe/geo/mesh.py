@@ -194,6 +194,10 @@ class RectangularMesh(Mesh):
         of points of this mesh. Only those points that lie on the borders
         of the rectangular mesh are included in the result one.
 
+        If the original mesh is purely vertical (with point in all the
+        rows different only by their depths), and ``with_depths == False``,
+        the resulting bounding mesh is filtered from duplicates.
+
         :param with_depths:
             If set ``False`` the new mesh will have depths array
             set to ``None``.
@@ -206,6 +210,16 @@ class RectangularMesh(Mesh):
             # the result mesh should have the same points.
             return Mesh(self.lons.flatten(), self.lats.flatten(),
                         self.depths.flatten() if with_depths else None)
+
+        # if depth are ignored and there is only one row (or the top row
+        # is equal to last one), consider only that top row. this way
+        # we avoid duplicating each point for purely vertical rectangular
+        # meshes.
+        if (not with_depths
+            and (len(self.lons) == 1
+                 or ((self.lons[0] == self.lons[-1]).all()
+                     and (self.lats[0] == self.lats[-1]).all()))):
+            return Mesh(self.lons[0], self.lats[0], None)
 
         # we need to perform the same operations on all three coordinate
         # components (lons, lats and depths).
@@ -235,6 +249,9 @@ class RectangularMesh(Mesh):
         Compute and return Joyner-Boore distance to ``point``.
         Point's depth is ignored.
 
+        See :meth:`nhe.geo.surface.BaseSurface.get_joyner_boore_distance`
+        for definition of this distance.
+
         :returns:
             Distance in km. Value is considered to be zero if ``point``
             lies inside the polygon enveloping the projection of the mesh
@@ -249,9 +266,13 @@ class RectangularMesh(Mesh):
         point_2d = shapely.geometry.Point(*proj(point.longitude,
                                                 point.latitude))
         xx, yy = proj(lons, lats)
-        mesh_2d = shapely.geometry.Polygon(
-            numpy.array([xx, yy], dtype=float).transpose().copy()
-        )
+        mesh_2d = numpy.array([xx, yy], dtype=float).transpose().copy()
+        if len(xx) == 2:
+            mesh_2d = shapely.geometry.LineString(mesh_2d)
+        elif len(xx) == 1:
+            mesh_2d = shapely.geometry.Point(*mesh_2d)
+        elif len(xx) > 2:
+            mesh_2d = shapely.geometry.Polygon(mesh_2d)
         dist = mesh_2d.distance(point_2d)
         if dist < 500:
             # if the distance is below threshold of 500 kilometers, consider
