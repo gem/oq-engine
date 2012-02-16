@@ -27,7 +27,7 @@ class Calculator(object):
         """
         self.calc_proxy = calc_proxy
 
-    def analyze(self):
+    def initialize(self):
         """Implement this method in subclasses to record pre-execution stats,
         estimate the calculation size, etc."""
 
