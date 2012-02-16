@@ -3,33 +3,32 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to OpenQuake's documentation!
-=====================================
+OpenQuake Source Code Documentation
+===================================
 
 Contents:
 
 .. toctree::
-   :maxdepth: 2
 
-   calculators
-   architecture
-   flags
-   formats
-   hazard
-   java
-   job
-   kvs
-   logs
-   input
-   output
-   producer
-   risk
-   schema
-   shapes
-   tasks
-   utils
-   writer
-   xml
+    calculators/hazard.rst
+    engine
+    architecture
+    flags
+    formats
+    java
+    job
+    kvs
+    logs
+    input
+    output
+    producer
+    risk
+    schema
+    shapes
+    tasks
+    utils
+    writer
+    xml
 
 Indices and tables
 ==================
