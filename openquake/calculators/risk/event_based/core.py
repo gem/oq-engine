@@ -101,8 +101,6 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
 
     def execute(self):
         """Execute the job."""
-        general.preload(self)
-
         aggregate_curve = general.AggregateLossCurve()
 
         tasks = []
