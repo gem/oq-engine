@@ -24,7 +24,6 @@
 
 from collections import defaultdict
 from collections import OrderedDict
-import json
 import math
 import os
 
@@ -166,11 +165,10 @@ class BaseRiskCalculator(Calculator):
     def store_exposure_assets(self):
         """Load exposure assets and write them to database."""
 
-        exposure_parser = exposure.ExposurePortfolioFile(
-            os.path.join(self.calc_proxy.base_path,
-                         self.calc_proxy.params[job_config.EXPOSURE]))
-
-        writer = ExposureDBWriter()
+        path = os.path.join(self.calc_proxy.base_path,
+                            self.calc_proxy.params[job_config.EXPOSURE])
+        exposure_parser = exposure.ExposurePortfolioFile(path)
+        writer = ExposureDBWriter(self.job_profile.input_set, path)
         writer.serialize(exposure_parser)
 
     def store_vulnerability_model(self):

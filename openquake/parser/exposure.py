@@ -155,9 +155,9 @@ class ExposurePortfolioFile(producer.FileProducer):
                  ('area', float), ('number', float), ('limit', float),
                  ('deductible', float))
         for (attr_name, attr_type) in attrs:
-            attr_value = element.find('%s%s' % (NRML, attr_name)).text
+            attr_value = element.find('%s%s' % (NRML, attr_name))
             if attr_value is not None:
-                site_attributes[attr_name] = attr_type(attr_value)
+                site_attributes[attr_name] = attr_type(attr_value.text)
 
         # Mandatory elements
         for (required_attr, attr_type) in (('taxonomy', str),):
@@ -169,9 +169,8 @@ class ExposurePortfolioFile(producer.FileProducer):
                              "attribute %s" % required_attr)
                 raise ValueError(error_str)
 
-        occupants = element.find('%soccupants' % NRML)
-        while occupants is not None:
-            pass
+        # TODO, al-maisan, Thu, 16 Feb 2012 15:55:01 +0100
+        # add the logic that handles the 'occupants' tags.
 
         site_attributes.update(self._current_meta)
 
