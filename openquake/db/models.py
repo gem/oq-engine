@@ -774,6 +774,22 @@ class OqJobProfile(models.Model):
     asset_life_expectancy = models.FloatField(null=True)
     interest_rate = models.FloatField(null=True)
 
+    def q_input(self, input_type=None, path=None):
+        """Find the input record(s) for the given input type and path.
+
+        :returns: a django `QuerySet` with zero+
+            :py:class:`openquake.db.models.Input` instances
+        """
+        qs = self.input_set.input_set
+
+        if input_type:
+            qs = qs.filter(input_type=input_type)
+
+        if path:
+            qs = qs.filter(path=path)
+
+        return qs
+
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"oq_job_profile'
 

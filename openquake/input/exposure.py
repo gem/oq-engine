@@ -30,10 +30,13 @@ class ExposureDBWriter(object):
     Serialize the exposure model to database
     """
 
-    def __init__(self, owner):
+    def __init__(self, owner=None):
         """Create a new serializer for the specified user"""
         self.model = None
-        self.owner = owner
+        if owner:
+            self.owner = owner
+        else:
+            self.owner = models.OqUser.objects.get(user_name="openquake")
 
     @transaction.commit_on_success(router.db_for_write(models.ExposureModel))
     def serialize(self, iterator):
@@ -63,16 +66,20 @@ class ExposureDBWriter(object):
         if not self.model:
             self.model = models.ExposureModel(
                 owner=self.owner,
-                description=values.get('listDescription'),
-                category=values['assetCategory'],
-                stco_type="aggregated",
-                stco_unit=values['unit'])
+                description=values.get("listDescription"),
+                category=values["assetCategory"],
+                area_type=values["areaType"], area_unit=values["areaUnit"],
+                coco_type=values["cocoType"], coco_unit=values["cocoUnit"],
+                reco_type=values["recoType"], reco_unit=values["recoUnit"],
+                stco_type=values["stcoType"], stco_unit=values["stcoUnit"])
             self.model.save()
 
         data = models.ExposureData(
-            exposure_model=self.model, asset_ref=values['assetID'],
-            stco=values['assetValue'],
-            taxonomy=values['taxonomy'],
-            site="POINT(%s %s)" % (point.point.x, point.point.y),
-            reco=values['retrofittingCost'])
+            exposure_model=self.model, asset_ref=values["assetID"],
+            coco=values["coco"], reco=values["reco"],
+            stco=values["stco"], area=values["area"],
+            number_of_units=values["number"],
+            coco_deductible=values["deductible"],
+            coco_limit=values["limit"], taxonomy=values["taxonomy"],
+            site="POINT(%s %s)" % (point.point.x, point.point.y))
         data.save()
