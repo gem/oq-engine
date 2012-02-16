@@ -43,8 +43,6 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
     # pylint: disable=R0914
     def execute(self):
         """Entry point for triggering the computation."""
-        general.preload(self)
-
         LOGGER.debug("Executing scenario risk computation.")
         LOGGER.debug("This will calculate mean and standard deviation loss"
             "values for the region defined in the job config.")
