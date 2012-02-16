@@ -173,13 +173,15 @@ class RectangularMesh(Mesh):
         :param point:
             List of lists of :class:`~nhe.geo.point.Point` objects.
         """
-        assert points and points[0]
+        assert points is not None and len(points) > 0 and len(points[0]) > 0, \
+               'list of at least one non-empty list of points is required'
         lons = numpy.zeros((len(points), len(points[0])), dtype=float)
         lats = lons.copy()
         depths = lons.copy()
         num_cols = len(points[0])
         for i, row in enumerate(points):
-            assert len(row) == num_cols
+            assert len(row) == num_cols, \
+                   'lists of points are not of uniform length'
             for j, point in enumerate(row):
                 lons[i][j] = point.longitude
                 lats[i][j] = point.latitude
@@ -211,7 +213,7 @@ class RectangularMesh(Mesh):
             return Mesh(self.lons.flatten(), self.lats.flatten(),
                         self.depths.flatten() if with_depths else None)
 
-        # if depth are ignored and there is only one row (or the top row
+        # if depths are ignored and there is only one row (or the top row
         # is equal to last one), consider only that top row. this way
         # we avoid duplicating each point for purely vertical rectangular
         # meshes.
