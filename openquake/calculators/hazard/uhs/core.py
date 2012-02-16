@@ -230,7 +230,7 @@ class UHSCalculator(Calculator):
     # LogicTreeProcessor for sampling the source model and gmpe logic trees.
     lt_processor = None
 
-    def analyze(self):
+    def initialize(self):
         """Set the task total counter."""
         task_total = (self.calc_proxy.oq_job_profile.realizations
                       * len(self.calc_proxy.sites_to_compute()))

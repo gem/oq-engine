@@ -736,10 +736,10 @@ def _launch_calculation(calc_proxy, sections):
             ['general', 'HAZARD', 'RISK']
     """
     # TODO(LB):
-    # In the future, this should be moved to the analyze() method of the base
-    # Calculator class, or something like that. For now, we don't want it there
-    # because it would get called twice in a Hazard+Risk calculation. This is
-    # going to need some thought.
+    # In the future, this should be moved to the initialize() method of the
+    # base Calculator class, or something like that. For now, we don't want it
+    # there because it would get called twice in a Hazard+Risk calculation.
+    # This is going to need some thought.
     # Ignoring 'Access to a protected member'
     # pylint: disable=W0212
     calc_proxy._record_initial_stats()
@@ -762,7 +762,7 @@ def _launch_calculation(calc_proxy, sections):
         logs.LOG.debug("Launching calculation with id=%s and type='%s'"
                        % (calc_proxy.job_id, job_type))
 
-        calculator.analyze()
+        calculator.initialize()
         calculator.pre_execute()
         calculator.execute()
         calculator.post_execute()
