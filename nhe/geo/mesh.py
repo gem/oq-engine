@@ -237,11 +237,13 @@ class RectangularMesh(Mesh):
 
         :returns:
             Distance in km. Value is considered to be zero if ``point``
-            lies inside the polygon enveloping the projection of the mesh.
+            lies inside the polygon enveloping the projection of the mesh
+            or on one of its edges.
         """
         bounding_mesh = self._get_bounding_mesh(with_depths=False)
+        assert bounding_mesh.depths is None
         lons, lats = bounding_mesh.lons, bounding_mesh.lats
-        proj = geo_utils.get_stereographic_projection(
+        proj = geo_utils.get_orthographic_projection(
             *geo_utils.get_spherical_bounding_box(lons, lats)
         )
         point_2d = shapely.geometry.Point(*proj(point.longitude,
@@ -250,11 +252,14 @@ class RectangularMesh(Mesh):
         mesh_2d = shapely.geometry.Polygon(
             numpy.array([xx, yy], dtype=float).transpose().copy()
         )
-        if mesh_2d.contains(point_2d) or mesh_2d.distance(point_2d) < 500:
-            # if the point is closer than half km to the mesh, or lies
-            # inside, return zero distance.
-            return 0
+        dist = mesh_2d.distance(point_2d)
+        if dist < 500:
+            # if the distance is below threshold of 500 kilometers, consider
+            # the distance measured on the projection accurate enough.
+            return dist
         else:
+            # ... otherwise get the precise distance between bounding mesh
+            # projection and the point projection using pure numerical way
             return bounding_mesh.get_min_distance(Point(point.longitude,
                                                         point.latitude))
 

@@ -222,17 +222,23 @@ class PlanarSurfaceGetJoynerBooreDistanceTestCase(unittest.TestCase):
         corners = [Point(0.1, -0.1, 1), Point(-0.1, -0.1, 1),
                    Point(-0.1, 0.1, 2), Point(0.1, 0.1, 2)]
         surface = PlanarSurface(1, 0, 45, *corners)
-        ae = self.assertEqual
-        ae(surface.get_joyner_boore_distance(Point(-0.1, 0.04)), 0)
-        ae(surface.get_joyner_boore_distance(Point(0.1, 0.03)), 0)
+        aae = self.assertAlmostEqual
+        aae(surface.get_joyner_boore_distance(Point(-0.1, 0.04)), 0, delta=0.3)
+        aae(surface.get_joyner_boore_distance(Point(0.1, 0.03)), 0, delta=0.3)
 
     def test_point_outside(self):
         corners = [Point(0.1, -0.1, 1), Point(-0.1, -0.1, 1),
                    Point(-0.1, 0.1, 2), Point(0.1, 0.1, 2)]
         surface = PlanarSurface(1, 0, 45, *corners)
         aae = self.assertAlmostEqual
-        aae(surface.get_joyner_boore_distance(Point(-0.2, -0.2)), 15.8951556)
-        aae(surface.get_joyner_boore_distance(Point(1, 1, 1)), 141.708801)
+        aae(surface.get_joyner_boore_distance(Point(-0.2, -0.2)),
+            Point(-0.2, -0.2).distance(Point(-0.1, -0.1)), delta=0.2)
+        aae(surface.get_joyner_boore_distance(Point(1, 1, 1)),
+            Point(1, 1).distance(Point(0.1, 0.1)), delta=0.4)
+        aae(surface.get_joyner_boore_distance(Point(4, 5)),
+            Point(4, 5).distance(Point(0.1, 0.1)), delta=0.3)
+        aae(surface.get_joyner_boore_distance(Point(8, 10.4)),
+            Point(8, 10.4).distance(Point(0.1, 0.1)), delta=0.3)
 
 
 class PlanarSurfaceGetRXDistanceTestCase(unittest.TestCase):
