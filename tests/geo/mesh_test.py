@@ -155,12 +155,30 @@ class MeshSlicingTestCase(_BaseMeshTestCase):
 
 
 class MeshGetMinDistanceTestCase(unittest.TestCase):
-    def test_1(self):
+    # test case depends on Point.distance() working right
+    def test_mesh_and_point_on_surface(self):
         mesh = Mesh.from_points_list([Point(0, 0), Point(0, 1), Point(0, 2)])
         self.assertEqual(mesh.get_min_distance(Point(1, 1)),
                          Point(1, 1).distance(Point(0, 1)))
         self.assertEqual(mesh.get_min_distance(Point(-1, 0)),
                          Point(-1, 0).distance(Point(0, 0)))
+
+    def test_mesh_on_surface(self):
+        mesh = Mesh.from_points_list([Point(0, 0), Point(0, 1), Point(0, 2)])
+        self.assertEqual(mesh.get_min_distance(Point(-1, -1, 3.4)),
+                         Point(-1, -1, 3.4).distance(Point(0, 0)))
+
+    def test_point_on_surface(self):
+        mesh = Mesh.from_points_list([Point(0, 0, 1), Point(0, 1, 2),
+                                      Point(0, 2, 3)])
+        self.assertEqual(mesh.get_min_distance(Point(0.5, 1.5)),
+                         Point(0.5, 1.5).distance(Point(0, 1, 2)))
+
+    def test_mesh_and_point_not_on_surface(self):
+        mesh = Mesh.from_points_list([Point(0, 0, 1), Point(0, 1, 2),
+                                      Point(0, 2, 3)])
+        self.assertEqual(mesh.get_min_distance(Point(0, 1.5, 3)),
+                         Point(0, 1.5, 3).distance(Point(0, 2, 3)))
 
 
 class RectangularMeshCreationTestCase(unittest.TestCase):

@@ -121,7 +121,34 @@ class Mesh(object):
         the method's time complexity grows linearly with the number
         of points in the mesh.
         """
-        return min(point.distance(mesh_point) for mesh_point in self)
+        # here the same approach as in :meth:`nhe.geo.point.Point.distance`
+        # is used. we find the great circle distance between the target
+        # point and each point of the mesh, independently calculate
+        # the vertical distance (just subtracting values) and combine
+        # these distances using Pythagoras theorem.
+        target_lons = numpy.repeat(point.longitude, len(self))
+        target_lats = numpy.repeat(point.latitude, len(self))
+        _, _, hor_distances = geo_utils.GEOD.inv(
+            self.lons.flatten(), self.lats.flatten(), target_lons, target_lats
+        )
+        if self.depths is None:
+            min_hor_distance = numpy.min(hor_distances) * 1e-3
+            if point.depth == 0:
+                # mesh and point have no depth, the actual distance
+                # is the horizontal one
+                return min_hor_distance
+            else:
+                # mesh is lying on earth surface and point has some depth
+                return (min_hor_distance ** 2 + point.depth ** 2) ** 0.5
+        elif point.depth == 0:
+            # point is lying on earth surface and the mesh is below
+            vert_distances = self.depths
+        else:
+            # both point and mesh are below earth surface
+            vert_distances = self.depths - point.depth
+        vert_distances = vert_distances.flatten()
+        hor_distances *= 1e-3
+        return numpy.min(hor_distances ** 2 + vert_distances ** 2) ** 0.5
 
 
 class RectangularMesh(Mesh):
