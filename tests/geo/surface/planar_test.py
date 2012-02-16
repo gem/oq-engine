@@ -242,42 +242,42 @@ class PlanarSurfaceGetRXDistanceTestCase(unittest.TestCase):
         surface = PlanarSurface(1, 90, 60, *corners)
         return surface
 
-    def test1(self):
+    def test1_site_on_the_footwall(self):
         surface = self._test1to7surface()
         self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, 0.05)),
                                -5.559752615413244, places=3)
 
-    def test2(self):
+    def test2_site_on_the_hanging_wall(self):
         surface = self._test1to7surface()
         self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, -0.05)),
                                5.559752615413244, places=3)
 
-    def test3(self):
+    def test3_site_on_centroid(self):
         surface = self._test1to7surface()
         self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, 0)),
                                0, places=3)
 
-    def test4(self):
+    def test4_site_along_strike(self):
         surface = self._test1to7surface()
         self.assertAlmostEqual(surface.get_rx_distance(Point(0.2, 0)),
                                0, places=3)
 
-    def test5(self):
+    def test5_site_opposite_to_strike_direction(self):
         surface = self._test1to7surface()
         self.assertAlmostEqual(surface.get_rx_distance(Point(-0.2, 0)),
                                0, places=3)
 
-    def test6(self):
+    def test6_one_degree_distance(self):
         surface = self._test1to7surface()
         self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, -1)),
                                111.19505230826488, places=3)
 
-    def test7(self):
+    def test7_ten_degrees_distance(self):
         surface = self._test1to7surface()
         self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, -10)),
                                1111.9505230826487, places=2)
 
-    def test8(self):
+    def test8_strike_of_45_degrees(self):
         corners = [Point(-0.05, -0.05, 8), Point(0.05, 0.05, 8),
                    Point(0.05, 0.05, 9), Point(-0.05, -0.05, 9)]
         surface = PlanarSurface(1, 45, 60, *corners)
