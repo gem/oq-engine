@@ -158,3 +158,7 @@ class GetMiddlePointTestCase(unittest.TestCase):
             geo.Point(*utils.get_middle_point(-178, 10, 178, -10)),
             geo.Point(180, 0)
         )
+        self.assertEqual(
+            geo.Point(*utils.get_middle_point(-179, 43, 179, 43)),
+            geo.Point(180, 43.004353)
+        )
