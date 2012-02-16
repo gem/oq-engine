@@ -3,18 +3,7 @@ Module :mod:`nhe.geo.point` defines :class:`Point`.
 """
 import math
 
-import numpy
-
 from nhe.geo._utils import GEOD
-
-
-#: Tolerance used for latitude and longitude to identify when two points
-#: are equal (it corresponds to about 1 m at the equator).
-LAT_LON_TOLERANCE = 1e-5
-
-#: Tolerance used for depth to identify when two points are equal
-# (it corresponds to 1 m).
-DEPTH_TOLERANCE = 1e-3
 
 
 class Point(object):
@@ -36,6 +25,10 @@ class Point(object):
     :type depth:
         float
     """
+    #: The distance between two points for them to be considered equal,
+    #: in km.
+    EQUALITY_DISTANCE = 1e-3
+
     def __init__(self, longitude, latitude, depth=0.0):
         if longitude < -180.0 or longitude > 180.0:
             raise ValueError("Longitude %.6f outside range!" % longitude)
@@ -159,26 +152,18 @@ class Point(object):
         """
         >>> Point(1e-4, 1e-4) == Point(0, 0)
         False
-        >>> Point(1e-5, 1e-5) == Point(0, 0)
+        >>> Point(1e-6, 1e-6) == Point(0, 0)
         True
         >>> Point(0, 0, 1) == Point(0, 0, 0)
         False
         >>> Point(4, 5, 1e-3) == Point(4, 5, 0)
         True
+        >>> Point(-180 + 1e-7, 0) == Point(180 - 1e-7, 0)
+        True
         """
         if other == None:
             return False
-
-        coord1 = [self.longitude, self.latitude]
-        coord2 = [other.longitude, other.latitude]
-        # need to disable relative comparison to make __eq__() depend only
-        # on the distance between points and not on distance to equator
-        # or Greenwich meridian.
-        if not numpy.allclose(coord1, coord2, atol=LAT_LON_TOLERANCE, rtol=0):
-            return False
-        if not abs(self.depth - other.depth) <= DEPTH_TOLERANCE:
-            return False
-        return True
+        return abs(self.distance(other)) <= self.EQUALITY_DISTANCE
 
     def __ne__(self, other):
         return not self.__eq__(other)

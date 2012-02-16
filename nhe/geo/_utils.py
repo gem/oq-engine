@@ -50,7 +50,7 @@ def line_intersects_itself(lons, lats, closed_shape=False):
         return False
 
     west, east, north, south = get_spherical_bounding_box(lons, lats)
-    proj = get_stereographic_projection(west, east, north, south)
+    proj = get_orthographic_projection(west, east, north, south)
 
     xx, yy = proj(lons, lats)
     if not shapely.geometry.LineString(zip(xx, yy)).is_simple:
@@ -117,28 +117,51 @@ def get_spherical_bounding_box(lons, lats):
     return west, east, north, south
 
 
-def get_stereographic_projection(west, east, north, south):
+def get_orthographic_projection(west, east, north, south):
     """
     Create and return a projection object for a given bounding box.
 
-    Parameters define a bounding box in a spherical coordinates of the
-    collection of points that is about to be projected. The center point
-    of the projection (coordinates (0, 0) in Cartesian space) is set
-    to the middle point of that bounding box. The resulting projection
-    is defined for spherical coordinates that are not further from the
-    bounding box center than 90 degree on the great circle arc.
+    :returns:
+        A pyproj's projection object. See
+        `http://pyproj.googlecode.com/svn/trunk/docs/pyproj.Proj-class.html`_.
 
-    The result projection is of type Oblique Stereographic, see
-    http://www.remotesensing.org/geotiff/proj_list/oblique_stereographic.html.
+    Parameters are given as floats, representing decimal degrees (first two
+    are longitudes and last two are latitudes). They define a bounding box
+    in a spherical coordinates of the collection of points that is about
+    to be projected. The center point of the projection (coordinates (0, 0)
+    in Cartesian space) is set to the middle point of that bounding box.
+    The resulting projection is defined for spherical coordinates that are
+    not further from the bounding box center than 90 degree on the great
+    circle arc.
 
+    The result projection is of type `Orthographic
+    <http://www.remotesensing.org/geotiff/proj_list/orthographic.html>`_.
     This projection is prone to distance, area and angle distortions
     everywhere outside of the center point, but still can be used for
     checking shapes: verifying if line intersects itself (like in
     :func:`_line_intersects_itself`) or if point is inside of a polygon
-    (like in :meth:`Polygon.discretize`).
+    (like in :meth:`Polygon.discretize`). It can be also used for measuring
+    distance to an extent of around 700 kilometers (error doesn't exceed
+    1 km up until then).
     """
-    middle_lat = (north + south) / 2.0
-    middle_lon = west + get_longitudinal_extent(west, east) / 2.0
-    if middle_lon > 180:
-        middle_lon = middle_lon - 360
-    return pyproj.Proj(proj='stere', lat_0=middle_lat, lon_0=middle_lon)
+    middle_lon, middle_lat = get_middle_point(west, north, east, south)
+    return pyproj.Proj(proj='ortho', lat_0=middle_lat, lon_0=middle_lon,
+                       units='km', preserve_units=True)
+
+
+def get_middle_point(lon1, lat1, lon2, lat2):
+    """
+    Given two points return the point exactly in the middle lying on the same
+    great circle arc.
+
+    Parameters are point coordinates in degrees.
+
+    :returns:
+        Tuple of longitude and latitude of the point in the middle.
+    """
+    if lon1 == lon2 and lat1 == lat2:
+        return lon1, lat1
+    [[lon, lat]] = GEOD.npts(lon1, lat1, lon2, lat2, 1)
+    if lon <= -180:
+        lon += 360
+    return lon, lat
