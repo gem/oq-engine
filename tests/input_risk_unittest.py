@@ -204,10 +204,12 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
     Test the code to serialize exposure model to DB.
     """
     job = None
+    path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, TEST_FILE)
 
     @classmethod
     def setUpClass(cls):
-        cls.job = cls.setup_classic_job()
+        inputs = [("exposure", cls.path)]
+        cls.job = cls.setup_classic_job(inputs=inputs)
 
     @classmethod
     def tearDownClass(cls):
@@ -215,11 +217,10 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
 
     def setUp(self):
         self.writer = ExposureDBWriter(self.job.oq_job_profile.input_set,
-                                       "demos/c_psha_risk/exposure.xml")
+                                       self.path)
 
     def test_read_exposure(self):
-        path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, TEST_FILE)
-        parser = ExposurePortfolioFile(path)
+        parser = ExposurePortfolioFile(self.path)
 
         # call tested function
         self.writer.serialize(parser)
