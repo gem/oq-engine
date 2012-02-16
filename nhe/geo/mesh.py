@@ -153,7 +153,7 @@ class Mesh(object):
 
 class RectangularMesh(Mesh):
     """
-    A specification of :class:`Mesh` that requires coordinate arrays
+    A specification of :class:`Mesh` that requires coordinate numpy-arrays
     to be two-dimensional.
 
     Rectangular mesh is meant to represent not just an unordered collection
