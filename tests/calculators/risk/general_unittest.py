@@ -22,7 +22,7 @@ import unittest
 
 from openquake.calculators.risk.classical.core import ClassicalRiskCalculator
 from openquake.calculators.risk.classical.core import _generate_loss_ratios
-from openquake.calculators.risk.general import assets_for_site
+from openquake.calculators.risk.general import BaseRiskCalculator
 from openquake.calculators.risk.general import BetaDistribution
 from openquake.calculators.risk.general import compute_alpha
 from openquake.calculators.risk.general import compute_beta
@@ -94,7 +94,7 @@ class ProbabilisticRiskCalculatorTestCase(unittest.TestCase):
                 isinstance(w, LossMapNonScenarioXMLWriter) for w in writers))
 
 
-class BaseRiskCalculator(unittest.TestCase):
+class BaseRiskCalculatorTestCase(unittest.TestCase):
     """Tests for
     :class:`openquake.calculators.risk.general.BaseRiskCalculator`.
     """
@@ -234,7 +234,7 @@ class BetaDistributionTestCase(unittest.TestCase):
 
 
 class AssetsForSiteTestCase(unittest.TestCase, DbTestCase):
-    """Test the assets_for_site() function."""
+    """Test the BaseRiskCalculator.assets_for_site() function."""
     job = None
 
     @classmethod
@@ -257,7 +257,7 @@ class AssetsForSiteTestCase(unittest.TestCase, DbTestCase):
     def test_assets_for_site_with_existent_row(self):
         # Asset is found in the database.
         site = shapes.Site(9.15000, 45.16667)
-        [asset] = assets_for_site(self.job.id, site)
+        [asset] = BaseRiskCalculator.assets_for_site(self.job.id, site)
         self.assertEqual("asset_01", asset.asset_ref)
         self.assertEqual(site, self._to_site(asset.site))
 
@@ -265,4 +265,5 @@ class AssetsForSiteTestCase(unittest.TestCase, DbTestCase):
         # An empty list is returned when no assets exist for a given
         # job and site.
         site = shapes.Site(99.15000, 15.16667)
-        self.assertEqual([], assets_for_site(self.job.id, site))
+        self.assertEqual(
+            [], BaseRiskCalculator.assets_for_site(self.job.id, site))

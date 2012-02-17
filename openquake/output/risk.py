@@ -468,7 +468,7 @@ class LossMapDBWriter(writer.DBWriter):
 
             kwargs = {
                 'loss_map_id': self.metadata.id,
-                'asset_ref': asset['assetID'],
+                'asset_ref': asset.asset_ref,
                 'location': "POINT(%s %s)" % (site.longitude, site.latitude),
             }
 
