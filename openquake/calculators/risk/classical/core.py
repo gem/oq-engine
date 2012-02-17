@@ -316,7 +316,7 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
             loss_ratio_curve = compute_loss_ratio_curve(
                     vuln_function, hazard_curve,
                     job_profile.lrem_steps_per_interval)
-            return compute_loss_curve(loss_ratio_curve, asset['assetValue'])
+            return compute_loss_curve(loss_ratio_curve, asset.value)
 
         bcr = general.compute_bcr_for_block(calc_proxy.job_id, points,
             get_loss_curve, float(calc_proxy.params['INTEREST_RATE']),
@@ -341,9 +341,9 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
                :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
         """
 
-        loss_curve = compute_loss_curve(loss_ratio_curve, asset['assetValue'])
+        loss_curve = compute_loss_curve(loss_ratio_curve, asset.value)
         loss_key = kvs.tokens.loss_curve_key(
-            self.calc_proxy.job_id, point.row, point.column, asset['assetID'])
+            self.calc_proxy.job_id, point.row, point.column, asset.asset_ref)
 
         kvs.get_client().set(loss_key, loss_curve.to_json())
 
@@ -366,14 +366,12 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
 
         # we get the vulnerability function related to the asset
 
-        vuln_function_reference = asset["taxonomy"]
+        vuln_function_reference = asset.taxonomy
         vuln_function = vuln_curves.get(vuln_function_reference, None)
 
         if not vuln_function:
-            LOGGER.error(
-                "Unknown vulnerability function %s for asset %s"
-                % (asset["taxonomy"],
-                asset["assetID"]))
+            LOGGER.error("Unknown vulnerability function %s for asset %s"
+                         % (asset.taxonomy, asset.asset_ref))
 
             return None
 
@@ -383,7 +381,7 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
             self.calc_proxy.params.get("probabilisticDistribution"))
 
         loss_ratio_key = kvs.tokens.loss_ratio_key(
-            self.calc_proxy.job_id, point.row, point.column, asset['assetID'])
+            self.calc_proxy.job_id, point.row, point.column, asset.asset_ref)
 
         kvs.get_client().set(loss_ratio_key, loss_ratio_curve.to_json())
 
