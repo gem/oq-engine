@@ -234,8 +234,17 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertEquals("Collection of existing building in downtown Pavia",
                           model.description)
         self.assertEquals("buildings", model.category)
+
+        self.assertEquals("per_asset", model.area_type)
+        self.assertEquals("GBP", model.area_unit)
+
+        self.assertEquals("per_area", model.coco_type)
         self.assertEquals("CHF", model.coco_unit)
+
+        self.assertEquals("aggregated", model.reco_type)
         self.assertEquals("EUR", model.reco_unit)
+
+        self.assertEquals("aggregated", model.stco_type)
         self.assertEquals("USD", model.stco_unit)
 
         # check asset instances
