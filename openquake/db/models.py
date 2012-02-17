@@ -567,7 +567,7 @@ class OqCalculation(models.Model):
     An OpenQuake engine run started by the user
     '''
     owner = models.ForeignKey('OqUser')
-    description = models.TextField()
+    description = models.TextField(default='')
     path = models.TextField(null=True, unique=True)
     STATUS_CHOICES = (
         (u'pending', u'Pending'),
@@ -608,6 +608,7 @@ class OqJobProfile(models.Model):
     Parameters needed to run an OpenQuake job
     '''
     owner = models.ForeignKey('OqUser')
+    description = models.TextField(default='')
     CALC_MODE_CHOICES = (
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
