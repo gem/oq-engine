@@ -661,6 +661,7 @@ def run_calculation(job_profile, params, sections, output_type='db'):
 
     calculation = OqCalculation(owner=job_profile.owner)
     calculation.oq_job_profile = job_profile
+    calculation.description = job_profile.description
     calculation.status = 'running'
     calculation.save()
 

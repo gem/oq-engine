@@ -15,6 +15,7 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+import ConfigParser
 import os
 import unittest
 
@@ -30,17 +31,19 @@ from openquake.db.models import OqUser
 
 from tests.utils.helpers import demo_file
 from tests.utils.helpers import patch
+from tests.utils.helpers import run_job
 
 
 class EngineAPITestCase(unittest.TestCase):
 
     def test_import_job_profile(self):
-        """Given a path to a demo config file, ensure that the appropriate
-        database records for OqJobProfile, InputSet, and Input are created.
+        # Given a path to a demo config file, ensure that the appropriate
+        # database records for OqJobProfile, InputSet, and Input are created.
 
-        At the moment, the api function used to import the job profile also
-        returns a dict of the config params and a list of config file sections.
-        """
+        # At the moment, the api function used to import the job profile also
+        # returns a dict of the config params and a list of config file
+        # sections.
+
         cfg_path = demo_file('HazardMapTest/config.gem')
 
         # Default 'openquake' user:
@@ -227,8 +230,8 @@ class EngineAPITestCase(unittest.TestCase):
                                      '_input_set_cache')))
 
     def test_run_calculation_deletes_job_counters(self):
-        """This test ensures that
-        :function:`openquake.utils.stats.delete_job_counters` is called"""
+        # This test ensures that
+        # :function:`openquake.utils.stats.delete_job_counters` is called
         cfg_path = demo_file('HazardMapTest/config.gem')
 
         job_profile, params, sections = engine.import_job_profile(cfg_path)
@@ -296,3 +299,33 @@ class EngineLaunchCalcTestCase(unittest.TestCase):
             p.stop()
         for p in risk_patchers:
             p.stop()
+
+
+class CalculationDescriptionTestCase(unittest.TestCase):
+
+    def test_run_calc_with_description(self):
+        # Test importing and running a job with a config containing the
+        # optional DESCRIPTION parameter.
+
+        description = 'Classical PSHA hazard test description'
+
+        orig_cfg_path = demo_file('PeerTestSet1Case2/config.gem')
+        mod_cfg_path = os.path.join(demo_file('PeerTestSet1Case2'),
+                                    'modified_config.gem')
+
+        # Use ConfigParser to add the DESCRIPTION param to an existing config
+        # profile and write a new temporary config file:
+        cfg_parser = ConfigParser.ConfigParser()
+        cfg_parser.readfp(open(orig_cfg_path, 'r'))
+        cfg_parser.set('general', 'DESCRIPTION', description) 
+        cfg_parser.write(open(mod_cfg_path, 'w'))
+
+        run_job(mod_cfg_path)
+        calculation = OqCalculation.objects.latest('id')
+        job_profile = calculation.oq_job_profile
+
+        self.assertEqual(description, job_profile.description)
+        self.assertEqual(description, calculation.description)
+
+        # Clean up the temporary config file:
+        os.unlink(mod_cfg_path)
