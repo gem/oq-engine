@@ -20,21 +20,26 @@ import os
 import numpy
 import unittest
 
-from openquake.engine import CalculationProxy
-from openquake.engine import import_job_profile
-from openquake.db.models import OqCalculation
-from openquake.output.risk import LossMapDBWriter
-from openquake.output.risk import LossMapNonScenarioXMLWriter
 from openquake.calculators.risk.classical.core import ClassicalRiskCalculator
 from openquake.calculators.risk.classical.core import _generate_loss_ratios
+from openquake.calculators.risk.general import assets_for_site
+from openquake.calculators.risk.general import BetaDistribution
 from openquake.calculators.risk.general import compute_alpha
 from openquake.calculators.risk.general import compute_beta
-from openquake.calculators.risk.general import BetaDistribution
+from openquake.db.models import OqCalculation
+from openquake.engine import CalculationProxy
+from openquake.engine import import_job_profile
 from openquake import shapes
+from openquake.input.exposure import ExposureDBWriter
+from openquake.output.risk import LossMapDBWriter
+from openquake.output.risk import LossMapNonScenarioXMLWriter
+from openquake.parser.exposure import ExposurePortfolioFile
 
+from tests.utils.helpers import SCHEMA_EXAMPLES_DIR
+from tests.utils.helpers import assertDeepAlmostEqual
+from tests.utils.helpers import DbTestCase
 from tests.utils.helpers import demo_file
 from tests.utils.helpers import patch
-from tests.utils.helpers import assertDeepAlmostEqual
 
 
 class ProbabilisticRiskCalculatorTestCase(unittest.TestCase):
@@ -226,3 +231,38 @@ class BetaDistributionTestCase(unittest.TestCase):
 
         assertDeepAlmostEqual(self, expected_beta_distributions,
             lrem, delta=0.0005)
+
+
+class AssetsForSiteTestCase(unittest.TestCase, DbTestCase):
+    """Test the assets_for_site() function."""
+    job = None
+
+    @classmethod
+    def setUpClass(cls):
+        path = os.path.join(SCHEMA_EXAMPLES_DIR, "exposure-portfolio.xml")
+        inputs = [("exposure", path)]
+        cls.job = cls.setup_classic_job(inputs=inputs)
+        parser = ExposurePortfolioFile(path)
+        writer = ExposureDBWriter(cls.job.oq_job_profile.input_set, path)
+        writer.serialize(parser)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.teardown_job(cls.job)
+
+    @staticmethod
+    def _to_site(pg_point):
+        return shapes.Site(pg_point.x, pg_point.y)
+
+    def test_assets_for_site_with_existent_row(self):
+        # Asset is found in the database.
+        site = shapes.Site(9.15000, 45.16667)
+        [asset] = assets_for_site(self.job.id, site)
+        self.assertEqual("asset_01", asset.asset_ref)
+        self.assertEqual(site, self._to_site(asset.site))
+
+    def test_assets_for_site_with_non_existent_row(self):
+        # An empty list is returned when no assets exist for a given
+        # job and site.
+        site = shapes.Site(99.15000, 15.16667)
+        self.assertEqual([], assets_for_site(self.job.id, site))
