@@ -17,8 +17,10 @@
 
 import os
 import unittest
+import uuid
 
 from django.contrib.gis.geos import GEOSGeometry
+from django.core.exceptions import ObjectDoesNotExist
 
 from openquake import engine
 from openquake.db.models import model_equals
@@ -226,6 +228,27 @@ class EngineAPITestCase(unittest.TestCase):
                 model_equals(exp_inp, act_inp,
                              ignore=('id', 'input_set_id', 'last_update',
                                      '_input_set_cache')))
+
+    def test_import_job_profile_as_specified_user(self):
+        # Test importing of a job profile when a user is specified
+        # The username will be randomly generated and unique to give
+        # a clean set of test conditions.
+
+        user_name = str(uuid.uuid4())
+
+        # For sanity, check that the user does not exist to begin with.
+        self.assertRaises(ObjectDoesNotExist, OqUser.objects.get,
+                          user_name=user_name)
+
+        cfg_path = demo_file('HazardMapTest/config.gem')
+
+        job_profile, _params, _sections = engine.import_job_profile(
+            cfg_path, user_name=user_name)
+
+        self.assertEqual(user_name, job_profile.owner.user_name)
+        # Check that the OqUser record for this user now exists.
+        # If this fails, it will raise an `ObjectDoesNotExist` exception.
+        new_user = OqUser.objects.get(user_name=user_name)
 
     def test_run_calculation_deletes_job_counters(self):
         # This test ensures that
