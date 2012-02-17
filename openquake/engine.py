@@ -32,6 +32,7 @@ from django.db import close_connection
 from django.db import transaction
 from django.contrib.gis.db import models
 from django.contrib.gis.geos import GEOSGeometry
+from django.core.exceptions import ObjectDoesNotExist
 
 from openquake.calculators.hazard import CALCULATORS as HAZ_CALCS
 from openquake.calculators.risk import CALCULATORS as RISK_CALCS
@@ -378,7 +379,7 @@ def _job_from_file(config_file, output_type, owner_username='openquake'):
 
     params, sections = _parse_config_file(config_file)
     params, sections = _prepare_config_parameters(params, sections)
-    job_profile = _prepare_job(params, sections)
+    job_profile = _prepare_job(params, sections, owner_username)
 
     validator = jobconf.default_validators(sections, params)
     is_valid, errors = validator.is_valid()
@@ -523,7 +524,7 @@ def _insert_input_files(params, input_set):
 
 
 @transaction.commit_on_success(using='job_init')
-def _prepare_job(params, sections, owner_username='openquake'):
+def _prepare_job(params, sections, owner_username):
     """
     Create a new OqCalculation and fill in the related OqJobProfile entry.
 
@@ -533,6 +534,8 @@ def _prepare_job(params, sections, owner_username='openquake'):
         The job config params.
     :params sections:
         The job config file sections, as a list of strings.
+    :params owner_username:
+        The username of the user who will own the returned job profile.
 
     :returns:
         A new :class:`openquake.db.models.OqJobProfile` object.
@@ -553,7 +556,17 @@ def _prepare_job(params, sections, owner_username='openquake'):
         return job_profile
 
     # TODO specify the owner as a command line parameter
-    owner = OqUser.objects.get(user_name=owner_username)
+    # See if the current user exists
+    # If not, create a record for them
+    try:
+        owner = OqUser.objects.get(user_name=owner_username)
+    except ObjectDoesNotExist:
+        # This user doesn't exist; let's fix that.
+        # NOTE: The Organization is currently hardcoded to 1.
+        # This org is added when the database is bootstrapped.
+        owner = OqUser(user_name=owner_username, full_name=owner_username,
+                       organization_id=1)
+        owner.save()
 
     input_set = InputSet(upload=None, owner=owner)
     input_set.save()
@@ -769,13 +782,15 @@ def _launch_calculation(calc_proxy, sections):
         calculator.post_execute()
 
 
-def import_job_profile(path_to_cfg):
+def import_job_profile(path_to_cfg, user_name='openquake'):
     """Given the path to a job config file, create a new
     :class:`openquake.db.models.OqJobProfile` and save it to the DB, and return
     it.
 
     :param str path_to_cfg:
         Path to a job config file.
+    :param user_name:
+        The user performing this action.
 
     :returns:
         A tuple of :class:`openquake.db.models.OqJobProfile` instance,
@@ -793,5 +808,5 @@ def import_job_profile(path_to_cfg):
     if not is_valid:
         raise jobconf.ValidationException(errors)
 
-    job_profile = _prepare_job(params, sections)
+    job_profile = _prepare_job(params, sections, user_name)
     return job_profile, params, sections
