@@ -264,8 +264,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                                                 point)}
             assets = load_assets_for_point(self.calc_proxy.job_id, point)
             for asset in assets:
-                vuln_function = \
-                    vuln_model[asset['taxonomy']]
+                vuln_function = vuln_model[asset.taxonomy]
 
                 asset_mean_loss = compute_mean_loss(
                     vuln_function, gmvs, epsilon_provider, asset)
@@ -273,11 +272,11 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                 asset_stddev_loss = compute_stddev_loss(
                     vuln_function, gmvs, epsilon_provider, asset)
 
-                asset_site = shapes.Site(asset['lon'], asset['lat'])
+                asset_site = shapes.Site(asset.site.x, asset.site.y)
 
                 loss = ({'mean_loss': asset_mean_loss,
                          'stddev_loss': asset_stddev_loss},
-                        {'assetID': asset['assetID']})
+                        {'assetID': asset.asset_ref})
 
                 collect_block_data(loss_data, asset_site, loss)
 
@@ -309,12 +308,10 @@ def load_assets_for_point(job_id, point):
 
     :param point: :py:class:`openquake.shapes.GridPoint` object
 
-    :returns: List of asset dicts at the given location (point) in the
-        following form::
-            {u'assetValue': 124.27, u'taxonomy': u'ID'}
+    :returns: a potentially empty list of
+        :py:class:`openquake.db.models.ExposureData` instances
     """
-    assets_key = kvs.tokens.asset_key(job_id, point.row, point.column)
-    return kvs.get_list_json_decoded(assets_key)
+    return general.BaseRiskCalculator.assets_for_site(job_id, point.site)
 
 
 def collect_region_data(block_loss_map_data, region_loss_map_data):
@@ -339,11 +336,10 @@ def _mean_loss_from_loss_ratios(loss_ratios, asset):
     :param loss_ratios: the set of loss ratios used.
     :type loss_ratios: numpy.ndarray
     :param asset: the asset used to compute the losses.
-    :type asset: :py:class:`dict` as provided by
-        :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
+    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
     """
 
-    losses = loss_ratios * asset["assetValue"]
+    losses = loss_ratios * asset.value
     return numpy.mean(losses)
 
 
@@ -354,15 +350,14 @@ def _stddev_loss_from_loss_ratios(loss_ratios, asset):
     :param loss_ratios: the set of loss ratios used.
     :type loss_ratios: numpy.ndarray
     :param asset: the asset used to compute the losses.
-    :type asset: :py:class:`dict` as provided by
-        :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
+    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
     """
 
-    losses = loss_ratios * asset["assetValue"]
+    losses = loss_ratios * asset.value
     return numpy.std(losses, ddof=1)
 
 
-def compute_mean_loss(vuln_function, ground_motion_field_set,
+def compute_mean_loss(vuln_function, gmf_set,
                       epsilon_provider, asset):
     """Compute the mean loss for the given asset using the
     related ground motion field set and vulnerability function.
@@ -370,48 +365,44 @@ def compute_mean_loss(vuln_function, ground_motion_field_set,
     :param vuln_function: the vulnerability function used to
         compute the loss ratios.
     :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
-    :param ground_motion_field_set: the set of ground motion
+    :param gmf_set: the set of ground motion
         fields used to compute the loss ratios.
-    :type ground_motion_field_set: :py:class:`dict` with the following
+    :type gmf_set: :py:class:`dict` with the following
         keys:
         **IMLs** - tuple of ground motion fields (float)
     :param epsilon_provider: service used to get the epsilon when
         using the sampled based algorithm.
     :type epsilon_provider: object that defines an :py:meth:`epsilon` method
     :param asset: the asset used to compute the loss ratios and losses.
-    :type asset: :py:class:`dict` as provided by
-        :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
+    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
     """
 
     loss_ratios = general.compute_loss_ratios(
-        vuln_function, ground_motion_field_set, epsilon_provider, asset)
+        vuln_function, gmf_set, epsilon_provider, asset)
 
     return _mean_loss_from_loss_ratios(loss_ratios, asset)
 
 
-def compute_stddev_loss(vuln_function, ground_motion_field_set,
-                        epsilon_provider, asset):
+def compute_stddev_loss(vuln_function, gmf_set, epsilon_provider, asset):
     """Compute the standard deviation of the losses for the given asset
     using the related ground motion field set and vulnerability function.
 
     :param vuln_function: the vulnerability function used to
         compute the loss ratios.
     :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
-    :param ground_motion_field_set: the set of ground motion
-        fields used to compute the loss ratios.
-    :type ground_motion_field_set: :py:class:`dict` with the following
+    :param gmf_set: the ground motion fields used to compute the loss ratios
+    :type gmf_set: :py:class:`dict` with the following
         keys:
         **IMLs** - tuple of ground motion fields (float)
     :param epsilon_provider: service used to get the epsilon when
         using the sampled based algorithm.
     :type epsilon_provider: object that defines an :py:meth:`epsilon` method
     :param asset: the asset used to compute the loss ratios and losses.
-    :type asset: :py:class:`dict` as provided by
-        :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
+    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
     """
 
     loss_ratios = general.compute_loss_ratios(
-        vuln_function, ground_motion_field_set, epsilon_provider, asset)
+        vuln_function, gmf_set, epsilon_provider, asset)
 
     return _stddev_loss_from_loss_ratios(loss_ratios, asset)
 
@@ -446,7 +437,7 @@ class SumPerGroundMotionField(object):
         if lr_calculator is None:
             self.lr_calculator = general.compute_loss_ratios
 
-    def add(self, ground_motion_field_set, asset):
+    def add(self, gmf_set, asset):
         """Compute the losses for the given ground motion field set, and
         sum those to the current sum of the losses.
 
@@ -454,32 +445,26 @@ class SumPerGroundMotionField(object):
         supported by the vulnerability model, the distribution
         of the losses is discarded.
 
-        :param ground_motion_field_set: the set of ground motion
-            fields used to compute the loss ratios.
-        :type ground_motion_field_set: :py:class:`dict` with the following
+        :param gmf_set: ground motion fields used to compute the loss ratios
+        :type gmf_set: :py:class:`dict` with the following
             keys:
             **IMLs** - tuple of ground motion fields (float)
         :param asset: the asset used to compute the loss ratios and losses.
-        :type asset: :py:class:`dict` as provided by
-            :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
+        :type asset: an :py:class:`openquake.db.model.ExposureData` instance
         """
 
-        if asset["taxonomy"] not in self.vuln_model:
-            LOGGER.debug("Unknown vulnerability function %s, asset %s will " \
-                      "not be included in the aggregate computation"
-                      % (asset["taxonomy"],
-                      asset["assetID"]))
-
+        if asset.taxonomy not in self.vuln_model:
+            LOGGER.debug("Unknown vulnerability function %s, asset %s will "
+                         "not be included in the aggregate computation"
+                         % (asset.taxonomy, asset.asset_ref))
             return
 
-        vuln_function = self.vuln_model[
-            asset["taxonomy"]]
+        vuln_function = self.vuln_model[asset.taxonomy]
 
-        loss_ratios = self.lr_calculator(
-            vuln_function, ground_motion_field_set,
-            self.epsilon_provider, asset)
+        loss_ratios = self.lr_calculator(vuln_function, gmf_set,
+                                         self.epsilon_provider, asset)
 
-        losses = numpy.array(loss_ratios) * asset["assetValue"]
+        losses = numpy.array(loss_ratios) * asset.value
 
         self.sum_losses(losses)
 

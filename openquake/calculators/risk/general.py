@@ -30,8 +30,6 @@ import os
 
 from celery.task import task
 
-from django.contrib.gis.geos.geometry import GEOSGeometry
-
 from numpy import array
 from numpy import exp
 from numpy import histogram
@@ -75,8 +73,7 @@ def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
     loss_conditional = _compute_conditional_loss(
         loss_curve, loss_poe)
 
-    key = kvs.tokens.loss_key(
-            job_id, row, col, asset["assetID"], loss_poe)
+    key = kvs.tokens.loss_key(job_id, row, col, asset.asset_ref, loss_poe)
 
     LOG.debug("Conditional loss is %s, write to key %s" %
             (loss_conditional, key))
@@ -123,6 +120,9 @@ def compute_risk(calculation_id, block_id, **kwargs):
 class BaseRiskCalculator(Calculator):
     """Base abstract class for Risk calculators."""
 
+    # Exposure model inputs (cached result)
+    _em_inputs = None
+
     def __init__(self, job_profile):
         self.job_profile = job_profile
 
@@ -144,6 +144,33 @@ class BaseRiskCalculator(Calculator):
         self.store_exposure_assets()
         self.store_vulnerability_model()
         self.partition()
+
+    @classmethod
+    def assets_for_site(cls, job_id, site):
+        """Return assets (from the exposure model) for the given job and site.
+
+
+        :param int job_id: the database key of the job in question
+        :param job_id: the :py:class:`openquake.shapes.Site` instance in
+            question
+        :returns: a potentially empty list of
+            :py:class:`openquake.db.models.ExposureData` instances
+        """
+        if cls._em_inputs is None:
+            # This query obtains the exposure model input rows and needs to be
+            # made only once in the course of a risk calculation.
+            cls._em_inputs = list(
+                models.OqCalculation.objects.get(id=job_id). \
+                       oq_job_profile.input_set.input_set. \
+                       filter(input_type="exposure"))
+        if not cls._em_inputs:
+            return []
+        gh = geohash.encode(site.latitude, site.longitude, precision=12)
+        result = models.ExposureData.objects. \
+                        filter(exposure_model__input__in=cls._em_inputs). \
+                        extra(where=["ST_GeoHash(site, 12) = %s"], params=[gh])
+
+        return list(result)
 
     def partition(self):
         """Split the sites to compute in blocks and store
@@ -247,14 +274,14 @@ class BaseRiskCalculator(Calculator):
         block = Block.from_kvs(job_id, block_id)
         for point, asset in self.grid_assets_iterator(
                 block.grid(self.calc_proxy.region)):
-            site = shapes.Site(asset['lon'], asset['lat'])
+            site = shapes.Site(asset.site.x, asset.site.y)
 
             loss_curve = kvs.get_client().get(
                 kvs.tokens.loss_curve_key(
-                    job_id, point.row, point.column, asset["assetID"]))
+                    job_id, point.row, point.column, asset.asset_ref))
             loss_ratio_curve = kvs.get_client().get(
                 kvs.tokens.loss_ratio_key(
-                    job_id, point.row, point.column, asset["assetID"]))
+                    job_id, point.row, point.column, asset.asset_ref))
 
             if loss_curve:
                 loss_curve = shapes.Curve.from_json(loss_curve)
@@ -301,16 +328,15 @@ class BaseRiskCalculator(Calculator):
 
         for point, asset in assets_iterator:
             key = kvs.tokens.loss_key(self.calc_proxy.job_id, point.row,
-                                      point.column,
-                    asset["assetID"], loss_poe)
+                                      point.column, asset.asset_ref, loss_poe)
 
             loss_value = kvs.get_client().get(key)
 
             LOG.debug("Loss for asset %s at %s %s is %s" %
-                (asset["assetID"], asset['lon'], asset['lat'], loss_value))
+                (asset.asset_ref, asset.site.x, asset.site.y, loss_value))
 
             if loss_value:
-                risk_site = shapes.Site(asset['lon'], asset['lat'])
+                risk_site = shapes.Site(asset.site.x, asset.site.y)
                 loss = {
                     "value": loss_value,
                 }
@@ -451,13 +477,9 @@ class EpsilonProvider(object):
                 # These are two references for the same dictionary.
                 samples = self.samples = dict()
 
-            taxonomy = asset.get("taxonomy")
-            if taxonomy is None:
-                raise ValueError("Asset %s has no taxonomy" % asset["assetID"])
-
-            if taxonomy not in samples:
-                samples[taxonomy] = norm.rvs(loc=0, scale=1)
-            return samples[taxonomy]
+            if asset.taxonomy not in samples:
+                samples[asset.taxonomy] = norm.rvs(loc=0, scale=1)
+            return samples[asset.taxonomy]
 
 
 class Block(object):
@@ -554,24 +576,6 @@ def split_into_blocks(calculation_id, sites, block_size=BLOCK_SIZE):
                     sites=sites[i:i + block_size])
 
 
-def assets_for_site(job_id, site):
-    """Return assets (from the exposure model) for the given site.
-
-
-    """
-    inputs = models.OqCalculation.objects.get(id=job_id). \
-                    oq_job_profile.input_set.input_set. \
-                    filter(input_type="exposure")
-    if not inputs:
-        return []
-    gh = geohash.encode(site.latitude, site.longitude, precision=12)
-    result = models.ExposureData.objects. \
-                    filter(exposure_model__input__in=list(inputs)). \
-                    extra(where=["ST_GeoHash(site, 12) = %s"], params=[gh])
-
-    return list(result)
-
-
 def compute_bcr_for_block(job_id, points, get_loss_curve,
                           interest_rate, asset_life_expectancy):
     """
@@ -598,35 +602,33 @@ def compute_bcr_for_block(job_id, points, get_loss_curve,
         job_id, retrofitted=True)
 
     for point in points:
-        asset_key = kvs.tokens.asset_key(job_id, point.row, point.column)
-        for asset in kvs.get_list_json_decoded(asset_key):
-            vuln_function = vuln_curves[asset['taxonomy']]
+        assets = BaseRiskCalculator.assets_for_site(job_id, point.site)
+        for asset in assets:
+            vuln_function = vuln_curves[asset.taxonomy]
             loss_curve = get_loss_curve(point, vuln_function, asset)
             LOG.info('for asset %s loss_curve = %s',
-                     asset['assetID'], loss_curve)
+                     asset.asset_ref, loss_curve)
             eal_original = compute_mean_loss(loss_curve)
 
-            vuln_function = vuln_curves_retrofitted[asset['taxonomy']]
+            vuln_function = vuln_curves_retrofitted[asset.taxonomy]
             loss_curve = get_loss_curve(point, vuln_function, asset)
             LOG.info('for asset %s loss_curve retrofitted = %s',
-                     asset['assetID'], loss_curve)
+                     asset.asset_ref, loss_curve)
             eal_retrofitted = compute_mean_loss(loss_curve)
 
-            bcr = compute_bcr(
-                eal_original, eal_retrofitted,
-                interest_rate, asset_life_expectancy,
-                asset['retrofittingCost']
-            )
+            bcr = compute_bcr(eal_original, eal_retrofitted,
+                              interest_rate, asset_life_expectancy,
+                              asset.retrofitting_cost)
 
             LOG.info('for asset %s EAL original = %f, '
                      'EAL retrofitted = %f, BCR = %f',
-                     asset['assetID'], eal_original, eal_retrofitted, bcr)
+                     asset.asset_ref, eal_original, eal_retrofitted, bcr)
 
-            key = (asset['lat'], asset['lon'])
+            key = (asset.site.x, asset.site.y)
             result[key].append(({'bcr': bcr,
                                  'eal_original': eal_original,
                                  'eal_retrofitted': eal_retrofitted},
-                                asset['assetID']))
+                                asset.asset_ref))
 
     return result.items()
 
@@ -724,17 +726,15 @@ def compute_bcr(eal_original, eal_retrofitted, interest_rate,
             / (interest_rate * retrofitting_cost))
 
 
-def compute_loss_ratios(vuln_function, ground_motion_field_set,
-        epsilon_provider, asset):
+def compute_loss_ratios(vuln_function, gmf_set, epsilon_provider, asset):
     """Compute the set of loss ratios using the set of
     ground motion fields passed.
 
     :param vuln_function: the vulnerability function used to
         compute the loss ratios.
     :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
-    :param ground_motion_field_set: the set of ground motion
-        fields used to compute the loss ratios.
-    :type ground_motion_field_set: :py:class:`dict` with the following
+    :param gmf_set: ground motion fields used to compute the loss ratios
+    :type gmf_set: :py:class:`dict` with the following
         keys:
         **IMLs** - tuple of ground motion fields (float)
         **TimeSpan** - time span parameter (float)
@@ -743,8 +743,7 @@ def compute_loss_ratios(vuln_function, ground_motion_field_set,
         using the sampled based algorithm.
     :type epsilon_provider: object that defines an :py:meth:`epsilon` method
     :param asset: the asset used to compute the loss ratios.
-    :type asset: :py:class:`dict` as provided by
-        :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
+    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
     """
 
     if vuln_function.is_empty:
@@ -753,14 +752,12 @@ def compute_loss_ratios(vuln_function, ground_motion_field_set,
     all_covs_are_zero = (vuln_function.covs <= 0.0).all()
 
     if all_covs_are_zero:
-        return _mean_based(vuln_function, ground_motion_field_set)
+        return _mean_based(vuln_function, gmf_set)
     else:
-        return _sampled_based(vuln_function, ground_motion_field_set,
-                epsilon_provider, asset)
+        return _sampled_based(vuln_function, gmf_set, epsilon_provider, asset)
 
 
-def _sampled_based(vuln_function, ground_motion_field_set,
-        epsilon_provider, asset):
+def _sampled_based(vuln_function, gmf_set, epsilon_provider, asset):
     """Compute the set of loss ratios when at least one CV
     (Coefficent of Variation) defined in the vulnerability function
     is greater than zero.
@@ -768,9 +765,8 @@ def _sampled_based(vuln_function, ground_motion_field_set,
     :param vuln_function: the vulnerability function used to
         compute the loss ratios.
     :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
-    :param ground_motion_field_set: the set of ground motion
-        fields used to compute the loss ratios.
-    :type ground_motion_field_set: :py:class:`dict` with the following
+    :param gmf_set: ground motion fields used to compute the loss ratios
+    :type gmf_set: :py:class:`dict` with the following
         keys:
         **IMLs** - tuple of ground motion fields (float)
         **TimeSpan** - time span parameter (float)
@@ -779,14 +775,13 @@ def _sampled_based(vuln_function, ground_motion_field_set,
         using the sampled based algorithm.
     :type epsilon_provider: object that defines an :py:meth:`epsilon` method
     :param asset: the asset used to compute the loss ratios.
-    :type asset: :py:class:`dict` as provided by
-        :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
+    :type asset: an :py:class:`openquake.db.model.ExposureData` instance
     """
 
     loss_ratios = []
 
-    means = vuln_function.loss_ratio_for(ground_motion_field_set["IMLs"])
-    covs = vuln_function.cov_for(ground_motion_field_set["IMLs"])
+    means = vuln_function.loss_ratio_for(gmf_set["IMLs"])
+    covs = vuln_function.cov_for(gmf_set["IMLs"])
 
     for mean_ratio, cov in zip(means, covs):
         if mean_ratio <= 0.0:
@@ -806,16 +801,16 @@ def _sampled_based(vuln_function, ground_motion_field_set,
     return array(loss_ratios)
 
 
-def _mean_based(vuln_function, ground_motion_field_set):
+def _mean_based(vuln_function, gmf_set):
     """Compute the set of loss ratios when the vulnerability function
     has all the CVs (Coefficent of Variation) set to zero.
 
     :param vuln_function: the vulnerability function used to
         compute the loss ratios.
     :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
-    :param ground_motion_field_set: the set of ground motion
+    :param gmf_set: the set of ground motion
         fields used to compute the loss ratios.
-    :type ground_motion_field_set: :py:class:`dict` with the following
+    :type gmf_set: :py:class:`dict` with the following
         keys:
         **IMLs** - tuple of ground motion fields (float)
         **TimeSpan** - time span parameter (float)
@@ -829,7 +824,7 @@ def _mean_based(vuln_function, ground_motion_field_set):
     # seems like with numpy you can only specify a single fill value
     # if the x_new is outside the range. Here we need two different values,
     # depending if the x_new is below or upon the defined values
-    for ground_motion_field in ground_motion_field_set["IMLs"]:
+    for ground_motion_field in gmf_set["IMLs"]:
         if ground_motion_field < imls[0]:
             loss_ratios.append(0.0)
         elif ground_motion_field > imls[-1]:
@@ -837,7 +832,7 @@ def _mean_based(vuln_function, ground_motion_field_set):
         else:
             # The actual value is computed later
             mark = len(loss_ratios)
-            retrieved[mark] = ground_motion_field_set['IMLs'][mark]
+            retrieved[mark] = gmf_set['IMLs'][mark]
             loss_ratios.append(0.0)
 
     means = vuln_function.loss_ratio_for(retrieved.values())
@@ -997,7 +992,7 @@ class BetaDistribution(object):
                 compute_beta(vf_loss_ratio, stddev))
 
 
-def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
+def compute_loss_ratio_curve(vuln_function, gmf_set,
         epsilon_provider, asset, loss_histogram_bins, loss_ratios=None):
     """Compute a loss ratio curve using the probabilistic event based approach.
 
@@ -1007,9 +1002,9 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
     :param vuln_function: the vulnerability function used to
         compute the loss ratios.
     :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
-    :param ground_motion_field_set: the set of ground motion
+    :param gmf_set: the set of ground motion
         fields used to compute the loss ratios.
-    :type ground_motion_field_set: :py:class:`dict` with the following
+    :type gmf_set: :py:class:`dict` with the following
         keys:
         **IMLs** - tuple of ground motion fields (float)
         **TimeSpan** - time span parameter (float)
@@ -1025,20 +1020,20 @@ def compute_loss_ratio_curve(vuln_function, ground_motion_field_set,
     """
 
     # with no gmfs (no earthquakes), an empty curve is enough
-    if not ground_motion_field_set["IMLs"]:
+    if not gmf_set["IMLs"]:
         return shapes.EMPTY_CURVE
 
     if loss_ratios is None:
         loss_ratios = compute_loss_ratios(
-            vuln_function, ground_motion_field_set, epsilon_provider, asset)
+            vuln_function, gmf_set, epsilon_provider, asset)
 
     loss_ratios_range = _compute_loss_ratios_range(
             loss_ratios, loss_histogram_bins)
 
     probs_of_exceedance = _compute_probs_of_exceedance(
             _compute_rates_of_exceedance(_compute_cumulative_histogram(
-            loss_ratios, loss_ratios_range), ground_motion_field_set["TSES"]),
-            ground_motion_field_set["TimeSpan"])
+            loss_ratios, loss_ratios_range), gmf_set["TSES"]),
+            gmf_set["TimeSpan"])
 
     return _generate_curve(loss_ratios_range, probs_of_exceedance)
 

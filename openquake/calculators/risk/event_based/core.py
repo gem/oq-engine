@@ -256,11 +256,9 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                                          point.row)
             gmf_slice = kvs.get_value_json_decoded(key)
 
-            asset_key = kvs.tokens.asset_key(
-                self.calc_proxy.job_id, point.row, point.column)
-
-            for asset in kvs.get_list_json_decoded(asset_key):
-                LOGGER.debug("Processing asset %s" % (asset))
+            assets = self.assets_for_site(self.calc_proxy.job_id, point.site)
+            for asset in assets:
+                LOGGER.debug("Processing asset %s" % asset)
 
                 # loss ratios, used both to produce the curve
                 # and to aggregate the losses
@@ -269,7 +267,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                 loss_ratio_curve = self.compute_loss_ratio_curve(
                     point.column, point.row, asset, gmf_slice, loss_ratios)
 
-                aggregate_curve.append(loss_ratios * asset["assetValue"])
+                aggregate_curve.append(loss_ratios * asset.value)
 
                 if loss_ratio_curve:
                     loss_curve = self.compute_loss_curve(
@@ -314,7 +312,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                 vuln_function, gmf_slice, epsilon_provider, asset,
                 self.calc_proxy.oq_job_profile.loss_histogram_bins,
                 loss_ratios=loss_ratios)
-            return loss_ratio_curve.rescale_abscissae(asset["assetValue"])
+            return loss_ratio_curve.rescale_abscissae(asset.value)
 
         result = general.compute_bcr_for_block(self.calc_proxy.job_id, points,
             get_loss_curve, float(self.calc_proxy.params['INTEREST_RATE']),
@@ -334,32 +332,26 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
 
         epsilon_provider = general.EpsilonProvider(self.calc_proxy.params)
 
-        vuln_function = self.vuln_curves.get(
-            asset["taxonomy"], None)
+        vuln_function = self.vuln_curves.get(asset.taxonomy, None)
 
         if not vuln_function:
-            LOGGER.error(
-                "Unknown vulnerability function %s for asset %s"
-                % (asset["taxonomy"], asset["assetID"]))
-
+            LOGGER.error("Unknown vulnerability function %s for asset %s"
+                         % (asset.taxonomy, asset.asset_ref))
             return None
 
-        return general.compute_loss_ratios(
-            vuln_function, gmf_slice, epsilon_provider, asset)
+        return general.compute_loss_ratios(vuln_function, gmf_slice,
+                                           epsilon_provider, asset)
 
-    def compute_loss_ratio_curve(
-            self, col, row, asset, gmf_slice, loss_ratios):
+    def compute_loss_ratio_curve(self, col, row, asset, gmf_slice,
+                                 loss_ratios):
         """Compute the loss ratio curve for a single asset."""
         calc_proxy = self.calc_proxy
 
-        vuln_function = self.vuln_curves.get(
-            asset["taxonomy"], None)
+        vuln_function = self.vuln_curves.get(asset.taxonomy, None)
 
         if not vuln_function:
-            LOGGER.error(
-                "Unknown vulnerability function %s for asset %s"
-                % (asset["taxonomy"], asset["assetID"]))
-
+            LOGGER.error("Unknown vulnerability function %s for asset %s"
+                         % (asset.taxonomy, asset.asset_ref))
             return None
 
         epsilon_provider = general.EpsilonProvider(calc_proxy.params)
@@ -374,7 +366,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
             return None
 
         key = kvs.tokens.loss_ratio_key(
-            self.calc_proxy.job_id, row, col, asset["assetID"])
+            self.calc_proxy.job_id, row, col, asset.asset_ref)
 
         kvs.get_client().set(key, loss_ratio_curve.to_json())
 
@@ -389,10 +381,10 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         if asset is None:
             return None
 
-        loss_curve = loss_ratio_curve.rescale_abscissae(asset["assetValue"])
+        loss_curve = loss_ratio_curve.rescale_abscissae(asset.value)
 
         key = kvs.tokens.loss_curve_key(
-            self.calc_proxy.job_id, row, column, asset["assetID"])
+            self.calc_proxy.job_id, row, column, asset.asset_ref)
 
         LOGGER.debug("Loss curve is %s, write to key %s" % (loss_curve, key))
         kvs.get_client().set(key, loss_curve.to_json())
