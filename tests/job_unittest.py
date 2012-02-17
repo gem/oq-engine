@@ -466,7 +466,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         params['GMPE_LT_RANDOM_SEED'] = '5'
         params['LREM_STEPS_PER_INTERVAL'] = '5'
 
-        self.job = _prepare_job(params, ['HAZARD', 'RISK'])
+        self.job = _prepare_job(params, ['HAZARD', 'RISK'], 'openquake')
         self.calculation.oq_job_profile = self.job
         self.calculation.save()
         self.job = self._reload_params()
@@ -517,7 +517,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
         params['LREM_STEPS_PER_INTERVAL'] = '5'
 
-        self.job = _prepare_job(params, ['HAZARD', 'RISK'])
+        self.job = _prepare_job(params, ['HAZARD', 'RISK'], 'openquake')
         self.calculation.oq_job_profile = self.job
         self.calculation.save()
         self.job = self._reload_params()
@@ -551,7 +551,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         params['EXPOSURE'] = abs_path("LA_small_portfolio.xml")
         params['VULNERABILITY'] = abs_path("vulnerability.xml")
 
-        self.job = _prepare_job(params, ['HAZARD', 'RISK'])
+        self.job = _prepare_job(params, ['HAZARD', 'RISK'], 'openquake')
         self.calculation.oq_job_profile = self.job
         self.calculation.save()
         self.job = self._reload_params()
@@ -595,7 +595,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         params = self.BASE_SCENARIO_PARAMS.copy()
         params['SITES'] = '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
 
-        self.job = _prepare_job(params, ['HAZARD', 'RISK'])
+        self.job = _prepare_job(params, ['HAZARD', 'RISK'], 'openquake')
         self.calculation.oq_job_profile = self.job
         self.calculation.save()
         self.job = self._reload_params()
@@ -633,7 +633,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         params['GMF_RANDOM_SEED'] = '1'
         params['LOSS_HISTOGRAM_BINS'] = '25'
 
-        self.job = _prepare_job(params, ['HAZARD', 'RISK'])
+        self.job = _prepare_job(params, ['HAZARD', 'RISK'], 'openquake')
         self.job.oq_job_profile = self._reload_params()
         self.assertEquals(params['REGION_VERTEX'],
                           _to_coord_list(self.job.oq_job_profile.region))
@@ -682,7 +682,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         params['SITES'] = '33.88, -118.3, 33.88, -118.06, 33.76, -118.06'
         params['LOSS_HISTOGRAM_BINS'] = '25'
 
-        self.job = _prepare_job(params, ['HAZARD', 'RISK'])
+        self.job = _prepare_job(params, ['HAZARD', 'RISK'], 'openquake')
         self.job.oq_job_profile = self._reload_params()
         self.assertEquals(params['SITES'],
                           _to_coord_list(self.job.oq_job_profile.sites))
