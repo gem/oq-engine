@@ -24,10 +24,13 @@
 
 from collections import defaultdict
 from collections import OrderedDict
+import geohash
 import math
 import os
 
 from celery.task import task
+
+from django.contrib.gis.geos.geometry import GEOSGeometry
 
 from numpy import array
 from numpy import exp
@@ -41,6 +44,7 @@ from scipy import stats
 from scipy.stats import norm
 
 from openquake.calculators.base import Calculator
+from openquake.db import models
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
@@ -548,6 +552,24 @@ def split_into_blocks(calculation_id, sites, block_size=BLOCK_SIZE):
     for block_id, i in enumerate(xrange(0, len(sites), block_size)):
         yield Block(calculation_id, block_id=block_id,
                     sites=sites[i:i + block_size])
+
+
+def assets_for_site(job_id, site):
+    """Return assets (from the exposure model) for the given site.
+
+
+    """
+    inputs = models.OqCalculation.objects.get(id=job_id). \
+                    oq_job_profile.input_set.input_set. \
+                    filter(input_type="exposure")
+    if not inputs:
+        return []
+    gh = geohash.encode(site.latitude, site.longitude, precision=12)
+    result = models.ExposureData.objects. \
+                    filter(exposure_model__input__in=list(inputs)). \
+                    extra(where=["ST_GeoHash(site, 12) = %s"], params=[gh])
+
+    return list(result)
 
 
 def compute_bcr_for_block(job_id, points, get_loss_curve,
