@@ -245,6 +245,13 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
             return Site(pg_point.x, pg_point.y)
 
         self.assertEquals("asset_01", assets[0].asset_ref)
+        self.assertEquals(120, assets[0].area)
+        self.assertEquals(12.95, assets[0].coco)
+        self.assertEquals(55, assets[0].coco_deductible)
+        self.assertEquals(999, assets[0].coco_limit)
+        self.assertEquals(7, assets[0].number_of_units)
+        self.assertEquals(109876, assets[0].reco)
+        self.assertEquals(150000, assets[0].stco)
         self.assertEquals(150000, assets[0].value)
         self.assertEquals("RC/DMRF-D/LR", assets[0].taxonomy)
         self.assertEquals(Site(9.15000, 45.16667), _to_site(assets[0].site))
