@@ -271,23 +271,20 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
         REGION_GRID_SPACING paramaters.
         """
 
-        region_vertex = \
-            "46.0, 9.14, 46.0, 9.15, 45.0, 9.15, 45.0, 9.14"
+        region_vertex = "46.0, 9.14, 46.0, 9.15, 45.0, 9.15, 45.0, 9.14"
 
         params = {config.EXPOSURE: os.path.join(
-                helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE),
-                config.INPUT_REGION: region_vertex,
-                config.REGION_GRID_SPACING: 0.1,
-                config.CALCULATION_MODE: "Event Based"}
+                    helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE),
+                  config.INPUT_REGION: region_vertex,
+                  config.REGION_GRID_SPACING: 0.1,
+                  config.CALCULATION_MODE: "Event Based"}
 
         a_job = helpers.create_job(params)
 
         sites = [shapes.Site(9.15, 45.16667), shapes.Site(9.14777, 45.17999)]
 
         expected_block = general.Block(a_job.job_id, 0, sites)
-
         calculator = general.BaseRiskCalculator(a_job)
-
         calculator.partition()
 
         self.assertEqual(1, len(a_job.blocks_keys))
@@ -311,8 +308,7 @@ class RiskCalculatorTestCase(unittest.TestCase):
                                          'config.gem'))
 
         self.grid = shapes.Grid(shapes.Region.from_coordinates(
-            [(1.0, 3.0), (1.0, 4.0), (2.0, 4.0), (2.0, 3.0)]),
-            1.0)
+            [(1.0, 3.0), (1.0, 4.0), (2.0, 4.0), (2.0, 3.0)]), 1.0)
 
         # this is the expected output of grid_assets_iterator and an input of
         # asset_losses_per_site
