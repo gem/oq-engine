@@ -20,6 +20,7 @@
 
 import h5py
 import numpy
+import random
 
 from celery.task import task
 from django.db import transaction
@@ -31,15 +32,21 @@ from openquake.calculators.hazard.general import generate_erf
 from openquake.calculators.hazard.general import generate_gmpe_map
 from openquake.calculators.hazard.general import get_iml_list
 from openquake.calculators.hazard.general import set_gmpe_params
+from openquake.calculators.hazard.general import store_gmpe_map
+from openquake.calculators.hazard.general import store_source_model
+from openquake.calculators.hazard.uhs.ath import completed_task_count
+from openquake.calculators.hazard.uhs.ath import uhs_task_handler
 from openquake.db.models import Output
 from openquake.db.models import UhSpectra
 from openquake.db.models import UhSpectrum
 from openquake.db.models import UhSpectrumData
+from openquake.input import logictree
 from openquake.java import list_to_jdouble_array
 from openquake.logs import LOG
 from openquake.utils import config
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
+from openquake.utils.general import block_splitter
 
 
 @task(ignore_result=True)
@@ -244,3 +251,52 @@ class UHSCalculator(Calculator):
           for sampling source model and gmpe logic trees
         """
         write_uh_spectra(self.calc_proxy)
+
+        source_model_lt = self.calc_proxy.params.get(
+            'SOURCE_MODEL_LOGIC_TREE_FILE_PATH')
+        gmpe_lt = self.calc_proxy.params.get('GMPE_LOGIC_TREE_FILE_PATH')
+        basepath = self.calc_proxy.params.get('BASE_PATH')
+        self.lt_processor = logictree.LogicTreeProcessor(
+            basepath, source_model_lt, gmpe_lt)
+
+    def execute(self):
+        """Loop over realizations (logic tree samples), split the geometry of
+        interest into blocks of sites, and distribute Celery tasks to carry out
+        the UHS computation.
+        """
+        calc_proxy = self.calc_proxy
+        all_sites = calc_proxy.sites_to_compute()
+        site_block_size = config.hazard_block_size()
+        job_profile = calc_proxy.oq_job_profile
+
+        src_model_rnd = random.Random(job_profile.source_model_lt_random_seed)
+        gmpe_rnd = random.Random(job_profile.gmpe_lt_random_seed)
+
+        for rlz in xrange(calc_proxy.oq_job_profile.realizations):
+
+            # Sample the gmpe and source models:
+            store_source_model(
+                calc_proxy.job_id, src_model_rnd.getrandbits(32),
+                calc_proxy.params, self.lt_processor)
+            store_gmpe_map(
+                calc_proxy.job_id, gmpe_rnd.getrandbits(32), self.lt_processor)
+
+            for site_block in block_splitter(all_sites, site_block_size):
+
+                tf_args = dict(job_id=calc_proxy.job_id, realization=rlz)
+
+                num_tasks_completed = completed_task_count(calc_proxy.job_id)
+
+                ath_args = dict(job_id=calc_proxy.job_id,
+                                num_tasks=len(site_block),
+                                start_count=num_tasks_completed)
+
+                utils_tasks.distribute(
+                    compute_uhs_task, ('site', site_block), tf_args=tf_args,
+                    ath=uhs_task_handler, ath_args=ath_args)
+
+    def post_execute(self):
+        """Clean up stats counters."""
+        # TODO: export these counters to the database before deleting them
+        # See bug https://bugs.launchpad.net/openquake/+bug/925946.
+        stats.delete_job_counters(self.calc_proxy.job_id)
