@@ -248,7 +248,7 @@ class EngineAPITestCase(unittest.TestCase):
         self.assertEqual(user_name, job_profile.owner.user_name)
         # Check that the OqUser record for this user now exists.
         # If this fails, it will raise an `ObjectDoesNotExist` exception.
-        new_user = OqUser.objects.get(user_name=user_name)
+        _new_user = OqUser.objects.get(user_name=user_name)
 
     def test_run_calculation_deletes_job_counters(self):
         # This test ensures that

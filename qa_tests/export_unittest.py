@@ -21,7 +21,6 @@ import os
 import unittest
 
 from openquake.db.models import OqCalculation
-from openquake.db.models import OqJobProfile
 from openquake.db.models import OqUser
 from openquake.db.models import Output
 
@@ -46,7 +45,7 @@ class CalculationDescriptionTestCase(unittest.TestCase):
         # profile and write a new temporary config file:
         cfg_parser = ConfigParser.ConfigParser()
         cfg_parser.readfp(open(orig_cfg_path, 'r'))
-        cfg_parser.set('general', 'DESCRIPTION', description) 
+        cfg_parser.set('general', 'DESCRIPTION', description)
         cfg_parser.write(open(mod_cfg_path, 'w'))
 
         run_job(mod_cfg_path)
