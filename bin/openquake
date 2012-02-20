@@ -50,6 +50,7 @@ Available Risk Analysis
 
 """
 
+import getpass
 import sys
 
 from gflags import DEFINE_boolean
@@ -117,7 +118,7 @@ if __name__ == '__main__':
     from openquake import engine
     try:
         job_profile, params, sections = engine.import_job_profile(
-            FLAGS.config_file)
+            FLAGS.config_file, user_name=getpass.getuser())
         engine.run_calculation(job_profile, params, sections,
                                output_type=FLAGS.output_type)
     except job.config.ValidationException as e:
