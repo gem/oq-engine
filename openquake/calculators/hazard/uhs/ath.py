@@ -19,6 +19,8 @@
 :function:`openquake.utils.tasks.distribute` for more information.
 """
 
+import time
+
 from openquake.utils import stats
 
 
@@ -76,3 +78,28 @@ def remaining_tasks_in_block(job_id, num_tasks, start_count):
     target = start_count + num_tasks
     while completed_task_count(job_id) < target:
         yield target - completed_task_count(job_id)  # number remaining
+
+
+def uhs_task_handler(job_id, num_tasks, start_count):
+    """Async task handler for counting calculation results and determining when
+    a batch of tasks is complete.
+
+    This function periodically polls the task counters in Redis and blocks
+    until the current block of tasks is finished.
+
+    :param int job_id:
+        The ID of the currently running calculation.
+    :param int num_tasks:
+        The number of tasks in the current block.
+    :param int start_count:
+        The number of tasks completed so far in the calculation.
+    """
+    remaining_gen = remaining_tasks_in_block(job_id, num_tasks, start_count)
+
+    while True:
+        time.sleep(0.5)
+        try:
+            remaining_gen.next()
+        except StopIteration:
+            # No more tasks remaining in this batch.
+            break
