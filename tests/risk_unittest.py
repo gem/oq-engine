@@ -1031,15 +1031,16 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertTrue(calculator.compute_risk(self.block_id))
 
         for point in block.grid(calc_proxy.region):
-            asset_key = kvs.tokens.asset_key(self.job_id, point.row,
-                point.column)
-            for asset in kvs.get_list_json_decoded(asset_key):
+            assets = BaseRiskCalculator.assets_for_site(
+                self.job_id, point.site)
+            for asset in assets:
                 loss_ratio_key = kvs.tokens.loss_ratio_key(
-                    self.job_id, point.row, point.column, asset['assetID'])
+                    self.job_id, point.row, point.column, asset.asset_ref)
+
                 self.assertTrue(kvs.get_client().get(loss_ratio_key))
 
-                loss_key = kvs.tokens.loss_curve_key(self.job_id, point.row,
-                    point.column, asset['assetID'])
+                loss_key = kvs.tokens.loss_curve_key(
+                    self.job_id, point.row, point.column, asset.asset_ref)
 
                 self.assertTrue(kvs.get_client().get(loss_key))
 
