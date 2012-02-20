@@ -24,6 +24,7 @@ from db_loader_unittest import *
 from db_routers_unittest import *
 from disaggregation_unittest import *
 from disagg_subsets_unittest import *
+from export_unittest import *
 from hazard_classical_unittest import *
 from hazard_nrml_unittest import *
 from hazard_unittest import *
