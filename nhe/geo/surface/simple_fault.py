@@ -8,6 +8,7 @@ import numpy
 
 from nhe.geo.surface.base import BaseSurface
 from nhe.geo.line import Line
+from nhe.geo.mesh import RectangularMesh
 
 
 def _ensure(expr, msg):
@@ -48,6 +49,8 @@ class SimpleFaultSurface(BaseSurface):
 
     def __init__(self, fault_trace, upper_seismo_depth,
             lower_seismo_depth, dip, mesh_spacing):
+
+        super(SimpleFaultSurface, self).__init__()
 
         _ensure(len(fault_trace) >= 2,
                 "The fault trace must have at least two points!")
@@ -90,14 +93,14 @@ class SimpleFaultSurface(BaseSurface):
 
         mesh = []
 
-        top_edge = self._fault_top_edge(mesh_spacing)
+        top_edge = self._fault_top_edge(self.mesh_spacing)
 
         for point in top_edge:
 
             bottom = point.point_at(
                 horizontal_distance, vertical_distance, azimuth)
 
-            points = point.equally_spaced_points(bottom, mesh_spacing)
+            points = point.equally_spaced_points(bottom, self.mesh_spacing)
             mesh.extend(points)
 
         # number of rows corresponds to number of points along dip

@@ -53,6 +53,9 @@ class Line(object):
     def __len__(self):
         return len(self.points)
 
+    def __getitem__(self, key):
+        return self.points.__getitem__(key)
+
     def on_surface(self):
         """
         Check if this line is defined on the surface (i.e. all points
