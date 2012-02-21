@@ -26,8 +26,6 @@ import os
 import tempfile
 import unittest
 
-from django.contrib.gis.geos.geometry import GEOSGeometry
-
 from openquake.db import models
 from openquake.calculators.risk.classical import core as classical_core
 from openquake.calculators.risk.event_based import core as eb_core
@@ -114,21 +112,23 @@ class EpsilonProvider(object):
         return self.epsilons.pop(0)
 
 
-TEST_REGION = shapes.Region.from_simple((0.1, 0.1), (100.2, 100.2))
+TEST_REGION = shapes.Region.from_simple((11.1, 11.1), (100.2, 100.2))
 
 
-class ProbabilisticEventBasedTestCase(unittest.TestCase):
+class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
-    job = None
+    calc = None
+    assets = []
+    peb_gmfs = []
     points = []
 
     @classmethod
     def setUpClass(cls):
         path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, "PEB-exposure.yaml")
         inputs = [("exposure", path)]
-        cls.job = cls.setup_classic_job(inputs=inputs)
+        cls.calc = cls.setup_classic_job(inputs=inputs)
         qargs = dict(input_type="exposure", path=path)
-        [input] = cls.job.oq_job_profile.input_set.input_set.filter(**qargs)
+        [input] = cls.calc.oq_job_profile.input_set.input_set.filter(**qargs)
         owner = models.OqUser.objects.get(user_name="openquake")
         model = models.ExposureModel(
             owner=owner, input=input, description="PEB test exposure model",
@@ -136,18 +136,19 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             stco_type="aggregated")
         model.save()
         values = [22.61, 124.27, 42.93, 29.37, 40.68, 178.47]
-        for x, value in zip([float(v) for v in range(1, 7)], values):
-            site = shapes.Site(x, x*11)
+        for x, value in zip([float(v) for v in range(20, 27)], values):
+            site = shapes.Site(x, x+11)
             cls.points.append(TEST_REGION.grid.point_at(site))
             location = GEOSGeometry(site.point.to_wkt())
             asset = models.ExposureData(exposure_model=model, taxonomy="ID",
                                         asset_ref="asset_%s" % x, stco=value,
                                         site=location)
             asset.save()
+            cls.assets.append(asset)
 
     @classmethod
     def tearDownClass(cls):
-        cls.teardown_job(cls.job)
+        cls.teardown_job(cls.calc)
 
     def setUp(self):
         imls_1 = [0.01, 0.04, 0.07, 0.1, 0.12, 0.22, 0.37, 0.52]
@@ -191,39 +192,49 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         self.params["BASE_PATH"] = "."
         self.params["INVESTIGATION_TIME"] = 50.0
 
-        self.job = helpers.create_job(self.params, base_path=".")
+        self.job = helpers.create_job(self.params, base_path=".",
+                                      job_id=self.calc.id,
+                                      oq_calculation=self.calc,
+                                      oq_job_profile=self.calc.oq_job_profile)
         self.job_id = self.job.job_id
         self.job.to_kvs()
 
+        self.peb_gmfs = []
         self.gmfs_1 = {"IMLs": (0.1439, 0.1821, 0.5343, 0.171, 0.2177,
                 0.6039, 0.0618, 0.186, 0.5512, 1.2602, 0.2824, 0.2693,
                 0.1705, 0.8453, 0.6355, 0.0721, 0.2475, 0.1601, 0.3544,
                 0.1756), "TSES": 200, "TimeSpan": 50}
+        self.peb_gmfs.append(self.gmfs_1)
 
         self.gmfs_2 = {"IMLs": (0.1507, 0.2656, 0.5422, 0.3685, 0.3172,
                 0.6604, 0.1182, 0.1545, 0.7613, 0.5246, 0.2428, 0.2882,
                 0.2179, 1.2939, 0.6042, 0.1418, 0.3637, 0.222, 0.3613,
                 0.113), "TSES": 200, "TimeSpan": 50}
+        self.peb_gmfs.append(self.gmfs_2)
 
         self.gmfs_3 = {"IMLs": (0.156, 0.3158, 0.3968, 0.2827, 0.1915, 0.5862,
                 0.1438, 0.2114, 0.5101, 1.0097, 0.226, 0.3443, 0.1693,
                 1.0754, 0.3533, 0.1461, 0.347, 0.2665, 0.2977, 0.2925),
                 "TSES": 200, "TimeSpan": 50}
+        self.peb_gmfs.append(self.gmfs_3)
 
         self.gmfs_4 = {"IMLs": (0.1311, 0.3566, 0.4895, 0.3647, 0.2313,
                 0.9297, 0.2337, 0.2862, 0.5278, 0.6603, 0.3537, 0.2997,
                 0.1097, 1.1875, 0.4752, 0.1575, 0.4009, 0.2519, 0.2653,
                 0.1394), "TSES": 200, "TimeSpan": 50}
+        self.peb_gmfs.append(self.gmfs_4)
 
         self.gmfs_5 = {"IMLs": (0.0879, 0.2895, 0.465, 0.2463, 0.1862, 0.763,
                 0.2189, 0.3324, 0.3215, 0.6406, 0.5014, 0.3877, 0.1318, 1.0545,
                 0.3035, 0.1118, 0.2981, 0.3492, 0.2406, 0.1043),
                 "TSES": 200, "TimeSpan": 50}
+        self.peb_gmfs.append(self.gmfs_5)
 
         self.gmfs_6 = {"IMLs": (0.0872, 0.2288, 0.5655, 0.2118, 0.2, 0.6633,
                 0.2095, 0.6537, 0.3838, 0.781, 0.3054, 0.5375, 0.1361, 0.8838,
                 0.3726, 0.0845, 0.1942, 0.4629, 0.1354, 0.1109),
                 "TSES": 200, "TimeSpan": 50}
+        self.peb_gmfs.append(self.gmfs_6)
 
         # deleting keys in kvs
         kvs.get_client().flushall()
@@ -236,13 +247,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 {"ID": self.vuln_function_2.to_json()})
 
         # store the gmfs
-        for idx, gmf in enumerate([self.gmfs_1, self.gmfs_2, self.gmfs_3,
-                                   self.gmfs_4, self.gmfs_5, self.gmfs_6]):
+        for idx, gmf in enumerate(self.peb_gmfs):
             self._store_gmfs(gmf, self.points[idx].row,
                              self.points[idx].column)
-
-        # deleting old file
-        self._delete_test_file()
 
     def tearDown(self):
         self._delete_test_file()
@@ -250,7 +257,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
     def _delete_test_file(self):
         try:
             os.remove(os.path.join(helpers.OUTPUT_DIR,
-                    eb_core._filename(self.job_id)))
+                      eb_core._filename(self.job_id)))
         except OSError:
             pass
 
@@ -573,47 +580,31 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
     def test_computes_the_aggregate_loss_curve(self):
         # no epsilon_provided is needed because the vulnerability
         # function has all the covs equal to zero
-        loss_ratios_1 = compute_loss_ratios(
-            self.vuln_function_2, self.gmfs_1, None, self.asset_1)
-
-        loss_ratios_2 = compute_loss_ratios(
-            self.vuln_function_2, self.gmfs_2, None, self.asset_2)
-
-        loss_ratios_3 = compute_loss_ratios(
-            self.vuln_function_2, self.gmfs_3, None, self.asset_3)
-
-        loss_ratios_4 = compute_loss_ratios(
-            self.vuln_function_2, self.gmfs_4, None, self.asset_4)
-
-        loss_ratios_5 = compute_loss_ratios(
-            self.vuln_function_2, self.gmfs_5, None, self.asset_5)
-
-        loss_ratios_6 = compute_loss_ratios(
-            self.vuln_function_2, self.gmfs_6, None, self.asset_6)
+        loss_ratios = []
+        for idx in range(6):
+            lr = compute_loss_ratios(self.vuln_function_2, self.peb_gmfs[idx],
+                                     None, self.assets[idx])
+            loss_ratios.append(lr)
 
         aggregate_curve = AggregateLossCurve()
 
-        aggregate_curve.append(loss_ratios_1 * self.asset_1["assetValue"])
-        aggregate_curve.append(loss_ratios_2 * self.asset_2["assetValue"])
-        aggregate_curve.append(loss_ratios_3 * self.asset_3["assetValue"])
-        aggregate_curve.append(loss_ratios_4 * self.asset_4["assetValue"])
-        aggregate_curve.append(loss_ratios_5 * self.asset_5["assetValue"])
-        aggregate_curve.append(loss_ratios_6 * self.asset_6["assetValue"])
+        for idx in range(6):
+            aggregate_curve.append(loss_ratios[idx] * self.assets[idx].value)
 
-        expected_losses = numpy.array((7.2636, 57.9264, 187.4893, 66.9082,
-                47.0280, 248.7796, 23.2329, 121.3514, 177.4167, 259.2902,
-                77.7080, 127.7417, 18.9470, 339.5774, 151.1763, 6.1881,
-                71.9168, 97.9514, 56.4720, 11.6513))
+        expected_losses = numpy.array((
+            7.2636, 57.9264, 187.4893, 66.9082, 47.0280, 248.7796, 23.2329,
+            121.3514, 177.4167, 259.2902, 77.7080, 127.7417, 18.9470, 339.5774,
+            151.1763, 6.1881, 71.9168, 97.9514, 56.4720, 11.6513))
 
-        self.assertTrue(numpy.allclose(
-                expected_losses, aggregate_curve.losses))
+        self.assertTrue(numpy.allclose(expected_losses,
+                                       aggregate_curve.losses))
 
-        expected_curve = shapes.Curve([(39.52702042, 0.99326205),
-                (106.20489077, 0.917915), (172.88276113, 0.77686984),
-                (239.56063147, 0.52763345), (306.23850182, 0.22119922)])
+        expected_curve = shapes.Curve([
+            (39.52702042, 0.99326205), (106.20489077, 0.917915),
+            (172.88276113, 0.77686984), (239.56063147, 0.52763345),
+            (306.23850182, 0.22119922)])
 
-        self.assertEqual(expected_curve, aggregate_curve.compute(
-                200, 50, 6))
+        self.assertEqual(expected_curve, aggregate_curve.compute(200, 50, 6))
 
     def test_no_losses_without_gmfs(self):
         aggregate_curve = AggregateLossCurve()
@@ -721,6 +712,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         block = Block(self.job_id, self.block_id, (SITE, SITE))
         block.to_kvs()
 
+        import pdb; pdb.set_trace()
         asset = {"taxonomy": "ID",
                  "assetID": 22.61,
                  "assetValue": 1,
