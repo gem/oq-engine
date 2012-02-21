@@ -110,3 +110,22 @@ class SimpleFaultSurfaceTestCase(utils.SurfaceTestCase):
                 1.0, 6.0, 90.0, 1.0)
 
         self.assert_mesh_is(fault, test_data.TEST_5_MESH)
+
+    def test_get_strike_1(self):
+        p1 = Point(0.0, 0.0)
+        p2 = Point(0.0635916966572, 0.0635916574897)
+        
+        surface = SimpleFaultSurface(Line([p1, p2]),
+                1.0, 6.0, 90.0, 1.0)
+        
+        self.assertAlmostEquals(45.0, surface.get_strike())
+
+    def test_get_strike_2(self):
+        p1 = Point(0.0, 0.0)
+        p2 = Point(0.0635916966572, 0.0635916574897)
+        p3 = Point(0.0860747816618, 0.102533437776)
+
+        surface = SimpleFaultSurface(Line([p1, p2, p3]),
+                1.0, 6.0, 90.0, 1.0)
+
+        self.assertAlmostEquals(40.0, surface.get_strike())

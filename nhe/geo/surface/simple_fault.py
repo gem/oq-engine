@@ -115,7 +115,19 @@ class SimpleFaultSurface(BaseSurface):
         pass
 
     def get_strike(self):
-        pass
+        average_strike = 0.0
+        fault_trace_length = 0.0
+
+        for i in range(len(self.fault_trace) - 1):
+
+            strike = self.fault_trace[i].azimuth(self.fault_trace[i + 1])
+            section_length = self.fault_trace[i].horizontal_distance(
+                self.fault_trace[i + 1])
+
+            average_strike = average_strike + section_length * strike
+            fault_trace_length = fault_trace_length + section_length
+
+        return average_strike / fault_trace_length
 
     def _fault_top_edge(self, mesh_spacing):
         """
