@@ -233,8 +233,8 @@ class BetaDistributionTestCase(unittest.TestCase):
             lrem, delta=0.0005)
 
 
-class AssetsForSiteTestCase(unittest.TestCase, DbTestCase):
-    """Test the BaseRiskCalculator.assets_for_site() function."""
+class AssetsForCellTestCase(unittest.TestCase, DbTestCase):
+    """Test the BaseRiskCalculator.assets_for_cell() function."""
     job = None
 
     @classmethod
@@ -254,16 +254,16 @@ class AssetsForSiteTestCase(unittest.TestCase, DbTestCase):
     def _to_site(pg_point):
         return shapes.Site(pg_point.x, pg_point.y)
 
-    def test_assets_for_site_with_existent_row(self):
+    def test_assets_for_cell_with_existent_row(self):
         # Asset is found in the database.
         site = shapes.Site(9.15000, 45.16667)
-        [asset] = BaseRiskCalculator.assets_for_site(self.job.id, site)
+        [asset] = BaseRiskCalculator.assets_for_cell(self.job.id, site)
         self.assertEqual("asset_01", asset.asset_ref)
         self.assertEqual(site, self._to_site(asset.site))
 
-    def test_assets_for_site_with_non_existent_row(self):
+    def test_assets_for_cell_with_non_existent_row(self):
         # An empty list is returned when no assets exist for a given
         # job and site.
         site = shapes.Site(99.15000, 15.16667)
         self.assertEqual(
-            [], BaseRiskCalculator.assets_for_site(self.job.id, site))
+            [], BaseRiskCalculator.assets_for_cell(self.job.id, site))

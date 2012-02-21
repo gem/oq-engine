@@ -274,7 +274,7 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
         for point in block.grid(self.calc_proxy.region):
             hazard_curve = self._get_db_curve(point.site)
 
-            assets = self.assets_for_site(self.calc_proxy.job_id, point.site)
+            assets = self.assets_for_cell(self.calc_proxy.job_id, point.site)
             for asset in assets:
                 LOGGER.debug("processing asset %s" % asset)
 

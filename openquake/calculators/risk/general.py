@@ -24,11 +24,12 @@
 
 from collections import defaultdict
 from collections import OrderedDict
-import geohash
 import math
 import os
 
 from celery.task import task
+
+from django.contrib.gis import geos
 
 from numpy import array
 from numpy import exp
@@ -51,6 +52,7 @@ from openquake.job import config as job_config
 from openquake.output import risk as risk_output
 from openquake.parser import exposure
 from openquake.parser import vulnerability
+from openquake.utils import round_float
 from openquake.utils.tasks import calculator_for_task
 
 
@@ -145,8 +147,25 @@ class BaseRiskCalculator(Calculator):
         self.store_vulnerability_model()
         self.partition()
 
-    @classmethod
-    def assets_for_site(cls, job_id, site):
+    @staticmethod
+    def _cell_to_polygon(midpoint, cell_size):
+        """Return the cell with the given mid point and size.
+
+        :param midpoint: the middle point of the risk sell
+        :type midpoint: a :py:class:`openquake.shapes.Site` instance
+        :param float cell_size: the configured risk cell size
+
+        :return: the risk cell as a :py:class:`django.contrib.gis.geos.Polygon`
+        """
+        lat, lon = midpoint.coords
+        hcell = cell_size / 2
+        coos = [(lat - hcell, lon - hcell), (lat + hcell, lon - hcell),
+                (lat + hcell, lon + hcell), (lat - hcell, lon + hcell),
+                (lat - hcell, lon - hcell)]
+        coos = [(round_float(x), round_float(y)) for x, y in coos]
+        return geos.Polygon(coos)
+
+    def assets_for_cell(self, job_id, site):
         """Return assets (from the exposure model) for the given job and site.
 
 
@@ -156,19 +175,22 @@ class BaseRiskCalculator(Calculator):
         :returns: a potentially empty list of
             :py:class:`openquake.db.models.ExposureData` instances
         """
-        if cls._em_inputs is None:
+        cell_size = self.calc_proxy.oq_job_profile.risk_cell_size
+        assert cell_size is not None, "Risk cell size must be set."
+
+        if self._em_inputs is None:
             # This query obtains the exposure model input rows and needs to be
             # made only once in the course of a risk calculation.
-            cls._em_inputs = list(
+            self._em_inputs = list(
                 models.OqCalculation.objects.get(id=job_id). \
                        oq_job_profile.input_set.input_set. \
                        filter(input_type="exposure"))
-        if not cls._em_inputs:
+        if not self._em_inputs:
             return []
-        gh = geohash.encode(site.latitude, site.longitude, precision=12)
+        risk_cell = self._cell_to_polygon(site, cell_size)
         result = models.ExposureData.objects. \
-                        filter(exposure_model__input__in=cls._em_inputs). \
-                        extra(where=["ST_GeoHash(site, 12) = %s"], params=[gh])
+                        filter(exposure_model__input__in=self._em_inputs,
+                               site__within=risk_cell)
 
         return list(result)
 
@@ -261,7 +283,7 @@ class BaseRiskCalculator(Calculator):
             * asset is an :py:class:`openquake.db.models.ExposureData` instance
         """
         for point in grid:
-            assets = self.assets_for_site(self.calc_proxy.job_id, point.site)
+            assets = self.assets_for_cell(self.calc_proxy.job_id, point.site)
             for asset in assets:
                 yield point, asset
 
@@ -600,7 +622,7 @@ def compute_bcr_for_block(job_id, points, get_loss_curve,
         job_id, retrofitted=True)
 
     for point in points:
-        assets = BaseRiskCalculator.assets_for_site(job_id, point.site)
+        assets = BaseRiskCalculator.assets_for_cell(job_id, point.site)
         for asset in assets:
             vuln_function = vuln_curves[asset.taxonomy]
             loss_curve = get_loss_curve(point, vuln_function, asset)
