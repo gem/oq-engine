@@ -256,7 +256,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                                          point.row)
             gmf_slice = kvs.get_value_json_decoded(key)
 
-            assets = self.assets_for_site(self.calc_proxy.job_id, point.site)
+            assets = self.assets_for_cell(self.calc_proxy.job_id, point.site)
             for asset in assets:
                 LOGGER.debug("Processing asset %s" % asset)
 

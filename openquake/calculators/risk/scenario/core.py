@@ -311,7 +311,7 @@ def load_assets_for_point(job_id, point):
     :returns: a potentially empty list of
         :py:class:`openquake.db.models.ExposureData` instances
     """
-    return general.BaseRiskCalculator.assets_for_site(job_id, point.site)
+    return general.BaseRiskCalculator.assets_for_cell(job_id, point.site)
 
 
 def collect_region_data(block_loss_map_data, region_loss_map_data):
