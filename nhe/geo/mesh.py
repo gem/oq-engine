@@ -1,9 +1,12 @@
 """
-Module :mod:`nhe.geo.mesh` defines :class:`Mesh`.
+Module :mod:`nhe.geo.mesh` defines classes :class:`Mesh` and its subclass
+:class:`RectangularMesh`.
 """
 import numpy
+import shapely.geometry
 
 from nhe.geo.point import Point
+from nhe.geo import _utils as geo_utils
 
 
 class Mesh(object):
@@ -85,7 +88,7 @@ class Mesh(object):
             to cut the portion of coordinates (and depths if it is available)
             arrays. These arrays are then used for creating a new mesh.
         :returns:
-            A new :class:`Mesh` object that borrows a portion of geometry
+            A new object of the same type that borrows a portion of geometry
             from this mesh (doesn't copy the array, just references it).
         """
         assert (isinstance(item, slice) or
@@ -118,4 +121,214 @@ class Mesh(object):
         the method's time complexity grows linearly with the number
         of points in the mesh.
         """
-        return min(point.distance(mesh_point) for mesh_point in self)
+        # here the same approach as in :meth:`nhe.geo.point.Point.distance`
+        # is used. we find the great circle distance between the target
+        # point and each point of the mesh, independently calculate
+        # the vertical distance (just subtracting values) and combine
+        # these distances using Pythagoras theorem.
+        target_lons = numpy.repeat(point.longitude, len(self))
+        target_lats = numpy.repeat(point.latitude, len(self))
+        _, _, hor_distances = geo_utils.GEOD.inv(
+            self.lons.flatten(), self.lats.flatten(), target_lons, target_lats
+        )
+        if self.depths is None:
+            min_hor_distance = numpy.min(hor_distances) * 1e-3
+            if point.depth == 0:
+                # mesh and point have no depth, the actual distance
+                # is the horizontal one
+                return min_hor_distance
+            else:
+                # mesh is lying on earth surface and point has some depth
+                return (min_hor_distance ** 2 + point.depth ** 2) ** 0.5
+        elif point.depth == 0:
+            # point is lying on earth surface and the mesh is below
+            vert_distances = self.depths
+        else:
+            # both point and mesh are below earth surface
+            vert_distances = self.depths - point.depth
+        vert_distances = vert_distances.flatten()
+        hor_distances *= 1e-3
+        return numpy.min(hor_distances ** 2 + vert_distances ** 2) ** 0.5
+
+
+class RectangularMesh(Mesh):
+    """
+    A specification of :class:`Mesh` that requires coordinate numpy-arrays
+    to be two-dimensional.
+
+    Rectangular mesh is meant to represent not just an unordered collection
+    of points but rather a sort of table of points, where index of the point
+    in a mesh is related to it's position with respect to neighbouring points.
+    """
+    def __init__(self, lons, lats, depths):
+        super(RectangularMesh, self).__init__(lons, lats, depths)
+        assert lons.ndim == 2
+
+    @classmethod
+    def from_points_list(cls, points):
+        """
+        Create a rectangular mesh object from a list of lists of points.
+        Lists in a list are supposed to have the same length.
+
+        :param point:
+            List of lists of :class:`~nhe.geo.point.Point` objects.
+        """
+        assert points is not None and len(points) > 0 and len(points[0]) > 0, \
+               'list of at least one non-empty list of points is required'
+        lons = numpy.zeros((len(points), len(points[0])), dtype=float)
+        lats = lons.copy()
+        depths = lons.copy()
+        num_cols = len(points[0])
+        for i, row in enumerate(points):
+            assert len(row) == num_cols, \
+                   'lists of points are not of uniform length'
+            for j, point in enumerate(row):
+                lons[i][j] = point.longitude
+                lats[i][j] = point.latitude
+                depths[i][j] = point.depth
+        if not depths.any():
+            depths = None
+        return cls(lons, lats, depths)
+
+    def _get_bounding_mesh(self, with_depths=True):
+        """
+        Create and return a :class:`Mesh` object that contains a subset
+        of points of this mesh. Only those points that lie on the borders
+        of the rectangular mesh are included in the result one.
+
+        If the original mesh is purely vertical (with point in all the
+        rows different only by their depths), and ``with_depths == False``,
+        the resulting bounding mesh is filtered from duplicates.
+
+        :param with_depths:
+            If set ``False`` the new mesh will have depths array
+            set to ``None``.
+        """
+        if self.depths is None:
+            with_depths = False
+
+        if 1 in self.lons.shape:
+            # the original mesh either has one row or one column of points.
+            # the result mesh should have the same points.
+            return Mesh(self.lons.flatten(), self.lats.flatten(),
+                        self.depths.flatten() if with_depths else None)
+
+        # if depths are ignored and there is only one row (or the top row
+        # is equal to last one), consider only that top row. this way
+        # we avoid duplicating each point for purely vertical rectangular
+        # meshes.
+        if (not with_depths
+            and (len(self.lons) == 1
+                 or ((self.lons[0] == self.lons[-1]).all()
+                     and (self.lats[0] == self.lats[-1]).all()))):
+            return Mesh(self.lons[0], self.lats[0], None)
+
+        # we need to perform the same operations on all three coordinate
+        # components (lons, lats and depths).
+        components_bounding = []
+        components_all = [self.lons, self.lats]
+        if with_depths:
+            components_all.append(self.depths)
+        for coords in components_all:
+            # the resulting coordinates are composed of four parts:
+            components_bounding.append(numpy.concatenate((
+                # the first row,
+                coords[0],
+                # the last column (excluding two corner points),
+                coords[1:-1, -1],
+                # the last row (in backward direction),
+                coords[-1][::-1],
+                # and the first column (backwards, excluding corner points).
+                coords[-2:0:-1, 0]
+            )))
+        if not with_depths:
+            components_bounding.append(None)
+        return Mesh(*components_bounding)
+
+    def get_joyner_boore_distance(self, point):
+        """
+        Compute and return Joyner-Boore distance to ``point``.
+        Point's depth is ignored.
+
+        See :meth:`nhe.geo.surface.BaseSurface.get_joyner_boore_distance`
+        for definition of this distance.
+
+        :returns:
+            Distance in km. Value is considered to be zero if ``point``
+            lies inside the polygon enveloping the projection of the mesh
+            or on one of its edges.
+        """
+        bounding_mesh = self._get_bounding_mesh(with_depths=False)
+        assert bounding_mesh.depths is None
+        lons, lats = bounding_mesh.lons, bounding_mesh.lats
+        proj = geo_utils.get_orthographic_projection(
+            *geo_utils.get_spherical_bounding_box(lons, lats)
+        )
+        point_2d = shapely.geometry.Point(*proj(point.longitude,
+                                                point.latitude))
+        xx, yy = proj(lons, lats)
+        mesh_2d = numpy.array([xx, yy], dtype=float).transpose().copy()
+        if len(xx) == 2:
+            mesh_2d = shapely.geometry.LineString(mesh_2d)
+        elif len(xx) == 1:
+            mesh_2d = shapely.geometry.Point(*mesh_2d)
+        elif len(xx) > 2:
+            mesh_2d = shapely.geometry.Polygon(mesh_2d)
+        dist = mesh_2d.distance(point_2d)
+        if dist < 500:
+            # if the distance is below threshold of 500 kilometers, consider
+            # the distance measured on the projection accurate enough.
+            return dist
+        else:
+            # ... otherwise get the precise distance between bounding mesh
+            # projection and the point projection using pure numerical way
+            return bounding_mesh.get_min_distance(Point(point.longitude,
+                                                        point.latitude))
+
+    def get_middle_point(self):
+        """
+        Return the middle point of the mesh.
+
+        :returns:
+            An instance of :class:`~nhe.geo.point.Point`.
+
+        The middle point is taken from the middle row and a middle column
+        of the mesh if there are odd number of both. Otherwise the geometric
+        mean point of two or four middle points.
+        """
+        num_rows, num_cols = self.lons.shape
+        mid_row = num_rows // 2
+        depth = 0
+        if num_rows & 1 == 1:
+            # there are odd number of rows
+            mid_col = num_cols // 2
+            if num_cols & 1 == 1:
+                # odd number of columns, we can easily take
+                # the middle point
+                if self.depths is not None:
+                    depth = self.depths[mid_row][mid_col]
+                return Point(self.lons[mid_row][mid_col],
+                             self.lats[mid_row][mid_col], depth)
+            else:
+                # even number of columns, need to take two middle
+                # points on the middle row
+                lon1, lon2 = self.lons[mid_row][mid_col - 1 : mid_col + 1]
+                lat1, lat2 = self.lats[mid_row][mid_col - 1 : mid_col + 1]
+                if self.depths is not None:
+                    depth1 = self.depths[mid_row][mid_col - 1]
+                    depth2 = self.depths[mid_row][mid_col]
+        else:
+            # there are even number of rows. take the row just above
+            # and the one just below the middle and find middle point
+            # of each
+            submesh1 = self[mid_row - 1 : mid_row]
+            submesh2 = self[mid_row : mid_row + 1]
+            p1, p2 = submesh1.get_middle_point(), submesh2.get_middle_point()
+            lon1, lat1, depth1 = p1.longitude, p1.latitude, p1.depth
+            lon2, lat2, depth2 = p2.longitude, p2.latitude, p2.depth
+
+        # we need to find the middle between two points
+        if self.depths is not None:
+            depth = (depth1 + depth2) / 2.0
+        lon, lat = geo_utils.get_middle_point(lon1, lat1, lon2, lat2)
+        return Point(lon, lat, depth)

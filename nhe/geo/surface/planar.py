@@ -2,7 +2,7 @@
 Module :mod:`nhe.geo.surface.planar` contains :class:`PlanarSurface`.
 """
 from nhe.geo.surface.base import BaseSurface
-from nhe.geo.mesh import Mesh
+from nhe.geo.mesh import RectangularMesh
 from nhe.geo.nodalplane import NodalPlane
 
 
@@ -86,15 +86,15 @@ class PlanarSurface(BaseSurface):
         """
         See :meth:`nhe.surface.base.BaseSurface._create_mesh`.
         """
-        points = []
+        mesh = []
         l_line = self.top_left.equally_spaced_points(self.bottom_left,
                                                      self.mesh_spacing)
         r_line = self.top_right.equally_spaced_points(self.bottom_right,
                                                       self.mesh_spacing)
         for i, left in enumerate(l_line):
             right = r_line[i]
-            points.extend(left.equally_spaced_points(right, self.mesh_spacing))
-        return Mesh.from_points_list(points)
+            mesh.append(left.equally_spaced_points(right, self.mesh_spacing))
+        return RectangularMesh.from_points_list(mesh)
 
     def get_strike(self):
         """

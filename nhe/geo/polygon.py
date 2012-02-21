@@ -111,7 +111,7 @@ class Polygon(object):
         west, east, north, south = utils.get_spherical_bounding_box(lons, lats)
 
         # create a projection that is centered in a polygon center:
-        proj = utils.get_stereographic_projection(west, east, north, south)
+        proj = utils.get_orthographic_projection(west, east, north, south)
 
         # project polygon vertices to the Cartesian space and create
         # a shapely polygon object:

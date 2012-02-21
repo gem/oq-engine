@@ -13,7 +13,7 @@ class CleanPointTestCase(unittest.TestCase):
                          [a, b, a, c])
 
     def test_close_duplicates(self):
-        a, b, c = geo.Point(1e-4, 1e-4), geo.Point(0, 0), geo.Point(1e-5, 1e-5)
+        a, b, c = geo.Point(1e-4, 1e-4), geo.Point(0, 0), geo.Point(1e-6, 1e-6)
         self.assertEqual(utils.clean_points([a, b, c]), [a, b])
 
 
@@ -106,18 +106,59 @@ class GetSphericalBoundingBox(unittest.TestCase):
                                  'extent wider than 180 deg')
 
 
-class GetStereographicProjectionTestCase(unittest.TestCase):
-    def _test(self, bounding_box, expected_params):
-        proj = utils.get_stereographic_projection(*bounding_box)
+class GetOrthographicProjectionTestCase(unittest.TestCase):
+    def _get_proj_params(self, bounding_box):
+        proj = utils.get_orthographic_projection(*bounding_box)
         self.assertIsInstance(proj, pyproj.Proj)
-        self.assertEqual(sorted(proj.srs.split()), sorted(expected_params))
+        params = dict(param.strip().split('=')
+                      for param in proj.srs.split('+')
+                      if param)
+        return params
 
     def test_simple(self):
-        self._test((10, 16, -20, 30),
-                   ['+lat_0=5.0', '+lon_0=13.0', '+proj=stere', '+units=m'])
-        self._test((-20, 40, 55, 56),
-                   ['+lat_0=55.5', '+lon_0=10.0', '+proj=stere', '+units=m'])
+        params = self._get_proj_params((10, 16, -29.98, 30))
+        self.assertEqual(params.pop('proj'), 'ortho')
+        self.assertEqual(params.pop('units'), 'km')
+        self.assertAlmostEqual(float(params.pop('lat_0')), 0.01, delta=0.0001)
+        self.assertAlmostEqual(float(params.pop('lon_0')), 13, delta=0.0004)
+        self.assertEqual(params, {})
+        params = self._get_proj_params((-20, 40, 55, 56))
+        self.assertAlmostEqual(float(params.pop('lat_0')), 59.2380983)
+        self.assertAlmostEqual(float(params.pop('lon_0')), 9.5799719)
 
     def test_international_date_line(self):
-        self._test((177.6, -175.8, -10, 10),
-                   ['+lat_0=0.0', '+lon_0=-179.1', '+proj=stere', '+units=m'])
+        params = self._get_proj_params((177.6, -175.8, -10, 10))
+        self.assertAlmostEqual(float(params.pop('lat_0')), 0)
+        self.assertAlmostEqual(float(params.pop('lon_0')), -179.1)
+
+
+class GetMiddlePointTestCase(unittest.TestCase):
+    def test_same_points(self):
+        self.assertEqual(
+            geo.Point(*utils.get_middle_point(1.2, -1.4, 1.2, -1.4)),
+            geo.Point(1.2, -1.4)
+        )
+        self.assertEqual(
+            geo.Point(*utils.get_middle_point(-150.33, 22.1, -150.33, 22.1)),
+            geo.Point(-150.33, 22.1)
+        )
+
+    def test_differnet_point(self):
+        self.assertEqual(
+            geo.Point(*utils.get_middle_point(0, 0, 0.2, -0.2)),
+            geo.Point(0.1, -0.1),
+        )
+        self.assertEqual(
+            geo.Point(*utils.get_middle_point(20, 40, 20.02, 40)),
+            geo.Point(20.01, 40)
+        )
+
+    def test_international_date_line(self):
+        self.assertEqual(
+            geo.Point(*utils.get_middle_point(-178, 10, 178, -10)),
+            geo.Point(180, 0)
+        )
+        self.assertEqual(
+            geo.Point(*utils.get_middle_point(-179, 43, 179, 43)),
+            geo.Point(180, 43.004353)
+        )
