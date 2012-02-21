@@ -317,6 +317,7 @@ class InitLogsAmqpSendTestCase(unittest.TestCase):
     def setUp(self):
         super(InitLogsAmqpSendTestCase, self).setUp()
         self.root_handlers_orig = logging.root.handlers[:]
+        logging.root.handlers = []
 
     def tearDown(self):
         super(InitLogsAmqpSendTestCase, self).setUp()
@@ -327,7 +328,6 @@ class InitLogsAmqpSendTestCase(unittest.TestCase):
         init_logs_amqp_send() will add an `AMQPHandler` instance to the
         root logger if none is present.
         """
-        logging.root.handlers = []
         mm = mock.MagicMock(spec=kombu.messaging.Producer)
         with mock.patch_object(logs.AMQPHandler, "_initialize") as minit:
             minit.return_value = mm
