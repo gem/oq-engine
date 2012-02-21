@@ -94,9 +94,9 @@ class LossCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestCase):
         for site, (curve, asset) in values:
             result.append((site,
                            (curve,
-                            {'assetID': asset['assetID']})))
+                            {'asset_ref': asset['asset_ref']})))
 
-        return sorted(result, key=lambda v: v[1][1]['assetID'])
+        return sorted(result, key=lambda v: v[1][1]['asset_ref'])
 
 
 class LossCurveDBWriterTestCase(LossCurveDBBaseTestCase):
@@ -139,7 +139,7 @@ class LossCurveDBWriterTestCase(LossCurveDBBaseTestCase):
 
             data = (Site(loc.x, loc.y),
                     (Curve(zip(lcd.losses, lcd.poes)),
-                    {u'assetID': lcd.asset_ref}))
+                    {u'asset_ref': lcd.asset_ref}))
 
             inserted_data.append(data)
 
@@ -166,11 +166,11 @@ class LossCurveDBReaderTestCase(LossCurveDBBaseTestCase):
 
 
 SITE_A = Site(-117.0, 38.0)
-SITE_A_ASSET_ONE = {'assetID': 'a1711'}
-SITE_A_ASSET_TWO = {'assetID': 'a1712'}
+SITE_A_ASSET_ONE = {'asset_ref': 'a1711'}
+SITE_A_ASSET_TWO = {'asset_ref': 'a1712'}
 
 SITE_B = Site(-118.0, 39.0)
-SITE_B_ASSET_ONE = {'assetID': 'a1713'}
+SITE_B_ASSET_ONE = {'asset_ref': 'a1713'}
 
 LOSS_MAP_METADATA = {
     'nrmlID': 'test_nrml_id',
@@ -275,21 +275,21 @@ class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
                                           key=lambda d: d.id)
 
         self.assertEqual(SITE_A, Site(*data_a.location.coords))
-        self.assertEqual(SITE_A_ASSET_ONE['assetID'], data_a.asset_ref)
+        self.assertEqual(SITE_A_ASSET_ONE['asset_ref'], data_a.asset_ref)
         self.assertEqual(SITE_A_SCENARIO_LOSS_ONE['mean_loss'],
                         data_a.value)
         self.assertEqual(SITE_A_SCENARIO_LOSS_ONE['stddev_loss'],
                          data_a.std_dev)
 
         self.assertEqual(SITE_A, Site(*data_b.location.coords))
-        self.assertEqual(SITE_A_ASSET_TWO['assetID'], data_b.asset_ref)
+        self.assertEqual(SITE_A_ASSET_TWO['asset_ref'], data_b.asset_ref)
         self.assertEqual(SITE_A_SCENARIO_LOSS_TWO['mean_loss'],
                          data_b.value)
         self.assertEqual(SITE_A_SCENARIO_LOSS_TWO['stddev_loss'],
                          data_b.std_dev)
 
         self.assertEqual(SITE_B, Site(*data_c.location.coords))
-        self.assertEqual(SITE_B_ASSET_ONE['assetID'], data_c.asset_ref)
+        self.assertEqual(SITE_B_ASSET_ONE['asset_ref'], data_c.asset_ref)
         self.assertEqual(SITE_B_SCENARIO_LOSS_ONE['mean_loss'],
                          data_c.value)
         self.assertEqual(SITE_B_SCENARIO_LOSS_ONE['stddev_loss'],
@@ -338,17 +338,17 @@ class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
                                           key=lambda d: d.id)
 
         self.assertEqual(SITE_A, Site(*data_a.location.coords))
-        self.assertEqual(SITE_A_ASSET_ONE['assetID'], data_a.asset_ref)
+        self.assertEqual(SITE_A_ASSET_ONE['asset_ref'], data_a.asset_ref)
         self.assertEqual(SITE_A_NONSCENARIO_LOSS_ONE['value'],
                          data_a.value)
 
         self.assertEqual(SITE_A, Site(*data_b.location.coords))
-        self.assertEqual(SITE_A_ASSET_TWO['assetID'], data_b.asset_ref)
+        self.assertEqual(SITE_A_ASSET_TWO['asset_ref'], data_b.asset_ref)
         self.assertEqual(SITE_A_NONSCENARIO_LOSS_TWO['value'],
                          data_b.value)
 
         self.assertEqual(SITE_B, Site(*data_c.location.coords))
-        self.assertEqual(SITE_B_ASSET_ONE['assetID'], data_c.asset_ref)
+        self.assertEqual(SITE_B_ASSET_ONE['asset_ref'], data_c.asset_ref)
         self.assertEqual(SITE_B_NONSCENARIO_LOSS_ONE['value'],
                          data_c.value)
 
@@ -414,6 +414,6 @@ class LossMapDBReaderTestCase(LossMapDBBaseTestCase):
 
         for site, losses in data:
             result.append((site, sorted(losses,
-                                        key=lambda e: e[1]['assetID'])))
+                                        key=lambda e: e[1]['asset_ref'])))
 
         return result

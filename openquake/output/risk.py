@@ -558,20 +558,20 @@ class BaseCurveXMLWriter(nrml.TreeNRMLWriter):
     def write(self, point, values):
         if isinstance(point, shapes.GridPoint):
             point = point.site
-        asset_object = values[1]
+        asset = values[1]
         if self.root_node is None:
             # nrml:nrml, needs gml:id
             self._create_root_element()
 
-            if 'nrml_id' in asset_object:
-                nrml.set_gml_id(self.root_node, str(asset_object['nrml_id']))
+            if 'nrml_id' in asset:
+                nrml.set_gml_id(self.root_node, str(asset['nrml_id']))
             else:
                 nrml.set_gml_id(self.root_node, nrml.NRML_DEFAULT_ID)
 
             # nrml:riskResult, needs gml:id
             result_el = etree.SubElement(self.root_node, xml.RISK_RESULT_TAG)
-            if 'riskres_id' in asset_object:
-                nrml.set_gml_id(result_el, str(asset_object['riskres_id']))
+            if 'riskres_id' in asset:
+                nrml.set_gml_id(result_el, str(asset['riskres_id']))
             else:
                 nrml.set_gml_id(result_el, nrml.RISKRESULT_DEFAULT_ID)
 
@@ -608,11 +608,11 @@ class CurveXMLWriter(BaseCurveXMLWriter):
         :type point: :py:class:`openquake.shapes.Site`,
                      :py:class:`openquake.shapes.GridPoint`
 
-        :param values: is a pair of (loss map values, asset_object)
+        :param values: is a pair of (loss map values, asset)
         :type values: with the following members
             :py:class:`openquake.shapes.Curve`
 
-            :py:class:`dict` (asset_object)
+            :py:class:`dict` (asset)
                 ***assetID*** - the assetID
                 ***endBranchLabel*** - endBranchLabel
                 ***riskres_id*** - for example, 'rr'
@@ -623,20 +623,19 @@ class CurveXMLWriter(BaseCurveXMLWriter):
         if isinstance(point, shapes.GridPoint):
             point = point.site
 
-        (curve_object, asset_object) = values
+        (curve_object, asset) = values
 
         # container element, needs gml:id
         if self.curve_list_el is None:
             self.curve_list_el = etree.SubElement(self.result_el,
-                self.container_tag)
+                                                  self.container_tag)
 
-        if 'list_id' in asset_object:
-            nrml.set_gml_id(self.curve_list_el, str(
-                asset_object['list_id']))
+        if 'list_id' in asset:
+            nrml.set_gml_id(self.curve_list_el, str(asset['list_id']))
         else:
             nrml.set_gml_id(self.curve_list_el, self.CONTAINER_DEFAULT_ID)
 
-        asset_id = str(asset_object['assetID'])
+        asset_id = str(asset['assetID'])
         try:
             asset_el = self.assets_per_id[asset_id]
         except KeyError:
@@ -671,9 +670,9 @@ class CurveXMLWriter(BaseCurveXMLWriter):
         curve_el = etree.SubElement(curves_el, self.curve_tag)
 
         # attribute for endBranchLabel (optional)
-        if 'endBranchLabel' in asset_object:
+        if 'endBranchLabel' in asset:
             curve_el.set(xml.RISK_END_BRANCH_ATTR_NAME,
-                str(asset_object[xml.RISK_END_BRANCH_ATTR_NAME]))
+                str(asset[xml.RISK_END_BRANCH_ATTR_NAME]))
 
         abscissa_el = etree.SubElement(curve_el, self.abscissa_tag)
         abscissa_el.text = _curve_vals_as_gmldoublelist(curve_object)
@@ -726,11 +725,11 @@ class LossCurveDBReader(object):
         for datum in loss_curve_data:
             curve = shapes.Curve(zip(datum.losses, datum.poes))
 
-            asset_object = asset.copy()
-            asset_object['assetID'] = datum.asset_ref
+            asset = asset.copy()
+            asset['assetID'] = datum.asset_ref
 
             loc = datum.location
-            curves.append((shapes.Site(loc.x, loc.y), (curve, asset_object)))
+            curves.append((shapes.Site(loc.x, loc.y), (curve, asset)))
 
         return curves
 
@@ -774,7 +773,7 @@ class LossCurveDBWriter(writer.DBWriter):
                     calculated
         :type key: :py:class:`openquake.shapes.Site`
 
-        :param values: a tuple (curve, asset_object). See
+        :param values: a tuple (curve, asset). See
         :py:meth:`insert_asset_loss_curve` for more details.
         """
         point = key
@@ -782,16 +781,16 @@ class LossCurveDBWriter(writer.DBWriter):
         if isinstance(point, shapes.GridPoint):
             point = point.site
 
-        curve, asset_object = values
+        curve, asset = values
 
-        self.insert_asset_loss_curve(asset_object, point, curve)
+        self.insert_asset_loss_curve(asset, point, curve)
 
-    def insert_asset_loss_curve(self, asset_object, point, curve):
+    def insert_asset_loss_curve(self, asset, point, curve):
         """
         Store into the database the loss curve of a given asset.
 
-        :param asset_object: the asset for which the loss curve is being stored
-        :type asset_object: :py:class:`dict`
+        :param asset: the asset for which the loss curve is being stored
+        :type asset: :py:class:`openquake.db.models.ExposureData`
 
         :param point: the location of the asset
         :type point: :py:class:`openquake.shapes.Site`
@@ -799,26 +798,24 @@ class LossCurveDBWriter(writer.DBWriter):
         :param curve: the loss curve
         :type curve: :py:class:`openquake.shapes.Curve`
 
-        The asset_object contains at least this items:
-            * **assetID** - the assetID
-            * **assetValueUnit** - the unit of the value (e.g. EUR)
+        The asset contains at least this items:
+            * **asset_ref** - the assetID
+            * **exposure_model.stco_unit** - the unit of the value (e.g. EUR)
 
         """
 
         if self.curve is None:
             self.curve = models.LossCurve(output=self.output,
-                unit=asset_object.get('assetValueUnit'),
-                # The following attributes (endBranchLabel, lossCategory) are
-                # currently not passed in by the calculators
-                end_branch_label=asset_object.get('endBranchLabel'),
-                category=asset_object.get('lossCategory'))
+                unit=asset.exposure_model.stco_unit,
+                end_branch_label=None,
+                category=asset.exposure_model.category)
             self.curve.save()
 
-        # Note: asset_object has lon and lat attributes that appear to contain
+        # Note: asset has lon and lat attributes that appear to contain
         # the same coordinates as point
         self.bulk_inserter.add_entry(
             loss_curve_id=self.curve.id,
-            asset_ref=asset_object['assetID'],
+            asset_ref=asset.asset_ref,
             location="POINT(%s %s)" % (point.longitude, point.latitude),
             losses=[float(x) for x in curve.abscissae],
             poes=[float(y) for y in curve.ordinates])
