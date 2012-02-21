@@ -166,3 +166,20 @@ class GetOutputsTestCase(BaseExportTestCase):
 
         self.assertTrue(len(export.get_outputs(self.uhs_calc.id)) == 0)
         self.assertTrue(len(export.get_outputs(self.cpsha_calc_fail.id)) == 0)
+
+
+class ExportFunctionsTestCase(GetOutputsTestCase):
+    """This test case ensures that the correct export function is executed for
+    each type of output.
+    """
+
+    def test_export_unknown_output_type(self):
+        self._create_job_profiles(self.user_name)
+        self._set_up_complete_calcs()
+        self._set_up_outputs()
+
+        self.uhs_output.output_type = 'unknown'
+        self.uhs_output.save()
+
+        self.assertRaises(NotImplementedError, export.export,
+                          self.uhs_output.id, '/some/dir/')
