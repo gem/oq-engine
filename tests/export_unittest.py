@@ -88,7 +88,6 @@ class GetCalculationsTestCase(BaseExportTestCase):
     """Tests for the :function:`openquake.export.get_calculations` API
     function."""
 
-
     def test_get_calculations(self):
         # Test that :function:`openquake.export.get_calculations` retrieves
         # only _completed_ calculations for the given user, in reverse chrono
