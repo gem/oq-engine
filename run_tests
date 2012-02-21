@@ -1,6 +1,6 @@
 #!/bin/bash
 # First, purge all .pyc files to clean the source tree,
-# in case some modules were deleted or removed.
+# in case some modules were deleted or moved.
 find . -name "*.pyc" -delete
 # We look for tests by recursively searching into the tests/ dir,
 # in addition to doctests within the openquake codebase.
