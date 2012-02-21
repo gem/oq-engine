@@ -18,10 +18,10 @@
 import unittest
 import uuid
 
-from openquake import export
 from openquake.db import models
 from openquake.engine import import_job_profile
 from openquake.engine import run_calculation
+from openquake.export import core as export
 
 from tests.utils import helpers
 
