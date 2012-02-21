@@ -106,10 +106,7 @@ class SimpleFaultSurface(BaseSurface):
         surface = surface.reshape(len(top_edge), len(mesh) / len(top_edge))
         surface = numpy.transpose(surface)
 
-        lons = numpy.map(surface, lambda x: x.longitude)
-        
-
-        return surface.tolist()
+        return RectangularMesh.from_points_list(surface.tolist())
 
     def get_dip(self):
         pass
