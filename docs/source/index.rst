@@ -10,9 +10,10 @@ Contents:
 
 .. toctree::
 
-    calculators/hazard.rst
+    calculators/hazard
     engine
     export
+    db/models
     architecture
     flags
     formats

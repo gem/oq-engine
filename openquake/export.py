@@ -30,6 +30,8 @@ def get_calculations(user_name):
         :class:`django.db.models.query.QuerySet` of
         :class:`openquake.db.models.OqCalculation` objects, sorted in
         reverse chronological order.
+    :rtype:
+        :class:`django.db.models.query.QuerySet`
     """
     return models.OqCalculation.objects.filter(
         owner__user_name=user_name).extra(
@@ -38,7 +40,16 @@ def get_calculations(user_name):
 
 
 def get_outputs(calculation_id):
-    """ """
+    """Get all :class:`openquake.db.models.Output`s associated with the
+    specified calculation.
+
+    :param int calculation_id:
+        ID of a :class:`openquake.db.models.OqCalculation`.
+    :returns:
+        :class:`django.db.models.query.QuerySet` of
+        :class:`openquake.db.models.Output` objects.
+    """
+    return models.Output.objects.filter(oq_calculation=calculation_id)
 
 def export(output_id, target_dir):
     """ """
