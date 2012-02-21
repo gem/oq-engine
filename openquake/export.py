@@ -27,10 +27,9 @@ def get_calculations(user_name):
     :param str user_name:
         Owner of the returned results.
     :returns:
-        A list of :class:`openquake.db.models.OqCalculation` objects, sorted in
+        :class:`django.db.models.query.QuerySet` of
+        :class:`openquake.db.models.OqCalculation` objects, sorted in
         reverse chronological order.
-
-        If there are no results, an empty list is returned.
     """
     return models.OqCalculation.objects.filter(
         owner__user_name=user_name).extra(
