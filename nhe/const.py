@@ -45,3 +45,29 @@ class TRT(ConstantContainer):
         False
         """
         return value in cls.ALL
+
+
+# TODO: document those four classes
+
+class IMT(ConstantContainer):
+    PGA = 'Peak ground acceleration'
+    PGV = 'Peak ground velocity'
+    SA = 'Spectral acceleration'
+
+
+class Dist(ConstantContainer):
+    RRUP = 'Minimum distance to a rupture'
+    RJB = 'Distance to surface projection of a rupture'
+    RX = "Perpendicular distance to rupture's top edge projection"
+
+
+class StdDev(ConstantContainer):
+    TOTAL = 'Total standard deviation'
+    INTER_EVENT = 'Inter event standard deviation'
+    INTRA_EVENT = 'Intra event standard deviation'
+    NONE = 'None standard deviation'
+
+
+class VS30T(ConstantContainer):
+    MEASURED = 'Measured'
+    INFERRED = 'Inferred'
