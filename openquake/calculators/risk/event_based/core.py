@@ -95,8 +95,8 @@ def plot_aggregate_curve(calculator, aggregate_curve):
 class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
     """Calculator for Event-Based Risk computations."""
 
-    def __init__(self, job_profile):
-        super(EventBasedRiskCalculator, self).__init__(job_profile)
+    def __init__(self, calc_proxy):
+        super(EventBasedRiskCalculator, self).__init__(calc_proxy)
         self.vuln_curves = None
 
     def execute(self):
