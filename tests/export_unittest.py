@@ -26,8 +26,8 @@ from openquake.engine import run_calculation
 from tests.utils import helpers
 
 
-class ExportAPITestCase(unittest.TestCase):
-    """Tests for the export API defined in :module:`openquake.export`."""
+class BaseExportTestCase(unittest.TestCase):
+    """Functionality common to Export API tests."""
 
     #: UHS job profile
     uhs_jp = None
@@ -83,6 +83,12 @@ class ExportAPITestCase(unittest.TestCase):
             oq_job_profile=cls.cpsha_jp, status='running')
         cls.cpsha_running_calc.save()
 
+
+class GetCalculationsTestCase(BaseExportTestCase):
+    """Tests for the :function:`openquake.export.get_calculations` API
+    function."""
+
+
     def test_get_calculations(self):
         # Test that :function:`openquake.export.get_calculations` retrieves
         # only _completed_ calculations for the given user, in reverse chrono
@@ -112,3 +118,10 @@ class ExportAPITestCase(unittest.TestCase):
         # No calculation records at all for this user.
         user_name = str(uuid.uuid4())
         self.assertTrue(len(export.get_calculations(user_name)) == 0)
+
+
+class GetOutputsTestCase(BaseExportTestCase):
+    """Tests for the :function:`openquake.export.get_outputs` API function."""
+
+    def test_get_outputs(self):
+        pass
