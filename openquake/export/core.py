@@ -15,7 +15,13 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+"""Functions for getting information about completed calculations and
+calculation outputs, as well as exporting outputs from the database to various
+file formats."""
+
+
 from openquake.db import models
+
 
 def _export_fn_map():
     """Creates a mapping from output type to export function.
@@ -25,6 +31,7 @@ def _export_fn_map():
     # TODO: No export functions have yet been written.
     fn_map = {}
     return fn_map
+
 
 def _export_fn_not_implemented(output, _target_dir):
     """This gets called if an export is attempted on an unsupported output
@@ -65,6 +72,7 @@ def get_outputs(calculation_id):
         :class:`openquake.db.models.Output` objects.
     """
     return models.Output.objects.filter(oq_calculation=calculation_id)
+
 
 def export(output_id, target_dir):
     """Export the given calculation output from the database to the specified
