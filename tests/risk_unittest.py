@@ -26,6 +26,9 @@ import os
 import tempfile
 import unittest
 
+from django.contrib.gis.geos.geometry import GEOSGeometry
+
+from openquake.db import models
 from openquake.calculators.risk.classical import core as classical_core
 from openquake.calculators.risk.event_based import core as eb_core
 from openquake.calculators.risk.general import AggregateLossCurve
@@ -111,20 +114,52 @@ class EpsilonProvider(object):
         return self.epsilons.pop(0)
 
 
+TEST_REGION = shapes.Region.from_simple((0.1, 0.1), (100.2, 100.2))
+
+
 class ProbabilisticEventBasedTestCase(unittest.TestCase):
+
+    job = None
+    points = []
+
+    @classmethod
+    def setUpClass(cls):
+        path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, "PEB-exposure.yaml")
+        inputs = [("exposure", path)]
+        cls.job = cls.setup_classic_job(inputs=inputs)
+        qargs = dict(input_type="exposure", path=path)
+        [input] = cls.job.oq_job_profile.input_set.input_set.filter(**qargs)
+        owner = models.OqUser.objects.get(user_name="openquake")
+        model = models.ExposureModel(
+            owner=owner, input=input, description="PEB test exposure model",
+            category="PEB storages sheds", stco_unit="nuts",
+            stco_type="aggregated")
+        model.save()
+        values = [22.61, 124.27, 42.93, 29.37, 40.68, 178.47]
+        for x, value in zip([float(v) for v in range(1, 7)], values):
+            site = shapes.Site(x, x*11)
+            cls.points.append(TEST_REGION.grid.point_at(site))
+            location = GEOSGeometry(site.point.to_wkt())
+            asset = models.ExposureData(exposure_model=model, taxonomy="ID",
+                                        asset_ref="asset_%s" % x, stco=value,
+                                        site=location)
+            asset.save()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.teardown_job(cls.job)
 
     def setUp(self):
         imls_1 = [0.01, 0.04, 0.07, 0.1, 0.12, 0.22, 0.37, 0.52]
         loss_ratios_1 = [0.001, 0.022, 0.051, 0.08, 0.1, 0.2, 0.405, 0.7]
         covs_1 = [0.0] * 8
-        self.vuln_function_1 = shapes.VulnerabilityFunction(imls_1,
-            loss_ratios_1, covs_1)
+        self.vuln_function_1 = shapes.VulnerabilityFunction(
+            imls_1, loss_ratios_1, covs_1)
 
         self.gmfs = GMFs
 
         self.cum_histogram = numpy.array([112, 46, 26, 18, 14,
-                12, 8, 7, 7, 6, 5, 4, 4, 4, 4, 4, 2, 1,
-                1, 1, 1, 1, 1, 1])
+                12, 8, 7, 7, 6, 5, 4, 4, 4, 4, 4, 2, 1, 1, 1, 1, 1, 1, 1])
 
         imls_2 = [0.0, 0.04, 0.08, 0.12, 0.16, 0.2, 0.24, 0.28, 0.32, 0.36,
             0.4, 0.44, 0.48, 0.53, 0.57, 0.61, 0.65, 0.69, 0.73, 0.77, 0.81,
@@ -147,8 +182,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
             0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 0.99, 1.0, 1.0,
             1.0, 1.0, 1.0]
         covs_2 = [0.0] * 100
-        self.vuln_function_2 = shapes.VulnerabilityFunction(imls_2,
-            loss_ratios_2, covs_2)
+        self.vuln_function_2 = shapes.VulnerabilityFunction(
+            imls_2, loss_ratios_2, covs_2)
 
         self.params = {}
         self.params["OUTPUT_DIR"] = helpers.OUTPUT_DIR
@@ -165,48 +200,30 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 0.1705, 0.8453, 0.6355, 0.0721, 0.2475, 0.1601, 0.3544,
                 0.1756), "TSES": 200, "TimeSpan": 50}
 
-        self.asset_1 = {"taxonomy": "ID",
-                "assetValue": 22.61}
-
         self.gmfs_2 = {"IMLs": (0.1507, 0.2656, 0.5422, 0.3685, 0.3172,
                 0.6604, 0.1182, 0.1545, 0.7613, 0.5246, 0.2428, 0.2882,
                 0.2179, 1.2939, 0.6042, 0.1418, 0.3637, 0.222, 0.3613,
                 0.113), "TSES": 200, "TimeSpan": 50}
-
-        self.asset_2 = {"taxonomy": "ID",
-                "assetValue": 124.27}
 
         self.gmfs_3 = {"IMLs": (0.156, 0.3158, 0.3968, 0.2827, 0.1915, 0.5862,
                 0.1438, 0.2114, 0.5101, 1.0097, 0.226, 0.3443, 0.1693,
                 1.0754, 0.3533, 0.1461, 0.347, 0.2665, 0.2977, 0.2925),
                 "TSES": 200, "TimeSpan": 50}
 
-        self.asset_3 = {"taxonomy": "ID",
-                "assetValue": 42.93}
-
         self.gmfs_4 = {"IMLs": (0.1311, 0.3566, 0.4895, 0.3647, 0.2313,
                 0.9297, 0.2337, 0.2862, 0.5278, 0.6603, 0.3537, 0.2997,
                 0.1097, 1.1875, 0.4752, 0.1575, 0.4009, 0.2519, 0.2653,
                 0.1394), "TSES": 200, "TimeSpan": 50}
-
-        self.asset_4 = {"taxonomy": "ID",
-                "assetValue": 29.37}
 
         self.gmfs_5 = {"IMLs": (0.0879, 0.2895, 0.465, 0.2463, 0.1862, 0.763,
                 0.2189, 0.3324, 0.3215, 0.6406, 0.5014, 0.3877, 0.1318, 1.0545,
                 0.3035, 0.1118, 0.2981, 0.3492, 0.2406, 0.1043),
                 "TSES": 200, "TimeSpan": 50}
 
-        self.asset_5 = {"taxonomy": "ID",
-                "assetValue": 40.68}
-
         self.gmfs_6 = {"IMLs": (0.0872, 0.2288, 0.5655, 0.2118, 0.2, 0.6633,
                 0.2095, 0.6537, 0.3838, 0.781, 0.3054, 0.5375, 0.1361, 0.8838,
                 0.3726, 0.0845, 0.1942, 0.4629, 0.1354, 0.1109),
                 "TSES": 200, "TimeSpan": 50}
-
-        self.asset_6 = {"taxonomy": "ID",
-                "assetValue": 178.47}
 
         # deleting keys in kvs
         kvs.get_client().flushall()
@@ -219,20 +236,10 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
                 {"ID": self.vuln_function_2.to_json()})
 
         # store the gmfs
-        self._store_gmfs(self.gmfs_1, 1, 1)
-        self._store_gmfs(self.gmfs_2, 1, 2)
-        self._store_gmfs(self.gmfs_3, 1, 3)
-        self._store_gmfs(self.gmfs_4, 1, 4)
-        self._store_gmfs(self.gmfs_5, 1, 5)
-        self._store_gmfs(self.gmfs_6, 1, 6)
-
-        # store the assets
-        self._store_asset(self.asset_1, 1, 1)
-        self._store_asset(self.asset_2, 1, 2)
-        self._store_asset(self.asset_3, 1, 3)
-        self._store_asset(self.asset_4, 1, 4)
-        self._store_asset(self.asset_5, 1, 5)
-        self._store_asset(self.asset_6, 1, 6)
+        for idx, gmf in enumerate([self.gmfs_1, self.gmfs_2, self.gmfs_3,
+                                   self.gmfs_4, self.gmfs_5, self.gmfs_6]):
+            self._store_gmfs(gmf, self.points[idx].row,
+                             self.points[idx].column)
 
         # deleting old file
         self._delete_test_file()
@@ -256,19 +263,19 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         kvs.set_value_json_encoded(key, gmfs)
 
     def test_an_empty_function_produces_an_empty_set(self):
-        self.assertEqual(0, compute_loss_ratios(shapes.EMPTY_CURVE, self.gmfs,
-                                                None, None).size)
+        data = compute_loss_ratios(shapes.EMPTY_CURVE, self.gmfs, None, None)
+        self.assertEqual(0, data.size)
 
     def test_an_empty_gmfs_produces_an_empty_set(self):
-        self.assertEqual(0, compute_loss_ratios(self.vuln_function_1,
-                                                {"IMLs": ()}, None, None).size)
+        data = compute_loss_ratios(self.vuln_function_1, {"IMLs": ()}, None,
+                                   None)
+        self.assertEqual(0, data.size)
 
     def test_with_valid_covs_we_sample_the_loss_ratios(self):
         """With valid covs we need to sample loss ratios.
 
-        If the vulnerability function has some covs greater than 0.0 we need
-        to use a different algorithm (sampled based)
-        to compute the loss ratios.
+        If the vulnerability function has some covs greater than 0.0 we need to
+        use a different algorithm (sampled based) to compute the loss ratios.
         """
 
         imls = [0.10, 0.30, 0.50, 1.00]
@@ -276,16 +283,18 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase):
         covs = [0.30, 0.30, 0.20, 0.20]
         vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
 
-        epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077, \
-                -0.4336, 0.3426, 3.5784, 2.7694]
+        epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
+                    -0.4336, 0.3426, 3.5784, 2.7694]
 
         expected_asset = object()
 
         gmfs = {"IMLs": (0.1576, 0.9706, 0.9572, 0.4854, 0.8003,
                 0.1419, 0.4218, 0.9157, 0.7922, 0.9595)}
 
-        self.assertTrue(numpy.allclose(numpy.array([0.0722, 0.4106, 0.1800,
-                0.1710, 0.2508, 0.0395, 0.1145, 0.2883, 0.4734, 0.4885]),
+        self.assertTrue(
+            numpy.allclose(
+                numpy.array([0.0722, 0.4106, 0.1800, 0.1710, 0.2508, 0.0395,
+                             0.1145, 0.2883, 0.4734, 0.4885]),
                 compute_loss_ratios(vuln_function, gmfs,
                                     EpsilonProvider(expected_asset, epsilons),
                                     expected_asset), atol=0.0001))

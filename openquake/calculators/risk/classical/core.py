@@ -274,24 +274,21 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
         for point in block.grid(self.calc_proxy.region):
             hazard_curve = self._get_db_curve(point.site)
 
-            asset_key = kvs.tokens.asset_key(self.calc_proxy.job_id,
-                            point.row, point.column)
-            for asset in kvs.get_list_json_decoded(asset_key):
-                LOGGER.debug("processing asset %s" % (asset))
+            assets = self.assets_for_site(self.calc_proxy.job_id, point.site)
+            for asset in assets:
+                LOGGER.debug("processing asset %s" % asset)
 
                 loss_ratio_curve = self.compute_loss_ratio_curve(
                     point, asset, hazard_curve, vuln_curves)
 
                 if loss_ratio_curve:
-                    loss_curve = self.compute_loss_curve(point,
-                            loss_ratio_curve, asset)
+                    loss_curve = self.compute_loss_curve(
+                        point, loss_ratio_curve, asset)
 
-                    for loss_poe in conditional_loss_poes(
-                        self.calc_proxy.params):
-
+                    for poe in conditional_loss_poes(self.calc_proxy.params):
                         compute_conditional_loss(
-                                self.calc_proxy.job_id, point.column,
-                                point.row, loss_curve, asset, loss_poe)
+                            self.calc_proxy.job_id, point.column,
+                            point.row, loss_curve, asset, poe)
 
         return True
 
