@@ -1032,7 +1032,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertTrue(calculator.compute_risk(self.block_id))
 
         for point in block.grid(calc_proxy.region):
-            assets = BaseRiskCalculator.assets_for_site(
+            assets = BaseRiskCalculator.assets_for_cell(
                 self.job_id, point.site)
             for asset in assets:
                 loss_ratio_key = kvs.tokens.loss_ratio_key(
