@@ -257,14 +257,11 @@ class BaseRiskCalculator(Calculator):
 
         :returns: tuples (point, asset) where:
             * point is a :py:class:`openquake.shapes.GridPoint` on the grid
-
-            * asset is a :py:class:`dict` representing an asset
+            * asset is an :py:class:`openquake.db.models.ExposureData` instance
         """
-
         for point in grid:
-            asset_key = kvs.tokens.asset_key(
-                self.calc_proxy.job_id, point.row, point.column)
-            for asset in kvs.get_list_json_decoded(asset_key):
+            assets = self.assets_for_site(self.calc_proxy.job_id, point.site)
+            for asset in assets:
                 yield point, asset
 
     def _write_output_for_block(self, job_id, block_id):
