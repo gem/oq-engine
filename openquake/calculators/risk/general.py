@@ -123,8 +123,8 @@ class BaseRiskCalculator(Calculator):
     # Exposure model inputs (cached result)
     _em_inputs = None
 
-    def __init__(self, job_profile):
-        self.job_profile = job_profile
+    def __init__(self, calc_proxy):
+        self.calc_proxy = calc_proxy
 
     def execute(self):
         """Calculation logic goes here; subclasses must implement this."""
@@ -199,7 +199,8 @@ class BaseRiskCalculator(Calculator):
         path = os.path.join(self.calc_proxy.base_path,
                             self.calc_proxy.params[job_config.EXPOSURE])
         exposure_parser = exposure.ExposurePortfolioFile(path)
-        writer = ExposureDBWriter(self.job_profile.input_set, path)
+        writer = ExposureDBWriter(self.calc_proxy.oq_job_profile.input_set,
+                                  path)
         writer.serialize(exposure_parser)
 
     def store_vulnerability_model(self):
