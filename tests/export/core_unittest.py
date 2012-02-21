@@ -20,7 +20,6 @@ import uuid
 
 from openquake.db import models
 from openquake.engine import import_job_profile
-from openquake.engine import run_calculation
 from openquake.export import core as export
 
 from tests.utils import helpers
@@ -103,7 +102,6 @@ class GetCalculationsTestCase(BaseExportTestCase):
 
         self.assertTrue(len(export.get_calculations(self.user_name)) == 0)
 
-
     def test_get_calculations_no_results_for_user(self):
         # No calculation records at all for this user.
         self.assertTrue(len(export.get_calculations(self.user_name)) == 0)
@@ -129,7 +127,7 @@ class GetOutputsTestCase(BaseExportTestCase):
         self.uhs_output.save()
 
         self.cpsha_hc_output = models.Output(
-            owner=self.cpsha_calc_fail.owner, 
+            owner=self.cpsha_calc_fail.owner,
             oq_calculation=self.cpsha_calc_fail, db_backed=True,
             output_type='hazard_curve')
         self.cpsha_hc_output.save()
