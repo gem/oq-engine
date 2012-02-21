@@ -123,9 +123,6 @@ class GetOutputsTestCase(BaseExportTestCase):
 
     def _set_up_outputs(self):
         # Set up test Output records
-        self._create_job_profiles(self.user_name)
-        self._set_up_complete_calcs()
-
         self.uhs_output = models.Output(
             owner=self.uhs_calc.owner, oq_calculation=self.uhs_calc,
             db_backed=True, output_type='uh_spectra')
@@ -150,6 +147,8 @@ class GetOutputsTestCase(BaseExportTestCase):
         self.cpsha_lc_output.save()
 
     def test_get_outputs_cpsha(self):
+        self._create_job_profiles(self.user_name)
+        self._set_up_complete_calcs()
         self._set_up_outputs()
 
         expected_cpsha = [self.cpsha_hc_output, self.cpsha_mean_hc_output,
@@ -160,3 +159,10 @@ class GetOutputsTestCase(BaseExportTestCase):
         expected_uhs = [self.uhs_output]
         actual_uhs = list(export.get_outputs(self.uhs_calc.id))
         self.assertEqual(expected_uhs, actual_uhs)
+
+    def test_get_outputs_no_outputs(self):
+        self._create_job_profiles(self.user_name)
+        self._set_up_complete_calcs()
+
+        self.assertTrue(len(export.get_outputs(self.uhs_calc.id)) == 0)
+        self.assertTrue(len(export.get_outputs(self.cpsha_calc_fail.id)) == 0)
