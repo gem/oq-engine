@@ -53,6 +53,23 @@ class Line(object):
     def __len__(self):
         return len(self.points)
 
+    def on_surface(self):
+        """
+        Check if this line is defined on the surface (i.e. all points
+        are on the surfance, depth=0.0).
+
+        :returns:
+            True if this line is on the surface, false otherwise.
+        :rtype:
+            boolean
+        """
+
+        for point in self.points:
+            if not point.on_surface():
+                return False
+
+        return True
+
     def resample(self, section_length):
         """
         Resample this line into sections.

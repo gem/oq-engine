@@ -183,6 +183,18 @@ class Point(object):
     def __ne__(self, other):
         return not self.__eq__(other)
 
+    def on_surface(self):
+        """
+        Check if this point is defined on the surface (depth is 0.0).
+
+        :returns:
+            True if this point is on the surface, false otherwise.
+        :rtype:
+            boolean
+        """
+
+        return self.depth == 0.0
+
     def equally_spaced_points(self, point, distance):
         """
         Compute the set of points equally spaced between this point

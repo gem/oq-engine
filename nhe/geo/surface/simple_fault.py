@@ -6,8 +6,8 @@ Module :mod:`nhe.surface.simple_fault` contains :class:`SimpleFaultSurface`.
 import math
 import numpy
 
-from nhe.surface.base import BaseSurface
-from nhe.common import geo
+from nhe.geo.surface.base import BaseSurface
+from nhe.geo.line import Line
 
 
 def _ensure(expr, msg):
@@ -17,7 +17,7 @@ def _ensure(expr, msg):
     """
 
     if not expr:
-        raise RuntimeError(msg)
+        raise ValueError(msg)
 
 
 class SimpleFaultSurface(BaseSurface):
@@ -28,7 +28,7 @@ class SimpleFaultSurface(BaseSurface):
         Geographical line representing the intersection between
         the fault surface and the earth surface.
     :type fault_trace:
-        instance of :class:`nhe.geo.Line`
+        instance of :class:`nhe.Line`
     :param upper_seismo_depth:
         Minimum depth ruptures can reach, in km (i.e. depth
         to fault's top edge).
@@ -47,7 +47,7 @@ class SimpleFaultSurface(BaseSurface):
     """
 
     def __init__(self, fault_trace, upper_seismo_depth,
-            lower_seismo_depth, dip):
+            lower_seismo_depth, dip, mesh_spacing):
 
         _ensure(len(fault_trace) >= 2,
                 "The fault trace must have at least two points!")
@@ -63,17 +63,18 @@ class SimpleFaultSurface(BaseSurface):
         _ensure(upper_seismo_depth >= 0.0,
                 "Upper seismo depth must be >= 0.0!")
 
+        _ensure(mesh_spacing > 0.0, "Mesh spacing must be > 0.0!")
+
         self.dip = dip
         self.fault_trace = fault_trace
+        self.mesh_spacing = mesh_spacing
         self.upper_seismo_depth = upper_seismo_depth
         self.lower_seismo_depth = lower_seismo_depth
 
-    def get_mesh(self, mesh_spacing):
+    def _create_mesh(self):
         """
         See :meth:`nhe.surface.base.BaseSurface.get_mesh`.
         """
-
-        _ensure(mesh_spacing > 0.0, "Mesh spacing must be > 0.0!")
 
         # Loops over points in the top edge, for each point
         # on the top edge compute corresponding point on the bottom edge, then
@@ -88,6 +89,7 @@ class SimpleFaultSurface(BaseSurface):
         azimuth = strike + 90.0
 
         mesh = []
+
         top_edge = self._fault_top_edge(mesh_spacing)
 
         for point in top_edge:
@@ -104,7 +106,16 @@ class SimpleFaultSurface(BaseSurface):
         surface = surface.reshape(len(top_edge), len(mesh) / len(top_edge))
         surface = numpy.transpose(surface)
 
+        lons = numpy.map(surface, lambda x: x.longitude)
+        
+
         return surface.tolist()
+
+    def get_dip(self):
+        pass
+
+    def get_strike(self):
+        pass
 
     def _fault_top_edge(self, mesh_spacing):
         """
@@ -124,7 +135,7 @@ class SimpleFaultSurface(BaseSurface):
         :returns:
             The fault top edge.
         :rtype:
-            instance of :class:`nhe.geo.Line`
+            instance of :class:`nhe.Line`
         """
 
         top_edge = []
@@ -142,6 +153,6 @@ class SimpleFaultSurface(BaseSurface):
             top_edge.append(point.point_at(
                     horizontal_distance, vertical_distance, azimuth))
 
-            top_edge = geo.Line(top_edge).resample(mesh_spacing).points
+            top_edge = Line(top_edge).resample(mesh_spacing).points
 
         return top_edge
