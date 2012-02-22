@@ -137,6 +137,7 @@ def do_export(output_id, target_dir):
     """Simple UI wrapper around
     :function:`openquake.export.core.export`. It prints the results in a nice
     way."""
+    from django.core.exceptions import ObjectDoesNotExist
     try:
         files = export.export(output_id, target_dir)
         if len(files) > 0:
@@ -146,6 +147,8 @@ def do_export(output_id, target_dir):
     except NotImplementedError, err:
         print err.message
         print 'This feature is probably not implemented yet'
+    except ObjectDoesNotExist:
+        print 'No output found for OUTPUT_ID %s' % output_id
 
 
 if __name__ == '__main__':
