@@ -31,11 +31,15 @@ class Point(object):
     EQUALITY_DISTANCE = 1e-3
 
     def __init__(self, longitude, latitude, depth=0.0):
-        if longitude < -180.0 or longitude > 180.0:
-            raise ValueError("Longitude %.6f outside range!" % longitude)
+        
+        ensure(depth < EARTH_RADIUS,
+                "The depth must be < than the earth radius (6371.0 km)!")
+        
+        ensure(-180.0 <= longitude <= 180.0,
+                "Longitude %.6f outside range!" % longitude)
 
-        if latitude < -90.0 or latitude > 90.0:
-            raise ValueError("Latitude %.6f outside range!" % latitude)
+        ensure(-90.0 <= latitude <= 90.0,
+                "Latitude %.6f outside range!" % latitude)
 
         self.depth = depth
         self.latitude = latitude
@@ -193,9 +197,6 @@ class Point(object):
         :rtype:
             ``numpy.array`` containing the cartesian coordinates (x, y, z)
         """
-
-        ensure(self.depth < EARTH_RADIUS,
-                "The depth must be < than the earth radius (6371.0 km)")
 
         theta = math.radians(self.longitude)
         phi = math.radians(90.0 - self.latitude)
