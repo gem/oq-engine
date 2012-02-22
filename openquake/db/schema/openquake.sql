@@ -1461,7 +1461,7 @@ CREATE TABLE oqmif.exposure_data (
     -- insurance coverage limit
     ins_limit float,
     -- insurance deductible
-    ins_deductible float,
+    deductible float,
 
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL,
