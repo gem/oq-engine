@@ -41,7 +41,6 @@ try:
 except ImportError:
     setproctitle = lambda title: None  # pylint: disable=C0103
 
-from openquake import flags
 from openquake.db.models import OqCalculation, ErrorMsg, CalcStats
 from openquake import supervising
 from openquake import kvs
