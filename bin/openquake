@@ -50,18 +50,13 @@ Available Risk Analysis
 
 """
 
+import argparse
 import getpass
 import sys
 
-from gflags import DEFINE_boolean
-from gflags import DEFINE_enum
-from gflags import DEFINE_string
-
 from openquake.utils import config
 
-
 config.abort_if_no_config_available()
-
 
 try:
     import celeryconfig
@@ -71,55 +66,114 @@ except ImportError:
 import oqpath
 oqpath.set_oq_path()
 
-from openquake import flags
 from openquake import __version__
-
+from openquake.export import core as export
 from openquake.utils import version as utils_version
 
-FLAGS = flags.FLAGS
 
-DEFINE_string('config_file', 'openquake-config.gem',
-                    'OpenQuake configuration file')
-DEFINE_enum('output_type', 'db', ['db', 'xml'],
-                  'Computation result output type')
+def set_up_arg_parser():
+    """Set up and return an :class:`argparse.ArgumentParser` with all of the
+    OpenQuake command line options."""
+    parser = argparse.ArgumentParser(
+        description='Openquake - Seismic Hazard and Risk Analysis Engine')
 
-DEFINE_boolean('help', False, 'Show this help')
-DEFINE_boolean('version', False, 'Show version information')
+    general_grp = parser.add_argument_group('General')
+    general_grp.add_argument(
+        '--version', action='store_true', help='display version information')
+
+    calc_grp = parser.add_argument_group('Run calculations')
+    calc_grp.add_argument(
+        '--config-file', '--config_file',
+        help='run a calculation with the specifed config file',
+        metavar='CONFIG_FILE')
+    calc_grp.add_argument(
+        '--output-type', '--output_type',
+        help='defaults to "db"', required=False, choices=['db', 'xml'],
+        default='db')
+    calc_grp.add_argument(
+        '--log-level', '-l',
+        help='defaults to "warn"', required=False,
+        choices=['debug', 'info', 'warn', 'error', 'critical'], default='warn')
+
+    export_grp = parser.add_argument_group('List and export')
+    export_grp.add_argument(
+        '--list-calculations',
+        help='list completed calculations', action='store_true')
+    export_grp.add_argument(
+        '--list-outputs',
+        help='list outputs for a completed calculation', type=int,
+        metavar='CALCULATION_ID')
+    export_grp.add_argument(
+        '--export',
+        help='export the desired output to the specified directory',
+        nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'))
+
+    return parser
+
+
+def list_calculations():
+    """Simple UI wrapper around
+    :function:`openquake.export.core.get_calculations`. It prints the reults in
+    a nice way."""
+    calcs = export.get_calculations(getpass.getuser())
+    if len(calcs) > 0:
+        print 'ID\tStatus\tDescription'
+        for c in calcs:
+            print '%s\t%s\t%s' % (c.id, c.status, c.description)
+
+
+def list_outputs(calculation_id):
+    """Simple UI wrapper arround
+    :function:`openquake.export.core.get_outputs`. It prints the results in a
+    nice way."""
+    outputs = export.get_outputs(calculation_id)
+    if len(outputs) > 0:
+        print 'ID\tOuput Type'
+        for o in outputs:
+            print '%s\t%s' % (o.id, o.output_type)
+
+
+def do_export(output_id, target_dir):
+    """Simple UI wrapper around
+    :function:`openquake.export.core.export`. It prints the results in a nice
+    way."""
+    try:
+        files = export.export(output_id, target_dir)
+        if len(files) > 0:
+            print 'Files Exported:'
+            for f in files:
+                print f
+    except NotImplementedError, err:
+        print err.message
+        print 'This feature is probably not implemented yet'
 
 
 if __name__ == '__main__':
-    if len(sys.argv) == 1:
-        sys.argv.append('--help')
+    arg_parser = set_up_arg_parser()
 
-    args = FLAGS(sys.argv)
+    args = arg_parser.parse_args()
 
-    if FLAGS.version:
+    if args.version:
         print utils_version.info(__version__)
-        sys.exit(0)
-    elif FLAGS.help:
-        print __doc__
+    elif args.config_file is not None:
+        from openquake import job
+        from openquake import engine
+        try:
+            job_profile, params, sections = engine.import_job_profile(
+                args.config_file, user_name=getpass.getuser())
+            engine.run_calculation(job_profile, params, sections,
+                                   output_type=args.output_type,
+                                   log_level=args.log_level)
+        except job.config.ValidationException as e:
+            print str(e)
+    elif args.list_calculations:
+        list_calculations()
+    elif args.list_outputs is not None:
+        list_outputs(args.list_outputs)
+    elif args.export is not None:
+        output_id, target_dir = args.export
+        output_id = int(output_id)
 
-        print "Flags:"
-        print flags.get_flags_help()
-        sys.exit(1)
-
-    # Collect inputs
-    # Determine Processing type
-    # Validate input data
-
-    # Prepare final configuration, save it
-    # Hash final config, store that
-
-    # Kick off processing tasks, and wait...
-    # Collate results
-    # Generate output
-
-    from openquake import job
-    from openquake import engine
-    try:
-        job_profile, params, sections = engine.import_job_profile(
-            FLAGS.config_file, user_name=getpass.getuser())
-        engine.run_calculation(job_profile, params, sections,
-                               output_type=FLAGS.output_type)
-    except job.config.ValidationException as e:
-        print str(e)
+        do_export(output_id, target_dir)
+    else:
+        arg_parser.print_usage()
