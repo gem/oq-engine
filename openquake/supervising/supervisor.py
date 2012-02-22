@@ -232,7 +232,7 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
             raise StopIteration()
 
 
-def supervise(pid, job_id, timeout=1):
+def supervise(pid, job_id, log_level, timeout=1):
     """
     Supervise a job process, entering a loop that ends only when the job
     terminates.
@@ -243,6 +243,8 @@ def supervise(pid, job_id, timeout=1):
     :type job_id: int
     :param timeout: timeout value in seconds
     :type timeout: float
+    :param str log_level:
+        One of 'debug', 'info', 'warn', 'error', or 'critical'.
     """
     # Set the name of this process (as reported by /bin/ps)
     setproctitle('openquake supervisor for job_id=%s job_pid=%s'
@@ -250,7 +252,7 @@ def supervise(pid, job_id, timeout=1):
     ignore_sigint()
 
     logging.root.addHandler(SupervisorLogHandler(job_id))
-    logs.set_logger_level(logging.root, flags.FLAGS.debug)
+    logs.set_logger_level(logging.root, log_level)
 
     supervisor = SupervisorLogMessageConsumer(job_id, pid, timeout)
     supervisor.run()
