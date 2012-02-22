@@ -13,10 +13,8 @@ def check_attrel(attrel_cls, filename, max_discrep_percentage,
     attrel = attrel_cls()
 
     linenum = 1
-    total_checks = 0
-    sum_discrep = 0
-    max_discrep = 0
     errors = 0
+    discrepancies = []
     for values in reader:
         linenum += 1
         expected_results = {}
@@ -65,10 +63,7 @@ def check_attrel(attrel_cls, filename, max_discrep_percentage,
             discrep_percentage = abs(
                 result / float(expected_result) * 100 - 100
             )
-            if discrep_percentage > max_discrep:
-                max_discrep = discrep_percentage
-            sum_discrep += discrep_percentage
-            total_checks += 1
+            discrepancies.append(discrep_percentage)
             if discrep_percentage > max_discrep_percentage:
                 # check failed
                 errors += 1
@@ -85,16 +80,22 @@ def check_attrel(attrel_cls, filename, max_discrep_percentage,
         if max_errors is not None and errors > max_errors:
             break
 
-    stats = '''\
-total of %d checks done.
-%d of them were successful and %d failed,
-success rate is %.1f%%.
-average discrepancy is %.4f%%
-and maximum discrepancy is %.4f%%.'''
+    max_discrep = max(discrepancies)
+    total_checks = len(discrepancies)
     successes = total_checks - errors
-    stats %= (total_checks, successes, errors,
-              successes / float(total_checks) * 100,
-              sum_discrep / float(total_checks), max_discrep)
+    avg_discrep = sum(discrepancies) / float(total_checks)
+    success_rate = successes / float(total_checks) * 100
+    stddev = math.sqrt(1.0 / total_checks * sum((avg_discrep - discrep) ** 2
+                                                for discrep in discrepancies))
+    stats = '''\
+total of %d checks done, %d of them were successful and %d failed.
+success rate = %.1f%%
+average discrepancy = %.4f%%
+maximum discrepancy = %.4f%%
+standard deviation = %.4f%%'''
+    successes = total_checks - errors
+    stats %= (total_checks, successes, errors, success_rate,
+              avg_discrep, max_discrep, stddev)
     return errors, stats
 
 
