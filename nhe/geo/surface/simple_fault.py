@@ -9,17 +9,7 @@ import numpy
 from nhe.geo.surface.base import BaseSurface
 from nhe.geo.line import Line
 from nhe.geo.mesh import RectangularMesh
-from nhe.geo._utils import plane_dip
-
-
-def _ensure(expr, msg):
-    """
-    Utility method that raises an error if the
-    given condition is not true.
-    """
-
-    if not expr:
-        raise ValueError(msg)
+from nhe.geo._utils import plane_dip, ensure
 
 
 class SimpleFaultSurface(BaseSurface):
@@ -53,21 +43,21 @@ class SimpleFaultSurface(BaseSurface):
 
         super(SimpleFaultSurface, self).__init__()
 
-        _ensure(len(fault_trace) >= 2,
+        ensure(len(fault_trace) >= 2,
                 "The fault trace must have at least two points!")
 
-        _ensure(fault_trace.on_surface(),
+        ensure(fault_trace.on_surface(),
                 "The fault trace must be defined on the surface!")
 
-        _ensure(0.0 < dip <= 90.0, "Dip must be between 0.0 and 90.0!")
+        ensure(0.0 < dip <= 90.0, "Dip must be between 0.0 and 90.0!")
 
-        _ensure(lower_seismo_depth > upper_seismo_depth,
+        ensure(lower_seismo_depth > upper_seismo_depth,
                 "Lower seismo depth must be > than upper seismo dept!")
 
-        _ensure(upper_seismo_depth >= 0.0,
+        ensure(upper_seismo_depth >= 0.0,
                 "Upper seismo depth must be >= 0.0!")
 
-        _ensure(mesh_spacing > 0.0, "Mesh spacing must be > 0.0!")
+        ensure(mesh_spacing > 0.0, "Mesh spacing must be > 0.0!")
 
         self.dip = dip
         self.fault_trace = fault_trace

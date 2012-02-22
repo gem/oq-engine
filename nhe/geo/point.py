@@ -4,7 +4,7 @@ Module :mod:`nhe.geo.point` defines :class:`Point`.
 import math
 import numpy
 
-from nhe.geo._utils import GEOD, EARTH_RADIUS
+from nhe.geo._utils import GEOD, EARTH_RADIUS, ensure
 
 
 class Point(object):
@@ -193,6 +193,9 @@ class Point(object):
         :rtype:
             ``numpy.array`` containing the cartesian coordinates (x, y, z)
         """
+
+        ensure(self.depth < EARTH_RADIUS,
+                "The depth must be < than the earth radius (6371.0 km)")
 
         theta = math.radians(self.longitude)
         phi = math.radians(90.0 - self.latitude)

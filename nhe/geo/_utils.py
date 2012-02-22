@@ -208,3 +208,13 @@ def plane_dip(p1, p2, p3):
     dip = math.degrees(math.acos(numpy.dot(normal_p1, normal)))
 
     return dip
+
+
+def ensure(expr, msg):
+    """
+    Utility method that raises an error if the
+    given condition is not true.
+    """
+
+    if not expr:
+        raise ValueError(msg)
