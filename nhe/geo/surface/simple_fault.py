@@ -9,6 +9,7 @@ import numpy
 from nhe.geo.surface.base import BaseSurface
 from nhe.geo.line import Line
 from nhe.geo.mesh import RectangularMesh
+from nhe.geo._utils import plane_dip
 
 
 def _ensure(expr, msg):
@@ -112,17 +113,36 @@ class SimpleFaultSurface(BaseSurface):
         return RectangularMesh.from_points_list(surface.tolist())
 
     def get_dip(self):
-        pass
+        surface = self.get_mesh()
+
+        if surface.shape[0] > 1 and surface.shape[1] > 1:
+            average_dip = 0.0
+
+            row_1 = list(surface[0:1])
+            row_2 = list(surface[1:2])
+
+            for i in xrange(len(row_1) - 1):
+                p1 = row_1[i]
+                p2 = row_1[i + 1]
+                p3 = row_2[i]
+
+                dip = plane_dip(p1, p2, p3)
+                average_dip = average_dip + dip
+
+            return average_dip / (surface.shape[1] - 1)
+
+        return self.dip
 
     def get_strike(self):
         average_strike = 0.0
         fault_trace_length = 0.0
 
-        for i in range(len(self.fault_trace) - 1):
+        for i in xrange(len(self.fault_trace) - 1):
+            current = self.fault_trace[i]
+            next = self.fault_trace[i + 1]
 
-            strike = self.fault_trace[i].azimuth(self.fault_trace[i + 1])
-            section_length = self.fault_trace[i].horizontal_distance(
-                self.fault_trace[i + 1])
+            strike = current.azimuth(next)
+            section_length = current.horizontal_distance(next)
 
             average_strike = average_strike + section_length * strike
             fault_trace_length = fault_trace_length + section_length

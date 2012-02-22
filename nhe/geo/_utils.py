@@ -5,10 +5,13 @@ common to several geographical primitives.
 import numpy
 import pyproj
 import shapely.geometry
+import math
 
 #: Geod object to be used whenever we need to deal with
 #: spherical coordinates.
 GEOD = pyproj.Geod(ellps='sphere')
+
+EARTH_RADIUS = 6371.0 # in km
 
 
 def clean_points(points):
@@ -165,3 +168,43 @@ def get_middle_point(lon1, lat1, lon2, lat2):
     if lon <= -180:
         lon += 360
     return lon, lat
+
+
+def plane_dip(p1, p2, p3):
+    """
+    Compute dip (that is inclination) of a plane with respect to earth surface.
+
+    The plane is defined by three corners: p1, p2, p3.
+    p1 and p2 are supposed to be the upper left and right corners,
+    and p3 the lower left corner.
+
+    The dip of the plane is obtained by calculating the vector
+    normal to the plane, and the vector normal to the earth surface
+    at the upper left corner location.
+
+    The angle between these two vectors is the dip angle.
+    """
+
+    # for each point get corresponding cartesian coordinates.
+    P1 = p1.position_vector()
+    P2 = p2.position_vector()
+    P3 = p3.position_vector()
+
+    # define vectors p1p2 and p1p3, that are vectors connecting upper
+    # left and upper right corners and upper left and lower left corners.
+    p1p2 = [P2[0] - P1[0], P2[1] - P1[1], P2[2] - P1[2]]
+    p1p3 = [P3[0] - P1[0], P3[1] - P1[1], P3[2] - P1[2]]
+
+    # compute normal vector as cross product of p1p2
+    # and p1p3 and normalize it.
+    normal = numpy.cross(p1p3, p1p2)
+    normal = normal / math.sqrt(
+            normal[0] ** 2 + normal[1] ** 2 + normal[2] ** 2)
+
+    # compute unit vector normal to earth surface at p1.
+    normal_p1 = P1 / math.sqrt(P1[0] ** 2 + P1[1] ** 2 + P1[2] ** 2)
+
+    # compute angle in between, this is the dip.
+    dip = math.degrees(math.acos(numpy.dot(normal_p1, normal)))
+
+    return dip

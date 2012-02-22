@@ -62,6 +62,10 @@ class Mesh(object):
             depths = None
         return cls(lons, lats, depths)
 
+    @property
+    def shape(self):
+        return self.lons.shape
+
     def __iter__(self):
         """
         Generate :class:`~nhe.geo.point.Point` objects the mesh is composed of.

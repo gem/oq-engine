@@ -129,3 +129,53 @@ class SimpleFaultSurfaceTestCase(utils.SurfaceTestCase):
                 1.0, 6.0, 90.0, 1.0)
 
         self.assertAlmostEquals(40.0, surface.get_strike())
+
+    def test_get_dip_1(self):
+        p1 = Point(0.0, 0.0)
+        p2 = Point(0.0635916966572, 0.0635916574897)
+        p3 = Point(0.0860747816618, 0.102533437776)
+
+        surface = SimpleFaultSurface(Line([p1, p2, p3]),
+                1.0, 6.0, 90.0, 1.0)
+
+        self.assertAlmostEquals(90.0, surface.get_dip())
+
+    def test_get_dip_2(self):
+        p1 = Point(0.0, 0.0)
+        p2 = Point(0.0635916966572, 0.0635916574897)
+
+        surface = SimpleFaultSurface(Line([p1, p2]),
+                1.0, 6.0, 30.0, 1.0)
+
+        self.assertAlmostEquals(30.0, surface.get_dip(), 1)
+
+    def test_get_dip_3(self):
+        p1 = Point(0.0, 0.0)
+        p2 = Point(0.0635916966572, 0.0635916574897)
+        p3 = Point(0.0635916966572, -1.30558137286e-08)
+
+        surface = SimpleFaultSurface(Line([p1, p2, p3]),
+                1.0, 6.0, 45.0, 20.0)
+
+        self.assertAlmostEquals(45.0, surface.get_dip())
+
+    def test_get_dip_4(self):
+        p1 = Point(0.0, 0.0)
+        p2 = Point(0.0635916966572, 0.0635916574897)
+        p3 = Point(0.0635916966572, -1.30558137286e-08)
+
+        surface = SimpleFaultSurface(Line([p1, p2, p3]),
+                1.0, 40.0, 45.0, 30.0)
+
+        self.assertAlmostEquals(45.0, surface.get_dip())
+
+    def test_get_dip_4(self):
+        p1 = Point(0.0, 0.0)
+        p2 = Point(0.0, 0.0899322029395)
+        p3 = Point(0.0899323137217, 0.0899320921571)
+        p4 = Point(0.0899323137217, -1.10782376538e-07)
+
+        surface = SimpleFaultSurface(Line([p1, p2, p3, p4]),
+                0.0, 10.0, 45.0, 10.0)
+
+        self.assertAlmostEquals(75.0, surface.get_dip(), 1)

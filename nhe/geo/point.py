@@ -2,8 +2,9 @@
 Module :mod:`nhe.geo.point` defines :class:`Point`.
 """
 import math
+import numpy
 
-from nhe.geo._utils import GEOD
+from nhe.geo._utils import GEOD, EARTH_RADIUS
 
 
 class Point(object):
@@ -179,6 +180,28 @@ class Point(object):
         """
 
         return self.depth == 0.0
+
+    def position_vector(self):
+        """
+        Return the position vector (in cartesian coordinates) of this point.
+
+        For the equation see: 
+            http://mathworld.wolfram.com/SphericalCoordinates.html.
+
+        :returns:
+            The position vector.
+        :rtype:
+            ``numpy.array`` containing the cartesian coordinates (x, y, z)
+        """
+
+        theta = math.radians(self.longitude)
+        phi = math.radians(90.0 - self.latitude)
+
+        x = (EARTH_RADIUS - self.depth) * math.cos(theta) * math.sin(phi)
+        y = (EARTH_RADIUS - self.depth) * math.sin(theta) * math.sin(phi)
+        z = (EARTH_RADIUS - self.depth) * math.cos(phi)
+
+        return numpy.array([x, y, z])
 
     def equally_spaced_points(self, point, distance):
         """
