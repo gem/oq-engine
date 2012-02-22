@@ -2,6 +2,7 @@ import math
 
 from nhe.attrel.base import AttenuationRelationship, NOT_SET
 from nhe import const
+from nhe.imt import PGA, PGV, SA
 
 
 class ChiouYoungs2008(AttenuationRelationship):
@@ -10,18 +11,21 @@ class ChiouYoungs2008(AttenuationRelationship):
         const.TRT.ACTIVE_SHALLOW_CRUST
     ])
     DEFINED_FOR_INTENCITY_MEASURE_TYPES = set([
-        const.IMT.PGA,
-        const.IMT.PGV,
-        const.IMT.SA
+        PGA,
+        PGV,
+        SA
     ])
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
+        const.StdDev.NONE,
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
         const.StdDev.INTRA_EVENT
     ])
-    REQUIRES_SITE_PARAMETERS = ('vs30', 'vs30type', 'z1pt0')
-    REQUIRES_RUPTURE_PARAMETERS = ('dip', 'rake', 'mag')
-    REQUIRES_DISTANCES = ('rrup', 'rjb', 'rx', 'ztor')
+    REQUIRES_SITE_PARAMETERS = set(('vs30', 'vs30type', 'z1pt0'))
+    REQUIRES_RUPTURE_PARAMETERS = set(('dip', 'rake', 'mag'))
+    REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx', 'ztor'))
+
+    SA_DAMPING = 5.0
 
     table = """\
 T     c2   c3    c4   c4a crb  chm cg3  c1      c1a     c1b    cn    cm     c5     c6     c7     c7a    c9     c9a     c10     cg1      cg2      phi1    phi2    phi3     phi4     phi5   phi6     phi7   phi8   tau1   tau2   sig1   sig2   sig3   sig4
@@ -57,15 +61,15 @@ pgv   1.06 3.45 -2.1 -0.5 50.0 3.0 4.0  2.2884  0.1094 -0.0626 1.648 4.2979 5.17
         row = row.split()
         period = row.pop(0)
         if period == 'pga':
-            imt = const.IMT.PGA
+            imt = PGA()
         elif period == 'pgv':
-            imt = const.IMT.PGV
+            imt = PGV()
         else:
-            imt = (const.IMT.SA, float(period))
+            imt = SA(float(period), SA_DAMPING)
         coeffs[imt] = dict(zip(coeff_names, map(float, row)))
     del coeff_names, table, imt, row, period
 
-    def get_mean_and_stddev(self, context, imt, stddev_type):
+    def get_mean_and_stddev(self, context, imt, stddev_type, component_type):
         C = self.coeffs[imt]
         ln_y_ref = self._get_ln_y_ref(context, C)
 
