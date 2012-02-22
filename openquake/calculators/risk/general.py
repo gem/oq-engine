@@ -165,8 +165,8 @@ class BaseRiskCalculator(Calculator):
         coos = [(round_float(x), round_float(y)) for x, y in coos]
         return geos.Polygon(coos)
 
-    def assets_for_cell(self, job_id, site):
-        """Return assets (from the exposure model) for the given job and site.
+    def assets_for_cell(self, job_id, midpoint):
+        """Return exposure assets for the given job and risk cell mid-point.
 
 
         :param int job_id: the database key of the job in question
@@ -187,10 +187,10 @@ class BaseRiskCalculator(Calculator):
                        filter(input_type="exposure"))
         if not self._em_inputs:
             return []
-        risk_cell = self._cell_to_polygon(site, cell_size)
+        risk_cell = self._cell_to_polygon(midpoint, cell_size)
         result = models.ExposureData.objects. \
                         filter(exposure_model__input__in=self._em_inputs,
-                               site__within=risk_cell)
+                               site__contained=risk_cell)
 
         return list(result)
 
@@ -217,12 +217,14 @@ class BaseRiskCalculator(Calculator):
 
     def store_exposure_assets(self):
         """Load exposure assets and write them to database."""
+        input_set = self.calc_proxy.oq_job_profile.input_set
+        qargs = dict(input_type="exposure")
 
-        path = os.path.join(self.calc_proxy.base_path,
-                            self.calc_proxy.params[job_config.EXPOSURE])
+        [emdl] = input_set.input_set.filter(**qargs)
+        path = os.path.join(self.calc_proxy.base_path, emdl.path)
+
         exposure_parser = exposure.ExposurePortfolioFile(path)
-        writer = ExposureDBWriter(self.calc_proxy.oq_job_profile.input_set,
-                                  path)
+        writer = ExposureDBWriter(input_set, path)
         writer.serialize(exposure_parser)
 
     def store_vulnerability_model(self):
