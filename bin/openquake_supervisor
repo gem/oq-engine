@@ -32,11 +32,12 @@ oqpath.set_oq_path()
 def main():  # pylint: disable=C0111
     os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.settings'
 
+    from openquake import flags
     from openquake.supervising import supervisor
 
     job_id = int(sys.argv[1])
     pid = int(sys.argv[2])
-    supervisor.supervise(pid, job_id)
+    supervisor.supervise(pid, job_id, flags.FLAGS.debug)
 
 
 if __name__ == '__main__':
