@@ -165,32 +165,31 @@ class BaseRiskCalculator(Calculator):
         coos = [(round_float(x), round_float(y)) for x, y in coos]
         return geos.Polygon(coos)
 
-    def assets_for_cell(self, job_id, midpoint):
+    @classmethod
+    def assets_for_cell(cls, job_id, midpoint):
         """Return exposure assets for the given job and risk cell mid-point.
 
-
         :param int job_id: the database key of the job in question
-        :param job_id: the :py:class:`openquake.shapes.Site` instance in
-            question
+        :param midpoint: a :py:class:`openquake.shapes.Site` instance
+            with the location of the centre of the risk cell
         :returns: a potentially empty list of
             :py:class:`openquake.db.models.ExposureData` instances
         """
-        cell_size = self.calc_proxy.oq_job_profile.risk_cell_size
-        assert cell_size is not None, "Risk cell size must be set."
+        jp = models.OqCalculation.objects.get(id=job_id).oq_job_profile
+        assert jp.risk_cell_size is not None, "Risk cell size must be set."
 
-        if self._em_inputs is None:
+        if cls._em_inputs is None:
             # This query obtains the exposure model input rows and needs to be
             # made only once in the course of a risk calculation.
-            self._em_inputs = list(
-                models.OqCalculation.objects.get(id=job_id). \
-                       oq_job_profile.input_set.input_set. \
-                       filter(input_type="exposure"))
-        if not self._em_inputs:
+            cls._em_inputs = list(
+                jp.input_set.input_set.filter(input_type="exposure"))
+        if not cls._em_inputs:
             return []
-        risk_cell = self._cell_to_polygon(midpoint, cell_size)
-        result = models.ExposureData.objects. \
-                        filter(exposure_model__input__in=self._em_inputs,
-                               site__contained=risk_cell)
+
+        risk_cell = cls._cell_to_polygon(midpoint, jp.risk_cell_size)
+        qm = models.ExposureData.objects
+        result = qm.filter(exposure_model__input__in=cls._em_inputs,
+                           site__contained=risk_cell)
 
         return list(result)
 
