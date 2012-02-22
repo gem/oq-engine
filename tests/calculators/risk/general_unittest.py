@@ -20,26 +20,23 @@ import os
 import numpy
 import unittest
 
+from django.contrib.gis import geos
+
 from openquake.calculators.risk.classical.core import ClassicalRiskCalculator
 from openquake.calculators.risk.classical.core import _generate_loss_ratios
 from openquake.calculators.risk.general import BaseRiskCalculator
 from openquake.calculators.risk.general import BetaDistribution
 from openquake.calculators.risk.general import compute_alpha
 from openquake.calculators.risk.general import compute_beta
-from openquake.db.models import OqCalculation
-from openquake.engine import CalculationProxy
-from openquake.engine import import_job_profile
+from openquake.db.models import ExposureData, OqCalculation
+from openquake import engine
 from openquake import shapes
 from openquake.input.exposure import ExposureDBWriter
 from openquake.output.risk import LossMapDBWriter
 from openquake.output.risk import LossMapNonScenarioXMLWriter
 from openquake.parser.exposure import ExposurePortfolioFile
 
-from tests.utils.helpers import SCHEMA_EXAMPLES_DIR
-from tests.utils.helpers import assertDeepAlmostEqual
-from tests.utils.helpers import DbTestCase
-from tests.utils.helpers import demo_file
-from tests.utils.helpers import patch
+from tests.utils import helpers
 
 
 class ProbabilisticRiskCalculatorTestCase(unittest.TestCase):
@@ -50,9 +47,9 @@ class ProbabilisticRiskCalculatorTestCase(unittest.TestCase):
     def test_write_output(self):
         # Test that the loss map writers are properly called when
         # write_output is invoked.
-        cfg_file = demo_file('classical_psha_based_risk/config.gem')
+        cfg_file = helpers.demo_file('classical_psha_based_risk/config.gem')
 
-        job_profile, params, sections = import_job_profile(cfg_file)
+        job_profile, params, sections = engine.import_job_profile(cfg_file)
 
         # Set conditional loss poe so that loss maps are created.
         # If this parameter is not specified, no loss maps will be serialized
@@ -65,7 +62,7 @@ class ProbabilisticRiskCalculatorTestCase(unittest.TestCase):
                                     oq_job_profile=job_profile)
         calculation.save()
 
-        calc_proxy = CalculationProxy(
+        calc_proxy = engine.CalculationProxy(
             params, calculation.id, sections=sections,
             serialize_results_to=['xml', 'db'], oq_job_profile=job_profile,
             oq_calculation=calculation)
@@ -73,8 +70,8 @@ class ProbabilisticRiskCalculatorTestCase(unittest.TestCase):
         calculator = ClassicalRiskCalculator(calc_proxy)
 
         # Mock the composed loss map serializer:
-        with patch('openquake.writer.CompositeWriter'
-                   '.serialize') as writer_mock:
+        with helpers.patch('openquake.writer.CompositeWriter'
+                           '.serialize') as writer_mock:
             calculator.write_output()
 
             self.assertEqual(1, writer_mock.call_count)
@@ -107,22 +104,22 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
         expected_lr_file_name = (
             'losscurves-loss-block-#%(calculation_id)s-block#%(block)s.xml')
 
-        cfg_file = demo_file('classical_psha_based_risk/config.gem')
+        cfg_file = helpers.demo_file('classical_psha_based_risk/config.gem')
 
-        job_profile, params, sections = import_job_profile(cfg_file)
+        job_profile, params, sections = engine.import_job_profile(cfg_file)
 
         calculation = OqCalculation(owner=job_profile.owner,
                                     oq_job_profile=job_profile)
         calculation.save()
 
-        calc_proxy = CalculationProxy(
+        calc_proxy = engine.CalculationProxy(
             params, calculation.id, sections=sections,
             serialize_results_to=['xml', 'db'], oq_job_profile=job_profile,
             oq_calculation=calculation)
 
         calculator = ClassicalRiskCalculator(calc_proxy)
 
-        with patch('openquake.writer.FileWriter.serialize'):
+        with helpers.patch('openquake.writer.FileWriter.serialize'):
             # The 'curves' key in the kwargs just needs to be present;
             # because of the serialize mock in place above, it doesn't need
             # to have a real value.
@@ -229,22 +226,32 @@ class BetaDistributionTestCase(unittest.TestCase):
                 lrem[row][col] = BetaDistribution.survival_function(loss_ratio,
                     col=col, vf=vuln_function)
 
-        assertDeepAlmostEqual(self, expected_beta_distributions,
-            lrem, delta=0.0005)
+        helpers.assertDeepAlmostEqual(self, expected_beta_distributions,
+                                      lrem, delta=0.0005)
 
 
-class AssetsForCellTestCase(unittest.TestCase, DbTestCase):
+RISK_DEMO_CONFIG_FILE = helpers.demo_file(
+    "classical_psha_based_risk/config.gem")
+
+
+class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
     """Test the BaseRiskCalculator.assets_for_cell() function."""
     job = None
+    job_profile = None
+    em_input = None
 
     @classmethod
     def setUpClass(cls):
-        path = os.path.join(SCHEMA_EXAMPLES_DIR, "exposure-portfolio.xml")
-        inputs = [("exposure", path)]
-        cls.job = cls.setup_classic_job(inputs=inputs)
-        parser = ExposurePortfolioFile(path)
-        writer = ExposureDBWriter(cls.job.oq_job_profile.input_set, path)
-        writer.serialize(parser)
+        cls.job_profile, _, _ = engine.import_job_profile(
+            RISK_DEMO_CONFIG_FILE)
+        cls.job = OqCalculation(
+            owner=cls.job_profile.owner, oq_job_profile=cls.job_profile)
+        cls.job.save()
+        path = os.path.normpath(
+            helpers.demo_file("classical_psha_based_risk/exposure.xml"))
+        qargs = dict(input_type="exposure", path=path)
+        [cls.em_input] = cls.job.oq_job_profile.input_set.input_set.filter(
+            **qargs)
 
     @classmethod
     def tearDownClass(cls):
@@ -254,12 +261,38 @@ class AssetsForCellTestCase(unittest.TestCase, DbTestCase):
     def _to_site(pg_point):
         return shapes.Site(pg_point.x, pg_point.y)
 
-    def test_assets_for_cell_with_existent_row(self):
-        # Asset is found in the database.
-        site = shapes.Site(9.15000, 45.16667)
-        [asset] = BaseRiskCalculator.assets_for_cell(self.job.id, site)
-        self.assertEqual("asset_01", asset.asset_ref)
-        self.assertEqual(site, self._to_site(asset.site))
+    def setUp(self):
+        self.calc_proxy = helpers.create_job(
+            {}, oq_job_profile=self.job_profile, oq_calculation=self.job)
+        self.calc = ClassicalRiskCalculator(self.calc_proxy)
+        self.calc.store_exposure_assets()
+        [model] = self.em_input.exposuremodel_set.all()
+        # Add some more assets.
+        coos = [
+            (10.520376165581, 46.247463385278),
+            (10.222034128255, 46.0071299176413),
+            (10.000155392289116, 46.546194318563),
+            (12.227304033599, 47.31846371358),
+            (12.124509476061, 47.952546799795),
+            (13.0941347077647, 48.956631541624),
+            (14.598449908236, 49.752172491756)]
+        for lat, lon in coos:
+            site = shapes.Site(lat, lon)
+            location = geos.GEOSGeometry(site.point.to_wkt())
+            asset = ExposureData(exposure_model=model, taxonomy="RC/DMRF-D/LR",
+                                 asset_ref=helpers.random_string(6),
+                                 stco=lat*2, site=location, reco=1.1*lon)
+            asset.save()
+
+    def test_assets_for_cell_with_more_than_one(self):
+        # All assets is the risk cell are found.
+        site = shapes.Site(10.25000, 46.2)
+        self.calc_proxy.oq_job_profile.risk_cell_size = 0.7
+        self.calc_proxy.oq_job_profile.save()
+
+        assets = self.calc.assets_for_cell(self.job.id, site)
+        import pdb; pdb.set_trace()
+        self.assertEqual(3, len(assets))
 
     def test_assets_for_cell_with_non_existent_row(self):
         # An empty list is returned when no assets exist for a given

@@ -1147,6 +1147,9 @@ class ExposureData(models.Model):
     asset_ref = models.TextField()
     taxonomy = models.TextField()
     site = models.PointField(srid=4326)
+    # Override the default manager with a GeoManager instance in order to
+    # enable spatial queries.
+    objects = models.GeoManager()
 
     stco = models.FloatField(null=True, help_text="structural cost")
     reco = models.FloatField(null=True, help_text="retrofitting cost")
@@ -1156,9 +1159,9 @@ class ExposureData(models.Model):
         null=True, help_text="number of assets, people etc.")
     area = models.FloatField(null=True)
 
-    coco_limit = models.FloatField(
+    ins_limit = models.FloatField(
         null=True, help_text="insurance coverage limit")
-    coco_deductible = models.FloatField(
+    ins_deductible = models.FloatField(
         null=True, help_text="insurance deductible")
 
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
