@@ -22,39 +22,8 @@ gflags extensions.
 
 # pylint: disable=W0622,W0611
 
-from gflags import DEFINE_boolean
-from gflags import DEFINE_enum
-from gflags import DEFINE_integer
-from gflags import DEFINE_string
 from gflags import FLAGS
-
-
-DEFINE_boolean('help', None, 'Show this help')
-DEFINE_boolean('version', None, 'Show version information')
-
-DEFINE_string('config_file', None, 'OpenQuake configuration file')
-DEFINE_enum('output_type', 'db', ['db', 'xml'],
-                  'Computation result output type')
-
-DEFINE_boolean(
-    'list_calculations', None,
-    'Print a table of completed (successful and failed) calculations')
-
-DEFINE_integer('list_outputs', None,
-    'List computed outputs for the given calculation ID. '
-    '\n\nExamples:'
-    '\n\t--list_outputs 17'
-    '\n\t--list_outputs=17')
-
-DEFINE_integer('export', None,
-    'Export the given output to the specified target dir. The `--target_dir`'
-    ' parameter is required.'
-    '\n\nExamples:'
-    '\n\t--export 287 --target_dir /home/currentuser/calc_results/'
-    '\n\t--export=287 --target_dir /home/currentuser/calc_results/'
-    '\n\t--export=287 --target_dir=/home/currentuser/calc_results/')
-DEFINE_string('target_dir', None,
-    'Specify with the `--export` option to indicate export result location.')
+from gflags import DEFINE_string
 
 DEFINE_string('debug', 'warn',
     'Turns on debug logging and verbose output.'
