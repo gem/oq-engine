@@ -94,7 +94,7 @@ class JobTestCase(unittest.TestCase):
             CONFIG_FILE))
         self.job = CalculationProxy(
             params, 1, sections=sections, oq_job_profile=jp)
-        jp, params, sections  = import_job_profile(helpers.get_data_path(
+        jp, params, sections = import_job_profile(helpers.get_data_path(
             CONFIG_WITH_INCLUDES))
         self.job_with_includes = CalculationProxy(
             params, 1, sections=sections, oq_job_profile=jp)
