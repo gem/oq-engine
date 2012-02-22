@@ -1161,7 +1161,7 @@ class ExposureData(models.Model):
 
     ins_limit = models.FloatField(
         null=True, help_text="insurance coverage limit")
-    ins_deductible = models.FloatField(
+    deductible = models.FloatField(
         null=True, help_text="insurance deductible")
 
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)

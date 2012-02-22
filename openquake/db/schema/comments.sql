@@ -211,7 +211,7 @@ COMMENT ON COLUMN hzrdr.uh_spectrum_data.realization IS 'Logic tree sample numbe
 COMMENT ON TABLE oqmif.exposure_data IS 'Per-asset risk exposure data';
 COMMENT ON COLUMN oqmif.exposure_data.area IS 'asset area';
 COMMENT ON COLUMN oqmif.exposure_data.asset_ref IS 'A unique identifier (within the exposure model) for the asset at hand';
-COMMENT ON COLUMN oqmif.exposure_data.ins_deductible IS 'insurance deductible';
+COMMENT ON COLUMN oqmif.exposure_data.deductible IS 'insurance deductible';
 COMMENT ON COLUMN oqmif.exposure_data.coco IS 'contents cost';
 COMMENT ON COLUMN oqmif.exposure_data.ins_limit IS 'insurance coverage limit';
 COMMENT ON COLUMN oqmif.exposure_data.exposure_model_id IS 'Foreign key to the exposure model';
