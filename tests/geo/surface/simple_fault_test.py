@@ -169,7 +169,7 @@ class SimpleFaultSurfaceTestCase(utils.SurfaceTestCase):
 
         self.assertAlmostEquals(45.0, surface.get_dip())
 
-    def test_get_dip_4(self):
+    def test_get_dip_5(self):
         p1 = Point(0.0, 0.0)
         p2 = Point(0.0, 0.0899322029395)
         p3 = Point(0.0899323137217, 0.0899320921571)
