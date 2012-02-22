@@ -57,3 +57,26 @@ class MemoizeMutable:
 def str2bool(value):
     """Convert a string representation of a boolean value to a bool."""
     return value.lower() in ("true", "yes", "t", "1")
+
+
+def block_splitter(data, block_size):
+    """Given a list of objects and a ``block_size``, generate slices from the
+    list. Each slice has a maximum size of ``block_size``.
+
+    If ``block_size`` is greater than the length of ``data``, this simply
+    yields the entire list.
+
+    :param data:
+        A list of any type of object.
+    :param int block_size:
+        Maximum size for each slice. Must be greater than 0.
+    :raises:
+        :exception:`ValueError` of the ``block_size`` is <= 0.
+    """
+    if block_size <= 0:
+        raise ValueError(
+            'Invalid block size: %s. Value must be greater than 0.'
+            % block_size)
+
+    for i in xrange(0, len(data), block_size):
+        yield data[i:i + block_size]
