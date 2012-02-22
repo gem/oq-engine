@@ -183,6 +183,23 @@ def plane_dip(p1, p2, p3):
     at the upper left corner location.
 
     The angle between these two vectors is the dip angle.
+    
+    :param p1:
+        The upper left corner.
+    :type p1:
+        Instance of :class:`nhe.geo.point.Point`
+    :param p2:
+        The upper right corner.
+    :type p2:
+        Instance of :class:`nhe.geo.point.Point`
+    :param p3:
+        The lower left corner.
+    :type p3:
+        Instance of :class:`nhe.geo.point.Point`
+    :returns:
+        The dip of the plane identified by the given points.
+    :rtype:
+        float
     """
 
     # for each point get corresponding cartesian coordinates.
