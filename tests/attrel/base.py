@@ -15,3 +15,5 @@ class BaseAttRelTestCase(unittest.TestCase):
                                      max_discrep_percentage)
         if errors:
             raise AssertionError(stats)
+        print
+        print stats
