@@ -1459,9 +1459,9 @@ CREATE TABLE oqmif.exposure_data (
     area float CONSTRAINT area_value CHECK(area >= 0.0),
 
     -- insurance coverage limit
-    coco_limit float,
+    ins_limit float,
     -- insurance deductible
-    coco_deductible float,
+    ins_deductible float,
 
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL,
