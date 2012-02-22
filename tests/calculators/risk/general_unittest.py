@@ -31,10 +31,8 @@ from openquake.calculators.risk.general import compute_beta
 from openquake.db.models import ExposureData, OqCalculation
 from openquake import engine
 from openquake import shapes
-from openquake.input.exposure import ExposureDBWriter
 from openquake.output.risk import LossMapDBWriter
 from openquake.output.risk import LossMapNonScenarioXMLWriter
-from openquake.parser.exposure import ExposurePortfolioFile
 
 from tests.utils import helpers
 
@@ -236,67 +234,67 @@ RISK_DEMO_CONFIG_FILE = helpers.demo_file(
 
 class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
     """Test the BaseRiskCalculator.assets_for_cell() function."""
-    job = None
-    job_profile = None
-    em_input = None
-
-    @classmethod
-    def setUpClass(cls):
-        cls.job_profile, _, _ = engine.import_job_profile(
-            RISK_DEMO_CONFIG_FILE)
-        cls.job = OqCalculation(
-            owner=cls.job_profile.owner, oq_job_profile=cls.job_profile)
-        cls.job.save()
-        path = os.path.normpath(
-            helpers.demo_file("classical_psha_based_risk/exposure.xml"))
-        qargs = dict(input_type="exposure", path=path)
-        [cls.em_input] = cls.job.oq_job_profile.input_set.input_set.filter(
-            **qargs)
-
-    @classmethod
-    def tearDownClass(cls):
-        cls.teardown_job(cls.job)
-
-    @staticmethod
-    def _to_site(pg_point):
-        return shapes.Site(pg_point.x, pg_point.y)
-
     def setUp(self):
+        self.job_profile, _, _ = engine.import_job_profile(
+            RISK_DEMO_CONFIG_FILE)
+        self.job = OqCalculation(
+            owner=self.job_profile.owner, oq_job_profile=self.job_profile)
+        self.job.save()
         self.calc_proxy = helpers.create_job(
             {}, oq_job_profile=self.job_profile, oq_calculation=self.job)
         self.calc = ClassicalRiskCalculator(self.calc_proxy)
+
         self.calc.store_exposure_assets()
-        [model] = self.em_input.exposuremodel_set.all()
+        [em_input] = self.job.oq_job_profile.input_set.input_set.filter(
+            input_type="exposure")
+        [model] = em_input.exposuremodel_set.all()
+
+        self.sites = []
         # Add some more assets.
-        coos = [
-            (10.520376165581, 46.247463385278),
-            (10.222034128255, 46.0071299176413),
-            (10.000155392289116, 46.546194318563),
-            (12.227304033599, 47.31846371358),
-            (12.124509476061, 47.952546799795),
-            (13.0941347077647, 48.956631541624),
-            (14.598449908236, 49.752172491756)]
+        coos = [(10.000155392289116, 46.546194318563),
+                (10.222034128255, 46.0071299176413),
+                (10.520376165581, 46.247463385278)]
         for lat, lon in coos:
             site = shapes.Site(lat, lon)
+            self.sites.append(site)
             location = geos.GEOSGeometry(site.point.to_wkt())
             asset = ExposureData(exposure_model=model, taxonomy="RC/DMRF-D/LR",
                                  asset_ref=helpers.random_string(6),
                                  stco=lat*2, site=location, reco=1.1*lon)
             asset.save()
 
+    def tearDown(self):
+        self.teardown_job(self.job)
+
+    @staticmethod
+    def _to_site(pg_point):
+        return shapes.Site(pg_point.x, pg_point.y)
+
     def test_assets_for_cell_with_more_than_one(self):
-        # All assets is the risk cell are found.
+        # All assets in the risk cell are found.
         site = shapes.Site(10.25000, 46.2)
         self.calc_proxy.oq_job_profile.risk_cell_size = 0.7
         self.calc_proxy.oq_job_profile.save()
 
         assets = self.calc.assets_for_cell(self.job.id, site)
-        import pdb; pdb.set_trace()
         self.assertEqual(3, len(assets))
+        # Make sure the assets associated with the first 3 added sites were
+        # selected.
+        for s, a in zip(self.sites, sorted(assets, key=lambda a: a.site.x)):
+            self.assertEqual(s, self._to_site(a.site))
 
-    def test_assets_for_cell_with_non_existent_row(self):
+    def test_assets_for_cell_with_one(self):
+        # A single asset in the risk cell is found.
+        site = shapes.Site(10.24000, 46.02)
+        self.calc_proxy.oq_job_profile.risk_cell_size = 0.06
+        self.calc_proxy.oq_job_profile.save()
+        [asset] = self.calc.assets_for_cell(self.job.id, site)
+        self.assertEqual(self.sites[1], self._to_site(asset.site))
+
+    def test_assets_for_cell_with_no_assets_matching(self):
         # An empty list is returned when no assets exist for a given
-        # job and site.
+        # risk cell.
         site = shapes.Site(99.15000, 15.16667)
-        self.assertEqual(
-            [], BaseRiskCalculator.assets_for_cell(self.job.id, site))
+        self.calc_proxy.oq_job_profile.risk_cell_size = 0.05
+        self.calc_proxy.oq_job_profile.save()
+        self.assertEqual([], self.calc.assets_for_cell(self.job.id, site))
