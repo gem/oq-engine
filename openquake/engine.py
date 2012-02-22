@@ -44,7 +44,6 @@ from openquake.db.models import InputSet
 from openquake.db.models import OqCalculation
 from openquake.db.models import OqJobProfile
 from openquake.db.models import OqUser
-from openquake.flags import FLAGS
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
@@ -82,7 +81,7 @@ class CalculationProxy(object):
     # pylint: disable=R0913
     def __init__(self, params, calculation_id, sections=list(), base_path=None,
                  serialize_results_to=list(), oq_job_profile=None,
-                 oq_calculation=None):
+                 oq_calculation=None, log_level='warn'):
         """
         :param dict params: Dict of job config params.
         :param int calculation_id:
@@ -97,6 +96,10 @@ class CalculationProxy(object):
             :class:`openquake.db.models.OqCalculation` instance; database
             representation of the runtime thing we refer to as the
             'calculation'.
+        :param str log_level:
+            One of 'debug', 'info', 'warn', 'error', 'critical'.
+
+            Defaults to 'warn'.
         """
         self._calculation_id = calculation_id
         mark_job_as_current(calculation_id)  # enables KVS gc
@@ -111,6 +114,14 @@ class CalculationProxy(object):
 
         self.oq_job_profile = oq_job_profile
         self.oq_calculation = oq_calculation
+        self.params['debug'] = log_level
+        self._log_level = log_level
+
+    @property
+    def log_level(self):
+        """The log level for this calculation. (One of 'debug', 'info', 'warn',
+        'error', 'critical'."""
+        return self._log_level
 
     @property
     def base_path(self):
@@ -131,7 +142,8 @@ class CalculationProxy(object):
         calculation = OqCalculation.objects.get(id=job_id)
         job_profile = calculation.oq_job_profile
         job = CalculationProxy(params, job_id, oq_job_profile=job_profile,
-                               oq_calculation=calculation)
+                               oq_calculation=calculation,
+                               log_level=params['debug'])
         return job
 
     @staticmethod
@@ -217,7 +229,7 @@ class CalculationProxy(object):
         self._slurp_files()
         key = kvs.tokens.generate_job_key(self.job_id)
         data = self.params.copy()
-        data['debug'] = FLAGS.debug
+        data['debug'] = self.log_level
         kvs.set_value_json_encoded(key, data)
 
     def sites_to_compute(self):
@@ -646,7 +658,8 @@ def _store_input_parameters(params, calc_mode, job_profile):
         job_profile.damping = None
 
 
-def run_calculation(job_profile, params, sections, output_type='db'):
+def run_calculation(job_profile, params, sections, output_type='db',
+                    log_level='warn'):
     """Given an :class:`openquake.db.models.OqJobProfile` object, create a new
     :class:`openquake.db.models.OqCalculation` object and run the calculation.
 
@@ -665,7 +678,10 @@ def run_calculation(job_profile, params, sections, output_type='db'):
         A list of sections parsed from the calculation config file.
     :param output_type:
         'db' or 'xml' (defaults to 'db')
+    :param str log_level:
+        One of 'debug', 'info', 'warn', 'error', or 'critical'.
 
+        Defaults to 'warn'.
     :returns:
         :class:`openquake.db.models.OqCalculation` instance.
     """
@@ -694,7 +710,8 @@ def run_calculation(job_profile, params, sections, output_type='db'):
     calc_proxy = CalculationProxy(params, calculation.id, sections=sections,
                                   serialize_results_to=serialize_results_to,
                                   oq_job_profile=job_profile,
-                                  oq_calculation=calculation)
+                                  oq_calculation=calculation,
+                                  log_level=log_level)
 
     # closing all db connections to make sure they're not shared between
     # supervisor and job executor processes. otherwise if one of them closes
@@ -705,7 +722,7 @@ def run_calculation(job_profile, params, sections, output_type='db'):
     if not calc_pid:
         # calculation executor process
         try:
-            logs.init_logs_amqp_send(level=FLAGS.debug, job_id=calculation.id)
+            logs.init_logs_amqp_send(level=log_level, job_id=calculation.id)
             _launch_calculation(calc_proxy, sections)
         except Exception, ex:
             logs.LOG.critical("Calculation failed with exception: '%s'"
@@ -725,7 +742,7 @@ def run_calculation(job_profile, params, sections, output_type='db'):
         calculation.supervisor_pid = supervisor_pid
         calculation.job_pid = calc_pid
         calculation.save()
-        supervisor.supervise(calc_pid, calculation.id)
+        supervisor.supervise(calc_pid, calculation.id, log_level)
         return
 
     # parent process
