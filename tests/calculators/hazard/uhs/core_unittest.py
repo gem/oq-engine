@@ -64,6 +64,7 @@ class UHSBaseTestCase(unittest.TestCase):
             params, self.calculation.id, sections=sections,
             serialize_results_to=['db'], oq_job_profile=self.job_profile,
             oq_calculation=self.calculation)
+        self.calc_proxy.to_kvs()
         self.job_id = self.calc_proxy.job_id
 
 
@@ -307,3 +308,14 @@ class UHSCalculatorTestCase(UHSBaseTestCase):
             '%s.write_uh_spectra' % self.UHS_CORE_MODULE) as write_mock:
             calc.pre_execute()
             self.assertEqual(1, write_mock.call_count)
+
+    def test_post_execute(self):
+        calc = UHSCalculator(self.calc_proxy)
+
+        expected_call_args = ((self.job_id,), {})
+
+        with helpers.patch(
+            'openquake.utils.stats.delete_job_counters') as del_mock:
+            calc.post_execute()
+            self.assertEqual(1, del_mock.call_count)
+            self.assertEqual(expected_call_args, del_mock.call_args)
