@@ -161,7 +161,7 @@ def run_job(config_file, **kw_params):
     :returns:
         The return code of the subprocess.
     """
-    params = ["bin/openquake", "--config_file=" + config_file]
+    params = ["bin/openquake", "--config-file=" + config_file]
     if kw_params:
         params.extend(["--%s=%s" % p for p in kw_params.iteritems()])
     return subprocess.call(params)
