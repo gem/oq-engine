@@ -53,6 +53,9 @@ Available Risk Analysis
 import getpass
 import sys
 
+from gflags import DEFINE_boolean
+from gflags import DEFINE_enum
+from gflags import DEFINE_string
 
 from openquake.utils import config
 
@@ -75,70 +78,48 @@ from openquake.utils import version as utils_version
 
 FLAGS = flags.FLAGS
 
+DEFINE_string('config_file', 'openquake-config.gem',
+                    'OpenQuake configuration file')
+DEFINE_enum('output_type', 'db', ['db', 'xml'],
+                  'Computation result output type')
 
-def _help():
-    """Print help information."""
-    print __doc__
-
-    print "Options:"
-    print flags.get_flags_help()
-
-
-def _list_calcs():
-    # TODO: print column headers
-    for c in export.get_calculations(getpass.getuser()):
-        # TODO: print the data also
-        print '%s: (%s) %s' % (c.id, c.status, c.description)
-
-
-def _list_outputs():
-    for o in export.get_outputs(FLAGS.list_outputs):
-        print '%s: %s' % (o.id, o.output_type)
-
-
-def _export():
-    """Execute an export action."""
-    if FLAGS.target_dir is None:
-        # User needs to specify the 'target_dir' also
-        _help()
-    else:
-        try:
-            for file_name in export.export(FLAGS.export, FLAGS.target_dir):
-                print file_name
-        except NotImplementedError, err:
-            print err.message
-            print 'This feature is probably not implemented yet'
-            sys.exit(1)
+DEFINE_boolean('help', False, 'Show this help')
+DEFINE_boolean('version', False, 'Show version information')
 
 
 if __name__ == '__main__':
-    from openquake.export import core as export
+    if len(sys.argv) == 1:
+        sys.argv.append('--help')
 
-    #if len(sys.argv) == 1:
-    #    sys.argv.append('--help')
+    args = FLAGS(sys.argv)
 
-    FLAGS(sys.argv)
-
-    if FLAGS.version is not None:
+    if FLAGS.version:
         print utils_version.info(__version__)
-    elif FLAGS.help is not None:
-        _help()
-    elif FLAGS.list_calculations:
-        _list_calcs()
-    elif FLAGS.list_outputs is not None:
-        _list_outputs()
-    elif FLAGS.export is not None:
-        _export()
-    elif FLAGS.config_file is not None:
-        from openquake import job
-        from openquake import engine
-        try:
-            job_profile, params, sections = engine.import_job_profile(
-                FLAGS.config_file, user_name=getpass.getuser())
-            engine.run_calculation(job_profile, params, sections,
-                                   output_type=FLAGS.output_type)
-        except job.config.ValidationException as e:
-            print str(e)
-    else:
-        _help()
+        sys.exit(0)
+    elif FLAGS.help:
+        print __doc__
 
+        print "Flags:"
+        print flags.get_flags_help()
+        sys.exit(1)
+
+    # Collect inputs
+    # Determine Processing type
+    # Validate input data
+
+    # Prepare final configuration, save it
+    # Hash final config, store that
+
+    # Kick off processing tasks, and wait...
+    # Collate results
+    # Generate output
+
+    from openquake import job
+    from openquake import engine
+    try:
+        job_profile, params, sections = engine.import_job_profile(
+            FLAGS.config_file, user_name=getpass.getuser())
+        engine.run_calculation(job_profile, params, sections,
+                               output_type=FLAGS.output_type)
+    except job.config.ValidationException as e:
+        print str(e)
