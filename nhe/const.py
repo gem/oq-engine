@@ -47,6 +47,28 @@ class TRT(ConstantContainer):
         return value in cls.ALL
 
 
+class IMC(ConstantContainer):
+    """
+    The intensity measure component is the component of interest
+    of ground shaking for an :mod:`intensity measure <nhe.imt>`.
+    """
+    #: Usually defined as the geometric average of the maximum
+    #: of the two horizontal components (which may not occur
+    #: at the same time).
+    AVERAGE_HORIZONTAL = 'Average horizontal'
+    #: An orientation-independent alternative to :attr:`AVERAGE_HORIZONTAL`.
+    #: Defined at Boore et al. (2006, Bull. Seism. Soc. Am. 96, 1502-1511)
+    #: and is used for all the NGA attenuation relationships.
+    GMRotI50 = 'Average Horizontal (GMRotI50)'
+    #: A randomly chosen horizontal component.
+    RANDOM_HORIZONTAL = 'Random horizontal'
+    #: The largest value obtained from two perpendicular horizontal
+    #: components.
+    GREATER_OF_TWO_HORIZONTAL = 'Greater of two horizontal'
+    #: The vertical component.
+    VERTICAL = 'Vertical'
+
+
 # TODO: document these three classes
 
 class Dist(ConstantContainer):
