@@ -113,6 +113,28 @@ class SimpleFaultSurface(BaseSurface):
         return RectangularMesh.from_points_list(surface.tolist())
 
     def get_dip(self):
+        """
+        Return the fault dip as the average dip over the fault surface mesh.
+
+        It is computed as the average value of the dip values of the mesh cells
+        in the first row of the surface mesh (in case of a simple fault surface
+        the dip is constant over depth, so there is not need
+        to compute the dip angle along width).
+
+        The dip of each mesh cell is obtained by calculating the vector normal
+        to each mesh cell, and the vector normal to the earth surface at the
+        cell location. The angle between these two vectors is the dip angle.
+
+        If the surface mesh has only one location along width
+        or one along strike, it returns the dip value
+        describing this fault surface.
+
+        :returns:
+            The average dip.
+        :rtype:
+            float
+        """
+
         surface = self.get_mesh()
 
         if surface.shape[0] > 1 and surface.shape[1] > 1:
@@ -134,15 +156,27 @@ class SimpleFaultSurface(BaseSurface):
         return self.dip
 
     def get_strike(self):
+        """
+        Return the fault strike as the average strike along the fault trace.
+
+        The average strike is defined as the average of the
+        azimuth values for all the fault trace segments.
+
+        :returns:
+            The average strike.
+        :rtype:
+            float
+        """
+
         average_strike = 0.0
         fault_trace_length = 0.0
 
         for i in xrange(len(self.fault_trace) - 1):
-            current = self.fault_trace[i]
-            next = self.fault_trace[i + 1]
+            current_point = self.fault_trace[i]
+            next_point = self.fault_trace[i + 1]
 
-            strike = current.azimuth(next)
-            section_length = current.horizontal_distance(next)
+            strike = current_point.azimuth(next_point)
+            section_length = current_point.horizontal_distance(next_point)
 
             average_strike = average_strike + section_length * strike
             fault_trace_length = fault_trace_length + section_length
