@@ -47,13 +47,7 @@ class TRT(ConstantContainer):
         return value in cls.ALL
 
 
-# TODO: document those four classes
-
-class IMT(ConstantContainer):
-    PGA = 'Peak ground acceleration'
-    PGV = 'Peak ground velocity'
-    SA = 'Spectral acceleration'
-
+# TODO: document these three classes
 
 class Dist(ConstantContainer):
     RRUP = 'Minimum distance to a rupture'
