@@ -712,7 +712,6 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
         block = Block(self.job_id, self.block_id, (SITE, SITE))
         block.to_kvs()
 
-        import pdb; pdb.set_trace()
         asset = {"taxonomy": "ID",
                  "assetID": 22.61,
                  "assetValue": 1,
