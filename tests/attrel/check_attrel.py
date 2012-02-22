@@ -5,26 +5,27 @@ import sys
 
 from nhe import const
 from nhe.attrel.base import AttRelContext, AttenuationRelationship
+from nhe.imt import PGA, PGV, SA
 
 
 def check_attrel(attrel_cls, filename, max_discrep_percentage,
                  max_errors=0, verbose=False):
-    reader = csv.DictReader(open(filename))
+    reader = csv.reader(open(filename))
     attrel = attrel_cls()
 
     linenum = 1
     errors = 0
     discrepancies = []
+    headers = [param_name.lower() for param_name in reader.next()]
     for values in reader:
         linenum += 1
         expected_results = {}
         context = AttRelContext()
-        stddev_type = result_type = None
+        stddev_type = result_type = damping = component_type = None
 
-        for param, value in values.items():
-            param = param.lower()
-            value = value.upper()
+        for param, value in zip(headers, values):
             if param == 'result_type':
+                value = value.upper()
                 if value.endswith('_STDDEV'):
                     # the row defines expected stddev results
                     result_type = 'STDDEV'
@@ -36,6 +37,10 @@ def check_attrel(attrel_cls, filename, max_discrep_percentage,
                     assert value == 'MEAN'
                     stddev_type = const.StdDev.NONE
                     result_type = 'MEAN'
+            elif param == 'damping':
+                damping = float(value)
+            elif param == 'component_type':
+                component_type = getattr(const.IMC, value)
             elif hasattr(context, param):
                 # value is context object attribute
                 if param == 'site_vs30type':
@@ -47,15 +52,22 @@ def check_attrel(attrel_cls, filename, max_discrep_percentage,
                 # value is the expected result (of result_type type)
                 value = float(value)
                 if param == 'pga':
-                    expected_results[const.IMT.PGA] = value
+                    imt = PGA()
                 elif param == 'pgv':
-                    expected_results[const.IMT.PGV] = value
+                    imt = PGV()
                 else:
-                    expected_results[(const.IMT.SA, float(param))] = value
+                    period = float(param)
+                    assert damping is not None
+                    imt = SA(period, damping)
+
+                expected_results[imt] = value
+
+        assert component_type is not None and result_type is not None
 
         for imt, expected_result in expected_results.items():
-            mean, stddev = attrel.get_mean_and_stddev(context, imt,
-                                                      stddev_type)
+            mean, stddev = attrel.get_mean_and_stddev(
+                context, imt, stddev_type, component_type
+            )
             if result_type == 'MEAN':
                 result = math.exp(mean)
             else:
