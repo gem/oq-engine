@@ -17,3 +17,11 @@ class ChiouYoungs2008TestCase(BaseAttRelTestCase):
     def test_mean_hanging_wall_normal_slip(self):
         self.check('CY08/CY08_MEDIAN_MS_HW_NM.csv',
                    max_discrep_percentage=0.05)
+
+    def test_mean_hanging_wall_reversed_slip(self):
+        self.check('CY08/CY08_MEDIAN_MS_HW_RV.csv',
+                   max_discrep_percentage=0.05)
+
+    def test_mean_hanging_wall_strike_slip(self):
+        self.check('CY08/CY08_MEDIAN_MS_HW_SS.csv',
+                   max_discrep_percentage=0.05)
