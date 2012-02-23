@@ -64,6 +64,14 @@ class Mesh(object):
 
     @property
     def shape(self):
+        """
+        Return the shape of this mesh.
+        
+        :returns:
+            The shape of this mesh.
+        :rtype:
+            tuple in the following format (rows, columns)
+        """
         return self.lons.shape
 
     def __iter__(self):

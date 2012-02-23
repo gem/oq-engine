@@ -84,7 +84,7 @@ class SimpleFaultSurface(BaseSurface):
 
         mesh = []
 
-        top_edge = self._fault_top_edge(self.mesh_spacing)
+        top_edge = self._fault_top_edge()
 
         for point in top_edge:
 
@@ -126,7 +126,9 @@ class SimpleFaultSurface(BaseSurface):
         """
 
         surface = self.get_mesh()
+        dip = self.dip
 
+        # more than one row and one column in the mesh
         if surface.shape[0] > 1 and surface.shape[1] > 1:
             average_dip = 0.0
 
@@ -141,9 +143,9 @@ class SimpleFaultSurface(BaseSurface):
                 dip = plane_dip(p1, p2, p3)
                 average_dip = average_dip + dip
 
-            return average_dip / (surface.shape[1] - 1)
+            dip = average_dip / (surface.shape[1] - 1)
 
-        return self.dip
+        return dip
 
     def get_strike(self):
         """
@@ -173,11 +175,11 @@ class SimpleFaultSurface(BaseSurface):
 
         return average_strike / fault_trace_length
 
-    def _fault_top_edge(self, mesh_spacing):
+    def _fault_top_edge(self):
         """
         Line representing the fault top edge.
 
-        It's obtained by translating the fault trace from the earth surface
+        It is obtained by translating the fault trace from the earth surface
         to the upper seismogenic depth, with an inclination equal to
         the dip angle, and along a direction perpendicular the fault strike
         (computed as the azimuth between the fault trace's first
@@ -209,6 +211,6 @@ class SimpleFaultSurface(BaseSurface):
             top_edge.append(point.point_at(
                     horizontal_distance, vertical_distance, azimuth))
 
-            top_edge = Line(top_edge).resample(mesh_spacing).points
+            top_edge = Line(top_edge).resample(self.mesh_spacing).points
 
         return top_edge
