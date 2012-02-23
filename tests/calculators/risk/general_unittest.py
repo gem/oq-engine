@@ -241,18 +241,16 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
 
     @classmethod
     def setUpClass(cls):
-        job_profile, _, _ = engine.import_job_profile(
+        jp, _, _ = engine.import_job_profile(
             RISK_DEMO_CONFIG_FILE)
-        cls.job = OqCalculation(owner=job_profile.owner,
-                                 oq_job_profile=job_profile)
+        cls.job = OqCalculation(owner=jp.owner, oq_job_profile=jp)
         cls.job.save()
-        cls.calc_proxy = helpers.create_job({}, oq_job_profile=job_profile,
+        cls.calc_proxy = helpers.create_job({}, oq_job_profile=jp,
                                             oq_calculation=cls.job)
         calc = ClassicalRiskCalculator(cls.calc_proxy)
 
         calc.store_exposure_assets()
-        [em_input] = job_profile.input_set.input_set.filter(
-            input_type="exposure")
+        [em_input] = jp.input_set.input_set.filter(input_type="exposure")
         [model] = em_input.exposuremodel_set.all()
         # Add some more assets.
         coos = [(10.000155392289116, 46.546194318563),
