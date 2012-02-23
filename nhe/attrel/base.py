@@ -52,7 +52,7 @@ class AttenuationRelationship(object):
     #: ``dip``
     #:     Rupture's surface dip angle in decimal degrees.
     #: ``rake``
-    #:     Angle describing the energy propagation from the rupture,
+    #:     Angle describing the slip propagation on the rupture surface,
     #:     in decimal degrees. See :mod:`~nhe.geo.nodalplane` for more
     #:     detailed description of dip and rake.
     #:
