@@ -131,8 +131,32 @@ class AttenuationRelationship(object):
 
     @classmethod
     def make_context(cls, site, rupture, distances=None):
-        # TODO: document
+        """
+        Create a :meth:`AttRelContext` object for given site and rupture.
+
+        This classmethod should be called from an actual attenuation
+        relationship implementation, not from the base class.
+
+        :param site:
+            Instance of :class:`nhe.site.Site`.
+        :param rupture:
+            Instance of :class:`~nhe.source.rupture.Rupture` (or its subclass
+            :class:`~nhe.source.rupture.ProbabilisticRupture`).
+        :param distances:
+            If provided should be a dictionary mapping distance types (strings
+            like ``'rrup'`` or ``'rjb'``, see :attr:`REQUIRES_DISTANCES`)
+            to actual distances between corresponding ``site`` and ``rupture``.
+            If this value is not None, it's expected to contain all the
+            distance information the attenuation relationship requires,
+            those values are used without checks. Otherwise distances will
+            be calculated.
+
+        :returns:
+            An instance of :class:`AttRelContext` with those (and only those)
+            attributes that are required by attenuation relationship filled in.
+        """
         # TODO: unittest this
+        assert cls is not AttenuationRelationship
         context = AttRelContext()
 
         for param in cls.REQUIRES_SITE_PARAMETERS:
@@ -153,7 +177,7 @@ class AttenuationRelationship(object):
                 value = rupture.surface.get_dip()
             elif param == 'rake':
                 value = rupture.rake
-            setattr(context, value)
+            setattr(context, attr, value)
 
         for param in cls.REQUIRES_DISTANCES:
             attr = 'dist_%s' % param
@@ -172,18 +196,25 @@ class AttenuationRelationship(object):
                     )
                 elif param == 'ztor':
                     value = rupture.surface.get_top_edge_depth()
+            setattr(context, attr, value)
+
         return context
 
 
-class _NotSet(object):
-    def die(self, *args, **kwargs):
-        raise ValueError('parameter is not set')
-    __cmp__ = __eq__ = __ne__ = __len__ = die
-NOT_SET = _NotSet()
-
-
 class AttRelContext(object):
-    # TODO: document
+    """
+    Calculation context for attenuation relationships.
+
+    Instances of this class are passed into
+    :meth:`AttenuationRelationship.get_mean_and_stddevs`. They are intended
+    to represent relevant features of the site, the rupture and their relative
+    position. Every Attenuation relationship class is required to declare what
+    :attr:`site <AttenuationRelationship.REQUIRES_SITE_PARAMETERS>`,
+    :attr:`rupture <AttenuationRelationship.REQUIRES_RUPTURE_PARAMETERS>`
+    and :attr:`distance <AttenuationRelationship.REQUIRES_DISTANCES>`
+    information does it need. Only those required parameters are calculated and
+    made available in a result of :meth:`AttenuationRelationship.make_context`.
+    """
     __slots__ = (
         # site parameters
         'site_vs30 site_vs30type site_z1pt0 site_z2pt5 '
@@ -192,8 +223,3 @@ class AttRelContext(object):
         # distance parameters
         'dist_rrup dist_rx dist_rjb dist_ztor'
     ).split()
-
-    def __init__(self):
-        # TODO: unittest this and NOT_SET object
-        for param in type(self).__slots__:
-            setattr(self, param, NOT_SET)
