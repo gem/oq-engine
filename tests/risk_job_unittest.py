@@ -22,12 +22,13 @@ import os
 import redis
 import unittest
 
+from openquake.calculators.risk.general import Block
+from openquake.calculators.risk import general
 from openquake import kvs
 from openquake import shapes
+from openquake.input.exposure import ExposureDBWriter
 from openquake.job import config
 from openquake.parser import exposure
-from openquake.calculators.risk import general
-from openquake.calculators.risk.general import Block
 
 from tests.utils import helpers
 
@@ -35,13 +36,21 @@ TEST_FILE = "exposure-portfolio.xml"
 EXPOSURE_TEST_FILE = "exposure-portfolio.xml"
 
 
-class EpsilonTestCase(unittest.TestCase):
+class EpsilonTestCase(unittest.TestCase, helpers.DbTestCase):
     """Tests the `epsilon` method in class `EpsilonProvider`"""
 
     def setUp(self):
-        self.exposure_parser = exposure.ExposurePortfolioFile(
-            os.path.join(helpers.SCHEMA_EXAMPLES_DIR, TEST_FILE))
+        path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, TEST_FILE)
+        inputs = [("exposure", path)]
+        self.job = self.setup_classic_job(inputs=inputs)
+        writer = ExposureDBWriter(self.job.oq_job_profile.input_set, path)
+        exposure_parser = exposure.ExposurePortfolioFile(path)
+        writer.serialize(exposure_parser)
+        self.model = writer.model
         self.epsilon_provider = general.EpsilonProvider(dict())
+
+    def tearDown(self):
+        self.teardown_job(self.job)
 
     def test_uncorrelated(self):
         """For uncorrelated jobs we sample epsilon values per asset.
@@ -50,7 +59,7 @@ class EpsilonTestCase(unittest.TestCase):
         building typology similarities.
         """
         samples = []
-        for _, asset in self.exposure_parser:
+        for asset in self.model.exposuredata_set.all():
             sample = self.epsilon_provider.epsilon(asset)
             self.assertTrue(sample not in samples,
                             "%s is already in %s" % (sample, samples))
@@ -68,9 +77,9 @@ class EpsilonTestCase(unittest.TestCase):
         """
         samples = dict()
         self.epsilon_provider.__dict__["ASSET_CORRELATION"] = "perfect"
-        for _, asset in self.exposure_parser:
+        for asset in self.model.exposuredata_set.all():
             sample = self.epsilon_provider.epsilon(asset)
-            taxonomy = asset["taxonomy"]
+            taxonomy = asset.taxonomy
             # This is either the first time we see this taxonomy or the sample
             # is identical to the one originally drawn for this taxonomy.
             if taxonomy not in samples:
@@ -92,15 +101,7 @@ class EpsilonTestCase(unittest.TestCase):
         file it should have a correct value ("perfect").
         """
         self.epsilon_provider.__dict__["ASSET_CORRELATION"] = "this-is-wrong"
-        for _, asset in self.exposure_parser:
-            self.assertRaises(ValueError, self.epsilon_provider.epsilon, asset)
-            break
-
-    def test_correlated_with_no_taxonomy(self):
-        """For correlated jobs assets require a taxonomy property."""
-        self.epsilon_provider.__dict__["ASSET_CORRELATION"] = "perfect"
-        for _, asset in self.exposure_parser:
-            del asset["taxonomy"]
+        for asset in self.model.exposuredata_set.all():
             self.assertRaises(ValueError, self.epsilon_provider.epsilon, asset)
             break
 
