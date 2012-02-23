@@ -72,6 +72,10 @@ def makedirs(fn):
             os.makedirs(target_dir)
         return fn(output, target_dir)
 
+    # This fixes doc generation problems with decorators
+    wrapped.__doc__ = fn.__doc__
+    wrapped.__repr__ = fn.__repr__
+
     return wrapped
 
 
