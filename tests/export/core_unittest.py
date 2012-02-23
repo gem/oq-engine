@@ -18,6 +18,8 @@
 import unittest
 import uuid
 
+from django.core.exceptions import ObjectDoesNotExist
+
 from openquake.db import models
 from openquake.engine import import_job_profile
 from openquake.export import core as export
@@ -181,3 +183,10 @@ class ExportFunctionsTestCase(GetOutputsTestCase):
 
         self.assertRaises(NotImplementedError, export.export,
                           self.uhs_output.id, '/some/dir/')
+
+    def test_export_with_bogus_output_id(self):
+        # If `export` is called with a non-existent output_id,
+        # a ObjectDoesNotExist error should be raised.
+
+        self.assertRaises(ObjectDoesNotExist, export.export,
+                          -1, '/some/dir/')
