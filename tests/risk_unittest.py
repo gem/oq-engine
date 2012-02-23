@@ -121,28 +121,32 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
     assets = []
     peb_gmfs = []
     points = []
+    emdl = None
 
     @classmethod
     def setUpClass(cls):
         path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, "PEB-exposure.yaml")
         inputs = [("exposure", path)]
         cls.calc = cls.setup_classic_job(inputs=inputs)
+        cls.calc.oq_job_profile.risk_cell_size = 0.05
+        cls.calc.oq_job_profile.save()
         qargs = dict(input_type="exposure", path=path)
         [input] = cls.calc.oq_job_profile.input_set.input_set.filter(**qargs)
         owner = models.OqUser.objects.get(user_name="openquake")
-        model = models.ExposureModel(
+        cls.emdl = models.ExposureModel(
             owner=owner, input=input, description="PEB test exposure model",
             category="PEB storages sheds", stco_unit="nuts",
-            stco_type="aggregated")
-        model.save()
+            stco_type="aggregated", reco_unit="pebbles",
+            reco_type="aggregated")
+        cls.emdl.save()
         values = [22.61, 124.27, 42.93, 29.37, 40.68, 178.47]
         for x, value in zip([float(v) for v in range(20, 27)], values):
             site = shapes.Site(x, x+11)
             cls.points.append(TEST_REGION.grid.point_at(site))
             location = GEOSGeometry(site.point.to_wkt())
-            asset = models.ExposureData(exposure_model=model, taxonomy="ID",
+            asset = models.ExposureData(exposure_model=cls.emdl, taxonomy="ID",
                                         asset_ref="asset_%s" % x, stco=value,
-                                        site=location)
+                                        site=location, reco=value*0.75)
             asset.save()
             cls.assets.append(asset)
 
@@ -260,10 +264,6 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
                       eb_core._filename(self.job_id)))
         except OSError:
             pass
-
-    def _store_asset(self, asset, row, column):
-        key = kvs.tokens.asset_key(self.job_id, row, column)
-        kvs.get_client().rpush(key, json.JSONEncoder().encode(asset))
 
     def _store_gmfs(self, gmfs, row, column):
         key = kvs.tokens.gmf_set_key(self.job_id, column, row)
@@ -712,24 +712,20 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
         block = Block(self.job_id, self.block_id, (SITE, SITE))
         block.to_kvs()
 
-        asset = {"taxonomy": "ID",
-                 "assetID": 22.61,
-                 "assetValue": 1,
-                 "retrofittingCost": 123.45,
-                 'lat': -1,
-                 'lon': -2}
-        self._store_asset(asset, 10, 10)
+        location = GEOSGeometry(SITE.point.to_wkt())
+        asset = models.ExposureData(exposure_model=self.emdl, taxonomy="ID",
+                                    asset_ref=22.61, stco=1, reco=123.45,
+                                    site=location)
+        asset.save()
 
         calculator.compute_risk(self.block_id)
 
         result_key = kvs.tokens.bcr_block_key(self.job_id, self.block_id)
         result = kvs.get_value_json_decoded(result_key)
-        expected_result = {'bcr': 0.0,
-                           'eal_original': 0.0,
+        expected_result = {'bcr': 0.0, 'eal_original': 0.0,
                            'eal_retrofitted': 0.0}
         helpers.assertDeepAlmostEqual(
-            self, result, [[[-1, -2], [[expected_result, 22.61]]]]
-        )
+            self, [[[1, 1], [[expected_result, "22.61"]]]], result)
 
 
 class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
@@ -944,7 +940,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         vuln_curves = {}
 
         # "empty" asset
-        asset = {"taxonomy": "ID", "assetID": 1}
+        asset = models.ExposureData(taxonomy="ID", asset_ref=1)
 
         self.assertEqual(None, calculator.compute_loss_ratio_curve(
                          None, asset, None, vuln_curves))
@@ -977,8 +973,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         self.vuln_function_2 = shapes.VulnerabilityFunction(imls_2,
             loss_ratios_2, covs_2)
 
-        self.asset_1 = {"taxonomy": "ID",
-                "assetValue": 124.27}
+        self.asset_1 = {"taxonomy": "ID", "assetValue": 124.27}
 
         self.region = shapes.RegionConstraint.from_simple(
                 (0.0, 0.0), (2.0, 2.0))
@@ -1198,7 +1193,28 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
                                compute_mean_loss(loss_ratio_curve), 3)
 
 
-class ScenarioEventBasedTestCase(unittest.TestCase):
+class ScenarioEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
+
+    calc = None
+    emdl = None
+
+    @classmethod
+    def setUpClass(cls):
+        path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, "SEB-exposure.yaml")
+        inputs = [("exposure", path)]
+        cls.calc = cls.setup_classic_job(inputs=inputs)
+        qargs = dict(input_type="exposure", path=path)
+        [input] = cls.calc.oq_job_profile.input_set.input_set.filter(**qargs)
+        owner = models.OqUser.objects.get(user_name="openquake")
+        cls.emdl = models.ExposureModel(
+            owner=owner, input=input, description="SEB test exposure model",
+            category="SEB factory buildings", stco_unit="screws",
+            stco_type="aggregated")
+        cls.emdl.save()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.teardown_job(cls.calc)
 
     def setUp(self):
         imls = [0.10, 0.30, 0.50, 1.00]
@@ -1214,14 +1230,14 @@ class ScenarioEventBasedTestCase(unittest.TestCase):
                      0.1419, 0.4218, 0.9157, 0.7922, 0.9595)}
 
     def test_computes_the_mean_loss_from_loss_ratios(self):
-        asset = {"assetValue": 1000}
+        asset = models.ExposureData(exposure_model=self.emdl, stco=1000)
         loss_ratios = numpy.array([0.20, 0.05, 0.10, 0.05, 0.10])
 
         self.assertEqual(100, scenario._mean_loss_from_loss_ratios(
                          loss_ratios, asset))
 
     def test_computes_the_mean_loss(self):
-        asset = {"assetValue": 10}
+        asset = models.ExposureData(exposure_model=self.emdl, stco=10)
         epsilon_provider = EpsilonProvider(asset, self.epsilons)
 
         self.assertTrue(numpy.allclose(2.4887999999999999,
@@ -1231,7 +1247,7 @@ class ScenarioEventBasedTestCase(unittest.TestCase):
                         atol=0.0001))
 
     def test_computes_the_stddev_loss_from_loss_ratios(self):
-        asset = {"assetValue": 1000}
+        asset = models.ExposureData(exposure_model=self.emdl, stco=1000)
         loss_ratios = numpy.array([0.20, 0.05, 0.10, 0.05, 0.10])
 
         self.assertTrue(numpy.allclose(61.237,
@@ -1239,7 +1255,7 @@ class ScenarioEventBasedTestCase(unittest.TestCase):
                         loss_ratios, asset), atol=0.001))
 
     def test_computes_the_stddev_loss(self):
-        asset = {"assetValue": 10}
+        asset = models.ExposureData(exposure_model=self.emdl, stco=10)
         epsilon_provider = EpsilonProvider(asset, self.epsilons)
 
         self.assertTrue(numpy.allclose(1.631,
@@ -1252,7 +1268,8 @@ class ScenarioEventBasedTestCase(unittest.TestCase):
         gmfs = {"IMLs": ()}
         epsilon_provider = object()
         vuln_model = {"ID": self.vuln_function}
-        asset = {"assetValue": 10, "taxonomy": "ID"}
+        asset = models.ExposureData(exposure_model=self.emdl, taxonomy="ID",
+                                    stco=10)
 
         def loss_ratios_calculator(
             vuln_function, ground_motion_field_set, epsilon_provider, asset):
@@ -1281,7 +1298,8 @@ class ScenarioEventBasedTestCase(unittest.TestCase):
             return loss_ratios.pop(0)
 
         vuln_model = {"ID": self.vuln_function}
-        asset = {"assetValue": 100, "taxonomy": "ID"}
+        asset = models.ExposureData(exposure_model=self.emdl, taxonomy="ID",
+                                    stco=100)
 
         calculator = scenario.SumPerGroundMotionField(
             vuln_model, None, lr_calculator=loss_ratios_calculator)
@@ -1289,9 +1307,11 @@ class ScenarioEventBasedTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose([], calculator.losses))
 
         calculator.add(None, asset)
-        asset = {"assetValue": 300, "taxonomy": "ID"}
+        asset = models.ExposureData(exposure_model=self.emdl, taxonomy="ID",
+                                    stco=300)
         calculator.add(None, asset)
-        asset = {"assetValue": 200, "taxonomy": "ID"}
+        asset = models.ExposureData(exposure_model=self.emdl, taxonomy="ID",
+                                    stco=200)
         calculator.add(None, asset)
 
         expected_sum = [62.63191284, 98.16576808,
@@ -1341,8 +1361,8 @@ class ScenarioEventBasedTestCase(unittest.TestCase):
         motion field set is ignored.
         """
         vuln_model = {"ID": self.vuln_function}
-        asset = {"assetValue": 100, "assetID": "ID",
-                 "taxonomy": "XX"}
+        asset = models.ExposureData(exposure_model=self.emdl, taxonomy="XX",
+                                    asset_ref="ID", stco=100)
 
         calculator = scenario.SumPerGroundMotionField(vuln_model, None)
 
