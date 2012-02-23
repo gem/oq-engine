@@ -12,7 +12,7 @@ Contents:
 
     calculators/hazard
     engine
-    export/core
+    export/index
     db/models
     architecture
     flags
