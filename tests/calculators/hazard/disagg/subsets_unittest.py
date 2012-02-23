@@ -151,7 +151,7 @@ class SubsetExtractionTestCase(unittest.TestCase):
         # https://bugs.launchpad.net/openquake/+bug/932765
 
         # To make this test work, we basically have to define a list of epsilon
-        # which has a different length from all of the others.
+        # limits which has a different length from all of the others.
         eps_limits = [-0.5, +0.5, +1.5]
         subset_name = 'MagDistEpsPMF'
         file_name = '%s.dat' % subset_name
