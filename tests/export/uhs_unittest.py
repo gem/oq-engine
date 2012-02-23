@@ -138,8 +138,11 @@ class UHSExportTestCase(unittest.TestCase):
         n_periods = 4  # columns
         ds_names = [uhs_export._point_to_ds_name(p) for p in points]
 
+        # As a robustness test, reverse the order of the ds_names.
+        # It should not matter when we're creating the file (since the
+        # structure of the file is basically a dict of 2D matrices).
         the_file = uhs_export.touch_result_hdf5_file(
-            target_dir, poe, ds_names, n_rlz, n_periods)
+            target_dir, poe, ds_names[::-1], n_rlz, n_periods)
 
         # Finally, call the function under test with our list of fake
         # `UhSpectrumData` objects.

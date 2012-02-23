@@ -79,7 +79,7 @@ def export_uhs(output, target_dir):
                              for datum in uhs_data]))
 
         file_name = touch_result_hdf5_file(
-            target_dir, spectrum.poe, ds_names, len(uh_spectra.realizations),
+            target_dir, spectrum.poe, ds_names, uh_spectra.realizations,
             len(uh_spectra.periods))
         # TODO: now write the actual data
         file_names.append(file_name)
