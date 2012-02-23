@@ -69,7 +69,7 @@ pgv   1.06 3.45 -2.1 -0.5 50.0 3.0 4.0  2.2884  0.1094 -0.0626 1.648 4.2979 5.17
         coeffs[imt] = dict(zip(coeff_names, map(float, row)))
     del coeff_names, table, imt, row, period
 
-    def get_mean_and_stddev(self, context, imt, stddev_type, component_type):
+    def get_mean_and_stddevs(self, context, imt, stddev_types, component_type):
         C = self.coeffs[imt]
         ln_y_ref = self._get_ln_y_ref(context, C)
 
@@ -88,7 +88,10 @@ pgv   1.06 3.45 -2.1 -0.5 50.0 3.0 4.0  2.2884  0.1094 -0.0626 1.648 4.2979 5.17
             + C['phi5'] * (1.0 - 1.0 / math.cosh(C['phi6'] * max(0.0, basin_depth - C['phi7'])))
             + C['phi8'] / math.cosh(0.15 * max(0.0, basin_depth - 15.0))
         )
-        return ln_y, self._get_stddev(context, C, stddev_type, ln_y_ref, exp1, exp2)
+        stddevs = [self._get_stddev(context, C, stddev_type,
+                                    ln_y_ref, exp1, exp2)
+                   for stddev_type in stddev_types]
+        return ln_y, stddevs
 
     def _get_stddev(self, context, C, stddev_type, ln_y_ref, exp1, exp2):
         AS = 0

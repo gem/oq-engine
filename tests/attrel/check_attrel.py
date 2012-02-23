@@ -65,8 +65,8 @@ def check_attrel(attrel_cls, filename, max_discrep_percentage,
         assert component_type is not None and result_type is not None
 
         for imt, expected_result in expected_results.items():
-            mean, stddev = attrel.get_mean_and_stddev(
-                context, imt, stddev_type, component_type
+            mean, [stddev] = attrel.get_mean_and_stddevs(
+                context, imt, [stddev_type], component_type
             )
             if result_type == 'MEAN':
                 result = math.exp(mean)
