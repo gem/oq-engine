@@ -23,7 +23,6 @@ file formats."""
 import os
 
 from openquake.db import models
-from openquake.export import uhs
 
 
 def _export_fn_map():
@@ -37,6 +36,8 @@ def _export_fn_map():
 
     :rtype: `dict`
     """
+    from openquake.export import uhs
+
     fn_map = {
         'uh_spectra': uhs.export_uhs,
     }
@@ -48,6 +49,23 @@ def _export_fn_not_implemented(output, _target_dir):
     type. See :data:`_EXPORT_FN_MAP`."""
     raise NotImplementedError('Cannot export output of type: %s'
                               % output.output_type)
+
+
+def makedirs(fn):
+    """Decorator for export functions. Creates intermediate directories (if
+    necessary) to the target export directory.
+
+    This is equivalent to `mkdir -p` and :function:`os.makedirs`.
+    """
+
+    def wrapped(output, target_dir):
+        """Call :function:`os.makedirs` to create intermediate directories to
+        the ``target_dir``.
+        """
+        os.makedirs(target_dir)
+        return fn(output, target_dir)
+
+    return wrapped
 
 
 def get_calculations(user_name):

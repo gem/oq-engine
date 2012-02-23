@@ -20,6 +20,7 @@ import numpy
 import os
 
 from openquake.db import models
+from openquake.export import core as export
 from openquake.utils import round_float
 
 #: Format string for HDF5 dataset names
@@ -57,11 +58,9 @@ def _point_to_ds_name(point):
     return _DS_NAME_FMT % (round_float(point.x), round_float(point.y))
 
 
+@export.makedirs
 def export_uhs(output, target_dir):
     """ """
-
-    # TODO: mkdir -p (if the target dir doesn't exist?)
-
     file_names = []
 
     uh_spectra = models.UhSpectra.objects.get(output=output.id)
