@@ -12,6 +12,7 @@ def check_attrel(attrel_cls, filename, max_discrep_percentage,
                  max_errors=0, verbose=False):
     reader = csv.reader(open(filename))
     attrel = attrel_cls()
+    context_params = set(AttRelContext.__slots__)
 
     linenum = 1
     errors = 0
@@ -41,7 +42,7 @@ def check_attrel(attrel_cls, filename, max_discrep_percentage,
                 damping = float(value)
             elif param == 'component_type':
                 component_type = getattr(const.IMC, value)
-            elif hasattr(context, param):
+            elif param in context_params:
                 # value is context object attribute
                 if param == 'site_vs30type':
                     value = getattr(const.VS30T, value)
