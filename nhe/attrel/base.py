@@ -16,11 +16,6 @@ class AttenuationRelationship(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    #: The closest and furthest distances between the site and a rupture
-    #: this attenuation relationship is defined for. Should be a tuple
-    #: of two elements, representing closest and furthest distances in km.
-    DEFINED_FOR_DISTANCE_RANGE = abc.abstractproperty()
-
     #: Set of :class:`tectonic region types <nhe.const.TRT>` this attenuation
     #: relationship is defined for.
     DEFINED_FOR_TECTONIC_REGION_TYPES = abc.abstractproperty()

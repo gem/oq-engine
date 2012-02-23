@@ -6,7 +6,6 @@ from nhe.imt import PGA, PGV, SA
 
 
 class ChiouYoungs2008(AttenuationRelationship):
-    DEFINED_FOR_DISTANCE_RANGE = (0, 70)
     DEFINED_FOR_TECTONIC_REGION_TYPES = set([
         const.TRT.ACTIVE_SHALLOW_CRUST
     ])
