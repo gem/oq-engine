@@ -125,3 +125,21 @@ def touch_result_hdf5_file(target_dir, poe, ds_names, n_realizations,
             h5_file.create_dataset(name, dtype=numpy.float64, shape=ds_shape)
 
     return full_path
+
+
+def write_uhs_data(hdf5_file, uhs_data):
+    """Given a path to an empty UHS HDF5 file (see
+    :function:`touch_result_hdf5_file`), write data (spectral acceleration
+    values) into the correct row in the correct dataset.
+
+    :param str h5df_file:
+        Path to the empty HDF5 file. The datasets should already be created.
+    :param uhs_data:
+        An iterable of :class:`openquake.db.models.UhSpectrumData` objects.
+    """
+    with h5py.File(hdf5_file, 'a') as h5_file:
+        for datum in uhs_data:
+            ds_name = _point_to_ds_name(datum.location)
+            # The `realization` is the row in the dataset.
+            # Each dataset is a 2D matrix of floats.
+            h5_file[ds_name][datum.realization] = datum.sa_values
