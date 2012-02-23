@@ -62,7 +62,14 @@ def makedirs(fn):
         """Call :function:`os.makedirs` to create intermediate directories to
         the ``target_dir``.
         """
-        os.makedirs(target_dir)
+        if os.path.exists(target_dir):
+            if not os.path.isdir(target_dir):
+                # If it's not a directory, we can't do anything.
+                # This is a problem
+                raise RuntimeError('%s already exists and is not a directory.'
+                                   % target_dir)
+        else:
+            os.makedirs(target_dir)
         return fn(output, target_dir)
 
     return wrapped
