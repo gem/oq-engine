@@ -60,7 +60,17 @@ def _point_to_ds_name(point):
 
 @export.makedirs
 def export_uhs(output, target_dir):
-    """ """
+    """Export the specified ``output`` to the ``target_dir``.
+
+    :param output:
+        :class:`openquake.db.models.Output` associated with UHS calculation
+        results.
+    :param str target_dir:
+        Destination directory location of the exported files.
+
+    :returns:
+        A list of exported file names (including the full path to each file).
+    """
     file_names = []
 
     uh_spectra = models.UhSpectra.objects.get(output=output.id)
@@ -78,10 +88,13 @@ def export_uhs(output, target_dir):
         ds_names = list(set([_point_to_ds_name(datum.location)
                              for datum in uhs_data]))
 
+        # Create the empty result file
         file_name = touch_result_hdf5_file(
             target_dir, spectrum.poe, ds_names, uh_spectra.realizations,
             len(uh_spectra.periods))
-        # TODO: now write the actual data
+
+        # Now write the actual data
+        write_uhs_data(file_name, uhs_data)
         file_names.append(file_name)
 
     return file_names

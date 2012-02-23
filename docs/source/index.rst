@@ -9,7 +9,6 @@ OpenQuake Source Code Documentation
 Contents:
 
 .. toctree::
-    :maxdepth: 2
 
     calculators/hazard
     engine
