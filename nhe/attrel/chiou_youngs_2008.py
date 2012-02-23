@@ -72,15 +72,20 @@ pgv   1.06 3.45 -2.1 -0.5 50.0 3.0 4.0  2.2884  0.1094 -0.0626 1.648 4.2979 5.17
     def get_mean_and_stddevs(self, context, imt, stddev_types, component_type):
         C = self.coeffs[imt]
         ln_y_ref = self._get_ln_y_ref(context, C)
+        exp1 = math.exp(C['phi3'] * (min(context.site_vs30, 1130) - 360))
+        exp2 = math.exp(C['phi3'] * (1130 - 360))
 
+        mean = self._get_mean(context, C, ln_y_ref, exp1, exp2)
+        stddevs = [self._get_stddev(context, C, stddev_type,
+                                    ln_y_ref, exp1, exp2)
+                   for stddev_type in stddev_types]
+        return mean, stddevs
+
+    def _get_mean(self, context, C, ln_y_ref, exp1, exp2):
         if context.site_z1pt0 is NOT_SET:
             basin_depth = math.exp(28.5 - 3.82 * math.log(math.pow(context.site_vs30, 8) + math.pow(378.7, 8)) / 8)
         else:
             basin_depth = context.site_z1pt0
-
-        exp1 = math.exp(C['phi3'] * (min(context.site_vs30, 1130) - 360))
-        exp2 = math.exp(C['phi3'] * (1130 - 360))
-
         ln_y = (
             ln_y_ref
             + C['phi1'] * min(math.log(context.site_vs30 / 1130), 0)
@@ -88,10 +93,7 @@ pgv   1.06 3.45 -2.1 -0.5 50.0 3.0 4.0  2.2884  0.1094 -0.0626 1.648 4.2979 5.17
             + C['phi5'] * (1.0 - 1.0 / math.cosh(C['phi6'] * max(0.0, basin_depth - C['phi7'])))
             + C['phi8'] / math.cosh(0.15 * max(0.0, basin_depth - 15.0))
         )
-        stddevs = [self._get_stddev(context, C, stddev_type,
-                                    ln_y_ref, exp1, exp2)
-                   for stddev_type in stddev_types]
-        return ln_y, stddevs
+        return ln_y
 
     def _get_stddev(self, context, C, stddev_type, ln_y_ref, exp1, exp2):
         AS = 0
