@@ -1,6 +1,6 @@
 import math
 
-from nhe.attrel.base import AttenuationRelationship, NOT_SET
+from nhe.attrel.base import AttenuationRelationship
 from nhe import const
 from nhe.imt import PGA, PGV, SA
 
@@ -82,10 +82,9 @@ pgv   1.06 3.45 -2.1 -0.5 50.0 3.0 4.0  2.2884  0.1094 -0.0626 1.648 4.2979 5.17
         return mean, stddevs
 
     def _get_mean(self, context, C, ln_y_ref, exp1, exp2):
-        if context.site_z1pt0 is NOT_SET:
-            basin_depth = math.exp(28.5 - 3.82 * math.log(math.pow(context.site_vs30, 8) + math.pow(378.7, 8)) / 8)
-        else:
-            basin_depth = context.site_z1pt0
+        # we do not support estimating of basin depth and instead
+        # rely on it being available (since we require it).
+        basin_depth = context.site_z1pt0
         ln_y = (
             ln_y_ref
             + C['phi1'] * min(math.log(context.site_vs30 / 1130), 0)
