@@ -28,7 +28,7 @@ class AttenuationRelationship(object):
     #: Set of :mod:`intensity measure types <nhe.imt>` this attenuation
     #: relationship can calculate. A set should contain classes from
     #: module :mod:`nhe.imt`.
-    DEFINED_FOR_INTENCITY_MEASURE_TYPES = abc.abstractproperty()
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = abc.abstractproperty()
 
     #: Set of :class:`standard deviation types <nhe.const.StdDev>`
     #: this attenuation relationship can calculate.

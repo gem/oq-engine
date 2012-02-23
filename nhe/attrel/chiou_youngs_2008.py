@@ -10,7 +10,7 @@ class ChiouYoungs2008(AttenuationRelationship):
     DEFINED_FOR_TECTONIC_REGION_TYPES = set([
         const.TRT.ACTIVE_SHALLOW_CRUST
     ])
-    DEFINED_FOR_INTENCITY_MEASURE_TYPES = set([
+    DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
         PGA,
         PGV,
         SA
