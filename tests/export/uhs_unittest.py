@@ -62,6 +62,7 @@ class UHSExportTestCase(unittest.TestCase):
         n_rlz = 3
         n_periods = 4
 
+        # Each dataset should be created empty (all zeros)
         expected_matrix = numpy.zeros((n_rlz, n_periods), dtype=numpy.float64)
 
         path = uhs_export.touch_result_hdf5_file(
