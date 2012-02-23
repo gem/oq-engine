@@ -20,6 +20,8 @@ calculation outputs, as well as exporting outputs from the database to various
 file formats."""
 
 
+import os
+
 from openquake.db import models
 from openquake.export import uhs
 
@@ -103,4 +105,4 @@ def export(output_id, target_dir):
     export_fn = _export_fn_map().get(
         output.output_type, _export_fn_not_implemented)
 
-    return export_fn(output, target_dir)
+    return export_fn(output, os.path.expanduser(target_dir))

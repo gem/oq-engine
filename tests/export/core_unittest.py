@@ -15,6 +15,7 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+import os
 import unittest
 import uuid
 
@@ -190,3 +191,24 @@ class ExportFunctionsTestCase(GetOutputsTestCase):
 
         self.assertRaises(ObjectDoesNotExist, export.export,
                           -1, '/some/dir/')
+
+    def test_export_expands_user(self):
+        # If the user specifies a path using '~' (to indicate the current
+        # user's home directory), make sure the path is expanded properly.
+        # See `os.path.expanduser`.
+        self._create_job_profiles(self.user_name)
+        self._set_up_complete_calcs()
+        self._set_up_outputs()
+
+        self.uhs_output.output_type = 'unknown'
+        self.uhs_output.save()
+
+        expanded_dir = '%s/uhs_results/some_subdir/' % os.getenv('HOME')
+
+        with helpers.patch(
+            'openquake.export.core._export_fn_not_implemented') as expt_patch:
+            export.export(self.uhs_output.id, '~/uhs_results/some_subdir/')
+
+            self.assertEqual(1, expt_patch.call_count)
+            self.assertEqual(((self.uhs_output, expanded_dir), {}),
+                             expt_patch.call_args)
