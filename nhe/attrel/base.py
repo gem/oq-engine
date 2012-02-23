@@ -10,7 +10,7 @@ class AttenuationRelationship(object):
     GMPEs (ground motion prediction equations) and IPEs
     (intensity prediction equations).
 
-    Subclasses must implement :meth:`get_mean_and_stddev`
+    Subclasses must implement :meth:`get_mean_and_stddevs`
     and all the class attributes with names starting from
     ``DEFINED_FOR`` and ``REQUIRES``.
     """
@@ -82,8 +82,47 @@ class AttenuationRelationship(object):
 
     @abc.abstractmethod
     def get_mean_and_stddevs(self, context, imt, stddev_types, component_type):
-        # TODO: document
-        pass
+        """
+        Calculate and return mean value of intensity distribution and it's
+        standard deviation.
+
+        Method must be implemented by subclasses.
+
+        :param context:
+            Instance of :class:`AttRelContext` with parameters of rupture, site
+            and their relative position (read, distances) assigned to respective
+            attributes. Only those attributes that are listed in class'
+            :attr:`REQUIRES_SITE_PARAMETERS`, :attr:`REQUIRES_DISTANCES`
+            and :attr:`REQUIRES_RUPTURE_PARAMETERS` are available.
+        :param imt:
+            An instance (not a class) of intensity measure type.
+            See :mod:`nhe.imt`.
+        :param stddev_types:
+            List of standard deviation types, constants from
+            :class:`nhe.const.StdDev`. Method result value should include
+            standard deviation values for each of types in this list.
+        :param component_type:
+            A component of interest of intensity measure. A constant from
+            :class:`nhe.const.IMC`.
+
+        :returns:
+            Method should return a tuple of two items. First item should be
+            a mean value of respective component of a chosen intensity measure
+            type and the second should be a list of standard deviation values
+            for the same single component of the same single intensity measure
+            type, one for each type in ``stddev_types`` parameter, preserving
+            the order.
+
+        Combining interface to mean and standard deviation values in a single
+        method allows to avoid redoing the same intermediate calculations
+        if there are some shared between stddev and mean formulae without
+        resorting to keeping any sort of internal state (and effectively
+        making attenuation relationship not reenterable).
+
+        However it is advised to split calculation of mean and stddev values
+        and make ``get_mean_and_stddevs()`` just combine both (and possibly
+        compute interim steps).
+        """
 
     def get_probabilities_of_exceedance(self, context, imts, component_type):
         # TODO: document
