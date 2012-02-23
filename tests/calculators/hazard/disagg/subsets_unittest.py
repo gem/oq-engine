@@ -164,7 +164,7 @@ class SubsetExtractionTestCase(unittest.TestCase):
             file_name, [self.NMAG - 1, self.NDIST - 1, self.NEPS - 1])
         # chop the test data to match what we expected with the shortened
         # epsilon limits we've defined (see above)
-        expected_data = numpy.array([x[:, 0:2] for x in data])
+        expected_data = data[:, :, 0:2]
 
         disagg_subsets.extract_subsets(
             666, self.SITE, self.full_matrix_path,
