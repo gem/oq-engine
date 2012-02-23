@@ -120,7 +120,7 @@ class SimpleFaultSurface(BaseSurface):
         describing this fault surface.
 
         :returns:
-            The average dip.
+            The average dip, in decimal degrees.
         :rtype:
             float
         """
@@ -155,7 +155,7 @@ class SimpleFaultSurface(BaseSurface):
         azimuth values for all the fault trace segments.
 
         :returns:
-            The average strike.
+            The average strike, in decimal degrees.
         :rtype:
             float
         """

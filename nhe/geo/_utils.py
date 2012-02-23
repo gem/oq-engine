@@ -197,7 +197,7 @@ def plane_dip(p1, p2, p3):
     :type p3:
         Instance of :class:`nhe.geo.point.Point`
     :returns:
-        The dip of the plane identified by the given points.
+        The dip of the plane identified by the given points, in decimal degrees.
     :rtype:
         float
     """
