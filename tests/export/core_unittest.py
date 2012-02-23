@@ -16,6 +16,7 @@
 
 
 import os
+import tempfile
 import unittest
 import uuid
 
@@ -212,3 +213,24 @@ class ExportFunctionsTestCase(GetOutputsTestCase):
             self.assertEqual(1, expt_patch.call_count)
             self.assertEqual(((self.uhs_output, expanded_dir), {}),
                              expt_patch.call_args)
+
+
+@export.makedirs
+def _decorated(_output, _target_dir):
+    """Just a test function for exercising the `makedirs` decorator."""
+    return []
+
+
+class UtilsTestCase(unittest.TestCase):
+    """Tests for misc. export utilties."""
+
+    def test_makedirs_decorator(self):
+        temp_dir = tempfile.mkdtemp()
+
+        target_dir = os.path.join(temp_dir, 'some', 'nonexistent', 'dir')
+
+        self.assertFalse(os.path.exists(target_dir))
+
+        _decorated(None, target_dir)
+
+        self.assertTrue(os.path.exists(target_dir))
