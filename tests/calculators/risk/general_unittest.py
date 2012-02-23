@@ -21,6 +21,8 @@ import numpy
 import unittest
 
 from django.contrib.gis import geos
+from django.db import router
+from django.db import transaction
 
 from openquake.calculators.risk.classical.core import ClassicalRiskCalculator
 from openquake.calculators.risk.classical.core import _generate_loss_ratios
@@ -28,7 +30,7 @@ from openquake.calculators.risk.general import BaseRiskCalculator
 from openquake.calculators.risk.general import BetaDistribution
 from openquake.calculators.risk.general import compute_alpha
 from openquake.calculators.risk.general import compute_beta
-from openquake.db.models import ExposureData, OqCalculation
+from openquake.db import models
 from openquake import engine
 from openquake import shapes
 from openquake.output.risk import LossMapDBWriter
@@ -56,8 +58,8 @@ class ProbabilisticRiskCalculatorTestCase(unittest.TestCase):
         job_profile.conditional_loss_poe = [0.01]
         job_profile.save()
 
-        calculation = OqCalculation(owner=job_profile.owner,
-                                    oq_job_profile=job_profile)
+        calculation = models.OqCalculation(owner=job_profile.owner,
+                                           oq_job_profile=job_profile)
         calculation.save()
 
         calc_proxy = engine.CalculationProxy(
@@ -106,8 +108,8 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
 
         job_profile, params, sections = engine.import_job_profile(cfg_file)
 
-        calculation = OqCalculation(owner=job_profile.owner,
-                                    oq_job_profile=job_profile)
+        calculation = models.OqCalculation(owner=job_profile.owner,
+                                           oq_job_profile=job_profile)
         calculation.save()
 
         calc_proxy = engine.CalculationProxy(
@@ -239,13 +241,14 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
     sites = []
     calc_proxy = None
 
+    @transaction.commit_on_success(router.db_for_write(models.ExposureData))
     @classmethod
     def setUpClass(cls):
-        jp, _, _ = engine.import_job_profile(
-            RISK_DEMO_CONFIG_FILE)
-        cls.job = OqCalculation(owner=jp.owner, oq_job_profile=jp)
+        jp, _, _ = engine.import_job_profile(RISK_DEMO_CONFIG_FILE)
+        cls.job = models.OqCalculation(owner=jp.owner, oq_job_profile=jp)
         cls.job.save()
-        cls.calc_proxy = helpers.create_job({}, oq_job_profile=jp,
+        cls.calc_proxy = helpers.create_job({}, job_id=cls.job.id,
+                                            oq_job_profile=jp,
                                             oq_calculation=cls.job)
         calc = ClassicalRiskCalculator(cls.calc_proxy)
 
@@ -260,9 +263,10 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
             site = shapes.Site(lat, lon)
             cls.sites.append(site)
             location = geos.GEOSGeometry(site.point.to_wkt())
-            asset = ExposureData(exposure_model=model, taxonomy="RC/DMRF-D/LR",
-                                 asset_ref=helpers.random_string(6),
-                                 stco=lat*2, site=location, reco=1.1*lon)
+            asset = models.ExposureData(
+                exposure_model=model, taxonomy="RC/DMRF-D/LR",
+                asset_ref=helpers.random_string(6), stco=lat*2, site=location,
+                reco=1.1*lon)
             asset.save()
 
     @staticmethod
