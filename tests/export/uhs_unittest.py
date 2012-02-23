@@ -21,9 +21,13 @@ import os
 import tempfile
 import unittest
 
+from collections import namedtuple
+
 from django.contrib.gis.geos.point import Point
 
 from openquake.export import uhs as uhs_export
+
+from tests.utils import helpers
 
 
 class UHSExportTestCase(unittest.TestCase):
@@ -82,3 +86,67 @@ class UHSExportTestCase(unittest.TestCase):
                 actual_matrix = h5_file[ds].value
                 self.assertEqual(expected_matrix.dtype, actual_matrix.dtype)
                 self.assertTrue((expected_matrix == actual_matrix).all())
+
+
+    def test_write_uhs_data(self):
+        # Test object type to use instead of `UhSpectrumData`;
+        # this is a little more light-weight
+
+        # First, set up all the test data:
+        Data = namedtuple('Data', 'realization, sa_values, location')
+
+        points = [
+            Point(0.0, 0.0),
+            Point(1.0, 0.0),
+            Point(0.0, 1.0),
+            Point(1.0, 1.0),
+        ]
+
+
+        # A single 2D matrix for each location/point
+        sa_test_values = [
+            # each row repsents a realization,
+            # while the contents of each row is an array of SA values
+            [[1.0, 2.0, 3.0, 4.0],
+             [5.0, 6.0, 7.0, 8.0],
+             [9.0, 10.0, 11.0, 12.0]],
+
+            [[13.0, 14.0, 15.0, 16.0],
+             [17.0, 18.0, 19.0, 20.0],
+             [21.0, 22.0, 23.0, 24.0]],
+
+            [[25.0, 26.0, 27.0, 28.0],
+             [29.0, 30.0, 31.0, 32.0],
+             [33.0, 34.0, 35.0, 36.0]],
+
+            [[37.0, 38.0, 39.0, 40.0],
+             [41.0, 42.0, 43.0, 44.0],
+             [45.0, 46.0, 47.0, 48.0]],
+        ]
+
+        uhs_data = []
+        for i, pt in enumerate(points):
+            for j, sa_values in enumerate(sa_test_values[i]):
+                uhs_data.append(Data(j, sa_values, pt))
+
+        # Done setting up the test data.
+
+        # Now, create the empty file:
+        target_dir = tempfile.mkdtemp()
+        poe = 0.05
+        n_rlz = 3  # rows
+        n_periods = 4  # columns
+        ds_names = [uhs_export._point_to_ds_name(p) for p in points]
+
+        the_file = uhs_export.touch_result_hdf5_file(
+            target_dir, poe, ds_names, n_rlz, n_periods)
+
+        # Finally, call the function under test with our list of fake
+        # `UhSpectrumData` objects.
+        uhs_export.write_uhs_data(the_file, uhs_data)
+
+        # Now read the file and check the contents:
+        with h5py.File(the_file, 'r') as h5_file:
+            for i, ds in enumerate(ds_names):
+                helpers.assertDeepAlmostEqual(
+                    self, sa_test_values[i], h5_file[ds].value)
