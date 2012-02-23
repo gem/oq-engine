@@ -30,6 +30,11 @@ class AttenuationRelationship(object):
     #: module :mod:`nhe.imt`.
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = abc.abstractproperty()
 
+    #: Set of :class:`intensity measure component types <nhe.const.IMC>`
+    #: this attenuation relationship can calculate mean and standard
+    #: deviation for.
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS = abc.abstractproperty()
+
     #: Set of :class:`standard deviation types <nhe.const.StdDev>`
     #: this attenuation relationship can calculate.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = abc.abstractproperty()

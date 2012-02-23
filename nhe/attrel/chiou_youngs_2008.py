@@ -15,6 +15,9 @@ class ChiouYoungs2008(AttenuationRelationship):
         PGV,
         SA
     ])
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS = set([
+        const.IMC.GMRotI50
+    ])
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.NONE,
         const.StdDev.TOTAL,
