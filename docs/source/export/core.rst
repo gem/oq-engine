@@ -13,4 +13,5 @@ UHS Export
 
 Export functionality for UHS calculation result artifacts.
 
+.. autofunction:: openquake.export.uhs.export_uhs
 .. automodule:: openquake.export.uhs
