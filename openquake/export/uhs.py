@@ -36,6 +36,7 @@ def _point_to_ds_name(point):
         :class:`django.contrib.gis.geos.point.Point` object.
     :returns:
         A dataset name generated from the point's lat/lon values. Example::
+
             "lon:-179.45-lat:-20.75"
 
     A simple example:
