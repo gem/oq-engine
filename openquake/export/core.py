@@ -21,15 +21,23 @@ file formats."""
 
 
 from openquake.db import models
+from openquake.export import uhs
 
 
 def _export_fn_map():
     """Creates a mapping from output type to export function.
 
+    The specific export functions should accept two parameters: a
+    :class:`openquake.db.models.Output` object and a taret dir (`str`).
+
+    Each function should return a list of the file names created by the export
+    action.
+
     :rtype: `dict`
     """
-    # TODO: No export functions have yet been written.
-    fn_map = {}
+    fn_map = {
+        'uh_spectra': uhs.export_uhs,
+    }
     return fn_map
 
 
