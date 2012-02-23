@@ -71,12 +71,6 @@ class IMC(ConstantContainer):
 
 # TODO: document these three classes
 
-class Dist(ConstantContainer):
-    RRUP = 'Minimum distance to a rupture'
-    RJB = 'Distance to surface projection of a rupture'
-    RX = "Perpendicular distance to rupture's top edge projection"
-
-
 class StdDev(ConstantContainer):
     TOTAL = 'Total standard deviation'
     INTER_EVENT = 'Inter event standard deviation'
