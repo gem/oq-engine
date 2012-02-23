@@ -473,6 +473,13 @@ class LossMapDBReaderTestCase(LossMapDBBaseTestCase):
         result = []
 
         for site, losses in data:
-            result.append((site, sorted(losses, key=dict_or_obj)))
+            nlosses = []
+            for loss, asset in sorted(losses, key=dict_or_obj):
+                if isinstance(asset, models.ExposureData):
+                    nlosses.append([loss, {"assetID": asset.asset_ref}])
+                else:
+                    nlosses.append([loss, asset])
+
+            result.append((site, nlosses))
 
         return result
