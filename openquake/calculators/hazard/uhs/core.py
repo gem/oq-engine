@@ -18,8 +18,6 @@
 """Core functionality of the Uniform Hazard Spectra calculator."""
 
 
-import h5py
-import numpy
 import random
 
 from celery.task import task
