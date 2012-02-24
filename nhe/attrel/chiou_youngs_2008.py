@@ -1,6 +1,7 @@
 """
 Module exports :class:`ChiouYoungs2008`.
 """
+from __future__ import division
 from math import log, tanh, cosh, cos, radians, sqrt, exp
 
 from nhe.attrel.base import AttenuationRelationship
