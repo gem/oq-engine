@@ -3,6 +3,10 @@ Module :mod:`nhe.attrel.base` defines base :class:`AttenuationRelationship`.
 """
 import abc
 
+import scipy.stats
+
+from nhe import const
+
 
 class AttenuationRelationship(object):
     """
@@ -124,10 +128,31 @@ class AttenuationRelationship(object):
         compute interim steps).
         """
 
-    def get_probabilities_of_exceedance(self, ctx, imts, component_type):
+    def get_probabilities_of_exceedance(self, ctx, imts, component_type,
+                                        truncation_level):
         # TODO: document
-        # TODO: implement
-        raise NotImplementedError()
+        # TODO: unittest
+        ret = {}
+        if truncation_level is None:
+            distribution = scipy.stats.norm()
+        else:
+            distribution = scipy.stats.truncnorm(- truncation_level,
+                                                 truncation_level)
+
+        for imt, imls in imts.items():
+            if truncation_level == 0:
+                mean, _ = self.get_mean_and_stddevs(ctx, imt, [],
+                                                    component_type)
+                probs = [1.0 if iml >= mean else 0.0 for iml in imls]
+            else:
+                mean, [stddev] = self.get_mean_and_stddevs(
+                    ctx, imt, [const.StdDev.TOTAL], component_type
+                )
+                probs = [distribution.sf((iml - mean) / stddev)
+                         for iml in imls]
+            ret[imt] = probs
+
+        return ret
 
     @classmethod
     def make_context(cls, site, rupture, distances=None):
