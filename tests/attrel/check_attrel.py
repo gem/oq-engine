@@ -2,6 +2,7 @@
 import csv
 import math
 import sys
+import time
 
 from nhe import const
 from nhe.attrel.base import AttRelContext, AttenuationRelationship
@@ -18,6 +19,7 @@ def check_attrel(attrel_cls, filename, max_discrep_percentage,
     errors = 0
     discrepancies = []
     headers = [param_name.lower() for param_name in reader.next()]
+    started = time.time()
     for values in reader:
         linenum += 1
         expected_results = {}
@@ -93,6 +95,7 @@ def check_attrel(attrel_cls, filename, max_discrep_percentage,
         if max_errors is not None and errors > max_errors:
             break
 
+    time_spent = time.time() - started
     max_discrep = max(discrepancies)
     total_checks = len(discrepancies)
     successes = total_checks - errors
@@ -101,14 +104,19 @@ def check_attrel(attrel_cls, filename, max_discrep_percentage,
     stddev = math.sqrt(1.0 / total_checks * sum((avg_discrep - discrep) ** 2
                                                 for discrep in discrepancies))
     stats = '''\
-total of %d checks done, %d of them were successful and %d failed.
+total of %d checks done, %d were successful and %d failed.
+%.1f seconds spent, avg rate is %.1f checks per seconds.
 success rate = %.1f%%
 average discrepancy = %.4f%%
 maximum discrepancy = %.4f%%
 standard deviation = %.4f%%'''
     successes = total_checks - errors
-    stats %= (total_checks, successes, errors, success_rate,
-              avg_discrep, max_discrep, stddev)
+    stats %= (total_checks, successes, errors,
+              time_spent, total_checks / float(time_spent),
+              success_rate,
+              avg_discrep,
+              max_discrep,
+              stddev)
     return errors, stats
 
 
