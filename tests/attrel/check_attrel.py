@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# TODO: document
 import csv
 import math
 import sys
