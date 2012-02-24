@@ -86,7 +86,7 @@ class ExposureDBWriter(object):
         for key, tag in [
             ("coco", "coco"), ("reco", "reco"), ("stco", "stco"),
             ("area", "area"), ("number_of_units", "number"),
-            ("deductible", "deductible"), ("limit", "limit")]:
+            ("deductible", "deductible"), ("ins_limit", "limit")]:
             value = values.get(tag)
             if value:
                 setattr(data, key, value)
