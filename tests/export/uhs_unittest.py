@@ -108,7 +108,6 @@ class UHSExportTestCase(unittest.TestCase):
             Point(1.0, 1.0),
         ]
 
-
         # A single 2D matrix for each location/point
         sa_test_values = [
             # each row repsents a realization,
