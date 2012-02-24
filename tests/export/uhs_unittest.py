@@ -18,6 +18,7 @@
 import h5py
 import numpy
 import os
+import shutil
 import tempfile
 import unittest
 
@@ -56,37 +57,42 @@ class UHSExportTestCase(unittest.TestCase):
     def test_touch_result_hdf5_file(self):
         target_dir = tempfile.mkdtemp()
 
-        poe = 0.02
-        ds_names = [
-            'lon:0.0-lat:0.0',
-            'lon:1.0-lat:0.0',
-            'lon:0.0-lat:1.0',
-            'lon:1.0-lat:1.0',
-        ]
-        n_rlz = 3
-        n_periods = 4
+        try:
+            poe = 0.02
+            ds_names = [
+                'lon:0.0-lat:0.0',
+                'lon:1.0-lat:0.0',
+                'lon:0.0-lat:1.0',
+                'lon:1.0-lat:1.0',
+            ]
+            n_rlz = 3
+            n_periods = 4
 
-        # Each dataset should be created empty (all zeros)
-        expected_matrix = numpy.zeros((n_rlz, n_periods), dtype=numpy.float64)
+            # Each dataset should be created empty (all zeros)
+            expected_matrix = numpy.zeros((n_rlz, n_periods),
+                                          dtype=numpy.float64)
 
-        path = uhs_export.touch_result_hdf5_file(
-            target_dir, poe, ds_names, n_rlz, n_periods)
+            path = uhs_export.touch_result_hdf5_file(
+                target_dir, poe, ds_names, n_rlz, n_periods)
 
-        directory, file_name = os.path.split(path)
+            directory, file_name = os.path.split(path)
 
-        self.assertEqual(target_dir, directory)
-        self.assertEqual('uhs_poe:0.02.hdf5', file_name)
+            self.assertEqual(target_dir, directory)
+            self.assertEqual('uhs_poe:0.02.hdf5', file_name)
 
-        with h5py.File(path, 'r') as h5_file:
+            with h5py.File(path, 'r') as h5_file:
 
-            # Verify the quanity and name of the datatsets:
-            self.assertEqual(set(ds_names), set(h5_file.keys()))
+                # Verify the quanity and name of the datatsets:
+                self.assertEqual(set(ds_names), set(h5_file.keys()))
 
-            for ds in ds_names:
-                actual_matrix = h5_file[ds].value
-                self.assertEqual(expected_matrix.dtype, actual_matrix.dtype)
-                self.assertTrue((expected_matrix == actual_matrix).all())
+                for ds in ds_names:
+                    actual_matrix = h5_file[ds].value
+                    self.assertEqual(expected_matrix.dtype,
+                                     actual_matrix.dtype)
+                    self.assertTrue((expected_matrix == actual_matrix).all())
 
+        finally:
+            shutil.rmtree(target_dir)
 
     def test_write_uhs_data(self):
         # Test object type to use instead of `UhSpectrumData`;
@@ -133,23 +139,28 @@ class UHSExportTestCase(unittest.TestCase):
 
         # Now, create the empty file:
         target_dir = tempfile.mkdtemp()
-        poe = 0.05
-        n_rlz = 3  # rows
-        n_periods = 4  # columns
-        ds_names = [uhs_export._point_to_ds_name(p) for p in points]
 
-        # As a robustness test, reverse the order of the ds_names.
-        # It should not matter when we're creating the file (since the
-        # structure of the file is basically a dict of 2D matrices).
-        the_file = uhs_export.touch_result_hdf5_file(
-            target_dir, poe, ds_names[::-1], n_rlz, n_periods)
+        try:
 
-        # Finally, call the function under test with our list of fake
-        # `UhSpectrumData` objects.
-        uhs_export.write_uhs_data(the_file, uhs_data)
+            poe = 0.05
+            n_rlz = 3  # rows
+            n_periods = 4  # columns
+            ds_names = [uhs_export._point_to_ds_name(p) for p in points]
 
-        # Now read the file and check the contents:
-        with h5py.File(the_file, 'r') as h5_file:
-            for i, ds in enumerate(ds_names):
-                helpers.assertDeepAlmostEqual(
-                    self, sa_test_values[i], h5_file[ds].value)
+            # As a robustness test, reverse the order of the ds_names.
+            # It should not matter when we're creating the file (since the
+            # structure of the file is basically a dict of 2D matrices).
+            the_file = uhs_export.touch_result_hdf5_file(
+                target_dir, poe, ds_names[::-1], n_rlz, n_periods)
+
+            # Finally, call the function under test with our list of fake
+            # `UhSpectrumData` objects.
+            uhs_export.write_uhs_data(the_file, uhs_data)
+
+            # Now read the file and check the contents:
+            with h5py.File(the_file, 'r') as h5_file:
+                for i, ds in enumerate(ds_names):
+                    helpers.assertDeepAlmostEqual(
+                        self, sa_test_values[i], h5_file[ds].value)
+        finally:
+            shutil.rmtree(target_dir)
