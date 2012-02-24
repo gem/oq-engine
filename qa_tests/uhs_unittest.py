@@ -91,10 +91,11 @@ class UniformHazardSpectraQATest(unittest.TestCase):
             uh_spectrum_data = UhSpectrumData.objects.get(
                 uh_spectrum=uh_spectrum.id)
 
-            self.assertTrue(numpy.allclose(data['sa_values'],
-                                          uh_spectrum_data.sa_values))
-            self.assertTrue(numpy.allclose(data['periods'],
-                            uh_spectra.periods))
+            self.assertTrue(
+                numpy.allclose(data['sa_values'], uh_spectrum_data.sa_values))
+            self.assertTrue(
+                numpy.allclose(data['periods'], uh_spectra.periods))
+
             self.assertEqual(0, uh_spectrum_data.realization)
             self.assertEqual(exp_site.point.to_wkt(),
                              uh_spectrum_data.location.wkt)
