@@ -15,12 +15,17 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+"""Functions for export Uniform Hazard Spectra results from the OpenQuake
+database.
+"""
+
+
 import h5py
 import numpy
 import os
 
 from openquake.db import models
-from openquake.export import core as export
+from openquake.export.core import makedirs
 from openquake.utils import round_float
 
 #: Format string for HDF5 dataset names
@@ -58,7 +63,7 @@ def _point_to_ds_name(point):
     return _DS_NAME_FMT % (round_float(point.x), round_float(point.y))
 
 
-@export.makedirs
+@makedirs
 def export_uhs(output, target_dir):
     """Export the specified ``output`` to the ``target_dir``.
 
