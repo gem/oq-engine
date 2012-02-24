@@ -15,10 +15,7 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-import h5py
 import numpy
-import os
-import tempfile
 import unittest
 
 from openquake import engine
