@@ -15,8 +15,33 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+import os
+import shutil
 import subprocess
+import tempfile
 import unittest
+
+from openquake.db import models
+
+from tests.utils import helpers
+
+
+def _prepare_cli_output(raw_output, discard_header=True):
+    """Given a huge string of output from a `subprocess.check_output` call,
+    split on newlines, strip, and discard empty lines.
+
+    If ``discard_header`` is `True`, drop the first row in the output.
+
+    Returns a `list` of strings, 1 for each row in the CLI output.
+    """
+    lines = raw_output.split('\n')
+    # strip and drop empty lines
+    lines = [x.strip() for x in lines if len(x.strip()) > 0]
+
+    if discard_header:
+        lines.pop(0)
+
+    return lines
 
 
 class ExportUHSTestCase(unittest.TestCase):
@@ -25,10 +50,64 @@ class ExportUHSTestCase(unittest.TestCase):
     """
 
     def test_export_uhs(self):
-        pass
-        # subprocess.call( bin/openquake --config-file demo/uhs/config.gem)
-        # subprocess.call( bin/openquake --list-calculations )
-        # subprocess.call( bin/openquake --list-outputs XXX )
-        # subprocess.call( bin/openquake --export YYY /tmp/blah/ )
-        # TODO: need to listen for text output, exit status
-        # TODO: parse the text output and check IDs
+        # Tests the UHS calculation run and export end-to-end.
+        # For the export, we only check the quantity, location, and names of
+        # each exported file. We don't check the contents; that's covered in
+        # other tests.
+        uhs_cfg = helpers.demo_file('uhs/config.gem')
+        export_target_dir = tempfile.mkdtemp()
+
+        expected_export_files = [
+            os.path.join(export_target_dir, 'uhs_poe:0.1.hdf5'),
+            os.path.join(export_target_dir, 'uhs_poe:0.02.hdf5'),
+        ]
+
+        try:
+            ret_code = helpers.run_job(uhs_cfg)
+            self.assertEqual(0, ret_code)
+
+            calculation = models.OqCalculation.objects.latest('id')
+            [output] = models.Output.objects.filter(
+                oq_calculation=calculation.id)
+
+            # Split into a list, 1 result for each row in the output.
+            # The first row of output (the table header) is discarded.
+            listed_calcs = _prepare_cli_output(subprocess.check_output(
+                ['bin/openquake', '--list-calculations']))
+
+            for c in listed_calcs:
+                # We get back:
+                # calc_id <tab> status <tag> description
+                # description is optional so we cannot always assume it will be
+                # present.
+                calc_id, status = c.split('\t')[:2]
+                if int(calc_id) == calculation.id:
+                    self.assertEqual('succeeded', status)
+                    break
+            else:
+                # We didn't find the calculation we just ran in the
+                # --list-calculations output.
+                self.fail('`openquake --list-calculations` did not print the'
+                          ' expected calculation with id %s' % calculation.id)
+
+            listed_outputs = _prepare_cli_output(subprocess.check_output(
+                ['bin/openquake', '--list-outputs',
+                 str(calculation.id)]))
+
+            for o in listed_outputs:
+                output_id, output_type = o.split('\t')
+                if int(output_id) == output.id:
+                    self.assertEqual('uh_spectra', output_type)
+                    break
+            else:
+                # We didn't find the output we expected with --list-outputs.
+                self.fail('`openquake --list-outputs` CALCULATION_ID did not'
+                          ' print the expected output with id %s' % output.id)
+
+            listed_exports = _prepare_cli_output(subprocess.check_output(
+                ['bin/openquake', '--export', str(output.id),
+                 export_target_dir]))
+
+            self.assertEqual(expected_export_files, listed_exports)
+        finally:
+            shutil.rmtree(export_target_dir)
