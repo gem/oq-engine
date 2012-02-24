@@ -24,7 +24,7 @@ def check_attrel(attrel_cls, filename, max_discrep_percentage,
         linenum += 1
         expected_results = {}
         context = AttRelContext()
-        stddev_type = result_type = damping = component_type = None
+        stddev_types = result_type = damping = component_type = None
 
         for param, value in zip(headers, values):
             if param == 'result_type':
@@ -32,13 +32,12 @@ def check_attrel(attrel_cls, filename, max_discrep_percentage,
                 if value.endswith('_STDDEV'):
                     # the row defines expected stddev results
                     result_type = 'STDDEV'
-                    stddev_type = getattr(const.StdDev,
-                                          value[:-len('_STDDEV')])
-                    assert stddev_type != const.StdDev.NONE
+                    stddev_types = [getattr(const.StdDev,
+                                            value[:-len('_STDDEV')])]
                 else:
                     # the row defines expected exponents of mean values
                     assert value == 'MEAN'
-                    stddev_type = const.StdDev.NONE
+                    stddev_types = []
                     result_type = 'MEAN'
             elif param == 'damping':
                 damping = float(value)
@@ -68,13 +67,13 @@ def check_attrel(attrel_cls, filename, max_discrep_percentage,
         assert component_type is not None and result_type is not None
 
         for imt, expected_result in expected_results.items():
-            mean, [stddev] = attrel.get_mean_and_stddevs(
-                context, imt, [stddev_type], component_type
+            mean, stddevs = attrel.get_mean_and_stddevs(
+                context, imt, stddev_types, component_type
             )
             if result_type == 'MEAN':
                 result = math.exp(mean)
             else:
-                result = stddev
+                [result] = stddevs
             discrep_percentage = abs(
                 result / float(expected_result) * 100 - 100
             )
