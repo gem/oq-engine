@@ -122,8 +122,10 @@ def compute_risk(calculation_id, block_id, **kwargs):
 class BaseRiskCalculator(Calculator):
     """Base abstract class for Risk calculators."""
 
-    # Exposure model inputs (cached result)
+    # Exposure model inputs (cached result). We need to refresh these for each
+    # job, otherwise the tests break when the entire suite is run.
     _em_inputs = None
+    _em_job_id = -1
 
     def __init__(self, calc_proxy):
         self.calc_proxy = calc_proxy
@@ -178,11 +180,13 @@ class BaseRiskCalculator(Calculator):
         jp = models.OqCalculation.objects.get(id=job_id).oq_job_profile
         assert jp.risk_cell_size is not None, "Risk cell size must be set."
 
-        if cls._em_inputs is None:
+        if cls._em_inputs is None or cls._em_job_id != job_id:
             # This query obtains the exposure model input rows and needs to be
             # made only once in the course of a risk calculation.
             cls._em_inputs = list(
                 jp.input_set.input_set.filter(input_type="exposure"))
+            cls._em_job_id = job_id
+
         if not cls._em_inputs:
             return []
 

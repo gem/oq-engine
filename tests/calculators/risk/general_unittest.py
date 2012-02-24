@@ -241,7 +241,6 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
     sites = []
     calc_proxy = None
 
-    @transaction.commit_on_success(router.db_for_write(models.ExposureData))
     @classmethod
     def setUpClass(cls):
         jp, _, _ = engine.import_job_profile(RISK_DEMO_CONFIG_FILE)
