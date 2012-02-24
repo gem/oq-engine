@@ -75,7 +75,6 @@ class StdDev(ConstantContainer):
     TOTAL = 'Total standard deviation'
     INTER_EVENT = 'Inter event standard deviation'
     INTRA_EVENT = 'Intra event standard deviation'
-    NONE = 'None standard deviation'
 
 
 class VS30T(ConstantContainer):
