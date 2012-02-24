@@ -36,6 +36,8 @@ def _export_fn_map():
 
     :rtype: `dict`
     """
+    # Silencing `Reimport <module>` warnings
+    # pylint: disable=W0404
     from openquake.export import uhs
 
     fn_map = {
