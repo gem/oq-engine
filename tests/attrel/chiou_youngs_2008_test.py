@@ -25,3 +25,11 @@ class ChiouYoungs2008TestCase(BaseAttRelTestCase):
     def test_mean_hanging_wall_strike_slip(self):
         self.check('CY08/CY08_MEDIAN_MS_HW_SS.csv',
                    max_discrep_percentage=0.05)
+
+    def test_inter_event_stddev(self):
+        self.check('CY08/CY08_INTER_EVENT_SIGMA.csv',
+                   max_discrep_percentage=0.002)
+
+    def test_intra_event_stddev(self):
+        self.check('CY08/CY08_INTRA_EVENT_SIGMA.csv',
+                   max_discrep_percentage=0.001)
