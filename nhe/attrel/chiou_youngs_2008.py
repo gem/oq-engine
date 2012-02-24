@@ -1,4 +1,7 @@
-import math
+"""
+Module exports :class:`ChiouYoungs2008`.
+"""
+from math import log, tanh, cosh, cos, radians, sqrt, exp
 
 from nhe.attrel.base import AttenuationRelationship
 from nhe import const
@@ -6,28 +9,56 @@ from nhe.imt import PGA, PGV, SA
 
 
 class ChiouYoungs2008(AttenuationRelationship):
+    """
+    Implements GMPE developed by Brian S.-J. Chiou and Robert R. Youngs
+    and published as "An NGA Model for the Average Horizontal Component
+    of Peak Ground Motion and Response Spectra" (2008, Earthquake Spectra,
+    Volume 24, No. 1, pages 173-215).
+    """
+    #: Supported tectonic region type is only active shallow crust,
+    #: see page 174.
     DEFINED_FOR_TECTONIC_REGION_TYPES = set([
         const.TRT.ACTIVE_SHALLOW_CRUST
     ])
+
+    #: Supported intensity measure types are spectral acceleration,
+    #: peak ground velocity and peak ground acceleration, see tables
+    #: at pages 198 and 199.
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = set([
         PGA,
         PGV,
         SA
     ])
+
+    #: Spectral acceleration is defined for damping of 5%, see page 208.
+    SA_DAMPING = 5.0
+
+    #: Supported intensity measure component is only orientation-independent
+    #: measure :attr:`~nhe.const.IMC.GMRotI50`, see page 174.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS = set([
         const.IMC.GMRotI50
     ])
+
+    #: Supported standard deviation types are inter-event, intra-event
+    #: and total, see chapter "Variance model".
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
         const.StdDev.NONE,
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
         const.StdDev.INTRA_EVENT
     ])
-    REQUIRES_SITE_PARAMETERS = set(('vs30', 'vs30type', 'z1pt0'))
-    REQUIRES_RUPTURE_PARAMETERS = set(('dip', 'rake', 'mag'))
-    REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx', 'ztor'))
 
-    SA_DAMPING = 5.0
+    #: Required site parameters are Vs30 (eq. 13b), Vs30 type (eq. 20)
+    #: and Z1.0 (eq. 13b).
+    REQUIRES_SITE_PARAMETERS = set(('vs30', 'vs30type', 'z1pt0'))
+
+    #: Required rupture parameters are magnitude, rake (eq. 13a and 13b)
+    #: and dip (eq. 13a).
+    REQUIRES_RUPTURE_PARAMETERS = set(('dip', 'rake', 'mag'))
+
+    #: Required distance measures are RRup, Rjb, Rx and Ztor
+    #: (all are in eq. 13a).
+    REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx', 'ztor'))
 
     table = """\
 T     c2   c3    c4   c4a crb  chm cg3  c1      c1a     c1b    cn    cm     c5     c6     c7     c7a    c9     c9a     c10     cg1      cg2      phi1    phi2    phi3     phi4     phi5   phi6     phi7   phi8   tau1   tau2   sig1   sig2   sig3   sig4
@@ -72,10 +103,21 @@ pgv   1.06 3.45 -2.1 -0.5 50.0 3.0 4.0  2.2884  0.1094 -0.0626 1.648 4.2979 5.17
     del coeff_names, table, imt, row, period
 
     def get_mean_and_stddevs(self, context, imt, stddev_types, component_type):
+        """
+        See :meth:`superclass method
+        <nhe.attrel.base.AttenuationRelationship.get_mean_and_stddevs>`
+        for spec of input and result values.
+        """
+        # extracting dictionary of coefficients specific to required
+        # intensity measure type.
         C = self.coeffs[imt]
+        # intensity on a reference soil is used for both mean
+        # and stddev calculations.
         ln_y_ref = self._get_ln_y_ref(context, C)
-        exp1 = math.exp(C['phi3'] * (min(context.site_vs30, 1130) - 360))
-        exp2 = math.exp(C['phi3'] * (1130 - 360))
+        # exp1 and exp2 are parts of eq. 10 and eq. 13b,
+        # calculate it once for both.
+        exp1 = exp(C['phi3'] * (min(context.site_vs30, 1130) - 360))
+        exp2 = exp(C['phi3'] * (1130 - 360))
 
         mean = self._get_mean(context, C, ln_y_ref, exp1, exp2)
         stddevs = [self._get_stddev(context, C, stddev_type,
@@ -84,60 +126,124 @@ pgv   1.06 3.45 -2.1 -0.5 50.0 3.0 4.0  2.2884  0.1094 -0.0626 1.648 4.2979 5.17
         return mean, stddevs
 
     def _get_mean(self, context, C, ln_y_ref, exp1, exp2):
+        """
+        Add site effects to an intensity.
+
+        Implements eq. 13b.
+        """
         # we do not support estimating of basin depth and instead
         # rely on it being available (since we require it).
-        basin_depth = context.site_z1pt0
+        z1pt0 = context.site_z1pt0
+
+        # we consider random variables being zero since we want
+        # to find the exact mean value.
+        eta = epsilon = 0
+
         ln_y = (
-            ln_y_ref
-            + C['phi1'] * min(math.log(context.site_vs30 / 1130), 0)
-            + C['phi2'] * (exp1 - exp2) * math.log((math.exp(ln_y_ref) + C['phi4']) / C['phi4'])
-            + C['phi5'] * (1.0 - 1.0 / math.cosh(C['phi6'] * max(0.0, basin_depth - C['phi7'])))
-            + C['phi8'] / math.cosh(0.15 * max(0.0, basin_depth - 15.0))
+            # first line of eq. 13b
+            ln_y_ref + C['phi1'] * min(log(context.site_vs30 / 1130), 0)
+            # second line
+            + C['phi2'] * (exp1 - exp2)
+              * log((exp(ln_y_ref) + C['phi4']) / C['phi4'])
+            # third line
+            + C['phi5']
+              * (1.0 - 1.0 / cosh(C['phi6'] * max(0.0, z1pt0 - C['phi7'])))
+              + C['phi8'] / cosh(0.15 * max(0.0, z1pt0 - 15.0))
+            # fourth line
+            + eta + epsilon
         )
         return ln_y
 
     def _get_stddev(self, context, C, stddev_type, ln_y_ref, exp1, exp2):
-        AS = 0
-        f_meas = 1 if context.site_vs30type == const.VS30T.MEASURED else 0
-        mag_test = min(max(context.rup_mag, 5.0), 7.0) - 5.0
+        """
+        Get standard deviation for a given intensity on reference soil.
 
+        Implements equations 19, 20 and 21 for inter-event, intra-event
+        and total standard deviations respectively.
+        """
+        if stddev_type == const.StdDev.NONE:
+            return 0
+
+        # aftershock flag is zero, we consider only main shock.
+        AS = 0
+        Fmeasured = 1 if context.site_vs30type == const.VS30T.MEASURED else 0
+        Finferred = 0 if Fmeasured == 1 else 1
+
+        # eq. 19 to calculate inter-event standard error
+        mag_test = min(max(context.rup_mag, 5.0), 7.0) - 5.0
         tau = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
 
-        b = C['phi2'] * (exp1 - exp2) # Equation 10
-        c = C['phi4'] # Equation 10
-        NLo = b * math.exp(ln_y_ref) / (math.exp(ln_y_ref) + c)
-        sigma = C['sig1'] + 0.5 * (C['sig2'] - C['sig1']) * mag_test + C['sig4'] * AS
-        sigma *= math.sqrt((C['sig3'] * (1 - f_meas) + 0.7 * f_meas) + (1 + NLo) * (1 + NLo))
+        # b and c coeffs from eq. 10
+        b = C['phi2'] * (exp1 - exp2)
+        c = C['phi4']
+
+        # eq. 20
+        NL = b * exp(ln_y_ref) / (exp(ln_y_ref) + c)
+        sigma = (
+            # first line of eq. 20
+            (C['sig1']
+               + 0.5 * (C['sig2'] - C['sig1']) * mag_test
+               + C['sig4'] * AS)
+            # second line
+            * sqrt((C['sig3'] * Finferred + 0.7 * Fmeasured) + (1 + NL) ** 2)
+        )
 
         if stddev_type == const.StdDev.TOTAL:
-            return math.sqrt((1 + NLo) * (1 + NLo) * tau * tau + sigma * sigma)
-        elif stddev_type == const.StdDev.NONE:
-            return 0
+            # eq. 21
+            return sqrt(((1 + NL) ** 2) * (tau ** 2) + (sigma ** 2))
         elif stddev_type == const.StdDev.INTRA_EVENT:
             return sigma
         elif stddev_type == const.StdDev.INTER_EVENT:
-            # not completely sure if this is the right
-            # thing to return here
-            return (1 + NLo) * tau
+            # this is implied in eq. 21
+            return abs((1 + NL) * tau)
         else:
             raise ValueError(stddev_type)
 
     def _get_ln_y_ref(self, context, C):
+        """
+        Get an intensity on a reference soil.
+
+        Implements eq. 13a.
+        """
+        # reverse faulting flag
         Frv = 1 if 30 <= context.rup_rake <= 150 else 0
+        # normal faulting flag
         Fnm = 1 if -120 <= context.rup_rake <= -60 else 0
+        # hanging wall flag
         Fhw = 1 if context.dist_rx >= 0 else 0
-        cos_delta = math.cos(math.radians(context.rup_dip))
-        alt_dist = math.sqrt(context.dist_rjb ** 2 + context.dist_ztor ** 2)
+        # aftershock flag. always zero since we only consider main shock
         AS = 0
-        return (
-            C['c1'] + (C['c1a'] * Frv + C['c1b'] * Fnm + C['c7'] * (context.dist_ztor - 4)) * (1 - AS)
+
+        ln_y_ref = (
+            # first line of eq. 13a
+            C['c1']
+              + (C['c1a'] * Frv
+                   + C['c1b'] * Fnm
+                   + C['c7'] * (context.dist_ztor - 4))
+                * (1 - AS)
             + (C['c10'] + C['c7a'] * (context.dist_ztor - 4)) * AS
+            # second line
             + C['c2'] * (context.rup_mag - 6)
-            + ((C['c2'] - C['c3']) / C['cn']) * math.log(1 + math.exp(C['cn'] * (C['cm'] - context.rup_mag)))
-            + C['c4'] * math.log(context.dist_rrup + C['c5'] * math.cosh(C['c6'] * max(context.rup_mag - C['chm'], 0)))
-            + (C['c4a'] - C['c4']) * math.log(math.sqrt(context.dist_rrup ** 2 + C['crb'] ** 2))
-            + (C['cg1'] + C['cg2'] / (math.cosh(max(context.rup_mag - C['cg3'], 0)))) * context.dist_rrup
-            + (C['c9'] * Fhw
-               * math.tanh(context.dist_rx * cos_delta * cos_delta / C['c9a'])
-               * (1 - alt_dist / (context.dist_rrup + 0.001)))
+              + ((C['c2'] - C['c3']) / C['cn'])
+                * log(1 + exp(C['cn'] * (C['cm'] - context.rup_mag)))
+            # third line
+            + C['c4'] * log(context.dist_rrup
+                            + C['c5']
+                              * cosh(C['c6']
+                                       * max(context.rup_mag - C['chm'], 0)))
+            # fourth line
+            + (C['c4a'] - C['c4'])
+              * log(sqrt(context.dist_rrup ** 2 + C['crb'] ** 2))
+            # fifth line
+            + (C['cg1'] + C['cg2']
+                            / (cosh(max(context.rup_mag - C['cg3'], 0))))
+              * context.dist_rrup
+            # sixth line
+            + C['c9'] * Fhw
+              * tanh(context.dist_rx
+                       * (cos(radians(context.rup_dip)) ** 2)
+                       / C['c9a'])
+              * (1 - sqrt(context.dist_rjb ** 2 + context.dist_ztor ** 2)
+                  / (context.dist_rrup + 0.001))
         )
+        return ln_y_ref
