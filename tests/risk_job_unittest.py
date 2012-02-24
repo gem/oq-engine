@@ -379,7 +379,5 @@ class RiskCalculatorTestCase(unittest.TestCase):
 
             self.assertEqual(
                 sorted(expected, key=coords),
-                sorted(
-                    calculator.asset_losses_per_site(
-                        0.5, self.grid_assets),
-                    key=coords))
+                sorted(calculator.asset_losses_per_site(0.5, self.grid_assets),
+                       key=coords))
