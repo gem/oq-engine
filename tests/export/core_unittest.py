@@ -256,4 +256,4 @@ class UtilsTestCase(unittest.TestCase):
         try:
             self.assertRaises(RuntimeError, _decorated, None, temp_file)
         finally:
-            shutil.rmtree(temp_file)
+            os.unlink(temp_file)
