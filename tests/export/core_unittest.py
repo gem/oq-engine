@@ -16,6 +16,7 @@
 
 
 import os
+import shutil
 import tempfile
 import unittest
 import uuid
@@ -227,24 +228,32 @@ class UtilsTestCase(unittest.TestCase):
     def test_makedirs_deco(self):
         temp_dir = tempfile.mkdtemp()
 
-        target_dir = os.path.join(temp_dir, 'some', 'nonexistent', 'dir')
+        try:
+            target_dir = os.path.join(temp_dir, 'some', 'nonexistent', 'dir')
 
-        self.assertFalse(os.path.exists(target_dir))
+            self.assertFalse(os.path.exists(target_dir))
 
-        _decorated(None, target_dir)
+            _decorated(None, target_dir)
 
-        self.assertTrue(os.path.exists(target_dir))
+            self.assertTrue(os.path.exists(target_dir))
+        finally:
+            shutil.rmtree(temp_dir)
 
     def test_makedirs_deco_dir_already_exists(self):
         # If the dir already exists, this should work with no errors.
         # The decorator should just gracefully pass through.
         temp_dir = tempfile.mkdtemp()
-
-        _decorated(None, temp_dir)
+        try:
+            _decorated(None, temp_dir)
+        finally:
+            shutil.rmtree(temp_dir)
 
     def test_makedirs_deco_target_exists_as_file(self):
         # If a file exists with the exact path of the target dir,
         # we should get a RuntimeError.
         _, temp_file = tempfile.mkstemp()
 
-        self.assertRaises(RuntimeError, _decorated, None, temp_file)
+        try:
+            self.assertRaises(RuntimeError, _decorated, None, temp_file)
+        finally:
+            shutil.rmtree(temp_file)
