@@ -124,7 +124,7 @@ class AttenuationRelationship(object):
         compute interim steps).
         """
 
-    def get_probabilities_of_exceedance(self, context, imts, component_type):
+    def get_probabilities_of_exceedance(self, ctx, imts, component_type):
         # TODO: document
         # TODO: implement
         raise NotImplementedError()

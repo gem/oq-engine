@@ -121,7 +121,7 @@ class ChiouYoungs2008(AttenuationRelationship):
 
     COEFFS = _make_coeffs_dict(SA_DAMPING)
 
-    def get_mean_and_stddevs(self, context, imt, stddev_types, component_type):
+    def get_mean_and_stddevs(self, ctx, imt, stddev_types, component_type):
         """
         See :meth:`superclass method
         <nhe.attrel.base.AttenuationRelationship.get_mean_and_stddevs>`
@@ -132,19 +132,19 @@ class ChiouYoungs2008(AttenuationRelationship):
         C = self.COEFFS[imt]
         # intensity on a reference soil is used for both mean
         # and stddev calculations.
-        ln_y_ref = self._get_ln_y_ref(context, C)
+        ln_y_ref = self._get_ln_y_ref(ctx, C)
         # exp1 and exp2 are parts of eq. 10 and eq. 13b,
         # calculate it once for both.
-        exp1 = exp(C['phi3'] * (min(context.site_vs30, 1130) - 360))
+        exp1 = exp(C['phi3'] * (min(ctx.site_vs30, 1130) - 360))
         exp2 = exp(C['phi3'] * (1130 - 360))
 
-        mean = self._get_mean(context, C, ln_y_ref, exp1, exp2)
-        stddevs = [self._get_stddev(context, C, stddev_type,
+        mean = self._get_mean(ctx, C, ln_y_ref, exp1, exp2)
+        stddevs = [self._get_stddev(ctx, C, stddev_type,
                                     ln_y_ref, exp1, exp2)
                    for stddev_type in stddev_types]
         return mean, stddevs
 
-    def _get_mean(self, context, C, ln_y_ref, exp1, exp2):
+    def _get_mean(self, ctx, C, ln_y_ref, exp1, exp2):
         """
         Add site effects to an intensity.
 
@@ -152,7 +152,7 @@ class ChiouYoungs2008(AttenuationRelationship):
         """
         # we do not support estimating of basin depth and instead
         # rely on it being available (since we require it).
-        z1pt0 = context.site_z1pt0
+        z1pt0 = ctx.site_z1pt0
 
         # we consider random variables being zero since we want
         # to find the exact mean value.
@@ -160,7 +160,7 @@ class ChiouYoungs2008(AttenuationRelationship):
 
         ln_y = (
             # first line of eq. 13b
-            ln_y_ref + C['phi1'] * min(log(context.site_vs30 / 1130), 0)
+            ln_y_ref + C['phi1'] * min(log(ctx.site_vs30 / 1130), 0)
             # second line
             + C['phi2'] * (exp1 - exp2)
               * log((exp(ln_y_ref) + C['phi4']) / C['phi4'])
@@ -173,7 +173,7 @@ class ChiouYoungs2008(AttenuationRelationship):
         )
         return ln_y
 
-    def _get_stddev(self, context, C, stddev_type, ln_y_ref, exp1, exp2):
+    def _get_stddev(self, ctx, C, stddev_type, ln_y_ref, exp1, exp2):
         """
         Get standard deviation for a given intensity on reference soil.
 
@@ -185,11 +185,11 @@ class ChiouYoungs2008(AttenuationRelationship):
 
         # aftershock flag is zero, we consider only main shock.
         AS = 0
-        Fmeasured = 1 if context.site_vs30type == const.VS30T.MEASURED else 0
+        Fmeasured = 1 if ctx.site_vs30type == const.VS30T.MEASURED else 0
         Finferred = 0 if Fmeasured == 1 else 1
 
         # eq. 19 to calculate inter-event standard error
-        mag_test = min(max(context.rup_mag, 5.0), 7.0) - 5.0
+        mag_test = min(max(ctx.rup_mag, 5.0), 7.0) - 5.0
         tau = C['tau1'] + (C['tau2'] - C['tau1']) / 2 * mag_test
 
         # b and c coeffs from eq. 10
@@ -218,18 +218,18 @@ class ChiouYoungs2008(AttenuationRelationship):
         else:
             raise ValueError(stddev_type)
 
-    def _get_ln_y_ref(self, context, C):
+    def _get_ln_y_ref(self, ctx, C):
         """
         Get an intensity on a reference soil.
 
         Implements eq. 13a.
         """
         # reverse faulting flag
-        Frv = 1 if 30 <= context.rup_rake <= 150 else 0
+        Frv = 1 if 30 <= ctx.rup_rake <= 150 else 0
         # normal faulting flag
-        Fnm = 1 if -120 <= context.rup_rake <= -60 else 0
+        Fnm = 1 if -120 <= ctx.rup_rake <= -60 else 0
         # hanging wall flag
-        Fhw = 1 if context.dist_rx >= 0 else 0
+        Fhw = 1 if ctx.dist_rx >= 0 else 0
         # aftershock flag. always zero since we only consider main shock
         AS = 0
 
@@ -238,31 +238,27 @@ class ChiouYoungs2008(AttenuationRelationship):
             C['c1']
               + (C['c1a'] * Frv
                    + C['c1b'] * Fnm
-                   + C['c7'] * (context.dist_ztor - 4))
+                   + C['c7'] * (ctx.dist_ztor - 4))
                 * (1 - AS)
-            + (C['c10'] + C['c7a'] * (context.dist_ztor - 4)) * AS
+            + (C['c10'] + C['c7a'] * (ctx.dist_ztor - 4)) * AS
             # second line
-            + C['c2'] * (context.rup_mag - 6)
+            + C['c2'] * (ctx.rup_mag - 6)
               + ((C['c2'] - C['c3']) / C['cn'])
-                * log(1 + exp(C['cn'] * (C['cm'] - context.rup_mag)))
+                * log(1 + exp(C['cn'] * (C['cm'] - ctx.rup_mag)))
             # third line
-            + C['c4'] * log(context.dist_rrup
+            + C['c4'] * log(ctx.dist_rrup
                             + C['c5']
-                              * cosh(C['c6']
-                                       * max(context.rup_mag - C['chm'], 0)))
+                              * cosh(C['c6'] * max(ctx.rup_mag - C['chm'], 0)))
             # fourth line
             + (C['c4a'] - C['c4'])
-              * log(sqrt(context.dist_rrup ** 2 + C['crb'] ** 2))
+              * log(sqrt(ctx.dist_rrup ** 2 + C['crb'] ** 2))
             # fifth line
-            + (C['cg1'] + C['cg2']
-                            / (cosh(max(context.rup_mag - C['cg3'], 0))))
-              * context.dist_rrup
+            + (C['cg1'] + C['cg2'] / (cosh(max(ctx.rup_mag - C['cg3'], 0))))
+              * ctx.dist_rrup
             # sixth line
             + C['c9'] * Fhw
-              * tanh(context.dist_rx
-                       * (cos(radians(context.rup_dip)) ** 2)
-                       / C['c9a'])
-              * (1 - sqrt(context.dist_rjb ** 2 + context.dist_ztor ** 2)
-                  / (context.dist_rrup + 0.001))
+              * tanh(ctx.dist_rx * (cos(radians(ctx.rup_dip)) ** 2) / C['c9a'])
+              * (1 - sqrt(ctx.dist_rjb ** 2 + ctx.dist_ztor ** 2)
+                  / (ctx.dist_rrup + 0.001))
         )
         return ln_y_ref
