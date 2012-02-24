@@ -160,11 +160,14 @@ def run_job(config_file, **kw_params):
 
     :returns:
         The return code of the subprocess.
+    :raises:
+        If the return code is not 0, a
+        :exception:`subprocess.CalledProcessError` is raised.
     """
     params = ["bin/openquake", "--config-file=" + config_file]
     if kw_params:
         params.extend(["--%s=%s" % p for p in kw_params.iteritems()])
-    return subprocess.call(params)
+    return subprocess.check_call(params)
 
 
 def store_hazard_logic_trees(a_job):
