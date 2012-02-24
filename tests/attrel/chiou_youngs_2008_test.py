@@ -1,6 +1,6 @@
 from nhe.attrel.chiou_youngs_2008 import ChiouYoungs2008
 
-from tests.attrel.base import BaseAttRelTestCase
+from tests.attrel.utils import BaseAttRelTestCase
 
 
 class ChiouYoungs2008TestCase(BaseAttRelTestCase):
