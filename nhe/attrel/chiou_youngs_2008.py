@@ -101,7 +101,6 @@ class ChiouYoungs2008(AttenuationRelationship):
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see chapter "Variance model".
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
-        const.StdDev.NONE,
         const.StdDev.TOTAL,
         const.StdDev.INTER_EVENT,
         const.StdDev.INTRA_EVENT
@@ -180,9 +179,6 @@ class ChiouYoungs2008(AttenuationRelationship):
         Implements equations 19, 20 and 21 for inter-event, intra-event
         and total standard deviations respectively.
         """
-        if stddev_type == const.StdDev.NONE:
-            return 0
-
         # aftershock flag is zero, we consider only main shock.
         AS = 0
         Fmeasured = 1 if ctx.site_vs30type == const.VS30T.MEASURED else 0
