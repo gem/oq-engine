@@ -175,6 +175,7 @@ cttfl = lambda x: cttl(x, float)  # config text to float list
 
 # general params
 define_param('CALCULATION_MODE', None)
+define_param('DESCRIPTION', 'description', default='')
 define_param('SITES', 'sites', to_job=cttfl)
 define_param('REGION_GRID_SPACING', 'region_grid_spacing', to_job=float)
 define_param('REGION_VERTEX', 'region', to_job=cttfl)

@@ -35,12 +35,13 @@ from tests.utils.helpers import patch
 class EngineAPITestCase(unittest.TestCase):
 
     def test_import_job_profile(self):
-        """Given a path to a demo config file, ensure that the appropriate
-        database records for OqJobProfile, InputSet, and Input are created.
+        # Given a path to a demo config file, ensure that the appropriate
+        # database records for OqJobProfile, InputSet, and Input are created.
 
-        At the moment, the api function used to import the job profile also
-        returns a dict of the config params and a list of config file sections.
-        """
+        # At the moment, the api function used to import the job profile also
+        # returns a dict of the config params and a list of config file
+        # sections.
+
         cfg_path = demo_file('HazardMapTest/config.gem')
 
         # Default 'openquake' user:
@@ -227,8 +228,8 @@ class EngineAPITestCase(unittest.TestCase):
                                      '_input_set_cache')))
 
     def test_run_calculation_deletes_job_counters(self):
-        """This test ensures that
-        :function:`openquake.utils.stats.delete_job_counters` is called"""
+        # This test ensures that
+        # :function:`openquake.utils.stats.delete_job_counters` is called
         cfg_path = demo_file('HazardMapTest/config.gem')
 
         job_profile, params, sections = engine.import_job_profile(cfg_path)
