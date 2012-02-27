@@ -1,11 +1,15 @@
 """
 Module :mod:`nhe.attrel.base` defines base :class:`AttenuationRelationship`.
 """
+from __future__ import division
+
 import abc
 
 import scipy.stats
+import numpy
 
 from nhe import const
+from nhe import imt as imt_module
 
 
 class AttenuationRelationship(object):
@@ -131,26 +135,43 @@ class AttenuationRelationship(object):
     def get_probabilities_of_exceedance(self, ctx, imts, component_type,
                                         truncation_level):
         # TODO: document
-        # TODO: unittest
-        ret = {}
-        if truncation_level is None:
-            distribution = scipy.stats.norm()
-        else:
-            distribution = scipy.stats.truncnorm(- truncation_level,
-                                                 truncation_level)
+        if truncation_level is not None and truncation_level < 0:
+            raise ValueError('truncation level must be positive')
 
-        for imt, imls in imts.items():
-            if truncation_level == 0:
+        if not component_type in self.DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS:
+            raise ValueError(
+                'intensity measure component %r is not supported by %s' %
+                (component_type, type(self).__name__)
+            )
+
+        for imt in imts.keys():
+            if not issubclass(type(imt), imt_module._IMT):
+                raise ValueError('keys of imts dictionary must be instances ' \
+                                 'of IMT classes')
+            if not type(imt) in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
+                raise ValueError(
+                    'intensity measure type %s is not supported by %s' %
+                    (type(imt).__name__, type(self).__name__)
+                )
+
+        ret = {}
+        if truncation_level == 0:
+            for imt, imls in imts.items():
                 mean, _ = self.get_mean_and_stddevs(ctx, imt, [],
                                                     component_type)
-                probs = [1.0 if iml >= mean else 0.0 for iml in imls]
+                ret[imt] = (numpy.array(imls) >= mean).astype(float)
+        else:
+            if truncation_level is None:
+                distribution = scipy.stats.norm()
             else:
+                distribution = scipy.stats.truncnorm(- truncation_level,
+                                                     truncation_level)
+            for imt, imls in imts.items():
                 mean, [stddev] = self.get_mean_and_stddevs(
                     ctx, imt, [const.StdDev.TOTAL], component_type
                 )
-                probs = [distribution.sf((iml - mean) / stddev)
-                         for iml in imls]
-            ret[imt] = probs
+                imls = numpy.array(imls, float)
+                ret[imt] = distribution.sf((imls - mean) / stddev)
 
         return ret
 
