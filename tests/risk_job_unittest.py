@@ -368,7 +368,7 @@ class RiskCalculatorTestCase(unittest.TestCase):
         self.assertEqual(expected, actual)
 
     def test_that_conditional_loss_is_in_kvs(self):
-        asset = GRID_ASSETS[(0,1)]
+        asset = GRID_ASSETS[(0, 1)]
         loss_poe = 0.1
         job_id = "1"
         row = 0
