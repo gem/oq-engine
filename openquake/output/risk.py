@@ -28,14 +28,17 @@ from collections import defaultdict
 
 from lxml import etree
 
-from openquake.db import models
-
 from openquake import shapes
 from openquake import writer
 from openquake import xml
-
+from openquake.db import models
 from openquake.output import nrml
-from openquake.xml import NRML_NS, GML_NS
+from openquake.xml import GML
+from openquake.xml import GML_NS
+from openquake.xml import NRML
+from openquake.xml import NRML_NS
+from openquake.xml import NSMAP
+
 
 NAMESPACES = {'gml': GML_NS, 'nrml': NRML_NS}
 
@@ -891,3 +894,29 @@ class AggregateLossCurveXMLWriter(object):
             Full path to the resulting XML file (including file name).
         """
         self.path = path
+
+    def serialize(self, loss_values, poe_values):
+        """Write aggregate loss curve values to XML.
+
+        :param loss_values:
+            An iterable of loss values (`float` types).
+        :param poe_values:
+            An iterable of Probability of Exceedance (PoE) values (`float`
+            types).
+        """
+        with open(self.path, 'w') as fh:
+
+            root = etree.Element('%snrml' % NRML, nsmap=NSMAP)
+            root.set('%sid' % GML, 'n1')
+            risk_result = etree.SubElement(root, 'riskResult')
+            risk_result.set('%sid' % GML, 'rr1')
+            agg_lc = etree.SubElement(risk_result, 'aggregateLossCurve')
+            agg_lc.set('%sid' % GML, 'alc1')
+            loss = etree.SubElement(agg_lc, 'loss')
+            loss.text = ' '.join([str(x) for x in loss_values])
+            poes = etree.SubElement(agg_lc, 'poE')
+            poes.text = ' '.join([str(x) for x in poe_values])
+
+            fh.write(etree.tostring(
+                root, pretty_print=True, xml_declaration=True,
+                encoding='UTF-8'))
