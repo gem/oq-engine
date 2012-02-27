@@ -319,19 +319,19 @@ class RiskCalculatorTestCase(unittest.TestCase):
         emdl.save()
 
         asset_data = [
-            ((0, 0), shapes.Site(9.1, 9.1),
+            ((0, 0), shapes.Site(10.0, 10.0),
              {u'stco': 5.07, u'asset_ref': u'a5625',
               u'taxonomy': u'HAZUS_RM1L_LC'}),
 
-            ((0, 1), shapes.Site(10.0, 10.5),
+            ((0, 1), shapes.Site(10.1, 10.0),
              {u'stco': 5.63, u'asset_ref': u'a5629',
               u'taxonomy': u'HAZUS_URML_LC'}),
 
-            ((1, 0), shapes.Site(10.1, 11.0),
+            ((1, 0), shapes.Site(10.0, 10.1),
              {u'stco': 11.26, u'asset_ref': u'a5630',
               u'taxonomy': u'HAZUS_URML_LS'}),
 
-            ((1, 1), shapes.Site(10.1, 11.1),
+            ((1, 1), shapes.Site(10.1, 10.1),
              {u'stco': 5.5, u'asset_ref': u'a5636',
               u'taxonomy': u'HAZUS_C3L_MC'}),
         ]
