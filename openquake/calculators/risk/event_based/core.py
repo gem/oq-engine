@@ -20,8 +20,6 @@
 
 """Core functionality for Event-Based Risk calculations."""
 
-import os
-
 from numpy import zeros
 
 from celery.exceptions import TimeoutError
@@ -31,7 +29,6 @@ from openquake import logs
 from openquake import shapes
 from openquake.db import models
 from openquake.parser import vulnerability
-from openquake.output import curve
 from openquake.calculators.risk import general
 
 LOGGER = logs.LOG
@@ -107,7 +104,6 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
             loss_curve=loss_curve, losses=self.agg_curve.x_values,
             poes=self.agg_curve.y_values)
         agg_lc_data.save()
-
 
     def _tses(self):
         """Return the time representative of the Stochastic Event Set
