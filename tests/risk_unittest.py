@@ -140,12 +140,12 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
         cls.emdl.save()
         values = [22.61, 124.27, 42.93, 29.37, 40.68, 178.47]
         for x, value in zip([float(v) for v in range(20, 27)], values):
-            site = shapes.Site(x, x+11)
+            site = shapes.Site(x, x + 11)
             cls.points.append(TEST_REGION.grid.point_at(site))
             location = GEOSGeometry(site.point.to_wkt())
             asset = models.ExposureData(exposure_model=cls.emdl, taxonomy="ID",
                                         asset_ref="asset_%s" % x, stco=value,
-                                        site=location, reco=value*0.75)
+                                        site=location, reco=value * 0.75)
             asset.save()
             cls.assets.append(asset)
 

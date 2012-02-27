@@ -160,10 +160,10 @@ class BaseRiskCalculator(Calculator):
         :return: the risk cell as a :py:class:`django.contrib.gis.geos.Polygon`
         """
         lon, lat = lowerleft.coords
-        coos = [(lon, lat), # lower left
-                (lon, lat + cell_size), # upper left
-                (lon + cell_size, lat + cell_size), # upper right
-                (lon + cell_size, lat), # lower right
+        coos = [(lon, lat),                             # lower left
+                (lon, lat + cell_size),                 # upper left
+                (lon + cell_size, lat + cell_size),     # upper right
+                (lon + cell_size, lat),                 # lower right
                 (lon, lat)]
         coos = [(round_float(x), round_float(y)) for x, y in coos]
         return geos.Polygon(coos)
