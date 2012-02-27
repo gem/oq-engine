@@ -36,7 +36,7 @@ from kvs_unittest import *
 from logs_unittest import *
 from loss_map_output_unittest import *
 from loss_output_unittest import *
-from models_unittest import *
+from db.models_unittest import *
 from output_hazard_unittest import *
 from output_risk_unittest import *
 from output_unittest import *
