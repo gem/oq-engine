@@ -343,7 +343,7 @@ class RiskCalculatorTestCase(unittest.TestCase):
             GRID_ASSETS[gcoo] = asset
 
         self.grid = shapes.Grid(shapes.Region.from_coordinates(
-            [(1.0, 3.0), (1.0, 4.0), (2.0, 4.0), (2.0, 3.0)]), 1.0)
+            [(10.0, 10.0), (10.0, 10.1), (10.1, 10.1), (10.1, 10.0)]), 0.1)
 
         # this is the expected output of grid_assets_iterator and an input of
         # asset_losses_per_site
@@ -357,6 +357,7 @@ class RiskCalculatorTestCase(unittest.TestCase):
         def row_col(item):
             return item[0].row, item[0].column
 
+        self.job.oq_job_profile.region_grid_spacing = 0.01
         self.job.oq_job_profile.save()
         calculator = general.BaseRiskCalculator(self.job)
 
