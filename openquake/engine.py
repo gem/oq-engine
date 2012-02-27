@@ -406,7 +406,9 @@ def _job_from_file(config_file, output_type, owner_username='openquake'):
 
     job = CalculationProxy(params, calculation_id, sections=sections,
                            base_path=base_path,
-                           serialize_results_to=serialize_results_to)
+                           serialize_results_to=serialize_results_to,
+                           oq_calculation=calculation,
+                           oq_job_profile=job_profile)
     job.to_kvs()
 
     return job
