@@ -15,6 +15,7 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+import os
 import shutil
 import subprocess
 import tempfile
@@ -37,13 +38,17 @@ class ExportAggLossCurvesTestCase(unittest.TestCase):
             'demos/event_based_risk_small/config.gem')
         export_target_dir = tempfile.mkdtemp()
 
+        expected_export_files = [
+            os.path.join(export_target_dir, 'aggregate_loss_curve.xml'),
+        ]
+
         try:
             ret_code = helpers.run_job(eb_cfg)
             self.assertEqual(0, ret_code)
 
             calculation = models.OqCalculation.objects.latest('id')
             [output] = models.Output.objects.filter(
-                oq_calculation=calculation.id)
+                oq_calculation=calculation.id, output_type='agg_loss_curve')
 
             listed_calcs = helpers.prepare_cli_output(subprocess.check_output(
                 ['bin/openquake', '--list-calculations']))
@@ -56,5 +61,12 @@ class ExportAggLossCurvesTestCase(unittest.TestCase):
 
             check_list_outputs(self, listed_outputs, output.id,
                                'agg_loss_curve')
+
+            listed_exports = helpers.prepare_cli_output(
+                subprocess.check_output([
+                    'bin/openquake', '--export', str(output.id),
+                    export_target_dir]))
+
+            self.assertEqual(expected_export_files, listed_exports)
         finally:
             shutil.rmtree(export_target_dir)

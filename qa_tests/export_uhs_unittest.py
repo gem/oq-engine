@@ -59,7 +59,7 @@ class ExportUHSTestCase(unittest.TestCase):
             listed_calcs = helpers.prepare_cli_output(subprocess.check_output(
                 ['bin/openquake', '--list-calculations']))
 
-            check_list_calcs(listed_calcs, calculation.id)
+            check_list_calcs(self, listed_calcs, calculation.id)
 
             listed_outputs = helpers.prepare_cli_output(
                 subprocess.check_output(['bin/openquake', '--list-outputs',
