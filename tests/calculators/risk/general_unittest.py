@@ -274,8 +274,8 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
 
     def test_assets_for_cell_with_more_than_one(self):
         # All assets in the risk cell are found.
-        site = shapes.Site(10.25000, 46.2)
-        self.calc_proxy.oq_job_profile.risk_cell_size = 0.7
+        site = shapes.Site(10.0, 46.0)
+        self.calc_proxy.oq_job_profile.region_grid_spacing = 0.6
         self.calc_proxy.oq_job_profile.save()
 
         assets = BaseRiskCalculator.assets_for_cell(self.job.id, site)
@@ -287,8 +287,8 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
 
     def test_assets_for_cell_with_one(self):
         # A single asset in the risk cell is found.
-        site = shapes.Site(10.24000, 46.02)
-        self.calc_proxy.oq_job_profile.risk_cell_size = 0.06
+        site = shapes.Site(10.0, 46.0)
+        self.calc_proxy.oq_job_profile.region_grid_spacing = 0.3
         self.calc_proxy.oq_job_profile.save()
         [asset] = BaseRiskCalculator.assets_for_cell(self.job.id, site)
         self.assertEqual(self.sites[1], self._to_site(asset.site))
@@ -297,7 +297,7 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
         # An empty list is returned when no assets exist for a given
         # risk cell.
         site = shapes.Site(99.15000, 15.16667)
-        self.calc_proxy.oq_job_profile.risk_cell_size = 0.05
+        self.calc_proxy.oq_job_profile.region_grid_spacing = 0.05
         self.calc_proxy.oq_job_profile.save()
         self.assertEqual([],
                          BaseRiskCalculator.assets_for_cell(self.job.id, site))
