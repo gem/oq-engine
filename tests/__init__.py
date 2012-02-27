@@ -19,6 +19,7 @@
 from bulk_insert_unittest import *
 from cache_gc_unittest import *
 from calculators.hazard.disagg.subsets_unittest import *
+from db.models_unittest import *
 from db_fields_unittest import *
 from db_loader_unittest import *
 from db_loader_unittest import *
@@ -36,7 +37,7 @@ from kvs_unittest import *
 from logs_unittest import *
 from loss_map_output_unittest import *
 from loss_output_unittest import *
-from db.models_unittest import *
+from output.risk_unittest import *
 from output_hazard_unittest import *
 from output_risk_unittest import *
 from output_unittest import *
