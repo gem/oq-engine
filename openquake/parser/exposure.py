@@ -22,6 +22,7 @@
 These can include building, population, critical infrastructure,
 and other asset classes."""
 
+from collections import namedtuple
 from lxml import etree
 
 from openquake import producer
@@ -32,6 +33,9 @@ from openquake.xml import NRML, GML
 
 # do not use namespace for now
 RISKML_NS = ''
+
+
+OCCUPANCY = namedtuple("OCCUPANCY", "occupants, description")
 
 
 def _to_site(element):
@@ -60,6 +64,22 @@ def _to_site(element):
     except Exception:
         error_str = "element assetDefintion: no valid lon/lat coordinates"
         raise ValueError(error_str)
+
+
+def _to_occupancy(element):
+    """Convert the 'occupants' tags to named tuples.
+
+    We want to extract the value of <occupants>. We expect the input
+    element to be an 'assetDefinition' and have a child element
+    structured like this:
+
+    <occupants time="day">245</occupants>
+    """
+    occupancy_data = []
+    for otag in element.findall('%soccupants' % NRML):
+        occupancy_data.append(OCCUPANCY(
+            occupants=int(otag.text), description=otag.attrib["description"]))
+    return occupancy_data
 
 
 class ExposurePortfolioFile(producer.FileProducer):
@@ -139,7 +159,7 @@ class ExposurePortfolioFile(producer.FileProducer):
                 level += 1
 
             elif event == 'end' and element.tag == '%sassetDefinition' % NRML:
-                site_data = (_to_site(element),
+                site_data = (_to_site(element), _to_occupancy(element),
                              self._to_site_attributes(element))
                 del element
                 yield site_data
