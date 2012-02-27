@@ -20,7 +20,6 @@
 from django.contrib.gis.geos import GEOSGeometry
 from lxml import etree
 from StringIO import StringIO
-import json
 import numpy
 import os
 import tempfile
@@ -729,10 +728,6 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
 class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
-    def _store_asset(self, asset, row, column):
-        key = kvs.tokens.asset_key(self.job_id, row, column)
-        kvs.get_client().rpush(key, json.JSONEncoder().encode(asset))
-
     def setUp(self):
         self.block_id = 7
         self.job = self.setup_classic_job()
@@ -1016,11 +1011,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         calculator.vuln_curves = {"ID": self.vuln_function}
 
         block = Block.from_kvs(self.job_id, self.block_id)
-
-        asset = {"taxonomy": "ID",
-                 "assetID": 22.61, "assetValue": 1}
-
-        self._store_asset(asset, 10, 10)
 
         # computes the loss curves and puts them in kvs
         self.assertTrue(calculator.compute_risk(self.block_id))
