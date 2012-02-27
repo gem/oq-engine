@@ -880,3 +880,14 @@ def create_loss_curve_writer(job_id, serialize_to, nrml_path, curve_mode):
         writers.append(writer_class(nrml_path))
 
     return writer.compose_writers(writers)
+
+
+class AggregateLossCurveXMLWriter(object):
+    """Writes an aggregate loss curve to NRML XML."""
+
+    def __init__(self, path):
+        """
+        :param path:
+            Full path to the resulting XML file (including file name).
+        """
+        self.path = path

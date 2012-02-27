@@ -37,73 +37,18 @@ from openquake.calculators.risk import general
 LOGGER = logs.LOG
 
 
-def _filename(job_id):
-    """Return the name of the generated file."""
-    return "%s-aggregate-loss-curve.svg" % job_id
-
-
-def _for_plotting(loss_curve, time_span):
-    """Translate a loss curve into a dictionary compatible to
-    the interface defined in CurvePlot.write."""
-    data = {}
-
-    data["AggregateLossCurve"] = {}
-    data["AggregateLossCurve"]["abscissa"] = tuple(loss_curve.abscissae)
-    data["AggregateLossCurve"]["ordinate"] = tuple(loss_curve.ordinates)
-    data["AggregateLossCurve"]["abscissa_property"] = "Economic Losses"
-    data["AggregateLossCurve"]["ordinate_property"] = \
-            "PoE in %s years" % (str(time_span))
-
-    data["AggregateLossCurve"]["curve_title"] = "Aggregate Loss Curve"
-
-    return data
-
-
-def plot_aggregate_curve(calculator, aggregate_curve):
-    """Plot an aggreate loss curve.
-
-    This function is triggered only if the AGGREGATE_LOSS_CURVE
-    parameter is specified in the configuration file.
-
-    :param calculator:
-        :py:class:`EventBasedRiskCalculator` instance for an in-progress
-        calculation.
-    :param aggregate_curve: the aggregate curve to plot.
-    :type aggregate_curve: :py:class:`openquake.shapes.Curve`
-    """
-
-    if not calculator.calc_proxy.has("AGGREGATE_LOSS_CURVE"):
-        LOGGER.debug(
-            "AGGREGATE_LOSS_CURVE parameter not specified, "
-            "skipping aggregate loss curve computation...")
-        return
-
-    path = os.path.join(
-            calculator.calc_proxy.params["BASE_PATH"],
-            calculator.calc_proxy.params["OUTPUT_DIR"],
-            _filename(calculator.calc_proxy.job_id))
-
-    plotter = curve.CurvePlot(path)
-    plotter.write(_for_plotting(aggregate_curve,
-            calculator.calc_proxy.params["INVESTIGATION_TIME"]),
-            autoscale_y=False)
-
-    plotter.close()
-    LOGGER.debug("Aggregate loss curve stored at %s" % path)
-
-
 class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
     """Calculator for Event-Based Risk computations."""
 
     def __init__(self, calc_proxy):
         super(EventBasedRiskCalculator, self).__init__(calc_proxy)
         self.vuln_curves = None
-        self.aggregate_curve = None
+        self.agg_curve = None
 
     def execute(self):
         """Execute the job."""
 
-        self.aggregate_curve = general.AggregateLossCurve()
+        aggregate_curve = general.AggregateLossCurve()
 
         tasks = []
         for block_id in self.calc_proxy.blocks_keys:
@@ -117,10 +62,14 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
             try:
                 task.wait()
 
-                self.aggregate_curve.append(task.result)
+                aggregate_curve.append(task.result)
             except TimeoutError:
                 # TODO(jmc): Cancel and respawn this task
                 return
+
+        self.agg_curve = aggregate_curve.compute(
+            self._tses(), self._time_span(),
+            self.calc_proxy.oq_job_profile.loss_histogram_bins)
 
     def post_execute(self):
         """Perform the following post-execution actions:
@@ -137,11 +86,6 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         if self.is_benefit_cost_ratio_mode():
             self.write_output_bcr()
             return
-
-        agg_curve = self.aggregate_curve.compute(
-            self._tses(), self._time_span(),
-            self.calc_proxy.oq_job_profile.loss_histogram_bins)
-        plot_aggregate_curve(self, agg_curve)
 
         self.write_output()
 
@@ -160,8 +104,8 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         loss_curve.save()
 
         agg_lc_data = models.AggregateLossCurveData(
-            loss_curve=loss_curve, losses=agg_curve.x_values,
-            poes=agg_curve.y_values)
+            loss_curve=loss_curve, losses=self.agg_curve.x_values,
+            poes=self.agg_curve.y_values)
         agg_lc_data.save()
 
 
