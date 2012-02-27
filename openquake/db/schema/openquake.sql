@@ -543,7 +543,7 @@ CREATE TABLE uiapi.input (
 CREATE TABLE uiapi.oq_calculation (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
-    description VARCHAR NOT NULL,
+    description VARCHAR NOT NULL DEFAULT '',
     -- The full path of the location where the input files for the calculation
     -- engine reside. This is used internally by openquake-server, can probably
     -- be removed (see https://github.com/gem/openquake-server/issues/55)
@@ -577,6 +577,7 @@ CREATE TABLE uiapi.calc_stats (
 CREATE TABLE uiapi.oq_job_profile (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
+    description VARCHAR NOT NULL DEFAULT '',
     -- One of:
     --      classical (Classical PSHA)
     --      event_based (Probabilistic event based)
