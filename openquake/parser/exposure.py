@@ -171,6 +171,7 @@ class ExposurePortfolioFile(producer.FileProducer):
 
         # TODO, al-maisan, Thu, 16 Feb 2012 15:55:01 +0100
         # add the logic that handles the 'occupants' tags.
+        # https://bugs.launchpad.net/openquake/+bug/942178
 
         site_attributes.update(self._current_meta)
 
