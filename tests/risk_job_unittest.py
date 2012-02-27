@@ -22,8 +22,11 @@ import os
 import redis
 import unittest
 
+from django.contrib.gis import geos
+
 from openquake.calculators.risk.general import Block
 from openquake.calculators.risk import general
+from openquake.db import models
 from openquake import kvs
 from openquake import shapes
 from openquake.input.exposure import ExposureDBWriter
@@ -296,21 +299,53 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
 
 
 GRID_ASSETS = {
-    (0, 0): {'assetID': 'asset_at_0_0', 'lat': 10.0, 'lon': 10.0},
-    (0, 1): {'assetID': 'asset_at_0_1', 'lat': 10.0, 'lon': 10.1},
-    (1, 0): {'assetID': 'asset_at_1_0', 'lat': 10.1, 'lon': 10.0},
-    (1, 1): {'assetID': 'asset_at_1_1', 'lat': 10.1, 'lon': 10.1}}
+    (0, 0): None,
+    (0, 1): None,
+    (1, 0): None,
+    (1, 1): None}
 
 
 class RiskCalculatorTestCase(unittest.TestCase):
 
     def setUp(self):
         self.job = helpers.job_from_file(os.path.join(helpers.DATA_DIR,
-                                         'config.gem'))
+                                                      'config.gem'))
+        [input] = self.job.oq_job_profile.input_set.input_set.filter(
+            input_type="exposure")
+        owner = models.OqUser.objects.get(user_name="openquake")
+        emdl = models.ExposureModel(
+            owner=owner, input=input, description="RCT test exposure model",
+            category="RCT villas", stco_unit="roofs", stco_type="aggregated")
+        emdl.save()
+
+        asset_data = [
+            ((0, 0), shapes.Site(9.1, 9.1),
+             {u'stco': 5.07, u'asset_ref': u'a5625',
+              u'taxonomy': u'HAZUS_RM1L_LC'}),
+
+            ((0, 1), shapes.Site(10.0, 10.5),
+             {u'stco': 5.63, u'asset_ref': u'a5629',
+              u'taxonomy': u'HAZUS_URML_LC'}),
+
+            ((1, 0), shapes.Site(10.1, 11.0),
+             {u'stco': 11.26, u'asset_ref': u'a5630',
+              u'taxonomy': u'HAZUS_URML_LS'}),
+
+            ((1, 1), shapes.Site(10.1, 11.1),
+             {u'stco': 5.5, u'asset_ref': u'a5636',
+              u'taxonomy': u'HAZUS_C3L_MC'}),
+        ]
+        for (gcoo, site, adata) in asset_data:
+            location = geos.GEOSGeometry(site.point.to_wkt())
+            asset = models.ExposureData(exposure_model=emdl, site=location,
+                                        **adata)
+            asset.save()
+            GRID_ASSETS[gcoo] = asset
 
         self.grid = shapes.Grid(shapes.Region.from_coordinates(
             [(1.0, 3.0), (1.0, 4.0), (2.0, 4.0), (2.0, 3.0)]), 1.0)
 
+        import pdb; pdb.set_trace()
         # this is the expected output of grid_assets_iterator and an input of
         # asset_losses_per_site
         self.grid_assets = [
@@ -320,24 +355,19 @@ class RiskCalculatorTestCase(unittest.TestCase):
             (shapes.GridPoint(self.grid, 1, 1), GRID_ASSETS[(1, 1)])]
 
     def test_grid_assets_iterator(self):
-        with helpers.patch('openquake.kvs.get_list_json_decoded') as get_mock:
+        def row_col(item):
+            return item[0].row, item[0].column
 
-            def get_list_json_decoded(key):
-                row, col = kvs.tokens.asset_row_col_from_kvs_key(key)
+        self.job.oq_job_profile.risk_cell_size = 1.0
+        self.job.oq_job_profile.save()
+        calculator = general.BaseRiskCalculator(self.job)
 
-                return [GRID_ASSETS[(row, col)]]
+        expected = sorted(self.grid_assets, key=row_col)
+        actual = sorted(calculator.grid_assets_iterator(self.grid),
+                        key=row_col)
 
-            get_mock.side_effect = get_list_json_decoded
-
-            def row_col(item):
-                return item[0].row, item[0].column
-
-            calculator = general.BaseRiskCalculator(self.job)
-
-            got = sorted(calculator.grid_assets_iterator(self.grid),
-                         key=row_col)
-
-            self.assertEqual(sorted(self.grid_assets, key=row_col), got)
+        import pdb; pdb.set_trace()
+        self.assertEqual(expected, actual)
 
     def test_that_conditional_loss_is_in_kvs(self):
         asset = {"assetID": 1}
@@ -376,8 +406,8 @@ class RiskCalculatorTestCase(unittest.TestCase):
                     [({'value': 0.123}, GRID_ASSETS[(1, 1)])])]
 
             calculator = general.BaseRiskCalculator(self.job)
+            actual = calculator.asset_losses_per_site(0.5, self.grid_assets)
+            expected = sorted(expected, key=coords)
+            actual = sorted(actual, key=coords)
 
-            self.assertEqual(
-                sorted(expected, key=coords),
-                sorted(calculator.asset_losses_per_site(0.5, self.grid_assets),
-                       key=coords))
+            self.assertEqual(expected, actual)
