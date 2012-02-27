@@ -127,9 +127,6 @@ class BaseRiskCalculator(Calculator):
     _em_inputs = None
     _em_job_id = -1
 
-    def __init__(self, calc_proxy):
-        self.calc_proxy = calc_proxy
-
     def execute(self):
         """Calculation logic goes here; subclasses must implement this."""
         raise NotImplementedError()
