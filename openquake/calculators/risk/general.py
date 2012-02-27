@@ -150,35 +150,36 @@ class BaseRiskCalculator(Calculator):
         self.partition()
 
     @staticmethod
-    def _cell_to_polygon(midpoint, cell_size):
+    def _cell_to_polygon(lowerleft, cell_size):
         """Return the cell with the given mid point and size.
 
-        :param midpoint: the middle point of the risk sell
-        :type midpoint: a :py:class:`openquake.shapes.Site` instance
+        :param lowerleft: the lower left corner of the risk cell
+        :type lowerleft: a :py:class:`openquake.shapes.Site` instance
         :param float cell_size: the configured risk cell size
 
         :return: the risk cell as a :py:class:`django.contrib.gis.geos.Polygon`
         """
-        lat, lon = midpoint.coords
-        hcell = cell_size / 2
-        coos = [(lat - hcell, lon - hcell), (lat + hcell, lon - hcell),
-                (lat + hcell, lon + hcell), (lat - hcell, lon + hcell),
-                (lat - hcell, lon - hcell)]
+        lon, lat = lowerleft.coords
+        coos = [(lon, lat), # lower left
+                (lon, lat + cell_size), # upper left
+                (lon + cell_size, lat + cell_size), # upper right
+                (lon + cell_size, lat), # lower right
+                (lon, lat)]
         coos = [(round_float(x), round_float(y)) for x, y in coos]
         return geos.Polygon(coos)
 
     @classmethod
-    def assets_for_cell(cls, job_id, midpoint):
+    def assets_for_cell(cls, job_id, lowerleft):
         """Return exposure assets for the given job and risk cell mid-point.
 
         :param int job_id: the database key of the job in question
-        :param midpoint: a :py:class:`openquake.shapes.Site` instance
-            with the location of the centre of the risk cell
+        :param lowerleft: a :py:class:`openquake.shapes.Site` instance
+            with the location of the lower left corner of the risk cell
         :returns: a potentially empty list of
             :py:class:`openquake.db.models.ExposureData` instances
         """
         jp = models.OqCalculation.objects.get(id=job_id).oq_job_profile
-        assert jp.risk_cell_size is not None, "Risk cell size must be set."
+        assert jp.region_grid_spacing is not None, "Grid spacing not known."
 
         if cls._em_inputs is None or cls._em_job_id != job_id:
             # This query obtains the exposure model input rows and needs to be
@@ -190,7 +191,7 @@ class BaseRiskCalculator(Calculator):
         if not cls._em_inputs:
             return []
 
-        risk_cell = cls._cell_to_polygon(midpoint, jp.risk_cell_size)
+        risk_cell = cls._cell_to_polygon(lowerleft, jp.region_grid_spacing)
         qm = models.ExposureData.objects
         result = qm.filter(exposure_model__input__in=cls._em_inputs,
                            site__contained=risk_cell)
