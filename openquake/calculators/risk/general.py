@@ -219,9 +219,7 @@ class BaseRiskCalculator(Calculator):
     def store_exposure_assets(self):
         """Load exposure assets and write them to database."""
         input_set = self.calc_proxy.oq_job_profile.input_set
-        qargs = dict(input_type="exposure")
-
-        [emdl] = input_set.input_set.filter(**qargs)
+        [emdl] = input_set.input_set.filter(input_type="exposure")
         path = os.path.join(self.calc_proxy.base_path, emdl.path)
 
         exposure_parser = exposure.ExposurePortfolioFile(path)
