@@ -358,7 +358,6 @@ class RiskCalculatorTestCase(unittest.TestCase):
         def row_col(item):
             return item[0].row, item[0].column
 
-        self.job.oq_job_profile.risk_cell_size = 1.0
         self.job.oq_job_profile.save()
         calculator = general.BaseRiskCalculator(self.job)
 

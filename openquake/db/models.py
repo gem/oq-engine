@@ -691,7 +691,6 @@ class OqJobProfile(models.Model):
     maximum_distance = models.FloatField(null=True)
     quantile_levels = FloatArrayField(null=True)
     reference_depth_to_2pt5km_per_sec_param = models.FloatField(null=True)
-    risk_cell_size = models.FloatField(null=True)
     rupture_aspect_ratio = models.FloatField(null=True)
     RUPTURE_FLOATING_TYPE_CHOICES = (
         ('alongstrike', 'Only along strike ( rupture full DDW)'),
