@@ -204,8 +204,8 @@ class GridPoint(object):
         return self.grid.site_at(self)
 
     def hash(self):
-        """Ugly hashing function
-        TODO(jmc): Fixme"""
+        """Ugly hashing function"""
+        # TODO(jmc): Fixme
         return self.__hash__()
 
     def __repr__(self):
