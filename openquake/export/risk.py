@@ -15,6 +15,9 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+"""Functions for exporting Risk artifacts from the database."""
+
+
 import os
 
 from openquake.db import models
@@ -24,6 +27,16 @@ from openquake.output.risk import AggregateLossCurveXMLWriter
 
 @makedirs
 def export_agg_loss_curve(output, target_dir):
+    """Export the specified aggregate loss curve ``output`` to the
+    ``target_dir``.
+
+    :param output:
+        :class:`openquake.db.models.Output` associated with the aggregate loss
+        curve results.
+    :param str target_dir:
+        Destination directory location of the exported files.
+    """
+
     file_name = 'aggregate_loss_curve.xml'
     file_path = os.path.join(target_dir, file_name)
 
