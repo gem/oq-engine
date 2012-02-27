@@ -4,6 +4,8 @@ CALCULATION_MODE = UHS
 
 SITES = 0.0, 0.0
 
+DESCRIPTION = Uniform Hazard Spectra Demo
+
 [HAZARD]
 
 # parameters for UHS calculations
