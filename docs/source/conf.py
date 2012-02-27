@@ -30,6 +30,8 @@
 import os
 import sys
 
+os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.settings'
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
@@ -62,7 +64,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'OpenQuake'
-copyright = u'2011, GEM Foundation'
+copyright = u'2012, GEM Foundation'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -107,6 +109,8 @@ pygments_style = 'sphinx'
 
 # A list of ignored prefixes for module index sorting.
 #modindex_common_prefix = []
+
+autodoc_default_flags = ['members', 'undoc-members', 'show-inheritance']
 
 
 # -- Options for HTML output --------------------------------------------------
