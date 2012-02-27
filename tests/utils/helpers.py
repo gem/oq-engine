@@ -747,3 +747,21 @@ def random_string(length=16):
     while len(result) < length:
         result += random.choice(string.letters + string.digits)
     return result
+
+
+def prepare_cli_output(raw_output, discard_header=True):
+    """Given a huge string of output from a `subprocess.check_output` call,
+    split on newlines, strip, and discard empty lines.
+
+    If ``discard_header`` is `True`, drop the first row in the output.
+
+    Returns a `list` of strings, 1 for each row in the CLI output.
+    """
+    lines = raw_output.split('\n')
+    # strip and drop empty lines
+    lines = [x.strip() for x in lines if len(x.strip()) > 0]
+
+    if discard_header:
+        lines.pop(0)
+
+    return lines
