@@ -73,9 +73,9 @@ def plot_aggregate_curve(calculator, aggregate_curve):
     """
 
     if not calculator.calc_proxy.has("AGGREGATE_LOSS_CURVE"):
-        LOGGER.debug("AGGREGATE_LOSS_CURVE parameter not specified, " \
-                "skipping aggregate loss curve computation...")
-
+        LOGGER.debug(
+            "AGGREGATE_LOSS_CURVE parameter not specified, "
+            "skipping aggregate loss curve computation...")
         return
 
     path = os.path.join(
@@ -98,10 +98,12 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
     def __init__(self, calc_proxy):
         super(EventBasedRiskCalculator, self).__init__(calc_proxy)
         self.vuln_curves = None
+        self.aggregate_curve = None
 
     def execute(self):
         """Execute the job."""
-        aggregate_curve = general.AggregateLossCurve()
+
+        self.aggregate_curve = general.AggregateLossCurve()
 
         tasks = []
         for block_id in self.calc_proxy.blocks_keys:
@@ -115,21 +117,53 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
             try:
                 task.wait()
 
-                aggregate_curve.append(task.result)
+                self.aggregate_curve.append(task.result)
             except TimeoutError:
                 # TODO(jmc): Cancel and respawn this task
                 return
+
+    def post_execute(self):
+        """Perform the following post-execution actions:
+
+        * Write loss curves to XML
+        * Save the aggregate loss curve to the database
+        * Write BCR output (NOTE: If BCR mode, none of the other artifacts will
+          be written.
+
+        Not all of these actions will be executed; this depends on the
+        configuration of the calculation.
+        """
 
         if self.is_benefit_cost_ratio_mode():
             self.write_output_bcr()
             return
 
-        agg_curve = aggregate_curve.compute(
+        agg_curve = self.aggregate_curve.compute(
             self._tses(), self._time_span(),
             self.calc_proxy.oq_job_profile.loss_histogram_bins)
         plot_aggregate_curve(self, agg_curve)
 
         self.write_output()
+
+        # Save the aggregate loss curve to the database:
+        calculation = self.calc_proxy.oq_calculation
+
+        agg_lc_display_name = (
+            'Aggregate Loss Curve for calculation %s' % calculation.id)
+        output = models.Output(
+            oq_calculation=calculation, owner=calculation.owner,
+            display_name=agg_lc_display_name, db_backed=True,
+            output_type='agg_loss_curve')
+        output.save()
+
+        loss_curve = models.LossCurve(output=output, aggregate=True)
+        loss_curve.save()
+
+        agg_lc_data = models.AggregateLossCurveData(
+            loss_curve=loss_curve, losses=agg_curve.x_values,
+            poes=agg_curve.y_values)
+        agg_lc_data.save()
+
 
     def _tses(self):
         """Return the time representative of the Stochastic Event Set
