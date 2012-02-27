@@ -19,15 +19,18 @@ import os
 
 from openquake.db import models
 from openquake.export.core import makedirs
+from openquake.output.risk import AggregateLossCurveXMLWriter
 
 
-#@makedirs
+@makedirs
 def export_agg_loss_curve(output, target_dir):
     file_name = 'aggregate_loss_curve.xml'
     file_path = os.path.join(target_dir, file_name)
 
     agg_loss_curve = models.AggregateLossCurveData.objects.get(
         loss_curve__output=output.id)
-    print agg_loss_curve
+
+    agg_lc_writer = AggregateLossCurveXMLWriter(file_path)
+    agg_lc_writer.serialize(agg_loss_curve.losses, agg_loss_curve.poes)
 
     return [file_path]
