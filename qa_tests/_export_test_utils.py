@@ -57,10 +57,10 @@ def check_list_outputs(testcase, cli_output, expected_output_id,
     """
     for line in cli_output:
         output_id, output_type = line.split('\t')
-        if int(output_id) == output.id:
-            self.assertEqual(expected_output_type, output_type)
+        if int(output_id) == expected_output_id:
+            testcase.assertEqual(expected_output_type, output_type)
             break
     else:
         # We didn't find the output we expected with --list-outputs.
-        self.fail('`openquake --list-outputs` CALCULATION_ID did not'
-                  ' print the expected output with id %s' % output_id)
+        testcase.fail('`openquake --list-outputs` CALCULATION_ID did not'
+                      ' print the expected output with id %s' % output_id)
