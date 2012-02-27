@@ -949,19 +949,33 @@ class CalcStatsTestCase(unittest.TestCase):
         is called.
         '''
         # Mock out pieces of the test job so it doesn't actually run.
-        haz_execute = ('openquake.calculators.hazard.event_based.core'
-                       '.EventBasedHazardCalculator.execute')
-        risk_execute = ('openquake.calculators.risk.event_based.core'
-                        '.EventBasedRiskCalculator.execute')
-        record = 'openquake.engine.CalculationProxy._record_initial_stats'
+        eb_haz_calc = ('openquake.calculators.hazard.event_based.core'
+                       '.EventBasedHazardCalculator')
+        eb_risk_calc = ('openquake.calculators.risk.event_based.core'
+                       '.EventBasedRiskCalculator')
+        methods = ('initialize', 'pre_execute', 'execute', 'post_execute')
 
-        with patch(haz_execute):
-            with patch(risk_execute):
-                with patch(record) as record_mock:
-                    engine._launch_calculation(
-                        self.eb_job, ['general', 'HAZARD', 'RISK'])
+        haz_patchers = [patch('%s.%s' % (eb_haz_calc, m)) for m in methods]
+        risk_patchers = [patch('%s.%s' % (eb_risk_calc, m)) for m in methods]
 
-                    self.assertEqual(1, record_mock.call_count)
+        for p in haz_patchers:
+            p.start()
+        for p in risk_patchers:
+            p.start()
+
+        try:
+            record = 'openquake.engine.CalculationProxy._record_initial_stats'
+
+            with patch(record) as record_mock:
+                engine._launch_calculation(
+                    self.eb_job, ['general', 'HAZARD', 'RISK'])
+
+                self.assertEqual(1, record_mock.call_count)
+        finally:
+            for p in haz_patchers:
+                p.stop()
+            for p in risk_patchers:
+                p.stop()
 
 
 class JobUtilsTestCase(unittest.TestCase):
