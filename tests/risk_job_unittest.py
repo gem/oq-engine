@@ -345,7 +345,6 @@ class RiskCalculatorTestCase(unittest.TestCase):
         self.grid = shapes.Grid(shapes.Region.from_coordinates(
             [(1.0, 3.0), (1.0, 4.0), (2.0, 4.0), (2.0, 3.0)]), 1.0)
 
-        import pdb; pdb.set_trace()
         # this is the expected output of grid_assets_iterator and an input of
         # asset_losses_per_site
         self.grid_assets = [
@@ -365,24 +364,22 @@ class RiskCalculatorTestCase(unittest.TestCase):
         actual = sorted(calculator.grid_assets_iterator(self.grid),
                         key=row_col)
 
-        import pdb; pdb.set_trace()
         self.assertEqual(expected, actual)
 
     def test_that_conditional_loss_is_in_kvs(self):
-        asset = {"assetID": 1}
+        asset = GRID_ASSETS[(0,1)]
         loss_poe = 0.1
         job_id = "1"
+        row = 0
         col = 1
-        row = 2
         loss_curve = shapes.Curve([(0.21, 0.131), (0.24, 0.108),
-                (0.27, 0.089), (0.30, 0.066)])
+                                   (0.27, 0.089), (0.30, 0.066)])
 
         # should set in kvs the conditional loss
         general.compute_conditional_loss(job_id, col, row, loss_curve, asset,
-                loss_poe)
-        loss_key = kvs.tokens.loss_key(job_id, row, col,
-                asset["assetID"], loss_poe)
-
+                                         loss_poe)
+        loss_key = kvs.tokens.loss_key(job_id, row, col, asset.asset_ref,
+                                       loss_poe)
         self.assertTrue(kvs.get_client().get(loss_key))
 
     def test_asset_losses_per_site(self):
