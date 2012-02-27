@@ -383,7 +383,7 @@ class BaseRiskCalculator(Calculator):
             key = kvs.tokens.bcr_block_key(self.calc_proxy.job_id, block_id)
             block_data = kvs.get_value_json_decoded(key)
             data += [(shapes.Site(latitude=lat, longitude=lon), payload)
-                     for ((lat, lon), payload) in block_data]
+                     for ((lon, lat), payload) in block_data]
         return data
 
 
@@ -651,6 +651,7 @@ def compute_bcr_for_block(job_id, points, get_loss_curve,
                      asset.asset_ref, eal_original, eal_retrofitted, bcr)
 
             key = (asset.site.x, asset.site.y)
+
             result[key].append(({'bcr': bcr,
                                  'eal_original': eal_original,
                                  'eal_retrofitted': eal_retrofitted},
