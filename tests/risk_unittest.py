@@ -128,7 +128,6 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
         path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, "PEB-exposure.yaml")
         inputs = [("exposure", path)]
         cls.calc = cls.setup_classic_job(inputs=inputs)
-        cls.calc.oq_job_profile.risk_cell_size = 0.05
         cls.calc.oq_job_profile.save()
         qargs = dict(input_type="exposure", path=path)
         [input] = cls.calc.oq_job_profile.input_set.input_set.filter(**qargs)
@@ -737,7 +736,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
     def setUp(self):
         self.block_id = 7
         self.job = self.setup_classic_job()
-        self.job.oq_job_profile.risk_cell_size = 0.05
         self.job.oq_job_profile.save()
         self.job_id = self.job.id
 
