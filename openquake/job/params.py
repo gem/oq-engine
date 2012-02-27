@@ -377,7 +377,6 @@ define_param("REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM",
              java_name="Depth 2.5 km/sec", to_job=float)
 define_param("REFERENCE_VS30_VALUE", "reference_vs30_value", java_name="Vs30",
              to_job=float)
-define_param('RISK_CELL_SIZE', 'risk_cell_size', to_job=float)
 define_param('RUPTURE_SURFACE_DISCRETIZATION',
              'rupture_surface_discretization', modes='scenario',
              to_job=float)
