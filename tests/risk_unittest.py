@@ -1403,7 +1403,7 @@ class RiskJobGeneralTestCase(unittest.TestCase):
     def _prepare_bcr_result(self):
         self.job.blocks_keys = [19, 20]
         kvs.set_value_json_encoded(kvs.tokens.bcr_block_key(self.job_id, 19), [
-            ((19.0, -1.1), [
+            ((-1.1, 19.0), [
                 ({'bcr': 35.1, 'eal_original': 12.34, 'eal_retrofitted': 4},
                  'assetID-191'),
                 ({'bcr': 35.2, 'eal_original': 2.5, 'eal_retrofitted': 2.2},
@@ -1411,7 +1411,7 @@ class RiskJobGeneralTestCase(unittest.TestCase):
             ])
         ])
         kvs.set_value_json_encoded(kvs.tokens.bcr_block_key(self.job_id, 20), [
-            ((20.0, 2.3), [
+            ((2.3, 20.0), [
                 ({'bcr': 35.1, 'eal_original': 1.23, 'eal_retrofitted': 0.3},
                  'assetID-201'),
                 ({'bcr': 35.2, 'eal_original': 4, 'eal_retrofitted': 0.4},
