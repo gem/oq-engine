@@ -571,7 +571,7 @@ class DbTestCase(object):
             for imt, imp in inputs:
                 iobj = models.Input(input_set=input_set, path=imp,
                                     input_type=imt,
-                                    size=random.randint(1024, 16*1024))
+                                    size=random.randint(1024, 16 * 1024))
                 iobj.save()
 
         oqjp = models.OqJobProfile()

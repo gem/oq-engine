@@ -21,8 +21,6 @@ import numpy
 import unittest
 
 from django.contrib.gis import geos
-from django.db import router
-from django.db import transaction
 
 from openquake.calculators.risk.classical.core import ClassicalRiskCalculator
 from openquake.calculators.risk.classical.core import _generate_loss_ratios
@@ -264,8 +262,8 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
             location = geos.GEOSGeometry(site.point.to_wkt())
             asset = models.ExposureData(
                 exposure_model=model, taxonomy="RC/DMRF-D/LR",
-                asset_ref=helpers.random_string(6), stco=lat*2, site=location,
-                reco=1.1*lon)
+                asset_ref=helpers.random_string(6), stco=lat * 2,
+                site=location, reco=1.1 * lon)
             asset.save()
 
     @staticmethod
