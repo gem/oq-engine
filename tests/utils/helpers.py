@@ -39,22 +39,16 @@ import textwrap
 import time
 
 from django.core import exceptions
-from gflags import DEFINE_boolean
 
 from openquake.calculators.hazard.general import store_gmpe_map
 from openquake.calculators.hazard.general import store_source_model
 from openquake.db import models
 from openquake.engine import CalculationProxy
 from openquake import engine
-from openquake import flags
 from openquake import logs
 from openquake import producer
 from openquake.input.logictree import LogicTreeProcessor
 from openquake.utils import config
-
-FLAGS = flags.FLAGS
-
-DEFINE_boolean('download_test_data', True, 'Fetch test data files if needed')
 
 DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data'))
 
@@ -551,12 +545,15 @@ class DbTestCase(object):
         input_set.delete()
 
     @classmethod
-    def setup_classic_job(cls, create_job_path=True, upload_id=None):
+    def setup_classic_job(cls, create_job_path=True, upload_id=None,
+                          inputs=None):
         """Create a classic job with associated upload and inputs.
 
-        :param integer upload_id: if set use upload record with given db key.
         :param bool create_job_path: if set the path for the job will be
             created and captured in the job record
+        :param integer upload_id: if set use upload record with given db key.
+        :param list inputs: a list of 2-tuples where the first and the second
+            element are the input type and path respectively
         :returns: a :py:class:`db.models.OqCalculation` instance
         """
         assert upload_id is None  # temporary
@@ -565,6 +562,14 @@ class DbTestCase(object):
 
         input_set = models.InputSet(owner=owner)
         input_set.save()
+
+        # Insert input model files
+        if inputs:
+            for imt, imp in inputs:
+                iobj = models.Input(input_set=input_set, path=imp,
+                                    input_type=imt,
+                                    size=random.randint(1024, 16 * 1024))
+                iobj.save()
 
         oqjp = models.OqJobProfile()
         oqjp.owner = owner

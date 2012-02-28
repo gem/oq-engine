@@ -141,7 +141,7 @@ def magdistepspmf(site, full_matrix,
     """
     Magnitude-distance-epsilon PMF extractor (3D).
     """
-    shape = [nmag - 1, ndist - 1, ntrt - 1]
+    shape = [nmag - 1, ndist - 1, neps - 1]
     ds = numpy.zeros(shape, DATA_TYPE)
     distgen = _distgen(site, lat_bin_edges, lon_bin_edges, distance_bin_edges,
                        nlat, nlon, nmag, neps, ntrt, ndist)
