@@ -231,7 +231,7 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
             raise StopIteration()
 
 
-def supervise(pid, job_id, log_level, timeout=1):
+def supervise(pid, job_id, timeout=1):
     """
     Supervise a job process, entering a loop that ends only when the job
     terminates.
@@ -251,7 +251,7 @@ def supervise(pid, job_id, log_level, timeout=1):
     ignore_sigint()
 
     logging.root.addHandler(SupervisorLogHandler(job_id))
-    logs.set_logger_level(logging.root, log_level)
+    logs.set_logger_level(logging.root, logging.NOTSET)
 
     supervisor = SupervisorLogMessageConsumer(job_id, pid, timeout)
     supervisor.run()
