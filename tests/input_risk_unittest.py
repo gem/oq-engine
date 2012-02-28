@@ -271,6 +271,7 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertEqual(150000, assets[0].value)
         self.assertEqual("RC/DMRF-D/LR", assets[0].taxonomy)
         self.assertEqual(Site(9.15000, 45.16667), _to_site(assets[0].site))
+        self.assertEqual(0, assets[0].occupancy_set.count())
 
         self.assertEqual("asset_02", assets[1].asset_ref)
         self.assertEqual(119, assets[1].area)
@@ -283,6 +284,13 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertEqual(250000, assets[1].value)
         self.assertEqual("RC/DMRF-D/HR", assets[1].taxonomy)
         self.assertEqual(Site(9.15333, 45.12200), _to_site(assets[1].site))
+        day, night = sorted(assets[1].occupancy_set.all(),
+                            key=lambda o: o.description)
+        self.assertEqual(12, day.occupants)
+        self.assertEqual("day", day.description)
+        self.assertEqual(50, night.occupants)
+        self.assertEqual("night", night.description)
+
 
         self.assertEqual("asset_03", assets[2].asset_ref)
         self.assertEqual(118, assets[2].area)
@@ -295,3 +303,9 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertEqual(500000, assets[2].value)
         self.assertEqual("RC/DMRF-D/LR", assets[2].taxonomy)
         self.assertEqual(Site(9.14777, 45.17999), _to_site(assets[2].site))
+        morning, afternoon = sorted(assets[2].occupancy_set.all(),
+                                    key=lambda o: o.description)
+        self.assertEqual(5, afternoon.occupants)
+        self.assertEqual("late afternoon", afternoon.description)
+        self.assertEqual(36, morning.occupants)
+        self.assertEqual("early morning", morning.description)
