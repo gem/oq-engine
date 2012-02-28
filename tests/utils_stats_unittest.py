@@ -22,6 +22,8 @@
 Unit tests for the utils.stats module.
 """
 
+import itertools
+import string
 import sys
 import unittest
 
@@ -432,3 +434,45 @@ class KvsOpTestCase(helpers.RedisTestCase, unittest.TestCase):
         """An `AttributeError` is raised for unknown kvs operations"""
         self.assertRaises(AttributeError, stats.kvs_op, "no-such-op",
                           "any-key-will-do")
+
+
+class FailureCountersTestCase(helpers.RedisTestCase, unittest.TestCase):
+    """Tests the behaviour of utils.stats.failure_counters()."""
+
+    def test_failure_counters_with_valid_area(self):
+        # Failure counters are returned for valid computation areas.
+        stats.delete_job_counters(123)
+        fcname = itertools.cycle(string.ascii_lowercase)
+        for cidx, carea in enumerate(["g", "h", "r"]):
+            stats.incr_counter(123, carea, "%s-failures" % fcname.next())
+            if not (cidx % 2):
+                stats.incr_counter(123, carea, "%s-failures" % fcname.next())
+
+        self.assertEqual(
+            [('oqs/123/g/a-failures/i', 1), ('oqs/123/g/b-failures/i', 1)],
+            sorted(stats.failure_counters(123, "g")))
+        self.assertEqual([('oqs/123/h/c-failures/i', 1)],
+                         sorted(stats.failure_counters(123, "h")))
+        self.assertEqual(
+            [('oqs/123/r/d-failures/i', 1), ('oqs/123/r/e-failures/i', 1)],
+            sorted(stats.failure_counters(123, "r")))
+
+    def test_failure_counters_with_invalid_area(self):
+        # An exception is raised for invalid computation areas.
+        self.assertRaises(AssertionError, stats.failure_counters, 123, "x")
+
+    def test_failure_counters_with_no_area(self):
+        # Failure counters are returned for all computation areas if the
+        # 'area' parameter is omitted.
+        stats.delete_job_counters(123)
+        fcname = itertools.cycle(string.ascii_lowercase)
+        for cidx, carea in enumerate(["g", "h", "r"]):
+            stats.incr_counter(123, carea, "%s-failures" % fcname.next())
+            if not (cidx % 2):
+                stats.incr_counter(123, carea, "%s-failures" % fcname.next())
+
+        self.assertEqual(
+            [('oqs/123/g/a-failures/i', 1), ('oqs/123/g/b-failures/i', 1),
+             ('oqs/123/h/c-failures/i', 1), ('oqs/123/r/d-failures/i', 1),
+             ('oqs/123/r/e-failures/i', 1)],
+            sorted(stats.failure_counters(123)))
