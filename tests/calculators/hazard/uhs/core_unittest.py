@@ -242,8 +242,8 @@ class UHSCalculatorTestCase(UHSBaseTestCase):
     """Tests for :class:`openquake.calculators.hazard.uhs.core.UHSCalculator`.
     """
 
-    def test_analyze(self):
-        # Test that `analyze` sets the task total counter with the correct
+    def test_initialize(self):
+        # Test that `initialize` sets the task total counter with the correct
         # value
         # First, check that the total counter doesn't exist.
         task_total = lambda: stats.get_counter(
@@ -252,7 +252,7 @@ class UHSCalculatorTestCase(UHSBaseTestCase):
 
         calc = UHSCalculator(self.calc_proxy)
 
-        calc.analyze()
+        calc.initialize()
 
         # In this test file, there is only 1 realization and 1 site.
         # So, the expected total is 1.

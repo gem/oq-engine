@@ -18,12 +18,13 @@
 
 from bulk_insert_unittest import *
 from cache_gc_unittest import *
+from calculators.hazard.disagg.subsets_unittest import *
 from db_fields_unittest import *
 from db_loader_unittest import *
 from db_loader_unittest import *
 from db_routers_unittest import *
 from disaggregation_unittest import *
-from disagg_subsets_unittest import *
+from engine_unittest import *
 from hazard_classical_unittest import *
 from hazard_nrml_unittest import *
 from hazard_unittest import *
@@ -35,6 +36,7 @@ from kvs_unittest import *
 from logs_unittest import *
 from loss_map_output_unittest import *
 from loss_output_unittest import *
+from db.models_unittest import *
 from output_hazard_unittest import *
 from output_risk_unittest import *
 from output_unittest import *
@@ -45,7 +47,6 @@ from parser_hazard_map_unittest import *
 from parser_vulnerability_model_unittest import *
 from probabilistic_unittest import *
 from producer_unittest import *
-from risk_exposure_model_unittest import *
 from risk_job_unittest import *
 from risk_parser_unittest import *
 from risk_unittest import *
@@ -63,8 +64,6 @@ from utils_stats_unittest import *
 from utils_tasks_unittest import *
 from utils_version_unittest import *
 from validator_unittest import *
-from models_unittest import *
-from engine_unittest import *
 from writer_unittest import *
 
 import glob
