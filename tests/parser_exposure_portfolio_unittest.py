@@ -80,6 +80,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
 
         expected_result = [
             (shapes.Site(9.15333, 45.12200),
+             [exposure.OCCUPANCY(12, "day"), exposure.OCCUPANCY(50, "night")],
              {"area": 119.0,
               "areaType": "per_asset",
               "areaUnit": "GBP",
@@ -101,16 +102,16 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
               "stcoType": "aggregated",
               "stcoUnit": "USD",
               "taxonomy": "RC/DMRF-D/HR"}
-
             )]
 
         ctr = None
-        for ctr, (exposure_point, exposure_data) in enumerate(
+        for ctr, (exposure_point, occupancy_data, exposure_data) in enumerate(
             ep.filter(region_constraint)):
 
             # check topological equality for points
             self.assertEqual(expected_result[ctr][0], exposure_point)
-            self.assertEqual(expected_result[ctr][1], exposure_data)
+            self.assertEqual(expected_result[ctr][1], occupancy_data)
+            self.assertEqual(expected_result[ctr][2], exposure_data)
 
         # ensure that generator yielded at least one item
         self.assertTrue(ctr is not None,
@@ -126,9 +127,8 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
     def test_filter_region_constraint_all_sites(self):
 
         # specified rectangle contains all sites in example file
-        region_constraint = \
-                shapes.RegionConstraint.from_simple((9.14776, 45.18000),
-                                                    (9.15334, 45.12199))
+        region_constraint = shapes.RegionConstraint.from_simple(
+            (9.14776, 45.18000), (9.15334, 45.12199))
         ep = exposure.ExposurePortfolioFile(
             os.path.join(helpers.SCHEMA_EXAMPLES_DIR, TEST_FILE))
 
@@ -136,8 +136,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
         ctr = None
 
         # just loop through iterator in order to count items
-        for ctr, (exposure_point, exposure_attr) in enumerate(
-            ep.filter(region_constraint)):
+        for ctr, _ in enumerate(ep.filter(region_constraint)):
             pass
 
         # ensure that generator yielded at least one item
