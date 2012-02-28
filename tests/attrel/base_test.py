@@ -76,9 +76,22 @@ class GetProbabilitiesOfExceedanceWrongInputTestCase(_FakeAttRelTestCase):
         self._assert_value_error(self._get_poes, err, truncation_level=-0.1)
         self._assert_value_error(self._get_poes, err, truncation_level=-1)
 
+    def test_attrel_doesnt_support_total_stddev(self):
+        with self.assertRaises(AssertionError) as ar:
+            self._get_poes()
+        self.assertEqual(
+            ar.exception.message,
+            'FakeAttrel does not support TOTAL standard deviation '
+            'which is required for calculating probabilities of exceedance '
+            'with non-zero truncation level'
+        )
+
 
 class GetProbabilitiesOfExceedanceTestCase(_FakeAttRelTestCase):
     def test_no_truncation(self):
+        self.attrel_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
+            const.StdDev.TOTAL
+        )
         def get_mean_and_stddevs(ctx, imt, stddev_types, component_type):
             self.assertEqual(imt, self.DEFAULT_IMT())
             self.assertEqual(stddev_types, [const.StdDev.TOTAL])
@@ -102,13 +115,23 @@ class GetProbabilitiesOfExceedanceTestCase(_FakeAttRelTestCase):
         def get_mean_and_stddevs(ctx, imt, stddev_types, component_type):
             return 1.1, [123.45]
         self.attrel.get_mean_and_stddevs = get_mean_and_stddevs
-        poes = self._get_poes(imts={self.DEFAULT_IMT(): [0, 1, 2, 1.1, 1.05]},
-                              truncation_level=0)[self.DEFAULT_IMT()]
+        imt = self.DEFAULT_IMT()
+        imts = {imt: [0, 1, 2, 1.1, 1.05]}
+        poes = self._get_poes(imts=imts, truncation_level=0)[imt]
         self.assertIsInstance(poes, numpy.ndarray)
         expected_poes = [0, 0, 1, 1, 0]
         self.assertEqual(list(poes), expected_poes)
 
+        self.attrel_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
+            const.StdDev.TOTAL
+        )
+        poes = self._get_poes(imts=imts, truncation_level=0)[imt]
+        self.assertEqual(list(poes), expected_poes)
+
     def test_truncated(self):
+        self.attrel_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
+            const.StdDev.TOTAL
+        )
         def get_mean_and_stddevs(ctx, imt, stddev_types, component_type):
             return -0.7872268528578843, [0.5962393527251486]
         self.attrel.get_mean_and_stddevs = get_mean_and_stddevs
