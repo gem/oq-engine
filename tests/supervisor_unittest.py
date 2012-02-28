@@ -121,7 +121,7 @@ class SupervisorTestCase(unittest.TestCase):
             # the supervisor will receive a msg
             run.side_effect = run_
 
-            supervisor.supervise(1, 123, 'warn', timeout=0.1)
+            supervisor.supervise(1, 123, timeout=0.1)
 
             # the job process is terminated
             self.assertEqual(1, self.terminate_job.call_count)
@@ -146,7 +146,7 @@ class SupervisorTestCase(unittest.TestCase):
         self.is_pid_running.return_value = False
         self.get_job_status.return_value = 'succeeded'
 
-        supervisor.supervise(1, 123, 'warn', timeout=0.1)
+        supervisor.supervise(1, 123, timeout=0.1)
 
         # stop time is recorded
         self.assertEqual(1, self.record_job_stop_time.call_count)
@@ -162,7 +162,7 @@ class SupervisorTestCase(unittest.TestCase):
         # but the database record says it is
         self.get_job_status.return_value = 'running'
 
-        supervisor.supervise(1, 123, 'warn', timeout=0.1)
+        supervisor.supervise(1, 123, timeout=0.1)
 
         # stop time is recorded
         self.assertEqual(1, self.record_job_stop_time.call_count)
