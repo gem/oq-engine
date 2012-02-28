@@ -69,7 +69,7 @@ RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 # pylint: disable=R0902
 class CalculationProxy(object):
     """Contains everything a calculator needs to run a calculation. This
-    includes: an :class:`OqJobProfile` object, an :class:`OqCalclation`, and a
+    includes: an :class:`OqJobProfile` object, an :class:`OqCalculation`, and a
     dictionary of all of the calculation config params (which is a basically a
     duplication of the :class:`OqJobProfile` member; in the future we would
     like to remove this duplication).
@@ -407,7 +407,9 @@ def _job_from_file(config_file, output_type, owner_username='openquake'):
 
     job = CalculationProxy(params, calculation_id, sections=sections,
                            base_path=base_path,
-                           serialize_results_to=serialize_results_to)
+                           serialize_results_to=serialize_results_to,
+                           oq_calculation=calculation,
+                           oq_job_profile=job_profile)
     job.to_kvs()
 
     return job
@@ -750,10 +752,10 @@ def _launch_calculation(calc_proxy, sections):
             ['general', 'HAZARD', 'RISK']
     """
     # TODO(LB):
-    # In the future, this should be moved to the analyze() method of the base
-    # Calculator class, or something like that. For now, we don't want it there
-    # because it would get called twice in a Hazard+Risk calculation. This is
-    # going to need some thought.
+    # In the future, this should be moved to the initialize() method of the
+    # base Calculator class, or something like that. For now, we don't want it
+    # there because it would get called twice in a Hazard+Risk calculation.
+    # This is going to need some thought.
     # Ignoring 'Access to a protected member'
     # pylint: disable=W0212
     calc_proxy._record_initial_stats()
@@ -776,7 +778,7 @@ def _launch_calculation(calc_proxy, sections):
         logs.LOG.debug("Launching calculation with id=%s and type='%s'"
                        % (calc_proxy.job_id, job_type))
 
-        calculator.analyze()
+        calculator.initialize()
         calculator.pre_execute()
         calculator.execute()
         calculator.post_execute()

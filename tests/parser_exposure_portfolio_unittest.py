@@ -80,30 +80,37 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
 
         expected_result = [
             (shapes.Site(9.15333, 45.12200),
-            {'listID': 'PAV01',
-             'listDescription': 'Collection of existing building in ' \
-                                'downtown Pavia',
-             'assetID': 'asset_02',
-             'assetCategory': 'buildings',
-             'taxonomy': 'RC/DMRF-D/HR',
-             'structureCategory': 'RC-HR-PC',
-             'assetValue': 250000.0,
-             'unit': 'EUR',
-             'retrofittingCost': 1.0
-            })]
+             {"area": 119.0,
+              "areaType": "per_asset",
+              "areaUnit": "GBP",
+              "assetCategory": "buildings",
+              "assetID": "asset_02",
+              "coco": 21.95,
+              "cocoType": "per_area",
+              "cocoUnit": "CHF",
+              "deductible": 66.0,
+              "limit": 1999.0,
+              "listDescription": "Collection of existing building in "
+                                 "downtown Pavia",
+              "listID": "PAV01",
+              "number": 6.0,
+              "reco": 205432.0,
+              "recoType": "aggregated",
+              "recoUnit": "EUR",
+              "stco": 250000.0,
+              "stcoType": "aggregated",
+              "stcoUnit": "USD",
+              "taxonomy": "RC/DMRF-D/HR"}
+
+            )]
 
         ctr = None
-        for ctr, (exposure_point, exposure_attr) in enumerate(
+        for ctr, (exposure_point, exposure_data) in enumerate(
             ep.filter(region_constraint)):
 
             # check topological equality for points
-            self.assertTrue(exposure_point.equals(expected_result[ctr][0]),
-                "filter yielded unexpected point at position %s: %s, %s" % (
-                ctr, exposure_point, expected_result[ctr][0]))
-
-            self.assertTrue(exposure_attr == expected_result[ctr][1],
-                "filter yielded unexpected attribute values at position " \
-                "%s: %s, %s" % (ctr, exposure_attr, expected_result[ctr][1]))
+            self.assertEqual(expected_result[ctr][0], exposure_point)
+            self.assertEqual(expected_result[ctr][1], exposure_data)
 
         # ensure that generator yielded at least one item
         self.assertTrue(ctr is not None,
