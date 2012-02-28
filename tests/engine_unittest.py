@@ -277,7 +277,7 @@ class EngineLaunchCalcTestCase(unittest.TestCase):
 
     def test__launch_calculation_calls_core_calc_methods(self):
         # The `Calculator` interface defines 4 general methods:
-        # - analyze
+        # - initialize
         # - pre_execute
         # - execute
         # - post_execute
@@ -302,7 +302,7 @@ class EngineLaunchCalcTestCase(unittest.TestCase):
                         '.ClassicalHazardCalculator')
         cls_risk_calc = ('openquake.calculators.risk.classical.core'
                          '.ClassicalRiskCalculator')
-        methods = ('analyze', 'pre_execute', 'execute', 'post_execute')
+        methods = ('initialize', 'pre_execute', 'execute', 'post_execute')
         haz_patchers = [patch('%s.%s' % (cls_haz_calc, m)) for m in methods]
         risk_patchers = [patch('%s.%s' % (cls_risk_calc, m)) for m in methods]
 
