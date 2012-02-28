@@ -226,8 +226,6 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
 
     def execute(self):
         """Core Classical Risk calculation starts here."""
-        general.preload(self)
-
         celery_tasks = []
         for block_id in self.calc_proxy.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s"
@@ -276,24 +274,21 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
         for point in block.grid(self.calc_proxy.region):
             hazard_curve = self._get_db_curve(point.site)
 
-            asset_key = kvs.tokens.asset_key(self.calc_proxy.job_id,
-                            point.row, point.column)
-            for asset in kvs.get_list_json_decoded(asset_key):
-                LOGGER.debug("processing asset %s" % (asset))
+            assets = self.assets_for_cell(self.calc_proxy.job_id, point.site)
+            for asset in assets:
+                LOGGER.debug("processing asset %s" % asset)
 
                 loss_ratio_curve = self.compute_loss_ratio_curve(
                     point, asset, hazard_curve, vuln_curves)
 
                 if loss_ratio_curve:
-                    loss_curve = self.compute_loss_curve(point,
-                            loss_ratio_curve, asset)
+                    loss_curve = self.compute_loss_curve(
+                        point, loss_ratio_curve, asset)
 
-                    for loss_poe in conditional_loss_poes(
-                        self.calc_proxy.params):
-
+                    for poe in conditional_loss_poes(self.calc_proxy.params):
                         compute_conditional_loss(
-                                self.calc_proxy.job_id, point.column,
-                                point.row, loss_curve, asset, loss_poe)
+                            self.calc_proxy.job_id, point.column,
+                            point.row, loss_curve, asset, poe)
 
         return True
 
@@ -318,7 +313,7 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
             loss_ratio_curve = compute_loss_ratio_curve(
                     vuln_function, hazard_curve,
                     job_profile.lrem_steps_per_interval)
-            return compute_loss_curve(loss_ratio_curve, asset['assetValue'])
+            return compute_loss_curve(loss_ratio_curve, asset.value)
 
         bcr = general.compute_bcr_for_block(calc_proxy.job_id, points,
             get_loss_curve, float(calc_proxy.params['INTEREST_RATE']),
@@ -343,9 +338,9 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
                :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
         """
 
-        loss_curve = compute_loss_curve(loss_ratio_curve, asset['assetValue'])
+        loss_curve = compute_loss_curve(loss_ratio_curve, asset.value)
         loss_key = kvs.tokens.loss_curve_key(
-            self.calc_proxy.job_id, point.row, point.column, asset['assetID'])
+            self.calc_proxy.job_id, point.row, point.column, asset.asset_ref)
 
         kvs.get_client().set(loss_key, loss_curve.to_json())
 
@@ -368,14 +363,12 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
 
         # we get the vulnerability function related to the asset
 
-        vuln_function_reference = asset["taxonomy"]
+        vuln_function_reference = asset.taxonomy
         vuln_function = vuln_curves.get(vuln_function_reference, None)
 
         if not vuln_function:
-            LOGGER.error(
-                "Unknown vulnerability function %s for asset %s"
-                % (asset["taxonomy"],
-                asset["assetID"]))
+            LOGGER.error("Unknown vulnerability function %s for asset %s"
+                         % (asset.taxonomy, asset.asset_ref))
 
             return None
 
@@ -385,7 +378,7 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
             self.calc_proxy.params.get("probabilisticDistribution"))
 
         loss_ratio_key = kvs.tokens.loss_ratio_key(
-            self.calc_proxy.job_id, point.row, point.column, asset['assetID'])
+            self.calc_proxy.job_id, point.row, point.column, asset.asset_ref)
 
         kvs.get_client().set(loss_ratio_key, loss_ratio_curve.to_json())
 

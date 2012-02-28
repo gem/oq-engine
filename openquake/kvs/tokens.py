@@ -101,11 +101,6 @@ def vuln_key(job_id, retrofitted=False):
                          "retrofitted" if retrofitted else "normal")
 
 
-def asset_key(job_id, row, col):
-    """ Return an asset key """
-    return _generate_key(job_id, EXPOSURE_KEY_TOKEN, row, col)
-
-
 def source_model_key(job_id):
     """ Return the KVS key for the source model of the given job"""
     return _generate_key(job_id, SOURCE_MODEL_TOKEN)
