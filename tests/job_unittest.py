@@ -899,7 +899,7 @@ class RunJobTestCase(unittest.TestCase):
                             field_name='last_update')
 
                         self.assertEquals(1, supervise.call_count)
-                        self.assertEquals(((1234, calculation.id, 'warn'), {}),
+                        self.assertEquals(((1234, calculation.id), {}),
                                           supervise.call_args)
             finally:
                 engine._launch_calculation = before_launch
