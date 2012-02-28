@@ -39,22 +39,16 @@ import textwrap
 import time
 
 from django.core import exceptions
-from gflags import DEFINE_boolean
 
 from openquake.calculators.hazard.general import store_gmpe_map
 from openquake.calculators.hazard.general import store_source_model
 from openquake.db import models
 from openquake.engine import CalculationProxy
 from openquake import engine
-from openquake import flags
 from openquake import logs
 from openquake import producer
 from openquake.input.logictree import LogicTreeProcessor
 from openquake.utils import config
-
-FLAGS = flags.FLAGS
-
-DEFINE_boolean('download_test_data', True, 'Fetch test data files if needed')
 
 DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '../data'))
 
