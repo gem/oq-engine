@@ -341,7 +341,7 @@ def read_sites_from_exposure(calc_proxy):
     logs.LOG.debug(
         "Constraining exposure parsing to %s" % constraint)
 
-    for site, _asset_data in reader.filter(constraint):
+    for site, _, _ in reader.filter(constraint):
 
         # we don't want duplicates (bug 812395):
         if not site in sites:
