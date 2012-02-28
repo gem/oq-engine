@@ -95,7 +95,7 @@ def failure_counters(job_id, area=None):
         "g" : general
         "h" : hazard
         "r" : risk
-    :returns: a potentially empty list of 2-tuples with failure keys/counts
+    :returns: a potentially empty list of 2-tuples with failure keys/counters
         for the given area.
     """
     assert area is None or area in ("g", "h", "r"), "Invalid area."
