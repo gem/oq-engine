@@ -24,14 +24,21 @@ if [ $# -eq 0 ]; then
     help
 fi
 
+if [ "$(id -u)" != "0" ]; then
+    echo ""
+    echo "!! This script should be run as root." 1>&2
+    echo "!! Press <enter> to continue, or <ctrl>-C to abort"
+    read
+fi
+
 # Openquake version
-oq_version="0.4.2"
+oq_version="0.5.0"
 
 # Stop at the first error in a batch to give a chance to see the error message
 psql_batch_options='--set ON_ERROR_STOP=1'
 
 # Where do the table spaces live?
-tspace_path='/var/lib/postgresql/8.4/main/ts'
+tspace_path='/var/lib/postgresql/9.1/main/ts'
 # What table spaces should be created?
 tspace_list="admin eqcat hzrdi hzrdr oqmif riski riskr uiapi"
 
@@ -142,7 +149,7 @@ else
 fi
 
 echo -n ".. Current table spaces: "
-echo `psql -c '\db' -d postgres -U $db_admin_user | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }'`
+echo `psql -U $db_admin_user -c '\db' -d postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }'`
 
 if [ "$check_table_spaces" == "on" ]; then
     # Create table spaces if needed.
@@ -151,24 +158,24 @@ if [ "$check_table_spaces" == "on" ]; then
         full_tspace_path="$tspace_path/$full_ts_name"
 
         # Create table space path if needed.
-        sudo test -d "$full_tspace_path"
+        test -d "$full_tspace_path"
         if [ $? -ne 0 ]; then
             echo ".. Creating table space path $full_tspace_path .."
-            sudo mkdir -p $full_tspace_path
+            mkdir -p $full_tspace_path
             if [ $this_is_linux -eq 1 ]; then
-                sudo chown -R postgres.postgres $full_tspace_path
+                chown -R postgres.postgres $full_tspace_path
             else
-                sudo chown -R postgres $full_tspace_path
+                chown -R postgres $full_tspace_path
             fi
         fi
 
         # Create the actual table space.
-        ts_found=`psql -c '\db' -d postgres -U $db_admin_user | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $full_ts_name | wc -l`
+        ts_found=`psql -U $db_admin_user -c '\db' -d postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $full_ts_name | wc -l`
         if [ $ts_found -eq 0 ]; then
             psql -d postgres -U $db_admin_user -c "CREATE TABLESPACE $full_ts_name LOCATION '$full_tspace_path'"
             if [ "$table_spaces_only" == "on" ]; then
-                psql -d $db_name -U $db_admin_user -c "DELETE FROM admin.revision_info WHERE artefact = 'openquake/${tspace}'"
-                psql -d $db_name -U $db_admin_user -c "INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/${tspace}', '${oq_version}', 0)"
+                psql -U $db_admin_user -d $db_name -c "DELETE FROM admin.revision_info WHERE artefact = 'openquake/${tspace}'"
+                psql -U $db_admin_user -d $db_name -c "INSERT INTO admin.revision_info(artefact, revision, step) VALUES('openquake/${tspace}', '${oq_version}', 0)"
             fi
         fi
     done
@@ -185,47 +192,49 @@ set -e
 # Create the OpenQuake database
 echo ".. Creating database $db_name .."
 psql -d postgres -U $db_admin_user -c "CREATE DATABASE $db_name"
-createlang plpgsql -d $db_name -U $db_admin_user
+createlang -d $db_name -U $db_admin_user plpythonu
 
+postgis="/usr/share/postgresql/9.1/contrib/postgis-1.5"
 # Load the PostGIS stuff into the newly created OpenQuake database.
 echo ".. Loading postgis functions/data into $db_name .."
-psql $psql_batch_options -d $db_name -U $db_admin_user -f /usr/share/postgresql/8.4/contrib/postgis-1.5/postgis.sql
-psql $psql_batch_options -d $db_name -U $db_admin_user -f /usr/share/postgresql/8.4/contrib/postgis-1.5/spatial_ref_sys.sql
-psql $psql_batch_options -d $db_name -U $db_admin_user -f /usr/share/postgresql/8.4/contrib/postgis_comments.sql
+psql -U $db_admin_user $psql_batch_options -d $db_name -f $postgis/postgis.sql
+
+psql -U $db_admin_user $psql_batch_options -d $db_name -f $postgis/spatial_ref_sys.sql
+psql -U $db_admin_user $psql_batch_options -d $db_name -f /usr/share/postgresql/9.1/contrib/postgis_comments.sql
+
+echo ".. Running schema definition file: $schema_file .."
+psql -U $db_admin_user $psql_batch_options -d $db_name -f $schema_file
 
 # Apply database function definitions if present.
 functions_file="$schema_path/functions.sql"
 if [ -r $functions_file ]; then
     echo ".. Running functions file: $functions_file .."
-    psql $psql_batch_options -d $db_name -U $db_admin_user -f $functions_file
+    psql -U $db_admin_user $psql_batch_options -d $db_name -f $functions_file
 fi
-
-echo ".. Running schema definition file: $schema_file .."
-psql $psql_batch_options -d $db_name -U $db_admin_user -f $schema_file
 
 # Load static data if present.
 load_file="$schema_path/load.sql"
 if [ -r $load_file ]; then
     echo ".. Loading static data from: $load_file .."
-    psql $psql_batch_options -d $db_name -U $db_admin_user -f $load_file
+    psql -U $db_admin_user $psql_batch_options -d $db_name -f $load_file
 fi
 
 # Apply database schema/table comments if present.
 comments_file="$schema_path/comments.sql"
 if [ -r $comments_file ]; then
     echo ".. Running comments file: $comments_file .."
-    psql $psql_batch_options -d $db_name -U $db_admin_user -f $comments_file
+    psql -U $db_admin_user $psql_batch_options -d $db_name -f $comments_file
 fi
 
 # Create OpenQuake database group if not present.
-oq_group_present=`psql -c '\dg' -d postgres -U $db_admin_user | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $db_group_name | wc -l`
+oq_group_present=`psql -U $db_admin_user -c '\dg' -d postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $db_group_name | wc -l`
 if [ $oq_group_present -eq 0 ]; then
     psql -d postgres -U $db_admin_user -c "CREATE ROLE $db_group_name"
 fi
 
 # Create OpenQuake database users/roles if/as needed.
 for role in $db_roles; do
-    role_present=`psql -c '\dg' -d postgres -U $db_admin_user | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $role | wc -l`
+    role_present=`psql -U $db_admin_user -c '\dg' -d postgres | perl -lane 'if ($_ =~ /^\s\S+/) { print $F[0] unless $. < 3 }' | grep $role | wc -l`
     if [ $role_present -eq 0 ]; then
         psql -d postgres -U $db_admin_user -c "CREATE ROLE $role WITH LOGIN IN GROUP openquake"
     fi
@@ -235,12 +244,12 @@ done
 security_file="$schema_path/security.sql"
 if [ -r $security_file ]; then
     echo ".. Running security settings file: $security_file .."
-    psql $psql_batch_options -d $db_name -U $db_admin_user -f $security_file
+    psql -U $db_admin_user $psql_batch_options -d $db_name -f $security_file
 fi
 
 # Apply database table indexes if present.
 indexes_file="$schema_path/indexes.sql"
 if [ -r $indexes_file ]; then
     echo ".. Applying index definitions: $indexes_file .."
-    psql $psql_batch_options -d $db_name -U $db_admin_user -f $indexes_file
+    psql -U $db_admin_user $psql_batch_options -d $db_name -f $indexes_file
 fi
