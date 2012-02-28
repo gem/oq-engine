@@ -39,7 +39,6 @@ from openquake.xml import NSMAP, NRML, GML
 
 
 LOGGER = logging.getLogger('hazard-serializer')
-LOGGER.setLevel(logging.DEBUG)
 
 
 NRML_GML_ID = 'n1'
