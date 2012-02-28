@@ -22,6 +22,7 @@
 """
 The OpenQuake job supervisor process, spawned by each OpenQuake job.
 """
+import logging
 import os
 import sys
 
@@ -32,12 +33,11 @@ oqpath.set_oq_path()
 def main():  # pylint: disable=C0111
     os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.settings'
 
-    from openquake import flags
     from openquake.supervising import supervisor
 
     job_id = int(sys.argv[1])
     pid = int(sys.argv[2])
-    supervisor.supervise(pid, job_id, flags.FLAGS.debug)
+    supervisor.supervise(pid, job_id, logging.NOTSET)
 
 
 if __name__ == '__main__':
