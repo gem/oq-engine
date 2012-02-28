@@ -165,6 +165,10 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
        - handling its "critical" and "error" messages
        - periodically checking that the job process is still running
     """
+    # Failure counter check delay, translates to 20 seconds with the current
+    # settings.
+    FCC_DELAY = 20
+
     def __init__(self, job_id, job_pid, timeout=1):
         self.selflogger = logging.getLogger('oq.job.%s.supervisor' % job_id)
         self.selflogger.info('Entering supervisor for job %s', job_id)
@@ -178,6 +182,8 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
         self.jobhandler = logging.Handler(logging.ERROR)
         self.jobhandler.emit = self.log_callback
         self.joblogger.addHandler(self.jobhandler)
+        # Failure counter check delay value
+        self.fcc_delay_value = 0
 
     def run(self):
         """
@@ -208,18 +214,28 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
 
     def timeout_callback(self):
         """
-        On timeout expiration check if the job process is still running, and
-        act accordingly if not.
-        """
-        we_should_stop = False
-        if not supervising.is_pid_running(self.job_pid):
-            self.selflogger.info('Process %s not running', self.job_pid)
+        On timeout expiration check if the job process is still running
+        and whether it experienced any failures.
 
-            # see what status was left in the database by the exited job
-            job_status = get_job_status(self.job_id)
-            self.selflogger.info('job finished with status %r', job_status)
+        Terminate the job process in the latter case.
+        """
+        def we_should_check_failure_counters():
+            """Return `True` if failure counters should be checked."""
+            self.fcc_delay_value += 1
+            result = self.fcc_delay_value >= self.FCC_DELAY
+            if result:
+                self.fcc_delay_value = 0
+            return result
+
+
+        we_should_stop = False
+        error_message = None
+
+        if not supervising.is_pid_running(self.job_pid):
+            error_message = ('Process %s not running, probably crashed'
+                             % self.job_pid)
             we_should_stop = True
-        else:
+        elif we_should_check_failure_counters():
             # Job process is still running.
             keys = stats.kvs_op("keys", "*%s*-failures*" % self.job_id)
             if keys:
@@ -227,19 +243,22 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
                 values = stats.kvs_op("mget", keys)
                 if any(values):
                     # At least one of the failure counters is above zero
+                    terminate_job(self.job_pid)
                     failures = ", ".join(
                         "%s = %s" % (k, v) for k, v in zip(keys, values) if v)
-                    self.selflogger.info('job terminated due to failures: %s'
-                                         % failures)
+                    error_message = ("job terminated due to failures: %s"
+                                     % failures)
                     we_should_stop = True
 
         if we_should_stop:
+            self.selflogger.info(error_message)
+            job_status = get_job_status(self.job_id)
             if job_status != 'succeeded':
                 if job_status == 'running':
                     # The job crashed without having a chance to update the
                     # status in the database.  We do it here.
                     update_job_status_and_error_msg(self.job_id, 'failed',
-                                                    'crash')
+                                                    error_message)
             record_job_stop_time(self.job_id)
             cleanup_after_job(self.job_id)
             raise StopIteration()
