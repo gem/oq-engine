@@ -18,8 +18,6 @@
 """Core functionality of the Uniform Hazard Spectra calculator."""
 
 
-import h5py
-import numpy
 import random
 
 from celery.task import task
@@ -47,35 +45,6 @@ from openquake.utils import config
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
 from openquake.utils.general import block_splitter
-
-
-@task(ignore_result=True)
-def touch_result_file(job_id, path, sites, realizations, n_periods):
-    """Given a path (including the file name), create an empty HDF5 result file
-    containing 1 empty data set for each site. Each dataset will be a matrix
-    with the number of rows = number of samples and number of cols = number of
-    UHS periods.
-
-    :param int job_id:
-        ID of the job record in the DB/KVS.
-    :param str path:
-        Location (including a file name) on an NFS where the empty
-        result file should be created.
-    :param sites:
-        List of :class:`openquake.shapes.Site` objects.
-    :param int realizations:
-        Number of logic tree samples (the y-dimension of each dataset).
-    :param int n_periods:
-        Number of UHS periods (the x-dimension of each dataset).
-    """
-    utils_tasks.get_running_calculation(job_id)
-    # TODO: Generate the sites, instead of pumping them through rabbit?
-    with h5py.File(path, 'w') as h5_file:
-        for site in sites:
-            ds_name = 'lon:%s-lat:%s' % (site.longitude, site.latitude)
-            ds_shape = (realizations, n_periods)
-            h5_file.create_dataset(ds_name, dtype=numpy.float64,
-                                   shape=ds_shape)
 
 
 @task(ignore_results=True)
@@ -237,7 +206,7 @@ class UHSCalculator(Calculator):
     # LogicTreeProcessor for sampling the source model and gmpe logic trees.
     lt_processor = None
 
-    def analyze(self):
+    def initialize(self):
         """Set the task total counter."""
         task_total = (self.calc_proxy.oq_job_profile.realizations
                       * len(self.calc_proxy.sites_to_compute()))

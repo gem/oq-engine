@@ -20,21 +20,21 @@ import os
 import numpy
 import unittest
 
-from openquake.engine import CalculationProxy
-from openquake.engine import import_job_profile
-from openquake.db.models import OqCalculation
-from openquake.output.risk import LossMapDBWriter
-from openquake.output.risk import LossMapNonScenarioXMLWriter
+from django.contrib.gis import geos
+
 from openquake.calculators.risk.classical.core import ClassicalRiskCalculator
 from openquake.calculators.risk.classical.core import _generate_loss_ratios
+from openquake.calculators.risk.general import BaseRiskCalculator
+from openquake.calculators.risk.general import BetaDistribution
 from openquake.calculators.risk.general import compute_alpha
 from openquake.calculators.risk.general import compute_beta
-from openquake.calculators.risk.general import BetaDistribution
+from openquake.db import models
+from openquake import engine
 from openquake import shapes
+from openquake.output.risk import LossMapDBWriter
+from openquake.output.risk import LossMapNonScenarioXMLWriter
 
-from tests.utils.helpers import demo_file
-from tests.utils.helpers import patch
-from tests.utils.helpers import assertDeepAlmostEqual
+from tests.utils import helpers
 
 
 class ProbabilisticRiskCalculatorTestCase(unittest.TestCase):
@@ -45,9 +45,9 @@ class ProbabilisticRiskCalculatorTestCase(unittest.TestCase):
     def test_write_output(self):
         # Test that the loss map writers are properly called when
         # write_output is invoked.
-        cfg_file = demo_file('classical_psha_based_risk/config.gem')
+        cfg_file = helpers.demo_file('classical_psha_based_risk/config.gem')
 
-        job_profile, params, sections = import_job_profile(cfg_file)
+        job_profile, params, sections = engine.import_job_profile(cfg_file)
 
         # Set conditional loss poe so that loss maps are created.
         # If this parameter is not specified, no loss maps will be serialized
@@ -56,11 +56,11 @@ class ProbabilisticRiskCalculatorTestCase(unittest.TestCase):
         job_profile.conditional_loss_poe = [0.01]
         job_profile.save()
 
-        calculation = OqCalculation(owner=job_profile.owner,
-                                    oq_job_profile=job_profile)
+        calculation = models.OqCalculation(owner=job_profile.owner,
+                                           oq_job_profile=job_profile)
         calculation.save()
 
-        calc_proxy = CalculationProxy(
+        calc_proxy = engine.CalculationProxy(
             params, calculation.id, sections=sections,
             serialize_results_to=['xml', 'db'], oq_job_profile=job_profile,
             oq_calculation=calculation)
@@ -68,8 +68,8 @@ class ProbabilisticRiskCalculatorTestCase(unittest.TestCase):
         calculator = ClassicalRiskCalculator(calc_proxy)
 
         # Mock the composed loss map serializer:
-        with patch('openquake.writer.CompositeWriter'
-                   '.serialize') as writer_mock:
+        with helpers.patch('openquake.writer.CompositeWriter'
+                           '.serialize') as writer_mock:
             calculator.write_output()
 
             self.assertEqual(1, writer_mock.call_count)
@@ -89,7 +89,7 @@ class ProbabilisticRiskCalculatorTestCase(unittest.TestCase):
                 isinstance(w, LossMapNonScenarioXMLWriter) for w in writers))
 
 
-class BaseRiskCalculator(unittest.TestCase):
+class BaseRiskCalculatorTestCase(unittest.TestCase):
     """Tests for
     :class:`openquake.calculators.risk.general.BaseRiskCalculator`.
     """
@@ -102,22 +102,22 @@ class BaseRiskCalculator(unittest.TestCase):
         expected_lr_file_name = (
             'losscurves-loss-block-#%(calculation_id)s-block#%(block)s.xml')
 
-        cfg_file = demo_file('classical_psha_based_risk/config.gem')
+        cfg_file = helpers.demo_file('classical_psha_based_risk/config.gem')
 
-        job_profile, params, sections = import_job_profile(cfg_file)
+        job_profile, params, sections = engine.import_job_profile(cfg_file)
 
-        calculation = OqCalculation(owner=job_profile.owner,
-                                    oq_job_profile=job_profile)
+        calculation = models.OqCalculation(owner=job_profile.owner,
+                                           oq_job_profile=job_profile)
         calculation.save()
 
-        calc_proxy = CalculationProxy(
+        calc_proxy = engine.CalculationProxy(
             params, calculation.id, sections=sections,
             serialize_results_to=['xml', 'db'], oq_job_profile=job_profile,
             oq_calculation=calculation)
 
         calculator = ClassicalRiskCalculator(calc_proxy)
 
-        with patch('openquake.writer.FileWriter.serialize'):
+        with helpers.patch('openquake.writer.FileWriter.serialize'):
             # The 'curves' key in the kwargs just needs to be present;
             # because of the serialize mock in place above, it doesn't need
             # to have a real value.
@@ -224,5 +224,78 @@ class BetaDistributionTestCase(unittest.TestCase):
                 lrem[row][col] = BetaDistribution.survival_function(loss_ratio,
                     col=col, vf=vuln_function)
 
-        assertDeepAlmostEqual(self, expected_beta_distributions,
-            lrem, delta=0.0005)
+        helpers.assertDeepAlmostEqual(self, expected_beta_distributions,
+                                      lrem, delta=0.0005)
+
+
+RISK_DEMO_CONFIG_FILE = helpers.demo_file(
+    "classical_psha_based_risk/config.gem")
+
+
+class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
+    """Test the BaseRiskCalculator.assets_for_cell() function."""
+
+    job = None
+    sites = []
+    calc_proxy = None
+
+    @classmethod
+    def setUpClass(cls):
+        jp, _, _ = engine.import_job_profile(RISK_DEMO_CONFIG_FILE)
+        cls.job = models.OqCalculation(owner=jp.owner, oq_job_profile=jp)
+        cls.job.save()
+        cls.calc_proxy = helpers.create_job({}, job_id=cls.job.id,
+                                            oq_job_profile=jp,
+                                            oq_calculation=cls.job)
+        calc = ClassicalRiskCalculator(cls.calc_proxy)
+
+        calc.store_exposure_assets()
+        [em_input] = jp.input_set.input_set.filter(input_type="exposure")
+        [model] = em_input.exposuremodel_set.all()
+        # Add some more assets.
+        coos = [(10.000155392289116, 46.546194318563),
+                (10.222034128255, 46.0071299176413),
+                (10.520376165581, 46.247463385278)]
+        for lat, lon in coos:
+            site = shapes.Site(lat, lon)
+            cls.sites.append(site)
+            location = geos.GEOSGeometry(site.point.to_wkt())
+            asset = models.ExposureData(
+                exposure_model=model, taxonomy="RC/DMRF-D/LR",
+                asset_ref=helpers.random_string(6), stco=lat * 2,
+                site=location, reco=1.1 * lon)
+            asset.save()
+
+    @staticmethod
+    def _to_site(pg_point):
+        return shapes.Site(pg_point.x, pg_point.y)
+
+    def test_assets_for_cell_with_more_than_one(self):
+        # All assets in the risk cell are found.
+        site = shapes.Site(10.0, 46.0)
+        self.calc_proxy.oq_job_profile.region_grid_spacing = 0.6
+        self.calc_proxy.oq_job_profile.save()
+
+        assets = BaseRiskCalculator.assets_for_cell(self.job.id, site)
+        self.assertEqual(3, len(assets))
+        # Make sure the assets associated with the first 3 added sites were
+        # selected.
+        for s, a in zip(self.sites, sorted(assets, key=lambda a: a.site.x)):
+            self.assertEqual(s, self._to_site(a.site))
+
+    def test_assets_for_cell_with_one(self):
+        # A single asset in the risk cell is found.
+        site = shapes.Site(10.0, 46.0)
+        self.calc_proxy.oq_job_profile.region_grid_spacing = 0.3
+        self.calc_proxy.oq_job_profile.save()
+        [asset] = BaseRiskCalculator.assets_for_cell(self.job.id, site)
+        self.assertEqual(self.sites[1], self._to_site(asset.site))
+
+    def test_assets_for_cell_with_no_assets_matching(self):
+        # An empty list is returned when no assets exist for a given
+        # risk cell.
+        site = shapes.Site(99.15000, 15.16667)
+        self.calc_proxy.oq_job_profile.region_grid_spacing = 0.05
+        self.calc_proxy.oq_job_profile.save()
+        self.assertEqual([],
+                         BaseRiskCalculator.assets_for_cell(self.job.id, site))

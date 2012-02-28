@@ -12,10 +12,9 @@ Contents:
 
     calculators/hazard
     engine
-    export
+    export/index
     db/models
     architecture
-    flags
     formats
     java
     job
