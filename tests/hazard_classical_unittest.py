@@ -25,16 +25,17 @@ import mock
 import os
 import unittest
 
+from openquake.calculators.hazard.classical import core as classical
+from openquake.calculators.hazard.general import create_java_cache
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
-from openquake.calculators.hazard.classical import core as classical
-from openquake.calculators.hazard.general import create_java_cache
+from openquake.utils import stats
 
 from tests.utils.helpers import (patch, TestStore, demo_file,
                                  create_job)
 from tests.utils.tasks import (
-    compute_hazard_curve, test_async_data_reflector,
+    fake_compute_hazard_curve, test_async_data_reflector,
     test_compute_hazard_curve, test_data_reflector)
 
 LOG = logs.LOG
@@ -124,10 +125,17 @@ class DoCurvesTestCase(unittest.TestCase):
     def test_serializer_aborts_on_failure(self):
         # The task function used here raises an exception, the serializer
         # should abort on that failure.
-        self.assertRaises(
-            RuntimeError, self.calculator.do_curves, self.sites, 2,
-            self.calculator.serialize_hazard_curve_of_realization,
-            compute_hazard_curve)
+        stats.delete_job_counters(self.calc_proxy.job_id)
+        try:
+            self.calculator.do_curves(
+                self.sites, 2,
+                self.calculator.serialize_hazard_curve_of_realization,
+                fake_compute_hazard_curve)
+        except RuntimeError, err:
+            self.assertTrue("h/fake_compute_hazard_curve-failures" in
+                            err.args[0])
+        else:
+            self.fail("RuntimeError not raised")
 
 
 class DoMeansTestCase(unittest.TestCase):
