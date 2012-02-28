@@ -48,16 +48,17 @@ class ExposureDBWriter(object):
 
         :type iterator: any iterable
         """
-        for point, values in iterator:
-            self.insert_datum(point, values)
+        for point, occupancy, values in iterator:
+            self.insert_datum(point, occupancy, values)
 
-    def insert_datum(self, point, values):
+    def insert_datum(self, point, occupancy, values):
         """
         Insert a single asset entry.
 
         :param point: asset location
         :type point: :class:`openquake.shapes.Site`
-
+        :param list occupancy: a potentially empty list of named tuples
+            each having an 'occupants' and a 'description' property
         :param values: dictionary of values (see
             :class:`openquake.parser.exposure.ExposurePortfolioFile`)
 
@@ -91,3 +92,8 @@ class ExposureDBWriter(object):
             if value:
                 setattr(data, key, value)
         data.save()
+        for odata in occupancy:
+            oobj = models.Occupancy(exposure_data=data,
+                                    occupants=odata.occupants,
+                                    description=odata.description)
+            oobj.save()
