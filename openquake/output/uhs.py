@@ -15,6 +15,9 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+"""Functionality for writing UHS NRML artifacts."""
+
+
 from lxml import etree
 
 from openquake import xml
