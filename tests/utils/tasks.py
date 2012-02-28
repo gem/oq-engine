@@ -26,6 +26,7 @@ Task functions for our unit tests.
 from celery.task import task
 
 from openquake import java
+from openquake.utils import stats
 
 from tests.utils import helpers
 
@@ -72,6 +73,14 @@ def test_compute_hazard_curve(job_id, sites, realization):
     """
     key = "%s/%s" % (job_id, realization + 1)
     return helpers.TestStore.lookup(key)
+
+
+@task(ignore_result=True)
+@java.unpack_exception
+@stats.progress_indicator("h")
+def compute_hazard_curve(job_id, sites, realization):
+    """Fake hazard curve computation function."""
+    raise NotImplementedError("Fake and failing hazard curve computation!")
 
 
 @task
