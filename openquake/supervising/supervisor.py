@@ -46,6 +46,7 @@ from openquake.db.models import OqCalculation, ErrorMsg, CalcStats
 from openquake import supervising
 from openquake import kvs
 from openquake import logs
+from openquake.utils import stats
 
 
 def ignore_sigint():
@@ -210,25 +211,37 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
         On timeout expiration check if the job process is still running, and
         act accordingly if not.
         """
+        we_should_stop = False
         if not supervising.is_pid_running(self.job_pid):
             self.selflogger.info('Process %s not running', self.job_pid)
 
             # see what status was left in the database by the exited job
             job_status = get_job_status(self.job_id)
-
             self.selflogger.info('job finished with status %r', job_status)
+            we_should_stop = True
+        else:
+            # Job process is still running.
+            keys = stats.kvs_op("keys", "*%s*-failures*" % self.job_id)
+            if keys:
+                # Job has some '-failures' counters
+                values = stats.kvs_op("mget", keys)
+                if any(values):
+                    # At least one of the failure counters is above zero
+                    failures = ", ".join(
+                        "%s = %s" % (k, v) for k, v in zip(keys, values) if v)
+                    self.selflogger.info('job terminated due to failures: %s'
+                                         % failures)
+                    we_should_stop = True
 
+        if we_should_stop:
             if job_status != 'succeeded':
                 if job_status == 'running':
                     # The job crashed without having a chance to update the
                     # status in the database.  We do it here.
                     update_job_status_and_error_msg(self.job_id, 'failed',
                                                     'crash')
-
             record_job_stop_time(self.job_id)
-
             cleanup_after_job(self.job_id)
-
             raise StopIteration()
 
 
