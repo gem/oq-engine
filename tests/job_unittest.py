@@ -30,7 +30,6 @@ from django.contrib.gis.geos.collections import MultiPoint
 
 from openquake import engine
 from openquake import kvs
-from openquake import flags
 from openquake import shapes
 from openquake.engine import _get_source_models
 from openquake.engine import _parse_config_file
@@ -56,8 +55,6 @@ HAZARD_ONLY = "hazard-config.gem"
 REGION_EXPOSURE_TEST_FILE = "ExposurePortfolioFile-helpers.region"
 BLOCK_SPLIT_TEST_FILE = "block_split.gem"
 REGION_TEST_FILE = "small.region"
-
-FLAGS = flags.FLAGS
 
 
 def _to_coord_list(geometry):
