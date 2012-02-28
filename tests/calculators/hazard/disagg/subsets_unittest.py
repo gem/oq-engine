@@ -145,3 +145,35 @@ class SubsetExtractionTestCase(unittest.TestCase):
         for name, (datafile, shape) in pmfs.items():
             expected_result = self.read_data_file(datafile, shape)
             helpers.assertDeepAlmostEqual(self, expected_result, result[name])
+
+    def test_bug_932765(self):
+        # Test to directly address this bug:
+        # https://bugs.launchpad.net/openquake/+bug/932765
+
+        # To make this test work, we basically have to define a list of epsilon
+        # limits which has a different length from all of the others.
+        eps_limits = [-0.5, +0.5, +1.5]
+        subset_name = 'MagDistEpsPMF'
+        file_name = '%s.dat' % subset_name
+
+        target_path = os.path.join(self.tempdir,
+                                   '%s_932765.hdf5' % subset_name)
+
+        # load in the test data
+        data = self.read_data_file(
+            file_name, [self.NMAG - 1, self.NDIST - 1, self.NEPS - 1])
+        # chop the test data to match what we expected with the shortened
+        # epsilon limits we've defined (see above)
+        expected_data = data[:, :, 0:2]
+
+        disagg_subsets.extract_subsets(
+            666, self.SITE, self.full_matrix_path,
+            self.LATITUDE_BIN_LIMITS, self.LONGITUDE_BIN_LIMITS,
+            self.MAGNITUDE_BIN_LIMITS, eps_limits,
+            self.DISTANCE_BIN_LIMITS,
+            target_path,
+            [subset_name]
+        )
+        actual = h5py.File(target_path, 'r')[subset_name].value
+
+        helpers.assertDeepAlmostEqual(self, expected_data, actual)

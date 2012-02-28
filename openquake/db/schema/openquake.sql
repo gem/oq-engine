@@ -875,7 +875,6 @@ CREATE TABLE uiapi.oq_job_profile (
             ((calc_mode != 'classical')
              AND (quantile_levels IS NULL))),
     reference_depth_to_2pt5km_per_sec_param float,
-    risk_cell_size float,
     rupture_aspect_ratio float
         CONSTRAINT rupture_aspect_ratio_is_set
         CHECK(
@@ -1460,9 +1459,9 @@ CREATE TABLE oqmif.exposure_data (
     area float CONSTRAINT area_value CHECK(area >= 0.0),
 
     -- insurance coverage limit
-    coco_limit float,
+    ins_limit float,
     -- insurance deductible
-    coco_deductible float,
+    deductible float,
 
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL,
