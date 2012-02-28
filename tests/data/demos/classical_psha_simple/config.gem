@@ -154,8 +154,6 @@ LOSS_MAP = loss_map.tiff
 # name of the loss ratio map file to generate
 LOSS_RATIO_MAP = loss_ratio_map.tiff
 
-RISK_CELL_SIZE = 0.0005
-
 # uncomment this if you want to compute the aggregate loss curve
 AGGREGATE_LOSS_CURVE = 1
 

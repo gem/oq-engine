@@ -44,7 +44,6 @@ from openquake.db.models import InputSet
 from openquake.db.models import OqCalculation
 from openquake.db.models import OqJobProfile
 from openquake.db.models import OqUser
-from openquake.flags import FLAGS
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
@@ -69,7 +68,7 @@ RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 # pylint: disable=R0902
 class CalculationProxy(object):
     """Contains everything a calculator needs to run a calculation. This
-    includes: an :class:`OqJobProfile` object, an :class:`OqCalclation`, and a
+    includes: an :class:`OqJobProfile` object, an :class:`OqCalculation`, and a
     dictionary of all of the calculation config params (which is a basically a
     duplication of the :class:`OqJobProfile` member; in the future we would
     like to remove this duplication).
@@ -82,7 +81,7 @@ class CalculationProxy(object):
     # pylint: disable=R0913
     def __init__(self, params, calculation_id, sections=list(), base_path=None,
                  serialize_results_to=list(), oq_job_profile=None,
-                 oq_calculation=None):
+                 oq_calculation=None, log_level='warn'):
         """
         :param dict params: Dict of job config params.
         :param int calculation_id:
@@ -97,6 +96,10 @@ class CalculationProxy(object):
             :class:`openquake.db.models.OqCalculation` instance; database
             representation of the runtime thing we refer to as the
             'calculation'.
+        :param str log_level:
+            One of 'debug', 'info', 'warn', 'error', 'critical'.
+
+            Defaults to 'warn'.
         """
         self._calculation_id = calculation_id
         mark_job_as_current(calculation_id)  # enables KVS gc
@@ -111,6 +114,14 @@ class CalculationProxy(object):
 
         self.oq_job_profile = oq_job_profile
         self.oq_calculation = oq_calculation
+        self.params['debug'] = log_level
+        self._log_level = log_level
+
+    @property
+    def log_level(self):
+        """The log level for this calculation. (One of 'debug', 'info', 'warn',
+        'error', 'critical'."""
+        return self._log_level
 
     @property
     def base_path(self):
@@ -131,7 +142,8 @@ class CalculationProxy(object):
         calculation = OqCalculation.objects.get(id=job_id)
         job_profile = calculation.oq_job_profile
         job = CalculationProxy(params, job_id, oq_job_profile=job_profile,
-                               oq_calculation=calculation)
+                               oq_calculation=calculation,
+                               log_level=params['debug'])
         return job
 
     @staticmethod
@@ -217,7 +229,7 @@ class CalculationProxy(object):
         self._slurp_files()
         key = kvs.tokens.generate_job_key(self.job_id)
         data = self.params.copy()
-        data['debug'] = FLAGS.debug
+        data['debug'] = self.log_level
         kvs.set_value_json_encoded(key, data)
 
     def sites_to_compute(self):
@@ -342,7 +354,7 @@ def read_sites_from_exposure(calc_proxy):
     logs.LOG.debug(
         "Constraining exposure parsing to %s" % constraint)
 
-    for site, _asset_data in reader.filter(constraint):
+    for site, _, _ in reader.filter(constraint):
 
         # we don't want duplicates (bug 812395):
         if not site in sites:
@@ -407,7 +419,9 @@ def _job_from_file(config_file, output_type, owner_username='openquake'):
 
     job = CalculationProxy(params, calculation_id, sections=sections,
                            base_path=base_path,
-                           serialize_results_to=serialize_results_to)
+                           serialize_results_to=serialize_results_to,
+                           oq_calculation=calculation,
+                           oq_job_profile=job_profile)
     job.to_kvs()
 
     return job
@@ -646,7 +660,8 @@ def _store_input_parameters(params, calc_mode, job_profile):
         job_profile.damping = None
 
 
-def run_calculation(job_profile, params, sections, output_type='db'):
+def run_calculation(job_profile, params, sections, output_type='db',
+                    log_level='warn'):
     """Given an :class:`openquake.db.models.OqJobProfile` object, create a new
     :class:`openquake.db.models.OqCalculation` object and run the calculation.
 
@@ -665,7 +680,10 @@ def run_calculation(job_profile, params, sections, output_type='db'):
         A list of sections parsed from the calculation config file.
     :param output_type:
         'db' or 'xml' (defaults to 'db')
+    :param str log_level:
+        One of 'debug', 'info', 'warn', 'error', or 'critical'.
 
+        Defaults to 'warn'.
     :returns:
         :class:`openquake.db.models.OqCalculation` instance.
     """
@@ -694,7 +712,8 @@ def run_calculation(job_profile, params, sections, output_type='db'):
     calc_proxy = CalculationProxy(params, calculation.id, sections=sections,
                                   serialize_results_to=serialize_results_to,
                                   oq_job_profile=job_profile,
-                                  oq_calculation=calculation)
+                                  oq_calculation=calculation,
+                                  log_level=log_level)
 
     # closing all db connections to make sure they're not shared between
     # supervisor and job executor processes. otherwise if one of them closes
@@ -705,7 +724,7 @@ def run_calculation(job_profile, params, sections, output_type='db'):
     if not calc_pid:
         # calculation executor process
         try:
-            logs.init_logs_amqp_send(level=FLAGS.debug, job_id=calculation.id)
+            logs.init_logs_amqp_send(level=log_level, job_id=calculation.id)
             _launch_calculation(calc_proxy, sections)
         except Exception, ex:
             logs.LOG.critical("Calculation failed with exception: '%s'"
@@ -725,7 +744,7 @@ def run_calculation(job_profile, params, sections, output_type='db'):
         calculation.supervisor_pid = supervisor_pid
         calculation.job_pid = calc_pid
         calculation.save()
-        supervisor.supervise(calc_pid, calculation.id)
+        supervisor.supervise(calc_pid, calculation.id, log_level)
         return
 
     # parent process
@@ -750,10 +769,10 @@ def _launch_calculation(calc_proxy, sections):
             ['general', 'HAZARD', 'RISK']
     """
     # TODO(LB):
-    # In the future, this should be moved to the analyze() method of the base
-    # Calculator class, or something like that. For now, we don't want it there
-    # because it would get called twice in a Hazard+Risk calculation. This is
-    # going to need some thought.
+    # In the future, this should be moved to the initialize() method of the
+    # base Calculator class, or something like that. For now, we don't want it
+    # there because it would get called twice in a Hazard+Risk calculation.
+    # This is going to need some thought.
     # Ignoring 'Access to a protected member'
     # pylint: disable=W0212
     calc_proxy._record_initial_stats()
@@ -776,7 +795,7 @@ def _launch_calculation(calc_proxy, sections):
         logs.LOG.debug("Launching calculation with id=%s and type='%s'"
                        % (calc_proxy.job_id, job_type))
 
-        calculator.analyze()
+        calculator.initialize()
         calculator.pre_execute()
         calculator.execute()
         calculator.post_execute()
