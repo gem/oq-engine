@@ -249,20 +249,26 @@ class AttenuationRelationship(object):
             An instance of :class:`AttRelContext` with those (and only those)
             attributes that are required by attenuation relationship filled in.
         """
-        # TODO: unittest this
-        assert cls is not AttenuationRelationship
+        if cls is AttenuationRelationship:
+            raise AssertionError(
+                'make_context() should be called as a specific GMPE/IPE '
+                'method, not the abstract base class %s' % cls.__name__
+            )
         context = AttRelContext()
+        all_ctx_attrs = set(AttRelContext.__slots__)
 
         for param in cls.REQUIRES_SITE_PARAMETERS:
             attr = 'site_%s' % param
-            if not hasattr(context, attr):
-                raise ValueError('site parameter %r is not defined' % param)
+            if not attr in all_ctx_attrs:
+                raise ValueError('%s requires unknown site parameter %r' %
+                                 (cls.__name__, param))
             setattr(context, attr, getattr(site, param))
 
         for param in cls.REQUIRES_RUPTURE_PARAMETERS:
-            attr = 'rupture_%s' % param
-            if not hasattr(context, attr):
-                raise ValueError('rupture parameter %r is not defined' % param)
+            attr = 'rup_%s' % param
+            if not attr in all_ctx_attrs:
+                raise ValueError('%s requires unknown rupture parameter %r' %
+                                 (cls.__name__, param))
             if param == 'mag':
                 value = rupture.mag
             elif param == 'trt':
@@ -275,9 +281,14 @@ class AttenuationRelationship(object):
 
         for param in cls.REQUIRES_DISTANCES:
             attr = 'dist_%s' % param
-            if not hasattr(context, attr):
-                raise ValueError('distance %r is not defined' % param)
+            if not attr in all_ctx_attrs:
+                raise ValueError('%s requires unknown distance measure %r' %
+                                 (cls.__name__, param))
             if distances is not None:
+                if not param in distances:
+                    raise ValueError("'distances' dict should include all "
+                                     "the required distance measures: %s" %
+                                     ', '.join(cls.REQUIRES_DISTANCES))
                 value = distances[param]
             else:
                 if param == 'rrup':
