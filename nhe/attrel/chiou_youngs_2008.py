@@ -203,6 +203,7 @@ class ChiouYoungs2008(AttenuationRelationship):
             * sqrt((C['sig3'] * Finferred + 0.7 * Fmeasured) + (1 + NL) ** 2)
         )
 
+        assert stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
         if stddev_type == const.StdDev.TOTAL:
             # eq. 21
             return sqrt(((1 + NL) ** 2) * (tau ** 2) + (sigma ** 2))
@@ -211,8 +212,6 @@ class ChiouYoungs2008(AttenuationRelationship):
         elif stddev_type == const.StdDev.INTER_EVENT:
             # this is implied in eq. 21
             return abs((1 + NL) * tau)
-        else:
-            raise ValueError(stddev_type)
 
     def _get_ln_y_ref(self, ctx, C):
         """
