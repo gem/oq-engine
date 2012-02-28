@@ -506,11 +506,9 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         pause = pgen.next()
 
         while accounted_for != sites:
-            failures = stats.get_counter(self.calc_proxy.job_id, "h",
-                                         "compute_hazard_curve-failures", "i")
+            failures = stats.failure_counters(self.calc_proxy.job_id, "h")
             if failures:
-                raise RuntimeError(
-                    "%s hazard curve failures, aborting" % failures)
+                raise RuntimeError("hazard failures (%s), aborting" % failures)
             hc_data = []
             # Sleep a little before checking the availability of additional
             # hazard curve results.
