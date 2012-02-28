@@ -67,8 +67,8 @@ class Region(object):
         """
 
         # Constrain the precision for the coordinates:
-        coordinates = \
-            [(round_float(pt[0]), round_float(pt[1])) for pt in coordinates]
+        coordinates = [(round_float(pt[0]), round_float(pt[1]))
+                       for pt in coordinates]
         polygon = geometry.Polygon(coordinates)
         return cls(polygon)
 
@@ -204,8 +204,8 @@ class GridPoint(object):
         return self.grid.site_at(self)
 
     def hash(self):
-        """Ugly hashing function
-        TODO(jmc): Fixme"""
+        """Ugly hashing function"""
+        # TODO(jmc): Fixme
         return self.__hash__()
 
     def __repr__(self):
@@ -245,7 +245,7 @@ class Grid(object):
             check = self.check_point(site.point)
         except BoundsException:
             LOGGER.debug("Site %s %s isn't on region" %
-                (site.point.site.longitude, site.point.site.latitude))
+                         (site.longitude, site.latitude))
 
         return check
 

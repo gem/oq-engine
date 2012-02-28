@@ -30,13 +30,13 @@ from django.contrib.gis.geos.collections import MultiPoint
 
 from openquake import engine
 from openquake import kvs
-from openquake import flags
 from openquake import shapes
 from openquake.engine import _get_source_models
 from openquake.engine import _parse_config_file
 from openquake.engine import _prepare_config_parameters
 from openquake.engine import _prepare_job
 from openquake.engine import CalculationProxy
+from openquake.engine import import_job_profile
 from openquake.job import config
 from openquake.job.params import config_text_to_list
 from openquake.db.models import CalcStats
@@ -55,8 +55,6 @@ HAZARD_ONLY = "hazard-config.gem"
 REGION_EXPOSURE_TEST_FILE = "ExposurePortfolioFile-helpers.region"
 BLOCK_SPLIT_TEST_FILE = "block_split.gem"
 REGION_TEST_FILE = "small.region"
-
-FLAGS = flags.FLAGS
 
 
 def _to_coord_list(geometry):
@@ -89,9 +87,14 @@ class JobTestCase(unittest.TestCase):
         client.delete(kvs.tokens.CURRENT_JOBS)
 
         self.generated_files = []
-        self.job = helpers.job_from_file(helpers.get_data_path(CONFIG_FILE))
-        self.job_with_includes = \
-            helpers.job_from_file(helpers.get_data_path(CONFIG_WITH_INCLUDES))
+        jp, params, sections = import_job_profile(helpers.get_data_path(
+            CONFIG_FILE))
+        self.job = CalculationProxy(
+            params, 1, sections=sections, oq_job_profile=jp)
+        jp, params, sections = import_job_profile(helpers.get_data_path(
+            CONFIG_WITH_INCLUDES))
+        self.job_with_includes = CalculationProxy(
+            params, 1, sections=sections, oq_job_profile=jp)
 
     def tearDown(self):
         for cfg in self.generated_files:
@@ -122,6 +125,9 @@ class JobTestCase(unittest.TestCase):
         src_model = 'SOURCE_MODEL_LOGIC_TREE_FILE'
         gmpe = 'GMPE_LOGIC_TREE_FILE'
 
+        self.job.to_kvs()
+        self.job_with_includes.to_kvs()
+
         job1_src_model_sha = sha_from_file_key(self.job.params, src_model)
         job2_src_model_sha = sha_from_file_key(
             self.job_with_includes.params, src_model)
@@ -141,20 +147,15 @@ class JobTestCase(unittest.TestCase):
         self.assertEqual(self.job.params, self.job_with_includes.params)
 
     def test_can_store_and_read_jobs_from_kvs(self):
-        flags_debug_default = flags.FLAGS.debug
-        flags.FLAGS.debug = 'debug'
+        self.job._log_level = 'debug'
+        self.job.params['debug'] = self.job.log_level
         try:
-            self.job = helpers.job_from_file(
-                os.path.join(helpers.DATA_DIR, CONFIG_FILE))
+            self.job.to_kvs()
+
             job_from_kvs = CalculationProxy.from_kvs(self.job.job_id)
-            self.assertEqual(flags.FLAGS.debug,
-                             job_from_kvs.params.pop('debug'))
-            self.assertEqual(self.job, job_from_kvs)
+            self.assertEqual(self.job.params, job_from_kvs.params)
         finally:
             helpers.cleanup_loggers()
-            # Restore the default global FLAGS.debug level
-            # so we don't break stuff.
-            flags.FLAGS.debug = flags_debug_default
 
 
 class JobDbRecordTestCase(unittest.TestCase):
@@ -384,7 +385,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         'GMPE_TRUNCATION_TYPE': 'None',
         'STANDARD_DEVIATION_TYPE': 'Total',
         'SUBDUCTION_FAULT_RUPTURE_OFFSET': '10.0',
-        'RISK_CELL_SIZE': '0.0005',
         'NUMBER_OF_LOGIC_TREE_SAMPLES': '5',
         'PERIOD': '1.0',
         'DAMPING': '5.0',
@@ -899,7 +899,7 @@ class RunJobTestCase(unittest.TestCase):
                             field_name='last_update')
 
                         self.assertEquals(1, supervise.call_count)
-                        self.assertEquals(((1234, calculation.id), {}),
+                        self.assertEquals(((1234, calculation.id, 'warn'), {}),
                                           supervise.call_args)
             finally:
                 engine._launch_calculation = before_launch
