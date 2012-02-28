@@ -344,7 +344,11 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
 
     def compute_loss_ratio_curve(self, col, row, asset, gmf_slice,
                                  loss_ratios):
-        """Compute the loss ratio curve for a single asset."""
+        """Compute the loss ratio curve for a single asset.
+
+        :param asset: the asset used to compute loss
+        :type asset: an :py:class:`openquake.db.model.ExposureData` instance
+        """
         calc_proxy = self.calc_proxy
 
         vuln_function = self.vuln_curves.get(asset.taxonomy, None)
