@@ -176,11 +176,13 @@ class AttenuationRelationship(object):
             have numpy arrays of corresponding PoEs.
 
         :raises ValueError:
-            If truncation level is not ``None`` and neither non-negative float
-            number, if intensity measure component is not supported by the
-            attenuation relationship (see
-            :attr:`DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS`), if ``imts``
-            dictionary contain wrong or unsupported IMTs.
+            If truncation level is not ``None`` and neither non-negative
+            float number, if intensity measure component or rupture's tectonic
+            region type is not supported by the attenuation relationship
+            (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS` and
+            :attr:`DEFINED_FOR_TECTONIC_REGION_TYPES`), if ``imts``
+            dictionary contain wrong or unsupported IMTs (see
+            :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
         :raises AssertionError:
             If ``truncation_level`` is not zero and attenuation relationship
             doesn't support standard deviation :attr:`~nhe.const.StdDev.TOTAL`.
@@ -204,6 +206,11 @@ class AttenuationRelationship(object):
                     'intensity measure type %s is not supported by %s' %
                     (type(imt).__name__, type(self).__name__)
                 )
+
+        if (hasattr(ctx, 'rup_trt')
+                and not ctx.rup_trt in self.DEFINED_FOR_TECTONIC_REGION_TYPES):
+            raise ValueError('tectonic region type %r is not supported by %s' %
+                             (ctx.rup_trt, type(self).__name__))
 
         ret = {}
         if truncation_level == 0:
@@ -260,6 +267,15 @@ class AttenuationRelationship(object):
         :returns:
             An instance of :class:`AttRelContext` with those (and only those)
             attributes that are required by attenuation relationship filled in.
+
+        :raises AssertionError:
+            If called as a method of abstract base class in opposed to
+            an actual GMPE/IPE implementation class.
+        :raises ValueError:
+            If any of declared required parameters (that includes site, rupture
+            and distance parameters) are unknown. If tectonic region type
+            of the rupture is not supported. If distances dict is provided
+            but is missing some of the required distance information.
         """
         if cls is AttenuationRelationship:
             raise AssertionError(
@@ -268,6 +284,11 @@ class AttenuationRelationship(object):
             )
         context = AttRelContext()
         all_ctx_attrs = set(AttRelContext.__slots__)
+
+        if (not rupture.tectonic_region_type
+                in cls.DEFINED_FOR_TECTONIC_REGION_TYPES):
+            raise ValueError('tectonic region type %r is not supported by %s' %
+                             (rupture.tectonic_region_type, cls.__name__))
 
         for param in cls.REQUIRES_SITE_PARAMETERS:
             attr = 'site_%s' % param

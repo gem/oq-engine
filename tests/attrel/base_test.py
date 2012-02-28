@@ -86,6 +86,13 @@ class GetProbabilitiesOfExceedanceWrongInputTestCase(_FakeAttRelTestCase):
             'with non-zero truncation level'
         )
 
+    def test_attrel_doesnt_support_rup_trt(self):
+        ctx = AttRelContext()
+        ctx.rup_trt = const.TRT.STABLE_CONTINENTAL
+        err = "tectonic region type 'Stable Shallow Crust' " \
+              "is not supported by FakeAttrel"
+        self._assert_value_error(self._get_poes, err, ctx=ctx)
+
 
 class GetProbabilitiesOfExceedanceTestCase(_FakeAttRelTestCase):
     def test_no_truncation(self):
@@ -183,6 +190,9 @@ class MakeContextTestCase(_FakeAttRelTestCase):
             tectonic_region_type=const.TRT.VOLCANIC,
             hypocenter=self.rupture_hypocenter, surface=FakeSurface()
         )
+        self.attrel_class.DEFINED_FOR_TECTONIC_REGION_TYPES.add(
+            const.TRT.VOLCANIC
+        )
         self.fake_surface = FakeSurface
 
     def test_calling_from_base_class_error(self):
@@ -227,6 +237,16 @@ class MakeContextTestCase(_FakeAttRelTestCase):
         self._assert_value_error(self.attrel_class.make_context, err,
                                  site=self.site, rupture=self.rupture,
                                  distances=distances)
+
+    def test_unsupported_trt_error(self):
+        self.rupture.tectonic_region_type = const.TRT.SUBDUCTION_INTERFACE
+        err = "tectonic region type 'Subduction Interface' " \
+              "is not supported by FakeAttrel"
+        self._assert_value_error(self.attrel_class.make_context, err,
+                                 site=self.site, rupture=self.rupture)
+        self._assert_value_error(self.attrel_class.make_context, err,
+                                 site=self.site, rupture=self.rupture,
+                                 distances=self.distances)
 
     def test_all_values_no_precalc_distances(self):
         self.attrel_class.REQUIRES_DISTANCES = set('rjb ztor rx rrup'.split())
