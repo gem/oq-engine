@@ -46,16 +46,16 @@ class SupervisorHelpersTestCase(DbTestCase, unittest.TestCase):
         """
         Test that job stop time is recorded properly.
         """
-        stats = CalcStats(
+        cstats = CalcStats(
             oq_calculation=self.job, start_time=datetime.utcnow(),
             num_sites=10)
-        stats.save(using='job_superv')
+        cstats.save(using='job_superv')
 
         supervisor.record_job_stop_time(self.job.id)
 
         # Fetch the stats and check for the stop_time
-        stats = CalcStats.objects.get(oq_calculation=self.job.id)
-        self.assertTrue(stats.stop_time is not None)
+        cstats = CalcStats.objects.get(oq_calculation=self.job.id)
+        self.assertTrue(cstats.stop_time is not None)
 
     def test_cleanup_after_job(self):
         with patch('openquake.kvs.cache_gc') as cache_gc:
