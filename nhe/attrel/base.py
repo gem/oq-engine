@@ -134,9 +134,57 @@ class AttenuationRelationship(object):
 
     def get_probabilities_of_exceedance(self, ctx, imts, component_type,
                                         truncation_level):
-        # TODO: document
+        """
+        Calculate and return probabilities of exceedance of one or more
+        intensity measure levels of one or more intensity measure types.
+
+        :param ctx:
+            An instance of :class:`AttRelContext` with the same meaning
+            as for :meth:`get_mean_and_stddevs`.
+        :param imts:
+            Dictionary mapping intensity measure type objects (that is,
+            instances of classes from :mod:`nhe.imt`) to lists of
+            interested intensity measure levels. Those lists contain
+            just floats representing the value of intensity exceedance
+            of which is of interest.
+        :param component_type:
+            A component of interest of intensity measure. A constant from
+            :class:`nhe.const.IMC`.
+        :param truncation_level:
+            Can be ``None``, which means that the distribution of intensity
+            is treated as Gaussian distribution with possible values ranging
+            from minus infinity to plus infinity.
+
+            When set to zero, the mean intensity is treated as an exact
+            value (standard deviation is not even computed for that case)
+            and resulting array contains 0 in places where IMT is strictly
+            lower than the mean value of intensity and 1.0 where IMT is equal
+            or greater.
+
+            When truncation level is positive number, the intensity
+            distribution is processed as symmetric truncated Gaussian with
+            range borders being ``mean - truncation_level * stddev`` and
+            ``mean + truncation_level * stddev``. That is, the truncation
+            level expresses how far the range borders are from the mean
+            value and is defined in units of sigmas. The resulting PoEs
+            for that mode are values of complementary cumulative distribution
+            function of that truncated Gaussian applied to IMLs.
+
+        :returns:
+            A dictionary of the same structure as parameter ``imts`` (see
+            above). Instead of lists of IMLs values of the dictionaries
+            have numpy arrays of corresponding PoEs.
+
+        :raises ValueError:
+            If truncation level is not ``None`` and neither non-negative float
+            number, if intensity measure component is not supported by the
+            attenuation relationship (see
+            :attr:`DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS`), if ``imts``
+            dictionary contain wrong or unsupported IMTs.
+        """
         if truncation_level is not None and truncation_level < 0:
-            raise ValueError('truncation level must be positive')
+            raise ValueError('truncation level must be zero, positive number '
+                             'or None')
 
         if not component_type in self.DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS:
             raise ValueError(

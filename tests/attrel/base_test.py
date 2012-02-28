@@ -74,7 +74,7 @@ class GetProbabilitiesOfExceedanceWrongInputTestCase(_FakeAttRelTestCase):
         self._assert_error(err, component_type=const.IMC.RANDOM_HORIZONTAL)
 
     def test_wrong_truncation_level(self):
-        err = 'truncation level must be positive'
+        err = 'truncation level must be zero, positive number or None'
         self._assert_error(err, truncation_level=-0.1)
         self._assert_error(err, truncation_level=-1)
 
