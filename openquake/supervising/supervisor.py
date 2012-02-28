@@ -219,14 +219,13 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
 
         Terminate the job process in the latter case.
         """
-        def we_should_check_failure_counters():
+        def failure_counters_need_check():
             """Return `True` if failure counters should be checked."""
             self.fcc_delay_value += 1
             result = self.fcc_delay_value >= self.FCC_DELAY
             if result:
                 self.fcc_delay_value = 0
             return result
-
 
         we_should_stop = False
         error_message = None
@@ -235,7 +234,7 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
             error_message = ('Process %s not running, probably crashed'
                              % self.job_pid)
             we_should_stop = True
-        elif we_should_check_failure_counters():
+        elif failure_counters_need_check():
             # Job process is still running.
             keys = stats.kvs_op("keys", "*%s*-failures*" % self.job_id)
             if keys:
