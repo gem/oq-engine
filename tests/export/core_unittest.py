@@ -15,8 +15,13 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
+import os
+import shutil
+import tempfile
 import unittest
 import uuid
+
+from django.core.exceptions import ObjectDoesNotExist
 
 from openquake.db import models
 from openquake.engine import import_job_profile
@@ -181,3 +186,74 @@ class ExportFunctionsTestCase(GetOutputsTestCase):
 
         self.assertRaises(NotImplementedError, export.export,
                           self.uhs_output.id, '/some/dir/')
+
+    def test_export_with_bogus_output_id(self):
+        # If `export` is called with a non-existent output_id,
+        # a ObjectDoesNotExist error should be raised.
+
+        self.assertRaises(ObjectDoesNotExist, export.export,
+                          -1, '/some/dir/')
+
+    def test_export_expands_user(self):
+        # If the user specifies a path using '~' (to indicate the current
+        # user's home directory), make sure the path is expanded properly.
+        # See `os.path.expanduser`.
+        self._create_job_profiles(self.user_name)
+        self._set_up_complete_calcs()
+        self._set_up_outputs()
+
+        self.uhs_output.output_type = 'unknown'
+        self.uhs_output.save()
+
+        expanded_dir = '%s/uhs_results/some_subdir/' % os.getenv('HOME')
+
+        with helpers.patch(
+            'openquake.export.core._export_fn_not_implemented') as expt_patch:
+            export.export(self.uhs_output.id, '~/uhs_results/some_subdir/')
+
+            self.assertEqual(1, expt_patch.call_count)
+            self.assertEqual(((self.uhs_output, expanded_dir), {}),
+                             expt_patch.call_args)
+
+
+@export.makedirs
+def _decorated(_output, _target_dir):
+    """Just a test function for exercising the `makedirs` decorator."""
+    return []
+
+
+class UtilsTestCase(unittest.TestCase):
+    """Tests for misc. export utilties."""
+
+    def test_makedirs_deco(self):
+        temp_dir = tempfile.mkdtemp()
+
+        try:
+            target_dir = os.path.join(temp_dir, 'some', 'nonexistent', 'dir')
+
+            self.assertFalse(os.path.exists(target_dir))
+
+            _decorated(None, target_dir)
+
+            self.assertTrue(os.path.exists(target_dir))
+        finally:
+            shutil.rmtree(temp_dir)
+
+    def test_makedirs_deco_dir_already_exists(self):
+        # If the dir already exists, this should work with no errors.
+        # The decorator should just gracefully pass through.
+        temp_dir = tempfile.mkdtemp()
+        try:
+            _decorated(None, temp_dir)
+        finally:
+            shutil.rmtree(temp_dir)
+
+    def test_makedirs_deco_target_exists_as_file(self):
+        # If a file exists with the exact path of the target dir,
+        # we should get a RuntimeError.
+        _, temp_file = tempfile.mkstemp()
+
+        try:
+            self.assertRaises(RuntimeError, _decorated, None, temp_file)
+        finally:
+            os.unlink(temp_file)
