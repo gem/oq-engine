@@ -30,7 +30,6 @@ from django.contrib.gis.geos.collections import MultiPoint
 
 from openquake import engine
 from openquake import kvs
-from openquake import flags
 from openquake import shapes
 from openquake.engine import _get_source_models
 from openquake.engine import _parse_config_file
@@ -56,8 +55,6 @@ HAZARD_ONLY = "hazard-config.gem"
 REGION_EXPOSURE_TEST_FILE = "ExposurePortfolioFile-helpers.region"
 BLOCK_SPLIT_TEST_FILE = "block_split.gem"
 REGION_TEST_FILE = "small.region"
-
-FLAGS = flags.FLAGS
 
 
 def _to_coord_list(geometry):
@@ -388,7 +385,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         'GMPE_TRUNCATION_TYPE': 'None',
         'STANDARD_DEVIATION_TYPE': 'Total',
         'SUBDUCTION_FAULT_RUPTURE_OFFSET': '10.0',
-        'RISK_CELL_SIZE': '0.0005',
         'NUMBER_OF_LOGIC_TREE_SAMPLES': '5',
         'PERIOD': '1.0',
         'DAMPING': '5.0',

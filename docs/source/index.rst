@@ -15,7 +15,6 @@ Contents:
     export/index
     db/models
     architecture
-    flags
     formats
     java
     job
