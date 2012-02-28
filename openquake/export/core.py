@@ -20,16 +20,29 @@ calculation outputs, as well as exporting outputs from the database to various
 file formats."""
 
 
+import os
+
 from openquake.db import models
 
 
 def _export_fn_map():
     """Creates a mapping from output type to export function.
 
+    The specific export functions should accept two parameters: a
+    :class:`openquake.db.models.Output` object and a taret dir (`str`).
+
+    Each function should return a list of the file names created by the export
+    action.
+
     :rtype: `dict`
     """
-    # TODO: No export functions have yet been written.
-    fn_map = {}
+    # Silencing `Reimport <module>` warnings
+    # pylint: disable=W0404
+    from openquake.export import uhs
+
+    fn_map = {
+        'uh_spectra': uhs.export_uhs,
+    }
     return fn_map
 
 
@@ -38,6 +51,34 @@ def _export_fn_not_implemented(output, _target_dir):
     type. See :data:`_EXPORT_FN_MAP`."""
     raise NotImplementedError('Cannot export output of type: %s'
                               % output.output_type)
+
+
+def makedirs(fn):
+    """Decorator for export functions. Creates intermediate directories (if
+    necessary) to the target export directory.
+
+    This is equivalent to `mkdir -p` and :function:`os.makedirs`.
+    """
+
+    def wrapped(output, target_dir):
+        """Call :function:`os.makedirs` to create intermediate directories to
+        the ``target_dir``.
+        """
+        if os.path.exists(target_dir):
+            if not os.path.isdir(target_dir):
+                # If it's not a directory, we can't do anything.
+                # This is a problem
+                raise RuntimeError('%s already exists and is not a directory.'
+                                   % target_dir)
+        else:
+            os.makedirs(target_dir)
+        return fn(output, target_dir)
+
+    # This fixes doc generation problems with decorators
+    wrapped.__doc__ = fn.__doc__
+    wrapped.__repr__ = fn.__repr__
+
+    return wrapped
 
 
 def get_calculations(user_name):
@@ -95,4 +136,4 @@ def export(output_id, target_dir):
     export_fn = _export_fn_map().get(
         output.output_type, _export_fn_not_implemented)
 
-    return export_fn(output, target_dir)
+    return export_fn(output, os.path.expanduser(target_dir))
