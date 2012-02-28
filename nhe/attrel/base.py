@@ -89,14 +89,14 @@ class AttenuationRelationship(object):
     REQUIRES_DISTANCES = abc.abstractproperty()
 
     @abc.abstractmethod
-    def get_mean_and_stddevs(self, context, imt, stddev_types, component_type):
+    def get_mean_and_stddevs(self, ctx, imt, stddev_types, component_type):
         """
         Calculate and return mean value of intensity distribution and it's
         standard deviation.
 
         Method must be implemented by subclasses.
 
-        :param context:
+        :param ctx:
             Instance of :class:`AttRelContext` with parameters of rupture, site
             and their relative position (read, distances) assigned to respective
             attributes. Only those attributes that are listed in class'
