@@ -384,7 +384,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         'GMPE_TRUNCATION_TYPE': 'None',
         'STANDARD_DEVIATION_TYPE': 'Total',
         'SUBDUCTION_FAULT_RUPTURE_OFFSET': '10.0',
-        'RISK_CELL_SIZE': '0.0005',
         'NUMBER_OF_LOGIC_TREE_SAMPLES': '5',
         'PERIOD': '1.0',
         'DAMPING': '5.0',
