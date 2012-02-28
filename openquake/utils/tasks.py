@@ -129,7 +129,7 @@ def get_running_calculation(calculation_id):
 
     calc_proxy = CalculationProxy.from_kvs(calculation_id)
     if calc_proxy and calc_proxy.params:
-        level = calc_proxy.params.get('debug')
+        level = calc_proxy.log_level
     else:
         level = 'warn'
     logs.init_logs_amqp_send(level=level, job_id=calculation_id)
