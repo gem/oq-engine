@@ -15,10 +15,7 @@
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
 
 
-import h5py
 import numpy
-import os
-import tempfile
 import unittest
 
 from openquake import engine
@@ -26,7 +23,6 @@ from openquake import java
 from openquake.calculators.hazard.uhs.core import UHSCalculator
 from openquake.calculators.hazard.uhs.core import compute_uhs
 from openquake.calculators.hazard.uhs.core import compute_uhs_task
-from openquake.calculators.hazard.uhs.core import touch_result_file
 from openquake.calculators.hazard.uhs.core import write_uh_spectra
 from openquake.calculators.hazard.uhs.core import write_uhs_spectrum_data
 from openquake.db.models import OqCalculation
@@ -79,43 +75,6 @@ class UHSCoreTestCase(UHSBaseTestCase):
         (0.02, [0.5667404129191248,
                 0.6185688023781438,
                 0.11843417899553109])]
-
-    def test_touch_result_file(self):
-        # Call the :function:`openquake.hazard.uhs.core.touch_result_file` and
-        # verify that the result file is properly created with the correct
-        # number of datasets.
-
-        # We also want to verify the name (since it is associated with a
-        # specific site of interest) as well as the size and datatype of each
-        # dataset.
-        _, path = tempfile.mkstemp()
-
-        fake_job_id = 1  # The job_id doesn't matter in this test.
-        sites = [Site(-122.000, 38.113), Site(-122.114, 38.113)]
-        n_samples = 4
-        n_periods = 3
-
-        with helpers.patch('openquake.utils.tasks.get_running_calculation'):
-            touch_result_file(fake_job_id, path, sites, n_samples, n_periods)
-
-        # Does the resulting file exist?
-        self.assertTrue(os.path.exists(path))
-
-        # Read the file and check the names, sizes, and datatypes of each
-        # dataset.
-        with h5py.File(path, 'r') as h5_file:
-            # There should be exactly 2 datasets.
-            self.assertEquals(2, len(h5_file))
-
-            for site in sites:
-                ds_name = 'lon:%s-lat:%s' % (site.longitude, site.latitude)
-                ds = h5_file.get(ds_name)
-                self.assertIsNotNone(ds)
-                self.assertEquals(numpy.float64, ds.dtype)
-                self.assertEquals((n_samples, n_periods), ds.shape)
-
-        # Clean up the test file.
-        os.unlink(path)
 
     def test_compute_uhs(self):
         # Test the :function:`openquake.hazard.uhs.core.compute_uhs`
