@@ -30,10 +30,15 @@ class ExposureDBWriter(object):
     Serialize the exposure model to database
     """
 
-    def __init__(self, owner):
+    def __init__(self, input_set, path, owner=None):
         """Create a new serializer for the specified user"""
+        qargs = dict(input_type="exposure", path=path)
+        [self.input] = input_set.input_set.filter(**qargs)
+        if owner:
+            self.owner = owner
+        else:
+            self.owner = models.OqUser.objects.get(user_name="openquake")
         self.model = None
-        self.owner = owner
 
     @transaction.commit_on_success(router.db_for_write(models.ExposureModel))
     def serialize(self, iterator):
@@ -43,36 +48,52 @@ class ExposureDBWriter(object):
 
         :type iterator: any iterable
         """
-        for point, values in iterator:
-            self.insert_datum(point, values)
+        for point, occupancy, values in iterator:
+            self.insert_datum(point, occupancy, values)
 
-    def insert_datum(self, point, values):
+    def insert_datum(self, point, occupancy, values):
         """
         Insert a single asset entry.
 
         :param point: asset location
         :type point: :class:`openquake.shapes.Site`
-
+        :param list occupancy: a potentially empty list of named tuples
+            each having an 'occupants' and a 'description' property
         :param values: dictionary of values (see
             :class:`openquake.parser.exposure.ExposurePortfolioFile`)
 
         it also inserts the main exposure model entry if not already
         present,
         """
-
         if not self.model:
             self.model = models.ExposureModel(
-                owner=self.owner,
-                description=values.get('listDescription'),
-                category=values['assetCategory'],
-                stco_type="aggregated",
-                stco_unit=values['unit'])
+                owner=self.owner, input=self.input,
+                description=values.get("listDescription"),
+                category=values["assetCategory"])
+            for key, tag in [
+                ("area_type", "areaType"), ("area_unit", "areaUnit"),
+                ("coco_type", "cocoType"), ("coco_unit", "cocoUnit"),
+                ("reco_type", "recoType"), ("reco_unit", "recoUnit"),
+                ("stco_type", "stcoType"), ("stco_unit", "stcoUnit")]:
+                value = values.get(tag)
+                if value:
+                    setattr(self.model, key, value)
             self.model.save()
 
         data = models.ExposureData(
-            exposure_model=self.model, asset_ref=values['assetID'],
-            stco=values['assetValue'],
-            taxonomy=values['taxonomy'],
-            site="POINT(%s %s)" % (point.point.x, point.point.y),
-            reco=values['retrofittingCost'])
+            exposure_model=self.model, asset_ref=values["assetID"],
+            taxonomy=values.get("taxonomy"),
+            site="POINT(%s %s)" % (point.point.x, point.point.y))
+        for key, tag in [
+            ("coco", "coco"), ("reco", "reco"), ("stco", "stco"),
+            ("area", "area"), ("number_of_units", "number"),
+            ("deductible", "deductible"), ("ins_limit", "limit")]:
+            value = values.get(tag)
+            if value:
+                setattr(data, key, value)
         data.save()
+        for odata in occupancy:
+            oobj = models.Occupancy(exposure_data=data,
+                                    occupants=odata.occupants,
+                                    description=odata.description)
+            oobj.save()

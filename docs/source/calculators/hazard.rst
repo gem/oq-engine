@@ -72,5 +72,4 @@ UHS Core
 
 UHS Celery Tasks
 ================
-.. autofunction:: touch_result_file
 .. autofunction:: compute_uhs_task

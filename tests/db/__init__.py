@@ -1,8 +1,3 @@
-#! /usr/bin/env python
-
-# -*- coding: utf-8 -*-
-# vim: tabstop=4 shiftwidth=4 softtabstop=4
-
 # Copyright (c) 2010-2012, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify
@@ -18,27 +13,3 @@
 # You should have received a copy of the GNU Lesser General Public License
 # version 3 along with OpenQuake.  If not, see
 # <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
-
-"""
-The OpenQuake job supervisor process, spawned by each OpenQuake job.
-"""
-import logging
-import os
-import sys
-
-import oqpath
-oqpath.set_oq_path()
-
-
-def main():  # pylint: disable=C0111
-    os.environ['DJANGO_SETTINGS_MODULE'] = 'openquake.settings'
-
-    from openquake.supervising import supervisor
-
-    job_id = int(sys.argv[1])
-    pid = int(sys.argv[2])
-    supervisor.supervise(pid, job_id, logging.NOTSET)
-
-
-if __name__ == '__main__':
-    main()
