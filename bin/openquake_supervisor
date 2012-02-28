@@ -22,6 +22,7 @@
 """
 The OpenQuake job supervisor process, spawned by each OpenQuake job.
 """
+import logging
 import os
 import sys
 
@@ -36,7 +37,7 @@ def main():  # pylint: disable=C0111
 
     job_id = int(sys.argv[1])
     pid = int(sys.argv[2])
-    supervisor.supervise(pid, job_id)
+    supervisor.supervise(pid, job_id, logging.NOTSET)
 
 
 if __name__ == '__main__':
