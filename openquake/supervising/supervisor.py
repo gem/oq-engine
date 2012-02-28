@@ -250,7 +250,7 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
                     we_should_stop = True
 
         if we_should_stop:
-            self.selflogger.info(error_message)
+            self.selflogger.error(error_message)
             job_status = get_job_status(self.job_id)
             if job_status != 'succeeded':
                 if job_status == 'running':
