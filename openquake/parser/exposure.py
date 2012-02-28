@@ -73,7 +73,7 @@ def _to_occupancy(element):
     element to be an 'assetDefinition' and have a child element
     structured like this:
 
-    <occupants time="day">245</occupants>
+    <occupants description="day">245</occupants>
     """
     occupancy_data = []
     for otag in element.findall('%soccupants' % NRML):
