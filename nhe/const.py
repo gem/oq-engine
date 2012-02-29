@@ -71,19 +71,18 @@ class IMC(ConstantContainer):
 
 class StdDev(ConstantContainer):
     """
-    Types of standard deviation -- allow to differentiate the source
-    of error on assessment the ground motion intensity in :mod:`attenuation
-    relationships <nhe.attrel>`.
+    Attenuation relationship standard deviation represents ground
+    shaking variability at a site.
     """
-    #: Standard deviation for an error that comes from estimating
-    #: the intensity caused by *different* events with close important
-    #: parameters (like magnitude and distance).
+    #: Standard deviation representing ground shaking variability
+    #: within different events.
     INTER_EVENT = 'Inter event'
-    #: Standard deviation for an error that comes from comparing recorded
-    #: intensity from *the same* event but in different points.
+    #: Standard deviation representing ground shaking variability
+    #: within a single event.
     INTRA_EVENT = 'Intra event'
-    #: Total standard deviation is usually defined as a sum
-    #: of :attr:`INTER_EVENT` and :attr:`INTRA_EVENT` and is the only
-    #: one that is used for calculating a probability of intensity exceedance
+    #: Total standard deviation, defined as the square root of the sum
+    #: of inter- and intra-event squared standard deviations, represents
+    #: the total ground shaking variability, and is the only one that
+    #: is used for calculating a probability of intensity exceedance
     #: (see :meth:`nhe.attrel.base.AttenuationRelationship.get_poes`).
     TOTAL = 'Total'
