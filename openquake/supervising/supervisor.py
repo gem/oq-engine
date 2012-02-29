@@ -235,18 +235,11 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
             we_should_stop = True
         elif failure_counters_need_check():
             # Job process is still running.
-            keys = stats.kvs_op("keys", "*%s*-failures*" % self.job_id)
-            if keys:
-                # Job has some '-failures' counters
-                values = stats.kvs_op("mget", keys)
-                if any(values):
-                    # At least one of the failure counters is above zero
-                    terminate_job(self.job_pid)
-                    failures = ", ".join(
-                        "%s = %s" % (k, v) for k, v in zip(keys, values) if v)
-                    error_message = ("job terminated due to failures: %s"
-                                     % failures)
-                    we_should_stop = True
+            failures = stats.failure_counters(self.job_id)
+            if failures:
+                terminate_job(self.job_pid)
+                error_message = ("job terminated with failures: %s" % failures)
+                we_should_stop = True
 
         if we_should_stop:
             self.selflogger.error(error_message)
