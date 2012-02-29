@@ -100,16 +100,8 @@ class BaseSurface(object):
         :returns:
             Float value, the vertical distance between the earth surface
             and the shallowest point in surface's top edge in km.
-
-        .. warning::
-            Base surface class implementation requires the :meth:`mesh
-            <get_mesh>` to be constructed "top-to-bottom". That's it,
-            the first row of points should be the shallowest.
         """
-        # TODO: unittest
-        mesh = self.get_mesh()
-        assert len(mesh.depths) == 1 or mesh.depths[0][0] < mesh.depths[-1][0]
-        top_edge = mesh[0:1]
+        top_edge = self.get_mesh()[0:1]
         if top_edge.depths is None:
             return 0
         else:
@@ -119,14 +111,8 @@ class BaseSurface(object):
         """
         Return :class:`~nhe.geo.point.Point` representing the surface's
         top edge centroid.
-
-        .. warning::
-            The same requirement for mesh structure applies as for
-            :meth:`get_top_edge_depth`.
         """
-        mesh = self.get_mesh()
-        assert len(mesh.depths) == 1 or mesh.depths[0][0] < mesh.depths[-1][0]
-        top_edge = mesh[0:1]
+        top_edge = self.get_mesh()[0:1]
         return top_edge.get_middle_point()
 
     def get_mesh(self):
@@ -135,9 +121,16 @@ class BaseSurface(object):
 
         Uses :meth:`_create_mesh` for creating the mesh for the first time.
         All subsequent calls to :meth:`get_mesh` return the same mesh object.
+
+        .. warning::
+            It is required that the mesh us constructed "top-to-bottom".
+            That is, the first row of points should be the shallowest.
         """
         if self._mesh is None:
             self._mesh = self._create_mesh()
+            assert (self._mesh.depths is None or len(self._mesh.depths) == 1
+                    or self._mesh.depths[0][0] < self._mesh.depths[-1][0]), \
+                   "the first row of points in the mesh must be the shallowest"
         return self._mesh
 
     @abc.abstractmethod
