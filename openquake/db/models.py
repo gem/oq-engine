@@ -798,6 +798,7 @@ class Output(models.Model):
         (u'collapse_map', u'Collapse map'),
         (u'bcr_distribution', u'Benefit-cost ratio distribution'),
         (u'uh_spectra', u'Uniform Hazard Spectra'),
+        (u'agg_loss_curve', u'Aggregate Loss Curve'),
     )
     output_type = models.TextField(choices=OUTPUT_TYPE_CHOICES)
     # Number of bytes in the file:
