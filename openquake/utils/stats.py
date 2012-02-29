@@ -87,6 +87,30 @@ def kvs_op(dop, *kvs_args):
     return op(*kvs_args)
 
 
+def failure_counters(job_id, area=None):
+    """Return a list of 2-tuples with failure keys/counters for the given area.
+
+    :param int job_id: identifier of the job in question
+    :param str area: computation area, one of:
+        "g" : general
+        "h" : hazard
+        "r" : risk
+    :returns: a potentially empty list of 2-tuples with failure keys/counters
+        for the given area.
+    """
+    assert area is None or area in ("g", "h", "r"), "Invalid area."
+
+    if area:
+        pattern = "oqs/%s/%s/*-failures*" % (job_id, area)
+    else:
+        pattern = "oqs/%s/*-failures*" % job_id
+
+    result = keys = kvs_op("keys", pattern)
+    if keys:
+        result = zip(keys, [int(c) for c in kvs_op("mget", keys)])
+    return result
+
+
 def pk_set(job_id, skey, value):
     """Set the value for a predefined statistics key.
 
