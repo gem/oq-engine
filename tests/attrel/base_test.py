@@ -45,7 +45,7 @@ class _FakeAttRelTestCase(unittest.TestCase):
         )
         default_kwargs.update(kwargs)
         kwargs = default_kwargs
-        return self.attrel.get_probabilities_of_exceedance(**kwargs)
+        return self.attrel.get_poes(**kwargs)
 
     def _assert_value_error(self, func, error, **kwargs):
         with self.assertRaises(ValueError) as ar:
@@ -53,7 +53,7 @@ class _FakeAttRelTestCase(unittest.TestCase):
         self.assertEqual(str(ar.exception), error)
 
 
-class GetProbabilitiesOfExceedanceWrongInputTestCase(_FakeAttRelTestCase):
+class GetPoEsWrongInputTestCase(_FakeAttRelTestCase):
     def test_wrong_imt(self):
         err = 'keys of imts dictionary must be instances of IMT classes'
         self._assert_value_error(self._get_poes, err, imts={'something': [3]})
@@ -94,7 +94,7 @@ class GetProbabilitiesOfExceedanceWrongInputTestCase(_FakeAttRelTestCase):
         self._assert_value_error(self._get_poes, err, ctx=ctx)
 
 
-class GetProbabilitiesOfExceedanceTestCase(_FakeAttRelTestCase):
+class GetPoEsTestCase(_FakeAttRelTestCase):
     def test_no_truncation(self):
         self.attrel_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
             const.StdDev.TOTAL

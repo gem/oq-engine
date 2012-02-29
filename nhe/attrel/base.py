@@ -132,11 +132,11 @@ class AttenuationRelationship(object):
         compute interim steps).
         """
 
-    def get_probabilities_of_exceedance(self, ctx, imts, component_type,
-                                        truncation_level):
+    def get_poes(self, ctx, imts, component_type, truncation_level):
         """
-        Calculate and return probabilities of exceedance of one or more
-        intensity measure levels of one or more intensity measure types.
+        Calculate and return probabilities of exceedance (PoEs) of one or more
+        intensity measure levels (IMLs) of one or more intensity measure types
+        (IMTs).
 
         :param ctx:
             An instance of :class:`AttRelContext` with the same meaning
