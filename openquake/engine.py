@@ -744,7 +744,7 @@ def run_calculation(job_profile, params, sections, output_type='db',
         calculation.supervisor_pid = supervisor_pid
         calculation.job_pid = calc_pid
         calculation.save()
-        supervisor.supervise(calc_pid, calculation.id, log_level)
+        supervisor.supervise(calc_pid, calculation.id)
         return
 
     # parent process
