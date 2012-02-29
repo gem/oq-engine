@@ -69,14 +69,28 @@ class IMC(ConstantContainer):
     VERTICAL = 'Vertical'
 
 
-# TODO: document these three classes
-
 class StdDev(ConstantContainer):
-    TOTAL = 'Total standard deviation'
-    INTER_EVENT = 'Inter event standard deviation'
-    INTRA_EVENT = 'Intra event standard deviation'
+    """
+    Types of standard deviation -- allow to differentiate the source
+    of error on assessment the ground motion intensity in :mod:`attenuation
+    relationships <nhe.attrel>`.
+    """
+    #: Standard deviation for an error that comes from estimating
+    #: the intensity caused by *different* events with close important
+    #: parameters (like magnitude and distance).
+    INTER_EVENT = 'Inter event'
+    #: Standard deviation for an error that comes from comparing recorded
+    #: intensity from *the same* event but in different points.
+    INTRA_EVENT = 'Intra event'
+    #: Total standard deviation is usually defined as a sum
+    #: of :attr:`INTER_EVENT` and :attr:`INTRA_EVENT` and is the only
+    #: one that is used for calculating a probability of intensity exceedance
+    #: (see :meth:`nhe.attrel.base.AttenuationRelationship.get_poes`).
+    TOTAL = 'Total'
 
 
 class VS30T(ConstantContainer):
+    # TODO: remove and replace with simple boolean flag
+    # TODO: in site and attrel params
     MEASURED = 'Measured'
     INFERRED = 'Inferred'
