@@ -476,3 +476,8 @@ class FailureCountersTestCase(helpers.RedisTestCase, unittest.TestCase):
              ('oqs/123/h/c-failures/i', 1), ('oqs/123/r/d-failures/i', 1),
              ('oqs/123/r/e-failures/i', 1)],
             sorted(stats.failure_counters(123)))
+
+    def test_failure_counters_with_no_failures(self):
+        # An empty list is returned in the absence of any failure counters
+        stats.delete_job_counters(123)
+        self.assertEqual([], stats.failure_counters(123))
