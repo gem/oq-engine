@@ -46,7 +46,7 @@ class AttenuationRelationship(object):
     #: needs. The set should include strings that match names
     #: of the :class:`site <nhe.site.Site>` object. Those attributes
     #: are then available in the context object with the same names
-    #: prefixed with ``site_`` (like ``site_vs30type`` for instance).
+    #: prefixed with ``site_`` (like ``site_vs30`` for instance).
     REQUIRES_SITE_PARAMETERS = abc.abstractproperty()
 
     #: Set of rupture parameters (excluding distance information) required
@@ -355,7 +355,7 @@ class AttRelContext(object):
     """
     __slots__ = (
         # site parameters
-        'site_vs30 site_vs30type site_z1pt0 site_z2pt5 '
+        'site_vs30 site_vs30measured site_z1pt0 site_z2pt5 '
         # rupture parameters
         'rup_mag rup_trt rup_dip rup_rake '
         # distance parameters

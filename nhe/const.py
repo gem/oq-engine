@@ -87,10 +87,3 @@ class StdDev(ConstantContainer):
     #: one that is used for calculating a probability of intensity exceedance
     #: (see :meth:`nhe.attrel.base.AttenuationRelationship.get_poes`).
     TOTAL = 'Total'
-
-
-class VS30T(ConstantContainer):
-    # TODO: remove and replace with simple boolean flag
-    # TODO: in site and attrel params
-    MEASURED = 'Measured'
-    INFERRED = 'Inferred'

@@ -156,7 +156,7 @@ class MakeContextTestCase(_FakeAttRelTestCase):
     def setUp(self):
         super(MakeContextTestCase, self).setUp()
         self.site_location = Point(10, 20)
-        self.site = Site(vs30=456, vs30type=const.VS30T.INFERRED,
+        self.site = Site(vs30=456, vs30measured=False,
                          z1pt0=12.1, z2pt5=15.1,
                          location=self.site_location)
         min_distance = 10
@@ -254,7 +254,7 @@ class MakeContextTestCase(_FakeAttRelTestCase):
             'mag rake trt dip'.split()
         )
         self.attrel_class.REQUIRES_SITE_PARAMETERS = set(
-            'vs30 vs30type z1pt0 z2pt5'.split()
+            'vs30 vs30measured z1pt0 z2pt5'.split()
         )
         ctx = self.attrel_class.make_context(self.site, self.rupture)
         self.assertIsInstance(ctx, AttRelContext)
@@ -263,7 +263,7 @@ class MakeContextTestCase(_FakeAttRelTestCase):
         self.assertEqual(ctx.rup_trt, const.TRT.VOLCANIC)
         self.assertEqual(ctx.rup_dip, 45.4545)
         self.assertEqual(ctx.site_vs30, 456)
-        self.assertEqual(ctx.site_vs30type, const.VS30T.INFERRED)
+        self.assertEqual(ctx.site_vs30measured, False)
         self.assertEqual(ctx.site_z1pt0, 12.1)
         self.assertEqual(ctx.site_z2pt5, 15.1)
         self.assertEqual(ctx.dist_rjb, 6)
@@ -281,16 +281,15 @@ class MakeContextTestCase(_FakeAttRelTestCase):
             'mag rake trt dip'.split()
         )
         self.attrel_class.REQUIRES_SITE_PARAMETERS = set(
-            'vs30 vs30type z1pt0 z2pt5'.split()
+            'vs30 vs30measured z1pt0 z2pt5'.split()
         )
         ctx = self.attrel_class.make_context(self.site, self.rupture,
                                              distances=self.distances)
         self.assertEqual((ctx.rup_mag, ctx.rup_rake, ctx.rup_trt, ctx.rup_dip),
                          (123.45, 123.56, const.TRT.VOLCANIC, 45.4545))
-        self.assertEqual(
-            (ctx.site_vs30, ctx.site_vs30type, ctx.site_z1pt0, ctx.site_z2pt5),
-            (456, const.VS30T.INFERRED, 12.1, 15.1)
-        )
+        self.assertEqual((ctx.site_vs30, ctx.site_vs30measured,
+                          ctx.site_z1pt0, ctx.site_z2pt5),
+                         (456, False, 12.1, 15.1))
         self.assertEqual(ctx.dist_rrup, 123)
         self.assertEqual(ctx.dist_rx, 456)
         self.assertEqual(ctx.dist_ztor, 789)
@@ -307,7 +306,7 @@ class MakeContextTestCase(_FakeAttRelTestCase):
         self.assertEqual((ctx.dist_rjb, ctx.dist_rx), (6, 4))
         self.assertFalse(hasattr(ctx, 'rup_trt'))
         self.assertFalse(hasattr(ctx, 'rup_dip'))
-        self.assertFalse(hasattr(ctx, 'site_vs30type'))
+        self.assertFalse(hasattr(ctx, 'site_vs30measured'))
         self.assertFalse(hasattr(ctx, 'site_z2pt0'))
         self.assertFalse(hasattr(ctx, 'dist_rrup'))
         self.assertFalse(hasattr(ctx, 'dist_ztor'))
@@ -317,13 +316,13 @@ class MakeContextTestCase(_FakeAttRelTestCase):
 
     def test_some_values_with_precalc_distances(self):
         self.attrel_class.REQUIRES_DISTANCES = set('ztor rrup'.split())
-        self.attrel_class.REQUIRES_RUPTURE_PARAMETERS = set('trt'.split())
-        self.attrel_class.REQUIRES_SITE_PARAMETERS = set('vs30type'.split())
+        self.attrel_class.REQUIRES_RUPTURE_PARAMETERS = set(('trt',))
+        self.attrel_class.REQUIRES_SITE_PARAMETERS = set(('vs30measured',))
         distances = {'ztor': 17, 'rrup': 33}
         ctx = self.attrel_class.make_context(self.site, self.rupture,
                                              distances=distances)
         self.assertEqual(ctx.rup_trt, const.TRT.VOLCANIC)
-        self.assertEqual(ctx.site_vs30type, const.VS30T.INFERRED)
+        self.assertEqual(ctx.site_vs30measured, False)
         self.assertEqual(ctx.dist_ztor, 17)
         self.assertEqual(ctx.dist_rrup, 33)
         self.assertEqual(self.fake_surface.call_counts, {})

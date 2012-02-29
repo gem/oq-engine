@@ -46,8 +46,8 @@ def check_attrel(attrel_cls, filename, max_discrep_percentage,
                 component_type = getattr(const.IMC, value)
             elif param in context_params:
                 # value is context object attribute
-                if param == 'site_vs30type':
-                    value = getattr(const.VS30T, value)
+                if param == 'site_vs30measured':
+                    value = float(value) != 0
                 else:
                     value = float(value)
                 setattr(context, param, value)

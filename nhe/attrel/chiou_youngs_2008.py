@@ -106,9 +106,9 @@ class ChiouYoungs2008(AttenuationRelationship):
         const.StdDev.INTRA_EVENT
     ])
 
-    #: Required site parameters are Vs30 (eq. 13b), Vs30 type (eq. 20)
+    #: Required site parameters are Vs30 (eq. 13b), Vs30 measured flag (eq. 20)
     #: and Z1.0 (eq. 13b).
-    REQUIRES_SITE_PARAMETERS = set(('vs30', 'vs30type', 'z1pt0'))
+    REQUIRES_SITE_PARAMETERS = set(('vs30', 'vs30measured', 'z1pt0'))
 
     #: Required rupture parameters are magnitude, rake (eq. 13a and 13b)
     #: and dip (eq. 13a).
@@ -181,8 +181,10 @@ class ChiouYoungs2008(AttenuationRelationship):
         """
         # aftershock flag is zero, we consider only main shock.
         AS = 0
-        Fmeasured = 1 if ctx.site_vs30type == const.VS30T.MEASURED else 0
-        Finferred = 0 if Fmeasured == 1 else 1
+        if ctx.site_vs30measured:
+            Fmeasured, Finferred = 1, 0
+        else:
+            Fmeasured, Finferred = 0, 1
 
         # eq. 19 to calculate inter-event standard error
         mag_test = min(max(ctx.rup_mag, 5.0), 7.0) - 5.0
