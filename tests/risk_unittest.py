@@ -249,19 +249,12 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
                 {"ID": self.vuln_function_2.to_json()})
 
         # store the gmfs
-        for idx, gmf in enumerate(self.peb_gmfs):
-            self._store_gmfs(gmf, self.points[idx].row,
-                             self.points[idx].column)
-
-    def tearDown(self):
-        self._delete_test_file()
-
-    def _delete_test_file(self):
-        try:
-            os.remove(os.path.join(helpers.OUTPUT_DIR,
-                      eb_core._filename(self.job_id)))
-        except OSError:
-            pass
+        self._store_gmfs(self.gmfs_1, 1, 1)
+        self._store_gmfs(self.gmfs_2, 1, 2)
+        self._store_gmfs(self.gmfs_3, 1, 3)
+        self._store_gmfs(self.gmfs_4, 1, 4)
+        self._store_gmfs(self.gmfs_5, 1, 5)
+        self._store_gmfs(self.gmfs_6, 1, 6)
 
     def _store_gmfs(self, gmfs, row, column):
         key = kvs.tokens.gmf_set_key(self.job_id, column, row)
@@ -607,76 +600,6 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
     def test_no_losses_without_gmfs(self):
         aggregate_curve = AggregateLossCurve()
         self.assertEqual(None, aggregate_curve.losses)
-
-    def test_curve_to_plot_interface_translation(self):
-        curve = shapes.Curve([(0.1, 1.0), (0.2, 2.0)])
-
-        expected_data = {}
-        expected_data["AggregateLossCurve"] = {}
-        expected_data["AggregateLossCurve"]["abscissa"] = (0.1, 0.2)
-        expected_data["AggregateLossCurve"]["ordinate"] = (1.0, 2.0)
-
-        expected_data["AggregateLossCurve"]["abscissa_property"] = \
-                "Economic Losses"
-
-        expected_data["AggregateLossCurve"]["ordinate_property"] = \
-                "PoE in 50.0 years"
-
-        expected_data["AggregateLossCurve"]["curve_title"] = \
-            "Aggregate Loss Curve"
-
-        self.assertEqual(expected_data, eb_core._for_plotting(curve, 50.0))
-
-    def test_comp_agg_curve_calls_plotter(self):
-        """
-        If the AGGREGATE_LOSS_CURVE parameter in the job config file, aggregate
-        loss curve SVGs will be produced using
-        :py:class:`openquake.output.curve.CurvePlot`
-
-        If AGGREGATE_LOSS_CURVE is defined in the config file (with any value),
-        this test ensures that the plotter is called.
-        :py:class:`openquake.output.curve.CurvePlot` will be mocked to perform
-        this test.
-        """
-        calculator = eb_core.EventBasedRiskCalculator(self.job)
-
-        curve = shapes.Curve([(0.1, 0.5), (0.2, 0.5), (0.3, 0.5)])
-
-        with helpers.patch(
-            'openquake.output.curve.CurvePlot.write') as write_mock:
-            with helpers.patch(
-                'openquake.output.curve.CurvePlot.close') as close_mock:
-                eb_core.plot_aggregate_curve(calculator, curve)
-
-                # make sure write() and close() were both called
-                self.assertEqual(1, write_mock.call_count)
-                self.assertEqual(1, close_mock.call_count)
-
-    def test_plots_the_aggregate_curve_only_if_specified(self):
-        """
-        If the AGGREGATE_LOSS_CURVE parameter in the job config file, aggregate
-        loss curve SVGs will be produced using
-        :py:class:`openquake.output.curve.CurvePlot`
-
-        If AGGREGATE_LOSS_CURVE is not defined in the config file, this test
-        ensures that the plotter is not called.
-        :py:class:`openquake.output.curve.CurvePlot` will be mocked to perform
-        this test.
-        """
-        del self.params["AGGREGATE_LOSS_CURVE"]
-        calculator = eb_core.EventBasedRiskCalculator(self.job)
-
-        curve = shapes.Curve([(0.1, 0.5), (0.2, 0.5), (0.3, 0.5)])
-
-        with helpers.patch(
-            'openquake.output.curve.CurvePlot.write') as write_mock:
-            with helpers.patch(
-                'openquake.output.curve.CurvePlot.close') as close_mock:
-                eb_core.plot_aggregate_curve(calculator, curve)
-
-                # the plotter should not be called
-                self.assertEqual(0, write_mock.call_count)
-                self.assertEqual(0, close_mock.call_count)
 
     def test_compute_bcr(self):
         cfg_path = helpers.demo_file(
