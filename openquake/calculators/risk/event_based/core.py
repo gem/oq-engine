@@ -20,8 +20,6 @@
 
 """Core functionality for Event-Based Risk calculations."""
 
-import os
-
 from numpy import zeros
 
 from celery.exceptions import TimeoutError
@@ -31,65 +29,9 @@ from openquake import logs
 from openquake import shapes
 from openquake.db import models
 from openquake.parser import vulnerability
-from openquake.output import curve
 from openquake.calculators.risk import general
 
 LOGGER = logs.LOG
-
-
-def _filename(job_id):
-    """Return the name of the generated file."""
-    return "%s-aggregate-loss-curve.svg" % job_id
-
-
-def _for_plotting(loss_curve, time_span):
-    """Translate a loss curve into a dictionary compatible to
-    the interface defined in CurvePlot.write."""
-    data = {}
-
-    data["AggregateLossCurve"] = {}
-    data["AggregateLossCurve"]["abscissa"] = tuple(loss_curve.abscissae)
-    data["AggregateLossCurve"]["ordinate"] = tuple(loss_curve.ordinates)
-    data["AggregateLossCurve"]["abscissa_property"] = "Economic Losses"
-    data["AggregateLossCurve"]["ordinate_property"] = \
-            "PoE in %s years" % (str(time_span))
-
-    data["AggregateLossCurve"]["curve_title"] = "Aggregate Loss Curve"
-
-    return data
-
-
-def plot_aggregate_curve(calculator, aggregate_curve):
-    """Plot an aggreate loss curve.
-
-    This function is triggered only if the AGGREGATE_LOSS_CURVE
-    parameter is specified in the configuration file.
-
-    :param calculator:
-        :py:class:`EventBasedRiskCalculator` instance for an in-progress
-        calculation.
-    :param aggregate_curve: the aggregate curve to plot.
-    :type aggregate_curve: :py:class:`openquake.shapes.Curve`
-    """
-
-    if not calculator.calc_proxy.has("AGGREGATE_LOSS_CURVE"):
-        LOGGER.debug("AGGREGATE_LOSS_CURVE parameter not specified, " \
-                "skipping aggregate loss curve computation...")
-
-        return
-
-    path = os.path.join(
-            calculator.calc_proxy.params["BASE_PATH"],
-            calculator.calc_proxy.params["OUTPUT_DIR"],
-            _filename(calculator.calc_proxy.job_id))
-
-    plotter = curve.CurvePlot(path)
-    plotter.write(_for_plotting(aggregate_curve,
-            calculator.calc_proxy.params["INVESTIGATION_TIME"]),
-            autoscale_y=False)
-
-    plotter.close()
-    LOGGER.debug("Aggregate loss curve stored at %s" % path)
 
 
 class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
@@ -98,9 +40,11 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
     def __init__(self, calc_proxy):
         super(EventBasedRiskCalculator, self).__init__(calc_proxy)
         self.vuln_curves = None
+        self.agg_curve = None
 
     def execute(self):
         """Execute the job."""
+
         aggregate_curve = general.AggregateLossCurve()
 
         tasks = []
@@ -120,16 +64,46 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                 # TODO(jmc): Cancel and respawn this task
                 return
 
+        self.agg_curve = aggregate_curve.compute(
+            self._tses(), self._time_span(),
+            self.calc_proxy.oq_job_profile.loss_histogram_bins)
+
+    def post_execute(self):
+        """Perform the following post-execution actions:
+
+        * Write loss curves to XML
+        * Save the aggregate loss curve to the database
+        * Write BCR output (NOTE: If BCR mode, none of the other artifacts will
+          be written.
+
+        Not all of these actions will be executed; this depends on the
+        configuration of the calculation.
+        """
+
         if self.is_benefit_cost_ratio_mode():
             self.write_output_bcr()
             return
 
-        agg_curve = aggregate_curve.compute(
-            self._tses(), self._time_span(),
-            self.calc_proxy.oq_job_profile.loss_histogram_bins)
-        plot_aggregate_curve(self, agg_curve)
-
         self.write_output()
+
+        # Save the aggregate loss curve to the database:
+        calculation = self.calc_proxy.oq_calculation
+
+        agg_lc_display_name = (
+            'Aggregate Loss Curve for calculation %s' % calculation.id)
+        output = models.Output(
+            oq_calculation=calculation, owner=calculation.owner,
+            display_name=agg_lc_display_name, db_backed=True,
+            output_type='agg_loss_curve')
+        output.save()
+
+        loss_curve = models.LossCurve(output=output, aggregate=True)
+        loss_curve.save()
+
+        agg_lc_data = models.AggregateLossCurveData(
+            loss_curve=loss_curve, losses=self.agg_curve.x_values,
+            poes=self.agg_curve.y_values)
+        agg_lc_data.save()
 
     def _tses(self):
         """Return the time representative of the Stochastic Event Set
