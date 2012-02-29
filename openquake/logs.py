@@ -58,6 +58,9 @@ def init_logs_amqp_send(level, job_id):
         return
 
     logging.getLogger("amqplib").propagate = False
+    # Add a null to amqplib logger to silence "No handlers could be found for
+    # logger 'amqplib'" warnings:
+    logging.getLogger("amqplib").addHandler(logging.NullHandler())
     hdlr = AMQPHandler()
     hdlr.set_job_id(job_id)
     logging.root.addHandler(hdlr)
