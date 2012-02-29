@@ -12,7 +12,6 @@ class _IMT(object):
     Subclasses must define __slots__ with names of parameters the specific
     intensity measure type requires.
     """
-    # TODO: unittest this
     __slots__ = ()
 
     def __eq__(self, other):
@@ -76,11 +75,13 @@ class SA(_IMT):
         The natural period of the oscillator in seconds.
     :param damping:
         The degree of damping for the oscillator in percents.
+
+    :raises ValueError:
+        if period or damping is not positive.
     """
     __slots__ = ('period', 'damping')
 
     def __init__(self, period, damping):
-        # TODO: unittest this
         if not period > 0:
             raise ValueError('period must be positive')
         if not damping > 0:
