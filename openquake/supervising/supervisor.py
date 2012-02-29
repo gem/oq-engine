@@ -200,6 +200,14 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
         """
         Handles messages of severe level from the supervised job.
         """
+        if record.name == self.selflogger.name:
+            # ignore error log messages sent by selflogger.
+            # this way we don't try to kill the job if its
+            # process has crashed (or has been stopped).
+            # we emit selflogger's error messages from
+            # timeout_callback().
+            return
+
         terminate_job(self.job_pid)
 
         update_job_status_and_error_msg(self.job_id, 'failed',
