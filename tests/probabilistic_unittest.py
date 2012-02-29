@@ -23,6 +23,7 @@ import unittest
 from openquake import engine
 from openquake.calculators.risk.event_based.core import (
     EventBasedRiskCalculator)
+from openquake.db import models
 
 from tests.utils import helpers
 
@@ -34,11 +35,14 @@ class LossMapCurveSerialization(unittest.TestCase):
             'probabilistic_event_based_risk/config.gem')
 
         job_profile, params, sections = engine.import_job_profile(cfg_path)
+        calculation = models.OqCalculation(owner=job_profile.owner,
+                                           oq_job_profile=job_profile)
+        calculation.save()
 
         calc_proxy = engine.CalculationProxy(
             params, 1, sections=sections, base_path='/tmp',
             serialize_results_to=['db', 'xml'],
-            oq_job_profile=job_profile)
+            oq_job_profile=job_profile, oq_calculation=calculation)
         calc_proxy.blocks_keys = []
 
         self.calculator = EventBasedRiskCalculator(calc_proxy)
@@ -50,23 +54,20 @@ class LossMapCurveSerialization(unittest.TestCase):
         self.calculator.calc_proxy.params['CONDITIONAL_LOSS_POE'] = (
             '0.01 0.02')
 
-        with helpers.patch('openquake.calculators.risk.event_based.core'
-                           '.plot_aggregate_curve'):
-            with helpers.patch(
-                'openquake.output.risk.create_loss_map_writer') as clw:
+        with helpers.patch(
+            'openquake.output.risk.create_loss_map_writer') as clw:
 
-                clw.return_value = None
+            clw.return_value = None
 
-                self.calculator.execute()
-                self.assertTrue(clw.called)
+            self.calculator.execute()
+            self.calculator.post_execute()
+            self.assertTrue(clw.called)
 
     def test_loss_map_not_serialized_unless_conditional_loss_poes(self):
-        with helpers.patch('openquake.calculators.risk.event_based.core'
-                           '.plot_aggregate_curve'):
-            with helpers.patch(
-                'openquake.output.risk.create_loss_map_writer') as clw:
+        with helpers.patch(
+            'openquake.output.risk.create_loss_map_writer') as clw:
 
-                clw.return_value = None
+            clw.return_value = None
 
-                self.calculator.execute()
-                self.assertFalse(clw.called)
+            self.calculator.execute()
+            self.assertFalse(clw.called)

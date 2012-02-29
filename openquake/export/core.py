@@ -39,9 +39,11 @@ def _export_fn_map():
     # Silencing `Reimport <module>` warnings
     # pylint: disable=W0404
     from openquake.export import uhs
+    from openquake.export import risk
 
     fn_map = {
         'uh_spectra': uhs.export_uhs,
+        'agg_loss_curve': risk.export_agg_loss_curve,
     }
     return fn_map
 
