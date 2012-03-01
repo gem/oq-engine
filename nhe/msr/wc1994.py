@@ -32,7 +32,8 @@ class WC1994MSR(BaseMSR):
             # normal
             return 10.0 ** (-2.87 + 0.82 * mag + 0.22 * epsilon)
 
-    def get_magnitude_from_area(self, area, rake, epsilon=0.0):
+    @staticmethod
+    def get_magnitude_from_area(area, rake, epsilon=0.0):
         """
         Returns magnitude (Mw) given the area, rake and epsilon
 
