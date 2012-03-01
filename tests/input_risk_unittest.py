@@ -293,7 +293,6 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertEqual(50, night.occupants)
         self.assertEqual("night", night.description)
 
-
         self.assertEqual("asset_03", assets[2].asset_ref)
         self.assertEqual(118, assets[2].area)
         self.assertEqual(30.95, assets[2].coco)
