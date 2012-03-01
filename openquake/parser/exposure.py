@@ -151,10 +151,10 @@ class ExposureModelFile(producer.FileProducer):
             elif event == 'start' and level < 2:
                 # check that the first child of the root element is an
                 # exposure portfolio
-                if level == 1 and element.tag != '%sexposurePortfolio' % NRML:
+                if level == 1 and element.tag != '%sexposureModel' % NRML:
                     raise xml.XMLMismatchError(
                         self.file.name, str(element.tag)[len(NRML):],
-                        'exposurePortfolio')
+                        'exposureModel')
 
                 level += 1
 
