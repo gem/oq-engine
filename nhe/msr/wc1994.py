@@ -12,8 +12,7 @@ class WC1994MSR(BaseMSR):
     """
     def get_median_area(self, mag, rake):
         """
-        The values are a function of both magnitude, rake and
-        epsilon when a value for that is provided.
+        The values are a function of both magnitude and rake.
 
         Setting the rake to ``None`` causes their "All" rupture-types
         to be applied.
