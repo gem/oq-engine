@@ -110,7 +110,7 @@ class XMLMismatchError(Exception):
     _HUMANIZE_FILE = {
         'logicTree': 'logic tree',
         'sourceModel': 'source model',
-        'exposurePortfolio': 'exposure portfolio',
+        'exposureModel': 'exposure model',
         'vulnerabilityModel': 'vulnerability model',
         }
 
