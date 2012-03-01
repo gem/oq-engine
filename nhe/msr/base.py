@@ -42,7 +42,8 @@ class BaseMSR(object):
     def get_area(self, mag, rake, epsilon=0.0):
         """
         Return the area (in square km) from magnitude ``mag``, ``rake``,
-        and uncertainty ``epsilon``.
+        and uncertainty ``epsilon``. Assumes area to be log-normally
+        distributed (with logarithmic function of base 10).
 
         :param mag:
             Moment magnitude (Mw)
