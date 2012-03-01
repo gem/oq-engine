@@ -326,7 +326,6 @@ class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
 
         self.assertEqual(SITE_A, Site(*data_a.location.coords))
 
-        import pprint; pprint.pprint(SAMPLE_SCENARIO_LOSS_MAP_DATA)
         self.assertEqual(
             SAMPLE_SCENARIO_LOSS_MAP_DATA[1][1][0][1]['assetID'],
             data_a.asset_ref)
