@@ -44,7 +44,12 @@ class ExportUHSTestCase(unittest.TestCase):
         expected_export_files = [
             os.path.join(export_target_dir, 'uhs_poe:0.1.hdf5'),
             os.path.join(export_target_dir, 'uhs_poe:0.02.hdf5'),
+            os.path.join(export_target_dir, 'uhs.xml'),
         ]
+
+        # Sanity check and precondition: these files should not exist yet
+        for f in expected_export_files:
+            self.assertFalse(os.path.exists(f))
 
         try:
             ret_code = helpers.run_job(uhs_cfg)
@@ -72,5 +77,11 @@ class ExportUHSTestCase(unittest.TestCase):
                                          str(output.id), export_target_dir]))
 
             self.assertEqual(expected_export_files, listed_exports)
+
+            # Check that the files actually have been created,
+            # and also verify that the paths are absolute:
+            for f in listed_exports:
+                self.assertTrue(os.path.exists(f))
+                self.assertTrue(os.path.isabs(f))
         finally:
             shutil.rmtree(export_target_dir)
