@@ -206,9 +206,9 @@ SITE_B_SCENARIO_LOSS_ONE = {'mean_loss': 120000.0, 'stddev_loss': 2000.0}
 
 SAMPLE_SCENARIO_LOSS_MAP_DATA = [
     SCENARIO_LOSS_MAP_METADATA,
-    (SITE_A, [[SITE_A_SCENARIO_LOSS_ONE, None],
-              [SITE_A_SCENARIO_LOSS_TWO, None]]),
-    (SITE_B, [[SITE_B_SCENARIO_LOSS_ONE, None]])]
+    (SITE_A, [[SITE_A_SCENARIO_LOSS_ONE, {'assetID': 'asset1'}],
+              [SITE_A_SCENARIO_LOSS_TWO, {'assetID': 'asset2'}]]),
+    (SITE_B, [[SITE_B_SCENARIO_LOSS_ONE, {'assetID': 'asset3'}]])]
 
 NONSCENARIO_LOSS_MAP_METADATA = LOSS_MAP_METADATA.copy()
 NONSCENARIO_LOSS_MAP_METADATA.update({
@@ -264,10 +264,6 @@ class LossMapDBBaseTestCase(unittest.TestCase, helpers.DbTestCase):
                                         **adata)
             asset.save()
             setattr(self, name, asset)
-
-        SAMPLE_SCENARIO_LOSS_MAP_DATA[1][1][0][1] = self.asset_a_1
-        SAMPLE_SCENARIO_LOSS_MAP_DATA[1][1][1][1] = self.asset_a_2
-        SAMPLE_SCENARIO_LOSS_MAP_DATA[2][1][0][1] = self.asset_b_1
 
         SAMPLE_NONSCENARIO_LOSS_MAP_DATA[1][1][0][1] = self.asset_a_1
         SAMPLE_NONSCENARIO_LOSS_MAP_DATA[1][1][1][1] = self.asset_a_2
@@ -329,21 +325,30 @@ class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
                                           key=lambda d: d.id)
 
         self.assertEqual(SITE_A, Site(*data_a.location.coords))
-        self.assertEqual(self.asset_a_1.asset_ref, data_a.asset_ref)
+
+        import pprint; pprint.pprint(SAMPLE_SCENARIO_LOSS_MAP_DATA)
+        self.assertEqual(
+            SAMPLE_SCENARIO_LOSS_MAP_DATA[1][1][0][1]['assetID'],
+            data_a.asset_ref)
+        # self.assertEqual(self.asset_a_1.asset_ref, data_a.asset_ref)
         self.assertEqual(SITE_A_SCENARIO_LOSS_ONE['mean_loss'],
                         data_a.value)
         self.assertEqual(SITE_A_SCENARIO_LOSS_ONE['stddev_loss'],
                          data_a.std_dev)
 
         self.assertEqual(SITE_A, Site(*data_b.location.coords))
-        self.assertEqual(self.asset_a_2.asset_ref, data_b.asset_ref)
+        self.assertEqual(
+            SAMPLE_SCENARIO_LOSS_MAP_DATA[1][1][1][1]['assetID'],
+            data_b.asset_ref)
         self.assertEqual(SITE_A_SCENARIO_LOSS_TWO['mean_loss'],
                          data_b.value)
         self.assertEqual(SITE_A_SCENARIO_LOSS_TWO['stddev_loss'],
                          data_b.std_dev)
 
         self.assertEqual(SITE_B, Site(*data_c.location.coords))
-        self.assertEqual(self.asset_b_1.asset_ref, data_c.asset_ref)
+        self.assertEqual(
+            SAMPLE_SCENARIO_LOSS_MAP_DATA[2][1][0][1]['assetID'],
+            data_c.asset_ref)
         self.assertEqual(SITE_B_SCENARIO_LOSS_ONE['mean_loss'],
                          data_c.value)
         self.assertEqual(SITE_B_SCENARIO_LOSS_ONE['stddev_loss'],
