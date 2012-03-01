@@ -254,6 +254,8 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertEqual("aggregated", model.stco_type)
         self.assertEqual("USD", model.stco_unit)
 
+        self.assertEqual("Pavia taxonomy", model.taxonomy_source)
+
         # check asset instances
         assets = sorted(model.exposuredata_set.all(), key=lambda e: e.value)
 
