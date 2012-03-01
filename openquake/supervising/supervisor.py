@@ -283,7 +283,6 @@ def supervise(pid, job_id, timeout=1):
     ignore_sigint()
 
     logging.root.addHandler(SupervisorLogHandler(job_id))
-    logging.root.setLevel(logging.NOTSET)
 
     supervisor = SupervisorLogMessageConsumer(job_id, pid, timeout)
     supervisor.run()
