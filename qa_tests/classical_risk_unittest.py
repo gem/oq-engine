@@ -71,7 +71,6 @@ class ClassicalRiskQATestCase(unittest.TestCase):
             0.00001,
         ]
 
-
         cls_risk_cfg = helpers.demo_file(
             'classical_psha_based_risk/config.gem')
         ret_code = helpers.run_job(cls_risk_cfg, ['--output-type=xml'])
