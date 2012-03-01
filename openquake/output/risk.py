@@ -469,17 +469,22 @@ class LossMapDBWriter(writer.DBWriter):
         """
         for loss, asset in values:
 
-            kwargs = dict(
-                loss_map_id=self.metadata.id, location=site.point.to_wkt())
-            if self.metadata.scenario:
-                kwargs['asset_ref'] = asset['assetID']
-                kwargs['value'] = float(loss.get('mean_loss'))
-                kwargs['std_dev'] = float(loss.get('stddev_loss'))
+            kwargs = {
+                'loss_map_id': self.metadata.id,
+                'asset_ref': asset.asset_ref,
+                'location': "POINT(%s %s)" % (site.longitude, site.latitude),
+            }
 
+            if self.metadata.scenario:
+                kwargs.update({
+                    'value': float(loss.get('mean_loss')),
+                    'std_dev': float(loss.get('stddev_loss')),
+                })
             else:
-                kwargs['asset_ref'] = asset.asset_ref
-                kwargs['value'] = float(loss.get('value'))
-                kwargs['std_dev'] = 0.0
+                kwargs.update({
+                    'value': float(loss.get('value')),
+                    'std_dev': 0.0,
+                })
 
             self.bulk_inserter.add_entry(**kwargs)
 
@@ -553,25 +558,16 @@ class BaseCurveXMLWriter(nrml.TreeNRMLWriter):
 
         self.result_el = None
 
-    def write(self, point, values):
-        if isinstance(point, shapes.GridPoint):
-            point = point.site
-        asset = values[1]
+    def write(self, point, _values):
         if self.root_node is None:
             # nrml:nrml, needs gml:id
             self._create_root_element()
 
-            if 'nrml_id' in asset:
-                nrml.set_gml_id(self.root_node, str(asset['nrml_id']))
-            else:
-                nrml.set_gml_id(self.root_node, nrml.NRML_DEFAULT_ID)
+            nrml.set_gml_id(self.root_node, nrml.NRML_DEFAULT_ID)
 
             # nrml:riskResult, needs gml:id
             result_el = etree.SubElement(self.root_node, xml.RISK_RESULT_TAG)
-            if 'riskres_id' in asset:
-                nrml.set_gml_id(result_el, str(asset['riskres_id']))
-            else:
-                nrml.set_gml_id(result_el, nrml.RISKRESULT_DEFAULT_ID)
+            nrml.set_gml_id(result_el, nrml.RISKRESULT_DEFAULT_ID)
 
             etree.SubElement(result_el, xml.NRML_CONFIG_TAG)
 
@@ -610,11 +606,7 @@ class CurveXMLWriter(BaseCurveXMLWriter):
         :type values: with the following members
             :py:class:`openquake.shapes.Curve`
 
-            :py:class:`dict` (asset)
-                ***assetID*** - the assetID
-                ***endBranchLabel*** - endBranchLabel
-                ***riskres_id*** - for example, 'rr'
-                ***list_id*** - 'list'
+            :py:class:`openquake.db.models.ExposureData``
         """
         super(CurveXMLWriter, self).write(point, values)
 
@@ -628,21 +620,17 @@ class CurveXMLWriter(BaseCurveXMLWriter):
             self.curve_list_el = etree.SubElement(self.result_el,
                                                   self.container_tag)
 
-        if 'list_id' in asset:
-            nrml.set_gml_id(self.curve_list_el, str(asset['list_id']))
-        else:
-            nrml.set_gml_id(self.curve_list_el, self.CONTAINER_DEFAULT_ID)
+        nrml.set_gml_id(self.curve_list_el, self.CONTAINER_DEFAULT_ID)
 
-        asset_id = str(asset['assetID'])
         try:
-            asset_el = self.assets_per_id[asset_id]
+            asset_el = self.assets_per_id[asset.asset_ref]
         except KeyError:
 
             # nrml:asset, needs gml:id
             asset_el = etree.SubElement(self.curve_list_el,
                 xml.RISK_ASSET_TAG)
-            nrml.set_gml_id(asset_el, asset_id)
-            self.assets_per_id[asset_id] = asset_el
+            nrml.set_gml_id(asset_el, asset.asset_ref)
+            self.assets_per_id[asset.asset_ref] = asset_el
 
         # check if nrml:site is already existing
         site_el = asset_el.find(xml.RISK_SITE_TAG)
@@ -657,7 +645,7 @@ class CurveXMLWriter(BaseCurveXMLWriter):
 
         elif not xml.element_equal_to_site(site_el, point):
             error_msg = "asset %s cannot have two differing sites: %s, %s " \
-                % (asset_id, xml.lon_lat_from_site(site_el), point)
+                % (asset.asset_ref, xml.lon_lat_from_site(site_el), point)
             raise ValueError(error_msg)
 
         # loss/loss ratio curves - sub-element already created?
@@ -666,11 +654,6 @@ class CurveXMLWriter(BaseCurveXMLWriter):
             curves_el = etree.SubElement(asset_el, self.curves_tag)
 
         curve_el = etree.SubElement(curves_el, self.curve_tag)
-
-        # attribute for endBranchLabel (optional)
-        if 'endBranchLabel' in asset:
-            curve_el.set(xml.RISK_END_BRANCH_ATTR_NAME,
-                str(asset[xml.RISK_END_BRANCH_ATTR_NAME]))
 
         abscissa_el = etree.SubElement(curve_el, self.abscissa_tag)
         abscissa_el.text = _curve_vals_as_gmldoublelist(curve_object)
