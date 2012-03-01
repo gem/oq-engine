@@ -27,10 +27,12 @@ import os
 from openquake.db import models
 from openquake.export.core import makedirs
 from openquake.utils import round_float
+from openquake.output import uhs as uhs_output
 
 #: Format string for HDF5 dataset names
 _DS_NAME_FMT = 'lon:%s-lat:%s'
 _HDF5_FILE_NAME_FMT = 'uhs_poe:%s.hdf5'
+_XML_FILE_NAME = 'uhs.xml'
 
 
 def _point_to_ds_name(point):
@@ -74,13 +76,18 @@ def export_uhs(output, target_dir):
         Destination directory location of the exported files.
 
     :returns:
-        A list of exported file names (including the full path to each file).
+        A list of exported file names (including the absolute path to each
+        file).
     """
     file_names = []
 
     uh_spectra = models.UhSpectra.objects.get(output=output.id)
 
     uh_spectrums = models.UhSpectrum.objects.filter(uh_spectra=uh_spectra.id)
+
+    # accumulate a list of (poe, path) pairs to serialize to NRML XML
+    # each `path` is the full path to a result hdf5 file
+    nrml_data = []
 
     for spectrum in uh_spectrums:
         # create a file for each spectrum/poe
@@ -97,10 +104,21 @@ def export_uhs(output, target_dir):
         file_name = touch_result_hdf5_file(
             target_dir, spectrum.poe, ds_names, uh_spectra.realizations,
             len(uh_spectra.periods))
+        file_name = os.path.abspath(file_name)
+
+        nrml_data.append((spectrum.poe, file_name))
 
         # Now write the actual data
         write_uhs_data(file_name, uhs_data)
         file_names.append(file_name)
+
+    nrml_file_path = os.path.join(target_dir, _XML_FILE_NAME)
+    nrml_writer = uhs_output.UHSXMLWriter(nrml_file_path, uh_spectra.periods,
+                                          uh_spectra.timespan)
+    nrml_writer.serialize(nrml_data)
+
+    # Don't forget the nrml file:
+    file_names.append(os.path.abspath(nrml_file_path))
 
     return file_names
 
