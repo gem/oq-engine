@@ -42,7 +42,7 @@ from output_hazard_unittest import *
 from output_risk_unittest import *
 from output_unittest import *
 from output_writers_unittest import *
-from parser_exposure_portfolio_unittest import *
+from parser_exposure_model_unittest import *
 from parser_hazard_curve_unittest import *
 from parser_hazard_map_unittest import *
 from parser_vulnerability_model_unittest import *

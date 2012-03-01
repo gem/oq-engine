@@ -52,7 +52,7 @@ CONFIG_FILE = "config.gem"
 CONFIG_WITH_INCLUDES = "config_with_includes.gem"
 HAZARD_ONLY = "hazard-config.gem"
 
-REGION_EXPOSURE_TEST_FILE = "ExposurePortfolioFile-helpers.region"
+REGION_EXPOSURE_TEST_FILE = "ExposureModelFile-helpers.region"
 BLOCK_SPLIT_TEST_FILE = "block_split.gem"
 REGION_TEST_FILE = "small.region"
 
