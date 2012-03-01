@@ -101,7 +101,8 @@ class ExposureModelFileTestCase(unittest.TestCase):
               "stco": 250000.0,
               "stcoType": "aggregated",
               "stcoUnit": "USD",
-              "taxonomy": "RC/DMRF-D/HR"}
+              "taxonomy": "RC/DMRF-D/HR",
+              "taxonomySource": "Pavia taxonomy"}
             )]
 
         ctr = None
