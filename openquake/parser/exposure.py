@@ -136,6 +136,10 @@ class ExposureModelFile(producer.FileProducer):
                 if desc is not None:
                     self._current_meta['listDescription'] = str(desc.text)
 
+                taxsrc = element.find('%staxonomySource' % NRML)
+                if taxsrc is not None:
+                    self._current_meta['taxonomySource'] = str(taxsrc.text)
+
                 asset_category = str(element.get('assetCategory'))
                 self._current_meta['assetCategory'] = asset_category
 
