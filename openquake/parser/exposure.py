@@ -82,8 +82,8 @@ def _to_occupancy(element):
     return occupancy_data
 
 
-class ExposurePortfolioFile(producer.FileProducer):
-    """ This class parses an ExposurePortfolio XML (part of riskML?) file.
+class ExposureModelFile(producer.FileProducer):
+    """ This class parses an ExposureModel XML (part of riskML?) file.
     The contents of such a file is meant to be used as input for the risk
     engine. The class is implemented as a generator.
     For each 'AssetInstance' element in the parsed
@@ -107,7 +107,7 @@ class ExposurePortfolioFile(producer.FileProducer):
     """
 
     def __init__(self, path):
-        super(ExposurePortfolioFile, self).__init__(path)
+        super(ExposureModelFile, self).__init__(path)
 
     def _parse(self):
         try:
