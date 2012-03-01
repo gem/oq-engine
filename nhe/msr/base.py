@@ -28,7 +28,8 @@ class BaseMSR(object):
     @abc.abstractmethod
     def get_std_dev_area(self, mag, rake):
         """
-        Return the standard deviation given magnitude ``mag`` and rake.
+        Return the standard deviation of the area distribution
+        given magnitude ``mag`` and rake.
 
         To be overridden by subclasses.
 
