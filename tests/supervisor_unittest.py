@@ -100,6 +100,8 @@ class SupervisorTestCase(unittest.TestCase):
         start_patch('openquake.supervising.supervisor'
                '.update_job_status_and_error_msg')
 
+        logging.root.setLevel(logging.CRITICAL)
+
     def tearDown(self):
         # Stop all the started patches
         for patcher in self.patchers:
