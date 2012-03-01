@@ -22,7 +22,6 @@
 Tests for the serialization of loss/loss ratio curves to NRML format.
 """
 
-import os
 import unittest
 
 from lxml import etree
