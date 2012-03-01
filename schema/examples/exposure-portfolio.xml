@@ -3,8 +3,8 @@
       xmlns="http://openquake.org/xmlns/nrml/0.3"
       gml:id="n1">
 
-    <!-- exposurePortfolio is a gml:Feature -->
-    <exposurePortfolio gml:id="ep1">
+    <!-- exposureModel is a gml:Feature -->
+    <exposureModel gml:id="ep1">
         <config/>
 
         <!--
@@ -79,5 +79,5 @@
             </assetDefinition>
 
         </exposureList>
-    </exposurePortfolio>
+    </exposureModel>
 </nrml>
