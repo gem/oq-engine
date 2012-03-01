@@ -30,6 +30,12 @@ class ExposureDBWriter(object):
     Serialize the exposure model to database
     """
 
+    model_attrs = [
+        ("area_type", "areaType"), ("area_unit", "areaUnit"),
+        ("coco_type", "cocoType"), ("coco_unit", "cocoUnit"),
+        ("reco_type", "recoType"), ("reco_unit", "recoUnit"),
+        ("stco_type", "stcoType"), ("stco_unit", "stcoUnit")]
+
     def __init__(self, input_set, path, owner=None):
         """Create a new serializer for the specified user"""
         qargs = dict(input_type="exposure", path=path)
@@ -69,12 +75,9 @@ class ExposureDBWriter(object):
             self.model = models.ExposureModel(
                 owner=self.owner, input=self.input,
                 description=values.get("listDescription"),
+                taxonomy_source=values.get("taxonomySource"),
                 category=values["assetCategory"])
-            for key, tag in [
-                ("area_type", "areaType"), ("area_unit", "areaUnit"),
-                ("coco_type", "cocoType"), ("coco_unit", "cocoUnit"),
-                ("reco_type", "recoType"), ("reco_unit", "recoUnit"),
-                ("stco_type", "stcoType"), ("stco_unit", "stcoUnit")]:
+            for key, tag in self.model_attrs:
                 value = values.get(tag)
                 if value:
                     setattr(self.model, key, value)
