@@ -146,11 +146,16 @@ def create_job(params, **kwargs):
     return CalculationProxy(params, job_id, **kwargs)
 
 
-def run_job(config_file, **kw_params):
+def run_job(config_file, params=None):
     """Given a path to a config file, run openquake as a separate process using
     `subprocess`.
 
     This function blocks until the openquake job has concluded.
+
+    :param str config_file:
+        Path to the calculation config file.
+    :param list params:
+        List of additional command line params to bin/openquake. Optional.
 
     :returns:
         The return code of the subprocess.
@@ -158,10 +163,10 @@ def run_job(config_file, **kw_params):
         If the return code is not 0, a
         :exception:`subprocess.CalledProcessError` is raised.
     """
-    params = ["bin/openquake", "--config-file=" + config_file]
-    if kw_params:
-        params.extend(["--%s=%s" % p for p in kw_params.iteritems()])
-    return subprocess.check_call(params)
+    args = ["bin/openquake", "--config-file=" + config_file]
+    if not params is None:
+        args.extend(params)
+    return subprocess.check_call(args)
 
 
 def store_hazard_logic_trees(a_job):
