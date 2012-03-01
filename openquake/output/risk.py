@@ -558,7 +558,7 @@ class BaseCurveXMLWriter(nrml.TreeNRMLWriter):
 
         self.result_el = None
 
-    def write(self, point, values):
+    def write(self, point, _values):
         if self.root_node is None:
             # nrml:nrml, needs gml:id
             self._create_root_element()
