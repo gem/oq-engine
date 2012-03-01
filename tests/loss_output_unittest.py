@@ -30,9 +30,10 @@ from lxml import etree
 from openquake import nrml
 from openquake import shapes
 from openquake import xml
-from tests.utils import helpers
-
+from openquake.db import models
 from openquake.output import risk as risk_output
+
+from tests.utils import helpers
 
 
 LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
@@ -73,33 +74,27 @@ class LossOutputTestCase(unittest.TestCase):
         first_site = shapes.Site(-117.0, 38.0)
         second_site = shapes.Site(-118.0, 39.0)
 
-        first_asset_a = {"assetID": "a1711", "endBranchLabel": "A"}
-        first_asset_b = {"assetID": "a1711", "endBranchLabel": "B"}
-        second_asset_a = {"assetID": "a1712", "endBranchLabel": "A"}
-        second_asset_b = {"assetID": "a1712", "endBranchLabel": "B"}
+        first_asset = models.ExposureData(asset_ref='a1711')
+        second_asset = models.ExposureData(asset_ref='a1712')
 
         self.loss_curves = [
-            (first_site, (TEST_LOSS_CURVE, first_asset_a)),
-            (first_site, (TEST_LOSS_CURVE, first_asset_b)),
-            (second_site, (TEST_LOSS_CURVE, second_asset_a)),
-            (second_site, (TEST_LOSS_CURVE, second_asset_b))]
+            (first_site, (TEST_LOSS_CURVE, first_asset)),
+            (second_site, (TEST_LOSS_CURVE, second_asset))]
 
         self.loss_ratio_curves = [
-            (first_site, (TEST_LOSS_RATIO_CURVE, first_asset_a)),
-            (first_site, (TEST_LOSS_RATIO_CURVE, first_asset_b)),
-            (second_site, (TEST_LOSS_RATIO_CURVE, second_asset_a)),
-            (second_site, (TEST_LOSS_RATIO_CURVE, second_asset_b))]
+            (first_site, (TEST_LOSS_RATIO_CURVE, first_asset)),
+            (second_site, (TEST_LOSS_RATIO_CURVE, second_asset))]
 
         self.single_loss_curve = [
-            (first_site, (TEST_LOSS_CURVE, first_asset_a))]
+            (first_site, (TEST_LOSS_CURVE, first_asset))]
 
         self.single_loss_ratio_curve = [
-            (first_site, (TEST_LOSS_RATIO_CURVE, first_asset_a))]
+            (first_site, (TEST_LOSS_RATIO_CURVE, first_asset))]
 
         # loss curve that fails with inconsistent sites for an asset
         self.loss_curves_fail = [
-            (first_site, (TEST_LOSS_CURVE, first_asset_a)),
-            (second_site, (TEST_LOSS_CURVE, first_asset_a))]
+            (first_site, (TEST_LOSS_CURVE, first_asset)),
+            (second_site, (TEST_LOSS_CURVE, first_asset))]
 
     def test_loss_is_serialized_to_file_and_validates(self):
         """Serialize loss curve to NRML and validate against schema."""
