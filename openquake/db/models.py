@@ -1096,6 +1096,8 @@ class ExposureModel(models.Model):
     name = models.TextField()
     description = models.TextField(null=True)
     category = models.TextField()
+    taxonomy_source = models.TextField(
+        null=True, help_text="the taxonomy system used to classify the assets")
     AREA_CHOICES = (
         (u'aggregated', u'Aggregated area value'),
         (u'per_asset', u'Per asset area value'),
