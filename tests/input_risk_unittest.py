@@ -25,7 +25,7 @@ from openquake.shapes import Site
 from openquake.input.exposure import ExposureDBWriter
 from openquake.output.hazard import GmfDBWriter
 from openquake.output.hazard import HazardCurveDBWriter
-from openquake.parser.exposure import ExposurePortfolioFile
+from openquake.parser.exposure import ExposureModelFile
 from openquake.calculators.risk.classical.core import ClassicalRiskCalculator
 from openquake.calculators.risk.event_based.core import (
     EventBasedRiskCalculator)
@@ -220,7 +220,7 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
                                        self.path)
 
     def test_read_exposure(self):
-        parser = ExposurePortfolioFile(self.path)
+        parser = ExposureModelFile(self.path)
 
         # call tested function
         self.writer.serialize(parser)
@@ -253,6 +253,8 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
 
         self.assertEqual("aggregated", model.stco_type)
         self.assertEqual("USD", model.stco_unit)
+
+        self.assertEqual("Pavia taxonomy", model.taxonomy_source)
 
         # check asset instances
         assets = sorted(model.exposuredata_set.all(), key=lambda e: e.value)

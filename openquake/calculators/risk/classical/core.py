@@ -335,7 +335,7 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
         :type loss_ratio_curve: :py:class `openquake.shapes.Curve`
         :param asset: the asset for which to compute the loss curve
         :type asset: :py:class:`dict` as provided by
-               :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
+               :py:class:`openquake.parser.exposure.ExposureModelFile`
         """
 
         loss_curve = compute_loss_curve(loss_ratio_curve, asset.value)
@@ -355,7 +355,7 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
         :type point: :py:class:`openquake.shapes.GridPoint`
         :param asset: the asset used to compute the loss curve
         :type asset: :py:class:`dict` as provided by
-            :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
+            :py:class:`openquake.parser.exposure.ExposureModelFile`
         :param hazard_curve: the hazard curve used to compute the
             loss ratio curve
         :type hazard_curve: :py:class:`openquake.shapes.Curve`
