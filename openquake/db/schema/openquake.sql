@@ -1400,6 +1400,8 @@ CREATE TABLE oqmif.exposure_model (
     input_id INTEGER,
     name VARCHAR NOT NULL,
     description VARCHAR,
+    -- the taxonomy system used to classify the assets
+    taxonomy_source VARCHAR,
     -- e.g. "buildings", "bridges" etc.
     category VARCHAR NOT NULL,
 
