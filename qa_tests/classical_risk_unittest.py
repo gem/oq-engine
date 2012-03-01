@@ -34,6 +34,8 @@ class ClassicalRiskQATestCase(unittest.TestCase):
     def test_classical_psha_based_risk(self):
         """Run the full hazard+risk job, serialize all results to the db,
         and verify them against expected values."""
+        output_dir = helpers.demo_file(
+            'classical_psha_based_risk/computed_output')
 
         expected_lc_poes = [
             0.03944,
@@ -69,8 +71,10 @@ class ClassicalRiskQATestCase(unittest.TestCase):
             0.00001,
         ]
 
-        helpers.run_job(helpers.demo_file(
-            os.path.join('classical_psha_based_risk', 'config.gem')))
+        cls_risk_cfg = helpers.demo_file(
+            'classical_psha_based_risk/config.gem')
+        ret_code = helpers.run_job(cls_risk_cfg, ['--output-type=xml'])
+        self.assertEquals(0, ret_code)
 
         calculation = OqCalculation.objects.latest('id')
         self.assertEqual('succeeded', calculation.status)
@@ -80,3 +84,14 @@ class ClassicalRiskQATestCase(unittest.TestCase):
 
         self.assertTrue(numpy.allclose(expected_lc_poes, loss_curve.poes,
                                        atol=0.0009))
+
+        # Now check that we output the expected XML files:
+        expected_files = [
+            'hazardcurve-0.xml',
+            'hazardcurve-mean.xml',
+            'losscurves-block-#%s-block#0.xml' % calculation.id,
+            'losscurves-loss-block-#%s-block#0.xml' % calculation.id,
+        ]
+
+        for f in expected_files:
+            self.assertTrue(os.path.exists(os.path.join(output_dir, f)))
