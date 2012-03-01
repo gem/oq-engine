@@ -100,6 +100,8 @@ class SupervisorTestCase(unittest.TestCase):
         start_patch('openquake.supervising.supervisor'
                '.update_job_status_and_error_msg')
 
+        logging.root.setLevel(logging.CRITICAL)
+
     def tearDown(self):
         # Stop all the started patches
         for patcher in self.patchers:
@@ -202,7 +204,7 @@ class SupervisorTestCase(unittest.TestCase):
         self.assertEqual(1,
                             self.update_job_status_and_error_msg.call_count)
         self.assertEqual(
-            ((123, 'failed', 'Process 1 not running, probably crashed'), {}),
+            ((123, 'failed', 'job process 1 crashed or terminated'), {}),
             self.update_job_status_and_error_msg.call_args)
 
 
