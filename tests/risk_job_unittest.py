@@ -47,7 +47,7 @@ class EpsilonTestCase(unittest.TestCase, helpers.DbTestCase):
         inputs = [("exposure", path)]
         self.job = self.setup_classic_job(inputs=inputs)
         writer = ExposureDBWriter(self.job.oq_job_profile.input_set, path)
-        exposure_parser = exposure.ExposurePortfolioFile(path)
+        exposure_parser = exposure.ExposureModelFile(path)
         writer.serialize(exposure_parser)
         self.model = writer.model
         self.epsilon_provider = general.EpsilonProvider(dict())

@@ -44,7 +44,7 @@ class ExposureDBWriter(object):
     def serialize(self, iterator):
         """
         Serialize a list of values produced by
-        :class:`openquake.parser.exposure.ExposurePortfolioFile`
+        :class:`openquake.parser.exposure.ExposureModelFile`
 
         :type iterator: any iterable
         """
@@ -60,7 +60,7 @@ class ExposureDBWriter(object):
         :param list occupancy: a potentially empty list of named tuples
             each having an 'occupants' and a 'description' property
         :param values: dictionary of values (see
-            :class:`openquake.parser.exposure.ExposurePortfolioFile`)
+            :class:`openquake.parser.exposure.ExposureModelFile`)
 
         it also inserts the main exposure model entry if not already
         present,
