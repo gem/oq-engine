@@ -348,7 +348,7 @@ def read_sites_from_exposure(calc_proxy):
     path = os.path.join(calc_proxy.base_path,
                         calc_proxy.params[jobconf.EXPOSURE])
 
-    reader = exposure.ExposurePortfolioFile(path)
+    reader = exposure.ExposureModelFile(path)
     constraint = calc_proxy.region
 
     logs.LOG.debug(
@@ -740,11 +740,12 @@ def run_calculation(job_profile, params, sections, output_type='db',
     supervisor_pid = os.fork()
     if not supervisor_pid:
         # supervisor process
+        logs.set_logger_level(logs.logging.root, log_level)
         supervisor_pid = os.getpid()
         calculation.supervisor_pid = supervisor_pid
         calculation.job_pid = calc_pid
         calculation.save()
-        supervisor.supervise(calc_pid, calculation.id, log_level)
+        supervisor.supervise(calc_pid, calculation.id)
         return
 
     # parent process

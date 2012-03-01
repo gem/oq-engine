@@ -45,6 +45,7 @@ from openquake.db.models import OqCalculation, ErrorMsg, CalcStats
 from openquake import supervising
 from openquake import kvs
 from openquake import logs
+from openquake.utils import stats
 
 
 def ignore_sigint():
@@ -163,6 +164,10 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
        - handling its "critical" and "error" messages
        - periodically checking that the job process is still running
     """
+    # Failure counter check delay, translates to 20 seconds with the current
+    # settings.
+    FCC_DELAY = 20
+
     def __init__(self, job_id, job_pid, timeout=1):
         self.selflogger = logging.getLogger('oq.job.%s.supervisor' % job_id)
         self.selflogger.info('Entering supervisor for job %s', job_id)
@@ -176,6 +181,8 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
         self.jobhandler = logging.Handler(logging.ERROR)
         self.jobhandler.emit = self.log_callback
         self.joblogger.addHandler(self.jobhandler)
+        # Failure counter check delay value
+        self.fcc_delay_value = 0
 
     def run(self):
         """
@@ -193,6 +200,14 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
         """
         Handles messages of severe level from the supervised job.
         """
+        if record.name == self.selflogger.name:
+            # ignore error log messages sent by selflogger.
+            # this way we don't try to kill the job if its
+            # process has crashed (or has been stopped).
+            # we emit selflogger's error messages from
+            # timeout_callback().
+            return
+
         terminate_job(self.job_pid)
 
         update_job_status_and_error_msg(self.job_id, 'failed',
@@ -206,32 +221,51 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
 
     def timeout_callback(self):
         """
-        On timeout expiration check if the job process is still running, and
-        act accordingly if not.
+        On timeout expiration check if the job process is still running
+        and whether it experienced any failures.
+
+        Terminate the job process in the latter case.
         """
+        def failure_counters_need_check():
+            """Return `True` if failure counters should be checked."""
+            self.fcc_delay_value += 1
+            result = self.fcc_delay_value >= self.FCC_DELAY
+            if result:
+                self.fcc_delay_value = 0
+            return result
+
+        process_stopped = job_failed = False
+        message = None
+
         if not supervising.is_pid_running(self.job_pid):
-            self.selflogger.info('Process %s not running', self.job_pid)
+            message = ('job process %s crashed or terminated' % self.job_pid)
+            process_stopped = True
+        elif failure_counters_need_check():
+            # Job process is still running.
+            failures = stats.failure_counters(self.job_id)
+            if failures:
+                terminate_job(self.job_pid)
+                message = "job terminated with failures: %s" % failures
+                job_failed = True
 
-            # see what status was left in the database by the exited job
+        if job_failed or process_stopped:
             job_status = get_job_status(self.job_id)
-
-            self.selflogger.info('job finished with status %r', job_status)
-
-            if job_status != 'succeeded':
-                if job_status == 'running':
-                    # The job crashed without having a chance to update the
-                    # status in the database.  We do it here.
-                    update_job_status_and_error_msg(self.job_id, 'failed',
-                                                    'crash')
+            if process_stopped and job_status == 'succeeded':
+                message = 'job process %s succeeded' % self.job_pid
+                self.selflogger.info(message)
+            elif job_status == 'running':
+                # The job crashed without having a chance to update the
+                # status in the database, or it has been running even though
+                # there were failures. We update the job status here.
+                self.selflogger.error(message)
+                update_job_status_and_error_msg(self.job_id, 'failed', message)
 
             record_job_stop_time(self.job_id)
-
             cleanup_after_job(self.job_id)
-
             raise StopIteration()
 
 
-def supervise(pid, job_id, log_level, timeout=1):
+def supervise(pid, job_id, timeout=1):
     """
     Supervise a job process, entering a loop that ends only when the job
     terminates.
@@ -251,7 +285,6 @@ def supervise(pid, job_id, log_level, timeout=1):
     ignore_sigint()
 
     logging.root.addHandler(SupervisorLogHandler(job_id))
-    logs.set_logger_level(logging.root, log_level)
 
     supervisor = SupervisorLogMessageConsumer(job_id, pid, timeout)
     supervisor.run()
