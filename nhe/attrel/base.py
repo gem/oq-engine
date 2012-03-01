@@ -361,3 +361,178 @@ class AttRelContext(object):
         # distance parameters
         'dist_rrup dist_rx dist_rjb dist_ztor'
     ).split()
+
+
+class CoeffsTable(object):
+    r"""
+    TODO: write me
+
+    Tables are tolerable to whitespaces:
+
+    >>> ct = CoeffsTable(' imt a    b   c    d  \n'
+    ...                  ' pga 1   2.4 -5   0.01 \n'
+    ...                  ' pgd 7.6 12   0   44.1 \n ')
+
+    The first column in the table must be named "IMT" (or "imt"):
+
+    >>> ct = CoeffsTable('imf z\n' 'pga 1')
+    Traceback (most recent call last):
+        ...
+    ValueError: first column in a table must be IMT
+
+    Names of other columns are used as coefficients dicts keys. The values
+    in the first column should correspond to real intensity measure types,
+    see :mod:`nhe.imt`:
+
+    >>> ct = CoeffsTable('imt z\n' 'pgx 2')
+    Traceback (most recent call last):
+        ...
+    ValueError: unknown IMT 'PGX'
+
+    Table objects could be indexed by IMT objects (this returns a dictionary
+    of coefficients):
+
+    >>> from nhe import imt
+    >>> ct[imt.PGA()] == dict(a=1, b=2.4, c=-5, d=0.01)
+    True
+    >>> ct[imt.PGD()] == dict(a=7.6, b=12, c=0, d=44.1)
+    True
+    >>> ct[imt.PGV()]  # doctest: +ELLIPSIS
+    Traceback (most recent call last):
+        ...
+    KeyError: <nhe.imt.PGV object at 0x...>
+
+    Separate tables can be merged one into another, see :meth:`merge`:
+
+    >>> ct2 = CoeffsTable('imt x\n' 'pgv 10')
+    >>> ct.merge(ct2)  # here we merge ct2 into ct,
+    >>> ct[imt.PGV()]  # so ct now has coeffs for PGV
+    {'x': 10.0}
+    """
+    _METACOLUMNS = ['IMT']
+
+    _IMT_CLASSES_BY_NAME = dict((cls.__name__, cls)
+                                for cls in imt_module._IMT.__subclasses__())
+
+    def __init__(self, table):
+        table = table.splitlines()
+        header = table.pop(0).split()
+        meta = slice(len(self._METACOLUMNS))
+        data = slice(len(self._METACOLUMNS), None)
+        metacolumns = header[meta]
+        if not [col.upper() for col in metacolumns] == self._METACOLUMNS:
+            if len(self._METACOLUMNS) == 1:
+                raise ValueError('first column in a table must be %s' %
+                                 tuple(self._METACOLUMNS))
+            else:
+                raise ValueError('first %s columns must be %s' %
+                                 (len(self._METACOLUMNS),
+                                  (', '.join(self._METACOLUMNS)).lower()))
+        coeff_names = header[data]
+        coeffs = {}
+        for row in table:
+            row = row.split()
+            if not row:
+                continue
+            imt = self._imt_from_metacolumns(*row[meta])
+            coeffs[imt] = dict(zip(coeff_names, map(float, row[data])))
+        self.coeffs = coeffs
+
+    def _imt_from_metacolumns(self, imt_name):
+        imt_name = imt_name.upper()
+        if not imt_name in self._IMT_CLASSES_BY_NAME:
+            raise ValueError('unknown IMT %r' % imt_name)
+        return self._IMT_CLASSES_BY_NAME[imt_name]()
+
+    def __getitem__(self, imt):
+        return self.coeffs[imt]
+
+    def merge(self, other_table):
+        # TODO: document
+        self.coeffs.update(other_table.coeffs)
+
+
+class SACoeffsTable(CoeffsTable):
+    """
+    TODO: write me
+
+    Tables for spectral acceleration are created the same way
+    as :class:`CoeffsTable`, the only difference is that first two columns
+    should be "period" and "damping" -- these values are used for creating
+    :class:`~nhe.imt.SA` object corresponding to the row.
+
+    >>> ct = SACoeffsTable('''period damping alpha beta
+    ...                       10.0     5      0.1  -10.3
+    ...                       20.0     5      1.1  -20.3
+    ...                       11.0    10      4     0
+    ...                       19.0    10      40  -30''')
+    >>> SACoeffsTable('''period foo bar
+    ...                   1     2    3''')
+    Traceback (most recent call last):
+        ...
+    ValueError: first 2 columns must be period, damping
+
+    For exact values of period and damping indexing of:class:`SACoeffsTable`
+    works the same way as :class:`CoeffsTable`, just returns the coefficients
+    dictionary:
+
+    >>> from nhe.imt import SA
+    >>> ct[SA(period=10, damping=5)] == {'alpha': 0.1, 'beta': -10.3}
+    True
+    >>> ct[SA(period=19, damping=10)] == {'alpha': 40.0, 'beta': -30.0}
+    True
+
+    Table of coefficients for spectral acceleration could be indexed
+    by instances of :class:`nhe.imt.SA` with period value that is not specified
+    in the table. The coefficients then get interpolated between the ones for
+    closest higher and closest lower period. That scaling of coefficients works
+    only within the same damping:
+
+    >>> ct[SA(period=11, damping=5)] == {'alpha': 0.2, 'beta': -11.3}
+    True
+    >>> ct[SA(period=15, damping=5)] == {'alpha': 0.6, 'beta': -15.3}
+    True
+
+    Extrapolation is not possible:
+
+    >>> ct[SA(period=0.5, damping=5)]
+    Traceback (most recent call last):
+        ...
+    KeyError: 'could not find nor scale coeffs for damping 5 and period 0.5'
+    """
+    _METACOLUMNS = ['PERIOD', 'DAMPING']
+
+    def _imt_from_metacolumns(self, period, damping):
+        return imt_module.SA(float(period), float(damping))
+
+    def __getitem__(self, imt):
+        if imt in self.coeffs:
+            return self.coeffs[imt]
+
+        max_below = min_above = None
+        for unscaled_imt in self.coeffs.keys():
+            if unscaled_imt.damping != imt.damping:
+                continue
+            if unscaled_imt.period > imt.period:
+                if min_above is None or unscaled_imt.period < min_above.period:
+                    min_above = unscaled_imt
+            elif unscaled_imt.period < imt.period:
+                if max_below is None or unscaled_imt.period > max_below.period:
+                    max_below = unscaled_imt
+        if max_below is None or min_above is None:
+            raise KeyError(
+                'could not find nor scale coeffs for damping %s and period %s'
+                % (imt.damping, imt.period)
+            )
+
+        # ratio tends to 1 when target period tends to a minimum
+        # known period above and to 0 if target period is close
+        # to maximum period below.
+        ratio = (imt.period - max_below.period) / (min_above.period
+                                                   - max_below.period)
+        max_below = self.coeffs[max_below]
+        min_above = self.coeffs[min_above]
+        return dict(
+            (co, (min_above[co] - max_below[co]) * ratio + max_below[co])
+            for co in max_below.keys()
+        )
