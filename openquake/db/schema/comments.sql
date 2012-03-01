@@ -237,6 +237,7 @@ COMMENT ON COLUMN oqmif.exposure_model.reco_type IS 'retrofitting cost type, one
 COMMENT ON COLUMN oqmif.exposure_model.reco_unit IS 'unit of measure for the retrofitting type';
 COMMENT ON COLUMN oqmif.exposure_model.stco_type IS 'structural cost type, one of: aggregated, per_area or per_asset';
 COMMENT ON COLUMN oqmif.exposure_model.stco_unit IS 'unit of measure for the structural type';
+COMMENT ON COLUMN oqmif.exposure_model.taxonomy_source IS 'the taxonomy system used to classify the assets';
 
 
 COMMENT ON TABLE oqmif.occupancy IS 'Occupancy for a given exposure data set';
