@@ -3,8 +3,8 @@
       xmlns="http://openquake.org/xmlns/nrml/0.3"
       gml:id="n1">
 
-    <!-- exposurePortfolio is a gml:Feature -->
-    <exposurePortfolio gml:id="ep1">
+    <!-- exposureModel is a gml:Feature -->
+    <exposureModel gml:id="ep1">
         <config/>
 
         <!--
@@ -21,6 +21,8 @@
         <exposureList gml:id="PAV01" areaType="per_asset" areaUnit="GBP" assetCategory="buildings" cocoType="per_area" cocoUnit="CHF" recoType="aggregated" recoUnit="EUR" stcoType="aggregated" stcoUnit="USD">
 
             <gml:description>Collection of existing building in downtown Pavia</gml:description>
+
+            <taxonomySource>Pavia taxonomy</taxonomySource>
 
             <!-- assetDefinition is a gml:Feature -->
             <assetDefinition gml:id="asset_01">
@@ -79,5 +81,5 @@
             </assetDefinition>
 
         </exposureList>
-    </exposurePortfolio>
+    </exposureModel>
 </nrml>
