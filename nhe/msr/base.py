@@ -20,7 +20,7 @@ class BaseMSR(object):
         To be overridden by subclasses.
 
         :param mag:
-            Moment magnitude (Mw)
+            Moment magnitude (Mw).
         :param rake:
             Rake angle (the rupture propagation direction) in degrees,
             from -180 to 180.
@@ -34,7 +34,7 @@ class BaseMSR(object):
         To be overridden by subclasses.
 
         :param mag:
-            Moment magnitude (Mw)
+            Moment magnitude (Mw).
         :param rake:
             Rake angle (the rupture propagation direction) in degrees,
             from -180 to 180.
