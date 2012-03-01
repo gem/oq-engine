@@ -22,6 +22,8 @@
 
             <gml:description>Collection of existing building in downtown Pavia</gml:description>
 
+            <taxonomySource>Pavia taxonomy</taxonomySource>
+
             <!-- assetDefinition is a gml:Feature -->
             <assetDefinition gml:id="asset_01">
                 <site>

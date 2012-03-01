@@ -26,6 +26,7 @@
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
+                    <xs:element name="taxonomySource" minOccurs="0" maxOccurs="1" type="xs:string"/>
                     <xs:element ref="assetDefinition" minOccurs="0" maxOccurs="unbounded"/>
                 </xs:sequence>
                 <xs:attribute name="assetCategory" type="AssetCategory" use="required"/>
