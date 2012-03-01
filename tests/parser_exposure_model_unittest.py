@@ -32,11 +32,11 @@ INVALID_TEST_FILE = helpers.get_data_path("invalid/small_exposure.xml")
 MISMATCHED_TEST_FILE = "examples/source-model.xml"
 
 
-class ExposurePortfolioFileTestCase(unittest.TestCase):
+class ExposureModelFileTestCase(unittest.TestCase):
 
     def test_schema_validation(self):
         def _parse_exposure(path):
-            ep = exposure.ExposurePortfolioFile(path)
+            ep = exposure.ExposureModelFile(path)
 
             # force parsing the whole file
             for e in ep:
@@ -54,7 +54,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
         # set region in which no site is found in input file
         region_constraint = shapes.RegionConstraint.from_simple((170.0, -80.0),
                                                                 (175.0, -85.0))
-        ep = exposure.ExposurePortfolioFile(
+        ep = exposure.ExposureModelFile(
             os.path.join(helpers.SCHEMA_EXAMPLES_DIR, TEST_FILE))
         ctr = None
 
@@ -75,7 +75,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
         # 9.15333 45.12200
         region_constraint = shapes.RegionConstraint.from_simple(
             (9.15332, 45.12201), (9.15334, 45.12199))
-        ep = exposure.ExposurePortfolioFile(
+        ep = exposure.ExposureModelFile(
             os.path.join(helpers.SCHEMA_EXAMPLES_DIR, TEST_FILE))
 
         expected_result = [
@@ -101,7 +101,8 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
               "stco": 250000.0,
               "stcoType": "aggregated",
               "stcoUnit": "USD",
-              "taxonomy": "RC/DMRF-D/HR"}
+              "taxonomy": "RC/DMRF-D/HR",
+              "taxonomySource": "Pavia taxonomy"}
             )]
 
         ctr = None
@@ -129,7 +130,7 @@ class ExposurePortfolioFileTestCase(unittest.TestCase):
         # specified rectangle contains all sites in example file
         region_constraint = shapes.RegionConstraint.from_simple(
             (9.14776, 45.18000), (9.15334, 45.12199))
-        ep = exposure.ExposurePortfolioFile(
+        ep = exposure.ExposureModelFile(
             os.path.join(helpers.SCHEMA_EXAMPLES_DIR, TEST_FILE))
 
         expected_result_ctr = 3

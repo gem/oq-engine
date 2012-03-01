@@ -222,7 +222,7 @@ class BaseRiskCalculator(Calculator):
         [emdl] = input_set.input_set.filter(input_type="exposure")
         path = os.path.join(self.calc_proxy.base_path, emdl.path)
 
-        exposure_parser = exposure.ExposurePortfolioFile(path)
+        exposure_parser = exposure.ExposureModelFile(path)
         writer = ExposureDBWriter(input_set, path)
         writer.serialize(exposure_parser)
 
@@ -1036,7 +1036,7 @@ def compute_loss_ratio_curve(vuln_function, gmf_set,
     :type epsilon_provider: object that defines an :py:meth:`epsilon` method
     :param asset: the asset used to compute the loss ratios.
     :type asset: :py:class:`dict` as provided by
-        :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
+        :py:class:`openquake.parser.exposure.ExposureModelFile`
     :param int loss_histogram_bins:
         The number of bins to use in the computed loss histogram.
     """
