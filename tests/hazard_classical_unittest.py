@@ -25,16 +25,18 @@ import mock
 import os
 import unittest
 
+from openquake.calculators.hazard.classical import core as classical
+from openquake.calculators.hazard.general import create_java_cache
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
-from openquake.calculators.hazard.classical import core as classical
-from openquake.calculators.hazard.general import create_java_cache
+from openquake.utils import stats
 
 from tests.utils.helpers import (patch, TestStore, demo_file,
                                  create_job)
 from tests.utils.tasks import (
-    test_async_data_reflector, test_compute_hazard_curve, test_data_reflector)
+    fake_compute_hazard_curve, test_async_data_reflector,
+    test_compute_hazard_curve, test_data_reflector)
 
 LOG = logs.LOG
 
@@ -81,7 +83,8 @@ class DoCurvesTestCase(unittest.TestCase):
             CALCULATION_MODE='Hazard',
             SOURCE_MODEL_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_SRC_MODEL_LT,
             GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
-            BASE_PATH=SIMPLE_FAULT_BASE_PATH)
+            BASE_PATH=SIMPLE_FAULT_BASE_PATH, OUTPUT_DIR="output",
+            NUMBER_OF_LOGIC_TREE_SAMPLES=2, WIDTH_OF_MFD_BIN=1)
 
         self.calc_proxy = create_job(params)
         self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
@@ -94,8 +97,6 @@ class DoCurvesTestCase(unittest.TestCase):
             self.keys.append(key)
         LOG.debug("keys = '%s'" % self.keys)
 
-        self.calc_proxy.params = dict(NUMBER_OF_LOGIC_TREE_SAMPLES=2,
-                                 WIDTH_OF_MFD_BIN=1)
         self.calculator.calc = self.FakeLogicTreeProcessor()
         self.calculator.cache = dict()
 
@@ -120,6 +121,21 @@ class DoCurvesTestCase(unittest.TestCase):
         self.calculator.do_curves(self.sites, 2, serializer=fake_serializer,
                              the_task=test_compute_hazard_curve)
         self.assertEqual(2, fake_serializer.number_of_calls)
+
+    def test_serializer_aborts_on_failure(self):
+        # The task function used here raises an exception, the serializer
+        # should abort on that failure.
+        stats.delete_job_counters(self.calc_proxy.job_id)
+        try:
+            self.calculator.do_curves(
+                self.sites, 2,
+                self.calculator.serialize_hazard_curve_of_realization,
+                fake_compute_hazard_curve)
+        except RuntimeError, err:
+            self.assertTrue("h/fake_compute_hazard_curve-failures" in
+                            err.args[0])
+        else:
+            self.fail("RuntimeError not raised")
 
 
 class DoMeansTestCase(unittest.TestCase):
