@@ -348,7 +348,7 @@ def read_sites_from_exposure(calc_proxy):
     path = os.path.join(calc_proxy.base_path,
                         calc_proxy.params[jobconf.EXPOSURE])
 
-    reader = exposure.ExposurePortfolioFile(path)
+    reader = exposure.ExposureModelFile(path)
     constraint = calc_proxy.region
 
     logs.LOG.debug(
