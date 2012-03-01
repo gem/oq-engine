@@ -234,30 +234,35 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
                 self.fcc_delay_value = 0
             return result
 
-        we_should_stop = False
-        error_message = None
+        process_stopped = job_failed = False
+        message = None
 
         if not supervising.is_pid_running(self.job_pid):
-            error_message = ('Process %s not running, probably crashed'
-                             % self.job_pid)
-            we_should_stop = True
+            process_stopped = True
         elif failure_counters_need_check():
             # Job process is still running.
             failures = stats.failure_counters(self.job_id)
             if failures:
                 terminate_job(self.job_pid)
-                error_message = ("job terminated with failures: %s" % failures)
-                we_should_stop = True
+                message = "job terminated with failures: %s" % failures
+                job_failed = True
 
-        if we_should_stop:
-            self.selflogger.error(error_message)
+        if job_failed or process_stopped:
             job_status = get_job_status(self.job_id)
-            if job_status != 'succeeded':
-                if job_status == 'running':
-                    # The job crashed without having a chance to update the
-                    # status in the database.  We do it here.
-                    update_job_status_and_error_msg(self.job_id, 'failed',
-                                                    error_message)
+            if process_stopped and job_status == 'succeeded':
+                message = 'job process %s succeeded' % self.job_pid
+                self.selflogger.info(message)
+            elif job_status == 'running':
+                # The job crashed without having a chance to update the
+                # status in the database, or it has been running even though
+                # there were failures. We update the job status here.
+                if process_stopped:
+                    message = ('job process %s crashed or terminated'
+                               % self.job_pid)
+                self.selflogger.error(message)
+                update_job_status_and_error_msg(self.job_id, 'failed',
+                                                message)
+
             record_job_stop_time(self.job_id)
             cleanup_after_job(self.job_id)
             raise StopIteration()
@@ -283,7 +288,6 @@ def supervise(pid, job_id, timeout=1):
     ignore_sigint()
 
     logging.root.addHandler(SupervisorLogHandler(job_id))
-    logging.root.setLevel(logging.NOTSET)
 
     supervisor = SupervisorLogMessageConsumer(job_id, pid, timeout)
     supervisor.run()

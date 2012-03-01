@@ -740,6 +740,7 @@ def run_calculation(job_profile, params, sections, output_type='db',
     supervisor_pid = os.fork()
     if not supervisor_pid:
         # supervisor process
+        logs.set_logger_level(logs.logging.root, log_level)
         supervisor_pid = os.getpid()
         calculation.supervisor_pid = supervisor_pid
         calculation.job_pid = calc_pid
