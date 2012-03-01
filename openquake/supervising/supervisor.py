@@ -254,7 +254,8 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
                 self.selflogger.info(message)
             elif job_status == 'running':
                 # The job crashed without having a chance to update the
-                # status in the database. We do it here.
+                # status in the database, or it has been running even though
+                # there were failures. We update the job status here.
                 if process_stopped:
                     message = ('job process %s crashed or terminated'
                                % self.job_pid)
