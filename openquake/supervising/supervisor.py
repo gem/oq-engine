@@ -238,6 +238,7 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
         message = None
 
         if not supervising.is_pid_running(self.job_pid):
+            message = ('job process %s crashed or terminated' % self.job_pid)
             process_stopped = True
         elif failure_counters_need_check():
             # Job process is still running.
@@ -256,12 +257,8 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
                 # The job crashed without having a chance to update the
                 # status in the database, or it has been running even though
                 # there were failures. We update the job status here.
-                if process_stopped:
-                    message = ('job process %s crashed or terminated'
-                               % self.job_pid)
                 self.selflogger.error(message)
-                update_job_status_and_error_msg(self.job_id, 'failed',
-                                                message)
+                update_job_status_and_error_msg(self.job_id, 'failed', message)
 
             record_job_stop_time(self.job_id)
             cleanup_after_job(self.job_id)
