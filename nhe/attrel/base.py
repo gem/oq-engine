@@ -380,17 +380,22 @@ class AttRelContext(object):
 
 class CoeffsTable(object):
     r"""
-    TODO: write me
+    Instances of :class:`CoeffsTable` encapsulate tables of coefficients
+    corresponding to different IMTs.
 
-    Tables are tolerable to whitespaces:
+    Tables are defined in a space-separated tabular form in a simple string
+    literal (heading and trailing whitespace does not matter):
 
-    >>> ct = CoeffsTable(' imt a    b   c    d  \n'
-    ...                  ' pga 1   2.4 -5   0.01 \n'
-    ...                  ' pgd 7.6 12   0   44.1 \n ')
+    >>> ct = CoeffsTable('''
+    ...     imt  a    b   c    d
+    ...     pga  1   2.4 -5  0.01
+    ...     pgd 7.6  12   0  44.1
+    ... ''')
 
-    The first column in the table must be named "IMT" (or "imt"):
+    The first column in the table must be named "IMT" (or "imt") and thus
+    should represent IMTs:
 
-    >>> ct = CoeffsTable('imf z\n' 'pga 1')
+    >>> ct = CoeffsTable('imf z\n' 'pga 1\n ')
     Traceback (most recent call last):
         ...
     ValueError: first column in a table must be IMT
@@ -417,10 +422,10 @@ class CoeffsTable(object):
         ...
     KeyError: <nhe.imt.PGV object at 0x...>
 
-    Separate tables can be merged one into another, see :meth:`merge`:
+    Separate tables can be merged one into another, see :meth:`update`:
 
     >>> ct2 = CoeffsTable('imt x\n' 'pgv 10')
-    >>> ct.merge(ct2)  # here we merge ct2 into ct,
+    >>> ct.update(ct2)  # here we merge ct2 into ct,
     >>> ct[imt.PGV()]  # so ct now has coeffs for PGV
     {'x': 10.0}
     """
@@ -430,7 +435,7 @@ class CoeffsTable(object):
                                 for cls in imt_module._IMT.__subclasses__())
 
     def __init__(self, table):
-        table = table.splitlines()
+        table = table.strip().splitlines()
         header = table.pop(0).split()
         meta = slice(len(self._METACOLUMNS))
         data = slice(len(self._METACOLUMNS), None)
@@ -460,16 +465,30 @@ class CoeffsTable(object):
         return self._IMT_CLASSES_BY_NAME[imt_name]()
 
     def __getitem__(self, imt):
+        """
+        Return a dictionary of coefficients corresponding to ``imt``.
+
+        :raises KeyError:
+            If ``imt`` is not listed in the original table.
+        """
         return self.coeffs[imt]
 
-    def merge(self, other_table):
-        # TODO: document
+    def update(self, other_table):
+        """
+        Merge values from other instance of :class:`CoeffsTable` into this one.
+        This makes coefficients that were only in ``other_table`` available
+        in the one whose method :meth:`update` was called and override the
+        coefficients that were in both. So it works the same way as python
+        dictionaries' ``update()`` method does.
+        """
         self.coeffs.update(other_table.coeffs)
 
 
 class SACoeffsTable(CoeffsTable):
     """
-    TODO: write me
+    Table of coefficients specific to :class:`spectral acceleration
+    <nhe.imt.SA>` IMT -- considers that SA values are always parametrized
+    by values of period and damping.
 
     Tables for spectral acceleration are created the same way
     as :class:`CoeffsTable`, the only difference is that first two columns
@@ -521,7 +540,16 @@ class SACoeffsTable(CoeffsTable):
         return imt_module.SA(float(period), float(damping))
 
     def __getitem__(self, imt):
-        if imt in self.coeffs:
+        """
+        Works the same as :class:`CoeffsTable` for IMTs other than
+        :class:`~nhe.imt.SA` and for spectral acceleration of known
+        (listed in the table) period and damping.
+
+        If the requested ``imt`` is of type SA and is missing from the
+        table, the linear interpolation across values of the same damping
+        and smallest period above and largest below requested.
+        """
+        if not isinstance(imt, imt_module.SA) or imt in self.coeffs:
             return self.coeffs[imt]
 
         max_below = min_above = None
