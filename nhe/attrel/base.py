@@ -14,13 +14,15 @@ from nhe import imt as imt_module
 
 class AttenuationRelationship(object):
     """
-    Base class for all the Attenuation Relationships --
-    GMPEs (ground motion prediction equations) and IPEs
-    (intensity prediction equations).
+    Base class for all the Attenuation Relationships.
 
-    Subclasses must implement :meth:`get_mean_and_stddevs`
-    and all the class attributes with names starting from
-    ``DEFINED_FOR`` and ``REQUIRES``.
+    This class is not intended to be subclassed directly, instead
+    the actual attenuation relationships should subclass either
+    :class:`GMPE` or :class:`IPE`.
+
+    Subclasses of both must implement :meth:`get_mean_and_stddevs`
+    and all the class attributes with names starting from ``DEFINED_FOR``
+    and ``REQUIRES``.
     """
     __metaclass__ = abc.ABCMeta
 
@@ -216,9 +218,10 @@ class AttenuationRelationship(object):
         if truncation_level == 0:
             # zero truncation mode, just compare imls to mean
             for imt, imls in imts.items():
+                imls = self._convert_imls(imls)
                 mean, _ = self.get_mean_and_stddevs(ctx, imt, [],
                                                     component_type)
-                ret[imt] = (numpy.array(imls) >= mean).astype(float)
+                ret[imt] = (imls >= mean).astype(float)
         else:
             # use real normal distribution
             if (not const.StdDev.TOTAL
@@ -234,13 +237,25 @@ class AttenuationRelationship(object):
                 distribution = scipy.stats.truncnorm(- truncation_level,
                                                      truncation_level)
             for imt, imls in imts.items():
+                imls = self._convert_imls(imls)
                 mean, [stddev] = self.get_mean_and_stddevs(
                     ctx, imt, [const.StdDev.TOTAL], component_type
                 )
-                imls = numpy.array(imls, float)
                 ret[imt] = distribution.sf((imls - mean) / stddev)
 
         return ret
+
+    @abc.abstractmethod
+    def _convert_imls(self, imls):
+        """
+        Convert a list of IML values to a numpy array and convert the actual
+        values with respect to intensity measure distribution (like taking
+        the natural logarithm for :class:`GMPE`).
+
+        This method is implemented by both :class:`GMPE` and :class:`IPE`
+        so there is no need to override it in actual attenuation relationship
+        implementations.
+        """
 
     def make_context(self, site, rupture, distances=None):
         """
@@ -326,6 +341,36 @@ class AttenuationRelationship(object):
             setattr(context, attr, value)
 
         return context
+
+
+class GMPE(AttenuationRelationship):
+    """
+    Ground-Motion Prediction Equation is a subclass of generic
+    :class:`AttenuationRelationship` with a distinct feature that
+    the intensity values are log-normally distributed.
+
+    Method :meth:`~AttenuationRelationship.get_mean_and_stddevs`
+    of actual GMPE implementations is supposed to return the mean
+    value as a natural logarithm of intensity.
+    """
+    def _convert_imls(self, imls):
+        """
+        Returns numpy array of natural logarithms of ``imls``.
+        """
+        return numpy.log(imls)
+
+
+class IPE(AttenuationRelationship):
+    """
+    Intensity Prediction Equation is a subclass of generic
+    :class:`AttenuationRelationship` which is suitable for intensity measures
+    that are normally distributed. In particular, for :class:`~nhe.imt.MMI`.
+    """
+    def _convert_imls(self, imls):
+        """
+        Returns numpy array of ``imls`` without any conversion.
+        """
+        return numpy.array(imls, dtype=float)
 
 
 class AttRelContext(object):

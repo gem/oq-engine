@@ -4,7 +4,7 @@ Module exports :class:`ChiouYoungs2008`.
 from __future__ import division
 from math import log, tanh, cosh, cos, radians, sqrt, exp
 
-from nhe.attrel.base import AttenuationRelationship
+from nhe.attrel.base import GMPE
 from nhe import const
 from nhe.imt import PGA, PGV, SA
 
@@ -67,7 +67,7 @@ def _make_coeffs_dict(sa_damping):
     return coeffs
 
 
-class ChiouYoungs2008(AttenuationRelationship):
+class ChiouYoungs2008(GMPE):
     """
     Implements GMPE developed by Brian S.-J. Chiou and Robert R. Youngs
     and published as "An NGA Model for the Average Horizontal Component

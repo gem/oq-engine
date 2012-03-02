@@ -4,7 +4,7 @@ import collections
 import numpy
 
 from nhe import const
-from nhe.attrel.base import AttenuationRelationship, AttRelContext
+from nhe.attrel.base import IPE, AttRelContext
 from nhe.geo.point import Point
 from nhe.imt import PGA, PGV
 from nhe.site import Site
@@ -16,7 +16,7 @@ class _FakeAttRelTestCase(unittest.TestCase):
     DEFAULT_COMPONENT = const.IMC.GMRotI50
 
     def setUp(self):
-        class FakeAttrel(AttenuationRelationship):
+        class FakeAttrel(IPE):
             DEFINED_FOR_TECTONIC_REGION_TYPES = set()
             DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
             DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS = set()
