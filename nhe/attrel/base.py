@@ -184,9 +184,6 @@ class AttenuationRelationship(object):
             :attr:`DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS`) and if ``imts``
             dictionary contain wrong or unsupported IMTs (see
             :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
-        :raises AssertionError:
-            If ``truncation_level`` is not zero and attenuation relationship
-            doesn't support standard deviation :attr:`~nhe.const.StdDev.TOTAL`.
         """
         if truncation_level is not None and truncation_level < 0:
             raise ValueError('truncation level must be zero, positive number '
@@ -218,13 +215,8 @@ class AttenuationRelationship(object):
                 ret[imt] = (imls >= mean).astype(float)
         else:
             # use real normal distribution
-            if (not const.StdDev.TOTAL
-                    in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES):
-                raise AssertionError(
-                    '%s does not support TOTAL standard deviation which is '
-                    'required for calculating probabilities of exceedance '
-                    'with non-zero truncation level' % type(self).__name__
-                )
+            assert (const.StdDev.TOTAL
+                    in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
             if truncation_level is None:
                 distribution = scipy.stats.norm()
             else:
