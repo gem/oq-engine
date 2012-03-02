@@ -14,13 +14,15 @@ from nhe import imt as imt_module
 
 class AttenuationRelationship(object):
     """
-    Base class for all the Attenuation Relationships --
-    GMPEs (ground motion prediction equations) and IPEs
-    (intensity prediction equations).
+    Base class for all the Attenuation Relationships.
 
-    Subclasses must implement :meth:`get_mean_and_stddevs`
-    and all the class attributes with names starting from
-    ``DEFINED_FOR`` and ``REQUIRES``.
+    This class is not intended to be subclassed directly, instead
+    the actual attenuation relationships should subclass either
+    :class:`GMPE` or :class:`IPE`.
+
+    Subclasses of both must implement :meth:`get_mean_and_stddevs`
+    and all the class attributes with names starting from ``DEFINED_FOR``
+    and ``REQUIRES``.
     """
     __metaclass__ = abc.ABCMeta
 
@@ -177,15 +179,11 @@ class AttenuationRelationship(object):
 
         :raises ValueError:
             If truncation level is not ``None`` and neither non-negative
-            float number, if intensity measure component or rupture's tectonic
-            region type is not supported by the attenuation relationship
-            (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS` and
-            :attr:`DEFINED_FOR_TECTONIC_REGION_TYPES`), if ``imts``
+            float number, if intensity measure component is not supported
+            by the attenuation relationship (see
+            :attr:`DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS`) and if ``imts``
             dictionary contain wrong or unsupported IMTs (see
             :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
-        :raises AssertionError:
-            If ``truncation_level`` is not zero and attenuation relationship
-            doesn't support standard deviation :attr:`~nhe.const.StdDev.TOTAL`.
         """
         if truncation_level is not None and truncation_level < 0:
             raise ValueError('truncation level must be zero, positive number '
@@ -207,48 +205,47 @@ class AttenuationRelationship(object):
                     (type(imt).__name__, type(self).__name__)
                 )
 
-        if (hasattr(ctx, 'rup_trt')
-                and not ctx.rup_trt in self.DEFINED_FOR_TECTONIC_REGION_TYPES):
-            raise ValueError('tectonic region type %r is not supported by %s' %
-                             (ctx.rup_trt, type(self).__name__))
-
         ret = {}
         if truncation_level == 0:
             # zero truncation mode, just compare imls to mean
             for imt, imls in imts.items():
+                imls = self._convert_imls(imls)
                 mean, _ = self.get_mean_and_stddevs(ctx, imt, [],
                                                     component_type)
-                ret[imt] = (numpy.array(imls) >= mean).astype(float)
+                ret[imt] = (imls >= mean).astype(float)
         else:
             # use real normal distribution
-            if (not const.StdDev.TOTAL
-                    in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES):
-                raise AssertionError(
-                    '%s does not support TOTAL standard deviation which is '
-                    'required for calculating probabilities of exceedance '
-                    'with non-zero truncation level' % type(self).__name__
-                )
+            assert (const.StdDev.TOTAL
+                    in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES)
             if truncation_level is None:
                 distribution = scipy.stats.norm()
             else:
                 distribution = scipy.stats.truncnorm(- truncation_level,
                                                      truncation_level)
             for imt, imls in imts.items():
+                imls = self._convert_imls(imls)
                 mean, [stddev] = self.get_mean_and_stddevs(
                     ctx, imt, [const.StdDev.TOTAL], component_type
                 )
-                imls = numpy.array(imls, float)
                 ret[imt] = distribution.sf((imls - mean) / stddev)
 
         return ret
 
-    @classmethod
-    def make_context(cls, site, rupture, distances=None):
+    @abc.abstractmethod
+    def _convert_imls(self, imls):
+        """
+        Convert a list of IML values to a numpy array and convert the actual
+        values with respect to intensity measure distribution (like taking
+        the natural logarithm for :class:`GMPE`).
+
+        This method is implemented by both :class:`GMPE` and :class:`IPE`
+        so there is no need to override it in actual attenuation relationship
+        implementations.
+        """
+
+    def make_context(self, site, rupture, distances=None):
         """
         Create a :meth:`AttRelContext` object for given site and rupture.
-
-        This classmethod should be called from an actual attenuation
-        relationship implementation, not from the base class.
 
         :param site:
             Instance of :class:`nhe.site.Site`.
@@ -268,40 +265,28 @@ class AttenuationRelationship(object):
             An instance of :class:`AttRelContext` with those (and only those)
             attributes that are required by attenuation relationship filled in.
 
-        :raises AssertionError:
-            If called as a method of abstract base class in opposed to
-            an actual GMPE/IPE implementation class.
         :raises ValueError:
             If any of declared required parameters (that includes site, rupture
-            and distance parameters) are unknown. If tectonic region type
-            of the rupture is not supported. If distances dict is provided
+            and distance parameters) is unknown. If distances dict is provided
             but is missing some of the required distance information.
         """
-        if cls is AttenuationRelationship:
-            raise AssertionError(
-                'make_context() should be called as a specific GMPE/IPE '
-                'method, not the abstract base class %s' % cls.__name__
-            )
         context = AttRelContext()
         all_ctx_attrs = set(AttRelContext.__slots__)
 
-        if (not rupture.tectonic_region_type
-                in cls.DEFINED_FOR_TECTONIC_REGION_TYPES):
-            raise ValueError('tectonic region type %r is not supported by %s' %
-                             (rupture.tectonic_region_type, cls.__name__))
+        clsname = type(self).__name__
 
-        for param in cls.REQUIRES_SITE_PARAMETERS:
+        for param in self.REQUIRES_SITE_PARAMETERS:
             attr = 'site_%s' % param
             if not attr in all_ctx_attrs:
                 raise ValueError('%s requires unknown site parameter %r' %
-                                 (cls.__name__, param))
+                                 (clsname, param))
             setattr(context, attr, getattr(site, param))
 
-        for param in cls.REQUIRES_RUPTURE_PARAMETERS:
+        for param in self.REQUIRES_RUPTURE_PARAMETERS:
             attr = 'rup_%s' % param
             if not attr in all_ctx_attrs:
                 raise ValueError('%s requires unknown rupture parameter %r' %
-                                 (cls.__name__, param))
+                                 (clsname, param))
             if param == 'mag':
                 value = rupture.mag
             elif param == 'trt':
@@ -312,16 +297,16 @@ class AttenuationRelationship(object):
                 value = rupture.rake
             setattr(context, attr, value)
 
-        for param in cls.REQUIRES_DISTANCES:
+        for param in self.REQUIRES_DISTANCES:
             attr = 'dist_%s' % param
             if not attr in all_ctx_attrs:
                 raise ValueError('%s requires unknown distance measure %r' %
-                                 (cls.__name__, param))
+                                 (clsname, param))
             if distances is not None:
                 if not param in distances:
                     raise ValueError("'distances' dict should include all "
                                      "the required distance measures: %s" %
-                                     ', '.join(cls.REQUIRES_DISTANCES))
+                                     ', '.join(self.REQUIRES_DISTANCES))
                 value = distances[param]
             else:
                 if param == 'rrup':
@@ -337,6 +322,36 @@ class AttenuationRelationship(object):
             setattr(context, attr, value)
 
         return context
+
+
+class GMPE(AttenuationRelationship):
+    """
+    Ground-Motion Prediction Equation is a subclass of generic
+    :class:`AttenuationRelationship` with a distinct feature that
+    the intensity values are log-normally distributed.
+
+    Method :meth:`~AttenuationRelationship.get_mean_and_stddevs`
+    of actual GMPE implementations is supposed to return the mean
+    value as a natural logarithm of intensity.
+    """
+    def _convert_imls(self, imls):
+        """
+        Returns numpy array of natural logarithms of ``imls``.
+        """
+        return numpy.log(imls)
+
+
+class IPE(AttenuationRelationship):
+    """
+    Intensity Prediction Equation is a subclass of generic
+    :class:`AttenuationRelationship` which is suitable for intensity measures
+    that are normally distributed. In particular, for :class:`~nhe.imt.MMI`.
+    """
+    def _convert_imls(self, imls):
+        """
+        Returns numpy array of ``imls`` without any conversion.
+        """
+        return numpy.array(imls, dtype=float)
 
 
 class AttRelContext(object):

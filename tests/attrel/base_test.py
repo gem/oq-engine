@@ -4,7 +4,7 @@ import collections
 import numpy
 
 from nhe import const
-from nhe.attrel.base import AttenuationRelationship, AttRelContext
+from nhe.attrel.base import IPE, AttRelContext
 from nhe.geo.point import Point
 from nhe.imt import PGA, PGV
 from nhe.site import Site
@@ -16,7 +16,7 @@ class _FakeAttRelTestCase(unittest.TestCase):
     DEFAULT_COMPONENT = const.IMC.GMRotI50
 
     def setUp(self):
-        class FakeAttrel(AttenuationRelationship):
+        class FakeAttrel(IPE):
             DEFINED_FOR_TECTONIC_REGION_TYPES = set()
             DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
             DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS = set()
@@ -75,23 +75,6 @@ class GetPoEsWrongInputTestCase(_FakeAttRelTestCase):
         err = 'truncation level must be zero, positive number or None'
         self._assert_value_error(self._get_poes, err, truncation_level=-0.1)
         self._assert_value_error(self._get_poes, err, truncation_level=-1)
-
-    def test_attrel_doesnt_support_total_stddev(self):
-        with self.assertRaises(AssertionError) as ar:
-            self._get_poes()
-        self.assertEqual(
-            ar.exception.message,
-            'FakeAttrel does not support TOTAL standard deviation '
-            'which is required for calculating probabilities of exceedance '
-            'with non-zero truncation level'
-        )
-
-    def test_attrel_doesnt_support_rup_trt(self):
-        ctx = AttRelContext()
-        ctx.rup_trt = const.TRT.STABLE_CONTINENTAL
-        err = "tectonic region type 'Stable Shallow Crust' " \
-              "is not supported by FakeAttrel"
-        self._assert_value_error(self._get_poes, err, ctx=ctx)
 
 
 class GetPoEsTestCase(_FakeAttRelTestCase):
@@ -195,37 +178,30 @@ class MakeContextTestCase(_FakeAttRelTestCase):
         )
         self.fake_surface = FakeSurface
 
-    def test_calling_from_base_class_error(self):
-        with self.assertRaises(AssertionError) as ar:
-            AttenuationRelationship.make_context(site=None, rupture=None)
-        err = 'make_context() should be called as a specific GMPE/IPE ' \
-              'method, not the abstract base class AttenuationRelationship'
-        self.assertEqual(ar.exception.message, err)
-
     def test_unknown_site_param_error(self):
         self.attrel_class.REQUIRES_SITE_PARAMETERS.add('unknown!')
         err = "FakeAttrel requires unknown site parameter 'unknown!'"
-        self._assert_value_error(self.attrel_class.make_context, err,
+        self._assert_value_error(self.attrel.make_context, err,
                                  site=self.site, rupture=self.rupture)
-        self._assert_value_error(self.attrel_class.make_context, err,
+        self._assert_value_error(self.attrel.make_context, err,
                                  site=self.site, rupture=self.rupture,
                                  distances=self.distances)
 
     def test_unknown_rupture_param_error(self):
         self.attrel_class.REQUIRES_RUPTURE_PARAMETERS.add('stuff')
         err = "FakeAttrel requires unknown rupture parameter 'stuff'"
-        self._assert_value_error(self.attrel_class.make_context, err,
+        self._assert_value_error(self.attrel.make_context, err,
                                  site=self.site, rupture=self.rupture)
-        self._assert_value_error(self.attrel_class.make_context, err,
+        self._assert_value_error(self.attrel.make_context, err,
                                  site=self.site, rupture=self.rupture,
                                  distances=self.distances)
 
     def test_unknown_distance_error(self):
         self.attrel_class.REQUIRES_DISTANCES.add('jump height')
         err = "FakeAttrel requires unknown distance measure 'jump height'"
-        self._assert_value_error(self.attrel_class.make_context, err,
+        self._assert_value_error(self.attrel.make_context, err,
                                  site=self.site, rupture=self.rupture)
-        self._assert_value_error(self.attrel_class.make_context, err,
+        self._assert_value_error(self.attrel.make_context, err,
                                  site=self.site, rupture=self.rupture,
                                  distances=self.distances)
 
@@ -234,19 +210,9 @@ class MakeContextTestCase(_FakeAttRelTestCase):
         distances = {'rjb': 444}
         err = "'distances' dict should include all the required distance " \
               "measures: rjb, ztor"
-        self._assert_value_error(self.attrel_class.make_context, err,
+        self._assert_value_error(self.attrel.make_context, err,
                                  site=self.site, rupture=self.rupture,
                                  distances=distances)
-
-    def test_unsupported_trt_error(self):
-        self.rupture.tectonic_region_type = const.TRT.SUBDUCTION_INTERFACE
-        err = "tectonic region type 'Subduction Interface' " \
-              "is not supported by FakeAttrel"
-        self._assert_value_error(self.attrel_class.make_context, err,
-                                 site=self.site, rupture=self.rupture)
-        self._assert_value_error(self.attrel_class.make_context, err,
-                                 site=self.site, rupture=self.rupture,
-                                 distances=self.distances)
 
     def test_all_values_no_precalc_distances(self):
         self.attrel_class.REQUIRES_DISTANCES = set('rjb ztor rx rrup'.split())
@@ -256,7 +222,7 @@ class MakeContextTestCase(_FakeAttRelTestCase):
         self.attrel_class.REQUIRES_SITE_PARAMETERS = set(
             'vs30 vs30measured z1pt0 z2pt5'.split()
         )
-        ctx = self.attrel_class.make_context(self.site, self.rupture)
+        ctx = self.attrel.make_context(self.site, self.rupture)
         self.assertIsInstance(ctx, AttRelContext)
         self.assertEqual(ctx.rup_mag, 123.45)
         self.assertEqual(ctx.rup_rake, 123.56)
@@ -283,8 +249,8 @@ class MakeContextTestCase(_FakeAttRelTestCase):
         self.attrel_class.REQUIRES_SITE_PARAMETERS = set(
             'vs30 vs30measured z1pt0 z2pt5'.split()
         )
-        ctx = self.attrel_class.make_context(self.site, self.rupture,
-                                             distances=self.distances)
+        ctx = self.attrel.make_context(self.site, self.rupture,
+                                       distances=self.distances)
         self.assertEqual((ctx.rup_mag, ctx.rup_rake, ctx.rup_trt, ctx.rup_dip),
                          (123.45, 123.56, const.TRT.VOLCANIC, 45.4545))
         self.assertEqual((ctx.site_vs30, ctx.site_vs30measured,
@@ -300,7 +266,7 @@ class MakeContextTestCase(_FakeAttRelTestCase):
         self.attrel_class.REQUIRES_DISTANCES = set('rjb rx'.split())
         self.attrel_class.REQUIRES_RUPTURE_PARAMETERS = set('mag rake'.split())
         self.attrel_class.REQUIRES_SITE_PARAMETERS = set('vs30 z1pt0'.split())
-        ctx = self.attrel_class.make_context(self.site, self.rupture)
+        ctx = self.attrel.make_context(self.site, self.rupture)
         self.assertEqual((ctx.rup_mag, ctx.rup_rake), (123.45, 123.56))
         self.assertEqual((ctx.site_vs30, ctx.site_z1pt0), (456, 12.1))
         self.assertEqual((ctx.dist_rjb, ctx.dist_rx), (6, 4))
@@ -319,8 +285,8 @@ class MakeContextTestCase(_FakeAttRelTestCase):
         self.attrel_class.REQUIRES_RUPTURE_PARAMETERS = set(('trt',))
         self.attrel_class.REQUIRES_SITE_PARAMETERS = set(('vs30measured',))
         distances = {'ztor': 17, 'rrup': 33}
-        ctx = self.attrel_class.make_context(self.site, self.rupture,
-                                             distances=distances)
+        ctx = self.attrel.make_context(self.site, self.rupture,
+                                       distances=distances)
         self.assertEqual(ctx.rup_trt, const.TRT.VOLCANIC)
         self.assertEqual(ctx.site_vs30measured, False)
         self.assertEqual(ctx.dist_ztor, 17)
