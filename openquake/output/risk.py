@@ -469,22 +469,17 @@ class LossMapDBWriter(writer.DBWriter):
         """
         for loss, asset in values:
 
-            kwargs = {
-                'loss_map_id': self.metadata.id,
-                'asset_ref': asset.asset_ref,
-                'location': "POINT(%s %s)" % (site.longitude, site.latitude),
-            }
-
+            kwargs = dict(
+                loss_map_id=self.metadata.id, location=site.point.to_wkt())
             if self.metadata.scenario:
-                kwargs.update({
-                    'value': float(loss.get('mean_loss')),
-                    'std_dev': float(loss.get('stddev_loss')),
-                })
+                kwargs['asset_ref'] = asset['assetID']
+                kwargs['value'] = float(loss.get('mean_loss'))
+                kwargs['std_dev'] = float(loss.get('stddev_loss'))
+
             else:
-                kwargs.update({
-                    'value': float(loss.get('value')),
-                    'std_dev': 0.0,
-                })
+                kwargs['asset_ref'] = asset.asset_ref
+                kwargs['value'] = float(loss.get('value'))
+                kwargs['std_dev'] = 0.0
 
             self.bulk_inserter.add_entry(**kwargs)
 
