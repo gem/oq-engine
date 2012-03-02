@@ -179,10 +179,9 @@ class AttenuationRelationship(object):
 
         :raises ValueError:
             If truncation level is not ``None`` and neither non-negative
-            float number, if intensity measure component or rupture's tectonic
-            region type is not supported by the attenuation relationship
-            (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS` and
-            :attr:`DEFINED_FOR_TECTONIC_REGION_TYPES`), if ``imts``
+            float number, if intensity measure component is not supported
+            by the attenuation relationship (see
+            :attr:`DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS`) and if ``imts``
             dictionary contain wrong or unsupported IMTs (see
             :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
         :raises AssertionError:
@@ -208,11 +207,6 @@ class AttenuationRelationship(object):
                     'intensity measure type %s is not supported by %s' %
                     (type(imt).__name__, type(self).__name__)
                 )
-
-        if (hasattr(ctx, 'rup_trt')
-                and not ctx.rup_trt in self.DEFINED_FOR_TECTONIC_REGION_TYPES):
-            raise ValueError('tectonic region type %r is not supported by %s' %
-                             (ctx.rup_trt, type(self).__name__))
 
         ret = {}
         if truncation_level == 0:
@@ -281,18 +275,13 @@ class AttenuationRelationship(object):
 
         :raises ValueError:
             If any of declared required parameters (that includes site, rupture
-            and distance parameters) are unknown. If tectonic region type
-            of the rupture is not supported. If distances dict is provided
+            and distance parameters) is unknown. If distances dict is provided
             but is missing some of the required distance information.
         """
         context = AttRelContext()
         all_ctx_attrs = set(AttRelContext.__slots__)
 
         clsname = type(self).__name__
-        if (not rupture.tectonic_region_type
-                in self.DEFINED_FOR_TECTONIC_REGION_TYPES):
-            raise ValueError('tectonic region type %r is not supported by %s' %
-                             (rupture.tectonic_region_type, clsname))
 
         for param in self.REQUIRES_SITE_PARAMETERS:
             attr = 'site_%s' % param
