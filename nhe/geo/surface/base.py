@@ -123,7 +123,7 @@ class BaseSurface(object):
         All subsequent calls to :meth:`get_mesh` return the same mesh object.
 
         .. warning::
-            It is required that the mesh us constructed "top-to-bottom".
+            It is required that the mesh is constructed "top-to-bottom".
             That is, the first row of points should be the shallowest.
         """
         if self._mesh is None:
