@@ -176,7 +176,7 @@ class BaseRiskCalculator(Calculator):
             cls._em_inputs = list(
                 job_profile.input_set.input_set.filter(input_type="exposure"))
 
-            cls._em_job_id = job_profile
+            cls._em_job_id = job_profile.id
 
     @classmethod
     def assets_for_cell(cls, job_id, lowerleft):
