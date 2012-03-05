@@ -1,5 +1,5 @@
 """
-Module :mod:`nhe.msr.base` defines a base class for MSR.
+Module :mod:`nhe.msr.base` defines an abstract base class for MSR.
 """
 import abc
 from math import log10
@@ -8,6 +8,7 @@ from math import log10
 class BaseMSR(object):
     """
     A base class for Magnitude-Scaling Relationship.
+    Allows calculation from rupture area from magnitude.
     """
     __metaclass__ = abc.ABCMeta
 

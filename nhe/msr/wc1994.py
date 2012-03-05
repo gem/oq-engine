@@ -3,9 +3,10 @@ Module :mod:`nhe.msr.wc1994` implements :class:`WC1994MSR`.
 """
 from math import log10
 from nhe.msr.base import BaseMSR
+from nhe.msr.magarea_base import BaseASR
 
 
-class WC1994MSR(BaseMSR):
+class WC1994MSR(BaseMSR, BaseASR):
     """
     Wells and Coppersmith magnitude -- rupture area relationships,
     see 1994, Bull. Seism. Soc. Am., pages 974-2002.
@@ -51,12 +52,8 @@ class WC1994MSR(BaseMSR):
 
     def get_std_dev_mag_from_area(self, rake):
         """
-        Returns the standard deviation on the magnitude
+        Standard deviation on the magnitude
         for the WC1994MSR area relation.
-
-        :param rake:
-            Rake angle (the rupture propagation direction) in degrees,
-            from -180 to 180.
         """
         assert rake is None or -180 <= rake <= 180
         if rake is None:
@@ -74,7 +71,7 @@ class WC1994MSR(BaseMSR):
 
     def get_median_mag_from_area(self, area, rake):
         """
-        Returns magnitude (Mw) given the area and rake.
+        Return magnitude (Mw) given the area and rake.
 
         Setting the rake to ``None`` causes their "All" rupture-types
         to be applied.
@@ -98,21 +95,3 @@ class WC1994MSR(BaseMSR):
         else:
             # normal
             return 3.93 + 1.02 * log10(area)
-
-    def get_mag_from_area(self, area, rake, epsilon=0.0):
-        """
-        Return the Moment magnitude given the area, rake
-        and uncertainty epsilon.
-
-        :param area:
-            Area in square km.
-        :param rake:
-            Rake angle (the rupture propagation direction) in degrees,
-            from -180 to 180.
-        :param epsilon:
-            Uncertainty residual, which identifies the number
-            of standard deviations from the median.
-        """
-        median_mag = self.get_median_mag_from_area(area, rake)
-        std_dev = self.get_std_dev_mag_from_area(rake)
-        return median_mag + epsilon * std_dev
