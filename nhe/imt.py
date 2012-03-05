@@ -42,6 +42,11 @@ class _IMT(object):
         return hash((cls.__name__, tuple(getattr(self, param)
                                          for param in cls.__slots__)))
 
+    def __repr__(self):
+        return '%s(%s)' % (type(self).__name__,
+                           ', '.join('%s=%s' % (slot, getattr(self, slot))
+                                     for slot in type(self).__slots__))
+
 
 class PGA(_IMT):
     """
