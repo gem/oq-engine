@@ -21,7 +21,6 @@
 # Silence 'Too many lines in module'
 # pylint: disable=C0302
 
-
 from collections import defaultdict
 from collections import OrderedDict
 import math
@@ -166,6 +165,20 @@ class BaseRiskCalculator(Calculator):
         return geos.Polygon(coos)
 
     @classmethod
+    def _load_exposure_model(cls, job_profile):
+        """
+        Load and cache the exposure model.
+        """
+
+        if cls._em_inputs is None or cls._em_job_id != job_profile.id:
+            # This query obtains the exposure model input rows and needs to be
+            # made only once in the course of a risk calculation.
+            cls._em_inputs = list(
+                job_profile.input_set.input_set.filter(input_type="exposure"))
+
+            cls._em_job_id = job_profile
+
+    @classmethod
     def assets_for_cell(cls, job_id, lowerleft):
         """Return exposure assets for the given job and risk cell mid-point.
 
@@ -178,12 +191,7 @@ class BaseRiskCalculator(Calculator):
         jp = models.OqCalculation.objects.get(id=job_id).oq_job_profile
         assert jp.region_grid_spacing is not None, "Grid spacing not known."
 
-        if cls._em_inputs is None or cls._em_job_id != job_id:
-            # This query obtains the exposure model input rows and needs to be
-            # made only once in the course of a risk calculation.
-            cls._em_inputs = list(
-                jp.input_set.input_set.filter(input_type="exposure"))
-            cls._em_job_id = job_id
+        cls._load_exposure_model(jp)
 
         if not cls._em_inputs:
             return []
@@ -192,6 +200,31 @@ class BaseRiskCalculator(Calculator):
         qm = models.ExposureData.objects
         result = qm.filter(exposure_model__input__in=cls._em_inputs,
                            site__contained=risk_cell)
+
+        return list(result)
+
+    @classmethod
+    def assets_at(cls, job_id, site):
+        """
+        Load the assets from the exposure defined at the given site.
+
+        :param job_id: the id of the job
+        :type job_id: integer
+        :param site: site where the assets are defined
+        :type site: instance of :py:class:`openquake.shapes.Site`
+        :returns: a list of
+            :py:class:`openquake.db.models.ExposureData` objects
+        """
+
+        jp = models.OqCalculation.objects.get(id=job_id).oq_job_profile
+        cls._load_exposure_model(jp)
+
+        if not cls._em_inputs:
+            return []
+
+        em = models.ExposureData.objects
+        result = em.filter(exposure_model__input__in=cls._em_inputs,
+                site=geos.Point(site.longitude, site.latitude))
 
         return list(result)
 
@@ -953,6 +986,7 @@ def compute_beta(mean_loss_ratio, stddev):
 
 class Lognorm(object):
     """ Simple Wrapper to use in a generic way survival functions """
+
     @staticmethod
     def survival_function(loss_ratio, **kwargs):
         """
@@ -987,6 +1021,7 @@ class Lognorm(object):
 
 class BetaDistribution(object):
     """ Simple Wrapper to use in a generic way Beta Distributions """
+
     @staticmethod
     def survival_function(loss_ratio, **kwargs):
         """
