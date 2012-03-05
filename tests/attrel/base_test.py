@@ -76,16 +76,6 @@ class GetPoEsWrongInputTestCase(_FakeAttRelTestCase):
         self._assert_value_error(self._get_poes, err, truncation_level=-0.1)
         self._assert_value_error(self._get_poes, err, truncation_level=-1)
 
-    def test_attrel_doesnt_support_total_stddev(self):
-        with self.assertRaises(AssertionError) as ar:
-            self._get_poes()
-        self.assertEqual(
-            ar.exception.message,
-            'FakeAttrel does not support TOTAL standard deviation '
-            'which is required for calculating probabilities of exceedance '
-            'with non-zero truncation level'
-        )
-
 
 class GetPoEsTestCase(_FakeAttRelTestCase):
     def test_no_truncation(self):
