@@ -16,8 +16,7 @@ class BaseASR(object):
     @abc.abstractmethod
     def get_std_dev_mag_from_area(self, rake):
         """
-        Return the standard deviation on the magnitude
-        for the WC1994MSR area relation.
+        Return the standard deviation on the magnitude.
 
         :param rake:
             Rake angle (the rupture propagation direction) in degrees,
