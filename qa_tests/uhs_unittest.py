@@ -16,6 +16,8 @@
 
 
 import numpy
+import os
+import shutil
 import unittest
 
 from openquake.db.models import OqCalculation
@@ -99,3 +101,34 @@ class UniformHazardSpectraQATest(unittest.TestCase):
             self.assertEqual(0, uh_spectrum_data.realization)
             self.assertEqual(exp_site.point.to_wkt(),
                              uh_spectrum_data.location.wkt)
+
+
+    def test_uhs_output_type_xml(self):
+        # Run a calculation with --output-type=xml and check that the expected
+        # result files are created in the right location.
+
+        # This location is based on parameters in the UHS config file:
+        results_target_dir = demo_file('uhs/computed_output')
+
+        # clear the target dir from previous demo/test runs
+        shutil.rmtree(results_target_dir)
+
+        expected_export_files = [
+            os.path.join(results_target_dir, 'uhs_poe:0.1.hdf5'),
+            os.path.join(results_target_dir, 'uhs_poe:0.02.hdf5'),
+            os.path.join(results_target_dir, 'uhs.xml'),
+        ]
+
+        for f in expected_export_files:
+            self.assertFalse(os.path.exists(f))
+
+        uhs_cfg = demo_file('uhs/config.gem')
+        try:
+            ret_code = run_job(uhs_cfg, ['--output-type=xml'])
+            self.assertEqual(0, ret_code)
+
+            # Check that all the output files were created:
+            for f in expected_export_files:
+                self.assertTrue(os.path.exists(f))
+        finally:
+            shutil.rmtree(results_target_dir)
