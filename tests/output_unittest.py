@@ -31,8 +31,6 @@ import numpy
 import struct
 import unittest
 
-from osgeo import gdal, gdalconst
-
 from openquake import writer
 from openquake import shapes
 from tests.utils import helpers
