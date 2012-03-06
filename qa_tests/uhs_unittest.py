@@ -102,7 +102,6 @@ class UniformHazardSpectraQATest(unittest.TestCase):
             self.assertEqual(exp_site.point.to_wkt(),
                              uh_spectrum_data.location.wkt)
 
-
     def test_uhs_output_type_xml(self):
         # Run a calculation with --output-type=xml and check that the expected
         # result files are created in the right location.
