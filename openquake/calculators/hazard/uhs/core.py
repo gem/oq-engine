@@ -18,6 +18,7 @@
 """Core functionality of the Uniform Hazard Spectra calculator."""
 
 
+import os
 import random
 
 from celery.task import task
@@ -38,6 +39,7 @@ from openquake.db.models import Output
 from openquake.db.models import UhSpectra
 from openquake.db.models import UhSpectrum
 from openquake.db.models import UhSpectrumData
+from openquake.export.uhs import export_uhs
 from openquake.input import logictree
 from openquake.java import list_to_jdouble_array
 from openquake.logs import LOG
@@ -265,7 +267,19 @@ class UHSCalculator(Calculator):
                     ath=uhs_task_handler, ath_args=ath_args)
 
     def post_execute(self):
-        """Clean up stats counters."""
+        """Clean up stats counters and create XML output artifacts (if
+        requested).
+        """
         # TODO: export these counters to the database before deleting them
         # See bug https://bugs.launchpad.net/openquake/+bug/925946.
         stats.delete_job_counters(self.calc_proxy.job_id)
+
+        if 'xml' in self.calc_proxy.serialize_results_to:
+            [uhs_output] = Output.objects.filter(
+                oq_calculation=self.calc_proxy.oq_calculation.id,
+                output_type='uh_spectra')
+
+            target_dir = os.path.join(self.calc_proxy.params.get('BASE_PATH'),
+                                      self.calc_proxy.params.get('OUTPUT_DIR'))
+
+            export_uhs(uhs_output, target_dir)
