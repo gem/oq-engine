@@ -26,9 +26,6 @@ and (eventually) test performance of various serializers.
 """
 
 import os
-import copy
-import numpy
-import struct
 import unittest
 
 from openquake import writer
