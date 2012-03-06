@@ -39,6 +39,7 @@ from openquake.db.models import Output
 from openquake.db.models import UhSpectra
 from openquake.db.models import UhSpectrum
 from openquake.db.models import UhSpectrumData
+from openquake.export.uhs import export_uhs
 from openquake.input import logictree
 from openquake.java import list_to_jdouble_array
 from openquake.logs import LOG
@@ -274,7 +275,7 @@ class UHSCalculator(Calculator):
         stats.delete_job_counters(self.calc_proxy.job_id)
 
         if 'xml' in self.calc_proxy.serialize_results_to:
-            [uhs_output] = models.Output.objects.filter(
+            [uhs_output] = Output.objects.filter(
                 oq_calculation=self.calc_proxy.oq_calculation.id,
                 output_type='uh_spectra')
 
