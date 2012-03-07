@@ -1,6 +1,7 @@
 import unittest
 
-from nhe.msr import PeerMSR, WC1994MSR
+from nhe.msr import PeerMSR
+from nhe.sr.wc1994 import WC1994
 
 
 class BaseMSRTestCase(unittest.TestCase):
@@ -32,7 +33,7 @@ class PeerMSRMSRTestCase(BaseMSRTestCase):
 
 
 class WC1994MSRTestCase(BaseMSRTestCase):
-    MSR_CLASS = WC1994MSR
+    MSR_CLASS = WC1994
 
     def test_median_area_all(self):
         self._test_get_median_area(2.2, None, 0.0325087)
@@ -63,31 +64,3 @@ class WC1994MSRTestCase(BaseMSRTestCase):
     def test_get_area(self):
         self._test_get_area(4.8, 50, 0.3, 6.1944108)
         self._test_get_area(5.6, 138, 1.3, 80.5378441)
-
-    def test_get_std_dev_mag_from_area(self):
-        self.assertEqual(self.msr.get_std_dev_mag_from_area(None), 0.24)
-        self.assertEqual(self.msr.get_std_dev_mag_from_area(20), 0.23)
-        self.assertEqual(self.msr.get_std_dev_mag_from_area(138), 0.23)
-        self.assertEqual(self.msr.get_std_dev_mag_from_area(-136), 0.23)
-        self.assertEqual(self.msr.get_std_dev_mag_from_area(50), 0.25)
-        self.assertEqual(self.msr.get_std_dev_mag_from_area(-130), 0.25)
-
-    def test_get_median_mag_from_area(self):
-        self.assertAlmostEqual(
-            self.msr.get_median_mag_from_area(50, None), 5.7349906)
-        self.assertAlmostEqual(
-            self.msr.get_median_mag_from_area(500, 20), 6.7329494)
-        self.assertAlmostEqual(
-            self.msr.get_median_mag_from_area(500, 138), 6.7329494)
-        self.assertAlmostEqual(
-            self.msr.get_median_mag_from_area(500, -136), 6.7329494)
-        self.assertAlmostEqual(
-            self.msr.get_median_mag_from_area(700, 50), 6.8905882)
-        self.assertAlmostEqual(
-            self.msr.get_median_mag_from_area(800, -130), 6.8911518)
-
-    def test_get_magnitude_from_area(self):
-        self.assertAlmostEqual(
-            self.msr.get_mag_from_area(100, 45, 0.4), 6.1120000)
-        self.assertAlmostEqual(
-            self.msr.get_mag_from_area(500, None, 1.3), 7.0269906)
