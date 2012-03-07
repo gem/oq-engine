@@ -8,7 +8,7 @@ from math import log10
 class BaseMSR(object):
     """
     A base class for Magnitude-Scaling Relationship.
-    Allows calculation from rupture area from magnitude.
+    Allows calculation of rupture area from magnitude.
     """
     __metaclass__ = abc.ABCMeta
 
