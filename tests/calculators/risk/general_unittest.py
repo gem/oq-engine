@@ -341,14 +341,14 @@ class AssetsAtTestCase(unittest.TestCase, helpers.DbTestCase):
             asset_ref="ASSET_3", stco=1,
             site=geos.GEOSGeometry(site.point.to_wkt()), reco=1).save()
 
-    def tests_one_asset_per_site(self):
+    def test_one_asset_per_site(self):
         site = shapes.Site(2.0, 2.0)
         assets = BaseRiskCalculator.assets_at(self.job.id, site)
 
         self.assertEqual(1, len(assets))
         self.assertEqual("ASSET_3", assets[0].asset_ref)
 
-    def tests_multiple_assets_per_site(self):
+    def test_multiple_assets_per_site(self):
         site = shapes.Site(1.0, 2.0)
         assets = BaseRiskCalculator.assets_at(self.job.id, site)
 
