@@ -26,7 +26,7 @@ class BaseASR(object):
     @abc.abstractmethod
     def get_median_mag(self, area, rake):
         """
-        Return magnitude (Mw) given the area and rake.
+        Return median magnitude (Mw) given the area and rake.
 
         :param area:
             Area in square km.
