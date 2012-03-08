@@ -71,7 +71,7 @@ class UniformHazardSpectraQATest(unittest.TestCase):
         return exp_data
 
     def test_uhs(self):
-        # Kick off the engine and run the UHS demo calculation.
+        # Kick off the engine and run the UHS demo job.
         # When that's done, query the database and check the UHS results.
 
         exp_results = self._load_expected_results()
@@ -79,10 +79,10 @@ class UniformHazardSpectraQATest(unittest.TestCase):
 
         run_job(self.UHS_DEMO_CONFIG)
 
-        calculation = OqJob.objects.latest('id')
+        job = OqJob.objects.latest('id')
 
         uh_spectra = UhSpectra.objects.get(
-            output__oq_job=calculation.id)
+            output__oq_job=job.id)
 
         self.assertEqual(1, uh_spectra.realizations)
 

@@ -1,4 +1,4 @@
-This demo provides an example of a Disaggregation calculation.
+This demo provides an example of a Disaggregation job.
 
 The source model logic tree contains only one source (for active shallow crust):
 a square area source, with sides of 1 degree length. The middle point of the square

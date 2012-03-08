@@ -38,7 +38,7 @@ import org.opensha.sha.imr.param.OtherParams.SigmaTruncTypeParam;
 import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
 
 /**
- * Class providing methods for ground motion field calculation.
+ * Class providing methods for ground motion field job.
  */
 public class GroundMotionFieldCalculator {
 
@@ -80,7 +80,7 @@ public class GroundMotionFieldCalculator {
 	private boolean interEvent = true;
 
 	/**
-	 * Defines truncation level for covariance matrix calculation. If distance
+	 * Defines truncation level for covariance matrix job. If distance
 	 * between sites is greater than correlationTruncationLevel*correlationRange
 	 * then automatically set to zero the correlation value
 	 */
