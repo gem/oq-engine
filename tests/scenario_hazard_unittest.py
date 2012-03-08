@@ -32,7 +32,7 @@ from openquake import java
 from openquake import kvs
 from openquake import shapes
 from openquake.engine import CalculationProxy
-from openquake.db.models import OqCalculation
+from openquake.db.models import OqJob
 from openquake.calculators.hazard.scenario import core as scenario
 
 SCENARIO_SMOKE_TEST = helpers.testdata_path("scenario/config.gem")
@@ -68,13 +68,13 @@ class ScenarioHazardCalculatorTestCase(unittest.TestCase):
         base_path = helpers.testdata_path("scenario")
         self.job_profile, self.params, self.sections = (
             engine.import_job_profile(SCENARIO_SMOKE_TEST))
-        calculation = OqCalculation(owner=self.job_profile.owner,
+        calculation = OqJob(owner=self.job_profile.owner,
                                     oq_job_profile=self.job_profile)
         calculation.save()
         self.calc_proxy = CalculationProxy(
             self.params, calculation.id, sections=self.sections,
             base_path=base_path, oq_job_profile=self.job_profile,
-            oq_calculation=calculation)
+            oq_job=calculation)
 
         self.calc_proxy.params[NUMBER_OF_CALC_KEY] = "1"
 

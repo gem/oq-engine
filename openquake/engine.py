@@ -35,12 +35,12 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from openquake.calculators.hazard import CALCULATORS as HAZ_CALCS
 from openquake.calculators.risk import CALCULATORS as RISK_CALCS
-from openquake.db.models import CalcStats
+from openquake.db.models import JobStats
 from openquake.db.models import CharArrayField
 from openquake.db.models import FloatArrayField
 from openquake.db.models import Input
 from openquake.db.models import InputSet
-from openquake.db.models import OqCalculation
+from openquake.db.models import OqJob
 from openquake.db.models import OqJobProfile
 from openquake.db.models import OqUser
 from openquake import kvs
@@ -67,7 +67,7 @@ RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 # pylint: disable=R0902
 class CalculationProxy(object):
     """Contains everything a calculator needs to run a calculation. This
-    includes: an :class:`OqJobProfile` object, an :class:`OqCalculation`, and a
+    includes: an :class:`OqJobProfile` object, an :class:`OqJob`, and a
     dictionary of all of the calculation config params (which is a basically a
     duplication of the :class:`OqJobProfile` member; in the future we would
     like to remove this duplication).
@@ -80,19 +80,19 @@ class CalculationProxy(object):
     # pylint: disable=R0913
     def __init__(self, params, calculation_id, sections=list(), base_path=None,
                  serialize_results_to=list(), oq_job_profile=None,
-                 oq_calculation=None, log_level='warn'):
+                 oq_job=None, log_level='warn'):
         """
         :param dict params: Dict of job config params.
         :param int calculation_id:
-            ID of the corresponding oq_calculation db record.
+            ID of the corresponding oq_job db record.
         :param list sections: List of config file sections. Example::
             ['HAZARD', 'RISK']
         :param str base_path: base directory containing job input files
         :param oq_job_profile:
             :class:`openquake.db.models.OqJobProfile` instance; database
             representation of the job profile / calculation configuration.
-        :param oq_calculation:
-            :class:`openquake.db.models.OqCalculation` instance; database
+        :param oq_job:
+            :class:`openquake.db.models.OqJob` instance; database
             representation of the runtime thing we refer to as the
             'calculation'.
         :param str log_level:
@@ -112,7 +112,7 @@ class CalculationProxy(object):
         self.serialize_results_to = list(serialize_results_to)
 
         self.oq_job_profile = oq_job_profile
-        self.oq_calculation = oq_calculation
+        self.oq_job = oq_job
         self.params['debug'] = log_level
         self._log_level = log_level
 
@@ -138,10 +138,10 @@ class CalculationProxy(object):
         """Return the job in the underlying kvs system with the given id."""
         params = kvs.get_value_json_decoded(
             kvs.tokens.generate_job_key(job_id))
-        calculation = OqCalculation.objects.get(id=job_id)
+        calculation = OqJob.objects.get(id=job_id)
         job_profile = calculation.oq_job_profile
         job = CalculationProxy(params, job_id, oq_job_profile=job_profile,
-                               oq_calculation=calculation,
+                               oq_job=calculation,
                                log_level=params['debug'])
         return job
 
@@ -152,7 +152,7 @@ class CalculationProxy(object):
 
         :returns: one of strings 'pending', 'running', 'succeeded', 'failed'.
         """
-        return OqCalculation.objects.get(id=job_id).status
+        return OqJob.objects.get(id=job_id).status
 
     @staticmethod
     def is_job_completed(job_id):
@@ -317,18 +317,18 @@ class CalculationProxy(object):
     def _record_initial_stats(self):
         '''
         Report initial job stats (such as start time) by adding a
-        uiapi.calc_stats record to the db.
+        uiapi.job_stats record to the db.
         '''
-        calc_stats = CalcStats(oq_calculation=self.oq_calculation)
-        calc_stats.start_time = datetime.utcnow()
-        calc_stats.num_sites = len(self.sites_to_compute())
+        job_stats = JobStats(oq_job=self.oq_job)
+        job_stats.start_time = datetime.utcnow()
+        job_stats.num_sites = len(self.sites_to_compute())
 
         calc_mode = CALCULATION_MODE[self['CALCULATION_MODE']]
         if jobconf.HAZARD_SECTION in self.sections:
             if calc_mode != 'scenario':
-                calc_stats.realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
+                job_stats.realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
 
-        calc_stats.save()
+        job_stats.save()
 
 
 def read_sites_from_exposure(calc_proxy):
@@ -404,7 +404,7 @@ def _job_from_file(config_file, output_type, owner_username='openquake'):
     calculation_id = params.get('OPENQUAKE_JOB_ID')
     if not calculation_id:
         # create the database record for this calculation
-        calculation = OqCalculation(owner=owner, path=None)
+        calculation = OqJob(owner=owner, path=None)
         calculation.oq_job_profile = job_profile
         calculation.save()
         calculation_id = calculation.id
@@ -419,7 +419,7 @@ def _job_from_file(config_file, output_type, owner_username='openquake'):
     job = CalculationProxy(params, calculation_id, sections=sections,
                            base_path=base_path,
                            serialize_results_to=serialize_results_to,
-                           oq_calculation=calculation,
+                           oq_job=calculation,
                            oq_job_profile=job_profile)
     job.to_kvs()
 
@@ -539,7 +539,7 @@ def _insert_input_files(params, input_set):
 @transaction.commit_on_success(using='job_init')
 def _prepare_job(params, sections, owner_username):
     """
-    Create a new OqCalculation and fill in the related OqJobProfile entry.
+    Create a new OqJob and fill in the related OqJobProfile entry.
 
     Returns the newly created job object.
 
@@ -662,7 +662,7 @@ def _store_input_parameters(params, calc_mode, job_profile):
 def run_calculation(job_profile, params, sections, output_type='db',
                     log_level='warn'):
     """Given an :class:`openquake.db.models.OqJobProfile` object, create a new
-    :class:`openquake.db.models.OqCalculation` object and run the calculation.
+    :class:`openquake.db.models.OqJob` object and run the calculation.
 
     NOTE: The params and sections parameters are temporary but will be required
     until we can run calculations purely using Django model objects as
@@ -684,12 +684,12 @@ def run_calculation(job_profile, params, sections, output_type='db',
 
         Defaults to 'warn'.
     :returns:
-        :class:`openquake.db.models.OqCalculation` instance.
+        :class:`openquake.db.models.OqJob` instance.
     """
     if not output_type in ('db', 'xml'):
         raise RuntimeError("output_type must be 'db' or 'xml'")
 
-    calculation = OqCalculation(owner=job_profile.owner)
+    calculation = OqJob(owner=job_profile.owner)
     calculation.oq_job_profile = job_profile
     calculation.description = job_profile.description
     calculation.status = 'running'
@@ -711,7 +711,7 @@ def run_calculation(job_profile, params, sections, output_type='db',
     calc_proxy = CalculationProxy(params, calculation.id, sections=sections,
                                   serialize_results_to=serialize_results_to,
                                   oq_job_profile=job_profile,
-                                  oq_calculation=calculation,
+                                  oq_job=calculation,
                                   log_level=log_level)
 
     # closing all db connections to make sure they're not shared between

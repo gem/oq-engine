@@ -19,7 +19,7 @@ import os
 import shutil
 import unittest
 
-from openquake.db.models import OqCalculation
+from openquake.db.models import OqJob
 from openquake.db.models import UhSpectra
 from openquake.db.models import UhSpectrum
 from openquake.db.models import UhSpectrumData
@@ -79,10 +79,10 @@ class UniformHazardSpectraQATest(unittest.TestCase):
 
         run_job(self.UHS_DEMO_CONFIG)
 
-        calculation = OqCalculation.objects.latest('id')
+        calculation = OqJob.objects.latest('id')
 
         uh_spectra = UhSpectra.objects.get(
-            output__oq_calculation=calculation.id)
+            output__oq_job=calculation.id)
 
         self.assertEqual(1, uh_spectra.realizations)
 
