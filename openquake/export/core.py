@@ -92,28 +92,28 @@ def get_calculations(user_name):
         Owner of the returned results.
     :returns:
         :class:`django.db.models.query.QuerySet` of
-        :class:`openquake.db.models.OqCalculation` objects, sorted in
+        :class:`openquake.db.models.OqJob` objects, sorted in
         reverse chronological order.
     :rtype:
         :class:`django.db.models.query.QuerySet`
     """
-    return models.OqCalculation.objects.filter(
+    return models.OqJob.objects.filter(
         owner__user_name=user_name).extra(
             where=["status in ('succeeded', 'failed')"]).order_by(
                 '-last_update')
 
 
-def get_outputs(calculation_id):
+def get_outputs(job_id):
     """Get all :class:`openquake.db.models.Output`s associated with the
-    specified calculation.
+    specified job.
 
-    :param int calculation_id:
-        ID of a :class:`openquake.db.models.OqCalculation`.
+    :param int job_id:
+        ID of a :class:`openquake.db.models.OqJob`.
     :returns:
         :class:`django.db.models.query.QuerySet` of
         :class:`openquake.db.models.Output` objects.
     """
-    return models.Output.objects.filter(oq_calculation=calculation_id)
+    return models.Output.objects.filter(oq_job=job_id)
 
 
 def export(output_id, target_dir):

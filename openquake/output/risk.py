@@ -429,8 +429,8 @@ class LossMapDBWriter(writer.DBWriter):
 
     """
 
-    def __init__(self, nrml_path, oq_calculation_id):
-        super(LossMapDBWriter, self).__init__(nrml_path, oq_calculation_id)
+    def __init__(self, nrml_path, oq_job_id):
+        super(LossMapDBWriter, self).__init__(nrml_path, oq_job_id)
 
         self.metadata = None
         self.bulk_inserter = writer.BulkInserter(models.LossMapData)
@@ -731,8 +731,8 @@ class LossCurveDBWriter(writer.DBWriter):
          ]
     """
 
-    def __init__(self, nrml_path, oq_calculation_id):
-        super(LossCurveDBWriter, self).__init__(nrml_path, oq_calculation_id)
+    def __init__(self, nrml_path, oq_job_id):
+        super(LossCurveDBWriter, self).__init__(nrml_path, oq_job_id)
 
         self.curve = None
         self.bulk_inserter = writer.BulkInserter(models.LossCurveData)

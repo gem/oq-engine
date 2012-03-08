@@ -58,23 +58,23 @@ class BaseExportTestCase(unittest.TestCase):
                                                  user_name=user_name)
 
     def _set_up_complete_calcs(self):
-        self.uhs_calc = models.OqCalculation(
+        self.uhs_calc = models.OqJob(
             owner=self.uhs_jp.owner, description=self.uhs_jp.description,
             oq_job_profile=self.uhs_jp, status='succeeded')
         self.uhs_calc.save()
 
-        self.cpsha_calc_fail = models.OqCalculation(
+        self.cpsha_calc_fail = models.OqJob(
             owner=self.cpsha_jp.owner, description=self.cpsha_jp.description,
             oq_job_profile=self.cpsha_jp, status='failed')
         self.cpsha_calc_fail.save()
 
     def _set_up_incomplete_calcs(self):
-        self.uhs_pending_calc = models.OqCalculation(
+        self.uhs_pending_calc = models.OqJob(
             owner=self.uhs_jp.owner, description=self.uhs_jp.description,
             oq_job_profile=self.uhs_jp, status='pending')
         self.uhs_pending_calc.save()
 
-        self.cpsha_running_calc = models.OqCalculation(
+        self.cpsha_running_calc = models.OqJob(
             owner=self.cpsha_jp.owner, description=self.cpsha_jp.description,
             oq_job_profile=self.cpsha_jp, status='running')
         self.cpsha_running_calc.save()
@@ -126,25 +126,25 @@ class GetOutputsTestCase(BaseExportTestCase):
     def _set_up_outputs(self):
         # Set up test Output records
         self.uhs_output = models.Output(
-            owner=self.uhs_calc.owner, oq_calculation=self.uhs_calc,
+            owner=self.uhs_calc.owner, oq_job=self.uhs_calc,
             db_backed=True, output_type='uh_spectra')
         self.uhs_output.save()
 
         self.cpsha_hc_output = models.Output(
             owner=self.cpsha_calc_fail.owner,
-            oq_calculation=self.cpsha_calc_fail, db_backed=True,
+            oq_job=self.cpsha_calc_fail, db_backed=True,
             output_type='hazard_curve')
         self.cpsha_hc_output.save()
 
         self.cpsha_mean_hc_output = models.Output(
             owner=self.cpsha_calc_fail.owner,
-            oq_calculation=self.cpsha_calc_fail, db_backed=True,
+            oq_job=self.cpsha_calc_fail, db_backed=True,
             output_type='hazard_curve')
         self.cpsha_mean_hc_output.save()
 
         self.cpsha_lc_output = models.Output(
             owner=self.cpsha_calc_fail.owner,
-            oq_calculation=self.cpsha_calc_fail, db_backed=True,
+            oq_job=self.cpsha_calc_fail, db_backed=True,
             output_type='loss_curve')
         self.cpsha_lc_output.save()
 

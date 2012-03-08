@@ -24,7 +24,7 @@ from openquake.calculators.hazard.uhs.core import compute_uhs
 from openquake.calculators.hazard.uhs.core import compute_uhs_task
 from openquake.calculators.hazard.uhs.core import write_uh_spectra
 from openquake.calculators.hazard.uhs.core import write_uhs_spectrum_data
-from openquake.db.models import OqCalculation
+from openquake.db.models import OqJob
 from openquake.db.models import Output
 from openquake.db.models import UhSpectra
 from openquake.db.models import UhSpectrum
@@ -46,21 +46,21 @@ class UHSBaseTestCase(unittest.TestCase):
     UHS_CORE_MODULE = 'openquake.calculators.hazard.uhs.core'
 
     def setUp(self):
-        # Create OqJobProfile, OqCalculation, and CalculationProxy objects
+        # Create OqJobProfile, OqJob, and JobContext objects
         # which can be used for several of the tests:
         self.job_profile, params, sections = engine.import_job_profile(
             UHS_DEMO_CONFIG_FILE)
-        self.calculation = OqCalculation(
+        self.job = OqJob(
             owner=self.job_profile.owner,
             oq_job_profile=self.job_profile)
-        self.calculation.save()
+        self.job.save()
 
-        self.calc_proxy = engine.CalculationProxy(
-            params, self.calculation.id, sections=sections,
+        self.job_ctxt = engine.JobContext(
+            params, self.job.id, sections=sections,
             serialize_results_to=['db'], oq_job_profile=self.job_profile,
-            oq_calculation=self.calculation)
-        self.calc_proxy.to_kvs()
-        self.job_id = self.calc_proxy.job_id
+            oq_job=self.job)
+        self.job_ctxt.to_kvs()
+        self.job_id = self.job_ctxt.job_id
 
 
 class UHSCoreTestCase(UHSBaseTestCase):
@@ -106,10 +106,10 @@ class UHSCoreTestCase(UHSBaseTestCase):
         #   - 1 hzrdr.uh_spectrum record per PoE defined in the oq_job_profile
 
         # Call the function under test:
-        write_uh_spectra(self.calc_proxy)
+        write_uh_spectra(self.job_ctxt)
 
         # Now check that the expected records were indeed created.
-        output = Output.objects.get(oq_calculation=self.calculation.id)
+        output = Output.objects.get(oq_job=self.job.id)
         self.assertEqual('uh_spectra', output.output_type)
 
         uh_spectra = UhSpectra.objects.get(output=output.id)
@@ -130,7 +130,7 @@ class UHSCoreTestCase(UHSBaseTestCase):
 
         # To start with, we need to write the 'container' records for the UHS
         # results:
-        write_uh_spectra(self.calc_proxy)
+        write_uh_spectra(self.job_ctxt)
 
         uhs_results = []  # The results we want to write to HDF5
         uhs_result = java.jvm().JClass('org.gem.calc.UHSResult')
@@ -144,11 +144,11 @@ class UHSCoreTestCase(UHSBaseTestCase):
 
         # Call the function under test
         write_uhs_spectrum_data(
-            self.calc_proxy, realization, test_site, uhs_results)
+            self.job_ctxt, realization, test_site, uhs_results)
 
         uhs_data = UhSpectrumData.objects.filter(
-            uh_spectrum__uh_spectra__output__oq_calculation=(
-            self.calculation.id))
+            uh_spectrum__uh_spectra__output__oq_job=(
+            self.job.id))
 
         self.assertEqual(len(self.UHS_RESULTS), len(uhs_data))
         self.assertTrue(all([x.realization == 0 for x in uhs_data]))
@@ -249,7 +249,7 @@ class UHSCalculatorTestCase(UHSBaseTestCase):
             self.job_id, 'h', 'uhs:tasks', 't')
         self.assertIsNone(task_total())
 
-        calc = UHSCalculator(self.calc_proxy)
+        calc = UHSCalculator(self.job_ctxt)
 
         calc.initialize()
 
@@ -260,7 +260,7 @@ class UHSCalculatorTestCase(UHSBaseTestCase):
     def test_pre_execute(self):
         # Simply tests that `pre_execute` calls `write_uh_spectra`.
         # That's all for now.
-        calc = UHSCalculator(self.calc_proxy)
+        calc = UHSCalculator(self.job_ctxt)
 
         with helpers.patch(
             '%s.write_uh_spectra' % self.UHS_CORE_MODULE) as write_mock:
@@ -268,7 +268,7 @@ class UHSCalculatorTestCase(UHSBaseTestCase):
             self.assertEqual(1, write_mock.call_count)
 
     def test_post_execute(self):
-        calc = UHSCalculator(self.calc_proxy)
+        calc = UHSCalculator(self.job_ctxt)
 
         expected_call_args = ((self.job_id,), {})
 

@@ -17,7 +17,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """
-This module tests the risk side of the scenario event based calculation.
+This module tests the risk side of the scenario event based job.
 """
 
 import json
