@@ -90,10 +90,10 @@ def preload(fn):
 
     @functools.wraps(fn)
     def preloader(self, *args, **kwargs):  # pylint: disable=C0111
-        source_model_lt = self.calc_proxy.params.get(
+        source_model_lt = self.job_ctxt.params.get(
             'SOURCE_MODEL_LOGIC_TREE_FILE_PATH')
-        gmpe_lt = self.calc_proxy.params.get('GMPE_LOGIC_TREE_FILE_PATH')
-        basepath = self.calc_proxy.params.get('BASE_PATH')
+        gmpe_lt = self.job_ctxt.params.get('GMPE_LOGIC_TREE_FILE_PATH')
+        basepath = self.job_ctxt.params.get('BASE_PATH')
         self.calc = logictree.LogicTreeProcessor(basepath, source_model_lt,
                                                  gmpe_lt)
         return fn(self, *args, **kwargs)
@@ -215,12 +215,12 @@ class BaseHazardCalculator(Calculator):
     def __init__(self, job_profile):
         super(BaseHazardCalculator, self).__init__(job_profile)
 
-        basepath = self.calc_proxy.params.get('BASE_PATH')
+        basepath = self.job_ctxt.params.get('BASE_PATH')
 
-        if not self.calc_proxy['CALCULATION_MODE'] == 'Scenario':
-            source_model_lt = self.calc_proxy.params.get(
+        if not self.job_ctxt['CALCULATION_MODE'] == 'Scenario':
+            source_model_lt = self.job_ctxt.params.get(
                 'SOURCE_MODEL_LOGIC_TREE_FILE_PATH')
-            gmpe_lt = self.calc_proxy.params.get('GMPE_LOGIC_TREE_FILE_PATH')
+            gmpe_lt = self.job_ctxt.params.get('GMPE_LOGIC_TREE_FILE_PATH')
             # TODO: This should probably be moved into a `pre_execute` method.
             self.calc = logictree.LogicTreeProcessor(basepath, source_model_lt,
                                                      gmpe_lt)
@@ -231,26 +231,26 @@ class BaseHazardCalculator(Calculator):
 
     def store_source_model(self, seed):
         """Generates a source model from the source model logic tree."""
-        store_source_model(self.calc_proxy.job_id, seed,
-                           self.calc_proxy.params, self.calc)
+        store_source_model(self.job_ctxt.job_id, seed,
+                           self.job_ctxt.params, self.calc)
 
     def store_gmpe_map(self, seed):
         """Generates a hash of tectonic regions and GMPEs, using the logic tree
         specified in the job config file."""
-        store_gmpe_map(self.calc_proxy.job_id, seed, self.calc)
+        store_gmpe_map(self.job_ctxt.job_id, seed, self.calc)
 
     def generate_erf(self):
         """Generate the Earthquake Rupture Forecast from the currently stored
         source model logic tree."""
-        return generate_erf(self.calc_proxy.job_id, self.cache)
+        return generate_erf(self.job_ctxt.job_id, self.cache)
 
     def set_gmpe_params(self, gmpe_map):
         """Push parameters from configuration file into the GMPE objects"""
-        set_gmpe_params(gmpe_map, self.calc_proxy.params)
+        set_gmpe_params(gmpe_map, self.job_ctxt.params)
 
     def generate_gmpe_map(self):
         """Generate the GMPE map from the stored GMPE logic tree."""
-        gmpe_map = generate_gmpe_map(self.calc_proxy.job_id, self.cache)
+        gmpe_map = generate_gmpe_map(self.job_ctxt.job_id, self.cache)
         self.set_gmpe_params(gmpe_map)
         return gmpe_map
 
@@ -266,22 +266,22 @@ class BaseHazardCalculator(Calculator):
 
             vs30 = java.jclass("DoubleParameter")(jpype.JString("Vs30"))
             vs30.setValue(
-                float(self.calc_proxy.params['REFERENCE_VS30_VALUE']))
+                float(self.job_ctxt.params['REFERENCE_VS30_VALUE']))
             depth25 = java.jclass("DoubleParameter")("Depth 2.5 km/sec")
             depth25.setValue(float(
-                self.calc_proxy.params[
+                self.job_ctxt.params[
                     'REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']))
             sadigh = java.jclass("StringParameter")("Sadigh Site Type")
-            sadigh.setValue(self.calc_proxy.params['SADIGH_SITE_TYPE'])
+            sadigh.setValue(self.job_ctxt.params['SADIGH_SITE_TYPE'])
 
             depth1km = java.jclass("DoubleParameter")(jpype.JString(
                 "Depth 1.0 km/sec"))
             depth1km.setValue(
-                float(self.calc_proxy.params['DEPTHTO1PT0KMPERSEC']))
+                float(self.job_ctxt.params['DEPTHTO1PT0KMPERSEC']))
             vs30_type = java.jclass("StringParameter")("Vs30 Type")
             # Enum values must be capitalized in the Java domain!
             vs30_type.setValue(
-                self.calc_proxy.params['VS30_TYPE'].capitalize())
+                self.job_ctxt.params['VS30_TYPE'].capitalize())
 
             site.addParameter(vs30)
             site.addParameter(depth25)

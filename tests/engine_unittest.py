@@ -291,7 +291,7 @@ class EngineLaunchCalcTestCase(unittest.TestCase):
                                     oq_job_profile=job_profile)
         job.save()
 
-        calc_proxy = engine.CalculationProxy(
+        job_ctxt = engine.JobContext(
             params, job.id, sections=sections,
             serialize_results_to=['xml', 'db'],
             oq_job_profile=job_profile, oq_job=job)
@@ -309,7 +309,7 @@ class EngineLaunchCalcTestCase(unittest.TestCase):
         risk_mocks = [p.start() for p in risk_patchers]
 
         # Call the function under test:
-        engine._launch_job(calc_proxy, sections)
+        engine._launch_job(job_ctxt, sections)
 
         self.assertTrue(all(x.call_count == 1 for x in haz_mocks))
         self.assertTrue(all(x.call_count == 1 for x in risk_mocks))
