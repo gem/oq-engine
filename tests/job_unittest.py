@@ -38,8 +38,8 @@ from openquake.engine import CalculationProxy
 from openquake.engine import import_job_profile
 from openquake.job import config
 from openquake.job.params import config_text_to_list
-from openquake.db.models import CalcStats
-from openquake.db.models import OqCalculation
+from openquake.db.models import JobStats
+from openquake.db.models import OqJob
 from openquake.db.models import OqJobProfile
 from openquake.db.models import OqUser
 
@@ -165,17 +165,17 @@ class JobDbRecordTestCase(unittest.TestCase):
     def test_job_db_record_for_output_type_db(self):
         self.job = engine._job_from_file(
             helpers.get_data_path(CONFIG_FILE), 'db')
-        OqCalculation.objects.get(id=self.job.job_id)
+        OqJob.objects.get(id=self.job.job_id)
 
     def test_job_db_record_for_output_type_xml(self):
         self.job = engine._job_from_file(
             helpers.get_data_path(CONFIG_FILE), 'xml')
-        OqCalculation.objects.get(id=self.job.job_id)
+        OqJob.objects.get(id=self.job.job_id)
 
     def test_get_status_from_db(self):
         self.job = engine._job_from_file(
             helpers.get_data_path(CONFIG_FILE), 'db')
-        row = OqCalculation.objects.get(id=self.job.job_id)
+        row = OqJob.objects.get(id=self.job.job_id)
 
         row.status = "failed"
         row.save()
@@ -190,7 +190,7 @@ class JobDbRecordTestCase(unittest.TestCase):
     def test_is_job_completed(self):
         job_id = engine._job_from_file(
             helpers.get_data_path(CONFIG_FILE), 'db').job_id
-        row = OqCalculation.objects.get(id=job_id)
+        row = OqJob.objects.get(id=job_id)
         pairs = [('pending', False), ('running', False),
                  ('succeeded', True), ('failed', True)]
         for status, is_completed in pairs:
@@ -419,7 +419,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
 
     def setUp(self):
         owner = OqUser.objects.get(user_name='openquake')
-        self.calculation = OqCalculation(owner=owner, path=None)
+        self.calculation = OqJob(owner=owner, path=None)
 
     def tearDown(self):
         if (hasattr(self, "calculation")
@@ -716,7 +716,7 @@ class RunJobTestCase(unittest.TestCase):
         self.init_logs_amqp_send.stop()
 
     def _calculation_status(self):
-        return OqCalculation.objects.latest(field_name='last_update').status
+        return OqJob.objects.latest(field_name='last_update').status
 
     def test_successful_job_lifecycle(self):
 
@@ -894,7 +894,7 @@ class RunJobTestCase(unittest.TestCase):
                         engine.run_calculation(self.calc_proxy,
                                                self.params,
                                                self.sections)
-                        calculation = OqCalculation.objects.latest(
+                        calculation = OqJob.objects.latest(
                             field_name='last_update')
 
                         self.assertEquals(1, supervise.call_count)
@@ -904,7 +904,7 @@ class RunJobTestCase(unittest.TestCase):
                 engine._launch_calculation = before_launch
 
 
-class CalcStatsTestCase(unittest.TestCase):
+class JobStatsTestCase(unittest.TestCase):
     '''
     Tests related to capturing job stats.
     '''
@@ -916,27 +916,27 @@ class CalcStatsTestCase(unittest.TestCase):
 
         oq_job_profile, params, sections = engine.import_job_profile(cfg_path)
 
-        oq_calculation = OqCalculation(
+        oq_job = OqJob(
             owner=oq_job_profile.owner,
             description='',
             oq_job_profile=oq_job_profile)
-        oq_calculation.save()
+        oq_job.save()
 
         self.eb_job = CalculationProxy(
-            params, oq_calculation.id, sections=sections, base_path=base_path,
-            oq_job_profile=oq_job_profile, oq_calculation=oq_calculation)
+            params, oq_job.id, sections=sections, base_path=base_path,
+            oq_job_profile=oq_job_profile, oq_job=oq_job)
 
     def test_record_initial_stats(self):
         '''Verify that
         :py:method:`openquake.engine.CalculationProxy._record_initial_stats`
         reports initial calculation stats.
 
-        As we add fields to the uiapi.calc_stats table, this test will need to
+        As we add fields to the uiapi.job_stats table, this test will need to
         be updated to check for this new information.
         '''
         self.eb_job._record_initial_stats()
 
-        actual_stats = CalcStats.objects.get(oq_calculation=self.eb_job.job_id)
+        actual_stats = JobStats.objects.get(oq_job=self.eb_job.job_id)
 
         self.assertTrue(actual_stats.start_time is not None)
         self.assertEqual(91, actual_stats.num_sites)

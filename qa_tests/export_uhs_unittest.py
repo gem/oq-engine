@@ -54,9 +54,9 @@ class ExportUHSTestCase(unittest.TestCase):
             ret_code = helpers.run_job(uhs_cfg)
             self.assertEqual(0, ret_code)
 
-            calculation = models.OqCalculation.objects.latest('id')
+            calculation = models.OqJob.objects.latest('id')
             [output] = models.Output.objects.filter(
-                oq_calculation=calculation.id)
+                oq_job=calculation.id)
 
             # Split into a list, 1 result for each row in the output.
             # The first row of output (the table header) is discarded.

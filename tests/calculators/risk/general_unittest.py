@@ -55,14 +55,14 @@ class ProbabilisticRiskCalculatorTestCase(unittest.TestCase):
         job_profile.conditional_loss_poe = [0.01]
         job_profile.save()
 
-        calculation = models.OqCalculation(owner=job_profile.owner,
+        calculation = models.OqJob(owner=job_profile.owner,
                                            oq_job_profile=job_profile)
         calculation.save()
 
         calc_proxy = engine.CalculationProxy(
             params, calculation.id, sections=sections,
             serialize_results_to=['xml', 'db'], oq_job_profile=job_profile,
-            oq_calculation=calculation)
+            oq_job=calculation)
 
         calculator = ClassicalRiskCalculator(calc_proxy)
 
@@ -105,14 +105,14 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
 
         job_profile, params, sections = engine.import_job_profile(cfg_file)
 
-        calculation = models.OqCalculation(owner=job_profile.owner,
+        calculation = models.OqJob(owner=job_profile.owner,
                                            oq_job_profile=job_profile)
         calculation.save()
 
         calc_proxy = engine.CalculationProxy(
             params, calculation.id, sections=sections,
             serialize_results_to=['xml', 'db'], oq_job_profile=job_profile,
-            oq_calculation=calculation)
+            oq_job=calculation)
 
         calculator = ClassicalRiskCalculator(calc_proxy)
 
@@ -241,11 +241,11 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
     @classmethod
     def setUpClass(cls):
         jp, _, _ = engine.import_job_profile(RISK_DEMO_CONFIG_FILE)
-        cls.job = models.OqCalculation(owner=jp.owner, oq_job_profile=jp)
+        cls.job = models.OqJob(owner=jp.owner, oq_job_profile=jp)
         cls.job.save()
         cls.calc_proxy = helpers.create_job({}, job_id=cls.job.id,
                                             oq_job_profile=jp,
-                                            oq_calculation=cls.job)
+                                            oq_job=cls.job)
         calc = ClassicalRiskCalculator(cls.calc_proxy)
 
         calc.store_exposure_assets()

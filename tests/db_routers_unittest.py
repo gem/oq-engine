@@ -112,7 +112,7 @@ class OQRouterTestCase(unittest.TestCase):
         For each model in the 'uiapi' schema, test for proper db routing
         for read operations.
         '''
-        classes = [Upload, Input, InputSet, OqCalculation, OqJobProfile,
+        classes = [Upload, Input, InputSet, OqJob, OqJobProfile,
                    Output, ErrorMsg]
         expected_db = 'reslt_writer'
 
@@ -123,7 +123,7 @@ class OQRouterTestCase(unittest.TestCase):
         For each model in the 'uiapi' schema, test for proper db routing
         for write operations.
         '''
-        classes = [Upload, Input, InputSet, OqCalculation, OqJobProfile,
+        classes = [Upload, Input, InputSet, OqJob, OqJobProfile,
                    ErrorMsg]
         expected_db = 'job_init'
 
