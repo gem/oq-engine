@@ -34,7 +34,7 @@ from openquake.engine import _get_source_models
 from openquake.engine import _parse_config_file
 from openquake.engine import _prepare_config_parameters
 from openquake.engine import _prepare_job
-from openquake.engine import CalculationProxy
+from openquake.engine import JobContext
 from openquake.engine import import_job_profile
 from openquake.job import config
 from openquake.job.params import config_text_to_list
@@ -88,11 +88,11 @@ class JobTestCase(unittest.TestCase):
         self.generated_files = []
         jp, params, sections = import_job_profile(helpers.get_data_path(
             CONFIG_FILE))
-        self.job = CalculationProxy(
+        self.job = JobContext(
             params, 1, sections=sections, oq_job_profile=jp)
         jp, params, sections = import_job_profile(helpers.get_data_path(
             CONFIG_WITH_INCLUDES))
-        self.job_with_includes = CalculationProxy(
+        self.job_with_includes = JobContext(
             params, 1, sections=sections, oq_job_profile=jp)
 
     def tearDown(self):
@@ -151,7 +151,7 @@ class JobTestCase(unittest.TestCase):
         try:
             self.job.to_kvs()
 
-            job_from_kvs = CalculationProxy.from_kvs(self.job.job_id)
+            job_from_kvs = JobContext.from_kvs(self.job.job_id)
             self.assertEqual(self.job.params, job_from_kvs.params)
         finally:
             helpers.cleanup_loggers()
@@ -180,12 +180,12 @@ class JobDbRecordTestCase(unittest.TestCase):
         row.status = "failed"
         row.save()
         self.assertEqual(
-            "failed", CalculationProxy.get_status_from_db(self.job.job_id))
+            "failed", JobContext.get_status_from_db(self.job.job_id))
 
         row.status = "running"
         row.save()
         self.assertEqual(
-            "running", CalculationProxy.get_status_from_db(self.job.job_id))
+            "running", JobContext.get_status_from_db(self.job.job_id))
 
     def test_is_job_completed(self):
         job_id = engine._job_from_file(
@@ -197,7 +197,7 @@ class JobDbRecordTestCase(unittest.TestCase):
             row.status = status
             row.save()
             self.assertEqual(
-                CalculationProxy.is_job_completed(job_id), is_completed)
+                JobContext.is_job_completed(job_id), is_completed)
 
 
 class ConfigParseTestCase(unittest.TestCase):
@@ -709,7 +709,7 @@ class RunJobTestCase(unittest.TestCase):
         self.job_from_file = engine._job_from_file
         self.init_logs_amqp_send = patch('openquake.logs.init_logs_amqp_send')
         self.init_logs_amqp_send.start()
-        self.calc_proxy, self.params, self.sections = (
+        self.job_ctxt, self.params, self.sections = (
             engine.import_job_profile(helpers.get_data_path(CONFIG_FILE)))
 
     def tearDown(self):
@@ -742,7 +742,7 @@ class RunJobTestCase(unittest.TestCase):
 
                 with patch('os.fork', mocksignature=False) as fork:
                     fork.return_value = 0
-                    engine.run_job(self.calc_proxy, self.params,
+                    engine.run_job(self.job_ctxt, self.params,
                                            self.sections)
 
             self.assertEquals(1, engine._launch_job.call_count)
@@ -775,7 +775,7 @@ class RunJobTestCase(unittest.TestCase):
                 with patch('os.fork', mocksignature=False) as fork:
                     fork.return_value = 0
                     self.assertRaises(Exception, engine.run_job,
-                                      self.calc_proxy, self.params,
+                                      self.job_ctxt, self.params,
                                       self.sections)
 
             self.assertEquals(1, engine._launch_job.call_count)
@@ -891,7 +891,7 @@ class RunJobTestCase(unittest.TestCase):
                     fork.side_effect = fork_side_effect
                     superv_func = 'openquake.supervising.supervisor.supervise'
                     with patch(superv_func) as supervise:
-                        engine.run_job(self.calc_proxy,
+                        engine.run_job(self.job_ctxt,
                                                self.params,
                                                self.sections)
                         job = OqJob.objects.latest(
@@ -922,13 +922,13 @@ class JobStatsTestCase(unittest.TestCase):
             oq_job_profile=oq_job_profile)
         oq_job.save()
 
-        self.eb_job = CalculationProxy(
+        self.eb_job = JobContext(
             params, oq_job.id, sections=sections, base_path=base_path,
             oq_job_profile=oq_job_profile, oq_job=oq_job)
 
     def test_record_initial_stats(self):
         '''Verify that
-        :py:method:`openquake.engine.CalculationProxy._record_initial_stats`
+        :py:method:`openquake.engine.JobContext._record_initial_stats`
         reports initial calculation stats.
 
         As we add fields to the uiapi.job_stats table, this test will need to
@@ -944,7 +944,7 @@ class JobStatsTestCase(unittest.TestCase):
 
     def test_job_launch_calls_record_initial_stats(self):
         '''When a job is launched, make sure that
-        :py:method:`openquake.engine.CalculationProxy._record_initial_stats`
+        :py:method:`openquake.engine.JobContext._record_initial_stats`
         is called.
         '''
         # Mock out pieces of the test job so it doesn't actually run.
@@ -963,7 +963,7 @@ class JobStatsTestCase(unittest.TestCase):
             p.start()
 
         try:
-            record = 'openquake.engine.CalculationProxy._record_initial_stats'
+            record = 'openquake.engine.JobContext._record_initial_stats'
 
             with patch(record) as record_mock:
                 engine._launch_job(

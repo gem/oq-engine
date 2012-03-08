@@ -38,19 +38,19 @@ class LossMapCurveSerialization(unittest.TestCase):
                                            oq_job_profile=job_profile)
         job.save()
 
-        calc_proxy = engine.CalculationProxy(
+        job_ctxt = engine.JobContext(
             params, 1, sections=sections, base_path='/tmp',
             serialize_results_to=['db', 'xml'],
             oq_job_profile=job_profile, oq_job=job)
-        calc_proxy.blocks_keys = []
+        job_ctxt.blocks_keys = []
 
-        self.calculator = EventBasedRiskCalculator(calc_proxy)
+        self.calculator = EventBasedRiskCalculator(job_ctxt)
         self.calculator.store_exposure_assets = lambda: None
         self.calculator.store_vulnerability_model = lambda: None
         self.calculator.partition = lambda: None
 
     def test_loss_map_serialized_if_conditional_loss_poes(self):
-        self.calculator.calc_proxy.params['CONDITIONAL_LOSS_POE'] = (
+        self.calculator.job_ctxt.params['CONDITIONAL_LOSS_POE'] = (
             '0.01 0.02')
 
         with helpers.patch(

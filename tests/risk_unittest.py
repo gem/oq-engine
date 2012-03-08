@@ -622,10 +622,10 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
                                           '2.0, 2.0, 2.0, 0.0'),
                            REGION_GRID_SPACING='0.1'))
 
-        calc_proxy = engine.CalculationProxy(
+        job_ctxt = engine.JobContext(
             params, self.job_id, sections=sections, oq_job_profile=job_profile)
 
-        calculator = eb_core.EventBasedRiskCalculator(calc_proxy)
+        calculator = eb_core.EventBasedRiskCalculator(job_ctxt)
 
         self.block_id = 7
         SITE = shapes.Site(1.0, 1.0)
@@ -924,12 +924,12 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
             params['REGION_VERTEX']))
         job_profile.save()
 
-        calc_proxy = engine.CalculationProxy(
+        job_ctxt = engine.JobContext(
             params, self.job_id, sections=sections, oq_job_profile=job_profile)
 
         self._compute_risk_classical_psha_setup()
 
-        calculator = classical_core.ClassicalRiskCalculator(calc_proxy)
+        calculator = classical_core.ClassicalRiskCalculator(job_ctxt)
         calculator.vuln_curves = {"ID": self.vuln_function}
 
         block = Block.from_kvs(self.job_id, self.block_id)
@@ -937,7 +937,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         # computes the loss curves and puts them in kvs
         self.assertTrue(calculator.compute_risk(self.block_id))
 
-        for point in block.grid(calc_proxy.region):
+        for point in block.grid(job_ctxt.region):
             assets = BaseRiskCalculator.assets_for_cell(
                 self.job_id, point.site)
             for asset in assets:
@@ -965,10 +965,10 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
             params['REGION_VERTEX']))
         job_profile.save()
 
-        calc_proxy = engine.CalculationProxy(
+        job_ctxt = engine.JobContext(
             params, self.job_id, sections=sections, oq_job_profile=job_profile)
 
-        calculator = classical_core.ClassicalRiskCalculator(calc_proxy)
+        calculator = classical_core.ClassicalRiskCalculator(job_ctxt)
 
         [input] = job_profile.input_set.input_set.filter(input_type="exposure")
         emdl = models.ExposureModel(
@@ -1408,10 +1408,10 @@ class RiskJobGeneralTestCase(unittest.TestCase):
 
         output_dir = tempfile.mkdtemp()
         try:
-            calc.calc_proxy.params = {'OUTPUT_DIR': output_dir,
+            calc.job_ctxt.params = {'OUTPUT_DIR': output_dir,
                                        'INTEREST_RATE': '0.12',
                                        'ASSET_LIFE_EXPECTANCY': '50'}
-            calc.calc_proxy._base_path = '.'
+            calc.job_ctxt._base_path = '.'
 
             resultfile = os.path.join(output_dir, 'bcr-map.xml')
 
