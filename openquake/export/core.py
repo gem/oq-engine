@@ -103,17 +103,17 @@ def get_calculations(user_name):
                 '-last_update')
 
 
-def get_outputs(calculation_id):
+def get_outputs(job_id):
     """Get all :class:`openquake.db.models.Output`s associated with the
-    specified calculation.
+    specified job.
 
-    :param int calculation_id:
+    :param int job_id:
         ID of a :class:`openquake.db.models.OqJob`.
     :returns:
         :class:`django.db.models.query.QuerySet` of
         :class:`openquake.db.models.Output` objects.
     """
-    return models.Output.objects.filter(oq_job=calculation_id)
+    return models.Output.objects.filter(oq_job=job_id)
 
 
 def export(output_id, target_dir):

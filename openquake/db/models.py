@@ -779,7 +779,7 @@ class OqJobProfile(models.Model):
 
 class Output(models.Model):
     '''
-    A single artifact which is a result of an OpenQuake calculation.
+    A single artifact which is a result of an OpenQuake job.
     The data may reside in a file or in the database.
     '''
     owner = models.ForeignKey('OqUser')

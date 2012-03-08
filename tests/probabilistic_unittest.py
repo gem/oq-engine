@@ -34,14 +34,14 @@ class LossMapCurveSerialization(unittest.TestCase):
             'probabilistic_event_based_risk/config.gem')
 
         job_profile, params, sections = engine.import_job_profile(cfg_path)
-        calculation = models.OqJob(owner=job_profile.owner,
+        job = models.OqJob(owner=job_profile.owner,
                                            oq_job_profile=job_profile)
-        calculation.save()
+        job.save()
 
         calc_proxy = engine.CalculationProxy(
             params, 1, sections=sections, base_path='/tmp',
             serialize_results_to=['db', 'xml'],
-            oq_job_profile=job_profile, oq_job=calculation)
+            oq_job_profile=job_profile, oq_job=job)
         calc_proxy.blocks_keys = []
 
         self.calculator = EventBasedRiskCalculator(calc_proxy)

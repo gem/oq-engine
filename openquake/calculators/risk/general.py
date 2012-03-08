@@ -105,7 +105,7 @@ def _compute_conditional_loss(curve, probability):
 
 
 @task
-def compute_risk(calculation_id, block_id, **kwargs):
+def compute_risk(job_id, block_id, **kwargs):
     """A task for computing risk, calls the compute_risk method defined in the
     chosen risk calculator.
 
@@ -113,7 +113,7 @@ def compute_risk(calculation_id, block_id, **kwargs):
     calculation mode (i.e., classical, event_based, etc.).
     """
 
-    calculator = calculator_for_task(calculation_id, 'risk')
+    calculator = calculator_for_task(job_id, 'risk')
 
     return calculator.compute_risk(block_id, **kwargs)
 
@@ -179,7 +179,7 @@ class BaseRiskCalculator(Calculator):
 
         if cls._em_inputs is None or cls._em_job_id != job_id:
             # This query obtains the exposure model input rows and needs to be
-            # made only once in the course of a risk calculation.
+            # made only once in the course of a risk job.
             cls._em_inputs = list(
                 jp.input_set.input_set.filter(input_type="exposure"))
             cls._em_job_id = job_id
@@ -505,25 +505,25 @@ class EpsilonProvider(object):
 class Block(object):
     """A block is a collection of sites to compute."""
 
-    def __init__(self, calculation_id, block_id, sites):
+    def __init__(self, job_id, block_id, sites):
         """
-        :param int calculation_id:
-            The id of a current calculation.
+        :param int job_id:
+            The id of a current job.
         :param int block_id:
             Sequence number of the site block (from 0 to N-1, where N is the
             number of blocks).
         :param sites:
             `list` of :class:`openquake.shapes.Site` objects.
         """
-        self.calculation_id = calculation_id
+        self.job_id = job_id
         self.block_id = block_id
         self._sites = sites
 
     def __eq__(self, other):
-        """Compares calculation_id, and block_id.
+        """Compares job_id, and block_id.
 
         This is a shallow comparison; site lists are not compared."""
-        return (self.calculation_id == other.calculation_id
+        return (self.job_id == other.job_id
                 and self.block_id == other.block_id)
 
     @property
@@ -544,10 +544,10 @@ class Block(object):
                 yield point
 
     @staticmethod
-    def from_kvs(calculation_id, block_id):
+    def from_kvs(job_id, block_id):
         """Return the block in the underlying KVS system with the given id."""
 
-        block_key = kvs.tokens.risk_block_key(calculation_id, block_id)
+        block_key = kvs.tokens.risk_block_key(job_id, block_id)
 
         raw_sites = kvs.get_value_json_decoded(block_key)
 
@@ -556,7 +556,7 @@ class Block(object):
         for raw_site in raw_sites:
             sites.append(shapes.Site(raw_site[0], raw_site[1]))
 
-        return Block(calculation_id, block_id, sites)
+        return Block(job_id, block_id, sites)
 
     def to_kvs(self):
         """Store this block into the underlying KVS system."""
@@ -566,18 +566,18 @@ class Block(object):
         for site in self.sites:
             raw_sites.append(site.coords)
 
-        block_key = kvs.tokens.risk_block_key(self.calculation_id,
+        block_key = kvs.tokens.risk_block_key(self.job_id,
                                               self.block_id)
 
         kvs.set_value_json_encoded(block_key, raw_sites)
 
 
-def split_into_blocks(calculation_id, sites, block_size=BLOCK_SIZE):
+def split_into_blocks(job_id, sites, block_size=BLOCK_SIZE):
     """Creates a generator for splitting a list of sites into
     :class:`openquake.calculators.risk.general.Block`s.
 
-    :param calculation_id:
-        The id for the current calculation.
+    :param job_id:
+        The id for the current job.
     :param sites:
         `list` of :class:`openquake.shapes.Site` objects to be split
         into blocks.
@@ -592,7 +592,7 @@ def split_into_blocks(calculation_id, sites, block_size=BLOCK_SIZE):
         raise RuntimeError("block_size should be at least 1.")
 
     for block_id, i in enumerate(xrange(0, len(sites), block_size)):
-        yield Block(calculation_id, block_id=block_id,
+        yield Block(job_id, block_id=block_id,
                     sites=sites[i:i + block_size])
 
 

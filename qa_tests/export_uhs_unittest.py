@@ -54,20 +54,20 @@ class ExportUHSTestCase(unittest.TestCase):
             ret_code = helpers.run_job(uhs_cfg)
             self.assertEqual(0, ret_code)
 
-            calculation = models.OqJob.objects.latest('id')
+            job = models.OqJob.objects.latest('id')
             [output] = models.Output.objects.filter(
-                oq_job=calculation.id)
+                oq_job=job.id)
 
             # Split into a list, 1 result for each row in the output.
             # The first row of output (the table header) is discarded.
             listed_calcs = helpers.prepare_cli_output(subprocess.check_output(
                 ['bin/openquake', '--list-calculations']))
 
-            check_list_calcs(self, listed_calcs, calculation.id)
+            check_list_calcs(self, listed_calcs, job.id)
 
             listed_outputs = helpers.prepare_cli_output(
                 subprocess.check_output(['bin/openquake', '--list-outputs',
-                                         str(calculation.id)]))
+                                         str(job.id)]))
 
             check_list_outputs(self, listed_outputs, output.id, 'uh_spectra')
 

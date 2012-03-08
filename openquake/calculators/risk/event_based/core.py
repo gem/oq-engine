@@ -76,7 +76,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
           be written.
 
         Not all of these actions will be executed; this depends on the
-        configuration of the calculation.
+        configuration of the job.
         """
 
         if self.is_benefit_cost_ratio_mode():
@@ -86,12 +86,12 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         self.write_output()
 
         # Save the aggregate loss curve to the database:
-        calculation = self.calc_proxy.oq_job
+        job = self.calc_proxy.oq_job
 
         agg_lc_display_name = (
-            'Aggregate Loss Curve for calculation %s' % calculation.id)
+            'Aggregate Loss Curve for calculation %s' % job.id)
         output = models.Output(
-            oq_job=calculation, owner=calculation.owner,
+            oq_job=job, owner=job.owner,
             display_name=agg_lc_display_name, db_backed=True,
             output_type='agg_loss_curve')
         output.save()

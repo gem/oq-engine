@@ -31,7 +31,7 @@ def completed_task_count(job_id):
     Successful and failed executions are included in the count.
 
     :param int job_id:
-        ID of the current calculation.
+        ID of the current job.
     :returns:
         Number of completed :function:`compute_uhs_task` task executions so
         far.
@@ -45,7 +45,7 @@ def completed_task_count(job_id):
 
 def remaining_tasks_in_block(job_id, num_tasks, start_count):
     """Figures out the numbers of remaining tasks in the current block. This
-    should only be called during an active calculation.
+    should only be called during an active job.
 
     Given the ID of a currently running calculation, query the stats
     counters in Redis and determine when N :function:`compute_uhs_task` tasks
@@ -58,7 +58,7 @@ def remaining_tasks_in_block(job_id, num_tasks, start_count):
     tasks is reached, a :exception:`StopIteration` is raised.
 
     :param int job_id:
-        ID of the current calculation.
+        ID of the current job.
     :param int num_tasks:
         Number of :function:`compute_uhs_task` tasks in this block.
     :param int start_count:
@@ -87,11 +87,11 @@ def uhs_task_handler(job_id, num_tasks, start_count):
     until the current block of tasks is finished.
 
     :param int job_id:
-        The ID of the currently running calculation.
+        The ID of the currently running job.
     :param int num_tasks:
         The number of tasks in the current block.
     :param int start_count:
-        The number of tasks completed so far in the calculation.
+        The number of tasks completed so far in the job.
     """
     remaining_gen = remaining_tasks_in_block(job_id, num_tasks, start_count)
 
