@@ -18,7 +18,7 @@ import unittest
 
 from nose.plugins.attrib import attr
 
-from openquake.db.models import OqCalculation
+from openquake.db.models import OqJob
 
 from tests.utils import helpers
 
@@ -35,5 +35,5 @@ class ScenarioRiskQATest(unittest.TestCase):
         ret_code = helpers.run_job(scen_cfg, ['--output-type=xml'])
         self.assertEqual(0, ret_code)
 
-        calculation = OqCalculation.objects.latest('id')
-        self.assertEqual('succeeded', calculation.status)
+        job = OqJob.objects.latest('id')
+        self.assertEqual('succeeded', job.status)

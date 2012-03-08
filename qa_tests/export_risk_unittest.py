@@ -45,18 +45,18 @@ class ExportAggLossCurvesTestCase(unittest.TestCase):
             ret_code = helpers.run_job(eb_cfg)
             self.assertEqual(0, ret_code)
 
-            calculation = models.OqCalculation.objects.latest('id')
+            job = models.OqJob.objects.latest('id')
             [output] = models.Output.objects.filter(
-                oq_calculation=calculation.id, output_type='agg_loss_curve')
+                oq_job=job.id, output_type='agg_loss_curve')
 
             listed_calcs = helpers.prepare_cli_output(subprocess.check_output(
                 ['bin/openquake', '--list-calculations']))
 
-            check_list_calcs(self, listed_calcs, calculation.id)
+            check_list_calcs(self, listed_calcs, job.id)
 
             listed_outputs = helpers.prepare_cli_output(
                 subprocess.check_output(
-                    ['bin/openquake', '--list-outputs', str(calculation.id)]))
+                    ['bin/openquake', '--list-outputs', str(job.id)]))
 
             check_list_outputs(self, listed_outputs, output.id,
                                'agg_loss_curve')

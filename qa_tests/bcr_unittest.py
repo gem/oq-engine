@@ -20,7 +20,7 @@ import unittest
 from lxml import etree
 from nose.plugins.attrib import attr
 
-from openquake.db.models import OqCalculation
+from openquake.db.models import OqJob
 from openquake.nrml import nrml_schema_file
 
 from tests.utils import helpers
@@ -59,7 +59,7 @@ class BCRQATestCase(unittest.TestCase):
         }
 
         helpers.run_job(CONFIG)
-        calc_record = OqCalculation.objects.latest("id")
+        calc_record = OqJob.objects.latest("id")
         self.assertEqual('succeeded', calc_record.status)
 
         result = self._parse_bcr_map(RESULT)
