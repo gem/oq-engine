@@ -34,7 +34,7 @@ class UHSXMLWriter(object):
             which produced these results.
         :param timespan:
             The value of the INVESTIGATION_TIME parameter used in the
-            calculation. See
+            job. See
             :data:`openquake.db.models.OqJobProfile.investigation_time`
         """
         self.path = path
