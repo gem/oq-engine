@@ -29,7 +29,7 @@ import uuid
 from openquake import engine
 from openquake.utils import tasks
 from openquake.db.models import model_equals
-from openquake.db.models import OqCalculation
+from openquake.db.models import OqJob
 
 from tests.utils.helpers import demo_file
 from tests.utils.helpers import patch
@@ -157,7 +157,7 @@ class GetRunningCalculationTestCase(unittest.TestCase):
 
         self.params['debug'] = 'warn'
 
-        self.calculation = OqCalculation(
+        self.calculation = OqJob(
             owner=self.job_profile.owner,
             oq_job_profile=self.job_profile)
         self.calculation.save()
@@ -165,7 +165,7 @@ class GetRunningCalculationTestCase(unittest.TestCase):
         # Cache the calc proxy data into the kvs:
         calc_proxy = engine.CalculationProxy(
             self.params, self.calculation.id, oq_job_profile=self.job_profile,
-            oq_calculation=self.calculation)
+            oq_job=self.calculation)
         calc_proxy.to_kvs()
 
     def test_get_running_calculation(self):
@@ -180,7 +180,7 @@ class GetRunningCalculationTestCase(unittest.TestCase):
             self.job_profile, calc_proxy.oq_job_profile,
             ignore=('_owner_cache',)))
         self.assertTrue(model_equals(
-            self.calculation, calc_proxy.oq_calculation,
+            self.calculation, calc_proxy.oq_job,
             ignore=('_owner_cache',)))
 
     def test_get_completed_calculation(self):
@@ -301,13 +301,13 @@ class CalculatorForTaskTestCase(unittest.TestCase):
         job_profile, params, sections = engine.import_job_profile(demo_file(
             'simple_fault_demo_hazard/config.gem'))
 
-        calculation = OqCalculation(owner=job_profile.owner,
+        calculation = OqJob(owner=job_profile.owner,
                                     oq_job_profile=job_profile)
         calculation.save()
 
         calc_proxy = engine.CalculationProxy(params, calculation.id,
                                              oq_job_profile=job_profile,
-                                             oq_calculation=calculation)
+                                             oq_job=calculation)
         calc_proxy.to_kvs()
 
         with patch(

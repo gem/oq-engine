@@ -138,12 +138,12 @@ def write_uh_spectra(calc_proxy):
         UHS calculation.
     """
     oq_job_profile = calc_proxy.oq_job_profile
-    oq_calculation = calc_proxy.oq_calculation
+    oq_job = calc_proxy.oq_job
 
     output = Output(
-        owner=oq_calculation.owner,
-        oq_calculation=oq_calculation,
-        display_name='UH Spectra for calculation id %s' % oq_calculation.id,
+        owner=oq_job.owner,
+        oq_job=oq_job,
+        display_name='UH Spectra for calculation id %s' % oq_job.id,
         db_backed=True,
         output_type='uh_spectra')
     output.save()
@@ -179,9 +179,9 @@ def write_uhs_spectrum_data(calc_proxy, realization, site, uhs_results):
         calculation configuration.
     """
     # Get the top-level uh_spectra record for this calculation:
-    oq_calculation = calc_proxy.oq_calculation
+    oq_job = calc_proxy.oq_job
     uh_spectra = UhSpectra.objects.get(
-        output__oq_calculation=oq_calculation.id)
+        output__oq_job=oq_job.id)
 
     location = GEOSGeometry(site.point.to_wkt())
 
@@ -275,7 +275,7 @@ class UHSCalculator(Calculator):
 
         if 'xml' in self.calc_proxy.serialize_results_to:
             [uhs_output] = Output.objects.filter(
-                oq_calculation=self.calc_proxy.oq_calculation.id,
+                oq_job=self.calc_proxy.oq_job.id,
                 output_type='uh_spectra')
 
             target_dir = os.path.join(self.calc_proxy.params.get('BASE_PATH'),

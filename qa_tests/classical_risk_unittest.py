@@ -21,7 +21,7 @@ import unittest
 from nose.plugins.attrib import attr
 
 from openquake.db.models import LossCurveData
-from openquake.db.models import OqCalculation
+from openquake.db.models import OqJob
 
 from tests.utils import helpers
 
@@ -75,11 +75,11 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         ret_code = helpers.run_job(cls_risk_cfg, ['--output-type=xml'])
         self.assertEquals(0, ret_code)
 
-        calculation = OqCalculation.objects.latest('id')
+        calculation = OqJob.objects.latest('id')
         self.assertEqual('succeeded', calculation.status)
 
         loss_curve = LossCurveData.objects.get(
-            loss_curve__output__oq_calculation=calculation.id)
+            loss_curve__output__oq_job=calculation.id)
 
         self.assertTrue(numpy.allclose(expected_lc_poes, loss_curve.poes,
                                        atol=0.0009))

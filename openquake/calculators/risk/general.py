@@ -174,7 +174,7 @@ class BaseRiskCalculator(Calculator):
         :returns: a potentially empty list of
             :py:class:`openquake.db.models.ExposureData` instances
         """
-        jp = models.OqCalculation.objects.get(id=job_id).oq_job_profile
+        jp = models.OqJob.objects.get(id=job_id).oq_job_profile
         assert jp.region_grid_spacing is not None, "Grid spacing not known."
 
         if cls._em_inputs is None or cls._em_job_id != job_id:

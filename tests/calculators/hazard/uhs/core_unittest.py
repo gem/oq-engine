@@ -24,7 +24,7 @@ from openquake.calculators.hazard.uhs.core import compute_uhs
 from openquake.calculators.hazard.uhs.core import compute_uhs_task
 from openquake.calculators.hazard.uhs.core import write_uh_spectra
 from openquake.calculators.hazard.uhs.core import write_uhs_spectrum_data
-from openquake.db.models import OqCalculation
+from openquake.db.models import OqJob
 from openquake.db.models import Output
 from openquake.db.models import UhSpectra
 from openquake.db.models import UhSpectrum
@@ -46,11 +46,11 @@ class UHSBaseTestCase(unittest.TestCase):
     UHS_CORE_MODULE = 'openquake.calculators.hazard.uhs.core'
 
     def setUp(self):
-        # Create OqJobProfile, OqCalculation, and CalculationProxy objects
+        # Create OqJobProfile, OqJob, and CalculationProxy objects
         # which can be used for several of the tests:
         self.job_profile, params, sections = engine.import_job_profile(
             UHS_DEMO_CONFIG_FILE)
-        self.calculation = OqCalculation(
+        self.calculation = OqJob(
             owner=self.job_profile.owner,
             oq_job_profile=self.job_profile)
         self.calculation.save()
@@ -58,7 +58,7 @@ class UHSBaseTestCase(unittest.TestCase):
         self.calc_proxy = engine.CalculationProxy(
             params, self.calculation.id, sections=sections,
             serialize_results_to=['db'], oq_job_profile=self.job_profile,
-            oq_calculation=self.calculation)
+            oq_job=self.calculation)
         self.calc_proxy.to_kvs()
         self.job_id = self.calc_proxy.job_id
 
@@ -109,7 +109,7 @@ class UHSCoreTestCase(UHSBaseTestCase):
         write_uh_spectra(self.calc_proxy)
 
         # Now check that the expected records were indeed created.
-        output = Output.objects.get(oq_calculation=self.calculation.id)
+        output = Output.objects.get(oq_job=self.calculation.id)
         self.assertEqual('uh_spectra', output.output_type)
 
         uh_spectra = UhSpectra.objects.get(output=output.id)
@@ -147,7 +147,7 @@ class UHSCoreTestCase(UHSBaseTestCase):
             self.calc_proxy, realization, test_site, uhs_results)
 
         uhs_data = UhSpectrumData.objects.filter(
-            uh_spectrum__uh_spectra__output__oq_calculation=(
+            uh_spectrum__uh_spectra__output__oq_job=(
             self.calculation.id))
 
         self.assertEqual(len(self.UHS_RESULTS), len(uhs_data))
