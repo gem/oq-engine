@@ -56,16 +56,16 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         GMFs."""
         source_model_generator = random.Random()
         source_model_generator.seed(
-            self.calc_proxy['SOURCE_MODEL_LT_RANDOM_SEED'])
+            self.job_ctxt['SOURCE_MODEL_LT_RANDOM_SEED'])
 
         gmpe_generator = random.Random()
-        gmpe_generator.seed(self.calc_proxy['GMPE_LT_RANDOM_SEED'])
+        gmpe_generator.seed(self.job_ctxt['GMPE_LT_RANDOM_SEED'])
 
         gmf_generator = random.Random()
-        gmf_generator.seed(self.calc_proxy['GMF_RANDOM_SEED'])
+        gmf_generator.seed(self.job_ctxt['GMF_RANDOM_SEED'])
 
-        histories = self.calc_proxy['NUMBER_OF_SEISMICITY_HISTORIES']
-        realizations = self.calc_proxy['NUMBER_OF_LOGIC_TREE_SAMPLES']
+        histories = self.job_ctxt['NUMBER_OF_SEISMICITY_HISTORIES']
+        realizations = self.job_ctxt['NUMBER_OF_LOGIC_TREE_SAMPLES']
         LOG.info(
             "Going to run hazard for %s histories of %s realizations each."
             % (histories, realizations))
@@ -77,8 +77,8 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
                 self.store_gmpe_map(gmpe_generator.getrandbits(32))
                 pending_tasks.append(
                     compute_ground_motion_fields.delay(
-                        self.calc_proxy.job_id,
-                        self.calc_proxy.sites_to_compute(),
+                        self.job_ctxt.job_id,
+                        self.job_ctxt.sites_to_compute(),
                         i, j, gmf_generator.getrandbits(32)))
 
             for each_task in pending_tasks:
@@ -88,7 +88,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
 
             for j in range(0, realizations):
                 stochastic_set_key = kvs.tokens.stochastic_set_key(
-                    self.calc_proxy.job_id, i, j)
+                    self.job_ctxt.job_id, i, j)
                 LOG.info("Writing output for ses %s" % stochastic_set_key)
                 ses = kvs.get_value_json_decoded(stochastic_set_key)
                 if ses:
@@ -98,7 +98,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         """
         Write each GMF to an NRML file or to DB depending on job configuration.
         """
-        iml_list = self.calc_proxy['INTENSITY_MEASURE_LEVELS']
+        iml_list = self.job_ctxt['INTENSITY_MEASURE_LEVELS']
 
         LOG.debug("IML: %s" % (iml_list))
         files = []
@@ -108,16 +108,16 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         for event_set in ses:
             for rupture in ses[event_set]:
 
-                if self.calc_proxy['GMF_OUTPUT']:
+                if self.job_ctxt['GMF_OUTPUT']:
                     common_path = os.path.join(self.base_path,
-                            self.calc_proxy['OUTPUT_DIR'],
+                            self.job_ctxt['OUTPUT_DIR'],
                             "gmf-%s-%s" % (str(event_set.replace("!", "_")),
                                            str(rupture.replace("!", "_"))))
                     nrml_path = "%s.xml" % common_path
 
                 gmf_writer = hazard_output.create_gmf_writer(
-                    self.calc_proxy.job_id,
-                    self.calc_proxy.serialize_results_to,
+                    self.job_ctxt.job_id,
+                    self.job_ctxt.serialize_results_to,
                     nrml_path)
                 gmf_data = {}
                 for site_key in ses[event_set][rupture]:
@@ -137,9 +137,9 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         jpype = java.jvm()
 
         jsite_list = self.parameterize_sites(site_list)
-        key = kvs.tokens.stochastic_set_key(self.calc_proxy.job_id, history,
+        key = kvs.tokens.stochastic_set_key(self.job_ctxt.job_id, history,
                                             realization)
-        correlate = self.calc_proxy['GROUND_MOTION_CORRELATION']
+        correlate = self.job_ctxt['GROUND_MOTION_CORRELATION']
         stochastic_set_id = "%s!%s" % (history, realization)
         java.jclass("HazardCalculator").generateAndSaveGMFs(
                 self.cache, key, stochastic_set_id, jsite_list,

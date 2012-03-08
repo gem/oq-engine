@@ -49,7 +49,7 @@ LOG = logs.LOG
 
 # pylint: disable=R0914
 @java.unpack_exception
-def compute_disagg_matrix(calc_proxy, site, poe, result_dir):
+def compute_disagg_matrix(job_ctxt, site, poe, result_dir):
     """ Compute a complete 5D Disaggregation matrix. This task leans heavily
     on the DisaggregationCalculator (in the OpenQuake Java lib) to handle this
     computation.
@@ -57,8 +57,8 @@ def compute_disagg_matrix(calc_proxy, site, poe, result_dir):
     The 5D matrix returned from the java calculator will be saved to a file in
     HDF5 format.
 
-    :param calc_proxy:
-        A :class:`openquake.engine.CalculationProxy` which holds all of the
+    :param job_ctxt:
+        A :class:`openquake.engine.JobContext` which holds all of the
         data we need to run this computation.
     :param site: a single site of interest
     :type site: :class:`openquake.shapes.Site` instance`
@@ -70,10 +70,10 @@ def compute_disagg_matrix(calc_proxy, site, poe, result_dir):
 
     :returns: 2-tuple of (ground_motion_value, path_to_h5_matrix_file)
     """
-    lat_bin_lims = calc_proxy[job_cfg.LAT_BIN_LIMITS]
-    lon_bin_lims = calc_proxy[job_cfg.LON_BIN_LIMITS]
-    mag_bin_lims = calc_proxy[job_cfg.MAG_BIN_LIMITS]
-    eps_bin_lims = calc_proxy[job_cfg.EPS_BIN_LIMITS]
+    lat_bin_lims = job_ctxt[job_cfg.LAT_BIN_LIMITS]
+    lon_bin_lims = job_ctxt[job_cfg.LON_BIN_LIMITS]
+    mag_bin_lims = job_ctxt[job_cfg.MAG_BIN_LIMITS]
+    eps_bin_lims = job_ctxt[job_cfg.EPS_BIN_LIMITS]
 
     jd = list_to_jdouble_array
 
@@ -85,16 +85,16 @@ def compute_disagg_matrix(calc_proxy, site, poe, result_dir):
         config.get('kvs', 'host'),
         int(config.get('kvs', 'port')))
 
-    erf = generate_erf(calc_proxy.job_id, cache)
-    gmpe_map = generate_gmpe_map(calc_proxy.job_id, cache)
-    set_gmpe_params(gmpe_map, calc_proxy.params)
+    erf = generate_erf(job_ctxt.job_id, cache)
+    gmpe_map = generate_gmpe_map(job_ctxt.job_id, cache)
+    set_gmpe_params(gmpe_map, job_ctxt.params)
 
-    imls = get_iml_list(calc_proxy['INTENSITY_MEASURE_LEVELS'],
-                        calc_proxy['INTENSITY_MEASURE_TYPE'])
-    vs30_type = calc_proxy['VS30_TYPE']
-    vs30_value = calc_proxy['REFERENCE_VS30_VALUE']
-    depth_to_1pt0 = calc_proxy['DEPTHTO1PT0KMPERSEC']
-    depth_to_2pt5 = calc_proxy['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']
+    imls = get_iml_list(job_ctxt['INTENSITY_MEASURE_LEVELS'],
+                        job_ctxt['INTENSITY_MEASURE_TYPE'])
+    vs30_type = job_ctxt['VS30_TYPE']
+    vs30_value = job_ctxt['REFERENCE_VS30_VALUE']
+    depth_to_1pt0 = job_ctxt['DEPTHTO1PT0KMPERSEC']
+    depth_to_2pt5 = job_ctxt['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']
 
     matrix_result = disagg_calc.computeMatrix(
         site.latitude, site.longitude, erf, gmpe_map, poe, imls,
@@ -148,15 +148,15 @@ def compute_disagg_matrix_task(job_id, site, realization, poe,
 
     :returns: 2-tuple of (ground_motion_value, path_to_h5_matrix_file)
     """
-    calc_proxy = get_running_job(job_id)
+    job_ctxt = get_running_job(job_id)
 
     log_msg = (
         "Computing full disaggregation matrix for job_id=%s, site=%s, "
         "realization=%s, PoE=%s. Matrix results will be serialized to `%s`.")
-    log_msg %= (calc_proxy.job_id, site, realization, poe, result_dir)
+    log_msg %= (job_ctxt.job_id, site, realization, poe, result_dir)
     LOG.info(log_msg)
 
-    return compute_disagg_matrix(calc_proxy, site, poe, result_dir)
+    return compute_disagg_matrix(job_ctxt, site, poe, result_dir)
 
 
 class DisaggHazardCalculator(Calculator):
@@ -190,26 +190,26 @@ class DisaggHazardCalculator(Calculator):
         """
         # matrix results for this job will go here:
         result_dir = DisaggHazardCalculator.create_result_dir(
-            config.get('nfs', 'base_dir'), self.calc_proxy.job_id)
+            config.get('nfs', 'base_dir'), self.job_ctxt.job_id)
 
-        realizations = self.calc_proxy['NUMBER_OF_LOGIC_TREE_SAMPLES']
-        poes = self.calc_proxy['POES']
-        sites = self.calc_proxy.sites_to_compute()
+        realizations = self.job_ctxt['NUMBER_OF_LOGIC_TREE_SAMPLES']
+        poes = self.job_ctxt['POES']
+        sites = self.job_ctxt.sites_to_compute()
 
         log_msg = ("Computing disaggregation for job_id=%s,  %s sites, "
             "%s realizations, and PoEs=%s")
-        log_msg %= (self.calc_proxy.job_id, len(sites), realizations, poes)
+        log_msg %= (self.job_ctxt.job_id, len(sites), realizations, poes)
         LOG.info(log_msg)
 
         full_disagg_results = self.distribute_disagg(sites, realizations, poes,
                                                      result_dir)
 
-        subset_types = self.calc_proxy['DISAGGREGATION_RESULTS']
+        subset_types = self.job_ctxt['DISAGGREGATION_RESULTS']
 
         subset_results = self.distribute_subsets(full_disagg_results,
                                                  subset_types, result_dir)
 
-        DisaggHazardCalculator.serialize_nrml(self.calc_proxy, subset_types,
+        DisaggHazardCalculator.serialize_nrml(self.job_ctxt, subset_types,
                                               subset_results)
 
     @staticmethod
@@ -247,9 +247,9 @@ class DisaggHazardCalculator(Calculator):
         realizations, and PoE values.
 
         :param the_job:
-            CalculationProxy definition
+            JobContext definition
         :type the_job:
-            :class:`openquake.engine.CalculationProxy` instance
+            :class:`openquake.engine.JobContext` instance
         :param sites:
             List of :class:`openquake.shapes.Site` objects
         :param poes:
@@ -289,25 +289,25 @@ class DisaggHazardCalculator(Calculator):
         task_data = []
 
         src_model_rnd = random.Random()
-        src_model_rnd.seed(self.calc_proxy['SOURCE_MODEL_LT_RANDOM_SEED'])
+        src_model_rnd.seed(self.job_ctxt['SOURCE_MODEL_LT_RANDOM_SEED'])
         gmpe_rnd = random.Random()
-        gmpe_rnd.seed(self.calc_proxy['GMPE_LT_RANDOM_SEED'])
+        gmpe_rnd.seed(self.job_ctxt['GMPE_LT_RANDOM_SEED'])
 
         for rlz in xrange(1, realizations + 1):  # 1 to N, inclusive
             # cache the source model and gmpe model in the KVS
             # so the Java code can access it
 
-            store_source_model(self.calc_proxy.job_id,
+            store_source_model(self.job_ctxt.job_id,
                                src_model_rnd.getrandbits(32),
-                               self.calc_proxy.params, self.calc)
-            store_gmpe_map(self.calc_proxy.job_id, gmpe_rnd.getrandbits(32),
+                               self.job_ctxt.params, self.calc)
+            store_gmpe_map(self.job_ctxt.job_id, gmpe_rnd.getrandbits(32),
                            self.calc)
 
             for poe in poes:
                 task_site_pairs = []
                 for site in sites:
                     a_task = compute_disagg_matrix_task.delay(
-                        self.calc_proxy.job_id, site, rlz, poe, result_dir)
+                        self.job_ctxt.job_id, site, rlz, poe, result_dir)
 
                     task_site_pairs.append((a_task, site))
 
@@ -325,7 +325,7 @@ class DisaggHazardCalculator(Calculator):
                         " for job %s with task_id=%s, realization=%s, PoE=%s,"
                         " site=%s has failed with the following error: %s")
                     msg %= (
-                        self.calc_proxy.job_id, a_task.task_id, rlz, poe,
+                        self.job_ctxt.job_id, a_task.task_id, rlz, poe,
                         site, a_task.result)
                     LOG.critical(msg)
                     raise RuntimeError(msg)
@@ -375,11 +375,11 @@ class DisaggHazardCalculator(Calculator):
                  ),
                 ]
         """
-        lat_bin_lims = self.calc_proxy[job_cfg.LAT_BIN_LIMITS]
-        lon_bin_lims = self.calc_proxy[job_cfg.LON_BIN_LIMITS]
-        mag_bin_lims = self.calc_proxy[job_cfg.MAG_BIN_LIMITS]
-        eps_bin_lims = self.calc_proxy[job_cfg.EPS_BIN_LIMITS]
-        dist_bin_lims = self.calc_proxy[job_cfg.DIST_BIN_LIMITS]
+        lat_bin_lims = self.job_ctxt[job_cfg.LAT_BIN_LIMITS]
+        lon_bin_lims = self.job_ctxt[job_cfg.LON_BIN_LIMITS]
+        mag_bin_lims = self.job_ctxt[job_cfg.MAG_BIN_LIMITS]
+        eps_bin_lims = self.job_ctxt[job_cfg.EPS_BIN_LIMITS]
+        dist_bin_lims = self.job_ctxt[job_cfg.DIST_BIN_LIMITS]
 
         rlz_poe_task_data = []
 
@@ -393,7 +393,7 @@ class DisaggHazardCalculator(Calculator):
                 target_file = os.path.join(target_dir, subset_file)
 
                 a_task = subsets.extract_subsets.delay(
-                    self.calc_proxy.job_id, site, matrix_path, lat_bin_lims,
+                    self.job_ctxt.job_id, site, matrix_path, lat_bin_lims,
                     lon_bin_lims, mag_bin_lims, eps_bin_lims, dist_bin_lims,
                     target_file, subset_types)
 
@@ -413,7 +413,7 @@ class DisaggHazardCalculator(Calculator):
                         "Matrix subset extraction task for job %s with"
                         " task_id=%s, realization=%s, PoE=%s, target_file=%s"
                         " has failed with the following error: %s")
-                    msg %= (self.calc_proxy.job_id, a_task.task_id, poe,
+                    msg %= (self.job_ctxt.job_id, a_task.task_id, poe,
                             target_file, a_task.result)
                     LOG.critical(msg)
                     raise RuntimeError(msg)
@@ -434,7 +434,7 @@ class DisaggHazardCalculator(Calculator):
         :param the_job:
             The job configuration.
         :type the_job:
-            :class:`openquake.engine.CalculationProxy` instance
+            :class:`openquake.engine.JobContext` instance
         :param subset_types:
             The matrix subset results requested in the job config.
         :param subsets_data:

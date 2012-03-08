@@ -226,11 +226,11 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
     def execute(self):
         """Core Classical Risk calculation starts here."""
         celery_tasks = []
-        for block_id in self.calc_proxy.blocks_keys:
+        for block_id in self.job_ctxt.blocks_keys:
             LOGGER.debug("starting task block, block_id = %s of %s"
-                        % (block_id, len(self.calc_proxy.blocks_keys)))
+                        % (block_id, len(self.job_ctxt.blocks_keys)))
             celery_tasks.append(
-                general.compute_risk.delay(self.calc_proxy.job_id, block_id))
+                general.compute_risk.delay(self.job_ctxt.job_id, block_id))
 
         # task compute_risk has return value 'True' (writes its results to
         # kvs).
@@ -253,7 +253,7 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
     def _get_db_curve(self, site):
         """Read hazard curve data from the DB"""
         gh = geohash.encode(site.latitude, site.longitude, precision=12)
-        job = models.OqJob.objects.get(id=self.calc_proxy.job_id)
+        job = models.OqJob.objects.get(id=self.job_ctxt.job_id)
         hc = models.HazardCurveData.objects.filter(
             hazard_curve__output__oq_job=job,
             hazard_curve__statistic_type='mean').extra(
@@ -265,15 +265,15 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
         """
         Calculate and store in the kvs the loss data.
         """
-        block = general.Block.from_kvs(self.calc_proxy.job_id, block_id)
+        block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
 
         vuln_curves = vulnerability.load_vuln_model_from_kvs(
-            self.calc_proxy.job_id)
+            self.job_ctxt.job_id)
 
-        for point in block.grid(self.calc_proxy.region):
+        for point in block.grid(self.job_ctxt.region):
             hazard_curve = self._get_db_curve(point.site)
 
-            assets = self.assets_for_cell(self.calc_proxy.job_id, point.site)
+            assets = self.assets_for_cell(self.job_ctxt.job_id, point.site)
             for asset in assets:
                 LOGGER.debug("processing asset %s" % asset)
 
@@ -284,9 +284,9 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
                     loss_curve = self.compute_loss_curve(
                         point, loss_ratio_curve, asset)
 
-                    for poe in conditional_loss_poes(self.calc_proxy.params):
+                    for poe in conditional_loss_poes(self.job_ctxt.params):
                         compute_conditional_loss(
-                            self.calc_proxy.job_id, point.column,
+                            self.job_ctxt.job_id, point.column,
                             point.row, loss_curve, asset, poe)
 
         return True
@@ -299,26 +299,26 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
         See :func:`openquake.risk.job.general.compute_bcr_for_block` for result
         data structure spec.
         """
-        calc_proxy = self.calc_proxy
+        job_ctxt = self.job_ctxt
         points = list(general.Block.from_kvs(
-            calc_proxy.job_id, block_id).grid(calc_proxy.region))
+            job_ctxt.job_id, block_id).grid(job_ctxt.region))
         hazard_curves = dict((point.site, self._get_db_curve(point.site))
                              for point in points)
 
         def get_loss_curve(point, vuln_function, asset):
             "Compute loss curve basing on hazard curve"
-            job_profile = self.calc_proxy.oq_job_profile
+            job_profile = self.job_ctxt.oq_job_profile
             hazard_curve = hazard_curves[point.site]
             loss_ratio_curve = compute_loss_ratio_curve(
                     vuln_function, hazard_curve,
                     job_profile.lrem_steps_per_interval)
             return compute_loss_curve(loss_ratio_curve, asset.value)
 
-        bcr = general.compute_bcr_for_block(calc_proxy.job_id, points,
-            get_loss_curve, float(calc_proxy.params['INTEREST_RATE']),
-            float(calc_proxy.params['ASSET_LIFE_EXPECTANCY'])
+        bcr = general.compute_bcr_for_block(job_ctxt.job_id, points,
+            get_loss_curve, float(job_ctxt.params['INTEREST_RATE']),
+            float(job_ctxt.params['ASSET_LIFE_EXPECTANCY'])
         )
-        bcr_block_key = kvs.tokens.bcr_block_key(calc_proxy.job_id, block_id)
+        bcr_block_key = kvs.tokens.bcr_block_key(job_ctxt.job_id, block_id)
         kvs.set_value_json_encoded(bcr_block_key, bcr)
         LOGGER.debug('bcr result for block %s: %r', block_id, bcr)
         return True
@@ -339,7 +339,7 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
 
         loss_curve = compute_loss_curve(loss_ratio_curve, asset.value)
         loss_key = kvs.tokens.loss_curve_key(
-            self.calc_proxy.job_id, point.row, point.column, asset.asset_ref)
+            self.job_ctxt.job_id, point.row, point.column, asset.asset_ref)
 
         kvs.get_client().set(loss_key, loss_curve.to_json())
 
@@ -371,13 +371,13 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
 
             return None
 
-        lrem_steps = self.calc_proxy.oq_job_profile.lrem_steps_per_interval
+        lrem_steps = self.job_ctxt.oq_job_profile.lrem_steps_per_interval
         loss_ratio_curve = compute_loss_ratio_curve(
             vuln_function, hazard_curve, lrem_steps,
-            self.calc_proxy.params.get("probabilisticDistribution"))
+            self.job_ctxt.params.get("probabilisticDistribution"))
 
         loss_ratio_key = kvs.tokens.loss_ratio_key(
-            self.calc_proxy.job_id, point.row, point.column, asset.asset_ref)
+            self.job_ctxt.job_id, point.row, point.column, asset.asset_ref)
 
         kvs.get_client().set(loss_ratio_key, loss_ratio_curve.to_json())
 
