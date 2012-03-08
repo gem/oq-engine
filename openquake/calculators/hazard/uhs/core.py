@@ -66,7 +66,7 @@ def compute_uhs_task(job_id, realization, site):
     :param site:
         The site of interest (a :class:`openquake.shapes.Site` object).
     """
-    calc_proxy = utils_tasks.get_running_calculation(job_id)
+    calc_proxy = utils_tasks.get_running_job(job_id)
 
     log_msg = (
         "Computing UHS for job_id=%s, site=%s, realization=%s."
@@ -125,7 +125,7 @@ def write_uh_spectra(calc_proxy):
     to the database.
 
     In the workflow of the UHS calculator, this should be written prior to the
-    execution of the main calculation. (See
+    execution of the main job. (See
     :method:`openquake.calculators.base.Calculator.pre_execute`.)
 
     This function writes:
@@ -135,7 +135,7 @@ def write_uh_spectra(calc_proxy):
 
     :param calc_proxy:
         :class:`openquake.engine.CalculationProxy` instance for the current
-        UHS calculation.
+        UHS job.
     """
     oq_job_profile = calc_proxy.oq_job_profile
     oq_job = calc_proxy.oq_job
@@ -167,7 +167,7 @@ def write_uhs_spectrum_data(calc_proxy, realization, site, uhs_results):
 
     :param calc_proxy:
         :class:`openquake.engine.CalculationProxy` instance for a UHS
-        calculation.
+        job.
     :param int realization:
        The realization number (from 0 to N, where N is the number of logic tree
         samples defined in the calculation config) for which these results have

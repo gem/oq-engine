@@ -52,7 +52,7 @@ def ignore_sigint():
     Setup signal handler on SIGINT in order to ignore it.
 
     This is needed to avoid premature death of the supervisor and is called
-    from :func:`openquake.engine.run_calculation` for job parent process and
+    from :func:`openquake.engine.run_job` for job parent process and
     from :func:`supervise` for supervisor process.
     """
     signal.signal(signal.SIGINT, signal.SIG_IGN)

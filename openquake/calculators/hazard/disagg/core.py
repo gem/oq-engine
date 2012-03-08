@@ -32,7 +32,7 @@ from openquake.job import config as job_cfg
 from openquake.output import hazard_disagg as hazard_output
 from openquake.utils import config
 from openquake.calculators.base import Calculator
-from openquake.utils.tasks import get_running_calculation
+from openquake.utils.tasks import get_running_job
 from openquake.calculators.hazard.disagg import FULL_DISAGG_MATRIX
 from openquake.calculators.hazard.disagg import subsets
 from openquake.calculators.hazard.general import generate_erf
@@ -129,14 +129,14 @@ def save_5d_matrix_to_h5(directory, matrix):
 
 @task
 @java.unpack_exception
-def compute_disagg_matrix_task(calculation_id, site, realization, poe,
+def compute_disagg_matrix_task(job_id, site, realization, poe,
                                result_dir):
     """ Compute a complete 5D Disaggregation matrix. This task leans heavily
     on the DisaggregationCalculator (in the OpenQuake Java lib) to handle this
     computation.
 
-    :param calculation_id: id of the calculation record in the KVS
-    :type calculation_id: `str`
+    :param job_id: id of the calculation record in the KVS
+    :type job_id: `str`
     :param site: a single site of interest
     :type site: :class:`openquake.shapes.Site` instance`
     :param int realization: logic tree sample iteration number
@@ -148,7 +148,7 @@ def compute_disagg_matrix_task(calculation_id, site, realization, poe,
 
     :returns: 2-tuple of (ground_motion_value, path_to_h5_matrix_file)
     """
-    calc_proxy = get_running_calculation(calculation_id)
+    calc_proxy = get_running_job(job_id)
 
     log_msg = (
         "Computing full disaggregation matrix for job_id=%s, site=%s, "

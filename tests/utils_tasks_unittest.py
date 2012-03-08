@@ -148,7 +148,7 @@ class DistributeTestCase(unittest.TestCase):
 
 
 class GetRunningCalculationTestCase(unittest.TestCase):
-    """Tests for :function:`openquake.utils.tasks.get_running_calculation`."""
+    """Tests for :function:`openquake.utils.tasks.get_running_job`."""
 
     def setUp(self):
         self.job_profile, self.params, _sections = (
@@ -157,51 +157,51 @@ class GetRunningCalculationTestCase(unittest.TestCase):
 
         self.params['debug'] = 'warn'
 
-        self.calculation = OqJob(
+        self.job = OqJob(
             owner=self.job_profile.owner,
             oq_job_profile=self.job_profile)
-        self.calculation.save()
+        self.job.save()
 
         # Cache the calc proxy data into the kvs:
         calc_proxy = engine.CalculationProxy(
-            self.params, self.calculation.id, oq_job_profile=self.job_profile,
-            oq_job=self.calculation)
+            self.params, self.job.id, oq_job_profile=self.job_profile,
+            oq_job=self.job)
         calc_proxy.to_kvs()
 
-    def test_get_running_calculation(self):
-        self.calculation.status = 'pending'
-        self.calculation.save()
+    def test_get_running_job(self):
+        self.job.status = 'pending'
+        self.job.save()
 
         # No 'JobCompletedError' should be raised.
-        calc_proxy = tasks.get_running_calculation(self.calculation.id)
+        calc_proxy = tasks.get_running_job(self.job.id)
 
         self.assertEqual(self.params, calc_proxy.params)
         self.assertTrue(model_equals(
             self.job_profile, calc_proxy.oq_job_profile,
             ignore=('_owner_cache',)))
         self.assertTrue(model_equals(
-            self.calculation, calc_proxy.oq_job,
+            self.job, calc_proxy.oq_job,
             ignore=('_owner_cache',)))
 
     def test_get_completed_calculation(self):
-        self.calculation.status = 'succeeded'
-        self.calculation.save()
+        self.job.status = 'succeeded'
+        self.job.save()
 
         try:
-            tasks.get_running_calculation(self.calculation.id)
+            tasks.get_running_job(self.job.id)
         except tasks.JobCompletedError as exc:
-            self.assertEqual(exc.message, self.calculation.id)
+            self.assertEqual(exc.message, self.job.id)
         else:
             self.fail("JobCompletedError wasn't raised")
 
     def test_completed_failure(self):
-        self.calculation.status = 'failed'
-        self.calculation.save()
+        self.job.status = 'failed'
+        self.job.save()
 
         try:
-            tasks.get_running_calculation(self.calculation.id)
+            tasks.get_running_job(self.job.id)
         except tasks.JobCompletedError as exc:
-            self.assertEqual(exc.message, self.calculation.id)
+            self.assertEqual(exc.message, self.job.id)
         else:
             self.fail("JobCompletedError wasn't raised")
 
@@ -301,24 +301,24 @@ class CalculatorForTaskTestCase(unittest.TestCase):
         job_profile, params, sections = engine.import_job_profile(demo_file(
             'simple_fault_demo_hazard/config.gem'))
 
-        calculation = OqJob(owner=job_profile.owner,
+        job = OqJob(owner=job_profile.owner,
                                     oq_job_profile=job_profile)
-        calculation.save()
+        job.save()
 
-        calc_proxy = engine.CalculationProxy(params, calculation.id,
+        calc_proxy = engine.CalculationProxy(params, job.id,
                                              oq_job_profile=job_profile,
-                                             oq_job=calculation)
+                                             oq_job=job)
         calc_proxy.to_kvs()
 
         with patch(
-            'openquake.utils.tasks.get_running_calculation') as grc_mock:
+            'openquake.utils.tasks.get_running_job') as grc_mock:
 
             # Loading of the CalculationProxy is done by
-            # `get_running_calculation`, which is covered by other tests.
+            # `get_running_job`, which is covered by other tests.
             # So, we just want to make sure that it's called here.
             grc_mock.return_value = calc_proxy
 
-            calculator = tasks.calculator_for_task(calculation.id, 'hazard')
+            calculator = tasks.calculator_for_task(job.id, 'hazard')
 
             self.assertTrue(isinstance(calculator, ClassicalHazardCalculator))
             self.assertEqual(1, grc_mock.call_count)

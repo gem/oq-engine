@@ -249,7 +249,7 @@ class EngineAPITestCase(unittest.TestCase):
         # If this fails, it will raise an `ObjectDoesNotExist` exception.
         OqUser.objects.get(user_name=user_name)
 
-    def test_run_calculation_deletes_job_counters(self):
+    def test_run_job_deletes_job_counters(self):
         # This test ensures that
         # :function:`openquake.utils.stats.delete_job_counters` is called
         cfg_path = demo_file('HazardMapTest/config.gem')
@@ -262,39 +262,39 @@ class EngineAPITestCase(unittest.TestCase):
         with patch('os.fork', mocksignature=False) as fork_mock:
             # Fake return val for fork:
             fork_mock.return_value = 0
-            # And we don't actually want to run the calculation.
-            with patch('openquake.engine._launch_calculation'):
+            # And we don't actually want to run the job.
+            with patch('openquake.engine._launch_job'):
                 with patch(
                     'openquake.utils.stats.delete_job_counters') as djc_mock:
-                    engine.run_calculation(job_profile, params, sections)
+                    engine.run_job(job_profile, params, sections)
 
                     self.assertEquals(1, djc_mock.call_count)
 
 
 class EngineLaunchCalcTestCase(unittest.TestCase):
-    """Tests for :func:`openquake.engine._launch_calculation`."""
+    """Tests for :func:`openquake.engine._launch_job`."""
 
-    def test__launch_calculation_calls_core_calc_methods(self):
+    def test__launch_job_calls_core_calc_methods(self):
         # The `Calculator` interface defines 4 general methods:
         # - initialize
         # - pre_execute
         # - execute
         # - post_execute
-        # When `_launch_calculation` is called, each of these methods should be
+        # When `_launch_job` is called, each of these methods should be
         # called once per job type (hazard, risk).
 
         # Calculation setup:
         cfg_file = demo_file('classical_psha_based_risk/config.gem')
 
         job_profile, params, sections = engine.import_job_profile(cfg_file)
-        calculation = OqJob(owner=job_profile.owner,
+        job = OqJob(owner=job_profile.owner,
                                     oq_job_profile=job_profile)
-        calculation.save()
+        job.save()
 
         calc_proxy = engine.CalculationProxy(
-            params, calculation.id, sections=sections,
+            params, job.id, sections=sections,
             serialize_results_to=['xml', 'db'],
-            oq_job_profile=job_profile, oq_job=calculation)
+            oq_job_profile=job_profile, oq_job=job)
 
         # Mocking setup:
         cls_haz_calc = ('openquake.calculators.hazard.classical.core'
@@ -309,7 +309,7 @@ class EngineLaunchCalcTestCase(unittest.TestCase):
         risk_mocks = [p.start() for p in risk_patchers]
 
         # Call the function under test:
-        engine._launch_calculation(calc_proxy, sections)
+        engine._launch_job(calc_proxy, sections)
 
         self.assertTrue(all(x.call_count == 1 for x in haz_mocks))
         self.assertTrue(all(x.call_count == 1 for x in risk_mocks))

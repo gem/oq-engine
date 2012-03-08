@@ -292,14 +292,14 @@ class HazardEngineTestCase(unittest.TestCase):
         path = helpers.testdata_path("classical_psha_simple/config.gem")
         job_profile, params, sections = engine.import_job_profile(path)
 
-        calculation = OqJob(owner=job_profile.owner)
-        calculation.oq_job_profile = job_profile
-        calculation.save()
+        job = OqJob(owner=job_profile.owner)
+        job.oq_job_profile = job_profile
+        job.save()
 
         the_job = CalculationProxy(
-            params, calculation.id, sections=sections, base_path=base_path,
+            params, job.id, sections=sections, base_path=base_path,
             serialize_results_to=['db', 'xml'], oq_job_profile=job_profile,
-            oq_job=calculation)
+            oq_job=job)
         the_job.to_kvs()
 
         calc_mode = job_profile.calc_mode

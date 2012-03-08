@@ -18,7 +18,7 @@
 
 """
 This module tests the hazard side of the scenario
-event based calculation.
+event based job.
 """
 
 import math
@@ -68,13 +68,13 @@ class ScenarioHazardCalculatorTestCase(unittest.TestCase):
         base_path = helpers.testdata_path("scenario")
         self.job_profile, self.params, self.sections = (
             engine.import_job_profile(SCENARIO_SMOKE_TEST))
-        calculation = OqJob(owner=self.job_profile.owner,
+        job = OqJob(owner=self.job_profile.owner,
                                     oq_job_profile=self.job_profile)
-        calculation.save()
+        job.save()
         self.calc_proxy = CalculationProxy(
-            self.params, calculation.id, sections=self.sections,
+            self.params, job.id, sections=self.sections,
             base_path=base_path, oq_job_profile=self.job_profile,
-            oq_job=calculation)
+            oq_job=job)
 
         self.calc_proxy.params[NUMBER_OF_CALC_KEY] = "1"
 
