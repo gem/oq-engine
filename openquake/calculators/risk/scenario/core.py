@@ -49,20 +49,20 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         tasks = []
 
         vuln_model = \
-            vulnerability.load_vuln_model_from_kvs(self.calc_proxy.job_id)
+            vulnerability.load_vuln_model_from_kvs(self.job_ctxt.job_id)
 
-        epsilon_provider = general.EpsilonProvider(self.calc_proxy.params)
+        epsilon_provider = general.EpsilonProvider(self.job_ctxt.params)
 
         sum_per_gmf = SumPerGroundMotionField(vuln_model,
                                                        epsilon_provider)
 
         region_loss_map_data = {}
 
-        for block_id in self.calc_proxy.blocks_keys:
+        for block_id in self.job_ctxt.blocks_keys:
             LOGGER.debug("Dispatching task for block %s of %s"
-                % (block_id, len(self.calc_proxy.blocks_keys)))
+                % (block_id, len(self.job_ctxt.blocks_keys)))
             a_task = general.compute_risk.delay(
-                self.calc_proxy.job_id, block_id, vuln_model=vuln_model,
+                self.job_ctxt.job_id, block_id, vuln_model=vuln_model,
                 epsilon_provider=epsilon_provider)
             tasks.append(a_task)
 
@@ -89,11 +89,11 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
         # serialize the loss map data to XML
         loss_map_path = os.path.join(
-            self.calc_proxy['BASE_PATH'],
-            self.calc_proxy['OUTPUT_DIR'],
-            'loss-map-%s.xml' % self.calc_proxy.job_id)
+            self.job_ctxt['BASE_PATH'],
+            self.job_ctxt['OUTPUT_DIR'],
+            'loss-map-%s.xml' % self.job_ctxt.job_id)
         loss_map_writer = risk_output.create_loss_map_writer(
-            self.calc_proxy.job_id, self.calc_proxy.serialize_results_to,
+            self.job_ctxt.job_id, self.job_ctxt.serialize_results_to,
             loss_map_path, True)
 
         if loss_map_writer:
@@ -175,7 +175,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         vuln_model = kwargs['vuln_model']
         epsilon_provider = kwargs['epsilon_provider']
 
-        block = general.Block.from_kvs(self.calc_proxy.job_id, block_id)
+        block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
 
         block_losses = self._compute_loss_for_block(
             block, vuln_model, epsilon_provider)
@@ -204,9 +204,9 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         """
         sum_per_gmf = SumPerGroundMotionField(vuln_model,
                                                        epsilon_provider)
-        for point in block.grid(self.calc_proxy.region):
-            gmvs = load_gmvs_for_point(self.calc_proxy.job_id, point)
-            assets = load_assets_for_point(self.calc_proxy.job_id, point)
+        for point in block.grid(self.job_ctxt.region):
+            gmvs = load_gmvs_for_point(self.job_ctxt.job_id, point)
+            assets = load_assets_for_point(self.job_ctxt.job_id, point)
             for asset in assets:
                 # the SumPerGroundMotionField add() method expects a dict
                 # with a single key ('IMLs') and value set to the sequence of
@@ -255,13 +255,13 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         """
         loss_data = {}
 
-        for point in block.grid(self.calc_proxy.region):
+        for point in block.grid(self.job_ctxt.region):
             # the mean and stddev calculation functions used below
             # require the gmvs to be wrapped in a dict with a single key:
             # 'IMLs'
-            gmvs = {'IMLs': load_gmvs_for_point(self.calc_proxy.job_id,
+            gmvs = {'IMLs': load_gmvs_for_point(self.job_ctxt.job_id,
                                                 point)}
-            assets = load_assets_for_point(self.calc_proxy.job_id, point)
+            assets = load_assets_for_point(self.job_ctxt.job_id, point)
             for asset in assets:
                 vuln_function = vuln_model[asset.taxonomy]
 

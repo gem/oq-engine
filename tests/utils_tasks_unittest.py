@@ -163,24 +163,24 @@ class GetRunningCalculationTestCase(unittest.TestCase):
         self.job.save()
 
         # Cache the calc proxy data into the kvs:
-        calc_proxy = engine.CalculationProxy(
+        job_ctxt = engine.JobContext(
             self.params, self.job.id, oq_job_profile=self.job_profile,
             oq_job=self.job)
-        calc_proxy.to_kvs()
+        job_ctxt.to_kvs()
 
     def test_get_running_job(self):
         self.job.status = 'pending'
         self.job.save()
 
         # No 'JobCompletedError' should be raised.
-        calc_proxy = tasks.get_running_job(self.job.id)
+        job_ctxt = tasks.get_running_job(self.job.id)
 
-        self.assertEqual(self.params, calc_proxy.params)
+        self.assertEqual(self.params, job_ctxt.params)
         self.assertTrue(model_equals(
-            self.job_profile, calc_proxy.oq_job_profile,
+            self.job_profile, job_ctxt.oq_job_profile,
             ignore=('_owner_cache',)))
         self.assertTrue(model_equals(
-            self.job, calc_proxy.oq_job,
+            self.job, job_ctxt.oq_job,
             ignore=('_owner_cache',)))
 
     def test_get_completed_calculation(self):
@@ -305,18 +305,18 @@ class CalculatorForTaskTestCase(unittest.TestCase):
                                     oq_job_profile=job_profile)
         job.save()
 
-        calc_proxy = engine.CalculationProxy(params, job.id,
+        job_ctxt = engine.JobContext(params, job.id,
                                              oq_job_profile=job_profile,
                                              oq_job=job)
-        calc_proxy.to_kvs()
+        job_ctxt.to_kvs()
 
         with patch(
             'openquake.utils.tasks.get_running_job') as grc_mock:
 
-            # Loading of the CalculationProxy is done by
+            # Loading of the JobContext is done by
             # `get_running_job`, which is covered by other tests.
             # So, we just want to make sure that it's called here.
-            grc_mock.return_value = calc_proxy
+            grc_mock.return_value = job_ctxt
 
             calculator = tasks.calculator_for_task(job.id, 'hazard')
 

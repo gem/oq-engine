@@ -107,33 +107,33 @@ def get_running_job(job_id):
     Given the id of an in-progress calculation
     (:class:`openquake.db.models.OqJob`), load all of the calculation
     data from the database and KVS and return a
-    :class:`openquake.engine.CalculationProxy` object.
+    :class:`openquake.engine.JobContext` object.
 
     If the calculation is not currently running, a
     :exception:`JobCompletedError` is raised.
 
     :returns:
-        :class:`openquake.engine.CalculationProxy` object, representing an
+        :class:`openquake.engine.JobContext` object, representing an
         in-progress job. This object is created from cached data in the
         KVS as well as data stored in the relational database.
     :raises JobCompletedError:
-        If :meth:`~openquake.engine.CalculationProxy.is_job_completed` returns
+        If :meth:`~openquake.engine.JobContext.is_job_completed` returns
         ``True`` for ``job_id``.
     """
     # pylint: disable=W0404
-    from openquake.engine import CalculationProxy
+    from openquake.engine import JobContext
 
-    if CalculationProxy.is_job_completed(job_id):
+    if JobContext.is_job_completed(job_id):
         raise JobCompletedError(job_id)
 
-    calc_proxy = CalculationProxy.from_kvs(job_id)
-    if calc_proxy and calc_proxy.params:
-        level = calc_proxy.log_level
+    job_ctxt = JobContext.from_kvs(job_id)
+    if job_ctxt and job_ctxt.params:
+        level = job_ctxt.log_level
     else:
         level = 'warn'
     logs.init_logs_amqp_send(level=level, job_id=job_id)
 
-    return calc_proxy
+    return job_ctxt
 
 
 def calculator_for_task(job_id, job_type):
@@ -158,8 +158,8 @@ def calculator_for_task(job_id, job_type):
     # pylint: disable=W0404
     from openquake.engine import CALCS
 
-    calc_proxy = get_running_job(job_id)
-    calc_mode = calc_proxy.oq_job_profile.calc_mode
-    calculator = CALCS[job_type][calc_mode](calc_proxy)
+    job_ctxt = get_running_job(job_id)
+    calc_mode = job_ctxt.oq_job_profile.calc_mode
+    calculator = CALCS[job_type][calc_mode](job_ctxt)
 
     return calculator

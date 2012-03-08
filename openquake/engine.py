@@ -65,7 +65,7 @@ RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
 
 # Silencing 'Too many instance attributes'
 # pylint: disable=R0902
-class CalculationProxy(object):
+class JobContext(object):
     """Contains everything a calculator needs to run a job. This
     includes: an :class:`OqJobProfile` object, an :class:`OqJob`, and a
     dictionary of all of the calculation config params (which is a basically a
@@ -140,7 +140,7 @@ class CalculationProxy(object):
             kvs.tokens.generate_job_key(job_id))
         job = OqJob.objects.get(id=job_id)
         job_profile = job.oq_job_profile
-        job = CalculationProxy(params, job_id, oq_job_profile=job_profile,
+        job = JobContext(params, job_id, oq_job_profile=job_profile,
                                oq_job=job,
                                log_level=params['debug'])
         return job
@@ -161,7 +161,7 @@ class CalculationProxy(object):
         of the job ``job_id`` is either 'succeeded' or 'failed'. Returns
         ``False`` otherwise.
         """
-        status = CalculationProxy.get_status_from_db(job_id)
+        status = JobContext.get_status_from_db(job_id)
         return status == 'succeeded' or status == 'failed'
 
     def has(self, name):
@@ -331,24 +331,24 @@ class CalculationProxy(object):
         job_stats.save()
 
 
-def read_sites_from_exposure(calc_proxy):
+def read_sites_from_exposure(job_ctxt):
     """Given the exposure model specified in the job config, read all sites
     which are located within the region of interest.
 
-    :param calc_proxy:
-        ACalculationProxy object with an EXPOSURE parameter defined
-    :type calc_proxy:
-        :py:class:`openquake.engine.CalculationProxy`
+    :param job_ctxt:
+        AJobContext object with an EXPOSURE parameter defined
+    :type job_ctxt:
+        :py:class:`openquake.engine.JobContext`
 
     :returns: a list of :py:class:`openquake.shapes.Site` objects
     """
 
     sites = []
-    path = os.path.join(calc_proxy.base_path,
-                        calc_proxy.params[jobconf.EXPOSURE])
+    path = os.path.join(job_ctxt.base_path,
+                        job_ctxt.params[jobconf.EXPOSURE])
 
     reader = exposure.ExposureModelFile(path)
-    constraint = calc_proxy.region
+    constraint = job_ctxt.region
 
     logs.LOG.debug(
         "Constraining exposure parsing to %s" % constraint)
@@ -416,7 +416,7 @@ def _job_from_file(config_file, output_type, owner_username='openquake'):
 
     base_path = params['BASE_PATH']
 
-    job = CalculationProxy(params, job_id, sections=sections,
+    job = JobContext(params, job_id, sections=sections,
                            base_path=base_path,
                            serialize_results_to=serialize_results_to,
                            oq_job=job,
@@ -708,7 +708,7 @@ def run_job(job_profile, params, sections, output_type='db',
     if output_type == 'xml':
         serialize_results_to.append('xml')
 
-    calc_proxy = CalculationProxy(params, job.id, sections=sections,
+    job_ctxt = JobContext(params, job.id, sections=sections,
                                   serialize_results_to=serialize_results_to,
                                   oq_job_profile=job_profile,
                                   oq_job=job,
@@ -719,12 +719,12 @@ def run_job(job_profile, params, sections, output_type='db',
     # the connection it immediately becomes unavailable for other
     close_connection()
 
-    calc_pid = os.fork()
-    if not calc_pid:
+    job_pid = os.fork()
+    if not job_pid:
         # calculation executor process
         try:
             logs.init_logs_amqp_send(level=log_level, job_id=job.id)
-            _launch_job(calc_proxy, sections)
+            _launch_job(job_ctxt, sections)
         except Exception, ex:
             logs.LOG.critical("Calculation failed with exception: '%s'"
                               % str(ex))
@@ -742,9 +742,9 @@ def run_job(job_profile, params, sections, output_type='db',
         logs.set_logger_level(logs.logging.root, log_level)
         supervisor_pid = os.getpid()
         job.supervisor_pid = supervisor_pid
-        job.job_pid = calc_pid
+        job.job_pid = job_pid
         job.save()
-        supervisor.supervise(calc_pid, job.id)
+        supervisor.supervise(job_pid, job.id)
         return
 
     # parent process
@@ -753,17 +753,17 @@ def run_job(job_profile, params, sections, output_type='db',
     # job executor terminates on SIGINT
     supervisor.ignore_sigint()
     # wait till both child processes are done
-    os.waitpid(calc_pid, 0)
+    os.waitpid(job_pid, 0)
     os.waitpid(supervisor_pid, 0)
 
-    return calculation
+    return job
 
 
-def _launch_job(calc_proxy, sections):
+def _launch_job(job_ctxt, sections):
     """Instantiate calculator(s) and actually run the job.
 
-    :param calc_proxy:
-        :class:`openquake.engine.CalculationProxy` instance.
+    :param job_ctxt:
+        :class:`openquake.engine.JobContext` instance.
     :param sections:
         List of config file sections. Example::
             ['general', 'HAZARD', 'RISK']
@@ -775,15 +775,15 @@ def _launch_job(calc_proxy, sections):
     # This is going to need some thought.
     # Ignoring 'Access to a protected member'
     # pylint: disable=W0212
-    calc_proxy._record_initial_stats()
+    job_ctxt._record_initial_stats()
 
-    calc_proxy.to_kvs()
+    job_ctxt.to_kvs()
 
-    output_dir = os.path.join(calc_proxy.base_path, calc_proxy['OUTPUT_DIR'])
+    output_dir = os.path.join(job_ctxt.base_path, job_ctxt['OUTPUT_DIR'])
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
 
-    calc_mode = calc_proxy.oq_job_profile.calc_mode
+    calc_mode = job_ctxt.oq_job_profile.calc_mode
 
     for job_type in ('hazard', 'risk'):
         if not job_type.upper() in sections:
@@ -791,9 +791,9 @@ def _launch_job(calc_proxy, sections):
 
         calc_class = CALCS[job_type][calc_mode]
 
-        calculator = calc_class(calc_proxy)
+        calculator = calc_class(job_ctxt)
         logs.LOG.debug("Launching calculation with id=%s and type='%s'"
-                       % (calc_proxy.job_id, job_type))
+                       % (job_ctxt.job_id, job_type))
 
         calculator.initialize()
         calculator.pre_execute()
