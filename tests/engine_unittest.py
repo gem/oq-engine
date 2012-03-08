@@ -25,7 +25,7 @@ from openquake import engine
 from openquake.db.models import model_equals
 from openquake.db.models import Input
 from openquake.db.models import InputSet
-from openquake.db.models import OqCalculation
+from openquake.db.models import OqJob
 from openquake.db.models import OqJobProfile
 from openquake.db.models import OqUser
 
@@ -287,14 +287,14 @@ class EngineLaunchCalcTestCase(unittest.TestCase):
         cfg_file = demo_file('classical_psha_based_risk/config.gem')
 
         job_profile, params, sections = engine.import_job_profile(cfg_file)
-        calculation = OqCalculation(owner=job_profile.owner,
+        calculation = OqJob(owner=job_profile.owner,
                                     oq_job_profile=job_profile)
         calculation.save()
 
         calc_proxy = engine.CalculationProxy(
             params, calculation.id, sections=sections,
             serialize_results_to=['xml', 'db'],
-            oq_job_profile=job_profile, oq_calculation=calculation)
+            oq_job_profile=job_profile, oq_job=calculation)
 
         # Mocking setup:
         cls_haz_calc = ('openquake.calculators.hazard.classical.core'

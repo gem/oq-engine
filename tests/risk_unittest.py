@@ -195,7 +195,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
         self.job = helpers.create_job(self.params, base_path=".",
                                       job_id=self.calc.id,
-                                      oq_calculation=self.calc,
+                                      oq_job=self.calc,
                                       oq_job_profile=self.calc.oq_job_profile)
         self.job_id = self.job.job_id
         self.job.to_kvs()

@@ -86,12 +86,12 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         self.write_output()
 
         # Save the aggregate loss curve to the database:
-        calculation = self.calc_proxy.oq_calculation
+        calculation = self.calc_proxy.oq_job
 
         agg_lc_display_name = (
             'Aggregate Loss Curve for calculation %s' % calculation.id)
         output = models.Output(
-            oq_calculation=calculation, owner=calculation.owner,
+            oq_job=calculation, owner=calculation.owner,
             display_name=agg_lc_display_name, db_backed=True,
             output_type='agg_loss_curve')
         output.save()
@@ -125,7 +125,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         """Returns a list of the output IDs of all computed GMFs"""
 
         ids = models.Output.objects.filter(
-            oq_calculation=job_id, output_type='gmf').values_list('id',
+            oq_job=job_id, output_type='gmf').values_list('id',
                                                                   flat=True)
 
         return list(ids)

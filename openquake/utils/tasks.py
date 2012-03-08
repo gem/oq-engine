@@ -105,7 +105,7 @@ def get_running_calculation(calculation_id):
     """Helper function which is intended to be run by celery task functions.
 
     Given the id of an in-progress calculation
-    (:class:`openquake.db.models.OqCalculation`), load all of the calculation
+    (:class:`openquake.db.models.OqJob`), load all of the calculation
     data from the database and KVS and return a
     :class:`openquake.engine.CalculationProxy` object.
 
@@ -138,7 +138,7 @@ def get_running_calculation(calculation_id):
 
 def calculator_for_task(calculation_id, job_type):
     """Given the id of an in-progress calculation
-    (:class:`openquake.db.models.OqCalculation`), load all of the calculation
+    (:class:`openquake.db.models.OqJob`), load all of the calculation
     data from the database and KVS and instantiate the calculator required for
     a task's computation.
 

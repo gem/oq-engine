@@ -19,7 +19,7 @@ import getpass
 import os
 import unittest
 
-from openquake.db.models import OqCalculation
+from openquake.db.models import OqJob
 from openquake.db.models import OqUser
 from openquake.db.models import Output
 
@@ -48,7 +48,7 @@ class CalculationDescriptionTestCase(unittest.TestCase):
         cfg_parser.write(open(mod_cfg_path, 'w'))
 
         run_job(mod_cfg_path)
-        calculation = OqCalculation.objects.latest('id')
+        calculation = OqJob.objects.latest('id')
         job_profile = calculation.oq_job_profile
 
         self.assertEqual(description, job_profile.description)
@@ -66,7 +66,7 @@ class CalculationUserAssociation(unittest.TestCase):
         # Run a full calculation in the same as other QA tests (using
         # `subprocess` to invoke bin/openquake) and check the following:
         # 1. There is an OqUser record for the current user.
-        # 2. This user is the owner of all OqJobProfile, OqCalculation,
+        # 2. This user is the owner of all OqJobProfile, OqJob,
         #    and Ouput records.
         cfg_path = demo_file('uhs/config.gem')
 
@@ -75,13 +75,13 @@ class CalculationUserAssociation(unittest.TestCase):
         # Get the OqUser for the current user
         user = OqUser.objects.get(user_name=getpass.getuser())
 
-        calculation = OqCalculation.objects.latest('id')
+        calculation = OqJob.objects.latest('id')
         job_profile = calculation.oq_job_profile
 
         self.assertEqual(user, calculation.owner)
         self.assertEqual(user, job_profile.owner)
 
-        outputs = Output.objects.filter(oq_calculation=calculation.id)
+        outputs = Output.objects.filter(oq_job=calculation.id)
         # We need at least 1 output record, otherwise this test is useless:
         self.assertTrue(len(outputs) > 0)
         for output in outputs:
