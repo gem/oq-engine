@@ -50,15 +50,15 @@ class UHSBaseTestCase(unittest.TestCase):
         # which can be used for several of the tests:
         self.job_profile, params, sections = engine.import_job_profile(
             UHS_DEMO_CONFIG_FILE)
-        self.calculation = OqJob(
+        self.job = OqJob(
             owner=self.job_profile.owner,
             oq_job_profile=self.job_profile)
-        self.calculation.save()
+        self.job.save()
 
         self.calc_proxy = engine.CalculationProxy(
-            params, self.calculation.id, sections=sections,
+            params, self.job.id, sections=sections,
             serialize_results_to=['db'], oq_job_profile=self.job_profile,
-            oq_job=self.calculation)
+            oq_job=self.job)
         self.calc_proxy.to_kvs()
         self.job_id = self.calc_proxy.job_id
 
@@ -109,7 +109,7 @@ class UHSCoreTestCase(UHSBaseTestCase):
         write_uh_spectra(self.calc_proxy)
 
         # Now check that the expected records were indeed created.
-        output = Output.objects.get(oq_job=self.calculation.id)
+        output = Output.objects.get(oq_job=self.job.id)
         self.assertEqual('uh_spectra', output.output_type)
 
         uh_spectra = UhSpectra.objects.get(output=output.id)
@@ -148,7 +148,7 @@ class UHSCoreTestCase(UHSBaseTestCase):
 
         uhs_data = UhSpectrumData.objects.filter(
             uh_spectrum__uh_spectra__output__oq_job=(
-            self.calculation.id))
+            self.job.id))
 
         self.assertEqual(len(self.UHS_RESULTS), len(uhs_data))
         self.assertTrue(all([x.realization == 0 for x in uhs_data]))

@@ -35,5 +35,5 @@ class ScenarioRiskQATest(unittest.TestCase):
         ret_code = helpers.run_job(scen_cfg, ['--output-type=xml'])
         self.assertEqual(0, ret_code)
 
-        calculation = OqJob.objects.latest('id')
-        self.assertEqual('succeeded', calculation.status)
+        job = OqJob.objects.latest('id')
+        self.assertEqual('succeeded', job.status)

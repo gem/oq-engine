@@ -324,7 +324,7 @@ class DisaggregationValidator(object):
         self.params = params
 
     def is_valid(self):
-        """Check if parameters are valid for a Disaggregation calculation.
+        """Check if parameters are valid for a Disaggregation job.
 
         :returns: the status of this validator and the related error messages.
         :rtype: when valid, a (True, []) tuple is returned. When invalid, a
@@ -367,7 +367,7 @@ class UHSValidator(object):
         self.params = params
 
     def is_valid(self):
-        """Check if UHS_PERIODS contains valid data for a UHS calculation.
+        """Check if UHS_PERIODS contains valid data for a UHS job.
 
         Currently, this is the only UHS-specific parameter we need to check.
         :returns: the status of this validator and the related error messages.

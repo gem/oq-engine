@@ -48,11 +48,11 @@ class CalculationDescriptionTestCase(unittest.TestCase):
         cfg_parser.write(open(mod_cfg_path, 'w'))
 
         run_job(mod_cfg_path)
-        calculation = OqJob.objects.latest('id')
-        job_profile = calculation.oq_job_profile
+        job = OqJob.objects.latest('id')
+        job_profile = job.oq_job_profile
 
         self.assertEqual(description, job_profile.description)
-        self.assertEqual(description, calculation.description)
+        self.assertEqual(description, job.description)
 
         # Clean up the temporary config file:
         os.unlink(mod_cfg_path)
@@ -75,13 +75,13 @@ class CalculationUserAssociation(unittest.TestCase):
         # Get the OqUser for the current user
         user = OqUser.objects.get(user_name=getpass.getuser())
 
-        calculation = OqJob.objects.latest('id')
-        job_profile = calculation.oq_job_profile
+        job = OqJob.objects.latest('id')
+        job_profile = job.oq_job_profile
 
-        self.assertEqual(user, calculation.owner)
+        self.assertEqual(user, job.owner)
         self.assertEqual(user, job_profile.owner)
 
-        outputs = Output.objects.filter(oq_job=calculation.id)
+        outputs = Output.objects.filter(oq_job=job.id)
         # We need at least 1 output record, otherwise this test is useless:
         self.assertTrue(len(outputs) > 0)
         for output in outputs:

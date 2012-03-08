@@ -131,7 +131,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         Other info:
 
         The GMF data for each realization is stored in the KVS by the preceding
-        scenario hazard calculation.
+        scenario hazard job.
 
         :param block_id: id of the region block data we need to pull from the
             KVS
@@ -285,7 +285,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 def load_gmvs_for_point(job_id, point):
     """
     From the KVS, load all the ground motion values for the given point. We
-    expect one ground motion value per realization of the calculation.
+    expect one ground motion value per realization of the job.
     Since there can be tens of thousands of realizations, this could return a
     large list.
 

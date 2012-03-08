@@ -79,7 +79,7 @@ public class UHSCalculator
      *            Map of GMPEs, keyed by TectonicRegionType
      * @param maxDistance
      *            Maximum distance (in km) from the site of interest for a
-     *            source to be considered in the calculation. (This corresponds
+     *            source to be considered in the job. (This corresponds
      *            to the MAXIMUM_DISTANCE job config param.)
      */
     public UHSCalculator(
