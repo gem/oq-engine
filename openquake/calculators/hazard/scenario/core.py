@@ -39,24 +39,24 @@ class ScenarioHazardCalculator(BaseHazardCalculator):
         """Entry point to trigger the computation."""
 
         random_generator = java.jclass(
-            "Random")(int(self.calc_proxy.params["GMF_RANDOM_SEED"]))
+            "Random")(int(self.job_ctxt.params["GMF_RANDOM_SEED"]))
 
         encoder = json.JSONEncoder()
         kvs_client = kvs.get_client()
 
-        grid = self.calc_proxy.region.grid
+        grid = self.job_ctxt.region.grid
 
         for _ in xrange(self._number_of_calculations()):
             gmf = self.compute_ground_motion_field(random_generator)
 
             for gmv in gmf_to_dict(
-                gmf, self.calc_proxy.params["INTENSITY_MEASURE_TYPE"]):
+                gmf, self.job_ctxt.params["INTENSITY_MEASURE_TYPE"]):
 
                 site = shapes.Site(gmv["site_lon"], gmv["site_lat"])
                 point = grid.point_at(site)
 
                 key = kvs.tokens.ground_motion_values_key(
-                    self.calc_proxy.job_id, point)
+                    self.job_ctxt.job_id, point)
 
                 kvs_client.rpush(key, encoder.encode(gmv))
 
@@ -69,7 +69,7 @@ class ScenarioHazardCalculator(BaseHazardCalculator):
         :returns: the number of computations to trigger.
         """
 
-        value = int(self.calc_proxy.params[
+        value = int(self.job_ctxt.params[
             "NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"])
 
         if value <= 0:
@@ -89,9 +89,9 @@ class ScenarioHazardCalculator(BaseHazardCalculator):
             around an instance of java.util.Map.
         """
 
-        calculator = self.gmf_calculator(self.calc_proxy.sites_to_compute())
+        calculator = self.gmf_calculator(self.job_ctxt.sites_to_compute())
 
-        if (self.calc_proxy.params["GROUND_MOTION_CORRELATION"].lower()
+        if (self.job_ctxt.params["GROUND_MOTION_CORRELATION"].lower()
             == "true"):
             return calculator.getCorrelatedGroundMotionField_JB2009(
                 random_generator)
@@ -130,10 +130,10 @@ class ScenarioHazardCalculator(BaseHazardCalculator):
             org.opensha.sha.earthquake.EqkRupture.
         """
 
-        rel_path = self.calc_proxy.params["SINGLE_RUPTURE_MODEL"]
-        abs_path = os.path.join(self.calc_proxy.params["BASE_PATH"], rel_path)
+        rel_path = self.job_ctxt.params["SINGLE_RUPTURE_MODEL"]
+        abs_path = os.path.join(self.job_ctxt.params["BASE_PATH"], rel_path)
         grid_spacing = float(
-            self.calc_proxy.params["RUPTURE_SURFACE_DISCRETIZATION"])
+            self.job_ctxt.params["RUPTURE_SURFACE_DISCRETIZATION"])
 
         return java.jclass("RuptureReader")(abs_path, grid_spacing).read()
 
@@ -151,7 +151,7 @@ class ScenarioHazardCalculator(BaseHazardCalculator):
         deserializer = java.jclass("GMPEDeserializer")()
 
         package_name = "org.opensha.sha.imr.attenRelImpl"
-        class_name = self.calc_proxy.params["GMPE_MODEL_NAME"]
+        class_name = self.job_ctxt.params["GMPE_MODEL_NAME"]
         fqn = package_name + "." + class_name
 
         gmpe = deserializer.deserialize(
@@ -160,12 +160,12 @@ class ScenarioHazardCalculator(BaseHazardCalculator):
         tree_data = java.jclass("GmpeLogicTreeData")
 
         tree_data.setGmpeParams(
-            self.calc_proxy.params["COMPONENT"],
-            self.calc_proxy.params["INTENSITY_MEASURE_TYPE"],
-            jpype.JDouble(float(self.calc_proxy.params["PERIOD"])),
-            jpype.JDouble(float(self.calc_proxy.params["DAMPING"])),
-            self.calc_proxy.params["GMPE_TRUNCATION_TYPE"],
-            jpype.JDouble(float(self.calc_proxy.params["TRUNCATION_LEVEL"])),
+            self.job_ctxt.params["COMPONENT"],
+            self.job_ctxt.params["INTENSITY_MEASURE_TYPE"],
+            jpype.JDouble(float(self.job_ctxt.params["PERIOD"])),
+            jpype.JDouble(float(self.job_ctxt.params["DAMPING"])),
+            self.job_ctxt.params["GMPE_TRUNCATION_TYPE"],
+            jpype.JDouble(float(self.job_ctxt.params["TRUNCATION_LEVEL"])),
             "Total",
             jpype.JObject(gmpe, java.jclass("AttenuationRelationship")))
 

@@ -42,7 +42,7 @@ from django.core import exceptions
 from openquake.calculators.hazard.general import store_gmpe_map
 from openquake.calculators.hazard.general import store_source_model
 from openquake.db import models
-from openquake.engine import CalculationProxy
+from openquake.engine import JobContext
 from openquake import engine
 from openquake import logs
 from openquake import producer
@@ -126,7 +126,7 @@ def testdata_path(file_name):
 
 def job_from_file(config_file_path):
     """
-    Create a CalculationProxy instance from the given configuration file.
+    Create a JobContext instance from the given configuration file.
 
     The results are configured to go to XML files.  *No* database record will
     be stored for the job.  This allows running test on jobs without requiring
@@ -142,7 +142,7 @@ def job_from_file(config_file_path):
 def create_job(params, **kwargs):
     job_id = kwargs.pop('job_id', 0)
 
-    return CalculationProxy(params, job_id, **kwargs)
+    return JobContext(params, job_id, **kwargs)
 
 
 def run_job(config_file, params=None):
@@ -174,7 +174,7 @@ def store_hazard_logic_trees(a_job):
     @preload decorator does.
 
     :param a_job:
-        :class:`openquake.engine.CalculationProxy` instance.
+        :class:`openquake.engine.JobContext` instance.
     """
     lt_proc = LogicTreeProcessor(
         a_job['BASE_PATH'],
@@ -558,7 +558,7 @@ class DbTestCase(object):
         :param integer upload_id: if set use upload record with given db key.
         :param list inputs: a list of 2-tuples where the first and the second
             element are the input type and path respectively
-        :returns: a :py:class:`db.models.OqCalculation` instance
+        :returns: a :py:class:`db.models.OqJob` instance
         """
         assert upload_id is None  # temporary
 
@@ -631,7 +631,7 @@ class DbTestCase(object):
         oqjp.gmpe_lt_random_seed = 5
         oqjp.save()
 
-        job = models.OqCalculation(oq_job_profile=oqjp, owner=owner)
+        job = models.OqJob(oq_job_profile=oqjp, owner=owner)
         job.save()
 
         if create_job_path:
@@ -649,9 +649,9 @@ class DbTestCase(object):
         Tear down the file system (and potentially db) artefacts for the
         given job.
 
-        :param job: the :py:class:`db.models.OqCalculation` instance
+        :param job: the :py:class:`db.models.OqJob` instance
             in question
-        :param bool filesystem_only: if set the oq_calculation/oq_param/upload/
+        :param bool filesystem_only: if set the oq_job/oq_param/upload/
             input database records will be left intact. This saves time and the
             test db will be dropped/recreated prior to the next db test suite
             run anyway.
@@ -686,7 +686,7 @@ class DbTestCase(object):
             be left intact. This saves time and the test db will be
             dropped/recreated prior to the next db test suite run anyway.
         """
-        job = output.oq_calculation
+        job = output.oq_job
         if not filesystem_only:
             output.delete()
         if teardown_job:
