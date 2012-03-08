@@ -18,7 +18,7 @@
 
 """
 This module tests the hazard side of the scenario
-event based calculation.
+event based job.
 """
 
 import math
@@ -31,8 +31,8 @@ from openquake import engine
 from openquake import java
 from openquake import kvs
 from openquake import shapes
-from openquake.engine import CalculationProxy
-from openquake.db.models import OqCalculation
+from openquake.engine import JobContext
+from openquake.db.models import OqJob
 from openquake.calculators.hazard.scenario import core as scenario
 
 SCENARIO_SMOKE_TEST = helpers.testdata_path("scenario/config.gem")
@@ -45,7 +45,7 @@ def compute_ground_motion_field(self, _random_generator):
 
     hashmap = java.jclass("HashMap")()
 
-    for site in self.calc_proxy.sites_to_compute():
+    for site in self.job_ctxt.sites_to_compute():
         location = java.jclass("Location")(site.latitude, site.longitude)
         site = java.jclass("Site")(location)
         hashmap.put(site, 0.5)
@@ -68,25 +68,25 @@ class ScenarioHazardCalculatorTestCase(unittest.TestCase):
         base_path = helpers.testdata_path("scenario")
         self.job_profile, self.params, self.sections = (
             engine.import_job_profile(SCENARIO_SMOKE_TEST))
-        calculation = OqCalculation(owner=self.job_profile.owner,
+        job = OqJob(owner=self.job_profile.owner,
                                     oq_job_profile=self.job_profile)
-        calculation.save()
-        self.calc_proxy = CalculationProxy(
-            self.params, calculation.id, sections=self.sections,
+        job.save()
+        self.job_ctxt = JobContext(
+            self.params, job.id, sections=self.sections,
             base_path=base_path, oq_job_profile=self.job_profile,
-            oq_calculation=calculation)
+            oq_job=job)
 
-        self.calc_proxy.params[NUMBER_OF_CALC_KEY] = "1"
+        self.job_ctxt.params[NUMBER_OF_CALC_KEY] = "1"
 
-        self.calc_proxy.params['SERIALIZE_RESULTS_TO'] = 'xml'
+        self.job_ctxt.params['SERIALIZE_RESULTS_TO'] = 'xml'
 
         # saving the default java implementation
         self.default = (
             scenario.ScenarioHazardCalculator.compute_ground_motion_field)
 
-        self.grid = self.calc_proxy.region.grid
+        self.grid = self.job_ctxt.region.grid
 
-        self.calc_proxy.to_kvs()
+        self.job_ctxt.to_kvs()
 
     def tearDown(self):
         # restoring the default java implementation
@@ -102,11 +102,11 @@ class ScenarioHazardCalculatorTestCase(unittest.TestCase):
         multiple times.
         """
 
-        self.calc_proxy.params[NUMBER_OF_CALC_KEY] = "3"
+        self.job_ctxt.params[NUMBER_OF_CALC_KEY] = "3"
         self.job_profile.gmf_calculation_number = 3
         self.job_profile.save()
 
-        calculator = scenario.ScenarioHazardCalculator(self.calc_proxy)
+        calculator = scenario.ScenarioHazardCalculator(self.job_ctxt)
 
         with patch('openquake.calculators.hazard.scenario.core'
                    '.ScenarioHazardCalculator'
@@ -160,13 +160,13 @@ class ScenarioHazardCalculatorTestCase(unittest.TestCase):
             self.assertEqual(0.1, gmv["mag"])
 
     def test_loads_the_rupture_model(self):
-        calculator = scenario.ScenarioHazardCalculator(self.calc_proxy)
+        calculator = scenario.ScenarioHazardCalculator(self.job_ctxt)
 
         self.assertEqual("org.opensha.sha.earthquake.EqkRupture",
                          calculator.rupture_model.__class__.__name__)
 
     def test_the_same_calculator_is_used_between_multiple_invocations(self):
-        calculator = scenario.ScenarioHazardCalculator(self.calc_proxy)
+        calculator = scenario.ScenarioHazardCalculator(self.job_ctxt)
 
         gmf_calculator1 = calculator.gmf_calculator([shapes.Site(1.0, 1.0)])
         gmf_calculator2 = calculator.gmf_calculator([shapes.Site(1.0, 1.0)])

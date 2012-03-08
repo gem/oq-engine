@@ -21,7 +21,7 @@ import unittest
 from nose.plugins.attrib import attr
 
 from openquake.db.models import LossCurveData
-from openquake.db.models import OqCalculation
+from openquake.db.models import OqJob
 
 from tests.utils import helpers
 
@@ -75,11 +75,11 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         ret_code = helpers.run_job(cls_risk_cfg, ['--output-type=xml'])
         self.assertEquals(0, ret_code)
 
-        calculation = OqCalculation.objects.latest('id')
-        self.assertEqual('succeeded', calculation.status)
+        job = OqJob.objects.latest('id')
+        self.assertEqual('succeeded', job.status)
 
         loss_curve = LossCurveData.objects.get(
-            loss_curve__output__oq_calculation=calculation.id)
+            loss_curve__output__oq_job=job.id)
 
         self.assertTrue(numpy.allclose(expected_lc_poes, loss_curve.poes,
                                        atol=0.0009))
@@ -88,8 +88,8 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         expected_files = [
             'hazardcurve-0.xml',
             'hazardcurve-mean.xml',
-            'losscurves-block-#%s-block#0.xml' % calculation.id,
-            'losscurves-loss-block-#%s-block#0.xml' % calculation.id,
+            'losscurves-block-#%s-block#0.xml' % job.id,
+            'losscurves-loss-block-#%s-block#0.xml' % job.id,
         ]
 
         for f in expected_files:

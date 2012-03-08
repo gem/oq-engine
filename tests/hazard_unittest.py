@@ -36,8 +36,8 @@ from openquake import nrml
 from openquake import shapes
 from openquake import xml
 
-from openquake.engine import CalculationProxy
-from openquake.db.models import OqCalculation
+from openquake.engine import JobContext
+from openquake.db.models import OqJob
 from openquake.job.config import HazardMandatoryParamsValidator
 from openquake.job.config import PARAMS
 from openquake.kvs import tokens
@@ -292,14 +292,14 @@ class HazardEngineTestCase(unittest.TestCase):
         path = helpers.testdata_path("classical_psha_simple/config.gem")
         job_profile, params, sections = engine.import_job_profile(path)
 
-        calculation = OqCalculation(owner=job_profile.owner)
-        calculation.oq_job_profile = job_profile
-        calculation.save()
+        job = OqJob(owner=job_profile.owner)
+        job.oq_job_profile = job_profile
+        job.save()
 
-        the_job = CalculationProxy(
-            params, calculation.id, sections=sections, base_path=base_path,
+        the_job = JobContext(
+            params, job.id, sections=sections, base_path=base_path,
             serialize_results_to=['db', 'xml'], oq_job_profile=job_profile,
-            oq_calculation=calculation)
+            oq_job=job)
         the_job.to_kvs()
 
         calc_mode = job_profile.calc_mode
@@ -507,9 +507,9 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
             GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
-        self.calc_proxy = helpers.create_job(self.params)
-        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
-        self.job_id = self.calc_proxy.job_id
+        self.job_ctxt = helpers.create_job(self.params)
+        self.calculator = classical.ClassicalHazardCalculator(self.job_ctxt)
+        self.job_id = self.job_ctxt.job_id
 
         self.expected_curve = numpy.array([9.9178000e-01, 9.8892000e-01,
                 9.6903000e-01, 9.4030000e-01, 8.8405000e-01, 7.8782000e-01,
@@ -545,20 +545,20 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
         self._has_computed_quantile_for_site(shapes.Site(2.0, 5.0), 0.75)
 
     def test_computes_just_the_quantiles_in_range(self):
-        self.calc_proxy.params[hazard_general.QUANTILE_PARAM_NAME] = (
+        self.job_ctxt.params[hazard_general.QUANTILE_PARAM_NAME] = (
             '-0.33 0.00 0.25 0.50 0.75 1.00 1.10')
 
         self.assertEqual([0.00, 0.25, 0.50, 0.75, 1.00],
             self.calculator.quantile_levels)
 
     def test_just_numeric_values_are_allowed(self):
-        self.calc_proxy.params[hazard_general.QUANTILE_PARAM_NAME] = (
+        self.job_ctxt.params[hazard_general.QUANTILE_PARAM_NAME] = (
             '-0.33 0.00 XYZ 0.50 ;;; 1.00 BBB')
 
         self.assertEqual([0.00, 0.50, 1.00], self.calculator.quantile_levels)
 
     def test_accepts_also_signs(self):
-        self.calc_proxy.params[hazard_general.QUANTILE_PARAM_NAME] = (
+        self.job_ctxt.params[hazard_general.QUANTILE_PARAM_NAME] = (
             '-0.33 +0.0 XYZ +0.5 +1.00')
 
         self.assertEqual([0.00, 0.50, 1.00], self.calculator.quantile_levels)
@@ -680,7 +680,7 @@ class QuantileHazardCurveComputationTestCase(unittest.TestCase):
 
     def _run(self, sites, realizations, quantiles):
         hazard_general.compute_quantile_hazard_curves(
-                self.calc_proxy.job_id, sites, realizations, quantiles)
+                self.job_ctxt.job_id, sites, realizations, quantiles)
 
     def _store_hazard_curve_at(self, site, curve, realization=0):
         kvs.set_value_json_encoded(
@@ -711,9 +711,9 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
                 2.8400e-01, 3.9700e-01, 5.5600e-01, 7.7800e-01, 1.0900e+00,
                 1.5200e+00, 2.1300e+00]
 
-        self.calc_proxy = helpers.create_job(self.params)
-        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
-        self.job_id = self.calc_proxy.job_id
+        self.job_ctxt = helpers.create_job(self.params)
+        self.calculator = classical.ClassicalHazardCalculator(self.job_ctxt)
+        self.job_id = self.job_ctxt.job_id
 
         self.empty_mean_curve = []
 
@@ -831,7 +831,7 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
         kvs.set_value_json_encoded(key_6, curve_2)
 
         hazard_general.compute_quantile_hazard_maps(
-            self.calc_proxy.job_id, sites, [0.25, 0.50, 0.75], self.imls,
+            self.job_ctxt.job_id, sites, [0.25, 0.50, 0.75], self.imls,
             [0.10])
 
         # asserting imls have been produced for all poes and quantiles
@@ -867,7 +867,7 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
         if sites is None:
             sites = [self.site]
 
-        hazard_general.compute_mean_hazard_maps(self.calc_proxy.job_id, sites,
+        hazard_general.compute_mean_hazard_maps(self.job_ctxt.job_id, sites,
                                                 self.imls, poes)
 
     def _no_stored_values_for(self, pattern):
@@ -898,9 +898,9 @@ class ParameterizeSitesTestCase(unittest.TestCase):
             GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
-        self.calc_proxy = helpers.create_job(self.params)
-        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
-        self.job_id = self.calc_proxy.job_id
+        self.job_ctxt = helpers.create_job(self.params)
+        self.calculator = classical.ClassicalHazardCalculator(self.job_ctxt)
+        self.job_id = self.job_ctxt.job_id
 
     def test_all_mandatory_params_covered(self):
         """Make sure we add defaults for all mandatory hazard parameters."""
