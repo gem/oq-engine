@@ -10,9 +10,9 @@ from nhe.attrel.base import AttRelContext, AttenuationRelationship
 from nhe.imt import PGA, PGV, SA
 
 
-def check_attrel(attrel_cls, filename, max_discrep_percentage,
-                 max_errors=0, verbose=False):
-    reader = csv.reader(open(filename))
+def check_attrel(attrel_cls, datafile, max_discrep_percentage,
+                 max_errors=1, verbose=False):
+    reader = csv.reader(datafile)
     attrel = attrel_cls()
     context_params = set(AttRelContext.__slots__)
 
@@ -85,14 +85,14 @@ def check_attrel(attrel_cls, filename, max_discrep_percentage,
                 if verbose:
                     msg = 'file %r line %r imt %r: expected %s %f != %f ' \
                           '(delta %.4f%%)' % (
-                              filename, linenum, imt, result_type.lower(),
+                              datafile.name, linenum, imt, result_type.lower(),
                               expected_result, result, discrep_percentage
                           )
                     print >> sys.stderr, msg
-                if max_errors is not None and errors > max_errors:
+                if max_errors > 0 and errors >= max_errors:
                     break
 
-        if max_errors is not None and errors > max_errors:
+        if max_errors > 0 and errors >= max_errors:
             break
 
     time_spent = time.time() - started
@@ -158,17 +158,18 @@ if __name__ == '__main__':
                         help='an import path of the attenuation relationship '\
                              'class in a form "package.module.ClassName".')
     parser.add_argument('datafile', type=argparse.FileType('r'),
-                        help='test data file in a csv format')
+                        help='test data file in a csv format. use "-" for ' \
+                             'reading from standard input')
     parser.add_argument('-p', '--max-discrepancy', type=float, metavar='prcnt',
                         help='the maximum discrepancy allowed for result ' \
                              'value to be considered matching, expressed ' \
                              'in percentage points. default value is 0.5.',
                         nargs='?', default=0.5, dest='max_discrep_percentage')
-    parser.add_argument('-e', '--max-errors', type=int, nargs='?',
+    parser.add_argument('-e', '--max-errors', type=int, required=False,
                         help='maximum number of tests to fail before ' \
                              'stopping execution. by default all tests ' \
                              'are executed.',
-                        default=None, metavar='num')
+                        default=0, metavar='num')
     verb_group = parser.add_mutually_exclusive_group()
     verb_group.add_argument('-v', '--verbose', action='store_true',
                             help='print information about each error ' \
@@ -180,7 +181,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     errors, stats = check_attrel(
-        attrel_cls=args.attrel, filename=args.datafile.name,
+        attrel_cls=args.attrel, datafile=args.datafile,
         max_discrep_percentage=args.max_discrep_percentage,
         max_errors=args.max_errors, verbose=args.verbose
     )

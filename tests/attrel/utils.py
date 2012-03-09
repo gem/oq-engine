@@ -11,7 +11,7 @@ class BaseAttRelTestCase(unittest.TestCase):
     def check(self, filename, max_discrep_percentage):
         assert self.ATTREL_CLASS is not None
         filename = os.path.join(self.BASE_DATA_PATH, filename)
-        errors, stats = check_attrel(self.ATTREL_CLASS, filename,
+        errors, stats = check_attrel(self.ATTREL_CLASS, open(filename),
                                      max_discrep_percentage)
         if errors:
             raise AssertionError(stats)
