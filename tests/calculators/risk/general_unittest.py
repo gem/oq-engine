@@ -307,11 +307,11 @@ class AssetsAtTestCase(unittest.TestCase, helpers.DbTestCase):
         jp, _, _ = engine.import_job_profile(RISK_DEMO_CONFIG_FILE)
 
         # creating and storing the job
-        cls.job = models.OqCalculation(owner=jp.owner, oq_job_profile=jp)
+        cls.job = models.OqJob(owner=jp.owner, oq_job_profile=jp)
         cls.job.save()
 
         calc_proxy = helpers.create_job({}, job_id=cls.job.id,
-                oq_job_profile=jp, oq_calculation=cls.job)
+                oq_job_profile=jp, oq_job=cls.job)
 
         # storing the basic exposure model
         ClassicalRiskCalculator(calc_proxy).store_exposure_assets()

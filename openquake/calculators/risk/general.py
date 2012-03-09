@@ -215,7 +215,7 @@ class BaseRiskCalculator(Calculator):
             :py:class:`openquake.db.models.ExposureData` objects
         """
 
-        jp = models.OqCalculation.objects.get(id=job_id).oq_job_profile
+        jp = models.OqJob.objects.get(id=job_id).oq_job_profile
         cls._load_exposure_model(jp)
 
         if not cls._em_inputs:
