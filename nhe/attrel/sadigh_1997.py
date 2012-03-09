@@ -16,8 +16,6 @@ class SadighEtAl1997(GMPE):
     relationships for shallow crustal earthquakes based on California
     strong motion data", Seismological Research Letters, 68(1), 180-189.
     """
-    # TODO: unittest
-
     #: Supported tectonic region type is only active shallow crust,
     #: since data consists of California earthquakes mainly.
     DEFINED_FOR_TECTONIC_REGION_TYPES = set([
@@ -79,6 +77,10 @@ class SadighEtAl1997(GMPE):
         # TODO: document
         assert component_type in self.DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS
 
+        # GMPE differentiates strike-slip, reverse and normal ruptures,
+        # but combines normal and strike-slip into one category. See page 180.
+        is_reverse = (45 <= rake <= 135)
+
         if not is_rock:
             # deep soil sites, equation from table 4
             if mag <= self.NEAR_FIELD_SATURATION_MAG:
@@ -87,29 +89,33 @@ class SadighEtAl1997(GMPE):
             else:
                 c4 = self.COEFFS_SOIL_IMT_INDEPENDENT['c4himag']
                 c5 = self.COEFFS_SOIL_IMT_INDEPENDENT['c5himag']
-            c1, c2, c3 = map(self.COEFFS_SOIL_IMT_INDEPENDENT.get,
-                             ('c1', 'c2', 'c3'))
+            c2 = self.COEFFS_SOIL_IMT_INDEPENDENT['c2']
+            c3 = self.COEFFS_SOIL_IMT_INDEPENDENT['c3']
             C = self.COEFFS_SOIL[imt]
-            if (-45 <= rake <= 45
-                or -180 <= rake <= -180 + 45
-                or 180 - 45 <= rake <= 180):
-                # see definition of reverse and strike-slip events on page 180
+            if is_reverse:
+                c1 = self.COEFFS_SOIL_IMT_INDEPENDENT['c1r']
                 c6 = C['c6r']
             else:
+                c1 = self.COEFFS_SOIL_IMT_INDEPENDENT['c1ss']
                 c6 = C['c6ss']
-            return (c1 + c2 * mag + c3 * log(rrup + c4 * exp(c5 * mag))
+            return (c1 + c2 * mag - c3 * log(rrup + c4 * exp(c5 * mag))
                     + c6 + C['c7'] * ((8.5 - mag) ** 2.5))
 
         # rock sites, equation from table 2
         if mag <= self.NEAR_FIELD_SATURATION_MAG:
-            C = self.COEFFS_ROCK_HIMAG
+            C = self.COEFFS_ROCK_LOWMAG[imt]
         else:
-            C = self.COEFFS_ROCK_LOWMAG
-        return (
+            C = self.COEFFS_ROCK_HIMAG[imt]
+        mean = (
             C['c1'] + C['c2'] * mag + C['c3'] * ((8.5 - mag) ** 2.5)
             + C['c4'] * log(rrup + exp(C['c5'] + C['c6'] * mag))
             + C['c7'] * log(rrup + 2)
         )
+        if is_reverse:
+            # footnote in table 2 says that for reverse ruptures
+            # the mean amplitude value should be multiplied by 1.2
+            mean += 0.1823215567939546  # == log(1.2)
+        return mean
 
     def _get_stddev(self, mag, is_rock, imt, stddev_type):
         # TODO: document
@@ -130,18 +136,19 @@ class SadighEtAl1997(GMPE):
         C = self.COEFFS_SOIL[imt]
         return C['sigma0'] + C['magfactor'] * mag
 
-    # TODO: recheck numbers in tables
-
     #: Coefficients tables for rock sites (table 2), for magnitude
     #: values of :attr:`NEAR_FIELD_SATURATION_MAG` and below. Damping
     #: for spectral acceleration here and in other SA-tables is 5%,
     #: see "introduction" section.
+    #:
+    #: Here we use lowest SA period of 0.075 s instead of 0.07 which
+    #: is listed in table 2 for consistency with table 4.
     COEFFS_ROCK_LOWMAG = CoeffsTable("""\
         IMT        c1     c2    c3      c4      c5       c6      c7
         PGA       -0.624  1.0   0.000  -2.100   1.29649  0.250   0.0
     """).chain(SACoeffsTable("""\
     period damping c1     c2    c3      c4      c5       c6      c7
-     0.07     5    0.110  1.0   0.006  -2.128   1.29649  0.250  -0.082
+     0.075    5    0.110  1.0   0.006  -2.128   1.29649  0.250  -0.082
      0.10     5    0.275  1.0   0.006  -2.148   1.29649  0.250  -0.041
      0.20     5    0.153  1.0  -0.004  -2.080   1.29649  0.250   0.0
      0.30     5   -0.057  1.0  -0.017  -2.028   1.29649  0.250   0.0
@@ -152,7 +159,7 @@ class SadighEtAl1997(GMPE):
      1.5      5   -2.407  1.0  -0.065  -1.725   1.29649  0.250   0.0
      2.0      5   -2.945  1.0  -0.070  -1.670   1.29649  0.250   0.0
      3.0      5   -3.700  1.0  -0.080  -1.610   1.29649  0.250   0.0
-     4.0      5   -4.320  1.0  -0.100  -1.570   1.29649  0.250   0.0
+     4.0      5   -4.230  1.0  -0.100  -1.570   1.29649  0.250   0.0
     """))
 
     #: Coefficients tables for rock sites (table 2), for magnitude
@@ -162,9 +169,9 @@ class SadighEtAl1997(GMPE):
         PGA       -1.274  1.1   0.000  -2.100  -0.48451  0.524   0.0
     """).chain(SACoeffsTable("""\
     period damping c1     c2    c3      c4      c5       c6      c7
-     0.07     5   -0.540  1.1   0.006  -2.128  -0.48451  0.524  -0.082
+     0.075    5   -0.540  1.1   0.006  -2.128  -0.48451  0.524  -0.082
      0.10     5   -0.375  1.1   0.006  -2.148  -0.48451  0.524  -0.041
-     0.20     5   -0.497  1.1  -0.004  -2.08   -0.48451  0.524   0.0
+     0.20     5   -0.497  1.1  -0.004  -2.080  -0.48451  0.524   0.0
      0.30     5   -0.707  1.1  -0.017  -2.028  -0.48451  0.524   0.0
      0.40     5   -0.948  1.1  -0.028  -1.990  -0.48451  0.524   0.0
      0.50     5   -1.238  1.1  -0.040  -1.945  -0.48451  0.524   0.0
@@ -182,7 +189,7 @@ class SadighEtAl1997(GMPE):
         PGA        1.39   -0.14      0.38     7.21
     """).chain(SACoeffsTable("""\
     period damping sigma0  magfactor maxsigma maxmag
-     0.07     5    1.40   -0.14      0.39     7.21
+     0.075    5    1.40   -0.14      0.39     7.21
      0.10     5    1.41   -0.14      0.40     7.21
      0.20     5    1.43   -0.14      0.42     7.21
      0.30     5    1.45   -0.14      0.44     7.21
@@ -216,7 +223,7 @@ class SadighEtAl1997(GMPE):
     #: IMT-independent coefficients for deep soil sites (table 4).
     COEFFS_SOIL_IMT_INDEPENDENT = {
         'c1ss': -2.17,
-        'c1rev_thrust': -1.92,
+        'c1r': -1.92,
         'c2': 1.0,
         'c3': 1.7,
         'c4lowmag': 2.1863,
