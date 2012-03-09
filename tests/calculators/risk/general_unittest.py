@@ -298,3 +298,65 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
         self.job_ctxt.oq_job_profile.save()
         self.assertEqual([],
                          BaseRiskCalculator.assets_for_cell(self.job.id, site))
+
+
+class AssetsAtTestCase(unittest.TestCase, helpers.DbTestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        jp, _, _ = engine.import_job_profile(RISK_DEMO_CONFIG_FILE)
+
+        # creating and storing the job
+        cls.job = models.OqJob(owner=jp.owner, oq_job_profile=jp)
+        cls.job.save()
+
+        calc_proxy = helpers.create_job({}, job_id=cls.job.id,
+                oq_job_profile=jp, oq_job=cls.job)
+
+        # storing the basic exposure model
+        ClassicalRiskCalculator(calc_proxy).store_exposure_assets()
+
+        [em_input] = jp.input_set.input_set.filter(input_type="exposure")
+        [model] = em_input.exposuremodel_set.all()
+
+        site = shapes.Site(1.0, 2.0)
+
+        # more assets at same location
+        models.ExposureData(
+            exposure_model=model, taxonomy="NOT_USED",
+            asset_ref="ASSET_1", stco=1,
+            site=geos.GEOSGeometry(site.point.to_wkt()), reco=1).save()
+
+        models.ExposureData(
+            exposure_model=model, taxonomy="NOT_USED",
+            asset_ref="ASSET_2", stco=1,
+            site=geos.GEOSGeometry(site.point.to_wkt()), reco=1).save()
+
+        site = shapes.Site(2.0, 2.0)
+
+        # just one asset at location
+        models.ExposureData(
+            exposure_model=model, taxonomy="NOT_USED",
+            asset_ref="ASSET_3", stco=1,
+            site=geos.GEOSGeometry(site.point.to_wkt()), reco=1).save()
+
+    def test_one_asset_per_site(self):
+        site = shapes.Site(2.0, 2.0)
+        assets = BaseRiskCalculator.assets_at(self.job.id, site)
+
+        self.assertEqual(1, len(assets))
+        self.assertEqual("ASSET_3", assets[0].asset_ref)
+
+    def test_multiple_assets_per_site(self):
+        site = shapes.Site(1.0, 2.0)
+        assets = BaseRiskCalculator.assets_at(self.job.id, site)
+
+        self.assertEqual(2, len(assets))
+        self.assertEqual("ASSET_1", assets[0].asset_ref)
+        self.assertEqual("ASSET_2", assets[1].asset_ref)
+
+    def test_no_assets_at_site(self):
+        # nothing is stored at this location
+        site = shapes.Site(10.0, 10.0)
+
+        self.assertEqual([], BaseRiskCalculator.assets_at(self.job.id, site))
