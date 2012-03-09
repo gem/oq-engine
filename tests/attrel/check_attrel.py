@@ -1,5 +1,8 @@
 #!/usr/bin/env python
-# TODO: document
+"""
+Check GMPE/IPE class versus data file in CSV format by calculating standard
+deviation and/or mean value and comparing the result to the expected value.
+"""
 import csv
 import math
 import sys
@@ -12,9 +15,30 @@ from nhe.imt import PGA, PGV, SA
 
 def check_attrel(attrel_cls, datafile, max_discrep_percentage,
                  max_errors=1, verbose=False):
+    """
+    Test attenuation relationship against the data file and return test result.
+
+    :param attrel_cls:
+        A subclass of either :class:`~nhe.attrel.base.GMPE`
+        or :class:`~nhe.attrel.base.IPE` to test.
+    :param datafile:
+        A file object containing test data in csv format.
+    :param max_discrep_percentage:
+        The maximum discrepancy in percentage points. The check fails
+        if expected value diverges from actual by more than that.
+    :param max_errors:
+        Maximum errors to allow. If set to 0 or negative values, all
+        tests are executed. Otherwise execution stops after that number
+        of failed checks.
+    :param verbose:
+        If ``True`` every failed check is printed immediately.
+
+    :returns:
+        A tuple of two elements: a number of errors and a string representing
+        statistics about the test run.
+    """
     reader = csv.reader(datafile)
     attrel = attrel_cls()
-    context_params = set(AttRelContext.__slots__)
 
     linenum = 1
     errors = 0
@@ -23,50 +47,8 @@ def check_attrel(attrel_cls, datafile, max_discrep_percentage,
     started = time.time()
     for values in reader:
         linenum += 1
-        expected_results = {}
-        context = AttRelContext()
-        stddev_types = result_type = damping = component_type = None
-
-        for param, value in zip(headers, values):
-            if param == 'result_type':
-                value = value.upper()
-                if value.endswith('_STDDEV'):
-                    # the row defines expected stddev results
-                    result_type = 'STDDEV'
-                    stddev_types = [getattr(const.StdDev,
-                                            value[:-len('_STDDEV')])]
-                else:
-                    # the row defines expected exponents of mean values
-                    assert value == 'MEAN'
-                    stddev_types = []
-                    result_type = 'MEAN'
-            elif param == 'damping':
-                damping = float(value)
-            elif param == 'component_type':
-                component_type = getattr(const.IMC, value)
-            elif param in context_params:
-                # value is context object attribute
-                if param == 'site_vs30measured':
-                    value = float(value) != 0
-                else:
-                    value = float(value)
-                setattr(context, param, value)
-            else:
-                # value is the expected result (of result_type type)
-                value = float(value)
-                if param == 'pga':
-                    imt = PGA()
-                elif param == 'pgv':
-                    imt = PGV()
-                else:
-                    period = float(param)
-                    assert damping is not None
-                    imt = SA(period, damping)
-
-                expected_results[imt] = value
-
-        assert component_type is not None and result_type is not None
-
+        context, stddev_types, component_type, expected_results, result_type =\
+                _parse_csv_line(headers, values)
         for imt, expected_result in expected_results.items():
             mean, stddevs = attrel.get_mean_and_stddevs(
                 context, imt, stddev_types, component_type
@@ -95,7 +77,22 @@ def check_attrel(attrel_cls, datafile, max_discrep_percentage,
         if max_errors > 0 and errors >= max_errors:
             break
 
-    time_spent = time.time() - started
+    return errors, _format_stats(time.time() - started, discrepancies, errors)
+
+
+def _format_stats(time_spent, discrepancies, errors):
+    """
+    Format a GMPE test statistics.
+
+    :param time_spent:
+        The amount of time spent doing checks, in seconds
+    :param discrepancies:
+        A list of discrepancy percentage values, one for each check.
+    :param errors:
+        Number of tests that failed.
+    :returns:
+        A string with human-readable statistics.
+    """
     max_discrep = max(discrepancies)
     total_checks = len(discrepancies)
     successes = total_checks - errors
@@ -117,7 +114,83 @@ standard deviation = %.4f%%'''
               avg_discrep,
               max_discrep,
               stddev)
-    return errors, stats
+    return stats
+
+
+def _parse_csv_line(headers, values):
+    """
+    Parse a single line from data file.
+
+    :param headers:
+        A list of header names, the strings from the first line of csv file.
+    :param values:
+        A list of values of a single row to parse.
+    :returns:
+        A tuple of the following values (in specified order):
+
+        context
+            An instance of :class:`nhe.attrel.base.AttRelContext` with
+            attributes populated by the information from in row.
+        stddev_types
+            An empty list, if the ``result_type`` column says "MEAN"
+            for that row, otherwise it is a list with one item --
+            a requested standard deviation type.
+        component_type
+            An intensity measure component, taken from the column
+            ``component_type``.
+        expected_results
+            A dictionary mapping IMT-objects to expected result values.
+            Those results represent either standard deviation or mean
+            value of corresponding IMT depending on ``result_type``.
+        result_type
+            A string literal, one of ``'STDDEV'`` or ``'MEAN'``. Value
+            is taken from column ``result_type``.
+    """
+    context_params = set(AttRelContext.__slots__)
+    context = AttRelContext()
+    expected_results = {}
+    stddev_types = result_type = damping = component_type = None
+
+    for param, value in zip(headers, values):
+        if param == 'result_type':
+            value = value.upper()
+            if value.endswith('_STDDEV'):
+                # the row defines expected stddev results
+                result_type = 'STDDEV'
+                stddev_types = [getattr(const.StdDev,
+                                        value[:-len('_STDDEV')])]
+            else:
+                # the row defines expected exponents of mean values
+                assert value == 'MEAN'
+                stddev_types = []
+                result_type = 'MEAN'
+        elif param == 'damping':
+            damping = float(value)
+        elif param == 'component_type':
+            component_type = getattr(const.IMC, value)
+        elif param in context_params:
+            # value is context object attribute
+            if param == 'site_vs30measured':
+                value = float(value) != 0
+            else:
+                value = float(value)
+            setattr(context, param, value)
+        else:
+            # value is the expected result (of result_type type)
+            value = float(value)
+            if param == 'pga':
+                imt = PGA()
+            elif param == 'pgv':
+                imt = PGV()
+            else:
+                period = float(param)
+                assert damping is not None
+                imt = SA(period, damping)
+
+            expected_results[imt] = value
+
+    assert component_type is not None and result_type is not None
+    return context, stddev_types, component_type, expected_results, result_type
 
 
 if __name__ == '__main__':
@@ -149,11 +222,7 @@ if __name__ == '__main__':
             )
         return attrel_class
 
-    parser = argparse.ArgumentParser(
-        description='Check GMPE/IPE class versus data file in CSV format ' \
-                    'by calculating standard deviation or mean value and ' \
-                    'comparing the result to the expected value.'
-    )
+    parser = argparse.ArgumentParser(description=' '.join(__doc__.split()))
     parser.add_argument('attrel', type=attrel_by_import_path,
                         help='an import path of the attenuation relationship '\
                              'class in a form "package.module.ClassName".')
