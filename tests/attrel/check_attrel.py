@@ -11,7 +11,7 @@ from nhe.imt import PGA, PGV, SA
 
 
 def check_attrel(attrel_cls, datafile, max_discrep_percentage,
-                 max_errors=0, verbose=False):
+                 max_errors=1, verbose=False):
     reader = csv.reader(datafile)
     attrel = attrel_cls()
     context_params = set(AttRelContext.__slots__)
@@ -89,10 +89,10 @@ def check_attrel(attrel_cls, datafile, max_discrep_percentage,
                               expected_result, result, discrep_percentage
                           )
                     print >> sys.stderr, msg
-                if max_errors is not None and errors > max_errors:
+                if max_errors > 0 and errors >= max_errors:
                     break
 
-        if max_errors is not None and errors > max_errors:
+        if max_errors > 0 and errors >= max_errors:
             break
 
     time_spent = time.time() - started
@@ -165,11 +165,11 @@ if __name__ == '__main__':
                              'value to be considered matching, expressed ' \
                              'in percentage points. default value is 0.5.',
                         nargs='?', default=0.5, dest='max_discrep_percentage')
-    parser.add_argument('-e', '--max-errors', type=int, nargs='?',
+    parser.add_argument('-e', '--max-errors', type=int, required=False,
                         help='maximum number of tests to fail before ' \
                              'stopping execution. by default all tests ' \
                              'are executed.',
-                        default=None, metavar='num')
+                        default=0, metavar='num')
     verb_group = parser.add_mutually_exclusive_group()
     verb_group.add_argument('-v', '--verbose', action='store_true',
                             help='print information about each error ' \
