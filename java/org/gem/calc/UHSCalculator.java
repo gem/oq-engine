@@ -1,3 +1,20 @@
+/*
+    Copyright (c) 2010-2012, GEM Foundation.
+
+    OpenQuake is free software: you can redistribute it and/or modify it
+    under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    OpenQuake is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
+*/
+
 package org.gem.calc;
 
 import java.util.ArrayList;
@@ -62,7 +79,7 @@ public class UHSCalculator
      *            Map of GMPEs, keyed by TectonicRegionType
      * @param maxDistance
      *            Maximum distance (in km) from the site of interest for a
-     *            source to be considered in the calculation. (This corresponds
+     *            source to be considered in the job. (This corresponds
      *            to the MAXIMUM_DISTANCE job config param.)
      */
     public UHSCalculator(

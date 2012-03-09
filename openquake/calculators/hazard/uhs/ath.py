@@ -1,18 +1,17 @@
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
 """Asynchronous task handler functions. See
@@ -32,7 +31,7 @@ def completed_task_count(job_id):
     Successful and failed executions are included in the count.
 
     :param int job_id:
-        ID of the current calculation.
+        ID of the current job.
     :returns:
         Number of completed :function:`compute_uhs_task` task executions so
         far.
@@ -46,7 +45,7 @@ def completed_task_count(job_id):
 
 def remaining_tasks_in_block(job_id, num_tasks, start_count):
     """Figures out the numbers of remaining tasks in the current block. This
-    should only be called during an active calculation.
+    should only be called during an active job.
 
     Given the ID of a currently running calculation, query the stats
     counters in Redis and determine when N :function:`compute_uhs_task` tasks
@@ -59,7 +58,7 @@ def remaining_tasks_in_block(job_id, num_tasks, start_count):
     tasks is reached, a :exception:`StopIteration` is raised.
 
     :param int job_id:
-        ID of the current calculation.
+        ID of the current job.
     :param int num_tasks:
         Number of :function:`compute_uhs_task` tasks in this block.
     :param int start_count:
@@ -88,11 +87,11 @@ def uhs_task_handler(job_id, num_tasks, start_count):
     until the current block of tasks is finished.
 
     :param int job_id:
-        The ID of the currently running calculation.
+        The ID of the currently running job.
     :param int num_tasks:
         The number of tasks in the current block.
     :param int start_count:
-        The number of tasks completed so far in the calculation.
+        The number of tasks completed so far in the job.
     """
     remaining_gen = remaining_tasks_in_block(job_id, num_tasks, start_count)
 

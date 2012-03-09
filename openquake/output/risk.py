@@ -3,19 +3,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 NRML serialization of risk-related data sets.
@@ -430,8 +429,8 @@ class LossMapDBWriter(writer.DBWriter):
 
     """
 
-    def __init__(self, nrml_path, oq_calculation_id):
-        super(LossMapDBWriter, self).__init__(nrml_path, oq_calculation_id)
+    def __init__(self, nrml_path, oq_job_id):
+        super(LossMapDBWriter, self).__init__(nrml_path, oq_job_id)
 
         self.metadata = None
         self.bulk_inserter = writer.BulkInserter(models.LossMapData)
@@ -732,8 +731,8 @@ class LossCurveDBWriter(writer.DBWriter):
          ]
     """
 
-    def __init__(self, nrml_path, oq_calculation_id):
-        super(LossCurveDBWriter, self).__init__(nrml_path, oq_calculation_id)
+    def __init__(self, nrml_path, oq_job_id):
+        super(LossCurveDBWriter, self).__init__(nrml_path, oq_job_id)
 
         self.curve = None
         self.bulk_inserter = writer.BulkInserter(models.LossCurveData)

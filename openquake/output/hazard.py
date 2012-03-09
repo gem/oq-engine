@@ -3,19 +3,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 This module provides classes that serialize hazard-related objects
@@ -556,7 +555,7 @@ class HazardMapDBReader(object):
         """
         hazard_map = models.HazardMap.objects.get(output=output_id)
         hazard_map_data = hazard_map.hazardmapdata_set.all()
-        params = hazard_map.output.oq_calculation.oq_job_profile
+        params = hazard_map.output.oq_job.oq_job_profile
         points = []
 
         for datum in hazard_map_data:
@@ -603,8 +602,8 @@ class HazardMapDBWriter(writer.DBWriter):
     with the assumption that the poE, statistic and quantile value is
     the same for all items.
     """
-    def __init__(self, nrml_path, oq_calculation_id):
-        super(HazardMapDBWriter, self).__init__(nrml_path, oq_calculation_id)
+    def __init__(self, nrml_path, oq_job_id):
+        super(HazardMapDBWriter, self).__init__(nrml_path, oq_job_id)
 
         self.bulk_inserter = writer.BulkInserter(models.HazardMapData)
         self.hazard_map = None
@@ -676,7 +675,7 @@ class HazardCurveDBReader(object):
         """
         hazard_curves = models.HazardCurve.objects.filter(output=output_id)
         params = models.Output.objects.get(
-            id=output_id).oq_calculation.oq_job_profile
+            id=output_id).oq_job.oq_job_profile
         points = []
 
         for hazard_curve_datum in hazard_curves:
@@ -727,8 +726,8 @@ class HazardCurveDBWriter(writer.DBWriter):
            'quantileValue': 0.6,
            'statistics': 'quantile'})]
     """
-    def __init__(self, nrml_path, oq_calculation_id):
-        super(HazardCurveDBWriter, self).__init__(nrml_path, oq_calculation_id)
+    def __init__(self, nrml_path, oq_job_id):
+        super(HazardCurveDBWriter, self).__init__(nrml_path, oq_job_id)
 
         self.curves_per_branch_label = {}
         self.bulk_inserter = writer.BulkInserter(models.HazardCurveData)
@@ -820,8 +819,8 @@ class GmfDBWriter(writer.DBWriter):
          Site(-117, 41): {'groundMotion': 0.3}}
     """
 
-    def __init__(self, nrml_path, oq_calculation_id):
-        super(GmfDBWriter, self).__init__(nrml_path, oq_calculation_id)
+    def __init__(self, nrml_path, oq_job_id):
+        super(GmfDBWriter, self).__init__(nrml_path, oq_job_id)
 
         self.curves_per_branch_label = {}
         self.bulk_inserter = writer.BulkInserter(models.GmfData)
