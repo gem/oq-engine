@@ -205,15 +205,15 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         sum_per_gmf = SumPerGroundMotionField(vuln_model, epsilon_provider)
 
         for site in block.sites:
-            point = self.calc_proxy.region.grid.point_at(site)
+            point = self.job_ctxt.region.grid.point_at(site)
 
             # the SumPerGroundMotionField add() method expects a dict
             # with a single key ('IMLs') and value set to the sequence of GMVs
             gmvs = {'IMLs': load_gmvs_for_point(
-                    self.calc_proxy.job_id, point)}
+                    self.job_ctxt.job_id, point)}
 
             assets = general.BaseRiskCalculator.assets_at(
-                self.calc_proxy.job_id, site)
+                self.job_ctxt.job_id, site)
 
             for asset in assets:
                 sum_per_gmf.add(gmvs, asset)
@@ -263,15 +263,15 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         loss_data = {}
 
         for site in block.sites:
-            point = self.calc_proxy.region.grid.point_at(site)
+            point = self.job_ctxt.region.grid.point_at(site)
 
             # the mean and stddev calculation functions used below
             # require the gmvs to be wrapped in a dict with a single key, IMLs
             gmvs = {'IMLs': load_gmvs_for_point(
-                    self.calc_proxy.job_id, point)}
+                    self.job_ctxt.job_id, point)}
 
             assets = general.BaseRiskCalculator.assets_at(
-                self.calc_proxy.job_id, site)
+                self.job_ctxt.job_id, site)
 
             for asset in assets:
                 vuln_function = vuln_model[asset.taxonomy]
