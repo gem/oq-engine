@@ -1,24 +1,25 @@
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
 import numpy
+import os
+import shutil
 import unittest
 
-from openquake.db.models import OqCalculation
+from openquake.db.models import OqJob
 from openquake.db.models import UhSpectra
 from openquake.db.models import UhSpectrum
 from openquake.db.models import UhSpectrumData
@@ -70,7 +71,7 @@ class UniformHazardSpectraQATest(unittest.TestCase):
         return exp_data
 
     def test_uhs(self):
-        # Kick off the engine and run the UHS demo calculation.
+        # Kick off the engine and run the UHS demo job.
         # When that's done, query the database and check the UHS results.
 
         exp_results = self._load_expected_results()
@@ -78,10 +79,10 @@ class UniformHazardSpectraQATest(unittest.TestCase):
 
         run_job(self.UHS_DEMO_CONFIG)
 
-        calculation = OqCalculation.objects.latest('id')
+        job = OqJob.objects.latest('id')
 
         uh_spectra = UhSpectra.objects.get(
-            output__oq_calculation=calculation.id)
+            output__oq_job=job.id)
 
         self.assertEqual(1, uh_spectra.realizations)
 
@@ -99,3 +100,33 @@ class UniformHazardSpectraQATest(unittest.TestCase):
             self.assertEqual(0, uh_spectrum_data.realization)
             self.assertEqual(exp_site.point.to_wkt(),
                              uh_spectrum_data.location.wkt)
+
+    def test_uhs_output_type_xml(self):
+        # Run a calculation with --output-type=xml and check that the expected
+        # result files are created in the right location.
+
+        # This location is based on parameters in the UHS config file:
+        results_target_dir = demo_file('uhs/computed_output')
+
+        # clear the target dir from previous demo/test runs
+        shutil.rmtree(results_target_dir)
+
+        expected_export_files = [
+            os.path.join(results_target_dir, 'uhs_poe:0.1.hdf5'),
+            os.path.join(results_target_dir, 'uhs_poe:0.02.hdf5'),
+            os.path.join(results_target_dir, 'uhs.xml'),
+        ]
+
+        for f in expected_export_files:
+            self.assertFalse(os.path.exists(f))
+
+        uhs_cfg = demo_file('uhs/config.gem')
+        try:
+            ret_code = run_job(uhs_cfg, ['--output-type=xml'])
+            self.assertEqual(0, ret_code)
+
+            # Check that all the output files were created:
+            for f in expected_export_files:
+                self.assertTrue(os.path.exists(f))
+        finally:
+            shutil.rmtree(results_target_dir)
