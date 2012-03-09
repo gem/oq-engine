@@ -158,7 +158,8 @@ if __name__ == '__main__':
                         help='an import path of the attenuation relationship '\
                              'class in a form "package.module.ClassName".')
     parser.add_argument('datafile', type=argparse.FileType('r'),
-                        help='test data file in a csv format')
+                        help='test data file in a csv format. use "-" for ' \
+                             'reading from standard input')
     parser.add_argument('-p', '--max-discrepancy', type=float, metavar='prcnt',
                         help='the maximum discrepancy allowed for result ' \
                              'value to be considered matching, expressed ' \
