@@ -10,9 +10,9 @@ from nhe.attrel.base import AttRelContext, AttenuationRelationship
 from nhe.imt import PGA, PGV, SA
 
 
-def check_attrel(attrel_cls, filename, max_discrep_percentage,
+def check_attrel(attrel_cls, datafile, max_discrep_percentage,
                  max_errors=0, verbose=False):
-    reader = csv.reader(open(filename))
+    reader = csv.reader(datafile)
     attrel = attrel_cls()
     context_params = set(AttRelContext.__slots__)
 
@@ -85,7 +85,7 @@ def check_attrel(attrel_cls, filename, max_discrep_percentage,
                 if verbose:
                     msg = 'file %r line %r imt %r: expected %s %f != %f ' \
                           '(delta %.4f%%)' % (
-                              filename, linenum, imt, result_type.lower(),
+                              datafile.name, linenum, imt, result_type.lower(),
                               expected_result, result, discrep_percentage
                           )
                     print >> sys.stderr, msg
@@ -180,7 +180,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     errors, stats = check_attrel(
-        attrel_cls=args.attrel, filename=args.datafile.name,
+        attrel_cls=args.attrel, datafile=args.datafile,
         max_discrep_percentage=args.max_discrep_percentage,
         max_errors=args.max_errors, verbose=args.verbose
     )
