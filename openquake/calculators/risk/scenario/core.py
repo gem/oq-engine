@@ -202,16 +202,22 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
             per realization.
 
         """
-        sum_per_gmf = SumPerGroundMotionField(vuln_model,
-                                                       epsilon_provider)
-        for point in block.grid(self.job_ctxt.region):
-            gmvs = load_gmvs_for_point(self.job_ctxt.job_id, point)
-            assets = load_assets_for_point(self.job_ctxt.job_id, point)
+        sum_per_gmf = SumPerGroundMotionField(vuln_model, epsilon_provider)
+
+        for site in block.sites:
+            point = self.job_ctxt.region.grid.point_at(site)
+
+            # the SumPerGroundMotionField add() method expects a dict
+            # with a single key ('IMLs') and value set to the sequence of GMVs
+            gmvs = {'IMLs': load_gmvs_for_point(
+                    self.job_ctxt.job_id, point)}
+
+            assets = general.BaseRiskCalculator.assets_at(
+                self.job_ctxt.job_id, site)
+
             for asset in assets:
-                # the SumPerGroundMotionField add() method expects a dict
-                # with a single key ('IMLs') and value set to the sequence of
-                # GMVs
-                sum_per_gmf.add({'IMLs': gmvs}, asset)
+                sum_per_gmf.add(gmvs, asset)
+
         return sum_per_gmf.losses
 
     def _compute_asset_losses_for_block(
@@ -253,15 +259,20 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                  ({'mean_loss': 50, 'stddev_loss': 50.0},
                   {'assetID': 'a192'}))]
         """
+
         loss_data = {}
 
-        for point in block.grid(self.job_ctxt.region):
+        for site in block.sites:
+            point = self.job_ctxt.region.grid.point_at(site)
+
             # the mean and stddev calculation functions used below
-            # require the gmvs to be wrapped in a dict with a single key:
-            # 'IMLs'
-            gmvs = {'IMLs': load_gmvs_for_point(self.job_ctxt.job_id,
-                                                point)}
-            assets = load_assets_for_point(self.job_ctxt.job_id, point)
+            # require the gmvs to be wrapped in a dict with a single key, IMLs
+            gmvs = {'IMLs': load_gmvs_for_point(
+                    self.job_ctxt.job_id, point)}
+
+            assets = general.BaseRiskCalculator.assets_at(
+                self.job_ctxt.job_id, site)
+
             for asset in assets:
                 vuln_function = vuln_model[asset.taxonomy]
 
@@ -273,9 +284,11 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
                 asset_site = shapes.Site(asset.site.x, asset.site.y)
 
-                loss = ({'mean_loss': asset_mean_loss,
-                         'stddev_loss': asset_stddev_loss},
-                        {'assetID': asset.asset_ref})
+                loss = ({
+                    'mean_loss': asset_mean_loss,
+                    'stddev_loss': asset_stddev_loss}, {
+                    'assetID': asset.asset_ref
+                })
 
                 collect_block_data(loss_data, asset_site, loss)
 
@@ -299,18 +312,6 @@ def load_gmvs_for_point(job_id, point):
     """
     gmfs_key = kvs.tokens.ground_motion_values_key(job_id, point)
     return [float(x['mag']) for x in kvs.get_list_json_decoded(gmfs_key)]
-
-
-def load_assets_for_point(job_id, point):
-    """
-    From the KVS, load all assets for the given point.
-
-    :param point: :py:class:`openquake.shapes.GridPoint` object
-
-    :returns: a potentially empty list of
-        :py:class:`openquake.db.models.ExposureData` instances
-    """
-    return general.BaseRiskCalculator.assets_for_cell(job_id, point.site)
 
 
 def collect_region_data(block_loss_map_data, region_loss_map_data):
