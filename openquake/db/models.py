@@ -3,19 +3,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 # pylint: disable=C0302
 
@@ -562,7 +561,7 @@ class Input(models.Model):
         db_table = 'uiapi\".\"input'
 
 
-class OqCalculation(models.Model):
+class OqJob(models.Model):
     '''
     An OpenQuake engine run started by the user
     '''
@@ -583,14 +582,14 @@ class OqCalculation(models.Model):
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
-        db_table = 'uiapi\".\"oq_calculation'
+        db_table = 'uiapi\".\"oq_job'
 
 
-class CalcStats(models.Model):
+class JobStats(models.Model):
     '''
     Capture various statistics about a job.
     '''
-    oq_calculation = models.ForeignKey('OqCalculation')
+    oq_job = models.ForeignKey('OqJob')
     start_time = models.DateTimeField(editable=False)
     stop_time = models.DateTimeField(editable=False)
     # The number of total sites in job
@@ -600,7 +599,7 @@ class CalcStats(models.Model):
     realizations = models.IntegerField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
-        db_table = 'uiapi\".\"calc_stats'
+        db_table = 'uiapi\".\"job_stats'
 
 
 class OqJobProfile(models.Model):
@@ -780,11 +779,11 @@ class OqJobProfile(models.Model):
 
 class Output(models.Model):
     '''
-    A single artifact which is a result of an OpenQuake calculation.
+    A single artifact which is a result of an OpenQuake job.
     The data may reside in a file or in the database.
     '''
     owner = models.ForeignKey('OqUser')
-    oq_calculation = models.ForeignKey('OqCalculation')
+    oq_job = models.ForeignKey('OqJob')
     path = models.TextField(null=True, unique=True)
     display_name = models.TextField()
     db_backed = models.BooleanField(default=False)
@@ -819,7 +818,7 @@ class ErrorMsg(models.Model):
     '''
     Error information associated with a job failure
     '''
-    oq_calculation = models.ForeignKey('OqCalculation')
+    oq_job = models.ForeignKey('OqJob')
     brief = models.TextField()
     detailed = models.TextField()
 

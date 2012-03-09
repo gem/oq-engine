@@ -1,18 +1,17 @@
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 # pylint: disable=W0232
 
@@ -50,20 +49,20 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         tasks = []
 
         vuln_model = \
-            vulnerability.load_vuln_model_from_kvs(self.calc_proxy.job_id)
+            vulnerability.load_vuln_model_from_kvs(self.job_ctxt.job_id)
 
-        epsilon_provider = general.EpsilonProvider(self.calc_proxy.params)
+        epsilon_provider = general.EpsilonProvider(self.job_ctxt.params)
 
         sum_per_gmf = SumPerGroundMotionField(vuln_model,
                                                        epsilon_provider)
 
         region_loss_map_data = {}
 
-        for block_id in self.calc_proxy.blocks_keys:
+        for block_id in self.job_ctxt.blocks_keys:
             LOGGER.debug("Dispatching task for block %s of %s"
-                % (block_id, len(self.calc_proxy.blocks_keys)))
+                % (block_id, len(self.job_ctxt.blocks_keys)))
             a_task = general.compute_risk.delay(
-                self.calc_proxy.job_id, block_id, vuln_model=vuln_model,
+                self.job_ctxt.job_id, block_id, vuln_model=vuln_model,
                 epsilon_provider=epsilon_provider)
             tasks.append(a_task)
 
@@ -90,11 +89,11 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
         # serialize the loss map data to XML
         loss_map_path = os.path.join(
-            self.calc_proxy['BASE_PATH'],
-            self.calc_proxy['OUTPUT_DIR'],
-            'loss-map-%s.xml' % self.calc_proxy.job_id)
+            self.job_ctxt['BASE_PATH'],
+            self.job_ctxt['OUTPUT_DIR'],
+            'loss-map-%s.xml' % self.job_ctxt.job_id)
         loss_map_writer = risk_output.create_loss_map_writer(
-            self.calc_proxy.job_id, self.calc_proxy.serialize_results_to,
+            self.job_ctxt.job_id, self.job_ctxt.serialize_results_to,
             loss_map_path, True)
 
         if loss_map_writer:
@@ -132,7 +131,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         Other info:
 
         The GMF data for each realization is stored in the KVS by the preceding
-        scenario hazard calculation.
+        scenario hazard job.
 
         :param block_id: id of the region block data we need to pull from the
             KVS
@@ -176,7 +175,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         vuln_model = kwargs['vuln_model']
         epsilon_provider = kwargs['epsilon_provider']
 
-        block = general.Block.from_kvs(self.calc_proxy.job_id, block_id)
+        block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
 
         block_losses = self._compute_loss_for_block(
             block, vuln_model, epsilon_provider)
@@ -203,7 +202,6 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
             per realization.
 
         """
-
         sum_per_gmf = SumPerGroundMotionField(vuln_model, epsilon_provider)
 
         for site in block.sites:
@@ -300,7 +298,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 def load_gmvs_for_point(job_id, point):
     """
     From the KVS, load all the ground motion values for the given point. We
-    expect one ground motion value per realization of the calculation.
+    expect one ground motion value per realization of the job.
     Since there can be tens of thousands of realizations, this could return a
     large list.
 

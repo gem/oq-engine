@@ -3,19 +3,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import mock
 import os
@@ -133,13 +132,13 @@ class BlockTestCase(unittest.TestCase):
 
     def test_block_kvs_serialization(self):
         # Test that a Block is properly serialized/deserialized from the cache.
-        calculation_id = 7
+        job_id = 7
         block_id = 0
-        expected_block = Block(calculation_id, block_id,
+        expected_block = Block(job_id, block_id,
                                [shapes.Site(1.0, 1.0), shapes.Site(2.0, 2.0)])
         expected_block.to_kvs()
 
-        actual_block = Block.from_kvs(calculation_id, block_id)
+        actual_block = Block.from_kvs(job_id, block_id)
 
         self.assertEqual(expected_block, actual_block)
         # The sites are not compared in Block.__eq__; we need to check those
@@ -170,30 +169,30 @@ class BlockSplitterTestCase(unittest.TestCase):
             self.site_8
         ]
 
-        self.calculation_id = 7
+        self.job_id = 7
 
     def test_split_into_blocks(self):
         # Test a typical split case.
         # We will use a block size of 3, which will
         # give us 2 blocks of 3 sites and 1 block of 2 sites.
         expected = [
-            Block(self.calculation_id, 0, self.all_sites[:3]),
-            Block(self.calculation_id, 1, self.all_sites[3:6]),
-            Block(self.calculation_id, 2, self.all_sites[6:])
+            Block(self.job_id, 0, self.all_sites[:3]),
+            Block(self.job_id, 1, self.all_sites[3:6]),
+            Block(self.job_id, 2, self.all_sites[6:])
         ]
 
         actual = [block for block in general.split_into_blocks(
-            self.calculation_id, self.all_sites, block_size=3)]
+            self.job_id, self.all_sites, block_size=3)]
 
         self.assertEqual(expected, actual)
 
     def test_split_block_size_eq_1(self):
         # Test splitting when block_size==1.
-        expected = [Block(self.calculation_id, i, [self.all_sites[i]])
+        expected = [Block(self.job_id, i, [self.all_sites[i]])
             for i in xrange(len(self.all_sites))]
 
         actual = [block for block in general.split_into_blocks(
-            self.calculation_id, self.all_sites, block_size=1)]
+            self.job_id, self.all_sites, block_size=1)]
 
         self.assertEqual(expected, actual)
 
@@ -201,7 +200,7 @@ class BlockSplitterTestCase(unittest.TestCase):
         # If `split_into_blocks` is given an empty site list, the generator
         # shouldn't yield anything.
         actual = [block for block in general.split_into_blocks(
-            self.calculation_id, [])]
+            self.job_id, [])]
 
         self.assertEqual([], actual)
 
@@ -210,10 +209,10 @@ class BlockSplitterTestCase(unittest.TestCase):
         # the generator should just yield a single block containing all of the
         # sites.
         actual = [block for block in general.split_into_blocks(
-            self.calculation_id, self.all_sites, block_size=8)]
+            self.job_id, self.all_sites, block_size=8)]
 
         self.assertEqual(
-            [Block(self.calculation_id, 0, self.all_sites)],
+            [Block(self.job_id, 0, self.all_sites)],
             actual)
 
     def test_split_block_size_gt_site_list_size(self):
@@ -221,20 +220,20 @@ class BlockSplitterTestCase(unittest.TestCase):
         # the generator should just yield a single block containing all of the
         # sites.
         actual = [block for block in general.split_into_blocks(
-            self.calculation_id, self.all_sites, block_size=9)]
+            self.job_id, self.all_sites, block_size=9)]
 
         self.assertEqual(
-            [Block(self.calculation_id, 0, self.all_sites)],
+            [Block(self.job_id, 0, self.all_sites)],
             actual)
 
     def test_split_block_size_lt_1(self):
         # If the specified block_size is less than 1, this is invalid.
         # We expect a RuntimeError to be raised.
-        gen = general.split_into_blocks(self.calculation_id, self.all_sites,
+        gen = general.split_into_blocks(self.job_id, self.all_sites,
                                         block_size=0)
         self.assertRaises(RuntimeError, gen.next)
 
-        gen = general.split_into_blocks(self.calculation_id, self.all_sites,
+        gen = general.split_into_blocks(self.job_id, self.all_sites,
                                         block_size=-1)
         self.assertRaises(RuntimeError, gen.next)
 

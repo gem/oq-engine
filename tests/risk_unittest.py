@@ -3,19 +3,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from django.contrib.gis.geos import GEOSGeometry
 from lxml import etree
@@ -196,7 +195,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
         self.job = helpers.create_job(self.params, base_path=".",
                                       job_id=self.calc.id,
-                                      oq_calculation=self.calc,
+                                      oq_job=self.calc,
                                       oq_job_profile=self.calc.oq_job_profile)
         self.job_id = self.job.job_id
         self.job.to_kvs()
@@ -623,10 +622,10 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
                                           '2.0, 2.0, 2.0, 0.0'),
                            REGION_GRID_SPACING='0.1'))
 
-        calc_proxy = engine.CalculationProxy(
+        job_ctxt = engine.JobContext(
             params, self.job_id, sections=sections, oq_job_profile=job_profile)
 
-        calculator = eb_core.EventBasedRiskCalculator(calc_proxy)
+        calculator = eb_core.EventBasedRiskCalculator(job_ctxt)
 
         self.block_id = 7
         SITE = shapes.Site(1.0, 1.0)
@@ -925,12 +924,12 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
             params['REGION_VERTEX']))
         job_profile.save()
 
-        calc_proxy = engine.CalculationProxy(
+        job_ctxt = engine.JobContext(
             params, self.job_id, sections=sections, oq_job_profile=job_profile)
 
         self._compute_risk_classical_psha_setup()
 
-        calculator = classical_core.ClassicalRiskCalculator(calc_proxy)
+        calculator = classical_core.ClassicalRiskCalculator(job_ctxt)
         calculator.vuln_curves = {"ID": self.vuln_function}
 
         block = Block.from_kvs(self.job_id, self.block_id)
@@ -938,7 +937,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         # computes the loss curves and puts them in kvs
         self.assertTrue(calculator.compute_risk(self.block_id))
 
-        for point in block.grid(calc_proxy.region):
+        for point in block.grid(job_ctxt.region):
             assets = BaseRiskCalculator.assets_for_cell(
                 self.job_id, point.site)
             for asset in assets:
@@ -966,10 +965,10 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
             params['REGION_VERTEX']))
         job_profile.save()
 
-        calc_proxy = engine.CalculationProxy(
+        job_ctxt = engine.JobContext(
             params, self.job_id, sections=sections, oq_job_profile=job_profile)
 
-        calculator = classical_core.ClassicalRiskCalculator(calc_proxy)
+        calculator = classical_core.ClassicalRiskCalculator(job_ctxt)
 
         [input] = job_profile.input_set.input_set.filter(input_type="exposure")
         emdl = models.ExposureModel(
@@ -1409,10 +1408,10 @@ class RiskJobGeneralTestCase(unittest.TestCase):
 
         output_dir = tempfile.mkdtemp()
         try:
-            calc.calc_proxy.params = {'OUTPUT_DIR': output_dir,
+            calc.job_ctxt.params = {'OUTPUT_DIR': output_dir,
                                        'INTEREST_RATE': '0.12',
                                        'ASSET_LIFE_EXPECTANCY': '50'}
-            calc.calc_proxy._base_path = '.'
+            calc.job_ctxt._base_path = '.'
 
             resultfile = os.path.join(output_dir, 'bcr-map.xml')
 

@@ -3,19 +3,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
 """Utility functions related to splitting work into tasks."""
@@ -97,54 +96,54 @@ def _check_exception(results):
 
 class JobCompletedError(Exception):
     """
-    Exception to be thrown by :func:`get_running_calculation`
+    Exception to be thrown by :func:`get_running_job`
     in case of dealing with already completed job.
     """
 
 
-def get_running_calculation(calculation_id):
+def get_running_job(job_id):
     """Helper function which is intended to be run by celery task functions.
 
     Given the id of an in-progress calculation
-    (:class:`openquake.db.models.OqCalculation`), load all of the calculation
+    (:class:`openquake.db.models.OqJob`), load all of the calculation
     data from the database and KVS and return a
-    :class:`openquake.engine.CalculationProxy` object.
+    :class:`openquake.engine.JobContext` object.
 
     If the calculation is not currently running, a
     :exception:`JobCompletedError` is raised.
 
     :returns:
-        :class:`openquake.engine.CalculationProxy` object, representing an
-        in-progress calculation. This object is created from cached data in the
+        :class:`openquake.engine.JobContext` object, representing an
+        in-progress job. This object is created from cached data in the
         KVS as well as data stored in the relational database.
     :raises JobCompletedError:
-        If :meth:`~openquake.engine.CalculationProxy.is_job_completed` returns
-        ``True`` for ``calculation_id``.
+        If :meth:`~openquake.engine.JobContext.is_job_completed` returns
+        ``True`` for ``job_id``.
     """
     # pylint: disable=W0404
-    from openquake.engine import CalculationProxy
+    from openquake.engine import JobContext
 
-    if CalculationProxy.is_job_completed(calculation_id):
-        raise JobCompletedError(calculation_id)
+    if JobContext.is_job_completed(job_id):
+        raise JobCompletedError(job_id)
 
-    calc_proxy = CalculationProxy.from_kvs(calculation_id)
-    if calc_proxy and calc_proxy.params:
-        level = calc_proxy.log_level
+    job_ctxt = JobContext.from_kvs(job_id)
+    if job_ctxt and job_ctxt.params:
+        level = job_ctxt.log_level
     else:
         level = 'warn'
-    logs.init_logs_amqp_send(level=level, job_id=calculation_id)
+    logs.init_logs_amqp_send(level=level, job_id=job_id)
 
-    return calc_proxy
+    return job_ctxt
 
 
-def calculator_for_task(calculation_id, job_type):
+def calculator_for_task(job_id, job_type):
     """Given the id of an in-progress calculation
-    (:class:`openquake.db.models.OqCalculation`), load all of the calculation
+    (:class:`openquake.db.models.OqJob`), load all of the calculation
     data from the database and KVS and instantiate the calculator required for
     a task's computation.
 
-    :param int calculation_id:
-        id of a in-progress calculation.
+    :param int job_id:
+        id of a in-progress job.
     :params job_type:
         'hazard' or 'risk'
     :returns:
@@ -159,8 +158,8 @@ def calculator_for_task(calculation_id, job_type):
     # pylint: disable=W0404
     from openquake.engine import CALCS
 
-    calc_proxy = get_running_calculation(calculation_id)
-    calc_mode = calc_proxy.oq_job_profile.calc_mode
-    calculator = CALCS[job_type][calc_mode](calc_proxy)
+    job_ctxt = get_running_job(job_id)
+    calc_mode = job_ctxt.oq_job_profile.calc_mode
+    calculator = CALCS[job_type][calc_mode](job_ctxt)
 
     return calculator
