@@ -1,18 +1,17 @@
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
 import os
@@ -59,23 +58,23 @@ class BaseExportTestCase(unittest.TestCase):
                                                  user_name=user_name)
 
     def _set_up_complete_calcs(self):
-        self.uhs_calc = models.OqCalculation(
+        self.uhs_calc = models.OqJob(
             owner=self.uhs_jp.owner, description=self.uhs_jp.description,
             oq_job_profile=self.uhs_jp, status='succeeded')
         self.uhs_calc.save()
 
-        self.cpsha_calc_fail = models.OqCalculation(
+        self.cpsha_calc_fail = models.OqJob(
             owner=self.cpsha_jp.owner, description=self.cpsha_jp.description,
             oq_job_profile=self.cpsha_jp, status='failed')
         self.cpsha_calc_fail.save()
 
     def _set_up_incomplete_calcs(self):
-        self.uhs_pending_calc = models.OqCalculation(
+        self.uhs_pending_calc = models.OqJob(
             owner=self.uhs_jp.owner, description=self.uhs_jp.description,
             oq_job_profile=self.uhs_jp, status='pending')
         self.uhs_pending_calc.save()
 
-        self.cpsha_running_calc = models.OqCalculation(
+        self.cpsha_running_calc = models.OqJob(
             owner=self.cpsha_jp.owner, description=self.cpsha_jp.description,
             oq_job_profile=self.cpsha_jp, status='running')
         self.cpsha_running_calc.save()
@@ -127,25 +126,25 @@ class GetOutputsTestCase(BaseExportTestCase):
     def _set_up_outputs(self):
         # Set up test Output records
         self.uhs_output = models.Output(
-            owner=self.uhs_calc.owner, oq_calculation=self.uhs_calc,
+            owner=self.uhs_calc.owner, oq_job=self.uhs_calc,
             db_backed=True, output_type='uh_spectra')
         self.uhs_output.save()
 
         self.cpsha_hc_output = models.Output(
             owner=self.cpsha_calc_fail.owner,
-            oq_calculation=self.cpsha_calc_fail, db_backed=True,
+            oq_job=self.cpsha_calc_fail, db_backed=True,
             output_type='hazard_curve')
         self.cpsha_hc_output.save()
 
         self.cpsha_mean_hc_output = models.Output(
             owner=self.cpsha_calc_fail.owner,
-            oq_calculation=self.cpsha_calc_fail, db_backed=True,
+            oq_job=self.cpsha_calc_fail, db_backed=True,
             output_type='hazard_curve')
         self.cpsha_mean_hc_output.save()
 
         self.cpsha_lc_output = models.Output(
             owner=self.cpsha_calc_fail.owner,
-            oq_calculation=self.cpsha_calc_fail, db_backed=True,
+            oq_job=self.cpsha_calc_fail, db_backed=True,
             output_type='loss_curve')
         self.cpsha_lc_output.save()
 

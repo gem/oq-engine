@@ -337,17 +337,17 @@ COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 
 COMMENT ON TABLE uiapi.input_set IS 'The set of input files for a job';
 
-COMMENT ON TABLE uiapi.oq_calculation IS 'Date related to an OpenQuake job that was created in the UI.';
-COMMENT ON COLUMN uiapi.oq_calculation.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
-COMMENT ON COLUMN uiapi.oq_calculation.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
-COMMENT ON COLUMN uiapi.oq_calculation.supervisor_pid IS 'The process id (PID) of the supervisor for this OpenQuake job';
-COMMENT ON COLUMN uiapi.oq_calculation.status IS 'One of: pending, running, failed or succeeded.';
-COMMENT ON COLUMN uiapi.oq_calculation.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
+COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
+COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
+COMMENT ON COLUMN uiapi.oq_job.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
+COMMENT ON COLUMN uiapi.oq_job.supervisor_pid IS 'The process id (PID) of the supervisor for this OpenQuake job';
+COMMENT ON COLUMN uiapi.oq_job.status IS 'One of: pending, running, failed or succeeded.';
+COMMENT ON COLUMN uiapi.oq_job.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
 
 
-COMMENT ON TABLE uiapi.calc_stats IS 'Tracks various job statistics';
-COMMENT ON COLUMN uiapi.calc_stats.num_sites IS 'The number of total sites in the calculation';
-COMMENT ON COLUMN uiapi.calc_stats.realizations IS 'The number of logic tree samples in the calculation (for hazard jobs of all types except scenario)';
+COMMENT ON TABLE uiapi.job_stats IS 'Tracks various job statistics';
+COMMENT ON COLUMN uiapi.job_stats.num_sites IS 'The number of total sites in the calculation';
+COMMENT ON COLUMN uiapi.job_stats.realizations IS 'The number of logic tree samples in the calculation (for hazard jobs of all types except scenario)';
 
 
 COMMENT ON TABLE uiapi.oq_job_profile IS 'Holds the parameters needed to invoke the OpenQuake engine.';
@@ -366,7 +366,7 @@ COMMENT ON COLUMN uiapi.oq_job_profile.imt IS 'Intensity measure type, one of:
 COMMENT ON COLUMN uiapi.oq_job_profile.lrem_steps_per_interval IS 'Loss Ration Exceedence Matrix steps per interval. Only used for Classical/Classical BCR Risk calculations.';
 COMMENT ON COLUMN uiapi.oq_job_profile.poes IS 'Probabilities of exceedence';
 COMMENT ON COLUMN uiapi.oq_job_profile.region IS 'Region of interest for the calculation (Polygon)';
-COMMENT ON COLUMN uiapi.oq_job_profile.region_grid_spacing IS 'Desired cell size (in degrees), used when splitting up the region of interest. This effectively defines the resolution of the calculation. (Smaller grid spacing means more sites and thus more calculations.)';
+COMMENT ON COLUMN uiapi.oq_job_profile.region_grid_spacing IS 'Desired cell size (in degrees), used when splitting up the region of interest. This effectively defines the resolution of the job. (Smaller grid spacing means more sites and thus more calculations.)';
 COMMENT ON COLUMN uiapi.oq_job_profile.sites IS 'Sites of interest for the calculation (MultiPoint)';
 
 

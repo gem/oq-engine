@@ -3,19 +3,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
 """
@@ -41,7 +40,7 @@ try:
 except ImportError:
     setproctitle = lambda title: None  # pylint: disable=C0103
 
-from openquake.db.models import OqCalculation, ErrorMsg, CalcStats
+from openquake.db.models import OqJob, ErrorMsg, JobStats
 from openquake import supervising
 from openquake import kvs
 from openquake import logs
@@ -53,7 +52,7 @@ def ignore_sigint():
     Setup signal handler on SIGINT in order to ignore it.
 
     This is needed to avoid premature death of the supervisor and is called
-    from :func:`openquake.engine.run_calculation` for job parent process and
+    from :func:`openquake.engine.run_job` for job parent process and
     from :func:`supervise` for supervisor process.
     """
     signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -75,16 +74,16 @@ def terminate_job(pid):
 def record_job_stop_time(job_id):
     """
     Call this when a job concludes (successful or not) to record the
-    'stop_time' (using the current UTC time) in the uiapi.calc_stats table.
+    'stop_time' (using the current UTC time) in the uiapi.job_stats table.
 
     :param job_id: the job id
     :type job_id: int
     """
-    logging.info('Recording stop time for job %s to calc_stats', job_id)
+    logging.info('Recording stop time for job %s to job_stats', job_id)
 
-    calc_stats = CalcStats.objects.get(oq_calculation=job_id)
-    calc_stats.stop_time = datetime.utcnow()
-    calc_stats.save(using='job_superv')
+    job_stats = JobStats.objects.get(oq_job=job_id)
+    job_stats.stop_time = datetime.utcnow()
+    job_stats.save(using='job_superv')
 
 
 def cleanup_after_job(job_id):
@@ -109,7 +108,7 @@ def get_job_status(job_id):
     :rtype: string
     """
 
-    return OqCalculation.objects.get(id=job_id).status
+    return OqJob.objects.get(id=job_id).status
 
 
 def update_job_status_and_error_msg(job_id, status, error_msg=None):
@@ -123,13 +122,13 @@ def update_job_status_and_error_msg(job_id, status, error_msg=None):
     :param error_msg: the error message, if any
     :type error_msg: string or None
     """
-    job = OqCalculation.objects.get(id=job_id)
+    job = OqJob.objects.get(id=job_id)
     job.status = status
     job.save()
 
     if error_msg:
         ErrorMsg.objects.using('job_superv')\
-                        .create(oq_calculation=job, detailed=error_msg)
+                        .create(oq_job=job, detailed=error_msg)
 
 
 class SupervisorLogHandler(logging.StreamHandler):

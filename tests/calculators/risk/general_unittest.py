@@ -1,18 +1,17 @@
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
 import itertools
@@ -51,21 +50,21 @@ class ProbabilisticRiskCalculatorTestCase(unittest.TestCase):
 
         # Set conditional loss poe so that loss maps are created.
         # If this parameter is not specified, no loss maps will be serialized
-        # at the end of the calculation.
+        # at the end of the job.
         params['CONDITIONAL_LOSS_POE'] = '0.01'
         job_profile.conditional_loss_poe = [0.01]
         job_profile.save()
 
-        calculation = models.OqCalculation(owner=job_profile.owner,
+        job = models.OqJob(owner=job_profile.owner,
                                            oq_job_profile=job_profile)
-        calculation.save()
+        job.save()
 
-        calc_proxy = engine.CalculationProxy(
-            params, calculation.id, sections=sections,
+        job_ctxt = engine.JobContext(
+            params, job.id, sections=sections,
             serialize_results_to=['xml', 'db'], oq_job_profile=job_profile,
-            oq_calculation=calculation)
+            oq_job=job)
 
-        calculator = ClassicalRiskCalculator(calc_proxy)
+        calculator = ClassicalRiskCalculator(job_ctxt)
 
         # Mock the composed loss map serializer:
         with helpers.patch('openquake.writer.CompositeWriter'
@@ -98,24 +97,24 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
         # Test that the file names of the loss XML artifacts are correct.
         # See https://bugs.launchpad.net/openquake/+bug/894706.
         expected_lrc_file_name = (
-            'losscurves-block-#%(calculation_id)s-block#%(block)s.xml')
+            'losscurves-block-#%(job_id)s-block#%(block)s.xml')
         expected_lr_file_name = (
-            'losscurves-loss-block-#%(calculation_id)s-block#%(block)s.xml')
+            'losscurves-loss-block-#%(job_id)s-block#%(block)s.xml')
 
         cfg_file = helpers.demo_file('classical_psha_based_risk/config.gem')
 
         job_profile, params, sections = engine.import_job_profile(cfg_file)
 
-        calculation = models.OqCalculation(owner=job_profile.owner,
+        job = models.OqJob(owner=job_profile.owner,
                                            oq_job_profile=job_profile)
-        calculation.save()
+        job.save()
 
-        calc_proxy = engine.CalculationProxy(
-            params, calculation.id, sections=sections,
+        job_ctxt = engine.JobContext(
+            params, job.id, sections=sections,
             serialize_results_to=['xml', 'db'], oq_job_profile=job_profile,
-            oq_calculation=calculation)
+            oq_job=job)
 
-        calculator = ClassicalRiskCalculator(calc_proxy)
+        calculator = ClassicalRiskCalculator(job_ctxt)
 
         with helpers.patch('openquake.writer.FileWriter.serialize'):
             # The 'curves' key in the kwargs just needs to be present;
@@ -132,7 +131,7 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
             _dir, file_name = os.path.split(file_path)
 
             self.assertEqual(
-                expected_lrc_file_name % dict(calculation_id=calculation.id,
+                expected_lrc_file_name % dict(job_id=job.id,
                                               block=0),
                 file_name)
 
@@ -143,7 +142,7 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
             _dir, file_name = os.path.split(file_path)
 
             self.assertEqual(
-                expected_lr_file_name % dict(calculation_id=calculation.id,
+                expected_lr_file_name % dict(job_id=job.id,
                                              block=0),
                 file_name)
 
@@ -237,17 +236,17 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
 
     job = None
     sites = []
-    calc_proxy = None
+    job_ctxt = None
 
     @classmethod
     def setUpClass(cls):
         jp, _, _ = engine.import_job_profile(RISK_DEMO_CONFIG_FILE)
-        cls.job = models.OqCalculation(owner=jp.owner, oq_job_profile=jp)
+        cls.job = models.OqJob(owner=jp.owner, oq_job_profile=jp)
         cls.job.save()
-        cls.calc_proxy = helpers.create_job({}, job_id=cls.job.id,
+        cls.job_ctxt = helpers.create_job({}, job_id=cls.job.id,
                                             oq_job_profile=jp,
-                                            oq_calculation=cls.job)
-        calc = ClassicalRiskCalculator(cls.calc_proxy)
+                                            oq_job=cls.job)
+        calc = ClassicalRiskCalculator(cls.job_ctxt)
 
         calc.store_exposure_assets()
         [em_input] = jp.input_set.input_set.filter(input_type="exposure")
@@ -273,8 +272,8 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
     def test_assets_for_cell_with_more_than_one(self):
         # All assets in the risk cell are found.
         site = shapes.Site(10.0, 46.0)
-        self.calc_proxy.oq_job_profile.region_grid_spacing = 0.6
-        self.calc_proxy.oq_job_profile.save()
+        self.job_ctxt.oq_job_profile.region_grid_spacing = 0.6
+        self.job_ctxt.oq_job_profile.save()
 
         assets = BaseRiskCalculator.assets_for_cell(self.job.id, site)
         self.assertEqual(3, len(assets))
@@ -286,8 +285,8 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
     def test_assets_for_cell_with_one(self):
         # A single asset in the risk cell is found.
         site = shapes.Site(10.0, 46.0)
-        self.calc_proxy.oq_job_profile.region_grid_spacing = 0.3
-        self.calc_proxy.oq_job_profile.save()
+        self.job_ctxt.oq_job_profile.region_grid_spacing = 0.3
+        self.job_ctxt.oq_job_profile.save()
         [asset] = BaseRiskCalculator.assets_for_cell(self.job.id, site)
         self.assertEqual(self.sites[1], self._to_site(asset.site))
 
@@ -295,8 +294,8 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
         # An empty list is returned when no assets exist for a given
         # risk cell.
         site = shapes.Site(99.15000, 15.16667)
-        self.calc_proxy.oq_job_profile.region_grid_spacing = 0.05
-        self.calc_proxy.oq_job_profile.save()
+        self.job_ctxt.oq_job_profile.region_grid_spacing = 0.05
+        self.job_ctxt.oq_job_profile.save()
         self.assertEqual([],
                          BaseRiskCalculator.assets_for_cell(self.job.id, site))
 
