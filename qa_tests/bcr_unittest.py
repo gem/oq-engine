@@ -124,3 +124,16 @@ class BCRQATestCase(unittest.TestCase):
             result[tuple(map(float, site.text.split()))] = assets
 
         return result
+
+    @attr('qa')
+    def test_bcr_event_based(self):
+        # First implementation of the QA test for the event based
+        # bcr calculator. For now, just run it end-to-end
+        # to make sure it doesn't blow up.
+        ret_code = helpers.run_job('%s/config_ebased.gem' % BCR_DEMO_BASE,
+                ['--output-type=xml'])
+
+        self.assertEqual(0, ret_code)
+
+        job = OqJob.objects.latest('id')
+        self.assertEqual('succeeded', job.status)
