@@ -31,6 +31,7 @@ from openquake.db.models import OqUser
 
 from tests.utils.helpers import demo_file
 from tests.utils.helpers import patch
+from tests.utils.helpers import testdata_path
 
 
 class EngineAPITestCase(unittest.TestCase):
@@ -319,3 +320,23 @@ class EngineLaunchCalcTestCase(unittest.TestCase):
             p.stop()
         for p in risk_patchers:
             p.stop()
+
+
+class ReadSitesFromExposureTestCase(unittest.TestCase):
+
+    def test_read_sites_from_exposure(self):
+        """
+        Test reading site data from an exposure file using
+        :py:function:`openquake.risk.read_sites_from_exposure`.
+        """
+        job_config_file = testdata_path('simplecase/config.gem')
+
+        test_job = helpers.job_from_file(job_config_file)
+
+        expected_sites = [
+            shapes.Site(-118.077721, 33.852034),
+            shapes.Site(-118.067592, 33.855398),
+            shapes.Site(-118.186739, 33.779013)]
+
+        self.assertEqual(expected_sites,
+            engine.read_sites_from_exposure(test_job))
