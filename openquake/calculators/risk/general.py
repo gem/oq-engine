@@ -235,7 +235,6 @@ class BaseRiskCalculator(Calculator):
 
         self.job_ctxt.blocks_keys = []  # pylint: disable=W0201
         sites = engine.read_sites_from_exposure(self.job_ctxt)
-        print sites
 
         block_count = 0
 
