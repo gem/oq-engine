@@ -37,6 +37,7 @@ from openquake.calculators.hazard import CALCULATORS as HAZ_CALCS
 from openquake.calculators.risk import CALCULATORS as RISK_CALCS
 from openquake.db.models import JobStats
 from openquake.db.models import CharArrayField
+from openquake.db.models import ExposureData
 from openquake.db.models import FloatArrayField
 from openquake.db.models import Input
 from openquake.db.models import InputSet
@@ -332,34 +333,24 @@ class JobContext(object):
 
 
 def read_sites_from_exposure(job_ctxt):
-    """Given the exposure model specified in the job config, read all sites
-    which are located within the region of interest.
+    """Given a :class:`JobContext` object, get all of the sites in the exposure
+    model which are contained by the region of interest (defined in the
+    `JobContext`).
+
+    It is assumed that exposure model is already loaded into the database.
 
     :param job_ctxt:
-        AJobContext object with an EXPOSURE parameter defined
-    :type job_ctxt:
-        :py:class:`openquake.engine.JobContext`
-
-    :returns: a list of :py:class:`openquake.shapes.Site` objects
+        :class:`JobContext` instance.
+    :returns:
+        `list` of :class:`openquake.shapes.Site` objects, with no duplicates
     """
+    exp_points = ExposureData.objects.filter(
+        exposure_model__input__input_set=job_ctxt.oq_job_profile.input_set.id,
+        site__contained=job_ctxt.oq_job_profile.region).values(
+            'site').distinct()
 
-    sites = []
-    path = os.path.join(job_ctxt.base_path,
-                        job_ctxt.params[jobconf.EXPOSURE])
-
-    reader = exposure.ExposureModelFile(path)
-    constraint = job_ctxt.region
-
-    logs.LOG.debug(
-        "Constraining exposure parsing to %s" % constraint)
-
-    for site, _, _ in reader.filter(constraint):
-
-        # we don't want duplicates (bug 812395):
-        if not site in sites:
-            sites.append(site)
-
-    return sites
+    sites = [shapes.Site(p['site'].x, p['site'].y) for p in exp_points]
+    return list(set(sites))
 
 
 def _job_from_file(config_file, output_type, owner_username='openquake'):
