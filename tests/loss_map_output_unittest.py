@@ -84,14 +84,14 @@ class LossMapOutputTestCase(unittest.TestCase):
         # sample data to serialize for the non scenario writer
         asset_1 = ExposureData()
         asset_1.asset_ref = "a1711"
-        
+
         asset_2 = ExposureData()
         asset_2.asset_ref = "a1712"
-        
+
         asset_3 = ExposureData()
         asset_3.asset_ref = "a1713"
-        
-        self.non_scenario_mdata =  {
+
+        self.non_scenario_mdata = {
             'nrmlID': 'test_nrml_id',
             'riskResultID': 'test_rr_id',
             'lossMapID': 'test_lm_id',
