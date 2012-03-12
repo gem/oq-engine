@@ -23,11 +23,12 @@ import unittest
 
 from django.contrib.gis import geos
 
-from openquake.calculators.risk.general import Block
-from openquake.calculators.risk import general
-from openquake.db import models
+from openquake import engine
 from openquake import kvs
 from openquake import shapes
+from openquake.calculators.risk import general
+from openquake.calculators.risk.general import Block
+from openquake.db import models
 from openquake.input.exposure import ExposureDBWriter
 from openquake.job import config
 from openquake.parser import exposure
@@ -236,6 +237,29 @@ class BlockSplitterTestCase(unittest.TestCase):
         gen = general.split_into_blocks(self.job_id, self.all_sites,
                                         block_size=-1)
         self.assertRaises(RuntimeError, gen.next)
+
+
+class BaseRiskCalculatorTestCase(unittest.TestCase):
+
+    def test_partition(self):
+        job_cfg = helpers.demo_file('classical_psha_based_risk/config.gem')
+        job_profile, params, sections = engine.import_job_profile(job_cfg)
+        job_ctxt = engine.JobContext(
+            params, 7, sections=sections, oq_job_profile=job_profile)
+
+        calc = general.BaseRiskCalculator(job_ctxt)
+
+        calc.partition()
+
+        expected_blocks_keys = [0]
+        self.assertEqual(expected_blocks_keys, job_ctxt.blocks_keys)
+
+        expected_sites = [shapes.Site(-122.0, 38.225)]
+        expected_block = general.Block(7, 0, expected_sites)
+
+        actual_block = general.Block.from_kvs(7, 0)
+        self.assertEqual(expected_block, actual_block)
+        self.assertEqual(expected_block.sites, actual_block.sites)
 
 
 GRID_ASSETS = {
