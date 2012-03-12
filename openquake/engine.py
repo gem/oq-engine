@@ -55,7 +55,6 @@ from openquake.job.params import INPUT_FILE_TYPES
 from openquake.job.params import PARAMS
 from openquake.job.params import PATH_PARAMS
 from openquake.kvs import mark_job_as_current
-from openquake.parser import exposure
 from openquake.supervising import supervisor
 from openquake.utils import config as utils_config
 from openquake.utils import stats
