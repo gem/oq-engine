@@ -158,18 +158,16 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
                 Example::
 
-                    [(<Site(-117.0, 38.0)>,
-                     [({'mean_loss': 200.0, 'stddev_loss': 100},
-                      {'assetID': 'a171'}), ({'mean_loss': 200.0,
-                      'stddev_loss': 100}, {'assetID': 'a187'})]),
-                     (<Site(-117.0, 38.0)>,
-                     ({'mean_loss': 200, 'stddev_loss': 100.0},
-                      {'assetID': 'a172'})),
-                     ...
-                     (<Site(-118.0, 39.0)>,
-                     ({'mean_loss': 50, 'stddev_loss': 50.0},
-                      {'assetID': 'a192'}))]
-
+                    [(<Site(-117.0, 38.0)>, [
+                        ({'mean_loss': 200.0, 'stddev_loss': 100},
+                            {'assetID': 'a171'}),
+                        ({'mean_loss': 200.0, 'stddev_loss': 100},
+                            {'assetID': 'a187'})
+                    ]),
+                     (<Site(-118.0, 39.0)>, [
+                        ({'mean_loss': 50, 'stddev_loss': 50.0},
+                            {'assetID': 'a192'})
+                    ])]
         """
 
         vuln_model = kwargs['vuln_model']
@@ -181,16 +179,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
     def _compute_losses_for_block(self, block, vuln_model, epsilon_provider):
         """
         Compute the mean & standard deviation loss values for each asset in the
-        given block.
-
-#### TODO UPDATE
-Compute the sum of all asset losses for the given region block.
-
-1-dimensional :py:class:`numpy.ndarray` of floats
-representing loss values for this block. There will be one value
-per realization.
-
-#### TODO UPDATE
+        given block, and the sum of the asset losses for the given region block.
 
         :param block: a block of sites represented by a
             :py:class:`openquake.job.Block` object
@@ -200,30 +189,34 @@ per realization.
         :param epsilon_provider:
             :py:class:`openquake.risk.job.EpsilonProvider` object
 
-        :returns: list of 2-tuples containing Site, Loss, and Asset
-            information.
+        :returns: two values:
+            * 1-dimensional :py:class:`numpy.ndarray` of floats
+                representing asset losses for this block.
+                There will be one value per realization.
 
-            The first element of each 2-tuple shall be a
-            :py:class:`openquake.shapes.Site` object, which represents the
-            geographical location of the asset loss.
+            * list of 2-tuples containing site, loss, and asset
+                information.
 
-            The second element shall be a list of
-            2-tuples of dicts representing the Loss and Asset data (in that
-            order).
+                The first element of each 2-tuple shall be a
+                :py:class:`openquake.shapes.Site` object, which represents
+                the geographical location of the asset loss.
+
+                The second element shall be a list of
+                2-tuples of dicts representing the loss and asset data
+                (in that order).
 
             Example::
 
-                [(<Site(-117.0, 38.0)>,
-                 [({'mean_loss': 200.0, 'stddev_loss': 100},
-                  {'assetID': 'a171'}), ({'mean_loss': 200.0,
-                  'stddev_loss': 100}, {'assetID': 'a187'})]),
-                 (<Site(-117.0, 38.0)>,
-                 ({'mean_loss': 200, 'stddev_loss': 100.0},
-                  {'assetID': 'a172'})),
-                 ...
-                 (<Site(-118.0, 39.0)>,
-                 ({'mean_loss': 50, 'stddev_loss': 50.0},
-                  {'assetID': 'a192'}))]
+                [(<Site(-117.0, 38.0)>, [
+                    ({'mean_loss': 200.0, 'stddev_loss': 100},
+                        {'assetID': 'a171'}),
+                    ({'mean_loss': 200.0, 'stddev_loss': 100},
+                        {'assetID': 'a187'})
+                ]),
+                 (<Site(-118.0, 39.0)>, [
+                    ({'mean_loss': 50, 'stddev_loss': 50.0},
+                        {'assetID': 'a192'})
+                ])]
         """
 
         loss_data = {}
@@ -233,7 +226,7 @@ per realization.
         for site in block.sites:
             point = self.job_ctxt.region.grid.point_at(site)
 
-            # the mean and stddev calculation functions used below
+            # the scientific functions used below
             # require the gmvs to be wrapped in a dict with a single key, IMLs
             gmvs = {'IMLs': load_gmvs_for_point(
                     self.job_ctxt.job_id, point)}
