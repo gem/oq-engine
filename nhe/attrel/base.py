@@ -384,18 +384,11 @@ class CoeffsTable(object):
     corresponding to different IMTs.
 
     Tables are defined in a space-separated tabular form in a simple string
-    literal (heading and trailing whitespace does not matter):
+    literal (heading and trailing whitespace does not matter). The first column
+    in the table must be named "IMT" (or "imt") and thus should represent IMTs:
 
-    >>> ct = CoeffsTable('''
-    ...     imt  a    b   c    d
-    ...     pga  1   2.4 -5  0.01
-    ...     pgd 7.6  12   0  44.1
-    ... ''')
-
-    The first column in the table must be named "IMT" (or "imt") and thus
-    should represent IMTs:
-
-    >>> ct = CoeffsTable('imf z\n' 'pga 1\n ')
+    >>> CoeffsTable(table='''imf z
+    ...                      pga 1''')
     Traceback (most recent call last):
         ...
     ValueError: first column in a table must be IMT
@@ -404,10 +397,46 @@ class CoeffsTable(object):
     in the first column should correspond to real intensity measure types,
     see :mod:`nhe.imt`:
 
-    >>> ct = CoeffsTable('imt z\n' 'pgx 2')
+    >>> CoeffsTable(table='''imt  z
+    ...                      pgx  2''')
     Traceback (most recent call last):
         ...
     ValueError: unknown IMT 'PGX'
+
+    Note that :class:`CoeffsTable` only accepts keyword argumets:
+
+    >>> CoeffsTable()
+    Traceback (most recent call last):
+        ...
+    TypeError: CoeffsTable requires "table" kwarg
+    >>> CoeffsTable(table='', foo=1)
+    Traceback (most recent call last):
+        ...
+    TypeError: CoeffsTable got unexpected kwargs: {'foo': 1}
+
+    If there are :class:`~nhe.imt.SA` IMTs in the table, they are not
+    referenced by name, because they require parametrization:
+
+    >>> CoeffsTable(table='''imt  x
+    ...                      sa   15''')
+    Traceback (most recent call last):
+        ...
+    ValueError: specify period as float value to declare SA IMT
+    >>> CoeffsTable(table='''imt  x
+    ...                      0.1  20''')
+    Traceback (most recent call last):
+        ...
+    TypeError: attribute "sa_damping" is required for tables defining SA
+
+    So proper table defining SA looks like this:
+
+    >>> ct = CoeffsTable(sa_damping=5, table='''
+    ...     imt   a    b     c   d
+    ...     pga   1    2.4  -5   0.01
+    ...     pgd  7.6  12     0  44.1
+    ...     0.1  10   20    30  40
+    ...     1.0   1    2     3   4
+    ... ''')
 
     Table objects could be indexed by IMT objects (this returns a dictionary
     of coefficients):
@@ -417,140 +446,16 @@ class CoeffsTable(object):
     True
     >>> ct[imt.PGD()] == dict(a=7.6, b=12, c=0, d=44.1)
     True
+    >>> ct[imt.SA(damping=5, period=0.1)] == dict(a=10, b=20, c=30, d=40)
+    True
     >>> ct[imt.PGV()]
     Traceback (most recent call last):
         ...
     KeyError: PGV()
-
-    Tables can be chained with others, see :meth:`chain`:
-
-    >>> ct2 = CoeffsTable('imt x\n' 'pgv 10\n' 'pgd 12')
-    >>> ct.chain(ct2) is ct  # here we chain ct2 in ct
-    True
-    >>> imt.PGV() in ct      # so ct now has coeffs for PGV
-    True
-    >>> ct[imt.PGV()]
-    {'x': 10.0}
-    """
-    _METACOLUMNS = ['IMT']
-
-    _IMT_CLASSES_BY_NAME = dict((cls.__name__, cls)
-                                for cls in imt_module._IMT.__subclasses__())
-
-    def __init__(self, table):
-        table = table.strip().splitlines()
-        header = table.pop(0).split()
-        meta = slice(len(self._METACOLUMNS))
-        data = slice(len(self._METACOLUMNS), None)
-        metacolumns = header[meta]
-        if not [col.upper() for col in metacolumns] == self._METACOLUMNS:
-            if len(self._METACOLUMNS) == 1:
-                raise ValueError('first column in a table must be %s' %
-                                 tuple(self._METACOLUMNS))
-            else:
-                raise ValueError('first %s columns must be %s' %
-                                 (len(self._METACOLUMNS),
-                                  (', '.join(self._METACOLUMNS)).lower()))
-        coeff_names = header[data]
-        coeffs = {}
-        for row in table:
-            row = row.split()
-            imt = self._imt_from_metacolumns(*row[meta])
-            coeffs[imt] = dict(zip(coeff_names, map(float, row[data])))
-        self.coeffs = coeffs
-        self.chained_tables = []
-
-    def _imt_from_metacolumns(self, imt_name):
-        imt_name = imt_name.upper()
-        if not imt_name in self._IMT_CLASSES_BY_NAME:
-            raise ValueError('unknown IMT %r' % imt_name)
-        return self._IMT_CLASSES_BY_NAME[imt_name]()
-
-    def __contains__(self, imt):
-        """
-        Return ``True`` if ``imt`` is in this table or one of chained tables.
-        """
-        if any(imt in table for table in self.chained_tables):
-            return True
-        return imt in self.coeffs
-
-    def __getitem__(self, imt):
-        """
-        Return a dictionary of coefficients corresponding to ``imt``
-        from this table (if there is a line for requested IMT in it),
-        or from the first one of chained tables that contains it.
-
-        :raises KeyError:
-            If ``imt`` is not :meth:`available <__contains__>` in the
-            original table or any of chained tables.
-        """
-        if imt in self.coeffs:
-            return self.coeffs[imt]
-        for table in self.chained_tables:
-            if imt in table:
-                return table[imt]
-        raise KeyError(imt)
-
-    def chain(self, other_table):
-        r"""
-        Chain another :class:`CoeffsTable` with this one.
-
-        :returns:
-            The same table object.
-
-        This allows to merge several tables together. If for some IMTs
-        coefficients are available in both tables, ones from the original
-        (the one whose ``chain()`` method was called) take precedence.
-
-        >>> ct = CoeffsTable('imt r\n' 'pga 1') \
-        ...          .chain(CoeffsTable('imt r\n' 'pga 2\n' 'pgv 3'))
-        >>> from nhe.imt import PGA, PGV
-        >>> ct[PGA()]
-        {'r': 1.0}
-
-        If more than one chained table has clashing data, the table that
-        was chained earlier takes precedence.
-
-        >>> ct = ct.chain(CoeffsTable('imt r\n' 'pgv 4'))
-        >>> ct[PGV()]
-        {'r': 3.0}
-        """
-        assert isinstance(other_table, CoeffsTable)
-        self.chained_tables.append(other_table)
-        return self
-
-
-class SACoeffsTable(CoeffsTable):
-    """
-    Table of coefficients specific to :class:`spectral acceleration
-    <nhe.imt.SA>` IMT -- considers that SA values are always parametrized
-    by values of period and damping.
-
-    Tables for spectral acceleration are created the same way
-    as :class:`CoeffsTable`, the only difference is that first two columns
-    should be "period" and "damping" -- these values are used for creating
-    :class:`~nhe.imt.SA` object corresponding to the row.
-
-    >>> ct = SACoeffsTable('''period damping alpha beta
-    ...                       10.0     5      0.1  -10.3
-    ...                       20.0     5      1.1  -20.3
-    ...                       11.0    10      4     0
-    ...                       19.0    10      40  -30''')
-    >>> SACoeffsTable('''period foo bar
-    ...                   1     2    3''')
+    >>> ct[imt.SA(1.0, 4)]
     Traceback (most recent call last):
         ...
-    ValueError: first 2 columns must be period, damping
-
-    For exact values of period and damping indexing of:class:`SACoeffsTable`
-    works the same way as :class:`CoeffsTable`, just returns the coefficients
-    dictionary:
-
-    >>> from nhe.imt import SA
-    >>> ct[SA(period=10, damping=5)] == {'alpha': 0.1, 'beta': -10.3}
-    True
-    >>> ct[SA(period=19, damping=10)] == {'alpha': 40.0, 'beta': -30.0}
-    True
+    KeyError: SA(period=1.0, damping=4)
 
     Table of coefficients for spectral acceleration could be indexed
     by instances of :class:`nhe.imt.SA` with period value that is not specified
@@ -558,68 +463,77 @@ class SACoeffsTable(CoeffsTable):
     closest higher and closest lower period. That scaling of coefficients works
     only within the same damping:
 
-    >>> ct[SA(period=11, damping=5)] == {'alpha': 0.2, 'beta': -11.3}
-    True
-    >>> ct[SA(period=15, damping=5)] == {'alpha': 0.6, 'beta': -15.3}
-    True
+    >>> ct[imt.SA(period=0.2, damping=5)]['a']
+    9.0
+    >>> ct[imt.SA(period=0.9, damping=5)]['c']
+    6.0
+    >>> ct[imt.SA(period=0.9, damping=15)]
+    Traceback (most recent call last):
+        ...
+    KeyError: SA(period=0.9, damping=15)
 
     Extrapolation is not possible:
 
-    >>> SA(period=10, damping=10) in ct
-    False
-    >>> ct[SA(period=0.5, damping=5)]
+    >>> ct[imt.SA(period=0.01, damping=5)]
     Traceback (most recent call last):
         ...
-    KeyError: SA(period=0.5, damping=5)
+    KeyError: SA(period=0.01, damping=5)
     """
-    _METACOLUMNS = ['PERIOD', 'DAMPING']
-
-    def __init__(self, *args, **kwargs):
-        super(SACoeffsTable, self).__init__(*args, **kwargs)
-        self.min_periods = {}
-        self.max_periods = {}
-        for imt in self.coeffs.keys():
-            if self.min_periods.setdefault(imt.damping,
-                                           imt.period) > imt.period:
-                self.min_periods[imt.damping] = imt.period
-            if self.max_periods.setdefault(imt.damping,
-                                           imt.period) < imt.period:
-                self.max_periods[imt.damping] = imt.period
-
-    def _imt_from_metacolumns(self, period, damping):
-        return imt_module.SA(float(period), float(damping))
-
-    def __contains__(self, imt):
-        """
-        Return ``True`` if ``imt`` is available in this table, or can be
-        interpolated using the data in this table, or available in any
-        of :meth:`chained <CoeffsTable.chain>` tables.
-        """
-        if imt in self.coeffs:
-            return True
-        if imt.damping in self.min_periods:
-            if self.min_periods[imt.damping] <= imt.period \
-                    and self.max_periods[imt.damping] >= imt.period:
-                return True
-        return any(imt in table for table in self.chained_tables)
+    def __init__(self, **kwargs):
+        if not 'table' in kwargs:
+            raise TypeError('CoeffsTable requires "table" kwarg')
+        table = kwargs.pop('table').strip().splitlines()
+        sa_damping = kwargs.pop('sa_damping', None)
+        if kwargs:
+            raise TypeError('CoeffsTable got unexpected kwargs: %r' % kwargs)
+        header = table.pop(0).split()
+        if not header[0].upper() == "IMT":
+            raise ValueError('first column in a table must be IMT')
+        coeff_names = header[1:]
+        self.sa_coeffs = {}
+        self.non_sa_coeffs = {}
+        for row in table:
+            row = row.split()
+            imt_name = row[0].upper()
+            if imt_name == 'SA':
+                raise ValueError('specify period as float value '
+                                 'to declare SA IMT')
+            imt_coeffs = dict(zip(coeff_names, map(float, row[1:])))
+            try:
+                sa_period = float(imt_name)
+            except:
+                if not hasattr(imt_module, imt_name):
+                    raise ValueError('unknown IMT %r' % imt_name)
+                imt = getattr(imt_module, imt_name)()
+                self.non_sa_coeffs[imt] = imt_coeffs
+            else:
+                if sa_damping is None:
+                    raise TypeError('attribute "sa_damping" is required '
+                                    'for tables defining SA')
+                imt = imt_module.SA(sa_period, sa_damping)
+                self.sa_coeffs[imt] = imt_coeffs
 
     def __getitem__(self, imt):
         """
-        Works the same as :class:`CoeffsTable` for IMTs other than
-        :class:`~nhe.imt.SA` and for spectral acceleration of known
-        (listed in the table) period and damping.
+        Return a dictionary of coefficients corresponding to ``imt``
+        from this table (if there is a line for requested IMT in it),
+        or the dictionary of interpolated coefficients, if ``imt``
+        is of type :class:`~nhe.imt.SA` and interpolation is possible.
 
-        If the requested ``imt`` is of type SA and is missing from the
-        table, the linear interpolation across values of the same damping
-        and smallest period above and largest below requested.
+        :raises KeyError:
+            If ``imt`` is not available in the table and no interpolation
+            can be done.
         """
-        if imt in self.coeffs:
-            return self.coeffs[imt]
-        elif not isinstance(imt, imt_module.SA) or not imt in self:
-            return super(SACoeffsTable, self).__getitem__(imt)
+        if not isinstance(imt, imt_module.SA):
+            return self.non_sa_coeffs[imt]
+
+        try:
+            return self.sa_coeffs[imt]
+        except KeyError:
+            pass
 
         max_below = min_above = None
-        for unscaled_imt in self.coeffs.keys():
+        for unscaled_imt in self.sa_coeffs.keys():
             if unscaled_imt.damping != imt.damping:
                 continue
             if unscaled_imt.period > imt.period:
@@ -628,15 +542,16 @@ class SACoeffsTable(CoeffsTable):
             elif unscaled_imt.period < imt.period:
                 if max_below is None or unscaled_imt.period > max_below.period:
                     max_below = unscaled_imt
-        assert max_below is not None and min_above is not None
+        if max_below is None or min_above is None:
+            raise KeyError(imt)
 
         # ratio tends to 1 when target period tends to a minimum
         # known period above and to 0 if target period is close
         # to maximum period below.
         ratio = (imt.period - max_below.period) / (min_above.period
                                                    - max_below.period)
-        max_below = self.coeffs[max_below]
-        min_above = self.coeffs[min_above]
+        max_below = self.sa_coeffs[max_below]
+        min_above = self.sa_coeffs[min_above]
         return dict(
             (co, (min_above[co] - max_below[co]) * ratio + max_below[co])
             for co in max_below.keys()
