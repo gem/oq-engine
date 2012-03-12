@@ -233,9 +233,9 @@ class BaseRiskCalculator(Calculator):
         # pylint: disable=W0404
         from openquake import engine
 
-        sites = []
         self.job_ctxt.blocks_keys = []  # pylint: disable=W0201
         sites = engine.read_sites_from_exposure(self.job_ctxt)
+        print sites
 
         block_count = 0
 
@@ -246,7 +246,7 @@ class BaseRiskCalculator(Calculator):
             block_count += 1
 
         LOG.info("Job has partitioned %s sites into %s blocks",
-                len(sites), block_count)
+                 len(sites), block_count)
 
     def store_exposure_assets(self):
         """Load exposure assets and write them to database."""
