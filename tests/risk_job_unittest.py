@@ -30,7 +30,6 @@ from openquake.calculators.risk import general
 from openquake.calculators.risk.general import Block
 from openquake.db import models
 from openquake.input.exposure import ExposureDBWriter
-from openquake.job import config
 from openquake.parser import exposure
 
 from tests.utils import helpers
