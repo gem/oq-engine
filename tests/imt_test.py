@@ -5,9 +5,15 @@ from nhe import imt as imt_module
 
 class BaseIMTTestCase(unittest.TestCase):
     class TestIMT(imt_module._IMT):
-        __slots__ = ('foo', 'bar')
-        def __init__(self, foo, bar):
-            self.foo, self.bar = foo, bar
+        _fields = ('foo', 'bar')
+        def __new__(cls, foo, bar):
+            return imt_module._IMT.__new__(cls, foo, bar)
+
+    def test_base(self):
+        self.assertEqual(getattr(self.TestIMT, '__slots__'), ())
+        self.assertFalse(hasattr(self.TestIMT(1, 2), '__dict__'))
+        imt = self.TestIMT(bar=2, foo=1)
+        self.assertEqual(str(imt), 'TestIMT(foo=1, bar=2)')
 
     def test_equality(self):
         self.assertTrue(self.TestIMT(1, 1) == self.TestIMT(1, 1))
