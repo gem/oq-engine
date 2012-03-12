@@ -248,6 +248,7 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
             params, 7, sections=sections, oq_job_profile=job_profile)
 
         calc = general.BaseRiskCalculator(job_ctxt)
+        calc.store_exposure_assets()
 
         calc.partition()
 
