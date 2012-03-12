@@ -860,23 +860,6 @@ class RunJobTestCase(unittest.TestCase):
 
         self.assertEquals(expected_sites, engine.sites_to_compute())
 
-    def test_read_sites_from_exposure(self):
-        """
-        Test reading site data from an exposure file using
-        :py:function:`openquake.risk.read_sites_from_exposure`.
-        """
-        job_config_file = helpers.testdata_path('simplecase/config.gem')
-
-        test_job = helpers.job_from_file(job_config_file)
-
-        expected_sites = [
-            shapes.Site(-118.077721, 33.852034),
-            shapes.Site(-118.067592, 33.855398),
-            shapes.Site(-118.186739, 33.779013)]
-
-        self.assertEqual(expected_sites,
-            engine.read_sites_from_exposure(test_job))
-
     def test_supervisor_is_spawned(self):
         with patch('openquake.engine._job_from_file'):
 
