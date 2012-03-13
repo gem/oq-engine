@@ -349,7 +349,7 @@ def read_sites_from_exposure(job_ctxt):
             'site').distinct()
 
     sites = [shapes.Site(p['site'].x, p['site'].y) for p in exp_points]
-    return list(set(sites))
+    return sites
 
 
 def _job_from_file(config_file, output_type, owner_username='openquake'):
