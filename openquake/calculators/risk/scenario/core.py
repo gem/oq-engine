@@ -145,7 +145,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
             * 1-dimensional :py:class:`numpy.ndarray` of loss values for this
                 region block (again, 1 value per realization)
 
-            * list of 2-tuples containing Site, Loss, and Asset
+            * list of 2-tuples containing site, loss, and asset
                 information.
 
                 The first element of each 2-tuple shall be a
@@ -153,7 +153,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                 geographical location of the asset loss.
 
                 The second element shall be a list of
-                2-tuples of dicts representing the Loss and Asset data (in that
+                2-tuples of dicts representing the loss and asset data (in that
                 order).
 
                 Example::
@@ -172,55 +172,11 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
         vuln_model = kwargs['vuln_model']
         epsilon_provider = kwargs['epsilon_provider']
-
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
-        return _compute_losses_for_block(block, vuln_model, epsilon_provider)
-
-    def _compute_losses_for_block(self, block, vuln_model, epsilon_provider):
-        """
-        Compute the mean & standard deviation loss values for each asset in the
-        given block, and the sum of the asset losses for the given region block.
-
-        :param block: a block of sites represented by a
-            :py:class:`openquake.job.Block` object
-        :param vuln_model:
-            dict of :py:class:`openquake.shapes.VulnerabilityFunction` objects,
-            keyed by the vulnerability function name as a string
-        :param epsilon_provider:
-            :py:class:`openquake.risk.job.EpsilonProvider` object
-
-        :returns: two values:
-            * 1-dimensional :py:class:`numpy.ndarray` of floats
-                representing asset losses for this block.
-                There will be one value per realization.
-
-            * list of 2-tuples containing site, loss, and asset
-                information.
-
-                The first element of each 2-tuple shall be a
-                :py:class:`openquake.shapes.Site` object, which represents
-                the geographical location of the asset loss.
-
-                The second element shall be a list of
-                2-tuples of dicts representing the loss and asset data
-                (in that order).
-
-            Example::
-
-                [(<Site(-117.0, 38.0)>, [
-                    ({'mean_loss': 200.0, 'stddev_loss': 100},
-                        {'assetID': 'a171'}),
-                    ({'mean_loss': 200.0, 'stddev_loss': 100},
-                        {'assetID': 'a187'})
-                ]),
-                 (<Site(-118.0, 39.0)>, [
-                    ({'mean_loss': 50, 'stddev_loss': 50.0},
-                        {'assetID': 'a192'})
-                ])]
-        """
 
         loss_data = {}
 
+        # used to sum the losses for the whole block
         sum_per_gmf = SumPerGroundMotionField(vuln_model, epsilon_provider)
 
         for site in block.sites:
