@@ -455,6 +455,9 @@ class DefaultValidatorsTestCase(unittest.TestCase):
     for correct behavior with various types of job configurations.
     """
 
+    def setUp(self):
+        self.job = engine.prepare_job()
+
     def test_default_validators_disagg_job(self):
         """Test to ensure that a Disaggregation job always includes the
         :class:`openquake.job.config.DisaggregationValidator`.
@@ -499,7 +502,8 @@ class DefaultValidatorsTestCase(unittest.TestCase):
         # `ClassicalRiskValidator` is included in the default validators.
         cfg_path = helpers.demo_file('classical_psha_based_risk/config.gem')
 
-        job_profile, params, sections = engine.import_job_profile(cfg_path)
+        job_profile, params, sections = engine.import_job_profile(
+            cfg_path, self.job)
 
         validators = config.default_validators(sections, params)
 
@@ -511,7 +515,8 @@ class DefaultValidatorsTestCase(unittest.TestCase):
         # `ClassicalRiskValidator` is included in the default validators.
         cfg_path = helpers.demo_file('benefit_cost_ratio/config.gem')
 
-        job_profile, params, sections = engine.import_job_profile(cfg_path)
+        job_profile, params, sections = engine.import_job_profile(
+            cfg_path, self.job)
 
         validators = config.default_validators(sections, params)
 
@@ -524,7 +529,8 @@ class DefaultValidatorsTestCase(unittest.TestCase):
         cfg_path = helpers.demo_file(
             'probabilistic_event_based_risk/config.gem')
 
-        job_profile, params, sections = engine.import_job_profile(cfg_path)
+        job_profile, params, sections = engine.import_job_profile(
+            cfg_path, self.job)
 
         validators = config.default_validators(sections, params)
 
@@ -540,7 +546,8 @@ class DefaultValidatorsTestCase(unittest.TestCase):
         cfg_path = helpers.demo_file(
             'event_based_bcr_risk/config.gem')
 
-        job_profile, params, sections = engine.import_job_profile(cfg_path)
+        job_profile, params, sections = engine.import_job_profile(
+            cfg_path, self.job)
 
         validators = config.default_validators(sections, params)
 

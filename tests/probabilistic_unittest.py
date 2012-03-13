@@ -22,7 +22,6 @@ import unittest
 from openquake import engine
 from openquake.calculators.risk.event_based.core import (
     EventBasedRiskCalculator)
-from openquake.db import models
 
 from tests.utils import helpers
 
@@ -33,15 +32,12 @@ class LossMapCurveSerialization(unittest.TestCase):
         cfg_path = helpers.demo_file(
             'probabilistic_event_based_risk/config.gem')
 
-        job_profile, params, sections = engine.import_job_profile(cfg_path)
-        job = models.OqJob(owner=job_profile.owner,
-                                           oq_job_profile=job_profile)
-        job.save()
+        job = engine.prepare_job()
+        jp, params, sections = engine.import_job_profile(cfg_path, job)
 
         job_ctxt = engine.JobContext(
             params, 1, sections=sections, base_path='/tmp',
-            serialize_results_to=['db', 'xml'],
-            oq_job_profile=job_profile, oq_job=job)
+            serialize_results_to=['db', 'xml'], oq_job_profile=jp, oq_job=job)
         job_ctxt.blocks_keys = []
 
         self.calculator = EventBasedRiskCalculator(job_ctxt)

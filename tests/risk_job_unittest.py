@@ -45,7 +45,9 @@ class EpsilonTestCase(unittest.TestCase, helpers.DbTestCase):
         path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, TEST_FILE)
         inputs = [("exposure", path)]
         self.job = self.setup_classic_job(inputs=inputs)
-        writer = ExposureDBWriter(self.job.oq_job_profile.input_set, path)
+        [input] = models.inputs4job(self.job.id, input_type="exposure",
+                                    path=path)
+        writer = ExposureDBWriter(input)
         exposure_parser = exposure.ExposureModelFile(path)
         writer.serialize(exposure_parser)
         self.model = writer.model
@@ -307,10 +309,10 @@ GRID_ASSETS = {
 class RiskCalculatorTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.job = helpers.job_from_file(os.path.join(helpers.DATA_DIR,
-                                                      'config.gem'))
-        [input] = self.job.oq_job_profile.input_set.input_set.filter(
-            input_type="exposure")
+        self.job_ctxt = helpers.job_from_file(os.path.join(helpers.DATA_DIR,
+                                              'config.gem'))
+        [input] = models.inputs4job(self.job_ctxt.job_id,
+                                    input_type="exposure")
         owner = models.OqUser.objects.get(user_name="openquake")
         emdl = models.ExposureModel(
             owner=owner, input=input, description="RCT test exposure model",
@@ -356,9 +358,10 @@ class RiskCalculatorTestCase(unittest.TestCase):
         def row_col(item):
             return item[0].row, item[0].column
 
-        self.job.oq_job_profile.region_grid_spacing = 0.01
-        self.job.oq_job_profile.save()
-        calculator = general.BaseRiskCalculator(self.job)
+        jp = models.profile4job(self.job_ctxt.job_id)
+        jp.region_grid_spacing = 0.01
+        jp.save()
+        calculator = general.BaseRiskCalculator(self.job_ctxt)
 
         expected = sorted(self.grid_assets, key=row_col)
         actual = sorted(calculator.grid_assets_iterator(self.grid),
@@ -401,7 +404,7 @@ class RiskCalculatorTestCase(unittest.TestCase):
                 (shapes.Site(10.1, 10.1),
                     [({'value': 0.123}, GRID_ASSETS[(1, 1)])])]
 
-            calculator = general.BaseRiskCalculator(self.job)
+            calculator = general.BaseRiskCalculator(self.job_ctxt)
             actual = calculator.asset_losses_per_site(0.5, self.grid_assets)
             expected = sorted(expected, key=coords)
             actual = sorted(actual, key=coords)
