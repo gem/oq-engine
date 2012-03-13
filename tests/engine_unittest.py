@@ -216,7 +216,6 @@ class EngineAPITestCase(unittest.TestCase):
                                     ignore=('id',  'last_update',
                                             '_owner_cache')))
 
-
     def test_import_job_profile_as_specified_user(self):
         # Test importing of a job profile when a user is specified
         # The username will be randomly generated and unique to give
