@@ -77,7 +77,7 @@ skip_pylint=0
 skip_pyflakes=0
 skip_pep8=0
 branch_name=""
-repo="openquake"
+repo="oq-engine"
 python_src="openquake"
 
 git diff --quiet HEAD
