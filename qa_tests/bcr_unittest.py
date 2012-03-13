@@ -54,7 +54,7 @@ class BCRQATestCase(unittest.TestCase):
         #    site location
             (-122.0, 38.225): {
                 # assetRef  eal_orig  eal_retrof  bcr
-                    'a1':   (0.009379,  0.006586,  0.483091)
+                'a1': (0.009379, 0.006586, 0.483091)
             }
         }
 
