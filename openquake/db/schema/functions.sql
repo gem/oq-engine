@@ -402,5 +402,3 @@ CREATE TRIGGER oqmif_exposure_data_refresh_last_update_trig BEFORE UPDATE ON oqm
 CREATE TRIGGER riski_vulnerability_function_refresh_last_update_trig BEFORE UPDATE ON riski.vulnerability_function FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
 CREATE TRIGGER riski_vulnerability_model_refresh_last_update_trig BEFORE UPDATE ON riski.vulnerability_model FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
-
-CREATE TRIGGER uiapi_input_set_refresh_last_update_trig BEFORE UPDATE ON uiapi.input_set FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
