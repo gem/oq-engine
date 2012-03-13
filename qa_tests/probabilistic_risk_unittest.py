@@ -34,7 +34,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         cfg = helpers.demo_file(
             'probabilistic_event_based_risk/config_stest.gem')
 
-        ret_code = helpers.run_job(scen_cfg, ['--output-type=xml'])
+        ret_code = helpers.run_job(cfg, ['--output-type=xml'])
         self.assertEqual(0, ret_code)
 
         job = OqJob.objects.latest('id')
