@@ -23,13 +23,13 @@ import unittest
 
 from django.contrib.gis import geos
 
-from openquake.calculators.risk.general import Block
-from openquake.calculators.risk import general
-from openquake.db import models
+from openquake import engine
 from openquake import kvs
 from openquake import shapes
+from openquake.calculators.risk import general
+from openquake.calculators.risk.general import Block
+from openquake.db import models
 from openquake.input.exposure import ExposureDBWriter
-from openquake.job import config
 from openquake.parser import exposure
 
 from tests.utils import helpers
@@ -240,61 +240,26 @@ class BlockSplitterTestCase(unittest.TestCase):
 
 class BaseRiskCalculatorTestCase(unittest.TestCase):
 
-    def test_prepares_blocks_using_the_exposure(self):
-        """The base risk calculator is able to read the exposure file,
-        split the sites into blocks and store them in KVS.
-        """
+    def test_partition(self):
+        job_cfg = helpers.demo_file('classical_psha_based_risk/config.gem')
+        job_profile, params, sections = engine.import_job_profile(job_cfg)
+        job_ctxt = engine.JobContext(
+            params, 7, sections=sections, oq_job_profile=job_profile)
 
-        params = {
-            config.EXPOSURE: os.path.join(helpers.SCHEMA_EXAMPLES_DIR,
-                                          EXPOSURE_TEST_FILE),
-            "BASE_PATH": "."
-        }
-        a_job = helpers.create_job(params)
+        calc = general.BaseRiskCalculator(job_ctxt)
+        calc.store_exposure_assets()
 
-        calculator = general.BaseRiskCalculator(a_job)
+        calc.partition()
 
-        calculator.partition()
+        expected_blocks_keys = [0]
+        self.assertEqual(expected_blocks_keys, job_ctxt.blocks_keys)
 
-        sites = [shapes.Site(9.15000, 45.16667),
-                 shapes.Site(9.15333, 45.12200),
-                 shapes.Site(9.14777, 45.17999)]
+        expected_sites = [shapes.Site(-122.0, 38.225)]
+        expected_block = general.Block(7, 0, expected_sites)
 
-        expected = general.Block(a_job.job_id, 0, sites)
-
-        self.assertEqual(1, len(a_job.blocks_keys))
-
-        self.assertEqual(
-            expected, general.Block.from_kvs(a_job.job_id,
-                                             a_job.blocks_keys[0]))
-
-    def test_prepares_blocks_using_the_exposure_and_filtering(self):
-        """When reading the exposure file, the calculator also provides
-        filtering on the region specified in the REGION_VERTEX and
-        REGION_GRID_SPACING paramaters.
-        """
-
-        region_vertex = "46.0, 9.14, 46.0, 9.15, 45.0, 9.15, 45.0, 9.14"
-
-        params = {config.EXPOSURE: os.path.join(
-                    helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE),
-                  config.INPUT_REGION: region_vertex,
-                  config.REGION_GRID_SPACING: 0.1,
-                  config.CALCULATION_MODE: "Event Based"}
-
-        a_job = helpers.create_job(params)
-
-        sites = [shapes.Site(9.15, 45.16667), shapes.Site(9.14777, 45.17999)]
-
-        expected_block = general.Block(a_job.job_id, 0, sites)
-        calculator = general.BaseRiskCalculator(a_job)
-        calculator.partition()
-
-        self.assertEqual(1, len(a_job.blocks_keys))
-
-        self.assertEqual(
-            expected_block,
-            general.Block.from_kvs(a_job.job_id, a_job.blocks_keys[0]))
+        actual_block = general.Block.from_kvs(7, 0)
+        self.assertEqual(expected_block, actual_block)
+        self.assertEqual(expected_block.sites, actual_block.sites)
 
 
 GRID_ASSETS = {
