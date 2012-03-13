@@ -74,8 +74,10 @@ GRANT ALL ON SEQUENCE uiapi.job_stats_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_job_profile_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.output_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.upload_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE uiapi.input_set_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.error_msg_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.input2job_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.input2upload_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.job2profile_id_seq to GROUP openquake;
 
 GRANT SELECT ON geography_columns TO GROUP openquake;
 GRANT SELECT ON geometry_columns TO GROUP openquake;
@@ -243,9 +245,21 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.bcr_distribution_data TO oq_reslt_wri
 GRANT SELECT ON uiapi.input TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.input TO oq_job_init;
 
+-- uiapi.input2job
+GRANT SELECT ON uiapi.input2job TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON uiapi.input2job TO oq_job_init;
+
+-- uiapi.input2upload
+GRANT SELECT ON uiapi.input2upload TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON uiapi.input2upload TO oq_job_init;
+
+-- uiapi.job2profile
+GRANT SELECT ON uiapi.job2profile TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON uiapi.job2profile TO oq_job_init;
+
 -- uiapi.oq_job
 GRANT SELECT ON uiapi.oq_job TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.oq_job TO oq_job_init;
 
 -- uiapi.job_stats
 GRANT SELECT ON uiapi.job_stats TO GROUP openquake;
@@ -256,15 +270,11 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.job_stats to oq_job_superv;
 
 -- uiapi.oq_job_profile
 GRANT SELECT ON uiapi.oq_job_profile TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job_profile TO oq_job_init;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.oq_job_profile TO oq_job_init;
 
 -- uiapi.output
 GRANT SELECT ON uiapi.output TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON uiapi.output TO oq_reslt_writer;
-
--- uiapi.input_set
-GRANT SELECT ON uiapi.input_set TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.input_set TO oq_job_init;
 
 -- uiapi.upload
 GRANT SELECT ON uiapi.upload TO GROUP openquake;

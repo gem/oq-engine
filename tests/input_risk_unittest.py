@@ -20,14 +20,16 @@
 import unittest
 import os
 
-from openquake.shapes import Site
+from openquake.calculators.risk.classical.core import ClassicalRiskCalculator
+from openquake.calculators.risk.event_based.core import (
+    EventBasedRiskCalculator)
+from openquake.db import models
 from openquake.input.exposure import ExposureDBWriter
 from openquake.output.hazard import GmfDBWriter
 from openquake.output.hazard import HazardCurveDBWriter
 from openquake.parser.exposure import ExposureModelFile
-from openquake.calculators.risk.classical.core import ClassicalRiskCalculator
-from openquake.calculators.risk.event_based.core import (
-    EventBasedRiskCalculator)
+from openquake.shapes import Site
+
 from tests.utils import helpers
 
 TEST_FILE = 'exposure-portfolio.xml'
@@ -215,8 +217,8 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         cls.teardown_job(cls.job)
 
     def setUp(self):
-        self.writer = ExposureDBWriter(self.job.oq_job_profile.input_set,
-                                       self.path)
+        [input] = models.inputs4job(self.job.id, input_type="exposure")
+        self.writer = ExposureDBWriter(input)
 
     def test_read_exposure(self):
         parser = ExposureModelFile(self.path)
@@ -230,11 +232,10 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertFalse(model is None)
 
         # Make sure the exposure model is associated with the proper
-        # input and input set.
+        # input and job.
         self.assertEqual(self.path, model.input.path)
         self.assertEqual("exposure", model.input.input_type)
-        self.assertEqual(self.job.oq_job_profile.input_set,
-                         model.input.input_set)
+        self.assertEqual(1, len(models.inputs4job(self.job.id)))
 
         # check model fields
         self.assertEqual("Collection of existing building in downtown Pavia",
