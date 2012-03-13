@@ -21,8 +21,10 @@ import uuid
 from django.contrib.gis.geos import GEOSGeometry
 from django.core.exceptions import ObjectDoesNotExist
 
-from openquake import engine
+from openquake.calculators.risk.event_based import core
 from openquake.db import models
+from openquake import engine
+from openquake import shapes
 
 from tests.utils import helpers
 
@@ -212,7 +214,6 @@ class EngineAPITestCase(unittest.TestCase):
             self.assertTrue(
                 models.model_equals(exp_inp, act_inp,
                                     ignore=('id',  'last_update',
-                                            '_input_set_cache',
                                             '_owner_cache')))
 
 
@@ -307,3 +308,24 @@ class EngineLaunchCalcTestCase(unittest.TestCase):
             p.stop()
         for p in risk_patchers:
             p.stop()
+
+
+class ReadSitesFromExposureTestCase(unittest.TestCase):
+
+    def test_read_sites_from_exposure(self):
+        # Test reading site data from an exposure file using
+        # :py:function:`openquake.risk.read_sites_from_exposure`.
+        job_cfg = helpers.testdata_path('simplecase/config.gem')
+
+        test_job = helpers.job_from_file(job_cfg)
+        calc = core.EventBasedRiskCalculator(test_job)
+        calc.store_exposure_assets()
+
+        expected_sites = set([
+            shapes.Site(-118.077721, 33.852034),
+            shapes.Site(-118.067592, 33.855398),
+            shapes.Site(-118.186739, 33.779013)])
+
+        actual_sites = set(engine.read_sites_from_exposure(test_job))
+
+        self.assertEqual(expected_sites, actual_sites)
