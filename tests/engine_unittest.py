@@ -22,15 +22,17 @@ from django.contrib.gis.geos import GEOSGeometry
 from django.core.exceptions import ObjectDoesNotExist
 
 from openquake import engine
-from openquake.db.models import model_equals
+from openquake import shapes
+from openquake.calculators.risk.event_based.core import (
+    EventBasedRiskCalculator)
 from openquake.db.models import Input
 from openquake.db.models import InputSet
 from openquake.db.models import OqJob
 from openquake.db.models import OqJobProfile
 from openquake.db.models import OqUser
+from openquake.db.models import model_equals
 
-from tests.utils.helpers import demo_file
-from tests.utils.helpers import patch
+from tests.utils import helpers
 
 
 class EngineAPITestCase(unittest.TestCase):
@@ -43,7 +45,7 @@ class EngineAPITestCase(unittest.TestCase):
         # returns a dict of the config params and a list of config file
         # sections.
 
-        cfg_path = demo_file('HazardMapTest/config.gem')
+        cfg_path = helpers.demo_file('HazardMapTest/config.gem')
 
         # Default 'openquake' user:
         owner = OqUser.objects.get(user_name='openquake')
@@ -52,21 +54,21 @@ class EngineAPITestCase(unittest.TestCase):
 
         smlt_input = Input(
             input_set=expected_input_set,
-            path=os.path.abspath(demo_file(
+            path=os.path.abspath(helpers.demo_file(
                 'HazardMapTest/source_model_logic_tree.xml')),
             input_type='lt_source',
             size=671)
 
         gmpelt_input = Input(
             input_set=expected_input_set,
-            path=os.path.abspath(demo_file(
+            path=os.path.abspath(helpers.demo_file(
                 'HazardMapTest/gmpe_logic_tree.xml')),
             input_type='lt_gmpe',
             size=709)
 
         src_model_input = Input(
             input_set=expected_input_set,
-            path=os.path.abspath(demo_file(
+            path=os.path.abspath(helpers.demo_file(
                 'HazardMapTest/source_model.xml')),
             input_type='source',
             size=1644)
@@ -142,7 +144,7 @@ class EngineAPITestCase(unittest.TestCase):
             'AREA_SOURCE_DISCRETIZATION': '0.1',
             'AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP':
                 'W&C 1994 Mag-Length Rel.',
-            'BASE_PATH': os.path.abspath(demo_file('HazardMapTest')),
+            'BASE_PATH': os.path.abspath(helpers.demo_file('HazardMapTest')),
             'CALCULATION_MODE': 'Classical',
             'COMPONENT': 'Average Horizontal (GMRotI50)',
             'COMPUTE_MEAN_HAZARD_CURVE': 'true',
@@ -154,7 +156,7 @@ class EngineAPITestCase(unittest.TestCase):
             'FAULT_RUPTURE_OFFSET': '1.0',
             'FAULT_SURFACE_DISCRETIZATION': '1.0',
             'GMPE_LOGIC_TREE_FILE': os.path.abspath(
-                demo_file('HazardMapTest/gmpe_logic_tree.xml')),
+                helpers.demo_file('HazardMapTest/gmpe_logic_tree.xml')),
             'GMPE_LT_RANDOM_SEED': '5',
             'GMPE_TRUNCATION_TYPE': '2 Sided',
             'GRID_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP':
@@ -185,7 +187,8 @@ class EngineAPITestCase(unittest.TestCase):
             'RUPTURE_FLOATING_TYPE': 'Along strike and down dip',
             'SADIGH_SITE_TYPE': 'Rock',
             'SOURCE_MODEL_LOGIC_TREE_FILE': os.path.abspath(
-                demo_file('HazardMapTest/source_model_logic_tree.xml')),
+                helpers.demo_file(
+                    'HazardMapTest/source_model_logic_tree.xml')),
             'SOURCE_MODEL_LT_RANDOM_SEED': '23',
             'STANDARD_DEVIATION_TYPE': 'Total',
             'SUBDUCTION_FAULT_MAGNITUDE_SCALING_RELATIONSHIP':
@@ -239,7 +242,7 @@ class EngineAPITestCase(unittest.TestCase):
         self.assertRaises(ObjectDoesNotExist, OqUser.objects.get,
                           user_name=user_name)
 
-        cfg_path = demo_file('HazardMapTest/config.gem')
+        cfg_path = helpers.demo_file('HazardMapTest/config.gem')
 
         job_profile, _params, _sections = engine.import_job_profile(
             cfg_path, user_name=user_name)
@@ -252,19 +255,19 @@ class EngineAPITestCase(unittest.TestCase):
     def test_run_job_deletes_job_counters(self):
         # This test ensures that
         # :function:`openquake.utils.stats.delete_job_counters` is called
-        cfg_path = demo_file('HazardMapTest/config.gem')
+        cfg_path = helpers.demo_file('HazardMapTest/config.gem')
 
         job_profile, params, sections = engine.import_job_profile(cfg_path)
 
         # We don't want any of the supervisor/executor forking to happen; it's
         # not necessary. Also, forking should not happen in the context of a
         # test run.
-        with patch('os.fork', mocksignature=False) as fork_mock:
+        with helpers.patch('os.fork', mocksignature=False) as fork_mock:
             # Fake return val for fork:
             fork_mock.return_value = 0
             # And we don't actually want to run the job.
-            with patch('openquake.engine._launch_job'):
-                with patch(
+            with helpers.patch('openquake.engine._launch_job'):
+                with helpers.patch(
                     'openquake.utils.stats.delete_job_counters') as djc_mock:
                     engine.run_job(job_profile, params, sections)
 
@@ -284,7 +287,7 @@ class EngineLaunchCalcTestCase(unittest.TestCase):
         # called once per job type (hazard, risk).
 
         # Calculation setup:
-        cfg_file = demo_file('classical_psha_based_risk/config.gem')
+        cfg_file = helpers.demo_file('classical_psha_based_risk/config.gem')
 
         job_profile, params, sections = engine.import_job_profile(cfg_file)
         job = OqJob(owner=job_profile.owner,
@@ -302,8 +305,10 @@ class EngineLaunchCalcTestCase(unittest.TestCase):
         cls_risk_calc = ('openquake.calculators.risk.classical.core'
                          '.ClassicalRiskCalculator')
         methods = ('initialize', 'pre_execute', 'execute', 'post_execute')
-        haz_patchers = [patch('%s.%s' % (cls_haz_calc, m)) for m in methods]
-        risk_patchers = [patch('%s.%s' % (cls_risk_calc, m)) for m in methods]
+        haz_patchers = [helpers.patch('%s.%s' % (cls_haz_calc, m))
+                        for m in methods]
+        risk_patchers = [helpers.patch('%s.%s' % (cls_risk_calc, m))
+                         for m in methods]
 
         haz_mocks = [p.start() for p in haz_patchers]
         risk_mocks = [p.start() for p in risk_patchers]
@@ -319,3 +324,24 @@ class EngineLaunchCalcTestCase(unittest.TestCase):
             p.stop()
         for p in risk_patchers:
             p.stop()
+
+
+class ReadSitesFromExposureTestCase(unittest.TestCase):
+
+    def test_read_sites_from_exposure(self):
+        # Test reading site data from an exposure file using
+        # :py:function:`openquake.risk.read_sites_from_exposure`.
+        job_cfg = helpers.testdata_path('simplecase/config.gem')
+
+        test_job = helpers.job_from_file(job_cfg)
+        calc = EventBasedRiskCalculator(test_job)
+        calc.store_exposure_assets()
+
+        expected_sites = set([
+            shapes.Site(-118.077721, 33.852034),
+            shapes.Site(-118.067592, 33.855398),
+            shapes.Site(-118.186739, 33.779013)])
+
+        actual_sites = set(engine.read_sites_from_exposure(test_job))
+
+        self.assertEqual(expected_sites, actual_sites)

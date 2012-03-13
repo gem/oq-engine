@@ -30,18 +30,20 @@ from django.contrib.gis.geos.collections import MultiPoint
 from openquake import engine
 from openquake import kvs
 from openquake import shapes
-from openquake.engine import _get_source_models
-from openquake.engine import _parse_config_file
-from openquake.engine import _prepare_config_parameters
-from openquake.engine import _prepare_job
-from openquake.engine import JobContext
-from openquake.engine import import_job_profile
-from openquake.job import config
-from openquake.job.params import config_text_to_list
+from openquake.calculators.risk.event_based.core import (
+    EventBasedRiskCalculator)
 from openquake.db.models import JobStats
 from openquake.db.models import OqJob
 from openquake.db.models import OqJobProfile
 from openquake.db.models import OqUser
+from openquake.engine import JobContext
+from openquake.engine import _get_source_models
+from openquake.engine import _parse_config_file
+from openquake.engine import _prepare_config_parameters
+from openquake.engine import _prepare_job
+from openquake.engine import import_job_profile
+from openquake.job import config
+from openquake.job.params import config_text_to_list
 
 from tests.utils import helpers
 from tests.utils.helpers import patch
@@ -836,46 +838,29 @@ class RunJobTestCase(unittest.TestCase):
         self.assertEquals(expected_sites, engine.sites_to_compute())
 
     def test_with_risk_jobs_we_can_trigger_hazard_only_on_exposure_sites(self):
-        """When we have hazard and risk jobs, we can ask to trigger
-        the hazard computation only on the sites specified
-        in the exposure file."""
+        # When we have hazard and risk jobs, we can ask to trigger
+        #the hazard computation only on the sites specified
+        # in the exposure file.
 
-        sections = [config.HAZARD_SECTION,
-                config.GENERAL_SECTION, config.RISK_SECTION]
+        job_cfg = helpers.testdata_path('simplecase/config.gem')
 
-        input_region = "46.0, 9.0, 46.0, 10.0, 45.0, 10.0, 45.0, 9.0"
+        job_profile, params, sections = engine.import_job_profile(job_cfg)
+        params['COMPUTE_HAZARD_AT_ASSETS_LOCATIONS'] = True
 
-        exposure = "exposure-portfolio.xml"
-        exposure_path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, exposure)
+        job_ctxt = engine.JobContext(
+            params, 0, sections=sections, oq_job_profile=job_profile)
 
-        params = {config.INPUT_REGION: input_region,
-                config.REGION_GRID_SPACING: 0.1,
-                config.EXPOSURE: exposure_path,
-                config.COMPUTE_HAZARD_AT_ASSETS: True}
+        calc = EventBasedRiskCalculator(job_ctxt)
+        calc.store_exposure_assets()
 
-        engine = helpers.create_job(params, sections=sections, base_path=".")
-
-        expected_sites = [shapes.Site(9.15000, 45.16667),
-                shapes.Site(9.15333, 45.12200), shapes.Site(9.14777, 45.17999)]
-
-        self.assertEquals(expected_sites, engine.sites_to_compute())
-
-    def test_read_sites_from_exposure(self):
-        """
-        Test reading site data from an exposure file using
-        :py:function:`openquake.risk.read_sites_from_exposure`.
-        """
-        job_config_file = helpers.testdata_path('simplecase/config.gem')
-
-        test_job = helpers.job_from_file(job_config_file)
-
-        expected_sites = [
+        expected_sites = set([
             shapes.Site(-118.077721, 33.852034),
             shapes.Site(-118.067592, 33.855398),
-            shapes.Site(-118.186739, 33.779013)]
+            shapes.Site(-118.186739, 33.779013)])
 
-        self.assertEqual(expected_sites,
-            engine.read_sites_from_exposure(test_job))
+        actual_sites = set(job_ctxt.sites_to_compute())
+
+        self.assertEqual(expected_sites, actual_sites)
 
     def test_supervisor_is_spawned(self):
         with patch('openquake.engine._job_from_file'):
