@@ -28,6 +28,36 @@ from django.contrib.gis.db import models
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
 
+def profile4job(job_id):
+    """Return the job profile for the given job.
+
+    :param int job_id: identifier of the job in question
+    :returns: a :py:class:`openquake.db.models.OqJobProfile` instance
+    """
+    [j2p] = Job2profile.objects.extra(where=["oq_job_id=%s"], params=[job_id])
+    return j2p.oq_job_profile
+
+
+def inputs4job(job_id, input_type=None, path=None):
+    """Return the inputs for the given job, input type and path.
+
+    :param int job_id: identifier of the job in question
+    :param str input_type: a valid input type
+    :param str path: the path of the desired input.
+    :returns: a list of :py:class:`openquake.db.models.Input` instances
+    """
+    i2js = Input2job.objects.extra(where=["oq_job_id=%s"], params=[job_id])
+    if not input_type and not path:
+        return list(i.input for i in i2js.all())
+    qargs = []
+    if input_type:
+        qargs.append(("input__input_type", input_type))
+    if path:
+        qargs.append(("input__path", path))
+    qargs = dict(qargs)
+    return list(i.input for i in i2js.filter(**qargs))
+
+
 def per_asset_value(exd):
     """Return per-asset value for the given exposure data set.
 
@@ -524,23 +554,11 @@ class Upload(models.Model):
         db_table = 'uiapi\".\"upload'
 
 
-class InputSet(models.Model):
-    '''
-    Set of input files for an OpenQuake job
-    '''
-    owner = models.ForeignKey('OqUser')
-    upload = models.ForeignKey('Upload', null=True)
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:  # pylint: disable=C0111,W0232
-        db_table = 'uiapi\".\"input_set'
-
-
 class Input(models.Model):
     '''
     A single OpenQuake input file uploaded by the user
     '''
-    input_set = models.ForeignKey('InputSet')
+    owner = models.ForeignKey('OqUser')
     path = models.TextField()
     INPUT_TYPE_CHOICES = (
         (u'unknown', u'Unknown'),
@@ -561,6 +579,28 @@ class Input(models.Model):
         db_table = 'uiapi\".\"input'
 
 
+class Input2job(models.Model):
+    '''
+    Associates input model files and jobs.
+    '''
+    input = models.ForeignKey('Input')
+    oq_job = models.ForeignKey('OqJob')
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'uiapi\".\"input2job'
+
+
+class Input2upload(models.Model):
+    '''
+    Associates input model files and uploads.
+    '''
+    input = models.ForeignKey('Input')
+    upload = models.ForeignKey('Upload')
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'uiapi\".\"input2upload'
+
+
 class OqJob(models.Model):
     '''
     An OpenQuake engine run started by the user
@@ -578,8 +618,11 @@ class OqJob(models.Model):
     duration = models.IntegerField(default=0)
     job_pid = models.IntegerField(default=0)
     supervisor_pid = models.IntegerField(default=0)
-    oq_job_profile = models.ForeignKey('OqJobProfile')
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    def profile(self):
+        """Return the associated job prfile."""
+        return profile4job(self.id)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"oq_job'
@@ -602,6 +645,17 @@ class JobStats(models.Model):
         db_table = 'uiapi\".\"job_stats'
 
 
+class Job2profile(models.Model):
+    '''
+    Associates jobs with their profiles.
+    '''
+    oq_job = models.ForeignKey('OqJob')
+    oq_job_profile = models.ForeignKey('OqJobProfile')
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'uiapi\".\"job2profile'
+
+
 class OqJobProfile(models.Model):
     '''
     Parameters needed to run an OpenQuake job
@@ -621,7 +675,6 @@ class OqJobProfile(models.Model):
     )
     calc_mode = models.TextField(choices=CALC_MODE_CHOICES)
     job_type = CharArrayField()
-    input_set = models.ForeignKey('InputSet')
     min_magnitude = models.FloatField(null=True)
     investigation_time = models.FloatField(null=True)
     COMPONENT_CHOICES = (

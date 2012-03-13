@@ -35,14 +35,13 @@ class ExposureDBWriter(object):
         ("reco_type", "recoType"), ("reco_unit", "recoUnit"),
         ("stco_type", "stcoType"), ("stco_unit", "stcoUnit")]
 
-    def __init__(self, input_set, path, owner=None):
+    def __init__(self, smi, owner=None):
         """Create a new serializer for the specified user"""
-        qargs = dict(input_type="exposure", path=path)
-        [self.input] = input_set.input_set.filter(**qargs)
+        self.smi = smi
         if owner:
             self.owner = owner
         else:
-            self.owner = models.OqUser.objects.get(user_name="openquake")
+            self.owner = smi.owner
         self.model = None
 
     @transaction.commit_on_success(router.db_for_write(models.ExposureModel))
@@ -72,7 +71,7 @@ class ExposureDBWriter(object):
         """
         if not self.model:
             self.model = models.ExposureModel(
-                owner=self.owner, input=self.input,
+                owner=self.owner, input=self.smi,
                 description=values.get("listDescription"),
                 taxonomy_source=values.get("taxonomySource"),
                 category=values["assetCategory"])
