@@ -119,7 +119,7 @@ class BaseMapXMLWriter(nrml.TreeNRMLWriter):
 
         # set the rest of the map container attributes
         for key in self.METADATA:
-            self.map_container.set(key, metadata.get(key, self.UNDEFINED))
+            self.map_container.set(key, str(metadata.get(key, self.UNDEFINED)))
 
     def _generate_map_node(self, site):
         """ convenience method to generate a new map node """
@@ -240,17 +240,19 @@ class LossMapNonScenarioXMLWriter(BaseMapXMLWriter):
     MAP_NODE_TAG = xml.RISK_LMNODE_TAG
 
     # method could be a function pylint: disable=R0201
-    def handle_map_node_for_asset(self, lmnode_el, loss_dict, asset_dict):
+    def handle_map_node_for_asset(self, lmnode_el, loss_dict, asset):
         """
         Create a new asset loss node under a pre-existing parent LMNode.
-        """
-        loss_el = etree.SubElement(lmnode_el,
-                                xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
 
-        loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_ATTR,
-                    str(asset_dict['assetID']))
-        value = etree.SubElement(
-            loss_el, xml.RISK_LOSS_MAP_VALUE)
+        :param asset: asset to serialize.
+        :type asset: instance of :py:class:`openquake.db.models.ExposureData`
+        """
+
+        loss_el = etree.SubElement(
+                lmnode_el, xml.RISK_LOSS_MAP_LOSS_CONTAINER_TAG)
+
+        loss_el.set(xml.RISK_LOSS_MAP_ASSET_REF_ATTR, str(asset.asset_ref))
+        value = etree.SubElement(loss_el, xml.RISK_LOSS_MAP_VALUE)
         value.text = "%s" % loss_dict['value']
 
 
