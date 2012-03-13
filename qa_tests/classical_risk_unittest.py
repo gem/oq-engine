@@ -90,6 +90,9 @@ class ClassicalRiskQATestCase(unittest.TestCase):
             'hazardcurve-mean.xml',
             'losscurves-block-#%s-block#0.xml' % job.id,
             'losscurves-loss-block-#%s-block#0.xml' % job.id,
+            'losses_at-0.01.xml',
+            'losses_at-0.02.xml',
+            'losses_at-0.05.xml'
         ]
 
         for f in expected_files:
