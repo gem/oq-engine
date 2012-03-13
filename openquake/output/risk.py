@@ -243,7 +243,7 @@ class LossMapNonScenarioXMLWriter(BaseMapXMLWriter):
     def handle_map_node_for_asset(self, lmnode_el, loss_dict, asset):
         """
         Create a new asset loss node under a pre-existing parent LMNode.
-        
+
         :param asset: asset to serialize.
         :type asset: instance of :py:class:`openquake.db.models.ExposureData`
         """
