@@ -815,7 +815,6 @@ class RunJobTestCase(unittest.TestCase):
 
         self.assertEqual(expected_sites, engine.sites_to_compute())
 
-
     def test_supervisor_is_spawned(self):
         with patch('openquake.engine._job_from_file'):
 
