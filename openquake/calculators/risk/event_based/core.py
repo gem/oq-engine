@@ -288,9 +288,9 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                 vuln_function, gmf_slice, epsilon_provider, asset,
                 self.job_ctxt.oq_job_profile.loss_histogram_bins,
                 loss_ratios=loss_ratios)
-            
-            aggregate_curve.append(loss_ratios * asset.value)    
-            
+
+            aggregate_curve.append(loss_ratios * asset.value)
+
             return loss_ratio_curve.rescale_abscissae(asset.value)
 
         result = general.compute_bcr_for_block(self.job_ctxt.job_id, points,
