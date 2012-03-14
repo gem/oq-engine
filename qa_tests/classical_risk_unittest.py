@@ -45,8 +45,8 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         self._verify_loss_maps()
 
     def _verify_loss_maps(self):
-        xpath = '{%(ns)s}riskResult/{%(ns)s}lossMap/' \
-                '{%(ns)s}LMNode/{%(ns)s}loss/{%(ns)s}value'
+        xpath = ('{%(ns)s}riskResult/{%(ns)s}lossMap/'
+                '{%(ns)s}LMNode/{%(ns)s}loss/{%(ns)s}value')
 
         filename = "%s/losses_at-0.01.xml" % OUTPUT_DIR
         expected_closs = 0.264530582
@@ -66,9 +66,9 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         filename = "%s/losscurves-block-#%s-block#0.xml" % (
                 OUTPUT_DIR, job.id)
 
-        xpath = '{%(ns)s}riskResult/{%(ns)s}lossRatioCurveList/' \
-                '{%(ns)s}asset/{%(ns)s}lossRatioCurves/{%(ns)s}' \
-                'lossRatioCurve/{%(ns)s}poE'
+        xpath = ('{%(ns)s}riskResult/{%(ns)s}lossRatioCurveList/'
+                '{%(ns)s}asset/{%(ns)s}lossRatioCurves/{%(ns)s}'
+                'lossRatioCurve/{%(ns)s}poE')
 
         poes = [float(x) for x in self._get(filename, xpath).split()]
 
@@ -81,9 +81,9 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(
                 poes, expected_poes, atol=0.000005, rtol=0.05))
 
-        xpath = '{%(ns)s}riskResult/{%(ns)s}lossRatioCurveList/' \
-                '{%(ns)s}asset/{%(ns)s}lossRatioCurves/' \
-                '{%(ns)s}lossRatioCurve/{%(ns)s}lossRatio'
+        xpath = ('{%(ns)s}riskResult/{%(ns)s}lossRatioCurveList/'
+                '{%(ns)s}asset/{%(ns)s}lossRatioCurves/'
+                '{%(ns)s}lossRatioCurve/{%(ns)s}lossRatio')
 
         loss_ratios = [float(x) for x in self._get(filename, xpath).split()]
 
@@ -100,9 +100,9 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         filename = "%s/losscurves-loss-block-#%s-block#0.xml" % (
                 OUTPUT_DIR, job.id)
 
-        xpath = '{%(ns)s}riskResult/{%(ns)s}lossCurveList/' \
-                '{%(ns)s}asset/{%(ns)s}lossCurves/' \
-                '{%(ns)s}lossCurve/{%(ns)s}poE'
+        xpath = ('{%(ns)s}riskResult/{%(ns)s}lossCurveList/'
+                '{%(ns)s}asset/{%(ns)s}lossCurves/'
+                '{%(ns)s}lossCurve/{%(ns)s}poE')
 
         poes = [float(x) for x in self._get(filename, xpath).split()]
 
@@ -115,9 +115,9 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(
                 poes, expected_poes, atol=0.000005, rtol=0.05))
 
-        xpath = '{%(ns)s}riskResult/{%(ns)s}lossCurveList/' \
-                '{%(ns)s}asset/{%(ns)s}lossCurves/' \
-                '{%(ns)s}lossCurve/{%(ns)s}loss'
+        xpath = ('{%(ns)s}riskResult/{%(ns)s}lossCurveList/'
+                '{%(ns)s}asset/{%(ns)s}lossCurves/'
+                '{%(ns)s}lossCurve/{%(ns)s}loss')
 
         losses = [float(x) for x in self._get(filename, xpath).split()]
 
