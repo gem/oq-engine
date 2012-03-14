@@ -32,7 +32,6 @@ from openquake import java
 from openquake import kvs
 from openquake import shapes
 from openquake.engine import JobContext
-from openquake.db.models import OqJob
 from openquake.calculators.hazard.scenario import core as scenario
 
 SCENARIO_SMOKE_TEST = helpers.testdata_path("scenario/config.gem")
@@ -66,11 +65,9 @@ class ScenarioHazardCalculatorTestCase(unittest.TestCase):
         kvs.get_client().flushall()
 
         base_path = helpers.testdata_path("scenario")
+        job = engine.prepare_job()
         self.job_profile, self.params, self.sections = (
-            engine.import_job_profile(SCENARIO_SMOKE_TEST))
-        job = OqJob(owner=self.job_profile.owner,
-                                    oq_job_profile=self.job_profile)
-        job.save()
+            engine.import_job_profile(SCENARIO_SMOKE_TEST, job))
         self.job_ctxt = JobContext(
             self.params, job.id, sections=self.sections,
             base_path=base_path, oq_job_profile=self.job_profile,

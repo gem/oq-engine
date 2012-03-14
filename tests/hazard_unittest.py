@@ -37,7 +37,6 @@ from openquake import shapes
 from openquake import xml
 
 from openquake.engine import JobContext
-from openquake.db.models import OqJob
 from openquake.job.config import HazardMandatoryParamsValidator
 from openquake.job.config import PARAMS
 from openquake.kvs import tokens
@@ -290,11 +289,8 @@ class HazardEngineTestCase(unittest.TestCase):
 
         base_path = helpers.testdata_path("classical_psha_simple")
         path = helpers.testdata_path("classical_psha_simple/config.gem")
-        job_profile, params, sections = engine.import_job_profile(path)
-
-        job = OqJob(owner=job_profile.owner)
-        job.oq_job_profile = job_profile
-        job.save()
+        job = engine.prepare_job()
+        job_profile, params, sections = engine.import_job_profile(path, job)
 
         the_job = JobContext(
             params, job.id, sections=sections, base_path=base_path,
