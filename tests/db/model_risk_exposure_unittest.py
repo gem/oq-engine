@@ -44,8 +44,11 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
 
     def setUp(self):
         emdl_input = models.Input(
-            input_type="exposure", input_set=self.job.oq_job_profile.input_set,
-            size=123, path="/tmp/fake-exposure-path")
+            input_type="exposure", size=123, path="/tmp/fake-exposure-path",
+            owner=self.job.owner)
+        emdl_input.save()
+        i2j = models.Input2job(input=emdl_input, oq_job=self.job)
+        i2j.save()
         self.mdl = models.ExposureModel(input=emdl_input, owner=self.job.owner,
                                         name="exposure-model-testing",
                                         category="economic loss")
@@ -306,8 +309,11 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
 
     def setUp(self):
         emdl_input = models.Input(
-            input_type="exposure", input_set=self.job.oq_job_profile.input_set,
-            size=123, path="/tmp/fake-exposure-path")
+            input_type="exposure", size=123, path="/tmp/fake-exposure-path",
+            owner=self.job.owner)
+        emdl_input.save()
+        i2j = models.Input2job(input=emdl_input, oq_job=self.job)
+        i2j.save()
         self.mdl = models.ExposureModel(input=emdl_input, owner=self.job.owner,
                                         name="exposure-data-testing",
                                         category="economic loss")

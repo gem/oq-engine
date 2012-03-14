@@ -67,6 +67,30 @@ MAX_WAIT_LOOPS = 10
 patch = functools.partial(mock_module.patch, mocksignature=True)
 
 
+def default_user():
+    """Return the default user to be used for test setups."""
+    return models.OqUser.objects.get(user_name="openquake")
+
+
+def delete_profile(job):
+    """Disassociate the job's profile and delete it."""
+    [j2p] = models.Job2profile.objects.extra(
+        where=["oq_job_id=%s"], params=[job.id])
+    jp = j2p.oq_job_profile
+    j2p.delete()
+    jp.delete()
+
+
+def insert_inputs(job, inputs):
+    """Insert the input records for the given data and job."""
+    for imt, imp in inputs:
+        iobj = models.Input(path=imp, input_type=imt, owner=job.owner,
+                            size=random.randint(1024, 16 * 1024))
+        iobj.save()
+        i2j = models.Input2job(input=iobj, oq_job=job)
+        i2j.save()
+
+
 def _patched_mocksignature(func, mock=None, skipfirst=False):
     """
     Fixes arguments order and support of staticmethods in mock.mocksignature.
@@ -518,9 +542,6 @@ class DbTestCase(object):
     IMLS = [0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527,
             0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778]
 
-    def default_user(self):
-        return models.OqUser.objects.get(user_name="openquake")
-
     @staticmethod
     def teardown_upload(upload, filesystem_only=True):
         """
@@ -540,46 +561,18 @@ class DbTestCase(object):
         upload.delete()
 
     @staticmethod
-    def teardown_input_set(input_set, filesystem_only):
-        if input_set.upload is not None:
-            DbTestCase.teardown_upload(input_set.upload,
-                                       filesystem_only=filesystem_only)
+    def teardown_inputs(inputs, filesystem_only):
         if filesystem_only:
             return
-        input_set.delete()
+        [input.delete() for input in inputs]
 
     @classmethod
-    def setup_classic_job(cls, create_job_path=True, upload_id=None,
-                          inputs=None):
-        """Create a classic job with associated upload and inputs.
-
-        :param bool create_job_path: if set the path for the job will be
-            created and captured in the job record
-        :param integer upload_id: if set use upload record with given db key.
-        :param list inputs: a list of 2-tuples where the first and the second
-            element are the input type and path respectively
-        :returns: a :py:class:`db.models.OqJob` instance
-        """
-        assert upload_id is None  # temporary
-
-        owner = models.OqUser.objects.get(user_name="openquake")
-
-        input_set = models.InputSet(owner=owner)
-        input_set.save()
-
-        # Insert input model files
-        if inputs:
-            for imt, imp in inputs:
-                iobj = models.Input(input_set=input_set, path=imp,
-                                    input_type=imt,
-                                    size=random.randint(1024, 16 * 1024))
-                iobj.save()
-
+    def setup_job_profile(cls, job):
+        """Create a profile for the given job."""
         oqjp = models.OqJobProfile()
-        oqjp.owner = owner
+        oqjp.owner = job.owner
         oqjp.calc_mode = "classical"
         oqjp.job_type = ['hazard']
-        oqjp.input_set = input_set
         oqjp.region_grid_spacing = 0.01
         oqjp.min_magnitude = 5.0
         oqjp.investigation_time = 50.0
@@ -630,9 +623,29 @@ class DbTestCase(object):
         oqjp.source_model_lt_random_seed = 23
         oqjp.gmpe_lt_random_seed = 5
         oqjp.save()
+        return oqjp
 
-        job = models.OqJob(oq_job_profile=oqjp, owner=owner)
-        job.save()
+    @classmethod
+    def setup_classic_job(cls, create_job_path=True, upload_id=None,
+                          inputs=None):
+        """Create a classic job with associated upload and inputs.
+
+        :param bool create_job_path: if set the path for the job will be
+            created and captured in the job record
+        :param integer upload_id: if set use upload record with given db key.
+        :param list inputs: a list of 2-tuples where the first and the second
+            element are the input type and path respectively
+        :returns: a :py:class:`db.models.OqJob` instance
+        """
+        assert upload_id is None  # temporary
+
+        job = engine.prepare_job()
+        oqjp = cls.setup_job_profile(job)
+        models.Job2profile(oq_job=job, oq_job_profile=oqjp).save()
+
+        # Insert input model files
+        if inputs:
+            insert_inputs(job, inputs)
 
         if create_job_path:
             job.path = os.path.join(tempfile.mkdtemp(), str(job.id))
@@ -649,22 +662,24 @@ class DbTestCase(object):
         Tear down the file system (and potentially db) artefacts for the
         given job.
 
-        :param job: the :py:class:`db.models.OqJob` instance
-            in question
+        :param job: a :py:class:`db.models.OqJob` instance
         :param bool filesystem_only: if set the oq_job/oq_param/upload/
             input database records will be left intact. This saves time and the
             test db will be dropped/recreated prior to the next db test suite
             run anyway.
         """
-        oqjp = job.oq_job_profile
-        if oqjp.input_set is not None:
-            DbTestCase.teardown_input_set(oqjp.input_set,
-                                          filesystem_only=filesystem_only)
+        DbTestCase.teardown_inputs(models.inputs4job(job.id),
+                                   filesystem_only=filesystem_only)
         if filesystem_only:
             return
 
         job.delete()
-        oqjp.delete()
+        try:
+            oqjp = models.profile4job(job.id)
+            oqjp.delete()
+        except ValueError:
+            # no job profile for this job
+            pass
 
     def generate_output_path(self, job, output_type="hazard_map"):
         """Return a random output path for the given job."""
