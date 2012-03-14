@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import numpy
 import os
 import unittest
@@ -46,7 +45,8 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         self._verify_loss_maps()
 
     def _verify_loss_maps(self):
-        xpath = '{%(ns)s}riskResult/{%(ns)s}lossMap/{%(ns)s}LMNode/{%(ns)s}loss/{%(ns)s}value'
+        xpath = '{%(ns)s}riskResult/{%(ns)s}lossMap/' \
+                '{%(ns)s}LMNode/{%(ns)s}loss/{%(ns)s}value'
 
         filename = "%s/losses_at-0.01.xml" % OUTPUT_DIR
         expected_closs = 0.264530582
@@ -66,7 +66,10 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         filename = "%s/losscurves-block-#%s-block#0.xml" % (
                 OUTPUT_DIR, job.id)
 
-        xpath = '{%(ns)s}riskResult/{%(ns)s}lossRatioCurveList/{%(ns)s}asset/{%(ns)s}lossRatioCurves/{%(ns)s}lossRatioCurve/{%(ns)s}poE'
+        xpath = '{%(ns)s}riskResult/{%(ns)s}lossRatioCurveList/' \
+                '{%(ns)s}asset/{%(ns)s}lossRatioCurves/{%(ns)s}' \
+                'lossRatioCurve/{%(ns)s}poE'
+
         poes = [float(x) for x in self._get(filename, xpath).split()]
 
         expected_poes = [0.03944, 0.03943, 0.03857, 0.03548, 0.03123, 0.02708,
@@ -78,7 +81,10 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(
                 poes, expected_poes, atol=0.000005, rtol=0.05))
 
-        xpath = '{%(ns)s}riskResult/{%(ns)s}lossRatioCurveList/{%(ns)s}asset/{%(ns)s}lossRatioCurves/{%(ns)s}lossRatioCurve/{%(ns)s}lossRatio'
+        xpath = '{%(ns)s}riskResult/{%(ns)s}lossRatioCurveList/' \
+                '{%(ns)s}asset/{%(ns)s}lossRatioCurves/' \
+                '{%(ns)s}lossRatioCurve/{%(ns)s}lossRatio'
+
         loss_ratios = [float(x) for x in self._get(filename, xpath).split()]
 
         expected_loss_ratios = [0.00, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07,
@@ -94,7 +100,10 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         filename = "%s/losscurves-loss-block-#%s-block#0.xml" % (
                 OUTPUT_DIR, job.id)
 
-        xpath = '{%(ns)s}riskResult/{%(ns)s}lossCurveList/{%(ns)s}asset/{%(ns)s}lossCurves/{%(ns)s}lossCurve/{%(ns)s}poE'
+        xpath = '{%(ns)s}riskResult/{%(ns)s}lossCurveList/' \
+                '{%(ns)s}asset/{%(ns)s}lossCurves/' \
+                '{%(ns)s}lossCurve/{%(ns)s}poE'
+
         poes = [float(x) for x in self._get(filename, xpath).split()]
 
         expected_poes = [0.03944, 0.03943, 0.03857, 0.03548, 0.03123, 0.02708,
@@ -106,7 +115,10 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(
                 poes, expected_poes, atol=0.000005, rtol=0.05))
 
-        xpath = '{%(ns)s}riskResult/{%(ns)s}lossCurveList/{%(ns)s}asset/{%(ns)s}lossCurves/{%(ns)s}lossCurve/{%(ns)s}loss'
+        xpath = '{%(ns)s}riskResult/{%(ns)s}lossCurveList/' \
+                '{%(ns)s}asset/{%(ns)s}lossCurves/' \
+                '{%(ns)s}lossCurve/{%(ns)s}loss'
+
         losses = [float(x) for x in self._get(filename, xpath).split()]
 
         expected_losses = [0.00, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16,
@@ -148,5 +160,5 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         parser = etree.XMLParser(schema=schema)
 
         tree = etree.parse(filename, parser=parser)
-        
+
         return tree.getroot().find(xpath % {'ns': NRML_NS}).text
