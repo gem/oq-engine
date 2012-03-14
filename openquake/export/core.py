@@ -14,7 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-"""Functions for getting information about completed calculations and
+"""Functions for getting information about completed jobs and
 calculation outputs, as well as exporting outputs from the database to various
 file formats."""
 
@@ -82,9 +82,8 @@ def makedirs(fn):
     return wrapped
 
 
-def get_calculations(user_name):
-    """Get the completed calculations (successful and failed) for the given
-    user_name.
+def get_jobs(user_name):
+    """Get the completed jobs (successful and failed) for the given user_name.
 
     Results are given in reverse chronological order.
 
