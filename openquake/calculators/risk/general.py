@@ -164,18 +164,14 @@ class BaseRiskCalculator(Calculator):
         return geos.Polygon(coos)
 
     @classmethod
-    def _load_exposure_model(cls, job_profile):
-        """
-        Load and cache the exposure model.
-        """
+    def _load_exposure_model(cls, job_id):
+        """Load and cache the exposure model."""
 
-        if cls._em_inputs is None or cls._em_job_id != job_profile.id:
+        if cls._em_inputs is None or cls._em_job_id != job_id:
             # This query obtains the exposure model input rows and needs to be
             # made only once in the course of a risk calculation.
-            cls._em_inputs = list(
-                job_profile.input_set.input_set.filter(input_type="exposure"))
-
-            cls._em_job_id = job_profile.id
+            cls._em_inputs = models.inputs4job(job_id, "exposure")
+            cls._em_job_id = job_id
 
     @classmethod
     def assets_for_cell(cls, job_id, lowerleft):
@@ -187,18 +183,17 @@ class BaseRiskCalculator(Calculator):
         :returns: a potentially empty list of
             :py:class:`openquake.db.models.ExposureData` instances
         """
-        jp = models.OqJob.objects.get(id=job_id).oq_job_profile
+        jp = models.profile4job(job_id)
         assert jp.region_grid_spacing is not None, "Grid spacing not known."
 
-        cls._load_exposure_model(jp)
-
+        cls._load_exposure_model(job_id)
         if not cls._em_inputs:
             return []
 
         risk_cell = cls._cell_to_polygon(lowerleft, jp.region_grid_spacing)
-        qm = models.ExposureData.objects
-        result = qm.filter(exposure_model__input__in=cls._em_inputs,
-                           site__contained=risk_cell)
+        result = models.ExposureData.objects.filter(
+            exposure_model__input__in=cls._em_inputs,
+            site__contained=risk_cell)
 
         return list(result)
 
@@ -215,8 +210,7 @@ class BaseRiskCalculator(Calculator):
             :py:class:`openquake.db.models.ExposureData` objects
         """
 
-        jp = models.OqJob.objects.get(id=job_id).oq_job_profile
-        cls._load_exposure_model(jp)
+        cls._load_exposure_model(job_id)
 
         if not cls._em_inputs:
             return []
@@ -249,12 +243,11 @@ class BaseRiskCalculator(Calculator):
 
     def store_exposure_assets(self):
         """Load exposure assets and write them to database."""
-        input_set = self.job_ctxt.oq_job_profile.input_set
-        [emdl] = input_set.input_set.filter(input_type="exposure")
+        [emdl] = models.inputs4job(self.job_ctxt.job_id, "exposure")
         path = os.path.join(self.job_ctxt.base_path, emdl.path)
 
         exposure_parser = exposure.ExposureModelFile(path)
-        writer = ExposureDBWriter(input_set, path)
+        writer = ExposureDBWriter(emdl)
         writer.serialize(exposure_parser)
 
     def store_vulnerability_model(self):
