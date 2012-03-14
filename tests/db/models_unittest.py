@@ -14,13 +14,16 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import itertools
+import string
 import unittest
 
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
-from openquake.db.models import model_equals
-from openquake.db.models import GmfData
-from openquake.db.models import Organization
+from openquake import engine
+from openquake.db import models
+
+from tests.utils import helpers
 
 
 class ModelEqualsTestCase(unittest.TestCase):
@@ -28,29 +31,31 @@ class ModelEqualsTestCase(unittest.TestCase):
     of two Django models objects."""
 
     def setUp(self):
-        self.org = Organization(name='test_name', address='test_address',
-                                url='http://www.test.com')
+        self.org = models.Organization(
+            name='test_name', address='test_address', url='http://test.com')
         self.org.save()
 
         # Now query two fresh copies of this record from the DB to test with:
-        self.o1 = Organization.objects.get(id=self.org.id)
-        self.o2 = Organization.objects.get(id=self.org.id)
+        self.o1 = models.Organization.objects.get(id=self.org.id)
+        self.o2 = models.Organization.objects.get(id=self.org.id)
 
     def test_model_equals(self):
-        self.assertTrue(model_equals(self.o1, self.o2))
+        self.assertTrue(models.model_equals(self.o1, self.o2))
 
     def test_model_equals_with_different_values(self):
         self.o1.name = 'something different'
-        self.assertFalse(model_equals(self.o1, self.o2))
+        self.assertFalse(models.model_equals(self.o1, self.o2))
 
     def test_model_equals_with_ignore(self):
         self.o1.name = 'something different'
-        self.assertTrue(model_equals(self.o1, self.o2, ignore=('name',)))
+        self.assertTrue(
+            models.model_equals(self.o1, self.o2, ignore=('name',)))
 
     def test_model_equals_with_many_ignores(self):
         self.o1.name = 'something different'
         self.o1.url = 'http://www.somethingdiff.com'
-        self.assertTrue(model_equals(self.o1, self.o2, ignore=('name', 'url')))
+        self.assertTrue(
+            models.model_equals(self.o1, self.o2, ignore=('name', 'url')))
 
     def test_model_equals_ignore_id(self):
         """Comparing two models with different ids is a special case, thus a
@@ -64,10 +69,10 @@ class ModelEqualsTestCase(unittest.TestCase):
         self.o1.id = 1
         self.o2.id = 2
 
-        self.assertTrue(model_equals(self.o1, self.o2, ignore=('id',)))
+        self.assertTrue(models.model_equals(self.o1, self.o2, ignore=('id',)))
 
     def test_model_equals_with_invalid_ignores(self):
-        self.assertTrue(model_equals(
+        self.assertTrue(models.model_equals(
             self.o1, self.o2, ignore=('not_an_attr',)))
 
     def test__state_is_always_ignored(self):
@@ -84,31 +89,131 @@ class ModelEqualsTestCase(unittest.TestCase):
         self.assertEquals('other_fake_state', self.o2.__dict__['_state'])
 
         # Now finally compare the two objects:
-        self.assertTrue(model_equals(self.o1, self.o2))
+        self.assertTrue(models.model_equals(self.o1, self.o2))
 
     def test_model_equals_different_classes(self):
-        gmf = GmfData(ground_motion=1.0)
+        gmf = models.GmfData(ground_motion=1.0)
 
-        self.assertFalse(model_equals(self.o1, gmf))
+        self.assertFalse(models.model_equals(self.o1, gmf))
 
     def test_model_equals_with_geometry(self):
-        gmf_data_1 = GmfData(
+        gmf_data_1 = models.GmfData(
             ground_motion=5.0,
             location=GEOSGeometry("POINT (30.0 10.0)"))
 
-        gmf_data_2 = GmfData(
+        gmf_data_2 = models.GmfData(
             ground_motion=5.0,
             location=GEOSGeometry("POINT (30.0 10.0)"))
 
-        self.assertTrue(model_equals(gmf_data_1, gmf_data_2))
+        self.assertTrue(models.model_equals(gmf_data_1, gmf_data_2))
 
     def test_model_equals_with_different_geometry(self):
-        gmf_data_1 = GmfData(
+        gmf_data_1 = models.GmfData(
             ground_motion=5.0,
             location=GEOSGeometry("POINT (30.0 10.0)"))
 
-        gmf_data_2 = GmfData(
+        gmf_data_2 = models.GmfData(
             ground_motion=5.0,
             location=GEOSGeometry("POINT (30.0 10.1)"))
 
-        self.assertFalse(model_equals(gmf_data_1, gmf_data_2))
+        self.assertFalse(models.model_equals(gmf_data_1, gmf_data_2))
+
+
+class Profile4JobTestCase(helpers.DbTestCase):
+    """Tests for :function:`profile4job`."""
+
+    def test_profile4job_with_existing(self):
+        # The correct job profile is found.
+        job = self.setup_classic_job()
+        self.assertIsNot(None, models.profile4job(job.id))
+
+    def test_profile4job_with_non_existing(self):
+        # No job profile is found, exception is raised.
+        self.assertRaises(ValueError, models.profile4job, -123)
+
+
+class Inputs4JobTestCase(unittest.TestCase):
+    """Tests for :function:`inputs4job`."""
+
+    sizes = itertools.count(10)
+    paths = itertools.cycle(string.ascii_lowercase)
+
+    def setUp(self):
+        self.job = engine.prepare_job()
+
+    def test_inputs4job_with_no_input(self):
+        # No inputs exist, an empty list is returned.
+        self.assertEqual([], models.inputs4job(self.job.id))
+
+    def test_inputs4job_with_single_input(self):
+        # The single input is returned.
+        inp = models.Input(owner=self.job.owner, path=self.paths.next(),
+                           input_type="exposure", size=self.sizes.next())
+        inp.save()
+        models.Input2job(oq_job=self.job, input=inp).save()
+        self.assertEqual([inp], models.inputs4job(self.job.id))
+
+    def test_inputs4job_with_wrong_input_type(self):
+        # No input is returned.
+        inp = models.Input(owner=self.job.owner, path=self.paths.next(),
+                           input_type="exposure", size=self.sizes.next())
+        inp.save()
+        models.Input2job(oq_job=self.job, input=inp).save()
+        self.assertEqual([], models.inputs4job(self.job.id, input_type="xxx"))
+
+    def test_inputs4job_with_correct_input_type(self):
+        # The exposure inputs are returned.
+        inp1 = models.Input(owner=self.job.owner, path=self.paths.next(),
+                            input_type="exposure", size=self.sizes.next())
+        inp1.save()
+        models.Input2job(oq_job=self.job, input=inp1).save()
+        inp2 = models.Input(owner=self.job.owner, path=self.paths.next(),
+                            input_type="rupture", size=self.sizes.next())
+        inp2.save()
+        models.Input2job(oq_job=self.job, input=inp2).save()
+        inp3 = models.Input(owner=self.job.owner, path=self.paths.next(),
+                            input_type="exposure", size=self.sizes.next())
+        inp3.save()
+        models.Input2job(oq_job=self.job, input=inp3).save()
+        self.assertEqual([inp1, inp3],
+                         models.inputs4job(self.job.id, input_type="exposure"))
+
+    def test_inputs4job_with_wrong_path(self):
+        # No input is returned.
+        inp = models.Input(owner=self.job.owner, path=self.paths.next(),
+                           input_type="exposure", size=self.sizes.next())
+        inp.save()
+        models.Input2job(oq_job=self.job, input=inp).save()
+        self.assertEqual([], models.inputs4job(self.job.id, path="xyz"))
+
+    def test_inputs4job_with_correct_path(self):
+        # The exposure inputs are returned.
+        inp1 = models.Input(owner=self.job.owner, path=self.paths.next(),
+                            input_type="exposure", size=self.sizes.next())
+        inp1.save()
+        models.Input2job(oq_job=self.job, input=inp1).save()
+        path = self.paths.next()
+        inp2 = models.Input(owner=self.job.owner, path=path,
+                            input_type="rupture", size=self.sizes.next())
+        inp2.save()
+        models.Input2job(oq_job=self.job, input=inp2).save()
+        self.assertEqual([inp2], models.inputs4job(self.job.id, path=path))
+
+    def test_inputs4job_with_correct_input_type_and_path(self):
+        # The source inputs are returned.
+        inp1 = models.Input(owner=self.job.owner, path=self.paths.next(),
+                            input_type="source", size=self.sizes.next())
+        inp1.save()
+        models.Input2job(oq_job=self.job, input=inp1).save()
+        path = self.paths.next()
+        inp2 = models.Input(owner=self.job.owner, path=path,
+                            input_type="source", size=self.sizes.next())
+        inp2.save()
+        models.Input2job(oq_job=self.job, input=inp2).save()
+        inp3 = models.Input(owner=self.job.owner, path=self.paths.next(),
+                            input_type="source", size=self.sizes.next())
+        inp3.save()
+        models.Input2job(oq_job=self.job, input=inp3).save()
+        self.assertEqual(
+            [inp2],
+            models.inputs4job(self.job.id, input_type="source", path=path))

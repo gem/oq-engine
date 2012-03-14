@@ -61,8 +61,8 @@ class LossCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestCase):
         inputs = [("exposure", path)]
         self.job = self.setup_classic_job(inputs=inputs)
 
-        qargs = dict(input_type="exposure", path=path)
-        [input] = self.job.oq_job_profile.input_set.input_set.filter(**qargs)
+        [input] = models.inputs4job(self.job.id, input_type="exposure",
+                                    path=path)
         owner = models.OqUser.objects.get(user_name="openquake")
         emdl = models.ExposureModel(
             owner=owner, input=input, description="LCB test exposure model",
@@ -236,8 +236,8 @@ class LossMapDBBaseTestCase(unittest.TestCase, helpers.DbTestCase):
         inputs = [("exposure", path)]
         self.job = self.setup_classic_job(inputs=inputs)
 
-        qargs = dict(input_type="exposure", path=path)
-        [input] = self.job.oq_job_profile.input_set.input_set.filter(**qargs)
+        [input] = models.inputs4job(self.job.id, input_type="exposure",
+                                    path=path)
         owner = models.OqUser.objects.get(user_name="openquake")
         emdl = models.ExposureModel(
             owner=owner, input=input, description="LMB test exposure model",

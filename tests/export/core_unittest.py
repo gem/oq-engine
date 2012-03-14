@@ -23,7 +23,7 @@ import uuid
 from django.core.exceptions import ObjectDoesNotExist
 
 from openquake.db import models
-from openquake.engine import import_job_profile
+from openquake import engine
 from openquake.export import core as export
 
 from tests.utils import helpers
@@ -34,15 +34,15 @@ class BaseExportTestCase(unittest.TestCase):
 
     # UHS job profile
     uhs_jp = None
-    # UHS calculation
-    uhs_calc = None
-    # UHS pending calculation
-    uhs_pending_calc = None
+    # UHS job
+    uhs_job = None
+    # UHS pending job
+    uhs_pending_job = None
 
     # classical psha (haz+risk) job profile
     cpsha_jp = None
-    # classical psha (haz+risk) calculation, failed
-    cpsha_calc_fail = None
+    # classical psha (haz+risk) job, failed
+    cpsha_job_fail = None
 
     user_name = None
 
@@ -51,64 +51,75 @@ class BaseExportTestCase(unittest.TestCase):
 
     def _create_job_profiles(self, user_name):
         uhs_cfg = helpers.demo_file('uhs/config.gem')
-        self.uhs_jp, _, _ = import_job_profile(uhs_cfg, user_name=user_name)
+        job = engine.prepare_job()
+        self.uhs_jp, _, _ = engine.import_job_profile(uhs_cfg, job,
+                                               user_name=user_name)
 
         cpsha_cfg = helpers.demo_file('classical_psha_based_risk/config.gem')
-        self.cpsha_jp, _, _ = import_job_profile(cpsha_cfg,
+        job = engine.prepare_job()
+        self.cpsha_jp, _, _ = engine.import_job_profile(cpsha_cfg, job,
                                                  user_name=user_name)
 
-    def _set_up_complete_calcs(self):
-        self.uhs_calc = models.OqJob(
+    def _set_up_complete_jobs(self):
+        self.uhs_job = models.OqJob(
             owner=self.uhs_jp.owner, description=self.uhs_jp.description,
-            oq_job_profile=self.uhs_jp, status='succeeded')
-        self.uhs_calc.save()
+            status='succeeded')
+        self.uhs_job.save()
+        models.Job2profile(
+            oq_job=self.uhs_job, oq_job_profile=self.uhs_jp).save()
 
-        self.cpsha_calc_fail = models.OqJob(
+        self.cpsha_job_fail = models.OqJob(
             owner=self.cpsha_jp.owner, description=self.cpsha_jp.description,
-            oq_job_profile=self.cpsha_jp, status='failed')
-        self.cpsha_calc_fail.save()
+            status='failed')
+        self.cpsha_job_fail.save()
+        models.Job2profile(
+            oq_job=self.cpsha_job_fail, oq_job_profile=self.cpsha_jp).save()
 
-    def _set_up_incomplete_calcs(self):
-        self.uhs_pending_calc = models.OqJob(
+    def _set_up_incomplete_jobs(self):
+        self.uhs_pending_job = models.OqJob(
             owner=self.uhs_jp.owner, description=self.uhs_jp.description,
-            oq_job_profile=self.uhs_jp, status='pending')
-        self.uhs_pending_calc.save()
+            status='pending')
+        self.uhs_pending_job.save()
+        models.Job2profile(
+            oq_job=self.uhs_pending_job, oq_job_profile=self.uhs_jp).save()
 
-        self.cpsha_running_calc = models.OqJob(
+        self.cpsha_running_job = models.OqJob(
             owner=self.cpsha_jp.owner, description=self.cpsha_jp.description,
-            oq_job_profile=self.cpsha_jp, status='running')
-        self.cpsha_running_calc.save()
+            status='running')
+        self.cpsha_running_job.save()
+        models.Job2profile(
+            oq_job=self.cpsha_running_job, oq_job_profile=self.cpsha_jp).save()
 
 
-class GetCalculationsTestCase(BaseExportTestCase):
-    """Tests for the :function:`openquake.export.get_calculations` API
+class GetJobsTestCase(BaseExportTestCase):
+    """Tests for the :function:`openquake.export.get_jobs` API
     function."""
 
-    def test_get_calculations(self):
-        # Test that :function:`openquake.export.get_calculations` retrieves
-        # only _completed_ calculations for the given user, in reverse chrono
+    def test_get_jobs(self):
+        # Test that :function:`openquake.export.get_jobs` retrieves
+        # only _completed_ jobs for the given user, in reverse chrono
         # order.
         self._create_job_profiles(self.user_name)
-        self._set_up_complete_calcs()
-        self._set_up_incomplete_calcs()
+        self._set_up_complete_jobs()
+        self._set_up_incomplete_jobs()
 
         # expeced values, sorted in reverse chronological order:
-        expected = sorted([self.uhs_calc, self.cpsha_calc_fail],
+        expected = sorted([self.uhs_job, self.cpsha_job_fail],
                           key=lambda x: x.last_update)[::-1]
-        actual = list(export.get_calculations(self.user_name))
+        actual = list(export.get_jobs(self.user_name))
 
         self.assertEqual(expected, actual)
 
-    def test_get_calculations_no_completed_calcs(self):
-        # No completed calculations for this user.
+    def test_get_jobs_no_completed_jobs(self):
+        # No completed jobs for this user.
         self._create_job_profiles(self.user_name)
-        self._set_up_incomplete_calcs()
+        self._set_up_incomplete_jobs()
 
-        self.assertTrue(len(export.get_calculations(self.user_name)) == 0)
+        self.assertTrue(len(export.get_jobs(self.user_name)) == 0)
 
-    def test_get_calculations_no_results_for_user(self):
-        # No calculation records at all for this user.
-        self.assertTrue(len(export.get_calculations(self.user_name)) == 0)
+    def test_get_jobs_no_results_for_user(self):
+        # No job records at all for this user.
+        self.assertTrue(len(export.get_jobs(self.user_name)) == 0)
 
 
 class GetOutputsTestCase(BaseExportTestCase):
@@ -126,48 +137,48 @@ class GetOutputsTestCase(BaseExportTestCase):
     def _set_up_outputs(self):
         # Set up test Output records
         self.uhs_output = models.Output(
-            owner=self.uhs_calc.owner, oq_job=self.uhs_calc,
+            owner=self.uhs_job.owner, oq_job=self.uhs_job,
             db_backed=True, output_type='uh_spectra')
         self.uhs_output.save()
 
         self.cpsha_hc_output = models.Output(
-            owner=self.cpsha_calc_fail.owner,
-            oq_job=self.cpsha_calc_fail, db_backed=True,
+            owner=self.cpsha_job_fail.owner,
+            oq_job=self.cpsha_job_fail, db_backed=True,
             output_type='hazard_curve')
         self.cpsha_hc_output.save()
 
         self.cpsha_mean_hc_output = models.Output(
-            owner=self.cpsha_calc_fail.owner,
-            oq_job=self.cpsha_calc_fail, db_backed=True,
+            owner=self.cpsha_job_fail.owner,
+            oq_job=self.cpsha_job_fail, db_backed=True,
             output_type='hazard_curve')
         self.cpsha_mean_hc_output.save()
 
         self.cpsha_lc_output = models.Output(
-            owner=self.cpsha_calc_fail.owner,
-            oq_job=self.cpsha_calc_fail, db_backed=True,
+            owner=self.cpsha_job_fail.owner,
+            oq_job=self.cpsha_job_fail, db_backed=True,
             output_type='loss_curve')
         self.cpsha_lc_output.save()
 
     def test_get_outputs_cpsha(self):
         self._create_job_profiles(self.user_name)
-        self._set_up_complete_calcs()
+        self._set_up_complete_jobs()
         self._set_up_outputs()
 
         expected_cpsha = [self.cpsha_hc_output, self.cpsha_mean_hc_output,
                           self.cpsha_lc_output]
-        actual_cpsha = list(export.get_outputs(self.cpsha_calc_fail.id))
+        actual_cpsha = list(export.get_outputs(self.cpsha_job_fail.id))
         self.assertEqual(expected_cpsha, actual_cpsha)
 
         expected_uhs = [self.uhs_output]
-        actual_uhs = list(export.get_outputs(self.uhs_calc.id))
+        actual_uhs = list(export.get_outputs(self.uhs_job.id))
         self.assertEqual(expected_uhs, actual_uhs)
 
     def test_get_outputs_no_outputs(self):
         self._create_job_profiles(self.user_name)
-        self._set_up_complete_calcs()
+        self._set_up_complete_jobs()
 
-        self.assertTrue(len(export.get_outputs(self.uhs_calc.id)) == 0)
-        self.assertTrue(len(export.get_outputs(self.cpsha_calc_fail.id)) == 0)
+        self.assertTrue(len(export.get_outputs(self.uhs_job.id)) == 0)
+        self.assertTrue(len(export.get_outputs(self.cpsha_job_fail.id)) == 0)
 
 
 class ExportFunctionsTestCase(GetOutputsTestCase):
@@ -177,7 +188,7 @@ class ExportFunctionsTestCase(GetOutputsTestCase):
 
     def test_export_unknown_output_type(self):
         self._create_job_profiles(self.user_name)
-        self._set_up_complete_calcs()
+        self._set_up_complete_jobs()
         self._set_up_outputs()
 
         self.uhs_output.output_type = 'unknown'
@@ -198,7 +209,7 @@ class ExportFunctionsTestCase(GetOutputsTestCase):
         # user's home directory), make sure the path is expanded properly.
         # See `os.path.expanduser`.
         self._create_job_profiles(self.user_name)
-        self._set_up_complete_calcs()
+        self._set_up_complete_jobs()
         self._set_up_outputs()
 
         self.uhs_output.output_type = 'unknown'

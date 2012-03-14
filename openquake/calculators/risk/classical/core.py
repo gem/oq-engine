@@ -259,7 +259,7 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
             hazard_curve__statistic_type='mean').extra(
             where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
 
-        return Curve(zip(job.oq_job_profile.imls, hc.poes))
+        return Curve(zip(job.profile().imls, hc.poes))
 
     def _compute_loss(self, block_id):
         """

@@ -35,15 +35,18 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from openquake.calculators.hazard import CALCULATORS as HAZ_CALCS
 from openquake.calculators.risk import CALCULATORS as RISK_CALCS
-from openquake.db.models import JobStats
 from openquake.db.models import CharArrayField
 from openquake.db.models import ExposureData
 from openquake.db.models import FloatArrayField
 from openquake.db.models import Input
-from openquake.db.models import InputSet
+from openquake.db.models import Input2job
+from openquake.db.models import inputs4job
+from openquake.db.models import Job2profile
+from openquake.db.models import JobStats
 from openquake.db.models import OqJob
 from openquake.db.models import OqJobProfile
 from openquake.db.models import OqUser
+from openquake.db.models import profile4job
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
@@ -138,11 +141,10 @@ class JobContext(object):
         """Return the job in the underlying kvs system with the given id."""
         params = kvs.get_value_json_decoded(
             kvs.tokens.generate_job_key(job_id))
+        job_profile = profile4job(job_id)
         job = OqJob.objects.get(id=job_id)
-        job_profile = job.oq_job_profile
         job = JobContext(params, job_id, oq_job_profile=job_profile,
-                               oq_job=job,
-                               log_level=params['debug'])
+                         oq_job=job, log_level=params['debug'])
         return job
 
     @staticmethod
@@ -343,8 +345,9 @@ def read_sites_from_exposure(job_ctxt):
     :returns:
         `list` of :class:`openquake.shapes.Site` objects, with no duplicates
     """
+    em_inputs = inputs4job(job_ctxt.job_id, input_type="exposure")
     exp_points = ExposureData.objects.filter(
-        exposure_model__input__input_set=job_ctxt.oq_job_profile.input_set.id,
+        exposure_model__input__id__in=[em.id for em in em_inputs],
         site__contained=job_ctxt.oq_job_profile.region).values(
             'site').distinct()
 
@@ -380,7 +383,6 @@ def _job_from_file(config_file, output_type, owner_username='openquake'):
 
     params, sections = _parse_config_file(config_file)
     params, sections = _prepare_config_parameters(params, sections)
-    job_profile = _prepare_job(params, sections, owner_username)
 
     validator = jobconf.default_validators(sections, params)
     is_valid, errors = validator.is_valid()
@@ -389,15 +391,18 @@ def _job_from_file(config_file, output_type, owner_username='openquake'):
         raise jobconf.ValidationException(errors)
 
     owner = OqUser.objects.get(user_name=owner_username)
-    # openquake-server creates the calculation record in advance and stores
+    # openquake-server creates the job record in advance and stores
     # the calculation id in the config file
     job_id = params.get('OPENQUAKE_JOB_ID')
     if not job_id:
-        # create the database record for this calculation
+        # create the database record for this job
         job = OqJob(owner=owner, path=None)
-        job.oq_job_profile = job_profile
         job.save()
         job_id = job.id
+    else:
+        job = OqJob.objects.get(job_id)
+
+    job_profile = _prepare_job(params, sections, owner_username, job)
 
     if output_type == 'db':
         serialize_results_to = ['db']
@@ -406,14 +411,13 @@ def _job_from_file(config_file, output_type, owner_username='openquake'):
 
     base_path = params['BASE_PATH']
 
-    job = JobContext(params, job_id, sections=sections,
-                           base_path=base_path,
-                           serialize_results_to=serialize_results_to,
-                           oq_job=job,
-                           oq_job_profile=job_profile)
-    job.to_kvs()
+    job_ctxt = JobContext(
+        params, job_id, sections=sections, base_path=base_path,
+        serialize_results_to=serialize_results_to, oq_job=job,
+        oq_job_profile=job_profile)
+    job_ctxt.to_kvs()
 
-    return job
+    return job_ctxt
 
 
 def _parse_config_file(config_file):
@@ -506,7 +510,7 @@ def _prepare_config_parameters(params, sections):
     return new_params, sections
 
 
-def _insert_input_files(params, input_set):
+def _insert_input_files(params, job):
     """Create uiapi.input records for all input files"""
 
     # insert input files in input table
@@ -514,20 +518,50 @@ def _insert_input_files(params, input_set):
         if param_key not in params:
             continue
         path = params[param_key]
-        in_model = Input(input_set=input_set, path=path,
-                         input_type=file_type, size=os.path.getsize(path))
+        in_model = Input(path=path, input_type=file_type, owner=job.owner,
+                         size=os.path.getsize(path))
         in_model.save()
+        i2j = Input2job(input=in_model, oq_job=job)
+        i2j.save()
 
     # insert soft-linked source models in input table
     if 'SOURCE_MODEL_LOGIC_TREE_FILE' in params:
         for path in _get_source_models(params['SOURCE_MODEL_LOGIC_TREE_FILE']):
-            in_model = Input(input_set=input_set, path=path,
-                             input_type='source', size=os.path.getsize(path))
+            in_model = Input(path=path, input_type='source', owner=job.owner,
+                             size=os.path.getsize(path))
             in_model.save()
+            i2j = Input2job(input=in_model, oq_job=job)
+            i2j.save()
+
+
+def prepare_job(user_name="openquake"):
+    """Create job for the given user, return it."""
+    # See if the current user exists
+    # If not, create a record for them
+    owner = prepare_user(user_name)
+    job = OqJob(owner=owner)
+    job.save()
+    return job
+
+
+def prepare_user(user_name):
+    """Make sure user with the given name exists, return it."""
+    # See if the current user exists
+    # If not, create a record for them
+    try:
+        user = OqUser.objects.get(user_name=user_name)
+    except ObjectDoesNotExist:
+        # This user doesn't exist; let's fix that.
+        # NOTE: The Organization is currently hardcoded to 1.
+        # This org is added when the database is bootstrapped.
+        user = OqUser(user_name=user_name, full_name=user_name,
+                       organization_id=1)
+        user.save()
+    return user
 
 
 @transaction.commit_on_success(using='job_init')
-def _prepare_job(params, sections, owner_username):
+def _prepare_job(params, sections, owner_username, job):
     """
     Create a new OqJob and fill in the related OqJobProfile entry.
 
@@ -535,50 +569,39 @@ def _prepare_job(params, sections, owner_username):
 
     :param dict params:
         The job config params.
-    :params sections:
+    :param sections:
         The job config file sections, as a list of strings.
-    :params owner_username:
+    :param owner_username:
         The username of the user who will own the returned job profile.
+    :param job:
+        The :class:`openquake.db.models.OqJob` instance to use
 
     :returns:
         A new :class:`openquake.db.models.OqJobProfile` object.
     """
 
     @transaction.commit_on_success(using='job_init')
-    def _get_job_profile(input_set, calc_mode, job_type, owner):
+    def _get_job_profile(calc_mode, job_type, owner):
         """Create an OqJobProfile, save it to the db, commit, and return."""
-        job_profile = OqJobProfile(input_set=input_set, calc_mode=calc_mode,
-                                   job_type=job_type)
+        job_profile = OqJobProfile(calc_mode=calc_mode, job_type=job_type)
 
-        _insert_input_files(params, input_set)
+        _insert_input_files(params, job)
         _store_input_parameters(params, calc_mode, job_profile)
 
         job_profile.owner = owner
         job_profile.save()
+        Job2profile(oq_job=job, oq_job_profile=job_profile).save()
 
         return job_profile
 
     # TODO specify the owner as a command line parameter
-    # See if the current user exists
-    # If not, create a record for them
-    try:
-        owner = OqUser.objects.get(user_name=owner_username)
-    except ObjectDoesNotExist:
-        # This user doesn't exist; let's fix that.
-        # NOTE: The Organization is currently hardcoded to 1.
-        # This org is added when the database is bootstrapped.
-        owner = OqUser(user_name=owner_username, full_name=owner_username,
-                       organization_id=1)
-        owner.save()
-
-    input_set = InputSet(upload=None, owner=owner)
-    input_set.save()
+    owner = prepare_user(owner_username)
 
     calc_mode = CALCULATION_MODE[params['CALCULATION_MODE']]
     job_type = [s.lower() for s in sections
         if s.upper() in [jobconf.HAZARD_SECTION, jobconf.RISK_SECTION]]
 
-    job_profile = _get_job_profile(input_set, calc_mode, job_type, owner)
+    job_profile = _get_job_profile(calc_mode, job_type, owner)
     job_profile.owner = owner
 
     # When querying this record from the db, Django changes the values
@@ -649,8 +672,7 @@ def _store_input_parameters(params, calc_mode, job_profile):
         job_profile.damping = None
 
 
-def run_job(job_profile, params, sections, output_type='db',
-                    log_level='warn'):
+def run_job(job, params, sections, output_type='db', log_level='warn'):
     """Given an :class:`openquake.db.models.OqJobProfile` object, create a new
     :class:`openquake.db.models.OqJob` object and run the job.
 
@@ -661,7 +683,7 @@ def run_job(job_profile, params, sections, output_type='db',
     Returns the calculation object when the calculation concludes.
 
     :param job_profile:
-        :class:`openquake.db.models.OqJobProfile` instance.
+        :class:`openquake.db.models.OqJob` instance
     :param params:
         A dictionary of config parameters parsed from the calculation
         config file.
@@ -679,9 +701,7 @@ def run_job(job_profile, params, sections, output_type='db',
     if not output_type in ('db', 'xml'):
         raise RuntimeError("output_type must be 'db' or 'xml'")
 
-    job = OqJob(owner=job_profile.owner)
-    job.oq_job_profile = job_profile
-    job.description = job_profile.description
+    job.description = job.profile().description
     job.status = 'running'
     job.save()
 
@@ -699,10 +719,9 @@ def run_job(job_profile, params, sections, output_type='db',
         serialize_results_to.append('xml')
 
     job_ctxt = JobContext(params, job.id, sections=sections,
-                                  serialize_results_to=serialize_results_to,
-                                  oq_job_profile=job_profile,
-                                  oq_job=job,
-                                  log_level=log_level)
+                          serialize_results_to=serialize_results_to,
+                          oq_job_profile=job.profile(), oq_job=job,
+                          log_level=log_level)
 
     # closing all db connections to make sure they're not shared between
     # supervisor and job executor processes. otherwise if one of them closes
@@ -791,13 +810,15 @@ def _launch_job(job_ctxt, sections):
         calculator.post_execute()
 
 
-def import_job_profile(path_to_cfg, user_name='openquake'):
+def import_job_profile(path_to_cfg, job, user_name='openquake'):
     """Given the path to a job config file, create a new
-    :class:`openquake.db.models.OqJobProfile` and save it to the DB, and return
+    :class:`openquake.db.models.OqJobProfile`, save it to the DB, and return
     it.
 
     :param str path_to_cfg:
         Path to a job config file.
+    :param job:
+        The :class:`openquake.db.models.OqJob` instance to use
     :param user_name:
         The user performing this action.
 
@@ -817,5 +838,5 @@ def import_job_profile(path_to_cfg, user_name='openquake'):
     if not is_valid:
         raise jobconf.ValidationException(errors)
 
-    job_profile = _prepare_job(params, sections, user_name)
+    job_profile = _prepare_job(params, sections, user_name, job)
     return job_profile, params, sections
