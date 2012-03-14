@@ -100,7 +100,7 @@ class DisaggCalcQATestCase(unittest.TestCase, helpers.ConfigTestCase):
 
         h5_file = H5_OUTPUT_FILE % job_record.id
         self.assertTrue(os.path.exists(h5_file))
-        self._verify_h5(h5_file, job_record.oq_job_profile)
+        self._verify_h5(h5_file, job_record.profile())
 
         # clean up the job hdf5 results dir:
         shutil.rmtree(H5_OUTPUT_DIR % job_record.id)
