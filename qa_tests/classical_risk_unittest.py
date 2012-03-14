@@ -21,12 +21,13 @@ import unittest
 from lxml import etree
 from nose.plugins.attrib import attr
 
-from openquake.db.models import LossCurveData
 from openquake.db.models import OqJob
 from openquake.nrml import nrml_schema_file
 from openquake.xml import NRML_NS
 
 from tests.utils import helpers
+
+OUTPUT_DIR = helpers.demo_file('classical_psha_based_risk/computed_output')
 
 
 class ClassicalRiskQATestCase(unittest.TestCase):
@@ -45,45 +46,28 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         self._verify_loss_maps()
 
     def _verify_loss_maps(self):
-        output_dir = helpers.demo_file(
-            'classical_psha_based_risk/computed_output')
+        xpath = '{%(ns)s}riskResult/{%(ns)s}lossMap/{%(ns)s}LMNode/{%(ns)s}loss/{%(ns)s}value'
 
-        def extract_conditional_loss(filename):
-            schema = etree.XMLSchema(file=nrml_schema_file())
-            parser = etree.XMLParser(schema=schema)
-            tree = etree.parse(filename, parser=parser)
-
-            return float(tree.getroot().find(
-                '{%(ns)s}riskResult/{%(ns)s}lossMap/{%(ns)s}LMNode/{%(ns)s}loss/{%(ns)s}value' %
-                {'ns': NRML_NS}
-            ).text)
-
-        filename = "%s/losses_at-0.01.xml" % output_dir
+        filename = "%s/losses_at-0.01.xml" % OUTPUT_DIR
         expected_closs = 0.264530582
-        closs = extract_conditional_loss(filename)
-        self.assertTrue((closs - expected_closs) / expected_closs <= 0.05)    
 
-        filename = "%s/losses_at-0.02.xml" % output_dir
+        closs = float(self._get(filename, xpath))
+        self.assertTrue((closs - expected_closs) / expected_closs <= 0.05)
+
+        filename = "%s/losses_at-0.02.xml" % OUTPUT_DIR
         expected_closs = 0.143009004
-        closs = extract_conditional_loss(filename)
-        self.assertTrue((closs - expected_closs) / expected_closs <= 0.05)    
-    
+
+        closs = float(self._get(filename, xpath))
+        self.assertTrue((closs - expected_closs) / expected_closs <= 0.05)
+
     def _verify_loss_ratio_curve(self):
-        output_dir = helpers.demo_file(
-            'classical_psha_based_risk/computed_output')
-
         job = OqJob.objects.latest('id')
+
         filename = "%s/losscurves-block-#%s-block#0.xml" % (
-                output_dir, job.id)
+                OUTPUT_DIR, job.id)
 
-        schema = etree.XMLSchema(file=nrml_schema_file())
-        parser = etree.XMLParser(schema=schema)
-        tree = etree.parse(filename, parser=parser)
-
-        poes = [float(x) for x in tree.getroot().find(
-            '{%(ns)s}riskResult/{%(ns)s}lossRatioCurveList/{%(ns)s}asset/{%(ns)s}lossRatioCurves/{%(ns)s}lossRatioCurve/{%(ns)s}poE' %
-            {'ns': NRML_NS}
-        ).text.split()]
+        xpath = '{%(ns)s}riskResult/{%(ns)s}lossRatioCurveList/{%(ns)s}asset/{%(ns)s}lossRatioCurves/{%(ns)s}lossRatioCurve/{%(ns)s}poE'
+        poes = [float(x) for x in self._get(filename, xpath).split()]
 
         expected_poes = [0.03944, 0.03943, 0.03857, 0.03548, 0.03123, 0.02708,
                 0.02346, 0.02039, 0.01780, 0.01565, 0.01386, 0.01118, 0.00926,
@@ -94,12 +78,8 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(
                 poes, expected_poes, atol=0.000005, rtol=0.05))
 
-        # self._verify_poes(expected_poes, poes)
-
-        loss_ratios = [float(x) for x in tree.getroot().find(
-            '{%(ns)s}riskResult/{%(ns)s}lossRatioCurveList/{%(ns)s}asset/{%(ns)s}lossRatioCurves/{%(ns)s}lossRatioCurve/{%(ns)s}lossRatio' %
-            {'ns': NRML_NS}
-        ).text.split()]
+        xpath = '{%(ns)s}riskResult/{%(ns)s}lossRatioCurveList/{%(ns)s}asset/{%(ns)s}lossRatioCurves/{%(ns)s}lossRatioCurve/{%(ns)s}lossRatio'
+        loss_ratios = [float(x) for x in self._get(filename, xpath).split()]
 
         expected_loss_ratios = [0.00, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07,
                 0.08, 0.09, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20, 0.24, 0.28,
@@ -109,21 +89,13 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(expected_loss_ratios, loss_ratios))
 
     def _verify_loss_curve(self):
-        output_dir = helpers.demo_file(
-            'classical_psha_based_risk/computed_output')
-
         job = OqJob.objects.latest('id')
+
         filename = "%s/losscurves-loss-block-#%s-block#0.xml" % (
-                output_dir, job.id)
+                OUTPUT_DIR, job.id)
 
-        schema = etree.XMLSchema(file=nrml_schema_file())
-        parser = etree.XMLParser(schema=schema)
-        tree = etree.parse(filename, parser=parser)
-
-        poes = [float(x) for x in tree.getroot().find(
-            '{%(ns)s}riskResult/{%(ns)s}lossCurveList/{%(ns)s}asset/{%(ns)s}lossCurves/{%(ns)s}lossCurve/{%(ns)s}poE' %
-            {'ns': NRML_NS}
-        ).text.split()]
+        xpath = '{%(ns)s}riskResult/{%(ns)s}lossCurveList/{%(ns)s}asset/{%(ns)s}lossCurves/{%(ns)s}lossCurve/{%(ns)s}poE'
+        poes = [float(x) for x in self._get(filename, xpath).split()]
 
         expected_poes = [0.03944, 0.03943, 0.03857, 0.03548, 0.03123, 0.02708,
                 0.02346, 0.02039, 0.01780, 0.01565, 0.01386, 0.01118, 0.00926,
@@ -134,12 +106,8 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(
                 poes, expected_poes, atol=0.000005, rtol=0.05))
 
-        # self._verify_poes(expected_poes, poes)
-
-        losses = [float(x) for x in tree.getroot().find(
-            '{%(ns)s}riskResult/{%(ns)s}lossCurveList/{%(ns)s}asset/{%(ns)s}lossCurves/{%(ns)s}lossCurve/{%(ns)s}loss' %
-            {'ns': NRML_NS}
-        ).text.split()]
+        xpath = '{%(ns)s}riskResult/{%(ns)s}lossCurveList/{%(ns)s}asset/{%(ns)s}lossCurves/{%(ns)s}lossCurve/{%(ns)s}loss'
+        losses = [float(x) for x in self._get(filename, xpath).split()]
 
         expected_losses = [0.00, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16,
                 0.18, 0.20, 0.24, 0.28, 0.32, 0.36, 0.40, 0.48, 0.56,
@@ -158,9 +126,6 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         job = OqJob.objects.latest('id')
         self.assertEqual('succeeded', job.status)
 
-        output_dir = helpers.demo_file(
-            'classical_psha_based_risk/computed_output')
-
         expected_files = [
             'hazardcurve-0.xml',
             'hazardcurve-mean.xml',
@@ -172,8 +137,16 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         ]
 
         for f in expected_files:
-            self.assertTrue(os.path.exists(os.path.join(output_dir, f)))
+            self.assertTrue(os.path.exists(os.path.join(OUTPUT_DIR, f)))
 
     def _run_job(self, config):
         ret_code = helpers.run_job(config, ['--output-type=xml'])
         self.assertEquals(0, ret_code)
+
+    def _get(self, filename, xpath):
+        schema = etree.XMLSchema(file=nrml_schema_file())
+        parser = etree.XMLParser(schema=schema)
+
+        tree = etree.parse(filename, parser=parser)
+        
+        return tree.getroot().find(xpath % {'ns': NRML_NS}).text
