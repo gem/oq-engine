@@ -505,20 +505,10 @@ CREATE TABLE uiapi.upload (
 ) TABLESPACE uiapi_ts;
 
 
--- Set of input files for an OpenQuake job
-CREATE TABLE uiapi.input_set (
-    id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
-    upload_id INTEGER,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE uiapi_ts;
-
-
 -- A single OpenQuake input file uploaded by the user
 CREATE TABLE uiapi.input (
     id SERIAL PRIMARY KEY,
-    input_set_id INTEGER NOT NULL,
+    owner_id INTEGER NOT NULL,
     -- The full path of the input file on the server
     path VARCHAR NOT NULL,
     -- Input file type, one of:
@@ -554,7 +544,6 @@ CREATE TABLE uiapi.oq_job (
     duration INTEGER NOT NULL DEFAULT 0,
     job_pid INTEGER NOT NULL DEFAULT 0,
     supervisor_pid INTEGER NOT NULL DEFAULT 0,
-    oq_job_profile_id INTEGER NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
@@ -598,7 +587,6 @@ CREATE TABLE uiapi.oq_job_profile (
            -- but if you pass it zero-length array, is returns NULL instead of 0.
            AND (array_length(job_type, 1) IS NOT NULL)
             AND (job_type <@ ARRAY['hazard', 'risk']::VARCHAR[]))),
-    input_set_id INTEGER NOT NULL,
     region_grid_spacing float,
     min_magnitude float CONSTRAINT min_magnitude_set
         CHECK(
@@ -1159,6 +1147,34 @@ CREATE TABLE uiapi.error_msg (
 ) TABLESPACE uiapi_ts;
 
 
+-- Associate inputs and jobs
+CREATE TABLE uiapi.input2job (
+    id SERIAL PRIMARY KEY,
+    input_id INTEGER NOT NULL,
+    oq_job_id INTEGER NOT NULL,
+    UNIQUE (input_id, oq_job_id)
+) TABLESPACE uiapi_ts;
+
+
+-- Associate inputs and uploads
+CREATE TABLE uiapi.input2upload (
+    id SERIAL PRIMARY KEY,
+    input_id INTEGER NOT NULL,
+    upload_id INTEGER NOT NULL,
+    UNIQUE (input_id, upload_id)
+) TABLESPACE uiapi_ts;
+
+
+-- Associate jobs and their profiles, a job may be associated with one profile
+-- only.
+CREATE TABLE uiapi.job2profile (
+    id SERIAL PRIMARY KEY,
+    oq_job_id INTEGER NOT NULL,
+    oq_job_profile_id INTEGER NOT NULL,
+    UNIQUE (oq_job_id)
+) TABLESPACE uiapi_ts;
+
+
 -- Hazard map header
 CREATE TABLE hzrdr.hazard_map (
     id SERIAL PRIMARY KEY,
@@ -1615,29 +1631,36 @@ FOREIGN KEY (surface_id) REFERENCES eqcat.surface(id) ON DELETE RESTRICT;
 ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_oq_job_profile_fk
-FOREIGN KEY (oq_job_profile_id) REFERENCES uiapi.oq_job_profile(id) ON DELETE RESTRICT;
-
 ALTER TABLE uiapi.oq_job_profile ADD CONSTRAINT uiapi_oq_job_profile_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.job_stats ADD CONSTRAINT  uiapi_job_stats_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
+ALTER TABLE uiapi.input2job ADD CONSTRAINT  uiapi_input2job_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.input2job ADD CONSTRAINT  uiapi_input2job_oq_job_fk
+FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.job2profile ADD CONSTRAINT
+uiapi_job2profile_oq_job_profile_fk FOREIGN KEY (oq_job_profile_id) REFERENCES
+uiapi.oq_job_profile(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.job2profile ADD CONSTRAINT  uiapi_job2profile_oq_job_fk
+FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.input2upload ADD CONSTRAINT  uiapi_input2upload_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.input2upload ADD CONSTRAINT  uiapi_input2upload_upload_fk
+FOREIGN KEY (upload_id) REFERENCES uiapi.upload(id) ON DELETE CASCADE;
+
 ALTER TABLE uiapi.upload ADD CONSTRAINT uiapi_upload_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.oq_job_profile ADD CONSTRAINT uiapi_oq_job_profile_input_set_fk
-FOREIGN KEY (input_set_id) REFERENCES uiapi.input_set(id) ON DELETE RESTRICT;
-
-ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_input_set_fk
-FOREIGN KEY (input_set_id) REFERENCES uiapi.input_set(id) ON DELETE RESTRICT;
-
-ALTER TABLE uiapi.input_set ADD CONSTRAINT uiapi_input_set_owner_fk
+ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
-
-ALTER TABLE uiapi.input_set ADD CONSTRAINT uiapi_input_set_upload_fk
-FOREIGN KEY (upload_id) REFERENCES uiapi.upload(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;

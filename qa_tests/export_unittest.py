@@ -49,7 +49,7 @@ class CalculationDescriptionTestCase(unittest.TestCase):
 
         run_job(mod_cfg_path)
         job = OqJob.objects.latest('id')
-        job_profile = job.oq_job_profile
+        job_profile = job.profile()
 
         self.assertEqual(description, job_profile.description)
         self.assertEqual(description, job.description)
@@ -76,7 +76,7 @@ class CalculationUserAssociation(unittest.TestCase):
         user = OqUser.objects.get(user_name=getpass.getuser())
 
         job = OqJob.objects.latest('id')
-        job_profile = job.oq_job_profile
+        job_profile = job.profile()
 
         self.assertEqual(user, job.owner)
         self.assertEqual(user, job_profile.owner)
