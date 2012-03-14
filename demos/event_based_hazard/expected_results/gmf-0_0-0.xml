@@ -1,0 +1,293 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.3" gml:id="n1">
+  <hazardResult gml:id="hr1">
+    <config>
+      <hazardProcessing xmlns:ns0="http://openquake.org/xmlns/nrml/0.3" ns0:investigationTimeSpan="50.0"/>
+    </config>
+    <groundMotionFieldSet gml:id="gmfs_1">
+      <GMPEParameters xmlns:ns1="http://openquake.org/xmlns/nrml/0.3" ns1:IMT="PGA"/>
+      <GMF gml:id="gmf_1">
+        <GMFNode gml:id="node0">
+          <site>
+            <gml:Point>
+              <gml:pos>15.57 38.14</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0460029262678</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node1">
+          <site>
+            <gml:Point>
+              <gml:pos>15.6 38.17</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0373377227353</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node2">
+          <site>
+            <gml:Point>
+              <gml:pos>15.54 38.2</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0184587287019</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node3">
+          <site>
+            <gml:Point>
+              <gml:pos>15.48 38.2</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0320841686172</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node4">
+          <site>
+            <gml:Point>
+              <gml:pos>15.57 38.11</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0348585553928</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node5">
+          <site>
+            <gml:Point>
+              <gml:pos>15.54 38.11</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0331424334596</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node6">
+          <site>
+            <gml:Point>
+              <gml:pos>15.57 38.26</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0293768623317</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node7">
+          <site>
+            <gml:Point>
+              <gml:pos>15.48 38.23</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0152810487825</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node8">
+          <site>
+            <gml:Point>
+              <gml:pos>15.51 38.29</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0266818025066</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node9">
+          <site>
+            <gml:Point>
+              <gml:pos>15.51 38.17</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0222628074554</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node10">
+          <site>
+            <gml:Point>
+              <gml:pos>15.48 38.14</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0173483199523</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node11">
+          <site>
+            <gml:Point>
+              <gml:pos>15.6 38.14</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0307031123515</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node12">
+          <site>
+            <gml:Point>
+              <gml:pos>15.6 38.2</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0276423072094</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node13">
+          <site>
+            <gml:Point>
+              <gml:pos>15.57 38.23</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0297113114137</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node14">
+          <site>
+            <gml:Point>
+              <gml:pos>15.51 38.2</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.024612612849</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node15">
+          <site>
+            <gml:Point>
+              <gml:pos>15.48 38.29</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.019465977711</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node16">
+          <site>
+            <gml:Point>
+              <gml:pos>15.51 38.14</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0222710564629</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node17">
+          <site>
+            <gml:Point>
+              <gml:pos>15.54 38.17</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0277526621516</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node18">
+          <site>
+            <gml:Point>
+              <gml:pos>15.57 38.29</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0127722161568</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node19">
+          <site>
+            <gml:Point>
+              <gml:pos>15.51 38.11</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0301395483791</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node20">
+          <site>
+            <gml:Point>
+              <gml:pos>15.6 38.11</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0198723506094</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node21">
+          <site>
+            <gml:Point>
+              <gml:pos>15.54 38.23</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0169582028206</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node22">
+          <site>
+            <gml:Point>
+              <gml:pos>15.51 38.26</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0217232020663</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node23">
+          <site>
+            <gml:Point>
+              <gml:pos>15.51 38.23</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.018825225248</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node24">
+          <site>
+            <gml:Point>
+              <gml:pos>15.6 38.26</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0286863347707</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node25">
+          <site>
+            <gml:Point>
+              <gml:pos>15.57 38.2</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0277861384373</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node26">
+          <site>
+            <gml:Point>
+              <gml:pos>15.54 38.29</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0234658494422</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node27">
+          <site>
+            <gml:Point>
+              <gml:pos>15.48 38.26</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0131377158874</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node28">
+          <site>
+            <gml:Point>
+              <gml:pos>15.48 38.11</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0306669202995</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node29">
+          <site>
+            <gml:Point>
+              <gml:pos>15.57 38.17</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0399437258167</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node30">
+          <site>
+            <gml:Point>
+              <gml:pos>15.6 38.29</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0162841375734</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node31">
+          <site>
+            <gml:Point>
+              <gml:pos>15.54 38.14</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0293083916362</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node32">
+          <site>
+            <gml:Point>
+              <gml:pos>15.48 38.17</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0308779395645</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node33">
+          <site>
+            <gml:Point>
+              <gml:pos>15.6 38.23</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0238709239929</groundMotion>
+        </GMFNode>
+        <GMFNode gml:id="node34">
+          <site>
+            <gml:Point>
+              <gml:pos>15.54 38.26</gml:pos>
+            </gml:Point>
+          </site>
+          <groundMotion>0.0163453093943</groundMotion>
+        </GMFNode>
+      </GMF>
+    </groundMotionFieldSet>
+  </hazardResult>
+</nrml>
