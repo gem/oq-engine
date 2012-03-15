@@ -1,0 +1,86 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.3"
+      gml:id="n1">
+
+    <!-- The fragility function format applies to the entire fragility model -->
+    <fragilityModel gml:id="ep1" format="discrete">
+        <gml:description>Fragility model for Pavia (discrete)</gml:description>
+
+        <!-- limit states apply to the entire fragility model -->
+        <limitStates>
+            <ls>minor</ls>
+            <ls>moderate</ls>
+            <ls>severe</ls>
+            <ls>collapse</ls>
+        </limitStates>
+
+        <!-- fragility function set, each with its own, distinct taxonomy -->
+        <ffs gml:id="PAV01-ff01-d">
+            <taxonomy>RC/DMRF-D/LR</taxonomy>
+
+            <!-- fragility function in discrete format, one per limit state -->
+            <ffd ls="minor">
+                <value iml="7" poe="0.0" />
+                <value iml="8" poe="0.09" />
+                <value iml="9" poe="0.56" />
+                <value iml="10" poe="0.91" />
+                <value iml="11" poe="0.98" />
+            </ffd>
+            <ffd ls="moderate">
+                <value iml="7" poe="0.0" />
+                <value iml="8" poe="0.0" />
+                <value iml="9" poe="0.04" />
+                <value iml="10" poe="0.78" />
+                <value iml="11" poe="0.96" />
+            </ffd>
+            <ffd ls="severe">
+                <value iml="7" poe="0.0" />
+                <value iml="8" poe="0.0" />
+                <value iml="9" poe="0.00" />
+                <value iml="10" poe="0.29" />
+                <value iml="11" poe="0.88" />
+            </ffd>
+            <ffd ls="collapse">
+                <value iml="7" poe="0.0" />
+                <value iml="8" poe="0.0" />
+                <value iml="9" poe="0.00" />
+                <value iml="10" poe="0.03" />
+                <value iml="11" poe="0.63" />
+            </ffd>
+        </ffs>
+        <ffs gml:id="PAV01-ff02-d">
+            <taxonomy>RC/DMRF-D/HR</taxonomy>
+
+            <!-- fragility function in discrete format, one per limit state -->
+            <ffd ls="minor">
+                <value iml="7" poe="0.0" />
+                <value iml="8" poe="0.08" />
+                <value iml="9" poe="0.56" />
+                <value iml="10" poe="0.92" />
+                <value iml="11" poe="0.98" />
+            </ffd>
+            <ffd ls="moderate">
+                <value iml="7" poe="0.0" />
+                <value iml="8" poe="0.0" />
+                <value iml="9" poe="0.05" />
+                <value iml="10" poe="0.77" />
+                <value iml="11" poe="0.96" />
+            </ffd>
+            <ffd ls="severe">
+                <value iml="7" poe="0.0" />
+                <value iml="8" poe="0.01" />
+                <value iml="9" poe="0.00" />
+                <value iml="10" poe="0.27" />
+                <value iml="11" poe="0.88" />
+            </ffd>
+            <ffd ls="collapse">
+                <value iml="7" poe="0.0" />
+                <value iml="8" poe="0.0" />
+                <value iml="9" poe="0.01" />
+                <value iml="10" poe="0.03" />
+                <value iml="11" poe="0.62" />
+            </ffd>
+        </ffs>
+    </fragilityModel>
+</nrml>
