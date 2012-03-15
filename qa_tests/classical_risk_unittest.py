@@ -52,13 +52,17 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         expected_closs = 0.264530582
 
         closs = float(self._get(filename, xpath))
-        self.assertTrue((closs - expected_closs) / expected_closs <= 0.05)
+
+        self.assertTrue(numpy.allclose(
+                closs, expected_closs, atol=0.0, rtol=0.05))
 
         filename = "%s/losses_at-0.02.xml" % OUTPUT_DIR
         expected_closs = 0.143009004
 
         closs = float(self._get(filename, xpath))
-        self.assertTrue((closs - expected_closs) / expected_closs <= 0.05)
+
+        self.assertTrue(numpy.allclose(
+                closs, expected_closs, atol=0.0, rtol=0.05))
 
     def _verify_loss_ratio_curve(self):
         job = OqJob.objects.latest('id')
@@ -72,14 +76,16 @@ class ClassicalRiskQATestCase(unittest.TestCase):
 
         poes = [float(x) for x in self._get(filename, xpath).split()]
 
-        expected_poes = [0.03944, 0.03943, 0.03857, 0.03548, 0.03123, 0.02708,
-                0.02346, 0.02039, 0.01780, 0.01565, 0.01386, 0.01118, 0.00926,
-                0.00776, 0.00654, 0.00555, 0.00417, 0.00338, 0.00283, 0.00231,
-                0.00182, 0.00114, 0.00089, 0.00082, 0.00069, 0.00039, 0.00024,
-                0.00013, 0.00006, 0.00002, 0.00001]
+        expected_poes = [0.03944225, 0.03942720, 0.03856604, 0.03548283,
+                0.03122610, 0.02707623, 0.02345915, 0.02038896, 0.01780364,
+                0.01564709, 0.01386492, 0.01117745, 0.00925748, 0.00776335,
+                0.00654064, 0.00554503, 0.00416704, 0.00337727, 0.00282694,
+                0.00231098, 0.00182046, 0.00114431, 0.00089103, 0.00081684,
+                0.00068862, 0.00039127, 0.00024029, 0.00012818, 0.00005978,
+                0.00002461, 0.00000904]
 
         self.assertTrue(numpy.allclose(
-                poes, expected_poes, atol=0.000005, rtol=0.05))
+                poes, expected_poes, atol=0.0, rtol=0.05))
 
         xpath = ('{%(ns)s}riskResult/{%(ns)s}lossRatioCurveList/'
                 '{%(ns)s}asset/{%(ns)s}lossRatioCurves/'
@@ -106,14 +112,16 @@ class ClassicalRiskQATestCase(unittest.TestCase):
 
         poes = [float(x) for x in self._get(filename, xpath).split()]
 
-        expected_poes = [0.03944, 0.03943, 0.03857, 0.03548, 0.03123, 0.02708,
-                0.02346, 0.02039, 0.01780, 0.01565, 0.01386, 0.01118, 0.00926,
-                0.00776, 0.00654, 0.00555, 0.00417, 0.00338, 0.00283, 0.00231,
-                0.00182, 0.00114, 0.00089, 0.00082, 0.00069, 0.00039, 0.00024,
-                0.00013, 0.00006, 0.00002, 0.00001]
+        expected_poes = [0.03944225, 0.03942720, 0.03856604, 0.03548283,
+                0.03122610, 0.02707623, 0.02345915, 0.02038896, 0.01780364,
+                0.01564709, 0.01386492, 0.01117745, 0.00925748, 0.00776335,
+                0.00654064, 0.00554503, 0.00416704, 0.00337727, 0.00282694,
+                0.00231098, 0.00182046, 0.00114431, 0.00089103, 0.00081684,
+                0.00068862, 0.00039127, 0.00024029, 0.00012818, 0.00005978,
+                0.00002461, 0.00000904]
 
         self.assertTrue(numpy.allclose(
-                poes, expected_poes, atol=0.000005, rtol=0.05))
+                poes, expected_poes, atol=0.0, rtol=0.05))
 
         xpath = ('{%(ns)s}riskResult/{%(ns)s}lossCurveList/'
                 '{%(ns)s}asset/{%(ns)s}lossCurves/'
@@ -127,12 +135,6 @@ class ClassicalRiskQATestCase(unittest.TestCase):
                 1.76, 1.84, 1.92, 2.00]
 
         self.assertTrue(numpy.allclose(expected_losses, losses))
-
-    def _verify_poes(self, expected, computed):
-        for x in xrange(len(expected)):
-            # absolute(a - b) / b <= 0.05
-            self.assertTrue(numpy.abs((
-                    computed[x] - expected[x]) / expected[x] <= 0.05))
 
     def _verify_job_succeeded(self):
         job = OqJob.objects.latest('id')
