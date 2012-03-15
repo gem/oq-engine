@@ -1,10 +1,10 @@
-from nhe.attrel.sadigh_1997 import SadighEtAl1997
+from nhe.gsim.sadigh_1997 import SadighEtAl1997
 
-from tests.attrel.utils import BaseAttRelTestCase
+from tests.gsim.utils import BaseGSIMTestCase
 
 
-class SadighEtAl1997TestCase(BaseAttRelTestCase):
-    ATTREL_CLASS = SadighEtAl1997
+class SadighEtAl1997TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = SadighEtAl1997
 
     # test data was generated using opensha implementation of GMPE.
 
