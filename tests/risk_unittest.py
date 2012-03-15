@@ -115,7 +115,7 @@ TEST_REGION = shapes.Region.from_simple((11.1, 11.1), (100.2, 100.2))
 
 class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
-    calc = None
+    job = None
     assets = []
     peb_gmfs = []
     points = []
@@ -125,10 +125,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
     def setUpClass(cls):
         path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, "PEB-exposure.yaml")
         inputs = [("exposure", path)]
-        cls.calc = cls.setup_classic_job(inputs=inputs)
-        cls.calc.oq_job_profile.save()
-        qargs = dict(input_type="exposure", path=path)
-        [input] = cls.calc.oq_job_profile.input_set.input_set.filter(**qargs)
+        cls.job = cls.setup_classic_job(inputs=inputs)
+        [input] = models.inputs4job(cls.job.id, input_type="exposure",
+                                    path=path)
         owner = models.OqUser.objects.get(user_name="openquake")
         cls.emdl = models.ExposureModel(
             owner=owner, input=input, description="PEB test exposure model",
@@ -149,7 +148,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.teardown_job(cls.calc)
+        cls.teardown_job(cls.job)
 
     def setUp(self):
         imls_1 = [0.01, 0.04, 0.07, 0.1, 0.12, 0.22, 0.37, 0.52]
@@ -193,12 +192,11 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
         self.params["BASE_PATH"] = "."
         self.params["INVESTIGATION_TIME"] = 50.0
 
-        self.job = helpers.create_job(self.params, base_path=".",
-                                      job_id=self.calc.id,
-                                      oq_job=self.calc,
-                                      oq_job_profile=self.calc.oq_job_profile)
-        self.job_id = self.job.job_id
-        self.job.to_kvs()
+        self.job_ctxt = helpers.create_job(
+            self.params, base_path=".", job_id=self.job.id,
+            oq_job=self.job, oq_job_profile=models.profile4job(self.job.id))
+        self.job_id = self.job_ctxt.job_id
+        self.job_ctxt.to_kvs()
 
         self.peb_gmfs = []
         self.gmfs_1 = {"IMLs": (0.1439, 0.1821, 0.5343, 0.171, 0.2177,
@@ -603,7 +601,9 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
     def test_compute_bcr(self):
         cfg_path = helpers.demo_file(
             'probabilistic_event_based_risk/config.gem')
-        job_profile, params, sections = engine.import_job_profile(cfg_path)
+        helpers.delete_profile(self.job)
+        job_profile, params, sections = engine.import_job_profile(
+            cfg_path, self.job)
         job_profile.calc_mode = 'event_based_bcr'
         job_profile.interest_rate = 0.05
         job_profile.asset_life_expectancy = 50
@@ -653,7 +653,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
     def setUp(self):
         self.block_id = 7
         self.job = self.setup_classic_job()
-        self.job.oq_job_profile.save()
         self.job_id = self.job.id
 
     def tearDown(self):
@@ -913,10 +912,11 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
             tests ClassicalRiskCalculator.compute_risk by retrieving
             all the loss curves in the kvs and checks their presence
         """
-
+        helpers.delete_profile(self.job)
         cls_risk_cfg = helpers.demo_file(
             'classical_psha_based_risk/config.gem')
-        job_profile, params, sections = engine.import_job_profile(cls_risk_cfg)
+        job_profile, params, sections = engine.import_job_profile(
+            cls_risk_cfg, self.job)
 
         # We need to adjust a few of the parameters for this test:
         params['REGION_VERTEX'] = '0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 2.0, 0.0'
@@ -953,11 +953,15 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
     def test_compute_bcr_in_the_classical_psha_calculator(self):
         self._compute_risk_classical_psha_setup()
-
+        helpers.delete_profile(self.job)
         bcr_config = helpers.demo_file('benefit_cost_ratio/config.gem')
-        job_profile, params, sections = engine.import_job_profile(bcr_config)
+        job_profile, params, sections = engine.import_job_profile(
+            bcr_config, self.job)
 
         # We need to adjust a few of the parameters for this test:
+        job_profile.imls = [
+            0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527,
+            0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778]
         params['ASSET_LIFE_EXPECTANCY'] = '50'
         job_profile.asset_life_expectancy = 50
         params['REGION_VERTEX'] = '0.0, 0.0, 0.0, 2.0, 2.0, 2.0, 2.0, 0.0'
@@ -970,7 +974,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
         calculator = classical_core.ClassicalRiskCalculator(job_ctxt)
 
-        [input] = job_profile.input_set.input_set.filter(input_type="exposure")
+        [input] = models.inputs4job(self.job.id, input_type="exposure")
         emdl = models.ExposureModel(
             owner=self.job.owner, input=input,
             description="c-psha test exposure model",
@@ -983,9 +987,6 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
                                     asset_ref=22.61, stco=1, reco=123.45,
                                     site=GEOSGeometry("POINT(1.0 1.0)"))
         asset.save()
-        self.job.oq_job_profile.input_set = job_profile.input_set
-        self.job.oq_job_profile.save()
-
         calculator.compute_risk(self.block_id)
 
         result_key = kvs.tokens.bcr_block_key(self.job_id, self.block_id)
@@ -1111,16 +1112,16 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
 class ScenarioEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
-    calc = None
+    job = None
     emdl = None
 
     @classmethod
     def setUpClass(cls):
         path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, "SEB-exposure.yaml")
         inputs = [("exposure", path)]
-        cls.calc = cls.setup_classic_job(inputs=inputs)
-        qargs = dict(input_type="exposure", path=path)
-        [input] = cls.calc.oq_job_profile.input_set.input_set.filter(**qargs)
+        cls.job = cls.setup_classic_job(inputs=inputs)
+        [input] = models.inputs4job(cls.job.id, input_type="exposure",
+                                    path=path)
         owner = models.OqUser.objects.get(user_name="openquake")
         cls.emdl = models.ExposureModel(
             owner=owner, input=input, description="SEB test exposure model",
@@ -1130,7 +1131,7 @@ class ScenarioEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
     @classmethod
     def tearDownClass(cls):
-        cls.teardown_job(cls.calc)
+        cls.teardown_job(cls.job)
 
     def setUp(self):
         imls = [0.10, 0.30, 0.50, 1.00]
@@ -1335,9 +1336,9 @@ class RiskJobGeneralTestCase(unittest.TestCase):
         self._make_job({})
         self._prepare_bcr_result()
 
-        calc = BaseRiskCalculator(self.job)
+        job = BaseRiskCalculator(self.job)
 
-        bcr_per_site = calc.asset_bcr_per_site()
+        bcr_per_site = job.asset_bcr_per_site()
         self.assertEqual(bcr_per_site, [
             (shapes.Site(-1.1, 19.0), [
                 [{u'bcr': 35.1, 'eal_original': 12.34, 'eal_retrofitted': 4},
@@ -1357,7 +1358,7 @@ class RiskJobGeneralTestCase(unittest.TestCase):
         self._make_job({})
         self._prepare_bcr_result()
 
-        calc = ProbabilisticRiskCalculator(self.job)
+        job = ProbabilisticRiskCalculator(self.job)
 
         expected_result = """\
 <?xml version='1.0' encoding='UTF-8'?>
@@ -1408,15 +1409,15 @@ class RiskJobGeneralTestCase(unittest.TestCase):
 
         output_dir = tempfile.mkdtemp()
         try:
-            calc.job_ctxt.params = {'OUTPUT_DIR': output_dir,
+            job.job_ctxt.params = {'OUTPUT_DIR': output_dir,
                                        'INTEREST_RATE': '0.12',
                                        'ASSET_LIFE_EXPECTANCY': '50'}
-            calc.job_ctxt._base_path = '.'
+            job.job_ctxt._base_path = '.'
 
             resultfile = os.path.join(output_dir, 'bcr-map.xml')
 
             try:
-                calc.write_output_bcr()
+                job.write_output_bcr()
                 result = open(resultfile).read()
             finally:
                 if os.path.exists(resultfile):

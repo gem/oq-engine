@@ -46,7 +46,9 @@ class ProbabilisticRiskCalculatorTestCase(unittest.TestCase):
         # write_output is invoked.
         cfg_file = helpers.demo_file('classical_psha_based_risk/config.gem')
 
-        job_profile, params, sections = engine.import_job_profile(cfg_file)
+        job = engine.prepare_job()
+        job_profile, params, sections = engine.import_job_profile(
+            cfg_file, job)
 
         # Set conditional loss poe so that loss maps are created.
         # If this parameter is not specified, no loss maps will be serialized
@@ -54,10 +56,6 @@ class ProbabilisticRiskCalculatorTestCase(unittest.TestCase):
         params['CONDITIONAL_LOSS_POE'] = '0.01'
         job_profile.conditional_loss_poe = [0.01]
         job_profile.save()
-
-        job = models.OqJob(owner=job_profile.owner,
-                                           oq_job_profile=job_profile)
-        job.save()
 
         job_ctxt = engine.JobContext(
             params, job.id, sections=sections,
@@ -103,11 +101,9 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
 
         cfg_file = helpers.demo_file('classical_psha_based_risk/config.gem')
 
-        job_profile, params, sections = engine.import_job_profile(cfg_file)
-
-        job = models.OqJob(owner=job_profile.owner,
-                                           oq_job_profile=job_profile)
-        job.save()
+        job = engine.prepare_job()
+        job_profile, params, sections = engine.import_job_profile(
+            cfg_file, job)
 
         job_ctxt = engine.JobContext(
             params, job.id, sections=sections,
@@ -240,17 +236,16 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
 
     @classmethod
     def setUpClass(cls):
-        jp, _, _ = engine.import_job_profile(RISK_DEMO_CONFIG_FILE)
-        cls.job = models.OqJob(owner=jp.owner, oq_job_profile=jp)
-        cls.job.save()
+        cls.job = engine.prepare_job()
+        jp, _, _ = engine.import_job_profile(RISK_DEMO_CONFIG_FILE, cls.job)
+
         cls.job_ctxt = helpers.create_job({}, job_id=cls.job.id,
-                                            oq_job_profile=jp,
-                                            oq_job=cls.job)
+                                          oq_job_profile=jp, oq_job=cls.job)
         calc = ClassicalRiskCalculator(cls.job_ctxt)
 
         calc.store_exposure_assets()
-        [em_input] = jp.input_set.input_set.filter(input_type="exposure")
-        [model] = em_input.exposuremodel_set.all()
+        [input] = models.inputs4job(cls.job.id, input_type="exposure")
+        [model] = input.exposuremodel_set.all()
         # Add some more assets.
         coos = [(10.000155392289116, 46.546194318563),
                 (10.222034128255, 46.0071299176413),
@@ -304,19 +299,15 @@ class AssetsAtTestCase(unittest.TestCase, helpers.DbTestCase):
 
     @classmethod
     def setUpClass(cls):
-        jp, _, _ = engine.import_job_profile(RISK_DEMO_CONFIG_FILE)
-
-        # creating and storing the job
-        cls.job = models.OqJob(owner=jp.owner, oq_job_profile=jp)
-        cls.job.save()
-
+        cls.job = engine.prepare_job()
+        jp, _, _ = engine.import_job_profile(RISK_DEMO_CONFIG_FILE, cls.job)
         calc_proxy = helpers.create_job({}, job_id=cls.job.id,
                 oq_job_profile=jp, oq_job=cls.job)
 
         # storing the basic exposure model
         ClassicalRiskCalculator(calc_proxy).store_exposure_assets()
 
-        [em_input] = jp.input_set.input_set.filter(input_type="exposure")
+        [em_input] = models.inputs4job(cls.job.id, input_type="exposure")
         [model] = em_input.exposuremodel_set.all()
 
         site = shapes.Site(1.0, 2.0)

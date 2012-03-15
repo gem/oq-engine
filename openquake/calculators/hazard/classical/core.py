@@ -368,6 +368,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
 
         blocks = range(0, len(sites), block_size)
         stats.pk_set(self.job_ctxt.job_id, "blocks", len(blocks))
+        stats.pk_set(self.job_ctxt.job_id, "cblock", 0)
 
         for start in blocks:
             stats.pk_inc(self.job_ctxt.job_id, "cblock")
