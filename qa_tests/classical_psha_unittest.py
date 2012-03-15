@@ -342,7 +342,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
             try:
                 self._assert_curve_is(
-                    curve, zip(self.job.oq_job_profile.imls, hc_db.poes),
+                    curve, zip(self.job.profile().imls, hc_db.poes),
                     site, tolerance=0.005)
             except AssertionError as exc:
                 errors.append(str(exc))

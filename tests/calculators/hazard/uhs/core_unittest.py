@@ -24,7 +24,6 @@ from openquake.calculators.hazard.uhs.core import compute_uhs
 from openquake.calculators.hazard.uhs.core import compute_uhs_task
 from openquake.calculators.hazard.uhs.core import write_uh_spectra
 from openquake.calculators.hazard.uhs.core import write_uhs_spectrum_data
-from openquake.db.models import OqJob
 from openquake.db.models import Output
 from openquake.db.models import UhSpectra
 from openquake.db.models import UhSpectrum
@@ -46,14 +45,9 @@ class UHSBaseTestCase(unittest.TestCase):
     UHS_CORE_MODULE = 'openquake.calculators.hazard.uhs.core'
 
     def setUp(self):
-        # Create OqJobProfile, OqJob, and JobContext objects
-        # which can be used for several of the tests:
+        self.job = engine.prepare_job()
         self.job_profile, params, sections = engine.import_job_profile(
-            UHS_DEMO_CONFIG_FILE)
-        self.job = OqJob(
-            owner=self.job_profile.owner,
-            oq_job_profile=self.job_profile)
-        self.job.save()
+            UHS_DEMO_CONFIG_FILE, self.job)
 
         self.job_ctxt = engine.JobContext(
             params, self.job.id, sections=sections,
