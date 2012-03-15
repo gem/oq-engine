@@ -8,13 +8,18 @@ class SadighEtAl1997TestCase(BaseGSIMTestCase):
 
     # test data was generated using opensha implementation of GMPE.
 
-    def test_mean(self):
-        # NB: this test fail because data files contain
-        # logarithms of amplitudes!
-        # TODO: fix test data files
-        self.check('SADIGH97/SADIGH1997_MEAN.csv',
-                    max_discrep_percentage=0.12)
+    def test_mean_rock(self):
+        self.check('SADIGH97/SADIGH1997_ROCK_MEAN.csv',
+                    max_discrep_percentage=0.4)
 
-    def test_total_stddev(self):
-        self.check('SADIGH97/SADIGH1997_TOTAL_STDDEV.csv',
+    def test_total_stddev_rock(self):
+        self.check('SADIGH97/SADIGH1997_ROCK_STD_TOTAL.csv',
+                   max_discrep_percentage=1e-10)
+
+    def test_mean_soil(self):
+        self.check('SADIGH97/SADIGH1997_SOIL_MEAN.csv',
+                    max_discrep_percentage=0.5)
+
+    def test_total_stddev_soil(self):
+        self.check('SADIGH97/SADIGH1997_SOIL_STD_TOTAL.csv',
                    max_discrep_percentage=1e-10)

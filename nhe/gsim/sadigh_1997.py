@@ -160,13 +160,10 @@ class SadighEtAl1997(GMPE):
     #: values of :attr:`NEAR_FIELD_SATURATION_MAG` and below. Damping
     #: for spectral acceleration here and in other SA-tables is 5%,
     #: see "introduction" section.
-    #:
-    #: Here we use lowest SA period of 0.075 s instead of 0.07 which
-    #: is listed in table 2 for consistency with table 4.
     COEFFS_ROCK_LOWMAG = CoeffsTable(sa_damping=5, table="""\
     IMT    c1     c2    c3      c4      c5       c6      c7
     PGA   -0.624  1.0   0.000  -2.100   1.29649  0.250   0.0
-    0.075  0.110  1.0   0.006  -2.128   1.29649  0.250  -0.082
+    0.07   0.110  1.0   0.006  -2.128   1.29649  0.250  -0.082
     0.10   0.275  1.0   0.006  -2.148   1.29649  0.250  -0.041
     0.20   0.153  1.0  -0.004  -2.080   1.29649  0.250   0.0
     0.30  -0.057  1.0  -0.017  -2.028   1.29649  0.250   0.0
@@ -185,7 +182,7 @@ class SadighEtAl1997(GMPE):
     COEFFS_ROCK_HIMAG = CoeffsTable(sa_damping=5, table="""\
     IMT    c1     c2    c3      c4      c5       c6      c7
     PGA   -1.274  1.1   0.000  -2.100  -0.48451  0.524   0.0
-    0.075 -0.540  1.1   0.006  -2.128  -0.48451  0.524  -0.082
+    0.07  -0.540  1.1   0.006  -2.128  -0.48451  0.524  -0.082
     0.10  -0.375  1.1   0.006  -2.148  -0.48451  0.524  -0.041
     0.20  -0.497  1.1  -0.004  -2.080  -0.48451  0.524   0.0
     0.30  -0.707  1.1  -0.017  -2.028  -0.48451  0.524   0.0
@@ -203,7 +200,7 @@ class SadighEtAl1997(GMPE):
     COEFFS_ROCK_STDDERR = CoeffsTable(sa_damping=5, table="""\
     IMT    sigma0  magfactor maxsigma maxmag
     PGA    1.39   -0.14      0.38     7.21
-    0.075  1.40   -0.14      0.39     7.21
+    0.07   1.40   -0.14      0.39     7.21
     0.10   1.41   -0.14      0.40     7.21
     0.20   1.43   -0.14      0.42     7.21
     0.30   1.45   -0.14      0.44     7.21
