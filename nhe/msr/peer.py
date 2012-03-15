@@ -20,5 +20,9 @@ class PeerMSR(BaseMSR):
     def get_std_dev_area(self, mag, rake):
         """
         Standard deviation for PeerMSR. Mag and rake are ignored.
+
+        >>> peer = PeerMSR()
+        >>> 0.25 == peer.get_std_dev_area(4.0, 50)
+        True
         """
         return 0.25
