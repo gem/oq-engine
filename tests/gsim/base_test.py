@@ -4,19 +4,19 @@ import collections
 import numpy
 
 from nhe import const
-from nhe.attrel.base import IPE, AttRelContext
+from nhe.gsim.base import IPE, GSIMContext
 from nhe.geo.point import Point
 from nhe.imt import PGA, PGV
 from nhe.site import Site
 from nhe.source.rupture import Rupture
 
 
-class _FakeAttRelTestCase(unittest.TestCase):
+class _FakeGSIMTestCase(unittest.TestCase):
     DEFAULT_IMT = PGA
     DEFAULT_COMPONENT = const.IMC.GMRotI50
 
     def setUp(self):
-        class FakeAttrel(IPE):
+        class FakeGSIM(IPE):
             DEFINED_FOR_TECTONIC_REGION_TYPES = set()
             DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
             DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS = set()
@@ -28,24 +28,24 @@ class _FakeAttRelTestCase(unittest.TestCase):
                                      component_type):
                 pass
 
-        super(_FakeAttRelTestCase, self).setUp()
-        self.attrel_class = FakeAttrel
-        self.attrel = self.attrel_class()
-        self.attrel.DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS.add(
+        super(_FakeGSIMTestCase, self).setUp()
+        self.gsim_class = FakeGSIM
+        self.gsim = self.gsim_class()
+        self.gsim.DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS.add(
             self.DEFAULT_COMPONENT
         )
-        self.attrel.DEFINED_FOR_INTENSITY_MEASURE_TYPES.add(self.DEFAULT_IMT)
+        self.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES.add(self.DEFAULT_IMT)
 
     def _get_poes(self, **kwargs):
         default_kwargs = dict(
-            ctx=AttRelContext(),
+            ctx=GSIMContext(),
             imts={self.DEFAULT_IMT(): [1.0, 2.0, 3.0]},
             component_type=self.DEFAULT_COMPONENT,
             truncation_level=1.0
         )
         default_kwargs.update(kwargs)
         kwargs = default_kwargs
-        return self.attrel.get_poes(**kwargs)
+        return self.gsim.get_poes(**kwargs)
 
     def _assert_value_error(self, func, error, **kwargs):
         with self.assertRaises(ValueError) as ar:
@@ -53,21 +53,21 @@ class _FakeAttRelTestCase(unittest.TestCase):
         self.assertEqual(str(ar.exception), error)
 
 
-class GetPoEsWrongInputTestCase(_FakeAttRelTestCase):
+class GetPoEsWrongInputTestCase(_FakeGSIMTestCase):
     def test_wrong_imt(self):
         err = 'keys of imts dictionary must be instances of IMT classes'
         self._assert_value_error(self._get_poes, err, imts={'something': [3]})
-        err = 'intensity measure type PGV is not supported by FakeAttrel'
+        err = 'intensity measure type PGV is not supported by FakeGSIM'
         self._assert_value_error(self._get_poes, err,
                                  imts={PGA(): [1], PGV(): [5]})
 
     def test_wrong_components(self):
         err = "intensity measure component 'something' " \
-              "is not supported by FakeAttrel"
+              "is not supported by FakeGSIM"
         self._assert_value_error(self._get_poes, err,
                                  component_type='something')
         err = "intensity measure component 'Random horizontal' " \
-              "is not supported by FakeAttrel"
+              "is not supported by FakeGSIM"
         self._assert_value_error(self._get_poes, err,
                                  component_type=const.IMC.RANDOM_HORIZONTAL)
 
@@ -77,9 +77,9 @@ class GetPoEsWrongInputTestCase(_FakeAttRelTestCase):
         self._assert_value_error(self._get_poes, err, truncation_level=-1)
 
 
-class GetPoEsTestCase(_FakeAttRelTestCase):
+class GetPoEsTestCase(_FakeGSIMTestCase):
     def test_no_truncation(self):
-        self.attrel_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
+        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
             const.StdDev.TOTAL
         )
         def get_mean_and_stddevs(ctx, imt, stddev_types, component_type):
@@ -91,7 +91,7 @@ class GetPoEsTestCase(_FakeAttRelTestCase):
             get_mean_and_stddevs.call_count += 1
             return mean, [stddev]
         get_mean_and_stddevs.call_count = 0
-        self.attrel.get_mean_and_stddevs = get_mean_and_stddevs
+        self.gsim.get_mean_and_stddevs = get_mean_and_stddevs
         iml = 0.6931471805599453
         iml_poes = self._get_poes(imts={self.DEFAULT_IMT(): [iml]},
                                   truncation_level=None)[self.DEFAULT_IMT()]
@@ -104,7 +104,7 @@ class GetPoEsTestCase(_FakeAttRelTestCase):
     def test_zero_truncation(self):
         def get_mean_and_stddevs(ctx, imt, stddev_types, component_type):
             return 1.1, [123.45]
-        self.attrel.get_mean_and_stddevs = get_mean_and_stddevs
+        self.gsim.get_mean_and_stddevs = get_mean_and_stddevs
         imt = self.DEFAULT_IMT()
         imts = {imt: [0, 1, 2, 1.1, 1.05]}
         poes = self._get_poes(imts=imts, truncation_level=0)[imt]
@@ -112,19 +112,19 @@ class GetPoEsTestCase(_FakeAttRelTestCase):
         expected_poes = [0, 0, 1, 1, 0]
         self.assertEqual(list(poes), expected_poes)
 
-        self.attrel_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
+        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
             const.StdDev.TOTAL
         )
         poes = self._get_poes(imts=imts, truncation_level=0)[imt]
         self.assertEqual(list(poes), expected_poes)
 
     def test_truncated(self):
-        self.attrel_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
+        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
             const.StdDev.TOTAL
         )
         def get_mean_and_stddevs(ctx, imt, stddev_types, component_type):
             return -0.7872268528578843, [0.5962393527251486]
-        self.attrel.get_mean_and_stddevs = get_mean_and_stddevs
+        self.gsim.get_mean_and_stddevs = get_mean_and_stddevs
         imls = [-2.995732273553991, -0.6931471805599453, 0.6931471805599453]
         poes = self._get_poes(imts={self.DEFAULT_IMT(): imls},
                               truncation_level=2.0)[self.DEFAULT_IMT()]
@@ -135,7 +135,7 @@ class GetPoEsTestCase(_FakeAttRelTestCase):
         self.assertAlmostEqual(poe2, 0.43432352175355504, places=6)
 
 
-class MakeContextTestCase(_FakeAttRelTestCase):
+class MakeContextTestCase(_FakeGSIMTestCase):
     def setUp(self):
         super(MakeContextTestCase, self).setUp()
         self.site_location = Point(10, 20)
@@ -173,57 +173,57 @@ class MakeContextTestCase(_FakeAttRelTestCase):
             tectonic_region_type=const.TRT.VOLCANIC,
             hypocenter=self.rupture_hypocenter, surface=FakeSurface()
         )
-        self.attrel_class.DEFINED_FOR_TECTONIC_REGION_TYPES.add(
+        self.gsim_class.DEFINED_FOR_TECTONIC_REGION_TYPES.add(
             const.TRT.VOLCANIC
         )
         self.fake_surface = FakeSurface
 
     def test_unknown_site_param_error(self):
-        self.attrel_class.REQUIRES_SITE_PARAMETERS.add('unknown!')
-        err = "FakeAttrel requires unknown site parameter 'unknown!'"
-        self._assert_value_error(self.attrel.make_context, err,
+        self.gsim_class.REQUIRES_SITE_PARAMETERS.add('unknown!')
+        err = "FakeGSIM requires unknown site parameter 'unknown!'"
+        self._assert_value_error(self.gsim.make_context, err,
                                  site=self.site, rupture=self.rupture)
-        self._assert_value_error(self.attrel.make_context, err,
+        self._assert_value_error(self.gsim.make_context, err,
                                  site=self.site, rupture=self.rupture,
                                  distances=self.distances)
 
     def test_unknown_rupture_param_error(self):
-        self.attrel_class.REQUIRES_RUPTURE_PARAMETERS.add('stuff')
-        err = "FakeAttrel requires unknown rupture parameter 'stuff'"
-        self._assert_value_error(self.attrel.make_context, err,
+        self.gsim_class.REQUIRES_RUPTURE_PARAMETERS.add('stuff')
+        err = "FakeGSIM requires unknown rupture parameter 'stuff'"
+        self._assert_value_error(self.gsim.make_context, err,
                                  site=self.site, rupture=self.rupture)
-        self._assert_value_error(self.attrel.make_context, err,
+        self._assert_value_error(self.gsim.make_context, err,
                                  site=self.site, rupture=self.rupture,
                                  distances=self.distances)
 
     def test_unknown_distance_error(self):
-        self.attrel_class.REQUIRES_DISTANCES.add('jump height')
-        err = "FakeAttrel requires unknown distance measure 'jump height'"
-        self._assert_value_error(self.attrel.make_context, err,
+        self.gsim_class.REQUIRES_DISTANCES.add('jump height')
+        err = "FakeGSIM requires unknown distance measure 'jump height'"
+        self._assert_value_error(self.gsim.make_context, err,
                                  site=self.site, rupture=self.rupture)
-        self._assert_value_error(self.attrel.make_context, err,
+        self._assert_value_error(self.gsim.make_context, err,
                                  site=self.site, rupture=self.rupture,
                                  distances=self.distances)
 
     def test_precalc_distance_is_missing_error(self):
-        self.attrel_class.REQUIRES_DISTANCES |= set(('rjb', 'ztor'))
+        self.gsim_class.REQUIRES_DISTANCES |= set(('rjb', 'ztor'))
         distances = {'rjb': 444}
         err = "'distances' dict should include all the required distance " \
               "measures: rjb, ztor"
-        self._assert_value_error(self.attrel.make_context, err,
+        self._assert_value_error(self.gsim.make_context, err,
                                  site=self.site, rupture=self.rupture,
                                  distances=distances)
 
     def test_all_values_no_precalc_distances(self):
-        self.attrel_class.REQUIRES_DISTANCES = set('rjb ztor rx rrup'.split())
-        self.attrel_class.REQUIRES_RUPTURE_PARAMETERS = set(
+        self.gsim_class.REQUIRES_DISTANCES = set('rjb ztor rx rrup'.split())
+        self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set(
             'mag rake trt dip'.split()
         )
-        self.attrel_class.REQUIRES_SITE_PARAMETERS = set(
+        self.gsim_class.REQUIRES_SITE_PARAMETERS = set(
             'vs30 vs30measured z1pt0 z2pt5'.split()
         )
-        ctx = self.attrel.make_context(self.site, self.rupture)
-        self.assertIsInstance(ctx, AttRelContext)
+        ctx = self.gsim.make_context(self.site, self.rupture)
+        self.assertIsInstance(ctx, GSIMContext)
         self.assertEqual(ctx.rup_mag, 123.45)
         self.assertEqual(ctx.rup_rake, 123.56)
         self.assertEqual(ctx.rup_trt, const.TRT.VOLCANIC)
@@ -242,15 +242,15 @@ class MakeContextTestCase(_FakeAttRelTestCase):
                           'get_min_distance': 1})
 
     def test_all_values_with_precalc_distances(self):
-        self.attrel_class.REQUIRES_DISTANCES = set('rjb ztor rx rrup'.split())
-        self.attrel_class.REQUIRES_RUPTURE_PARAMETERS = set(
+        self.gsim_class.REQUIRES_DISTANCES = set('rjb ztor rx rrup'.split())
+        self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set(
             'mag rake trt dip'.split()
         )
-        self.attrel_class.REQUIRES_SITE_PARAMETERS = set(
+        self.gsim_class.REQUIRES_SITE_PARAMETERS = set(
             'vs30 vs30measured z1pt0 z2pt5'.split()
         )
-        ctx = self.attrel.make_context(self.site, self.rupture,
-                                       distances=self.distances)
+        ctx = self.gsim.make_context(self.site, self.rupture,
+                                     distances=self.distances)
         self.assertEqual((ctx.rup_mag, ctx.rup_rake, ctx.rup_trt, ctx.rup_dip),
                          (123.45, 123.56, const.TRT.VOLCANIC, 45.4545))
         self.assertEqual((ctx.site_vs30, ctx.site_vs30measured,
@@ -263,10 +263,10 @@ class MakeContextTestCase(_FakeAttRelTestCase):
         self.assertEqual(self.fake_surface.call_counts, {'get_dip': 1})
 
     def test_some_values_no_precalc_distances(self):
-        self.attrel_class.REQUIRES_DISTANCES = set('rjb rx'.split())
-        self.attrel_class.REQUIRES_RUPTURE_PARAMETERS = set('mag rake'.split())
-        self.attrel_class.REQUIRES_SITE_PARAMETERS = set('vs30 z1pt0'.split())
-        ctx = self.attrel.make_context(self.site, self.rupture)
+        self.gsim_class.REQUIRES_DISTANCES = set('rjb rx'.split())
+        self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set('mag rake'.split())
+        self.gsim_class.REQUIRES_SITE_PARAMETERS = set('vs30 z1pt0'.split())
+        ctx = self.gsim.make_context(self.site, self.rupture)
         self.assertEqual((ctx.rup_mag, ctx.rup_rake), (123.45, 123.56))
         self.assertEqual((ctx.site_vs30, ctx.site_z1pt0), (456, 12.1))
         self.assertEqual((ctx.dist_rjb, ctx.dist_rx), (6, 4))
@@ -281,12 +281,12 @@ class MakeContextTestCase(_FakeAttRelTestCase):
                           'get_joyner_boore_distance': 1})
 
     def test_some_values_with_precalc_distances(self):
-        self.attrel_class.REQUIRES_DISTANCES = set('ztor rrup'.split())
-        self.attrel_class.REQUIRES_RUPTURE_PARAMETERS = set(('trt',))
-        self.attrel_class.REQUIRES_SITE_PARAMETERS = set(('vs30measured',))
+        self.gsim_class.REQUIRES_DISTANCES = set('ztor rrup'.split())
+        self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set(('trt',))
+        self.gsim_class.REQUIRES_SITE_PARAMETERS = set(('vs30measured',))
         distances = {'ztor': 17, 'rrup': 33}
-        ctx = self.attrel.make_context(self.site, self.rupture,
-                                       distances=distances)
+        ctx = self.gsim.make_context(self.site, self.rupture,
+                                     distances=distances)
         self.assertEqual(ctx.rup_trt, const.TRT.VOLCANIC)
         self.assertEqual(ctx.site_vs30measured, False)
         self.assertEqual(ctx.dist_ztor, 17)

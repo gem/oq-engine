@@ -4,7 +4,7 @@ Module exports :class:`ChiouYoungs2008`.
 from __future__ import division
 from math import log, tanh, cosh, cos, radians, sqrt, exp
 
-from nhe.attrel.base import GMPE, CoeffsTable
+from nhe.gsim.base import GMPE, CoeffsTable
 from nhe import const
 from nhe.imt import PGA, PGV, SA
 
@@ -60,7 +60,7 @@ class ChiouYoungs2008(GMPE):
     def get_mean_and_stddevs(self, ctx, imt, stddev_types, component_type):
         """
         See :meth:`superclass method
-        <nhe.attrel.base.AttenuationRelationship.get_mean_and_stddevs>`
+        <nhe.gsim.base.GroundShkingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         # extracting dictionary of coefficients specific to required
