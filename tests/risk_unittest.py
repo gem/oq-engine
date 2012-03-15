@@ -561,9 +561,20 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertEqual(expected_curve, compute_loss_ratio_curve(
                 self.vuln_function_1, gmfs, None, None, 25))
 
-    def test_an_empty_distribution_produces_an_empty_aggregate_curve(self):
-        self.assertEqual(
-            shapes.EMPTY_CURVE, AggregateLossCurve().compute(0, 0, 25))
+    def test_empty_aggregate_curve_with_no_earthquakes(self):
+        """
+        With no earthquakes (that means no losses added or empty
+        arrays filled), the aggregate is an empty curve.
+        """
+
+        self.assertEqual(shapes.EMPTY_CURVE,
+                AggregateLossCurve().compute(0, 0, 0))
+
+        aggregate = AggregateLossCurve()
+        aggregate.append(numpy.array([]))
+        aggregate.append(numpy.array([]))
+
+        self.assertEqual(shapes.EMPTY_CURVE, aggregate.compute(0, 0, 0))
 
     def test_computes_the_aggregate_loss_curve(self):
         # no epsilon_provided is needed because the vulnerability
@@ -593,10 +604,6 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
             (306.23850182, 0.22119922)])
 
         self.assertEqual(expected_curve, aggregate_curve.compute(200, 50, 6))
-
-    def test_no_losses_without_gmfs(self):
-        aggregate_curve = AggregateLossCurve()
-        self.assertEqual(None, aggregate_curve.losses)
 
     def test_compute_bcr(self):
         cfg_path = helpers.demo_file(

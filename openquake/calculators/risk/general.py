@@ -1104,25 +1104,34 @@ class AggregateLossCurve(object):
         self.losses = None
 
     def append(self, losses):
-        """Accumulate losses into a single sum..
+        """
+        Accumulate losses into a single sum.
 
         :param losses: an array of loss values.
         :type losses: 1-dimensional :py:class:`numpy.ndarray`
         """
 
         if self.losses is None:
-            self.losses = losses
-        else:
-            self.losses = self.losses + losses
+            # initialize the losses with the shape
+            # we are using in the computation
+            self.losses = zeros(losses.shape)
+
+        assert self.losses.shape == losses.shape
+
+        self.losses = self.losses + losses
 
     @property
     def empty(self):
-        """Return true is this aggregate curve has no losses
-        associated, false otherwise."""
-        return self.losses is None
+        """
+        Return true is this aggregate curve has no losses
+        associated, false otherwise.
+        """
+
+        return self.losses is None or len(self.losses) == 0
 
     def compute(self, tses, time_span, loss_histogram_bins):
-        """Compute the aggregate loss curve.
+        """
+        Compute the aggregate loss curve.
 
         :param tses: time representative of the Stochastic Event Set.
         :type tses: float
@@ -1130,16 +1139,17 @@ class AggregateLossCurve(object):
         :type time_span: float
         :param int loss_histogram_bins:
             The number of bins to use in the computed loss histogram.
+        :type loss_histogram_bins: integer
         """
 
         if self.empty:
             return shapes.EMPTY_CURVE
 
-        losses = self.losses
-        loss_range = _compute_loss_ratios_range(losses, loss_histogram_bins)
+        loss_range = _compute_loss_ratios_range(
+            self.losses, loss_histogram_bins)
 
         probs_of_exceedance = _compute_probs_of_exceedance(
                 _compute_rates_of_exceedance(_compute_cumulative_histogram(
-                losses, loss_range), tses), time_span)
+                self.losses, loss_range), tses), time_span)
 
         return _generate_curve(loss_range, probs_of_exceedance)
