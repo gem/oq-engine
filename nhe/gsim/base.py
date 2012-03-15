@@ -103,9 +103,9 @@ class GroundShakingIntensityModel(object):
 
         :param ctx:
             Instance of :class:`GSIMContext` with parameters of rupture, site
-            and their relative position (read, distances) assigned to respective
-            attributes. Only those attributes that are listed in class'
-            :attr:`REQUIRES_SITE_PARAMETERS`, :attr:`REQUIRES_DISTANCES`
+            and their relative position (read, distances) assigned
+            to respective attributes. Only those attributes that are listed in
+            class' :attr:`REQUIRES_SITE_PARAMETERS`, :attr:`REQUIRES_DISTANCES`
             and :attr:`REQUIRES_RUPTURE_PARAMETERS` are available.
         :param imt:
             An instance (not a class) of intensity measure type.

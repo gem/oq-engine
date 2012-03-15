@@ -6,6 +6,7 @@ from nhe import imt as imt_module
 class BaseIMTTestCase(unittest.TestCase):
     class TestIMT(imt_module._IMT):
         _fields = ('foo', 'bar')
+
         def __new__(cls, foo, bar):
             return imt_module._IMT.__new__(cls, foo, bar)
 
