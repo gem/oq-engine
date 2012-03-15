@@ -109,10 +109,10 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
             for rupture in ses[event_set]:
 
                 if self.job_ctxt['GMF_OUTPUT']:
-                    common_path = os.path.join(self.base_path,
-                            self.job_ctxt['OUTPUT_DIR'],
-                            "gmf-%s-%s" % (str(event_set.replace("!", "_")),
-                                           str(rupture.replace("!", "_"))))
+                    common_path = os.path.join(
+                        self.job_ctxt.base_path, self.job_ctxt['OUTPUT_DIR'],
+                        "gmf-%s-%s" % (str(event_set.replace("!", "_")),
+                        str(rupture.replace("!", "_"))))
                     nrml_path = "%s.xml" % common_path
 
                 gmf_writer = hazard_output.create_gmf_writer(
