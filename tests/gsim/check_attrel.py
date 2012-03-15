@@ -9,18 +9,18 @@ import sys
 import time
 
 from nhe import const
-from nhe.attrel.base import AttRelContext, AttenuationRelationship
+from nhe.gsim.base import GSIMContext, GroundShakingIntensityModel
 from nhe.imt import PGA, PGV, SA
 
 
-def check_attrel(attrel_cls, datafile, max_discrep_percentage,
+def check_gsim(gsim_cls, datafile, max_discrep_percentage,
                  max_errors=1, verbose=False):
     """
-    Test attenuation relationship against the data file and return test result.
+    Test GSIM against the data file and return test result.
 
-    :param attrel_cls:
-        A subclass of either :class:`~nhe.attrel.base.GMPE`
-        or :class:`~nhe.attrel.base.IPE` to test.
+    :param gsim_cls:
+        A subclass of either :class:`~nhe.gsim.base.GMPE`
+        or :class:`~nhe.gsim.base.IPE` to test.
     :param datafile:
         A file object containing test data in csv format.
     :param max_discrep_percentage:
@@ -38,7 +38,7 @@ def check_attrel(attrel_cls, datafile, max_discrep_percentage,
         statistics about the test run.
     """
     reader = csv.reader(datafile)
-    attrel = attrel_cls()
+    gsim = gsim_cls()
 
     linenum = 1
     errors = 0
@@ -50,7 +50,7 @@ def check_attrel(attrel_cls, datafile, max_discrep_percentage,
         context, stddev_types, component_type, expected_results, result_type =\
                 _parse_csv_line(headers, values)
         for imt, expected_result in expected_results.items():
-            mean, stddevs = attrel.get_mean_and_stddevs(
+            mean, stddevs = gsim.get_mean_and_stddevs(
                 context, imt, stddev_types, component_type
             )
             if result_type == 'MEAN':
@@ -129,7 +129,7 @@ def _parse_csv_line(headers, values):
         A tuple of the following values (in specified order):
 
         context
-            An instance of :class:`nhe.attrel.base.AttRelContext` with
+            An instance of :class:`nhe.gsim.base.GSIMContext` with
             attributes populated by the information from in row.
         stddev_types
             An empty list, if the ``result_type`` column says "MEAN"
@@ -146,8 +146,8 @@ def _parse_csv_line(headers, values):
             A string literal, one of ``'STDDEV'`` or ``'MEAN'``. Value
             is taken from column ``result_type``.
     """
-    context_params = set(AttRelContext.__slots__)
-    context = AttRelContext()
+    context_params = set(GSIMContext.__slots__)
+    context = GSIMContext()
     expected_results = {}
     stddev_types = result_type = damping = component_type = None
 
@@ -196,7 +196,7 @@ def _parse_csv_line(headers, values):
 if __name__ == '__main__':
     import argparse
 
-    def attrel_by_import_path(import_path):
+    def gsim_by_import_path(import_path):
         if not '.' in import_path:
             raise argparse.ArgumentTypeError(
                 '%r is not well-formed import path' % import_path
@@ -213,19 +213,20 @@ if __name__ == '__main__':
             raise argparse.ArgumentTypeError(
                 "module %r doesn't export name %r" % (module_name, class_name)
             )
-        attrel_class = getattr(module, class_name)
-        if not isinstance(attrel_class, type) \
-                or not issubclass(attrel_class, AttenuationRelationship):
+        gsim_class = getattr(module, class_name)
+        if not isinstance(gsim_class, type) \
+                or not issubclass(gsim_class, GroundShakingIntensityModel):
             raise argparse.ArgumentTypeError(
                 "%r is not subclass of " \
-                "nhe.attrel.base.AttenuationRelationship" % import_path
+                "nhe.gsim.base.GroundShakingIntensityModel" % import_path
             )
-        return attrel_class
+        return gsim_class
 
     parser = argparse.ArgumentParser(description=' '.join(__doc__.split()))
-    parser.add_argument('attrel', type=attrel_by_import_path,
-                        help='an import path of the attenuation relationship '\
-                             'class in a form "package.module.ClassName".')
+    parser.add_argument('gsim', type=gsim_by_import_path,
+                        help='an import path of the ground shaking ' \
+                             'intensity model class in a form ' \
+                             '"package.module.ClassName".')
     parser.add_argument('datafile', type=argparse.FileType('r'),
                         help='test data file in a csv format. use "-" for ' \
                              'reading from standard input')
@@ -249,8 +250,8 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
 
-    errors, stats = check_attrel(
-        attrel_cls=args.attrel, datafile=args.datafile,
+    errors, stats = check_gsim(
+        gsim_cls=args.gsim, datafile=args.datafile,
         max_discrep_percentage=args.max_discrep_percentage,
         max_errors=args.max_errors, verbose=args.verbose
     )

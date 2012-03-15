@@ -1,10 +1,10 @@
-from nhe.attrel.chiou_youngs_2008 import ChiouYoungs2008
+from nhe.gsim.chiou_youngs_2008 import ChiouYoungs2008
 
-from tests.attrel.utils import BaseAttRelTestCase
+from tests.gsim.utils import BaseGSIMTestCase
 
 
-class ChiouYoungs2008TestCase(BaseAttRelTestCase):
-    ATTREL_CLASS = ChiouYoungs2008
+class ChiouYoungs2008TestCase(BaseGSIMTestCase):
+    GSIM_CLASS = ChiouYoungs2008
 
     # First five tests use data ported from Kenneth Campbell
     # tables for verifying NGA models, see

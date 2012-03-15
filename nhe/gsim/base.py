@@ -1,5 +1,6 @@
 """
-Module :mod:`nhe.attrel.base` defines base :class:`AttenuationRelationship`.
+Module :mod:`nhe.gsim.base` defines base classes for different kinds
+of :class:`ground shaking intensity models <GroundShakingIntensityModel>`.
 """
 from __future__ import division
 
@@ -12,13 +13,17 @@ from nhe import const
 from nhe import imt as imt_module
 
 
-class AttenuationRelationship(object):
+class GroundShakingIntensityModel(object):
     """
-    Base class for all the Attenuation Relationships.
+    Base class for all the ground shaking intensity models.
+
+    A Ground Shaking Intensity Model (GSIM) defines a set of equations
+    for computing mean and standard deviation of a Normal distribution
+    representing the variability of an intensity measure (or of its logarithm)
+    at a site given an earthquake rupture.
 
     This class is not intended to be subclassed directly, instead
-    the actual attenuation relationships should subclass either
-    :class:`GMPE` or :class:`IPE`.
+    the actual GSIMs should subclass either :class:`GMPE` or :class:`IPE`.
 
     Subclasses of both must implement :meth:`get_mean_and_stddevs`
     and all the class attributes with names starting from ``DEFINED_FOR``
@@ -26,33 +31,30 @@ class AttenuationRelationship(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    #: Set of :class:`tectonic region types <nhe.const.TRT>` this attenuation
-    #: relationship is defined for.
+    #: Set of :class:`tectonic region types <nhe.const.TRT>` this GSIM
+    #: is defined for.
     DEFINED_FOR_TECTONIC_REGION_TYPES = abc.abstractproperty()
 
-    #: Set of :mod:`intensity measure types <nhe.imt>` this attenuation
-    #: relationship can calculate. A set should contain classes from
-    #: module :mod:`nhe.imt`.
+    #: Set of :mod:`intensity measure types <nhe.imt>` this GSIM can calculate.
+    #: A set should contain classes from module :mod:`nhe.imt`.
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = abc.abstractproperty()
 
     #: Set of :class:`intensity measure component types <nhe.const.IMC>`
-    #: this attenuation relationship can calculate mean and standard
-    #: deviation for.
+    #: this GSIM can calculate mean and standard deviation for.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS = abc.abstractproperty()
 
     #: Set of :class:`standard deviation types <nhe.const.StdDev>`
-    #: this attenuation relationship can calculate.
+    #: this GSIM can calculate.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = abc.abstractproperty()
 
-    #: Set of site parameters names this attenuation relationship
-    #: needs. The set should include strings that match names
-    #: of the :class:`site <nhe.site.Site>` object. Those attributes
-    #: are then available in the context object with the same names
-    #: prefixed with ``site_`` (like ``site_vs30`` for instance).
+    #: Set of site parameters names this GSIM needs. The set should include
+    #: strings that match names of the :class:`site <nhe.site.Site>` object.
+    #: Those attributes are then available in the context object with the same
+    #: names prefixed with ``site_`` (like ``site_vs30`` for instance).
     REQUIRES_SITE_PARAMETERS = abc.abstractproperty()
 
     #: Set of rupture parameters (excluding distance information) required
-    #: by attenuation relationship. Supported parameters are:
+    #: by GSIM. Supported parameters are:
     #:
     #: ``mag``
     #:     Magnitude of the rupture.
@@ -99,7 +101,7 @@ class AttenuationRelationship(object):
         Method must be implemented by subclasses.
 
         :param ctx:
-            Instance of :class:`AttRelContext` with parameters of rupture, site
+            Instance of :class:`GSIMContext` with parameters of rupture, site
             and their relative position (read, distances) assigned to respective
             attributes. Only those attributes that are listed in class'
             :attr:`REQUIRES_SITE_PARAMETERS`, :attr:`REQUIRES_DISTANCES`
@@ -127,7 +129,7 @@ class AttenuationRelationship(object):
         method allows to avoid redoing the same intermediate calculations
         if there are some shared between stddev and mean formulae without
         resorting to keeping any sort of internal state (and effectively
-        making attenuation relationship not reenterable).
+        making GSIM not reenterable).
 
         However it is advised to split calculation of mean and stddev values
         and make ``get_mean_and_stddevs()`` just combine both (and possibly
@@ -141,7 +143,7 @@ class AttenuationRelationship(object):
         (IMTs).
 
         :param ctx:
-            An instance of :class:`AttRelContext` with the same meaning
+            An instance of :class:`GSIMContext` with the same meaning
             as for :meth:`get_mean_and_stddevs`.
         :param imts:
             Dictionary mapping intensity measure type objects (that is,
@@ -180,9 +182,8 @@ class AttenuationRelationship(object):
         :raises ValueError:
             If truncation level is not ``None`` and neither non-negative
             float number, if intensity measure component is not supported
-            by the attenuation relationship (see
-            :attr:`DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS`) and if ``imts``
-            dictionary contain wrong or unsupported IMTs (see
+            by the GSIM (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS`)
+            and if ``imts`` dictionary contain wrong or unsupported IMTs (see
             :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
         """
         if truncation_level is not None and truncation_level < 0:
@@ -239,13 +240,12 @@ class AttenuationRelationship(object):
         the natural logarithm for :class:`GMPE`).
 
         This method is implemented by both :class:`GMPE` and :class:`IPE`
-        so there is no need to override it in actual attenuation relationship
-        implementations.
+        so there is no need to override it in actual GSIM implementations.
         """
 
     def make_context(self, site, rupture, distances=None):
         """
-        Create a :meth:`AttRelContext` object for given site and rupture.
+        Create a :meth:`GSIMContext` object for given site and rupture.
 
         :param site:
             Instance of :class:`nhe.site.Site`.
@@ -257,21 +257,20 @@ class AttenuationRelationship(object):
             like ``'rrup'`` or ``'rjb'``, see :attr:`REQUIRES_DISTANCES`)
             to actual distances between corresponding ``site`` and ``rupture``.
             If this value is not None, it's expected to contain all the
-            distance information the attenuation relationship requires,
-            those values are used without checks. Otherwise distances will
-            be calculated.
+            distance information the GSIM requires, those values are used
+            without checks. Otherwise distances will be calculated.
 
         :returns:
-            An instance of :class:`AttRelContext` with those (and only those)
-            attributes that are required by attenuation relationship filled in.
+            An instance of :class:`GSIMContext` with those (and only those)
+            attributes that are required by GSIM filled in.
 
         :raises ValueError:
             If any of declared required parameters (that includes site, rupture
             and distance parameters) is unknown. If distances dict is provided
             but is missing some of the required distance information.
         """
-        context = AttRelContext()
-        all_ctx_attrs = set(AttRelContext.__slots__)
+        context = GSIMContext()
+        all_ctx_attrs = set(GSIMContext.__slots__)
 
         clsname = type(self).__name__
 
@@ -324,13 +323,13 @@ class AttenuationRelationship(object):
         return context
 
 
-class GMPE(AttenuationRelationship):
+class GMPE(GroundShakingIntensityModel):
     """
     Ground-Motion Prediction Equation is a subclass of generic
-    :class:`AttenuationRelationship` with a distinct feature that
-    the intensity values are log-normally distributed.
+    :class:`GroundShakingIntensityModel` with a distinct feature
+    that the intensity values are log-normally distributed.
 
-    Method :meth:`~AttenuationRelationship.get_mean_and_stddevs`
+    Method :meth:`~GroundShakingIntensityModel.get_mean_and_stddevs`
     of actual GMPE implementations is supposed to return the mean
     value as a natural logarithm of intensity.
     """
@@ -341,11 +340,12 @@ class GMPE(AttenuationRelationship):
         return numpy.log(imls)
 
 
-class IPE(AttenuationRelationship):
+class IPE(GroundShakingIntensityModel):
     """
     Intensity Prediction Equation is a subclass of generic
-    :class:`AttenuationRelationship` which is suitable for intensity measures
-    that are normally distributed. In particular, for :class:`~nhe.imt.MMI`.
+    :class:`GroundShakingIntensityModel` which is suitable for
+    intensity measures that are normally distributed. In particular,
+    for :class:`~nhe.imt.MMI`.
     """
     def _convert_imls(self, imls):
         """
@@ -354,19 +354,20 @@ class IPE(AttenuationRelationship):
         return numpy.array(imls, dtype=float)
 
 
-class AttRelContext(object):
+class GSIMContext(object):
     """
-    Calculation context for attenuation relationships.
+    Calculation context for ground shaking intensity models.
 
     Instances of this class are passed into
-    :meth:`AttenuationRelationship.get_mean_and_stddevs`. They are intended
+    :meth:`GroundShakingIntensityModel.get_mean_and_stddevs`. They are intended
     to represent relevant features of the site, the rupture and their relative
-    position. Every Attenuation relationship class is required to declare what
-    :attr:`site <AttenuationRelationship.REQUIRES_SITE_PARAMETERS>`,
-    :attr:`rupture <AttenuationRelationship.REQUIRES_RUPTURE_PARAMETERS>`
-    and :attr:`distance <AttenuationRelationship.REQUIRES_DISTANCES>`
-    information does it need. Only those required parameters are calculated and
-    made available in a result of :meth:`AttenuationRelationship.make_context`.
+    position. Every GSIM class is required to declare what
+    :attr:`site <GroundShakingIntensityModel.REQUIRES_SITE_PARAMETERS>`,
+    :attr:`rupture <GroundShakingIntensityModel.REQUIRES_RUPTURE_PARAMETERS>`
+    and :attr:`distance <GroundShakingIntensityModel.REQUIRES_DISTANCES>`
+    information does it need. Only those required parameters are calculated
+    and made available in a result
+    of :meth:`GroundShakingIntensityModel.make_context`.
     """
     __slots__ = (
         # site parameters

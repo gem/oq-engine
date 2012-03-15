@@ -58,7 +58,7 @@ class IMC(ConstantContainer):
     AVERAGE_HORIZONTAL = 'Average horizontal'
     #: An orientation-independent alternative to :attr:`AVERAGE_HORIZONTAL`.
     #: Defined at Boore et al. (2006, Bull. Seism. Soc. Am. 96, 1502-1511)
-    #: and is used for all the NGA attenuation relationships.
+    #: and is used for all the NGA GMPEs.
     GMRotI50 = 'Average Horizontal (GMRotI50)'
     #: A randomly chosen horizontal component.
     RANDOM_HORIZONTAL = 'Random horizontal'
@@ -71,8 +71,7 @@ class IMC(ConstantContainer):
 
 class StdDev(ConstantContainer):
     """
-    Attenuation relationship standard deviation represents ground
-    shaking variability at a site.
+    GSIM standard deviation represents ground shaking variability at a site.
     """
     #: Standard deviation representing ground shaking variability
     #: within different events.
@@ -84,5 +83,5 @@ class StdDev(ConstantContainer):
     #: of inter- and intra-event squared standard deviations, represents
     #: the total ground shaking variability, and is the only one that
     #: is used for calculating a probability of intensity exceedance
-    #: (see :meth:`nhe.attrel.base.AttenuationRelationship.get_poes`).
+    #: (see :meth:`nhe.gsim.base.GroundShakingIntensityModel.get_poes`).
     TOTAL = 'Total'

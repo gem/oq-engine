@@ -1,4 +1,4 @@
 """
-Package :mod:`nhe.attrel` contains base and specific implementations of
-attenuation relationships. See :mod:`nhe.attrel.base`.
+Package :mod:`nhe.gsim` contains base and specific implementations of
+ground shaking intensity models. See :mod:`nhe.gsim.base`.
 """
