@@ -29,7 +29,6 @@ import uuid
 from openquake import engine
 from openquake.utils import tasks
 from openquake.db.models import model_equals
-from openquake.db.models import OqJob
 
 from tests.utils.helpers import demo_file
 from tests.utils.helpers import patch
@@ -151,16 +150,12 @@ class GetRunningCalculationTestCase(unittest.TestCase):
     """Tests for :function:`openquake.utils.tasks.get_running_job`."""
 
     def setUp(self):
+        self.job = engine.prepare_job()
         self.job_profile, self.params, _sections = (
             engine.import_job_profile(demo_file(
-                'simple_fault_demo_hazard/config.gem')))
+                'simple_fault_demo_hazard/config.gem'), self.job))
 
         self.params['debug'] = 'warn'
-
-        self.job = OqJob(
-            owner=self.job_profile.owner,
-            oq_job_profile=self.job_profile)
-        self.job.save()
 
         # Cache the calc proxy data into the kvs:
         job_ctxt = engine.JobContext(
@@ -298,12 +293,9 @@ class CalculatorForTaskTestCase(unittest.TestCase):
         """
         from openquake.calculators.hazard.classical.core import (
             ClassicalHazardCalculator)
+        job = engine.prepare_job()
         job_profile, params, sections = engine.import_job_profile(demo_file(
-            'simple_fault_demo_hazard/config.gem'))
-
-        job = OqJob(owner=job_profile.owner,
-                                    oq_job_profile=job_profile)
-        job.save()
+            'simple_fault_demo_hazard/config.gem'), job)
 
         job_ctxt = engine.JobContext(params, job.id,
                                              oq_job_profile=job_profile,

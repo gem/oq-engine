@@ -555,7 +555,7 @@ class HazardMapDBReader(object):
         """
         hazard_map = models.HazardMap.objects.get(output=output_id)
         hazard_map_data = hazard_map.hazardmapdata_set.all()
-        params = hazard_map.output.oq_job.oq_job_profile
+        params = hazard_map.output.oq_job.profile()
         points = []
 
         for datum in hazard_map_data:
@@ -674,8 +674,7 @@ class HazardCurveDBReader(object):
         :class:`HazardCurveDBWriter`.
         """
         hazard_curves = models.HazardCurve.objects.filter(output=output_id)
-        params = models.Output.objects.get(
-            id=output_id).oq_job.oq_job_profile
+        params = models.Output.objects.get(id=output_id).oq_job.profile()
         points = []
 
         for hazard_curve_datum in hazard_curves:

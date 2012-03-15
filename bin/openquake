@@ -113,9 +113,9 @@ def set_up_arg_parser():
 
 def list_calculations():
     """Simple UI wrapper around
-    :function:`openquake.export.core.get_calculations`. It prints the results in
+    :function:`openquake.export.core.get_jobs`. It prints the results in
     a nice way."""
-    calcs = export.get_calculations(getpass.getuser())
+    calcs = export.get_jobs(getpass.getuser())
     if len(calcs) > 0:
         print 'ID\tStatus\tDescription'
         for c in calcs:
@@ -162,11 +162,13 @@ if __name__ == '__main__':
         from openquake import job
         from openquake import engine
         try:
-            job_profile, params, sections = engine.import_job_profile(
-                args.config_file, user_name=getpass.getuser())
-            engine.run_job(job_profile, params, sections,
-                                   output_type=args.output_type,
-                                   log_level=args.log_level)
+            user_name = getpass.getuser()
+            ajob = engine.prepare_job(user_name)
+            _, params, sections = engine.import_job_profile(
+                args.config_file, ajob, user_name)
+            engine.run_job(ajob, params, sections,
+                           output_type=args.output_type,
+                           log_level=args.log_level)
         except job.config.ValidationException as e:
             print str(e)
     elif args.list_calculations:
