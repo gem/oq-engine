@@ -5,6 +5,7 @@ of :class:`ground shaking intensity models <GroundShakingIntensityModel>`.
 from __future__ import division
 
 import abc
+import math
 
 import scipy.stats
 import numpy
@@ -437,6 +438,7 @@ class CoeffsTable(object):
     ...     pgd  7.6  12     0  44.1
     ...     0.1  10   20    30  40
     ...     1.0   1    2     3   4
+    ...     10    2    4     6   8
     ... ''')
 
     Table objects could be indexed by IMT objects (this returns a dictionary
@@ -462,12 +464,14 @@ class CoeffsTable(object):
     by instances of :class:`nhe.imt.SA` with period value that is not specified
     in the table. The coefficients then get interpolated between the ones for
     closest higher and closest lower period. That scaling of coefficients works
-    only within the same damping:
+    in a logarithmic scale of periods and only within the same damping:
 
-    >>> ct[imt.SA(period=0.2, damping=5)]['a']
-    9.0
-    >>> ct[imt.SA(period=0.9, damping=5)]['c']
-    6.0
+    >>> '%.5f' % ct[imt.SA(period=0.2, damping=5)]['a']
+    '7.29073'
+    >>> '%.5f' % ct[imt.SA(period=0.9, damping=5)]['c']
+    '4.23545'
+    >>> '%.5f' % ct[imt.SA(period=5, damping=5)]['c']
+    '5.09691'
     >>> ct[imt.SA(period=0.9, damping=15)]
     Traceback (most recent call last):
         ...
@@ -549,8 +553,8 @@ class CoeffsTable(object):
         # ratio tends to 1 when target period tends to a minimum
         # known period above and to 0 if target period is close
         # to maximum period below.
-        ratio = (imt.period - max_below.period) / (min_above.period
-                                                   - max_below.period)
+        ratio = ((math.log(imt.period) - math.log(max_below.period))
+                 / (math.log(min_above.period) - math.log(max_below.period)))
         max_below = self.sa_coeffs[max_below]
         min_above = self.sa_coeffs[min_above]
         return dict(
