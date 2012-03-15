@@ -1,7 +1,7 @@
 import unittest
 import os
 
-from tests.gsim.check_attrel import check_gsim
+from tests.gsim.check_gsim import check_gsim
 
 
 class BaseGSIMTestCase(unittest.TestCase):
