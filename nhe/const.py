@@ -45,3 +45,43 @@ class TRT(ConstantContainer):
         False
         """
         return value in cls.ALL
+
+
+class IMC(ConstantContainer):
+    """
+    The intensity measure component is the component of interest
+    of ground shaking for an :mod:`intensity measure <nhe.imt>`.
+    """
+    #: Usually defined as the geometric average of the maximum
+    #: of the two horizontal components (which may not occur
+    #: at the same time).
+    AVERAGE_HORIZONTAL = 'Average horizontal'
+    #: An orientation-independent alternative to :attr:`AVERAGE_HORIZONTAL`.
+    #: Defined at Boore et al. (2006, Bull. Seism. Soc. Am. 96, 1502-1511)
+    #: and is used for all the NGA GMPEs.
+    GMRotI50 = 'Average Horizontal (GMRotI50)'
+    #: A randomly chosen horizontal component.
+    RANDOM_HORIZONTAL = 'Random horizontal'
+    #: The largest value obtained from two perpendicular horizontal
+    #: components.
+    GREATER_OF_TWO_HORIZONTAL = 'Greater of two horizontal'
+    #: The vertical component.
+    VERTICAL = 'Vertical'
+
+
+class StdDev(ConstantContainer):
+    """
+    GSIM standard deviation represents ground shaking variability at a site.
+    """
+    #: Standard deviation representing ground shaking variability
+    #: within different events.
+    INTER_EVENT = 'Inter event'
+    #: Standard deviation representing ground shaking variability
+    #: within a single event.
+    INTRA_EVENT = 'Intra event'
+    #: Total standard deviation, defined as the square root of the sum
+    #: of inter- and intra-event squared standard deviations, represents
+    #: the total ground shaking variability, and is the only one that
+    #: is used for calculating a probability of intensity exceedance
+    #: (see :meth:`nhe.gsim.base.GroundShakingIntensityModel.get_poes`).
+    TOTAL = 'Total'

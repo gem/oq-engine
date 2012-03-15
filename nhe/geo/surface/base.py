@@ -2,8 +2,9 @@
 Module :mod:`nhe.geo.surface.base` implements :class:`BaseSurface`.
 """
 import abc
-
 import math
+
+import numpy
 
 from nhe.geo import _utils as geo_utils
 
@@ -92,19 +93,26 @@ class BaseSurface(object):
         # distance to target is returned in meters, so multiply it by 0.001
         return math.sin(math.radians(azimuth)) * distance_to_target * 1e-3
 
+    def get_top_edge_depth(self):
+        """
+        Return minimum depth of surface's top edge.
+
+        :returns:
+            Float value, the vertical distance between the earth surface
+            and the shallowest point in surface's top edge in km.
+        """
+        top_edge = self.get_mesh()[0:1]
+        if top_edge.depths is None:
+            return 0
+        else:
+            return numpy.min(top_edge.depths)
+
     def _get_top_edge_centroid(self):
         """
         Return :class:`~nhe.geo.point.Point` representing the surface's
         top edge centroid.
-
-        .. warning::
-            Base surface class implementation requires the :meth:`mesh
-            <get_mesh>` to be constructed "top-to-bottom". That's it,
-            the first row of points should be the shallowest.
         """
-        mesh = self.get_mesh()
-        assert len(mesh.depths) == 1 or mesh.depths[0][0] < mesh.depths[-1][0]
-        top_edge = mesh[0:1]
+        top_edge = self.get_mesh()[0:1]
         return top_edge.get_middle_point()
 
     def get_mesh(self):
@@ -113,9 +121,16 @@ class BaseSurface(object):
 
         Uses :meth:`_create_mesh` for creating the mesh for the first time.
         All subsequent calls to :meth:`get_mesh` return the same mesh object.
+
+        .. warning::
+            It is required that the mesh is constructed "top-to-bottom".
+            That is, the first row of points should be the shallowest.
         """
         if self._mesh is None:
             self._mesh = self._create_mesh()
+            assert (self._mesh.depths is None or len(self._mesh.depths) == 1
+                    or self._mesh.depths[0][0] < self._mesh.depths[-1][0]), \
+                   "the first row of points in the mesh must be the shallowest"
         return self._mesh
 
     @abc.abstractmethod
