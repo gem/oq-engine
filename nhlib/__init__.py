@@ -14,6 +14,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-NHE stands for New Hazard Engine.
+nhlib stands for New Hazard Library.
 """
-from nhe import geo, mfd, scalerel, source, const, pmf, tom
+from nhlib import geo, mfd, scalerel, source, const, pmf, tom

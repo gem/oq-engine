@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
-from nhe.scalerel.wc1994 import WC1994
+from nhlib.scalerel.wc1994 import WC1994
 
 
 class WC1994ASRTestCase(unittest.TestCase):

@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
-from nhe.tom import PoissonTOM
+from nhlib.tom import PoissonTOM
 
 
 class PoissonTOMTestCase(unittest.TestCase):

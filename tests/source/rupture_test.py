@@ -15,11 +15,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
-from nhe import const
-from nhe.geo import Point
-from nhe.geo.surface.planar import PlanarSurface
-from nhe.tom import PoissonTOM
-from nhe.source.rupture import Rupture, ProbabilisticRupture
+from nhlib import const
+from nhlib.geo import Point
+from nhlib.geo.surface.planar import PlanarSurface
+from nhlib.tom import PoissonTOM
+from nhlib.source.rupture import Rupture, ProbabilisticRupture
 
 
 class RuptureCreationTestCase(unittest.TestCase):

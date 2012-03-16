@@ -14,11 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhe.geo.surface.planar` contains :class:`PlanarSurface`.
+Module :mod:`nhlib.geo.surface.planar` contains :class:`PlanarSurface`.
 """
-from nhe.geo.surface.base import BaseSurface
-from nhe.geo.mesh import RectangularMesh
-from nhe.geo.nodalplane import NodalPlane
+from nhlib.geo.surface.base import BaseSurface
+from nhlib.geo.mesh import RectangularMesh
+from nhlib.geo.nodalplane import NodalPlane
 
 
 class PlanarSurface(BaseSurface):
@@ -34,12 +34,12 @@ class PlanarSurface(BaseSurface):
     :param dip:
         Dip is the angle between the surface itself and the earth surface.
 
-    Other parameters are points (instances of :class:`~nhe.geo.point.Point`)
+    Other parameters are points (instances of :class:`~nhlib.geo.point.Point`)
     defining the surface corners in clockwise direction starting from top
     left corner. Top and bottom edges of the polygon must be parallel
     to earth surface and to each other.
 
-    See :class:`~nhe.geo.nodalplane.NodalPlane` for more detailed definition
+    See :class:`~nhlib.geo.nodalplane.NodalPlane` for more detailed definition
     of ``strike`` and ``dip``. Note that these parameters are supposed
     to match the factual surface geometry (defined by corner points), but
     this is not enforced or even checked.
@@ -99,7 +99,7 @@ class PlanarSurface(BaseSurface):
 
     def _create_mesh(self):
         """
-        See :meth:`nhe.surface.base.BaseSurface._create_mesh`.
+        See :meth:`nhlib.surface.base.BaseSurface._create_mesh`.
         """
         mesh = []
         l_line = self.top_left.equally_spaced_points(self.bottom_left,

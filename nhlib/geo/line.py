@@ -14,9 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhe.geo.line` defines :class:`Line`.
+Module :mod:`nhlib.geo.line` defines :class:`Line`.
 """
-from nhe.geo import _utils as utils
+from nhlib.geo import _utils as utils
 
 
 class Line(object):
@@ -31,7 +31,7 @@ class Line(object):
     :param points:
         The sequence of points defining this line.
     :type points:
-        list of :class:`~nhe.geo.point.Point` instances
+        list of :class:`~nhlib.geo.point.Point` instances
     """
 
     def __init__(self, points):
@@ -47,7 +47,7 @@ class Line(object):
 
     def __eq__(self, other):
         """
-        >>> from nhe.geo.point import Point
+        >>> from nhlib.geo.point import Point
         >>> points = [Point(1, 2), Point(3, 4)]; Line(points) == Line(points)
         True
         >>> Line(points) == Line(list(reversed(points)))
@@ -57,7 +57,7 @@ class Line(object):
 
     def __ne__(self, other):
         """
-        >>> from nhe.geo.point import Point
+        >>> from nhlib.geo.point import Point
         >>> Line([Point(1, 2)]) != Line([Point(1, 2)])
         False
         >>> Line([Point(1, 2)]) != Line([Point(2, 1)])

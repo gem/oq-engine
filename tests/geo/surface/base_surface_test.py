@@ -15,9 +15,9 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
-from nhe.geo.point import Point
-from nhe.geo.mesh import RectangularMesh
-from nhe.geo.surface.base import BaseSurface
+from nhlib.geo.point import Point
+from nhlib.geo.mesh import RectangularMesh
+from nhlib.geo.surface.base import BaseSurface
 
 from tests.geo.surface import _planar_test_data as test_data
 

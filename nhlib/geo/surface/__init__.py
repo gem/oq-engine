@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Package :mod:`nhe.geo.surface` contains base and specific implementations
+Package :mod:`nhlib.geo.surface` contains base and specific implementations
 of earthquake rupture surfaces.
 """
-from nhe.geo.surface.planar import PlanarSurface
+from nhlib.geo.surface.planar import PlanarSurface

@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhe.tom` contains implementations of probability
+Module :mod:`nhlib.tom` contains implementations of probability
 density functions for earthquake temporal occurrence modeling.
 """
 import math

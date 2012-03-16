@@ -14,15 +14,15 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Package :mod:`nhe.geo` contains implementations of different geographical
-primitives, such as :class:`~nhe.geo.point.Point`, :class:`~nhe.geo.line.Line`
-:class:`~nhe.geo.polygon.Polygon` and :class:`~nhe.geo.mesh.Mesh`, as well
-as different :mod:`surface <nhe.geo.surface>` implementations and utility
-class :class:`~nhe.geo.nodalplane.NodalPlane`.
+Package :mod:`nhlib.geo` contains implementations of different geographical
+primitives, such as :class:`~nhlib.geo.point.Point`, :class:`~nhlib.geo.line.Line`
+:class:`~nhlib.geo.polygon.Polygon` and :class:`~nhlib.geo.mesh.Mesh`, as well
+as different :mod:`surface <nhlib.geo.surface>` implementations and utility
+class :class:`~nhlib.geo.nodalplane.NodalPlane`.
 """
-from nhe.geo.point import Point
-from nhe.geo.line import Line
-from nhe.geo.polygon import Polygon
-from nhe.geo.mesh import Mesh, RectangularMesh
-from nhe.geo.surface import PlanarSurface
-from nhe.geo.nodalplane import NodalPlane
+from nhlib.geo.point import Point
+from nhlib.geo.line import Line
+from nhlib.geo.polygon import Polygon
+from nhlib.geo.mesh import Mesh, RectangularMesh
+from nhlib.geo.surface import PlanarSurface
+from nhlib.geo.nodalplane import NodalPlane

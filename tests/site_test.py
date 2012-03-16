@@ -15,8 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
-from nhe.site import Site
-from nhe.geo.point import Point
+from nhlib.site import Site
+from nhlib.geo.point import Point
 
 
 class SiteTestCase(unittest.TestCase):

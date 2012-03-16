@@ -16,14 +16,14 @@
 import unittest
 from decimal import Decimal
 
-from nhe.const import TRT
-from nhe.source.point import PointSource
-from nhe.source.rupture import ProbabilisticRupture
-from nhe.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
-from nhe.scalerel.peer import PeerMSR
-from nhe.geo import Point, PlanarSurface, NodalPlane
-from nhe.pmf import PMF
-from nhe.tom import PoissonTOM
+from nhlib.const import TRT
+from nhlib.source.point import PointSource
+from nhlib.source.rupture import ProbabilisticRupture
+from nhlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
+from nhlib.scalerel.peer import PeerMSR
+from nhlib.geo import Point, PlanarSurface, NodalPlane
+from nhlib.pmf import PMF
+from nhlib.tom import PoissonTOM
 
 from tests.geo.surface import _planar_test_data as planar_surface_test_data
 

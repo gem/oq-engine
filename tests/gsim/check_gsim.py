@@ -23,9 +23,9 @@ import math
 import sys
 import time
 
-from nhe import const
-from nhe.gsim.base import GSIMContext, GroundShakingIntensityModel
-from nhe.imt import PGA, PGV, SA
+from nhlib import const
+from nhlib.gsim.base import GSIMContext, GroundShakingIntensityModel
+from nhlib.imt import PGA, PGV, SA
 
 
 def check_gsim(gsim_cls, datafile, max_discrep_percentage,
@@ -34,8 +34,8 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage,
     Test GSIM against the data file and return test result.
 
     :param gsim_cls:
-        A subclass of either :class:`~nhe.gsim.base.GMPE`
-        or :class:`~nhe.gsim.base.IPE` to test.
+        A subclass of either :class:`~nhlib.gsim.base.GMPE`
+        or :class:`~nhlib.gsim.base.IPE` to test.
     :param datafile:
         A file object containing test data in csv format.
     :param max_discrep_percentage:
@@ -144,7 +144,7 @@ def _parse_csv_line(headers, values):
         A tuple of the following values (in specified order):
 
         context
-            An instance of :class:`nhe.gsim.base.GSIMContext` with
+            An instance of :class:`nhlib.gsim.base.GSIMContext` with
             attributes populated by the information from in row.
         stddev_types
             An empty list, if the ``result_type`` column says "MEAN"
@@ -233,7 +233,7 @@ if __name__ == '__main__':
                 or not issubclass(gsim_class, GroundShakingIntensityModel):
             raise argparse.ArgumentTypeError(
                 "%r is not subclass of " \
-                "nhe.gsim.base.GroundShakingIntensityModel" % import_path
+                "nhlib.gsim.base.GroundShakingIntensityModel" % import_path
             )
         return gsim_class
 

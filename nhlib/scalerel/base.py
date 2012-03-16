@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhe.scalerel.base` defines an abstract base classes
+Module :mod:`nhlib.scalerel.base` defines an abstract base classes
 for :class:`ASR <BaseASR>` and :class:`MSR <BaseMSR>`.
 """
 import abc

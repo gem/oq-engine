@@ -14,11 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhe.source.rupture` defines classes :class:`Rupture`
+Module :mod:`nhlib.source.rupture` defines classes :class:`Rupture`
 and its subclass :class:`ProbabilisticRupture`.
 """
-from nhe import const
-from nhe.geo.nodalplane import NodalPlane
+from nhlib import const
+from nhlib.geo.nodalplane import NodalPlane
 
 
 class Rupture(object):
@@ -28,13 +28,13 @@ class Rupture(object):
     :param mag:
         Magnitude of the rupture.
     :param rake:
-        Rake value of the rupture. See :class:`~nhe.geo.nodalplane.NodalPlane`.
+        Rake value of the rupture. See :class:`~nhlib.geo.nodalplane.NodalPlane`.
     :param tectonic_region_type:
-        Rupture's tectonic regime. One of constants in :class:`nhe.const.TRT`.
+        Rupture's tectonic regime. One of constants in :class:`nhlib.const.TRT`.
     :param hypocenter:
-        A :class:`~nhe.geo.point.Point`, rupture's hypocenter.
+        A :class:`~nhlib.geo.point.Point`, rupture's hypocenter.
     :param surface:
-        An instance of subclass of :class:`~nhe.geo.surface.base.BaseSurface`.
+        An instance of subclass of :class:`~nhlib.geo.surface.base.BaseSurface`.
         Object representing the rupture surface geometry.
 
     :raises ValueError:
@@ -66,7 +66,7 @@ class ProbabilisticRupture(Rupture):
         Number of times rupture happens per year.
     :param temporal_occurrence_model:
         Temporal occurrence model assigned for this rupture. Should
-        be an instance of :class:`nhe.tom.PoissonTOM`.
+        be an instance of :class:`nhlib.tom.PoissonTOM`.
 
     :raises ValueError:
         If occurrence rate is not positive.

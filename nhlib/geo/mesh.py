@@ -14,14 +14,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhe.geo.mesh` defines classes :class:`Mesh` and its subclass
+Module :mod:`nhlib.geo.mesh` defines classes :class:`Mesh` and its subclass
 :class:`RectangularMesh`.
 """
 import numpy
 import shapely.geometry
 
-from nhe.geo.point import Point
-from nhe.geo import _utils as geo_utils
+from nhlib.geo.point import Point
+from nhlib.geo import _utils as geo_utils
 
 
 class Mesh(object):
@@ -60,7 +60,7 @@ class Mesh(object):
         Create a mesh object from a collection of points.
 
         :param point:
-            List of :class:`~nhe.geo.point.Point` objects.
+            List of :class:`~nhlib.geo.point.Point` objects.
         :returns:
             An instance of :class:`Mesh` with one-dimensional arrays
             of coordinates from ``points``.
@@ -79,7 +79,7 @@ class Mesh(object):
 
     def __iter__(self):
         """
-        Generate :class:`~nhe.geo.point.Point` objects the mesh is composed of.
+        Generate :class:`~nhlib.geo.point.Point` objects the mesh is composed of.
 
         Coordinates arrays are processed sequentially (as if they were
         flattened).
@@ -136,7 +136,7 @@ class Mesh(object):
         the method's time complexity grows linearly with the number
         of points in the mesh.
         """
-        # here the same approach as in :meth:`nhe.geo.point.Point.distance`
+        # here the same approach as in :meth:`nhlib.geo.point.Point.distance`
         # is used. we find the great circle distance between the target
         # point and each point of the mesh, independently calculate
         # the vertical distance (just subtracting values) and combine
@@ -186,7 +186,7 @@ class RectangularMesh(Mesh):
         Lists in a list are supposed to have the same length.
 
         :param point:
-            List of lists of :class:`~nhe.geo.point.Point` objects.
+            List of lists of :class:`~nhlib.geo.point.Point` objects.
         """
         assert points is not None and len(points) > 0 and len(points[0]) > 0, \
                'list of at least one non-empty list of points is required'
@@ -265,7 +265,7 @@ class RectangularMesh(Mesh):
         Compute and return Joyner-Boore distance to ``point``.
         Point's depth is ignored.
 
-        See :meth:`nhe.geo.surface.BaseSurface.get_joyner_boore_distance`
+        See :meth:`nhlib.geo.surface.BaseSurface.get_joyner_boore_distance`
         for definition of this distance.
 
         :returns:
@@ -305,7 +305,7 @@ class RectangularMesh(Mesh):
         Return the middle point of the mesh.
 
         :returns:
-            An instance of :class:`~nhe.geo.point.Point`.
+            An instance of :class:`~nhlib.geo.point.Point`.
 
         The middle point is taken from the middle row and a middle column
         of the mesh if there are odd number of both. Otherwise the geometric

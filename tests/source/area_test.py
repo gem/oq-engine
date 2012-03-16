@@ -15,13 +15,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
-from nhe.const import TRT
-from nhe.scalerel.peer import PeerMSR
-from nhe.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
-from nhe.geo import Point, Polygon, NodalPlane
-from nhe.pmf import PMF
-from nhe.tom import PoissonTOM
-from nhe.source.area import AreaSource
+from nhlib.const import TRT
+from nhlib.scalerel.peer import PeerMSR
+from nhlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
+from nhlib.geo import Point, Polygon, NodalPlane
+from nhlib.pmf import PMF
+from nhlib.tom import PoissonTOM
+from nhlib.source.area import AreaSource
 
 
 class AreaSourceIterRupturesTestCase(unittest.TestCase):

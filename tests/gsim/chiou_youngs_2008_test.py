@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from nhe.gsim.chiou_youngs_2008 import ChiouYoungs2008
+from nhlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
 
 from tests.gsim.utils import BaseGSIMTestCase
 

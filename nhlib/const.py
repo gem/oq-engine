@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhe.const` defines various constants.
+Module :mod:`nhlib.const` defines various constants.
 """
 
 
@@ -65,7 +65,7 @@ class TRT(ConstantContainer):
 class IMC(ConstantContainer):
     """
     The intensity measure component is the component of interest
-    of ground shaking for an :mod:`intensity measure <nhe.imt>`.
+    of ground shaking for an :mod:`intensity measure <nhlib.imt>`.
     """
     #: Usually defined as the geometric average of the maximum
     #: of the two horizontal components (which may not occur
@@ -98,5 +98,5 @@ class StdDev(ConstantContainer):
     #: of inter- and intra-event squared standard deviations, represents
     #: the total ground shaking variability, and is the only one that
     #: is used for calculating a probability of intensity exceedance
-    #: (see :meth:`nhe.gsim.base.GroundShakingIntensityModel.get_poes`).
+    #: (see :meth:`nhlib.gsim.base.GroundShakingIntensityModel.get_poes`).
     TOTAL = 'Total'

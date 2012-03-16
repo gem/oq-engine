@@ -14,10 +14,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhe.scalerel.wc1994` implements :class:`WC1994`.
+Module :mod:`nhlib.scalerel.wc1994` implements :class:`WC1994`.
 """
 from math import log10
-from nhe.scalerel.base import BaseMSR, BaseASR
+from nhlib.scalerel.base import BaseMSR, BaseASR
 
 
 class WC1994(BaseMSR, BaseASR):

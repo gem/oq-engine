@@ -14,11 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhe.source.base` defines a base class for seismic sources.
+Module :mod:`nhlib.source.base` defines a base class for seismic sources.
 """
 import abc
 
-from nhe import const
+from nhlib import const
 
 
 class SeismicSource(object):
@@ -34,12 +34,12 @@ class SeismicSource(object):
     :param tectonic_region_type:
         Source's tectonic regime. See :class:`const.TRT`.
     :param mfd:
-        Magnitude-Frequency distribution for the source. See :mod:`nhe.mfd`.
+        Magnitude-Frequency distribution for the source. See :mod:`nhlib.mfd`.
     :param rupture_mesh_spacing:
         The desired distance between two adjacent points in source's
         ruptures' mesh, in km. Mainly this parameter allows to balance
         the trade-off between time needed to compute the :meth:`distance
-        <nhe.geo.surface.base.BaseSurface.get_min_distance>` between
+        <nhlib.geo.surface.base.BaseSurface.get_min_distance>` between
         the rupture surface and a site and the precision of that computation.
     :raises ValueError:
         If ``tectonic_region_type`` is wrong/unknown.
@@ -67,9 +67,9 @@ class SeismicSource(object):
 
         :param temporal_occurrence_model:
             Temporal occurrence model (supposedly
-            :class:`nhe.tom.PoissonTOM`). It is passed intact
+            :class:`nhlib.tom.PoissonTOM`). It is passed intact
             to the probabilistic rupture constructor.
         :returns:
             Generator of instances
-            of :class:`~nhe.source.rupture.ProbabilisticRupture`.
+            of :class:`~nhlib.source.rupture.ProbabilisticRupture`.
         """

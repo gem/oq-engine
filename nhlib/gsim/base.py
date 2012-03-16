@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhe.gsim.base` defines base classes for different kinds
+Module :mod:`nhlib.gsim.base` defines base classes for different kinds
 of :class:`ground shaking intensity models <GroundShakingIntensityModel>`.
 """
 from __future__ import division
@@ -25,8 +25,8 @@ import math
 import scipy.stats
 import numpy
 
-from nhe import const
-from nhe import imt as imt_module
+from nhlib import const
+from nhlib import imt as imt_module
 
 
 class GroundShakingIntensityModel(object):
@@ -47,24 +47,24 @@ class GroundShakingIntensityModel(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    #: Set of :class:`tectonic region types <nhe.const.TRT>` this GSIM
+    #: Set of :class:`tectonic region types <nhlib.const.TRT>` this GSIM
     #: is defined for.
     DEFINED_FOR_TECTONIC_REGION_TYPES = abc.abstractproperty()
 
-    #: Set of :mod:`intensity measure types <nhe.imt>` this GSIM can calculate.
-    #: A set should contain classes from module :mod:`nhe.imt`.
+    #: Set of :mod:`intensity measure types <nhlib.imt>` this GSIM can calculate.
+    #: A set should contain classes from module :mod:`nhlib.imt`.
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = abc.abstractproperty()
 
-    #: Set of :class:`intensity measure component types <nhe.const.IMC>`
+    #: Set of :class:`intensity measure component types <nhlib.const.IMC>`
     #: this GSIM can calculate mean and standard deviation for.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS = abc.abstractproperty()
 
-    #: Set of :class:`standard deviation types <nhe.const.StdDev>`
+    #: Set of :class:`standard deviation types <nhlib.const.StdDev>`
     #: this GSIM can calculate.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = abc.abstractproperty()
 
     #: Set of site parameters names this GSIM needs. The set should include
-    #: strings that match names of the :class:`site <nhe.site.Site>` object.
+    #: strings that match names of the :class:`site <nhlib.site.Site>` object.
     #: Those attributes are then available in the context object with the same
     #: names prefixed with ``site_`` (like ``site_vs30`` for instance).
     REQUIRES_SITE_PARAMETERS = abc.abstractproperty()
@@ -76,12 +76,12 @@ class GroundShakingIntensityModel(object):
     #:     Magnitude of the rupture.
     #: ``trt``
     #:     Rupture's tectonic region type. A constant from
-    #:     :class:`nhe.const.TRT`.
+    #:     :class:`nhlib.const.TRT`.
     #: ``dip``
     #:     Rupture's surface dip angle in decimal degrees.
     #: ``rake``
     #:     Angle describing the slip propagation on the rupture surface,
-    #:     in decimal degrees. See :mod:`~nhe.geo.nodalplane` for more
+    #:     in decimal degrees. See :mod:`~nhlib.geo.nodalplane` for more
     #:     detailed description of dip and rake.
     #:
     #: These parameters are available from the context object attributes
@@ -93,16 +93,16 @@ class GroundShakingIntensityModel(object):
     #:
     #: ``rrup``
     #:     Closest distance to rupture surface.
-    #:     See :meth:`~nhe.geo.surface.base.BaseSurface.get_min_distance`.
+    #:     See :meth:`~nhlib.geo.surface.base.BaseSurface.get_min_distance`.
     #: ``rjb``
     #:     Distance to rupture's surface projection. See
-    #:     :meth:`~nhe.geo.surface.base.BaseSurface.get_joyner_boore_distance`.
+    #:     :meth:`~nhlib.geo.surface.base.BaseSurface.get_joyner_boore_distance`.
     #: ``rx``
     #:     Perpendicular distance to rupture top edge projection.
-    #:     See :meth:`~nhe.geo.surface.base.BaseSurface.get_rx_distance`.
+    #:     See :meth:`~nhlib.geo.surface.base.BaseSurface.get_rx_distance`.
     #: ``ztor``
     #:     Rupture's top edge depth. See
-    #:     :meth:`~nhe.geo.surface.base.BaseSurface.get_top_edge_depth`.
+    #:     :meth:`~nhlib.geo.surface.base.BaseSurface.get_top_edge_depth`.
     #:
     #: All the distances are available from the context object attributes
     #: with same names prefixed with ``dist_``. Values are in kilometers.
@@ -124,14 +124,14 @@ class GroundShakingIntensityModel(object):
             and :attr:`REQUIRES_RUPTURE_PARAMETERS` are available.
         :param imt:
             An instance (not a class) of intensity measure type.
-            See :mod:`nhe.imt`.
+            See :mod:`nhlib.imt`.
         :param stddev_types:
             List of standard deviation types, constants from
-            :class:`nhe.const.StdDev`. Method result value should include
+            :class:`nhlib.const.StdDev`. Method result value should include
             standard deviation values for each of types in this list.
         :param component_type:
             A component of interest of intensity measure. A constant from
-            :class:`nhe.const.IMC`.
+            :class:`nhlib.const.IMC`.
 
         :returns:
             Method should return a tuple of two items. First item should be
@@ -163,13 +163,13 @@ class GroundShakingIntensityModel(object):
             as for :meth:`get_mean_and_stddevs`.
         :param imts:
             Dictionary mapping intensity measure type objects (that is,
-            instances of classes from :mod:`nhe.imt`) to lists of
+            instances of classes from :mod:`nhlib.imt`) to lists of
             interested intensity measure levels. Those lists contain
             just floats representing the value of intensity exceedance
             of which is of interest.
         :param component_type:
             A component of interest of intensity measure. A constant from
-            :class:`nhe.const.IMC`.
+            :class:`nhlib.const.IMC`.
         :param truncation_level:
             Can be ``None``, which means that the distribution of intensity
             is treated as Gaussian distribution with possible values ranging
@@ -264,10 +264,10 @@ class GroundShakingIntensityModel(object):
         Create a :meth:`GSIMContext` object for given site and rupture.
 
         :param site:
-            Instance of :class:`nhe.site.Site`.
+            Instance of :class:`nhlib.site.Site`.
         :param rupture:
-            Instance of :class:`~nhe.source.rupture.Rupture` (or its subclass
-            :class:`~nhe.source.rupture.ProbabilisticRupture`).
+            Instance of :class:`~nhlib.source.rupture.Rupture` (or its subclass
+            :class:`~nhlib.source.rupture.ProbabilisticRupture`).
         :param distances:
             If provided should be a dictionary mapping distance types (strings
             like ``'rrup'`` or ``'rjb'``, see :attr:`REQUIRES_DISTANCES`)
@@ -361,7 +361,7 @@ class IPE(GroundShakingIntensityModel):
     Intensity Prediction Equation is a subclass of generic
     :class:`GroundShakingIntensityModel` which is suitable for
     intensity measures that are normally distributed. In particular,
-    for :class:`~nhe.imt.MMI`.
+    for :class:`~nhlib.imt.MMI`.
     """
     def _convert_imls(self, imls):
         """
@@ -412,7 +412,7 @@ class CoeffsTable(object):
 
     Names of other columns are used as coefficients dicts keys. The values
     in the first column should correspond to real intensity measure types,
-    see :mod:`nhe.imt`:
+    see :mod:`nhlib.imt`:
 
     >>> CoeffsTable(table='''imt  z
     ...                      pgx  2''')
@@ -431,7 +431,7 @@ class CoeffsTable(object):
         ...
     TypeError: CoeffsTable got unexpected kwargs: {'foo': 1}
 
-    If there are :class:`~nhe.imt.SA` IMTs in the table, they are not
+    If there are :class:`~nhlib.imt.SA` IMTs in the table, they are not
     referenced by name, because they require parametrization:
 
     >>> CoeffsTable(table='''imt  x
@@ -459,7 +459,7 @@ class CoeffsTable(object):
     Table objects could be indexed by IMT objects (this returns a dictionary
     of coefficients):
 
-    >>> from nhe import imt
+    >>> from nhlib import imt
     >>> ct[imt.PGA()] == dict(a=1, b=2.4, c=-5, d=0.01)
     True
     >>> ct[imt.PGD()] == dict(a=7.6, b=12, c=0, d=44.1)
@@ -476,7 +476,7 @@ class CoeffsTable(object):
     KeyError: SA(period=1.0, damping=4)
 
     Table of coefficients for spectral acceleration could be indexed
-    by instances of :class:`nhe.imt.SA` with period value that is not specified
+    by instances of :class:`nhlib.imt.SA` with period value that is not specified
     in the table. The coefficients then get interpolated between the ones for
     closest higher and closest lower period. That scaling of coefficients works
     in a logarithmic scale of periods and only within the same damping:
@@ -538,7 +538,7 @@ class CoeffsTable(object):
         Return a dictionary of coefficients corresponding to ``imt``
         from this table (if there is a line for requested IMT in it),
         or the dictionary of interpolated coefficients, if ``imt``
-        is of type :class:`~nhe.imt.SA` and interpolation is possible.
+        is of type :class:`~nhlib.imt.SA` and interpolation is possible.
 
         :raises KeyError:
             If ``imt`` is not available in the table and no interpolation

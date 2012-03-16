@@ -14,14 +14,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhe.geo.polygon` defines :class:`Polygon`.
+Module :mod:`nhlib.geo.polygon` defines :class:`Polygon`.
 """
 import numpy
 import shapely.geometry
 
-from nhe.geo.mesh import Mesh
-from nhe.geo._utils import GEOD
-from nhe.geo import _utils as utils
+from nhlib.geo.mesh import Mesh
+from nhlib.geo._utils import GEOD
+from nhlib.geo import _utils as utils
 
 
 class Polygon(object):
@@ -112,7 +112,7 @@ class Polygon(object):
         with distance of ``mesh_spacing`` km between.
 
         :returns:
-            An instance of :class:`~nhe.geo.mesh.Mesh` that holds
+            An instance of :class:`~nhlib.geo.mesh.Mesh` that holds
             the points data. Mesh is created with no depth information
             (all the points are on the Earth surface).
         """

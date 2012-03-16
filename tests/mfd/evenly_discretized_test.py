@@ -13,7 +13,7 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from nhe.mfd import EvenlyDiscretizedMFD
+from nhlib.mfd import EvenlyDiscretizedMFD
 
 from tests.mfd.base_test import BaseMFDTestCase
 

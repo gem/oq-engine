@@ -19,9 +19,9 @@ Module exports :class:`ChiouYoungs2008`.
 from __future__ import division
 from math import log, tanh, cosh, cos, radians, sqrt, exp
 
-from nhe.gsim.base import GMPE, CoeffsTable
-from nhe import const
-from nhe.imt import PGA, PGV, SA
+from nhlib.gsim.base import GMPE, CoeffsTable
+from nhlib import const
+from nhlib.imt import PGA, PGV, SA
 
 
 class ChiouYoungs2008(GMPE):
@@ -47,7 +47,7 @@ class ChiouYoungs2008(GMPE):
     ])
 
     #: Supported intensity measure component is only orientation-independent
-    #: measure :attr:`~nhe.const.IMC.GMRotI50`, see page 174.
+    #: measure :attr:`~nhlib.const.IMC.GMRotI50`, see page 174.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS = set([
         const.IMC.GMRotI50
     ])
@@ -75,7 +75,7 @@ class ChiouYoungs2008(GMPE):
     def get_mean_and_stddevs(self, ctx, imt, stddev_types, component_type):
         """
         See :meth:`superclass method
-        <nhe.gsim.base.GroundShkingIntensityModel.get_mean_and_stddevs>`
+        <nhlib.gsim.base.GroundShkingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         # extracting dictionary of coefficients specific to required

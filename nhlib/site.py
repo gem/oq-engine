@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhe.site` defines :class:`Site`.
+Module :mod:`nhlib.site` defines :class:`Site`.
 """
 class Site(object):
     """
@@ -22,7 +22,7 @@ class Site(object):
     as well as its soil characteristics.
 
     :param location:
-        Instance of :class:`~nhe.geo.point.Point` representing where the site
+        Instance of :class:`~nhlib.geo.point.Point` representing where the site
         is located.
     :param vs30:
         Average shear wave velocity in the top 30 m, in m/s.

@@ -14,14 +14,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhe.geo.surface.base` implements :class:`BaseSurface`.
+Module :mod:`nhlib.geo.surface.base` implements :class:`BaseSurface`.
 """
 import abc
 import math
 
 import numpy
 
-from nhe.geo import _utils as geo_utils
+from nhlib.geo import _utils as geo_utils
 
 
 class BaseSurface(object):
@@ -46,7 +46,7 @@ class BaseSurface(object):
             Distance in km.
 
         Base class implementation calls the :meth:`corresponding
-        <nhe.geo.mesh.Mesh.get_min_distance>` method of the
+        <nhlib.geo.mesh.Mesh.get_min_distance>` method of the
         surface's :meth:`mesh <get_mesh>`.
 
         Subclasses may override this method in order to make use
@@ -65,7 +65,7 @@ class BaseSurface(object):
             and the surface to the earth surface.
 
         Base class calls surface mesh's method
-        :meth:`~nhe.geo.mesh.RectangularMesh.get_joyner_boore_distance`.
+        :meth:`~nhlib.geo.mesh.RectangularMesh.get_joyner_boore_distance`.
         """
         return self.get_mesh().get_joyner_boore_distance(point)
 
@@ -124,7 +124,7 @@ class BaseSurface(object):
 
     def _get_top_edge_centroid(self):
         """
-        Return :class:`~nhe.geo.point.Point` representing the surface's
+        Return :class:`~nhlib.geo.point.Point` representing the surface's
         top edge centroid.
         """
         top_edge = self.get_mesh()[0:1]
@@ -154,7 +154,7 @@ class BaseSurface(object):
         Create and return the mesh of points covering the surface.
 
         :returns:
-            An instance of :class:`nhe.geo.mesh.RectangularMesh`.
+            An instance of :class:`nhlib.geo.mesh.RectangularMesh`.
         """
 
     @abc.abstractmethod

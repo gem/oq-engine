@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhe.mfd.base` defines base class for MFD -- :class:`BaseMFD`.
+Module :mod:`nhlib.mfd.base` defines base class for MFD -- :class:`BaseMFD`.
 """
 import abc
 

@@ -17,8 +17,8 @@ import unittest
 
 import numpy
 
-from nhe.geo.point import Point
-from nhe.geo.mesh import Mesh, RectangularMesh
+from nhlib.geo.point import Point
+from nhlib.geo.mesh import Mesh, RectangularMesh
 
 from tests.geo import _mesh_test_data
 

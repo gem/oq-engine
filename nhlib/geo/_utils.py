@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Package-private module :mod:`nhe.geo._utils` contains functions that are
+Package-private module :mod:`nhlib.geo._utils` contains functions that are
 common to several geographical primitives.
 """
 import numpy
@@ -28,7 +28,7 @@ GEOD = pyproj.Geod(ellps='sphere')
 
 def clean_points(points):
     """
-    Given a list of :class:`~nhe.geo.point.Point` objects, return a new list
+    Given a list of :class:`~nhlib.geo.point.Point` objects, return a new list
     with adjacent duplicate points removed.
     """
     if not points:

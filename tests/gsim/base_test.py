@@ -18,12 +18,12 @@ import collections
 
 import numpy
 
-from nhe import const
-from nhe.gsim.base import IPE, GSIMContext
-from nhe.geo.point import Point
-from nhe.imt import PGA, PGV
-from nhe.site import Site
-from nhe.source.rupture import Rupture
+from nhlib import const
+from nhlib.gsim.base import IPE, GSIMContext
+from nhlib.geo.point import Point
+from nhlib.imt import PGA, PGV
+from nhlib.site import Site
+from nhlib.source.rupture import Rupture
 
 
 class _FakeGSIMTestCase(unittest.TestCase):

@@ -14,11 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhe.mfd.truncated_gr` defines a Truncated Gutenberg-Richter MFD.
+Module :mod:`nhlib.mfd.truncated_gr` defines a Truncated Gutenberg-Richter MFD.
 """
 import math
 
-from nhe.mfd.base import BaseMFD
+from nhlib.mfd.base import BaseMFD
 
 
 class TruncatedGRMFD(BaseMFD):
@@ -135,7 +135,7 @@ class TruncatedGRMFD(BaseMFD):
         values appear equal after rounding.
 
         :returns:
-            See :meth:`nhe.mfd.BaseMFD.get_annual_occurrence_rates`.
+            See :meth:`nhlib.mfd.BaseMFD.get_annual_occurrence_rates`.
         """
         mag, num_bins = self._get_min_mag_and_num_bins()
         rates = []

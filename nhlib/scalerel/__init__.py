@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Package :mod:`nhe.scalerel` contains base classes and implementations
+Package :mod:`nhlib.scalerel` contains base classes and implementations
 of magnitude-area and area-magnitude scaling relationships.
 """
-from nhe.scalerel.peer import PeerMSR
-from nhe.scalerel.wc1994 import WC1994
+from nhlib.scalerel.peer import PeerMSR
+from nhlib.scalerel.wc1994 import WC1994

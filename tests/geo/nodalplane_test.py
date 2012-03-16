@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
-from nhe.geo.nodalplane import NodalPlane
+from nhlib.geo.nodalplane import NodalPlane
 
 
 class NodalPlaneTestCase(unittest.TestCase):

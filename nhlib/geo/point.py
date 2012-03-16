@@ -14,11 +14,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhe.geo.point` defines :class:`Point`.
+Module :mod:`nhlib.geo.point` defines :class:`Point`.
 """
 import math
 
-from nhe.geo._utils import GEOD
+from nhlib.geo._utils import GEOD
 
 
 class Point(object):

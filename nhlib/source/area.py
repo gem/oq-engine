@@ -14,9 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhe.source.area` defines :class:`AreaSource`.
+Module :mod:`nhlib.source.area` defines :class:`AreaSource`.
 """
-from nhe.source.point import PointSource
+from nhlib.source.point import PointSource
 
 
 class AreaSource(PointSource):
@@ -25,14 +25,14 @@ class AreaSource(PointSource):
     region.
 
     :param polygon:
-        An instance of :class:`nhe.common.geo.Polygon` that defines
+        An instance of :class:`nhlib.common.geo.Polygon` that defines
         source's area.
     :param area_discretization:
         Float number, polygon area discretization spacing in kilometers.
         See :meth:`iter_ruptures`.
 
     Other parameters (except ``location``) are the same as for
-    :class:`~nhe.source.point.PointSource`.
+    :class:`~nhlib.source.point.PointSource`.
     """
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  polygon, area_discretization, *args, **kwargs):
@@ -45,15 +45,15 @@ class AreaSource(PointSource):
 
     def iter_ruptures(self, temporal_occurrence_model):
         """
-        See :meth:`nhe.source.base.SeismicSource.iter_ruptures`
+        See :meth:`nhlib.source.base.SeismicSource.iter_ruptures`
         for description of parameters and return value.
 
         Area sources are treated as a collection of point sources
-        (see :mod:`nhe.source.point`) with uniform parameters.
+        (see :mod:`nhlib.source.point`) with uniform parameters.
         Ruptures of area source are just a union of ruptures
         of those point sources. The actual positions of the implied
         point sources form a uniformly spaced mesh on the polygon.
-        Polygon's method :meth:`~nhe.geo.polygon.Polygon.discretize`
+        Polygon's method :meth:`~nhlib.geo.polygon.Polygon.discretize`
         is used for creating a mesh of points on the source's area.
         Constructor's parameter ``area_discretization`` is used as
         polygon's discretization spacing (not to be confused with

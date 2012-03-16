@@ -14,9 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhe.scalerel.peer` implements :class:`PeerMSR`.
+Module :mod:`nhlib.scalerel.peer` implements :class:`PeerMSR`.
 """
-from nhe.scalerel.base import BaseMSR
+from nhlib.scalerel.base import BaseMSR
 
 
 class PeerMSR(BaseMSR):

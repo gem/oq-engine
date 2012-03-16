@@ -17,7 +17,7 @@ from decimal import Decimal
 
 import unittest
 
-from nhe.pmf import PMF
+from nhlib.pmf import PMF
 
 
 class PMFTestCase(unittest.TestCase):

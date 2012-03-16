@@ -17,8 +17,8 @@ import unittest
 
 import pyproj
 
-from nhe import geo
-from nhe.geo import _utils as utils
+from nhlib import geo
+from nhlib.geo import _utils as utils
 
 
 class CleanPointTestCase(unittest.TestCase):

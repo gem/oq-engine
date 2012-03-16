@@ -17,8 +17,8 @@ import unittest
 
 import numpy
 
-from nhe import geo
-from nhe.geo import _utils as geo_utils
+from nhlib import geo
+from nhlib.geo import _utils as geo_utils
 
 
 class PolygonCreationTestCase(unittest.TestCase):

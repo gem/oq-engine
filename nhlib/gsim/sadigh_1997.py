@@ -19,9 +19,9 @@ Module exports :class:`SadighEtAl1997`.
 from __future__ import division
 from math import log, exp
 
-from nhe.gsim.base import GMPE, CoeffsTable
-from nhe import const
-from nhe.imt import PGA, SA
+from nhlib.gsim.base import GMPE, CoeffsTable
+from nhlib import const
+from nhlib.imt import PGA, SA
 
 
 class SadighEtAl1997(GMPE):
@@ -45,7 +45,7 @@ class SadighEtAl1997(GMPE):
     ])
 
     #: Supported intensity measure component is the geometric mean
-    #: of two horizontal components :attr:`~nhe.const.IMC.AVERAGE_HORIZONTAL`,
+    #: of two horizontal components :attr:`~nhlib.const.IMC.AVERAGE_HORIZONTAL`,
     #: see page 180.
     DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS = set([
         const.IMC.AVERAGE_HORIZONTAL
@@ -77,7 +77,7 @@ class SadighEtAl1997(GMPE):
     def get_mean_and_stddevs(self, ctx, imt, stddev_types, component_type):
         """
         See :meth:`superclass method
-        <nhe.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
+        <nhlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         assert component_type in self.DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS

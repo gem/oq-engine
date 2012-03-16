@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
-from nhe import geo
+from nhlib import geo
 
 
 class LineTestCase(unittest.TestCase):

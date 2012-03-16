@@ -15,8 +15,8 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
-from nhe.scalerel.peer import PeerMSR
-from nhe.scalerel.wc1994 import WC1994
+from nhlib.scalerel.peer import PeerMSR
+from nhlib.scalerel.wc1994 import WC1994
 
 
 class BaseMSRTestCase(unittest.TestCase):

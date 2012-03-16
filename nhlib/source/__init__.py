@@ -14,8 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Package :mod:`nhe.source` deals with various types of seismic sources.
+Package :mod:`nhlib.source` deals with various types of seismic sources.
 """
-from nhe.source.rupture import Rupture, ProbabilisticRupture
-from nhe.source.point import PointSource
-from nhe.source.area import AreaSource
+from nhlib.source.rupture import Rupture, ProbabilisticRupture
+from nhlib.source.point import PointSource
+from nhlib.source.area import AreaSource

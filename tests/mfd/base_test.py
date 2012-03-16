@@ -15,7 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
-from nhe.mfd.base import BaseMFD
+from nhlib.mfd.base import BaseMFD
 
 
 class BaseMFDTestCase(unittest.TestCase):

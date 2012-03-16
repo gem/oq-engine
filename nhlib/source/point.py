@@ -14,14 +14,14 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhe.source.point` defines :class:`PointSource`.
+Module :mod:`nhlib.source.point` defines :class:`PointSource`.
 """
 import math
 
-from nhe.geo import Point
-from nhe.geo.surface.planar import PlanarSurface
-from nhe.source.base import SeismicSource
-from nhe.source.rupture import ProbabilisticRupture
+from nhlib.geo import Point
+from nhlib.geo.surface.planar import PlanarSurface
+from nhlib.source.base import SeismicSource
+from nhlib.source.rupture import ProbabilisticRupture
 
 
 class PointSource(SeismicSource):
@@ -30,14 +30,14 @@ class PointSource(SeismicSource):
     location.
 
     :param location:
-        :class:`~nhe.geo.Point` object representing the location
+        :class:`~nhlib.geo.Point` object representing the location
         of the seismic source. The depth value of that point is ignored.
     :param nodal_plane_distribution:
-        :class:`~nhe.pmf.PMF` object with values that are instances
-        of :class:`nhe.source.nodalplane.NodalPlane`. Shows the distribution
+        :class:`~nhlib.pmf.PMF` object with values that are instances
+        of :class:`nhlib.source.nodalplane.NodalPlane`. Shows the distribution
         of probability for rupture to have the certain nodal plane.
     :param hypocenter_distribution:
-        :class:`~nhe.pmf.PMF` with values being float numbers in km
+        :class:`~nhlib.pmf.PMF` with values being float numbers in km
         representing the depth of the hypocenter. Latitude and longitude
         of the hypocenter is always set to ones of ``location``.
     :param upper_seismogenic_depth:
@@ -45,7 +45,7 @@ class PointSource(SeismicSource):
     :param lower_seismogenic_depth:
         Maximum depth an earthquake rupture can reach, in km.
     :param magnitude_scaling_relationship:
-        Instance of subclass of :class:`nhe.msr.base.BaseMSR` to describe
+        Instance of subclass of :class:`nhlib.msr.base.BaseMSR` to describe
         how does the area of the rupture depend on magnitude and rake.
     :param rupture_aspect_ratio:
         Float number representing how much source's ruptures are more wide
@@ -53,7 +53,7 @@ class PointSource(SeismicSource):
         value below 1 means ruptures stretch vertically more than horizontally
         and vice versa.
 
-    See also :class:`nhe.source.base.SeismicSource` for description of other
+    See also :class:`nhlib.source.base.SeismicSource` for description of other
     parameters.
 
     :raises ValueError:
@@ -96,7 +96,7 @@ class PointSource(SeismicSource):
 
     def iter_ruptures(self, temporal_occurrence_model):
         """
-        See :meth:`nhe.source.base.SeismicSource.iter_ruptures`.
+        See :meth:`nhlib.source.base.SeismicSource.iter_ruptures`.
 
         Generate one rupture for each combination of magnitude, nodal plane
         and hypocenter depth.
@@ -108,12 +108,12 @@ class PointSource(SeismicSource):
                                    rate_scaling_factor=1):
         """
         The common part of :meth:`iter_ruptures` shared between point source
-        and :class:`~nhe.source.area.AreaSource`.
+        and :class:`~nhlib.source.area.AreaSource`.
 
         :param temporal_occurrence_model:
             The same object as given to :meth:`iter_ruptures`.
         :param location:
-            A :class:`~nhe.geo.point.Point` object representing the hypocenter
+            A :class:`~nhlib.geo.point.Point` object representing the hypocenter
             location. In case of :class:`PointSource` it is the one provided
             to constructor, and for area source the location points are taken
             from polygon discretization.
@@ -145,12 +145,12 @@ class PointSource(SeismicSource):
         for given magnitude ``mag`` and nodal plane.
 
         :param nodal_plane:
-            Instance of :class:`nhe.source.nodalplane.NodalPlane`.
+            Instance of :class:`nhlib.source.nodalplane.NodalPlane`.
         :returns:
             Tuple of two items: rupture length in width in km.
 
         The rupture area is calculated using method
-        :meth:`~nhe.msr.base.BaseMSR.get_median_area` of source's
+        :meth:`~nhlib.msr.base.BaseMSR.get_median_area` of source's
         magnitude-scaling relationship. In any case the returned
         dimensions multiplication is equal to that value. Than
         the area is decomposed to length and width with respect
@@ -184,12 +184,12 @@ class PointSource(SeismicSource):
             Magnitude value, used to calculate rupture dimensions,
             see :meth:`_get_rupture_dimensions`.
         :param nodal_plane:
-            Instance of :class:`nhe.source.nodalplane.NodalPlane`
+            Instance of :class:`nhlib.source.nodalplane.NodalPlane`
             describing the rupture orientation.
         :param hypocenter:
             Point representing rupture's hypocenter.
         :returns:
-            Instance of :class:`~nhe.geo.surface.planar.PlanarSurface`.
+            Instance of :class:`~nhlib.geo.surface.planar.PlanarSurface`.
         """
         assert self.upper_seismogenic_depth <= hypocenter.depth \
                and self.lower_seismogenic_depth >= hypocenter.depth

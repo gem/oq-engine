@@ -16,9 +16,9 @@
 import itertools
 import unittest
 
-from nhe.geo import Point
-from nhe.geo.surface.planar import PlanarSurface
-from nhe.geo.mesh import RectangularMesh
+from nhlib.geo import Point
+from nhlib.geo.surface.planar import PlanarSurface
+from nhlib.geo.mesh import RectangularMesh
 
 from tests.geo.surface import _planar_test_data as test_data
 
