@@ -345,6 +345,39 @@ COMMENT ON FUNCTION pcheck_exposure_data() IS
 'Make sure the inserted or modified exposure data is consistent.';
 
 
+CREATE OR REPLACE FUNCTION riskr.dmg_state_check_dmg_dist_per_asset_data()
+    RETURNS TRIGGER
+AS $$
+    # make sure that NEW.dmg_state is in dmg_dist_per_asset.dmg_states
+    NEW = TD["new"]
+
+    ps = plpy.prepare("SELECT dmg_states FROM riskr.dmg_dist_per_asset WHERE id=$1",
+                      ["integer"])
+    [ddps] = plpy.execute(ps, [NEW["dmg_dist_per_asset_id"]])
+
+    if not NEW["dmg_state"] in ddps["dmg_states"]:
+        raise Exception(fmt("Invalid dmg_state '%s', must be one of %s"
+                            % (NEW["dmg_state"], ddps["dmg_states"])))
+$$ LANGUAGE plpythonu;
+
+COMMENT ON FUNCTION riskr.dmg_state_check_dmg_dist_per_asset_data() IS
+'Make sure that each inserted or modified riskr.dmg_dist_per_asset_data record has a valid dmg_state.';
+
+CREATE TRIGGER riskr_dmg_dist_per_asset_data_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON riskr.dmg_dist_per_asset_data
+FOR EACH ROW EXECUTE PROCEDURE riskr.dmg_state_check_dmg_dist_per_asset_data();
+
+--CREATE TRIGGER riskir_dmg_dist_per_taxonomy_data_before_insert_update_trig
+--BEFORE INSERT OR UPDATE ON riskr.dmg_dist_per_taxonomy_data
+--FOR EACH ROW EXECUTE PROCEDURE riskr.dmg_state_check_dmg_dist_per_taxonomy_data();
+
+--CREATE OR REPLACE FUNCTION riskr.dmg_state_check_dmg_dist_per_taxonomy_data()
+--    RETURNS TRIGGER
+--AS $$
+--
+--$$ LANGUAGE plpythonu;
+
+
 CREATE TRIGGER hzrdi_rupture_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON hzrdi.rupture
 FOR EACH ROW EXECUTE PROCEDURE check_rupture_sources();
