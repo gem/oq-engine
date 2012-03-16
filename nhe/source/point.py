@@ -120,7 +120,7 @@ class PointSource(SeismicSource):
                     occurrence_rate *= rate_scaling_factor
                     surface = self._get_rupture_surface(mag, np, hypocenter)
                     yield ProbabilisticRupture(
-                        mag, np, self.tectonic_region_type, hypocenter,
+                        mag, np.rake, self.tectonic_region_type, hypocenter,
                         surface, occurrence_rate, temporal_occurrence_model
                     )
 

@@ -121,7 +121,7 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         [rupture] = ruptures
         self.assertIs(rupture.temporal_occurrence_model, tom)
         self.assertIs(rupture.tectonic_region_type, trt)
-        self.assertEqual(rupture.nodal_plane, nodal_plane)
+        self.assertEqual(rupture.rake, nodal_plane.rake)
         self.assertIsInstance(rupture.surface, PlanarSurface)
         self.assertEqual(rupture.surface.mesh_spacing, rupture_mesh_spacing)
         return rupture
@@ -291,44 +291,44 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         actual_ruptures = list(point_source.iter_ruptures(tom))
         self.assertEqual(len(actual_ruptures), 8)
         expected_ruptures = {
-            (mag1, nodalplane1, hypocenter1): (
+            (mag1, nodalplane1.rake, hypocenter1): (
                 # probabilistic rupture's occurrence rate
                 9e-3 * 0.3 * 0.8,
                 # rupture surface corners
                 planar_surface_test_data.TEST_7_RUPTURE_1_CORNERS
             ),
-            (mag2, nodalplane1, hypocenter1): (
+            (mag2, nodalplane1.rake, hypocenter1): (
                 9e-4 * 0.3 * 0.8,
                 planar_surface_test_data.TEST_7_RUPTURE_2_CORNERS
             ),
-            (mag1, nodalplane2, hypocenter1): (
+            (mag1, nodalplane2.rake, hypocenter1): (
                 9e-3 * 0.7 * 0.8,
                 planar_surface_test_data.TEST_7_RUPTURE_3_CORNERS
             ),
-            (mag2, nodalplane2, hypocenter1): (
+            (mag2, nodalplane2.rake, hypocenter1): (
                 9e-4 * 0.7 * 0.8,
                 planar_surface_test_data.TEST_7_RUPTURE_4_CORNERS
             ),
-            (mag1, nodalplane1, hypocenter2): (
+            (mag1, nodalplane1.rake, hypocenter2): (
                 9e-3 * 0.3 * 0.2,
                 planar_surface_test_data.TEST_7_RUPTURE_5_CORNERS
             ),
-            (mag2, nodalplane1, hypocenter2): (
+            (mag2, nodalplane1.rake, hypocenter2): (
                 9e-4 * 0.3 * 0.2,
                 planar_surface_test_data.TEST_7_RUPTURE_6_CORNERS
             ),
-            (mag1, nodalplane2, hypocenter2): (
+            (mag1, nodalplane2.rake, hypocenter2): (
                 9e-3 * 0.7 * 0.2,
                 planar_surface_test_data.TEST_7_RUPTURE_7_CORNERS
             ),
-            (mag2, nodalplane2, hypocenter2): (
+            (mag2, nodalplane2.rake, hypocenter2): (
                 9e-4 * 0.7 * 0.2,
                 planar_surface_test_data.TEST_7_RUPTURE_8_CORNERS
             )
         }
         for actual_rupture in actual_ruptures:
             expected_occurrence_rate, expected_corners = expected_ruptures[
-                (actual_rupture.mag, actual_rupture.nodal_plane,
+                (actual_rupture.mag, actual_rupture.rake,
                  actual_rupture.hypocenter.depth)
             ]
             self.assertTrue(isinstance(actual_rupture, ProbabilisticRupture))
