@@ -851,6 +851,9 @@ class Output(models.Model):
         (u'bcr_distribution', u'Benefit-cost ratio distribution'),
         (u'uh_spectra', u'Uniform Hazard Spectra'),
         (u'agg_loss_curve', u'Aggregate Loss Curve'),
+        (u'dmg_dist_per_asset', u'Damage Distribution Per Asset'),
+        (u'dmg_dist_per_taxonomy', u'Damage Distribution Per Taxonomy'),
+        (u'dmg_dist_total', u'Total Damage Distribution'),
     )
     output_type = models.TextField(choices=OUTPUT_TYPE_CHOICES)
     # Number of bytes in the file:
