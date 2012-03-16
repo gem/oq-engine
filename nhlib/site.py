@@ -16,6 +16,8 @@
 """
 Module :mod:`nhlib.site` defines :class:`Site`.
 """
+
+
 class Site(object):
     """
     Site object represents a geographical location defined by its position

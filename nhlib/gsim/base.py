@@ -51,8 +51,8 @@ class GroundShakingIntensityModel(object):
     #: is defined for.
     DEFINED_FOR_TECTONIC_REGION_TYPES = abc.abstractproperty()
 
-    #: Set of :mod:`intensity measure types <nhlib.imt>` this GSIM can calculate.
-    #: A set should contain classes from module :mod:`nhlib.imt`.
+    #: Set of :mod:`intensity measure types <nhlib.imt>` this GSIM can
+    #: calculate. A set should contain classes from module :mod:`nhlib.imt`.
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = abc.abstractproperty()
 
     #: Set of :class:`intensity measure component types <nhlib.const.IMC>`

@@ -124,9 +124,9 @@ def get_spherical_bounding_box(lons, lats):
         # longitude and east one is the highest negative.
         west = min(lon for lon in lons if lon > 0)
         east = max(lon for lon in lons if lon < 0)
-        if not all ((get_longitudinal_extent(west, lon) >= 0
-                     and get_longitudinal_extent(lon, east) >= 0)
-                    for lon in lons):
+        if not all((get_longitudinal_extent(west, lon) >= 0
+                    and get_longitudinal_extent(lon, east) >= 0)
+                   for lon in lons):
             raise ValueError('points collection has longitudinal extent '
                              'wider than 180 deg')
     return west, east, north, south

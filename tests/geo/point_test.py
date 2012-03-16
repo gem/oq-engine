@@ -60,8 +60,8 @@ class PointTestCase(unittest.TestCase):
         points = p1.equally_spaced_points(p2, 10.0)
         self.assertEqual(4, len(points))
 
-        self.assertEqual(p1, points[0]) # first point is the start point
-        self.assertEqual(p2, points[3]) # last point is the end point
+        self.assertEqual(p1, points[0])  # first point is the start point
+        self.assertEqual(p2, points[3])  # last point is the end point
 
         expected = geo.Point(0.0635916966572, 0.0635916574897, 0.0)
         self.assertEqual(expected, points[1])
@@ -76,8 +76,8 @@ class PointTestCase(unittest.TestCase):
         points = p1.equally_spaced_points(p2, 10.0)
         self.assertEqual(4, len(points))
 
-        self.assertEqual(p1, points[0]) # first point is the start point
-        self.assertEqual(p2, points[3]) # last point is the end point
+        self.assertEqual(p1, points[0])  # first point is the start point
+        self.assertEqual(p2, points[3])  # last point is the end point
 
         expected = geo.Point(0.0449661107016, 0.0449660968538, 7.07106781187)
         self.assertEqual(expected, points[1])

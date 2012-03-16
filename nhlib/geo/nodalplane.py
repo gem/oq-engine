@@ -17,6 +17,7 @@
 Module :mod:`nhlib.source.nodalplane` implements :class:`NodalPlane`.
 """
 
+
 class NodalPlane(object):
     """
     Nodal plane represents earthquake rupture orientation and propagation

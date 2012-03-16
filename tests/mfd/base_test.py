@@ -23,8 +23,10 @@ class BaseMFDTestCase(unittest.TestCase):
         PARAMETERS = ()
         MODIFICATIONS = set()
         check_constraints_call_count = 0
+
         def check_constraints(self):
             self.check_constraints_call_count += 1
+
         def get_annual_occurrence_rates(self):
             pass
 
@@ -75,8 +77,10 @@ class BaseMFDModificationsTestCase(BaseMFDTestCase):
         class TestMFD(self.BaseTestMFD):
             MODIFICATIONS = ('foo', )
             foo_calls = []
+
             def modify_foo(self, **kwargs):
                 self.foo_calls.append(kwargs)
+
         mfd = TestMFD()
         self.assertEqual(mfd.check_constraints_call_count, 1)
         mfd.modify('foo', dict(a=1, b='2', c=True))

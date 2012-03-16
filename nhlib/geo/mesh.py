@@ -79,7 +79,8 @@ class Mesh(object):
 
     def __iter__(self):
         """
-        Generate :class:`~nhlib.geo.point.Point` objects the mesh is composed of.
+        Generate :class:`~nhlib.geo.point.Point` objects the mesh is composed
+        of.
 
         Coordinates arrays are processed sequentially (as if they were
         flattened).

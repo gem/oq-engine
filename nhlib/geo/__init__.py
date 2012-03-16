@@ -15,10 +15,11 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 Package :mod:`nhlib.geo` contains implementations of different geographical
-primitives, such as :class:`~nhlib.geo.point.Point`, :class:`~nhlib.geo.line.Line`
-:class:`~nhlib.geo.polygon.Polygon` and :class:`~nhlib.geo.mesh.Mesh`, as well
-as different :mod:`surface <nhlib.geo.surface>` implementations and utility
-class :class:`~nhlib.geo.nodalplane.NodalPlane`.
+primitives, such as :class:`~nhlib.geo.point.Point`,
+:class:`~nhlib.geo.line.Line` :class:`~nhlib.geo.polygon.Polygon`
+and :class:`~nhlib.geo.mesh.Mesh`, as well as different :mod:`surface
+<nhlib.geo.surface>` implementations and utility class
+:class:`~nhlib.geo.nodalplane.NodalPlane`.
 """
 from nhlib.geo.point import Point
 from nhlib.geo.line import Line
