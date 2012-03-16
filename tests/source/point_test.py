@@ -5,7 +5,7 @@ from nhe.const import TRT
 from nhe.source.point import PointSource
 from nhe.source.rupture import ProbabilisticRupture
 from nhe.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
-from nhe.msr import PeerMSR
+from nhe.scalerel.peer import PeerMSR
 from nhe.geo import Point, PlanarSurface, NodalPlane
 from nhe.pmf import PMF
 from nhe.tom import PoissonTOM

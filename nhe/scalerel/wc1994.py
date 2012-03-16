@@ -1,15 +1,16 @@
 """
-Module :mod:`nhe.msr.wc1994` implements :class:`WC1994MSR`.
+Module :mod:`nhe.scalerel.wc1994` implements :class:`WC1994`.
 """
 from math import log10
-from nhe.msr.base import BaseMSR
-from nhe.asr.base import BaseASR
+from nhe.scalerel.base import BaseMSR, BaseASR
 
 
 class WC1994(BaseMSR, BaseASR):
     """
     Wells and Coppersmith magnitude -- rupture area relationships,
     see 1994, Bull. Seism. Soc. Am., pages 974-2002.
+
+    Implements both magnitude-area and area-magnitude scaling relationships.
     """
     def get_median_area(self, mag, rake):
         """
@@ -34,7 +35,7 @@ class WC1994(BaseMSR, BaseASR):
 
     def get_std_dev_area(self, mag, rake):
         """
-        Standard deviation for WC1994MSR. Mag is ignored.
+        Standard deviation for WC1994. Magnitude is ignored.
         """
         assert rake is None or -180 <= rake <= 180
         if rake is None:
@@ -52,8 +53,7 @@ class WC1994(BaseMSR, BaseASR):
 
     def get_std_dev_mag(self, rake):
         """
-        Standard deviation on the magnitude
-        for the WC1994MSR area relation.
+        Standard deviation on the magnitude for the WC1994 area relation.
         """
         assert rake is None or -180 <= rake <= 180
         if rake is None:

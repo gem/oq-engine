@@ -1,7 +1,7 @@
 import unittest
 
-from nhe.msr import PeerMSR
-from nhe.sr.wc1994 import WC1994
+from nhe.scalerel.peer import PeerMSR
+from nhe.scalerel.wc1994 import WC1994
 
 
 class BaseMSRTestCase(unittest.TestCase):

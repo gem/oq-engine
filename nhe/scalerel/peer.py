@@ -1,7 +1,7 @@
 """
-Module :mod:`nhe.msr.peer` implements :class:`PeerMSR`.
+Module :mod:`nhe.scalerel.peer` implements :class:`PeerMSR`.
 """
-from nhe.msr.base import BaseMSR
+from nhe.scalerel.base import BaseMSR
 
 
 class PeerMSR(BaseMSR):

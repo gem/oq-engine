@@ -1,6 +1,6 @@
 import unittest
 
-from nhe.sr.wc1994 import WC1994
+from nhe.scalerel.wc1994 import WC1994
 
 
 class WC1994ASRTestCase(unittest.TestCase):
