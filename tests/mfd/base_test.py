@@ -1,6 +1,21 @@
+# nhlib: A New Hazard Library
+# Copyright (C) 2012 GEM Foundation
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
-from nhe.mfd.base import BaseMFD
+from nhlib.mfd.base import BaseMFD
 
 
 class BaseMFDTestCase(unittest.TestCase):
@@ -8,8 +23,10 @@ class BaseMFDTestCase(unittest.TestCase):
         PARAMETERS = ()
         MODIFICATIONS = set()
         check_constraints_call_count = 0
+
         def check_constraints(self):
             self.check_constraints_call_count += 1
+
         def get_annual_occurrence_rates(self):
             pass
 
@@ -60,8 +77,10 @@ class BaseMFDModificationsTestCase(BaseMFDTestCase):
         class TestMFD(self.BaseTestMFD):
             MODIFICATIONS = ('foo', )
             foo_calls = []
+
             def modify_foo(self, **kwargs):
                 self.foo_calls.append(kwargs)
+
         mfd = TestMFD()
         self.assertEqual(mfd.check_constraints_call_count, 1)
         mfd.modify('foo', dict(a=1, b='2', c=True))

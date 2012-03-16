@@ -1,14 +1,29 @@
+# nhlib: A New Hazard Library
+# Copyright (C) 2012 GEM Foundation
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 import collections
 
 import numpy
 
-from nhe import const
-from nhe.gsim.base import IPE, GSIMContext
-from nhe.geo.point import Point
-from nhe.imt import PGA, PGV
-from nhe.site import Site
-from nhe.source.rupture import Rupture
+from nhlib import const
+from nhlib.gsim.base import IPE, GSIMContext
+from nhlib.geo.point import Point
+from nhlib.imt import PGA, PGV
+from nhlib.site import Site
+from nhlib.source.rupture import Rupture
 
 
 class _FakeGSIMTestCase(unittest.TestCase):
@@ -24,6 +39,7 @@ class _FakeGSIMTestCase(unittest.TestCase):
             REQUIRES_SITE_PARAMETERS = set()
             REQUIRES_RUPTURE_PARAMETERS = set()
             REQUIRES_DISTANCES = set()
+
             def get_mean_and_stddevs(self, context, imt, stddev_types,
                                      component_type):
                 pass
@@ -82,6 +98,7 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
         self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
             const.StdDev.TOTAL
         )
+
         def get_mean_and_stddevs(ctx, imt, stddev_types, component_type):
             self.assertEqual(imt, self.DEFAULT_IMT())
             self.assertEqual(stddev_types, [const.StdDev.TOTAL])
@@ -90,6 +107,7 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
             stddev = 0.5962393527251486
             get_mean_and_stddevs.call_count += 1
             return mean, [stddev]
+
         get_mean_and_stddevs.call_count = 0
         self.gsim.get_mean_and_stddevs = get_mean_and_stddevs
         iml = 0.6931471805599453
@@ -122,8 +140,10 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
         self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
             const.StdDev.TOTAL
         )
+
         def get_mean_and_stddevs(ctx, imt, stddev_types, component_type):
             return -0.7872268528578843, [0.5962393527251486]
+
         self.gsim.get_mean_and_stddevs = get_mean_and_stddevs
         imls = [-2.995732273553991, -0.6931471805599453, 0.6931471805599453]
         poes = self._get_poes(imts={self.DEFAULT_IMT(): imls},
@@ -147,26 +167,33 @@ class MakeContextTestCase(_FakeGSIMTestCase):
         jb_distance = 6
         top_edge_depth = 30
         self.distances = {'rrup': 123, 'rx': 456, 'ztor': 789, 'rjb': 779}
+
         class FakeSurface(object):
             call_counts = collections.Counter()
+
             def get_dip(self):
                 self.call_counts['get_dip'] += 1
                 return 45.4545
+
             def get_min_distance(fake_surface, point):
                 self.assertEqual(point, self.site_location)
                 fake_surface.call_counts['get_min_distance'] += 1
                 return min_distance
+
             def get_rx_distance(fake_surface, point):
                 self.assertEqual(point, self.site_location)
                 fake_surface.call_counts['get_rx_distance'] += 1
                 return rx_distance
+
             def get_joyner_boore_distance(fake_surface, point):
                 self.assertEqual(point, self.site_location)
                 fake_surface.call_counts['get_joyner_boore_distance'] += 1
                 return jb_distance
+
             def get_top_edge_depth(fake_surface):
                 fake_surface.call_counts['get_top_edge_depth'] += 1
                 return top_edge_depth
+
         self.rupture_hypocenter = Point(20, 30, 40)
         self.rupture = Rupture(
             mag=123.45, rake=123.56,

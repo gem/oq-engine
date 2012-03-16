@@ -1,6 +1,21 @@
+# nhlib: A New Hazard Library
+# Copyright (C) 2012 GEM Foundation
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
-from nhe import geo
+from nhlib import geo
 
 
 class PointTestCase(unittest.TestCase):
@@ -45,8 +60,8 @@ class PointTestCase(unittest.TestCase):
         points = p1.equally_spaced_points(p2, 10.0)
         self.assertEqual(4, len(points))
 
-        self.assertEqual(p1, points[0]) # first point is the start point
-        self.assertEqual(p2, points[3]) # last point is the end point
+        self.assertEqual(p1, points[0])  # first point is the start point
+        self.assertEqual(p2, points[3])  # last point is the end point
 
         expected = geo.Point(0.0635916966572, 0.0635916574897, 0.0)
         self.assertEqual(expected, points[1])
@@ -61,8 +76,8 @@ class PointTestCase(unittest.TestCase):
         points = p1.equally_spaced_points(p2, 10.0)
         self.assertEqual(4, len(points))
 
-        self.assertEqual(p1, points[0]) # first point is the start point
-        self.assertEqual(p2, points[3]) # last point is the end point
+        self.assertEqual(p1, points[0])  # first point is the start point
+        self.assertEqual(p2, points[3])  # last point is the end point
 
         expected = geo.Point(0.0449661107016, 0.0449660968538, 7.07106781187)
         self.assertEqual(expected, points[1])

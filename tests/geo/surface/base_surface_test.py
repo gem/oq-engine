@@ -1,8 +1,23 @@
+# nhlib: A New Hazard Library
+# Copyright (C) 2012 GEM Foundation
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
-from nhe.geo.point import Point
-from nhe.geo.mesh import RectangularMesh
-from nhe.geo.surface.base import BaseSurface
+from nhlib.geo.point import Point
+from nhlib.geo.mesh import RectangularMesh
+from nhlib.geo.surface.base import BaseSurface
 
 from tests.geo.surface import _planar_test_data as test_data
 
@@ -11,13 +26,16 @@ class DummySurface(BaseSurface):
     def __init__(self, coordinates_list):
         self.coordinates_list = coordinates_list
         super(DummySurface, self).__init__()
+
     def _create_mesh(self):
         points = [[Point(*coordinates) for coordinates in row]
                   for row in self.coordinates_list]
         return RectangularMesh.from_points_list(points)
+
     def get_strike(self):
         top_edge = list(self.get_mesh()[0:1])
         return top_edge[1].azimuth(top_edge[0])
+
     def get_dip(self):
         raise NotImplementedError()
 
