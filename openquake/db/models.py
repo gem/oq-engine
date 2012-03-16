@@ -1135,6 +1135,29 @@ class BCRDistributionData(models.Model):
         db_table = 'riskr\".\"bcr_distribution_data'
 
 
+class DmgDistPerAsset(models.Model):
+    """Holds metadata for damage distributions per asset."""
+
+    output = models.ForeignKey("Output")
+    dmg_states = CharArrayField()
+    end_branch_label = models.TextField(null=True)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_per_asset'
+
+class DmgDistPerAssetData(models.Model):
+    """Holds the actual data for damage distributions per asset."""
+
+    dmg_dist_per_asset = models.ForeignKey("DmgDistPerAsset")
+    exposure_data = models.ForeignKey("ExposureData")
+    dmg_state = models.TextField()
+    mean = models.FloatField()
+    stddev = models.FloatField()
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_per_asset_data'
+
+
 ## Tables in the 'oqmif' schema.
 
 
