@@ -1118,10 +1118,14 @@ CREATE TABLE uiapi.output (
     --      collapse_map
     --      bcr_distribution
     --      agg_loss_curve
+    --      dmg_dist_per_asset
+    --      dmg_dist_per_taxonomy
+    --      dmg_dist_total
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
         CHECK(output_type IN ('unknown', 'hazard_curve', 'hazard_map',
             'gmf', 'loss_curve', 'loss_map', 'collapse_map',
-            'bcr_distribution', 'uh_spectra', 'agg_loss_curve')),
+            'bcr_distribution', 'uh_spectra', 'agg_loss_curve',
+            'dmg_dist_per_asset', 'dmg_dist_per_taxonomy', 'dmg_dist_total')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
     -- The full path of the shapefile generated for a hazard or loss map
