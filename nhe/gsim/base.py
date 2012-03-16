@@ -5,6 +5,7 @@ of :class:`ground shaking intensity models <GroundShakingIntensityModel>`.
 from __future__ import division
 
 import abc
+import math
 
 import scipy.stats
 import numpy
@@ -102,9 +103,9 @@ class GroundShakingIntensityModel(object):
 
         :param ctx:
             Instance of :class:`GSIMContext` with parameters of rupture, site
-            and their relative position (read, distances) assigned to respective
-            attributes. Only those attributes that are listed in class'
-            :attr:`REQUIRES_SITE_PARAMETERS`, :attr:`REQUIRES_DISTANCES`
+            and their relative position (read, distances) assigned
+            to respective attributes. Only those attributes that are listed in
+            class' :attr:`REQUIRES_SITE_PARAMETERS`, :attr:`REQUIRES_DISTANCES`
             and :attr:`REQUIRES_RUPTURE_PARAMETERS` are available.
         :param imt:
             An instance (not a class) of intensity measure type.
@@ -377,3 +378,186 @@ class GSIMContext(object):
         # distance parameters
         'dist_rrup dist_rx dist_rjb dist_ztor'
     ).split()
+
+
+class CoeffsTable(object):
+    r"""
+    Instances of :class:`CoeffsTable` encapsulate tables of coefficients
+    corresponding to different IMTs.
+
+    Tables are defined in a space-separated tabular form in a simple string
+    literal (heading and trailing whitespace does not matter). The first column
+    in the table must be named "IMT" (or "imt") and thus should represent IMTs:
+
+    >>> CoeffsTable(table='''imf z
+    ...                      pga 1''')
+    Traceback (most recent call last):
+        ...
+    ValueError: first column in a table must be IMT
+
+    Names of other columns are used as coefficients dicts keys. The values
+    in the first column should correspond to real intensity measure types,
+    see :mod:`nhe.imt`:
+
+    >>> CoeffsTable(table='''imt  z
+    ...                      pgx  2''')
+    Traceback (most recent call last):
+        ...
+    ValueError: unknown IMT 'PGX'
+
+    Note that :class:`CoeffsTable` only accepts keyword argumets:
+
+    >>> CoeffsTable()
+    Traceback (most recent call last):
+        ...
+    TypeError: CoeffsTable requires "table" kwarg
+    >>> CoeffsTable(table='', foo=1)
+    Traceback (most recent call last):
+        ...
+    TypeError: CoeffsTable got unexpected kwargs: {'foo': 1}
+
+    If there are :class:`~nhe.imt.SA` IMTs in the table, they are not
+    referenced by name, because they require parametrization:
+
+    >>> CoeffsTable(table='''imt  x
+    ...                      sa   15''')
+    Traceback (most recent call last):
+        ...
+    ValueError: specify period as float value to declare SA IMT
+    >>> CoeffsTable(table='''imt  x
+    ...                      0.1  20''')
+    Traceback (most recent call last):
+        ...
+    TypeError: attribute "sa_damping" is required for tables defining SA
+
+    So proper table defining SA looks like this:
+
+    >>> ct = CoeffsTable(sa_damping=5, table='''
+    ...     imt   a    b     c   d
+    ...     pga   1    2.4  -5   0.01
+    ...     pgd  7.6  12     0  44.1
+    ...     0.1  10   20    30  40
+    ...     1.0   1    2     3   4
+    ...     10    2    4     6   8
+    ... ''')
+
+    Table objects could be indexed by IMT objects (this returns a dictionary
+    of coefficients):
+
+    >>> from nhe import imt
+    >>> ct[imt.PGA()] == dict(a=1, b=2.4, c=-5, d=0.01)
+    True
+    >>> ct[imt.PGD()] == dict(a=7.6, b=12, c=0, d=44.1)
+    True
+    >>> ct[imt.SA(damping=5, period=0.1)] == dict(a=10, b=20, c=30, d=40)
+    True
+    >>> ct[imt.PGV()]
+    Traceback (most recent call last):
+        ...
+    KeyError: PGV()
+    >>> ct[imt.SA(1.0, 4)]
+    Traceback (most recent call last):
+        ...
+    KeyError: SA(period=1.0, damping=4)
+
+    Table of coefficients for spectral acceleration could be indexed
+    by instances of :class:`nhe.imt.SA` with period value that is not specified
+    in the table. The coefficients then get interpolated between the ones for
+    closest higher and closest lower period. That scaling of coefficients works
+    in a logarithmic scale of periods and only within the same damping:
+
+    >>> '%.5f' % ct[imt.SA(period=0.2, damping=5)]['a']
+    '7.29073'
+    >>> '%.5f' % ct[imt.SA(period=0.9, damping=5)]['c']
+    '4.23545'
+    >>> '%.5f' % ct[imt.SA(period=5, damping=5)]['c']
+    '5.09691'
+    >>> ct[imt.SA(period=0.9, damping=15)]
+    Traceback (most recent call last):
+        ...
+    KeyError: SA(period=0.9, damping=15)
+
+    Extrapolation is not possible:
+
+    >>> ct[imt.SA(period=0.01, damping=5)]
+    Traceback (most recent call last):
+        ...
+    KeyError: SA(period=0.01, damping=5)
+    """
+    def __init__(self, **kwargs):
+        if not 'table' in kwargs:
+            raise TypeError('CoeffsTable requires "table" kwarg')
+        table = kwargs.pop('table').strip().splitlines()
+        sa_damping = kwargs.pop('sa_damping', None)
+        if kwargs:
+            raise TypeError('CoeffsTable got unexpected kwargs: %r' % kwargs)
+        header = table.pop(0).split()
+        if not header[0].upper() == "IMT":
+            raise ValueError('first column in a table must be IMT')
+        coeff_names = header[1:]
+        self.sa_coeffs = {}
+        self.non_sa_coeffs = {}
+        for row in table:
+            row = row.split()
+            imt_name = row[0].upper()
+            if imt_name == 'SA':
+                raise ValueError('specify period as float value '
+                                 'to declare SA IMT')
+            imt_coeffs = dict(zip(coeff_names, map(float, row[1:])))
+            try:
+                sa_period = float(imt_name)
+            except:
+                if not hasattr(imt_module, imt_name):
+                    raise ValueError('unknown IMT %r' % imt_name)
+                imt = getattr(imt_module, imt_name)()
+                self.non_sa_coeffs[imt] = imt_coeffs
+            else:
+                if sa_damping is None:
+                    raise TypeError('attribute "sa_damping" is required '
+                                    'for tables defining SA')
+                imt = imt_module.SA(sa_period, sa_damping)
+                self.sa_coeffs[imt] = imt_coeffs
+
+    def __getitem__(self, imt):
+        """
+        Return a dictionary of coefficients corresponding to ``imt``
+        from this table (if there is a line for requested IMT in it),
+        or the dictionary of interpolated coefficients, if ``imt``
+        is of type :class:`~nhe.imt.SA` and interpolation is possible.
+
+        :raises KeyError:
+            If ``imt`` is not available in the table and no interpolation
+            can be done.
+        """
+        if not isinstance(imt, imt_module.SA):
+            return self.non_sa_coeffs[imt]
+
+        try:
+            return self.sa_coeffs[imt]
+        except KeyError:
+            pass
+
+        max_below = min_above = None
+        for unscaled_imt in self.sa_coeffs.keys():
+            if unscaled_imt.damping != imt.damping:
+                continue
+            if unscaled_imt.period > imt.period:
+                if min_above is None or unscaled_imt.period < min_above.period:
+                    min_above = unscaled_imt
+            elif unscaled_imt.period < imt.period:
+                if max_below is None or unscaled_imt.period > max_below.period:
+                    max_below = unscaled_imt
+        if max_below is None or min_above is None:
+            raise KeyError(imt)
+
+        # ratio tends to 1 when target period tends to a minimum
+        # known period above and to 0 if target period is close
+        # to maximum period below.
+        ratio = ((math.log(imt.period) - math.log(max_below.period))
+                 / (math.log(min_above.period) - math.log(max_below.period)))
+        max_below = self.sa_coeffs[max_below]
+        min_above = self.sa_coeffs[min_above]
+        return dict(
+            (co, (min_above[co] - max_below[co]) * ratio + max_below[co])
+            for co in max_below.keys()
+        )

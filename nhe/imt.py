@@ -1,46 +1,38 @@
 """
 Module :mod:`nhe.imt` defines different intensity measure types.
 """
+import operator
+
 
 __all__ = ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')
 
 
-class _IMT(object):
+class _IMT(tuple):
     """
     Base class for intensity measure type.
 
-    Subclasses must define __slots__ with names of parameters the specific
-    intensity measure type requires.
+    Subclasses may define class attribute ``_fields`` as a tuple with names
+    of parameters the specific intensity measure type requires (if there
+    are any).
     """
-    __slots__ = ()
+    _fields = ()
 
-    def __eq__(self, other):
-        """
-        Two intensity measure type objects are considered equal if they
-        are of the same type and have all the parameters in their
-        ``__slots__`` exactly equal.
-        """
-        if not type(other) is type(self):
-            return False
-        return all(getattr(other, param) == getattr(self, param)
-                   for param in type(self).__slots__)
+    class __metaclass__(type):
+        def __new__(mcs, name, bases, dct):
+            dct['__slots__'] = ()
+            cls = type.__new__(mcs, name, bases, dct)
+            for index, field in enumerate(cls._fields):
+                setattr(cls, field, property(operator.itemgetter(index)))
+            return cls
 
-    def __ne__(self, other):
-        """
-        Two intensity measure type objects are considered not equal if
-        :meth:`__eq__` for them returns ``False``.
-        """
-        return not self.__eq__(other)
+    def __new__(cls, *args):
+        salt = hash(('IMT', cls.__name__))
+        return tuple.__new__(cls, args + (salt, ))
 
-    def __hash__(self):
-        """
-        Object's class name as well as all the attributes from ``__slots__``
-        are used for calculating object's hash. That means that objects
-        that are considered :meth:`equal <__eq__>` have the same hash.
-        """
-        cls = type(self)
-        return hash((cls.__name__, tuple(getattr(self, param)
-                                         for param in cls.__slots__)))
+    def __repr__(self):
+        return '%s(%s)' % (type(self).__name__,
+                           ', '.join('%s=%s' % (field, getattr(self, field))
+                                     for field in type(self)._fields))
 
 
 class PGA(_IMT):
@@ -48,21 +40,18 @@ class PGA(_IMT):
     Peak ground acceleration during an earthquake measured in units
     of ``g``, times of gravitational acceleration.
     """
-    __slots__ = ()
 
 
 class PGV(_IMT):
     """
     Peak ground velocity during an earthquake measured in units of ``cm/sec``.
     """
-    __slots__ = ()
 
 
 class PGD(_IMT):
     """
     Peak ground displacement during an earthquake measured in units of ``cm``.
     """
-    __slots__ = ()
 
 
 class SA(_IMT):
@@ -79,15 +68,14 @@ class SA(_IMT):
     :raises ValueError:
         if period or damping is not positive.
     """
-    __slots__ = ('period', 'damping')
+    _fields = ('period', 'damping')
 
-    def __init__(self, period, damping):
+    def __new__(cls, period, damping):
         if not period > 0:
             raise ValueError('period must be positive')
         if not damping > 0:
             raise ValueError('damping must be positive')
-        self.period = period
-        self.damping = damping
+        return _IMT.__new__(cls, period, damping)
 
 
 class IA(_IMT):
@@ -95,7 +83,6 @@ class IA(_IMT):
     Arias intensity. Determines the intensity of shaking by measuring
     the acceleration of transient seismic waves. Units are ``m/s``.
     """
-    __slots__ = ()
 
 
 class RSD(_IMT):
@@ -103,7 +90,6 @@ class RSD(_IMT):
     Relative significant duration, 5-95% of :class:`Arias intensity
     <IA>`, in seconds.
     """
-    __slots__ = ()
 
 
 class MMI(_IMT):
@@ -112,4 +98,3 @@ class MMI(_IMT):
     of an earthquake in terms of its effects on the earth's surface
     and on humans and their structures.
     """
-    __slots__ = ()
