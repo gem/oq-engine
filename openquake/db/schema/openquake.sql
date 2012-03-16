@@ -1404,6 +1404,43 @@ SELECT AddGeometryColumn('riskr', 'bcr_distribution_data', 'location', 4326, 'PO
 ALTER TABLE riskr.bcr_distribution_data ALTER COLUMN location SET NOT NULL;
 
 
+-- Damage Distribution Per Asset
+CREATE TABLE riskr.dmg_dist_per_asset (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL,  -- FK to uiapi.output.id
+    dmg_states VARCHAR[] NOT NULL,
+    end_branch_label VARCHAR
+) TABLESPACE riskr_ts;
+
+CREATE TABLE riskr.dmg_dist_per_asset_data (
+    -- TODO: re-order these
+    id SERIAL PRIMARY KEY,
+    dmg_dist_per_asset_id INTEGER NOT NULL,  -- FK to riskr.dmg_dist_per_asset.id
+    exposure_data_id INTEGER NOT NULL,  -- FK to oqmif.exposure_data.id
+    dmg_state VARCHAR NOT NULL,
+    mean float NOT NULL,
+    stddev float NOT NULL
+) TABLESPACE riskr_ts;
+
+
+-- Damage Distrubtion Per Taxonomy
+CREATE TABLE riskr.dmg_dist_per_taxonomy (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL,  -- FK to uiapi.output.id
+    dmg_states VARCHAR[] NOT NULL,
+    end_branch_label VARCHAR
+) TABLESPACE riskr_ts;
+
+CREATE TABLE riskr.dmg_dist_per_taxonomy_data (
+    id SERIAL PRIMARY KEY,
+    dmg_dist_per_taxonomy_id INTEGER NOT NULL,  -- FK riskir.dmg_dist_per_taxonomy.id
+    taxonomy VARCHAR NOT NULL,
+    dmg_state VARCHAR NOT NULL,
+    mean float NOT NULL,
+    stddev float NOT NULL
+) TABLESPACE riskr_ts;
+
+
 -- Exposure model
 -- Abbreviations:
 --      coco: contents cost
