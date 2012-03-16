@@ -348,6 +348,9 @@ COMMENT ON FUNCTION pcheck_exposure_data() IS
 CREATE OR REPLACE FUNCTION riskr.dmg_state_check_dmg_dist_per_asset_data()
     RETURNS TRIGGER
 AS $$
+    def fmt(err):
+        return "%s (%s)" % (err, TD["table_name"])
+
     # make sure that NEW.dmg_state is in dmg_dist_per_asset.dmg_states
     NEW = TD["new"]
 
@@ -358,6 +361,8 @@ AS $$
     if not NEW["dmg_state"] in ddps["dmg_states"]:
         raise Exception(fmt("Invalid dmg_state '%s', must be one of %s"
                             % (NEW["dmg_state"], ddps["dmg_states"])))
+
+    return "OK"
 $$ LANGUAGE plpythonu;
 
 COMMENT ON FUNCTION riskr.dmg_state_check_dmg_dist_per_asset_data() IS
