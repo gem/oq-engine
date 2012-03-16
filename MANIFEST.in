@@ -1,0 +1,3 @@
+include LICENSE README
+recursive-include nhlib *.py
+recursive-include tests *.py *.csv
