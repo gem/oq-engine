@@ -32,5 +32,6 @@ CALCULATORS = {
     'event_based_bcr': EventBasedHazardCalculator,
     'disaggregation': DisaggHazardCalculator,
     'scenario': ScenarioHazardCalculator,
+    'scenario_damage': ScenarioHazardCalculator,
     'uhs': UHSCalculator,
 }
