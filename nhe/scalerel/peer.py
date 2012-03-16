@@ -1,7 +1,7 @@
 """
-Module :mod:`nhe.msr.peer` implements :class:`PeerMSR`.
+Module :mod:`nhe.scalerel.peer` implements :class:`PeerMSR`.
 """
-from nhe.msr.base import BaseMSR
+from nhe.scalerel.base import BaseMSR
 
 
 class PeerMSR(BaseMSR):
@@ -16,3 +16,13 @@ class PeerMSR(BaseMSR):
         Calculates median area as ``10 ** (mag - 4)``. Rake is ignored.
         """
         return 10 ** (mag - 4.0)
+
+    def get_std_dev_area(self, mag, rake):
+        """
+        Standard deviation for PeerMSR. Mag and rake are ignored.
+
+        >>> peer = PeerMSR()
+        >>> 0.25 == peer.get_std_dev_area(4.0, 50)
+        True
+        """
+        return 0.25

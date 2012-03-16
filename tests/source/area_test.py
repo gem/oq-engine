@@ -1,7 +1,7 @@
 import unittest
 
 from nhe.const import TRT
-from nhe.msr import PeerMSR
+from nhe.scalerel.peer import PeerMSR
 from nhe.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from nhe.geo import Point, Polygon, NodalPlane
 from nhe.pmf import PMF
