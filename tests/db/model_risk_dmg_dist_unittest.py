@@ -66,7 +66,6 @@ class DmgDistDbTriggerTestCase(unittest.TestCase):
             site=test_site.point.to_wkt(), stco=1234.56)
         cls.exp_data.save()
 
-    @helpers.skipit
     def test_dmg_dist_per_asset_data_valid_dmg_state(self):
         # We just want to test that there are no errors saving to the db.
         for ds in self.DMG_STATES:
@@ -75,7 +74,6 @@ class DmgDistDbTriggerTestCase(unittest.TestCase):
                 dmg_state=ds, mean=0.0, stddev=0.0)
             dd.save()
 
-    #@helpers.skipit
     def test_dmg_dist_per_asset_data_invalid_dmg_state(self):
         expected_error = (
             "Exception: Invalid dmg_state 'invalid state', must be one of "
@@ -90,6 +88,5 @@ class DmgDistDbTriggerTestCase(unittest.TestCase):
             dd.save()
         except DatabaseError, de:
             self.assertEqual(expected_error, de.message.split('\n')[0])
-            transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
