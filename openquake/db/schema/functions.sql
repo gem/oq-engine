@@ -345,8 +345,8 @@ COMMENT ON FUNCTION pcheck_exposure_data() IS
 'Make sure the inserted or modified exposure data is consistent.';
 
 
-CREATE OR REPLACE FUNCTION riskr.dmg_state_check_dmg_dist_per_asset_data()
-    RETURNS TRIGGER
+CREATE OR REPLACE FUNCTION riskr.pcheck_dmg_state_dmg_dist_per_asset_data()
+  RETURNS TRIGGER
 AS $$
     def fmt(err):
         return "%s (%s)" % (err, TD["table_name"])
@@ -365,23 +365,12 @@ AS $$
     return "OK"
 $$ LANGUAGE plpythonu;
 
-COMMENT ON FUNCTION riskr.dmg_state_check_dmg_dist_per_asset_data() IS
+COMMENT ON FUNCTION riskr.pcheck_dmg_state_dmg_dist_per_asset_data() IS
 'Make sure that each inserted or modified riskr.dmg_dist_per_asset_data record has a valid dmg_state.';
 
 CREATE TRIGGER riskr_dmg_dist_per_asset_data_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON riskr.dmg_dist_per_asset_data
-FOR EACH ROW EXECUTE PROCEDURE riskr.dmg_state_check_dmg_dist_per_asset_data();
-
---CREATE TRIGGER riskir_dmg_dist_per_taxonomy_data_before_insert_update_trig
---BEFORE INSERT OR UPDATE ON riskr.dmg_dist_per_taxonomy_data
---FOR EACH ROW EXECUTE PROCEDURE riskr.dmg_state_check_dmg_dist_per_taxonomy_data();
-
---CREATE OR REPLACE FUNCTION riskr.dmg_state_check_dmg_dist_per_taxonomy_data()
---    RETURNS TRIGGER
---AS $$
---
---$$ LANGUAGE plpythonu;
-
+FOR EACH ROW EXECUTE PROCEDURE riskr.pcheck_dmg_state_dmg_dist_per_asset_data();
 
 CREATE TRIGGER hzrdi_rupture_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON hzrdi.rupture
