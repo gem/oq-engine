@@ -14,10 +14,9 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import unittest
-
 from django.db import transaction
 from django.db.utils import DatabaseError
+from django.test import TestCase as DjangoTestCase
 
 from openquake import shapes
 from openquake.db import models
@@ -25,7 +24,7 @@ from openquake.db import models
 from tests.utils import helpers
 
 
-class DmgDistDbTriggerTestCase(unittest.TestCase):
+class DmgDistDbTriggerTestCase(DjangoTestCase):
     """These tests are meant to exercise the insert/update triggers for
     ensuring record validity."""
 
@@ -88,5 +87,6 @@ class DmgDistDbTriggerTestCase(unittest.TestCase):
             dd.save()
         except DatabaseError, de:
             self.assertEqual(expected_error, de.message.split('\n')[0])
+            transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
