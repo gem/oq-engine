@@ -69,6 +69,8 @@ GRANT ALL ON SEQUENCE riskr.bcr_distribution_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.bcr_distribution_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.dmg_dist_per_asset_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.dmg_dist_per_asset_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.dmg_dist_per_taxonomy_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.dmg_dist_per_taxonomy_data_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE uiapi.input_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_job_id_seq to GROUP openquake;
@@ -250,6 +252,14 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.dmg_dist_per_asset TO oq_reslt_writer
 -- riskr.dmg_dist_per_asset_data
 GRANT SELECT ON riskr.dmg_dist_per_asset_data TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.dmg_dist_per_asset_data TO oq_reslt_writer;
+
+-- riskr.dmg_dist_per_taxonomy
+GRANT SELECT ON riskr.dmg_dist_per_taxonomy TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.dmg_dist_per_taxonomy TO oq_reslt_writer;
+
+-- riskr.dmg_dist_per_taxonomy_data
+GRANT SELECT ON riskr.dmg_dist_per_taxonomy_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.dmg_dist_per_taxonomy_data TO oq_reslt_writer;
 
 -- uiapi.input
 GRANT SELECT ON uiapi.input TO GROUP openquake;
