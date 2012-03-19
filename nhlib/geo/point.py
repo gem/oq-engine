@@ -46,10 +46,10 @@ class Point(object):
     EQUALITY_DISTANCE = 1e-3
 
     def __init__(self, longitude, latitude, depth=0.0):
-        
+
         ensure(depth < EARTH_RADIUS,
                 "The depth must be < than the earth radius (6371.0 km)!")
-        
+
         ensure(-180.0 <= longitude <= 180.0,
                 "Longitude %.6f outside range!" % longitude)
 
@@ -204,7 +204,7 @@ class Point(object):
         """
         Return the position vector (in cartesian coordinates) of this point.
 
-        For the equation see: 
+        For the equation see:
             http://mathworld.wolfram.com/SphericalCoordinates.html.
 
         :returns:

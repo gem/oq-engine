@@ -198,7 +198,7 @@ def plane_dip(p1, p2, p3):
     at the upper left corner location.
 
     The angle between these two vectors is the dip angle.
-    
+
     :param p1:
         The upper left corner.
     :type p1:

@@ -13,12 +13,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import itertools
 import unittest
 
 from nhlib.geo import Point
 from nhlib.geo.surface.planar import PlanarSurface
-from nhlib.geo.mesh import RectangularMesh
 
 from tests.geo.surface import _planar_test_data as test_data
 from tests.geo.surface import _utils as utils

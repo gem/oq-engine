@@ -81,7 +81,7 @@ class Mesh(object):
     def shape(self):
         """
         Return the shape of this mesh.
-        
+
         :returns:
             The shape of this mesh.
         :rtype:

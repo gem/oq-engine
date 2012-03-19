@@ -135,7 +135,7 @@ class PointTestCase(unittest.TestCase):
 
     def test_position_vector_1(self):
         point = geo.Point(0.0, 0.0, 0.0)
-        
+
         self.assertTrue(numpy.allclose(
                 [6371.0, 0.0, 0.0], point.position_vector()))
 
@@ -144,7 +144,7 @@ class PointTestCase(unittest.TestCase):
 
         self.assertTrue(numpy.allclose(
                 [0.0, 0.0, 6371.0], point.position_vector()))
-    
+
     def test_position_vector_3(self):
         point = geo.Point(0.0, 90.0, 10.0)
 
