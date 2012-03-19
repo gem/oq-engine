@@ -31,6 +31,7 @@ from openquake.job.config import EventBasedRiskValidator
 from openquake.job.config import HazardMandatoryParamsValidator
 from openquake.job.config import RiskMandatoryParamsValidator
 from openquake.job.config import ScenarioComputationValidator
+from openquake.job.config import ScenarioDamageValidator
 from openquake.job.config import UHSValidator
 from openquake.job.config import to_float_array
 from openquake.job.config import to_str_array
@@ -206,15 +207,35 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
         # Restore the list with the mandatory hazard parameters.
         HazardMandatoryParamsValidator.MANDATORY_PARAMS.pop()
 
-    def test_scenario_is_not_supported_alone(self):
-        """When we specify a scenario computation, we only
-        support hazard + risk jobs."""
-
+    def test_scenario_is_only_hazard_and_risk(self):
+        """
+        When we specify a scenario computation, we only
+        support hazard + risk jobs.
+        """
         sections = [config.RISK_SECTION,
                 config.HAZARD_SECTION, config.GENERAL_SECTION]
 
         params = {config.CALCULATION_MODE: config.SCENARIO_MODE,
                   'NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS': '1'}
+
+        validator = config.ScenarioComputationValidator(sections, params)
+
+        self.assertTrue(validator.is_valid()[0])
+
+        sections.remove(config.RISK_SECTION)
+
+        self.assertFalse(validator.is_valid()[0])
+
+    def test_scenario_damage_is_only_and_hazard_risk(self):
+        """
+        When we specify a scenario damage computation, we only
+        support hazard + risk jobs.
+        """
+        sections = [config.RISK_SECTION, config.HAZARD_SECTION,
+                config.GENERAL_SECTION]
+
+        params = {config.CALCULATION_MODE: config.SCENARIO_DAMAGE_MODE,
+                'NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS': '1'}
 
         validator = config.ScenarioComputationValidator(sections, params)
 
@@ -497,6 +518,27 @@ class DefaultValidatorsTestCase(unittest.TestCase):
         self.assertTrue(any(
             isinstance(v, ScenarioComputationValidator) for v in validators))
 
+    def test_default_validators_scenario_damage_job(self):
+        """
+        Ensures that a Scenario Damage job always includes the
+        :class:`openquake.job.config.ScenarioComputationValidator` and
+        the :class:`openquake.job.config.ScenarioDamageComputationValidator`.
+        """
+
+        scenario_job_path = helpers.demo_file(
+            "scenario_damage_risk/config.gem")
+
+        scenario_job = helpers.job_from_file(scenario_job_path)
+
+        validators = config.default_validators(
+            scenario_job.sections, scenario_job.params)
+
+        self.assertTrue(any(isinstance(
+                v, ScenarioComputationValidator) for v in validators))
+
+        self.assertTrue(any(isinstance(
+                v, ScenarioDamageValidator) for v in validators))
+
     def test_default_validators_classical_risk(self):
         # For Classical Hazard+Risk calculations, ensure that a
         # `ClassicalRiskValidator` is included in the default validators.
@@ -623,6 +665,25 @@ class NumericSequenceValidationTestCase(unittest.TestCase):
     def test_check_dupes(self):
         self.assertRaises(ValueError, validate_numeric_sequence,
                           self.TEST_VALUES, check_dupes=True)
+
+
+class ScenarioDamageValidatorTestCase(unittest.TestCase):
+    """
+    Tests for :class:`openquake.job.config.ScenarioDamageValidator`.
+    """
+
+    def test_fragility_must_be_specified(self):
+        params = {config.FRAGILITY: "/path/to/file"}
+
+        validator = ScenarioDamageValidator(
+            [config.RISK_SECTION], params)
+
+        self.assertTrue(validator.is_valid()[0])
+
+        validator = ScenarioDamageValidator(
+            [config.RISK_SECTION], {})
+
+        self.assertFalse(validator.is_valid()[0])
 
 
 class UHSValidatorTestCase(unittest.TestCase):
