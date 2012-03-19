@@ -22,16 +22,16 @@
 
             <!-- fragility function in discrete format, one per limit state -->
             <ffd ls="minor">
-                <poes>0.0 0.09 0.56 0.91 0.98</poes>
+                <poE>0.0 0.09 0.56 0.91 0.98</poE>
             </ffd>
             <ffd ls="moderate">
-                <poes>0.0 0.00 0.04 0.78 0.96</poes>
+                <poE>0.0 0.00 0.04 0.78 0.96</poE>
             </ffd>
             <ffd ls="severe">
-                <poes>0.0 0.00 0.00 0.29 0.88</poes>
+                <poE>0.0 0.00 0.00 0.29 0.88</poE>
             </ffd>
             <ffd ls="collapse">
-                <poes>0.0 0.00 0.00 0.03 0.63</poes>
+                <poE>0.0 0.00 0.00 0.03 0.63</poE>
             </ffd>
         </ffs>
 
@@ -42,16 +42,16 @@
 
             <!-- fragility function in discrete format, one per limit state -->
             <ffd ls="minor">
-                <poes>0.0 0.09 0.56 0.92 0.99</poes>
+                <poE>0.0 0.09 0.56 0.92 0.99</poE>
             </ffd>
             <ffd ls="moderate">
-                <poes>0.0 0.00 0.04 0.79 0.97</poes>
+                <poE>0.0 0.00 0.04 0.79 0.97</poE>
             </ffd>
             <ffd ls="severe">
-                <poes>0.0 0.00 0.00 0.30 0.89</poes>
+                <poE>0.0 0.00 0.00 0.30 0.89</poE>
             </ffd>
             <ffd ls="collapse">
-                <poes>0.0 0.00 0.00 0.04 0.64</poes>
+                <poE>0.0 0.00 0.00 0.04 0.64</poE>
             </ffd>
         </ffs>
     </fragilityModel>

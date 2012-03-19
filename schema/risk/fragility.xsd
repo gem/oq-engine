@@ -77,7 +77,7 @@
 
     <xs:complexType name="Ffd">
         <xs:sequence>
-            <xs:element name="poes" type="NormalizedDoubleList" minOccurs="1" maxOccurs="1"/>
+            <xs:element name="poE" type="NormalizedDoubleList" minOccurs="1" maxOccurs="1"/>
         </xs:sequence>
         <xs:attribute name="ls" type="xs:string" use="required"/>
     </xs:complexType>
