@@ -1,14 +1,29 @@
+# nhlib: A New Hazard Library
+# Copyright (C) 2012 GEM Foundation
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 from decimal import Decimal
 
-from nhe.const import TRT
-from nhe.source.point import PointSource
-from nhe.source.rupture import ProbabilisticRupture
-from nhe.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
-from nhe.msr import PeerMSR
-from nhe.geo import Point, PlanarSurface, NodalPlane
-from nhe.pmf import PMF
-from nhe.tom import PoissonTOM
+from nhlib.const import TRT
+from nhlib.source.point import PointSource
+from nhlib.source.rupture import ProbabilisticRupture
+from nhlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
+from nhlib.scalerel.peer import PeerMSR
+from nhlib.geo import Point, PlanarSurface, NodalPlane
+from nhlib.pmf import PMF
+from nhlib.tom import PoissonTOM
 
 from tests.geo.surface import _planar_test_data as planar_surface_test_data
 
@@ -121,7 +136,7 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         [rupture] = ruptures
         self.assertIs(rupture.temporal_occurrence_model, tom)
         self.assertIs(rupture.tectonic_region_type, trt)
-        self.assertEqual(rupture.nodal_plane, nodal_plane)
+        self.assertEqual(rupture.rake, nodal_plane.rake)
         self.assertIsInstance(rupture.surface, PlanarSurface)
         self.assertEqual(rupture.surface.mesh_spacing, rupture_mesh_spacing)
         return rupture
@@ -291,44 +306,44 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         actual_ruptures = list(point_source.iter_ruptures(tom))
         self.assertEqual(len(actual_ruptures), 8)
         expected_ruptures = {
-            (mag1, nodalplane1, hypocenter1): (
+            (mag1, nodalplane1.rake, hypocenter1): (
                 # probabilistic rupture's occurrence rate
                 9e-3 * 0.3 * 0.8,
                 # rupture surface corners
                 planar_surface_test_data.TEST_7_RUPTURE_1_CORNERS
             ),
-            (mag2, nodalplane1, hypocenter1): (
+            (mag2, nodalplane1.rake, hypocenter1): (
                 9e-4 * 0.3 * 0.8,
                 planar_surface_test_data.TEST_7_RUPTURE_2_CORNERS
             ),
-            (mag1, nodalplane2, hypocenter1): (
+            (mag1, nodalplane2.rake, hypocenter1): (
                 9e-3 * 0.7 * 0.8,
                 planar_surface_test_data.TEST_7_RUPTURE_3_CORNERS
             ),
-            (mag2, nodalplane2, hypocenter1): (
+            (mag2, nodalplane2.rake, hypocenter1): (
                 9e-4 * 0.7 * 0.8,
                 planar_surface_test_data.TEST_7_RUPTURE_4_CORNERS
             ),
-            (mag1, nodalplane1, hypocenter2): (
+            (mag1, nodalplane1.rake, hypocenter2): (
                 9e-3 * 0.3 * 0.2,
                 planar_surface_test_data.TEST_7_RUPTURE_5_CORNERS
             ),
-            (mag2, nodalplane1, hypocenter2): (
+            (mag2, nodalplane1.rake, hypocenter2): (
                 9e-4 * 0.3 * 0.2,
                 planar_surface_test_data.TEST_7_RUPTURE_6_CORNERS
             ),
-            (mag1, nodalplane2, hypocenter2): (
+            (mag1, nodalplane2.rake, hypocenter2): (
                 9e-3 * 0.7 * 0.2,
                 planar_surface_test_data.TEST_7_RUPTURE_7_CORNERS
             ),
-            (mag2, nodalplane2, hypocenter2): (
+            (mag2, nodalplane2.rake, hypocenter2): (
                 9e-4 * 0.7 * 0.2,
                 planar_surface_test_data.TEST_7_RUPTURE_8_CORNERS
             )
         }
         for actual_rupture in actual_ruptures:
             expected_occurrence_rate, expected_corners = expected_ruptures[
-                (actual_rupture.mag, actual_rupture.nodal_plane,
+                (actual_rupture.mag, actual_rupture.rake,
                  actual_rupture.hypocenter.depth)
             ]
             self.assertTrue(isinstance(actual_rupture, ProbabilisticRupture))

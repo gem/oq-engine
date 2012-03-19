@@ -1,10 +1,21 @@
-# encoding: utf-8
-
-import unittest
-
-from nhe.geo.point import Point
-from nhe.geo.line import Line
-from nhe.geo.surface.simple_fault import SimpleFaultSurface
+# nhlib: A New Hazard Library
+# Copyright (C) 2012 GEM Foundation
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+from nhlib.geo.point import Point
+from nhlib.geo.line import Line
+from nhlib.geo.surface.simple_fault import SimpleFaultSurface
 
 import _simple_fault_test_data as test_data
 from tests.geo.surface import _utils as utils
@@ -114,10 +125,10 @@ class SimpleFaultSurfaceTestCase(utils.SurfaceTestCase):
     def test_get_strike_1(self):
         p1 = Point(0.0, 0.0)
         p2 = Point(0.0635916966572, 0.0635916574897)
-        
+
         surface = SimpleFaultSurface(Line([p1, p2]),
                 1.0, 6.0, 90.0, 1.0)
-        
+
         self.assertAlmostEquals(45.0, surface.get_strike())
 
     def test_get_strike_2(self):

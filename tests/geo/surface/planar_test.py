@@ -1,9 +1,24 @@
+# nhlib: A New Hazard Library
+# Copyright (C) 2012 GEM Foundation
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import itertools
 import unittest
 
-from nhe.geo import Point
-from nhe.geo.surface.planar import PlanarSurface
-from nhe.geo.mesh import RectangularMesh
+from nhlib.geo import Point
+from nhlib.geo.surface.planar import PlanarSurface
+from nhlib.geo.mesh import RectangularMesh
 
 from tests.geo.surface import _planar_test_data as test_data
 from tests.geo.surface import _utils as utils
