@@ -387,8 +387,9 @@ AS $$
     NEW = TD["new"]
 
     ps = plpy.prepare(
-        "SELECT dmg_states FROM riskr.dmg_dist_per_taxonomy where id=$1"
+        "SELECT dmg_states FROM riskr.dmg_dist_per_taxonomy WHERE id=$1",
         ["integer"])
+
     [ddpt] = plpy.execute(ps, [NEW["dmg_dist_per_taxonomy_id"]])
 
     if not NEW["dmg_state"] in ddpt["dmg_states"]:

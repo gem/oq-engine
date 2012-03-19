@@ -1148,6 +1148,7 @@ class DmgDistPerAsset(models.Model):
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"dmg_dist_per_asset'
 
+
 class DmgDistPerAssetData(models.Model):
     """Holds the actual data for damage distributions per asset."""
 
@@ -1159,6 +1160,30 @@ class DmgDistPerAssetData(models.Model):
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"dmg_dist_per_asset_data'
+
+
+class DmgDistPerTaxonomy(models.Model):
+    """Hold metdata for damage distributions per taxonomy."""
+
+    output = models.ForeignKey("Output")
+    dmg_states = CharArrayField()
+    end_branch_label = models.TextField(null=True)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_per_taxonomy'
+
+
+class DmgDistPerTaxonomyData(models.Model):
+    """Holds the actual data for damage distributions per taxonomy."""
+
+    dmg_dist_per_taxonomy = models.ForeignKey("DmgDistPerTaxonomy")
+    taxonomy = models.TextField()
+    dmg_state = models.TextField()
+    mean = models.FloatField()
+    stddev = models.FloatField()
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_per_taxonomy_data'
 
 
 ## Tables in the 'oqmif' schema.
