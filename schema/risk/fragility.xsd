@@ -36,6 +36,7 @@
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
+                    <xs:element name="IML" type="IMLType" minOccurs="0" maxOccurs="1" />
                     <xs:element name="taxonomy" minOccurs="1" maxOccurs="1" type="xs:string"/>
                     <!-- continuous and discrete fragility functions are
                          mutually exclusive i.e.
@@ -76,7 +77,7 @@
 
     <xs:complexType name="Ffd">
         <xs:sequence>
-            <xs:element name="value" minOccurs="1" maxOccurs="unbounded" type="FfdValue"/>
+            <xs:element name="poes" type="NormalizedDoubleList" minOccurs="1" maxOccurs="1"/>
         </xs:sequence>
         <xs:attribute name="ls" type="xs:string" use="required"/>
     </xs:complexType>

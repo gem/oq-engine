@@ -17,69 +17,41 @@
 
         <!-- fragility function set, each with its own, distinct taxonomy -->
         <ffs gml:id="PAV01-ff01-d">
+            <IML IMT="MMI">7 8 9 10 11</IML>
             <taxonomy>RC/DMRF-D/LR</taxonomy>
 
             <!-- fragility function in discrete format, one per limit state -->
             <ffd ls="minor">
-                <value iml="7" poe="0.0" />
-                <value iml="8" poe="0.09" />
-                <value iml="9" poe="0.56" />
-                <value iml="10" poe="0.91" />
-                <value iml="11" poe="0.98" />
+                <poes>0.0 0.09 0.56 0.91 0.98</poes>
             </ffd>
             <ffd ls="moderate">
-                <value iml="7" poe="0.0" />
-                <value iml="8" poe="0.0" />
-                <value iml="9" poe="0.04" />
-                <value iml="10" poe="0.78" />
-                <value iml="11" poe="0.96" />
+                <poes>0.0 0.00 0.04 0.78 0.96</poes>
             </ffd>
             <ffd ls="severe">
-                <value iml="7" poe="0.0" />
-                <value iml="8" poe="0.0" />
-                <value iml="9" poe="0.00" />
-                <value iml="10" poe="0.29" />
-                <value iml="11" poe="0.88" />
+                <poes>0.0 0.00 0.00 0.29 0.88</poes>
             </ffd>
             <ffd ls="collapse">
-                <value iml="7" poe="0.0" />
-                <value iml="8" poe="0.0" />
-                <value iml="9" poe="0.00" />
-                <value iml="10" poe="0.03" />
-                <value iml="11" poe="0.63" />
+                <poes>0.0 0.00 0.00 0.03 0.63</poes>
             </ffd>
         </ffs>
+
+        <!-- fragility function set, with different IMLs -->
         <ffs gml:id="PAV01-ff02-d">
+            <IML IMT="MMI">8 9 10 11 12</IML>
             <taxonomy>RC/DMRF-D/HR</taxonomy>
 
             <!-- fragility function in discrete format, one per limit state -->
             <ffd ls="minor">
-                <value iml="7" poe="0.0" />
-                <value iml="8" poe="0.08" />
-                <value iml="9" poe="0.56" />
-                <value iml="10" poe="0.92" />
-                <value iml="11" poe="0.98" />
+                <poes>0.0 0.09 0.56 0.92 0.99</poes>
             </ffd>
             <ffd ls="moderate">
-                <value iml="7" poe="0.0" />
-                <value iml="8" poe="0.0" />
-                <value iml="9" poe="0.05" />
-                <value iml="10" poe="0.77" />
-                <value iml="11" poe="0.96" />
+                <poes>0.0 0.00 0.04 0.79 0.97</poes>
             </ffd>
             <ffd ls="severe">
-                <value iml="7" poe="0.0" />
-                <value iml="8" poe="0.01" />
-                <value iml="9" poe="0.00" />
-                <value iml="10" poe="0.27" />
-                <value iml="11" poe="0.88" />
+                <poes>0.0 0.00 0.00 0.30 0.89</poes>
             </ffd>
             <ffd ls="collapse">
-                <value iml="7" poe="0.0" />
-                <value iml="8" poe="0.0" />
-                <value iml="9" poe="0.01" />
-                <value iml="10" poe="0.03" />
-                <value iml="11" poe="0.62" />
+                <poes>0.0 0.00 0.00 0.04 0.64</poes>
             </ffd>
         </ffs>
     </fragilityModel>
