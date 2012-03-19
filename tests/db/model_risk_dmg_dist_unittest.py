@@ -37,6 +37,7 @@ class DmgDistDbTriggerTestCase(DjangoTestCase):
         cls.job = models.OqJob(owner=default_user)
         cls.job.save()
 
+        # dmg dist per asset
         cls.ddpa_output = models.Output(
             owner=default_user, oq_job=cls.job,
             display_name='Test dmg dist per asset',
@@ -47,6 +48,18 @@ class DmgDistDbTriggerTestCase(DjangoTestCase):
         cls.ddpa = models.DmgDistPerAsset(
             output=cls.ddpa_output, dmg_states=cls.DMG_STATES)
         cls.ddpa.save()
+
+        # dmg dist per taxonomy
+        cls.ddpt_output = models.Output(
+            owner=default_user, oq_job=cls.job,
+            display_name='Test dmg dist per taxonomy',
+            output_type='dmg_dist_per_taxonomy',
+            db_backed=True)
+        cls.ddpt_output.save()
+
+        cls.ddpt = models.DmgDistPerTaxonomy(
+            output=cls.ddpt_output, dmg_states=cls.DMG_STATES)
+        cls.ddpt.save()
 
         # We also need some sample exposure data records (to satisfy the dmg
         # dist per asset FK).
@@ -82,6 +95,32 @@ class DmgDistDbTriggerTestCase(DjangoTestCase):
 
         dd = models.DmgDistPerAssetData(
             dmg_dist_per_asset=self.ddpa, exposure_data=self.exp_data,
+            dmg_state='invalid state', mean=0.0, stddev=0.0)
+        try:
+            dd.save()
+        except DatabaseError, de:
+            self.assertEqual(expected_error, de.message.split('\n')[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_dmg_dist_per_taxonomy_data_valid_dmg_state(self):
+        for ds in self.DMG_STATES:
+            dd = models.DmgDistPerTaxonomyData(
+                dmg_dist_per_taxonomy=self.ddpt,
+                taxonomy=helpers.random_string(), dmg_state=ds, mean=0.0,
+                stddev=0.0)
+            dd.save()
+
+    def test_dmg_dist_per_taxonomy_data_invalid_dmg_state(self):
+        expected_error = (
+            "Exception: Invalid dmg_state 'invalid state', must be one of "
+            "['no_damage', 'slight', 'moderate', 'extensive', 'complete'] "
+            "(dmg_dist_per_taxonomy_data)"
+        )
+
+        dd = models.DmgDistPerTaxonomyData(
+            dmg_dist_per_taxonomy=self.ddpt, taxonomy=helpers.random_string(),
             dmg_state='invalid state', mean=0.0, stddev=0.0)
         try:
             dd.save()
