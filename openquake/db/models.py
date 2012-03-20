@@ -1186,6 +1186,32 @@ class DmgDistPerTaxonomyData(models.Model):
         db_table = 'riskr\".\"dmg_dist_per_taxonomy_data'
 
 
+class DmgDistTotal(models.Model):
+    """Holds metadata for 'total damage distribution' values for an entire
+    calculation. This is the total over all assets and GMFs."""
+
+    output = models.ForeignKey("Output")
+    dmg_states = CharArrayField()
+    end_branch_label = models.TextField(null=True)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_total'
+
+
+class DmgDistTotalData(models.Model):
+    """Holds the actual 'total damage distribution' values for for an entire
+    calculation. There should be  one record per calculation per damage state.
+    """
+
+    dmg_dist_total = models.ForeignKey("DmgDistTotal")
+    dmg_state = models.TextField()
+    mean = models.FloatField()
+    stddev = models.FloatField()
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_total_data'
+
+
 ## Tables in the 'oqmif' schema.
 
 
