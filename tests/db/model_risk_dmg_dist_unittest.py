@@ -36,6 +36,8 @@ class DamageStateTriggersTestCase(DjangoTestCase):
         "(%s)"
     )
 
+    GRID_CELL_SITE = shapes.Site(3.11, 2.14)
+
     @classmethod
     def setUpClass(cls):
         default_user = helpers.default_user()
@@ -113,20 +115,22 @@ class DamageStateTriggersTestCase(DjangoTestCase):
         for ds in self.DMG_STATES:
             dd = models.DmgDistPerAssetData(
                 dmg_dist_per_asset=self.ddpa, exposure_data=self.exp_data,
-                dmg_state=ds, mean=0.0, stddev=0.0)
+                dmg_state=ds, mean=0.0, stddev=0.0,
+                location=self.GRID_CELL_SITE.point.to_wkt())
             dd.save()
 
     def test_ddpa_insert_invalid_dmg_state(self):
         dd = models.DmgDistPerAssetData(
             dmg_dist_per_asset=self.ddpa, exposure_data=self.exp_data,
-            mean=0.0, stddev=0.0)
+            mean=0.0, stddev=0.0, location=self.GRID_CELL_SITE.point.to_wkt())
 
         self._test_insert_update_invalid(dd, 'dmg_dist_per_asset_data')
 
     def test_ddpa_update_valid_dmg_state(self):
         dd = models.DmgDistPerAssetData(
             dmg_dist_per_asset=self.ddpa, exposure_data=self.exp_data,
-            dmg_state='slight', mean=0.0, stddev=0.0)
+            dmg_state='slight', mean=0.0, stddev=0.0,
+            location=self.GRID_CELL_SITE.point.to_wkt())
         dd.save()
 
         dd.dmg_state = 'moderate'
@@ -135,7 +139,8 @@ class DamageStateTriggersTestCase(DjangoTestCase):
     def test_ddpa_update_invalid_dmg_state(self):
         dd = models.DmgDistPerAssetData(
             dmg_dist_per_asset=self.ddpa, exposure_data=self.exp_data,
-            dmg_state='slight', mean=0.0, stddev=0.0)
+            dmg_state='slight', mean=0.0, stddev=0.0,
+            location=self.GRID_CELL_SITE.point.to_wkt())
         dd.save()
 
         self._test_insert_update_invalid(dd, 'dmg_dist_per_asset_data')
