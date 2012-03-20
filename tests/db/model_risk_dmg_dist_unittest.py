@@ -24,11 +24,18 @@ from openquake.db import models
 from tests.utils import helpers
 
 
-class DmgDistDbTriggerTestCase(DjangoTestCase):
+class DamageStateTriggersTestCase(DjangoTestCase):
     """These tests are meant to exercise the insert/update triggers for
-    ensuring record validity."""
+    ensuring that `dmg_state` values for dmg_dist_*_data records are valid."""
 
     DMG_STATES = ['no_damage', 'slight', 'moderate', 'extensive', 'complete']
+
+    EXP_ERROR_FMT_STR = (
+        "Exception: Invalid dmg_state 'invalid state', must be one of "
+        "['no_damage', 'slight', 'moderate', 'extensive', 'complete'] "
+        "(%s)"
+    )
+
 
     @classmethod
     def setUpClass(cls):
@@ -49,18 +56,6 @@ class DmgDistDbTriggerTestCase(DjangoTestCase):
             output=cls.ddpa_output, dmg_states=cls.DMG_STATES)
         cls.ddpa.save()
 
-        # dmg dist per taxonomy
-        cls.ddpt_output = models.Output(
-            owner=default_user, oq_job=cls.job,
-            display_name='Test dmg dist per taxonomy',
-            output_type='dmg_dist_per_taxonomy',
-            db_backed=True)
-        cls.ddpt_output.save()
-
-        cls.ddpt = models.DmgDistPerTaxonomy(
-            output=cls.ddpt_output, dmg_states=cls.DMG_STATES)
-        cls.ddpt.save()
-
         # We also need some sample exposure data records (to satisfy the dmg
         # dist per asset FK).
         test_input = models.Input(
@@ -78,33 +73,75 @@ class DmgDistDbTriggerTestCase(DjangoTestCase):
             site=test_site.point.to_wkt(), stco=1234.56)
         cls.exp_data.save()
 
-    def test_dmg_dist_per_asset_data_valid_dmg_state(self):
-        # We just want to test that there are no errors saving to the db.
+        # dmg dist per taxonomy
+        cls.ddpt_output = models.Output(
+            owner=default_user, oq_job=cls.job,
+            display_name='Test dmg dist per taxonomy',
+            output_type='dmg_dist_per_taxonomy',
+            db_backed=True)
+        cls.ddpt_output.save()
+
+        cls.ddpt = models.DmgDistPerTaxonomy(
+            output=cls.ddpt_output, dmg_states=cls.DMG_STATES)
+        cls.ddpt.save()
+
+        # total dmg dist
+        cls.ddt_output = models.Output(
+            owner=default_user, oq_job=cls.job,
+            display_name='Test dmg dist total',
+            output_type='dmg_dist_total',
+            db_backed=True)
+        cls.ddt_output.save()
+
+        cls.ddt = models.DmgDistTotal(
+            output=cls.ddt_output, dmg_states=cls.DMG_STATES)
+        cls.ddt.save()
+
+    def _test_insert_update_invalid(self, mdl, table):
+        # Helper function for running tests for invalid damage states.
+        mdl.dmg_state = 'invalid state'
+        try:
+            mdl.save()
+        except DatabaseError, de:
+            self.assertEqual(
+                self.EXP_ERROR_FMT_STR % table,
+                de.message.split('\n')[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_ddpa_insert_valid_dmg_state(self):
         for ds in self.DMG_STATES:
             dd = models.DmgDistPerAssetData(
                 dmg_dist_per_asset=self.ddpa, exposure_data=self.exp_data,
                 dmg_state=ds, mean=0.0, stddev=0.0)
             dd.save()
 
-    def test_dmg_dist_per_asset_data_invalid_dmg_state(self):
-        expected_error = (
-            "Exception: Invalid dmg_state 'invalid state', must be one of "
-            "['no_damage', 'slight', 'moderate', 'extensive', 'complete'] "
-            "(dmg_dist_per_asset_data)"
-        )
-
+    def test_ddpa_insert_invalid_dmg_state(self):
         dd = models.DmgDistPerAssetData(
             dmg_dist_per_asset=self.ddpa, exposure_data=self.exp_data,
-            dmg_state='invalid state', mean=0.0, stddev=0.0)
-        try:
-            dd.save()
-        except DatabaseError, de:
-            self.assertEqual(expected_error, de.message.split('\n')[0])
-            transaction.rollback()
-        else:
-            self.fail("DatabaseError not raised")
+            mean=0.0, stddev=0.0)
 
-    def test_dmg_dist_per_taxonomy_data_valid_dmg_state(self):
+        self._test_insert_update_invalid(dd, 'dmg_dist_per_asset_data')
+
+    def test_ddpa_update_valid_dmg_state(self):
+        dd = models.DmgDistPerAssetData(
+            dmg_dist_per_asset=self.ddpa, exposure_data=self.exp_data,
+            dmg_state='slight', mean=0.0, stddev=0.0)
+        dd.save()
+
+        dd.dmg_state = 'moderate'
+        dd.save()
+
+    def test_ddpa_update_invalid_dmg_state(self):
+        dd = models.DmgDistPerAssetData(
+            dmg_dist_per_asset=self.ddpa, exposure_data=self.exp_data,
+            dmg_state='slight', mean=0.0, stddev=0.0)
+        dd.save()
+
+        self._test_insert_update_invalid(dd, 'dmg_dist_per_asset_data')
+
+    def test_ddpt_insert_valid_dmg_state(self):
         for ds in self.DMG_STATES:
             dd = models.DmgDistPerTaxonomyData(
                 dmg_dist_per_taxonomy=self.ddpt,
@@ -112,20 +149,56 @@ class DmgDistDbTriggerTestCase(DjangoTestCase):
                 stddev=0.0)
             dd.save()
 
-    def test_dmg_dist_per_taxonomy_data_invalid_dmg_state(self):
-        expected_error = (
-            "Exception: Invalid dmg_state 'invalid state', must be one of "
-            "['no_damage', 'slight', 'moderate', 'extensive', 'complete'] "
-            "(dmg_dist_per_taxonomy_data)"
-        )
-
+    def test_ddpt_insert_invalid_dmg_state(self):
         dd = models.DmgDistPerTaxonomyData(
             dmg_dist_per_taxonomy=self.ddpt, taxonomy=helpers.random_string(),
-            dmg_state='invalid state', mean=0.0, stddev=0.0)
-        try:
-            dd.save()
-        except DatabaseError, de:
-            self.assertEqual(expected_error, de.message.split('\n')[0])
-            transaction.rollback()
-        else:
-            self.fail("DatabaseError not raised")
+            mean=0.0, stddev=0.0)
+
+        self._test_insert_update_invalid(dd, 'dmg_dist_per_taxonomy_data')
+
+    def test_ddpt_update_valid_dmg_state(self):
+        dd = models.DmgDistPerTaxonomyData(
+            dmg_dist_per_taxonomy=self.ddpt,
+            taxonomy=helpers.random_string(), dmg_state='extensive', mean=0.0,
+            stddev=0.0)
+        dd.save()
+
+        dd.dmg_state = 'complete'
+        dd.save()
+
+    def test_ddpt_update_invalid_dmg_state(self):
+        dd = models.DmgDistPerTaxonomyData(
+            dmg_dist_per_taxonomy=self.ddpt,
+            taxonomy=helpers.random_string(), dmg_state='extensive', mean=0.0,
+            stddev=0.0)
+        dd.save()
+
+        self._test_insert_update_invalid(dd, 'dmg_dist_per_taxonomy_data')
+
+    def test_ddt_insert_valid_dmg_state(self):
+        for ds in self.DMG_STATES:
+            dd = models.DmgDistTotalData(
+                dmg_dist_total=self.ddt, dmg_state=ds, mean=0.0, stddev=0.0)
+
+    def test_ddt_insert_invalid_dmg_state(self):
+        dd = models.DmgDistTotalData(
+            dmg_dist_total=self.ddt, mean=0.0, stddev=0.0)
+
+        self._test_insert_update_invalid(dd, 'dmg_dist_total_data')
+
+    def test_ddt_update_valid_dmg_state(self):
+        dd = models.DmgDistTotalData(
+            dmg_dist_total=self.ddt, dmg_state='complete', mean=0.0,
+            stddev=0.0)
+        dd.save()
+
+        dd.dmg_state = 'moderate'
+        dd.save()
+
+    def test_ddt_update_invalid_dmg_state(self):
+        dd = models.DmgDistTotalData(
+            dmg_dist_total=self.ddt, dmg_state='complete', mean=0.0,
+            stddev=0.0)
+        dd.save()
+
+        self._test_insert_update_invalid(dd, 'dmg_dist_total_data')
