@@ -8,10 +8,10 @@
         <gml:description>Fragility model for Pavia (continuous)</gml:description>
         <!-- limit states apply to the entire fragility model -->
         <limitStates>
-            <ls>slight</ls>
-            <ls>moderate</ls>
-            <ls>extensive</ls>
-            <ls>complete</ls>
+            slight
+            moderate
+            extensive
+            complete
         </limitStates>
 
         <!-- fragility function set, each with its own, distinct taxonomy -->
