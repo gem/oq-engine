@@ -208,10 +208,8 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
         HazardMandatoryParamsValidator.MANDATORY_PARAMS.pop()
 
     def test_scenario_is_only_hazard_and_risk(self):
-        """
-        When we specify a scenario computation, we only
-        support hazard + risk jobs.
-        """
+        # When we specify a scenario computation, we only
+        # support hazard + risk jobs.
         sections = [config.RISK_SECTION,
                 config.HAZARD_SECTION, config.GENERAL_SECTION]
 
@@ -227,10 +225,8 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
         self.assertFalse(validator.is_valid()[0])
 
     def test_scenario_damage_is_only_and_hazard_risk(self):
-        """
-        When we specify a scenario damage computation, we only
-        support hazard + risk jobs.
-        """
+        # When we specify a scenario damage computation, we only
+        # support hazard + risk jobs.
         sections = [config.RISK_SECTION, config.HAZARD_SECTION,
                 config.GENERAL_SECTION]
 
@@ -519,11 +515,9 @@ class DefaultValidatorsTestCase(unittest.TestCase):
             isinstance(v, ScenarioComputationValidator) for v in validators))
 
     def test_default_validators_scenario_damage_job(self):
-        """
-        Ensures that a Scenario Damage job always includes the
-        :class:`openquake.job.config.ScenarioComputationValidator` and
-        the :class:`openquake.job.config.ScenarioDamageComputationValidator`.
-        """
+        # Ensures that a Scenario Damage job always includes the
+        # :class:`openquake.job.config.ScenarioComputationValidator` and
+        # the :class:`openquake.job.config.ScenarioDamageComputationValidator`.
 
         scenario_job_path = helpers.demo_file(
             "scenario_damage_risk/config.gem")
