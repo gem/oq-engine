@@ -1444,6 +1444,7 @@ CREATE TABLE riskr.dmg_dist_per_taxonomy_data (
     stddev float NOT NULL
 ) TABLESPACE riskr_ts;
 
+
 -- Total Damage Distribution
 CREATE TABLE riskr.dmg_dist_total (
     id SERIAL PRIMARY KEY,
