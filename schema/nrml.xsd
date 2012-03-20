@@ -24,6 +24,7 @@
     <xs:include schemaLocation="./hazard/uhs.xsd"/>
     <xs:include schemaLocation="./risk/agg_loss_curve.xsd"/>
     <xs:include schemaLocation="./risk/bcr_map.xsd"/>
+    <xs:include schemaLocation="./risk/dmg_dist.xsd"/>
     <xs:include schemaLocation="./risk/exposure.xsd"/>
     <xs:include schemaLocation="./risk/general.xsd"/>
     <xs:include schemaLocation="./risk/loss_curve.xsd"/>
@@ -53,6 +54,7 @@
                         <xs:element ref="disaggregationResultField"/>
                         <xs:element ref="uhsResultSet"/>
                         <xs:element ref="rawSourceModel"/>
+                        <xs:element ref="dmgDistPerAsset"/>
                     </xs:choice>
                 </xs:sequence>
             </xs:extension>
