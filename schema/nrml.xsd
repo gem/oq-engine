@@ -25,6 +25,7 @@
     <xs:include schemaLocation="./risk/agg_loss_curve.xsd"/>
     <xs:include schemaLocation="./risk/bcr_map.xsd"/>
     <xs:include schemaLocation="./risk/exposure.xsd"/>
+    <xs:include schemaLocation="./risk/fragility.xsd"/>
     <xs:include schemaLocation="./risk/general.xsd"/>
     <xs:include schemaLocation="./risk/loss_curve.xsd"/>
     <xs:include schemaLocation="./risk/loss_map.xsd"/>
@@ -48,6 +49,7 @@
                         <xs:element ref="rupture"/>
                         <xs:element ref="riskResult"/>
                         <xs:element ref="exposureModel"/>
+                        <xs:element ref="fragilityModel"/>
                         <xs:element ref="vulnerabilityModel"/>
                         <xs:element ref="logicTree"/>
                         <xs:element ref="disaggregationResultField"/>

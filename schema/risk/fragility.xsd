@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.3"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
+    <!--
+         Abbreviations used:
+            - ffs: fragility function set
+            - ffc: fragility function (continuous)
+            - ffd: fragility function (discrete)
+    -->
+
+    <!-- Top-level element for Fragility model definitions. -->
+    <xs:element name="fragilityModel" type="FragilityModel" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="FragilityModel">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <!-- The format of the functions in this fragility model,
+                     one of: discrete, continuous -->
+                <xs:sequence>
+                    <xs:element name="limitStates" type="LimitStates" minOccurs="1" maxOccurs="1" />
+                    <xs:element ref="ffs" minOccurs="1" maxOccurs="unbounded" />
+                </xs:sequence>
+                <xs:attribute name="format" type="Fmformat" use="required"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:element name="ffs" type="Ffs" substitutionGroup="gml:_Feature"/>
+    <xs:complexType name="Ffs">
+        <xs:complexContent>
+            <xs:extension base="gml:AbstractFeatureType">
+                <xs:sequence>
+                    <xs:element name="IML" type="IMLType" minOccurs="0" maxOccurs="1" />
+                    <xs:element name="taxonomy" minOccurs="1" maxOccurs="1" type="xs:string"/>
+                    <!-- continuous and discrete fragility functions are
+                         mutually exclusive i.e.
+                            - cannot mix types inside a particular ffs
+                            - the type must match the format defined in the
+                              fragility model tag. -->
+                    <xs:element name="ffc" type="Ffc" minOccurs="0" maxOccurs="unbounded" />
+                    <xs:element name="ffd" type="Ffd" minOccurs="0" maxOccurs="unbounded" />
+                </xs:sequence>
+
+                <!-- optional function type for a continuous ffs -->
+                <xs:attribute name="type" type="xs:string" use="optional"/>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="LimitStates">
+        <xs:sequence>
+            <xs:element name="ls" type="xs:string" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="Ffc">
+        <xs:sequence>
+            <xs:element name="params" minOccurs="1" maxOccurs="1" type="FfcParams"/>
+        </xs:sequence>
+        <xs:attribute name="ls" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <xs:complexType name="FfcParams">
+        <xs:simpleContent>
+            <xs:extension base="xs:string">
+            <xs:attribute name="mean" type="NonNegativeDoubleType" use="required" />
+            <xs:attribute name="stddev" type="NonNegativeDoubleType" use="required" />
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:complexType name="Ffd">
+        <xs:sequence>
+            <xs:element name="poE" type="NormalizedDoubleList" minOccurs="1" maxOccurs="1"/>
+        </xs:sequence>
+        <xs:attribute name="ls" type="xs:string" use="required"/>
+    </xs:complexType>
+
+    <xs:complexType name="FfdValue">
+        <xs:simpleContent>
+            <xs:extension base="xs:string">
+            <xs:attribute name="iml" type="NonNegativeDoubleType" use="required" />
+            <xs:attribute name="poe" type="NonNegativeDoubleType" use="required" />
+            </xs:extension>
+        </xs:simpleContent>
+    </xs:complexType>
+
+    <xs:simpleType name="Fmformat">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="continuous" />
+            <xs:enumeration value="discrete" />
+        </xs:restriction>
+    </xs:simpleType>
+</xs:schema>
