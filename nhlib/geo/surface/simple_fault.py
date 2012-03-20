@@ -20,6 +20,7 @@ import math
 import numpy
 
 from nhlib.geo.surface.base import BaseSurface
+from nhlib.geo.line import Line
 from nhlib.geo.mesh import RectangularMesh
 from nhlib.geo._utils import spherical_to_cartesian, ensure
 
@@ -81,7 +82,6 @@ class SimpleFaultSurface(BaseSurface):
         """
         See :meth:`nhlib.surface.base.BaseSurface.get_mesh`.
         """
-
         # Loops over points in the top edge, for each point
         # on the top edge compute corresponding point on the bottom edge, then
         # computes equally spaced points between top and bottom points.
@@ -95,24 +95,15 @@ class SimpleFaultSurface(BaseSurface):
         azimuth = (strike + 90.0) % 360
 
         mesh = []
-
-        top_edge = self._fault_top_edge()
-
-        for point in top_edge:
-
+        for point in self._fault_top_edge(azimuth):
             bottom = point.point_at(
                 horizontal_distance, vertical_distance, azimuth)
-
-            points = point.equally_spaced_points(bottom, self.mesh_spacing)
-            mesh.extend(points)
+            mesh.append(point.equally_spaced_points(bottom, self.mesh_spacing))
 
         # number of rows corresponds to number of points along dip
         # number of columns corresponds to number of points along strike
-        surface = numpy.array(mesh)
-        surface = surface.reshape(len(top_edge), len(mesh) / len(top_edge))
-        surface = numpy.transpose(surface)
-
-        return RectangularMesh.from_points_list(surface.tolist())
+        surface_points = numpy.array(mesh).transpose().tolist()
+        return RectangularMesh.from_points_list(surface_points)
 
     def get_dip(self):
         """
@@ -189,7 +180,7 @@ class SimpleFaultSurface(BaseSurface):
         """
         return self.fault_trace.average_azimuth()
 
-    def _fault_top_edge(self):
+    def _fault_top_edge(self, azimuth):
         """
         Line representing the fault top edge.
 
@@ -200,26 +191,21 @@ class SimpleFaultSurface(BaseSurface):
         and last points). The line is then resampled in equal length segments
         (length equal to ``mesh_spacing``).
 
-        :param mesh_spacing:
-            Spacing between mesh points, in km.
-        :type mesh_spacing:
-            float
+        :param azimuth:
+            The azimuth perpendicular to the fault strike (the direction along
+            dip) in decimal degrees.
         :returns:
-            The fault top edge.
-        :rtype:
-            instance of :class:`nhlib.Line`
+            List of points (instances of :class:`~nhlib.geo.point.Point`)
+            of the fault top edge.
         """
         horizontal_distance = 0.0
-
         if self.dip < 90.0:
             horizontal_distance = self.upper_seismo_depth / math.tan(
                     math.radians(self.dip))
 
         vertical_distance = self.upper_seismo_depth
-        strike = self.fault_trace[0].azimuth(self.fault_trace[-1])
-        azimuth = (strike + 90.0) % 360
-
-        return [
+        top_edge_points = [
             point.point_at(horizontal_distance, vertical_distance, azimuth)
-            for point in  self.fault_trace.resample(self.mesh_spacing).points
+            for point in self.fault_trace
         ]
+        return Line(top_edge_points).resample(self.mesh_spacing).points
