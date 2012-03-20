@@ -22,16 +22,18 @@ from openquake.db.models import OqJob
 from tests.utils import helpers
 
 
-class ScenarioRiskQATest(unittest.TestCase):
-    """QA test for the Scenario Risk calculator."""
+class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
+    """QA tests for the Probabilistic Event Based Risk calculator."""
 
     @attr('qa')
-    def test_scenario_risk(self):
-        # The rudimentary beginnings of a QA test for the scenario calc.
-        # For now, just run it end-to-end to make sure it doesn't blow up.
-        scen_cfg = helpers.demo_file('scenario_risk/config.gem')
+    def test_probabilistic_risk(self):
+        # The rudimentary beginnings of a QA test for the probabilistic
+        # calculator. For now, just run it end-to-end
+        # to make sure it doesn't blow up.
+        cfg = helpers.demo_file(
+            'probabilistic_event_based_risk/config_stest.gem')
 
-        ret_code = helpers.run_job(scen_cfg, ['--output-type=xml'])
+        ret_code = helpers.run_job(cfg, ['--output-type=xml'])
         self.assertEqual(0, ret_code)
 
         job = OqJob.objects.latest('id')
