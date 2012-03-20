@@ -188,21 +188,7 @@ class SimpleFaultSurface(BaseSurface):
         :rtype:
             float
         """
-
-        average_strike = 0.0
-        fault_trace_length = 0.0
-
-        for i in xrange(len(self.fault_trace) - 1):
-            current_point = self.fault_trace[i]
-            next_point = self.fault_trace[i + 1]
-
-            strike = current_point.azimuth(next_point)
-            section_length = current_point.horizontal_distance(next_point)
-
-            average_strike = average_strike + section_length * strike
-            fault_trace_length = fault_trace_length + section_length
-
-        return average_strike / fault_trace_length
+        return self.fault_trace.average_azimuth()
 
     def _fault_top_edge(self):
         """
