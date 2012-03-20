@@ -36,7 +36,6 @@ class DamageStateTriggersTestCase(DjangoTestCase):
         "(%s)"
     )
 
-
     @classmethod
     def setUpClass(cls):
         default_user = helpers.default_user()
@@ -179,6 +178,7 @@ class DamageStateTriggersTestCase(DjangoTestCase):
         for ds in self.DMG_STATES:
             dd = models.DmgDistTotalData(
                 dmg_dist_total=self.ddt, dmg_state=ds, mean=0.0, stddev=0.0)
+            dd.save()
 
     def test_ddt_insert_invalid_dmg_state(self):
         dd = models.DmgDistTotalData(
