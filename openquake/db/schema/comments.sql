@@ -323,6 +323,8 @@ COMMENT ON COLUMN riskr.bcr_distribution_data.bcr_distribution_id IS 'The foreig
 COMMENT ON COLUMN riskr.bcr_distribution_data.asset_ref IS 'The asset id';
 COMMENT ON COLUMN riskr.bcr_distribution_data.bcr IS 'The actual benefit-cost ratio';
 
+COMMENT ON COLUMN riskr.dmg_dist_per_asset_data.location IS 'Geometry for the computation cell which contains the referenced asset (exposure_data_id)';
+
 -- uiapi schema tables ------------------------------------------
 COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';
 COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
