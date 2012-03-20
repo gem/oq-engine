@@ -344,7 +344,7 @@ $$ LANGUAGE plpythonu;
 COMMENT ON FUNCTION pcheck_exposure_data() IS
 'Make sure the inserted or modified exposure data is consistent.';
 
--- Damage Distributions, Per Asset
+-- Damage Distribution, Per Asset
 CREATE OR REPLACE FUNCTION riskr.pcheck_dmg_state_dmg_dist_per_asset_data()
     RETURNS TRIGGER
 AS $$
@@ -374,9 +374,9 @@ CREATE TRIGGER riskr_dmg_dist_per_asset_data_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON riskr.dmg_dist_per_asset_data
 FOR EACH ROW EXECUTE PROCEDURE
 riskr.pcheck_dmg_state_dmg_dist_per_asset_data();
--- End Damage Distributions, Per Asset
+-- End Damage Distribution, Per Asset
 
--- Damage Distributions, Per Taxonomy
+-- Damage Distribution, Per Taxonomy
 CREATE OR REPLACE FUNCTION riskr.pcheck_dmg_state_dmg_dist_per_taxonomy_data()
     RETURNS TRIGGER
 AS $$
@@ -400,14 +400,47 @@ AS $$
 $$ LANGUAGE plpythonu;
 
 COMMENT ON FUNCTION riskr.pcheck_dmg_state_dmg_dist_per_taxonomy_data() IS
-'Make sure that each inserted or modified riskir.dmg_dist_per_taxonomy_data
+'Make sure that each inserted or modified riskr.dmg_dist_per_taxonomy_data
  record has a valid dmg_state.';
 
-CREATE TRIGGER riskir_dmg_dist_per_taxonomy_data_before_insert_update_trig
+CREATE TRIGGER riskr_dmg_dist_per_taxonomy_data_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON riskr.dmg_dist_per_taxonomy_data
 FOR EACH ROW EXECUTE PROCEDURE
 riskr.pcheck_dmg_state_dmg_dist_per_taxonomy_data();
--- End Damage Distributions, Per Taxonomy
+-- End Damage Distribution, Per Taxonomy
+
+-- Damage Distribution, Total
+CREATE OR REPLACE FUNCTION riskr.pcheck_dmg_state_dmg_dist_total_data()
+    RETURNS TRIGGER
+AS $$
+    def fmt(err):
+        return "%s (%s)" % (err, TD["table_name"])
+
+    # make sure that NEW.dmg_state is in dmg_dist_total.dmg_states
+    NEW = TD["new"]
+
+    ps = plpy.prepare(
+        "SELECT dmg_states FROM riskr.dmg_dist_total WHERE id=$1",
+        ["integer"])
+
+    [ddt] = plpy.execute(ps, [NEW["dmg_dist_total_id"]])
+
+    if not NEW["dmg_state"] in ddt["dmg_states"]:
+        raise Exception(fmt("Invalid dmg_state '%s', must be one of %s"
+                            % (NEW["dmg_state"], ddt["dmg_states"])))
+
+    return "OK"
+$$ LANGUAGE plpythonu;
+
+COMMENT ON FUNCTION riskr.pcheck_dmg_state_dmg_dist_total_data() IS
+'Make sure that each inserted or modified riskr.dmg_dist_total record has a
+ valid dmg_state.';
+
+CREATE TRIGGER riskr_dmg_dist_total_data_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON riskr.dmg_dist_total_data
+FOR EACH ROW EXECUTE PROCEDURE
+riskr.pcheck_dmg_state_dmg_dist_total_data();
+-- End Damage Distribution, Total
 
 CREATE TRIGGER hzrdi_rupture_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON hzrdi.rupture

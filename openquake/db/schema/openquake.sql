@@ -1437,8 +1437,24 @@ CREATE TABLE riskr.dmg_dist_per_taxonomy (
 
 CREATE TABLE riskr.dmg_dist_per_taxonomy_data (
     id SERIAL PRIMARY KEY,
-    dmg_dist_per_taxonomy_id INTEGER NOT NULL,  -- FK riskir.dmg_dist_per_taxonomy.id
+    dmg_dist_per_taxonomy_id INTEGER NOT NULL,  -- FK riskr.dmg_dist_per_taxonomy.id
     taxonomy VARCHAR NOT NULL,
+    dmg_state VARCHAR NOT NULL,
+    mean float NOT NULL,
+    stddev float NOT NULL
+) TABLESPACE riskr_ts;
+
+-- Total Damage Distribution
+CREATE TABLE riskr.dmg_dist_total (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL,  -- FK to uiapi.output.id
+    dmg_states VARCHAR[] NOT NULL,
+    end_branch_label VARCHAR
+) TABLESPACE riskr_ts;
+
+CREATE TABLE riskr.dmg_dist_total_data (
+    id SERIAL PRIMARY KEY,
+    dmg_dist_total_id INTEGER NOT NULL,  -- FK to riskr.dmg_dist_total.id
     dmg_state VARCHAR NOT NULL,
     mean float NOT NULL,
     stddev float NOT NULL
@@ -1805,6 +1821,37 @@ FOREIGN KEY (collapse_map_id) REFERENCES riskr.collapse_map(id) ON DELETE CASCAD
 ALTER TABLE riskr.bcr_distribution_data
 ADD CONSTRAINT riskr_bcr_distribution_data_bcr_distribution_fk
 FOREIGN KEY (bcr_distribution_id) REFERENCES riskr.bcr_distribution(id) ON DELETE CASCADE;
+
+
+-- Damage Distribution, Per Asset
+ALTER TABLE riskr.dmg_dist_per_asset
+ADD CONSTRAINT riskr_dmg_dist_per_asset_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.dmg_dist_per_asset_data
+ADD CONSTRAINT riskr_dmg_dist_per_asset_data_dmg_dist_per_asset_fk
+FOREIGN KEY (dmg_dist_per_asset_id) REFERENCES riskr.dmg_dist_per_asset(id) ON DELETE CASCADE;
+
+
+-- Damage Distribution, Per Taxonomy
+ALTER TABLE riskr.dmg_dist_per_taxonomy
+ADD CONSTRAINT riskr_dmg_dist_per_taxonomy_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.dmg_dist_per_taxonomy_data
+ADD CONSTRAINT riskr_dmg_dist_per_taxonomy_data_dmg_dist_per_taxonomy_fk
+FOREIGN KEY (dmg_dist_per_taxonomy_id) REFERENCES riskr.dmg_dist_per_taxonomy(id) ON DELETE CASCADE;
+
+
+-- Damage Distribution, Total
+ALTER TABLE riskr.dmg_dist_total
+ADD CONSTRAINT riskr_dmg_dist_total_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.dmg_dist_total_data
+ADD CONSTRAINT riskr_dmg_dist_total_data_dmg_dist_total_fk
+FOREIGN KEY (dmg_dist_total_id) REFERENCES riskr.dmg_dist_total(id) ON DELETE CASCADE;
+
 
 ALTER TABLE oqmif.exposure_data ADD CONSTRAINT
 oqmif_exposure_data_exposure_model_fk FOREIGN KEY (exposure_model_id)
