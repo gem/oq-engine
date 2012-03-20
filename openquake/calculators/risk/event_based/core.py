@@ -265,6 +265,9 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         """
         self.slice_gmfs(block_id)
 
+        # aggregate the losses for this block
+        aggregate_curve = general.AggregateLossCurve()
+
         points = list(general.Block.from_kvs(
             self.job_ctxt.job_id, block_id).grid(self.job_ctxt.region))
         gmf_slices = dict(
@@ -285,6 +288,9 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                 vuln_function, gmf_slice, epsilon_provider, asset,
                 self.job_ctxt.oq_job_profile.loss_histogram_bins,
                 loss_ratios=loss_ratios)
+
+            aggregate_curve.append(loss_ratios * asset.value)
+
             return loss_ratio_curve.rescale_abscissae(asset.value)
 
         result = general.compute_bcr_for_block(self.job_ctxt.job_id, points,
@@ -296,7 +302,8 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                                                  block_id)
         kvs.set_value_json_encoded(bcr_block_key, result)
         LOGGER.debug('bcr result for block %s: %r', block_id, result)
-        return True
+
+        return aggregate_curve.losses
 
     def compute_loss_ratios(self, asset, gmf_slice):
         """For a given asset and ground motion field, computes
