@@ -111,21 +111,21 @@ class SimpleFaultSurface(BaseSurface):
 
         It is computed as the average value of the dip values of the mesh cells
         in the first row of the surface mesh (in case of a simple fault surface
-        the dip is constant over depth, so there is not need
-        to compute the dip angle along width).
+        the dip is constant over depth, so there is not need to compute the dip
+        angle along width).
 
         The dip of each mesh cell is obtained by calculating the vector normal
-        to each mesh cell, and the vector normal to the earth surface at the
-        cell location. The angle between these two vectors is the dip angle.
+        to the vertical surface that cell's top segment lies in (this vector
+        is parallel to earth surface and pointing towards dip direction) and
+        vector pointing from top to bottom points in a same column of points
+        in the mesh. The dot product of these two vectors is the dip angle
+        of a cell.
 
-        If the surface mesh has only one location along width
-        or one along strike, it returns the dip value
-        describing this fault surface.
+        If the surface mesh has only one location along width or one along
+        strike, it returns the dip value describing this fault surface.
 
         :returns:
             The average dip, in decimal degrees.
-        :rtype:
-            float
         """
         mesh = self.get_mesh()
         if 1 in mesh.shape:
