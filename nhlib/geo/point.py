@@ -17,7 +17,6 @@
 Module :mod:`nhlib.geo.point` defines :class:`Point`.
 """
 import math
-import numpy
 
 from nhlib.geo._utils import GEOD, EARTH_RADIUS, ensure
 
