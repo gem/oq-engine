@@ -90,6 +90,9 @@ class Line(object):
         Calculate and return weighted average azimuth of all line's segments
         in decimal degrees.
 
+        Uses formula from
+        `http://en.wikipedia.org/wiki/Mean_of_circular_quantities`_.
+
         >>> from nhlib.geo.point import Point as P
         >>> str(Line([P(0, 0), P(1e-5, 1e-5)]).average_azimuth())
         '45.0'
@@ -106,6 +109,7 @@ class Line(object):
         azimuths = []
         distances = []
         for point in points:
+            # collect all the segments' lengths and azimuths
             assert point.depth == prev_point.depth
             azimuth, _, distance = utils.GEOD.inv(
                 prev_point.longitude, prev_point.latitude,
@@ -115,8 +119,11 @@ class Line(object):
             distances.append(distance)
             prev_point = point
         azimuths, distances = numpy.radians(azimuths), numpy.array(distances)
+        # convert polar coordinates to Cartesian ones and calculate
+        # the average coordinate of each component
         avg_x = numpy.mean(distances * numpy.sin(azimuths))
         avg_y = numpy.mean(distances * numpy.cos(azimuths))
+        # find the mean azimuth from that mean vector
         azimuth = numpy.degrees(numpy.arctan2(avg_x, avg_y))
         if azimuth < 0:
             azimuth += 360
