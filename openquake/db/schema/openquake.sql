@@ -1417,7 +1417,6 @@ CREATE TABLE riskr.dmg_dist_per_asset (
 ) TABLESPACE riskr_ts;
 
 CREATE TABLE riskr.dmg_dist_per_asset_data (
-    -- TODO: re-order these
     id SERIAL PRIMARY KEY,
     dmg_dist_per_asset_id INTEGER NOT NULL,  -- FK to riskr.dmg_dist_per_asset.id
     exposure_data_id INTEGER NOT NULL,  -- FK to oqmif.exposure_data.id
