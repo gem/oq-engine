@@ -20,7 +20,6 @@ import math
 import numpy
 
 from nhlib.geo.surface.base import BaseSurface
-from nhlib.geo.line import Line
 from nhlib.geo.mesh import RectangularMesh
 from nhlib.geo._utils import spherical_to_cartesian, ensure
 
@@ -93,7 +92,7 @@ class SimpleFaultSurface(BaseSurface):
                 math.radians(self.dip))
 
         strike = self.fault_trace[0].azimuth(self.fault_trace[-1])
-        azimuth = strike + 90.0
+        azimuth = (strike + 90.0) % 360
 
         mesh = []
 
@@ -210,8 +209,6 @@ class SimpleFaultSurface(BaseSurface):
         :rtype:
             instance of :class:`nhlib.Line`
         """
-
-        top_edge = []
         horizontal_distance = 0.0
 
         if self.dip < 90.0:
@@ -220,12 +217,9 @@ class SimpleFaultSurface(BaseSurface):
 
         vertical_distance = self.upper_seismo_depth
         strike = self.fault_trace[0].azimuth(self.fault_trace[-1])
-        azimuth = strike + 90.0
+        azimuth = (strike + 90.0) % 360
 
-        for point in self.fault_trace:
-            top_edge.append(point.point_at(
-                    horizontal_distance, vertical_distance, azimuth))
-
-            top_edge = Line(top_edge).resample(self.mesh_spacing).points
-
-        return top_edge
+        return [
+            point.point_at(horizontal_distance, vertical_distance, azimuth)
+            for point in  self.fault_trace.resample(self.mesh_spacing).points
+        ]
