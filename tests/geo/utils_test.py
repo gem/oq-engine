@@ -16,6 +16,7 @@
 import unittest
 
 import pyproj
+import numpy
 
 from nhlib import geo
 from nhlib.geo import _utils as utils
@@ -177,3 +178,39 @@ class GetMiddlePointTestCase(unittest.TestCase):
             geo.Point(*utils.get_middle_point(-179, 43, 179, 43)),
             geo.Point(180, 43.004353)
         )
+
+
+class SphericalToCartesianTestCase(unittest.TestCase):
+    def _test(self, (lons, lats, depths), (xx, yy, zz)):
+        res = utils.spherical_to_cartesian(lons, lats, depths)
+        self.assertIsInstance(res, numpy.ndarray)
+        self.assertTrue(numpy.allclose([xx, yy, zz], res), str(res))
+
+    def test_zero_zero_zero(self):
+        self._test((0, 0, 0), (6371, 0, 0))
+        self._test((0, 0, None), (6371, 0, 0))
+        self._test(([0], [0], [0]), ([6371], [0], [0]))
+        self._test(([0], [0], None), ([6371], [0], [0]))
+
+    def test_north_pole(self):
+        self._test((0, 90, 0), (0, 0, 6371))
+        self._test((0, 90, None), (0, 0, 6371))
+        self._test(([0], [90], [0]), ([0], [0], [6371]))
+        self._test(([0], [90], None), ([0], [0], [6371]))
+
+    def test_north_pole_10_km_depth(self):
+        self._test((0, 90, 10), (0, 0, 6361))
+        self._test(([0], [90], [10]), ([0], [0], [6361]))
+
+    def test_arrays(self):
+        lons = numpy.array([10.0, 20.0, 30.0])
+        lats = numpy.array([-10.0, 0.0, 10.0])
+        depths = numpy.array([1.0, 10.0, 100.0])
+        self._test((lons, lats, depths),
+                   ([6177.9209972, 5977.38476082, 5348.33856387],
+                    [1089.33415649, 2175.59013169, 3087.86470957],
+                    [-1106.13889174, 0., 1088.94772215]))
+        self._test((lons, lats, None),
+                   ([6178.89084351, 5986.78168703, 5433.62541707],
+                    [1089.50516656, 2179.01033313, 3137.10509722],
+                    [-1106.31253992, 0., 1106.31253992]))

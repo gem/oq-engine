@@ -132,21 +132,3 @@ class PointTestCase(unittest.TestCase):
         self.assertRaises(ValueError, geo.Point, 0.0, 0.0, EARTH_RADIUS + 0.1)
 
         geo.Point(0.0, 90.0, EARTH_RADIUS - 0.1)
-
-    def test_position_vector_1(self):
-        point = geo.Point(0.0, 0.0, 0.0)
-
-        self.assertTrue(numpy.allclose(
-                [6371.0, 0.0, 0.0], point.position_vector()))
-
-    def test_position_vector_2(self):
-        point = geo.Point(0.0, 90.0, 0.0)
-
-        self.assertTrue(numpy.allclose(
-                [0.0, 0.0, 6371.0], point.position_vector()))
-
-    def test_position_vector_3(self):
-        point = geo.Point(0.0, 90.0, 10.0)
-
-        self.assertTrue(numpy.allclose(
-                [0.0, 0.0, 6361.0], point.position_vector()))

@@ -22,7 +22,7 @@ import numpy
 from nhlib.geo.surface.base import BaseSurface
 from nhlib.geo.line import Line
 from nhlib.geo.mesh import RectangularMesh
-from nhlib.geo._utils import plane_dip, ensure
+from nhlib.geo._utils import spherical_to_cartesian, ensure
 
 
 class SimpleFaultSurface(BaseSurface):
@@ -137,28 +137,44 @@ class SimpleFaultSurface(BaseSurface):
         :rtype:
             float
         """
+        mesh = self.get_mesh()
+        if 1 in mesh.shape:
+            # mesh has one row and/or one column, no need to calc any mean
+            return self.dip
 
-        surface = self.get_mesh()
-        dip = self.dip
+        # mesh of the top row of points
+        line0 = mesh[0:1]
+        # mesh of the second row of points
+        line1 = mesh[1:2]
+        # Cartesian 3d-coordinates of points in the top row
+        coords0 = spherical_to_cartesian(
+            line0.lons, line0.lats, line0.depths
+        ).reshape(3, -1).transpose()
+        # Cartesian coordinates of points in the second row
+        coords1 = spherical_to_cartesian(
+            line1.lons, line1.lats, line1.depths
+        ).reshape(3, -1).transpose()
+        # Cartesian coordinates of points just below ones in the first row.
+        # that is, the same lons and lats but deeper depth
+        coords2 = spherical_to_cartesian(
+            line0.lons, line0.lats, line0.depths + 1.0
+        ).reshape(3, -1).transpose()
+        # vectors, normal to planes defined by pairs of vectors, where first
+        # one is the one between subsequent points in the top row and the
+        # second is directed downwards from one of those
+        normals = numpy.cross((coords0[:-1] - coords0[1:]),
+                              (coords2[:-1] - coords0[:-1]))
+        # normalize these normal vectors by dividing all coordinate components
+        # by vector's length
+        normals /= numpy.sqrt(numpy.sum(normals ** 2, axis=1)).reshape((-1, 1))
+        # vectors along the dip direction
+        downdip = coords1[:-1] - coords0[:-1]
+        # we need both ``normals`` and ``downdip`` normalized because we will
+        # use dot product of those for calculating angle in between
+        downdip /= numpy.sqrt(numpy.sum(downdip ** 2, axis=1)).reshape((-1, 1))
 
-        # more than one row and one column in the mesh
-        if surface.shape[0] > 1 and surface.shape[1] > 1:
-            average_dip = 0.0
-
-            row_1 = list(surface[0:1])
-            row_2 = list(surface[1:2])
-
-            for i in xrange(len(row_1) - 1):
-                p1 = row_1[i]
-                p2 = row_1[i + 1]
-                p3 = row_2[i]
-
-                dip = plane_dip(p1, p2, p3)
-                average_dip = average_dip + dip
-
-            dip = average_dip / (surface.shape[1] - 1)
-
-        return dip
+        dot_products = numpy.sum(normals * downdip, axis=1)
+        return numpy.degrees(numpy.mean(numpy.arccos(dot_products)))
 
     def get_strike(self):
         """
