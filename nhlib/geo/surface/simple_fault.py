@@ -118,8 +118,8 @@ class SimpleFaultSurface(BaseSurface):
         to the vertical surface that cell's top segment lies in (this vector
         is parallel to earth surface and pointing towards dip direction) and
         vector pointing from top to bottom points in a same column of points
-        in the mesh. The dot product of these two vectors is the dip angle
-        of a cell.
+        in the mesh. The dot product of these two vectors is cosine of the dip
+        angle of a cell.
 
         If the surface mesh has only one location along width or one along
         strike, it returns the dip value describing this fault surface.
