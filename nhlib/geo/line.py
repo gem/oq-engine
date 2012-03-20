@@ -16,6 +16,8 @@
 """
 Module :mod:`nhlib.geo.line` defines :class:`Line`.
 """
+import numpy
+
 from nhlib.geo import _utils as utils
 
 
@@ -81,12 +83,44 @@ class Line(object):
         :rtype:
             boolean
         """
+        return all(point.on_surface() for point in self.points)
 
-        for point in self.points:
-            if not point.on_surface():
-                return False
+    def average_azimuth(self):
+        """
+        Calculate and return weighted average azimuth of all line's segments
+        in decimal degrees.
 
-        return True
+        >>> from nhlib.geo.point import Point as P
+        >>> str(Line([P(0, 0), P(1e-5, 1e-5)]).average_azimuth())
+        '45.0'
+        >>> str(Line([P(0, 0), P(0, 1e-5), P(1e-5, 1e-5)]).average_azimuth())
+        '45.0'
+        >>> line = Line([P(0, 0), P(-2e-5, 0), P(-2e-5, 1.154e-5)])
+        >>> '%.1f' % line.average_azimuth()
+        '300.0'
+        """
+        if len(self.points) == 2:
+            return self.points[0].azimuth(self.points[1])
+        points = iter(self.points)
+        prev_point = next(points)
+        azimuths = []
+        distances = []
+        for point in points:
+            assert point.depth == prev_point.depth
+            azimuth, _, distance = utils.GEOD.inv(
+                prev_point.longitude, prev_point.latitude,
+                point.longitude, point.latitude
+            )
+            azimuths.append(azimuth)
+            distances.append(distance)
+            prev_point = point
+        azimuths, distances = numpy.radians(azimuths), numpy.array(distances)
+        avg_x = numpy.mean(distances * numpy.sin(azimuths))
+        avg_y = numpy.mean(distances * numpy.cos(azimuths))
+        azimuth = numpy.degrees(numpy.arctan2(avg_x, avg_y))
+        if azimuth < 0:
+            azimuth += 360
+        return azimuth
 
     def resample(self, section_length):
         """
