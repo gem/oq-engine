@@ -1157,6 +1157,8 @@ class DmgDistPerAssetData(models.Model):
     dmg_state = models.TextField()
     mean = models.FloatField()
     stddev = models.FloatField()
+    # geometry for the computation cell which contains the referenced asset
+    location = models.PointField(srid=4326)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"dmg_dist_per_asset_data'

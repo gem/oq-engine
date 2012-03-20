@@ -1424,6 +1424,8 @@ CREATE TABLE riskr.dmg_dist_per_asset_data (
     mean float NOT NULL,
     stddev float NOT NULL
 ) TABLESPACE riskr_ts;
+SELECT AddGeometryColumn('riskr', 'dmg_dist_per_asset_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE riskr.dmg_dist_per_asset_data ALTER COLUMN location SET NOT NULL;
 
 
 -- Damage Distrubtion Per Taxonomy
@@ -1831,6 +1833,10 @@ FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
 ALTER TABLE riskr.dmg_dist_per_asset_data
 ADD CONSTRAINT riskr_dmg_dist_per_asset_data_dmg_dist_per_asset_fk
 FOREIGN KEY (dmg_dist_per_asset_id) REFERENCES riskr.dmg_dist_per_asset(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.dmg_dist_per_asset_data
+ADD CONSTRAINT riskr_dmg_dist_per_asset_data_exposure_data_fk
+FOREIGN KEY (exposure_data_id) REFERENCES oqmif.exposure_data(id) ON DELETE RESTRICT;
 
 
 -- Damage Distribution, Per Taxonomy
