@@ -55,6 +55,8 @@
                         <xs:element ref="uhsResultSet"/>
                         <xs:element ref="rawSourceModel"/>
                         <xs:element ref="dmgDistPerAsset"/>
+                        <xs:element ref="dmgDistPerTaxonomy"/>
+                        <xs:element ref="totalDmgDist"/>
                     </xs:choice>
                 </xs:sequence>
             </xs:extension>

@@ -5,6 +5,8 @@
            targetNamespace="http://openquake.org/xmlns/nrml/0.3"
            elementFormDefault="qualified"
            xml:lang="en">
+
+
     <!-- Common elements -->
     <xs:complexType name="Damage">
         <xs:attribute name="ds" type="xs:string" use="required" />
@@ -17,6 +19,7 @@
             <xs:element name="ds" type="xs:string" minOccurs="2" maxOccurs="unbounded" />
         </xs:sequence> 
     </xs:complexType>
+
 
     <!-- Dmg Dist Per Asset -->
     <xs:element name="dmgDistPerAsset" type="DmgDistPerAsset" />
@@ -48,9 +51,31 @@
 
 
     <!-- Dmg Dist Per Taxonomy -->
+    <xs:element name="dmgDistPerTaxonomy" type="DmgDistPerTaxonomy" />
+    <xs:complexType name="DmgDistPerTaxonomy">
+        <xs:sequence>
+            <xs:element name="damageStates" type="DamageStates" minOccurs="1" maxOccurs="1" />
+            <xs:element name="DDNode" type="DmgDistPerTaxonomyNode" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:attribute name="endBranchLabel" type="xs:string" use="optional" />
+    </xs:complexType>
+
+    <xs:complexType name="DmgDistPerTaxonomyNode">
+        <xs:sequence>
+            <xs:element name="taxonomy" type="Taxonomy" minOccurs="1" maxOccurs="1" />
+            <xs:element name="damage" type="Damage" minOccurs="2" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
 
 
     <!-- Dmg Dist, Total -->
-
+    <xs:element name="totalDmgDist" type="TotalDmgDist" />
+    <xs:complexType name="TotalDmgDist">
+        <xs:sequence>
+            <xs:element name="damageStates" type="DamageStates" minOccurs="1" maxOccurs="1" />
+            <xs:element name="damage" type="Damage" minOccurs="2" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:attribute name="endBranchLabel" type="xs:string" use="optional" />
+    </xs:complexType>
 
 </xs:schema>

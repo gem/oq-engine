@@ -64,7 +64,7 @@
                     <xs:element name="reco" minOccurs="0" maxOccurs="1" type="AssetValue"/>
                     <!-- structural cost -->
                     <xs:element name="stco" minOccurs="0" maxOccurs="1" type="AssetValue"/>
-                    <xs:element name="taxonomy" type="xs:string"/>
+                    <xs:element name="taxonomy" type="Taxonomy"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
