@@ -1,0 +1,18 @@
+<?xml version="1.0"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.3" xmlns:gml="http://www.opengis.net/gml" gml:id="anrml">
+<exposureModel gml:id="aep">
+<exposureList gml:id="aIstanbul" assetCategory="buildings" stcoType="aggregated" stcoUnit="EUR" recoType="aggregated" recoUnit="EUR">
+<gml:description>Collection of existing building in the region of Messina, Turkey</gml:description>
+	<assetDefinition gml:id="a1">
+		<site>
+			<gml:Point srsName="epsg:4326">
+			    <gml:pos>15.22591267 38.80478933</gml:pos>
+			</gml:Point>
+		</site>
+		<reco>123</reco>
+		<stco>838332000</stco>
+		<taxonomy>URM</taxonomy>
+	</assetDefinition>
+</exposureList>
+</exposureModel>
+</nrml>
