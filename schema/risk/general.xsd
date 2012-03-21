@@ -38,4 +38,10 @@
         <xs:restriction base="xs:string" />
     </xs:simpleType>
 
+    <xs:simpleType name="Taxonomy">
+        <xs:restriction base="xs:string">
+            <xs:minLength value="1" />
+        </xs:restriction>
+    </xs:simpleType>
+
 </xs:schema>

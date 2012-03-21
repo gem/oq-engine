@@ -24,13 +24,19 @@
                      one of: discrete, continuous -->
                 <xs:sequence>
                     <xs:element name="IML" type="IMLType" minOccurs="0" maxOccurs="1" />
-                    <xs:element name="limitStates" type="xs:string" minOccurs="1" maxOccurs="1" />
+                    <xs:element name="limitStates" type="LimitStates" minOccurs="1" maxOccurs="1" />
                     <xs:element ref="ffs" minOccurs="1" maxOccurs="unbounded" />
                 </xs:sequence>
                 <xs:attribute name="format" type="Fmformat" use="required"/>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
+
+    <xs:simpleType name="LimitStates">
+        <xs:restriction base="StringList">
+            <xs:minLength value="1" />
+        </xs:restriction>
+    </xs:simpleType>
 
     <xs:element name="ffs" type="Ffs" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="Ffs">

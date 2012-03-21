@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.3"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+
+    <!-- Common elements -->
+    <xs:complexType name="Damage">
+        <xs:attribute name="ds" type="xs:string" use="required" />
+        <xs:attribute name="mean" type="xs:double" use="required" />
+        <xs:attribute name="stddev" type="xs:double" use="required" />
+    </xs:complexType>
+
+    <xs:simpleType name="DamageStates">
+        <xs:restriction base="StringList">
+            <xs:minLength value="2" />
+        </xs:restriction>
+    </xs:simpleType>
+
+
+    <!-- Dmg Dist Per Asset -->
+    <xs:element name="dmgDistPerAsset" type="DmgDistPerAsset" />
+    <xs:complexType name="DmgDistPerAsset">
+        <xs:sequence>
+            <xs:element name="damageStates" type="DamageStates" minOccurs="1" maxOccurs="1" />
+            <xs:element name="DDNode" type="DmgDistPerAssetNode" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:attribute name="endBranchLabel" type="xs:string" use="optional" />
+    </xs:complexType>
+
+    <xs:complexType name="DmgDistPerAssetNode">
+        <xs:sequence>
+            <xs:element ref="site" minOccurs="1" maxOccurs="1" />
+            <xs:element name="asset" type="DmgDistAsset" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="DmgDistAsset">
+        <xs:sequence>
+            <!-- Note that there must be at least 2 'damage' elements here, 1 per damage state.
+                 There should be at least 2 because we also require at least 2 damage states to be defined.
+                 (See the 'DamageStates' type definition above.)
+            -->
+            <xs:element name="damage" type="Damage" minOccurs="2" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:attribute name="assetRef" type="xs:string" use="required" />
+    </xs:complexType>
+
+
+    <!-- Dmg Dist Per Taxonomy -->
+    <xs:element name="dmgDistPerTaxonomy" type="DmgDistPerTaxonomy" />
+    <xs:complexType name="DmgDistPerTaxonomy">
+        <xs:sequence>
+            <xs:element name="damageStates" type="DamageStates" minOccurs="1" maxOccurs="1" />
+            <xs:element name="DDNode" type="DmgDistPerTaxonomyNode" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:attribute name="endBranchLabel" type="xs:string" use="optional" />
+    </xs:complexType>
+
+    <xs:complexType name="DmgDistPerTaxonomyNode">
+        <xs:sequence>
+            <xs:element name="taxonomy" type="Taxonomy" minOccurs="1" maxOccurs="1" />
+            <xs:element name="damage" type="Damage" minOccurs="2" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+
+
+    <!-- Dmg Dist, Total -->
+    <xs:element name="totalDmgDist" type="TotalDmgDist" />
+    <xs:complexType name="TotalDmgDist">
+        <xs:sequence>
+            <xs:element name="damageStates" type="DamageStates" minOccurs="1" maxOccurs="1" />
+            <xs:element name="damage" type="Damage" minOccurs="2" maxOccurs="unbounded" />
+        </xs:sequence>
+        <xs:attribute name="endBranchLabel" type="xs:string" use="optional" />
+    </xs:complexType>
+
+</xs:schema>
