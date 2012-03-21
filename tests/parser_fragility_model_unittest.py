@@ -170,36 +170,6 @@ class DiscreteFragilityModelParserTestCase(unittest.TestCase):
             imls=[7.0, 8.0, 9.0, 10.0, 11.0], imt='MMI')
         self.assertEqual(expected, parser.model)
 
-    def test_parser_with_wrong_format(self):
-        # Continuous format and discrete fragility functions result in errors.
-        content = """
-            <?xml version='1.0' encoding='utf-8'?>
-            <nrml xmlns:gml="http://www.opengis.net/gml"
-                  xmlns="http://openquake.org/xmlns/nrml/0.3"
-                  gml:id="n2">
-                <fragilityModel gml:id="ep2" format="continuous">
-                    <IML IMT="MMI">7 8 9 10 11</IML>
-                    <limitStates>collapse</limitStates>
-                    <ffs gml:id="PAV01-ff02-d">
-                        <taxonomy>RC/DMRF-D/LR</taxonomy>
-                        <ffd ls="collapse">
-                            <poE>0.0 0.00 0.00 0.03 0.63</poE>
-                        </ffd>
-                    </ffs>
-                </fragilityModel>
-            </nrml>"""
-        try:
-            parser = setup_parser(content)
-            try:
-                list(parser)
-            except AssertionError, exc:
-                self.assertEqual("invalid model format (continuous) for "
-                                 "discrete fragility function", exc.args[0])
-            else:
-                self.fail("exception not raised")
-        finally:
-            os.unlink(parser.path)
-
     def test_parser_with_no_imls(self):
         # A fragility model without IMLs results in errors.
         content = """
@@ -287,38 +257,6 @@ class ContinuousFragilityModelParserTestCase(unittest.TestCase):
             description='Fragility model for Pavia (continuous)',
             imls=None, imt=None)
         self.assertEqual(expected, parser.model)
-
-    def test_parser_with_wrong_format(self):
-        # Discrete model format and continuous fragility functions result in
-        # errors.
-        content = """
-            <?xml version='1.0' encoding='utf-8'?>
-            <nrml xmlns:gml="http://www.opengis.net/gml"
-                  xmlns="http://openquake.org/xmlns/nrml/0.3"
-                  gml:id="n2">
-                <fragilityModel gml:id="ep2" format="discrete">
-                    <IML IMT="MMI">7 8 9 10 11</IML>
-                    <limitStates>slight</limitStates>
-                    <ffs gml:id="PAV01-ff02-c" type="lognormal">
-                        <taxonomy>RC/DMRF-D/LR</taxonomy>
-                        <ffc ls="slight">
-                            <params mean="11.19" stddev="8.27" />
-                        </ffc>
-                    </ffs>
-                </fragilityModel>
-            </nrml>"""
-        try:
-            parser = setup_parser(content)
-            try:
-                list(parser)
-            except AssertionError, exc:
-                self.assertEqual("invalid model format (discrete) for "
-                                 "continuous fragility function",
-                                 exc.args[0])
-            else:
-                self.fail("exception not raised")
-        finally:
-            os.unlink(parser.path)
 
     def test_parser_with_no_params(self):
         # A continuous fragility function without parameters will result in
