@@ -537,14 +537,11 @@ class DefaultValidatorsTestCase(unittest.TestCase):
         self.assertTrue(any(
             isinstance(v, EventBasedRiskValidator) for v in validators))
 
-    # Currently skipped because we do not have a set of demo files for
-    # Event-Based BCR Risk.
-    @helpers.skipit
     def test_default_validators_event_based_bcr_risk(self):
         # For Event-Based BCR Risk calculations, ensure that a
         # `EventBasedRiskValidator` is included in the default validators.
         cfg_path = helpers.demo_file(
-            'event_based_bcr_risk/config.gem')
+            'benefit_cost_ratio/config_ebased.gem')
 
         job_profile, params, sections = engine.import_job_profile(
             cfg_path, self.job)
