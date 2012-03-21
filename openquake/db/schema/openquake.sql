@@ -571,6 +571,7 @@ CREATE TABLE uiapi.oq_job_profile (
     --      classical (Classical PSHA)
     --      event_based (Probabilistic event based)
     --      scenario (Scenario)
+    --      scenario_damage (Scenario Damage Assessment)
     --      disaggregation (Hazard only)
     --      uhs (Uniform Hazard Spectra; Hazard only)
     --      classical_bcr (Benefit-cost ratio calc based on Classical PSHA)
@@ -578,7 +579,7 @@ CREATE TABLE uiapi.oq_job_profile (
     -- Note: 'classical' and 'event_based' are both probabilistic methods
     calc_mode VARCHAR NOT NULL CONSTRAINT calc_mode_value
         CHECK(calc_mode IN ('classical', 'event_based', 'scenario',
-                            'disaggregation', 'uhs',
+                            'disaggregation', 'uhs', 'scenario_damage',
                             'classical_bcr', 'event_based_bcr')),
     -- Job type: hazard and/or risk.
     job_type VARCHAR[] CONSTRAINT job_type_value
@@ -590,12 +591,12 @@ CREATE TABLE uiapi.oq_job_profile (
     region_grid_spacing float,
     min_magnitude float CONSTRAINT min_magnitude_set
         CHECK(
-            ((calc_mode = 'scenario') AND (min_magnitude IS NULL))
-            OR ((calc_mode != 'scenario') AND (min_magnitude IS NOT NULL))),
+            ((calc_mode IN ('scenario', 'scenario_damage')) AND (min_magnitude IS NULL))
+            OR ((calc_mode NOT IN ('scenario', 'scenario_damage')) AND (min_magnitude IS NOT NULL))),
     investigation_time float CONSTRAINT investigation_time_set
         CHECK(
-            ((calc_mode = 'scenario') AND (investigation_time IS NULL))
-            OR ((calc_mode != 'scenario') AND (investigation_time IS NOT NULL))),
+            ((calc_mode IN ('scenario', 'scenario_damage')) AND (investigation_time IS NULL))
+            OR ((calc_mode NOT IN ('scenario', 'scenario_damage')) AND (investigation_time IS NOT NULL))),
     -- One of:
     --      average (Average horizontal)
     --      gmroti50 (Average horizontal (GMRotI50))
@@ -629,19 +630,19 @@ CREATE TABLE uiapi.oq_job_profile (
     -- Intensity measure levels
     imls float[] CONSTRAINT imls_are_set
         CHECK(
-            ((calc_mode != 'scenario') AND (imls IS NOT NULL))
-            OR ((calc_mode = 'scenario') AND (imls IS NULL))),
+            ((calc_mode NOT IN ('scenario', 'scenario_damage')) AND (imls IS NOT NULL))
+            OR ((calc_mode IN ('scenario', 'scenario_damage')) AND (imls IS NULL))),
     -- Probabilities of exceedence
     poes float[] CONSTRAINT poes_are_set
         CHECK(
             ((calc_mode IN ('classical', 'disaggregation', 'uhs')) AND (poes IS NOT NULL))
-            OR ((calc_mode IN ('event_based', 'scenario',
+            OR ((calc_mode IN ('event_based', 'scenario', 'scenario_damage',
                               'classical_bcr', 'event_based_bcr')) AND (poes IS NULL))),
     -- Number of logic tree samples
     realizations integer CONSTRAINT realizations_is_set
         CHECK(
-            ((calc_mode = 'scenario') AND (realizations IS NULL))
-            OR ((calc_mode != 'scenario') AND (realizations IS NOT NULL))),
+            ((calc_mode IN ('scenario', 'scenario_damage')) AND (realizations IS NULL))
+            OR ((calc_mode NOT IN ('scenario', 'scenario_damage')) AND (realizations IS NOT NULL))),
     -- Number of seismicity histories
     histories integer CONSTRAINT histories_is_set
         CHECK(
@@ -652,39 +653,39 @@ CREATE TABLE uiapi.oq_job_profile (
         CHECK(
             ((calc_mode IN ('classical', 'disaggregation', 'uhs',
                            'classical_bcr', 'event_based_bcr')) AND (gm_correlated IS NULL))
-            OR ((calc_mode IN ('event_based', 'scenario', 'event_based_bcr')) AND (gm_correlated IS NOT NULL))),
+            OR ((calc_mode IN ('event_based', 'scenario', 'scenario_damage', 'event_based_bcr')) AND (gm_correlated IS NOT NULL))),
     gmf_calculation_number integer CONSTRAINT gmf_calculation_number_is_set
         CHECK(
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (gmf_calculation_number IS NOT NULL)
              AND (realizations > 0))
             OR
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (gmf_calculation_number IS NULL))),
     rupture_surface_discretization float
         CONSTRAINT rupture_surface_discretization_is_set
         CHECK(
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (rupture_surface_discretization IS NOT NULL)
              AND (rupture_surface_discretization > 0))
             OR
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (rupture_surface_discretization IS NULL))),
 
     aggregate_loss_curve boolean,
     area_source_discretization float
         CONSTRAINT area_source_discretization_is_set
         CHECK(
-            ((calc_mode != 'scenario') AND (area_source_discretization IS NOT NULL))
+            ((calc_mode NOT IN ('scenario', 'scenario_damage')) AND (area_source_discretization IS NOT NULL))
             OR
-            ((calc_mode = 'scenario') AND (area_source_discretization IS NULL))),
+            ((calc_mode IN ('scenario', 'scenario_damage')) AND (area_source_discretization IS NULL))),
     area_source_magnitude_scaling_relationship VARCHAR
         CONSTRAINT area_source_magnitude_scaling_relationship_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (area_source_magnitude_scaling_relationship IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (area_source_magnitude_scaling_relationship IS NULL))),
     asset_life_expectancy float
         CONSTRAINT asset_life_expectancy_is_set
@@ -715,84 +716,84 @@ CREATE TABLE uiapi.oq_job_profile (
     fault_magnitude_scaling_relationship VARCHAR
         CONSTRAINT fault_magnitude_scaling_relationship_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (fault_magnitude_scaling_relationship IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (fault_magnitude_scaling_relationship IS NULL))),
     fault_magnitude_scaling_sigma float
         CONSTRAINT fault_magnitude_scaling_sigma_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (fault_magnitude_scaling_sigma IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (fault_magnitude_scaling_sigma IS NULL))),
     fault_rupture_offset float
         CONSTRAINT fault_rupture_offset_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (fault_rupture_offset IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (fault_rupture_offset IS NULL))),
     fault_surface_discretization float
         CONSTRAINT fault_surface_discretization_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (fault_surface_discretization IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (fault_surface_discretization IS NULL))),
     gmf_random_seed integer
         CONSTRAINT gmf_random_seed_is_set
         CHECK(
-            (calc_mode IN ('scenario', 'event_based')
+            (calc_mode IN ('scenario', 'scenario_damage', 'event_based')
              AND (gmf_random_seed IS NOT NULL))
             OR
-            ((calc_mode NOT IN ('scenario', 'event_based'))
+            ((calc_mode NOT IN ('scenario', 'scenario_damage', 'event_based'))
              AND (gmf_random_seed IS NULL))),
     gmpe_lt_random_seed integer
         CONSTRAINT gmpe_lt_random_seed_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (gmpe_lt_random_seed IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (gmpe_lt_random_seed IS NULL))),
     gmpe_model_name VARCHAR,
     grid_source_magnitude_scaling_relationship VARCHAR,
     include_area_sources boolean
         CONSTRAINT include_area_sources_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (include_area_sources IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (include_area_sources IS NULL))),
     include_fault_source boolean
         CONSTRAINT include_fault_source_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (include_fault_source IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (include_fault_source IS NULL))),
     include_grid_sources boolean
         CONSTRAINT include_grid_sources_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (include_grid_sources IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (include_grid_sources IS NULL))),
     include_subduction_fault_source boolean
         CONSTRAINT include_subduction_fault_source_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (include_subduction_fault_source IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (include_subduction_fault_source IS NULL))),
     interest_rate float
         CONSTRAINT interest_rate_is_set
@@ -852,7 +853,7 @@ CREATE TABLE uiapi.oq_job_profile (
                            'classical_bcr', 'event_based_bcr'))
              AND (maximum_distance IS NOT NULL))
             OR
-            ((calc_mode IN ('scenario', 'event_based'))
+            ((calc_mode IN ('scenario', 'scenario_damage', 'event_based'))
              AND (maximum_distance IS NULL))),
     quantile_levels float[]
         CONSTRAINT quantile_levels_is_set
@@ -866,10 +867,10 @@ CREATE TABLE uiapi.oq_job_profile (
     rupture_aspect_ratio float
         CONSTRAINT rupture_aspect_ratio_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (rupture_aspect_ratio IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (rupture_aspect_ratio IS NULL))),
     -- Rupture floating type, one of:
     --     Only along strike ( rupture full DDW) (alongstrike)
@@ -882,7 +883,7 @@ CREATE TABLE uiapi.oq_job_profile (
                            'classical_bcr', 'event_based_bcr'))
              AND (rupture_floating_type IN ('alongstrike', 'downdip', 'centereddowndip')))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (rupture_floating_type IS NULL))),
     -- Sadigh site type, one of:
     --     Rock (rock)
@@ -893,10 +894,10 @@ CREATE TABLE uiapi.oq_job_profile (
     source_model_lt_random_seed integer
         CONSTRAINT source_model_lt_random_seed_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (source_model_lt_random_seed IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (source_model_lt_random_seed IS NULL))),
     -- Standard deviation, one of:
     --     Total (total)
@@ -909,50 +910,50 @@ CREATE TABLE uiapi.oq_job_profile (
     standard_deviation_type VARCHAR
         CONSTRAINT standard_deviation_type_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (standard_deviation_type IN ('total', 'interevent', 'intraevent', 'zero', 'total_mag_dependent', 'total_pga_dependent', 'intraevent_mag_dependent')))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (standard_deviation_type IS NULL))),
     subduction_fault_magnitude_scaling_relationship VARCHAR
         CONSTRAINT subduction_fault_magnitude_scaling_relationship_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (subduction_fault_magnitude_scaling_relationship IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (subduction_fault_magnitude_scaling_relationship IS NULL))),
     subduction_fault_magnitude_scaling_sigma float
         CONSTRAINT subduction_fault_magnitude_scaling_sigma_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (subduction_fault_magnitude_scaling_sigma IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (subduction_fault_magnitude_scaling_sigma IS NULL))),
     subduction_fault_rupture_offset float
         CONSTRAINT subduction_fault_rupture_offset_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (subduction_fault_rupture_offset IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (subduction_fault_rupture_offset IS NULL))),
     subduction_fault_surface_discretization float
         CONSTRAINT subduction_fault_surface_discretization_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (subduction_fault_surface_discretization IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (subduction_fault_surface_discretization IS NULL))),
     subduction_rupture_aspect_ratio float
         CONSTRAINT subduction_rupture_aspect_ratio_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (subduction_rupture_aspect_ratio IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (subduction_rupture_aspect_ratio IS NULL))),
     -- Rupture floating type, one of:
     --     Only along strike ( rupture full DDW) (alongstrike)
@@ -961,10 +962,10 @@ CREATE TABLE uiapi.oq_job_profile (
     subduction_rupture_floating_type VARCHAR
         CONSTRAINT subduction_rupture_floating_type_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (subduction_rupture_floating_type IN ('alongstrike', 'downdip', 'centereddowndip')))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (subduction_rupture_floating_type IS NULL))),
     -- Source as, one of:
     --     Point Sources (pointsources)
@@ -974,26 +975,26 @@ CREATE TABLE uiapi.oq_job_profile (
     treat_area_source_as VARCHAR
         CONSTRAINT treat_area_source_as_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (treat_area_source_as IN ('pointsources', 'linesources', 'crosshairsources', '16spokedsources')))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (treat_area_source_as IS NULL))),
     treat_grid_source_as VARCHAR
         CONSTRAINT treat_grid_source_as_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (treat_grid_source_as IN ('pointsources', 'linesources', 'crosshairsources', '16spokedsources')))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (treat_grid_source_as IS NULL))),
     width_of_mfd_bin float
         CONSTRAINT width_of_mfd_bin_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (width_of_mfd_bin IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (width_of_mfd_bin IS NULL))),
     lat_bin_limits float[]
         CONSTRAINT lat_bin_limits_valid
