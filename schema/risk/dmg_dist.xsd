@@ -14,11 +14,11 @@
         <xs:attribute name="stddev" type="xs:double" use="required" />
     </xs:complexType>
 
-    <xs:complexType name="DamageStates">
-        <xs:sequence>
-            <xs:element name="ds" type="xs:string" minOccurs="2" maxOccurs="unbounded" />
-        </xs:sequence> 
-    </xs:complexType>
+    <xs:simpleType name="DamageStates">
+        <xs:restriction base="StringList">
+            <xs:minLength value="2" />
+        </xs:restriction>
+    </xs:simpleType>
 
 
     <!-- Dmg Dist Per Asset -->

@@ -14,11 +14,11 @@
              The first damage state should always be 'no_damage'.
         -->
         <damageStates>
-            <ds>no_damage</ds>
-            <ds>slight</ds>
-            <ds>moderate</ds>
-            <ds>extensive</ds>
-            <ds>complete</ds>
+            no_damage
+            slight
+            moderate
+            extensive
+            complete
         </damageStates>
 
         <DDNode>

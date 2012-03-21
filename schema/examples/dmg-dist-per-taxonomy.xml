@@ -4,11 +4,11 @@
       gml:id="n1">
     <dmgDistPerTaxonomy endBranchLabel="ebl1">
         <damageStates>
-            <ds>no_damage</ds>
-            <ds>slight</ds>
-            <ds>moderate</ds>
-            <ds>extensive</ds>
-            <ds>complete</ds>
+            no_damage
+            slight
+            moderate
+            extensive
+            complete
         </damageStates>
 
         <!-- Note that, although this element has the same name ("DDNode") as dmgDistPerAsset, the contents are different. -->

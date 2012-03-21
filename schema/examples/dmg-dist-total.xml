@@ -4,11 +4,11 @@
       gml:id="n1">
     <totalDmgDist endBranchLabel="ebl1">
         <damageStates>
-            <ds>no_damage</ds>
-            <ds>slight</ds>
-            <ds>moderate</ds>
-            <ds>extensive</ds>
-            <ds>complete</ds>
+            no_damage
+            slight
+            moderate
+            extensive
+            complete
         </damageStates>
 
         <damage ds="no_damage" mean="1.0" stddev="1.6" />

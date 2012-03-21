@@ -147,4 +147,8 @@
         <xs:list itemType="NormalizedDoubleType"/>
     </xs:simpleType>
 
+    <xs:simpleType name="StringList">
+        <xs:list itemType="xs:string" />
+    </xs:simpleType>
+
 </xs:schema>
