@@ -55,60 +55,56 @@ class FragilityModelParser(producer.FileProducer):
     def _do_parse(self):
         """parser implementation"""
         # The tags we expect to see:
-        # fragility model
-        fm_tag = '%sfragilityModel' % xml.NRML
-        # fragility function set
         ffs_tag = '%sffs' % xml.NRML
-        # discrete fragility function
-        ffd_tag = '%sffd' % xml.NRML
-        # continuous fragility function
         ffc_tag = '%sffc' % xml.NRML
+        ffd_tag = '%sffd' % xml.NRML
 
-        # current fragility function set
-        mdl = None
-        nrml_schema = etree.XMLSchema(etree.parse(nrml_schema_file()))
-        parse_args = dict(source=self.file, events=("start", "end"),
-                          schema=nrml_schema)
+        first_ffs = True
 
-        for event, element in etree.iterparse(**parse_args):
+        schema = etree.XMLSchema(etree.parse(nrml_schema_file()))
+        parse_args = dict(source=self.file, events=("end",), schema=schema)
+
+        for _, element in etree.iterparse(**parse_args):
             # start: fragility model
-            if event == "start" and element.tag == fm_tag:
-                mdl = dict(description=None, imls=None, imt=None)
-                mdl["id"] = element.get('%sid' % xml.GML)
-
-                mdl["format"] = element.get('format')
-                assert mdl["format"] in ("continuous", "discrete"), (
-                    "invalid fragility model format (%s)" % mdl["format"])
-                if mdl["format"] == "discrete":
-                    self.discrete = True
-
-                limits = element.find('%slimitStates' % xml.NRML)
-                assert limits is not None, "no limit states found"
-                mdl["limits"] = [ls.strip() for ls in limits.text.split()]
-
-                imls = element.find('%sIML' % xml.NRML)
-                if self.discrete:
-                    assert imls is not None, "IML not set"
-                    mdl["imls"] = [float(iml) for iml in imls.text.split()]
-                    mdl["imt"] = imls.get('IMT')
-
-                desc = element.find('%sdescription' % xml.GML)
-                if desc is not None:
-                    mdl["description"] = desc.text
-                self.model = mdl = FRAGM(**mdl)
-            # start: fragility function set
-            elif event == "start" and element.tag == ffs_tag:
+            if element.tag == ffs_tag:
+                if first_ffs:
+                    # parse the "fragilityModel" element data only once
+                    self._parse_model(element.getparent())
+                    first_ffs = False
                 self.ffs = dict(type=None)
                 self.ffs["type"] = element.get('type')
                 taxonomy = element.find('%staxonomy' % xml.NRML)
                 assert taxonomy is not None, "taxonomy not set"
                 self.ffs["taxonomy"] = taxonomy.text.strip()
-            # start: discrete fragility function
-            elif event == "start" and element.tag == ffd_tag:
-                yield self._parse_ffd(element)
-            # start: continuous fragility function
-            elif event == "start" and element.tag == ffc_tag:
-                yield self._parse_ffc(element)
+                tag, func = ((ffd_tag, self._parse_ffd) if self.discrete
+                             else (ffc_tag, self._parse_ffc))
+                for child in element.iterchildren(tag=tag):
+                    yield func(child)
+
+    def _parse_model(self, element):
+        """Parse the fragility model."""
+        mdl = dict(description=None, imls=None, imt=None)
+        mdl["id"] = element.get('%sid' % xml.GML)
+
+        mdl["format"] = element.get('format')
+        assert mdl["format"] in ("continuous", "discrete"), (
+            "invalid fragility model format (%s)" % mdl["format"])
+        if mdl["format"] == "discrete":
+            self.discrete = True
+        limits = element.find('%slimitStates' % xml.NRML)
+        assert limits is not None, "no limit states found"
+        mdl["limits"] = [ls.strip() for ls in limits.text.split()]
+
+        imls = element.find('%sIML' % xml.NRML)
+        if self.discrete:
+            assert imls is not None, "IML not set"
+            mdl["imls"] = [float(iml) for iml in imls.text.split()]
+            mdl["imt"] = imls.get('IMT')
+
+        desc = element.find('%sdescription' % xml.GML)
+        if desc is not None:
+            mdl["description"] = desc.text
+        self.model = mdl = FRAGM(**mdl)
 
     def _parse_ffd(self, element):
         """Parses a discrete fragility function tag."""
