@@ -851,6 +851,9 @@ class Output(models.Model):
         (u'bcr_distribution', u'Benefit-cost ratio distribution'),
         (u'uh_spectra', u'Uniform Hazard Spectra'),
         (u'agg_loss_curve', u'Aggregate Loss Curve'),
+        (u'dmg_dist_per_asset', u'Damage Distribution Per Asset'),
+        (u'dmg_dist_per_taxonomy', u'Damage Distribution Per Taxonomy'),
+        (u'dmg_dist_total', u'Total Damage Distribution'),
     )
     output_type = models.TextField(choices=OUTPUT_TYPE_CHOICES)
     # Number of bytes in the file:
@@ -1133,6 +1136,82 @@ class BCRDistributionData(models.Model):
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"bcr_distribution_data'
+
+
+class DmgDistPerAsset(models.Model):
+    """Holds metadata for damage distributions per asset."""
+
+    output = models.ForeignKey("Output")
+    dmg_states = CharArrayField()
+    end_branch_label = models.TextField(null=True)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_per_asset'
+
+
+class DmgDistPerAssetData(models.Model):
+    """Holds the actual data for damage distributions per asset."""
+
+    dmg_dist_per_asset = models.ForeignKey("DmgDistPerAsset")
+    exposure_data = models.ForeignKey("ExposureData")
+    dmg_state = models.TextField()
+    mean = models.FloatField()
+    stddev = models.FloatField()
+    # geometry for the computation cell which contains the referenced asset
+    location = models.PointField(srid=4326)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_per_asset_data'
+
+
+class DmgDistPerTaxonomy(models.Model):
+    """Hold metdata for damage distributions per taxonomy."""
+
+    output = models.ForeignKey("Output")
+    dmg_states = CharArrayField()
+    end_branch_label = models.TextField(null=True)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_per_taxonomy'
+
+
+class DmgDistPerTaxonomyData(models.Model):
+    """Holds the actual data for damage distributions per taxonomy."""
+
+    dmg_dist_per_taxonomy = models.ForeignKey("DmgDistPerTaxonomy")
+    taxonomy = models.TextField()
+    dmg_state = models.TextField()
+    mean = models.FloatField()
+    stddev = models.FloatField()
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_per_taxonomy_data'
+
+
+class DmgDistTotal(models.Model):
+    """Holds metadata for 'total damage distribution' values for an entire
+    calculation. This is the total over all assets and GMFs."""
+
+    output = models.ForeignKey("Output")
+    dmg_states = CharArrayField()
+    end_branch_label = models.TextField(null=True)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_total'
+
+
+class DmgDistTotalData(models.Model):
+    """Holds the actual 'total damage distribution' values for for an entire
+    calculation. There should be  one record per calculation per damage state.
+    """
+
+    dmg_dist_total = models.ForeignKey("DmgDistTotal")
+    dmg_state = models.TextField()
+    mean = models.FloatField()
+    stddev = models.FloatField()
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_total_data'
 
 
 ## Tables in the 'oqmif' schema.
