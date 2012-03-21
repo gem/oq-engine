@@ -31,9 +31,71 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     """Scenario Damage method for performing risk calculations."""
 
     def pre_execute(self):
+        """
+        Load and store the fragility model
+        """
         pass
 
     def execute(self):
-        """Entry point for triggering the computation."""
+        """
+        Dispatch the computation into multiple tasks.
+        """
 
-        LOGGER.debug("Executing scenario damage risk computation [TODO]")
+        LOGGER.debug("Executing scenario damage risk computation.")
+        tasks = []
+
+        # TODO: Load the fragility model
+
+        for block_id in self.job_ctxt.blocks_keys:
+            LOGGER.debug("Dispatching task for block %s of %s" % (
+                    block_id, len(self.job_ctxt.blocks_keys)))
+
+            # TODO: Pass the fragility model to tasks
+            task = general.compute_risk.delay(self.job_ctxt.job_id, block_id, fmodel=None)
+            tasks.append(a_task)
+
+        for task in tasks:
+            task.wait()
+
+            if not task.successful():
+                raise Exception(task.result)
+
+        LOGGER.debug("Scenario damage risk computation completed.")
+
+    def compute_risk(self, block_id, **kwargs):
+        """
+        Compute the results for a single block.
+        """
+
+        block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
+
+        for site in block.sites:
+            point = self.job_ctxt.region.grid.point_at(site)
+            gmvs = gmvs(self.job_ctxt.job_id, point)
+
+            assets = general.BaseRiskCalculator.assets_at(
+                self.job_ctxt.job_id, site)
+
+            # 0. lookup the correct functions (asset.taxonomy)
+
+            for asset in assets:
+                for gmv in gmvs:
+                    # 1. compute the damage states for a single gmv
+                    # 2. sum the results
+                
+                    pass
+                
+                # 3. mean and stddev
+                # 4. serialization
+
+    def post_execute(self):
+        """
+        Export the results to file if the `output-type`
+        parameter is set to `xml`.
+        """
+        pass
+
+
+def gmvs(job_id, point):
+    key = kvs.tokens.ground_motion_values_key(job_id, point)
+    return [float(x["mag"]) for x in kvs.get_list_json_decoded(key)]
