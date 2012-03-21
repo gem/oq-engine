@@ -217,13 +217,15 @@ class BaseHazardCalculator(Calculator):
 
         basepath = self.job_ctxt.params.get('BASE_PATH')
 
-        if not self.job_ctxt['CALCULATION_MODE'] == 'Scenario':
+        if not self.job_ctxt['CALCULATION_MODE'] in (
+                'Scenario', 'Scenario Damage'):
+
             source_model_lt = self.job_ctxt.params.get(
                 'SOURCE_MODEL_LOGIC_TREE_FILE_PATH')
             gmpe_lt = self.job_ctxt.params.get('GMPE_LOGIC_TREE_FILE_PATH')
             # TODO: This should probably be moved into a `pre_execute` method.
-            self.calc = logictree.LogicTreeProcessor(basepath, source_model_lt,
-                                                     gmpe_lt)
+            self.calc = logictree.LogicTreeProcessor(
+                basepath, source_model_lt, gmpe_lt)
 
     def execute(self):
         """Calculation logic goes here; subclasses must implement this."""
