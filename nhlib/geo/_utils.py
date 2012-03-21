@@ -198,8 +198,6 @@ def spherical_to_cartesian(lons, lats, depths):
     considered zero for all points.
 
     :returns:
-        The position vector.
-    :rtype:
         ``numpy.array`` of shape (3, n), where n is the number of points
         in original spherical coordinates lists. Those three rows in the
         returned array are the Cartesian coordinates x, y and z.
