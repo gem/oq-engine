@@ -1473,7 +1473,7 @@ CREATE TABLE oqmif.exposure_model (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     -- Associates the risk exposure model with an input file
-    input_id INTEGER,
+    input_id INTEGER NOT NULL,
     name VARCHAR NOT NULL,
     description VARCHAR,
     -- the taxonomy system used to classify the assets
