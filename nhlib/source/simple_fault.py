@@ -34,29 +34,16 @@ class SimpleFaultSource(SeismicSource):
         super(SimpleFaultSource, self).__init__(source_id, name,
                                                 tectonic_region_type, mfd,
                                                 rupture_mesh_spacing)
-        if not len(fault_trace) >= 2:
-            raise ValueError("fault trace must have at least two points")
-
-        if not fault_trace.on_surface():
-            raise ValueError("fault trace must be defined on earth surface")
-
-        if upper_seismogenic_depth < 0:
-            raise ValueError('upper seismogenic depth must be non-negative')
-
-        if not lower_seismogenic_depth > upper_seismogenic_depth:
-            raise ValueError('lower seismogenic depth must be below '
-                             'upper seismogenic depth')
-
-        if not rupture_aspect_ratio > 0:
-            raise ValueError('rupture aspect ratio must be positive')
-
+        NodalPlane.check_rake(rake)
+        SimpleFaultSurface.check_fault_data(
+            fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
+            dip, rupture_mesh_spacing
+        )
         self.fault_trace = fault_trace
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
         self.magnitude_scaling_relationship = magnitude_scaling_relationship
         self.rupture_aspect_ratio = rupture_aspect_ratio
-        NodalPlane.check_dip(dip)
-        NodalPlane.check_rake(rake)
         self.dip = dip
         self.rake = rake
 
@@ -116,10 +103,7 @@ class SimpleFaultSource(SeismicSource):
                     mesh = whole_fault_mesh[first_row : first_row + rup_rows,
                                             first_col : first_col + rup_cols]
                     hypocenter = mesh.get_middle_point()
-                    surface = SimpleFaultSurface(
-                        mesh, whole_fault_surface.strike,
-                        whole_fault_surface.dip
-                    )
+                    surface = SimpleFaultSurface(mesh)
                     yield ProbabilisticRupture(
                         mag, self.rake, self.tectonic_region_type, hypocenter,
                         surface, occurrence_rate, temporal_occurrence_model
