@@ -55,6 +55,9 @@ GRANT ALL ON SEQUENCE oqmif.exposure_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE oqmif.exposure_model_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE oqmif.occupancy_id_seq to GROUP openquake;
 
+GRANT ALL ON SEQUENCE riski.ffc_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riski.ffd_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riski.fragility_model_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riski.vulnerability_function_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riski.vulnerability_model_id_seq to GROUP openquake;
 
@@ -190,18 +193,30 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdr.uh_spectrum_data TO oq_reslt_writer;
 
 -- oqmif.exposure_data
 GRANT SELECT ON oqmif.exposure_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.exposure_data TO oq_ged4gem;
-GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.exposure_data TO oq_job_init;
+GRANT SELECT,INSERT,DELETE ON oqmif.exposure_data TO oq_ged4gem;
+GRANT SELECT,INSERT,DELETE ON oqmif.exposure_data TO oq_job_init;
 
 -- oqmif.exposure_model
 GRANT SELECT ON oqmif.exposure_model TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.exposure_model TO oq_ged4gem;
-GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.exposure_model TO oq_job_init;
+GRANT SELECT,INSERT,DELETE ON oqmif.exposure_model TO oq_ged4gem;
+GRANT SELECT,INSERT,DELETE ON oqmif.exposure_model TO oq_job_init;
 
 -- oqmif.occupancy
 GRANT SELECT ON oqmif.occupancy TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.occupancy TO oq_ged4gem;
 GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.occupancy TO oq_job_init;
+
+-- riski.ffc
+GRANT SELECT ON riski.ffc TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON riski.ffc TO oq_job_init;
+
+-- riski.ffd
+GRANT SELECT ON riski.ffd TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON riski.ffd TO oq_job_init;
+
+-- riski.fragility_model
+GRANT SELECT ON riski.fragility_model TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON riski.fragility_model TO oq_job_init;
 
 -- riski.vulnerability_function
 GRANT SELECT ON riski.vulnerability_function TO GROUP openquake;
