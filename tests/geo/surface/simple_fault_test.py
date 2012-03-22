@@ -21,11 +21,67 @@ import _simple_fault_test_data as test_data
 from tests.geo.surface import _utils as utils
 
 
-class SimpleFaultSurfaceTestCase(utils.SurfaceTestCase):
+class SimpleFaultSurfaceCheckFaultDataTestCase(utils.SurfaceTestCase):
     def setUp(self):
-        self.fault_trace = Line(
-            [Point(0.0, 0.0), Point(1.0, 1.0)])
+        self.fault_trace = Line([Point(0.0, 0.0), Point(1.0, 1.0)])
 
+    def test_dip_inside_range(self):
+        self.assertRaises(ValueError, SimpleFaultSurface.check_fault_data,
+                          self.fault_trace, 0.0, 1.0, 0.0, 1.0)
+
+        self.assertRaises(ValueError, SimpleFaultSurface.check_fault_data,
+                          self.fault_trace, 0.0, 1.0, -0.1, 1.0)
+
+        self.assertRaises(ValueError, SimpleFaultSurface.check_fault_data,
+                          self.fault_trace, 0.0, 1.0, 90.1, 1.0)
+
+        SimpleFaultSurface.check_fault_data(self.fault_trace,
+                                            0.0, 1.0, 0.1, 1.0)
+        SimpleFaultSurface.check_fault_data(self.fault_trace,
+                                            0.0, 1.0, 90.0, 1.0)
+
+    def test_upper_seismo_depth_range(self):
+        self.assertRaises(ValueError, SimpleFaultSurface.check_fault_data,
+                          self.fault_trace, -0.1, None, 90.0, 1.0)
+
+        SimpleFaultSurface.check_fault_data(self.fault_trace,
+                                            0.0, 1.0, 90.0, 1.0)
+        SimpleFaultSurface.check_fault_data(self.fault_trace,
+                                            1.0, 1.1, 90.0, 1.0)
+
+    def test_upper_lower_seismo_values(self):
+        self.assertRaises(ValueError, SimpleFaultSurface.check_fault_data,
+                          self.fault_trace, 1.0, 1.0, 90.0, 1.0)
+
+        self.assertRaises(ValueError, SimpleFaultSurface.check_fault_data,
+                          self.fault_trace, 1.0, 0.9, 90.0, 1.0)
+
+    def test_fault_trace_on_surface(self):
+        fault_trace = Line([Point(0.0, 0.0, 1.0), Point(1.0, 1.0, 0.0)])
+
+        self.assertRaises(ValueError, SimpleFaultSurface.check_fault_data,
+                          fault_trace, 0.0, 1.0, 90.0, 1.0)
+
+    def test_mesh_spacing_range(self):
+        SimpleFaultSurface.check_fault_data(self.fault_trace,
+                                            0.0, 1.0, 90.0, 1.0)
+
+        self.assertRaises(ValueError, SimpleFaultSurface.check_fault_data,
+                          self.fault_trace, 0.0, 1.0, 90.0, 0.0)
+
+        self.assertRaises(ValueError, SimpleFaultSurface.check_fault_data,
+                          self.fault_trace, 0.0, 1.0, 90.0, -1.0)
+
+    def test_fault_trace_points(self):
+        """
+        The fault trace must have at least two points.
+        """
+        fault_trace = Line([Point(0.0, 0.0)])
+        self.assertRaises(ValueError, SimpleFaultSurface.check_fault_data,
+                          fault_trace, 0.0, 1.0, 90.0, 1.0)
+
+
+class SimpleFaultSurfaceGetMeshTestCase(utils.SurfaceTestCase):
     def test_get_mesh_1(self):
         p1 = Point(0.0, 0.0, 0.0)
         p2 = Point(0.0, 0.0359728811759, 0.0)
@@ -69,6 +125,8 @@ class SimpleFaultSurfaceTestCase(utils.SurfaceTestCase):
 
         self.assert_mesh_is(fault, test_data.TEST_5_MESH)
 
+
+class SimpleFaultSurfaceGetStrikeTestCase(utils.SurfaceTestCase):
     def test_get_strike_1(self):
         p1 = Point(0.0, 0.0)
         p2 = Point(0.0635916966572, 0.0635916574897)
@@ -93,6 +151,8 @@ class SimpleFaultSurfaceTestCase(utils.SurfaceTestCase):
         surface = SimpleFaultSurface.from_fault_data(line, 1.0, 6.0, 90.0, 0.1)
         self.assertAlmostEquals(0, surface.get_strike(), delta=6e-2)
 
+
+class SimpleFaultSurfaceGetDipTestCase(utils.SurfaceTestCase):
     def test_get_dip_1(self):
         p1 = Point(0.0, 0.0)
         p2 = Point(0.0635916966572, 0.0635916574897)

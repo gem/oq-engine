@@ -22,7 +22,7 @@ import numpy
 from nhlib.geo.surface.base import BaseSurface
 from nhlib.geo.line import Line
 from nhlib.geo.mesh import RectangularMesh
-from nhlib.geo._utils import spherical_to_cartesian
+from nhlib.geo._utils import spherical_to_cartesian, ensure
 
 
 class SimpleFaultSurface(BaseSurface):
@@ -32,6 +32,9 @@ class SimpleFaultSurface(BaseSurface):
     :param mesh:
         Instance of :class:`~nhlib.geo.mesh.RectangularMesh` representing
         surface geometry.
+
+    Another way to construct the surface object is to call
+    :meth:`from_fault_data`.
     """
     def __init__(self, mesh):
         super(SimpleFaultSurface, self).__init__()
@@ -112,6 +115,26 @@ class SimpleFaultSurface(BaseSurface):
         return Line(list(self.get_mesh()[0:1])).average_azimuth()
 
     @classmethod
+    def check_fault_data(cls, fault_trace, upper_seismogenic_depth,
+                         lower_seismogenic_depth, dip, mesh_spacing):
+        """
+        Verify the fault data and raise ``ValueError`` if anything is wrong.
+
+        This method doesn't have to be called by hands before creating the
+        surface object, because it is called from :meth:`from_fault_data`.
+        """
+        ensure(len(fault_trace) >= 2,
+               "The fault trace must have at least two points!")
+        ensure(fault_trace.on_surface(),
+               "The fault trace must be defined on the surface!")
+        ensure(0.0 < dip <= 90.0, "Dip must be between 0.0 and 90.0!")
+        ensure(lower_seismogenic_depth > upper_seismogenic_depth,
+               "Lower seismo depth must be > than upper seismo dept!")
+        ensure(upper_seismogenic_depth >= 0.0,
+               "Upper seismo depth must be >= 0.0!")
+        ensure(mesh_spacing > 0.0, "Mesh spacing must be > 0.0!")
+
+    @classmethod
     def from_fault_data(cls, fault_trace, upper_seismogenic_depth,
                         lower_seismogenic_depth, dip, mesh_spacing):
         """
@@ -134,7 +157,11 @@ class SimpleFaultSurface(BaseSurface):
             Distance between two subsequent points in a mesh, in km.
         :returns:
             An instance of :class:`SimpleFaultSurface` created using that data.
+
+        Uses :meth:`check_fault_data` for checking parameters.
         """
+        cls.check_fault_data(fault_trace, upper_seismogenic_depth,
+                             lower_seismogenic_depth, dip, mesh_spacing)
         # Loops over points in the top edge, for each point
         # on the top edge compute corresponding point on the bottom edge, then
         # computes equally spaced points between top and bottom points.
