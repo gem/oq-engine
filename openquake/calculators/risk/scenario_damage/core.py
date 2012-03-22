@@ -22,7 +22,7 @@ damage assessment approach.
 
 from openquake import logs
 from openquake.calculators.risk import general
-
+from openquake import kvs
 
 LOGGER = logs.LOG
 
@@ -71,22 +71,22 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
         for site in block.sites:
             point = self.job_ctxt.region.grid.point_at(site)
-            gmvs = gmvs(self.job_ctxt.job_id, point)
+            gmf = gmvs(self.job_ctxt.job_id, point)
 
-            assets = general.BaseRiskCalculator.assets_at(
-                self.job_ctxt.job_id, site)
+        #     assets = general.BaseRiskCalculator.assets_at(
+        #         self.job_ctxt.job_id, site)
 
-            # 0. lookup the correct functions (asset.taxonomy)
+        # 0. lookup the correct functions (asset.taxonomy)
 
-            for asset in assets:
-                for gmv in gmvs:
+        #     for asset in assets:
+        #        for gmv in gmvs:
                     # 1. compute the damage states for a single gmv
-                    # 2. sum the results
-                
-                    pass
-                
-                # 3. mean and stddev
-                # 4. serialization
+                    # 2. mean and stddev
+                    # 3. multiply per number of buildings
+
+        #        pass
+
+        # 4. serialization
 
     def post_execute(self):
         """
