@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.3"
+      gml:id="n1">
+
+    <!-- An example of hazard curves which would be produced (for example) from the
+         Uniform Hazard Spectra calculator.
+
+         In this example, we have two hazard curves for the same site and logic tree
+         branch where each curve is computed using a different spectral acceleration (SA)
+         period value. In this case, the `saPeriod` (an optional attribute) is noted in the
+         hazardCurve element.
+    -->
+    <hazardResult gml:id="hr1">
+        <config>
+            <hazardProcessing investigationTimeSpan="50.0" IDmodel="PGA_1_1" saDamping="0.5" />
+        </config>
+        <hazardCurveField gml:id="hcl_1_1" endBranchLabel="1_1">
+            <IML IMT="SA">5.0000e-03 7.0000e-03 1.3700e-02</IML>
+
+            <HCNode gml:id="hc1">
+                <site>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-122.5000 37.5000</gml:pos>
+                    </gml:Point>
+                </site>
+                <hazardCurve saPeriod="0.025">
+                    <poE>9.8728e-01 9.8266e-01 9.4957e-01</poE>
+                </hazardCurve>
+            </HCNode>
+            <HCNode gml:id="hc2">
+                <site>
+                    <gml:Point srsName="epsg:4326">
+                        <gml:pos>-122.5000 37.5000</gml:pos>
+                    </gml:Point>
+                </site>
+                <hazardCurve saPeriod="0.45">
+                    <poE>9.8728e-02 9.8266e-02 9.4957e-02</poE>
+                </hazardCurve>
+            </HCNode>
+        </hazardCurveField>
+    </hazardResult>
+</nrml>
