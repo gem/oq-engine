@@ -22,88 +22,26 @@ import numpy
 from nhlib.geo.surface.base import BaseSurface
 from nhlib.geo.line import Line
 from nhlib.geo.mesh import RectangularMesh
-from nhlib.geo._utils import spherical_to_cartesian, ensure
+from nhlib.geo._utils import spherical_to_cartesian
 
 
 class SimpleFaultSurface(BaseSurface):
     """
     Represent a fault surface as regular (uniformly spaced) 3D mesh of points.
 
-    :param fault_trace:
-        Geographical line representing the intersection between
-        the fault surface and the earth surface.
-    :type fault_trace:
-        instance of :class:`nhlib.Line`
-    :param upper_seismo_depth:
-        Minimum depth ruptures can reach, in km (i.e. depth
-        to fault's top edge).
-    :type upper_seismo_depth:
-        float
-    :param lower_seismo_depth:
-        Maximum depth ruptures can reach, in km (i.e. depth
-        to fault's bottom edge).
-    :type lower_seismo_depth:
-        float
-    :param dip:
-        Dip angle (i.e. angle between fault surface
-        and earth surface), in degrees.
-    :type dip:
-        float
+    :param mesh:
+        Instance of :class:`~nhlib.geo.mesh.RectangularMesh` representing
+        surface geometry.
     """
-
-    def __init__(self, fault_trace, upper_seismo_depth,
-            lower_seismo_depth, dip, mesh_spacing):
-
+    def __init__(self, mesh):
         super(SimpleFaultSurface, self).__init__()
-
-        ensure(len(fault_trace) >= 2,
-                "The fault trace must have at least two points!")
-
-        ensure(fault_trace.on_surface(),
-                "The fault trace must be defined on the surface!")
-
-        ensure(0.0 < dip <= 90.0, "Dip must be between 0.0 and 90.0!")
-
-        ensure(lower_seismo_depth > upper_seismo_depth,
-                "Lower seismo depth must be > than upper seismo dept!")
-
-        ensure(upper_seismo_depth >= 0.0,
-                "Upper seismo depth must be >= 0.0!")
-
-        ensure(mesh_spacing > 0.0, "Mesh spacing must be > 0.0!")
-
-        self.dip = dip
-        self.fault_trace = fault_trace
-        self.mesh_spacing = mesh_spacing
-        self.upper_seismo_depth = upper_seismo_depth
-        self.lower_seismo_depth = lower_seismo_depth
+        self.mesh = mesh
 
     def _create_mesh(self):
         """
-        See :meth:`nhlib.surface.base.BaseSurface.get_mesh`.
+        Return a mesh provided to object's constructor.
         """
-        # Loops over points in the top edge, for each point
-        # on the top edge compute corresponding point on the bottom edge, then
-        # computes equally spaced points between top and bottom points.
-
-        vertical_distance = (self.lower_seismo_depth - self.upper_seismo_depth)
-
-        horizontal_distance = vertical_distance / math.tan(
-                math.radians(self.dip))
-
-        strike = self.fault_trace[0].azimuth(self.fault_trace[-1])
-        azimuth = (strike + 90.0) % 360
-
-        mesh = []
-        for point in self._fault_top_edge(azimuth):
-            bottom = point.point_at(
-                horizontal_distance, vertical_distance, azimuth)
-            mesh.append(point.equally_spaced_points(bottom, self.mesh_spacing))
-
-        # number of rows corresponds to number of points along dip
-        # number of columns corresponds to number of points along strike
-        surface_points = numpy.array(mesh).transpose().tolist()
-        return RectangularMesh.from_points_list(surface_points)
+        return self.mesh
 
     def get_dip(self):
         """
@@ -121,17 +59,10 @@ class SimpleFaultSurface(BaseSurface):
         in the mesh. The dot product of these two vectors is cosine of the dip
         angle of a cell.
 
-        If the surface mesh has only one location along width or one along
-        strike, it returns the dip value describing this fault surface.
-
         :returns:
             The average dip, in decimal degrees.
         """
         mesh = self.get_mesh()
-        if 1 in mesh.shape:
-            # mesh has one row and/or one column, no need to calc any mean
-            return self.dip
-
         # mesh of the top row of points
         line0 = mesh[0:1]
         # mesh of the second row of points
@@ -178,34 +109,54 @@ class SimpleFaultSurface(BaseSurface):
         :rtype:
             float
         """
-        return self.fault_trace.average_azimuth()
+        return Line(list(self.get_mesh()[0:1])).average_azimuth()
 
-    def _fault_top_edge(self, azimuth):
+    @classmethod
+    def from_fault_data(cls, fault_trace, upper_seismogenic_depth,
+                        lower_seismogenic_depth, dip, mesh_spacing):
         """
-        Line representing the fault top edge.
+        Create and return a fault surface using fault source data.
 
-        It is obtained by translating the fault trace from the earth surface
-        to the upper seismogenic depth, with an inclination equal to
-        the dip angle, and along a direction perpendicular the fault strike
-        (computed as the azimuth between the fault trace's first
-        and last points). The line is then resampled in equal length segments
-        (length equal to ``mesh_spacing``).
-
-        :param azimuth:
-            The azimuth perpendicular to the fault strike (the direction along
-            dip) in decimal degrees.
+        :param fault_trace:
+            Geographical line representing the intersection between
+            the fault surface and the earth surface, an instance
+            of :class:`nhlib.Line`.
+        :param upper_seismo_depth:
+            Minimum depth ruptures can reach, in km (i.e. depth
+            to fault's top edge).
+        :param lower_seismo_depth:
+            Maximum depth ruptures can reach, in km (i.e. depth
+            to fault's bottom edge).
+        :param dip:
+            Dip angle (i.e. angle between fault surface
+            and earth surface), in degrees.
+        :param mesh_spacing:
+            Distance between two subsequent points in a mesh, in km.
         :returns:
-            List of points (instances of :class:`~nhlib.geo.point.Point`)
-            of the fault top edge.
+            An instance of :class:`SimpleFaultSurface` created using that data.
         """
-        horizontal_distance = 0.0
-        if self.dip < 90.0:
-            horizontal_distance = self.upper_seismo_depth / math.tan(
-                    math.radians(self.dip))
+        # Loops over points in the top edge, for each point
+        # on the top edge compute corresponding point on the bottom edge, then
+        # computes equally spaced points between top and bottom points.
 
-        vertical_distance = self.upper_seismo_depth
-        top_edge_points = [
-            point.point_at(horizontal_distance, vertical_distance, azimuth)
-            for point in self.fault_trace
-        ]
-        return Line(top_edge_points).resample(self.mesh_spacing).points
+        vdist_top = upper_seismogenic_depth
+        vdist_bottom = lower_seismogenic_depth
+
+        hdist_top = vdist_top / math.tan(math.radians(dip))
+        hdist_bottom = vdist_bottom / math.tan(math.radians(dip))
+
+        strike = fault_trace[0].azimuth(fault_trace[-1])
+        azimuth = (strike + 90.0) % 360
+
+        mesh = []
+        for point in fault_trace.resample(mesh_spacing):
+            top = point.point_at(hdist_top, vdist_top, azimuth)
+            bottom = point.point_at(hdist_bottom, vdist_bottom, azimuth)
+            mesh.append(top.equally_spaced_points(bottom, mesh_spacing))
+
+        # number of rows corresponds to number of points along dip
+        # number of columns corresponds to number of points along strike
+        surface_points = numpy.array(mesh).transpose().tolist()
+        mesh = RectangularMesh.from_points_list(surface_points)
+        assert 1 not in mesh.shape
+        return cls(mesh)
