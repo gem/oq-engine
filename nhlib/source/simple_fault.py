@@ -20,6 +20,7 @@ import math
 
 from nhlib.source.base import SeismicSource
 from nhlib.geo.surface.simple_fault import SimpleFaultSurface
+from nhlib.geo.nodalplane import NodalPlane
 from nhlib.source.rupture import ProbabilisticRupture
 
 
@@ -33,6 +34,11 @@ class SimpleFaultSource(SeismicSource):
         super(SimpleFaultSource, self).__init__(source_id, name,
                                                 tectonic_region_type, mfd,
                                                 rupture_mesh_spacing)
+        if not len(fault_trace) >= 2:
+            raise ValueError("fault trace must have at least two points")
+
+        if not fault_trace.on_surface():
+            raise ValueError("fault trace must be defined on earth surface")
 
         if upper_seismogenic_depth < 0:
             raise ValueError('upper seismogenic depth must be non-negative')
@@ -49,6 +55,8 @@ class SimpleFaultSource(SeismicSource):
         self.lower_seismogenic_depth = lower_seismogenic_depth
         self.magnitude_scaling_relationship = magnitude_scaling_relationship
         self.rupture_aspect_ratio = rupture_aspect_ratio
+        NodalPlane.check_dip(dip)
+        NodalPlane.check_rake(rake)
         self.dip = dip
         self.rake = rake
 
@@ -57,14 +65,11 @@ class SimpleFaultSource(SeismicSource):
         See :meth:`nhlib.source.base.SeismicSource.iter_ruptures`.
         """
         # TODO: document better
-
-        # TODO: move creation of the mesh from SimpleFaultSurface
-        # TODO: to SimpleFaultSource, make surface class accept mesh
-        whole_fault_mesh = SimpleFaultSurface(
+        whole_fault_surface = SimpleFaultSurface.from_fault_data(
             self.fault_trace, self.upper_seismogenic_depth,
-            self.lower_seismogenic_depth, self.dip, self.rupture_mesh_spacing
-        ).get_mesh()
-
+            self.lower_seismogenic_depth, self.dip, self.mesh_spacing
+        )
+        whole_fault_mesh = whole_fault_surface.get_mesh()
         mesh_rows, mesh_cols = whole_fault_mesh.shape
         fault_length = (mesh_cols - 1) * self.rupture_mesh_spacing
         fault_width = (mesh_rows - 1) * self.rupture_mesh_spacing
@@ -111,8 +116,10 @@ class SimpleFaultSource(SeismicSource):
                     mesh = whole_fault_mesh[first_row : first_row + rup_rows,
                                             first_col : first_col + rup_cols]
                     hypocenter = mesh.get_middle_point()
-                    # TODO: create a surface from a mesh
-                    surface = None
+                    surface = SimpleFaultSurface(
+                        mesh, whole_fault_surface.strike,
+                        whole_fault_surface.dip
+                    )
                     yield ProbabilisticRupture(
                         mag, self.rake, self.tectonic_region_type, hypocenter,
                         surface, occurrence_rate, temporal_occurrence_model
