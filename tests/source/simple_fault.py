@@ -27,6 +27,12 @@ from tests.geo.surface._utils import assert_mesh_is
 from tests.source import _simple_fault_test_data as test_data
 
 
+def assert_angles_equal(testcase, angle1, angle2, delta):
+    if abs(angle1 - angle2) > 180:
+        angle1, angle2 = 360 - max((angle1, angle2)), min((angle1, angle2))
+    testcase.assertAlmostEqual(angle1, angle2, delta=delta)
+
+
 class SimpleFaultSourceIterRupturesTestCase(unittest.TestCase):
     def _test(self, expected_ruptures, mfd, aspect_ratio):
         source_id = name = 'test-source'
@@ -67,10 +73,10 @@ class SimpleFaultSourceIterRupturesTestCase(unittest.TestCase):
                            expected_rupture['surface'])
             self.assertEqual(rupture.hypocenter,
                              Point(*expected_rupture['hypocenter']))
-            #self.assertAlmostEqual(rupture.surface.get_strike(),
-            #                       expected_rupture['strike'])
-            #self.assertAlmostEqual(rupture.surface.get_dip(),
-            #                       expected_rupture['dip'])
+            assert_angles_equal(self, rupture.surface.get_strike(),
+                                expected_rupture['strike'], delta=1e-4)
+            assert_angles_equal(self, rupture.surface.get_dip(),
+                                expected_rupture['dip'], delta=3)
 
     def test_2(self):
         # rupture dimensions are larger then mesh_spacing, number of nodes
