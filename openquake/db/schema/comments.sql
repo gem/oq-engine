@@ -247,6 +247,34 @@ COMMENT ON COLUMN oqmif.occupancy.occupants IS 'number of occupants';
 
 
 -- riski schema tables ------------------------------------------
+COMMENT ON TABLE riski.ffc IS 'A continuous fragility function';
+COMMENT ON COLUMN riski.ffc.fragility_model_id IS 'A reference to the fragility model this function belongs to';
+COMMENT ON COLUMN riski.ffc.ls IS 'The limit state for the function at hand';
+COMMENT ON COLUMN riski.ffc.taxonomy IS 'The taxonomy, only unique in conjunction with the limit state.';
+COMMENT ON COLUMN riski.ffc.ftype IS 'Optional function/distribution type e.g. lognormal';
+COMMENT ON COLUMN riski.ffc.mean IS 'Mean value';
+COMMENT ON COLUMN riski.ffc.stddev IS 'Standard deviation';
+COMMENT ON COLUMN riski.ffc.last_update IS 'Date/time of the last change of the model at hand';
+
+
+COMMENT ON TABLE riski.ffd IS 'A discrete fragility function';
+COMMENT ON COLUMN riski.ffd.fragility_model_id IS 'A reference to the fragility model this function belongs to';
+COMMENT ON COLUMN riski.ffd.ls IS 'The limit state for the function at hand';
+COMMENT ON COLUMN riski.ffd.taxonomy IS 'The taxonomy, only unique in conjunction with the limit state.';
+COMMENT ON COLUMN riski.ffd.poes IS 'Probabilities of exceedence, one per riski.fragility_model.imls';
+COMMENT ON COLUMN riski.ffd.last_update IS 'Date/time of the last change of the model at hand';
+
+
+COMMENT ON TABLE riski.fragility_model IS 'A risk fragility model';
+COMMENT ON COLUMN riski.fragility_model.format IS 'One of "discrete", "continuous"';
+COMMENT ON COLUMN riski.fragility_model.lss IS 'A list of limit states';
+COMMENT ON COLUMN riski.fragility_model.imls IS 'Optional list of intensity measure levels, only applicable to discrete fragility models';
+COMMENT ON COLUMN riski.fragility_model.imt IS 'An optional intensity measure type, only applicable to discrete fragility models';
+COMMENT ON COLUMN riski.fragility_model.description IS 'An optional description of the risk fragility model at hand';
+COMMENT ON COLUMN riski.fragility_model.input_id IS 'The foreign key to the associated input model file';
+COMMENT ON COLUMN riski.fragility_model.last_update IS 'Date/time of the last change of the model at hand';
+
+
 COMMENT ON TABLE riski.vulnerability_function IS 'A risk vulnerability function';
 COMMENT ON COLUMN riski.vulnerability_function.vulnerability_model_id IS 'A reference to the vulnerability model this function belongs to';
 COMMENT ON COLUMN riski.vulnerability_function.taxonomy IS 'The taxonomy, unique within the vulnerability model.';
