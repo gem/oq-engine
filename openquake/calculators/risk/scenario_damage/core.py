@@ -52,7 +52,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
             # TODO: Pass the fragility model to tasks
             task = general.compute_risk.delay(self.job_ctxt.job_id, block_id, fmodel=None)
-            tasks.append(a_task)
+            tasks.append(task)
 
         for task in tasks:
             task.wait()
