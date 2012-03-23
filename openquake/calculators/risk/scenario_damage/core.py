@@ -20,6 +20,10 @@ This module performs risk calculations using the scenario
 damage assessment approach.
 """
 
+import math
+import numpy
+import scipy
+
 from openquake import logs
 from openquake.calculators.risk import general
 from openquake import kvs
@@ -29,12 +33,6 @@ LOGGER = logs.LOG
 
 class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     """Scenario Damage method for performing risk calculations."""
-
-    def pre_execute(self):
-        """
-        Load and store the fragility model
-        """
-        pass
 
     def execute(self):
         """
@@ -51,7 +49,9 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                     block_id, len(self.job_ctxt.blocks_keys)))
 
             # TODO: Pass the fragility model to tasks
-            task = general.compute_risk.delay(self.job_ctxt.job_id, block_id, fmodel=None)
+            task = general.compute_risk.delay(
+                self.job_ctxt.job_id, block_id, fmodel=None)
+
             tasks.append(task)
 
         for task in tasks:
@@ -67,26 +67,32 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         Compute the results for a single block.
         """
 
+        fm = kwargs["fmodel"]
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
 
         for site in block.sites:
             point = self.job_ctxt.region.grid.point_at(site)
             gmf = gmvs(self.job_ctxt.job_id, point)
 
-        #     assets = general.BaseRiskCalculator.assets_at(
-        #         self.job_ctxt.job_id, site)
+            assets = general.BaseRiskCalculator.assets_at(
+                self.job_ctxt.job_id, site)
 
-        # 0. lookup the correct functions (asset.taxonomy)
+            for asset in assets:
+                funcs = fm.ffc_set.filter(taxonomy=asset.taxonomy)
 
-        #     for asset in assets:
-        #        for gmv in gmvs:
-                    # 1. compute the damage states for a single gmv
-                    # 2. mean and stddev
-                    # 3. multiply per number of buildings
+                # we always have a number of damage states
+                # which is len(limit states) + 1
+                sum_ds = numpy.zeros((len(gmf), len(funcs) + 1))
 
-        #        pass
+                for x, gmv in enumerate(gmf):
+                    sum_ds[x] += compute_dm(funcs, gmv)
 
-        # 4. serialization
+                # TODO: verify the attribute for number of buildings!..
+                mean = numpy.mean(sum_ds, axis=0) * asset.stco
+                stddev = numpy.std(sum_ds, axis=0, ddof=1) * asset.stco
+
+                # TODO: serialize!..
+                print mean, stddev
 
     def post_execute(self):
         """
@@ -94,6 +100,44 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         parameter is set to `xml`.
         """
         pass
+
+
+def compute_dm(funcs, gmv):
+
+    def compute_poe(iml, mean, stddev):
+        variance = stddev ** 2.0
+        sigma = math.sqrt(math.log((variance / mean ** 2.0) + 1.0))
+        mu = math.exp(math.log(mean ** 2.0 / math.sqrt(
+                variance + mean ** 2.0)))
+
+        return scipy.stats.lognorm.cdf(iml, sigma, scale=mu)
+
+    # we always have a number of damage states
+    # which is len(limit states) + 1
+    damage_states = numpy.zeros(len(funcs) + 1)
+
+    first_poe = compute_poe(gmv, funcs[0].mean, funcs[0].stddev)
+
+    # first damage state is always 1 - the probability
+    # of exceedance of first limit state
+    damage_states[0] = 1 - first_poe
+
+    last_poe = first_poe
+
+    # starting from one, the first damage state
+    # is already computed...
+    for x in xrange(1, len(funcs)):
+        poe = compute_poe(gmv, funcs[x].mean, funcs[x].stddev)
+        damage_states[x] = last_poe - poe
+        last_poe = poe
+
+    # last damage state is equal to the probabily
+    # of exceedance of the last limit state
+    damage_states[len(funcs)] = compute_poe(
+        gmv, funcs[len(funcs) - 1].mean,
+        funcs[len(funcs) - 1].stddev)
+
+    return numpy.array(damage_states)
 
 
 def gmvs(job_id, point):
