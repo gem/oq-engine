@@ -54,7 +54,7 @@ class SimpleFaultSource(SeismicSource):
         # TODO: document better
         whole_fault_surface = SimpleFaultSurface.from_fault_data(
             self.fault_trace, self.upper_seismogenic_depth,
-            self.lower_seismogenic_depth, self.dip, self.mesh_spacing
+            self.lower_seismogenic_depth, self.dip, self.rupture_mesh_spacing
         )
         whole_fault_mesh = whole_fault_surface.get_mesh()
         mesh_rows, mesh_cols = whole_fault_mesh.shape
@@ -87,8 +87,8 @@ class SimpleFaultSource(SeismicSource):
             # round rupture dimensions with respect to mesh_spacing
             # and compute number of points in the rupture along length
             # and strike
-            rup_cols = round(rup_length / self.rupture_mesh_spacing) + 1
-            rup_rows = round(rup_width / self.rupture_mesh_spacing) + 1
+            rup_cols = int(round(rup_length / self.rupture_mesh_spacing) + 1)
+            rup_rows = int(round(rup_width / self.rupture_mesh_spacing) + 1)
             rup_length = (rup_cols - 1) * self.rupture_mesh_spacing
             rup_width = (rup_rows - 1) * self.rupture_mesh_spacing
 
@@ -98,8 +98,8 @@ class SimpleFaultSource(SeismicSource):
 
             occurrence_rate = mag_occ_rate / float(num_rup)
 
-            for first_col in xrange(num_rup_along_length):
-                for first_row in xrange(num_rup_along_width):
+            for first_row in xrange(num_rup_along_width):
+                for first_col in xrange(num_rup_along_length):
                     mesh = whole_fault_mesh[first_row : first_row + rup_rows,
                                             first_col : first_col + rup_cols]
                     hypocenter = mesh.get_middle_point()
