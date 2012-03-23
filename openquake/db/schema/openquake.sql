@@ -520,7 +520,7 @@ CREATE TABLE uiapi.input (
     --      rupture file (rupture)
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
         CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gmpe',
-                             'exposure', 'rupture',
+                             'exposure', 'fragility', 'rupture',
                              'vulnerability', 'vulnerability_retrofitted')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
@@ -1119,10 +1119,14 @@ CREATE TABLE uiapi.output (
     --      collapse_map
     --      bcr_distribution
     --      agg_loss_curve
+    --      dmg_dist_per_asset
+    --      dmg_dist_per_taxonomy
+    --      dmg_dist_total
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
         CHECK(output_type IN ('unknown', 'hazard_curve', 'hazard_map',
             'gmf', 'loss_curve', 'loss_map', 'collapse_map',
-            'bcr_distribution', 'uh_spectra', 'agg_loss_curve')),
+            'bcr_distribution', 'uh_spectra', 'agg_loss_curve',
+            'dmg_dist_per_asset', 'dmg_dist_per_taxonomy', 'dmg_dist_total')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
     -- The full path of the shapefile generated for a hazard or loss map
@@ -1405,6 +1409,61 @@ SELECT AddGeometryColumn('riskr', 'bcr_distribution_data', 'location', 4326, 'PO
 ALTER TABLE riskr.bcr_distribution_data ALTER COLUMN location SET NOT NULL;
 
 
+-- Damage Distribution Per Asset
+CREATE TABLE riskr.dmg_dist_per_asset (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL,  -- FK to uiapi.output.id
+    dmg_states VARCHAR[] NOT NULL,
+    end_branch_label VARCHAR
+) TABLESPACE riskr_ts;
+
+CREATE TABLE riskr.dmg_dist_per_asset_data (
+    id SERIAL PRIMARY KEY,
+    dmg_dist_per_asset_id INTEGER NOT NULL,  -- FK to riskr.dmg_dist_per_asset.id
+    exposure_data_id INTEGER NOT NULL,  -- FK to oqmif.exposure_data.id
+    dmg_state VARCHAR NOT NULL,
+    mean float NOT NULL,
+    stddev float NOT NULL
+) TABLESPACE riskr_ts;
+SELECT AddGeometryColumn('riskr', 'dmg_dist_per_asset_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE riskr.dmg_dist_per_asset_data ALTER COLUMN location SET NOT NULL;
+
+
+-- Damage Distrubtion Per Taxonomy
+CREATE TABLE riskr.dmg_dist_per_taxonomy (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL,  -- FK to uiapi.output.id
+    dmg_states VARCHAR[] NOT NULL,
+    end_branch_label VARCHAR
+) TABLESPACE riskr_ts;
+
+CREATE TABLE riskr.dmg_dist_per_taxonomy_data (
+    id SERIAL PRIMARY KEY,
+    dmg_dist_per_taxonomy_id INTEGER NOT NULL,  -- FK riskr.dmg_dist_per_taxonomy.id
+    taxonomy VARCHAR NOT NULL,
+    dmg_state VARCHAR NOT NULL,
+    mean float NOT NULL,
+    stddev float NOT NULL
+) TABLESPACE riskr_ts;
+
+
+-- Total Damage Distribution
+CREATE TABLE riskr.dmg_dist_total (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL,  -- FK to uiapi.output.id
+    dmg_states VARCHAR[] NOT NULL,
+    end_branch_label VARCHAR
+) TABLESPACE riskr_ts;
+
+CREATE TABLE riskr.dmg_dist_total_data (
+    id SERIAL PRIMARY KEY,
+    dmg_dist_total_id INTEGER NOT NULL,  -- FK to riskr.dmg_dist_total.id
+    dmg_state VARCHAR NOT NULL,
+    mean float NOT NULL,
+    stddev float NOT NULL
+) TABLESPACE riskr_ts;
+
+
 -- Exposure model
 -- Abbreviations:
 --      coco: contents cost
@@ -1414,7 +1473,7 @@ CREATE TABLE oqmif.exposure_model (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     -- Associates the risk exposure model with an input file
-    input_id INTEGER,
+    input_id INTEGER NOT NULL,
     name VARCHAR NOT NULL,
     description VARCHAR,
     -- the taxonomy system used to classify the assets
@@ -1533,6 +1592,65 @@ CREATE TABLE riski.vulnerability_function (
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL,
     UNIQUE (vulnerability_model_id, taxonomy)
+) TABLESPACE riski_ts;
+
+
+-- Fragility model
+CREATE TABLE riski.fragility_model (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL,
+    -- Associates the risk fragility model with an input file
+    input_id INTEGER NOT NULL,
+    description VARCHAR,
+    -- Fragility model format: one of "discrete", "continuous"
+    format VARCHAR NOT NULL CONSTRAINT format_value
+        CHECK(format IN ('continuous', 'discrete')),
+    -- Limit states
+    lss VARCHAR[] NOT NULL,
+    -- Intensity measure levels, only applicable for discrete fragility models.
+    imls float[],
+    -- Intensity measure type, only applicable for discrete fragility models.
+    imt VARCHAR,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE riski_ts;
+
+
+-- Continuous fragility function
+CREATE TABLE riski.ffc (
+    id SERIAL PRIMARY KEY,
+    fragility_model_id INTEGER NOT NULL,
+    -- limit state
+    ls VARCHAR NOT NULL,
+    -- taxonomy
+    taxonomy VARCHAR NOT NULL,
+    -- Optional function/distribution type e.g. lognormal
+    ftype VARCHAR,
+    mean float NOT NULL,
+    stddev float NOT NULL,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL,
+    -- The combination of limit state and taxonomy is unique within an
+    -- fragility model.
+    UNIQUE (fragility_model_id, ls, taxonomy)
+) TABLESPACE riski_ts;
+
+
+-- Discrete fragility function
+CREATE TABLE riski.ffd (
+    id SERIAL PRIMARY KEY,
+    fragility_model_id INTEGER NOT NULL,
+    -- limit state
+    ls VARCHAR NOT NULL,
+    -- taxonomy
+    taxonomy VARCHAR NOT NULL,
+    poes float[] NOT NULL CONSTRAINT poes_values
+        CHECK (0.0 <= ALL(poes) AND 1.0 >= ALL(poes)),
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL,
+    -- The combination of limit state and taxonomy is unique within an
+    -- fragility model.
+    UNIQUE (fragility_model_id, ls, taxonomy)
 ) TABLESPACE riski_ts;
 
 
@@ -1682,8 +1800,16 @@ ALTER TABLE riski.vulnerability_model ADD CONSTRAINT
 riski_vulnerability_model_owner_fk FOREIGN KEY (owner_id) REFERENCES
 admin.oq_user(id) ON DELETE RESTRICT;
 
+ALTER TABLE riski.fragility_model ADD CONSTRAINT
+riski_fragility_model_owner_fk FOREIGN KEY (owner_id) REFERENCES
+admin.oq_user(id) ON DELETE RESTRICT;
+
 ALTER TABLE riski.vulnerability_model ADD CONSTRAINT
 riski_vulnerability_model_input_fk FOREIGN KEY (input_id) REFERENCES
+uiapi.input(id) ON DELETE RESTRICT;
+
+ALTER TABLE riski.fragility_model ADD CONSTRAINT
+riski_fragility_model_input_fk FOREIGN KEY (input_id) REFERENCES
 uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE hzrdr.hazard_map
@@ -1766,6 +1892,40 @@ ALTER TABLE riskr.bcr_distribution_data
 ADD CONSTRAINT riskr_bcr_distribution_data_bcr_distribution_fk
 FOREIGN KEY (bcr_distribution_id) REFERENCES riskr.bcr_distribution(id) ON DELETE CASCADE;
 
+
+-- Damage Distribution, Per Asset
+ALTER TABLE riskr.dmg_dist_per_asset
+ADD CONSTRAINT riskr_dmg_dist_per_asset_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.dmg_dist_per_asset_data
+ADD CONSTRAINT riskr_dmg_dist_per_asset_data_dmg_dist_per_asset_fk
+FOREIGN KEY (dmg_dist_per_asset_id) REFERENCES riskr.dmg_dist_per_asset(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.dmg_dist_per_asset_data
+ADD CONSTRAINT riskr_dmg_dist_per_asset_data_exposure_data_fk
+FOREIGN KEY (exposure_data_id) REFERENCES oqmif.exposure_data(id) ON DELETE RESTRICT;
+
+
+-- Damage Distribution, Per Taxonomy
+ALTER TABLE riskr.dmg_dist_per_taxonomy
+ADD CONSTRAINT riskr_dmg_dist_per_taxonomy_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.dmg_dist_per_taxonomy_data
+ADD CONSTRAINT riskr_dmg_dist_per_taxonomy_data_dmg_dist_per_taxonomy_fk
+FOREIGN KEY (dmg_dist_per_taxonomy_id) REFERENCES riskr.dmg_dist_per_taxonomy(id) ON DELETE CASCADE;
+
+
+-- Damage Distribution, Total
+ALTER TABLE riskr.dmg_dist_total
+ADD CONSTRAINT riskr_dmg_dist_total_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.dmg_dist_total_data
+ADD CONSTRAINT riskr_dmg_dist_total_data_dmg_dist_total_fk
+FOREIGN KEY (dmg_dist_total_id) REFERENCES riskr.dmg_dist_total(id) ON DELETE CASCADE;
+
 ALTER TABLE oqmif.exposure_data ADD CONSTRAINT
 oqmif_exposure_data_exposure_model_fk FOREIGN KEY (exposure_model_id)
 REFERENCES oqmif.exposure_model(id) ON DELETE CASCADE;
@@ -1779,3 +1939,10 @@ riski_vulnerability_function_vulnerability_model_fk FOREIGN KEY
 (vulnerability_model_id) REFERENCES riski.vulnerability_model(id) ON DELETE
 CASCADE;
 
+ALTER TABLE riski.ffd ADD CONSTRAINT riski_ffd_fragility_model_fk FOREIGN KEY
+(fragility_model_id) REFERENCES riski.fragility_model(id) ON DELETE
+CASCADE;
+
+ALTER TABLE riski.ffc ADD CONSTRAINT riski_ffc_fragility_model_fk FOREIGN KEY
+(fragility_model_id) REFERENCES riski.fragility_model(id) ON DELETE
+CASCADE;

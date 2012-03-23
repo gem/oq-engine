@@ -42,6 +42,7 @@ class LossMapCurveSerialization(unittest.TestCase):
 
         self.calculator = EventBasedRiskCalculator(job_ctxt)
         self.calculator.store_exposure_assets = lambda: None
+        self.calculator.store_fragility_model = lambda: None
         self.calculator.store_vulnerability_model = lambda: None
         self.calculator.partition = lambda: None
 

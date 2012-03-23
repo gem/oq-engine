@@ -344,6 +344,199 @@ $$ LANGUAGE plpythonu;
 COMMENT ON FUNCTION pcheck_exposure_data() IS
 'Make sure the inserted or modified exposure data is consistent.';
 
+-- Damage Distribution, Per Asset
+CREATE OR REPLACE FUNCTION riskr.pcheck_dmg_state_dmg_dist_per_asset_data()
+    RETURNS TRIGGER
+AS $$
+    def fmt(err):
+        return "%s (%s)" % (err, TD["table_name"])
+
+    # make sure that NEW.dmg_state is in dmg_dist_per_asset.dmg_states
+    NEW = TD["new"]
+
+    ps = plpy.prepare(
+        "SELECT dmg_states FROM riskr.dmg_dist_per_asset WHERE id=$1",
+        ["integer"])
+    [ddps] = plpy.execute(ps, [NEW["dmg_dist_per_asset_id"]])
+
+    if not NEW["dmg_state"] in ddps["dmg_states"]:
+        raise Exception(fmt("Invalid dmg_state '%s', must be one of %s"
+                            % (NEW["dmg_state"], ddps["dmg_states"])))
+
+    return "OK"
+$$ LANGUAGE plpythonu;
+
+
+COMMENT ON FUNCTION riskr.pcheck_dmg_state_dmg_dist_per_asset_data() IS
+'Make sure that each inserted or modified riskr.dmg_dist_per_asset_data record
+ has a valid dmg_state.';
+
+
+CREATE TRIGGER riskr_dmg_dist_per_asset_data_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON riskr.dmg_dist_per_asset_data
+FOR EACH ROW EXECUTE PROCEDURE
+riskr.pcheck_dmg_state_dmg_dist_per_asset_data();
+-- End Damage Distribution, Per Asset
+
+-- Damage Distribution, Per Taxonomy
+CREATE OR REPLACE FUNCTION riskr.pcheck_dmg_state_dmg_dist_per_taxonomy_data()
+    RETURNS TRIGGER
+AS $$
+    def fmt(err):
+        return "%s (%s)" % (err, TD["table_name"])
+
+    # make sure that NEW.dmg_state is in dmg_dist_per_taxonomy.dmg_states
+    NEW = TD["new"]
+
+    ps = plpy.prepare(
+        "SELECT dmg_states FROM riskr.dmg_dist_per_taxonomy WHERE id=$1",
+        ["integer"])
+
+    [ddpt] = plpy.execute(ps, [NEW["dmg_dist_per_taxonomy_id"]])
+
+    if not NEW["dmg_state"] in ddpt["dmg_states"]:
+        raise Exception(fmt("Invalid dmg_state '%s', must be one of %s"
+                            % (NEW["dmg_state"], ddpt["dmg_states"])))
+
+    return "OK"
+$$ LANGUAGE plpythonu;
+
+
+COMMENT ON FUNCTION riskr.pcheck_dmg_state_dmg_dist_per_taxonomy_data() IS
+'Make sure that each inserted or modified riskr.dmg_dist_per_taxonomy_data
+ record has a valid dmg_state.';
+
+
+CREATE TRIGGER riskr_dmg_dist_per_taxonomy_data_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON riskr.dmg_dist_per_taxonomy_data
+FOR EACH ROW EXECUTE PROCEDURE
+riskr.pcheck_dmg_state_dmg_dist_per_taxonomy_data();
+-- End Damage Distribution, Per Taxonomy
+
+-- Damage Distribution, Total
+CREATE OR REPLACE FUNCTION riskr.pcheck_dmg_state_dmg_dist_total_data()
+    RETURNS TRIGGER
+AS $$
+    def fmt(err):
+        return "%s (%s)" % (err, TD["table_name"])
+
+    # make sure that NEW.dmg_state is in dmg_dist_total.dmg_states
+    NEW = TD["new"]
+
+    ps = plpy.prepare(
+        "SELECT dmg_states FROM riskr.dmg_dist_total WHERE id=$1",
+        ["integer"])
+
+    [ddt] = plpy.execute(ps, [NEW["dmg_dist_total_id"]])
+
+    if not NEW["dmg_state"] in ddt["dmg_states"]:
+        raise Exception(fmt("Invalid dmg_state '%s', must be one of %s"
+                            % (NEW["dmg_state"], ddt["dmg_states"])))
+
+    return "OK"
+$$ LANGUAGE plpythonu;
+
+
+COMMENT ON FUNCTION riskr.pcheck_dmg_state_dmg_dist_total_data() IS
+'Make sure that each inserted or modified riskr.dmg_dist_total record has a
+ valid dmg_state.';
+
+
+CREATE OR REPLACE FUNCTION pcheck_fragility_model()
+  RETURNS TRIGGER
+AS $$
+    imts = ("pga", "sa", "pgv", "pgd", "ia", "rsd", "mmi")
+    NEW = TD["new"] # new data resulting from insert or update
+
+    def fmt(err):
+        return "%s (%s)" % (err, TD["table_name"])
+
+    if len(NEW["lss"]) == 0:
+        raise Exception(fmt("no limit states supplied"))
+
+    imls = NEW["imls"]
+    imt = NEW["imt"]
+    if NEW["format"] == "discrete":
+        assert imls and len(imls) > 0, "no IMLs for discrete fragility model"
+        assert imt, "no IMT for discrete fragility model"
+        assert imt in imts, "invalid IMT (%s)" % imt
+    else:
+        assert imls is None, "IMLs defined for continuous fragility model"
+        assert not imt, "IMT defined for continuous fragility model"
+
+    return "OK"
+$$ LANGUAGE plpythonu;
+
+
+COMMENT ON FUNCTION pcheck_fragility_model() IS
+'Make sure the inserted continuous fragility model record is consistent.';
+
+
+CREATE OR REPLACE FUNCTION pcheck_ffc()
+  RETURNS TRIGGER
+AS $$
+    NEW = TD["new"] # new data resulting from insert or update
+
+    # get the associated fragility model record
+    q = ("SELECT * FROM riski.fragility_model WHERE id = %s" %
+         NEW["fragility_model_id"])
+    [fmdl] = plpy.execute(q)
+
+    ls = NEW["ls"]
+    lss = fmdl["lss"]
+    assert ls and ls in lss, (
+        "invalid limit state (%s), not in: %s" % (ls, lss))
+    taxonomy = NEW["taxonomy"]
+    assert fmdl["format"] == "continuous", (
+        "mismatch: discrete model but continuous function (%s, %s)"
+        % (ls, taxonomy))
+
+    return "OK"
+$$ LANGUAGE plpythonu;
+
+
+COMMENT ON FUNCTION pcheck_ffc() IS
+'Make sure the inserted continuous fragility function record is consistent.';
+
+
+CREATE OR REPLACE FUNCTION pcheck_ffd()
+  RETURNS TRIGGER
+AS $$
+    NEW = TD["new"] # new data resulting from insert or update
+
+    # get the associated fragility model record
+    q = ("SELECT * FROM riski.fragility_model WHERE id = %s" %
+         NEW["fragility_model_id"])
+    [fmdl] = plpy.execute(q)
+
+    ls = NEW["ls"]
+    lss = fmdl["lss"]
+    assert ls and ls in lss, (
+        "invalid limit state (%s), not in: %s" % (ls, lss))
+    taxonomy = NEW["taxonomy"]
+    assert fmdl["format"] == "discrete", (
+        "mismatch: continuous model but discrete function (%s, %s)"
+        % (ls, taxonomy))
+
+    len_poes = len(NEW["poes"])
+    len_imls = len(fmdl["imls"])
+    assert len_poes == len_imls, (
+        "#poes differs from #imls (%s != %s) for discrete function (%s, %s)"
+        % (len_poes, len_imls, ls, taxonomy))
+
+    return "OK"
+$$ LANGUAGE plpythonu;
+
+
+COMMENT ON FUNCTION pcheck_ffd() IS
+'Make sure the inserted discrete fragility function record is consistent.';
+
+
+CREATE TRIGGER riskr_dmg_dist_total_data_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON riskr.dmg_dist_total_data
+FOR EACH ROW EXECUTE PROCEDURE
+riskr.pcheck_dmg_state_dmg_dist_total_data();
+-- End Damage Distribution, Total
 
 CREATE TRIGGER hzrdi_rupture_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON hzrdi.rupture
@@ -366,12 +559,24 @@ BEFORE INSERT OR UPDATE ON hzrdi.complex_fault
 FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
 
 CREATE TRIGGER oqmif_exposure_model_before_insert_update_trig
-BEFORE INSERT OR UPDATE ON oqmif.exposure_model
+BEFORE INSERT ON oqmif.exposure_model
 FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_model();
 
 CREATE TRIGGER oqmif_exposure_data_before_insert_update_trig
-BEFORE INSERT OR UPDATE ON oqmif.exposure_data
+BEFORE INSERT ON oqmif.exposure_data
 FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_data();
+
+CREATE TRIGGER riski_fragility_model_before_insert_update_trig
+BEFORE INSERT ON riski.fragility_model
+FOR EACH ROW EXECUTE PROCEDURE pcheck_fragility_model();
+
+CREATE TRIGGER riski_ffc_before_insert_update_trig
+BEFORE INSERT ON riski.ffc
+FOR EACH ROW EXECUTE PROCEDURE pcheck_ffc();
+
+CREATE TRIGGER riski_ffd_before_insert_update_trig
+BEFORE INSERT ON riski.ffd
+FOR EACH ROW EXECUTE PROCEDURE pcheck_ffd();
 
 CREATE TRIGGER eqcat_magnitude_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON eqcat.magnitude
@@ -394,10 +599,6 @@ CREATE TRIGGER hzrdi_mfd_tgr_refresh_last_update_trig BEFORE UPDATE ON hzrdi.mfd
 CREATE TRIGGER hzrdi_r_depth_distr_refresh_last_update_trig BEFORE UPDATE ON hzrdi.r_depth_distr FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
 CREATE TRIGGER hzrdi_focal_mechanism_refresh_last_update_trig BEFORE UPDATE ON hzrdi.focal_mechanism FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
-
-CREATE TRIGGER oqmif_exposure_model_refresh_last_update_trig BEFORE UPDATE ON oqmif.exposure_model FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
-
-CREATE TRIGGER oqmif_exposure_data_refresh_last_update_trig BEFORE UPDATE ON oqmif.exposure_data FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
 CREATE TRIGGER riski_vulnerability_function_refresh_last_update_trig BEFORE UPDATE ON riski.vulnerability_function FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 

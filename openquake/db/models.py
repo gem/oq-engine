@@ -851,6 +851,9 @@ class Output(models.Model):
         (u'bcr_distribution', u'Benefit-cost ratio distribution'),
         (u'uh_spectra', u'Uniform Hazard Spectra'),
         (u'agg_loss_curve', u'Aggregate Loss Curve'),
+        (u'dmg_dist_per_asset', u'Damage Distribution Per Asset'),
+        (u'dmg_dist_per_taxonomy', u'Damage Distribution Per Taxonomy'),
+        (u'dmg_dist_total', u'Total Damage Distribution'),
     )
     output_type = models.TextField(choices=OUTPUT_TYPE_CHOICES)
     # Number of bytes in the file:
@@ -1135,6 +1138,82 @@ class BCRDistributionData(models.Model):
         db_table = 'riskr\".\"bcr_distribution_data'
 
 
+class DmgDistPerAsset(models.Model):
+    """Holds metadata for damage distributions per asset."""
+
+    output = models.ForeignKey("Output")
+    dmg_states = CharArrayField()
+    end_branch_label = models.TextField(null=True)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_per_asset'
+
+
+class DmgDistPerAssetData(models.Model):
+    """Holds the actual data for damage distributions per asset."""
+
+    dmg_dist_per_asset = models.ForeignKey("DmgDistPerAsset")
+    exposure_data = models.ForeignKey("ExposureData")
+    dmg_state = models.TextField()
+    mean = models.FloatField()
+    stddev = models.FloatField()
+    # geometry for the computation cell which contains the referenced asset
+    location = models.PointField(srid=4326)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_per_asset_data'
+
+
+class DmgDistPerTaxonomy(models.Model):
+    """Hold metdata for damage distributions per taxonomy."""
+
+    output = models.ForeignKey("Output")
+    dmg_states = CharArrayField()
+    end_branch_label = models.TextField(null=True)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_per_taxonomy'
+
+
+class DmgDistPerTaxonomyData(models.Model):
+    """Holds the actual data for damage distributions per taxonomy."""
+
+    dmg_dist_per_taxonomy = models.ForeignKey("DmgDistPerTaxonomy")
+    taxonomy = models.TextField()
+    dmg_state = models.TextField()
+    mean = models.FloatField()
+    stddev = models.FloatField()
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_per_taxonomy_data'
+
+
+class DmgDistTotal(models.Model):
+    """Holds metadata for 'total damage distribution' values for an entire
+    calculation. This is the total over all assets and GMFs."""
+
+    output = models.ForeignKey("Output")
+    dmg_states = CharArrayField()
+    end_branch_label = models.TextField(null=True)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_total'
+
+
+class DmgDistTotalData(models.Model):
+    """Holds the actual 'total damage distribution' values for for an entire
+    calculation. There should be  one record per calculation per damage state.
+    """
+
+    dmg_dist_total = models.ForeignKey("DmgDistTotal")
+    dmg_state = models.TextField()
+    mean = models.FloatField()
+    stddev = models.FloatField()
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_total_data'
+
+
 ## Tables in the 'oqmif' schema.
 
 
@@ -1277,3 +1356,52 @@ class VulnerabilityFunction(models.Model):
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riski\".\"vulnerability_function'
+
+
+class FragilityModel(models.Model):
+    """A risk fragility model"""
+
+    owner = models.ForeignKey("OqUser")
+    input = models.ForeignKey("Input")
+    description = models.TextField(null=True)
+    FORMAT_CHOICES = (
+        (u"continuous", u"Continuous fragility model"),
+        (u"discrete", u"Discrete fragility model"),
+    )
+    format = models.TextField(choices=FORMAT_CHOICES)
+    lss = CharArrayField(help_text="limit states")
+    imls = FloatArrayField(null=True, help_text="Intensity measure levels")
+    imt = models.TextField(null=True, choices=OqJobProfile.IMT_CHOICES,
+                           help_text="Intensity measure type")
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riski\".\"fragility_model'
+
+
+class Ffc(models.Model):
+    """A continuous fragility function"""
+
+    fragility_model = models.ForeignKey("FragilityModel")
+    ls = models.TextField(help_text="limit state")
+    taxonomy = models.TextField()
+    ftype = models.TextField(null=True, help_text="function/distribution type")
+    mean = models.FloatField(help_text="Mean value")
+    stddev = models.FloatField(help_text="Standard deviation")
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riski\".\"ffc'
+
+
+class Ffd(models.Model):
+    """A discrete fragility function"""
+
+    fragility_model = models.ForeignKey("FragilityModel")
+    ls = models.TextField(help_text="limit state")
+    taxonomy = models.TextField()
+    poes = FloatArrayField(help_text="Probabilities of exceedance")
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riski\".\"ffd'
