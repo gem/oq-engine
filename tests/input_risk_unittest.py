@@ -25,13 +25,18 @@ from openquake.calculators.risk.event_based.core import (
     EventBasedRiskCalculator)
 from openquake.db import models
 from openquake.input.exposure import ExposureDBWriter
+from openquake.input.fragility import FragilityDBWriter
 from openquake.output.hazard import GmfDBWriter
 from openquake.output.hazard import HazardCurveDBWriter
 from openquake.parser.exposure import ExposureModelFile
+from openquake.parser.fragility import FragilityModelParser
 from openquake.shapes import Site
 
 from tests.utils import helpers
 
+
+CONTINUOUS_FMODEL = os.path.join(helpers.SCHEMA_DIR, "examples/fragm_c.xml")
+DISCRETE_FMODEL = os.path.join(helpers.SCHEMA_DIR, "examples/fragm_d.xml")
 TEST_FILE = 'exposure-portfolio.xml'
 
 
@@ -310,3 +315,131 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertEqual("late afternoon", afternoon.description)
         self.assertEqual(36, morning.occupants)
         self.assertEqual("early morning", morning.description)
+
+
+class CFragilityDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
+    """
+    Test the code that writes continuous fragility model data to the database
+    """
+    job = None
+    path = CONTINUOUS_FMODEL
+
+    @classmethod
+    def setUpClass(cls):
+        inputs = [("fragility", cls.path)]
+        cls.job = cls.setup_classic_job(inputs=inputs)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.teardown_job(cls.job)
+
+    def setUp(self):
+        [self.input] = models.inputs4job(self.job.id, input_type="fragility")
+        self.parser = FragilityModelParser(self.path)
+        self.writer = FragilityDBWriter(self.input, self.parser)
+
+    def test_write_continuous_fragility_model_to_db(self):
+        # call tested function
+        self.writer.serialize()
+
+        # test results
+        model = self.writer.model
+        self.assertFalse(model is None)
+
+        self.assertIs(None, model.imls)
+        self.assertIs(None, model.imt)
+        self.assertEqual("continuous", model.format)
+        self.assertEqual("Fragility model for Pavia (continuous)",
+                         model.description)
+        self.assertEqual(["slight", "moderate", "extensive", "complete"],
+                         model.lss)
+        self.assertIs(self.input, model.input)
+
+        ffcs = model.ffc_set.all().order_by("taxonomy", "ls")
+        ffds = model.ffd_set.all()
+        self.assertEqual(8, ffcs.count())
+        self.assertEqual(0, ffds.count())
+
+        self.assertIs(None, ffcs[0].ftype)
+        self.assertEqual("RC/DMRF-D/HR", ffcs[0].taxonomy)
+        self.assertEqual("complete", ffcs[0].ls)
+        self.assertEqual(108.8, ffcs[0].mean)
+        self.assertEqual(123.6, ffcs[0].stddev)
+
+        self.assertIs(None, ffcs[3].ftype)
+        self.assertEqual("RC/DMRF-D/HR", ffcs[3].taxonomy)
+        self.assertEqual("slight", ffcs[3].ls)
+        self.assertEqual(11.18, ffcs[3].mean)
+        self.assertEqual(8.28, ffcs[3].stddev)
+
+        self.assertEqual("lognormal", ffcs[5].ftype)
+        self.assertEqual("RC/DMRF-D/LR", ffcs[5].taxonomy)
+        self.assertEqual("extensive", ffcs[5].ls)
+        self.assertEqual(48.05, ffcs[5].mean)
+        self.assertEqual(42.49, ffcs[5].stddev)
+
+        self.assertEqual("lognormal", ffcs[6].ftype)
+        self.assertEqual("RC/DMRF-D/LR", ffcs[6].taxonomy)
+        self.assertEqual("moderate", ffcs[6].ls)
+        self.assertEqual(27.98, ffcs[6].mean)
+        self.assertEqual(20.677, ffcs[6].stddev)
+
+
+class DFragilityDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
+    """
+    Test the code that writes discrete fragility model data to the database
+    """
+    job = None
+    path = DISCRETE_FMODEL
+
+    @classmethod
+    def setUpClass(cls):
+        inputs = [("fragility", cls.path)]
+        cls.job = cls.setup_classic_job(inputs=inputs)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.teardown_job(cls.job)
+
+    def setUp(self):
+        [self.input] = models.inputs4job(self.job.id, input_type="fragility")
+        self.parser = FragilityModelParser(self.path)
+        self.writer = FragilityDBWriter(self.input, self.parser)
+
+    def test_write_discrete_fragility_model_to_db(self):
+        # call tested function
+        self.writer.serialize()
+
+        # test results
+        model = self.writer.model
+        self.assertFalse(model is None)
+
+        self.assertEqual([7.0, 8.0, 9.0, 10.0, 11.0], model.imls)
+        self.assertEqual("mmi", model.imt)
+        self.assertEqual("discrete", model.format)
+        self.assertEqual("Fragility model for Pavia (discrete)",
+                         model.description)
+        self.assertEqual(["minor", "moderate", "severe", "collapse"],
+                         model.lss)
+        self.assertIs(self.input, model.input)
+
+        ffcs = model.ffc_set.all()
+        ffds = model.ffd_set.all().order_by("taxonomy", "ls")
+        self.assertEqual(0, ffcs.count())
+        self.assertEqual(8, ffds.count())
+
+        self.assertEqual("RC/DMRF-D/HR", ffds[0].taxonomy)
+        self.assertEqual("collapse", ffds[0].ls)
+        self.assertEqual([0.0, 0.0, 0.0, 0.04, 0.64], ffds[0].poes)
+
+        self.assertEqual("RC/DMRF-D/HR", ffds[3].taxonomy)
+        self.assertEqual("severe", ffds[3].ls)
+        self.assertEqual([0.0, 0.0, 0.0, 0.3, 0.89], ffds[3].poes)
+
+        self.assertEqual("RC/DMRF-D/LR", ffds[5].taxonomy)
+        self.assertEqual("minor", ffds[5].ls)
+        self.assertEqual([0.0, 0.09, 0.56, 0.91, 0.98], ffds[5].poes)
+
+        self.assertEqual("RC/DMRF-D/LR", ffds[6].taxonomy)
+        self.assertEqual("moderate", ffds[6].ls)
+        self.assertEqual([0.0, 0.0, 0.04, 0.78, 0.96], ffds[6].poes)
