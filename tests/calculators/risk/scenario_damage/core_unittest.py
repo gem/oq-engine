@@ -92,6 +92,14 @@ class ScenarioDamageRiskCalculatorTestCase(
             fragility_model=fmodel, taxonomy="RC",
             ls="LS2", mean="0.35", stddev="0.10").save()
 
+        models.Ffc(
+            fragility_model=fmodel, taxonomy="RM",
+            ls="LS1", mean="0.25", stddev="0.08").save()
+
+        models.Ffc(
+            fragility_model=fmodel, taxonomy="RM",
+            ls="LS2", mean="0.40", stddev="0.12").save()
+
         return fmodel
 
     def _store_em(self):
@@ -108,4 +116,9 @@ class ScenarioDamageRiskCalculatorTestCase(
         models.ExposureData(
             exposure_model=em, taxonomy="RC",
             asset_ref="A", stco=100,
+            site=geos.GEOSGeometry(self.site.point.to_wkt()), reco=1).save()
+
+        models.ExposureData(
+            exposure_model=em, taxonomy="RM",
+            asset_ref="B", stco=40,
             site=geos.GEOSGeometry(self.site.point.to_wkt()), reco=1).save()
