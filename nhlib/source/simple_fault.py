@@ -26,7 +26,6 @@ from nhlib.source.rupture import ProbabilisticRupture
 
 class SimpleFaultSource(SeismicSource):
     # TODO: document
-    # TODO: unittest
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, fault_trace, upper_seismogenic_depth,
                  lower_seismogenic_depth, dip, rake,
@@ -63,35 +62,9 @@ class SimpleFaultSource(SeismicSource):
 
         for (mag, mag_occ_rate) in self.mfd.get_annual_occurrence_rates():
             # compute rupture dimensions
-            area = self.magnitude_scaling_relationship.get_median_area(
-                mag, self.rake
+            rup_cols, rup_rows = self._get_rupture_dimensions(
+                fault_length, fault_width, mag
             )
-            rup_length = math.sqrt(area * self.rupture_aspect_ratio)
-            rup_width = area / rup_length
-
-            # clip rupture's length and width to
-            # fault's length and width if both rupture
-            # dimensions are greater than fault dimensions
-            if rup_length > fault_length and rup_width > fault_width:
-                rup_length = fault_length
-                rup_width = fault_width
-            # reshape rupture (conserving area) if its length or width
-            # exceeds fault's length or width
-            elif rup_width > fault_width:
-                rup_length = rup_length * (rup_width / fault_width)
-                rup_width = fault_width
-            elif rup_length > fault_length:
-                rup_width = rup_width * (rup_length / fault_length)
-                rup_length = fault_length
-
-            # round rupture dimensions with respect to mesh_spacing
-            # and compute number of points in the rupture along length
-            # and strike
-            rup_cols = int(round(rup_length / self.rupture_mesh_spacing) + 1)
-            rup_rows = int(round(rup_width / self.rupture_mesh_spacing) + 1)
-            rup_length = (rup_cols - 1) * self.rupture_mesh_spacing
-            rup_width = (rup_rows - 1) * self.rupture_mesh_spacing
-
             num_rup_along_length = mesh_cols - rup_cols + 1
             num_rup_along_width = mesh_rows - rup_rows + 1
             num_rup = num_rup_along_length * num_rup_along_width
@@ -108,3 +81,32 @@ class SimpleFaultSource(SeismicSource):
                         mag, self.rake, self.tectonic_region_type, hypocenter,
                         surface, occurrence_rate, temporal_occurrence_model
                     )
+
+    def _get_rupture_dimensions(self, fault_length, fault_width, mag):
+        area = self.magnitude_scaling_relationship.get_median_area(
+            mag, self.rake
+        )
+        rup_length = math.sqrt(area * self.rupture_aspect_ratio)
+        rup_width = area / rup_length
+
+        # clip rupture's length and width to
+        # fault's length and width if both rupture
+        # dimensions are greater than fault dimensions
+        if rup_length > fault_length and rup_width > fault_width:
+            rup_length = fault_length
+            rup_width = fault_width
+        # reshape rupture (conserving area) if its length or width
+        # exceeds fault's length or width
+        elif rup_width > fault_width:
+            rup_length = rup_length * (rup_width / fault_width)
+            rup_width = fault_width
+        elif rup_length > fault_length:
+            rup_width = rup_width * (rup_length / fault_length)
+            rup_length = fault_length
+
+        # round rupture dimensions with respect to mesh_spacing
+        # and compute number of points in the rupture along length
+        # and strike
+        rup_cols = int(round(rup_length / self.rupture_mesh_spacing) + 1)
+        rup_rows = int(round(rup_width / self.rupture_mesh_spacing) + 1)
+        return rup_cols, rup_rows
