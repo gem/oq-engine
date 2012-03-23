@@ -1356,3 +1356,52 @@ class VulnerabilityFunction(models.Model):
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riski\".\"vulnerability_function'
+
+
+class FragilityModel(models.Model):
+    """A risk fragility model"""
+
+    owner = models.ForeignKey("OqUser")
+    input = models.ForeignKey("Input")
+    description = models.TextField(null=True)
+    FORMAT_CHOICES = (
+        (u"continuous", u"Continuous fragility model"),
+        (u"discrete", u"Discrete fragility model"),
+    )
+    format = models.TextField(choices=FORMAT_CHOICES)
+    lss = CharArrayField(help_text="limit states")
+    imls = FloatArrayField(null=True, help_text="Intensity measure levels")
+    imt = models.TextField(null=True, choices=OqJobProfile.IMT_CHOICES,
+                           help_text="Intensity measure type")
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riski\".\"fragility_model'
+
+
+class Ffc(models.Model):
+    """A continuous fragility function"""
+
+    fragility_model = models.ForeignKey("FragilityModel")
+    ls = models.TextField(help_text="limit state")
+    taxonomy = models.TextField()
+    ftype = models.TextField(null=True, help_text="function/distribution type")
+    mean = models.FloatField(help_text="Mean value")
+    stddev = models.FloatField(help_text="Standard deviation")
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riski\".\"ffc'
+
+
+class Ffd(models.Model):
+    """A discrete fragility function"""
+
+    fragility_model = models.ForeignKey("FragilityModel")
+    ls = models.TextField(help_text="limit state")
+    taxonomy = models.TextField()
+    poes = FloatArrayField(help_text="Probabilities of exceedance")
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riski\".\"ffd'
