@@ -21,7 +21,7 @@ from collections import namedtuple
 
 from django.db import transaction
 from django.db.utils import DatabaseError
-from django.test import TestCase
+from django.test import TestCase as DjangoTestCase
 
 from openquake import shapes
 from openquake.db import models
@@ -29,7 +29,7 @@ from openquake.db import models
 from tests.utils import helpers
 
 
-class ExposureModelTestCase(TestCase, helpers.DbTestCase):
+class ExposureModelTestCase(DjangoTestCase, helpers.DbTestCase):
     """Test the exposure_model database constraints."""
 
     job = None
@@ -294,7 +294,7 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             self.fail("DatabaseError not raised")
 
 
-class ExposureDataTestCase(TestCase, helpers.DbTestCase):
+class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
     """Test the exposure_data database constraints."""
 
     job = None
@@ -601,7 +601,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
             self.fail("DatabaseError not raised")
 
 
-class PerAssetValueTestCase(TestCase):
+class PerAssetValueTestCase(DjangoTestCase):
     """Test and exercise the per_asset_value() function."""
 
     # risk exposure data
