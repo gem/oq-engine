@@ -80,6 +80,10 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             for asset in assets:
                 funcs = fm.ffc_set.filter(taxonomy=asset.taxonomy)
 
+                assert len(funcs) > 0, ("no limit states associated "
+                        "with taxonomy %s of asset %s.") % (
+                        asset.taxonomy, asset.asset_ref)
+
                 # we always have a number of damage states
                 # which is len(limit states) + 1
                 sum_ds = numpy.zeros((len(gmf), len(funcs) + 1))
