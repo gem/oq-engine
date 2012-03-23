@@ -25,7 +25,33 @@ from nhlib.source.rupture import ProbabilisticRupture
 
 
 class SimpleFaultSource(SeismicSource):
-    # TODO: document
+    """
+    Simple fault source typology represents seismicity occurring on a fault
+    surface with simple geometry.
+
+    :param fault_trace:
+        A :class:`~nhlib.geo.line.Line` representing the line of intersection
+        between the fault plane and the Earth's surface.
+    :param upper_seismogenic_depth:
+        Minimum depth an earthquake rupture can reach, in km.
+    :param lower_seismogenic_depth:
+        Maximum depth an earthquake rupture can reach, in km.
+    :param dip:
+        Angle between earth surface and fault plane in decimal degrees.
+    :param rake:
+        Angle describing rupture propagation direction in decimal degrees.
+    :param magnitude_scaling_relationship:
+        Instance of subclass of :class:`nhlib.msr.base.BaseMSR` to describe
+        how does the area of the rupture depend on magnitude and rake.
+    :param rupture_aspect_ratio:
+        Float number representing how much source's ruptures are more wide
+        than tall. Aspect ratio of 1 means ruptures have square shape,
+        value below 1 means ruptures stretch vertically more than horizontally
+        and vice versa.
+
+    See also :class:`nhlib.source.base.SeismicSource` for description of other
+    parameters.
+    """
     def __init__(self, source_id, name, tectonic_region_type, mfd,
                  rupture_mesh_spacing, fault_trace, upper_seismogenic_depth,
                  lower_seismogenic_depth, dip, rake,
@@ -45,12 +71,20 @@ class SimpleFaultSource(SeismicSource):
         self.rupture_aspect_ratio = rupture_aspect_ratio
         self.dip = dip
         self.rake = rake
+        # TODO: check that mesh_spacing is low enough
+        # TODO: for the smallest possible magnitude
 
     def iter_ruptures(self, temporal_occurrence_model):
         """
         See :meth:`nhlib.source.base.SeismicSource.iter_ruptures`.
+
+        Generates a ruptures using the "floating" algorithm: for all the
+        magnitude values of assigned MFD calculates the rupture size with
+        respect to MSR and aspect ratio and then places ruptures of that
+        size on the surface of the whole fault source. The occurrence
+        rate of each of those ruptures is the magnitude occurrence rate
+        divided by the number of ruptures that can be placed in a fault.
         """
-        # TODO: document better
         whole_fault_surface = SimpleFaultSurface.from_fault_data(
             self.fault_trace, self.upper_seismogenic_depth,
             self.lower_seismogenic_depth, self.dip, self.rupture_mesh_spacing
@@ -61,7 +95,6 @@ class SimpleFaultSource(SeismicSource):
         fault_width = (mesh_rows - 1) * self.rupture_mesh_spacing
 
         for (mag, mag_occ_rate) in self.mfd.get_annual_occurrence_rates():
-            # compute rupture dimensions
             rup_cols, rup_rows = self._get_rupture_dimensions(
                 fault_length, fault_width, mag
             )
@@ -83,6 +116,23 @@ class SimpleFaultSource(SeismicSource):
                     )
 
     def _get_rupture_dimensions(self, fault_length, fault_width, mag):
+        """
+        Calculate rupture dimensions for a given magnitude.
+
+        :param fault_length:
+            The length of the fault as a sum of all segments, in km.
+        :param fault_width:
+            The width of the fault, in km.
+        :param mag:
+            Magnitude value to calculate rupture geometry for.
+        :returns:
+            A tuple of two integer items, representing rupture's dimensions:
+            number of mesh points along length and along width respectively.
+
+        The rupture is reshaped (conserving area, if possible) if one
+        of dimensions exceeds fault geometry. If both do, the rupture
+        is considered to cover the whole fault.
+        """
         area = self.magnitude_scaling_relationship.get_median_area(
             mag, self.rake
         )
