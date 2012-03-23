@@ -18,3 +18,4 @@ Package :mod:`nhlib.geo.surface` contains base and specific implementations
 of earthquake rupture surfaces.
 """
 from nhlib.geo.surface.planar import PlanarSurface
+from nhlib.geo.surface.simple_fault import SimpleFaultSurface
