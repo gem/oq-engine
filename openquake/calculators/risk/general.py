@@ -46,9 +46,11 @@ from openquake import kvs
 from openquake import logs
 from openquake import shapes
 from openquake.input.exposure import ExposureDBWriter
+from openquake.input.fragility import FragilityDBWriter
 from openquake.job import config as job_config
 from openquake.output import risk as risk_output
 from openquake.parser import exposure
+from openquake.parser import fragility
 from openquake.parser import vulnerability
 from openquake.utils import round_float
 from openquake.utils.tasks import calculator_for_task
@@ -141,6 +143,7 @@ class BaseRiskCalculator(Calculator):
     def pre_execute(self):
         """Make sure the exposure and vulnerability data is in the database."""
         self.store_exposure_assets()
+        self.store_fragility_model()
         self.store_vulnerability_model()
         self.partition()
 
@@ -249,6 +252,15 @@ class BaseRiskCalculator(Calculator):
         exposure_parser = exposure.ExposureModelFile(path)
         writer = ExposureDBWriter(emdl)
         writer.serialize(exposure_parser)
+
+    def store_fragility_model(self):
+        """Load fragility model and write it to database."""
+        fmodels = models.inputs4job(self.job_ctxt.job_id, "fragility")
+        for fmdl in fmodels:
+            path = os.path.join(self.job_ctxt.base_path, fmdl.path)
+            parser = fragility.FragilityModelParser(path)
+            writer = FragilityDBWriter(fmdl, parser)
+            writer.serialize()
 
     def store_vulnerability_model(self):
         """ load vulnerability and write to kvs """
