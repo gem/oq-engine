@@ -212,18 +212,13 @@ def set_gmpe_params(gmpe_map, params):
 class BaseHazardCalculator(Calculator):
     """Contains common functionality for Hazard calculators"""
 
-    def __init__(self, job_profile):
-        super(BaseHazardCalculator, self).__init__(job_profile)
-
+    def pre_execute(self):
         basepath = self.job_ctxt.params.get('BASE_PATH')
-
         if not self.job_ctxt['CALCULATION_MODE'] in (
                 'Scenario', 'Scenario Damage'):
-
             source_model_lt = self.job_ctxt.params.get(
                 'SOURCE_MODEL_LOGIC_TREE_FILE_PATH')
             gmpe_lt = self.job_ctxt.params.get('GMPE_LOGIC_TREE_FILE_PATH')
-            # TODO: This should probably be moved into a `pre_execute` method.
             self.calc = logictree.LogicTreeProcessor(
                 basepath, source_model_lt, gmpe_lt)
 
@@ -233,12 +228,16 @@ class BaseHazardCalculator(Calculator):
 
     def store_source_model(self, seed):
         """Generates a source model from the source model logic tree."""
+        if getattr(self, "calc", None) is None:
+            self.pre_execute()
         store_source_model(self.job_ctxt.job_id, seed,
                            self.job_ctxt.params, self.calc)
 
     def store_gmpe_map(self, seed):
         """Generates a hash of tectonic regions and GMPEs, using the logic tree
         specified in the job config file."""
+        if getattr(self, "calc", None) is None:
+            self.pre_execute()
         store_gmpe_map(self.job_ctxt.job_id, seed, self.calc)
 
     def generate_erf(self):
