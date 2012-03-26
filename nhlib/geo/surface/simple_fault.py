@@ -52,7 +52,7 @@ class SimpleFaultSurface(BaseSurface):
 
         It is computed as the average value of the dip values of the mesh cells
         in the first row of the surface mesh (in case of a simple fault surface
-        the dip is constant over depth, so there is not need to compute the dip
+        the dip is constant over depth, so there is no need to compute the dip
         angle along width).
 
         The dip of each mesh cell is obtained by calculating the vector normal
