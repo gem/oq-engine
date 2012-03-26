@@ -21,9 +21,13 @@ import numpy
 import pyproj
 import shapely.geometry
 
+
 #: Geod object to be used whenever we need to deal with
 #: spherical coordinates.
 GEOD = pyproj.Geod(ellps='sphere')
+
+#: Earth radius in km.
+EARTH_RADIUS = 6371.0
 
 
 def clean_points(points):
@@ -180,3 +184,42 @@ def get_middle_point(lon1, lat1, lon2, lat2):
     if lon <= -180:
         lon += 360
     return lon, lat
+
+
+def spherical_to_cartesian(lons, lats, depths):
+    """
+    Return the position vectors (in Cartesian coordinates) of list of spherical
+    coordinates.
+
+    For equations see: http://mathworld.wolfram.com/SphericalCoordinates.html.
+
+    Parameters are components of spherical coordinates in a form of scalars,
+    lists or numpy arrays. ``depths`` can be ``None`` in which case it's
+    considered zero for all points.
+
+    :returns:
+        ``numpy.array`` of shape (3, n), where n is the number of points
+        in original spherical coordinates lists. Those three rows in the
+        returned array are the Cartesian coordinates x, y and z.
+    """
+    phi = numpy.radians(lons)
+    theta = numpy.radians(lats)
+    if depths is None:
+        rr = EARTH_RADIUS
+    else:
+        rr = EARTH_RADIUS - numpy.array(depths)
+    cos_theta_r = rr * numpy.cos(theta)
+    xx = cos_theta_r * numpy.cos(phi)
+    yy = cos_theta_r * numpy.sin(phi)
+    zz = rr * numpy.sin(theta)
+    return numpy.array([xx, yy, zz])
+
+
+def ensure(expr, msg):
+    """
+    Utility method that raises an error if the
+    given condition is not true.
+    """
+
+    if not expr:
+        raise ValueError(msg)

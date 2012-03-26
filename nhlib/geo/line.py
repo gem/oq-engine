@@ -16,6 +16,8 @@
 """
 Module :mod:`nhlib.geo.line` defines :class:`Line`.
 """
+import numpy
+
 from nhlib.geo import _utils as utils
 
 
@@ -67,6 +69,65 @@ class Line(object):
 
     def __len__(self):
         return len(self.points)
+
+    def __getitem__(self, key):
+        return self.points.__getitem__(key)
+
+    def on_surface(self):
+        """
+        Check if this line is defined on the surface (i.e. all points
+        are on the surfance, depth=0.0).
+
+        :returns:
+            True if this line is on the surface, false otherwise.
+        :rtype:
+            boolean
+        """
+        return all(point.on_surface() for point in self.points)
+
+    def average_azimuth(self):
+        """
+        Calculate and return weighted average azimuth of all line's segments
+        in decimal degrees.
+
+        Uses formula from
+        `http://en.wikipedia.org/wiki/Mean_of_circular_quantities`_.
+
+        >>> from nhlib.geo.point import Point as P
+        >>> str(Line([P(0, 0), P(1e-5, 1e-5)]).average_azimuth())
+        '45.0'
+        >>> str(Line([P(0, 0), P(0, 1e-5), P(1e-5, 1e-5)]).average_azimuth())
+        '45.0'
+        >>> line = Line([P(0, 0), P(-2e-5, 0), P(-2e-5, 1.154e-5)])
+        >>> '%.1f' % line.average_azimuth()
+        '300.0'
+        """
+        if len(self.points) == 2:
+            return self.points[0].azimuth(self.points[1])
+        points = iter(self.points)
+        prev_point = next(points)
+        azimuths = []
+        distances = []
+        for point in points:
+            # collect all the segments' lengths and azimuths
+            assert point.depth == prev_point.depth
+            azimuth, _, distance = utils.GEOD.inv(
+                prev_point.longitude, prev_point.latitude,
+                point.longitude, point.latitude
+            )
+            azimuths.append(azimuth)
+            distances.append(distance)
+            prev_point = point
+        azimuths, distances = numpy.radians(azimuths), numpy.array(distances)
+        # convert polar coordinates to Cartesian ones and calculate
+        # the average coordinate of each component
+        avg_x = numpy.mean(distances * numpy.sin(azimuths))
+        avg_y = numpy.mean(distances * numpy.cos(azimuths))
+        # find the mean azimuth from that mean vector
+        azimuth = numpy.degrees(numpy.arctan2(avg_x, avg_y))
+        if azimuth < 0:
+            azimuth += 360
+        return azimuth
 
     def resample(self, section_length):
         """

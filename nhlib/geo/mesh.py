@@ -77,6 +77,18 @@ class Mesh(object):
             depths = None
         return cls(lons, lats, depths)
 
+    @property
+    def shape(self):
+        """
+        Return the shape of this mesh.
+
+        :returns:
+            The shape of this mesh.
+        :rtype:
+            tuple in the following format (rows, columns)
+        """
+        return self.lons.shape
+
     def __iter__(self):
         """
         Generate :class:`~nhlib.geo.point.Point` objects the mesh is composed

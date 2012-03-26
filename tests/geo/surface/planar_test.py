@@ -13,14 +13,13 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-import itertools
 import unittest
 
 from nhlib.geo import Point
 from nhlib.geo.surface.planar import PlanarSurface
-from nhlib.geo.mesh import RectangularMesh
 
 from tests.geo.surface import _planar_test_data as test_data
+from tests.geo.surface import _utils as utils
 
 
 class PlanarSurfaceCreationTestCase(unittest.TestCase):
@@ -129,74 +128,165 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
         )
 
 
-class PlanarSurfaceGetMeshTestCase(unittest.TestCase):
-    def _test(self, corner_points, mesh_spacing, expected_mesh):
-        strike = 0
-        dip = 90
-        surface = PlanarSurface(mesh_spacing, strike, dip, *corner_points)
-        mesh = surface.get_mesh()
-        self.assertIs(mesh, surface.get_mesh())
-        expected_mesh = list(itertools.chain(*expected_mesh))
-        self.assertEqual(len(mesh), len(expected_mesh))
-        self.assertIsInstance(mesh, RectangularMesh)
-        for i, point in enumerate(mesh):
-            expected_point = Point(*expected_mesh[i])
-            distance = expected_point.distance(point) * 1e3
-            self.assertAlmostEqual(
-                0, distance, delta=2,  # allow discrepancy of 2 meters
-                msg='point %d is off: %s != %s (distance is %.3fm)'
-                    % (i, point, expected_point, distance)
-            )
+class PlanarSurfaceGetMeshTestCase(utils.SurfaceTestCase):
+
+    def _surface(self, corners):
+        return PlanarSurface(1.0, 0.0, 90.0, *corners)
 
     def test_2(self):
-        self._test(test_data.TEST_2_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_2_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_2_CORNERS),
+                expected_mesh=test_data.TEST_2_MESH)
 
     def test_3(self):
-        self._test(test_data.TEST_3_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_3_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_3_CORNERS),
+                expected_mesh=test_data.TEST_3_MESH)
 
     def test_4(self):
-        self._test(test_data.TEST_4_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_4_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_4_CORNERS),
+                expected_mesh=test_data.TEST_4_MESH)
 
     def test_5(self):
-        self._test(test_data.TEST_5_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_5_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_5_CORNERS),
+                expected_mesh=test_data.TEST_5_MESH)
 
     def test_6(self):
         corners = [Point(0, 0, 9)] * 4
         mesh = [[(0, 0, 9)]]
-        self._test(corners, mesh_spacing=1, expected_mesh=mesh)
+        self.assert_mesh_is(self._surface(corners),
+                expected_mesh=mesh)
 
     def test_7_rupture_1(self):
-        self._test(test_data.TEST_7_RUPTURE_1_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_7_RUPTURE_1_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_1_CORNERS),
+                expected_mesh=test_data.TEST_7_RUPTURE_1_MESH)
 
     def test_7_rupture_2(self):
-        self._test(test_data.TEST_7_RUPTURE_2_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_7_RUPTURE_2_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_2_CORNERS),
+                expected_mesh=test_data.TEST_7_RUPTURE_2_MESH)
 
     def test_7_rupture_3(self):
-        self._test(test_data.TEST_7_RUPTURE_3_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_7_RUPTURE_3_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_3_CORNERS),
+                expected_mesh=test_data.TEST_7_RUPTURE_3_MESH)
 
     def test_7_rupture_4(self):
-        self._test(test_data.TEST_7_RUPTURE_4_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_7_RUPTURE_4_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_4_CORNERS),
+                expected_mesh=test_data.TEST_7_RUPTURE_4_MESH)
 
     def test_7_rupture_5(self):
-        self._test(test_data.TEST_7_RUPTURE_5_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_7_RUPTURE_5_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_5_CORNERS),
+                expected_mesh=test_data.TEST_7_RUPTURE_5_MESH)
 
     def test_7_rupture_6(self):
-        self._test(test_data.TEST_7_RUPTURE_6_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_7_RUPTURE_6_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_6_CORNERS),
+                expected_mesh=test_data.TEST_7_RUPTURE_6_MESH)
 
     def test_7_rupture_7(self):
-        self._test(test_data.TEST_7_RUPTURE_7_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_7_RUPTURE_7_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_7_CORNERS),
+                expected_mesh=test_data.TEST_7_RUPTURE_7_MESH)
 
     def test_7_rupture_8(self):
-        self._test(test_data.TEST_7_RUPTURE_8_CORNERS, mesh_spacing=1,
-                   expected_mesh=test_data.TEST_7_RUPTURE_8_MESH)
+        self.assert_mesh_is(self._surface(test_data.TEST_7_RUPTURE_8_CORNERS),
+                expected_mesh=test_data.TEST_7_RUPTURE_8_MESH)
+
+
+class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):
+    def test_1(self):
+        surface = PlanarSurface(1, 2, 3, *test_data.TEST_7_RUPTURE_6_CORNERS)
+        self.assertAlmostEqual(8.01185807319,
+                               surface.get_min_distance(Point(0, 0)))
+
+    def test_2(self):
+        surface = PlanarSurface(1, 2, 3, *test_data.TEST_7_RUPTURE_6_CORNERS)
+        self.assertAlmostEqual(40.1213468,
+                               surface.get_min_distance(Point(-0.25, 0.25)))
+
+    def test_3(self):
+        surface = PlanarSurface(1, 2, 3, *test_data.TEST_7_RUPTURE_2_CORNERS)
+        self.assertAlmostEqual(7.01186304977,
+                               surface.get_min_distance(Point(0, 0)))
+
+    def test_4(self):
+        surface = PlanarSurface(1, 2, 3, *test_data.TEST_7_RUPTURE_2_CORNERS)
+        self.assertAlmostEqual(55.6159556,
+                               surface.get_min_distance(Point(-0.3, 0.4)))
+
+
+class PlanarSurfaceGetJoynerBooreDistanceTestCase(unittest.TestCase):
+    def test_point_inside(self):
+        corners = [Point(-1, -1, 1), Point(1, -1, 1),
+                   Point(1, 1, 2), Point(-1, 1, 2)]
+        surface = PlanarSurface(10, 0, 45, *corners)
+        self.assertEqual(surface.get_joyner_boore_distance(Point(0, 0)), 0)
+        self.assertEqual(surface.get_joyner_boore_distance(Point(0, 0, 20)), 0)
+        self.assertEqual(surface.get_joyner_boore_distance(Point(0.1, 0.3)), 0)
+
+    def test_point_on_the_border(self):
+        corners = [Point(0.1, -0.1, 1), Point(-0.1, -0.1, 1),
+                   Point(-0.1, 0.1, 2), Point(0.1, 0.1, 2)]
+        surface = PlanarSurface(1, 0, 45, *corners)
+        aae = self.assertAlmostEqual
+        aae(surface.get_joyner_boore_distance(Point(-0.1, 0.04)), 0, delta=0.3)
+        aae(surface.get_joyner_boore_distance(Point(0.1, 0.03)), 0, delta=0.3)
+
+    def test_point_outside(self):
+        corners = [Point(0.1, -0.1, 1), Point(-0.1, -0.1, 1),
+                   Point(-0.1, 0.1, 2), Point(0.1, 0.1, 2)]
+        surface = PlanarSurface(1, 0, 45, *corners)
+        aae = self.assertAlmostEqual
+        aae(surface.get_joyner_boore_distance(Point(-0.2, -0.2)),
+            Point(-0.2, -0.2).distance(Point(-0.1, -0.1)), delta=0.2)
+        aae(surface.get_joyner_boore_distance(Point(1, 1, 1)),
+            Point(1, 1).distance(Point(0.1, 0.1)), delta=0.4)
+        aae(surface.get_joyner_boore_distance(Point(4, 5)),
+            Point(4, 5).distance(Point(0.1, 0.1)), delta=0.3)
+        aae(surface.get_joyner_boore_distance(Point(8, 10.4)),
+            Point(8, 10.4).distance(Point(0.1, 0.1)), delta=0.3)
+
+
+class PlanarSurfaceGetRXDistanceTestCase(unittest.TestCase):
+    def _test1to7surface(self):
+        corners = [Point(0, 0, 8), Point(-0.1, 0, 8),
+                   Point(-0.1, 0, 9), Point(0, 0, 9)]
+        surface = PlanarSurface(1, 90, 60, *corners)
+        return surface
+
+    def test1_site_on_the_footwall(self):
+        surface = self._test1to7surface()
+        self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, 0.05)),
+                               -5.559752615413244, places=3)
+
+    def test2_site_on_the_hanging_wall(self):
+        surface = self._test1to7surface()
+        self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, -0.05)),
+                               5.559752615413244, places=3)
+
+    def test3_site_on_centroid(self):
+        surface = self._test1to7surface()
+        self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, 0)),
+                               0, places=3)
+
+    def test4_site_along_strike(self):
+        surface = self._test1to7surface()
+        self.assertAlmostEqual(surface.get_rx_distance(Point(0.2, 0)),
+                               0, places=3)
+
+    def test5_site_opposite_to_strike_direction(self):
+        surface = self._test1to7surface()
+        self.assertAlmostEqual(surface.get_rx_distance(Point(-0.2, 0)),
+                               0, places=3)
+
+    def test6_one_degree_distance(self):
+        surface = self._test1to7surface()
+        self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, -1)),
+                               111.19505230826488, places=3)
+
+    def test7_ten_degrees_distance(self):
+        surface = self._test1to7surface()
+        self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, -10)),
+                               1111.9505230826487, places=2)
+
+    def test8_strike_of_45_degrees(self):
+        corners = [Point(-0.05, -0.05, 8), Point(0.05, 0.05, 8),
+                   Point(0.05, 0.05, 9), Point(-0.05, -0.05, 9)]
+        surface = PlanarSurface(1, 45, 60, *corners)
+        self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, 0)),
+                               3.9313415355436705, places=3)

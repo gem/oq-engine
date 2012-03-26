@@ -18,7 +18,7 @@ Module :mod:`nhlib.geo.point` defines :class:`Point`.
 """
 import math
 
-from nhlib.geo._utils import GEOD
+from nhlib.geo._utils import GEOD, EARTH_RADIUS, ensure
 
 
 class Point(object):
@@ -45,11 +45,15 @@ class Point(object):
     EQUALITY_DISTANCE = 1e-3
 
     def __init__(self, longitude, latitude, depth=0.0):
-        if longitude < -180.0 or longitude > 180.0:
-            raise ValueError("Longitude %.6f outside range!" % longitude)
 
-        if latitude < -90.0 or latitude > 90.0:
-            raise ValueError("Latitude %.6f outside range!" % latitude)
+        ensure(depth < EARTH_RADIUS,
+                "The depth must be < than the earth radius (6371.0 km)!")
+
+        ensure(-180.0 <= longitude <= 180.0,
+                "Longitude %.6f outside range!" % longitude)
+
+        ensure(-90.0 <= latitude <= 90.0,
+                "Latitude %.6f outside range!" % latitude)
 
         self.depth = depth
         self.latitude = latitude
@@ -182,6 +186,18 @@ class Point(object):
 
     def __ne__(self, other):
         return not self.__eq__(other)
+
+    def on_surface(self):
+        """
+        Check if this point is defined on the surface (depth is 0.0).
+
+        :returns:
+            True if this point is on the surface, false otherwise.
+        :rtype:
+            boolean
+        """
+
+        return self.depth == 0.0
 
     def equally_spaced_points(self, point, distance):
         """

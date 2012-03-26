@@ -14,8 +14,10 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
+import numpy
 
 from nhlib import geo
+from nhlib.geo._utils import EARTH_RADIUS
 
 
 class PointTestCase(unittest.TestCase):
@@ -124,3 +126,9 @@ class PointTestCase(unittest.TestCase):
 
         geo.Point(0.0, 90.0, 0.0)
         geo.Point(0.0, -90.0, 0.0)
+
+    def test_depth_inside_range(self):
+        self.assertRaises(ValueError, geo.Point, 0.0, 0.0, EARTH_RADIUS)
+        self.assertRaises(ValueError, geo.Point, 0.0, 0.0, EARTH_RADIUS + 0.1)
+
+        geo.Point(0.0, 90.0, EARTH_RADIUS - 0.1)
