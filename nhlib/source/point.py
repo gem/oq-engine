@@ -29,6 +29,10 @@ class PointSource(SeismicSource):
     Point source typology represents seismicity on a single geographical
     location.
 
+    :param upper_seismogenic_depth:
+        Minimum depth an earthquake rupture can reach, in km.
+    :param lower_seismogenic_depth:
+        Maximum depth an earthquake rupture can reach, in km.
     :param location:
         :class:`~nhlib.geo.Point` object representing the location
         of the seismic source. The depth value of that point is ignored.
@@ -40,36 +44,25 @@ class PointSource(SeismicSource):
         :class:`~nhlib.pmf.PMF` with values being float numbers in km
         representing the depth of the hypocenter. Latitude and longitude
         of the hypocenter is always set to ones of ``location``.
-    :param upper_seismogenic_depth:
-        Minimum depth an earthquake rupture can reach, in km.
-    :param lower_seismogenic_depth:
-        Maximum depth an earthquake rupture can reach, in km.
-    :param magnitude_scaling_relationship:
-        Instance of subclass of :class:`nhlib.msr.base.BaseMSR` to describe
-        how does the area of the rupture depend on magnitude and rake.
-    :param rupture_aspect_ratio:
-        Float number representing how much source's ruptures are more wide
-        than tall. Aspect ratio of 1 means ruptures have square shape,
-        value below 1 means ruptures stretch vertically more than horizontally
-        and vice versa.
 
     See also :class:`nhlib.source.base.SeismicSource` for description of other
     parameters.
 
     :raises ValueError:
         If upper seismogenic depth is negative or below lower seismogenic
-        depth, if rupture aspect ratio is not positive and if one or more
-        of hypocenter depth values is shallower than upper seismogenic depth
-        or deeper than lower seismogenic depth.
+        depth,  if one or more of hypocenter depth values is shallower
+        than upper seismogenic depth or deeper than lower seismogenic depth.
     """
-    def __init__(self, source_id, name, tectonic_region_type, mfd,
-                 rupture_mesh_spacing,
-                 location, nodal_plane_distribution, hypocenter_distribution,
+    def __init__(self, source_id, name, tectonic_region_type,
+                 mfd, rupture_mesh_spacing,
+                 magnitude_scaling_relationship, rupture_aspect_ratio,
+                 # point-specific parameters
                  upper_seismogenic_depth, lower_seismogenic_depth,
-                 magnitude_scaling_relationship, rupture_aspect_ratio):
-        super(PointSource, self).__init__(source_id, name,
-                                          tectonic_region_type, mfd,
-                                          rupture_mesh_spacing)
+                 location, nodal_plane_distribution, hypocenter_distribution):
+        super(PointSource, self).__init__(
+            source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
+            magnitude_scaling_relationship, rupture_aspect_ratio
+        )
 
         if upper_seismogenic_depth < 0:
             raise ValueError('upper seismogenic depth must be non-negative')
@@ -83,16 +76,11 @@ class PointSource(SeismicSource):
             raise ValueError('depths of all hypocenters must be in between '
                              'lower and upper seismogenic depths')
 
-        if not rupture_aspect_ratio > 0:
-            raise ValueError('rupture aspect ratio must be positive')
-
         self.location = location
         self.nodal_plane_distribution = nodal_plane_distribution
         self.hypocenter_distribution = hypocenter_distribution
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
-        self.magnitude_scaling_relationship = magnitude_scaling_relationship
-        self.rupture_aspect_ratio = rupture_aspect_ratio
 
     def iter_ruptures(self, temporal_occurrence_model):
         """

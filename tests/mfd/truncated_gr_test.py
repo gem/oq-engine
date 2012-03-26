@@ -79,6 +79,8 @@ class TruncatedGRMFDMFDGetRatesTestCase(BaseMFDTestCase):
             expected_mag, expected_rate = expected_rates[i]
             self.assertAlmostEqual(mag, expected_mag, delta=1e-14)
             self.assertAlmostEqual(rate, expected_rate, delta=rate_tolerance)
+            if i == 0:
+                self.assertEqual(mag, mfd.get_min_mag())
 
     def test_1_different_min_mag_and_max_mag(self):
         expected_rates = [
@@ -109,6 +111,7 @@ class TruncatedGRMFDMFDRoundingTestCase(BaseMFDTestCase):
         # should be three bins with the first having center at 0.65
         min_mag, num_bins = mfd._get_min_mag_and_num_bins()
         self.assertAlmostEqual(min_mag, 0.65)
+        self.assertEqual(mfd.get_min_mag(), min_mag)
         self.assertEqual(num_bins, 3)
 
 

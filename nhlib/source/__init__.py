@@ -19,3 +19,4 @@ Package :mod:`nhlib.source` deals with various types of seismic sources.
 from nhlib.source.rupture import Rupture, ProbabilisticRupture
 from nhlib.source.point import PointSource
 from nhlib.source.area import AreaSource
+from nhlib.source.simple_fault import SimpleFaultSource

@@ -126,9 +126,9 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         rupture_aspect_ratio = aspect_ratio
         point_source = PointSource(
             source_id, name, trt, mfd, rupture_mesh_spacing,
-            location, nodal_plane_distribution, hypocenter_distribution,
+            magnitude_scaling_relationship, rupture_aspect_ratio,
             upper_seismogenic_depth, lower_seismogenic_depth,
-            magnitude_scaling_relationship, rupture_aspect_ratio
+            location, nodal_plane_distribution, hypocenter_distribution
         )
         tom = PoissonTOM(time_span=50)
         ruptures = list(point_source.iter_ruptures(tom))
@@ -299,9 +299,9 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
                                        (hypocenter2_weight, hypocenter2)])
         point_source = PointSource(
             source_id, name, trt, mfd, rupture_mesh_spacing,
-            location, nodal_plane_distribution, hypocenter_distribution,
-            upper_seismogenic_depth, lower_seismogenic_depth,
             magnitude_scaling_relationship, rupture_aspect_ratio,
+            upper_seismogenic_depth, lower_seismogenic_depth,
+            location, nodal_plane_distribution, hypocenter_distribution
         )
         actual_ruptures = list(point_source.iter_ruptures(tom))
         self.assertEqual(len(actual_ruptures), 8)

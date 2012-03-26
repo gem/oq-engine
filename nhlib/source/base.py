@@ -41,23 +41,42 @@ class SeismicSource(object):
         the trade-off between time needed to compute the :meth:`distance
         <nhlib.geo.surface.base.BaseSurface.get_min_distance>` between
         the rupture surface and a site and the precision of that computation.
+    :param magnitude_scaling_relationship:
+        Instance of subclass of :class:`nhlib.msr.base.BaseMSR` to describe
+        how does the area of the rupture depend on magnitude and rake.
+    :param rupture_aspect_ratio:
+        Float number representing how much source's ruptures are more wide
+        than tall. Aspect ratio of 1 means ruptures have square shape,
+        value below 1 means ruptures stretch vertically more than horizontally
+        and vice versa.
+
     :raises ValueError:
-        If ``tectonic_region_type`` is wrong/unknown.
+        If tectonic region type is wrong/unknown, if either rupture aspect
+        ratio or rupture mesh spacing is not positive.
     """
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, source_id, name, tectonic_region_type,
-                 mfd, rupture_mesh_spacing):
+                 mfd, rupture_mesh_spacing,
+                 magnitude_scaling_relationship, rupture_aspect_ratio):
+
         if not const.TRT.is_valid(tectonic_region_type):
             raise ValueError('unknown tectonic region type %r' %
                               tectonic_region_type)
+
         if not rupture_mesh_spacing > 0:
             raise ValueError('rupture mesh spacing must be positive')
+
+        if not rupture_aspect_ratio > 0:
+            raise ValueError('rupture aspect ratio must be positive')
+
         self.source_id = source_id
         self.name = name
         self.tectonic_region_type = tectonic_region_type
         self.mfd = mfd
         self.rupture_mesh_spacing = rupture_mesh_spacing
+        self.magnitude_scaling_relationship = magnitude_scaling_relationship
+        self.rupture_aspect_ratio = rupture_aspect_ratio
 
     @abc.abstractmethod
     def iter_ruptures(self, temporal_occurrence_model):
