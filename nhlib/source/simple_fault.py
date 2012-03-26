@@ -161,7 +161,7 @@ class SimpleFaultSource(SeismicSource):
 
         # round rupture dimensions with respect to mesh_spacing
         # and compute number of points in the rupture along length
-        # and strike
+        # and width (aka strike and dip)
         rup_cols = int(round(rup_length / self.rupture_mesh_spacing) + 1)
         rup_rows = int(round(rup_width / self.rupture_mesh_spacing) + 1)
         return rup_cols, rup_rows
