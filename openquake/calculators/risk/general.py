@@ -1165,3 +1165,22 @@ class AggregateLossCurve(object):
                 self.losses, loss_range), tses), time_span)
 
         return _generate_curve(loss_range, probs_of_exceedance)
+
+
+def load_gmvs_for_point(job_id, point):
+    """
+    From the KVS, load all the ground motion values for the given point. We
+    expect one ground motion value per realization of the job.
+    Since there can be tens of thousands of realizations, this could return a
+    large list.
+
+    Note(LB): In the future, we may want to refactor this (and the code which
+    uses the values) to use a generator instead.
+
+    :param point: :py:class:`openquake.shapes.GridPoint` object
+
+    :returns: List of ground motion values (as floats). Each value represents a
+                realization of the calculation for a single point.
+    """
+    gmfs_key = kvs.tokens.ground_motion_values_key(job_id, point)
+    return [float(x['mag']) for x in kvs.get_list_json_decoded(gmfs_key)]
