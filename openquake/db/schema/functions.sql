@@ -483,6 +483,7 @@ AS $$
     [fmdl] = plpy.execute(q)
 
     ls = NEW["ls"]
+    lsi = NEW["lsi"]
     lss = fmdl["lss"]
     assert ls and ls in lss, (
         "invalid limit state (%s), not in: %s" % (ls, lss))
@@ -490,6 +491,8 @@ AS $$
     assert fmdl["format"] == "continuous", (
         "mismatch: discrete model but continuous function (%s, %s)"
         % (ls, taxonomy))
+    assert lsi <= len(lss) and ls == lss[lsi-1], (
+        "Invalid limit state index (%s) for ffc(%s, %s)" % (lsi, taxonomy, ls))
 
     return "OK"
 $$ LANGUAGE plpythonu;
@@ -510,6 +513,7 @@ AS $$
     [fmdl] = plpy.execute(q)
 
     ls = NEW["ls"]
+    lsi = NEW["lsi"]
     lss = fmdl["lss"]
     assert ls and ls in lss, (
         "invalid limit state (%s), not in: %s" % (ls, lss))
@@ -523,6 +527,9 @@ AS $$
     assert len_poes == len_imls, (
         "#poes differs from #imls (%s != %s) for discrete function (%s, %s)"
         % (len_poes, len_imls, ls, taxonomy))
+
+    assert lsi <= len(lss) and ls == lss[lsi-1], (
+        "Invalid limit state index (%s) for ffc(%s, %s)" % (lsi, taxonomy, ls))
 
     return "OK"
 $$ LANGUAGE plpythonu;

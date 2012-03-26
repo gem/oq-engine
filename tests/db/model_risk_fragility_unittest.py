@@ -267,32 +267,48 @@ class FfcTestCase(DjangoTestCase, helpers.DbTestCase):
     def test_ffc(self):
         # continuous fragility function with good data is inserted OK.
         ffc = models.Ffc(fragility_model=self.mdl, ls="a", taxonomy="T1",
-                         mean=0.4, stddev=12.1)
+                         mean=0.4, stddev=12.1, lsi=1)
         ffc.save()
         self.assertIs(self.mdl, ffc.fragility_model)
         self.assertEqual("T1", ffc.taxonomy)
         self.assertEqual("a", ffc.ls)
+        self.assertEqual(1, ffc.lsi)
         self.assertEqual(0.4, ffc.mean)
         self.assertEqual(12.1, ffc.stddev)
+
+    def test_ffc_with_invalid_lsi(self):
+        # continuous fragility function with a limit state that's off by one
+        #   -> exception
+        ffc = models.Ffc(fragility_model=self.mdl, ls="a", taxonomy="T1",
+                         mean=0.4, stddev=12.1, lsi=2)
+        try:
+            ffc.save()
+        except DatabaseError, de:
+            self.assertTrue('Invalid limit state index (2) for ffc(T1, a)'
+                            in de.args[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
 
     def test_ffc_with_duplicate_ls_and_taxonomy(self):
         # continuous fragility function with duplicate limit state and taxonomy
         #   -> exception
         ffc = models.Ffc(fragility_model=self.mdl, ls="a", taxonomy="T1",
-                         mean=0.4, stddev=12.1)
+                         mean=0.4, stddev=12.1, lsi=1)
         ffc.save()
         self.assertIs(self.mdl, ffc.fragility_model)
         self.assertEqual("T1", ffc.taxonomy)
         self.assertEqual("a", ffc.ls)
+        self.assertEqual(1, ffc.lsi)
         self.assertEqual(0.4, ffc.mean)
         self.assertEqual(12.1, ffc.stddev)
         ffc2 = models.Ffc(fragility_model=self.mdl, ls="a", taxonomy="T1",
-                         mean=0.41, stddev=12.12)
+                         mean=0.41, stddev=12.12, lsi=1)
         try:
             ffc2.save()
         except DatabaseError, de:
             self.assertTrue('duplicate key value violates unique constraint '
-                            '"ffc_fragility_model_id_ls_taxonomy_key"' in
+                            '"ffc_fragility_model_id_taxonomy_lsi_key"' in
                             de.args[0])
             transaction.rollback()
         else:
@@ -376,30 +392,46 @@ class FfdTestCase(DjangoTestCase, helpers.DbTestCase):
     def test_ffd(self):
         # discrete fragility function with good data is inserted OK.
         ffd = models.Ffd(fragility_model=self.mdl, ls="b", taxonomy="T2",
-                         poes=[0.5, 0.6])
+                         poes=[0.5, 0.6], lsi=2)
         ffd.save()
         self.assertIs(self.mdl, ffd.fragility_model)
         self.assertEqual("T2", ffd.taxonomy)
         self.assertEqual("b", ffd.ls)
+        self.assertEqual(2, ffd.lsi)
         self.assertEqual([0.5, 0.6], ffd.poes)
+
+    def test_ffd_with_invalid_sli(self):
+        # discrete fragility function with with invalid limit state index
+        #   -> exception
+        ffd = models.Ffd(fragility_model=self.mdl, ls="b", taxonomy="T2",
+                         poes=[0.5, 0.6], lsi=len(self.mdl.lss)*2)
+        try:
+            ffd.save()
+        except DatabaseError, de:
+            self.assertTrue('Invalid limit state index (6) for ffc(T2, b)'
+                            in de.args[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
 
     def test_ffd_with_duplicate_ls_and_taxonomy(self):
         # discrete fragility function with duplicate limit state and taxonomy
         #   -> exception
         ffd = models.Ffd(fragility_model=self.mdl, ls="b", taxonomy="T2",
-                         poes=[0.5, 0.6])
+                         poes=[0.5, 0.6], lsi=2)
         ffd.save()
         self.assertIs(self.mdl, ffd.fragility_model)
         self.assertEqual("T2", ffd.taxonomy)
         self.assertEqual("b", ffd.ls)
+        self.assertEqual(2, ffd.lsi)
         self.assertEqual([0.5, 0.6], ffd.poes)
         ffd2 = models.Ffd(fragility_model=self.mdl, ls="b", taxonomy="T2",
-                          poes=[0.51, 0.62])
+                          poes=[0.51, 0.62], lsi=2)
         try:
             ffd2.save()
         except DatabaseError, de:
             self.assertTrue('duplicate key value violates unique constraint '
-                            '"ffd_fragility_model_id_ls_taxonomy_key"' in
+                            '"ffd_fragility_model_id_taxonomy_lsi_key"' in
                             de.args[0])
             transaction.rollback()
         else:
