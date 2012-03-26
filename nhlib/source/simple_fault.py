@@ -39,6 +39,11 @@ class SimpleFaultSource(SeismicSource):
 
     See also :class:`nhlib.source.base.SeismicSource` for description of other
     parameters.
+
+    :raises ValueError:
+        If :meth:`SimpleFaultSurface.check_fault_data` fails, if rake value
+        is invalid and if rupture mesh spacing is too low for the lowest
+        magnitude value.
     """
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
@@ -61,8 +66,14 @@ class SimpleFaultSource(SeismicSource):
         self.lower_seismogenic_depth = lower_seismogenic_depth
         self.dip = dip
         self.rake = rake
-        # TODO: check that mesh_spacing is low enough
-        # TODO: for the smallest possible magnitude
+
+        min_mag = self.mfd.get_min_mag()
+        cols_rows = self._get_rupture_dimensions(float('inf'), float('inf'),
+                                                 min_mag)
+        if 1 in cols_rows:
+            raise ValueError('mesh spacing %s is too low to represent '
+                             'ruptures of magnitude %s' %
+                             (rupture_mesh_spacing, min_mag))
 
     def iter_ruptures(self, temporal_occurrence_model):
         """

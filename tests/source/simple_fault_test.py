@@ -33,7 +33,7 @@ def assert_angles_equal(testcase, angle1, angle2, delta):
     testcase.assertAlmostEqual(angle1, angle2, delta=delta)
 
 
-class SimpleFaultSourceIterRupturesTestCase(unittest.TestCase):
+class SimpleFaultSourceTestCase(unittest.TestCase):
     def _test(self, expected_ruptures, mfd, aspect_ratio):
         source_id = name = 'test-source'
         trt = TRT.ACTIVE_SHALLOW_CRUST
@@ -106,3 +106,12 @@ class SimpleFaultSourceIterRupturesTestCase(unittest.TestCase):
         mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=6.0, max_mag=7.0,
                              bin_width=1.0)
         self._test(test_data.TEST5_RUPTURES, mfd=mfd, aspect_ratio=1.0)
+
+    def test_mesh_spacing_too_small(self):
+        mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=0.5, max_mag=1.5,
+                             bin_width=1.0)
+        with self.assertRaises(ValueError) as ar:
+            self._test([], mfd=mfd, aspect_ratio=1.0)
+        self.assertEqual(str(ar.exception),
+                         'mesh spacing 1 is too low to represent '
+                         'ruptures of magnitude 1.5')
