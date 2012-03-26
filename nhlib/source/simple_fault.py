@@ -29,6 +29,10 @@ class SimpleFaultSource(SeismicSource):
     Simple fault source typology represents seismicity occurring on a fault
     surface with simple geometry.
 
+    :param upper_seismogenic_depth:
+        Minimum depth an earthquake rupture can reach, in km.
+    :param lower_seismogenic_depth:
+        Maximum depth an earthquake rupture can reach, in km.
     :param fault_trace:
         A :class:`~nhlib.geo.line.Line` representing the line of intersection
         between the fault plane and the Earth's surface.
