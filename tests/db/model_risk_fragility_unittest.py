@@ -232,7 +232,7 @@ class FfcTestCase(DjangoTestCase, helpers.DbTestCase):
 
     def test_ffc_with_no_ls(self):
         # continuous fragility function and no limit state -> exception
-        ffc = models.Ffc(fragility_model=self.mdl)
+        ffc = models.Ffc(fragility_model=self.mdl, lsi=-2)
         try:
             ffc.save()
         except DatabaseError, de:
@@ -254,7 +254,7 @@ class FfcTestCase(DjangoTestCase, helpers.DbTestCase):
 
     def test_ffc_with_discrete_model(self):
         # continuous fragility function and discrete model -> exception
-        ffc = models.Ffc(fragility_model=self.discrete_mdl, ls="d")
+        ffc = models.Ffc(fragility_model=self.discrete_mdl, ls="d", lsi=1)
         try:
             ffc.save()
         except DatabaseError, de:
@@ -346,7 +346,7 @@ class FfdTestCase(DjangoTestCase, helpers.DbTestCase):
 
     def test_ffd_with_no_ls(self):
         # discrete fragility function and no limit state -> exception
-        ffd = models.Ffd(fragility_model=self.mdl, poes=[0.5, 0.6])
+        ffd = models.Ffd(fragility_model=self.mdl, poes=[0.5, 0.6], lsi=-1)
         try:
             ffd.save()
         except DatabaseError, de:
@@ -367,9 +367,21 @@ class FfdTestCase(DjangoTestCase, helpers.DbTestCase):
         else:
             self.fail("DatabaseError not raised")
 
+    def test_ffd_with_invalid_ls_not_int(self):
+        # discrete fragility function and invalid limit state -> exception
+        ffd = models.Ffd(fragility_model=self.mdl, ls="xyz", lsi="blah",
+                         poes=[0.5, 0.6])
+        try:
+            ffd.save()
+        except ValueError, de:
+            self.assertTrue('invalid literal for int' in de.args[0])
+            transaction.rollback()
+        else:
+            self.fail("ValueError not raised")
+
     def test_ffd_with_discrete_model(self):
         # discrete fragility function and discrete model -> exception
-        ffd = models.Ffd(fragility_model=self.continuous_mdl, ls="d")
+        ffd = models.Ffd(fragility_model=self.continuous_mdl, ls="d", lsi=1)
         try:
             ffd.save()
         except DatabaseError, de:
@@ -381,7 +393,7 @@ class FfdTestCase(DjangoTestCase, helpers.DbTestCase):
 
     def test_ffd_with_wrong_num_of_poes(self):
         # discrete fragility function and wrong #poes -> exception
-        ffd = models.Ffd(fragility_model=self.mdl, ls="a", poes=[0.5])
+        ffd = models.Ffd(fragility_model=self.mdl, ls="a", poes=[0.5], lsi=1)
         try:
             ffd.save()
         except DatabaseError, de:
