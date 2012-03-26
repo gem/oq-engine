@@ -1167,7 +1167,7 @@ class AggregateLossCurve(object):
         return _generate_curve(loss_range, probs_of_exceedance)
 
 
-def load_gmvs_for_point(job_id, point):
+def load_gmvs_at(job_id, point):
     """
     From the KVS, load all the ground motion values for the given point. We
     expect one ground motion value per realization of the job.
