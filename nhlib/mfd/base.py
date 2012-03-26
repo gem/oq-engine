@@ -125,3 +125,14 @@ class BaseMFD(object):
             represents the number of events per year with magnitude
             that falls in between bin's boundaries.
         """
+
+    @abc.abstractmethod
+    def get_min_mag(self):
+        """
+        Return the minimum magnitude this MFD is defined for.
+
+        This method must be implemented by subclasses.
+
+        :return:
+            Magnitude value, float number.
+        """

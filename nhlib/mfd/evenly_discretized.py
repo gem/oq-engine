@@ -67,3 +67,9 @@ class EvenlyDiscretizedMFD(BaseMFD):
             (self.min_mag + i * self.bin_width, occurence_rate)
             for i, occurence_rate in enumerate(self.occurrence_rates)
         ]
+
+    def get_min_mag(self):
+        """
+        Returns the ``min_mag`` parameter.
+        """
+        return self.min_mag

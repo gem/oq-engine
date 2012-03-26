@@ -55,11 +55,12 @@ class EvenlyDiscretizedMFDMFDConstraintsTestCase(BaseMFDTestCase):
         self.assertEqual(exc.message, 'bin width must be positive')
 
 
-class EvenlyDiscretizedMFDMFDGetRatesTestCase(BaseMFDTestCase):
-    def test_zero_min_width(self):
+class EvenlyDiscretizedMFDTestCase(BaseMFDTestCase):
+    def test_zero_min_mag(self):
         mfd = EvenlyDiscretizedMFD(min_mag=0, bin_width=1,
                                    occurrence_rates=[1])
         self.assertEqual(mfd.get_annual_occurrence_rates(), [(0, 1)])
+        self.assertEqual(mfd.get_min_mag(), 0)
 
     def test(self):
         evenly_discretized = EvenlyDiscretizedMFD(
@@ -67,3 +68,4 @@ class EvenlyDiscretizedMFDMFDGetRatesTestCase(BaseMFDTestCase):
         )
         self.assertEqual(evenly_discretized.get_annual_occurrence_rates(),
                          [(0.2, 2.1), (0.5, 2.4), (0.8, 5.3)])
+        self.assertEqual(evenly_discretized.get_min_mag(), 0.2)

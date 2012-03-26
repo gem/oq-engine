@@ -30,6 +30,9 @@ class BaseMFDTestCase(unittest.TestCase):
         def get_annual_occurrence_rates(self):
             pass
 
+        def get_min_mag(self):
+            pass
+
     def assert_mfd_error(self, func, *args, **kwargs):
         with self.assertRaises(ValueError) as exc_catcher:
             func(*args, **kwargs)
