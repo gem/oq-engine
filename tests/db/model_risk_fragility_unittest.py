@@ -408,7 +408,7 @@ class FfdTestCase(DjangoTestCase, helpers.DbTestCase):
         try:
             ffd.save()
         except DatabaseError, de:
-            self.assertTrue('Invalid limit state index (6) for ffc(T2, b)'
+            self.assertTrue('Invalid limit state index (6) for ffd(T2, b)'
                             in de.args[0])
             transaction.rollback()
         else:

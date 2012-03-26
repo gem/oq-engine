@@ -529,7 +529,7 @@ AS $$
         % (len_poes, len_imls, ls, taxonomy))
 
     assert lsi <= len(lss) and ls == lss[lsi-1], (
-        "Invalid limit state index (%s) for ffc(%s, %s)" % (lsi, taxonomy, ls))
+        "Invalid limit state index (%s) for ffd(%s, %s)" % (lsi, taxonomy, ls))
 
     return "OK"
 $$ LANGUAGE plpythonu;
