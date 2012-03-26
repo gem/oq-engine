@@ -36,7 +36,9 @@ LOGGER = logs.LOG
 
 
 class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
-    """Scenario Damage method for performing risk calculations."""
+    """
+    Scenario Damage method for performing risk calculations.
+    """
 
     def pre_execute(self):
         """
@@ -106,7 +108,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
         for site in block.sites:
             point = self.job_ctxt.region.grid.point_at(site)
-            gmf = general.load_gmvs_for_point(self.job_ctxt.job_id, point)
+            gmf = general.load_gmvs_at(self.job_ctxt.job_id, point)
 
             assets = general.BaseRiskCalculator.assets_at(
                 self.job_ctxt.job_id, site)
