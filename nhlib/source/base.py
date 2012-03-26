@@ -41,10 +41,6 @@ class SeismicSource(object):
         the trade-off between time needed to compute the :meth:`distance
         <nhlib.geo.surface.base.BaseSurface.get_min_distance>` between
         the rupture surface and a site and the precision of that computation.
-    :param upper_seismogenic_depth:
-        Minimum depth an earthquake rupture can reach, in km.
-    :param lower_seismogenic_depth:
-        Maximum depth an earthquake rupture can reach, in km.
     :param magnitude_scaling_relationship:
         Instance of subclass of :class:`nhlib.msr.base.BaseMSR` to describe
         how does the area of the rupture depend on magnitude and rake.
