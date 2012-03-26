@@ -29,6 +29,10 @@ class PointSource(SeismicSource):
     Point source typology represents seismicity on a single geographical
     location.
 
+    :param upper_seismogenic_depth:
+        Minimum depth an earthquake rupture can reach, in km.
+    :param lower_seismogenic_depth:
+        Maximum depth an earthquake rupture can reach, in km.
     :param location:
         :class:`~nhlib.geo.Point` object representing the location
         of the seismic source. The depth value of that point is ignored.
