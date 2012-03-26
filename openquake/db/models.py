@@ -567,6 +567,7 @@ class Input(models.Model):
         (u'lt_gmpe', u'GMPE Logic Tree'),
         (u'exposure', u'Exposure'),
         (u'vulnerability', u'Vulnerability'),
+        (u'fragility', u'Fragility'),
         (u'vulnerability_retrofitted', u'Vulnerability Retroffited'),
         (u'rupture', u'Rupture'),
     )

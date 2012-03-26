@@ -21,6 +21,7 @@ from django.contrib.gis import geos
 from openquake import kvs
 from openquake.db import models
 from openquake.shapes import Site, GridPoint
+from openquake.db.models import Output
 from openquake.engine import JobContext
 from openquake.kvs.tokens import ground_motion_values_key
 from openquake.calculators.risk.general import Block
@@ -41,13 +42,6 @@ class ScenarioDamageRiskCalculatorTestCase(
         kvs.cache_gc(self.job.id)
 
         self.site = Site(1.0, 1.0)
-
-    @classmethod
-    def setUpClass(cls):
-        inputs = [("fragility", ""), ("exposure", "")]
-        cls.job = cls.setup_classic_job(inputs=inputs)
-
-    def test_compute_risk(self):
         block = Block(self.job.id, BLOCK_ID, [self.site])
         block.to_kvs()
 
@@ -56,15 +50,34 @@ class ScenarioDamageRiskCalculatorTestCase(
         params = {"REGION_VERTEX": "1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0",
                 "REGION_GRID_SPACING": "0.5"}
 
-        job_ctxt = JobContext(params, self.job.id)
+        job_ctxt = JobContext(params, self.job.id, oq_job=self.job)
 
         # now storing in kvs the ground motion values
         self._store_gmvs([0.40, 0.30, 0.45, 0.35, 0.40])
-        
         self._store_em()
 
-        calculator = ScenarioDamageRiskCalculator(job_ctxt)
-        calculator.compute_risk(BLOCK_ID, fmodel=self._fmodel())
+        self.fm = self._store_fmodel()
+
+        self.calculator = ScenarioDamageRiskCalculator(job_ctxt)
+
+    @classmethod
+    def setUpClass(cls):
+        inputs = [("fragility", ""), ("exposure", "")]
+        cls.job = cls.setup_classic_job(inputs=inputs)
+
+    def test_compute_risk(self):
+        self.calculator.pre_execute()
+        self.calculator.compute_risk(BLOCK_ID, fmodel=self.fm)
+
+    def TODO_pre_execute(self):
+        # store the main output artifact to db
+        self.calculator.pre_execute()
+
+        sdac_output = Output.objects.filter(
+            oq_job=self.job.id,
+            output_type="dmg_dist_per_asset")
+
+        self.assertEquals(1, len(sdac_output))
 
     def _store_gmvs(self, gmvs):
         client = kvs.get_client()
@@ -75,7 +88,7 @@ class ScenarioDamageRiskCalculatorTestCase(
         for gmv in gmvs:
             client.rpush(key, encoder.encode({"mag": gmv}))
 
-    def _fmodel(self):
+    def _store_fmodel(self):
         [ism] = models.inputs4job(self.job.id, input_type="fragility")
 
         fmodel = models.FragilityModel(
