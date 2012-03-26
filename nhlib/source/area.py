@@ -34,11 +34,20 @@ class AreaSource(PointSource):
     Other parameters (except ``location``) are the same as for
     :class:`~nhlib.source.point.PointSource`.
     """
-    def __init__(self, source_id, name, tectonic_region_type, mfd,
-                 polygon, area_discretization, *args, **kwargs):
+    def __init__(self, source_id, name, tectonic_region_type,
+                 mfd, rupture_mesh_spacing,
+                 upper_seismogenic_depth, lower_seismogenic_depth,
+                 magnitude_scaling_relationship, rupture_aspect_ratio,
+                 # point-specific parameters (excluding location)
+                 nodal_plane_distribution, hypocenter_distribution,
+                 # area-specific parameters
+                 polygon, area_discretization):
         super(AreaSource, self).__init__(
-            source_id, name, tectonic_region_type, mfd, *args,
-            location=None, **kwargs
+            source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
+            upper_seismogenic_depth, lower_seismogenic_depth,
+            magnitude_scaling_relationship, rupture_aspect_ratio,
+            location=None, nodal_plane_distribution=nodal_plane_distribution,
+            hypocenter_distribution=hypocenter_distribution,
         )
         self.polygon = polygon
         self.area_discretization = area_discretization

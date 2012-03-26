@@ -32,33 +32,26 @@ class SimpleFaultSource(SeismicSource):
     :param fault_trace:
         A :class:`~nhlib.geo.line.Line` representing the line of intersection
         between the fault plane and the Earth's surface.
-    :param upper_seismogenic_depth:
-        Minimum depth an earthquake rupture can reach, in km.
-    :param lower_seismogenic_depth:
-        Maximum depth an earthquake rupture can reach, in km.
     :param dip:
         Angle between earth surface and fault plane in decimal degrees.
     :param rake:
         Angle describing rupture propagation direction in decimal degrees.
-    :param magnitude_scaling_relationship:
-        Instance of subclass of :class:`nhlib.msr.base.BaseMSR` to describe
-        how does the area of the rupture depend on magnitude and rake.
-    :param rupture_aspect_ratio:
-        Float number representing how much source's ruptures are more wide
-        than tall. Aspect ratio of 1 means ruptures have square shape,
-        value below 1 means ruptures stretch vertically more than horizontally
-        and vice versa.
 
     See also :class:`nhlib.source.base.SeismicSource` for description of other
     parameters.
     """
-    def __init__(self, source_id, name, tectonic_region_type, mfd,
-                 rupture_mesh_spacing, fault_trace, upper_seismogenic_depth,
-                 lower_seismogenic_depth, dip, rake,
-                 magnitude_scaling_relationship, rupture_aspect_ratio):
-        super(SimpleFaultSource, self).__init__(source_id, name,
-                                                tectonic_region_type, mfd,
-                                                rupture_mesh_spacing)
+    def __init__(self, source_id, name, tectonic_region_type,
+                 mfd, rupture_mesh_spacing,
+                 upper_seismogenic_depth, lower_seismogenic_depth,
+                 magnitude_scaling_relationship, rupture_aspect_ratio,
+                 # simple-fault specific parameters
+                 fault_trace, dip, rake):
+        super(SimpleFaultSource, self).__init__(
+            source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
+            upper_seismogenic_depth, lower_seismogenic_depth,
+            magnitude_scaling_relationship, rupture_aspect_ratio
+        )
+
         NodalPlane.check_rake(rake)
         SimpleFaultSurface.check_fault_data(
             fault_trace, upper_seismogenic_depth, lower_seismogenic_depth,
