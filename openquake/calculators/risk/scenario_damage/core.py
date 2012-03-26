@@ -106,7 +106,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
         for site in block.sites:
             point = self.job_ctxt.region.grid.point_at(site)
-            gmf = gmvs(self.job_ctxt.job_id, point)
+            gmf = general.load_gmvs_for_point(self.job_ctxt.job_id, point)
 
             assets = general.BaseRiskCalculator.assets_at(
                 self.job_ctxt.job_id, site)
@@ -197,8 +197,3 @@ def _fm(oq_job):
     [fm] = FragilityModel.objects.filter(input=ism, owner=oq_job.owner)
 
     return fm
-
-
-def gmvs(job_id, point):
-    key = kvs.tokens.ground_motion_values_key(job_id, point)
-    return [float(x["mag"]) for x in kvs.get_list_json_decoded(key)]
