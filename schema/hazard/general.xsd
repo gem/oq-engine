@@ -16,7 +16,6 @@
              because xs:duration could be hard to match with a database type -->
         <xs:attribute name="investigationTimeSpan" type="NonNegativeDoubleType"/>
         <xs:attribute name="IDmodel" type="xs:string"/>
-        <xs:attribute name="saPeriod" type="NonNegativeDoubleType"/>
         <xs:attribute name="saDamping" type="NonNegativeDoubleType"/>
     </xs:complexType>
 
