@@ -56,6 +56,9 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
         fm = _fm(oq_job)
 
+        # temporary, will be removed
+        assert fm.format == "continuous"
+
         dmg_states = list(fm.lss)
         dmg_states.insert(0, "no_damage")
 
