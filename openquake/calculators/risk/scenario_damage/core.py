@@ -28,7 +28,7 @@ from openquake import logs
 from openquake.calculators.risk import general
 from openquake import kvs
 from openquake.db.models import Output, FragilityModel, DmgDistPerAsset
-from openquake.db.models import ExposureData, DmgDistPerAssetData
+from openquake.db.models import DmgDistPerAssetData
 from openquake.db.models import inputs4job
 from django.contrib.gis import geos
 
@@ -99,8 +99,6 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 output_type="dmg_dist_per_asset")
 
         [dds] = DmgDistPerAsset.objects.filter(output=output)
-        [em_input] = inputs4job(oq_job.id, input_type="exposure")
-        [em] = em_input.exposuremodel_set.all()
 
         lss = list(fm.lss)
 
