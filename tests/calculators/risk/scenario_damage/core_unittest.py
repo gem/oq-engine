@@ -15,6 +15,7 @@
 
 import unittest
 import json
+import numpy
 
 from django.contrib.gis import geos
 
@@ -23,6 +24,7 @@ from openquake.db import models
 from openquake.shapes import Site, GridPoint
 from openquake.db.models import Output
 from openquake.engine import JobContext
+from openquake.db.models import DmgDistPerAsset, DmgDistPerAssetData
 from openquake.kvs.tokens import ground_motion_values_key
 from openquake.calculators.risk.general import Block
 from openquake.calculators.risk.scenario_damage.core import (
@@ -54,8 +56,8 @@ class ScenarioDamageRiskCalculatorTestCase(
 
         # now storing in kvs the ground motion values
         self._store_gmvs([0.40, 0.30, 0.45, 0.35, 0.40])
-        self._store_em()
 
+        self.em = self._store_em()
         self.fm = self._store_fmodel()
 
         self.calculator = ScenarioDamageRiskCalculator(job_ctxt)
@@ -69,15 +71,51 @@ class ScenarioDamageRiskCalculatorTestCase(
         self.calculator.pre_execute()
         self.calculator.compute_risk(BLOCK_ID, fmodel=self.fm)
 
-    def TODO_pre_execute(self):
-        # store the main output artifact to db
-        self.calculator.pre_execute()
+        [dda] = DmgDistPerAsset.objects.filter(output__oq_job=self.job.id,
+                output__output_type="dmg_dist_per_asset")
+        
+        self.assertEquals(["no_damage", "LS1", "LS2"], dda.dmg_states)
 
-        sdac_output = Output.objects.filter(
-            oq_job=self.job.id,
-            output_type="dmg_dist_per_asset")
+        [exposure] = self.em.exposuredata_set.filter(asset_ref="A")
+        [data] = DmgDistPerAssetData.objects.filter(dmg_dist_per_asset=dda,
+                exposure_data=exposure, dmg_state="no_damage")
 
-        self.assertEquals(1, len(sdac_output))
+        self._close_to(1.00563, data.mean)
+        self._close_to(1.61341, data.stddev)
+
+        [data] = DmgDistPerAssetData.objects.filter(dmg_dist_per_asset=dda,
+                exposure_data=exposure, dmg_state="LS1")
+
+        self._close_to(34.80851, data.mean)
+        self._close_to(18.34906, data.stddev)
+        
+        [data] = DmgDistPerAssetData.objects.filter(dmg_dist_per_asset=dda,
+                exposure_data=exposure, dmg_state="LS2")
+
+        self._close_to(64.18586, data.mean)
+        self._close_to(19.83963, data.stddev)
+
+        [exposure] = self.em.exposuredata_set.filter(asset_ref="B")
+        [data] = DmgDistPerAssetData.objects.filter(dmg_dist_per_asset=dda,
+                exposure_data=exposure, dmg_state="no_damage")
+        
+        self._close_to(3.64527, data.mean)
+        self._close_to(3.35330, data.stddev)
+                
+        [data] = DmgDistPerAssetData.objects.filter(dmg_dist_per_asset=dda,
+                exposure_data=exposure, dmg_state="LS1")
+
+        self._close_to(17.10494, data.mean)
+        self._close_to(4.63604, data.stddev)
+
+        [data] = DmgDistPerAssetData.objects.filter(dmg_dist_per_asset=dda,
+                exposure_data=exposure, dmg_state="LS2")
+
+        self._close_to(19.24979, data.mean)
+        self._close_to(7.78725, data.stddev)
+
+    def _close_to(self, expected, actual):
+        self.assertTrue(numpy.allclose(actual, expected, atol=0.0, rtol=0.05))
 
     def _store_gmvs(self, gmvs):
         client = kvs.get_client()
@@ -128,10 +166,12 @@ class ScenarioDamageRiskCalculatorTestCase(
 
         models.ExposureData(
             exposure_model=em, taxonomy="RC",
-            asset_ref="A", stco=100,
+            asset_ref="A", number_of_units=100, stco=1,
             site=geos.GEOSGeometry(self.site.point.to_wkt()), reco=1).save()
 
         models.ExposureData(
             exposure_model=em, taxonomy="RM",
-            asset_ref="B", stco=40,
+            asset_ref="B", number_of_units=40, stco=1,
             site=geos.GEOSGeometry(self.site.point.to_wkt()), reco=1).save()
+
+        return em

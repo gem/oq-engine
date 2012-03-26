@@ -95,12 +95,10 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
         oq_job = self.job_ctxt.oq_job
 
-        [output] = Output.objects.filter(owner=oq_job.owner, oq_job=oq_job,
-                output_type="dmg_dist_per_asset")
-
-        [dds] = DmgDistPerAsset.objects.filter(output=output)
-
-        lss = list(fm.lss)
+        [dds] = DmgDistPerAsset.objects.filter(
+                output__owner=oq_job.owner,
+                output__oq_job=oq_job,
+                output__output_type="dmg_dist_per_asset")
 
         for site in block.sites:
             point = self.job_ctxt.region.grid.point_at(site)
@@ -123,12 +121,12 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 for x, gmv in enumerate(gmf):
                     sum_ds[x] += compute_dm(funcs, gmv)
 
-                # TODO: verify the attribute for number of buildings!..
-                mean = numpy.mean(sum_ds, axis=0) * asset.stco
-                stddev = numpy.std(sum_ds, axis=0, ddof=1) * asset.stco
+                nou = asset.number_of_units
+                mean = numpy.mean(sum_ds, axis=0) * nou
+                stddev = numpy.std(sum_ds, axis=0, ddof=1) * nou
 
                 for x in xrange(len(mean)):
-                    ds = lss[x - 1]
+                    ds = fm.lss[x - 1]
 
                     if x == 0:
                         ds = "no_damage"
