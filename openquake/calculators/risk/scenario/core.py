@@ -184,7 +184,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
             # the scientific functions used below
             # require the gmvs to be wrapped in a dict with a single key, IMLs
-            gmvs = {'IMLs': general.load_gmvs_for_point(
+            gmvs = {'IMLs': general.load_gmvs_at(
                     self.job_ctxt.job_id, point)}
 
             assets = general.BaseRiskCalculator.assets_at(
