@@ -19,6 +19,8 @@
 
 """Saves fragility model data to the database"""
 
+import itertools
+
 from openquake.db import models
 from django.db import router
 from django.db import transaction
@@ -29,6 +31,7 @@ class FragilityDBWriter(object):
     Serialize the fragility model to database
     """
 
+    lsi = None
     model_attrs = [
         ("description", "description"), ("imls", "imls"), ("imt", "imt")]
 
@@ -81,11 +84,13 @@ class FragilityDBWriter(object):
                         value = value.lower()
                     setattr(self.model, key, value)
             self.model.save()
+            self.lsi = dict(zip(self.model.lss, itertools.count(1)))
 
         discrete = self.model.format == "discrete"
         ctor = models.Ffd if discrete else models.Ffc
         data = ctor(
-            fragility_model=self.model, taxonomy=ff.taxonomy, ls=ff.limit)
+            fragility_model=self.model, taxonomy=ff.taxonomy, ls=ff.limit,
+            lsi=self.lsi[ff.limit])
         if discrete:
             data.poes = ff.poes
         else:
