@@ -27,12 +27,39 @@ import scipy
 from openquake import logs
 from openquake.calculators.risk import general
 from openquake import kvs
+from openquake.db.models import Output, FragilityModel, DmgDistPerAsset
+from openquake.db.models import ExposureData, DmgDistPerAssetData
+from openquake.db.models import inputs4job
+from django.contrib.gis import geos
 
 LOGGER = logs.LOG
 
 
 class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     """Scenario Damage method for performing risk calculations."""
+
+    def pre_execute(self):
+        """
+        Write the initial db container records for the calculation results.
+        """
+
+        oq_job = self.job_ctxt.oq_job
+
+        output = Output(
+            owner=oq_job.owner,
+            oq_job=oq_job,
+            display_name="SDA results for calculation id %s" % oq_job.id,
+            db_backed=True,
+            output_type="dmg_dist_per_asset")
+
+        output.save()
+
+        fm = _fm(oq_job)
+
+        dmg_states = list(fm.lss)
+        dmg_states.insert(0, "no_damage")
+
+        DmgDistPerAsset(output=output, dmg_states=dmg_states).save()
 
     def execute(self):
         """
@@ -42,15 +69,12 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         LOGGER.debug("Executing scenario damage risk computation.")
         tasks = []
 
-        # TODO: Load the fragility model
-
         for block_id in self.job_ctxt.blocks_keys:
             LOGGER.debug("Dispatching task for block %s of %s" % (
                     block_id, len(self.job_ctxt.blocks_keys)))
 
-            # TODO: Pass the fragility model to tasks
-            task = general.compute_risk.delay(
-                self.job_ctxt.job_id, block_id, fmodel=None)
+            task = general.compute_risk.delay(self.job_ctxt.job_id, block_id,
+                fmodel=_fm(self.job_ctxt.oq_job))
 
             tasks.append(task)
 
@@ -69,6 +93,16 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
         fm = kwargs["fmodel"]
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
+        oq_job = self.job_ctxt.oq_job
+
+        [output] = Output.objects.filter(owner=oq_job.owner, oq_job=oq_job,
+                output_type="dmg_dist_per_asset")
+
+        [dds] = DmgDistPerAsset.objects.filter(output=output)
+        [em_input] = inputs4job(oq_job.id, input_type="exposure")
+        [em] = em_input.exposuremodel_set.all()
+
+        lss = list(fm.lss)
 
         for site in block.sites:
             point = self.job_ctxt.region.grid.point_at(site)
@@ -95,8 +129,17 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 mean = numpy.mean(sum_ds, axis=0) * asset.stco
                 stddev = numpy.std(sum_ds, axis=0, ddof=1) * asset.stco
 
-                # TODO: serialize!..
-                print mean, stddev
+                for x in xrange(len(mean)):
+                    ds = lss[x - 1]
+
+                    if x == 0:
+                        ds = "no_damage"
+
+                    DmgDistPerAssetData(dmg_dist_per_asset=dds,
+                            exposure_data=asset, dmg_state=ds,
+                            mean=mean[x], stddev=stddev[x],
+                            location=geos.GEOSGeometry(
+                            site.point.to_wkt())).save()
 
     def post_execute(self):
         """
@@ -142,6 +185,13 @@ def compute_dm(funcs, gmv):
         funcs[len(funcs) - 1].stddev)
 
     return numpy.array(damage_states)
+
+
+def _fm(oq_job):
+    [ism] = inputs4job(oq_job.id, input_type="fragility")
+    [fm] = FragilityModel.objects.filter(input=ism, owner=oq_job.owner)
+
+    return fm
 
 
 def gmvs(job_id, point):
