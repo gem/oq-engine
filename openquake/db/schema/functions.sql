@@ -483,7 +483,7 @@ AS $$
     [fmdl] = plpy.execute(q)
 
     ls = NEW["ls"]
-    lsi = NEW["lsi"]
+    lsi = int(NEW["lsi"])
     lss = fmdl["lss"]
     taxonomy = NEW["taxonomy"]
 
@@ -513,7 +513,7 @@ AS $$
     [fmdl] = plpy.execute(q)
 
     ls = NEW["ls"]
-    lsi = NEW["lsi"]
+    lsi = int(NEW["lsi"])
     lss = fmdl["lss"]
     taxonomy = NEW["taxonomy"]
 
