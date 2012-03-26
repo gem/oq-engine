@@ -51,8 +51,8 @@ class SimpleFaultSourceIterRupturesTestCase(unittest.TestCase):
 
         source = SimpleFaultSource(
             source_id, name, trt, mfd, rupture_mesh_spacing,
-            upper_seismogenic_depth, lower_seismogenic_depth,
             magnitude_scaling_relationship, rupture_aspect_ratio,
+            upper_seismogenic_depth, lower_seismogenic_depth,
             fault_trace, dip, rake
         )
         tom = PoissonTOM(time_span=50)

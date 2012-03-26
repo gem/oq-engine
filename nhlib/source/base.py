@@ -55,15 +55,13 @@ class SeismicSource(object):
         and vice versa.
 
     :raises ValueError:
-        If tectonic region type is wrong/unknown, if upper seismogenic depth
-        is negative or below lower seismogenic depth, if either rupture aspect
+        If tectonic region type is wrong/unknown, if either rupture aspect
         ratio or rupture mesh spacing is not positive.
     """
     __metaclass__ = abc.ABCMeta
 
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
-                 upper_seismogenic_depth, lower_seismogenic_depth,
                  magnitude_scaling_relationship, rupture_aspect_ratio):
 
         if not const.TRT.is_valid(tectonic_region_type):
@@ -73,13 +71,6 @@ class SeismicSource(object):
         if not rupture_mesh_spacing > 0:
             raise ValueError('rupture mesh spacing must be positive')
 
-        if upper_seismogenic_depth < 0:
-            raise ValueError('upper seismogenic depth must be non-negative')
-
-        if not lower_seismogenic_depth > upper_seismogenic_depth:
-            raise ValueError('lower seismogenic depth must be below '
-                             'upper seismogenic depth')
-
         if not rupture_aspect_ratio > 0:
             raise ValueError('rupture aspect ratio must be positive')
 
@@ -88,6 +79,8 @@ class SeismicSource(object):
         self.tectonic_region_type = tectonic_region_type
         self.mfd = mfd
         self.rupture_mesh_spacing = rupture_mesh_spacing
+        self.magnitude_scaling_relationship = magnitude_scaling_relationship
+        self.rupture_aspect_ratio = rupture_aspect_ratio
 
     @abc.abstractmethod
     def iter_ruptures(self, temporal_occurrence_model):

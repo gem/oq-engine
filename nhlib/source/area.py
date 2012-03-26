@@ -36,16 +36,16 @@ class AreaSource(PointSource):
     """
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
-                 upper_seismogenic_depth, lower_seismogenic_depth,
                  magnitude_scaling_relationship, rupture_aspect_ratio,
                  # point-specific parameters (excluding location)
+                 upper_seismogenic_depth, lower_seismogenic_depth,
                  nodal_plane_distribution, hypocenter_distribution,
                  # area-specific parameters
                  polygon, area_discretization):
         super(AreaSource, self).__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
-            upper_seismogenic_depth, lower_seismogenic_depth,
             magnitude_scaling_relationship, rupture_aspect_ratio,
+            upper_seismogenic_depth, lower_seismogenic_depth,
             location=None, nodal_plane_distribution=nodal_plane_distribution,
             hypocenter_distribution=hypocenter_distribution,
         )

@@ -45,20 +45,27 @@ class PointSource(SeismicSource):
     parameters.
 
     :raises ValueError:
-        if one or more of hypocenter depth values is shallower than upper
-        seismogenic depth or deeper than lower seismogenic depth.
+        If upper seismogenic depth is negative or below lower seismogenic
+        depth,  if one or more of hypocenter depth values is shallower
+        than upper seismogenic depth or deeper than lower seismogenic depth.
     """
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
-                 upper_seismogenic_depth, lower_seismogenic_depth,
                  magnitude_scaling_relationship, rupture_aspect_ratio,
                  # point-specific parameters
+                 upper_seismogenic_depth, lower_seismogenic_depth,
                  location, nodal_plane_distribution, hypocenter_distribution):
         super(PointSource, self).__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
-            upper_seismogenic_depth, lower_seismogenic_depth,
             magnitude_scaling_relationship, rupture_aspect_ratio
         )
+
+        if upper_seismogenic_depth < 0:
+            raise ValueError('upper seismogenic depth must be non-negative')
+
+        if not lower_seismogenic_depth > upper_seismogenic_depth:
+            raise ValueError('lower seismogenic depth must be below '
+                             'upper seismogenic depth')
 
         if not all(upper_seismogenic_depth <= depth <= lower_seismogenic_depth
                    for (prob, depth) in hypocenter_distribution.data):
@@ -70,8 +77,6 @@ class PointSource(SeismicSource):
         self.hypocenter_distribution = hypocenter_distribution
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
-        self.magnitude_scaling_relationship = magnitude_scaling_relationship
-        self.rupture_aspect_ratio = rupture_aspect_ratio
 
     def iter_ruptures(self, temporal_occurrence_model):
         """

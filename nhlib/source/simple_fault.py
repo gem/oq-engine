@@ -42,13 +42,12 @@ class SimpleFaultSource(SeismicSource):
     """
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,
-                 upper_seismogenic_depth, lower_seismogenic_depth,
                  magnitude_scaling_relationship, rupture_aspect_ratio,
-                 # simple-fault specific parameters
+                 # simple fault specific parameters
+                 upper_seismogenic_depth, lower_seismogenic_depth,
                  fault_trace, dip, rake):
         super(SimpleFaultSource, self).__init__(
             source_id, name, tectonic_region_type, mfd, rupture_mesh_spacing,
-            upper_seismogenic_depth, lower_seismogenic_depth,
             magnitude_scaling_relationship, rupture_aspect_ratio
         )
 
@@ -60,8 +59,6 @@ class SimpleFaultSource(SeismicSource):
         self.fault_trace = fault_trace
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
-        self.magnitude_scaling_relationship = magnitude_scaling_relationship
-        self.rupture_aspect_ratio = rupture_aspect_ratio
         self.dip = dip
         self.rake = rake
         # TODO: check that mesh_spacing is low enough
