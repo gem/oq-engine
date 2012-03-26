@@ -59,10 +59,9 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         # temporary, will be removed
         assert fm.format == "continuous"
 
-        dmg_states = list(fm.lss)
-        dmg_states.insert(0, "no_damage")
-
-        DmgDistPerAsset(output=output, dmg_states=dmg_states).save()
+        DmgDistPerAsset(
+            output=output,
+            dmg_states=_damage_states(fm.lss)).save()
 
     def execute(self):
         """
@@ -103,6 +102,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 output__oq_job=oq_job,
                 output__output_type="dmg_dist_per_asset")
 
+        dmg_states = _damage_states(fm.lss)
+
         for site in block.sites:
             point = self.job_ctxt.region.grid.point_at(site)
             gmf = gmvs(self.job_ctxt.job_id, point)
@@ -129,16 +130,14 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 stddev = numpy.std(sum_ds, axis=0, ddof=1) * nou
 
                 for x in xrange(len(mean)):
-                    ds = fm.lss[x - 1]
-
-                    if x == 0:
-                        ds = "no_damage"
-
-                    DmgDistPerAssetData(dmg_dist_per_asset=dds,
-                            exposure_data=asset, dmg_state=ds,
-                            mean=mean[x], stddev=stddev[x],
-                            location=geos.GEOSGeometry(
-                            site.point.to_wkt())).save()
+                    DmgDistPerAssetData(
+                        dmg_dist_per_asset=dds,
+                        exposure_data=asset,
+                        dmg_state=dmg_states[x],
+                        mean=mean[x],
+                        stddev=stddev[x],
+                        location=geos.GEOSGeometry(
+                        site.point.to_wkt())).save()
 
     def post_execute(self):
         """
@@ -184,6 +183,13 @@ def compute_dm(funcs, gmv):
         funcs[len(funcs) - 1].stddev)
 
     return numpy.array(damage_states)
+
+
+def _damage_states(limit_states):
+    dmg_states = list(limit_states)
+    dmg_states.insert(0, "no_damage")
+
+    return dmg_states
 
 
 def _fm(oq_job):
