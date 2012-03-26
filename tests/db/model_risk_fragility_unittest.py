@@ -236,18 +236,18 @@ class FfcTestCase(DjangoTestCase, helpers.DbTestCase):
         try:
             ffc.save()
         except DatabaseError, de:
-            self.assertTrue('invalid limit state' in de.args[0])
+            self.assertTrue('Invalid limit state' in de.args[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
 
     def test_ffc_with_invalid_ls(self):
         # continuous fragility function and invalid limit state -> exception
-        ffc = models.Ffc(fragility_model=self.mdl, ls="xyz")
+        ffc = models.Ffc(fragility_model=self.mdl, ls="xyz", lsi=1)
         try:
             ffc.save()
         except DatabaseError, de:
-            self.assertTrue('invalid limit state' in de.args[0])
+            self.assertTrue('Invalid limit state' in de.args[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
@@ -346,22 +346,23 @@ class FfdTestCase(DjangoTestCase, helpers.DbTestCase):
 
     def test_ffd_with_no_ls(self):
         # discrete fragility function and no limit state -> exception
-        ffd = models.Ffd(fragility_model=self.mdl)
+        ffd = models.Ffd(fragility_model=self.mdl, poes=[0.5, 0.6])
         try:
             ffd.save()
         except DatabaseError, de:
-            self.assertTrue('invalid limit state' in de.args[0])
+            self.assertTrue('Invalid limit state' in de.args[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
 
     def test_ffd_with_invalid_ls(self):
         # discrete fragility function and invalid limit state -> exception
-        ffd = models.Ffd(fragility_model=self.mdl, ls="xyz")
+        ffd = models.Ffd(fragility_model=self.mdl, ls="xyz", lsi=1,
+                         poes=[0.5, 0.6])
         try:
             ffd.save()
         except DatabaseError, de:
-            self.assertTrue('invalid limit state' in de.args[0])
+            self.assertTrue('Invalid limit state' in de.args[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")
