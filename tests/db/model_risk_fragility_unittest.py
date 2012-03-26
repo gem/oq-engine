@@ -404,7 +404,7 @@ class FfdTestCase(DjangoTestCase, helpers.DbTestCase):
         # discrete fragility function with with invalid limit state index
         #   -> exception
         ffd = models.Ffd(fragility_model=self.mdl, ls="b", taxonomy="T2",
-                         poes=[0.5, 0.6], lsi=len(self.mdl.lss)*2)
+                         poes=[0.5, 0.6], lsi=len(self.mdl.lss) * 2)
         try:
             ffd.save()
         except DatabaseError, de:
