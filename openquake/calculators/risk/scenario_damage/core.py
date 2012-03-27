@@ -114,7 +114,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 self.job_ctxt.job_id, site)
 
             for asset in assets:
-                funcs = fm.ffc_set.filter(taxonomy=asset.taxonomy)
+                funcs = fm.ffc_set.filter(
+                    taxonomy=asset.taxonomy).order_by("lsi")
 
                 assert len(funcs) > 0, ("no limit states associated "
                         "with taxonomy %s of asset %s.") % (
