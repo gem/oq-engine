@@ -2,30 +2,30 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import unittest
 import logging
 from datetime import datetime
 
-from tests.utils.helpers import patch, job_from_file, get_data_path
-from tests.utils.helpers import DbTestCase, cleanup_loggers
-
-from openquake.db.models import OqCalculation, ErrorMsg, CalcStats
+from openquake.db.models import OqJob, ErrorMsg, JobStats
 from openquake.supervising import supervisor
 from openquake.supervising import supersupervisor
+from openquake.utils import stats
+
+from tests.utils.helpers import patch, job_from_file, get_data_path
+from tests.utils.helpers import DbTestCase, cleanup_loggers
 
 
 CONFIG_FILE = "config.gem"
@@ -38,23 +38,23 @@ class SupervisorHelpersTestCase(DbTestCase, unittest.TestCase):
     def tearDown(self):
         if self.job:
             ErrorMsg.objects.using('job_superv')\
-                            .filter(oq_calculation=self.job.id).delete()
+                            .filter(oq_job=self.job.id).delete()
             self.teardown_job(self.job, filesystem_only=True)
 
     def test_record_job_stop_time(self):
         """
         Test that job stop time is recorded properly.
         """
-        stats = CalcStats(
-            oq_calculation=self.job, start_time=datetime.utcnow(),
+        cstats = JobStats(
+            oq_job=self.job, start_time=datetime.utcnow(),
             num_sites=10)
-        stats.save(using='job_superv')
+        cstats.save(using='job_superv')
 
         supervisor.record_job_stop_time(self.job.id)
 
         # Fetch the stats and check for the stop_time
-        stats = CalcStats.objects.get(oq_calculation=self.job.id)
-        self.assertTrue(stats.stop_time is not None)
+        cstats = JobStats.objects.get(oq_job=self.job.id)
+        self.assertTrue(cstats.stop_time is not None)
 
     def test_cleanup_after_job(self):
         with patch('openquake.kvs.cache_gc') as cache_gc:
@@ -72,7 +72,7 @@ class SupervisorHelpersTestCase(DbTestCase, unittest.TestCase):
         self.assertEqual(status, supervisor.get_job_status(self.job.id))
         self.assertEqual(
             error_msg,
-            ErrorMsg.objects.get(oq_calculation=self.job.id).detailed)
+            ErrorMsg.objects.get(oq_job=self.job.id).detailed)
 
 
 class SupervisorTestCase(unittest.TestCase):
@@ -98,6 +98,8 @@ class SupervisorTestCase(unittest.TestCase):
         start_patch('openquake.supervising.supervisor.get_job_status')
         start_patch('openquake.supervising.supervisor'
                '.update_job_status_and_error_msg')
+
+        logging.root.setLevel(logging.CRITICAL)
 
     def tearDown(self):
         # Stop all the started patches
@@ -156,6 +158,31 @@ class SupervisorTestCase(unittest.TestCase):
         self.assertEqual(1, self.cleanup_after_job.call_count)
         self.assertEqual(((123,), {}), self.cleanup_after_job.call_args)
 
+    def test_actions_after_job_process_failures(self):
+        # the job process is running but has some failure counters above zero
+        # shorten the delay to checking failure counters
+        supervisor.SupervisorLogMessageConsumer.FCC_DELAY = 2
+        self.is_pid_running.return_value = True
+        self.get_job_status.return_value = 'running'
+
+        stats.delete_job_counters(123)
+        stats.incr_counter(123, "h", "a-failures")
+        stats.incr_counter(123, "r", "b-failures")
+        stats.incr_counter(123, "r", "b-failures")
+        supervisor.supervise(1, 123, timeout=0.1)
+
+        # the job process is terminated
+        self.assertEqual(1, self.terminate_job.call_count)
+        self.assertEqual(((1,), {}), self.terminate_job.call_args)
+
+        # stop time is recorded
+        self.assertEqual(1, self.record_job_stop_time.call_count)
+        self.assertEqual(((123,), {}), self.record_job_stop_time.call_args)
+
+        # the cleanup is triggered
+        self.assertEqual(1, self.cleanup_after_job.call_count)
+        self.assertEqual(((123,), {}), self.cleanup_after_job.call_args)
+
     def test_actions_after_job_process_crash(self):
         # the job process is *not* running
         self.is_pid_running.return_value = False
@@ -175,20 +202,21 @@ class SupervisorTestCase(unittest.TestCase):
         # the status in the job record is updated
         self.assertEqual(1,
                             self.update_job_status_and_error_msg.call_count)
-        self.assertEqual(((123, 'failed', 'crash'), {}),
-                            self.update_job_status_and_error_msg.call_args)
+        self.assertEqual(
+            ((123, 'failed', 'job process 1 crashed or terminated'), {}),
+            self.update_job_status_and_error_msg.call_args)
 
 
 class SupersupervisorTestCase(unittest.TestCase):
     def setUp(self):
         self.running_pid = 1324
         self.stopped_pid = 4312
-        OqCalculation.objects.all().update(status='succeeded')
+        OqJob.objects.all().update(status='succeeded')
         job_pid = 1
         for status in ('pending', 'running', 'failed', 'succeeded'):
             for supervisor_pid in (self.running_pid, self.stopped_pid):
                 job = job_from_file(get_data_path(CONFIG_FILE))
-                job = OqCalculation.objects.get(id=job.job_id)
+                job = OqJob.objects.get(id=job.job_id)
                 job.status = status
                 job.supervisor_pid = supervisor_pid
                 job.job_pid = job_pid

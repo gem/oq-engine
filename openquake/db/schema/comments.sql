@@ -237,6 +237,7 @@ COMMENT ON COLUMN oqmif.exposure_model.reco_type IS 'retrofitting cost type, one
 COMMENT ON COLUMN oqmif.exposure_model.reco_unit IS 'unit of measure for the retrofitting type';
 COMMENT ON COLUMN oqmif.exposure_model.stco_type IS 'structural cost type, one of: aggregated, per_area or per_asset';
 COMMENT ON COLUMN oqmif.exposure_model.stco_unit IS 'unit of measure for the structural type';
+COMMENT ON COLUMN oqmif.exposure_model.taxonomy_source IS 'the taxonomy system used to classify the assets';
 
 
 COMMENT ON TABLE oqmif.occupancy IS 'Occupancy for a given exposure data set';
@@ -246,6 +247,36 @@ COMMENT ON COLUMN oqmif.occupancy.occupants IS 'number of occupants';
 
 
 -- riski schema tables ------------------------------------------
+COMMENT ON TABLE riski.ffc IS 'A continuous fragility function';
+COMMENT ON COLUMN riski.ffc.fragility_model_id IS 'A reference to the fragility model this function belongs to';
+COMMENT ON COLUMN riski.ffc.ls IS 'The limit state index, facilitates ordering of fragility functions in accordance to limit states';
+COMMENT ON COLUMN riski.ffc.ls IS 'The limit state for the function at hand';
+COMMENT ON COLUMN riski.ffc.taxonomy IS 'The taxonomy, only unique in conjunction with the limit state.';
+COMMENT ON COLUMN riski.ffc.ftype IS 'Optional function/distribution type e.g. lognormal';
+COMMENT ON COLUMN riski.ffc.mean IS 'Mean value';
+COMMENT ON COLUMN riski.ffc.stddev IS 'Standard deviation';
+COMMENT ON COLUMN riski.ffc.last_update IS 'Date/time of the last change of the model at hand';
+
+
+COMMENT ON TABLE riski.ffd IS 'A discrete fragility function';
+COMMENT ON COLUMN riski.ffd.fragility_model_id IS 'A reference to the fragility model this function belongs to';
+COMMENT ON COLUMN riski.ffd.ls IS 'The limit state index, facilitates ordering of fragility functions in accordance to limit states';
+COMMENT ON COLUMN riski.ffd.ls IS 'The limit state for the function at hand';
+COMMENT ON COLUMN riski.ffd.taxonomy IS 'The taxonomy, only unique in conjunction with the limit state.';
+COMMENT ON COLUMN riski.ffd.poes IS 'Probabilities of exceedence, one per riski.fragility_model.imls';
+COMMENT ON COLUMN riski.ffd.last_update IS 'Date/time of the last change of the model at hand';
+
+
+COMMENT ON TABLE riski.fragility_model IS 'A risk fragility model';
+COMMENT ON COLUMN riski.fragility_model.format IS 'One of "discrete", "continuous"';
+COMMENT ON COLUMN riski.fragility_model.lss IS 'A list of limit states';
+COMMENT ON COLUMN riski.fragility_model.imls IS 'Optional list of intensity measure levels, only applicable to discrete fragility models';
+COMMENT ON COLUMN riski.fragility_model.imt IS 'An optional intensity measure type, only applicable to discrete fragility models';
+COMMENT ON COLUMN riski.fragility_model.description IS 'An optional description of the risk fragility model at hand';
+COMMENT ON COLUMN riski.fragility_model.input_id IS 'The foreign key to the associated input model file';
+COMMENT ON COLUMN riski.fragility_model.last_update IS 'Date/time of the last change of the model at hand';
+
+
 COMMENT ON TABLE riski.vulnerability_function IS 'A risk vulnerability function';
 COMMENT ON COLUMN riski.vulnerability_function.vulnerability_model_id IS 'A reference to the vulnerability model this function belongs to';
 COMMENT ON COLUMN riski.vulnerability_function.taxonomy IS 'The taxonomy, unique within the vulnerability model.';
@@ -322,6 +353,8 @@ COMMENT ON COLUMN riskr.bcr_distribution_data.bcr_distribution_id IS 'The foreig
 COMMENT ON COLUMN riskr.bcr_distribution_data.asset_ref IS 'The asset id';
 COMMENT ON COLUMN riskr.bcr_distribution_data.bcr IS 'The actual benefit-cost ratio';
 
+COMMENT ON COLUMN riskr.dmg_dist_per_asset_data.location IS 'Geometry for the computation cell which contains the referenced asset (exposure_data_id)';
+
 -- uiapi schema tables ------------------------------------------
 COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';
 COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
@@ -334,19 +367,23 @@ COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
 COMMENT ON COLUMN uiapi.input.path IS 'The full path of the input file on the server';
 COMMENT ON COLUMN uiapi.input.size IS 'Number of bytes in file';
 
-COMMENT ON TABLE uiapi.input_set IS 'The set of input files for a job';
+COMMENT ON TABLE uiapi.input2job IS 'Associate inputs and jobs';
 
-COMMENT ON TABLE uiapi.oq_calculation IS 'Date related to an OpenQuake job that was created in the UI.';
-COMMENT ON COLUMN uiapi.oq_calculation.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
-COMMENT ON COLUMN uiapi.oq_calculation.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
-COMMENT ON COLUMN uiapi.oq_calculation.supervisor_pid IS 'The process id (PID) of the supervisor for this OpenQuake job';
-COMMENT ON COLUMN uiapi.oq_calculation.status IS 'One of: pending, running, failed or succeeded.';
-COMMENT ON COLUMN uiapi.oq_calculation.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
+COMMENT ON TABLE uiapi.input2upload IS 'Associate inputs and uploads';
+
+COMMENT ON TABLE uiapi.job2profile IS 'Associate jobs with their profiles';
+
+COMMENT ON TABLE uiapi.oq_job IS 'Date related to an OpenQuake job that was created in the UI.';
+COMMENT ON COLUMN uiapi.oq_job.description IS 'A description of the OpenQuake job, allows users to browse jobs and their inputs/outputs at a later point.';
+COMMENT ON COLUMN uiapi.oq_job.job_pid IS 'The process id (PID) of the OpenQuake engine runner process';
+COMMENT ON COLUMN uiapi.oq_job.supervisor_pid IS 'The process id (PID) of the supervisor for this OpenQuake job';
+COMMENT ON COLUMN uiapi.oq_job.status IS 'One of: pending, running, failed or succeeded.';
+COMMENT ON COLUMN uiapi.oq_job.duration IS 'The job''s duration in seconds (only available once the jobs terminates).';
 
 
-COMMENT ON TABLE uiapi.calc_stats IS 'Tracks various job statistics';
-COMMENT ON COLUMN uiapi.calc_stats.num_sites IS 'The number of total sites in the calculation';
-COMMENT ON COLUMN uiapi.calc_stats.realizations IS 'The number of logic tree samples in the calculation (for hazard jobs of all types except scenario)';
+COMMENT ON TABLE uiapi.job_stats IS 'Tracks various job statistics';
+COMMENT ON COLUMN uiapi.job_stats.num_sites IS 'The number of total sites in the calculation';
+COMMENT ON COLUMN uiapi.job_stats.realizations IS 'The number of logic tree samples in the calculation (for hazard jobs of all types except scenario)';
 
 
 COMMENT ON TABLE uiapi.oq_job_profile IS 'Holds the parameters needed to invoke the OpenQuake engine.';
@@ -365,7 +402,7 @@ COMMENT ON COLUMN uiapi.oq_job_profile.imt IS 'Intensity measure type, one of:
 COMMENT ON COLUMN uiapi.oq_job_profile.lrem_steps_per_interval IS 'Loss Ration Exceedence Matrix steps per interval. Only used for Classical/Classical BCR Risk calculations.';
 COMMENT ON COLUMN uiapi.oq_job_profile.poes IS 'Probabilities of exceedence';
 COMMENT ON COLUMN uiapi.oq_job_profile.region IS 'Region of interest for the calculation (Polygon)';
-COMMENT ON COLUMN uiapi.oq_job_profile.region_grid_spacing IS 'Desired cell size (in degrees), used when splitting up the region of interest. This effectively defines the resolution of the calculation. (Smaller grid spacing means more sites and thus more calculations.)';
+COMMENT ON COLUMN uiapi.oq_job_profile.region_grid_spacing IS 'Desired cell size (in degrees), used when splitting up the region of interest. This effectively defines the resolution of the job. (Smaller grid spacing means more sites and thus more calculations.)';
 COMMENT ON COLUMN uiapi.oq_job_profile.sites IS 'Sites of interest for the calculation (MultiPoint)';
 
 

@@ -2,19 +2,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
 """
@@ -86,13 +85,13 @@ class DoCurvesTestCase(unittest.TestCase):
             BASE_PATH=SIMPLE_FAULT_BASE_PATH, OUTPUT_DIR="output",
             NUMBER_OF_LOGIC_TREE_SAMPLES=2, WIDTH_OF_MFD_BIN=1)
 
-        self.calc_proxy = create_job(params)
-        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
+        self.job_ctxt = create_job(params)
+        self.calculator = classical.ClassicalHazardCalculator(self.job_ctxt)
 
         # Store the canned result data in the KVS.
-        key = self.calc_proxy.job_id
+        key = self.job_ctxt.job_id
         for realization in xrange(2):
-            key = "%s/%s" % (self.calc_proxy.job_id, realization + 1)
+            key = "%s/%s" % (self.job_ctxt.job_id, realization + 1)
             TestStore.put(key, self.mock_results[realization])
             self.keys.append(key)
         LOG.debug("keys = '%s'" % self.keys)
@@ -125,7 +124,7 @@ class DoCurvesTestCase(unittest.TestCase):
     def test_serializer_aborts_on_failure(self):
         # The task function used here raises an exception, the serializer
         # should abort on that failure.
-        stats.delete_job_counters(self.calc_proxy.job_id)
+        stats.delete_job_counters(self.job_ctxt.job_id)
         try:
             self.calculator.do_curves(
                 self.sites, 2,
@@ -160,8 +159,8 @@ class DoMeansTestCase(unittest.TestCase):
             GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
-        self.calc_proxy = create_job(params)
-        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
+        self.job_ctxt = create_job(params)
+        self.calculator = classical.ClassicalHazardCalculator(self.job_ctxt)
 
     def tearDown(self):
         # Remove the canned result data from the KVS.
@@ -180,7 +179,7 @@ class DoMeansTestCase(unittest.TestCase):
         # serializer function.
         fake_serializer.number_of_calls = 0
 
-        key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
+        key = TestStore.put(self.job_ctxt.job_id, self.mock_results)
         self.keys.append(key)
         self.calculator.do_means(
             self.sites, 1, curve_serializer=fake_serializer,
@@ -201,7 +200,7 @@ class DoMeansTestCase(unittest.TestCase):
 
         fake_serializer.number_of_calls = 0
 
-        key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
+        key = TestStore.put(self.job_ctxt.job_id, self.mock_results)
         self.keys.append(key)
         self.calculator.do_means(self.sites, 1,
                         curve_serializer=lambda _: True,
@@ -225,9 +224,9 @@ class DoMeansTestCase(unittest.TestCase):
 
         fake_serializer.number_of_calls = 0
 
-        key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
+        key = TestStore.put(self.job_ctxt.job_id, self.mock_results)
         self.keys.append(key)
-        self.calc_proxy.params["POES"] = "0.6 0.8"
+        self.job_ctxt.params["POES"] = "0.6 0.8"
         self.calculator.do_means(self.sites, 1,
             curve_serializer=lambda _: True,
             curve_task=test_data_reflector,
@@ -244,9 +243,9 @@ class DoMeansTestCase(unittest.TestCase):
         for the specific assertion message.
         """
 
-        key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
+        key = TestStore.put(self.job_ctxt.job_id, self.mock_results)
         self.keys.append(key)
-        self.calc_proxy.params["POES"] = "0.6 0.8"
+        self.job_ctxt.params["POES"] = "0.6 0.8"
         self.assertRaises(
             AssertionError, self.calculator.do_means,
             self.sites, 1,
@@ -262,9 +261,9 @@ class DoMeansTestCase(unittest.TestCase):
         for the specific assertion message.
         """
 
-        key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
+        key = TestStore.put(self.job_ctxt.job_id, self.mock_results)
         self.keys.append(key)
-        self.calc_proxy.params["POES"] = "0.6 0.8"
+        self.job_ctxt.params["POES"] = "0.6 0.8"
         self.assertRaises(
             AssertionError, self.calculator.do_means,
             self.sites, 1,
@@ -272,7 +271,7 @@ class DoMeansTestCase(unittest.TestCase):
             map_serializer=lambda _: True, map_func=None)
 
     def test_no_do_means_if_disabled(self):
-        self.calc_proxy.params['COMPUTE_MEAN_HAZARD_CURVE'] = (
+        self.job_ctxt.params['COMPUTE_MEAN_HAZARD_CURVE'] = (
             'false')
         with patch('openquake.utils.tasks.distribute') as distribute:
             self.calculator.do_means(self.sites, 1,
@@ -303,8 +302,8 @@ class DoQuantilesTestCase(unittest.TestCase):
             GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
             BASE_PATH=SIMPLE_FAULT_BASE_PATH)
 
-        self.calc_proxy = create_job(params)
-        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
+        self.job_ctxt = create_job(params)
+        self.calculator = classical.ClassicalHazardCalculator(self.job_ctxt)
 
     def tearDown(self):
         # Remove the canned result data from the KVS.
@@ -320,7 +319,7 @@ class DoQuantilesTestCase(unittest.TestCase):
 
         fake_serializer.number_of_calls = 0
 
-        key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
+        key = TestStore.put(self.job_ctxt.job_id, self.mock_results)
         self.keys.append(key)
         self.calculator.do_quantiles(
             self.sites, 1, [0.2, 0.4], curve_serializer=fake_serializer,
@@ -345,10 +344,10 @@ class DoQuantilesTestCase(unittest.TestCase):
                     "quantile_hazard_map!10!-122.8!38.0!0.4",
                     "quantile_hazard_map!10!-121.8!38.0!0.4"]
 
-        key = TestStore.put(self.calc_proxy.job_id,
+        key = TestStore.put(self.job_ctxt.job_id,
                             self.mock_results)
         self.keys.append(key)
-        self.calc_proxy.params["POES"] = "0.6 0.8"
+        self.job_ctxt.params["POES"] = "0.6 0.8"
         self.calculator.do_quantiles(
             self.sites, 1, [0.2, 0.4],
             curve_serializer=lambda _, __: True,
@@ -372,7 +371,7 @@ class DoQuantilesTestCase(unittest.TestCase):
 
         fake_serializer.number_of_calls = 0
 
-        key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
+        key = TestStore.put(self.job_ctxt.job_id, self.mock_results)
         self.keys.append(key)
         self.calculator.do_quantiles(self.sites, 1, [],
                             curve_serializer=lambda _: True,
@@ -389,9 +388,9 @@ class DoQuantilesTestCase(unittest.TestCase):
         for the specific assertion message.
         """
 
-        key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
+        key = TestStore.put(self.job_ctxt.job_id, self.mock_results)
         self.keys.append(key)
-        self.calc_proxy.params["POES"] = "0.6 0.8"
+        self.job_ctxt.params["POES"] = "0.6 0.8"
         self.assertRaises(
             AssertionError, self.calculator.do_quantiles,
             self.sites, 1, [0.5],
@@ -407,9 +406,9 @@ class DoQuantilesTestCase(unittest.TestCase):
         for the specific assertion message.
         """
 
-        key = TestStore.put(self.calc_proxy.job_id, self.mock_results)
+        key = TestStore.put(self.job_ctxt.job_id, self.mock_results)
         self.keys.append(key)
-        self.calc_proxy.params["POES"] = "0.6 0.8"
+        self.job_ctxt.params["POES"] = "0.6 0.8"
         self.assertRaises(
             AssertionError, self.calculator.do_quantiles,
             self.sites, 1, [0.5],
@@ -453,8 +452,8 @@ class ClassicalExecuteTestCase(unittest.TestCase):
             SITES=('38.0, -121.9, 38.0, -121.8, 38.0, -122.9, 38.0, -122.8 '
                    '38.0, -123.9, 38.0, -123.8, 38.0, -124.9, 38.0, -124.8'))
 
-        self.calc_proxy = create_job(params)
-        self.calculator = classical.ClassicalHazardCalculator(self.calc_proxy)
+        self.job_ctxt = create_job(params)
+        self.calculator = classical.ClassicalHazardCalculator(self.job_ctxt)
 
         self.calculator.calc = self.FakeLogicTreeProcessor()
         self.calculator.cache = dict()

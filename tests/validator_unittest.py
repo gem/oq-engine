@@ -3,19 +3,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 This module tests the logic related to the engine configuration
@@ -32,6 +31,7 @@ from openquake.job.config import EventBasedRiskValidator
 from openquake.job.config import HazardMandatoryParamsValidator
 from openquake.job.config import RiskMandatoryParamsValidator
 from openquake.job.config import ScenarioComputationValidator
+from openquake.job.config import ScenarioDamageValidator
 from openquake.job.config import UHSValidator
 from openquake.job.config import to_float_array
 from openquake.job.config import to_str_array
@@ -207,15 +207,31 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
         # Restore the list with the mandatory hazard parameters.
         HazardMandatoryParamsValidator.MANDATORY_PARAMS.pop()
 
-    def test_scenario_is_not_supported_alone(self):
-        """When we specify a scenario computation, we only
-        support hazard + risk jobs."""
-
+    def test_scenario_is_only_hazard_and_risk(self):
+        # When we specify a scenario computation, we only
+        # support hazard + risk jobs.
         sections = [config.RISK_SECTION,
                 config.HAZARD_SECTION, config.GENERAL_SECTION]
 
         params = {config.CALCULATION_MODE: config.SCENARIO_MODE,
                   'NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS': '1'}
+
+        validator = config.ScenarioComputationValidator(sections, params)
+
+        self.assertTrue(validator.is_valid()[0])
+
+        sections.remove(config.RISK_SECTION)
+
+        self.assertFalse(validator.is_valid()[0])
+
+    def test_scenario_damage_is_only_and_hazard_risk(self):
+        # When we specify a scenario damage computation, we only
+        # support hazard + risk jobs.
+        sections = [config.RISK_SECTION, config.HAZARD_SECTION,
+                config.GENERAL_SECTION]
+
+        params = {config.CALCULATION_MODE: config.SCENARIO_DAMAGE_MODE,
+                'NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS': '1'}
 
         validator = config.ScenarioComputationValidator(sections, params)
 
@@ -456,6 +472,9 @@ class DefaultValidatorsTestCase(unittest.TestCase):
     for correct behavior with various types of job configurations.
     """
 
+    def setUp(self):
+        self.job = engine.prepare_job()
+
     def test_default_validators_disagg_job(self):
         """Test to ensure that a Disaggregation job always includes the
         :class:`openquake.job.config.DisaggregationValidator`.
@@ -495,12 +514,32 @@ class DefaultValidatorsTestCase(unittest.TestCase):
         self.assertTrue(any(
             isinstance(v, ScenarioComputationValidator) for v in validators))
 
+    def test_default_validators_scenario_damage_job(self):
+        # Ensures that a Scenario Damage job always includes the
+        # :class:`openquake.job.config.ScenarioComputationValidator` and
+        # the :class:`openquake.job.config.ScenarioDamageComputationValidator`.
+
+        scenario_job_path = helpers.demo_file(
+            "scenario_damage_risk/config.gem")
+
+        scenario_job = helpers.job_from_file(scenario_job_path)
+
+        validators = config.default_validators(
+            scenario_job.sections, scenario_job.params)
+
+        self.assertTrue(any(isinstance(
+                v, ScenarioComputationValidator) for v in validators))
+
+        self.assertTrue(any(isinstance(
+                v, ScenarioDamageValidator) for v in validators))
+
     def test_default_validators_classical_risk(self):
         # For Classical Hazard+Risk calculations, ensure that a
         # `ClassicalRiskValidator` is included in the default validators.
         cfg_path = helpers.demo_file('classical_psha_based_risk/config.gem')
 
-        job_profile, params, sections = engine.import_job_profile(cfg_path)
+        job_profile, params, sections = engine.import_job_profile(
+            cfg_path, self.job)
 
         validators = config.default_validators(sections, params)
 
@@ -512,7 +551,8 @@ class DefaultValidatorsTestCase(unittest.TestCase):
         # `ClassicalRiskValidator` is included in the default validators.
         cfg_path = helpers.demo_file('benefit_cost_ratio/config.gem')
 
-        job_profile, params, sections = engine.import_job_profile(cfg_path)
+        job_profile, params, sections = engine.import_job_profile(
+            cfg_path, self.job)
 
         validators = config.default_validators(sections, params)
 
@@ -525,23 +565,22 @@ class DefaultValidatorsTestCase(unittest.TestCase):
         cfg_path = helpers.demo_file(
             'probabilistic_event_based_risk/config.gem')
 
-        job_profile, params, sections = engine.import_job_profile(cfg_path)
+        job_profile, params, sections = engine.import_job_profile(
+            cfg_path, self.job)
 
         validators = config.default_validators(sections, params)
 
         self.assertTrue(any(
             isinstance(v, EventBasedRiskValidator) for v in validators))
 
-    # Currently skipped because we do not have a set of demo files for
-    # Event-Based BCR Risk.
-    @helpers.skipit
     def test_default_validators_event_based_bcr_risk(self):
         # For Event-Based BCR Risk calculations, ensure that a
         # `EventBasedRiskValidator` is included in the default validators.
         cfg_path = helpers.demo_file(
-            'event_based_bcr_risk/config.gem')
+            'benefit_cost_ratio/config_ebased.gem')
 
-        job_profile, params, sections = engine.import_job_profile(cfg_path)
+        job_profile, params, sections = engine.import_job_profile(
+            cfg_path, self.job)
 
         validators = config.default_validators(sections, params)
 
@@ -617,6 +656,25 @@ class NumericSequenceValidationTestCase(unittest.TestCase):
     def test_check_dupes(self):
         self.assertRaises(ValueError, validate_numeric_sequence,
                           self.TEST_VALUES, check_dupes=True)
+
+
+class ScenarioDamageValidatorTestCase(unittest.TestCase):
+    """
+    Tests for :class:`openquake.job.config.ScenarioDamageValidator`.
+    """
+
+    def test_fragility_must_be_specified(self):
+        params = {config.FRAGILITY: "/path/to/file"}
+
+        validator = ScenarioDamageValidator(
+            [config.RISK_SECTION], params)
+
+        self.assertTrue(validator.is_valid()[0])
+
+        validator = ScenarioDamageValidator(
+            [config.RISK_SECTION], {})
+
+        self.assertFalse(validator.is_valid()[0])
 
 
 class UHSValidatorTestCase(unittest.TestCase):

@@ -2,19 +2,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """Core functionality for Classical PSHA-based hazard calculations."""
 
@@ -82,9 +81,9 @@ def compute_hazard_curve(job_id, sites, realization):
 def compute_mgm_intensity(job_id, block_id, site_id):
     """Compute mean ground intensity for a specific site."""
 
-    # We don't actually need the CalculationProxy returned by this function
+    # We don't actually need the JobContext returned by this function
     # (yet) but this does check if the calculation is still in progress.
-    utils_tasks.get_running_calculation(job_id)
+    utils_tasks.get_running_job(job_id)
     kvs_client = kvs.get_client()
 
     mgm_key = kvs.tokens.mgm_key(job_id, block_id, site_id)
@@ -99,9 +98,9 @@ def compute_mgm_intensity(job_id, block_id, site_id):
 def compute_mean_curves(job_id, sites, realizations):
     """Compute the mean hazard curve for each site given."""
 
-    # We don't actually need the CalculationProxy returned by this function
+    # We don't actually need the JobContext returned by this function
     # (yet) but this does check if the calculation is still in progress.
-    utils_tasks.get_running_calculation(job_id)
+    utils_tasks.get_running_job(job_id)
 
     HAZARD_LOG.info("Computing MEAN curves for %s sites (job_id %s)"
                     % (len(sites), job_id))
@@ -115,9 +114,9 @@ def compute_mean_curves(job_id, sites, realizations):
 def compute_quantile_curves(job_id, sites, realizations, quantiles):
     """Compute the quantile hazard curve for each site given."""
 
-    # We don't actually need the CalculationProxy returned by this function
+    # We don't actually need the JobContext returned by this function
     # (yet) but this does check if the calculation is still in progress.
-    utils_tasks.get_running_calculation(job_id)
+    utils_tasks.get_running_job(job_id)
 
     HAZARD_LOG.info("Computing QUANTILE curves for %s sites (job_id %s)"
                     % (len(sites), job_id))
@@ -141,7 +140,7 @@ def release_data_from_kvs(job_id, sites, realizations, quantiles, poes,
     :param list poes: the probabilities of exceedence specified for this
         calculation
     :param kvs_keys_purged: a list only passed by tests who check the
-        kvs keys used/purged in the course of the calculation.
+        kvs keys used/purged in the course of the job.
     """
     for realization in xrange(0, realizations):
         template = kvs.tokens.hazard_curve_poes_key_template(
@@ -207,21 +206,21 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         """
         source_model_generator = random.Random()
         source_model_generator.seed(
-            self.calc_proxy["SOURCE_MODEL_LT_RANDOM_SEED"])
+            self.job_ctxt["SOURCE_MODEL_LT_RANDOM_SEED"])
 
         gmpe_generator = random.Random()
-        gmpe_generator.seed(self.calc_proxy["GMPE_LT_RANDOM_SEED"])
+        gmpe_generator.seed(self.job_ctxt["GMPE_LT_RANDOM_SEED"])
 
-        stats.pk_set(self.calc_proxy.job_id, "hcls_crealization", 0)
+        stats.pk_set(self.job_ctxt.job_id, "hcls_crealization", 0)
 
         for realization in xrange(0, realizations):
-            stats.pk_inc(self.calc_proxy.job_id, "hcls_crealization")
+            stats.pk_inc(self.job_ctxt.job_id, "hcls_crealization")
             LOG.info("Calculating hazard curves for realization %s"
                      % realization)
             self.store_source_model(source_model_generator.getrandbits(32))
             self.store_gmpe_map(source_model_generator.getrandbits(32))
 
-            tf_args = dict(job_id=self.calc_proxy.job_id,
+            tf_args = dict(job_id=self.job_ctxt.job_id,
                            realization=realization)
             ath_args = dict(sites=sites, realization=realization)
             utils_tasks.distribute(
@@ -255,16 +254,16 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 * the sites for which to calculate the hazard curves
         :type curve_task: function(string, [:py:class:`openquake.shapes.Site`])
         :param map_func: A function that computes mean hazard maps.
-        :type map_func: function(:py:class:`openquake.engine.CalculationProxy`)
+        :type map_func: function(:py:class:`openquake.engine.JobContext`)
         :returns: `None`
         """
-        if not self.calc_proxy["COMPUTE_MEAN_HAZARD_CURVE"]:
+        if not self.job_ctxt["COMPUTE_MEAN_HAZARD_CURVE"]:
             return
 
         # Compute and serialize the mean curves.
         LOG.info("Computing mean hazard curves")
 
-        tf_args = dict(job_id=self.calc_proxy.job_id,
+        tf_args = dict(job_id=self.job_ctxt.job_id,
                        realizations=realizations)
         ath_args = dict(sites=sites)
         utils_tasks.distribute(
@@ -276,7 +275,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             assert map_serializer, "No serializer for the mean hazard maps set"
 
             LOG.info("Computing/serializing mean hazard maps")
-            map_func(self.calc_proxy.job_id, sites, self.calc_proxy.imls,
+            map_func(self.job_ctxt.job_id, sites, self.job_ctxt.imls,
                      self.poes_hazard_maps)
             LOG.debug(">> mean maps!")
             map_serializer(sites, self.poes_hazard_maps)
@@ -311,7 +310,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 * the sites for which to calculate the hazard curves
         :type curve_task: function(string, [:py:class:`openquake.shapes.Site`])
         :param map_func: A function that computes quantile hazard maps.
-        :type map_func: function(:py:class:`openquake.engine.CalculationProxy`)
+        :type map_func: function(:py:class:`openquake.engine.JobContext`)
         :returns: `None`
         """
         if not quantiles:
@@ -320,7 +319,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         # compute and serialize quantile hazard curves
         LOG.info("Computing quantile hazard curves")
 
-        tf_args = dict(job_id=self.calc_proxy.job_id,
+        tf_args = dict(job_id=self.job_ctxt.job_id,
                        realizations=realizations, quantiles=quantiles)
         ath_args = dict(sites=sites, quantiles=quantiles)
         utils_tasks.distribute(
@@ -333,8 +332,8 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
 
             # quantile maps
             LOG.info("Computing quantile hazard maps")
-            map_func(self.calc_proxy.job_id, sites, quantiles,
-                     self.calc_proxy.imls, self.poes_hazard_maps)
+            map_func(self.job_ctxt.job_id, sites, quantiles,
+                     self.job_ctxt.imls, self.poes_hazard_maps)
 
             LOG.info("Serializing quantile maps for %s values"
                      % len(quantiles))
@@ -350,28 +349,29 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         curves/maps and quantile curves.
 
         :param kvs_keys_purged: a list only passed by tests who check the
-            kvs keys used/purged in the course of the calculation.
+            kvs keys used/purged in the course of the job.
         :returns: the keys used in the course of the calculation (for the sake
             of testability).
         """
-        sites = self.calc_proxy.sites_to_compute()
-        realizations = self.calc_proxy["NUMBER_OF_LOGIC_TREE_SAMPLES"]
+        sites = self.job_ctxt.sites_to_compute()
+        realizations = self.job_ctxt["NUMBER_OF_LOGIC_TREE_SAMPLES"]
 
         LOG.info("Going to run classical PSHA hazard for %s realizations "
                  "and %s sites" % (realizations, len(sites)))
 
-        stats.pk_set(self.calc_proxy.job_id, "hcls_sites", len(sites))
-        stats.pk_set(self.calc_proxy.job_id, "hcls_realizations",
+        stats.pk_set(self.job_ctxt.job_id, "hcls_sites", len(sites))
+        stats.pk_set(self.job_ctxt.job_id, "hcls_realizations",
                      realizations)
 
         block_size = config.hazard_block_size()
-        stats.pk_set(self.calc_proxy.job_id, "block_size", block_size)
+        stats.pk_set(self.job_ctxt.job_id, "block_size", block_size)
 
         blocks = range(0, len(sites), block_size)
-        stats.pk_set(self.calc_proxy.job_id, "blocks", len(blocks))
+        stats.pk_set(self.job_ctxt.job_id, "blocks", len(blocks))
+        stats.pk_set(self.job_ctxt.job_id, "cblock", 0)
 
         for start in blocks:
-            stats.pk_inc(self.calc_proxy.job_id, "cblock")
+            stats.pk_inc(self.job_ctxt.job_id, "cblock")
             end = start + block_size
             data = sites[start:end]
 
@@ -398,7 +398,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 map_serializer=self.serialize_quantile_hazard_map)
 
             # Done with this block, purge intermediate results from kvs.
-            release_data_from_kvs(self.calc_proxy.job_id, data, realizations,
+            release_data_from_kvs(self.job_ctxt.job_id, data, realizations,
                                   quantiles, self.poes_hazard_maps,
                                   kvs_keys_purged)
 
@@ -414,7 +414,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         hc_attrib_update = {'endBranchLabel': realization}
         nrml_file = self.hazard_curve_filename(realization)
         key_template = kvs.tokens.hazard_curve_poes_key_template(
-            self.calc_proxy.job_id, realization)
+            self.job_ctxt.job_id, realization)
         self.serialize_hazard_curve(nrml_file, key_template,
                                     hc_attrib_update, sites)
 
@@ -428,7 +428,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         hc_attrib_update = {'statistics': 'mean'}
         nrml_file = self.mean_hazard_curve_filename()
         key_template = kvs.tokens.mean_hazard_curve_key_template(
-            self.calc_proxy.job_id)
+            self.job_ctxt.job_id)
         self.serialize_hazard_curve(nrml_file, key_template, hc_attrib_update,
                                     sites)
 
@@ -448,7 +448,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 'quantileValue': quantile}
             nrml_file = self.quantile_hazard_curve_filename(quantile)
             key_template = kvs.tokens.quantile_hazard_curve_key_template(
-                self.calc_proxy.job_id, str(quantile))
+                self.job_ctxt.job_id, str(quantile))
             self.serialize_hazard_curve(nrml_file, key_template,
                                         hc_attrib_update, sites)
 
@@ -489,14 +489,14 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
 
         # XML serialization context
         xsc = namedtuple("XSC", "blocks, cblock, i_total, i_done, i_next")(
-                         stats.pk_get(self.calc_proxy.job_id, "blocks"),
-                         stats.pk_get(self.calc_proxy.job_id, "cblock"),
+                         stats.pk_get(self.job_ctxt.job_id, "blocks"),
+                         stats.pk_get(self.job_ctxt.job_id, "cblock"),
                          len(sites), 0, 0)
 
-        nrml_path = self.calc_proxy.build_nrml_path(nrml_file)
+        nrml_path = self.job_ctxt.build_nrml_path(nrml_file)
 
         curve_writer = hazard_output.create_hazardcurve_writer(
-            self.calc_proxy.job_id, self.calc_proxy.serialize_results_to,
+            self.job_ctxt.job_id, self.job_ctxt.serialize_results_to,
             nrml_path)
 
         sites = set(sites)
@@ -506,7 +506,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         pause = pgen.next()
 
         while accounted_for != sites:
-            failures = stats.failure_counters(self.calc_proxy.job_id, "h")
+            failures = stats.failure_counters(self.job_ctxt.job_id, "h")
             if failures:
                 raise RuntimeError("hazard failures (%s), aborting" % failures)
             hc_data = []
@@ -525,9 +525,9 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 # from the IML list in config.
                 hc_attrib = {
                     'investigationTimeSpan':
-                        self.calc_proxy['INVESTIGATION_TIME'],
-                    'IMLValues': self.calc_proxy.imls,
-                    'IMT': self.calc_proxy['INTENSITY_MEASURE_TYPE'],
+                        self.job_ctxt['INVESTIGATION_TIME'],
+                    'IMLValues': self.job_ctxt.imls,
+                    'IMT': self.job_ctxt['INTENSITY_MEASURE_TYPE'],
                     'PoEValues': value}
                 hc_attrib.update(hc_attrib_update)
                 hc_data.append((site, hc_attrib))
@@ -561,7 +561,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
 
             hm_attrib_update = {'statistics': 'mean'}
             key_template = kvs.tokens.mean_hazard_map_key_template(
-                self.calc_proxy.job_id, poe)
+                self.job_ctxt.job_id, poe)
 
             self.serialize_hazard_map_at_poe(sites, poe, key_template,
                                              hm_attrib_update, nrml_file)
@@ -582,7 +582,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             nrml_file = self.quantile_hazard_map_filename(quantile, poe)
 
             key_template = kvs.tokens.quantile_hazard_map_key_template(
-                self.calc_proxy.job_id, poe, quantile)
+                self.job_ctxt.job_id, poe, quantile)
 
             hm_attrib_update = {'statistics': 'quantile',
                                 'quantileValue': quantile}
@@ -611,13 +611,13 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         :param nrml_file: the output filename
         :type nrml_file: :py:class:`string`
         """
-        nrml_path = self.calc_proxy.build_nrml_path(nrml_file)
+        nrml_path = self.job_ctxt.build_nrml_path(nrml_file)
 
         LOG.info("Generating NRML hazard map file for PoE %s, "
                  "%s nodes in hazard map: %s" % (poe, len(sites), nrml_file))
 
         map_writer = hazard_output.create_hazardmap_writer(
-            self.calc_proxy.job_id, self.calc_proxy.serialize_results_to,
+            self.job_ctxt.job_id, self.job_ctxt.serialize_results_to,
             nrml_path)
         hm_data = []
 
@@ -626,9 +626,9 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             # use hazard map IML values from KVS
             hm_attrib = {
                 'investigationTimeSpan':
-                    self.calc_proxy['INVESTIGATION_TIME'],
-                'IMT': self.calc_proxy['INTENSITY_MEASURE_TYPE'],
-                'vs30': self.calc_proxy['REFERENCE_VS30_VALUE'],
+                    self.job_ctxt['INVESTIGATION_TIME'],
+                'IMT': self.job_ctxt['INTENSITY_MEASURE_TYPE'],
+                'vs30': self.job_ctxt['REFERENCE_VS30_VALUE'],
                 'IML': kvs.get_value_json_decoded(key),
                 'poE': poe}
 
@@ -638,8 +638,8 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         LOG.debug(">> path: %s" % nrml_path)
         # XML serialization context
         xsc = namedtuple("XSC", "blocks, cblock, i_total, i_done, i_next")(
-                         stats.pk_get(self.calc_proxy.job_id, "blocks"),
-                         stats.pk_get(self.calc_proxy.job_id, "cblock"),
+                         stats.pk_get(self.job_ctxt.job_id, "blocks"),
+                         stats.pk_get(self.job_ctxt.job_id, "cblock"),
                          len(sites), 0, len(hm_data))
         hazard_output.SerializerContext().update(xsc)
         map_writer.serialize(hm_data)
@@ -658,9 +658,9 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                 self.generate_erf(),
                 self.generate_gmpe_map(),
                 general.get_iml_list(
-                    self.calc_proxy.imls,
-                    self.calc_proxy.params['INTENSITY_MEASURE_TYPE']),
-                self.calc_proxy['MAXIMUM_DISTANCE'])
+                    self.job_ctxt.imls,
+                    self.job_ctxt.params['INTENSITY_MEASURE_TYPE']),
+                self.job_ctxt['MAXIMUM_DISTANCE'])
         except jpype.JavaException, ex:
             unwrap_validation_error(jpype, ex)
 
@@ -669,7 +669,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         curve_keys = []
         for site, poes in izip(sites, poes_list):
             curve_key = kvs.tokens.hazard_curve_poes_key(
-                self.calc_proxy.job_id, realization, site)
+                self.job_ctxt.job_id, realization, site)
 
             kvs.get_client().set(curve_key, poes)
 
@@ -679,7 +679,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
 
     def _hazard_curve_filename(self, filename_part):
         "Helper to build the filenames of hazard curves"
-        return self.calc_proxy.build_nrml_path('%s-%s.xml'
+        return self.job_ctxt.build_nrml_path('%s-%s.xml'
                                     % (HAZARD_CURVE_FILENAME_PREFIX,
                                        filename_part))
 
@@ -706,7 +706,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
 
     def _hazard_map_filename(self, filename_part):
         """Helper to build the filenames of hazard maps"""
-        return self.calc_proxy.build_nrml_path('%s-%s.xml'
+        return self.job_ctxt.build_nrml_path('%s-%s.xml'
                                     % (HAZARD_MAP_FILENAME_PREFIX,
                                        filename_part))
 
@@ -729,7 +729,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         """Returns the quantile levels specified in the config file of this
         job.
         """
-        return self.calc_proxy.extract_values_from_config(
+        return self.job_ctxt.extract_values_from_config(
             general.QUANTILE_PARAM_NAME,
             check_value=lambda v: v >= 0.0 and v <= 1.0)
 
@@ -739,6 +739,6 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         Returns the PoEs at which the hazard maps will be calculated, as
         specified in the config file of this job.
         """
-        return self.calc_proxy.extract_values_from_config(
+        return self.job_ctxt.extract_values_from_config(
             general.POES_PARAM_NAME,
             check_value=lambda v: v >= 0.0 and v <= 1.0)

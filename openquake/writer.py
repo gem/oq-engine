@@ -1,18 +1,17 @@
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
 # vim: tabstop=4 shiftwidth=4 softtabstop=4
@@ -123,9 +122,9 @@ class DBWriter(object):
     override serialize().
     """
 
-    def __init__(self, nrml_path, oq_calculation_id):
+    def __init__(self, nrml_path, oq_job_id):
         self.nrml_path = nrml_path
-        self.oq_calculation_id = oq_calculation_id
+        self.oq_job_id = oq_job_id
         self.output = None
         self.bulk_inserter = None
 
@@ -134,8 +133,8 @@ class DBWriter(object):
 
         assert self.output is None
 
-        job = models.OqCalculation.objects.get(id=self.oq_calculation_id)
-        self.output = models.Output(owner=job.owner, oq_calculation=job,
+        job = models.OqJob.objects.get(id=self.oq_job_id)
+        self.output = models.Output(owner=job.owner, oq_job=job,
                                     display_name=basename(self.nrml_path),
                                     output_type=output_type, db_backed=True)
         self.output.save()

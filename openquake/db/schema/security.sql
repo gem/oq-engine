@@ -55,6 +55,9 @@ GRANT ALL ON SEQUENCE oqmif.exposure_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE oqmif.exposure_model_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE oqmif.occupancy_id_seq to GROUP openquake;
 
+GRANT ALL ON SEQUENCE riski.ffc_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riski.ffd_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riski.fragility_model_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riski.vulnerability_function_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riski.vulnerability_model_id_seq to GROUP openquake;
 
@@ -67,15 +70,23 @@ GRANT ALL ON SEQUENCE riskr.collapse_map_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.collapse_map_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.bcr_distribution_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.bcr_distribution_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.dmg_dist_per_asset_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.dmg_dist_per_asset_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.dmg_dist_per_taxonomy_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.dmg_dist_per_taxonomy_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.dmg_dist_total_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE riskr.dmg_dist_total_data_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE uiapi.input_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE uiapi.oq_calculation_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE uiapi.calc_stats_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.oq_job_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.job_stats_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_job_profile_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.output_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.upload_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE uiapi.input_set_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.error_msg_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.input2job_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.input2upload_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.job2profile_id_seq to GROUP openquake;
 
 GRANT SELECT ON geography_columns TO GROUP openquake;
 GRANT SELECT ON geometry_columns TO GROUP openquake;
@@ -110,43 +121,43 @@ GRANT SELECT ON eqcat.catalog_allfields TO GROUP openquake;
 
 -- hzrdi.complex_fault
 GRANT SELECT ON hzrdi.complex_fault TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.complex_fault TO oq_calculation_init;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.complex_fault TO oq_job_init;
 
 -- hzrdi.fault_edge
 GRANT SELECT ON hzrdi.fault_edge TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.fault_edge TO oq_calculation_init;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.fault_edge TO oq_job_init;
 
 -- hzrdi.focal_mechanism
 GRANT SELECT ON hzrdi.focal_mechanism TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.focal_mechanism TO oq_calculation_init;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.focal_mechanism TO oq_job_init;
 
 -- hzrdi.mfd_evd
 GRANT SELECT ON hzrdi.mfd_evd TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.mfd_evd TO oq_calculation_init;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.mfd_evd TO oq_job_init;
 
 -- hzrdi.mfd_tgr
 GRANT SELECT ON hzrdi.mfd_tgr TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.mfd_tgr TO oq_calculation_init;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.mfd_tgr TO oq_job_init;
 
 -- hzrdi.r_depth_distr
 GRANT SELECT ON hzrdi.r_depth_distr TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.r_depth_distr TO oq_calculation_init;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.r_depth_distr TO oq_job_init;
 
 -- hzrdi.r_rate_mdl
 GRANT SELECT ON hzrdi.r_rate_mdl TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.r_rate_mdl TO oq_calculation_init;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.r_rate_mdl TO oq_job_init;
 
 -- hzrdi.rupture
 GRANT SELECT ON hzrdi.rupture TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.rupture TO oq_calculation_init;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.rupture TO oq_job_init;
 
 -- hzrdi.simple_fault
 GRANT SELECT ON hzrdi.simple_fault TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.simple_fault TO oq_calculation_init;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.simple_fault TO oq_job_init;
 
 -- hzrdi.source
 GRANT SELECT ON hzrdi.source TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.source TO oq_calculation_init;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.source TO oq_job_init;
 
 -- hzrdr.hazard_curve
 GRANT SELECT ON hzrdr.hazard_curve TO GROUP openquake;
@@ -182,26 +193,38 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdr.uh_spectrum_data TO oq_reslt_writer;
 
 -- oqmif.exposure_data
 GRANT SELECT ON oqmif.exposure_data TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.exposure_data TO oq_ged4gem;
-GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.exposure_data TO oq_calculation_init;
+GRANT SELECT,INSERT,DELETE ON oqmif.exposure_data TO oq_ged4gem;
+GRANT SELECT,INSERT,DELETE ON oqmif.exposure_data TO oq_job_init;
 
 -- oqmif.exposure_model
 GRANT SELECT ON oqmif.exposure_model TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.exposure_model TO oq_ged4gem;
-GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.exposure_model TO oq_calculation_init;
+GRANT SELECT,INSERT,DELETE ON oqmif.exposure_model TO oq_ged4gem;
+GRANT SELECT,INSERT,DELETE ON oqmif.exposure_model TO oq_job_init;
 
 -- oqmif.occupancy
 GRANT SELECT ON oqmif.occupancy TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.occupancy TO oq_ged4gem;
-GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.occupancy TO oq_calculation_init;
+GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.occupancy TO oq_job_init;
+
+-- riski.ffc
+GRANT SELECT ON riski.ffc TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON riski.ffc TO oq_job_init;
+
+-- riski.ffd
+GRANT SELECT ON riski.ffd TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON riski.ffd TO oq_job_init;
+
+-- riski.fragility_model
+GRANT SELECT ON riski.fragility_model TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON riski.fragility_model TO oq_job_init;
 
 -- riski.vulnerability_function
 GRANT SELECT ON riski.vulnerability_function TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON riski.vulnerability_function TO oq_calculation_init;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riski.vulnerability_function TO oq_job_init;
 
 -- riski.vulnerability_model
 GRANT SELECT ON riski.vulnerability_model TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON riski.vulnerability_model TO oq_calculation_init;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riski.vulnerability_model TO oq_job_init;
 
 -- riskr.loss_curve
 GRANT SELECT ON riskr.loss_curve TO GROUP openquake;
@@ -239,37 +262,69 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.bcr_distribution TO oq_reslt_writer;
 GRANT SELECT ON riskr.bcr_distribution_data TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.bcr_distribution_data TO oq_reslt_writer;
 
+-- riskr.dmg_dist_per_asset
+GRANT SELECT ON riskr.dmg_dist_per_asset TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.dmg_dist_per_asset TO oq_reslt_writer;
+
+-- riskr.dmg_dist_per_asset_data
+GRANT SELECT ON riskr.dmg_dist_per_asset_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.dmg_dist_per_asset_data TO oq_reslt_writer;
+
+-- riskr.dmg_dist_per_taxonomy
+GRANT SELECT ON riskr.dmg_dist_per_taxonomy TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.dmg_dist_per_taxonomy TO oq_reslt_writer;
+
+-- riskr.dmg_dist_per_taxonomy_data
+GRANT SELECT ON riskr.dmg_dist_per_taxonomy_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.dmg_dist_per_taxonomy_data TO oq_reslt_writer;
+
+-- riskr.dmg_dist_total
+GRANT SELECT ON riskr.dmg_dist_total TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.dmg_dist_total TO oq_reslt_writer;
+
+-- riskr.dmg_dist_total_data
+GRANT SELECT ON riskr.dmg_dist_total_data TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.dmg_dist_total_data TO oq_reslt_writer;
+
 -- uiapi.input
 GRANT SELECT ON uiapi.input TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.input TO oq_calculation_init;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.input TO oq_job_init;
 
--- uiapi.oq_calculation
-GRANT SELECT ON uiapi.oq_calculation TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE ON uiapi.oq_calculation TO oq_calculation_init;
+-- uiapi.input2job
+GRANT SELECT ON uiapi.input2job TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON uiapi.input2job TO oq_job_init;
 
--- uiapi.calc_stats
-GRANT SELECT ON uiapi.calc_stats TO GROUP openquake;
--- oq_calculation_init is granted write access to record job start time and other job stats at job init time
-GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.calc_stats to oq_calculation_init;
--- oq_calculation_superv is granted write access so that the job supervisor can record job completion time
-GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.calc_stats to oq_calculation_superv;
+-- uiapi.input2upload
+GRANT SELECT ON uiapi.input2upload TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON uiapi.input2upload TO oq_job_init;
+
+-- uiapi.job2profile
+GRANT SELECT ON uiapi.job2profile TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON uiapi.job2profile TO oq_job_init;
+
+-- uiapi.oq_job
+GRANT SELECT ON uiapi.oq_job TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.oq_job TO oq_job_init;
+
+-- uiapi.job_stats
+GRANT SELECT ON uiapi.job_stats TO GROUP openquake;
+-- oq_job_init is granted write access to record job start time and other job stats at job init time
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.job_stats to oq_job_init;
+-- oq_job_superv is granted write access so that the job supervisor can record job completion time
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.job_stats to oq_job_superv;
 
 -- uiapi.oq_job_profile
 GRANT SELECT ON uiapi.oq_job_profile TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE ON uiapi.oq_job_profile TO oq_calculation_init;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.oq_job_profile TO oq_job_init;
 
 -- uiapi.output
 GRANT SELECT ON uiapi.output TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE ON uiapi.output TO oq_reslt_writer;
 
--- uiapi.input_set
-GRANT SELECT ON uiapi.input_set TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.input_set TO oq_calculation_init;
-
 -- uiapi.upload
 GRANT SELECT ON uiapi.upload TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.upload TO oq_calculation_init;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.upload TO oq_job_init;
 
 -- uiapi.error_msg
 GRANT SELECT ON uiapi.error_msg TO openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.error_msg TO oq_calculation_superv;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.error_msg TO oq_job_superv;

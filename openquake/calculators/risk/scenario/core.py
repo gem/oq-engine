@@ -1,18 +1,17 @@
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 # pylint: disable=W0232
 
@@ -49,21 +48,20 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
         tasks = []
 
-        vuln_model = \
-            vulnerability.load_vuln_model_from_kvs(self.calc_proxy.job_id)
+        vuln_model = vulnerability.load_vuln_model_from_kvs(
+            self.job_ctxt.job_id)
 
-        epsilon_provider = general.EpsilonProvider(self.calc_proxy.params)
+        epsilon_provider = general.EpsilonProvider(self.job_ctxt.params)
 
-        sum_per_gmf = SumPerGroundMotionField(vuln_model,
-                                                       epsilon_provider)
+        sum_per_gmf = SumPerGroundMotionField(vuln_model, epsilon_provider)
 
         region_loss_map_data = {}
 
-        for block_id in self.calc_proxy.blocks_keys:
+        for block_id in self.job_ctxt.blocks_keys:
             LOGGER.debug("Dispatching task for block %s of %s"
-                % (block_id, len(self.calc_proxy.blocks_keys)))
+                % (block_id, len(self.job_ctxt.blocks_keys)))
             a_task = general.compute_risk.delay(
-                self.calc_proxy.job_id, block_id, vuln_model=vuln_model,
+                self.job_ctxt.job_id, block_id, vuln_model=vuln_model,
                 epsilon_provider=epsilon_provider)
             tasks.append(a_task)
 
@@ -90,11 +88,11 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
         # serialize the loss map data to XML
         loss_map_path = os.path.join(
-            self.calc_proxy['BASE_PATH'],
-            self.calc_proxy['OUTPUT_DIR'],
-            'loss-map-%s.xml' % self.calc_proxy.job_id)
+            self.job_ctxt['BASE_PATH'],
+            self.job_ctxt['OUTPUT_DIR'],
+            'loss-map-%s.xml' % self.job_ctxt.job_id)
         loss_map_writer = risk_output.create_loss_map_writer(
-            self.calc_proxy.job_id, self.calc_proxy.serialize_results_to,
+            self.job_ctxt.job_id, self.job_ctxt.serialize_results_to,
             loss_map_path, True)
 
         if loss_map_writer:
@@ -132,7 +130,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         Other info:
 
         The GMF data for each realization is stored in the KVS by the preceding
-        scenario hazard calculation.
+        scenario hazard job.
 
         :param block_id: id of the region block data we need to pull from the
             KVS
@@ -147,7 +145,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
             * 1-dimensional :py:class:`numpy.ndarray` of loss values for this
                 region block (again, 1 value per realization)
 
-            * list of 2-tuples containing Site, Loss, and Asset
+            * list of 2-tuples containing site, loss, and asset
                 information.
 
                 The first element of each 2-tuple shall be a
@@ -155,114 +153,43 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                 geographical location of the asset loss.
 
                 The second element shall be a list of
-                2-tuples of dicts representing the Loss and Asset data (in that
+                2-tuples of dicts representing the loss and asset data (in that
                 order).
 
                 Example::
 
-                    [(<Site(-117.0, 38.0)>,
-                     [({'mean_loss': 200.0, 'stddev_loss': 100},
-                      {'assetID': 'a171'}), ({'mean_loss': 200.0,
-                      'stddev_loss': 100}, {'assetID': 'a187'})]),
-                     (<Site(-117.0, 38.0)>,
-                     ({'mean_loss': 200, 'stddev_loss': 100.0},
-                      {'assetID': 'a172'})),
-                     ...
-                     (<Site(-118.0, 39.0)>,
-                     ({'mean_loss': 50, 'stddev_loss': 50.0},
-                      {'assetID': 'a192'}))]
-
+                    [(<Site(-117.0, 38.0)>, [
+                        ({'mean_loss': 200.0, 'stddev_loss': 100},
+                            {'assetID': 'a171'}),
+                        ({'mean_loss': 200.0, 'stddev_loss': 100},
+                            {'assetID': 'a187'})
+                    ]),
+                     (<Site(-118.0, 39.0)>, [
+                        ({'mean_loss': 50, 'stddev_loss': 50.0},
+                            {'assetID': 'a192'})
+                    ])]
         """
+
         vuln_model = kwargs['vuln_model']
         epsilon_provider = kwargs['epsilon_provider']
+        block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
 
-        block = general.Block.from_kvs(self.calc_proxy.job_id, block_id)
-
-        block_losses = self._compute_loss_for_block(
-            block, vuln_model, epsilon_provider)
-
-        asset_losses = self._compute_asset_losses_for_block(
-            block, vuln_model, epsilon_provider)
-
-        return block_losses, asset_losses
-
-    def _compute_loss_for_block(self, block, vuln_model, epsilon_provider):
-        """
-        Compute the sum of all asset losses for the given region block.
-
-        :param block: a block of sites represented by a
-            :py:class:`openquake.job.Block` object
-        :param vuln_model:
-            dict of :py:class:`openquake.shapes.VulnerabilityFunction` objects,
-            keyed by the vulnerability function name as a string
-        :param epsilon_provider:
-            :py:class:`openquake.risk.job.EpsilonProvider` object
-
-        :returns: 1-dimensional :py:class:`numpy.ndarray` of floats
-            representing loss values for this block. There will be one value
-            per realization.
-
-        """
-        sum_per_gmf = SumPerGroundMotionField(vuln_model,
-                                                       epsilon_provider)
-        for point in block.grid(self.calc_proxy.region):
-            gmvs = load_gmvs_for_point(self.calc_proxy.job_id, point)
-            assets = load_assets_for_point(self.calc_proxy.job_id, point)
-            for asset in assets:
-                # the SumPerGroundMotionField add() method expects a dict
-                # with a single key ('IMLs') and value set to the sequence of
-                # GMVs
-                sum_per_gmf.add({'IMLs': gmvs}, asset)
-        return sum_per_gmf.losses
-
-    def _compute_asset_losses_for_block(
-        self, block, vuln_model, epsilon_provider):
-        """
-        Compute the mean & standard deviation loss values for each asset in the
-        given block.
-
-        :param block: a block of sites represented by a
-            :py:class:`openquake.job.Block` object
-        :param vuln_model:
-            dict of :py:class:`openquake.shapes.VulnerabilityFunction` objects,
-            keyed by the vulnerability function name as a string
-        :param epsilon_provider:
-            :py:class:`openquake.risk.job.EpsilonProvider` object
-
-        :returns: list of 2-tuples containing Site, Loss, and Asset
-            information.
-
-            The first element of each 2-tuple shall be a
-            :py:class:`openquake.shapes.Site` object, which represents the
-            geographical location of the asset loss.
-
-            The second element shall be a list of
-            2-tuples of dicts representing the Loss and Asset data (in that
-            order).
-
-            Example::
-
-                [(<Site(-117.0, 38.0)>,
-                 [({'mean_loss': 200.0, 'stddev_loss': 100},
-                  {'assetID': 'a171'}), ({'mean_loss': 200.0,
-                  'stddev_loss': 100}, {'assetID': 'a187'})]),
-                 (<Site(-117.0, 38.0)>,
-                 ({'mean_loss': 200, 'stddev_loss': 100.0},
-                  {'assetID': 'a172'})),
-                 ...
-                 (<Site(-118.0, 39.0)>,
-                 ({'mean_loss': 50, 'stddev_loss': 50.0},
-                  {'assetID': 'a192'}))]
-        """
         loss_data = {}
 
-        for point in block.grid(self.calc_proxy.region):
-            # the mean and stddev calculation functions used below
-            # require the gmvs to be wrapped in a dict with a single key:
-            # 'IMLs'
-            gmvs = {'IMLs': load_gmvs_for_point(self.calc_proxy.job_id,
-                                                point)}
-            assets = load_assets_for_point(self.calc_proxy.job_id, point)
+        # used to sum the losses for the whole block
+        sum_per_gmf = SumPerGroundMotionField(vuln_model, epsilon_provider)
+
+        for site in block.sites:
+            point = self.job_ctxt.region.grid.point_at(site)
+
+            # the scientific functions used below
+            # require the gmvs to be wrapped in a dict with a single key, IMLs
+            gmvs = {'IMLs': load_gmvs_for_point(
+                    self.job_ctxt.job_id, point)}
+
+            assets = general.BaseRiskCalculator.assets_at(
+                self.job_ctxt.job_id, site)
+
             for asset in assets:
                 vuln_function = vuln_model[asset.taxonomy]
 
@@ -274,19 +201,22 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
                 asset_site = shapes.Site(asset.site.x, asset.site.y)
 
-                loss = ({'mean_loss': asset_mean_loss,
-                         'stddev_loss': asset_stddev_loss},
-                        {'assetID': asset.asset_ref})
+                loss = ({
+                    'mean_loss': asset_mean_loss,
+                    'stddev_loss': asset_stddev_loss}, {
+                    'assetID': asset.asset_ref
+                })
 
+                sum_per_gmf.add(gmvs, asset)
                 collect_block_data(loss_data, asset_site, loss)
 
-        return loss_data
+        return sum_per_gmf.losses, loss_data
 
 
 def load_gmvs_for_point(job_id, point):
     """
     From the KVS, load all the ground motion values for the given point. We
-    expect one ground motion value per realization of the calculation.
+    expect one ground motion value per realization of the job.
     Since there can be tens of thousands of realizations, this could return a
     large list.
 
@@ -300,18 +230,6 @@ def load_gmvs_for_point(job_id, point):
     """
     gmfs_key = kvs.tokens.ground_motion_values_key(job_id, point)
     return [float(x['mag']) for x in kvs.get_list_json_decoded(gmfs_key)]
-
-
-def load_assets_for_point(job_id, point):
-    """
-    From the KVS, load all assets for the given point.
-
-    :param point: :py:class:`openquake.shapes.GridPoint` object
-
-    :returns: a potentially empty list of
-        :py:class:`openquake.db.models.ExposureData` instances
-    """
-    return general.BaseRiskCalculator.assets_for_cell(job_id, point.site)
 
 
 def collect_region_data(block_loss_map_data, region_loss_map_data):

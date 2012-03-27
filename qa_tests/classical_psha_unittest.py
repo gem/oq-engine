@@ -3,19 +3,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 from collections import defaultdict
 from lxml import etree
@@ -130,7 +129,7 @@ def verify_hazcurve_results(
         gh = geohash.encode(lat, lon)
 
         hc = models.HazardCurveData.objects.filter(
-            hazard_curve__output__oq_calculation=job,
+            hazard_curve__output__oq_job=job,
             hazard_curve__end_branch_label=end_branch_label,
             hazard_curve__statistic_type=statistic_type).extra(
                 where=["ST_GeoHash(location, 12) = %s"],
@@ -216,7 +215,7 @@ def verify_hazmap_results(tc, job, expected_map, poe, statistic_type):
         gh = geohash.encode(site.latitude, site.longitude, precision=12)
 
         hm_db = models.HazardMapData.objects.filter(
-            hazard_map__output__oq_calculation=job,
+            hazard_map__output__oq_job=job,
             hazard_map__statistic_type=statistic_type,
             hazard_map__poe=poe).extra(
             where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
@@ -276,7 +275,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         helpers.run_job(helpers.demo_file(
             os.path.join("HazardMapTest", "config.gem")))
 
-        self.job = models.OqCalculation.objects.latest("id")
+        self.job = models.OqJob.objects.latest("id")
 
         path = helpers.demo_file(os.path.join("HazardMapTest",
             "expected_results", "meanHazardMap0.1.dat"))
@@ -299,7 +298,7 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
         helpers.run_job(job_cfg)
 
-        self.job = models.OqCalculation.objects.latest("id")
+        self.job = models.OqJob.objects.latest("id")
 
         # Check hazard curves for sample 0:
         # Hazard curve expected results for logic tree sample 0:
@@ -330,20 +329,20 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         """Compare the expected hazard curve results with the results
         computed by the current job."""
 
-        self.job = models.OqCalculation.objects.latest("id")
+        self.job = models.OqJob.objects.latest("id")
 
         errors = []
         for site, curve in expected_results.items():
             gh = geohash.encode(site.latitude, site.longitude, precision=12)
 
             hc_db = models.HazardCurveData.objects.filter(
-                hazard_curve__output__oq_calculation=self.job,
+                hazard_curve__output__oq_job=self.job,
                 hazard_curve__statistic_type="mean").extra(
                 where=["ST_GeoHash(location, 12) = %s"], params=[gh]).get()
 
             try:
                 self._assert_curve_is(
-                    curve, zip(self.job.oq_job_profile.imls, hc_db.poes),
+                    curve, zip(self.job.profile().imls, hc_db.poes),
                     site, tolerance=0.005)
             except AssertionError as exc:
                 errors.append(str(exc))
@@ -378,9 +377,9 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         exp_results_dir = os.path.join("complex_fault_demo_hazard",
                                        "expected_results")
 
-        helpers.run_job(job_cfg, output_type="xml")
+        helpers.run_job(job_cfg, ['--output-type=xml'])
 
-        self.job = models.OqCalculation.objects.latest("id")
+        self.job = models.OqJob.objects.latest("id")
 
         copath = helpers.demo_file(os.path.join(
             "complex_fault_demo_hazard", "computed_output"))
@@ -431,9 +430,9 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         job_cfg = helpers.demo_file(os.path.join(
             "complex_fault_demo_hazard", "config.gem"))
 
-        helpers.run_job(job_cfg, output_type='xml')
+        helpers.run_job(job_cfg, ['--output-type=xml'])
 
-        self.job = models.OqCalculation.objects.latest("id")
+        self.job = models.OqJob.objects.latest("id")
 
         key = stats.key_name(
             self.job.id, *stats.STATS_KEYS["hcls_xmlcurvewrites"])

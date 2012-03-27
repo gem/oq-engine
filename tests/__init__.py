@@ -1,28 +1,27 @@
 # -*- coding: utf-8 -*-
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
 from bulk_insert_unittest import *
 from cache_gc_unittest import *
 from calculators.hazard.disagg.subsets_unittest import *
-from db.models_unittest import *
 from db_fields_unittest import *
 from db_loader_unittest import *
 from db_loader_unittest import *
+from db.models_unittest import *
 from db_routers_unittest import *
 from disaggregation_unittest import *
 from engine_unittest import *
@@ -37,12 +36,13 @@ from kvs_unittest import *
 from logs_unittest import *
 from loss_map_output_unittest import *
 from loss_output_unittest import *
-from output.risk_unittest import *
 from output_hazard_unittest import *
 from output_risk_unittest import *
+from output.risk_unittest import *
 from output_unittest import *
 from output_writers_unittest import *
-from parser_exposure_portfolio_unittest import *
+from parser_exposure_model_unittest import *
+from parser_fragility_model_unittest import *
 from parser_hazard_curve_unittest import *
 from parser_hazard_map_unittest import *
 from parser_vulnerability_model_unittest import *

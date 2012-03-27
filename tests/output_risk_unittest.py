@@ -3,19 +3,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
 import os
@@ -62,8 +61,8 @@ class LossCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestCase):
         inputs = [("exposure", path)]
         self.job = self.setup_classic_job(inputs=inputs)
 
-        qargs = dict(input_type="exposure", path=path)
-        [input] = self.job.oq_job_profile.input_set.input_set.filter(**qargs)
+        [input] = models.inputs4job(self.job.id, input_type="exposure",
+                                    path=path)
         owner = models.OqUser.objects.get(user_name="openquake")
         emdl = models.ExposureModel(
             owner=owner, input=input, description="LCB test exposure model",
@@ -206,9 +205,9 @@ SITE_B_SCENARIO_LOSS_ONE = {'mean_loss': 120000.0, 'stddev_loss': 2000.0}
 
 SAMPLE_SCENARIO_LOSS_MAP_DATA = [
     SCENARIO_LOSS_MAP_METADATA,
-    (SITE_A, [[SITE_A_SCENARIO_LOSS_ONE, None],
-              [SITE_A_SCENARIO_LOSS_TWO, None]]),
-    (SITE_B, [[SITE_B_SCENARIO_LOSS_ONE, None]])]
+    (SITE_A, [[SITE_A_SCENARIO_LOSS_ONE, {'assetID': 'asset1'}],
+              [SITE_A_SCENARIO_LOSS_TWO, {'assetID': 'asset2'}]]),
+    (SITE_B, [[SITE_B_SCENARIO_LOSS_ONE, {'assetID': 'asset3'}]])]
 
 NONSCENARIO_LOSS_MAP_METADATA = LOSS_MAP_METADATA.copy()
 NONSCENARIO_LOSS_MAP_METADATA.update({
@@ -237,8 +236,8 @@ class LossMapDBBaseTestCase(unittest.TestCase, helpers.DbTestCase):
         inputs = [("exposure", path)]
         self.job = self.setup_classic_job(inputs=inputs)
 
-        qargs = dict(input_type="exposure", path=path)
-        [input] = self.job.oq_job_profile.input_set.input_set.filter(**qargs)
+        [input] = models.inputs4job(self.job.id, input_type="exposure",
+                                    path=path)
         owner = models.OqUser.objects.get(user_name="openquake")
         emdl = models.ExposureModel(
             owner=owner, input=input, description="LMB test exposure model",
@@ -264,10 +263,6 @@ class LossMapDBBaseTestCase(unittest.TestCase, helpers.DbTestCase):
                                         **adata)
             asset.save()
             setattr(self, name, asset)
-
-        SAMPLE_SCENARIO_LOSS_MAP_DATA[1][1][0][1] = self.asset_a_1
-        SAMPLE_SCENARIO_LOSS_MAP_DATA[1][1][1][1] = self.asset_a_2
-        SAMPLE_SCENARIO_LOSS_MAP_DATA[2][1][0][1] = self.asset_b_1
 
         SAMPLE_NONSCENARIO_LOSS_MAP_DATA[1][1][0][1] = self.asset_a_1
         SAMPLE_NONSCENARIO_LOSS_MAP_DATA[1][1][1][1] = self.asset_a_2
@@ -329,21 +324,29 @@ class LossMapDBWriterTestCase(LossMapDBBaseTestCase):
                                           key=lambda d: d.id)
 
         self.assertEqual(SITE_A, Site(*data_a.location.coords))
-        self.assertEqual(self.asset_a_1.asset_ref, data_a.asset_ref)
+
+        self.assertEqual(
+            SAMPLE_SCENARIO_LOSS_MAP_DATA[1][1][0][1]['assetID'],
+            data_a.asset_ref)
+        # self.assertEqual(self.asset_a_1.asset_ref, data_a.asset_ref)
         self.assertEqual(SITE_A_SCENARIO_LOSS_ONE['mean_loss'],
                         data_a.value)
         self.assertEqual(SITE_A_SCENARIO_LOSS_ONE['stddev_loss'],
                          data_a.std_dev)
 
         self.assertEqual(SITE_A, Site(*data_b.location.coords))
-        self.assertEqual(self.asset_a_2.asset_ref, data_b.asset_ref)
+        self.assertEqual(
+            SAMPLE_SCENARIO_LOSS_MAP_DATA[1][1][1][1]['assetID'],
+            data_b.asset_ref)
         self.assertEqual(SITE_A_SCENARIO_LOSS_TWO['mean_loss'],
                          data_b.value)
         self.assertEqual(SITE_A_SCENARIO_LOSS_TWO['stddev_loss'],
                          data_b.std_dev)
 
         self.assertEqual(SITE_B, Site(*data_c.location.coords))
-        self.assertEqual(self.asset_b_1.asset_ref, data_c.asset_ref)
+        self.assertEqual(
+            SAMPLE_SCENARIO_LOSS_MAP_DATA[2][1][0][1]['assetID'],
+            data_c.asset_ref)
         self.assertEqual(SITE_B_SCENARIO_LOSS_ONE['mean_loss'],
                          data_c.value)
         self.assertEqual(SITE_B_SCENARIO_LOSS_ONE['stddev_loss'],

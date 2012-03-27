@@ -3,19 +3,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
 """
@@ -41,10 +40,11 @@ try:
 except ImportError:
     setproctitle = lambda title: None  # pylint: disable=C0103
 
-from openquake.db.models import OqCalculation, ErrorMsg, CalcStats
+from openquake.db.models import OqJob, ErrorMsg, JobStats
 from openquake import supervising
 from openquake import kvs
 from openquake import logs
+from openquake.utils import stats
 
 
 def ignore_sigint():
@@ -52,7 +52,7 @@ def ignore_sigint():
     Setup signal handler on SIGINT in order to ignore it.
 
     This is needed to avoid premature death of the supervisor and is called
-    from :func:`openquake.engine.run_calculation` for job parent process and
+    from :func:`openquake.engine.run_job` for job parent process and
     from :func:`supervise` for supervisor process.
     """
     signal.signal(signal.SIGINT, signal.SIG_IGN)
@@ -74,16 +74,16 @@ def terminate_job(pid):
 def record_job_stop_time(job_id):
     """
     Call this when a job concludes (successful or not) to record the
-    'stop_time' (using the current UTC time) in the uiapi.calc_stats table.
+    'stop_time' (using the current UTC time) in the uiapi.job_stats table.
 
     :param job_id: the job id
     :type job_id: int
     """
-    logging.info('Recording stop time for job %s to calc_stats', job_id)
+    logging.info('Recording stop time for job %s to job_stats', job_id)
 
-    calc_stats = CalcStats.objects.get(oq_calculation=job_id)
-    calc_stats.stop_time = datetime.utcnow()
-    calc_stats.save(using='job_superv')
+    job_stats = JobStats.objects.get(oq_job=job_id)
+    job_stats.stop_time = datetime.utcnow()
+    job_stats.save(using='job_superv')
 
 
 def cleanup_after_job(job_id):
@@ -108,7 +108,7 @@ def get_job_status(job_id):
     :rtype: string
     """
 
-    return OqCalculation.objects.get(id=job_id).status
+    return OqJob.objects.get(id=job_id).status
 
 
 def update_job_status_and_error_msg(job_id, status, error_msg=None):
@@ -122,13 +122,13 @@ def update_job_status_and_error_msg(job_id, status, error_msg=None):
     :param error_msg: the error message, if any
     :type error_msg: string or None
     """
-    job = OqCalculation.objects.get(id=job_id)
+    job = OqJob.objects.get(id=job_id)
     job.status = status
     job.save()
 
     if error_msg:
         ErrorMsg.objects.using('job_superv')\
-                        .create(oq_calculation=job, detailed=error_msg)
+                        .create(oq_job=job, detailed=error_msg)
 
 
 class SupervisorLogHandler(logging.StreamHandler):
@@ -163,6 +163,10 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
        - handling its "critical" and "error" messages
        - periodically checking that the job process is still running
     """
+    # Failure counter check delay, translates to 20 seconds with the current
+    # settings.
+    FCC_DELAY = 20
+
     def __init__(self, job_id, job_pid, timeout=1):
         self.selflogger = logging.getLogger('oq.job.%s.supervisor' % job_id)
         self.selflogger.info('Entering supervisor for job %s', job_id)
@@ -176,6 +180,8 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
         self.jobhandler = logging.Handler(logging.ERROR)
         self.jobhandler.emit = self.log_callback
         self.joblogger.addHandler(self.jobhandler)
+        # Failure counter check delay value
+        self.fcc_delay_value = 0
 
     def run(self):
         """
@@ -193,6 +199,14 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
         """
         Handles messages of severe level from the supervised job.
         """
+        if record.name == self.selflogger.name:
+            # ignore error log messages sent by selflogger.
+            # this way we don't try to kill the job if its
+            # process has crashed (or has been stopped).
+            # we emit selflogger's error messages from
+            # timeout_callback().
+            return
+
         terminate_job(self.job_pid)
 
         update_job_status_and_error_msg(self.job_id, 'failed',
@@ -206,28 +220,47 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
 
     def timeout_callback(self):
         """
-        On timeout expiration check if the job process is still running, and
-        act accordingly if not.
+        On timeout expiration check if the job process is still running
+        and whether it experienced any failures.
+
+        Terminate the job process in the latter case.
         """
+        def failure_counters_need_check():
+            """Return `True` if failure counters should be checked."""
+            self.fcc_delay_value += 1
+            result = self.fcc_delay_value >= self.FCC_DELAY
+            if result:
+                self.fcc_delay_value = 0
+            return result
+
+        process_stopped = job_failed = False
+        message = None
+
         if not supervising.is_pid_running(self.job_pid):
-            self.selflogger.info('Process %s not running', self.job_pid)
+            message = ('job process %s crashed or terminated' % self.job_pid)
+            process_stopped = True
+        elif failure_counters_need_check():
+            # Job process is still running.
+            failures = stats.failure_counters(self.job_id)
+            if failures:
+                terminate_job(self.job_pid)
+                message = "job terminated with failures: %s" % failures
+                job_failed = True
 
-            # see what status was left in the database by the exited job
+        if job_failed or process_stopped:
             job_status = get_job_status(self.job_id)
-
-            self.selflogger.info('job finished with status %r', job_status)
-
-            if job_status != 'succeeded':
-                if job_status == 'running':
-                    # The job crashed without having a chance to update the
-                    # status in the database.  We do it here.
-                    update_job_status_and_error_msg(self.job_id, 'failed',
-                                                    'crash')
+            if process_stopped and job_status == 'succeeded':
+                message = 'job process %s succeeded' % self.job_pid
+                self.selflogger.info(message)
+            elif job_status == 'running':
+                # The job crashed without having a chance to update the
+                # status in the database, or it has been running even though
+                # there were failures. We update the job status here.
+                self.selflogger.error(message)
+                update_job_status_and_error_msg(self.job_id, 'failed', message)
 
             record_job_stop_time(self.job_id)
-
             cleanup_after_job(self.job_id)
-
             raise StopIteration()
 
 
@@ -251,7 +284,6 @@ def supervise(pid, job_id, timeout=1):
     ignore_sigint()
 
     logging.root.addHandler(SupervisorLogHandler(job_id))
-    logging.root.setLevel(logging.NOTSET)
 
     supervisor = SupervisorLogMessageConsumer(job_id, pid, timeout)
     supervisor.run()
