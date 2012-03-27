@@ -1620,6 +1620,9 @@ CREATE TABLE riski.fragility_model (
 CREATE TABLE riski.ffc (
     id SERIAL PRIMARY KEY,
     fragility_model_id INTEGER NOT NULL,
+    -- limit state index, facilitates the ordering of fragility functions in
+    -- accordance to limit states
+    lsi smallint NOT NULL CONSTRAINT lsi_value CHECK(lsi > 0),
     -- limit state
     ls VARCHAR NOT NULL,
     -- taxonomy
@@ -1632,7 +1635,7 @@ CREATE TABLE riski.ffc (
         DEFAULT timezone('UTC'::text, now()) NOT NULL,
     -- The combination of limit state and taxonomy is unique within an
     -- fragility model.
-    UNIQUE (fragility_model_id, ls, taxonomy)
+    UNIQUE (fragility_model_id, taxonomy, lsi)
 ) TABLESPACE riski_ts;
 
 
@@ -1640,6 +1643,9 @@ CREATE TABLE riski.ffc (
 CREATE TABLE riski.ffd (
     id SERIAL PRIMARY KEY,
     fragility_model_id INTEGER NOT NULL,
+    -- limit state index, facilitates the ordering of fragility functions in
+    -- accordance to limit states
+    lsi smallint NOT NULL CONSTRAINT lsi_value CHECK(lsi > 0),
     -- limit state
     ls VARCHAR NOT NULL,
     -- taxonomy
@@ -1650,7 +1656,7 @@ CREATE TABLE riski.ffd (
         DEFAULT timezone('UTC'::text, now()) NOT NULL,
     -- The combination of limit state and taxonomy is unique within an
     -- fragility model.
-    UNIQUE (fragility_model_id, ls, taxonomy)
+    UNIQUE (fragility_model_id, taxonomy, lsi)
 ) TABLESPACE riski_ts;
 
 

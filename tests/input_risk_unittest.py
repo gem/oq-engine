@@ -351,38 +351,40 @@ class CFragilityDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertEqual("continuous", model.format)
         self.assertEqual("Fragility model for Pavia (continuous)",
                          model.description)
-        self.assertEqual(["slight", "moderate", "extensive", "complete"],
-                         model.lss)
+        expected_lss = ["slight", "moderate", "extensive", "complete"]
+        self.assertEqual(expected_lss, model.lss)
         self.assertIs(self.input, model.input)
 
-        ffcs = model.ffc_set.all().order_by("taxonomy", "ls")
+        ffcs = model.ffc_set.all().order_by("taxonomy", "lsi")
         ffds = model.ffd_set.all()
         self.assertEqual(8, ffcs.count())
         self.assertEqual(0, ffds.count())
 
+        self.assertEqual(expected_lss * 2, [ff.ls for ff in ffcs])
+
         self.assertIs(None, ffcs[0].ftype)
         self.assertEqual("RC/DMRF-D/HR", ffcs[0].taxonomy)
-        self.assertEqual("complete", ffcs[0].ls)
-        self.assertEqual(108.8, ffcs[0].mean)
-        self.assertEqual(123.6, ffcs[0].stddev)
+        self.assertEqual("slight", ffcs[0].ls)
+        self.assertEqual(11.18, ffcs[0].mean)
+        self.assertEqual(8.28, ffcs[0].stddev)
 
         self.assertIs(None, ffcs[3].ftype)
         self.assertEqual("RC/DMRF-D/HR", ffcs[3].taxonomy)
-        self.assertEqual("slight", ffcs[3].ls)
-        self.assertEqual(11.18, ffcs[3].mean)
-        self.assertEqual(8.28, ffcs[3].stddev)
+        self.assertEqual("complete", ffcs[3].ls)
+        self.assertEqual(108.8, ffcs[3].mean)
+        self.assertEqual(123.6, ffcs[3].stddev)
 
         self.assertEqual("lognormal", ffcs[5].ftype)
         self.assertEqual("RC/DMRF-D/LR", ffcs[5].taxonomy)
-        self.assertEqual("extensive", ffcs[5].ls)
-        self.assertEqual(48.05, ffcs[5].mean)
-        self.assertEqual(42.49, ffcs[5].stddev)
+        self.assertEqual("moderate", ffcs[5].ls)
+        self.assertEqual(27.98, ffcs[5].mean)
+        self.assertEqual(20.677, ffcs[5].stddev)
 
         self.assertEqual("lognormal", ffcs[6].ftype)
         self.assertEqual("RC/DMRF-D/LR", ffcs[6].taxonomy)
-        self.assertEqual("moderate", ffcs[6].ls)
-        self.assertEqual(27.98, ffcs[6].mean)
-        self.assertEqual(20.677, ffcs[6].stddev)
+        self.assertEqual("extensive", ffcs[6].ls)
+        self.assertEqual(48.05, ffcs[6].mean)
+        self.assertEqual(42.49, ffcs[6].stddev)
 
 
 class DFragilityDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
@@ -419,27 +421,29 @@ class DFragilityDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertEqual("discrete", model.format)
         self.assertEqual("Fragility model for Pavia (discrete)",
                          model.description)
-        self.assertEqual(["minor", "moderate", "severe", "collapse"],
-                         model.lss)
+        expected_lss = ["minor", "moderate", "severe", "collapse"]
+        self.assertEqual(expected_lss, model.lss)
         self.assertIs(self.input, model.input)
 
         ffcs = model.ffc_set.all()
-        ffds = model.ffd_set.all().order_by("taxonomy", "ls")
+        ffds = model.ffd_set.all().order_by("taxonomy", "lsi")
         self.assertEqual(0, ffcs.count())
         self.assertEqual(8, ffds.count())
 
+        self.assertEqual(expected_lss * 2, [ff.ls for ff in ffds])
+
         self.assertEqual("RC/DMRF-D/HR", ffds[0].taxonomy)
-        self.assertEqual("collapse", ffds[0].ls)
-        self.assertEqual([0.0, 0.0, 0.0, 0.04, 0.64], ffds[0].poes)
+        self.assertEqual("minor", ffds[0].ls)
+        self.assertEqual([0.0, 0.09, 0.56, 0.92, 0.99], ffds[0].poes)
 
         self.assertEqual("RC/DMRF-D/HR", ffds[3].taxonomy)
-        self.assertEqual("severe", ffds[3].ls)
-        self.assertEqual([0.0, 0.0, 0.0, 0.3, 0.89], ffds[3].poes)
+        self.assertEqual("collapse", ffds[3].ls)
+        self.assertEqual([0.0, 0.0, 0.0, 0.04, 0.64], ffds[3].poes)
 
         self.assertEqual("RC/DMRF-D/LR", ffds[5].taxonomy)
-        self.assertEqual("minor", ffds[5].ls)
-        self.assertEqual([0.0, 0.09, 0.56, 0.91, 0.98], ffds[5].poes)
+        self.assertEqual("moderate", ffds[5].ls)
+        self.assertEqual([0.0, 0.0, 0.04, 0.78, 0.96], ffds[5].poes)
 
         self.assertEqual("RC/DMRF-D/LR", ffds[6].taxonomy)
-        self.assertEqual("moderate", ffds[6].ls)
-        self.assertEqual([0.0, 0.0, 0.04, 0.78, 0.96], ffds[6].poes)
+        self.assertEqual("severe", ffds[6].ls)
+        self.assertEqual([0.0, 0.0, 0.0, 0.29, 0.88], ffds[6].poes)
