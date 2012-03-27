@@ -1384,6 +1384,9 @@ class Ffc(models.Model):
     """A continuous fragility function"""
 
     fragility_model = models.ForeignKey("FragilityModel")
+    lsi = models.PositiveSmallIntegerField(
+        help_text="limit state index, facilitates ordering of fragility "
+                  "function in accordance with the limit states")
     ls = models.TextField(help_text="limit state")
     taxonomy = models.TextField()
     ftype = models.TextField(null=True, help_text="function/distribution type")
@@ -1399,6 +1402,9 @@ class Ffd(models.Model):
     """A discrete fragility function"""
 
     fragility_model = models.ForeignKey("FragilityModel")
+    lsi = models.PositiveSmallIntegerField(
+        help_text="limit state index, facilitates ordering of fragility "
+                  "function in accordance with the limit states")
     ls = models.TextField(help_text="limit state")
     taxonomy = models.TextField()
     poes = FloatArrayField(help_text="Probabilities of exceedance")
