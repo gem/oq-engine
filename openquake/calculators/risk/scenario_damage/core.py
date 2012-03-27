@@ -93,6 +93,17 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     def compute_risk(self, block_id, **kwargs):
         """
         Compute the results for a single block.
+        
+        Currently we  only support continuous fragility models and
+        the computation of the damage distribution per asset (i.e.
+        mean and stddev of the distribution for each damage state
+        related to the asset).
+
+        :param block_id: id of the region block data.
+        :type block_id: integer
+        :keyword fmodel: fragility model associated to this computation.
+        :type fmodel: instance of
+            :py:class:`openquake.db.models.FragilityModel`
         """
 
         fm = kwargs["fmodel"]
@@ -121,16 +132,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                         "with taxonomy %s of asset %s.") % (
                         asset.taxonomy, asset.asset_ref)
 
-                # we always have a number of damage states
-                # which is len(limit states) + 1
-                sum_ds = numpy.zeros((len(gmf), len(funcs) + 1))
-
-                for x, gmv in enumerate(gmf):
-                    sum_ds[x] += compute_dm(funcs, gmv)
-
-                nou = asset.number_of_units
-                mean = numpy.mean(sum_ds, axis=0) * nou
-                stddev = numpy.std(sum_ds, axis=0, ddof=1) * nou
+                mean, stddev = compute_mean_stddev(gmf, funcs, asset)
 
                 for x in xrange(len(mean)):
                     DmgDistPerAssetData(
@@ -150,7 +152,64 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         pass
 
 
+def compute_mean_stddev(gmf, funcs, asset):
+    """
+    Compute the mean and the standard deviation distribution
+    for the given asset for each damage state.
+    
+    :param gmf: ground motion values computed in the grid
+        point where the asset is located.
+    :type gmf: list of floats
+    :param funcs: list of fragility functions describing
+        the distribution for each limit state. The functions
+        must be in order from the one with the lower
+        limit state to the one with the higher limit state.
+    :type funcs: list of
+        :py:class:`openquake.db.models.Ffc` instances
+    :param asset: asset where the distribution must
+        be computed on.
+    :type asset: instance of
+        :py:class:`openquake.db.models.ExposureData`
+    :returns: the mean and the standard deviation for
+        each damage state.
+    :rtype: two `numpy.array`. The first one contains
+        the mean for each damage state, the second one
+        contains the standard deviation. Both arrays
+        have a number of columns that is equal to the
+        number of damage states.
+    """
+
+    # we always have a number of damage states
+    # which is len(limit states) + 1
+    sum_ds = numpy.zeros((len(gmf), len(funcs) + 1))
+
+    for x, gmv in enumerate(gmf):
+        sum_ds[x] += compute_dm(funcs, gmv)
+
+    nou = asset.number_of_units
+    mean = numpy.mean(sum_ds, axis=0) * nou
+    stddev = numpy.std(sum_ds, axis=0, ddof=1) * nou
+
+    return mean, stddev
+
+
 def compute_dm(funcs, gmv):
+    """
+    Compute the fraction of buildings for each damage state.
+
+    :param gmv: ground motion value that defines the Intensity
+        Measure Level used to interpolate the fragility functions.
+    :type gmv: float
+    :param funcs: list of fragility functions describing
+        the distribution for each limit state. The functions
+        must be in order from the one with the lower
+        limit state to the one with the higher limit state.
+    :type funcs: list of
+        :py:class:`openquake.db.models.Ffc` instances
+    :returns: the fraction of buildings for each damage state
+        computed of the given ground motion value.
+    :rtype: 1d `numpy.array`
+    """
 
     def compute_poe(iml, mean, stddev):
         variance = stddev ** 2.0
@@ -189,6 +248,14 @@ def compute_dm(funcs, gmv):
 
 
 def _damage_states(limit_states):
+    """
+    Return the damage states from the given limit states.
+    
+    For N limit states in the fragility model, we always
+    define N+1 damage states. The first damage state
+    should always be 'no_damage'.
+    """
+
     dmg_states = list(limit_states)
     dmg_states.insert(0, "no_damage")
 
@@ -196,6 +263,10 @@ def _damage_states(limit_states):
 
 
 def _fm(oq_job):
+    """
+    Return the fragility model related to the current computation.
+    """
+
     [ism] = inputs4job(oq_job.id, input_type="fragility")
     [fm] = FragilityModel.objects.filter(input=ism, owner=oq_job.owner)
 
