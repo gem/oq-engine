@@ -3,19 +3,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 # pylint: disable=C0302
 
@@ -27,6 +26,36 @@ from collections import namedtuple
 from datetime import datetime
 from django.contrib.gis.db import models
 from django.contrib.gis.geos.geometry import GEOSGeometry
+
+
+def profile4job(job_id):
+    """Return the job profile for the given job.
+
+    :param int job_id: identifier of the job in question
+    :returns: a :py:class:`openquake.db.models.OqJobProfile` instance
+    """
+    [j2p] = Job2profile.objects.extra(where=["oq_job_id=%s"], params=[job_id])
+    return j2p.oq_job_profile
+
+
+def inputs4job(job_id, input_type=None, path=None):
+    """Return the inputs for the given job, input type and path.
+
+    :param int job_id: identifier of the job in question
+    :param str input_type: a valid input type
+    :param str path: the path of the desired input.
+    :returns: a list of :py:class:`openquake.db.models.Input` instances
+    """
+    i2js = Input2job.objects.extra(where=["oq_job_id=%s"], params=[job_id])
+    if not input_type and not path:
+        return list(i.input for i in i2js.all())
+    qargs = []
+    if input_type:
+        qargs.append(("input__input_type", input_type))
+    if path:
+        qargs.append(("input__path", path))
+    qargs = dict(qargs)
+    return list(i.input for i in i2js.filter(**qargs))
 
 
 def per_asset_value(exd):
@@ -525,23 +554,11 @@ class Upload(models.Model):
         db_table = 'uiapi\".\"upload'
 
 
-class InputSet(models.Model):
-    '''
-    Set of input files for an OpenQuake job
-    '''
-    owner = models.ForeignKey('OqUser')
-    upload = models.ForeignKey('Upload', null=True)
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:  # pylint: disable=C0111,W0232
-        db_table = 'uiapi\".\"input_set'
-
-
 class Input(models.Model):
     '''
     A single OpenQuake input file uploaded by the user
     '''
-    input_set = models.ForeignKey('InputSet')
+    owner = models.ForeignKey('OqUser')
     path = models.TextField()
     INPUT_TYPE_CHOICES = (
         (u'unknown', u'Unknown'),
@@ -562,7 +579,29 @@ class Input(models.Model):
         db_table = 'uiapi\".\"input'
 
 
-class OqCalculation(models.Model):
+class Input2job(models.Model):
+    '''
+    Associates input model files and jobs.
+    '''
+    input = models.ForeignKey('Input')
+    oq_job = models.ForeignKey('OqJob')
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'uiapi\".\"input2job'
+
+
+class Input2upload(models.Model):
+    '''
+    Associates input model files and uploads.
+    '''
+    input = models.ForeignKey('Input')
+    upload = models.ForeignKey('Upload')
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'uiapi\".\"input2upload'
+
+
+class OqJob(models.Model):
     '''
     An OpenQuake engine run started by the user
     '''
@@ -579,18 +618,21 @@ class OqCalculation(models.Model):
     duration = models.IntegerField(default=0)
     job_pid = models.IntegerField(default=0)
     supervisor_pid = models.IntegerField(default=0)
-    oq_job_profile = models.ForeignKey('OqJobProfile')
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
 
+    def profile(self):
+        """Return the associated job prfile."""
+        return profile4job(self.id)
+
     class Meta:  # pylint: disable=C0111,W0232
-        db_table = 'uiapi\".\"oq_calculation'
+        db_table = 'uiapi\".\"oq_job'
 
 
-class CalcStats(models.Model):
+class JobStats(models.Model):
     '''
     Capture various statistics about a job.
     '''
-    oq_calculation = models.ForeignKey('OqCalculation')
+    oq_job = models.ForeignKey('OqJob')
     start_time = models.DateTimeField(editable=False)
     stop_time = models.DateTimeField(editable=False)
     # The number of total sites in job
@@ -600,7 +642,18 @@ class CalcStats(models.Model):
     realizations = models.IntegerField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
-        db_table = 'uiapi\".\"calc_stats'
+        db_table = 'uiapi\".\"job_stats'
+
+
+class Job2profile(models.Model):
+    '''
+    Associates jobs with their profiles.
+    '''
+    oq_job = models.ForeignKey('OqJob')
+    oq_job_profile = models.ForeignKey('OqJobProfile')
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'uiapi\".\"job2profile'
 
 
 class OqJobProfile(models.Model):
@@ -622,7 +675,6 @@ class OqJobProfile(models.Model):
     )
     calc_mode = models.TextField(choices=CALC_MODE_CHOICES)
     job_type = CharArrayField()
-    input_set = models.ForeignKey('InputSet')
     min_magnitude = models.FloatField(null=True)
     investigation_time = models.FloatField(null=True)
     COMPONENT_CHOICES = (
@@ -780,11 +832,11 @@ class OqJobProfile(models.Model):
 
 class Output(models.Model):
     '''
-    A single artifact which is a result of an OpenQuake calculation.
+    A single artifact which is a result of an OpenQuake job.
     The data may reside in a file or in the database.
     '''
     owner = models.ForeignKey('OqUser')
-    oq_calculation = models.ForeignKey('OqCalculation')
+    oq_job = models.ForeignKey('OqJob')
     path = models.TextField(null=True, unique=True)
     display_name = models.TextField()
     db_backed = models.BooleanField(default=False)
@@ -799,6 +851,9 @@ class Output(models.Model):
         (u'bcr_distribution', u'Benefit-cost ratio distribution'),
         (u'uh_spectra', u'Uniform Hazard Spectra'),
         (u'agg_loss_curve', u'Aggregate Loss Curve'),
+        (u'dmg_dist_per_asset', u'Damage Distribution Per Asset'),
+        (u'dmg_dist_per_taxonomy', u'Damage Distribution Per Taxonomy'),
+        (u'dmg_dist_total', u'Total Damage Distribution'),
     )
     output_type = models.TextField(choices=OUTPUT_TYPE_CHOICES)
     # Number of bytes in the file:
@@ -819,7 +874,7 @@ class ErrorMsg(models.Model):
     '''
     Error information associated with a job failure
     '''
-    oq_calculation = models.ForeignKey('OqCalculation')
+    oq_job = models.ForeignKey('OqJob')
     brief = models.TextField()
     detailed = models.TextField()
 
@@ -1083,6 +1138,82 @@ class BCRDistributionData(models.Model):
         db_table = 'riskr\".\"bcr_distribution_data'
 
 
+class DmgDistPerAsset(models.Model):
+    """Holds metadata for damage distributions per asset."""
+
+    output = models.ForeignKey("Output")
+    dmg_states = CharArrayField()
+    end_branch_label = models.TextField(null=True)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_per_asset'
+
+
+class DmgDistPerAssetData(models.Model):
+    """Holds the actual data for damage distributions per asset."""
+
+    dmg_dist_per_asset = models.ForeignKey("DmgDistPerAsset")
+    exposure_data = models.ForeignKey("ExposureData")
+    dmg_state = models.TextField()
+    mean = models.FloatField()
+    stddev = models.FloatField()
+    # geometry for the computation cell which contains the referenced asset
+    location = models.PointField(srid=4326)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_per_asset_data'
+
+
+class DmgDistPerTaxonomy(models.Model):
+    """Hold metdata for damage distributions per taxonomy."""
+
+    output = models.ForeignKey("Output")
+    dmg_states = CharArrayField()
+    end_branch_label = models.TextField(null=True)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_per_taxonomy'
+
+
+class DmgDistPerTaxonomyData(models.Model):
+    """Holds the actual data for damage distributions per taxonomy."""
+
+    dmg_dist_per_taxonomy = models.ForeignKey("DmgDistPerTaxonomy")
+    taxonomy = models.TextField()
+    dmg_state = models.TextField()
+    mean = models.FloatField()
+    stddev = models.FloatField()
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_per_taxonomy_data'
+
+
+class DmgDistTotal(models.Model):
+    """Holds metadata for 'total damage distribution' values for an entire
+    calculation. This is the total over all assets and GMFs."""
+
+    output = models.ForeignKey("Output")
+    dmg_states = CharArrayField()
+    end_branch_label = models.TextField(null=True)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_total'
+
+
+class DmgDistTotalData(models.Model):
+    """Holds the actual 'total damage distribution' values for for an entire
+    calculation. There should be  one record per calculation per damage state.
+    """
+
+    dmg_dist_total = models.ForeignKey("DmgDistTotal")
+    dmg_state = models.TextField()
+    mean = models.FloatField()
+    stddev = models.FloatField()
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riskr\".\"dmg_dist_total_data'
+
+
 ## Tables in the 'oqmif' schema.
 
 
@@ -1096,6 +1227,8 @@ class ExposureModel(models.Model):
     name = models.TextField()
     description = models.TextField(null=True)
     category = models.TextField()
+    taxonomy_source = models.TextField(
+        null=True, help_text="the taxonomy system used to classify the assets")
     AREA_CHOICES = (
         (u'aggregated', u'Aggregated area value'),
         (u'per_asset', u'Per asset area value'),
@@ -1223,3 +1356,58 @@ class VulnerabilityFunction(models.Model):
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riski\".\"vulnerability_function'
+
+
+class FragilityModel(models.Model):
+    """A risk fragility model"""
+
+    owner = models.ForeignKey("OqUser")
+    input = models.ForeignKey("Input")
+    description = models.TextField(null=True)
+    FORMAT_CHOICES = (
+        (u"continuous", u"Continuous fragility model"),
+        (u"discrete", u"Discrete fragility model"),
+    )
+    format = models.TextField(choices=FORMAT_CHOICES)
+    lss = CharArrayField(help_text="limit states")
+    imls = FloatArrayField(null=True, help_text="Intensity measure levels")
+    imt = models.TextField(null=True, choices=OqJobProfile.IMT_CHOICES,
+                           help_text="Intensity measure type")
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riski\".\"fragility_model'
+
+
+class Ffc(models.Model):
+    """A continuous fragility function"""
+
+    fragility_model = models.ForeignKey("FragilityModel")
+    lsi = models.PositiveSmallIntegerField(
+        help_text="limit state index, facilitates ordering of fragility "
+                  "function in accordance with the limit states")
+    ls = models.TextField(help_text="limit state")
+    taxonomy = models.TextField()
+    ftype = models.TextField(null=True, help_text="function/distribution type")
+    mean = models.FloatField(help_text="Mean value")
+    stddev = models.FloatField(help_text="Standard deviation")
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riski\".\"ffc'
+
+
+class Ffd(models.Model):
+    """A discrete fragility function"""
+
+    fragility_model = models.ForeignKey("FragilityModel")
+    lsi = models.PositiveSmallIntegerField(
+        help_text="limit state index, facilitates ordering of fragility "
+                  "function in accordance with the limit states")
+    ls = models.TextField(help_text="limit state")
+    taxonomy = models.TextField()
+    poes = FloatArrayField(help_text="Probabilities of exceedance")
+    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'riski\".\"ffd'

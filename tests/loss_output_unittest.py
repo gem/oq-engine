@@ -3,26 +3,24 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
 """
 Tests for the serialization of loss/loss ratio curves to NRML format.
 """
 
-import os
 import unittest
 
 from lxml import etree
@@ -30,9 +28,10 @@ from lxml import etree
 from openquake import nrml
 from openquake import shapes
 from openquake import xml
-from tests.utils import helpers
-
+from openquake.db import models
 from openquake.output import risk as risk_output
+
+from tests.utils import helpers
 
 
 LOSS_XML_OUTPUT_FILE = 'loss-curves.xml'
@@ -73,33 +72,27 @@ class LossOutputTestCase(unittest.TestCase):
         first_site = shapes.Site(-117.0, 38.0)
         second_site = shapes.Site(-118.0, 39.0)
 
-        first_asset_a = {"assetID": "a1711", "endBranchLabel": "A"}
-        first_asset_b = {"assetID": "a1711", "endBranchLabel": "B"}
-        second_asset_a = {"assetID": "a1712", "endBranchLabel": "A"}
-        second_asset_b = {"assetID": "a1712", "endBranchLabel": "B"}
+        first_asset = models.ExposureData(asset_ref='a1711')
+        second_asset = models.ExposureData(asset_ref='a1712')
 
         self.loss_curves = [
-            (first_site, (TEST_LOSS_CURVE, first_asset_a)),
-            (first_site, (TEST_LOSS_CURVE, first_asset_b)),
-            (second_site, (TEST_LOSS_CURVE, second_asset_a)),
-            (second_site, (TEST_LOSS_CURVE, second_asset_b))]
+            (first_site, (TEST_LOSS_CURVE, first_asset)),
+            (second_site, (TEST_LOSS_CURVE, second_asset))]
 
         self.loss_ratio_curves = [
-            (first_site, (TEST_LOSS_RATIO_CURVE, first_asset_a)),
-            (first_site, (TEST_LOSS_RATIO_CURVE, first_asset_b)),
-            (second_site, (TEST_LOSS_RATIO_CURVE, second_asset_a)),
-            (second_site, (TEST_LOSS_RATIO_CURVE, second_asset_b))]
+            (first_site, (TEST_LOSS_RATIO_CURVE, first_asset)),
+            (second_site, (TEST_LOSS_RATIO_CURVE, second_asset))]
 
         self.single_loss_curve = [
-            (first_site, (TEST_LOSS_CURVE, first_asset_a))]
+            (first_site, (TEST_LOSS_CURVE, first_asset))]
 
         self.single_loss_ratio_curve = [
-            (first_site, (TEST_LOSS_RATIO_CURVE, first_asset_a))]
+            (first_site, (TEST_LOSS_RATIO_CURVE, first_asset))]
 
         # loss curve that fails with inconsistent sites for an asset
         self.loss_curves_fail = [
-            (first_site, (TEST_LOSS_CURVE, first_asset_a)),
-            (second_site, (TEST_LOSS_CURVE, first_asset_a))]
+            (first_site, (TEST_LOSS_CURVE, first_asset)),
+            (second_site, (TEST_LOSS_CURVE, first_asset))]
 
     def test_loss_is_serialized_to_file_and_validates(self):
         """Serialize loss curve to NRML and validate against schema."""

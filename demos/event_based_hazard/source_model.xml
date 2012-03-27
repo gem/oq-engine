@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.3"
+      xmlns:gml="http://www.opengis.net/gml"
+      gml:id="n1">
+  <sourceModel gml:id="sm1">
+    <config/>
+    <simpleFaultSource gml:id="ITCS069">
+      <gml:name>Southern Calabria</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>90.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>4.616788516552253</aValueCumulative>
+        <bValue>1.0</bValue>
+        <minMagnitude>5.0</minMagnitude>
+        <maxMagnitude>7.1000000000000005</maxMagnitude>
+      </truncatedGutenbergRichter>
+      <simpleFaultGeometry gml:id="sfg_92">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>17.3906 39.0407 11.0 17.3555 38.8986 11.0 17.3204 38.7564 11.0 17.2523 38.5891 11.0 17.1842 38.4217 11.0 17.0899 38.2873 11.0 16.9956 38.1529 11.0 16.9014 38.0185 11.0 16.7833 37.9155 11.0 16.6653 37.8126 11.0 16.5472 37.7096 11.0 16.4228 37.6337 11.0 16.2983 37.5578 11.0 16.1739 37.4818 11.0 16.0226 37.4146 11.0 15.8714 37.34740000000001 11.0 15.7201 37.2801 11.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>30.0</dip>
+        <upperSeismogenicDepth>11.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>50.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+  </sourceModel>
+</nrml>

@@ -1,18 +1,17 @@
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
 import numpy
@@ -25,7 +24,6 @@ from openquake.calculators.hazard.uhs.core import compute_uhs
 from openquake.calculators.hazard.uhs.core import compute_uhs_task
 from openquake.calculators.hazard.uhs.core import write_uh_spectra
 from openquake.calculators.hazard.uhs.core import write_uhs_spectrum_data
-from openquake.db.models import OqCalculation
 from openquake.db.models import Output
 from openquake.db.models import UhSpectra
 from openquake.db.models import UhSpectrum
@@ -47,21 +45,16 @@ class UHSBaseTestCase(unittest.TestCase):
     UHS_CORE_MODULE = 'openquake.calculators.hazard.uhs.core'
 
     def setUp(self):
-        # Create OqJobProfile, OqCalculation, and CalculationProxy objects
-        # which can be used for several of the tests:
+        self.job = engine.prepare_job()
         self.job_profile, params, sections = engine.import_job_profile(
-            UHS_DEMO_CONFIG_FILE)
-        self.calculation = OqCalculation(
-            owner=self.job_profile.owner,
-            oq_job_profile=self.job_profile)
-        self.calculation.save()
+            UHS_DEMO_CONFIG_FILE, self.job)
 
-        self.calc_proxy = engine.CalculationProxy(
-            params, self.calculation.id, sections=sections,
+        self.job_ctxt = engine.JobContext(
+            params, self.job.id, sections=sections,
             serialize_results_to=['db'], oq_job_profile=self.job_profile,
-            oq_calculation=self.calculation)
-        self.calc_proxy.to_kvs()
-        self.job_id = self.calc_proxy.job_id
+            oq_job=self.job)
+        self.job_ctxt.to_kvs()
+        self.job_id = self.job_ctxt.job_id
 
 
 class UHSCoreTestCase(UHSBaseTestCase):
@@ -107,10 +100,10 @@ class UHSCoreTestCase(UHSBaseTestCase):
         #   - 1 hzrdr.uh_spectrum record per PoE defined in the oq_job_profile
 
         # Call the function under test:
-        write_uh_spectra(self.calc_proxy)
+        write_uh_spectra(self.job_ctxt)
 
         # Now check that the expected records were indeed created.
-        output = Output.objects.get(oq_calculation=self.calculation.id)
+        output = Output.objects.get(oq_job=self.job.id)
         self.assertEqual('uh_spectra', output.output_type)
 
         uh_spectra = UhSpectra.objects.get(output=output.id)
@@ -131,7 +124,7 @@ class UHSCoreTestCase(UHSBaseTestCase):
 
         # To start with, we need to write the 'container' records for the UHS
         # results:
-        write_uh_spectra(self.calc_proxy)
+        write_uh_spectra(self.job_ctxt)
 
         uhs_results = []  # The results we want to write to HDF5
         uhs_result = java.jvm().JClass('org.gem.calc.UHSResult')
@@ -145,11 +138,11 @@ class UHSCoreTestCase(UHSBaseTestCase):
 
         # Call the function under test
         write_uhs_spectrum_data(
-            self.calc_proxy, realization, test_site, uhs_results)
+            self.job_ctxt, realization, test_site, uhs_results)
 
         uhs_data = UhSpectrumData.objects.filter(
-            uh_spectrum__uh_spectra__output__oq_calculation=(
-            self.calculation.id))
+            uh_spectrum__uh_spectra__output__oq_job=(
+            self.job.id))
 
         self.assertEqual(len(self.UHS_RESULTS), len(uhs_data))
         self.assertTrue(all([x.realization == 0 for x in uhs_data]))
@@ -250,7 +243,7 @@ class UHSCalculatorTestCase(UHSBaseTestCase):
             self.job_id, 'h', 'uhs:tasks', 't')
         self.assertIsNone(task_total())
 
-        calc = UHSCalculator(self.calc_proxy)
+        calc = UHSCalculator(self.job_ctxt)
 
         calc.initialize()
 
@@ -261,7 +254,7 @@ class UHSCalculatorTestCase(UHSBaseTestCase):
     def test_pre_execute(self):
         # Simply tests that `pre_execute` calls `write_uh_spectra`.
         # That's all for now.
-        calc = UHSCalculator(self.calc_proxy)
+        calc = UHSCalculator(self.job_ctxt)
 
         with helpers.patch(
             '%s.write_uh_spectra' % self.UHS_CORE_MODULE) as write_mock:
@@ -269,7 +262,7 @@ class UHSCalculatorTestCase(UHSBaseTestCase):
             self.assertEqual(1, write_mock.call_count)
 
     def test_post_execute(self):
-        calc = UHSCalculator(self.calc_proxy)
+        calc = UHSCalculator(self.job_ctxt)
 
         expected_call_args = ((self.job_id,), {})
 

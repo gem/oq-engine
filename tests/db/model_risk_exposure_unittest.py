@@ -3,26 +3,25 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
 from collections import namedtuple
 
 from django.db import transaction
 from django.db.utils import DatabaseError
-from django.test import TestCase
+from django.test import TestCase as DjangoTestCase
 
 from openquake import shapes
 from openquake.db import models
@@ -30,7 +29,7 @@ from openquake.db import models
 from tests.utils import helpers
 
 
-class ExposureModelTestCase(TestCase, helpers.DbTestCase):
+class ExposureModelTestCase(DjangoTestCase, helpers.DbTestCase):
     """Test the exposure_model database constraints."""
 
     job = None
@@ -45,8 +44,11 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
 
     def setUp(self):
         emdl_input = models.Input(
-            input_type="exposure", input_set=self.job.oq_job_profile.input_set,
-            size=123, path="/tmp/fake-exposure-path")
+            input_type="exposure", size=123, path="/tmp/fake-exposure-path",
+            owner=self.job.owner)
+        emdl_input.save()
+        i2j = models.Input2job(input=emdl_input, oq_job=self.job)
+        i2j.save()
         self.mdl = models.ExposureModel(input=emdl_input, owner=self.job.owner,
                                         name="exposure-model-testing",
                                         category="economic loss")
@@ -292,7 +294,7 @@ class ExposureModelTestCase(TestCase, helpers.DbTestCase):
             self.fail("DatabaseError not raised")
 
 
-class ExposureDataTestCase(TestCase, helpers.DbTestCase):
+class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
     """Test the exposure_data database constraints."""
 
     job = None
@@ -307,8 +309,11 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
 
     def setUp(self):
         emdl_input = models.Input(
-            input_type="exposure", input_set=self.job.oq_job_profile.input_set,
-            size=123, path="/tmp/fake-exposure-path")
+            input_type="exposure", size=123, path="/tmp/fake-exposure-path",
+            owner=self.job.owner)
+        emdl_input.save()
+        i2j = models.Input2job(input=emdl_input, oq_job=self.job)
+        i2j.save()
         self.mdl = models.ExposureModel(input=emdl_input, owner=self.job.owner,
                                         name="exposure-data-testing",
                                         category="economic loss")
@@ -596,7 +601,7 @@ class ExposureDataTestCase(TestCase, helpers.DbTestCase):
             self.fail("DatabaseError not raised")
 
 
-class PerAssetValueTestCase(TestCase):
+class PerAssetValueTestCase(DjangoTestCase):
     """Test and exercise the per_asset_value() function."""
 
     # risk exposure data

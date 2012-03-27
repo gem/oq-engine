@@ -1,4 +1,4 @@
-<ExposurePortfolio xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://openquake.org/xmlns/nrml/0.1">
+<ExposureModel xmlns:gml="http://www.opengis.net/gml/profile/sfgml/1.0" xmlns="http://openquake.org/xmlns/nrml/0.1">
 	<Config>
     	<ExposureParameters PortfolioID="PAV01" PortfolioDescription="Collection of existing building in downtown Pavia" AssetType="buildings" LossType="economical loss">
 		</ExposureParameters>
@@ -41,4 +41,4 @@
 	      <AssetValue>320000</AssetValue>
 	    </AssetInstance>
 	</ExposureList>
-</ExposurePortfolio>
+</ExposureModel>
