@@ -54,11 +54,9 @@ class ScenarioDamageRiskCalculatorTestCase(
 
         job_ctxt = JobContext(params, self.job.id, oq_job=self.job)
 
-        # now storing in kvs the ground motion values
-        self._store_gmvs([0.40, 0.30, 0.45, 0.35, 0.40])
-
         self.em = self._store_em()
         self.fm = self._store_fmodel()
+        self._store_gmvs([0.40, 0.30, 0.45, 0.35, 0.40])
 
         self.calculator = ScenarioDamageRiskCalculator(job_ctxt)
 
@@ -137,19 +135,19 @@ class ScenarioDamageRiskCalculatorTestCase(
 
         models.Ffc(
             fragility_model=fmodel, taxonomy="RC",
-            ls="LS1", mean="0.20", stddev="0.05").save()
+            ls="LS2", mean="0.35", stddev="0.10", lsi=2).save()
 
         models.Ffc(
             fragility_model=fmodel, taxonomy="RC",
-            ls="LS2", mean="0.35", stddev="0.10").save()
+            ls="LS1", mean="0.20", stddev="0.05", lsi=1).save()
 
         models.Ffc(
             fragility_model=fmodel, taxonomy="RM",
-            ls="LS1", mean="0.25", stddev="0.08").save()
+            ls="LS2", mean="0.40", stddev="0.12", lsi=2).save()
 
         models.Ffc(
             fragility_model=fmodel, taxonomy="RM",
-            ls="LS2", mean="0.40", stddev="0.12").save()
+            ls="LS1", mean="0.25", stddev="0.08", lsi=1).save()
 
         return fmodel
 
