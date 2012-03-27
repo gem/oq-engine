@@ -3,19 +3,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
 import unittest
@@ -113,8 +112,7 @@ class OQRouterTestCase(unittest.TestCase):
         For each model in the 'uiapi' schema, test for proper db routing
         for read operations.
         '''
-        classes = [Upload, Input, InputSet, OqCalculation, OqJobProfile,
-                   Output, ErrorMsg]
+        classes = [Upload, Input, OqJob, OqJobProfile, Output, ErrorMsg]
         expected_db = 'reslt_writer'
 
         self._db_for_read_helper(classes, expected_db)
@@ -124,8 +122,7 @@ class OQRouterTestCase(unittest.TestCase):
         For each model in the 'uiapi' schema, test for proper db routing
         for write operations.
         '''
-        classes = [Upload, Input, InputSet, OqCalculation, OqJobProfile,
-                   ErrorMsg]
+        classes = [Upload, Input, OqJob, OqJobProfile, ErrorMsg]
         expected_db = 'job_init'
 
         self._db_for_write_helper(classes, expected_db)

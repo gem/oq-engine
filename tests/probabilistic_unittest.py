@@ -3,19 +3,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
 import unittest
@@ -23,7 +22,6 @@ import unittest
 from openquake import engine
 from openquake.calculators.risk.event_based.core import (
     EventBasedRiskCalculator)
-from openquake.db import models
 
 from tests.utils import helpers
 
@@ -34,24 +32,22 @@ class LossMapCurveSerialization(unittest.TestCase):
         cfg_path = helpers.demo_file(
             'probabilistic_event_based_risk/config.gem')
 
-        job_profile, params, sections = engine.import_job_profile(cfg_path)
-        calculation = models.OqCalculation(owner=job_profile.owner,
-                                           oq_job_profile=job_profile)
-        calculation.save()
+        job = engine.prepare_job()
+        jp, params, sections = engine.import_job_profile(cfg_path, job)
 
-        calc_proxy = engine.CalculationProxy(
+        job_ctxt = engine.JobContext(
             params, 1, sections=sections, base_path='/tmp',
-            serialize_results_to=['db', 'xml'],
-            oq_job_profile=job_profile, oq_calculation=calculation)
-        calc_proxy.blocks_keys = []
+            serialize_results_to=['db', 'xml'], oq_job_profile=jp, oq_job=job)
+        job_ctxt.blocks_keys = []
 
-        self.calculator = EventBasedRiskCalculator(calc_proxy)
+        self.calculator = EventBasedRiskCalculator(job_ctxt)
         self.calculator.store_exposure_assets = lambda: None
+        self.calculator.store_fragility_model = lambda: None
         self.calculator.store_vulnerability_model = lambda: None
         self.calculator.partition = lambda: None
 
     def test_loss_map_serialized_if_conditional_loss_poes(self):
-        self.calculator.calc_proxy.params['CONDITIONAL_LOSS_POE'] = (
+        self.calculator.job_ctxt.params['CONDITIONAL_LOSS_POE'] = (
             '0.01 0.02')
 
         with helpers.patch(

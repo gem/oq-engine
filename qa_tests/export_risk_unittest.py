@@ -1,18 +1,17 @@
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
 import os
@@ -46,18 +45,18 @@ class ExportAggLossCurvesTestCase(unittest.TestCase):
             ret_code = helpers.run_job(eb_cfg)
             self.assertEqual(0, ret_code)
 
-            calculation = models.OqCalculation.objects.latest('id')
+            job = models.OqJob.objects.latest('id')
             [output] = models.Output.objects.filter(
-                oq_calculation=calculation.id, output_type='agg_loss_curve')
+                oq_job=job.id, output_type='agg_loss_curve')
 
             listed_calcs = helpers.prepare_cli_output(subprocess.check_output(
                 ['bin/openquake', '--list-calculations']))
 
-            check_list_calcs(self, listed_calcs, calculation.id)
+            check_list_calcs(self, listed_calcs, job.id)
 
             listed_outputs = helpers.prepare_cli_output(
                 subprocess.check_output(
-                    ['bin/openquake', '--list-outputs', str(calculation.id)]))
+                    ['bin/openquake', '--list-outputs', str(job.id)]))
 
             check_list_outputs(self, listed_outputs, output.id,
                                'agg_loss_curve')

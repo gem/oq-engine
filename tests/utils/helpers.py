@@ -3,19 +3,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 Helper functions for our unit and smoke tests.
@@ -43,7 +42,7 @@ from django.core import exceptions
 from openquake.calculators.hazard.general import store_gmpe_map
 from openquake.calculators.hazard.general import store_source_model
 from openquake.db import models
-from openquake.engine import CalculationProxy
+from openquake.engine import JobContext
 from openquake import engine
 from openquake import logs
 from openquake import producer
@@ -66,6 +65,30 @@ MAX_WAIT_LOOPS = 10
 
 #: Wraps mock.patch() to make mocksignature=True by default.
 patch = functools.partial(mock_module.patch, mocksignature=True)
+
+
+def default_user():
+    """Return the default user to be used for test setups."""
+    return models.OqUser.objects.get(user_name="openquake")
+
+
+def delete_profile(job):
+    """Disassociate the job's profile and delete it."""
+    [j2p] = models.Job2profile.objects.extra(
+        where=["oq_job_id=%s"], params=[job.id])
+    jp = j2p.oq_job_profile
+    j2p.delete()
+    jp.delete()
+
+
+def insert_inputs(job, inputs):
+    """Insert the input records for the given data and job."""
+    for imt, imp in inputs:
+        iobj = models.Input(path=imp, input_type=imt, owner=job.owner,
+                            size=random.randint(1024, 16 * 1024))
+        iobj.save()
+        i2j = models.Input2job(input=iobj, oq_job=job)
+        i2j.save()
 
 
 def _patched_mocksignature(func, mock=None, skipfirst=False):
@@ -127,7 +150,7 @@ def testdata_path(file_name):
 
 def job_from_file(config_file_path):
     """
-    Create a CalculationProxy instance from the given configuration file.
+    Create a JobContext instance from the given configuration file.
 
     The results are configured to go to XML files.  *No* database record will
     be stored for the job.  This allows running test on jobs without requiring
@@ -143,14 +166,19 @@ def job_from_file(config_file_path):
 def create_job(params, **kwargs):
     job_id = kwargs.pop('job_id', 0)
 
-    return CalculationProxy(params, job_id, **kwargs)
+    return JobContext(params, job_id, **kwargs)
 
 
-def run_job(config_file, **kw_params):
+def run_job(config_file, params=None):
     """Given a path to a config file, run openquake as a separate process using
     `subprocess`.
 
     This function blocks until the openquake job has concluded.
+
+    :param str config_file:
+        Path to the calculation config file.
+    :param list params:
+        List of additional command line params to bin/openquake. Optional.
 
     :returns:
         The return code of the subprocess.
@@ -158,10 +186,10 @@ def run_job(config_file, **kw_params):
         If the return code is not 0, a
         :exception:`subprocess.CalledProcessError` is raised.
     """
-    params = ["bin/openquake", "--config-file=" + config_file]
-    if kw_params:
-        params.extend(["--%s=%s" % p for p in kw_params.iteritems()])
-    return subprocess.check_call(params)
+    args = ["bin/openquake", "--config-file=" + config_file]
+    if not params is None:
+        args.extend(params)
+    return subprocess.check_call(args)
 
 
 def store_hazard_logic_trees(a_job):
@@ -170,7 +198,7 @@ def store_hazard_logic_trees(a_job):
     @preload decorator does.
 
     :param a_job:
-        :class:`openquake.engine.CalculationProxy` instance.
+        :class:`openquake.engine.JobContext` instance.
     """
     lt_proc = LogicTreeProcessor(
         a_job['BASE_PATH'],
@@ -514,9 +542,6 @@ class DbTestCase(object):
     IMLS = [0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527,
             0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778]
 
-    def default_user(self):
-        return models.OqUser.objects.get(user_name="openquake")
-
     @staticmethod
     def teardown_upload(upload, filesystem_only=True):
         """
@@ -536,46 +561,18 @@ class DbTestCase(object):
         upload.delete()
 
     @staticmethod
-    def teardown_input_set(input_set, filesystem_only):
-        if input_set.upload is not None:
-            DbTestCase.teardown_upload(input_set.upload,
-                                       filesystem_only=filesystem_only)
+    def teardown_inputs(inputs, filesystem_only):
         if filesystem_only:
             return
-        input_set.delete()
+        [input.delete() for input in inputs]
 
     @classmethod
-    def setup_classic_job(cls, create_job_path=True, upload_id=None,
-                          inputs=None):
-        """Create a classic job with associated upload and inputs.
-
-        :param bool create_job_path: if set the path for the job will be
-            created and captured in the job record
-        :param integer upload_id: if set use upload record with given db key.
-        :param list inputs: a list of 2-tuples where the first and the second
-            element are the input type and path respectively
-        :returns: a :py:class:`db.models.OqCalculation` instance
-        """
-        assert upload_id is None  # temporary
-
-        owner = models.OqUser.objects.get(user_name="openquake")
-
-        input_set = models.InputSet(owner=owner)
-        input_set.save()
-
-        # Insert input model files
-        if inputs:
-            for imt, imp in inputs:
-                iobj = models.Input(input_set=input_set, path=imp,
-                                    input_type=imt,
-                                    size=random.randint(1024, 16 * 1024))
-                iobj.save()
-
+    def setup_job_profile(cls, job):
+        """Create a profile for the given job."""
         oqjp = models.OqJobProfile()
-        oqjp.owner = owner
+        oqjp.owner = job.owner
         oqjp.calc_mode = "classical"
         oqjp.job_type = ['hazard']
-        oqjp.input_set = input_set
         oqjp.region_grid_spacing = 0.01
         oqjp.min_magnitude = 5.0
         oqjp.investigation_time = 50.0
@@ -626,9 +623,29 @@ class DbTestCase(object):
         oqjp.source_model_lt_random_seed = 23
         oqjp.gmpe_lt_random_seed = 5
         oqjp.save()
+        return oqjp
 
-        job = models.OqCalculation(oq_job_profile=oqjp, owner=owner)
-        job.save()
+    @classmethod
+    def setup_classic_job(cls, create_job_path=True, upload_id=None,
+                          inputs=None):
+        """Create a classic job with associated upload and inputs.
+
+        :param bool create_job_path: if set the path for the job will be
+            created and captured in the job record
+        :param integer upload_id: if set use upload record with given db key.
+        :param list inputs: a list of 2-tuples where the first and the second
+            element are the input type and path respectively
+        :returns: a :py:class:`db.models.OqJob` instance
+        """
+        assert upload_id is None  # temporary
+
+        job = engine.prepare_job()
+        oqjp = cls.setup_job_profile(job)
+        models.Job2profile(oq_job=job, oq_job_profile=oqjp).save()
+
+        # Insert input model files
+        if inputs:
+            insert_inputs(job, inputs)
 
         if create_job_path:
             job.path = os.path.join(tempfile.mkdtemp(), str(job.id))
@@ -645,22 +662,24 @@ class DbTestCase(object):
         Tear down the file system (and potentially db) artefacts for the
         given job.
 
-        :param job: the :py:class:`db.models.OqCalculation` instance
-            in question
-        :param bool filesystem_only: if set the oq_calculation/oq_param/upload/
+        :param job: a :py:class:`db.models.OqJob` instance
+        :param bool filesystem_only: if set the oq_job/oq_param/upload/
             input database records will be left intact. This saves time and the
             test db will be dropped/recreated prior to the next db test suite
             run anyway.
         """
-        oqjp = job.oq_job_profile
-        if oqjp.input_set is not None:
-            DbTestCase.teardown_input_set(oqjp.input_set,
-                                          filesystem_only=filesystem_only)
+        DbTestCase.teardown_inputs(models.inputs4job(job.id),
+                                   filesystem_only=filesystem_only)
         if filesystem_only:
             return
 
         job.delete()
-        oqjp.delete()
+        try:
+            oqjp = models.profile4job(job.id)
+            oqjp.delete()
+        except ValueError:
+            # no job profile for this job
+            pass
 
     def generate_output_path(self, job, output_type="hazard_map"):
         """Return a random output path for the given job."""
@@ -682,7 +701,7 @@ class DbTestCase(object):
             be left intact. This saves time and the test db will be
             dropped/recreated prior to the next db test suite run anyway.
         """
-        job = output.oq_calculation
+        job = output.oq_job
         if not filesystem_only:
             output.delete()
         if teardown_job:
