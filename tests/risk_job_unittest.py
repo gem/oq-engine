@@ -3,19 +3,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import mock
 import os
@@ -24,13 +23,13 @@ import unittest
 
 from django.contrib.gis import geos
 
-from openquake.calculators.risk.general import Block
-from openquake.calculators.risk import general
-from openquake.db import models
+from openquake import engine
 from openquake import kvs
 from openquake import shapes
+from openquake.calculators.risk import general
+from openquake.calculators.risk.general import Block
+from openquake.db import models
 from openquake.input.exposure import ExposureDBWriter
-from openquake.job import config
 from openquake.parser import exposure
 
 from tests.utils import helpers
@@ -46,8 +45,10 @@ class EpsilonTestCase(unittest.TestCase, helpers.DbTestCase):
         path = os.path.join(helpers.SCHEMA_EXAMPLES_DIR, TEST_FILE)
         inputs = [("exposure", path)]
         self.job = self.setup_classic_job(inputs=inputs)
-        writer = ExposureDBWriter(self.job.oq_job_profile.input_set, path)
-        exposure_parser = exposure.ExposurePortfolioFile(path)
+        [input] = models.inputs4job(self.job.id, input_type="exposure",
+                                    path=path)
+        writer = ExposureDBWriter(input)
+        exposure_parser = exposure.ExposureModelFile(path)
         writer.serialize(exposure_parser)
         self.model = writer.model
         self.epsilon_provider = general.EpsilonProvider(dict())
@@ -133,13 +134,13 @@ class BlockTestCase(unittest.TestCase):
 
     def test_block_kvs_serialization(self):
         # Test that a Block is properly serialized/deserialized from the cache.
-        calculation_id = 7
+        job_id = 7
         block_id = 0
-        expected_block = Block(calculation_id, block_id,
+        expected_block = Block(job_id, block_id,
                                [shapes.Site(1.0, 1.0), shapes.Site(2.0, 2.0)])
         expected_block.to_kvs()
 
-        actual_block = Block.from_kvs(calculation_id, block_id)
+        actual_block = Block.from_kvs(job_id, block_id)
 
         self.assertEqual(expected_block, actual_block)
         # The sites are not compared in Block.__eq__; we need to check those
@@ -170,30 +171,30 @@ class BlockSplitterTestCase(unittest.TestCase):
             self.site_8
         ]
 
-        self.calculation_id = 7
+        self.job_id = 7
 
     def test_split_into_blocks(self):
         # Test a typical split case.
         # We will use a block size of 3, which will
         # give us 2 blocks of 3 sites and 1 block of 2 sites.
         expected = [
-            Block(self.calculation_id, 0, self.all_sites[:3]),
-            Block(self.calculation_id, 1, self.all_sites[3:6]),
-            Block(self.calculation_id, 2, self.all_sites[6:])
+            Block(self.job_id, 0, self.all_sites[:3]),
+            Block(self.job_id, 1, self.all_sites[3:6]),
+            Block(self.job_id, 2, self.all_sites[6:])
         ]
 
         actual = [block for block in general.split_into_blocks(
-            self.calculation_id, self.all_sites, block_size=3)]
+            self.job_id, self.all_sites, block_size=3)]
 
         self.assertEqual(expected, actual)
 
     def test_split_block_size_eq_1(self):
         # Test splitting when block_size==1.
-        expected = [Block(self.calculation_id, i, [self.all_sites[i]])
+        expected = [Block(self.job_id, i, [self.all_sites[i]])
             for i in xrange(len(self.all_sites))]
 
         actual = [block for block in general.split_into_blocks(
-            self.calculation_id, self.all_sites, block_size=1)]
+            self.job_id, self.all_sites, block_size=1)]
 
         self.assertEqual(expected, actual)
 
@@ -201,7 +202,7 @@ class BlockSplitterTestCase(unittest.TestCase):
         # If `split_into_blocks` is given an empty site list, the generator
         # shouldn't yield anything.
         actual = [block for block in general.split_into_blocks(
-            self.calculation_id, [])]
+            self.job_id, [])]
 
         self.assertEqual([], actual)
 
@@ -210,10 +211,10 @@ class BlockSplitterTestCase(unittest.TestCase):
         # the generator should just yield a single block containing all of the
         # sites.
         actual = [block for block in general.split_into_blocks(
-            self.calculation_id, self.all_sites, block_size=8)]
+            self.job_id, self.all_sites, block_size=8)]
 
         self.assertEqual(
-            [Block(self.calculation_id, 0, self.all_sites)],
+            [Block(self.job_id, 0, self.all_sites)],
             actual)
 
     def test_split_block_size_gt_site_list_size(self):
@@ -221,81 +222,50 @@ class BlockSplitterTestCase(unittest.TestCase):
         # the generator should just yield a single block containing all of the
         # sites.
         actual = [block for block in general.split_into_blocks(
-            self.calculation_id, self.all_sites, block_size=9)]
+            self.job_id, self.all_sites, block_size=9)]
 
         self.assertEqual(
-            [Block(self.calculation_id, 0, self.all_sites)],
+            [Block(self.job_id, 0, self.all_sites)],
             actual)
 
     def test_split_block_size_lt_1(self):
         # If the specified block_size is less than 1, this is invalid.
         # We expect a RuntimeError to be raised.
-        gen = general.split_into_blocks(self.calculation_id, self.all_sites,
+        gen = general.split_into_blocks(self.job_id, self.all_sites,
                                         block_size=0)
         self.assertRaises(RuntimeError, gen.next)
 
-        gen = general.split_into_blocks(self.calculation_id, self.all_sites,
+        gen = general.split_into_blocks(self.job_id, self.all_sites,
                                         block_size=-1)
         self.assertRaises(RuntimeError, gen.next)
 
 
 class BaseRiskCalculatorTestCase(unittest.TestCase):
 
-    def test_prepares_blocks_using_the_exposure(self):
-        """The base risk calculator is able to read the exposure file,
-        split the sites into blocks and store them in KVS.
-        """
+    def setUp(self):
+        self.job = engine.prepare_job()
 
-        params = {
-            config.EXPOSURE: os.path.join(helpers.SCHEMA_EXAMPLES_DIR,
-                                          EXPOSURE_TEST_FILE),
-            "BASE_PATH": "."
-        }
-        a_job = helpers.create_job(params)
+    def test_partition(self):
+        job_cfg = helpers.demo_file('classical_psha_based_risk/config.gem')
+        job_profile, params, sections = engine.import_job_profile(
+            job_cfg, self.job)
+        job_ctxt = engine.JobContext(
+            params, self.job.id, sections=sections, oq_job_profile=job_profile)
 
-        calculator = general.BaseRiskCalculator(a_job)
+        calc = general.BaseRiskCalculator(job_ctxt)
+        calc.store_exposure_assets()
 
-        calculator.partition()
+        calc.partition()
 
-        sites = [shapes.Site(9.15000, 45.16667),
-                 shapes.Site(9.15333, 45.12200),
-                 shapes.Site(9.14777, 45.17999)]
+        expected_blocks_keys = [0]
+        self.assertEqual(expected_blocks_keys, job_ctxt.blocks_keys)
 
-        expected = general.Block(a_job.job_id, 0, sites)
+        expected_sites = [shapes.Site(-122.0, 38.225)]
+        expected_block = general.Block(self.job.id, 0, expected_sites)
 
-        self.assertEqual(1, len(a_job.blocks_keys))
-
-        self.assertEqual(
-            expected, general.Block.from_kvs(a_job.job_id,
-                                             a_job.blocks_keys[0]))
-
-    def test_prepares_blocks_using_the_exposure_and_filtering(self):
-        """When reading the exposure file, the calculator also provides
-        filtering on the region specified in the REGION_VERTEX and
-        REGION_GRID_SPACING paramaters.
-        """
-
-        region_vertex = "46.0, 9.14, 46.0, 9.15, 45.0, 9.15, 45.0, 9.14"
-
-        params = {config.EXPOSURE: os.path.join(
-                    helpers.SCHEMA_EXAMPLES_DIR, EXPOSURE_TEST_FILE),
-                  config.INPUT_REGION: region_vertex,
-                  config.REGION_GRID_SPACING: 0.1,
-                  config.CALCULATION_MODE: "Event Based"}
-
-        a_job = helpers.create_job(params)
-
-        sites = [shapes.Site(9.15, 45.16667), shapes.Site(9.14777, 45.17999)]
-
-        expected_block = general.Block(a_job.job_id, 0, sites)
-        calculator = general.BaseRiskCalculator(a_job)
-        calculator.partition()
-
-        self.assertEqual(1, len(a_job.blocks_keys))
-
-        self.assertEqual(
-            expected_block,
-            general.Block.from_kvs(a_job.job_id, a_job.blocks_keys[0]))
+        actual_block = general.Block.from_kvs(self.job.id, 0)
+        self.assertEqual(expected_block, actual_block)
+        self.assertEqual(expected_block.sites, actual_block.sites)
 
 
 GRID_ASSETS = {
@@ -308,10 +278,10 @@ GRID_ASSETS = {
 class RiskCalculatorTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.job = helpers.job_from_file(os.path.join(helpers.DATA_DIR,
-                                                      'config.gem'))
-        [input] = self.job.oq_job_profile.input_set.input_set.filter(
-            input_type="exposure")
+        self.job_ctxt = helpers.job_from_file(os.path.join(helpers.DATA_DIR,
+                                              'config.gem'))
+        [input] = models.inputs4job(self.job_ctxt.job_id,
+                                    input_type="exposure")
         owner = models.OqUser.objects.get(user_name="openquake")
         emdl = models.ExposureModel(
             owner=owner, input=input, description="RCT test exposure model",
@@ -357,9 +327,10 @@ class RiskCalculatorTestCase(unittest.TestCase):
         def row_col(item):
             return item[0].row, item[0].column
 
-        self.job.oq_job_profile.region_grid_spacing = 0.01
-        self.job.oq_job_profile.save()
-        calculator = general.BaseRiskCalculator(self.job)
+        jp = models.profile4job(self.job_ctxt.job_id)
+        jp.region_grid_spacing = 0.01
+        jp.save()
+        calculator = general.BaseRiskCalculator(self.job_ctxt)
 
         expected = sorted(self.grid_assets, key=row_col)
         actual = sorted(calculator.grid_assets_iterator(self.grid),
@@ -402,7 +373,7 @@ class RiskCalculatorTestCase(unittest.TestCase):
                 (shapes.Site(10.1, 10.1),
                     [({'value': 0.123}, GRID_ASSETS[(1, 1)])])]
 
-            calculator = general.BaseRiskCalculator(self.job)
+            calculator = general.BaseRiskCalculator(self.job_ctxt)
             actual = calculator.asset_losses_per_site(0.5, self.grid_assets)
             expected = sorted(expected, key=coords)
             actual = sorted(actual, key=coords)

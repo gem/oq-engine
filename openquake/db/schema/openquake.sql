@@ -505,20 +505,10 @@ CREATE TABLE uiapi.upload (
 ) TABLESPACE uiapi_ts;
 
 
--- Set of input files for an OpenQuake job
-CREATE TABLE uiapi.input_set (
-    id SERIAL PRIMARY KEY,
-    owner_id INTEGER NOT NULL,
-    upload_id INTEGER,
-    last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL
-) TABLESPACE uiapi_ts;
-
-
 -- A single OpenQuake input file uploaded by the user
 CREATE TABLE uiapi.input (
     id SERIAL PRIMARY KEY,
-    input_set_id INTEGER NOT NULL,
+    owner_id INTEGER NOT NULL,
     -- The full path of the input file on the server
     path VARCHAR NOT NULL,
     -- Input file type, one of:
@@ -530,7 +520,7 @@ CREATE TABLE uiapi.input (
     --      rupture file (rupture)
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
         CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gmpe',
-                             'exposure', 'rupture',
+                             'exposure', 'fragility', 'rupture',
                              'vulnerability', 'vulnerability_retrofitted')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
@@ -540,7 +530,7 @@ CREATE TABLE uiapi.input (
 
 
 -- An OpenQuake engine run started by the user
-CREATE TABLE uiapi.oq_calculation (
+CREATE TABLE uiapi.oq_job (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     description VARCHAR NOT NULL DEFAULT '',
@@ -554,16 +544,15 @@ CREATE TABLE uiapi.oq_calculation (
     duration INTEGER NOT NULL DEFAULT 0,
     job_pid INTEGER NOT NULL DEFAULT 0,
     supervisor_pid INTEGER NOT NULL DEFAULT 0,
-    oq_job_profile_id INTEGER NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
 
 
 -- Tracks various job statistics
-CREATE TABLE uiapi.calc_stats (
+CREATE TABLE uiapi.job_stats (
     id SERIAL PRIMARY KEY,
-    oq_calculation_id INTEGER NOT NULL,
+    oq_job_id INTEGER NOT NULL,
     start_time timestamp with time zone,
     stop_time timestamp with time zone,
     -- The number of total sites in the calculation
@@ -582,6 +571,7 @@ CREATE TABLE uiapi.oq_job_profile (
     --      classical (Classical PSHA)
     --      event_based (Probabilistic event based)
     --      scenario (Scenario)
+    --      scenario_damage (Scenario Damage Assessment)
     --      disaggregation (Hazard only)
     --      uhs (Uniform Hazard Spectra; Hazard only)
     --      classical_bcr (Benefit-cost ratio calc based on Classical PSHA)
@@ -589,7 +579,7 @@ CREATE TABLE uiapi.oq_job_profile (
     -- Note: 'classical' and 'event_based' are both probabilistic methods
     calc_mode VARCHAR NOT NULL CONSTRAINT calc_mode_value
         CHECK(calc_mode IN ('classical', 'event_based', 'scenario',
-                            'disaggregation', 'uhs',
+                            'disaggregation', 'uhs', 'scenario_damage',
                             'classical_bcr', 'event_based_bcr')),
     -- Job type: hazard and/or risk.
     job_type VARCHAR[] CONSTRAINT job_type_value
@@ -598,16 +588,15 @@ CREATE TABLE uiapi.oq_job_profile (
            -- but if you pass it zero-length array, is returns NULL instead of 0.
            AND (array_length(job_type, 1) IS NOT NULL)
             AND (job_type <@ ARRAY['hazard', 'risk']::VARCHAR[]))),
-    input_set_id INTEGER NOT NULL,
     region_grid_spacing float,
     min_magnitude float CONSTRAINT min_magnitude_set
         CHECK(
-            ((calc_mode = 'scenario') AND (min_magnitude IS NULL))
-            OR ((calc_mode != 'scenario') AND (min_magnitude IS NOT NULL))),
+            ((calc_mode IN ('scenario', 'scenario_damage')) AND (min_magnitude IS NULL))
+            OR ((calc_mode NOT IN ('scenario', 'scenario_damage')) AND (min_magnitude IS NOT NULL))),
     investigation_time float CONSTRAINT investigation_time_set
         CHECK(
-            ((calc_mode = 'scenario') AND (investigation_time IS NULL))
-            OR ((calc_mode != 'scenario') AND (investigation_time IS NOT NULL))),
+            ((calc_mode IN ('scenario', 'scenario_damage')) AND (investigation_time IS NULL))
+            OR ((calc_mode NOT IN ('scenario', 'scenario_damage')) AND (investigation_time IS NOT NULL))),
     -- One of:
     --      average (Average horizontal)
     --      gmroti50 (Average horizontal (GMRotI50))
@@ -641,19 +630,19 @@ CREATE TABLE uiapi.oq_job_profile (
     -- Intensity measure levels
     imls float[] CONSTRAINT imls_are_set
         CHECK(
-            ((calc_mode != 'scenario') AND (imls IS NOT NULL))
-            OR ((calc_mode = 'scenario') AND (imls IS NULL))),
+            ((calc_mode NOT IN ('scenario', 'scenario_damage')) AND (imls IS NOT NULL))
+            OR ((calc_mode IN ('scenario', 'scenario_damage')) AND (imls IS NULL))),
     -- Probabilities of exceedence
     poes float[] CONSTRAINT poes_are_set
         CHECK(
             ((calc_mode IN ('classical', 'disaggregation', 'uhs')) AND (poes IS NOT NULL))
-            OR ((calc_mode IN ('event_based', 'scenario',
+            OR ((calc_mode IN ('event_based', 'scenario', 'scenario_damage',
                               'classical_bcr', 'event_based_bcr')) AND (poes IS NULL))),
     -- Number of logic tree samples
     realizations integer CONSTRAINT realizations_is_set
         CHECK(
-            ((calc_mode = 'scenario') AND (realizations IS NULL))
-            OR ((calc_mode != 'scenario') AND (realizations IS NOT NULL))),
+            ((calc_mode IN ('scenario', 'scenario_damage')) AND (realizations IS NULL))
+            OR ((calc_mode NOT IN ('scenario', 'scenario_damage')) AND (realizations IS NOT NULL))),
     -- Number of seismicity histories
     histories integer CONSTRAINT histories_is_set
         CHECK(
@@ -664,39 +653,39 @@ CREATE TABLE uiapi.oq_job_profile (
         CHECK(
             ((calc_mode IN ('classical', 'disaggregation', 'uhs',
                            'classical_bcr', 'event_based_bcr')) AND (gm_correlated IS NULL))
-            OR ((calc_mode IN ('event_based', 'scenario', 'event_based_bcr')) AND (gm_correlated IS NOT NULL))),
+            OR ((calc_mode IN ('event_based', 'scenario', 'scenario_damage', 'event_based_bcr')) AND (gm_correlated IS NOT NULL))),
     gmf_calculation_number integer CONSTRAINT gmf_calculation_number_is_set
         CHECK(
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (gmf_calculation_number IS NOT NULL)
              AND (realizations > 0))
             OR
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (gmf_calculation_number IS NULL))),
     rupture_surface_discretization float
         CONSTRAINT rupture_surface_discretization_is_set
         CHECK(
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (rupture_surface_discretization IS NOT NULL)
              AND (rupture_surface_discretization > 0))
             OR
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (rupture_surface_discretization IS NULL))),
 
     aggregate_loss_curve boolean,
     area_source_discretization float
         CONSTRAINT area_source_discretization_is_set
         CHECK(
-            ((calc_mode != 'scenario') AND (area_source_discretization IS NOT NULL))
+            ((calc_mode NOT IN ('scenario', 'scenario_damage')) AND (area_source_discretization IS NOT NULL))
             OR
-            ((calc_mode = 'scenario') AND (area_source_discretization IS NULL))),
+            ((calc_mode IN ('scenario', 'scenario_damage')) AND (area_source_discretization IS NULL))),
     area_source_magnitude_scaling_relationship VARCHAR
         CONSTRAINT area_source_magnitude_scaling_relationship_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (area_source_magnitude_scaling_relationship IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (area_source_magnitude_scaling_relationship IS NULL))),
     asset_life_expectancy float
         CONSTRAINT asset_life_expectancy_is_set
@@ -727,84 +716,84 @@ CREATE TABLE uiapi.oq_job_profile (
     fault_magnitude_scaling_relationship VARCHAR
         CONSTRAINT fault_magnitude_scaling_relationship_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (fault_magnitude_scaling_relationship IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (fault_magnitude_scaling_relationship IS NULL))),
     fault_magnitude_scaling_sigma float
         CONSTRAINT fault_magnitude_scaling_sigma_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (fault_magnitude_scaling_sigma IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (fault_magnitude_scaling_sigma IS NULL))),
     fault_rupture_offset float
         CONSTRAINT fault_rupture_offset_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (fault_rupture_offset IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (fault_rupture_offset IS NULL))),
     fault_surface_discretization float
         CONSTRAINT fault_surface_discretization_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (fault_surface_discretization IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (fault_surface_discretization IS NULL))),
     gmf_random_seed integer
         CONSTRAINT gmf_random_seed_is_set
         CHECK(
-            (calc_mode IN ('scenario', 'event_based')
+            (calc_mode IN ('scenario', 'scenario_damage', 'event_based')
              AND (gmf_random_seed IS NOT NULL))
             OR
-            ((calc_mode NOT IN ('scenario', 'event_based'))
+            ((calc_mode NOT IN ('scenario', 'scenario_damage', 'event_based'))
              AND (gmf_random_seed IS NULL))),
     gmpe_lt_random_seed integer
         CONSTRAINT gmpe_lt_random_seed_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (gmpe_lt_random_seed IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (gmpe_lt_random_seed IS NULL))),
     gmpe_model_name VARCHAR,
     grid_source_magnitude_scaling_relationship VARCHAR,
     include_area_sources boolean
         CONSTRAINT include_area_sources_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (include_area_sources IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (include_area_sources IS NULL))),
     include_fault_source boolean
         CONSTRAINT include_fault_source_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (include_fault_source IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (include_fault_source IS NULL))),
     include_grid_sources boolean
         CONSTRAINT include_grid_sources_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (include_grid_sources IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (include_grid_sources IS NULL))),
     include_subduction_fault_source boolean
         CONSTRAINT include_subduction_fault_source_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (include_subduction_fault_source IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (include_subduction_fault_source IS NULL))),
     interest_rate float
         CONSTRAINT interest_rate_is_set
@@ -864,7 +853,7 @@ CREATE TABLE uiapi.oq_job_profile (
                            'classical_bcr', 'event_based_bcr'))
              AND (maximum_distance IS NOT NULL))
             OR
-            ((calc_mode IN ('scenario', 'event_based'))
+            ((calc_mode IN ('scenario', 'scenario_damage', 'event_based'))
              AND (maximum_distance IS NULL))),
     quantile_levels float[]
         CONSTRAINT quantile_levels_is_set
@@ -878,10 +867,10 @@ CREATE TABLE uiapi.oq_job_profile (
     rupture_aspect_ratio float
         CONSTRAINT rupture_aspect_ratio_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (rupture_aspect_ratio IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (rupture_aspect_ratio IS NULL))),
     -- Rupture floating type, one of:
     --     Only along strike ( rupture full DDW) (alongstrike)
@@ -894,7 +883,7 @@ CREATE TABLE uiapi.oq_job_profile (
                            'classical_bcr', 'event_based_bcr'))
              AND (rupture_floating_type IN ('alongstrike', 'downdip', 'centereddowndip')))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (rupture_floating_type IS NULL))),
     -- Sadigh site type, one of:
     --     Rock (rock)
@@ -905,10 +894,10 @@ CREATE TABLE uiapi.oq_job_profile (
     source_model_lt_random_seed integer
         CONSTRAINT source_model_lt_random_seed_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (source_model_lt_random_seed IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (source_model_lt_random_seed IS NULL))),
     -- Standard deviation, one of:
     --     Total (total)
@@ -921,50 +910,50 @@ CREATE TABLE uiapi.oq_job_profile (
     standard_deviation_type VARCHAR
         CONSTRAINT standard_deviation_type_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (standard_deviation_type IN ('total', 'interevent', 'intraevent', 'zero', 'total_mag_dependent', 'total_pga_dependent', 'intraevent_mag_dependent')))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (standard_deviation_type IS NULL))),
     subduction_fault_magnitude_scaling_relationship VARCHAR
         CONSTRAINT subduction_fault_magnitude_scaling_relationship_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (subduction_fault_magnitude_scaling_relationship IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (subduction_fault_magnitude_scaling_relationship IS NULL))),
     subduction_fault_magnitude_scaling_sigma float
         CONSTRAINT subduction_fault_magnitude_scaling_sigma_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (subduction_fault_magnitude_scaling_sigma IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (subduction_fault_magnitude_scaling_sigma IS NULL))),
     subduction_fault_rupture_offset float
         CONSTRAINT subduction_fault_rupture_offset_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (subduction_fault_rupture_offset IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (subduction_fault_rupture_offset IS NULL))),
     subduction_fault_surface_discretization float
         CONSTRAINT subduction_fault_surface_discretization_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (subduction_fault_surface_discretization IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (subduction_fault_surface_discretization IS NULL))),
     subduction_rupture_aspect_ratio float
         CONSTRAINT subduction_rupture_aspect_ratio_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (subduction_rupture_aspect_ratio IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (subduction_rupture_aspect_ratio IS NULL))),
     -- Rupture floating type, one of:
     --     Only along strike ( rupture full DDW) (alongstrike)
@@ -973,10 +962,10 @@ CREATE TABLE uiapi.oq_job_profile (
     subduction_rupture_floating_type VARCHAR
         CONSTRAINT subduction_rupture_floating_type_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (subduction_rupture_floating_type IN ('alongstrike', 'downdip', 'centereddowndip')))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (subduction_rupture_floating_type IS NULL))),
     -- Source as, one of:
     --     Point Sources (pointsources)
@@ -986,26 +975,26 @@ CREATE TABLE uiapi.oq_job_profile (
     treat_area_source_as VARCHAR
         CONSTRAINT treat_area_source_as_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (treat_area_source_as IN ('pointsources', 'linesources', 'crosshairsources', '16spokedsources')))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (treat_area_source_as IS NULL))),
     treat_grid_source_as VARCHAR
         CONSTRAINT treat_grid_source_as_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (treat_grid_source_as IN ('pointsources', 'linesources', 'crosshairsources', '16spokedsources')))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (treat_grid_source_as IS NULL))),
     width_of_mfd_bin float
         CONSTRAINT width_of_mfd_bin_is_set
         CHECK(
-            ((calc_mode != 'scenario')
+            ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (width_of_mfd_bin IS NOT NULL))
             OR
-            ((calc_mode = 'scenario')
+            ((calc_mode IN ('scenario', 'scenario_damage'))
              AND (width_of_mfd_bin IS NULL))),
     lat_bin_limits float[]
         CONSTRAINT lat_bin_limits_valid
@@ -1113,7 +1102,7 @@ ALTER TABLE uiapi.oq_job_profile ADD CONSTRAINT oq_job_profile_geometry CHECK(
 CREATE TABLE uiapi.output (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
-    oq_calculation_id INTEGER NOT NULL,
+    oq_job_id INTEGER NOT NULL,
     -- The full path of the output file on the server, optional and only set
     -- for outputs with NRML/XML files.
     path VARCHAR UNIQUE,
@@ -1130,10 +1119,14 @@ CREATE TABLE uiapi.output (
     --      collapse_map
     --      bcr_distribution
     --      agg_loss_curve
+    --      dmg_dist_per_asset
+    --      dmg_dist_per_taxonomy
+    --      dmg_dist_total
     output_type VARCHAR NOT NULL CONSTRAINT output_type_value
         CHECK(output_type IN ('unknown', 'hazard_curve', 'hazard_map',
             'gmf', 'loss_curve', 'loss_map', 'collapse_map',
-            'bcr_distribution', 'uh_spectra', 'agg_loss_curve')),
+            'bcr_distribution', 'uh_spectra', 'agg_loss_curve',
+            'dmg_dist_per_asset', 'dmg_dist_per_taxonomy', 'dmg_dist_total')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
     -- The full path of the shapefile generated for a hazard or loss map
@@ -1151,11 +1144,39 @@ CREATE TABLE uiapi.output (
 -- A place to store error information in the case of a job failure.
 CREATE TABLE uiapi.error_msg (
     id SERIAL PRIMARY KEY,
-    oq_calculation_id INTEGER NOT NULL,
+    oq_job_id INTEGER NOT NULL,
     -- Summary of the error message.
     brief VARCHAR NOT NULL,
     -- The full error message.
     detailed VARCHAR NOT NULL
+) TABLESPACE uiapi_ts;
+
+
+-- Associate inputs and jobs
+CREATE TABLE uiapi.input2job (
+    id SERIAL PRIMARY KEY,
+    input_id INTEGER NOT NULL,
+    oq_job_id INTEGER NOT NULL,
+    UNIQUE (input_id, oq_job_id)
+) TABLESPACE uiapi_ts;
+
+
+-- Associate inputs and uploads
+CREATE TABLE uiapi.input2upload (
+    id SERIAL PRIMARY KEY,
+    input_id INTEGER NOT NULL,
+    upload_id INTEGER NOT NULL,
+    UNIQUE (input_id, upload_id)
+) TABLESPACE uiapi_ts;
+
+
+-- Associate jobs and their profiles, a job may be associated with one profile
+-- only.
+CREATE TABLE uiapi.job2profile (
+    id SERIAL PRIMARY KEY,
+    oq_job_id INTEGER NOT NULL,
+    oq_job_profile_id INTEGER NOT NULL,
+    UNIQUE (oq_job_id)
 ) TABLESPACE uiapi_ts;
 
 
@@ -1388,6 +1409,61 @@ SELECT AddGeometryColumn('riskr', 'bcr_distribution_data', 'location', 4326, 'PO
 ALTER TABLE riskr.bcr_distribution_data ALTER COLUMN location SET NOT NULL;
 
 
+-- Damage Distribution Per Asset
+CREATE TABLE riskr.dmg_dist_per_asset (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL,  -- FK to uiapi.output.id
+    dmg_states VARCHAR[] NOT NULL,
+    end_branch_label VARCHAR
+) TABLESPACE riskr_ts;
+
+CREATE TABLE riskr.dmg_dist_per_asset_data (
+    id SERIAL PRIMARY KEY,
+    dmg_dist_per_asset_id INTEGER NOT NULL,  -- FK to riskr.dmg_dist_per_asset.id
+    exposure_data_id INTEGER NOT NULL,  -- FK to oqmif.exposure_data.id
+    dmg_state VARCHAR NOT NULL,
+    mean float NOT NULL,
+    stddev float NOT NULL
+) TABLESPACE riskr_ts;
+SELECT AddGeometryColumn('riskr', 'dmg_dist_per_asset_data', 'location', 4326, 'POINT', 2);
+ALTER TABLE riskr.dmg_dist_per_asset_data ALTER COLUMN location SET NOT NULL;
+
+
+-- Damage Distrubtion Per Taxonomy
+CREATE TABLE riskr.dmg_dist_per_taxonomy (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL,  -- FK to uiapi.output.id
+    dmg_states VARCHAR[] NOT NULL,
+    end_branch_label VARCHAR
+) TABLESPACE riskr_ts;
+
+CREATE TABLE riskr.dmg_dist_per_taxonomy_data (
+    id SERIAL PRIMARY KEY,
+    dmg_dist_per_taxonomy_id INTEGER NOT NULL,  -- FK riskr.dmg_dist_per_taxonomy.id
+    taxonomy VARCHAR NOT NULL,
+    dmg_state VARCHAR NOT NULL,
+    mean float NOT NULL,
+    stddev float NOT NULL
+) TABLESPACE riskr_ts;
+
+
+-- Total Damage Distribution
+CREATE TABLE riskr.dmg_dist_total (
+    id SERIAL PRIMARY KEY,
+    output_id INTEGER NOT NULL,  -- FK to uiapi.output.id
+    dmg_states VARCHAR[] NOT NULL,
+    end_branch_label VARCHAR
+) TABLESPACE riskr_ts;
+
+CREATE TABLE riskr.dmg_dist_total_data (
+    id SERIAL PRIMARY KEY,
+    dmg_dist_total_id INTEGER NOT NULL,  -- FK to riskr.dmg_dist_total.id
+    dmg_state VARCHAR NOT NULL,
+    mean float NOT NULL,
+    stddev float NOT NULL
+) TABLESPACE riskr_ts;
+
+
 -- Exposure model
 -- Abbreviations:
 --      coco: contents cost
@@ -1397,9 +1473,11 @@ CREATE TABLE oqmif.exposure_model (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     -- Associates the risk exposure model with an input file
-    input_id INTEGER,
+    input_id INTEGER NOT NULL,
     name VARCHAR NOT NULL,
     description VARCHAR,
+    -- the taxonomy system used to classify the assets
+    taxonomy_source VARCHAR,
     -- e.g. "buildings", "bridges" etc.
     category VARCHAR NOT NULL,
 
@@ -1517,6 +1595,71 @@ CREATE TABLE riski.vulnerability_function (
 ) TABLESPACE riski_ts;
 
 
+-- Fragility model
+CREATE TABLE riski.fragility_model (
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL,
+    -- Associates the risk fragility model with an input file
+    input_id INTEGER NOT NULL,
+    description VARCHAR,
+    -- Fragility model format: one of "discrete", "continuous"
+    format VARCHAR NOT NULL CONSTRAINT format_value
+        CHECK(format IN ('continuous', 'discrete')),
+    -- Limit states
+    lss VARCHAR[] NOT NULL,
+    -- Intensity measure levels, only applicable for discrete fragility models.
+    imls float[],
+    -- Intensity measure type, only applicable for discrete fragility models.
+    imt VARCHAR,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE riski_ts;
+
+
+-- Continuous fragility function
+CREATE TABLE riski.ffc (
+    id SERIAL PRIMARY KEY,
+    fragility_model_id INTEGER NOT NULL,
+    -- limit state index, facilitates the ordering of fragility functions in
+    -- accordance to limit states
+    lsi smallint NOT NULL CONSTRAINT lsi_value CHECK(lsi > 0),
+    -- limit state
+    ls VARCHAR NOT NULL,
+    -- taxonomy
+    taxonomy VARCHAR NOT NULL,
+    -- Optional function/distribution type e.g. lognormal
+    ftype VARCHAR,
+    mean float NOT NULL,
+    stddev float NOT NULL,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL,
+    -- The combination of limit state and taxonomy is unique within an
+    -- fragility model.
+    UNIQUE (fragility_model_id, taxonomy, lsi)
+) TABLESPACE riski_ts;
+
+
+-- Discrete fragility function
+CREATE TABLE riski.ffd (
+    id SERIAL PRIMARY KEY,
+    fragility_model_id INTEGER NOT NULL,
+    -- limit state index, facilitates the ordering of fragility functions in
+    -- accordance to limit states
+    lsi smallint NOT NULL CONSTRAINT lsi_value CHECK(lsi > 0),
+    -- limit state
+    ls VARCHAR NOT NULL,
+    -- taxonomy
+    taxonomy VARCHAR NOT NULL,
+    poes float[] NOT NULL CONSTRAINT poes_values
+        CHECK (0.0 <= ALL(poes) AND 1.0 >= ALL(poes)),
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL,
+    -- The combination of limit state and taxonomy is unique within an
+    -- fragility model.
+    UNIQUE (fragility_model_id, taxonomy, lsi)
+) TABLESPACE riski_ts;
+
+
 ------------------------------------------------------------------------
 -- Constraints (foreign keys etc.) go here
 ------------------------------------------------------------------------
@@ -1610,41 +1753,48 @@ FOREIGN KEY (magnitude_id) REFERENCES eqcat.magnitude(id) ON DELETE RESTRICT;
 ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_surface_fk
 FOREIGN KEY (surface_id) REFERENCES eqcat.surface(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.oq_calculation ADD CONSTRAINT uiapi_oq_calculation_owner_fk
+ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
-
-ALTER TABLE uiapi.oq_calculation ADD CONSTRAINT uiapi_oq_calculation_oq_job_profile_fk
-FOREIGN KEY (oq_job_profile_id) REFERENCES uiapi.oq_job_profile(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.oq_job_profile ADD CONSTRAINT uiapi_oq_job_profile_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.calc_stats ADD CONSTRAINT  uiapi_calc_stats_oq_calculation_fk
-FOREIGN KEY (oq_calculation_id) REFERENCES uiapi.oq_calculation(id) ON DELETE CASCADE;
+ALTER TABLE uiapi.job_stats ADD CONSTRAINT  uiapi_job_stats_oq_job_fk
+FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.input2job ADD CONSTRAINT  uiapi_input2job_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.input2job ADD CONSTRAINT  uiapi_input2job_oq_job_fk
+FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.job2profile ADD CONSTRAINT
+uiapi_job2profile_oq_job_profile_fk FOREIGN KEY (oq_job_profile_id) REFERENCES
+uiapi.oq_job_profile(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.job2profile ADD CONSTRAINT  uiapi_job2profile_oq_job_fk
+FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.input2upload ADD CONSTRAINT  uiapi_input2upload_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.input2upload ADD CONSTRAINT  uiapi_input2upload_upload_fk
+FOREIGN KEY (upload_id) REFERENCES uiapi.upload(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.upload ADD CONSTRAINT uiapi_upload_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.oq_job_profile ADD CONSTRAINT uiapi_oq_job_profile_input_set_fk
-FOREIGN KEY (input_set_id) REFERENCES uiapi.input_set(id) ON DELETE RESTRICT;
-
-ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_input_set_fk
-FOREIGN KEY (input_set_id) REFERENCES uiapi.input_set(id) ON DELETE RESTRICT;
-
-ALTER TABLE uiapi.input_set ADD CONSTRAINT uiapi_input_set_owner_fk
+ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.input_set ADD CONSTRAINT uiapi_input_set_upload_fk
-FOREIGN KEY (upload_id) REFERENCES uiapi.upload(id) ON DELETE RESTRICT;
-
-ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_oq_calculation_fk
-FOREIGN KEY (oq_calculation_id) REFERENCES uiapi.oq_calculation(id) ON DELETE RESTRICT;
+ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_oq_job_fk
+FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.error_msg ADD CONSTRAINT uiapi_error_msg_oq_calculation_fk
-FOREIGN KEY (oq_calculation_id) REFERENCES uiapi.oq_calculation(id) ON DELETE CASCADE;
+ALTER TABLE uiapi.error_msg ADD CONSTRAINT uiapi_error_msg_oq_job_fk
+FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
 ALTER TABLE oqmif.exposure_model ADD CONSTRAINT oqmif_exposure_model_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
@@ -1656,8 +1806,16 @@ ALTER TABLE riski.vulnerability_model ADD CONSTRAINT
 riski_vulnerability_model_owner_fk FOREIGN KEY (owner_id) REFERENCES
 admin.oq_user(id) ON DELETE RESTRICT;
 
+ALTER TABLE riski.fragility_model ADD CONSTRAINT
+riski_fragility_model_owner_fk FOREIGN KEY (owner_id) REFERENCES
+admin.oq_user(id) ON DELETE RESTRICT;
+
 ALTER TABLE riski.vulnerability_model ADD CONSTRAINT
 riski_vulnerability_model_input_fk FOREIGN KEY (input_id) REFERENCES
+uiapi.input(id) ON DELETE RESTRICT;
+
+ALTER TABLE riski.fragility_model ADD CONSTRAINT
+riski_fragility_model_input_fk FOREIGN KEY (input_id) REFERENCES
 uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE hzrdr.hazard_map
@@ -1740,6 +1898,40 @@ ALTER TABLE riskr.bcr_distribution_data
 ADD CONSTRAINT riskr_bcr_distribution_data_bcr_distribution_fk
 FOREIGN KEY (bcr_distribution_id) REFERENCES riskr.bcr_distribution(id) ON DELETE CASCADE;
 
+
+-- Damage Distribution, Per Asset
+ALTER TABLE riskr.dmg_dist_per_asset
+ADD CONSTRAINT riskr_dmg_dist_per_asset_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.dmg_dist_per_asset_data
+ADD CONSTRAINT riskr_dmg_dist_per_asset_data_dmg_dist_per_asset_fk
+FOREIGN KEY (dmg_dist_per_asset_id) REFERENCES riskr.dmg_dist_per_asset(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.dmg_dist_per_asset_data
+ADD CONSTRAINT riskr_dmg_dist_per_asset_data_exposure_data_fk
+FOREIGN KEY (exposure_data_id) REFERENCES oqmif.exposure_data(id) ON DELETE RESTRICT;
+
+
+-- Damage Distribution, Per Taxonomy
+ALTER TABLE riskr.dmg_dist_per_taxonomy
+ADD CONSTRAINT riskr_dmg_dist_per_taxonomy_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.dmg_dist_per_taxonomy_data
+ADD CONSTRAINT riskr_dmg_dist_per_taxonomy_data_dmg_dist_per_taxonomy_fk
+FOREIGN KEY (dmg_dist_per_taxonomy_id) REFERENCES riskr.dmg_dist_per_taxonomy(id) ON DELETE CASCADE;
+
+
+-- Damage Distribution, Total
+ALTER TABLE riskr.dmg_dist_total
+ADD CONSTRAINT riskr_dmg_dist_total_output_fk
+FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE riskr.dmg_dist_total_data
+ADD CONSTRAINT riskr_dmg_dist_total_data_dmg_dist_total_fk
+FOREIGN KEY (dmg_dist_total_id) REFERENCES riskr.dmg_dist_total(id) ON DELETE CASCADE;
+
 ALTER TABLE oqmif.exposure_data ADD CONSTRAINT
 oqmif_exposure_data_exposure_model_fk FOREIGN KEY (exposure_model_id)
 REFERENCES oqmif.exposure_model(id) ON DELETE CASCADE;
@@ -1753,3 +1945,10 @@ riski_vulnerability_function_vulnerability_model_fk FOREIGN KEY
 (vulnerability_model_id) REFERENCES riski.vulnerability_model(id) ON DELETE
 CASCADE;
 
+ALTER TABLE riski.ffd ADD CONSTRAINT riski_ffd_fragility_model_fk FOREIGN KEY
+(fragility_model_id) REFERENCES riski.fragility_model(id) ON DELETE
+CASCADE;
+
+ALTER TABLE riski.ffc ADD CONSTRAINT riski_ffc_fragility_model_fk FOREIGN KEY
+(fragility_model_id) REFERENCES riski.fragility_model(id) ON DELETE
+CASCADE;

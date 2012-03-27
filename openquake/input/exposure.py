@@ -3,19 +3,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
 """Serializer to save exposure data to the database"""
@@ -30,21 +29,26 @@ class ExposureDBWriter(object):
     Serialize the exposure model to database
     """
 
-    def __init__(self, input_set, path, owner=None):
+    model_attrs = [
+        ("area_type", "areaType"), ("area_unit", "areaUnit"),
+        ("coco_type", "cocoType"), ("coco_unit", "cocoUnit"),
+        ("reco_type", "recoType"), ("reco_unit", "recoUnit"),
+        ("stco_type", "stcoType"), ("stco_unit", "stcoUnit")]
+
+    def __init__(self, smi, owner=None):
         """Create a new serializer for the specified user"""
-        qargs = dict(input_type="exposure", path=path)
-        [self.input] = input_set.input_set.filter(**qargs)
+        self.smi = smi
         if owner:
             self.owner = owner
         else:
-            self.owner = models.OqUser.objects.get(user_name="openquake")
+            self.owner = smi.owner
         self.model = None
 
     @transaction.commit_on_success(router.db_for_write(models.ExposureModel))
     def serialize(self, iterator):
         """
         Serialize a list of values produced by
-        :class:`openquake.parser.exposure.ExposurePortfolioFile`
+        :class:`openquake.parser.exposure.ExposureModelFile`
 
         :type iterator: any iterable
         """
@@ -60,21 +64,18 @@ class ExposureDBWriter(object):
         :param list occupancy: a potentially empty list of named tuples
             each having an 'occupants' and a 'description' property
         :param values: dictionary of values (see
-            :class:`openquake.parser.exposure.ExposurePortfolioFile`)
+            :class:`openquake.parser.exposure.ExposureModelFile`)
 
         it also inserts the main exposure model entry if not already
         present,
         """
         if not self.model:
             self.model = models.ExposureModel(
-                owner=self.owner, input=self.input,
+                owner=self.owner, input=self.smi,
                 description=values.get("listDescription"),
+                taxonomy_source=values.get("taxonomySource"),
                 category=values["assetCategory"])
-            for key, tag in [
-                ("area_type", "areaType"), ("area_unit", "areaUnit"),
-                ("coco_type", "cocoType"), ("coco_unit", "cocoUnit"),
-                ("reco_type", "recoType"), ("reco_unit", "recoUnit"),
-                ("stco_type", "stcoType"), ("stco_unit", "stcoUnit")]:
+            for key, tag in self.model_attrs:
                 value = values.get(tag)
                 if value:
                     setattr(self.model, key, value)

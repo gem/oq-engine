@@ -2,25 +2,23 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """Common functionality for Risk calculators."""
 
 # Silence 'Too many lines in module'
 # pylint: disable=C0302
-
 
 from collections import defaultdict
 from collections import OrderedDict
@@ -48,9 +46,11 @@ from openquake import kvs
 from openquake import logs
 from openquake import shapes
 from openquake.input.exposure import ExposureDBWriter
+from openquake.input.fragility import FragilityDBWriter
 from openquake.job import config as job_config
 from openquake.output import risk as risk_output
 from openquake.parser import exposure
+from openquake.parser import fragility
 from openquake.parser import vulnerability
 from openquake.utils import round_float
 from openquake.utils.tasks import calculator_for_task
@@ -106,7 +106,7 @@ def _compute_conditional_loss(curve, probability):
 
 
 @task
-def compute_risk(calculation_id, block_id, **kwargs):
+def compute_risk(job_id, block_id, **kwargs):
     """A task for computing risk, calls the compute_risk method defined in the
     chosen risk calculator.
 
@@ -114,7 +114,7 @@ def compute_risk(calculation_id, block_id, **kwargs):
     calculation mode (i.e., classical, event_based, etc.).
     """
 
-    calculator = calculator_for_task(calculation_id, 'risk')
+    calculator = calculator_for_task(job_id, 'risk')
 
     return calculator.compute_risk(block_id, **kwargs)
 
@@ -135,7 +135,7 @@ class BaseRiskCalculator(Calculator):
         """
         Return True if current calculation mode is Benefit-Cost Ratio.
         """
-        return self.calc_proxy.params[job_config.CALCULATION_MODE] in (
+        return self.job_ctxt.params[job_config.CALCULATION_MODE] in (
             job_config.BCR_CLASSICAL_MODE,
             job_config.BCR_EVENT_BASED_MODE
         )
@@ -143,6 +143,7 @@ class BaseRiskCalculator(Calculator):
     def pre_execute(self):
         """Make sure the exposure and vulnerability data is in the database."""
         self.store_exposure_assets()
+        self.store_fragility_model()
         self.store_vulnerability_model()
         self.partition()
 
@@ -166,6 +167,16 @@ class BaseRiskCalculator(Calculator):
         return geos.Polygon(coos)
 
     @classmethod
+    def _load_exposure_model(cls, job_id):
+        """Load and cache the exposure model."""
+
+        if cls._em_inputs is None or cls._em_job_id != job_id:
+            # This query obtains the exposure model input rows and needs to be
+            # made only once in the course of a risk calculation.
+            cls._em_inputs = models.inputs4job(job_id, "exposure")
+            cls._em_job_id = job_id
+
+    @classmethod
     def assets_for_cell(cls, job_id, lowerleft):
         """Return exposure assets for the given job and risk cell mid-point.
 
@@ -175,23 +186,41 @@ class BaseRiskCalculator(Calculator):
         :returns: a potentially empty list of
             :py:class:`openquake.db.models.ExposureData` instances
         """
-        jp = models.OqCalculation.objects.get(id=job_id).oq_job_profile
+        jp = models.profile4job(job_id)
         assert jp.region_grid_spacing is not None, "Grid spacing not known."
 
-        if cls._em_inputs is None or cls._em_job_id != job_id:
-            # This query obtains the exposure model input rows and needs to be
-            # made only once in the course of a risk calculation.
-            cls._em_inputs = list(
-                jp.input_set.input_set.filter(input_type="exposure"))
-            cls._em_job_id = job_id
-
+        cls._load_exposure_model(job_id)
         if not cls._em_inputs:
             return []
 
         risk_cell = cls._cell_to_polygon(lowerleft, jp.region_grid_spacing)
-        qm = models.ExposureData.objects
-        result = qm.filter(exposure_model__input__in=cls._em_inputs,
-                           site__contained=risk_cell)
+        result = models.ExposureData.objects.filter(
+            exposure_model__input__in=cls._em_inputs,
+            site__contained=risk_cell)
+
+        return list(result)
+
+    @classmethod
+    def assets_at(cls, job_id, site):
+        """
+        Load the assets from the exposure defined at the given site.
+
+        :param job_id: the id of the job
+        :type job_id: integer
+        :param site: site where the assets are defined
+        :type site: instance of :py:class:`openquake.shapes.Site`
+        :returns: a list of
+            :py:class:`openquake.db.models.ExposureData` objects
+        """
+
+        cls._load_exposure_model(job_id)
+
+        if not cls._em_inputs:
+            return []
+
+        em = models.ExposureData.objects
+        result = em.filter(exposure_model__input__in=cls._em_inputs,
+                site=geos.Point(site.longitude, site.latitude))
 
         return list(result)
 
@@ -201,44 +230,51 @@ class BaseRiskCalculator(Calculator):
         # pylint: disable=W0404
         from openquake import engine
 
-        sites = []
-        self.calc_proxy.blocks_keys = []  # pylint: disable=W0201
-        sites = engine.read_sites_from_exposure(self.calc_proxy)
+        self.job_ctxt.blocks_keys = []  # pylint: disable=W0201
+        sites = engine.read_sites_from_exposure(self.job_ctxt)
 
         block_count = 0
 
-        for block in split_into_blocks(self.calc_proxy.job_id, sites):
-            self.calc_proxy.blocks_keys.append(block.block_id)
+        for block in split_into_blocks(self.job_ctxt.job_id, sites):
+            self.job_ctxt.blocks_keys.append(block.block_id)
             block.to_kvs()
 
             block_count += 1
 
         LOG.info("Job has partitioned %s sites into %s blocks",
-                len(sites), block_count)
+                 len(sites), block_count)
 
     def store_exposure_assets(self):
         """Load exposure assets and write them to database."""
-        input_set = self.calc_proxy.oq_job_profile.input_set
-        [emdl] = input_set.input_set.filter(input_type="exposure")
-        path = os.path.join(self.calc_proxy.base_path, emdl.path)
+        [emdl] = models.inputs4job(self.job_ctxt.job_id, "exposure")
+        path = os.path.join(self.job_ctxt.base_path, emdl.path)
 
-        exposure_parser = exposure.ExposurePortfolioFile(path)
-        writer = ExposureDBWriter(input_set, path)
+        exposure_parser = exposure.ExposureModelFile(path)
+        writer = ExposureDBWriter(emdl)
         writer.serialize(exposure_parser)
+
+    def store_fragility_model(self):
+        """Load fragility model and write it to database."""
+        fmodels = models.inputs4job(self.job_ctxt.job_id, "fragility")
+        for fmdl in fmodels:
+            path = os.path.join(self.job_ctxt.base_path, fmdl.path)
+            parser = fragility.FragilityModelParser(path)
+            writer = FragilityDBWriter(fmdl, parser)
+            writer.serialize()
 
     def store_vulnerability_model(self):
         """ load vulnerability and write to kvs """
         path = os.path.join(
-            self.calc_proxy.base_path,
-            self.calc_proxy.params["VULNERABILITY"])
-        vulnerability.load_vulnerability_model(self.calc_proxy.job_id, path)
+            self.job_ctxt.base_path,
+            self.job_ctxt.params["VULNERABILITY"])
+        vulnerability.load_vulnerability_model(self.job_ctxt.job_id, path)
 
         if self.is_benefit_cost_ratio_mode():
             path = os.path.join(
-                self.calc_proxy.base_path,
-                self.calc_proxy.params["VULNERABILITY_RETROFITTED"])
+                self.job_ctxt.base_path,
+                self.job_ctxt.params["VULNERABILITY_RETROFITTED"])
             vulnerability.load_vulnerability_model(
-                self.calc_proxy.job_id, path, retrofitted=True)
+                self.job_ctxt.job_id, path, retrofitted=True)
 
     def _serialize(self, block_id, **kwargs):
         """
@@ -250,22 +286,22 @@ class BaseRiskCalculator(Calculator):
 
         if kwargs['curve_mode'] == 'loss_ratio':
             serialize_filename = "%s-block-#%s-block#%s.xml" % (
-                self.calc_proxy.params["LOSS_CURVES_OUTPUT_PREFIX"],
-                self.calc_proxy.job_id,
+                self.job_ctxt.params["LOSS_CURVES_OUTPUT_PREFIX"],
+                self.job_ctxt.job_id,
                 block_id)
         elif kwargs['curve_mode'] == 'loss':
             serialize_filename = "%s-loss-block-#%s-block#%s.xml" % (
-                self.calc_proxy.params["LOSS_CURVES_OUTPUT_PREFIX"],
-                self.calc_proxy.job_id,
+                self.job_ctxt.params["LOSS_CURVES_OUTPUT_PREFIX"],
+                self.job_ctxt.job_id,
                 block_id)
 
-        serialize_path = os.path.join(self.calc_proxy.base_path,
-                                      self.calc_proxy.params['OUTPUT_DIR'],
+        serialize_path = os.path.join(self.job_ctxt.base_path,
+                                      self.job_ctxt.params['OUTPUT_DIR'],
                                       serialize_filename)
 
         LOG.debug("Serializing %s" % kwargs['curve_mode'])
         writer = risk_output.create_loss_curve_writer(
-            self.calc_proxy.job_id, self.calc_proxy.serialize_results_to,
+            self.job_ctxt.job_id, self.job_ctxt.serialize_results_to,
             serialize_path, kwargs['curve_mode'])
         if writer:
             writer.serialize(kwargs['curves'])
@@ -284,7 +320,7 @@ class BaseRiskCalculator(Calculator):
             * asset is an :py:class:`openquake.db.models.ExposureData` instance
         """
         for point in grid:
-            assets = self.assets_for_cell(self.calc_proxy.job_id, point.site)
+            assets = self.assets_for_cell(self.job_ctxt.job_id, point.site)
             for asset in assets:
                 yield point, asset
 
@@ -294,7 +330,7 @@ class BaseRiskCalculator(Calculator):
         loss_curves = []
         block = Block.from_kvs(job_id, block_id)
         for point, asset in self.grid_assets_iterator(
-                block.grid(self.calc_proxy.region)):
+                block.grid(self.job_ctxt.region)):
             site = shapes.Site(asset.site.x, asset.site.y)
 
             loss_curve = kvs.get_client().get(
@@ -348,7 +384,7 @@ class BaseRiskCalculator(Calculator):
         result = defaultdict(list)
 
         for point, asset in assets_iterator:
-            key = kvs.tokens.loss_key(self.calc_proxy.job_id, point.row,
+            key = kvs.tokens.loss_key(self.job_ctxt.job_id, point.row,
                                       point.column, asset.asset_ref, loss_poe)
 
             loss_value = kvs.get_client().get(key)
@@ -374,8 +410,8 @@ class BaseRiskCalculator(Calculator):
             asset in that site. See :func:`compute_bcr_for_block`.
         """
         data = []
-        for block_id in self.calc_proxy.blocks_keys:
-            key = kvs.tokens.bcr_block_key(self.calc_proxy.job_id, block_id)
+        for block_id in self.job_ctxt.blocks_keys:
+            key = kvs.tokens.bcr_block_key(self.job_ctxt.job_id, block_id)
             block_data = kvs.get_value_json_decoded(key)
             data += [(shapes.Site(latitude=lat, longitude=lon), payload)
                      for ((lon, lat), payload) in block_data]
@@ -409,24 +445,24 @@ class ProbabilisticRiskCalculator(BaseRiskCalculator):
     def write_output(self):
         """Write the output of a block to db/xml.
         """
-        calc_proxy = self.calc_proxy
+        job_ctxt = self.job_ctxt
 
-        for block_id in calc_proxy.blocks_keys:
+        for block_id in job_ctxt.blocks_keys:
             #pylint: disable=W0212
-            self._write_output_for_block(calc_proxy.job_id, block_id)
+            self._write_output_for_block(job_ctxt.job_id, block_id)
 
-        for loss_poe in conditional_loss_poes(calc_proxy.params):
-            path = os.path.join(calc_proxy.base_path,
-                                calc_proxy.params['OUTPUT_DIR'],
+        for loss_poe in conditional_loss_poes(job_ctxt.params):
+            path = os.path.join(job_ctxt.base_path,
+                                job_ctxt.params['OUTPUT_DIR'],
                                 "losses_at-%s.xml" % loss_poe)
             writer = risk_output.create_loss_map_writer(
-                calc_proxy.job_id, calc_proxy.serialize_results_to, path,
+                job_ctxt.job_id, job_ctxt.serialize_results_to, path,
                 False)
 
             if writer:
                 metadata = {
                     "scenario": False,
-                    "timeSpan": calc_proxy.params["INVESTIGATION_TIME"],
+                    "timeSpan": job_ctxt.params["INVESTIGATION_TIME"],
                     "poE": loss_poe,
                 }
 
@@ -435,22 +471,22 @@ class ProbabilisticRiskCalculator(BaseRiskCalculator):
                     + self.asset_losses_per_site(
                         loss_poe,
                         self.grid_assets_iterator(
-                            calc_proxy.region.grid)))
+                            job_ctxt.region.grid)))
                 LOG.info('Loss Map is at: %s' % path)
 
     def write_output_bcr(self):
         """
         Write BCR map in NRML format.
         """
-        path = os.path.join(self.calc_proxy.base_path,
-                            self.calc_proxy.params['OUTPUT_DIR'],
+        path = os.path.join(self.job_ctxt.base_path,
+                            self.job_ctxt.params['OUTPUT_DIR'],
                             "bcr-map.xml")
         writer = risk_output.create_bcr_map_writer(
-            self.calc_proxy.job_id, self.calc_proxy.serialize_results_to, path)
+            self.job_ctxt.job_id, self.job_ctxt.serialize_results_to, path)
 
         metadata = {
-            'interestRate': self.calc_proxy.params['INTEREST_RATE'],
-            'assetLifeExpectancy': self.calc_proxy.params[
+            'interestRate': self.job_ctxt.params['INTEREST_RATE'],
+            'assetLifeExpectancy': self.job_ctxt.params[
                 'ASSET_LIFE_EXPECTANCY'],
         }
 
@@ -506,25 +542,25 @@ class EpsilonProvider(object):
 class Block(object):
     """A block is a collection of sites to compute."""
 
-    def __init__(self, calculation_id, block_id, sites):
+    def __init__(self, job_id, block_id, sites):
         """
-        :param int calculation_id:
-            The id of a current calculation.
+        :param int job_id:
+            The id of a current job.
         :param int block_id:
             Sequence number of the site block (from 0 to N-1, where N is the
             number of blocks).
         :param sites:
             `list` of :class:`openquake.shapes.Site` objects.
         """
-        self.calculation_id = calculation_id
+        self.job_id = job_id
         self.block_id = block_id
         self._sites = sites
 
     def __eq__(self, other):
-        """Compares calculation_id, and block_id.
+        """Compares job_id, and block_id.
 
         This is a shallow comparison; site lists are not compared."""
-        return (self.calculation_id == other.calculation_id
+        return (self.job_id == other.job_id
                 and self.block_id == other.block_id)
 
     @property
@@ -545,10 +581,10 @@ class Block(object):
                 yield point
 
     @staticmethod
-    def from_kvs(calculation_id, block_id):
+    def from_kvs(job_id, block_id):
         """Return the block in the underlying KVS system with the given id."""
 
-        block_key = kvs.tokens.risk_block_key(calculation_id, block_id)
+        block_key = kvs.tokens.risk_block_key(job_id, block_id)
 
         raw_sites = kvs.get_value_json_decoded(block_key)
 
@@ -557,7 +593,7 @@ class Block(object):
         for raw_site in raw_sites:
             sites.append(shapes.Site(raw_site[0], raw_site[1]))
 
-        return Block(calculation_id, block_id, sites)
+        return Block(job_id, block_id, sites)
 
     def to_kvs(self):
         """Store this block into the underlying KVS system."""
@@ -567,18 +603,18 @@ class Block(object):
         for site in self.sites:
             raw_sites.append(site.coords)
 
-        block_key = kvs.tokens.risk_block_key(self.calculation_id,
+        block_key = kvs.tokens.risk_block_key(self.job_id,
                                               self.block_id)
 
         kvs.set_value_json_encoded(block_key, raw_sites)
 
 
-def split_into_blocks(calculation_id, sites, block_size=BLOCK_SIZE):
+def split_into_blocks(job_id, sites, block_size=BLOCK_SIZE):
     """Creates a generator for splitting a list of sites into
     :class:`openquake.calculators.risk.general.Block`s.
 
-    :param calculation_id:
-        The id for the current calculation.
+    :param job_id:
+        The id for the current job.
     :param sites:
         `list` of :class:`openquake.shapes.Site` objects to be split
         into blocks.
@@ -593,7 +629,7 @@ def split_into_blocks(calculation_id, sites, block_size=BLOCK_SIZE):
         raise RuntimeError("block_size should be at least 1.")
 
     for block_id, i in enumerate(xrange(0, len(sites), block_size)):
-        yield Block(calculation_id, block_id=block_id,
+        yield Block(job_id, block_id=block_id,
                     sites=sites[i:i + block_size])
 
 
@@ -953,6 +989,7 @@ def compute_beta(mean_loss_ratio, stddev):
 
 class Lognorm(object):
     """ Simple Wrapper to use in a generic way survival functions """
+
     @staticmethod
     def survival_function(loss_ratio, **kwargs):
         """
@@ -987,6 +1024,7 @@ class Lognorm(object):
 
 class BetaDistribution(object):
     """ Simple Wrapper to use in a generic way Beta Distributions """
+
     @staticmethod
     def survival_function(loss_ratio, **kwargs):
         """
@@ -1036,7 +1074,7 @@ def compute_loss_ratio_curve(vuln_function, gmf_set,
     :type epsilon_provider: object that defines an :py:meth:`epsilon` method
     :param asset: the asset used to compute the loss ratios.
     :type asset: :py:class:`dict` as provided by
-        :py:class:`openquake.parser.exposure.ExposurePortfolioFile`
+        :py:class:`openquake.parser.exposure.ExposureModelFile`
     :param int loss_histogram_bins:
         The number of bins to use in the computed loss histogram.
     """
@@ -1078,25 +1116,34 @@ class AggregateLossCurve(object):
         self.losses = None
 
     def append(self, losses):
-        """Accumulate losses into a single sum..
+        """
+        Accumulate losses into a single sum.
 
         :param losses: an array of loss values.
         :type losses: 1-dimensional :py:class:`numpy.ndarray`
         """
 
         if self.losses is None:
-            self.losses = losses
-        else:
-            self.losses = self.losses + losses
+            # initialize the losses with the shape
+            # we are using in the computation
+            self.losses = zeros(losses.shape)
+
+        assert self.losses.shape == losses.shape
+
+        self.losses = self.losses + losses
 
     @property
     def empty(self):
-        """Return true is this aggregate curve has no losses
-        associated, false otherwise."""
-        return self.losses is None
+        """
+        Return true is this aggregate curve has no losses
+        associated, false otherwise.
+        """
+
+        return self.losses is None or len(self.losses) == 0
 
     def compute(self, tses, time_span, loss_histogram_bins):
-        """Compute the aggregate loss curve.
+        """
+        Compute the aggregate loss curve.
 
         :param tses: time representative of the Stochastic Event Set.
         :type tses: float
@@ -1104,16 +1151,17 @@ class AggregateLossCurve(object):
         :type time_span: float
         :param int loss_histogram_bins:
             The number of bins to use in the computed loss histogram.
+        :type loss_histogram_bins: integer
         """
 
         if self.empty:
             return shapes.EMPTY_CURVE
 
-        losses = self.losses
-        loss_range = _compute_loss_ratios_range(losses, loss_histogram_bins)
+        loss_range = _compute_loss_ratios_range(
+            self.losses, loss_histogram_bins)
 
         probs_of_exceedance = _compute_probs_of_exceedance(
                 _compute_rates_of_exceedance(_compute_cumulative_histogram(
-                losses, loss_range), tses), time_span)
+                self.losses, loss_range), tses), time_span)
 
         return _generate_curve(loss_range, probs_of_exceedance)

@@ -1,18 +1,17 @@
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import shutil
@@ -21,7 +20,7 @@ import unittest
 from lxml import etree
 from nose.plugins.attrib import attr
 
-from openquake.db.models import OqCalculation
+from openquake.db.models import OqJob
 from openquake.nrml import nrml_schema_file
 
 from tests.utils import helpers
@@ -55,12 +54,12 @@ class BCRQATestCase(unittest.TestCase):
         #    site location
             (-122.0, 38.225): {
                 # assetRef  eal_orig  eal_retrof  bcr
-                    'a1':   (0.009379,  0.006586,  0.483091)
+                'a1': (0.009379, 0.006586, 0.483091)
             }
         }
 
         helpers.run_job(CONFIG)
-        calc_record = OqCalculation.objects.latest("id")
+        calc_record = OqJob.objects.latest("id")
         self.assertEqual('succeeded', calc_record.status)
 
         result = self._parse_bcr_map(RESULT)
@@ -125,3 +124,16 @@ class BCRQATestCase(unittest.TestCase):
             result[tuple(map(float, site.text.split()))] = assets
 
         return result
+
+    @attr('qa')
+    def test_bcr_event_based(self):
+        # First implementation of the QA test for the event based
+        # bcr calculator. For now, just run it end-to-end
+        # to make sure it doesn't blow up.
+        ret_code = helpers.run_job('%s/config_ebased.gem' % BCR_DEMO_BASE,
+                ['--output-type=xml'])
+
+        self.assertEqual(0, ret_code)
+
+        job = OqJob.objects.latest('id')
+        self.assertEqual('succeeded', job.status)

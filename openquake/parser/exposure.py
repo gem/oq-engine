@@ -3,19 +3,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
 """Parsers to read exposure files, including exposure portfolios.
@@ -82,8 +81,8 @@ def _to_occupancy(element):
     return occupancy_data
 
 
-class ExposurePortfolioFile(producer.FileProducer):
-    """ This class parses an ExposurePortfolio XML (part of riskML?) file.
+class ExposureModelFile(producer.FileProducer):
+    """ This class parses an ExposureModel XML (part of riskML?) file.
     The contents of such a file is meant to be used as input for the risk
     engine. The class is implemented as a generator.
     For each 'AssetInstance' element in the parsed
@@ -107,7 +106,7 @@ class ExposurePortfolioFile(producer.FileProducer):
     """
 
     def __init__(self, path):
-        super(ExposurePortfolioFile, self).__init__(path)
+        super(ExposureModelFile, self).__init__(path)
 
     def _parse(self):
         try:
@@ -136,6 +135,10 @@ class ExposurePortfolioFile(producer.FileProducer):
                 if desc is not None:
                     self._current_meta['listDescription'] = str(desc.text)
 
+                taxsrc = element.find('%staxonomySource' % NRML)
+                if taxsrc is not None:
+                    self._current_meta['taxonomySource'] = str(taxsrc.text)
+
                 asset_category = str(element.get('assetCategory'))
                 self._current_meta['assetCategory'] = asset_category
 
@@ -151,10 +154,10 @@ class ExposurePortfolioFile(producer.FileProducer):
             elif event == 'start' and level < 2:
                 # check that the first child of the root element is an
                 # exposure portfolio
-                if level == 1 and element.tag != '%sexposurePortfolio' % NRML:
+                if level == 1 and element.tag != '%sexposureModel' % NRML:
                     raise xml.XMLMismatchError(
                         self.file.name, str(element.tag)[len(NRML):],
-                        'exposurePortfolio')
+                        'exposureModel')
 
                 level += 1
 

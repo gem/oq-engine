@@ -1,21 +1,20 @@
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-"""Functions for getting information about completed calculations and
+"""Functions for getting information about completed jobs and
 calculation outputs, as well as exporting outputs from the database to various
 file formats."""
 
@@ -83,9 +82,8 @@ def makedirs(fn):
     return wrapped
 
 
-def get_calculations(user_name):
-    """Get the completed calculations (successful and failed) for the given
-    user_name.
+def get_jobs(user_name):
+    """Get the completed jobs (successful and failed) for the given user_name.
 
     Results are given in reverse chronological order.
 
@@ -93,28 +91,28 @@ def get_calculations(user_name):
         Owner of the returned results.
     :returns:
         :class:`django.db.models.query.QuerySet` of
-        :class:`openquake.db.models.OqCalculation` objects, sorted in
+        :class:`openquake.db.models.OqJob` objects, sorted in
         reverse chronological order.
     :rtype:
         :class:`django.db.models.query.QuerySet`
     """
-    return models.OqCalculation.objects.filter(
+    return models.OqJob.objects.filter(
         owner__user_name=user_name).extra(
             where=["status in ('succeeded', 'failed')"]).order_by(
                 '-last_update')
 
 
-def get_outputs(calculation_id):
+def get_outputs(job_id):
     """Get all :class:`openquake.db.models.Output`s associated with the
-    specified calculation.
+    specified job.
 
-    :param int calculation_id:
-        ID of a :class:`openquake.db.models.OqCalculation`.
+    :param int job_id:
+        ID of a :class:`openquake.db.models.OqJob`.
     :returns:
         :class:`django.db.models.query.QuerySet` of
         :class:`openquake.db.models.Output` objects.
     """
-    return models.Output.objects.filter(oq_calculation=calculation_id)
+    return models.Output.objects.filter(oq_job=job_id)
 
 
 def export(output_id, target_dir):

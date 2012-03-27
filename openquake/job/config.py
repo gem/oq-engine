@@ -2,19 +2,18 @@
 
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 """
 This module contains logic related to the configuration and
@@ -36,6 +35,7 @@ CLASSICAL_MODE = "Classical"
 EVENT_BASED_MODE = "Event Based"
 DISAGGREGATION_MODE = "Disaggregation"
 SCENARIO_MODE = "Scenario"
+SCENARIO_DAMAGE_MODE = "Scenario Damage"
 UHS_MODE = "UHS"
 
 GENERAL_SECTION = "general"
@@ -57,6 +57,7 @@ UHS_PERIODS = 'UHS_PERIODS'
 BASE_PATH = "BASE_PATH"
 COMPUTE_HAZARD_AT_ASSETS = "COMPUTE_HAZARD_AT_ASSETS_LOCATIONS"
 EXPOSURE = "EXPOSURE"
+FRAGILITY = "FRAGILITY"
 DEPTHTO1PT0KMPERSEC = "DEPTHTO1PT0KMPERSEC"
 VS30_TYPE = "VS30_TYPE"
 
@@ -237,28 +238,36 @@ class ComputationTypeValidator(object):
 
 
 class ScenarioComputationValidator(object):
-    """Validator that checks if the scenario calculation
-    mode specified in the configuration file is for an
-    hazard + risk job. We don't currently support scenario
-    calculations for hazard jobs only."""
+    """
+    Checks if the scenario calculation mode (standard or damage assessment)
+    specified in the configuration file is an hazard + risk job.
+
+    We don't currently support scenario calculations for hazard jobs only.
+
+    It also ensures the `NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS`
+    contains a valid value (greater than zero).
+    """
 
     def __init__(self, sections, params):
         self.params = params
         self.sections = sections
 
     def is_valid(self):
-        """Return `True` if the scenario calculation mode
-        specified is for an hazard + risk job, `False` otherwise."""
+        """
+        Return `True` if the scenario calculation mode
+        specified is an hazard + risk job, `False` otherwise.
+        """
 
         if RISK_SECTION not in self.sections \
-                and self.params[CALCULATION_MODE] == SCENARIO_MODE:
+                and self.params[CALCULATION_MODE] in (
+                SCENARIO_MODE, SCENARIO_DAMAGE_MODE):
 
             return (False, ["With SCENARIO calculations we"
-                    + " only support hazard + risk jobs."])
+                            " only support hazard + risk jobs."])
 
         try:
             num_gmfs = self.params.get(
-                'NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS')
+                "NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS")
             if num_gmfs is None or not int(num_gmfs) > 0:
                 return (False, ["NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS"
                                 " parameter must be greater than 0."])
@@ -266,6 +275,22 @@ class ScenarioComputationValidator(object):
             return (False, [err.message])
 
         return (True, [])
+
+
+class ScenarioDamageValidator(MandatoryParamsValidator):
+    """
+    Ensures the `FRAGILITY` parameter is specified in the
+    configuration file.
+
+    The `FRAGILITY parameter contains the fragility model used to perform
+    calculations in the Scenario Damage Assessment.
+    """
+
+    SECTION_OF_INTEREST = RISK_SECTION
+    MANDATORY_PARAMS = [FRAGILITY]
+
+    def __init__(self, sections, params):
+        super(ScenarioDamageValidator, self).__init__(sections, params)
 
 
 # pylint: disable=R0913
@@ -325,7 +350,7 @@ class DisaggregationValidator(object):
         self.params = params
 
     def is_valid(self):
-        """Check if parameters are valid for a Disaggregation calculation.
+        """Check if parameters are valid for a Disaggregation job.
 
         :returns: the status of this validator and the related error messages.
         :rtype: when valid, a (True, []) tuple is returned. When invalid, a
@@ -368,7 +393,7 @@ class UHSValidator(object):
         self.params = params
 
     def is_valid(self):
-        """Check if UHS_PERIODS contains valid data for a UHS calculation.
+        """Check if UHS_PERIODS contains valid data for a UHS job.
 
         Currently, this is the only UHS-specific parameter we need to check.
         :returns: the status of this validator and the related error messages.
@@ -647,20 +672,22 @@ def default_validators(sections, params):
         validators.add(DisaggregationValidator(params))
     elif calc_mode in (BCR_CLASSICAL_MODE, BCR_EVENT_BASED_MODE):
         validators.add(BCRValidator(params))
-    elif calc_mode == SCENARIO_MODE:
+    elif calc_mode in (SCENARIO_MODE, SCENARIO_DAMAGE_MODE):
         validators.add(ScenarioComputationValidator(sections, params))
 
-    if params.get(CALCULATION_MODE) == CLASSICAL_MODE:
+    if calc_mode == SCENARIO_DAMAGE_MODE:
+        validators.add(ScenarioDamageValidator(sections, params))
+
+    if calc_mode == CLASSICAL_MODE:
         validators.add(ClassicalValidator(sections, params))
 
     # Validator only for Classical/Classical BCR Risk:
-    if (params.get(CALCULATION_MODE) in (BCR_CLASSICAL_MODE, CLASSICAL_MODE)
+    if (calc_mode in (BCR_CLASSICAL_MODE, CLASSICAL_MODE)
         and set([HAZARD_SECTION, RISK_SECTION]).issubset(sections)):
         validators.add(ClassicalRiskValidator(params))
 
     # Validator only for Event-Based/Event-Based BCR Risk:
-    if (params.get(CALCULATION_MODE) in (BCR_EVENT_BASED_MODE,
-                                         EVENT_BASED_MODE)
+    if (calc_mode in (BCR_EVENT_BASED_MODE, EVENT_BASED_MODE)
         and set([HAZARD_SECTION, RISK_SECTION]).issubset(sections)):
         validators.add(EventBasedRiskValidator(params))
 

@@ -1,18 +1,17 @@
 # Copyright (c) 2010-2012, GEM Foundation.
 #
-# OpenQuake is free software: you can redistribute it and/or modify
-# it under the terms of the GNU Lesser General Public License version 3
-# only, as published by the Free Software Foundation.
+# OpenQuake is free software: you can redistribute it and/or modify it
+# under the terms of the GNU Affero General Public License as published
+# by the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
 #
 # OpenQuake is distributed in the hope that it will be useful,
 # but WITHOUT ANY WARRANTY; without even the implied warranty of
 # MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU Lesser General Public License version 3 for more details
-# (a copy is included in the LICENSE file that accompanied this code).
+# GNU General Public License for more details.
 #
-# You should have received a copy of the GNU Lesser General Public License
-# version 3 along with OpenQuake.  If not, see
-# <http://www.gnu.org/licenses/lgpl-3.0.txt> for a copy of the LGPLv3 License.
+# You should have received a copy of the GNU Affero General Public License
+# along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
 """Functions for export Uniform Hazard Spectra results from the OpenQuake
@@ -27,10 +26,12 @@ import os
 from openquake.db import models
 from openquake.export.core import makedirs
 from openquake.utils import round_float
+from openquake.output import uhs as uhs_output
 
 #: Format string for HDF5 dataset names
 _DS_NAME_FMT = 'lon:%s-lat:%s'
 _HDF5_FILE_NAME_FMT = 'uhs_poe:%s.hdf5'
+_XML_FILE_NAME = 'uhs.xml'
 
 
 def _point_to_ds_name(point):
@@ -74,13 +75,18 @@ def export_uhs(output, target_dir):
         Destination directory location of the exported files.
 
     :returns:
-        A list of exported file names (including the full path to each file).
+        A list of exported file names (including the absolute path to each
+        file).
     """
     file_names = []
 
     uh_spectra = models.UhSpectra.objects.get(output=output.id)
 
     uh_spectrums = models.UhSpectrum.objects.filter(uh_spectra=uh_spectra.id)
+
+    # accumulate a list of (poe, path) pairs to serialize to NRML XML
+    # each `path` is the full path to a result hdf5 file
+    nrml_data = []
 
     for spectrum in uh_spectrums:
         # create a file for each spectrum/poe
@@ -97,10 +103,21 @@ def export_uhs(output, target_dir):
         file_name = touch_result_hdf5_file(
             target_dir, spectrum.poe, ds_names, uh_spectra.realizations,
             len(uh_spectra.periods))
+        file_name = os.path.abspath(file_name)
+
+        nrml_data.append((spectrum.poe, file_name))
 
         # Now write the actual data
         write_uhs_data(file_name, uhs_data)
         file_names.append(file_name)
+
+    nrml_file_path = os.path.join(target_dir, _XML_FILE_NAME)
+    nrml_writer = uhs_output.UHSXMLWriter(nrml_file_path, uh_spectra.periods,
+                                          uh_spectra.timespan)
+    nrml_writer.serialize(nrml_data)
+
+    # Don't forget the nrml file:
+    file_names.append(os.path.abspath(nrml_file_path))
 
     return file_names
 
