@@ -249,6 +249,7 @@ COMMENT ON COLUMN oqmif.occupancy.occupants IS 'number of occupants';
 -- riski schema tables ------------------------------------------
 COMMENT ON TABLE riski.ffc IS 'A continuous fragility function';
 COMMENT ON COLUMN riski.ffc.fragility_model_id IS 'A reference to the fragility model this function belongs to';
+COMMENT ON COLUMN riski.ffc.ls IS 'The limit state index, facilitates ordering of fragility functions in accordance to limit states';
 COMMENT ON COLUMN riski.ffc.ls IS 'The limit state for the function at hand';
 COMMENT ON COLUMN riski.ffc.taxonomy IS 'The taxonomy, only unique in conjunction with the limit state.';
 COMMENT ON COLUMN riski.ffc.ftype IS 'Optional function/distribution type e.g. lognormal';
@@ -259,6 +260,7 @@ COMMENT ON COLUMN riski.ffc.last_update IS 'Date/time of the last change of the 
 
 COMMENT ON TABLE riski.ffd IS 'A discrete fragility function';
 COMMENT ON COLUMN riski.ffd.fragility_model_id IS 'A reference to the fragility model this function belongs to';
+COMMENT ON COLUMN riski.ffd.ls IS 'The limit state index, facilitates ordering of fragility functions in accordance to limit states';
 COMMENT ON COLUMN riski.ffd.ls IS 'The limit state for the function at hand';
 COMMENT ON COLUMN riski.ffd.taxonomy IS 'The taxonomy, only unique in conjunction with the limit state.';
 COMMENT ON COLUMN riski.ffd.poes IS 'Probabilities of exceedence, one per riski.fragility_model.imls';
