@@ -101,10 +101,10 @@ class JobContext(object):
             'calculation'.
         :param str log_level:
             One of 'debug', 'info', 'warn', 'error', 'critical'.
-        :param bool force_inputs: If `True` the model input files will be parsed
-            and the resulting content written to the database no matter what.
-
             Defaults to 'warn'.
+        :param bool force_inputs: If `True` the model input files will be
+            parsed and the resulting content written to the database no matter
+            what.
         """
         self._job_id = job_id
         mark_job_as_current(job_id)  # enables KVS gc
@@ -530,7 +530,7 @@ def _file_digest(path):
         return checksum.hexdigest()
 
 
-def _identical_input(input_type, path, digest):
+def _identical_input(input_type, digest):
     """Get an identical input with the same type or `None`.
 
     Identical inputs are found by comparing md5sum digests. In order to avoid
@@ -538,7 +538,6 @@ def _identical_input(input_type, path, digest):
     associated with a first job that failed.
 
     :param str input_type: input model type
-    :param str path: input model file path
     :param str digest: md5sum digest
     :returns: an `:class:openquake.db.models.Input` instance or `None`
     """
@@ -550,11 +549,12 @@ def _identical_input(input_type, path, digest):
                 FROM uiapi.oq_job AS j, uiapi.input2job AS i2j,
                      uiapi.input AS i
                 WHERE i2j.oq_job_id = j.id AND i2j.input_id = i.id
-                    AND i.digest = %s
+                    AND i.digest = %s AND i.input_type = %s
                 GROUP BY i.id ORDER BY i.id DESC) AS mjq
             WHERE id = mjq.min_job_id AND status = 'succeeded')"""
-    ios = list(Input.objects.raw(q, [digest]))
+    ios = list(Input.objects.raw(q, [digest, input_type]))
     return ios[0] if ios else None
+
 
 def _insert_input_files(params, job, force_inputs):
     """Create uiapi.input records for all input files
@@ -567,7 +567,7 @@ def _insert_input_files(params, job, force_inputs):
 
     inputs_seen = []
 
-    def ln_input2job(job, path, input_type, owner, size):
+    def ln_input2job(job, path, input_type):
         """Link identical or newly created input to the given job."""
         digest = _file_digest(path)
         linked_inputs = inputs4job(job.id)
