@@ -359,6 +359,8 @@ def read_sites_from_exposure(job_ctxt):
     return sites
 
 
+# Too many local variables
+# pylint: disable=R0914
 def _job_from_file(config_file, output_type, owner_username='openquake',
                    force_inputs=False):
     """
