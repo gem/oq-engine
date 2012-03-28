@@ -49,6 +49,7 @@ INPUT_FILE_TYPES = {
     'SOURCE_MODEL_LOGIC_TREE_FILE': 'lt_source',
     'GMPE_LOGIC_TREE_FILE': 'lt_gmpe',
     'EXPOSURE': 'exposure',
+    'FRAGILITY': 'fragility',
     'VULNERABILITY': 'vulnerability',
     'VULNERABILITY_RETROFITTED': 'vulnerability_retrofitted',
     'SINGLE_RUPTURE_MODEL': 'rupture',

@@ -246,21 +246,29 @@ class BaseRiskCalculator(Calculator):
 
     def store_exposure_assets(self):
         """Load exposure assets and write them to database."""
-        [emdl] = models.inputs4job(self.job_ctxt.job_id, "exposure")
-        path = os.path.join(self.job_ctxt.base_path, emdl.path)
+        [emi] = models.inputs4job(self.job_ctxt.job_id, "exposure")
+        if emi.exposuremodel_set.all().count() > 0:
+            return
 
+        path = os.path.join(self.job_ctxt.base_path, emi.path)
         exposure_parser = exposure.ExposureModelFile(path)
-        writer = ExposureDBWriter(emdl)
+        writer = ExposureDBWriter(emi)
         writer.serialize(exposure_parser)
+        return emi.model()
 
     def store_fragility_model(self):
         """Load fragility model and write it to database."""
-        fmodels = models.inputs4job(self.job_ctxt.job_id, "fragility")
-        for fmdl in fmodels:
-            path = os.path.join(self.job_ctxt.base_path, fmdl.path)
+        new_models = []
+        fmis = models.inputs4job(self.job_ctxt.job_id, "fragility")
+        for fmi in fmis:
+            if fmi.fragilitymodel_set.all().count() > 0:
+                continue
+            path = os.path.join(self.job_ctxt.base_path, fmi.path)
             parser = fragility.FragilityModelParser(path)
-            writer = FragilityDBWriter(fmdl, parser)
+            writer = FragilityDBWriter(fmi, parser)
             writer.serialize()
+            new_models.append(writer.model)
+        return new_models if new_models else None
 
     def store_vulnerability_model(self):
         """ load vulnerability and write to kvs """
