@@ -357,6 +357,7 @@ COMMENT ON COLUMN riskr.dmg_dist_per_asset_data.location IS 'Geometry for the co
 
 -- uiapi schema tables ------------------------------------------
 COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';
+COMMENT ON COLUMN uiapi.input.digest IS '32 byte md5um digest, used to detect identical input model files';
 COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
     - source model file (source)
     - source logic tree (lt_source)
@@ -388,8 +389,8 @@ COMMENT ON COLUMN uiapi.job_stats.realizations IS 'The number of logic tree samp
 
 COMMENT ON TABLE uiapi.oq_job_profile IS 'Holds the parameters needed to invoke the OpenQuake engine.';
 COMMENT ON COLUMN uiapi.oq_job_profile.calc_mode IS 'One of: classical, event_based, scenario, disaggregation, uhs, classical_bcr or event_based_bcr.';
-COMMENT ON COLUMN uiapi.oq_job_profile.job_type IS '"hazard" and/or "risk"';
 COMMENT ON COLUMN uiapi.oq_job_profile.histories IS 'Number of seismicity histories';
+COMMENT ON COLUMN uiapi.oq_job_profile.force_inputs IS 'If true: parse model inputs and write them to the database no matter what';
 COMMENT ON COLUMN uiapi.oq_job_profile.imls IS 'Intensity measure levels';
 COMMENT ON COLUMN uiapi.oq_job_profile.imt IS 'Intensity measure type, one of:
     - peak ground acceleration (pga)
@@ -399,10 +400,11 @@ COMMENT ON COLUMN uiapi.oq_job_profile.imt IS 'Intensity measure type, one of:
     - Arias Intensity (ia)
     - relative significant duration (rsd)
     - Modified Mercalli Intensity';
+COMMENT ON COLUMN uiapi.oq_job_profile.job_type IS '"hazard" and/or "risk"';
 COMMENT ON COLUMN uiapi.oq_job_profile.lrem_steps_per_interval IS 'Loss Ration Exceedence Matrix steps per interval. Only used for Classical/Classical BCR Risk calculations.';
 COMMENT ON COLUMN uiapi.oq_job_profile.poes IS 'Probabilities of exceedence';
-COMMENT ON COLUMN uiapi.oq_job_profile.region IS 'Region of interest for the calculation (Polygon)';
 COMMENT ON COLUMN uiapi.oq_job_profile.region_grid_spacing IS 'Desired cell size (in degrees), used when splitting up the region of interest. This effectively defines the resolution of the job. (Smaller grid spacing means more sites and thus more calculations.)';
+COMMENT ON COLUMN uiapi.oq_job_profile.region IS 'Region of interest for the calculation (Polygon)';
 COMMENT ON COLUMN uiapi.oq_job_profile.sites IS 'Sites of interest for the calculation (MultiPoint)';
 
 
