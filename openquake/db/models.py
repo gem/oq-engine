@@ -22,6 +22,8 @@
 Model representations of the OpenQuake DB tables.
 '''
 
+import os
+
 from collections import namedtuple
 from datetime import datetime
 from django.contrib.gis.db import models
@@ -559,6 +561,8 @@ class Input(models.Model):
     A single OpenQuake input file uploaded by the user
     '''
     owner = models.ForeignKey('OqUser')
+    digest = models.TextField(help_text="32 byte md5um digest, used to "
+                                        "detect identical input model files")
     path = models.TextField()
     INPUT_TYPE_CHOICES = (
         (u'unknown', u'Unknown'),
@@ -574,6 +578,24 @@ class Input(models.Model):
     # Number of bytes in the file:
     size = models.IntegerField()
     last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+
+    def model(self):
+        """The model associated with this input or `None`.
+
+        :returns: the appropriate model if one exists or `None`
+        """
+        assert self.input_type in ("exposure", "fragility"), (
+            "unsupported model type (%s)" % self.input_type)
+        attr = "%smodel_set" % self.input_type
+        qm = getattr(self, attr)
+        models = qm.all()
+        if models:
+            return models[0]
+
+    def __str__(self):
+        path_suffix = "/".join(self.path.rsplit(os.sep, 2)[1:])
+        return "%s||%s||%s||%s" % (
+            self.id, self.input_type, self.digest[:16], path_suffix)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"input'
@@ -662,6 +684,9 @@ class OqJobProfile(models.Model):
     '''
     owner = models.ForeignKey('OqUser')
     description = models.TextField(default='')
+    force_inputs = models.BooleanField(
+        default=False, help_text="whether the model inputs should be parsed "
+        "and their content be written to the db no matter what")
     CALC_MODE_CHOICES = (
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
