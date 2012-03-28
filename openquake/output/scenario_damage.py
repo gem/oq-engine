@@ -30,7 +30,8 @@ class DmgDistPerAssetXMLWriter(object):
 
     :param path: full path to the resulting XML file (including file name).
     :type path: string
-    :param end_branch_label: TODO
+    :param end_branch_label: logic tree branch which was used for the
+        realization associated with this distribution.
     :type end_branch_label: string
     :param damage_states: the damage states considered in this distribution.
     :type damage_states: list of strings, for example:
