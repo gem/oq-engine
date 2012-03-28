@@ -32,6 +32,10 @@ class DmgDistPerAssetXMLWriter(object):
         self.dmg_dist_el = None
 
     def serialize(self, assets_data):
+        if assets_data is None or not len(assets_data):
+            raise RuntimeError(
+                "empty damage distributions are not supported by the schema.")
+
         # contains the set of </ DDNode> elements indexed per site
         dd_nodes = {}
 
