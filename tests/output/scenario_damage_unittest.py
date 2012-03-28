@@ -13,12 +13,13 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import os
 import tempfile
 import unittest
 
 from django.contrib.gis import geos
+
+from openquake import xml
 from openquake import shapes
 from openquake.db import models
 from openquake.output.scenario_damage import DmgDistPerAssetXMLWriter
@@ -39,37 +40,16 @@ class DmgDistPerAssetXMLWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         self.data = []
         self.dda = None
 
+        self.damage_states = ["no_damage", "slight", "moderate",
+                "extensive", "complete"]
+
     def test_serialize(self):
-# TODO: 1. map nrml/schema/examples/dmg-dist-per-asset.xml DONE
-#       2. check results
-#       3. refactoring
-#       4. validation
-#       5. serialization with no data
-        damage_states = [
-            "no_damage",
-            "slight",
-            "moderate",
-            "extensive",
-            "complete"]
+        expected_file = helpers.get_data_path(
+            "expected-dmg-dist-per-asset.xml")
 
-        writer = DmgDistPerAssetXMLWriter("p.txt",
-                "ebl1", damage_states)
+        expected_text = open(expected_file, "r").readlines()
 
-        output = models.Output(
-            owner=self.job.owner,
-            oq_job=self.job,
-            display_name="",
-            db_backed=True,
-            output_type="dmg_dist_per_asset")
-
-        output.save()
-
-        self.dda = models.DmgDistPerAsset(
-            output=output,
-            dmg_states=damage_states)
-
-        self.dda.save()
-
+        self.make_dist()
         asset_1, asset_2, asset_3 = self.make_assets()
 
         self.make_data(asset_1, "no_damage", 1.0, 1.6)
@@ -90,7 +70,32 @@ class DmgDistPerAssetXMLWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         self.make_data(asset_3, "extensive", 64.3, 19.7)
         self.make_data(asset_3, "complete", 64.3, 19.7)
 
-        writer.serialize(self.data)
+        try:
+            _, result_xml = tempfile.mkstemp()
+
+            writer = DmgDistPerAssetXMLWriter(result_xml,
+                    "ebl1", self.damage_states)
+
+            writer.serialize(self.data)
+            actual_text = open(result_xml, "r").readlines()
+
+            self.assertEqual(expected_text, actual_text)
+
+            self.assertTrue(xml.validates_against_xml_schema(
+                    result_xml))
+        finally:
+            os.unlink(result_xml)
+
+    def test_no_empty_dist(self):
+        # an empty distribution is not supported by the schema
+        writer = DmgDistPerAssetXMLWriter("output.xml",
+                "ebl1", self.damage_states)
+
+        self.assertRaises(RuntimeError, writer.serialize, [])
+        self.assertFalse(os.path.exists("output.xml"))
+
+        self.assertRaises(RuntimeError, writer.serialize, None)
+        self.assertFalse(os.path.exists("output.xml"))
 
     def make_assets(self):
         [ism] = models.inputs4job(self.job.id, input_type="exposure")
@@ -126,6 +131,22 @@ class DmgDistPerAssetXMLWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         asset_3.save()
 
         return asset_1, asset_2, asset_3
+
+    def make_dist(self):
+        output = models.Output(
+            owner=self.job.owner,
+            oq_job=self.job,
+            display_name="",
+            db_backed=True,
+            output_type="dmg_dist_per_asset")
+
+        output.save()
+
+        self.dda = models.DmgDistPerAsset(
+            output=output,
+            dmg_states=self.damage_states)
+
+        self.dda.save()
 
     def make_data(self, asset, dmg_state, mean, stddev):
         data = models.DmgDistPerAssetData(
