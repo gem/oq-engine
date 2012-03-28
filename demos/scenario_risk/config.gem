@@ -6,7 +6,7 @@ CALCULATION_MODE = Scenario
 # lat, lon of polygon vertices (in clock or counter-clock wise order)
 REGION_VERTEX = 38.30, 15.48, 38.30, 15.63, 38.01, 15.63, 38.01, 15.48
 # degrees
-REGION_GRID_SPACING = 0.04
+REGION_GRID_SPACING = 0.08
 
 [HAZARD]
 
@@ -52,7 +52,7 @@ OUTPUT_DIR = computed_output
 
 GMPE_MODEL_NAME = BA_2008_AttenRel
 
-NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS = 100
+NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS = 10
 
 GMF_RANDOM_SEED = 3
 
@@ -61,7 +61,7 @@ SINGLE_RUPTURE_MODEL = Messina1908.xml
 [RISK]
 
 # file containing the exposure in nrml format
-EXPOSURE = Messina_exposure_model.xml
+EXPOSURE = exposure_model.xml
 
 # file containing the vulnerability functions
-VULNERABILITY = Messina_vulnerability_model.xml
+VULNERABILITY = vulnerability_model.xml
