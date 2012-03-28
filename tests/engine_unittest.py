@@ -421,14 +421,13 @@ class IdenticalInputTestCase(unittest.TestCase, helpers.DbTestCase):
     def test__identical_input(self):
         # The matching fragility model input is found
         expected = self.fmdl_input
-        actual = engine._identical_input("fragility", self.FRAGM,
-                                         expected.digest)
+        actual = engine._identical_input("fragility", expected.digest)
         self.assertEqual(expected.id, actual.id)
 
     def test__identical_input_and_no_match(self):
         # The exposure model input is not found since the md5sum digest does
         # not match.
-        actual = engine._identical_input("exposure", self.EXPOM, "x" * 32)
+        actual = engine._identical_input("exposure", "x" * 32)
         self.assertIs(None, actual)
 
 

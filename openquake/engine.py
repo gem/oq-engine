@@ -575,7 +575,7 @@ def _insert_input_files(params, job, force_inputs):
                for li in linked_inputs):
             return
 
-        in_model = (_identical_input(input_type, path, digest)
+        in_model = (_identical_input(input_type, digest)
                     if not force_inputs else None)
         if in_model is None:
             in_model = Input(path=path, input_type=input_type, owner=job.owner,
@@ -596,12 +596,12 @@ def _insert_input_files(params, job, force_inputs):
         if param_key not in params:
             continue
         path = params[param_key]
-        ln_input2job(job, path, file_type, job.owner, os.path.getsize(path))
+        ln_input2job(job, path, file_type)
 
     # insert source models referenced in the logic tree
     if 'SOURCE_MODEL_LOGIC_TREE_FILE' in params:
         for path in _get_source_models(params['SOURCE_MODEL_LOGIC_TREE_FILE']):
-            ln_input2job(job, path, "source", job.owner, os.path.getsize(path))
+            ln_input2job(job, path, "source")
 
 
 def prepare_job(user_name="openquake"):
