@@ -214,3 +214,30 @@ class SphericalToCartesianTestCase(unittest.TestCase):
                    ([6178.89084351, 5986.78168703, 5433.62541707],
                     [1089.50516656, 2179.01033313, 3137.10509722],
                     [-1106.31253992, 0., 1106.31253992]))
+
+
+class TriangleAreaTestCase(unittest.TestCase):
+    def test_one_triangle(self):
+        a = numpy.array([0., 0., 0.])
+        b = numpy.array([1., 0., 0.])
+        c = numpy.array([0., 1., 0.])
+        self.assertAlmostEqual(utils.triangle_area(a - b, a - c, b - c), 0.5)
+        b = numpy.array([1., 0., 1.])
+        self.assertAlmostEqual(utils.triangle_area(a - b, a - c, b - c),
+                               (2 ** 0.5) / 2)
+
+    def test_arrays(self):
+        # 1d array of vectors
+        aa = numpy.array([(0.5, 0., 3.), (0., 2., -1.)])
+        bb = numpy.array([(0.5, 4., 3.), (0, 2, -2.)])
+        cc = numpy.array([(-1.5, 0., 3.), (1, 2, -2)])
+        areas = utils.triangle_area(aa - bb, aa - cc, bb - cc)
+        self.assertTrue(numpy.allclose(areas, [4.0, 0.5]))
+
+        # 2d array
+        aa = numpy.array([aa, aa * 2])
+        bb = numpy.array([bb, bb * 2])
+        cc = numpy.array([cc, cc * 2])
+        expected_area = [[4.0, 0.5], [16.0, 2.0]]
+        areas = utils.triangle_area(aa - bb, aa - cc, bb - cc)
+        self.assertTrue(numpy.allclose(areas, expected_area), msg=str(areas))

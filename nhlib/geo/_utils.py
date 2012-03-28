@@ -223,3 +223,25 @@ def ensure(expr, msg):
 
     if not expr:
         raise ValueError(msg)
+
+
+def triangle_area(e1, e2, e3):
+    """
+    Get the area of triangle formed by three vectors.
+
+    Parameters are three three-dimensional numpy arrays representing
+    vectors of triangle's edges in Cartesian space.
+
+    :returns:
+        Float number, the area of the triangle in squared units of coordinates.
+
+    Uses Heron formula, see `http://mathworld.wolfram.com/HeronsFormula.html`_.
+    """
+    # calculating edges length
+    e1_length = numpy.sqrt(numpy.sum(e1 * e1, axis=-1))
+    e2_length = numpy.sqrt(numpy.sum(e2 * e2, axis=-1))
+    e3_length = numpy.sqrt(numpy.sum(e3 * e3, axis=-1))
+    # calculating half perimeter
+    s = (e1_length + e2_length + e3_length) / 2.0
+    # applying Heron's formula
+    return numpy.sqrt(s * (s - e1_length) * (s - e2_length) * (s - e3_length))
