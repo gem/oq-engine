@@ -14,7 +14,6 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import itertools
 import os
 import subprocess
 import unittest
@@ -442,7 +441,7 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
 
     PARAMS = {
         "GMPE_LOGIC_TREE_FILE": GLT,
-        "SOURCE_MODEL_LOGIC_TREE_FILE": SLT }
+        "SOURCE_MODEL_LOGIC_TREE_FILE": SLT}
 
     old_job = None
     job = None
