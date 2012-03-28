@@ -11,7 +11,7 @@
                     </gml:Point>
                 </site>
                 <stco>3000</stco>
-                <taxonomy>RC</taxonomy>
+                <taxonomy>RM</taxonomy>
             </assetDefinition>
             <assetDefinition gml:id="a2">
                 <site>
@@ -20,7 +20,7 @@
                     </gml:Point>
                 </site>
                 <stco>2000</stco>
-                <taxonomy>RM</taxonomy>
+                <taxonomy>RC</taxonomy>
             </assetDefinition>
             <assetDefinition gml:id="a3">
                 <site>
@@ -29,7 +29,7 @@
                     </gml:Point>
                 </site>
                 <stco>1000</stco>
-                <taxonomy>RC</taxonomy>
+                <taxonomy>RM</taxonomy>
             </assetDefinition>
         </exposureList>
     </exposureModel>
