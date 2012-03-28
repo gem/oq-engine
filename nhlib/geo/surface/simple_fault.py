@@ -14,7 +14,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhlib.surface.simple_fault` contains :class:`SimpleFaultSurface`.
+Module :mod:`nhlib.geo.surface.simple_fault` defines
+:class:`SimpleFaultSurface`.
 """
 import math
 import numpy
