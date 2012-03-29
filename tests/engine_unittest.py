@@ -16,6 +16,7 @@
 
 import os
 import subprocess
+import sys
 import unittest
 import uuid
 
@@ -342,7 +343,11 @@ class FileDigestTestCase(unittest.TestCase):
     def test__file_digest(self):
         # Make sure the digest returned by the function matches the one
         # obtained via /usr/bin/md5sum
-        expected = subprocess.check_output(["md5sum", self.PATH]).split()[0]
+        if sys.platform == 'darwin':
+            expected = subprocess.check_output(["md5", self.PATH]).split()[-1]
+        else:
+            expected = subprocess.check_output(
+                ["md5sum", self.PATH]).split()[0]
         actual = engine._file_digest(self.PATH)
         self.assertEqual(expected, actual)
 
@@ -388,7 +393,11 @@ class IdenticalInputTestCase(unittest.TestCase, helpers.DbTestCase):
         i2j = models.Input2job(input=emdl_input, oq_job=self.job)
         i2j.save()
         # md5sum digest correct
-        digest = subprocess.check_output(["md5sum", self.FRAGM]).split()[0]
+        if sys.platform == 'darwin':
+            digest = subprocess.check_output(["md5", self.FRAGM]).split()[-1]
+        else:
+            digest = subprocess.check_output(
+                ["md5sum", self.FRAGM]).split()[0]
 
         # The 'fmdl_input' will be linked to a sequence of jobs so that the
         # first/oldest of them *was* successful i.e. ot should be found an
@@ -464,7 +473,10 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
         i2j = models.Input2job(input=self.glt_i, oq_job=self.old_job)
         i2j.save()
         # md5sum digest correct
-        digest = subprocess.check_output(["md5sum", self.SLT]).split()[0]
+        if sys.platform == 'darwin':
+            digest = subprocess.check_output(["md5", self.SLT]).split()[-1]
+        else:
+            digest = subprocess.check_output(["md5sum", self.SLT]).split()[0]
         self.slt_i = models.Input(input_type="lt_source", size=123,
                                   path=self.SLT, owner=self.old_job.owner,
                                   digest=digest)
