@@ -26,7 +26,6 @@ import scipy
 
 from openquake import logs
 from openquake.calculators.risk import general
-from openquake import kvs
 from openquake.db.models import Output, FragilityModel, DmgDistPerAsset
 from openquake.db.models import DmgDistPerAssetData
 from openquake.db.models import inputs4job
@@ -97,7 +96,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     def compute_risk(self, block_id, **kwargs):
         """
         Compute the results for a single block.
-        
+
         Currently we  only support continuous fragility models and
         the computation of the damage distribution per asset (i.e.
         mean and stddev of the distribution for each damage state
@@ -112,11 +111,10 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
         fm = kwargs["fmodel"]
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
-        oq_job = self.job_ctxt.oq_job
 
         [dds] = DmgDistPerAsset.objects.filter(
-                output__owner=oq_job.owner,
-                output__oq_job=oq_job,
+                output__owner=self.job_ctxt.oq_job.owner,
+                output__oq_job=self.job_ctxt.oq_job,
                 output__output_type="dmg_dist_per_asset")
 
         dmg_states = _damage_states(fm.lss)
@@ -160,7 +158,7 @@ def compute_mean_stddev(gmf, funcs, asset):
     """
     Compute the mean and the standard deviation distribution
     for the given asset for each damage state.
-    
+
     :param gmf: ground motion values computed in the grid
         point where the asset is located.
     :type gmf: list of floats
@@ -216,6 +214,11 @@ def compute_dm(funcs, gmv):
     """
 
     def compute_poe(iml, mean, stddev):
+        """
+        Compute the Probability of Exceedance for the given
+        Intensity Measure Level.
+        """
+
         variance = stddev ** 2.0
         sigma = math.sqrt(math.log((variance / mean ** 2.0) + 1.0))
         mu = math.exp(math.log(mean ** 2.0 / math.sqrt(
@@ -254,7 +257,7 @@ def compute_dm(funcs, gmv):
 def _damage_states(limit_states):
     """
     Return the damage states from the given limit states.
-    
+
     For N limit states in the fragility model, we always
     define N+1 damage states. The first damage state
     should always be 'no_damage'.
