@@ -372,49 +372,50 @@ class RectangularMesh(Mesh):
         and average dip weighted on each triangle's area is calculated.
         """
         # TODO: comment the code better
-        # TODO: unittest independently of surfaces
         # TODO: combine with strike calculation
-        # TODO: support dip over 90 degree
+        assert self.lons.shape[0] > 1, \
+               "dip is only defined for mesh of more than one row of points"
+
         if self.depths is None:
-            return 0
+            return 0.0
+
+        assert ((self.depths[1:] - self.depths[:-1]) >= 0).all(), \
+               "get_mean_dip() requires next mesh row to be not shallower " \
+               "than the previous one"
 
         points = geo_utils.spherical_to_cartesian(
             self.lons, self.lats, self.depths
         ).transpose(1, 2, 0)
-        xx = 0
-        yy = 0
-        for i, row in enumerate(points):
-            if i == 0:
-                continue
-            prev_row = points[i - 1]
 
-            # top-left triangle
-            tops = prev_row[1:] - prev_row[:-1]  # right along the top edge
-            lefts = prev_row[:-1] - row[:-1]  # up along the left edge
-            ups = prev_row[:-1] * 1.1  # up from the top left corner
-            diags = prev_row[1:] - row[:-1]  # right-to-left top-to-bottom (/)
+        along_strike = points[:, 1:] - points[:, :-1]
+        updip = points[:-1] - points[1:]
+        earth_surface_tangent_normal = geo_utils.normalized(points)
+        diag = points[:-1, 1:] - points[1:, :-1]
 
-            areas = geo_utils.triangle_area(tops, lefts, diags)
+        # top-left triangles
+        triangle_area = geo_utils.triangle_area(along_strike[:-1],
+                                                updip[:, :-1], diag)
+        triangle_normal = geo_utils.normalized(numpy.cross(
+            along_strike[:-1], updip[:, :-1]
+        ))
+        dip = numpy.arccos(numpy.sum(
+            earth_surface_tangent_normal[:-1, :-1] * triangle_normal, axis=-1
+        ).clip(-1.0, 1.0))
+        xx = numpy.sum(triangle_area * numpy.cos(dip))
+        yy = numpy.sum(triangle_area * numpy.sin(dip))
 
-            n1 = geo_utils.normalized(numpy.cross(tops, lefts))
-            n2 = geo_utils.normalized(numpy.cross(tops, ups))
+        # bottom-right triangles
+        triangle_area = geo_utils.triangle_area(along_strike[1:],
+                                                updip[:, 1:], diag)
+        triangle_normal = geo_utils.normalized(numpy.cross(
+            along_strike[1:], updip[:, 1:]
+        ))
+        dip = numpy.arccos(numpy.sum(
+            earth_surface_tangent_normal[1:, 1:] * triangle_normal, axis=-1
+        ).clip(-1.0, 1.0))
 
-            dips = numpy.arcsin(numpy.sum(n1 * n2, axis=-1).clip(-1., 1.))
-            xx += numpy.sum(areas * numpy.cos(dips))
-            yy += numpy.sum(areas * numpy.sin(dips))
-
-            # bottom-right triangle
-            bottoms = row[1:] - row[:-1]  # right along the bottom edge
-            rights = prev_row[1:] - row[1:]  # up along the right edge
-            ups2 = row[1:] * 1.1  # up from bottom right corner
-
-            areas = geo_utils.triangle_area(bottoms, rights, diags)
-            n1 = geo_utils.normalized(numpy.cross(bottoms, rights))
-            n2 = geo_utils.normalized(numpy.cross(bottoms, ups2))
-
-            dips = numpy.arcsin(numpy.sum(n1 * n2, axis=-1).clip(-1., 1.))
-            xx += numpy.sum(areas * numpy.cos(dips))
-            yy += numpy.sum(areas * numpy.sin(dips))
+        xx += numpy.sum(triangle_area * numpy.cos(dip))
+        yy += numpy.sum(triangle_area * numpy.sin(dip))
 
         dip = numpy.degrees(numpy.arctan2(yy, xx))
         return dip
