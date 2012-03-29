@@ -143,7 +143,6 @@ class BaseRiskCalculator(Calculator):
     def pre_execute(self):
         """Make sure the exposure and vulnerability data is in the database."""
         self.store_exposure_assets()
-        self.store_fragility_model()
         self.store_vulnerability_model()
         self.partition()
 

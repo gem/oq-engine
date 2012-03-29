@@ -45,6 +45,10 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         Write the initial db container records for the calculation results.
         """
 
+        self.store_exposure_assets()
+        self.store_fragility_model()
+        self.partition()
+
         oq_job = self.job_ctxt.oq_job
 
         output = Output(
