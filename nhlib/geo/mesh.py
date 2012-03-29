@@ -393,29 +393,24 @@ class RectangularMesh(Mesh):
         diag = points[:-1, 1:] - points[1:, :-1]
 
         # top-left triangles
-        triangle_area = geo_utils.triangle_area(along_strike[:-1],
-                                                updip[:, :-1], diag)
-        triangle_normal = geo_utils.normalized(numpy.cross(
-            along_strike[:-1], updip[:, :-1]
-        ))
-        dip = numpy.arccos(numpy.sum(
-            earth_surface_tangent_normal[:-1, :-1] * triangle_normal, axis=-1
-        ).clip(-1.0, 1.0))
-        xx = numpy.sum(triangle_area * numpy.cos(dip))
-        yy = numpy.sum(triangle_area * numpy.sin(dip))
+        e1 = along_strike[:-1]
+        e2 = updip[:, :-1]
+        en = earth_surface_tangent_normal[:-1, :-1]
+        triangle_area = geo_utils.triangle_area(e1, e2, diag)
+        triangle_normal = geo_utils.normalized(numpy.cross(e1, e2))
+        dip_cos = numpy.sum(en * triangle_normal, axis=-1).clip(-1.0, 1.0)
+        xx = numpy.sum(triangle_area * dip_cos)
+        # express sine via cosine using Pythagorean trigonometric identity,
+        # this is a bit faster than sin(arccos(dip_cos))
+        yy = numpy.sum(triangle_area * numpy.sqrt(1 - dip_cos * dip_cos))
 
         # bottom-right triangles
-        triangle_area = geo_utils.triangle_area(along_strike[1:],
-                                                updip[:, 1:], diag)
-        triangle_normal = geo_utils.normalized(numpy.cross(
-            along_strike[1:], updip[:, 1:]
-        ))
-        dip = numpy.arccos(numpy.sum(
-            earth_surface_tangent_normal[1:, 1:] * triangle_normal, axis=-1
-        ).clip(-1.0, 1.0))
-
-        xx += numpy.sum(triangle_area * numpy.cos(dip))
-        yy += numpy.sum(triangle_area * numpy.sin(dip))
-
-        dip = numpy.degrees(numpy.arctan2(yy, xx))
-        return dip
+        e1 = along_strike[1:]
+        e2 = updip[:, 1:]
+        en = earth_surface_tangent_normal[1:, 1:]
+        triangle_area = geo_utils.triangle_area(e1, e2, diag)
+        triangle_normal = geo_utils.normalized(numpy.cross(e1, e2))
+        dip_cos = numpy.sum(en * triangle_normal, axis=-1).clip(-1.0, 1.0)
+        xx += numpy.sum(triangle_area * dip_cos)
+        yy += numpy.sum(triangle_area * numpy.sqrt(1 - dip_cos * dip_cos))
+        return numpy.degrees(numpy.arctan2(yy, xx))
