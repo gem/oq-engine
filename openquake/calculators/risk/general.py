@@ -522,7 +522,6 @@ class EpsilonProvider(object):
         if eps_rnd_seed is not None:
             self.rnd.seed(eps_rnd_seed)
 
-
     def epsilon(self, asset):
         """Sample from the standard normal distribution for the given asset.
 
