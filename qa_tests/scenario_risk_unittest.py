@@ -33,8 +33,6 @@ class ScenarioRiskQATest(unittest.TestCase):
     #: decimal places
     LOSSMAP_PRECISION = 4
 
-
-
     def _verify_loss_map(self, path, expected_data):
         namespaces = dict(nrml=xml.NRML_NS, gml=xml.GML_NS)
         root = etree.parse(path)
