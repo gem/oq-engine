@@ -22,7 +22,6 @@ from django.contrib.gis import geos
 from openquake import kvs
 from openquake.db import models
 from openquake.shapes import Site, GridPoint
-from openquake.db.models import Output
 from openquake.engine import JobContext
 from openquake.db.models import DmgDistPerAsset, DmgDistPerAssetData
 from openquake.kvs.tokens import ground_motion_values_key
@@ -34,11 +33,12 @@ from tests.utils import helpers
 
 BLOCK_ID = 1
 
+
 class ScenarioDamageRiskCalculatorTestCase(
     unittest.TestCase, helpers.DbTestCase):
-    
+
     job = None
-    
+
     def setUp(self):
         kvs.mark_job_as_current(self.job.id)
         kvs.cache_gc(self.job.id)
@@ -60,6 +60,11 @@ class ScenarioDamageRiskCalculatorTestCase(
 
         self.calculator = ScenarioDamageRiskCalculator(job_ctxt)
 
+        # just stubbing out some preprocessing stuff...
+        ScenarioDamageRiskCalculator.store_exposure_assets = lambda self: None
+        ScenarioDamageRiskCalculator.store_fragility_model = lambda self: None
+        ScenarioDamageRiskCalculator.partition = lambda self: None
+
     @classmethod
     def setUpClass(cls):
         inputs = [("fragility", ""), ("exposure", "")]
@@ -71,7 +76,7 @@ class ScenarioDamageRiskCalculatorTestCase(
 
         [dda] = DmgDistPerAsset.objects.filter(output__oq_job=self.job.id,
                 output__output_type="dmg_dist_per_asset")
-        
+
         self.assertEquals(["no_damage", "LS1", "LS2"], dda.dmg_states)
 
         [exposure] = self.em.exposuredata_set.filter(asset_ref="A")
@@ -86,7 +91,7 @@ class ScenarioDamageRiskCalculatorTestCase(
 
         self._close_to(34.80851, data.mean)
         self._close_to(18.34906, data.stddev)
-        
+
         [data] = DmgDistPerAssetData.objects.filter(dmg_dist_per_asset=dda,
                 exposure_data=exposure, dmg_state="LS2")
 
@@ -96,10 +101,10 @@ class ScenarioDamageRiskCalculatorTestCase(
         [exposure] = self.em.exposuredata_set.filter(asset_ref="B")
         [data] = DmgDistPerAssetData.objects.filter(dmg_dist_per_asset=dda,
                 exposure_data=exposure, dmg_state="no_damage")
-        
+
         self._close_to(3.64527, data.mean)
         self._close_to(3.35330, data.stddev)
-                
+
         [data] = DmgDistPerAssetData.objects.filter(dmg_dist_per_asset=dda,
                 exposure_data=exposure, dmg_state="LS1")
 
