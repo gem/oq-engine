@@ -62,6 +62,8 @@ class DamageStateTriggersTestCase(DjangoTestCase):
         test_input = models.Input(
             owner=default_user, input_type='exposure', path='fake', size=0)
         test_input.save()
+        i2j = models.Input2job(input=test_input, oq_job=cls.job)
+        i2j.save()
         exp_model = models.ExposureModel(
             owner=default_user, input=test_input, name='test-exp-model',
             category='economic loss', stco_type='per_asset', stco_unit='CHF')
