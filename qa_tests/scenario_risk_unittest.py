@@ -114,7 +114,7 @@ class ScenarioRiskQATest(unittest.TestCase):
             self.EXP_STDDEV_LOSS, actual_stddev,
             places=self.TOTAL_LOSS_PRECISION)
 
-    @attr(speed='slow')
+    @attr('slow')
     def test_scenario_risk_sample_based(self):
         # This QA is a longer-running test of the Scenario Risk calculator.
         # The vulnerabiilty model has non-zero Coefficients of Variation and
