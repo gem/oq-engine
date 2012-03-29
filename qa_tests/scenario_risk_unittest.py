@@ -33,6 +33,11 @@ class ScenarioRiskQATest(unittest.TestCase):
     #: decimal places
     LOSSMAP_PRECISION = 4
 
+    #: expected mean loss for the region
+    EXP_MEAN_LOSS = 1272.7
+    #: expected stddev loss for the region
+    EXP_STDDEV_LOSS = 455.83
+
     def _verify_loss_map(self, path, expected_data):
         namespaces = dict(nrml=xml.NRML_NS, gml=xml.GML_NS)
         root = etree.parse(path)
@@ -77,9 +82,6 @@ class ScenarioRiskQATest(unittest.TestCase):
                  stddev=270.632803227),
         ]
 
-        expected_mean = 1272.70
-        expected_stddev = 455.83
-
         result = helpers.run_job(scen_cfg, ['--output-type=xml'],
                                  check_output=True)
 
@@ -108,6 +110,21 @@ class ScenarioRiskQATest(unittest.TestCase):
         actual_stddev = float(result[1].split()[-1])
 
         self.assertAlmostEqual(
-            expected_mean, actual_mean, places=self.TOTAL_LOSS_PRECISION)
+            self.EXP_MEAN_LOSS, actual_mean, places=self.TOTAL_LOSS_PRECISION)
         self.assertAlmostEqual(
-            expected_stddev, actual_stddev, places=self.TOTAL_LOSS_PRECISION)
+            self.EXP_STDDEV_LOSS, actual_stddev,
+            places=self.TOTAL_LOSS_PRECISION)
+
+    @attr(speed='slow')
+    def test_scenario_risk_sample_based(self):
+        # This QA is a longer-running test of the Scenario Risk calculator.
+        # The vulnerabiilty model has non-zero Coefficients of Variation and
+        # therefore exercises the 'sample-based' path through the calculator.
+        # This test is configured to produce 1000 ground motion fields at each
+        # location of interest (in the test above, only 10 are produced).
+
+        # We expect the `mean` results to be roughly the same as the above
+        # test, however the standard values are unpredicatable. The only
+        # validation we can do on the stddev results is to make sure they are
+        # > the values in the expected values (see above).
+        pass
