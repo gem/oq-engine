@@ -561,7 +561,7 @@ class Input(djm.Model):
     A single OpenQuake input file uploaded by the user
     '''
     owner = djm.ForeignKey('OqUser')
-    digest = djm.TextField(help_text="32 byte md5um digest, used to "
+    digest = djm.TextField(help_text="32 byte md5sum digest, used to "
                                         "detect identical input model files")
     path = djm.TextField()
     INPUT_TYPE_CHOICES = (
