@@ -360,3 +360,61 @@ class RectangularMesh(Mesh):
             depth = (depth1 + depth2) / 2.0
         lon, lat = geo_utils.get_middle_point(lon1, lat1, lon2, lat2)
         return Point(lon, lat, depth)
+
+    def get_mean_dip(self):
+        """
+        Calculate weighted average dip of the mesh surface.
+
+        :returns:
+            Dip angle in decimal degrees.
+
+        The mesh is triangulated, the dip for each triangle is computed
+        and average dip weighted on each triangle's area is calculated.
+        """
+        # TODO: comment the code better
+        # TODO: unittest independently of surfaces
+        # TODO: combine with strike calculation
+        # TODO: support dip over 90 degree
+        if self.depths is None:
+            return 0
+
+        points = geo_utils.spherical_to_cartesian(
+            self.lons, self.lats, self.depths
+        ).transpose(1, 2, 0)
+        xx = 0
+        yy = 0
+        for i, row in enumerate(points):
+            if i == 0:
+                continue
+            prev_row = points[i - 1]
+
+            # top-left triangle
+            tops = prev_row[1:] - prev_row[:-1]  # right along the top edge
+            lefts = prev_row[:-1] - row[:-1]  # up along the left edge
+            ups = prev_row[:-1] * 1.1  # up from the top left corner
+            diags = prev_row[1:] - row[:-1]  # right-to-left top-to-bottom (/)
+
+            areas = geo_utils.triangle_area(tops, lefts, diags)
+
+            n1 = geo_utils.normalized(numpy.cross(tops, lefts))
+            n2 = geo_utils.normalized(numpy.cross(tops, ups))
+
+            dips = numpy.arcsin(numpy.sum(n1 * n2, axis=-1).clip(-1., 1.))
+            xx += numpy.sum(areas * numpy.cos(dips))
+            yy += numpy.sum(areas * numpy.sin(dips))
+
+            # bottom-right triangle
+            bottoms = row[1:] - row[:-1]  # right along the bottom edge
+            rights = prev_row[1:] - row[1:]  # up along the right edge
+            ups2 = row[1:] * 1.1  # up from bottom right corner
+
+            areas = geo_utils.triangle_area(bottoms, rights, diags)
+            n1 = geo_utils.normalized(numpy.cross(bottoms, rights))
+            n2 = geo_utils.normalized(numpy.cross(bottoms, ups2))
+
+            dips = numpy.arcsin(numpy.sum(n1 * n2, axis=-1).clip(-1., 1.))
+            xx += numpy.sum(areas * numpy.cos(dips))
+            yy += numpy.sum(areas * numpy.sin(dips))
+
+        dip = numpy.degrees(numpy.arctan2(yy, xx))
+        return dip
