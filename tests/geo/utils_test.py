@@ -241,3 +241,36 @@ class TriangleAreaTestCase(unittest.TestCase):
         expected_area = [[4.0, 0.5], [16.0, 2.0]]
         areas = utils.triangle_area(aa - bb, aa - cc, bb - cc)
         self.assertTrue(numpy.allclose(areas, expected_area), msg=str(areas))
+
+        # 3d array
+        aa = numpy.array([aa])
+        bb = numpy.array([bb])
+        cc = numpy.array([cc])
+        expected_area = numpy.array([expected_area])
+        areas = utils.triangle_area(aa - bb, aa - cc, bb - cc)
+        self.assertTrue(numpy.allclose(areas, expected_area), msg=str(areas))
+
+
+class NormalizedTestCase(unittest.TestCase):
+    def test_one_vector(self):
+        v = numpy.array([0., 0., 2.])
+        self.assertTrue(numpy.allclose(utils.normalized(v), [0, 0, 1]))
+        v = numpy.array([0., -1., -1.])
+        n = utils.normalized(v)
+        self.assertTrue(numpy.allclose(n, [0, -2 ** 0.5 / 2., -2 ** 0.5 / 2.]))
+
+    def test_arrays(self):
+        # 1d array of vectors
+        vv = numpy.array([(0., 0., -0.1), (10., 0., 0.)])
+        nn = numpy.array([(0., 0., -1.), (1., 0., 0.)])
+        self.assertTrue(numpy.allclose(utils.normalized(vv), nn))
+
+        # 2d array
+        vv = numpy.array([vv, vv * 2, vv * (-3)])
+        nn = numpy.array([nn, nn, -nn])
+        self.assertTrue(numpy.allclose(utils.normalized(vv), nn))
+
+        # 3d array
+        vv = numpy.array([vv])
+        nn = numpy.array([nn])
+        self.assertTrue(numpy.allclose(utils.normalized(vv), nn))
