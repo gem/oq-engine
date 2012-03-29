@@ -542,8 +542,8 @@ class DbTestCase(object):
     IMLS = [0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527,
             0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778]
 
-    @staticmethod
-    def teardown_upload(upload, filesystem_only=True):
+    @classmethod
+    def teardown_upload(cls, upload, filesystem_only=True):
         """
         Tear down the file system (and potentially db) artefacts for the
         given upload.
@@ -560,8 +560,8 @@ class DbTestCase(object):
             return
         upload.delete()
 
-    @staticmethod
-    def teardown_inputs(inputs, filesystem_only):
+    @classmethod
+    def teardown_inputs(cls, inputs, filesystem_only):
         if filesystem_only:
             return
         [input.delete() for input in inputs]
@@ -669,8 +669,8 @@ class DbTestCase(object):
 
         return job
 
-    @staticmethod
-    def teardown_job(job, filesystem_only=True):
+    @classmethod
+    def teardown_job(cls, job, filesystem_only=True):
         """
         Tear down the file system (and potentially db) artefacts for the
         given job.
