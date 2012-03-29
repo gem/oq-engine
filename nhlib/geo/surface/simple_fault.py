@@ -23,7 +23,7 @@ import numpy
 from nhlib.geo.surface.base import BaseSurface
 from nhlib.geo.line import Line
 from nhlib.geo.mesh import RectangularMesh
-from nhlib.geo._utils import spherical_to_cartesian, ensure
+from nhlib.geo._utils import ensure
 
 
 class SimpleFaultSurface(BaseSurface):
@@ -51,55 +51,15 @@ class SimpleFaultSurface(BaseSurface):
         """
         Return the fault dip as the average dip over the fault surface mesh.
 
-        It is computed as the average value of the dip values of the mesh cells
-        in the first row of the surface mesh (in case of a simple fault surface
-        the dip is constant over depth, so there is no need to compute the dip
-        angle along width).
-
-        The dip of each mesh cell is obtained by calculating the vector normal
-        to the vertical surface that cell's top segment lies in (this vector
-        is parallel to earth surface and pointing towards dip direction) and
-        vector pointing from top to bottom points in a same column of points
-        in the mesh. The dot product of these two vectors is cosine of the dip
-        angle of a cell.
+        It is computed as the weighted average mean of the top row of the
+        surface's mesh (in case of a simple fault surface the dip is constant
+        over depth, so there is no need to compute the dip angle along width).
+        See :meth:`nhlib.geo.mesh.RectangularMesh.get_mean_dip`.
 
         :returns:
             The average dip, in decimal degrees.
         """
-        mesh = self.get_mesh()
-        # mesh of the top row of points
-        line0 = mesh[0:1]
-        # mesh of the second row of points
-        line1 = mesh[1:2]
-        # Cartesian 3d-coordinates of points in the top row
-        coords0 = spherical_to_cartesian(
-            line0.lons, line0.lats, line0.depths
-        ).reshape(3, -1).transpose()
-        # Cartesian coordinates of points in the second row
-        coords1 = spherical_to_cartesian(
-            line1.lons, line1.lats, line1.depths
-        ).reshape(3, -1).transpose()
-        # Cartesian coordinates of points just below ones in the first row.
-        # that is, the same lons and lats but deeper depth
-        coords2 = spherical_to_cartesian(
-            line0.lons, line0.lats, line0.depths + 1.0
-        ).reshape(3, -1).transpose()
-        # vectors, normal to planes defined by pairs of vectors, where first
-        # one is the one between subsequent points in the top row and the
-        # second is directed downwards from one of those
-        normals = numpy.cross((coords0[:-1] - coords0[1:]),
-                              (coords2[:-1] - coords0[:-1]))
-        # normalize these normal vectors by dividing all coordinate components
-        # by vector's length
-        normals /= numpy.sqrt(numpy.sum(normals ** 2, axis=1)).reshape((-1, 1))
-        # vectors along the dip direction
-        downdip = coords1[:-1] - coords0[:-1]
-        # we need both ``normals`` and ``downdip`` normalized because we will
-        # use dot product of those for calculating angle in between
-        downdip /= numpy.sqrt(numpy.sum(downdip ** 2, axis=1)).reshape((-1, 1))
-
-        dot_products = numpy.sum(normals * downdip, axis=1)
-        return numpy.degrees(numpy.mean(numpy.arccos(dot_products)))
+        return self.get_mesh()[0:2].get_mean_dip()
 
     def get_strike(self):
         """
