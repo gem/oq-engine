@@ -65,4 +65,4 @@ EXPOSURE = Messina_exposure_model.xml
 
 # file containing the fragility functions,
 # in continuous or discrete format
-FRAGILITY = 
+FRAGILITY = fragm_d.xml
