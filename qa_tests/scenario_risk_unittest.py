@@ -128,3 +128,7 @@ class ScenarioRiskQATest(unittest.TestCase):
         # validation we can do on the stddev results is to make sure they are
         # > the values in the expected values (see above).
         pass
+
+        # With 1000 GMFs and CoVs = 0, our mean results should be +/- 5% of
+        # 1222.09357155
+        # Standard deviation value should be > 411.377907473
