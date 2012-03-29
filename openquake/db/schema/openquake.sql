@@ -511,6 +511,7 @@ CREATE TABLE uiapi.input (
     owner_id INTEGER NOT NULL,
     -- The full path of the input file on the server
     path VARCHAR NOT NULL,
+    digest VARCHAR(32) NOT NULL,
     -- Input file type, one of:
     --      source model file (source)
     --      source logic tree (lt_source)
@@ -566,6 +567,7 @@ CREATE TABLE uiapi.job_stats (
 CREATE TABLE uiapi.oq_job_profile (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
+    force_inputs boolean NOT NULL DEFAULT false,
     description VARCHAR NOT NULL DEFAULT '',
     -- One of:
     --      classical (Classical PSHA)
