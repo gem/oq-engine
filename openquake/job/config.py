@@ -680,6 +680,8 @@ def default_validators(sections, params):
         validators.add(BCRValidator(params))
     elif calc_mode in (SCENARIO_MODE, SCENARIO_DAMAGE_MODE):
         validators.add(ScenarioComputationValidator(sections, params))
+
+    if calc_mode == SCENARIO_MODE:
         validators.add(ScenarioValidator(sections, params))
 
     if calc_mode == SCENARIO_DAMAGE_MODE:
