@@ -515,7 +515,7 @@ class DefaultValidatorsTestCase(unittest.TestCase):
         self.assertTrue(any(
             isinstance(v, ScenarioComputationValidator) for v in validators))
         self.assertTrue(any(
-            isinstance(v, ScenarioValidaotr) for v in validators))
+            isinstance(v, ScenarioValidator) for v in validators))
 
     def test_default_validators_scenario_damage_job(self):
         # Ensures that a Scenario Damage job always includes the
