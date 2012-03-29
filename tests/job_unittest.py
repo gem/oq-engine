@@ -468,7 +468,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         params['GMPE_LT_RANDOM_SEED'] = '5'
         params['LREM_STEPS_PER_INTERVAL'] = '5'
 
-        jp = _prepare_job(params, ['HAZARD', 'RISK'], 'openquake', self.job)
+        jp = _prepare_job(params, ['HAZARD', 'RISK'], 'openquake', self.job,
+                          False)
         self.assertEqual(params['REGION_VERTEX'], _to_coord_list(jp.region))
         self.assertFieldsEqual(
             {'calc_mode': 'classical',
@@ -491,20 +492,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
              'rupture_surface_discretization': None,
              'subduction_rupture_floating_type': 'downdip',
              }, jp)
-        self.assertEqual([
-                {'path': abs_path("small_exposure.xml"),
-                 'type': 'exposure'},
-                {'path': abs_path("gmpe_logic_tree.xml"),
-                 'type': 'lt_gmpe'},
-                {'path': abs_path("source_model_logic_tree.xml"),
-                 'type': 'lt_source'},
-                {'path': abs_path("source_model1.xml"),
-                 'type': 'source'},
-                {'path': abs_path("source_model2.xml"),
-                 'type': 'source'},
-                {'path': abs_path("vulnerability.xml"),
-                 'type': 'vulnerability'},
-                ], self._get_inputs(self.job))
 
     def test_prepare_classical_job_over_sites(self):
         '''
@@ -515,7 +502,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         params['SITES'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
         params['LREM_STEPS_PER_INTERVAL'] = '5'
 
-        jp = _prepare_job(params, ['HAZARD', 'RISK'], 'openquake', self.job)
+        jp = _prepare_job(params, ['HAZARD', 'RISK'], 'openquake', self.job,
+                          False)
         self.assertEqual(params['SITES'], _to_coord_list(jp.sites))
         self.assertFieldsEqual(
             {'calc_mode': 'classical',
@@ -544,7 +532,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         params['EXPOSURE'] = abs_path("LA_small_portfolio.xml")
         params['VULNERABILITY'] = abs_path("vulnerability.xml")
 
-        jp = _prepare_job(params, ['HAZARD', 'RISK'], 'openquake', self.job)
+        jp = _prepare_job(params, ['HAZARD', 'RISK'], 'openquake', self.job,
+                          False)
         self.assertEqual(params['REGION_VERTEX'], _to_coord_list(jp.region))
         self.assertFieldsEqual(
             {'calc_mode': 'scenario',
@@ -566,14 +555,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
              'gmf_calculation_number': 5,
              'rupture_surface_discretization': 0.1,
              }, jp)
-        self.assertEqual([
-                {'path': abs_path("LA_small_portfolio.xml"),
-                 'type': 'exposure'},
-                {'path': abs_path("simple-fault-rupture.xml"),
-                 'type': 'rupture'},
-                {'path': abs_path("vulnerability.xml"),
-                 'type': 'vulnerability'},
-                ], self._get_inputs(self.job))
 
     def test_prepare_scenario_job_over_sites(self):
         '''
@@ -583,7 +564,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         params = self.BASE_SCENARIO_PARAMS.copy()
         params['SITES'] = '34.07, -118.25, 34.07, -118.22, 34.04, -118.22'
 
-        jp = _prepare_job(params, ['HAZARD', 'RISK'], 'openquake', self.job)
+        jp = _prepare_job(params, ['HAZARD', 'RISK'], 'openquake', self.job,
+                          False)
         self.assertEqual(params['SITES'], _to_coord_list(jp.sites))
         self.assertFieldsEqual(
             {'calc_mode': 'scenario',
@@ -616,7 +598,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         params['GMF_RANDOM_SEED'] = '1'
         params['LOSS_HISTOGRAM_BINS'] = '25'
 
-        jp = _prepare_job(params, ['HAZARD', 'RISK'], 'openquake', self.job)
+        jp = _prepare_job(params, ['HAZARD', 'RISK'], 'openquake', self.job,
+                          False)
         self.assertEqual(params['REGION_VERTEX'], _to_coord_list(jp.region))
         self.assertFieldsEqual(
             {'calc_mode': 'event_based',
@@ -638,20 +621,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
              'gmf_calculation_number': None,
              'rupture_surface_discretization': None,
              }, jp)
-        self.assertEqual([
-                {'path': abs_path("small_exposure.xml"),
-                 'type': 'exposure'},
-                {'path': abs_path("gmpe_logic_tree.xml"),
-                 'type': 'lt_gmpe'},
-                {'path': abs_path("source_model_logic_tree.xml"),
-                 'type': 'lt_source'},
-                {'path': abs_path("source_model1.xml"),
-                 'type': 'source'},
-                {'path': abs_path("source_model2.xml"),
-                 'type': 'source'},
-                {'path': abs_path("vulnerability.xml"),
-                 'type': 'vulnerability'},
-                ], self._get_inputs(self.job))
 
     def test_prepare_event_based_job_over_sites(self):
         '''
@@ -663,7 +632,8 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         params['SITES'] = '33.88, -118.3, 33.88, -118.06, 33.76, -118.06'
         params['LOSS_HISTOGRAM_BINS'] = '25'
 
-        jp = _prepare_job(params, ['HAZARD', 'RISK'], 'openquake', self.job)
+        jp = _prepare_job(params, ['HAZARD', 'RISK'], 'openquake', self.job,
+                          False)
         self.assertEqual(params['SITES'], _to_coord_list(jp.sites))
         self.assertFieldsEqual(
             {'calc_mode': 'event_based',
