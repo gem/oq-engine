@@ -245,7 +245,8 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
 
         calc.store_exposure_assets()
         [input] = models.inputs4job(cls.job.id, input_type="exposure")
-        [model] = input.exposuremodel_set.all()
+        model = input.model()
+        assets = model.exposuredata_set.filter(taxonomy="af/ctc-D/LR")
         # Add some more assets.
         coos = [(10.000155392289116, 46.546194318563),
                 (10.222034128255, 46.0071299176413),
@@ -253,9 +254,11 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
         for lat, lon in coos:
             site = shapes.Site(lat, lon)
             cls.sites.append(site)
+            if assets:
+                continue
             location = geos.GEOSGeometry(site.point.to_wkt())
             asset = models.ExposureData(
-                exposure_model=model, taxonomy="RC/DMRF-D/LR",
+                exposure_model=model, taxonomy="af/ctc-D/LR",
                 asset_ref=helpers.random_string(6), stco=lat * 2,
                 site=location, reco=1.1 * lon)
             asset.save()
@@ -306,30 +309,30 @@ class AssetsAtTestCase(unittest.TestCase, helpers.DbTestCase):
 
         # storing the basic exposure model
         ClassicalRiskCalculator(calc_proxy).store_exposure_assets()
+        [input] = models.inputs4job(cls.job.id, input_type="exposure")
+        model = input.model()
+        assets = model.exposuredata_set.filter(taxonomy="aa/aatc-D/LR")
 
-        [em_input] = models.inputs4job(cls.job.id, input_type="exposure")
-        [model] = em_input.exposuremodel_set.all()
+        if not assets:
+            # This model did not exist in the database before.
+            site = shapes.Site(1.0, 2.0)
+            # more assets at same location
+            models.ExposureData(
+                exposure_model=model, taxonomy="aa/aatc-D/LR",
+                asset_ref="ASSET_1", stco=1,
+                site=geos.GEOSGeometry(site.point.to_wkt()), reco=1).save()
 
-        site = shapes.Site(1.0, 2.0)
+            models.ExposureData(
+                exposure_model=model, taxonomy="aa/aatc-D/LR",
+                asset_ref="ASSET_2", stco=1,
+                site=geos.GEOSGeometry(site.point.to_wkt()), reco=1).save()
 
-        # more assets at same location
-        models.ExposureData(
-            exposure_model=model, taxonomy="NOT_USED",
-            asset_ref="ASSET_1", stco=1,
-            site=geos.GEOSGeometry(site.point.to_wkt()), reco=1).save()
-
-        models.ExposureData(
-            exposure_model=model, taxonomy="NOT_USED",
-            asset_ref="ASSET_2", stco=1,
-            site=geos.GEOSGeometry(site.point.to_wkt()), reco=1).save()
-
-        site = shapes.Site(2.0, 2.0)
-
-        # just one asset at location
-        models.ExposureData(
-            exposure_model=model, taxonomy="NOT_USED",
-            asset_ref="ASSET_3", stco=1,
-            site=geos.GEOSGeometry(site.point.to_wkt()), reco=1).save()
+            site = shapes.Site(2.0, 2.0)
+            # just one asset at location
+            models.ExposureData(
+                exposure_model=model, taxonomy="aa/aatc-D/LR",
+                asset_ref="ASSET_3", stco=1,
+                site=geos.GEOSGeometry(site.point.to_wkt()), reco=1).save()
 
     def test_one_asset_per_site(self):
         site = shapes.Site(2.0, 2.0)
