@@ -67,7 +67,6 @@ class ScenarioRiskQATest(unittest.TestCase):
         helpers.assertDeepAlmostEqual(
             self, expected_data, actual_lm_data, places=self.LOSSMAP_PRECISION)
 
-    @attr('qa')
     def test_scenario_risk(self):
         # The rudimentary beginnings of a QA test for the scenario calc.
         # For now, just run it end-to-end to make sure it doesn't blow up.
