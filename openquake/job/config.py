@@ -278,6 +278,9 @@ class ScenarioComputationValidator(object):
 
 
 class ScenarioValidator(MandatoryParamsValidator):
+    """Checks for the presence of mandatory params in the Scenario Risk
+    calculator.
+    """
 
     SECTION_OF_INTEREST = RISK_SECTION
     MANDATORY_PARAMS = ['EPSILON_RANDOM_SEED']
