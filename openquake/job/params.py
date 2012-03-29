@@ -330,6 +330,8 @@ define_param('COMPUTE_MEAN_HAZARD_CURVE', 'compute_mean_hazard_curve',
              modes=('classical', 'classical_bcr'), to_job=str2bool)
 define_param('CONDITIONAL_LOSS_POE', 'conditional_loss_poe', to_job=cttfl)
 define_param('DAMPING', 'damping', default=0.0, to_job=float)
+define_param('EPSILON_RANDOM_SEED', 'epsilon_random_seed', modes='scenario',
+             to_job=int)
 define_param('GMF_OUTPUT', None,
              modes=('event_based', 'scenario', 'scenario_damage'),
              to_job=str2bool)

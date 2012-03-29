@@ -825,6 +825,7 @@ class OqJobProfile(models.Model):
     depth_to_1pt_0km_per_sec = models.FloatField(default=100.0)
     asset_life_expectancy = models.FloatField(null=True)
     interest_rate = models.FloatField(null=True)
+    epsilon_random_seed = models.IntegerField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"oq_job_profile'
