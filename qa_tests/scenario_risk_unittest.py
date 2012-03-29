@@ -33,10 +33,7 @@ class ScenarioRiskQATest(unittest.TestCase):
     #: decimal places
     LOSSMAP_PRECISION = 4
 
-    #: expected mean loss for the region
-    EXP_MEAN_LOSS = 1272.7
-    #: expected stddev loss for the region
-    EXP_STDDEV_LOSS = 455.83
+
 
     def _verify_loss_map(self, path, expected_data):
         namespaces = dict(nrml=xml.NRML_NS, gml=xml.GML_NS)
@@ -68,10 +65,13 @@ class ScenarioRiskQATest(unittest.TestCase):
             self, expected_data, actual_lm_data, places=self.LOSSMAP_PRECISION)
 
     def test_scenario_risk(self):
-        # The rudimentary beginnings of a QA test for the scenario calc.
-        # For now, just run it end-to-end to make sure it doesn't blow up.
+        # This test exercises the 'mean-based' path through the Scenario Risk
+        # calculator. There is no random sampling done here so the results are
+        # 100% predictable.
         scen_cfg = helpers.demo_file('scenario_risk/config.gem')
 
+        exp_mean_loss = 1272.7
+        exp_stddev_loss = 455.83
         expected_loss_map = [
             dict(asset='a3', pos='15.48 38.25', mean=217.510673644,
                  stddev=86.3215466446),
@@ -109,10 +109,9 @@ class ScenarioRiskQATest(unittest.TestCase):
         actual_stddev = float(result[1].split()[-1])
 
         self.assertAlmostEqual(
-            self.EXP_MEAN_LOSS, actual_mean, places=self.TOTAL_LOSS_PRECISION)
+            exp_mean_loss, actual_mean, places=self.TOTAL_LOSS_PRECISION)
         self.assertAlmostEqual(
-            self.EXP_STDDEV_LOSS, actual_stddev,
-            places=self.TOTAL_LOSS_PRECISION)
+            exp_stddev_loss, actual_stddev, places=self.TOTAL_LOSS_PRECISION)
 
     @attr('slow')
     def test_scenario_risk_sample_based(self):
@@ -122,12 +121,83 @@ class ScenarioRiskQATest(unittest.TestCase):
         # This test is configured to produce 1000 ground motion fields at each
         # location of interest (in the test above, only 10 are produced).
 
-        # We expect the `mean` results to be roughly the same as the above
-        # test, however the standard values are unpredicatable. The only
-        # validation we can do on the stddev results is to make sure they are
-        # > the values in the expected values (see above).
-        pass
+        # Since we're seeding the random epsilon sampling, we can consistently
+        # reproduce all result values.
 
-        # With 1000 GMFs and CoVs = 0, our mean results should be +/- 5% of
-        # 1222.09357155
-        # Standard deviation value should be > 411.377907473
+        # When these values are compared to the results computed by a similar
+        # config which takes the 'mean-based' path (with CoVs = 0), we expect
+        # the following:
+        # All of the mean values in the 'sample-based' results should be with
+        # 5%, + or -, of the 'mean-based' results.
+        # The standard deviation values of the 'sample-based' results should
+        # simply be greater than those produced with the 'mean-based' method.
+
+        # For comparison, mean and stddev values for the region were computed
+        # with 1000 GMFs using the mean-based approach. These values (rounded
+        # to 2 decimal places) are:
+        mb_mean_loss = 1222.09
+        mb_stddev_loss = 411.38
+        # Loss map for the mean-based approach:
+        mb_loss_map = [
+            dict(asset='a3', pos='15.48 38.25', mean=193.695291394,
+                 stddev=92.1588328045),
+            dict(asset='a2', pos='15.56 38.17', mean=504.736840362,
+                 stddev=246.792898999),
+            dict(asset='a1', pos='15.48 38.09', mean=523.661439794,
+                 stddev=237.575081332),
+        ]
+
+        # Given the random seed in this config file, here's what we expect to
+        # get for the region:
+        exp_mean_loss = 1222.58
+        exp_stddev_loss = 470.32
+        # Expected loss map for the sample-based approach:
+        expected_loss_map = [
+            dict(asset='a3', pos='15.48 38.25', mean=193.949563098,
+                 stddev=93.6466713506),
+            dict(asset='a2', pos='15.56 38.17', mean=504.013749752,
+                 stddev=316.913182992),
+            dict(asset='a1', pos='15.48 38.09', mean=524.904984369,
+                 stddev=241.028111194),
+        ]
+
+        # Sanity check on the test data defined above, because humans suck at
+        # math:
+        self.assertAlmostEqual(mb_mean_loss, exp_mean_loss,
+                               delta=mb_mean_loss * 0.05)
+        self.assertTrue(exp_stddev_loss > mb_stddev_loss)
+        # ... and the loss map:
+        for i, lm_node in enumerate(mb_loss_map):
+            exp_lm_node = expected_loss_map[i]
+
+            delta = lm_node['mean'] * 0.05
+            self.assertAlmostEqual(
+                lm_node['mean'], exp_lm_node['mean'], delta=delta)
+            self.assertTrue(exp_lm_node['stddev'] > lm_node['stddev'])
+
+        # Sanity checks are done. Let's do this.
+        scen_cfg = helpers.demo_file('scenario_risk/config_sample-based.gem')
+        result = helpers.run_job(scen_cfg, ['--output-type=xml'],
+                                 check_output=True)
+
+        job = OqJob.objects.latest('id')
+        self.assertEqual('succeeded', job.status)
+
+        expected_loss_map_file = helpers.demo_file(
+            'scenario_risk/computed_output/loss-map-%s.xml' % job.id)
+
+        self.assertTrue(os.path.exists(expected_loss_map_file))
+
+        self._verify_loss_map(expected_loss_map_file, expected_loss_map)
+
+        result = [line for line in result.split('\n') if len(line) > 0]
+
+        self.assertEqual(2, len(result))
+
+        actual_mean = float(result[0].split()[-1])
+        actual_stddev = float(result[1].split()[-1])
+
+        self.assertAlmostEqual(
+            exp_mean_loss, actual_mean, places=self.TOTAL_LOSS_PRECISION)
+        self.assertAlmostEqual(
+            exp_stddev_loss, actual_stddev, places=self.TOTAL_LOSS_PRECISION)
