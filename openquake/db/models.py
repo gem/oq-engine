@@ -667,6 +667,7 @@ class OqJobProfile(models.Model):
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
         (u'scenario', u'Scenario'),
+        (u'scenario_damage', u'Scenario Damage'),
         (u'disaggregation', u'Disaggregation'),
         (u'uhs', u'UHS'),  # Uniform Hazard Spectra
         # Benefit-cost ratio calculator based on Classical PSHA risk calc
