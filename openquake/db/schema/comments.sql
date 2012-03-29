@@ -357,7 +357,7 @@ COMMENT ON COLUMN riskr.dmg_dist_per_asset_data.location IS 'Geometry for the co
 
 -- uiapi schema tables ------------------------------------------
 COMMENT ON TABLE uiapi.input IS 'A single OpenQuake input file uploaded by the user';
-COMMENT ON COLUMN uiapi.input.digest IS '32 byte md5um digest, used to detect identical input model files';
+COMMENT ON COLUMN uiapi.input.digest IS '32 byte md5sum digest, used to detect identical input model files';
 COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
     - source model file (source)
     - source logic tree (lt_source)
