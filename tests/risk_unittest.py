@@ -129,12 +129,14 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
         [input] = models.inputs4job(cls.job.id, input_type="exposure",
                                     path=path)
         owner = models.OqUser.objects.get(user_name="openquake")
-        cls.emdl = models.ExposureModel(
-            owner=owner, input=input, description="PEB test exposure model",
-            category="PEB storages sheds", stco_unit="nuts",
-            stco_type="aggregated", reco_unit="pebbles",
-            reco_type="aggregated")
-        cls.emdl.save()
+        cls.emdl = input.model()
+        if not cls.emdl:
+            cls.emdl = models.ExposureModel(
+                owner=owner, input=input, description="PEB exposure model",
+                category="PEB storages sheds", stco_unit="nuts",
+                stco_type="aggregated", reco_unit="pebbles",
+                reco_type="aggregated")
+            cls.emdl.save()
         values = [22.61, 124.27, 42.93, 29.37, 40.68, 178.47]
         for x, value in zip([float(v) for v in range(20, 27)], values):
             site = shapes.Site(x, x + 11)
@@ -982,18 +984,24 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         calculator = classical_core.ClassicalRiskCalculator(job_ctxt)
 
         [input] = models.inputs4job(self.job.id, input_type="exposure")
-        emdl = models.ExposureModel(
-            owner=self.job.owner, input=input,
-            description="c-psha test exposure model",
-            category="c-psha power plants", stco_unit="watt",
-            stco_type="aggregated", reco_unit="joule", reco_type="aggregated")
-        emdl.save()
+        emdl = input.model()
+        if not emdl:
+            emdl = models.ExposureModel(
+                owner=self.job.owner, input=input,
+                description="c-psha test exposure model",
+                category="c-psha power plants", stco_unit="watt",
+                stco_type="aggregated", reco_unit="joule",
+                reco_type="aggregated")
+            emdl.save()
+
+        assets = emdl.exposuredata_set.filter(asset_ref="rubcr")
+        if not assets:
+            asset = models.ExposureData(exposure_model=emdl, taxonomy="ID",
+                                        asset_ref="rubcr", stco=1, reco=123.45,
+                                        site=GEOSGeometry("POINT(1.0 1.0)"))
+            asset.save()
 
         Block.from_kvs(self.job_id, self.block_id)
-        asset = models.ExposureData(exposure_model=emdl, taxonomy="ID",
-                                    asset_ref=22.61, stco=1, reco=123.45,
-                                    site=GEOSGeometry("POINT(1.0 1.0)"))
-        asset.save()
         calculator.compute_risk(self.block_id)
 
         result_key = kvs.tokens.bcr_block_key(self.job_id, self.block_id)
@@ -1001,7 +1009,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         expected_result = {'bcr': 0.0, 'eal_original': 0.003032,
                            'eal_retrofitted': 0.003032}
         helpers.assertDeepAlmostEqual(
-            self, res, [[[1, 1], [[expected_result, "22.61"]]]])
+            self, res, [[[1, 1], [[expected_result, "rubcr"]]]])
 
     def test_splits_with_real_values_from_turkey(self):
         loss_ratios = [0.0, 1.96E-15, 2.53E-12, 8.00E-10, 8.31E-08, 3.52E-06,
@@ -1130,11 +1138,13 @@ class ScenarioEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
         [input] = models.inputs4job(cls.job.id, input_type="exposure",
                                     path=path)
         owner = models.OqUser.objects.get(user_name="openquake")
-        cls.emdl = models.ExposureModel(
-            owner=owner, input=input, description="SEB test exposure model",
-            category="SEB factory buildings", stco_unit="screws",
-            stco_type="aggregated")
-        cls.emdl.save()
+        cls.emdl = input.model()
+        if not cls.emdl:
+            cls.emdl = models.ExposureModel(
+                owner=owner, input=input, description="SEB exposure model",
+                category="SEB factory buildings", stco_unit="screws",
+                stco_type="aggregated")
+            cls.emdl.save()
 
     @classmethod
     def tearDownClass(cls):

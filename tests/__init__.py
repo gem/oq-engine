@@ -53,7 +53,6 @@ from risk_job_unittest import *
 from risk_parser_unittest import *
 from risk_unittest import *
 from scenario_hazard_unittest import *
-from scenario_risk_unittest import *
 from schema_unittest import *
 from shapes_unittest import *
 from signalling_unittest import *
