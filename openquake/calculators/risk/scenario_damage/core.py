@@ -117,8 +117,6 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 output__oq_job=self.job_ctxt.oq_job,
                 output__output_type="dmg_dist_per_asset")
 
-        dmg_states = _damage_states(fm.lss)
-
         for site in block.sites:
             point = self.job_ctxt.region.grid.point_at(site)
             gmf = general.load_gmvs_at(self.job_ctxt.job_id, point)
@@ -140,7 +138,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                     DmgDistPerAssetData(
                         dmg_dist_per_asset=dds,
                         exposure_data=asset,
-                        dmg_state=dmg_states[x],
+                        dmg_state=_damage_states(fm.lss)[x],
                         mean=mean[x],
                         stddev=stddev[x],
                         location=geos.GEOSGeometry(
