@@ -22,9 +22,11 @@
 Model representations of the OpenQuake DB tables.
 '''
 
+import os
+
 from collections import namedtuple
 from datetime import datetime
-from django.contrib.gis.db import models
+from django.contrib.gis.db import models as djm
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
 
@@ -148,7 +150,7 @@ def model_equals(model_a, model_b, ignore=None):
     return True
 
 
-class FloatArrayField(models.Field):  # pylint: disable=R0904
+class FloatArrayField(djm.Field):  # pylint: disable=R0904
     """This field models a postgres `float` array."""
 
     def db_type(self, connection):
@@ -161,7 +163,7 @@ class FloatArrayField(models.Field):  # pylint: disable=R0904
             return None
 
 
-class CharArrayField(models.Field):  # pylint: disable=R0904
+class CharArrayField(djm.Field):  # pylint: disable=R0904
     """This field models a postgres `varchar` array."""
 
     def db_type(self, _connection):
@@ -188,41 +190,41 @@ class CharArrayField(models.Field):  # pylint: disable=R0904
 ## Tables in the 'admin' schema.
 
 
-class Organization(models.Model):
+class Organization(djm.Model):
     '''
     Organizations for grouping users
     '''
-    name = models.TextField()
-    address = models.TextField(null=True)
-    url = models.TextField(null=True)
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    name = djm.TextField()
+    address = djm.TextField(null=True)
+    url = djm.TextField(null=True)
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'admin\".\"organization'
 
 
-class OqUser(models.Model):
+class OqUser(djm.Model):
     '''
     OpenQuake users
     '''
-    user_name = models.TextField()
-    full_name = models.TextField()
-    organization = models.ForeignKey('Organization')
-    data_is_open = models.BooleanField(default=True)
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    user_name = djm.TextField()
+    full_name = djm.TextField()
+    organization = djm.ForeignKey('Organization')
+    data_is_open = djm.BooleanField(default=True)
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'admin\".\"oq_user'
 
 
-class RevisionInfo(models.Model):
+class RevisionInfo(djm.Model):
     '''
     Revision information
     '''
-    artefact = models.TextField(unique=True)
-    revision = models.TextField()
-    step = models.IntegerField(default=0)
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    artefact = djm.TextField(unique=True)
+    revision = djm.TextField()
+    step = djm.IntegerField(default=0)
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'admin\".\"revision_info'
@@ -231,58 +233,58 @@ class RevisionInfo(models.Model):
 ## Tables in the 'eqcat' schema.
 
 
-class Catalog(models.Model):
+class Catalog(djm.Model):
     '''
     Earthquake catalog
     '''
-    owner = models.ForeignKey('OqUser')
-    eventid = models.IntegerField()
-    agency = models.TextField()
-    identifier = models.TextField()
-    time = models.DateTimeField()
-    time_error = models.FloatField()
-    depth = models.FloatField()
-    depth_error = models.FloatField()
+    owner = djm.ForeignKey('OqUser')
+    eventid = djm.IntegerField()
+    agency = djm.TextField()
+    identifier = djm.TextField()
+    time = djm.DateTimeField()
+    time_error = djm.FloatField()
+    depth = djm.FloatField()
+    depth_error = djm.FloatField()
     EVENT_CLASS_CHOICES = (
         (u'aftershock', u'Aftershock'),
         (u'foreshock', u'Foreshock'),
     )
-    event_class = models.TextField(null=True, choices=EVENT_CLASS_CHOICES)
-    magnitude = models.ForeignKey('Magnitude')
-    surface = models.ForeignKey('Surface')
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
-    point = models.PointField(srid=4326)
+    event_class = djm.TextField(null=True, choices=EVENT_CLASS_CHOICES)
+    magnitude = djm.ForeignKey('Magnitude')
+    surface = djm.ForeignKey('Surface')
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
+    point = djm.PointField(srid=4326)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'eqcat\".\"catalog'
 
 
-class Magnitude(models.Model):
+class Magnitude(djm.Model):
     '''
     Earthquake event magnitudes
     '''
-    mb_val = models.FloatField(null=True)
-    mb_val_error = models.FloatField(null=True)
-    ml_val = models.FloatField(null=True)
-    ml_val_error = models.FloatField(null=True)
-    ms_val = models.FloatField(null=True)
-    ms_val_error = models.FloatField(null=True)
-    mw_val = models.FloatField(null=True)
-    mw_val_error = models.FloatField(null=True)
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    mb_val = djm.FloatField(null=True)
+    mb_val_error = djm.FloatField(null=True)
+    ml_val = djm.FloatField(null=True)
+    ml_val_error = djm.FloatField(null=True)
+    ms_val = djm.FloatField(null=True)
+    ms_val_error = djm.FloatField(null=True)
+    mw_val = djm.FloatField(null=True)
+    mw_val_error = djm.FloatField(null=True)
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'eqcat\".\"magnitude'
 
 
-class Surface(models.Model):
+class Surface(djm.Model):
     '''
     Earthquake event surface (ellipse with an angle)
     '''
-    semi_minor = models.FloatField()
-    semi_major = models.FloatField()
-    strike = models.FloatField()
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    semi_minor = djm.FloatField()
+    semi_major = djm.FloatField()
+    strike = djm.FloatField()
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'eqcat\".\"surface'
@@ -291,21 +293,21 @@ class Surface(models.Model):
 ## Tables in the 'hzrdi' (Hazard Input) schema.
 
 
-class Rupture(models.Model):
+class Rupture(djm.Model):
     '''
     Rupture
     '''
-    owner = models.ForeignKey('OqUser')
-    input = models.ForeignKey('Input')
-    gid = models.TextField()
-    name = models.TextField(null=True)
-    description = models.TextField(null=True)
+    owner = djm.ForeignKey('OqUser')
+    input = djm.ForeignKey('Input')
+    gid = djm.TextField()
+    name = djm.TextField(null=True)
+    description = djm.TextField(null=True)
     SI_TYPE_CHOICES = (
         (u'complex', u'Complex'),
         (u'point', u'Point'),
         (u'simple', u'Simple'),
     )
-    si_type = models.TextField(choices=SI_TYPE_CHOICES, default='simple')
+    si_type = djm.TextField(choices=SI_TYPE_CHOICES, default='simple')
     TECT_REG_CHOICES = (
         (u'active', u'Active Shallow Crust'),
         (u'stable', u'Stable Shallow Crust'),
@@ -313,9 +315,9 @@ class Rupture(models.Model):
         (u'intraslab', u'Subduction Intraslab'),
         (u'volcanic', u'Volcanic'),
     )
-    tectonic_region = models.TextField(choices=TECT_REG_CHOICES)
-    rake = models.FloatField(null=True)
-    magnitude = models.FloatField()
+    tectonic_region = djm.TextField(choices=TECT_REG_CHOICES)
+    rake = djm.FloatField(null=True)
+    magnitude = djm.FloatField()
     MAG_TYPE_CHOICES = (
         (u'Mb', u'Body Wave Magnitude'),
         (u'Md', u'Duration Magnitude'),
@@ -323,33 +325,33 @@ class Rupture(models.Model):
         (u'Ms', u'Surface Wave Magnitude'),
         (u'Mw', u'Moment Magnitude'),
     )
-    magnitude_type = models.CharField(max_length=2, choices=MAG_TYPE_CHOICES,
+    magnitude_type = djm.CharField(max_length=2, choices=MAG_TYPE_CHOICES,
         default='Mw')
-    simple_fault = models.ForeignKey('SimpleFault')
-    complex_fault = models.ForeignKey('ComplexFault')
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
-    point = models.PointField(srid=4326)
+    simple_fault = djm.ForeignKey('SimpleFault')
+    complex_fault = djm.ForeignKey('ComplexFault')
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
+    point = djm.PointField(srid=4326)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"rupture'
 
 
-class Source(models.Model):
+class Source(djm.Model):
     '''
     Source
     '''
-    owner = models.ForeignKey('OqUser')
-    input = models.ForeignKey('Input')
-    gid = models.TextField()
-    name = models.TextField(null=True)
-    description = models.TextField(null=True)
+    owner = djm.ForeignKey('OqUser')
+    input = djm.ForeignKey('Input')
+    gid = djm.TextField()
+    name = djm.TextField(null=True)
+    description = djm.TextField(null=True)
     SI_TYPE_CHOICES = (
         (u'area', u'Area'),
         (u'point', u'Point'),
         (u'complex', u'Complex'),
         (u'simple', u'Simple'),
     )
-    si_type = models.TextField(choices=SI_TYPE_CHOICES, default='simple')
+    si_type = djm.TextField(choices=SI_TYPE_CHOICES, default='simple')
     TECT_REG_CHOICES = (
         (u'active', u'Active Shallow Crust'),
         (u'stable', u'Stable Shallow Crust'),
@@ -357,46 +359,46 @@ class Source(models.Model):
         (u'intraslab', u'Subduction Intraslab'),
         (u'volcanic', u'Volcanic'),
     )
-    tectonic_region = models.TextField(choices=TECT_REG_CHOICES)
-    simple_fault = models.ForeignKey('SimpleFault')
-    complex_fault = models.ForeignKey('ComplexFault')
-    rake = models.FloatField(null=True)
-    hypocentral_depth = models.FloatField(null=True)
-    r_depth_distr = models.ForeignKey('RDepthDistr')
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
-    point = models.PointField(srid=4326)
-    area = models.PolygonField(srid=4326)
+    tectonic_region = djm.TextField(choices=TECT_REG_CHOICES)
+    simple_fault = djm.ForeignKey('SimpleFault')
+    complex_fault = djm.ForeignKey('ComplexFault')
+    rake = djm.FloatField(null=True)
+    hypocentral_depth = djm.FloatField(null=True)
+    r_depth_distr = djm.ForeignKey('RDepthDistr')
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
+    point = djm.PointField(srid=4326)
+    area = djm.PolygonField(srid=4326)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"source'
 
 
-class SimpleFault(models.Model):
+class SimpleFault(djm.Model):
     '''
     Simple fault geometry
     '''
-    owner = models.ForeignKey('OqUser')
-    gid = models.TextField()
-    name = models.TextField(null=True)
-    description = models.TextField(null=True)
-    dip = models.FloatField()
-    upper_depth = models.FloatField()
-    lower_depth = models.FloatField()
-    mfd_tgr = models.ForeignKey('MfdTgr')
-    mfd_evd = models.ForeignKey('MfdEvd')
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
-    edge = models.LineStringField(srid=4326)
-    outline = models.PolygonField(srid=4326)
+    owner = djm.ForeignKey('OqUser')
+    gid = djm.TextField()
+    name = djm.TextField(null=True)
+    description = djm.TextField(null=True)
+    dip = djm.FloatField()
+    upper_depth = djm.FloatField()
+    lower_depth = djm.FloatField()
+    mfd_tgr = djm.ForeignKey('MfdTgr')
+    mfd_evd = djm.ForeignKey('MfdEvd')
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
+    edge = djm.LineStringField(srid=4326)
+    outline = djm.PolygonField(srid=4326)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"simple_fault'
 
 
-class MfdEvd(models.Model):
+class MfdEvd(djm.Model):
     '''
     Magnitude Frequency Distribution, evenly discretized
     '''
-    owner = models.ForeignKey('OqUser')
+    owner = djm.ForeignKey('OqUser')
     MAG_TYPE_CHOICES = (
         (u'Mb', u'Body Wave Magnitude'),
         (u'Md', u'Duration Magnitude'),
@@ -404,25 +406,25 @@ class MfdEvd(models.Model):
         (u'Ms', u'Surface Wave Magnitude'),
         (u'Mw', u'Moment Magnitude'),
     )
-    magnitude_type = models.CharField(max_length=2, choices=MAG_TYPE_CHOICES,
+    magnitude_type = djm.CharField(max_length=2, choices=MAG_TYPE_CHOICES,
         default='Mw')
-    min_val = models.FloatField()
-    max_val = models.FloatField(default=-1.0)
-    bin_size = models.FloatField()
+    min_val = djm.FloatField()
+    max_val = djm.FloatField(default=-1.0)
+    bin_size = djm.FloatField()
     mfd_values = FloatArrayField()
-    total_cumulative_rate = models.FloatField(null=True)
-    total_moment_rate = models.FloatField(null=True)
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    total_cumulative_rate = djm.FloatField(null=True)
+    total_moment_rate = djm.FloatField(null=True)
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"mfd_evd'
 
 
-class MfdTgr(models.Model):
+class MfdTgr(djm.Model):
     '''
     Magnitude Frequency Distribution, truncated Gutenberg-Richter
     '''
-    owner = models.ForeignKey('OqUser')
+    owner = djm.ForeignKey('OqUser')
     MAG_TYPE_CHOICES = (
         (u'Mb', u'Body Wave Magnitude'),
         (u'Md', u'Duration Magnitude'),
@@ -430,101 +432,101 @@ class MfdTgr(models.Model):
         (u'Ms', u'Surface Wave Magnitude'),
         (u'Mw', u'Moment Magnitude'),
     )
-    magnitude_type = models.CharField(max_length=2, choices=MAG_TYPE_CHOICES,
+    magnitude_type = djm.CharField(max_length=2, choices=MAG_TYPE_CHOICES,
         default='Mw')
-    min_val = models.FloatField()
-    max_val = models.FloatField()
-    a_val = models.FloatField()
-    b_val = models.FloatField()
-    total_cumulative_rate = models.FloatField(null=True)
-    total_moment_rate = models.FloatField(null=True)
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    min_val = djm.FloatField()
+    max_val = djm.FloatField()
+    a_val = djm.FloatField()
+    b_val = djm.FloatField()
+    total_cumulative_rate = djm.FloatField(null=True)
+    total_moment_rate = djm.FloatField(null=True)
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"mfd_tgr'
 
 
-class ComplexFault(models.Model):
+class ComplexFault(djm.Model):
     '''
     Complex fault geometry
     '''
-    owner = models.ForeignKey('OqUser')
-    gid = models.TextField()
-    name = models.TextField(null=True)
-    description = models.TextField(null=True)
-    mfd_tgr = models.ForeignKey('MfdTgr')
-    mfd_evd = models.ForeignKey('MfdEvd')
-    fault_edge = models.ForeignKey('FaultEdge')
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
-    outline = models.PolygonField(srid=4326)
+    owner = djm.ForeignKey('OqUser')
+    gid = djm.TextField()
+    name = djm.TextField(null=True)
+    description = djm.TextField(null=True)
+    mfd_tgr = djm.ForeignKey('MfdTgr')
+    mfd_evd = djm.ForeignKey('MfdEvd')
+    fault_edge = djm.ForeignKey('FaultEdge')
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
+    outline = djm.PolygonField(srid=4326)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"complex_fault'
 
 
-class FaultEdge(models.Model):
+class FaultEdge(djm.Model):
     '''
     Fault edge
     '''
-    owner = models.ForeignKey('OqUser')
-    gid = models.TextField()
-    name = models.TextField(null=True)
-    description = models.TextField(null=True)
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
-    top = models.LineStringField(srid=4326)
-    bottom = models.LineStringField(srid=4326)
+    owner = djm.ForeignKey('OqUser')
+    gid = djm.TextField()
+    name = djm.TextField(null=True)
+    description = djm.TextField(null=True)
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
+    top = djm.LineStringField(srid=4326)
+    bottom = djm.LineStringField(srid=4326)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"fault_edge'
 
 
-class RDepthDistr(models.Model):
+class RDepthDistr(djm.Model):
     '''
     Rupture Depth Distribution
     '''
-    owner = models.ForeignKey('OqUser')
-    gid = models.TextField()
-    name = models.TextField(null=True)
-    description = models.TextField(null=True)
-    magnitude_type = models.CharField(max_length=2)
+    owner = djm.ForeignKey('OqUser')
+    gid = djm.TextField()
+    name = djm.TextField(null=True)
+    description = djm.TextField(null=True)
+    magnitude_type = djm.CharField(max_length=2)
     magnitude = FloatArrayField()
     depth = FloatArrayField()
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"r_depth_distr'
 
 
-class RRateMdl(models.Model):
+class RRateMdl(djm.Model):
     '''
     Rupture Rate Model
     '''
-    owner = models.ForeignKey('OqUser')
-    gid = models.TextField()
-    name = models.TextField(null=True)
-    description = models.TextField(null=True)
-    mfd_tgr = models.ForeignKey('MfdTgr')
-    mfd_evd = models.ForeignKey('MfdEvd')
-    focal_mechanism = models.ForeignKey('FocalMechanism')
-    source = models.ForeignKey('Source')
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    owner = djm.ForeignKey('OqUser')
+    gid = djm.TextField()
+    name = djm.TextField(null=True)
+    description = djm.TextField(null=True)
+    mfd_tgr = djm.ForeignKey('MfdTgr')
+    mfd_evd = djm.ForeignKey('MfdEvd')
+    focal_mechanism = djm.ForeignKey('FocalMechanism')
+    source = djm.ForeignKey('Source')
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"r_rate_mdl'
 
 
-class FocalMechanism(models.Model):
+class FocalMechanism(djm.Model):
     '''
     Holds strike, dip and rake values with the respective constraints
     '''
-    owner = models.ForeignKey('OqUser')
-    gid = models.TextField()
-    name = models.TextField(null=True)
-    description = models.TextField(null=True)
-    strike = models.FloatField(null=True)
-    dip = models.FloatField(null=True)
-    rake = models.FloatField(null=True)
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    owner = djm.ForeignKey('OqUser')
+    gid = djm.TextField()
+    name = djm.TextField(null=True)
+    description = djm.TextField(null=True)
+    strike = djm.FloatField(null=True)
+    dip = djm.FloatField(null=True)
+    rake = djm.FloatField(null=True)
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdi\".\"focal_mechanism'
@@ -533,33 +535,35 @@ class FocalMechanism(models.Model):
 ## Tables in the 'uiapi' schema.
 
 
-class Upload(models.Model):
+class Upload(djm.Model):
     '''
     A batch of OpenQuake input files uploaded by the user
     '''
-    owner = models.ForeignKey('OqUser')
-    description = models.TextField(default='')
-    path = models.TextField(unique=True)
+    owner = djm.ForeignKey('OqUser')
+    description = djm.TextField(default='')
+    path = djm.TextField(unique=True)
     STATUS_CHOICES = (
         (u'pending', u'Pending'),
         (u'running', u'Running'),
         (u'failed', u'Failed'),
         (u'succeeded', u'Succeeded'),
     )
-    status = models.TextField(choices=STATUS_CHOICES, default='pending')
-    job_pid = models.IntegerField(default=0)
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    status = djm.TextField(choices=STATUS_CHOICES, default='pending')
+    job_pid = djm.IntegerField(default=0)
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"upload'
 
 
-class Input(models.Model):
+class Input(djm.Model):
     '''
     A single OpenQuake input file uploaded by the user
     '''
-    owner = models.ForeignKey('OqUser')
-    path = models.TextField()
+    owner = djm.ForeignKey('OqUser')
+    digest = djm.TextField(help_text="32 byte md5sum digest, used to "
+                                        "detect identical input model files")
+    path = djm.TextField()
     INPUT_TYPE_CHOICES = (
         (u'unknown', u'Unknown'),
         (u'source', u'Source Model'),
@@ -571,55 +575,73 @@ class Input(models.Model):
         (u'vulnerability_retrofitted', u'Vulnerability Retroffited'),
         (u'rupture', u'Rupture'),
     )
-    input_type = models.TextField(choices=INPUT_TYPE_CHOICES)
+    input_type = djm.TextField(choices=INPUT_TYPE_CHOICES)
     # Number of bytes in the file:
-    size = models.IntegerField()
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    size = djm.IntegerField()
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
+
+    def model(self):
+        """The model associated with this input or `None`.
+
+        :returns: the appropriate model if one exists or `None`
+        """
+        assert self.input_type in ("exposure", "fragility"), (
+            "unsupported model type (%s)" % self.input_type)
+        attr = "%smodel_set" % self.input_type
+        qm = getattr(self, attr)
+        models = qm.all()
+        if models:
+            return models[0]
+
+    def __str__(self):
+        path_suffix = "/".join(self.path.rsplit(os.sep, 2)[1:])
+        return "%s||%s||%s||%s" % (
+            self.id, self.input_type, self.digest[:16], path_suffix)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"input'
 
 
-class Input2job(models.Model):
+class Input2job(djm.Model):
     '''
     Associates input model files and jobs.
     '''
-    input = models.ForeignKey('Input')
-    oq_job = models.ForeignKey('OqJob')
+    input = djm.ForeignKey('Input')
+    oq_job = djm.ForeignKey('OqJob')
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"input2job'
 
 
-class Input2upload(models.Model):
+class Input2upload(djm.Model):
     '''
     Associates input model files and uploads.
     '''
-    input = models.ForeignKey('Input')
-    upload = models.ForeignKey('Upload')
+    input = djm.ForeignKey('Input')
+    upload = djm.ForeignKey('Upload')
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"input2upload'
 
 
-class OqJob(models.Model):
+class OqJob(djm.Model):
     '''
     An OpenQuake engine run started by the user
     '''
-    owner = models.ForeignKey('OqUser')
-    description = models.TextField(default='')
-    path = models.TextField(null=True, unique=True)
+    owner = djm.ForeignKey('OqUser')
+    description = djm.TextField(default='')
+    path = djm.TextField(null=True, unique=True)
     STATUS_CHOICES = (
         (u'pending', u'Pending'),
         (u'running', u'Running'),
         (u'failed', u'Failed'),
         (u'succeeded', u'Succeeded'),
     )
-    status = models.TextField(choices=STATUS_CHOICES, default='pending')
-    duration = models.IntegerField(default=0)
-    job_pid = models.IntegerField(default=0)
-    supervisor_pid = models.IntegerField(default=0)
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    status = djm.TextField(choices=STATUS_CHOICES, default='pending')
+    duration = djm.IntegerField(default=0)
+    job_pid = djm.IntegerField(default=0)
+    supervisor_pid = djm.IntegerField(default=0)
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     def profile(self):
         """Return the associated job prfile."""
@@ -629,40 +651,43 @@ class OqJob(models.Model):
         db_table = 'uiapi\".\"oq_job'
 
 
-class JobStats(models.Model):
+class JobStats(djm.Model):
     '''
     Capture various statistics about a job.
     '''
-    oq_job = models.ForeignKey('OqJob')
-    start_time = models.DateTimeField(editable=False)
-    stop_time = models.DateTimeField(editable=False)
+    oq_job = djm.ForeignKey('OqJob')
+    start_time = djm.DateTimeField(editable=False)
+    stop_time = djm.DateTimeField(editable=False)
     # The number of total sites in job
-    num_sites = models.IntegerField()
+    num_sites = djm.IntegerField()
     # The number of logic tree samples
     # (for hazard jobs of all types except scenario)
-    realizations = models.IntegerField(null=True)
+    realizations = djm.IntegerField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"job_stats'
 
 
-class Job2profile(models.Model):
+class Job2profile(djm.Model):
     '''
     Associates jobs with their profiles.
     '''
-    oq_job = models.ForeignKey('OqJob')
-    oq_job_profile = models.ForeignKey('OqJobProfile')
+    oq_job = djm.ForeignKey('OqJob')
+    oq_job_profile = djm.ForeignKey('OqJobProfile')
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"job2profile'
 
 
-class OqJobProfile(models.Model):
+class OqJobProfile(djm.Model):
     '''
     Parameters needed to run an OpenQuake job
     '''
-    owner = models.ForeignKey('OqUser')
-    description = models.TextField(default='')
+    owner = djm.ForeignKey('OqUser')
+    description = djm.TextField(default='')
+    force_inputs = djm.BooleanField(
+        default=False, help_text="whether the model inputs should be parsed "
+        "and their content be written to the db no matter what")
     CALC_MODE_CHOICES = (
         (u'classical', u'Classical PSHA'),
         (u'event_based', u'Probabilistic Event-Based'),
@@ -675,15 +700,15 @@ class OqJobProfile(models.Model):
         # Benefit-cost ratio calculator based on Event Based risk calc
         (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
-    calc_mode = models.TextField(choices=CALC_MODE_CHOICES)
+    calc_mode = djm.TextField(choices=CALC_MODE_CHOICES)
     job_type = CharArrayField()
-    min_magnitude = models.FloatField(null=True)
-    investigation_time = models.FloatField(null=True)
+    min_magnitude = djm.FloatField(null=True)
+    investigation_time = djm.FloatField(null=True)
     COMPONENT_CHOICES = (
         (u'average', u'Average horizontal'),
         (u'gmroti50', u'Average horizontal (GMRotI50)'),
     )
-    component = models.TextField(choices=COMPONENT_CHOICES)
+    component = djm.TextField(choices=COMPONENT_CHOICES)
     IMT_CHOICES = (
        (u'pga', u'Peak Ground Acceleration'),
        (u'sa', u'Spectral Acceleration'),
@@ -693,74 +718,74 @@ class OqJobProfile(models.Model):
        (u'rsd', u'Relative Significant Duration'),
        (u'mmi', u'Modified Mercalli Intensity'),
     )
-    imt = models.TextField(choices=IMT_CHOICES)
-    period = models.FloatField(null=True)
-    damping = models.FloatField(null=True)
+    imt = djm.TextField(choices=IMT_CHOICES)
+    period = djm.FloatField(null=True)
+    damping = djm.FloatField(null=True)
     TRUNC_TYPE_CHOICES = (
        (u'none', u'None'),
        (u'onesided', u'One-sided'),
        (u'twosided', u'Two-sided'),
     )
-    truncation_type = models.TextField(choices=TRUNC_TYPE_CHOICES)
+    truncation_type = djm.TextField(choices=TRUNC_TYPE_CHOICES)
     # TODO(LB): We should probably find out why (from a science perspective)
     # the default is 3.0 and document it. I definitely don't remember why it's
     # 3.0.
-    truncation_level = models.FloatField(default=3.0)
-    reference_vs30_value = models.FloatField(
+    truncation_level = djm.FloatField(default=3.0)
+    reference_vs30_value = djm.FloatField(
         "Average shear-wave velocity in the upper 30 meters of a site")
     imls = FloatArrayField(null=True)
     poes = FloatArrayField(null=True)
-    realizations = models.IntegerField(null=True)
-    histories = models.IntegerField(null=True)
-    gm_correlated = models.NullBooleanField(null=True)
-    gmf_calculation_number = models.IntegerField(null=True)
-    rupture_surface_discretization = models.FloatField(null=True)
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    realizations = djm.IntegerField(null=True)
+    histories = djm.IntegerField(null=True)
+    gm_correlated = djm.NullBooleanField(null=True)
+    gmf_calculation_number = djm.IntegerField(null=True)
+    rupture_surface_discretization = djm.FloatField(null=True)
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     # We can specify a (region and region_grid_spacing) or sites, but not both.
-    region = models.PolygonField(srid=4326, null=True)
-    region_grid_spacing = models.FloatField(null=True)
-    sites = models.MultiPointField(srid=4326, null=True)
+    region = djm.PolygonField(srid=4326, null=True)
+    region_grid_spacing = djm.FloatField(null=True)
+    sites = djm.MultiPointField(srid=4326, null=True)
 
-    aggregate_loss_curve = models.NullBooleanField(null=True)  # 1/0 ?
-    area_source_discretization = models.FloatField(null=True)
-    area_source_magnitude_scaling_relationship = models.TextField(null=True)
-    compute_mean_hazard_curve = models.NullBooleanField(null=True)
+    aggregate_loss_curve = djm.NullBooleanField(null=True)  # 1/0 ?
+    area_source_discretization = djm.FloatField(null=True)
+    area_source_magnitude_scaling_relationship = djm.TextField(null=True)
+    compute_mean_hazard_curve = djm.NullBooleanField(null=True)
     conditional_loss_poe = FloatArrayField(null=True)
-    fault_magnitude_scaling_relationship = models.TextField(null=True)
-    fault_magnitude_scaling_sigma = models.FloatField(null=True)
-    fault_rupture_offset = models.FloatField(null=True)
-    fault_surface_discretization = models.FloatField(null=True)
-    gmf_random_seed = models.IntegerField(null=True)
-    gmpe_lt_random_seed = models.IntegerField(null=True)
-    gmpe_model_name = models.TextField(null=True)
-    grid_source_magnitude_scaling_relationship = models.TextField(null=True)
-    include_area_sources = models.NullBooleanField(null=True)
-    include_fault_source = models.NullBooleanField(null=True)
-    include_grid_sources = models.NullBooleanField(null=True)
-    include_subduction_fault_source = models.NullBooleanField(null=True)
-    lrem_steps_per_interval = models.IntegerField(null=True)
-    loss_curves_output_prefix = models.TextField(null=True)
+    fault_magnitude_scaling_relationship = djm.TextField(null=True)
+    fault_magnitude_scaling_sigma = djm.FloatField(null=True)
+    fault_rupture_offset = djm.FloatField(null=True)
+    fault_surface_discretization = djm.FloatField(null=True)
+    gmf_random_seed = djm.IntegerField(null=True)
+    gmpe_lt_random_seed = djm.IntegerField(null=True)
+    gmpe_model_name = djm.TextField(null=True)
+    grid_source_magnitude_scaling_relationship = djm.TextField(null=True)
+    include_area_sources = djm.NullBooleanField(null=True)
+    include_fault_source = djm.NullBooleanField(null=True)
+    include_grid_sources = djm.NullBooleanField(null=True)
+    include_subduction_fault_source = djm.NullBooleanField(null=True)
+    lrem_steps_per_interval = djm.IntegerField(null=True)
+    loss_curves_output_prefix = djm.TextField(null=True)
     # Only used for Event-Based Risk calculations.
-    loss_histogram_bins = models.IntegerField(null=True)
-    maximum_distance = models.FloatField(null=True)
+    loss_histogram_bins = djm.IntegerField(null=True)
+    maximum_distance = djm.FloatField(null=True)
     quantile_levels = FloatArrayField(null=True)
-    reference_depth_to_2pt5km_per_sec_param = models.FloatField(null=True)
-    rupture_aspect_ratio = models.FloatField(null=True)
+    reference_depth_to_2pt5km_per_sec_param = djm.FloatField(null=True)
+    rupture_aspect_ratio = djm.FloatField(null=True)
     RUPTURE_FLOATING_TYPE_CHOICES = (
         ('alongstrike', 'Only along strike ( rupture full DDW)'),
         ('downdip', 'Along strike and down dip'),
         ('centereddowndip', 'Along strike & centered down dip'),
     )
-    rupture_floating_type = models.TextField(
+    rupture_floating_type = djm.TextField(
         null=True, choices=RUPTURE_FLOATING_TYPE_CHOICES)
     SADIGH_SITE_TYPE_CHOICES = (
         ('rock', 'Rock'),
         ('deepsoil', 'Deep-Soil'),
     )
-    sadigh_site_type = models.TextField(
+    sadigh_site_type = djm.TextField(
         null=True, choices=SADIGH_SITE_TYPE_CHOICES)
-    source_model_lt_random_seed = models.IntegerField(null=True)
+    source_model_lt_random_seed = djm.IntegerField(null=True)
     STANDARD_DEVIATION_TYPE_CHOICES = (
         ('total', 'Total'),
         ('interevent', 'Inter-Event'),
@@ -770,15 +795,15 @@ class OqJobProfile(models.Model):
         ('total_pga_dependent', 'Total (PGA Dependent)'),
         ('intraevent_mag_dependent', 'Intra-Event (Mag Dependent)'),
     )
-    standard_deviation_type = models.TextField(
+    standard_deviation_type = djm.TextField(
         null=True, choices=STANDARD_DEVIATION_TYPE_CHOICES)
     subduction_fault_magnitude_scaling_relationship = \
-        models.TextField(null=True)
-    subduction_fault_magnitude_scaling_sigma = models.FloatField(null=True)
-    subduction_fault_rupture_offset = models.FloatField(null=True)
-    subduction_fault_surface_discretization = models.FloatField(null=True)
-    subduction_rupture_aspect_ratio = models.FloatField(null=True)
-    subduction_rupture_floating_type = models.TextField(
+        djm.TextField(null=True)
+    subduction_fault_magnitude_scaling_sigma = djm.FloatField(null=True)
+    subduction_fault_rupture_offset = djm.FloatField(null=True)
+    subduction_fault_surface_discretization = djm.FloatField(null=True)
+    subduction_rupture_aspect_ratio = djm.FloatField(null=True)
+    subduction_rupture_floating_type = djm.TextField(
         null=True, choices=RUPTURE_FLOATING_TYPE_CHOICES)
     SOURCE_AS_CHOICES = (
         ('pointsources', 'Point Sources'),
@@ -786,11 +811,11 @@ class OqJobProfile(models.Model):
         ('crosshairsources', 'Cross Hair Line Sources'),
         ('16spokedsources', '16 Spoked Line Sources'),
     )
-    treat_area_source_as = models.TextField(
+    treat_area_source_as = djm.TextField(
         null=True, choices=SOURCE_AS_CHOICES)
-    treat_grid_source_as = models.TextField(
+    treat_grid_source_as = djm.TextField(
         null=True, choices=SOURCE_AS_CHOICES)
-    width_of_mfd_bin = models.FloatField(null=True)
+    width_of_mfd_bin = djm.FloatField(null=True)
 
     # The following bin limits fields are for the Disaggregation calculator
     # only:
@@ -823,25 +848,25 @@ class OqJobProfile(models.Model):
        (u"measured", u"Value obtained from on-site measurements"),
        (u"inferred", u"Estimated value"),
     )
-    vs30_type = models.TextField(choices=VS30_TYPE_CHOICES, default="measured")
-    depth_to_1pt_0km_per_sec = models.FloatField(default=100.0)
-    asset_life_expectancy = models.FloatField(null=True)
-    interest_rate = models.FloatField(null=True)
+    vs30_type = djm.TextField(choices=VS30_TYPE_CHOICES, default="measured")
+    depth_to_1pt_0km_per_sec = djm.FloatField(default=100.0)
+    asset_life_expectancy = djm.FloatField(null=True)
+    interest_rate = djm.FloatField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"oq_job_profile'
 
 
-class Output(models.Model):
+class Output(djm.Model):
     '''
     A single artifact which is a result of an OpenQuake job.
     The data may reside in a file or in the database.
     '''
-    owner = models.ForeignKey('OqUser')
-    oq_job = models.ForeignKey('OqJob')
-    path = models.TextField(null=True, unique=True)
-    display_name = models.TextField()
-    db_backed = models.BooleanField(default=False)
+    owner = djm.ForeignKey('OqUser')
+    oq_job = djm.ForeignKey('OqJob')
+    path = djm.TextField(null=True, unique=True)
+    display_name = djm.TextField()
+    db_backed = djm.BooleanField(default=False)
     OUTPUT_TYPE_CHOICES = (
         (u'unknown', u'Unknown'),
         (u'hazard_curve', u'Hazard Curve'),
@@ -857,28 +882,28 @@ class Output(models.Model):
         (u'dmg_dist_per_taxonomy', u'Damage Distribution Per Taxonomy'),
         (u'dmg_dist_total', u'Total Damage Distribution'),
     )
-    output_type = models.TextField(choices=OUTPUT_TYPE_CHOICES)
+    output_type = djm.TextField(choices=OUTPUT_TYPE_CHOICES)
     # Number of bytes in the file:
-    size = models.IntegerField(default=0)
+    size = djm.IntegerField(default=0)
     # TODO(LB): We should consider removing shapefile_path; as far I know, it's
     # obsolete.
-    shapefile_path = models.TextField(null=True)
-    min_value = models.FloatField(null=True)
-    max_value = models.FloatField(null=True)
+    shapefile_path = djm.TextField(null=True)
+    min_value = djm.FloatField(null=True)
+    max_value = djm.FloatField(null=True)
 
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"output'
 
 
-class ErrorMsg(models.Model):
+class ErrorMsg(djm.Model):
     '''
     Error information associated with a job failure
     '''
-    oq_job = models.ForeignKey('OqJob')
-    brief = models.TextField()
-    detailed = models.TextField()
+    oq_job = djm.ForeignKey('OqJob')
+    brief = djm.TextField()
+    detailed = djm.TextField()
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"error_msg'
@@ -887,81 +912,81 @@ class ErrorMsg(models.Model):
 ## Tables in the 'hzrdr' schema.
 
 
-class HazardMap(models.Model):
+class HazardMap(djm.Model):
     '''
     Hazard Map header (information which pertains to entire map)
     '''
-    output = models.ForeignKey('Output')
-    poe = models.FloatField()
+    output = djm.ForeignKey('Output')
+    poe = djm.FloatField()
     STAT_CHOICES = (
         (u'mean', u'Mean'),
         (u'quantile', u'Quantile'),
     )
-    statistic_type = models.TextField(choices=STAT_CHOICES)
-    quantile = models.FloatField(null=True)
+    statistic_type = djm.TextField(choices=STAT_CHOICES)
+    quantile = djm.FloatField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdr\".\"hazard_map'
 
 
-class HazardMapData(models.Model):
+class HazardMapData(djm.Model):
     '''
     Hazard Map data (data for a single point in the map)
     '''
-    hazard_map = models.ForeignKey('HazardMap')
-    value = models.FloatField()
-    location = models.PointField(srid=4326)
+    hazard_map = djm.ForeignKey('HazardMap')
+    value = djm.FloatField()
+    location = djm.PointField(srid=4326)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdr\".\"hazard_map_data'
 
 
-class HazardCurve(models.Model):
+class HazardCurve(djm.Model):
     '''
     Hazard Curve header information
     '''
-    output = models.ForeignKey('Output')
-    end_branch_label = models.TextField(null=True)
+    output = djm.ForeignKey('Output')
+    end_branch_label = djm.TextField(null=True)
     STAT_CHOICES = (
         (u'mean', u'Mean'),
         (u'median', u'Median'),
         (u'quantile', u'Quantile'),
     )
-    statistic_type = models.TextField(null=True, choices=STAT_CHOICES)
-    quantile = models.FloatField(null=True)
+    statistic_type = djm.TextField(null=True, choices=STAT_CHOICES)
+    quantile = djm.FloatField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdr\".\"hazard_curve'
 
 
-class HazardCurveData(models.Model):
+class HazardCurveData(djm.Model):
     '''
     Hazard Curve data
 
     Contains an list of PoE (Probability of Exceedance)
     values and the geographical point associated with the curve
     '''
-    hazard_curve = models.ForeignKey('HazardCurve')
+    hazard_curve = djm.ForeignKey('HazardCurve')
     poes = FloatArrayField()
-    location = models.PointField(srid=4326)
+    location = djm.PointField(srid=4326)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdr\".\"hazard_curve_data'
 
 
-class GmfData(models.Model):
+class GmfData(djm.Model):
     '''
     Ground Motion Field data
     '''
-    output = models.ForeignKey('Output')
-    ground_motion = models.FloatField()
-    location = models.PointField(srid=4326)
+    output = djm.ForeignKey('Output')
+    ground_motion = djm.FloatField()
+    location = djm.PointField(srid=4326)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdr\".\"gmf_data'
 
 
-class UhSpectra(models.Model):
+class UhSpectra(djm.Model):
     """Uniform Hazard Spectra
 
     A Collection of Uniform Hazard Spectrum which share a set of periods.
@@ -970,38 +995,38 @@ class UhSpectra(models.Model):
     Each 2D matrix has a number of row equal to ``realizations`` and a number
     of columns equal to the number of ``periods``.
     """
-    output = models.ForeignKey('Output')
-    timespan = models.FloatField()
-    realizations = models.IntegerField()
+    output = djm.ForeignKey('Output')
+    timespan = djm.FloatField()
+    realizations = djm.IntegerField()
     periods = FloatArrayField()
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdr\".\"uh_spectra'
 
 
-class UhSpectrum(models.Model):
+class UhSpectrum(djm.Model):
     """Uniform Hazard Spectrum
 
     * "Uniform" meaning "the same PoE"
     * "Spectrum" because it covers a range/band of periods/frequencies
     """
-    uh_spectra = models.ForeignKey('UhSpectra')
-    poe = models.FloatField()
+    uh_spectra = djm.ForeignKey('UhSpectra')
+    poe = djm.FloatField()
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdr\".\"uh_spectrum'
 
 
-class UhSpectrumData(models.Model):
+class UhSpectrumData(djm.Model):
     """Uniform Hazard Spectrum Data
 
     A single "row" of data in a UHS matrix for a specific site/point of
     interest.
     """
-    uh_spectrum = models.ForeignKey('UhSpectrum')
-    realization = models.IntegerField()
+    uh_spectrum = djm.ForeignKey('UhSpectrum')
+    realization = djm.IntegerField()
     sa_values = FloatArrayField()
-    location = models.PointField(srid=4326)
+    location = djm.PointField(srid=4326)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'hzrdr\".\"uh_spectrum_data'
@@ -1010,76 +1035,76 @@ class UhSpectrumData(models.Model):
 ## Tables in the 'riskr' schema.
 
 
-class LossMap(models.Model):
+class LossMap(djm.Model):
     '''
     Holds metadata for loss maps
     '''
 
-    output = models.ForeignKey("Output")
-    scenario = models.BooleanField()
-    loss_map_ref = models.TextField(null=True)
-    end_branch_label = models.TextField(null=True)
-    category = models.TextField(null=True)
-    unit = models.TextField(null=True)
-    timespan = models.FloatField(null=True)
-    poe = models.FloatField(null=True)
+    output = djm.ForeignKey("Output")
+    scenario = djm.BooleanField()
+    loss_map_ref = djm.TextField(null=True)
+    end_branch_label = djm.TextField(null=True)
+    category = djm.TextField(null=True)
+    unit = djm.TextField(null=True)
+    timespan = djm.FloatField(null=True)
+    poe = djm.FloatField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"loss_map'
 
 
-class LossMapData(models.Model):
+class LossMapData(djm.Model):
     '''
     Holds an asset, its position and a value plus (for
     non-scenario maps) the standard deviation for its loss
     '''
 
-    loss_map = models.ForeignKey("LossMap")
-    asset_ref = models.TextField()
-    value = models.FloatField()
-    std_dev = models.FloatField(default=0.0)
-    location = models.PointField(srid=4326)
+    loss_map = djm.ForeignKey("LossMap")
+    asset_ref = djm.TextField()
+    value = djm.FloatField()
+    std_dev = djm.FloatField(default=0.0)
+    location = djm.PointField(srid=4326)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"loss_map_data'
 
 
-class LossCurve(models.Model):
+class LossCurve(djm.Model):
     '''
     Holds the parameters common to a set of loss curves
     '''
 
-    output = models.ForeignKey("Output")
-    aggregate = models.BooleanField(default=False)
-    end_branch_label = models.TextField(null=True)
-    category = models.TextField(null=True)
-    unit = models.TextField(null=True)
+    output = djm.ForeignKey("Output")
+    aggregate = djm.BooleanField(default=False)
+    end_branch_label = djm.TextField(null=True)
+    category = djm.TextField(null=True)
+    unit = djm.TextField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"loss_curve'
 
 
-class LossCurveData(models.Model):
+class LossCurveData(djm.Model):
     '''
     Holds the probabilities of exceedance for a given loss curve
     '''
 
-    loss_curve = models.ForeignKey("LossCurve")
-    asset_ref = models.TextField()
+    loss_curve = djm.ForeignKey("LossCurve")
+    asset_ref = djm.TextField()
     losses = FloatArrayField()
     poes = FloatArrayField()
-    location = models.PointField(srid=4326)
+    location = djm.PointField(srid=4326)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"loss_curve_data'
 
 
-class AggregateLossCurveData(models.Model):
+class AggregateLossCurveData(djm.Model):
     '''
     Holds the probabilities of exceedance for the whole exposure model
     '''
 
-    loss_curve = models.ForeignKey("LossCurve")
+    loss_curve = djm.ForeignKey("LossCurve")
     losses = FloatArrayField()
     poes = FloatArrayField()
 
@@ -1087,130 +1112,130 @@ class AggregateLossCurveData(models.Model):
         db_table = 'riskr\".\"aggregate_loss_curve_data'
 
 
-class CollapseMap(models.Model):
+class CollapseMap(djm.Model):
     '''
     Holds metadata for the collapse map
     '''
 
-    output = models.ForeignKey("Output")
-    exposure_model = models.ForeignKey("ExposureModel")
+    output = djm.ForeignKey("Output")
+    exposure_model = djm.ForeignKey("ExposureModel")
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"collapse_map'
 
 
-class CollapseMapData(models.Model):
+class CollapseMapData(djm.Model):
     '''
     Holds the actual data for the collapse map
     '''
 
-    collapse_map = models.ForeignKey("CollapseMap")
-    asset_ref = models.TextField()
-    value = models.FloatField()
-    std_dev = models.FloatField()
-    location = models.PointField(srid=4326)
+    collapse_map = djm.ForeignKey("CollapseMap")
+    asset_ref = djm.TextField()
+    value = djm.FloatField()
+    std_dev = djm.FloatField()
+    location = djm.PointField(srid=4326)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"collapse_map_data'
 
 
-class BCRDistribution(models.Model):
+class BCRDistribution(djm.Model):
     '''
     Holds metadata for the benefit-cost ratio distribution
     '''
 
-    output = models.ForeignKey("Output")
-    exposure_model = models.ForeignKey("ExposureModel")
+    output = djm.ForeignKey("Output")
+    exposure_model = djm.ForeignKey("ExposureModel")
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"bcr_distribution'
 
 
-class BCRDistributionData(models.Model):
+class BCRDistributionData(djm.Model):
     '''
     Holds the actual data for the benefit-cost ratio distribution
     '''
 
-    bcr_distribution = models.ForeignKey("BCRDistribution")
-    asset_ref = models.TextField()
-    bcr = models.FloatField()
-    location = models.PointField(srid=4326)
+    bcr_distribution = djm.ForeignKey("BCRDistribution")
+    asset_ref = djm.TextField()
+    bcr = djm.FloatField()
+    location = djm.PointField(srid=4326)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"bcr_distribution_data'
 
 
-class DmgDistPerAsset(models.Model):
+class DmgDistPerAsset(djm.Model):
     """Holds metadata for damage distributions per asset."""
 
-    output = models.ForeignKey("Output")
+    output = djm.ForeignKey("Output")
     dmg_states = CharArrayField()
-    end_branch_label = models.TextField(null=True)
+    end_branch_label = djm.TextField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"dmg_dist_per_asset'
 
 
-class DmgDistPerAssetData(models.Model):
+class DmgDistPerAssetData(djm.Model):
     """Holds the actual data for damage distributions per asset."""
 
-    dmg_dist_per_asset = models.ForeignKey("DmgDistPerAsset")
-    exposure_data = models.ForeignKey("ExposureData")
-    dmg_state = models.TextField()
-    mean = models.FloatField()
-    stddev = models.FloatField()
+    dmg_dist_per_asset = djm.ForeignKey("DmgDistPerAsset")
+    exposure_data = djm.ForeignKey("ExposureData")
+    dmg_state = djm.TextField()
+    mean = djm.FloatField()
+    stddev = djm.FloatField()
     # geometry for the computation cell which contains the referenced asset
-    location = models.PointField(srid=4326)
+    location = djm.PointField(srid=4326)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"dmg_dist_per_asset_data'
 
 
-class DmgDistPerTaxonomy(models.Model):
+class DmgDistPerTaxonomy(djm.Model):
     """Hold metdata for damage distributions per taxonomy."""
 
-    output = models.ForeignKey("Output")
+    output = djm.ForeignKey("Output")
     dmg_states = CharArrayField()
-    end_branch_label = models.TextField(null=True)
+    end_branch_label = djm.TextField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"dmg_dist_per_taxonomy'
 
 
-class DmgDistPerTaxonomyData(models.Model):
+class DmgDistPerTaxonomyData(djm.Model):
     """Holds the actual data for damage distributions per taxonomy."""
 
-    dmg_dist_per_taxonomy = models.ForeignKey("DmgDistPerTaxonomy")
-    taxonomy = models.TextField()
-    dmg_state = models.TextField()
-    mean = models.FloatField()
-    stddev = models.FloatField()
+    dmg_dist_per_taxonomy = djm.ForeignKey("DmgDistPerTaxonomy")
+    taxonomy = djm.TextField()
+    dmg_state = djm.TextField()
+    mean = djm.FloatField()
+    stddev = djm.FloatField()
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"dmg_dist_per_taxonomy_data'
 
 
-class DmgDistTotal(models.Model):
+class DmgDistTotal(djm.Model):
     """Holds metadata for 'total damage distribution' values for an entire
     calculation. This is the total over all assets and GMFs."""
 
-    output = models.ForeignKey("Output")
+    output = djm.ForeignKey("Output")
     dmg_states = CharArrayField()
-    end_branch_label = models.TextField(null=True)
+    end_branch_label = djm.TextField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"dmg_dist_total'
 
 
-class DmgDistTotalData(models.Model):
+class DmgDistTotalData(djm.Model):
     """Holds the actual 'total damage distribution' values for for an entire
     calculation. There should be  one record per calculation per damage state.
     """
 
-    dmg_dist_total = models.ForeignKey("DmgDistTotal")
-    dmg_state = models.TextField()
-    mean = models.FloatField()
-    stddev = models.FloatField()
+    dmg_dist_total = djm.ForeignKey("DmgDistTotal")
+    dmg_state = djm.TextField()
+    mean = djm.FloatField()
+    stddev = djm.FloatField()
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riskr\".\"dmg_dist_total_data'
@@ -1219,59 +1244,59 @@ class DmgDistTotalData(models.Model):
 ## Tables in the 'oqmif' schema.
 
 
-class ExposureModel(models.Model):
+class ExposureModel(djm.Model):
     '''
     A risk exposure model
     '''
 
-    owner = models.ForeignKey("OqUser")
-    input = models.ForeignKey("Input")
-    name = models.TextField()
-    description = models.TextField(null=True)
-    category = models.TextField()
-    taxonomy_source = models.TextField(
+    owner = djm.ForeignKey("OqUser")
+    input = djm.ForeignKey("Input")
+    name = djm.TextField()
+    description = djm.TextField(null=True)
+    category = djm.TextField()
+    taxonomy_source = djm.TextField(
         null=True, help_text="the taxonomy system used to classify the assets")
     AREA_CHOICES = (
         (u'aggregated', u'Aggregated area value'),
         (u'per_asset', u'Per asset area value'),
     )
-    area_type = models.TextField(null=True, choices=AREA_CHOICES)
-    area_unit = models.TextField(null=True)
+    area_type = djm.TextField(null=True, choices=AREA_CHOICES)
+    area_unit = djm.TextField(null=True)
     COST_CHOICES = (
         (u'aggregated', u'Aggregated economic value'),
         (u'per_area', u'Per area economic value'),
         (u'per_asset', u'Per asset economic value'),
     )
-    stco_type = models.TextField(null=True, choices=COST_CHOICES,
+    stco_type = djm.TextField(null=True, choices=COST_CHOICES,
                                  help_text="structural cost type")
-    stco_unit = models.TextField(null=True, help_text="structural cost unit")
-    reco_type = models.TextField(null=True, choices=COST_CHOICES,
+    stco_unit = djm.TextField(null=True, help_text="structural cost unit")
+    reco_type = djm.TextField(null=True, choices=COST_CHOICES,
                                  help_text="retrofitting cost type")
-    reco_unit = models.TextField(null=True, help_text="retrofitting cost unit")
-    coco_type = models.TextField(null=True, choices=COST_CHOICES,
+    reco_unit = djm.TextField(null=True, help_text="retrofitting cost unit")
+    coco_type = djm.TextField(null=True, choices=COST_CHOICES,
                                  help_text="contents cost type")
-    coco_unit = models.TextField(null=True, help_text="contents cost unit")
+    coco_unit = djm.TextField(null=True, help_text="contents cost unit")
 
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'oqmif\".\"exposure_model'
 
 
-class Occupancy(models.Model):
+class Occupancy(djm.Model):
     '''
     Asset occupancy data
     '''
 
-    exposure_data = models.ForeignKey("ExposureData")
-    description = models.TextField()
-    occupants = models.IntegerField()
+    exposure_data = djm.ForeignKey("ExposureData")
+    description = djm.TextField()
+    occupants = djm.IntegerField()
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'oqmif\".\"occupancy'
 
 
-class ExposureData(models.Model):
+class ExposureData(djm.Model):
     '''
     Per-asset risk exposure data
     '''
@@ -1279,28 +1304,28 @@ class ExposureData(models.Model):
     REXD = namedtuple(
         "REXD", "cost, cost_type, area, area_type, number_of_units")
 
-    exposure_model = models.ForeignKey("ExposureModel")
-    asset_ref = models.TextField()
-    taxonomy = models.TextField()
-    site = models.PointField(srid=4326)
+    exposure_model = djm.ForeignKey("ExposureModel")
+    asset_ref = djm.TextField()
+    taxonomy = djm.TextField()
+    site = djm.PointField(srid=4326)
     # Override the default manager with a GeoManager instance in order to
     # enable spatial queries.
-    objects = models.GeoManager()
+    objects = djm.GeoManager()
 
-    stco = models.FloatField(null=True, help_text="structural cost")
-    reco = models.FloatField(null=True, help_text="retrofitting cost")
-    coco = models.FloatField(null=True, help_text="contents cost")
+    stco = djm.FloatField(null=True, help_text="structural cost")
+    reco = djm.FloatField(null=True, help_text="retrofitting cost")
+    coco = djm.FloatField(null=True, help_text="contents cost")
 
-    number_of_units = models.FloatField(
+    number_of_units = djm.FloatField(
         null=True, help_text="number of assets, people etc.")
-    area = models.FloatField(null=True)
+    area = djm.FloatField(null=True)
 
-    ins_limit = models.FloatField(
+    ins_limit = djm.FloatField(
         null=True, help_text="insurance coverage limit")
-    deductible = models.FloatField(
+    deductible = djm.FloatField(
         null=True, help_text="insurance deductible")
 
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     @property
     def value(self):
@@ -1327,89 +1352,89 @@ class ExposureData(models.Model):
 ## Tables in the 'riski' schema.
 
 
-class VulnerabilityModel(models.Model):
+class VulnerabilityModel(djm.Model):
     '''
     A risk vulnerability model
     '''
 
-    owner = models.ForeignKey("OqUser")
-    input = models.ForeignKey("Input")
-    name = models.TextField()
-    description = models.TextField(null=True)
-    imt = models.TextField(choices=OqJobProfile.IMT_CHOICES)
+    owner = djm.ForeignKey("OqUser")
+    input = djm.ForeignKey("Input")
+    name = djm.TextField()
+    description = djm.TextField(null=True)
+    imt = djm.TextField(choices=OqJobProfile.IMT_CHOICES)
     imls = FloatArrayField()
-    category = models.TextField()
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    category = djm.TextField()
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riski\".\"vulnerability_model'
 
 
-class VulnerabilityFunction(models.Model):
+class VulnerabilityFunction(djm.Model):
     '''
     A risk vulnerability function
     '''
 
-    vulnerability_model = models.ForeignKey("VulnerabilityModel")
-    taxonomy = models.TextField()
+    vulnerability_model = djm.ForeignKey("VulnerabilityModel")
+    taxonomy = djm.TextField()
     loss_ratios = FloatArrayField()
     covs = FloatArrayField()
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riski\".\"vulnerability_function'
 
 
-class FragilityModel(models.Model):
+class FragilityModel(djm.Model):
     """A risk fragility model"""
 
-    owner = models.ForeignKey("OqUser")
-    input = models.ForeignKey("Input")
-    description = models.TextField(null=True)
+    owner = djm.ForeignKey("OqUser")
+    input = djm.ForeignKey("Input")
+    description = djm.TextField(null=True)
     FORMAT_CHOICES = (
         (u"continuous", u"Continuous fragility model"),
         (u"discrete", u"Discrete fragility model"),
     )
-    format = models.TextField(choices=FORMAT_CHOICES)
+    format = djm.TextField(choices=FORMAT_CHOICES)
     lss = CharArrayField(help_text="limit states")
     imls = FloatArrayField(null=True, help_text="Intensity measure levels")
-    imt = models.TextField(null=True, choices=OqJobProfile.IMT_CHOICES,
+    imt = djm.TextField(null=True, choices=OqJobProfile.IMT_CHOICES,
                            help_text="Intensity measure type")
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riski\".\"fragility_model'
 
 
-class Ffc(models.Model):
+class Ffc(djm.Model):
     """A continuous fragility function"""
 
-    fragility_model = models.ForeignKey("FragilityModel")
-    lsi = models.PositiveSmallIntegerField(
+    fragility_model = djm.ForeignKey("FragilityModel")
+    lsi = djm.PositiveSmallIntegerField(
         help_text="limit state index, facilitates ordering of fragility "
                   "function in accordance with the limit states")
-    ls = models.TextField(help_text="limit state")
-    taxonomy = models.TextField()
-    ftype = models.TextField(null=True, help_text="function/distribution type")
-    mean = models.FloatField(help_text="Mean value")
-    stddev = models.FloatField(help_text="Standard deviation")
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    ls = djm.TextField(help_text="limit state")
+    taxonomy = djm.TextField()
+    ftype = djm.TextField(null=True, help_text="function/distribution type")
+    mean = djm.FloatField(help_text="Mean value")
+    stddev = djm.FloatField(help_text="Standard deviation")
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riski\".\"ffc'
 
 
-class Ffd(models.Model):
+class Ffd(djm.Model):
     """A discrete fragility function"""
 
-    fragility_model = models.ForeignKey("FragilityModel")
-    lsi = models.PositiveSmallIntegerField(
+    fragility_model = djm.ForeignKey("FragilityModel")
+    lsi = djm.PositiveSmallIntegerField(
         help_text="limit state index, facilitates ordering of fragility "
                   "function in accordance with the limit states")
-    ls = models.TextField(help_text="limit state")
-    taxonomy = models.TextField()
+    ls = djm.TextField(help_text="limit state")
+    taxonomy = djm.TextField()
     poes = FloatArrayField(help_text="Probabilities of exceedance")
-    last_update = models.DateTimeField(editable=False, default=datetime.utcnow)
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'riski\".\"ffd'

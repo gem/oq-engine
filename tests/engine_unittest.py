@@ -15,6 +15,8 @@
 
 
 import os
+import subprocess
+import sys
 import unittest
 import uuid
 
@@ -51,19 +53,22 @@ class EngineAPITestCase(unittest.TestCase):
             owner=helpers.default_user(),
             path=os.path.abspath(helpers.demo_file(
                 'HazardMapTest/source_model_logic_tree.xml')),
-            input_type='lt_source', size=671)
+            input_type='lt_source', size=671,
+            digest="4372d13cec89f2a1072a2c7c694656d0")
 
         gmpelt_input = models.Input(
             owner=helpers.default_user(),
             path=os.path.abspath(helpers.demo_file(
                 'HazardMapTest/gmpe_logic_tree.xml')),
-            input_type='lt_gmpe', size=709)
+            input_type='lt_gmpe', size=709,
+            digest="d9ece248a1e73ee25bd5964670282012")
 
         src_model_input = models.Input(
             owner=helpers.default_user(),
             path=os.path.abspath(helpers.demo_file(
                 'HazardMapTest/source_model.xml')),
-            input_type='source', size=1644)
+            input_type='source', size=1644,
+            digest="3118538b30b69289e6ea47967e9f51aa")
 
         expected_inputs_map = dict(
             lt_source=smlt_input, lt_gmpe=gmpelt_input, source=src_model_input)
@@ -197,8 +202,8 @@ class EngineAPITestCase(unittest.TestCase):
 
         actual_jp, params, sections = engine.import_job_profile(
             cfg_path, self.job)
-        self.assertEquals(expected_params, params)
-        self.assertEquals(expected_sections, sections)
+        self.assertEqual(expected_params, params)
+        self.assertEqual(expected_sections, sections)
 
         # Test the OqJobProfile:
         self.assertTrue(
@@ -207,14 +212,15 @@ class EngineAPITestCase(unittest.TestCase):
 
         # Test the Inputs:
         actual_inputs = models.inputs4job(self.job.id)
-        self.assertEquals(3, len(actual_inputs))
+        self.assertEqual(3, len(actual_inputs))
 
         for act_inp in actual_inputs:
             exp_inp = expected_inputs_map[act_inp.input_type]
             self.assertTrue(
-                models.model_equals(exp_inp, act_inp,
-                                    ignore=('id',  'last_update',
-                                            '_owner_cache')))
+                models.model_equals(
+                    exp_inp, act_inp, ignore=(
+                        "id",  "last_update", "path", "model", "_owner_cache",
+                        "owner_id")))
 
     def test_import_job_profile_as_specified_user(self):
         # Test importing of a job profile when a user is specified
@@ -255,7 +261,7 @@ class EngineAPITestCase(unittest.TestCase):
                 with helpers.patch(
                     'openquake.utils.stats.delete_job_counters') as djc_mock:
                     engine.run_job(self.job, params, sections)
-                    self.assertEquals(1, djc_mock.call_count)
+                    self.assertEqual(1, djc_mock.call_count)
 
 
 class EngineLaunchCalcTestCase(unittest.TestCase):
@@ -328,3 +334,166 @@ class ReadSitesFromExposureTestCase(unittest.TestCase):
         actual_sites = set(engine.read_sites_from_exposure(test_job))
 
         self.assertEqual(expected_sites, actual_sites)
+
+
+class FileDigestTestCase(unittest.TestCase):
+    """Test the _file_digest() function."""
+
+    PATH = helpers.get_data_path("src_model1.dat")
+
+    def test__file_digest(self):
+        # Make sure the digest returned by the function matches the one
+        # obtained via /usr/bin/md5sum
+        if sys.platform == 'darwin':
+            expected = subprocess.check_output(["md5", self.PATH]).split()[-1]
+        else:
+            expected = subprocess.check_output(
+                ["md5sum", self.PATH]).split()[0]
+        actual = engine._file_digest(self.PATH)
+        self.assertEqual(expected, actual)
+
+
+class IdenticalInputTestCase(unittest.TestCase, helpers.DbTestCase):
+    """Test the _identical_input() function."""
+
+    EXPOM = helpers.get_data_path("exposure.xml")
+    FRAGM = os.path.join(helpers.SCHEMA_DIR, "examples/fragm_d.xml")
+
+    # list of jobs, first job failed
+    fjf = []
+    # older jobs (first one succeeded)
+    jold = []
+    job = None
+
+    @classmethod
+    def setUpClass(cls):
+        # In 'fjf' we want the first job to have status "failed".
+        # In 'jold' the second job should be "failed".
+        jdata = ((cls.fjf, 0), (cls.jold, 1))
+        for ji, (jl, fidx) in enumerate(jdata):
+            num_jobs = ji + 2
+            for jj in range(num_jobs):
+                job = cls.setup_classic_job(omit_profile=True)
+                job.status = "failed" if jj == fidx else "succeeded"
+                job.save()
+                jl.append(job)
+        cls.job = cls.setup_classic_job()
+        cls.job.status = "succeeded"
+        cls.job.save()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.teardown_job(cls.job)
+
+    def setUp(self):
+        # md5sum digest incorrect
+        emdl_input = models.Input(
+            input_type="exposure", size=123, path=self.EXPOM,
+            owner=self.job.owner, digest="0" * 32)
+        emdl_input.save()
+        i2j = models.Input2job(input=emdl_input, oq_job=self.job)
+        i2j.save()
+        # md5sum digest correct
+        if sys.platform == 'darwin':
+            digest = subprocess.check_output(["md5", self.FRAGM]).split()[-1]
+        else:
+            digest = subprocess.check_output(
+                ["md5sum", self.FRAGM]).split()[0]
+
+        # The 'fmdl_input' will be linked to a sequence of jobs so that the
+        # first/oldest of them *was* successful i.e. ot should be found an
+        # considered for reuse.
+        self.fmdl_input = models.Input(
+            input_type="fragility", size=123, path=self.FRAGM,
+            owner=self.job.owner, digest=digest)
+        self.fmdl_input.save()
+        jdata = (self.jold,)
+        for jl in jdata:
+            for job in jl:
+                i2j = models.Input2job(input=self.fmdl_input, oq_job=job)
+                i2j.save()
+
+        # Despite being more recent (inserted into the db after 'fmdl_input')
+        # the 'failed_input' will not be found and/or considered for reuse
+        # because the first/oldest job that is linked to it was not successful.
+        self.failed_input = models.Input(
+            input_type="fragility", size=123, path=self.FRAGM,
+            owner=self.job.owner, digest=digest)
+        self.failed_input.save()
+        # Link 'failed_input' to a sequence of jobs where the oldest one of
+        # them was not successful.
+        jdata = (self.fjf,)
+        for jl in jdata:
+            for job in jl:
+                i2j = models.Input2job(input=self.failed_input, oq_job=job)
+                i2j.save()
+
+    def test__identical_input(self):
+        # The matching fragility model input is found
+        expected = self.fmdl_input
+        actual = engine._identical_input("fragility", expected.digest)
+        self.assertEqual(expected.id, actual.id)
+
+    def test__identical_input_and_no_match(self):
+        # The exposure model input is not found since the md5sum digest does
+        # not match.
+        actual = engine._identical_input("exposure", "x" * 32)
+        self.assertIs(None, actual)
+
+
+class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
+    """Test the _insert_input_files() function."""
+
+    GLT = helpers.demo_file("simple_fault_demo_hazard/gmpe_logic_tree.xml")
+    SLT = helpers.demo_file(
+        "simple_fault_demo_hazard/source_model_logic_tree.xml")
+
+    PARAMS = {
+        "GMPE_LOGIC_TREE_FILE": GLT,
+        "SOURCE_MODEL_LOGIC_TREE_FILE": SLT}
+
+    old_job = None
+    job = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.old_job = cls.setup_classic_job()
+        cls.old_job.status = "succeeded"
+        cls.old_job.save()
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.teardown_job(cls.old_job)
+
+    def setUp(self):
+        # md5sum digest incorrect
+        self.glt_i = models.Input(input_type="lt_gmpe", size=123,
+                                  path=self.GLT, owner=self.old_job.owner,
+                                  digest="0" * 32)
+        self.glt_i.save()
+        i2j = models.Input2job(input=self.glt_i, oq_job=self.old_job)
+        i2j.save()
+        # md5sum digest correct
+        if sys.platform == 'darwin':
+            digest = subprocess.check_output(["md5", self.SLT]).split()[-1]
+        else:
+            digest = subprocess.check_output(["md5sum", self.SLT]).split()[0]
+        self.slt_i = models.Input(input_type="lt_source", size=123,
+                                  path=self.SLT, owner=self.old_job.owner,
+                                  digest=digest)
+        self.slt_i.save()
+        i2j = models.Input2job(input=self.slt_i, oq_job=self.old_job)
+        i2j.save()
+        self.job = self.setup_classic_job()
+
+    def tearDown(self):
+        self.teardown_job(self.job)
+
+    def test__insert_input_files(self):
+        # A new input record is inserted for the GMPE logic tree but the
+        # existing input row is reused for the source model logic tree.
+        engine._insert_input_files(self.PARAMS, self.job, False)
+        [glt_i] = models.inputs4job(self.job.id, input_type="lt_gmpe")
+        self.assertNotEqual(self.glt_i.id, glt_i.id)
+        [slt_i] = models.inputs4job(self.job.id, input_type="lt_source")
+        self.assertEqual(self.slt_i.id, slt_i.id)
