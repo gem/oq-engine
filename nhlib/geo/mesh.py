@@ -361,27 +361,30 @@ class RectangularMesh(Mesh):
         lon, lat = geo_utils.get_middle_point(lon1, lat1, lon2, lat2)
         return Point(lon, lat, depth)
 
-    def get_mean_dip(self):
+    def get_mean_inclination_and_azimuth(self):
         """
-        Calculate weighted average dip of the mesh surface.
+        Calculate weighted average inclination and azimuth of the mesh surface.
 
         :returns:
-            Dip angle in decimal degrees.
+            Tuple of two float numbers: inclination angle in a range [0, 90]
+            and azimuth in range (-180, 180] (in decimal degrees).
 
-        The mesh is triangulated, the dip for each triangle is computed
-        and average dip weighted on each triangle's area is calculated.
+        The mesh is triangulated, the inclination and strike for each triangle
+        is computed and average values weighted on each triangle's area
+        are calculated. Azimuth is always defined in a way that inclination
+        angle doesn't exceed 90 degree.
         """
         # TODO: comment the code better
-        # TODO: combine with strike calculation
-        assert self.lons.shape[0] > 1, \
-               "dip is only defined for mesh of more than one row of points"
+        assert not 1 in self.lons.shape, (
+            "dip and strike are only defined for mesh of more than one "
+            "row and more than one column of points"
+        )
 
-        if self.depths is None:
-            return 0.0
-
-        assert ((self.depths[1:] - self.depths[:-1]) >= 0).all(), \
-               "get_mean_dip() requires next mesh row to be not shallower " \
-               "than the previous one"
+        if self.depths is not None:
+            assert ((self.depths[1:] - self.depths[:-1]) >= 0).all(), (
+                "get_mean_dip_and_strike() requires next mesh row to be "
+                "not shallower than the previous one"
+            )
 
         points = geo_utils.spherical_to_cartesian(
             self.lons, self.lats, self.depths
@@ -391,26 +394,65 @@ class RectangularMesh(Mesh):
         updip = points[:-1] - points[1:]
         earth_surface_tangent_normal = geo_utils.normalized(points)
         diag = points[:-1, 1:] - points[1:, :-1]
+        west = numpy.array([0.0, 1.0, 0.0])
+        north = numpy.array([0.0, 0.0, 1.0])
 
         # top-left triangles
         e1 = along_strike[:-1]
         e2 = updip[:, :-1]
-        en = earth_surface_tangent_normal[:-1, :-1]
-        triangle_area = geo_utils.triangle_area(e1, e2, diag)
+        top_left_triangle_area = geo_utils.triangle_area(e1, e2, diag)
         triangle_normal = geo_utils.normalized(numpy.cross(e1, e2))
+        en = earth_surface_tangent_normal[:-1, :-1]
         dip_cos = numpy.sum(en * triangle_normal, axis=-1).clip(-1.0, 1.0)
-        xx = numpy.sum(triangle_area * dip_cos)
+        xx = numpy.sum(top_left_triangle_area * dip_cos)
         # express sine via cosine using Pythagorean trigonometric identity,
         # this is a bit faster than sin(arccos(dip_cos))
-        yy = numpy.sum(triangle_area * numpy.sqrt(1 - dip_cos * dip_cos))
+        yy = numpy.sum(top_left_triangle_area
+                       * numpy.sqrt(1 - dip_cos * dip_cos))
 
         # bottom-right triangles
         e1 = along_strike[1:]
         e2 = updip[:, 1:]
-        en = earth_surface_tangent_normal[1:, 1:]
-        triangle_area = geo_utils.triangle_area(e1, e2, diag)
+        bottom_right_triangle_area = geo_utils.triangle_area(e1, e2, diag)
         triangle_normal = geo_utils.normalized(numpy.cross(e1, e2))
+        en = earth_surface_tangent_normal[1:, 1:]
         dip_cos = numpy.sum(en * triangle_normal, axis=-1).clip(-1.0, 1.0)
-        xx += numpy.sum(triangle_area * dip_cos)
-        yy += numpy.sum(triangle_area * numpy.sqrt(1 - dip_cos * dip_cos))
-        return numpy.degrees(numpy.arctan2(yy, xx))
+        xx += numpy.sum(bottom_right_triangle_area * dip_cos)
+        yy += numpy.sum(bottom_right_triangle_area
+                        * numpy.sqrt(1 - dip_cos * dip_cos))
+        dip = numpy.degrees(numpy.arctan2(yy, xx))
+
+        if self.depths is None:
+            # TODO: avoid unnecessary calculations for dip
+            dip = 0
+
+        # strike calculation
+        norms_north = geo_utils.normalized(numpy.cross(points, points + west))
+        norms_west = geo_utils.normalized(numpy.cross(points + north, points))
+        along_strike = geo_utils.normalized(along_strike)
+
+        # top-left triangles
+        sign = numpy.sign(numpy.sign(
+            numpy.sum(along_strike[:-1] * norms_west[:-1, :-1], axis=-1)) + 0.1
+        )
+        az_cos = numpy.sum(along_strike[:-1] * norms_north[:-1, :-1], axis=-1)
+        xx = numpy.sum(top_left_triangle_area * az_cos)
+        yy = numpy.sum(top_left_triangle_area
+                       * numpy.sqrt(1 - az_cos * az_cos) * sign)
+
+        # bottom-right triangles
+        sign = numpy.sign(numpy.sign(
+            numpy.sum(along_strike[1:] * norms_west[1:, 1:], axis=-1)) + 0.1
+        )
+        az_cos = numpy.sum(along_strike[1:] * norms_north[1:, 1:], axis=-1)
+        xx += numpy.sum(bottom_right_triangle_area * az_cos)
+        yy += numpy.sum(bottom_right_triangle_area
+                        * numpy.sqrt(1 - az_cos * az_cos) * sign)
+
+        strike = numpy.degrees(numpy.arctan2(yy, xx))
+
+        if dip > 90:
+            dip = 180 - dip
+            strike = (strike + 180) % 360
+
+        return dip, strike

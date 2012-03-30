@@ -59,7 +59,9 @@ class SimpleFaultSurface(BaseSurface):
         :returns:
             The average dip, in decimal degrees.
         """
-        return self.get_mesh()[0:2].get_mean_dip()
+        dip, strike = self.get_mesh()[0:2].get_mean_inclination_and_azimuth()
+        # TODO: cache values
+        return dip
 
     def get_strike(self):
         """
@@ -73,6 +75,7 @@ class SimpleFaultSurface(BaseSurface):
         :rtype:
             float
         """
+        # TODO: use mesh get_mean_inclination_and_azimuth()
         return Line(list(self.get_mesh()[0:1])).average_azimuth()
 
     @classmethod

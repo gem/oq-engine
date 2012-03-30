@@ -432,19 +432,58 @@ class RectangularMeshGetMiddlePointTestCase(unittest.TestCase):
                          Point(15.996712, -0.250993, 3.5))
 
 
-class RectangularMeshGetMeanDipTestCase(unittest.TestCase):
+class RectangularMeshGetMeanInclinationAndAzimuthTestCase(unittest.TestCase):
     def test_on_surface(self):
         row1 = [Point(0, 0), Point(0, 1)]
         row2 = [Point(1, 0), Point(1, 1)]
         mesh = RectangularMesh.from_points_list([row1, row2])
-        self.assertEqual(mesh.get_mean_dip(), 0)
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertEqual(dip, 0)
+        self.assertAlmostEqual(strike, 0, delta=0.6)
+
+        row1 = [Point(0, 0), Point(0, -1)]
+        row2 = [Point(1, 0), Point(1, -1)]
+        mesh = RectangularMesh.from_points_list([row1, row2])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertEqual(dip, 0)
+        self.assertAlmostEqual(strike, 180, delta=0.6)
+
+        row1 = [Point(0, 0), Point(1, 1)]
+        row2 = [Point(1, 0), Point(2, 1)]
+        mesh = RectangularMesh.from_points_list([row1, row2])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertEqual(dip, 0)
+        self.assertAlmostEqual(strike, 45, delta=0.6)
+
+        row1 = [Point(0, 0), Point(1, -1)]
+        row2 = [Point(1, 0), Point(2, -1)]
+        mesh = RectangularMesh.from_points_list([row1, row2])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertEqual(dip, 0)
+        self.assertAlmostEqual(strike, 135, delta=0.6)
+
+        row1 = [Point(0, 0), Point(-1, -1)]
+        row2 = [Point(-1, 0), Point(-2, -1)]
+        mesh = RectangularMesh.from_points_list([row1, row2])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertEqual(dip, 0)
+        self.assertAlmostEqual(strike, -135, delta=0.6)
+
+        row1 = [Point(0, 0), Point(-1, 1)]
+        row2 = [Point(-1, 0), Point(-2, 1)]
+        mesh = RectangularMesh.from_points_list([row1, row2])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertEqual(dip, 0)
+        self.assertAlmostEqual(strike, -45, delta=0.6)
 
     def test_one_cell(self):
         top = [Point(0, -0.01), Point(0, 0.01)]
         bottom = [Point(0.01, -0.01, 1.11), Point(0.01, 0.01, 1.11)]
 
         mesh = RectangularMesh.from_points_list([top, bottom])
-        self.assertAlmostEqual(mesh.get_mean_dip(), 45, delta=0.05)
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertAlmostEqual(dip, 45, delta=0.05)
+        self.assertAlmostEqual(strike, 0, delta=0.05)
 
     def test_two_cells(self):
         top = [Point(0, -0.01), Point(0, 0.01)]
@@ -452,28 +491,38 @@ class RectangularMeshGetMeanDipTestCase(unittest.TestCase):
         bottom = [Point(0.01, -0.01, 2.22), Point(0.01, 0.01, 2.22)]
 
         mesh = RectangularMesh.from_points_list([top, middle, bottom])
-        self.assertAlmostEqual(mesh.get_mean_dip(),
-                               math.degrees(math.atan2(2, 1)), delta=0.1)
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertAlmostEqual(dip, math.degrees(math.atan2(2, 1)), delta=0.1)
+        self.assertAlmostEqual(strike, 0, delta=0.02)
 
         bottom = [Point(0.01, -0.01, 3.33), Point(0.01, 0.01, 3.33)]
         mesh = RectangularMesh.from_points_list([top, middle, bottom])
-        self.assertAlmostEqual(mesh.get_mean_dip(),
-                               math.degrees(math.atan2(3, 1)), delta=0.1)
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertAlmostEqual(dip, math.degrees(math.atan2(3, 1)), delta=0.1)
+        self.assertAlmostEqual(strike, 0, delta=0.02)
 
     def test_one_cell_unequal_area(self):
-        # top-left triangle is vertical, has dip of 90 degrees and area
-        # of 1 by 1 over 2. bottom-right one has dip atan2(1, sqrt(2) / 2.0)
-        # which is 54.73561 degrees and area that is 1.73246136 times area
-        # of the first one's. weighted mean dip is 67.5 degrees
+        # top-left triangle is vertical, has dip of 90 degrees, zero
+        # strike and area of 1 by 1 over 2. bottom-right one has dip
+        # of atan2(1, sqrt(2) / 2.0) which is 54.73561 degrees, strike
+        # of 45 degrees and area that is 1.73246136 times area of the
+        # first one's. weighted mean dip is 67.5 degrees and weighted
+        # mean strike is 28.84 degrees
         top = [Point(0, -0.01), Point(0, 0.01)]
         bottom = [Point(0, -0.01, 2.22), Point(0.02, 0.01, 2.22)]
 
         mesh = RectangularMesh.from_points_list([top, bottom])
-        self.assertAlmostEqual(mesh.get_mean_dip(), 67.5, delta=0.05)
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertAlmostEqual(dip, 67.5, delta=0.05)
+        self.assertAlmostEqual(strike, 28.84, delta=0.05)
 
     def test_dip_over_90_degree(self):
         top = [Point(0, -0.01), Point(0, 0.01)]
         bottom = [Point(-0.01, -0.01, 1.11), Point(-0.01, 0.01, 1.11)]
 
         mesh = RectangularMesh.from_points_list([top, bottom])
-        self.assertAlmostEqual(mesh.get_mean_dip(), 135, delta=0.05)
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        # dip must be still in a range 0..90
+        self.assertAlmostEqual(dip, 45, delta=0.05)
+        # strike must be reversed
+        self.assertAlmostEqual(strike, 180, delta=0.05)
