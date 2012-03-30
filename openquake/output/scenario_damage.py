@@ -131,7 +131,7 @@ class DmgDistPerAssetXMLWriter(object):
         self.root.set("%sid" % xml.GML, "n1")
 
         self.dmg_dist_el = etree.SubElement(self.root, "dmgDistPerAsset")
-        self.dmg_dist_el.set("endBranchLabel", self.end_branch_label)
+        self.dmg_dist_el.set("endBranchLabel", str(self.end_branch_label))
 
         dmg_states = etree.SubElement(self.dmg_dist_el, "damageStates")
         dmg_states.text = " ".join(self.damage_states)
