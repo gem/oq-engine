@@ -143,7 +143,6 @@ class BaseRiskCalculator(Calculator):
     def pre_execute(self):
         """Make sure the exposure and vulnerability data is in the database."""
         self.store_exposure_assets()
-        self.store_fragility_model()
         self.store_vulnerability_model()
         self.partition()
 
@@ -246,21 +245,29 @@ class BaseRiskCalculator(Calculator):
 
     def store_exposure_assets(self):
         """Load exposure assets and write them to database."""
-        [emdl] = models.inputs4job(self.job_ctxt.job_id, "exposure")
-        path = os.path.join(self.job_ctxt.base_path, emdl.path)
+        [emi] = models.inputs4job(self.job_ctxt.job_id, "exposure")
+        if emi.exposuremodel_set.all().count() > 0:
+            return
 
+        path = os.path.join(self.job_ctxt.base_path, emi.path)
         exposure_parser = exposure.ExposureModelFile(path)
-        writer = ExposureDBWriter(emdl)
+        writer = ExposureDBWriter(emi)
         writer.serialize(exposure_parser)
+        return emi.model()
 
     def store_fragility_model(self):
         """Load fragility model and write it to database."""
-        fmodels = models.inputs4job(self.job_ctxt.job_id, "fragility")
-        for fmdl in fmodels:
-            path = os.path.join(self.job_ctxt.base_path, fmdl.path)
+        new_models = []
+        fmis = models.inputs4job(self.job_ctxt.job_id, "fragility")
+        for fmi in fmis:
+            if fmi.fragilitymodel_set.all().count() > 0:
+                continue
+            path = os.path.join(self.job_ctxt.base_path, fmi.path)
             parser = fragility.FragilityModelParser(path)
-            writer = FragilityDBWriter(fmdl, parser)
+            writer = FragilityDBWriter(fmi, parser)
             writer.serialize()
+            new_models.append(writer.model)
+        return new_models if new_models else None
 
     def store_vulnerability_model(self):
         """ load vulnerability and write to kvs """
@@ -1165,3 +1172,22 @@ class AggregateLossCurve(object):
                 self.losses, loss_range), tses), time_span)
 
         return _generate_curve(loss_range, probs_of_exceedance)
+
+
+def load_gmvs_at(job_id, point):
+    """
+    From the KVS, load all the ground motion values for the given point. We
+    expect one ground motion value per realization of the job.
+    Since there can be tens of thousands of realizations, this could return a
+    large list.
+
+    Note(LB): In the future, we may want to refactor this (and the code which
+    uses the values) to use a generator instead.
+
+    :param point: :py:class:`openquake.shapes.GridPoint` object
+
+    :returns: List of ground motion values (as floats). Each value represents a
+                realization of the calculation for a single point.
+    """
+    gmfs_key = kvs.tokens.ground_motion_values_key(job_id, point)
+    return [float(x['mag']) for x in kvs.get_list_json_decoded(gmfs_key)]

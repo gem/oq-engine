@@ -18,6 +18,7 @@ import itertools
 import os
 import numpy
 import unittest
+import json
 
 from django.contrib.gis import geos
 
@@ -27,8 +28,10 @@ from openquake.calculators.risk.general import BaseRiskCalculator
 from openquake.calculators.risk.general import BetaDistribution
 from openquake.calculators.risk.general import compute_alpha
 from openquake.calculators.risk.general import compute_beta
+from openquake.calculators.risk.general import load_gmvs_at
 from openquake.db import models
 from openquake import engine
+from openquake import kvs
 from openquake import shapes
 from openquake.output.risk import LossMapDBWriter
 from openquake.output.risk import LossMapNonScenarioXMLWriter
@@ -245,7 +248,8 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
 
         calc.store_exposure_assets()
         [input] = models.inputs4job(cls.job.id, input_type="exposure")
-        [model] = input.exposuremodel_set.all()
+        model = input.model()
+        assets = model.exposuredata_set.filter(taxonomy="af/ctc-D/LR")
         # Add some more assets.
         coos = [(10.000155392289116, 46.546194318563),
                 (10.222034128255, 46.0071299176413),
@@ -253,9 +257,11 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
         for lat, lon in coos:
             site = shapes.Site(lat, lon)
             cls.sites.append(site)
+            if assets:
+                continue
             location = geos.GEOSGeometry(site.point.to_wkt())
             asset = models.ExposureData(
-                exposure_model=model, taxonomy="RC/DMRF-D/LR",
+                exposure_model=model, taxonomy="af/ctc-D/LR",
                 asset_ref=helpers.random_string(6), stco=lat * 2,
                 site=location, reco=1.1 * lon)
             asset.save()
@@ -306,30 +312,30 @@ class AssetsAtTestCase(unittest.TestCase, helpers.DbTestCase):
 
         # storing the basic exposure model
         ClassicalRiskCalculator(calc_proxy).store_exposure_assets()
+        [input] = models.inputs4job(cls.job.id, input_type="exposure")
+        model = input.model()
+        assets = model.exposuredata_set.filter(taxonomy="aa/aatc-D/LR")
 
-        [em_input] = models.inputs4job(cls.job.id, input_type="exposure")
-        [model] = em_input.exposuremodel_set.all()
+        if not assets:
+            # This model did not exist in the database before.
+            site = shapes.Site(1.0, 2.0)
+            # more assets at same location
+            models.ExposureData(
+                exposure_model=model, taxonomy="aa/aatc-D/LR",
+                asset_ref="ASSET_1", stco=1,
+                site=geos.GEOSGeometry(site.point.to_wkt()), reco=1).save()
 
-        site = shapes.Site(1.0, 2.0)
+            models.ExposureData(
+                exposure_model=model, taxonomy="aa/aatc-D/LR",
+                asset_ref="ASSET_2", stco=1,
+                site=geos.GEOSGeometry(site.point.to_wkt()), reco=1).save()
 
-        # more assets at same location
-        models.ExposureData(
-            exposure_model=model, taxonomy="NOT_USED",
-            asset_ref="ASSET_1", stco=1,
-            site=geos.GEOSGeometry(site.point.to_wkt()), reco=1).save()
-
-        models.ExposureData(
-            exposure_model=model, taxonomy="NOT_USED",
-            asset_ref="ASSET_2", stco=1,
-            site=geos.GEOSGeometry(site.point.to_wkt()), reco=1).save()
-
-        site = shapes.Site(2.0, 2.0)
-
-        # just one asset at location
-        models.ExposureData(
-            exposure_model=model, taxonomy="NOT_USED",
-            asset_ref="ASSET_3", stco=1,
-            site=geos.GEOSGeometry(site.point.to_wkt()), reco=1).save()
+            site = shapes.Site(2.0, 2.0)
+            # just one asset at location
+            models.ExposureData(
+                exposure_model=model, taxonomy="aa/aatc-D/LR",
+                asset_ref="ASSET_3", stco=1,
+                site=geos.GEOSGeometry(site.point.to_wkt()), reco=1).save()
 
     def test_one_asset_per_site(self):
         site = shapes.Site(2.0, 2.0)
@@ -351,3 +357,44 @@ class AssetsAtTestCase(unittest.TestCase, helpers.DbTestCase):
         site = shapes.Site(10.0, 10.0)
 
         self.assertEqual([], BaseRiskCalculator.assets_at(self.job.id, site))
+
+
+class LoadGroundMotionValuesTestCase(unittest.TestCase):
+
+    job_id = "1234"
+    region = shapes.Region.from_simple((0.1, 0.1), (0.2, 0.2))
+
+    def setUp(self):
+        kvs.mark_job_as_current(self.job_id)
+        kvs.cache_gc(self.job_id)
+
+    def tearDown(self):
+        kvs.mark_job_as_current(self.job_id)
+        kvs.cache_gc(self.job_id)
+
+    def test_load_gmvs_at(self):
+        """
+        Exercise the function
+        :func:`openquake.calculators.risk.general.load_gmvs_at`.
+        """
+
+        gmvs = [
+            {'site_lon': 0.1, 'site_lat': 0.2, 'mag': 0.117},
+            {'site_lon': 0.1, 'site_lat': 0.2, 'mag': 0.167},
+            {'site_lon': 0.1, 'site_lat': 0.2, 'mag': 0.542}]
+
+        expected_gmvs = [0.117, 0.167, 0.542]
+        point = self.region.grid.point_at(shapes.Site(0.1, 0.2))
+
+        # we expect this point to be at row 1, column 0
+        self.assertEqual(1, point.row)
+        self.assertEqual(0, point.column)
+
+        key = kvs.tokens.ground_motion_values_key(self.job_id, point)
+
+        # place the test values in kvs
+        for gmv in gmvs:
+            kvs.get_client().rpush(key, json.JSONEncoder().encode(gmv))
+
+        actual_gmvs = load_gmvs_at(self.job_id, point)
+        self.assertEqual(expected_gmvs, actual_gmvs)
