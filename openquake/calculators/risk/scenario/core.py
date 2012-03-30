@@ -24,7 +24,6 @@ event based approach.
 import numpy
 import os
 
-from openquake import kvs
 from openquake import logs
 from openquake import shapes
 
