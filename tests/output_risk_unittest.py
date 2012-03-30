@@ -64,10 +64,13 @@ class LossCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestCase):
         [input] = models.inputs4job(self.job.id, input_type="exposure",
                                     path=path)
         owner = models.OqUser.objects.get(user_name="openquake")
-        emdl = models.ExposureModel(
-            owner=owner, input=input, description="LCB test exposure model",
-            category="LCB cars", stco_unit="peanuts", stco_type="aggregated")
-        emdl.save()
+        emdl = input.model()
+        if not emdl:
+            emdl = models.ExposureModel(
+                owner=owner, input=input, description="LCB exposure model",
+                category="LCB cars", stco_unit="peanuts",
+                stco_type="aggregated")
+            emdl.save()
 
         asset_data = [
             (Site(-118.077721, 33.852034),
@@ -239,10 +242,13 @@ class LossMapDBBaseTestCase(unittest.TestCase, helpers.DbTestCase):
         [input] = models.inputs4job(self.job.id, input_type="exposure",
                                     path=path)
         owner = models.OqUser.objects.get(user_name="openquake")
-        emdl = models.ExposureModel(
-            owner=owner, input=input, description="LMB test exposure model",
-            category="LMB yachts", stco_unit="oranges", stco_type="aggregated")
-        emdl.save()
+        emdl = input.model()
+        if not emdl:
+            emdl = models.ExposureModel(
+                owner=owner, input=input, description="LMB exposure model",
+                category="LMB yachts", stco_unit="oranges",
+                stco_type="aggregated")
+            emdl.save()
 
         asset_data = [
             ("asset_a_1", SITE_A,
