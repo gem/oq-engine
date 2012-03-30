@@ -407,10 +407,6 @@ class RectangularMesh(Mesh):
         # as normals to those planes
         earth_surface_tangent_normal = geo_utils.normalized(points)
 
-        # unit vectors along y and z axes
-        west = numpy.array([0.0, 1.0, 0.0])
-        north = numpy.array([0.0, 0.0, 1.0])
-
         # calculating triangles' area and normals for top-left triangles
         e1 = along_azimuth[:-1]
         e2 = updip[:, :-1]
@@ -461,18 +457,44 @@ class RectangularMesh(Mesh):
         # do separate calculations for top-left and bottom-right triangles
         # and also combine results using mean of circular quantities approach
 
-        # TODO: comment this part better
-        norms_north = geo_utils.normalized(numpy.cross(points, points + west))
-        norms_west = geo_utils.normalized(numpy.cross(points + north, points))
+        # unit vector along z axis
+        z_unit = numpy.array([0.0, 0.0, 1.0])
+
+        # unit vectors pointing west from each point of the mesh, they define
+        # planes that contain meridian of respective point
+        norms_west = geo_utils.normalized(numpy.cross(points + z_unit, points))
+        # unit vectors parallel to planes defined by previous ones. they are
+        # directed from each point to a point lying on z axis on the same
+        # distance from earth center
+        norms_north = geo_utils.normalized(numpy.cross(points, norms_west))
+        # need to normalize triangles' azimuthal edges because we will project
+        # them on other normals and thus calculate an angle in between
         along_azimuth = geo_utils.normalized(along_azimuth)
 
-        # top-left triangles
+        # process top-left triangles
+        # here we identify the sign of direction of the triangles' azimuthal
+        # edges: is edge pointing west or east? for finding that we project
+        # those edges to vectors directing to west by calculating scalar
+        # product and get the sign of resulting value: if it is negative
+        # than the resulting azimuth should be negative as top edge is pointing
+        # west.
         sign = numpy.sign(numpy.sign(
             numpy.sum(along_azimuth[:-1] * norms_west[:-1, :-1], axis=-1))
+            # we run numpy.sign(numpy.sign(...) + 0.1) to make resulting values
+            # be only either -1 or 1 with zero values (when edge is pointing
+            # strictly north or south) expressed as 1 (which means "don't
+            # change the sign")
             + 0.1
         )
+        # the length of projection of azimuthal edge on norms_north is cosine
+        # of edge's azimuth
         az_cos = numpy.sum(along_azimuth[:-1] * norms_north[:-1, :-1], axis=-1)
+        # use the same approach for finding the weighted mean
+        # as for inclination (see above)
         xx = numpy.sum(tl_area * az_cos)
+        # the only difference is that azimuth is defined in a range
+        # (-180, 180], so we need to have two reference planes and change
+        # sign of projection on one normal to sign of projection to another one
         yy = numpy.sum(tl_area * numpy.sqrt(1 - az_cos * az_cos) * sign)
 
         # bottom-right triangles
@@ -487,7 +509,12 @@ class RectangularMesh(Mesh):
         azimuth = numpy.degrees(numpy.arctan2(yy, xx))
 
         if inclination > 90:
+            # average inclination is over 90 degree, that means that we need
+            # to reverse azimuthal direction in order for inclination to be
+            # in range [0, 90]
             inclination = 180 - inclination
             azimuth = (azimuth + 180) % 360
+            if azimuth > 180:
+                azimuth = azimuth - 360
 
         return inclination, azimuth
