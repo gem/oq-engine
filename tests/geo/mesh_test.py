@@ -439,42 +439,42 @@ class RectangularMeshGetMeanInclinationAndAzimuthTestCase(unittest.TestCase):
         mesh = RectangularMesh.from_points_list([row1, row2])
         dip, strike = mesh.get_mean_inclination_and_azimuth()
         self.assertEqual(dip, 0)
-        self.assertAlmostEqual(strike, 0, delta=0.6)
+        self.assertAlmostEqual(strike, 0, delta=0.5)
 
         row1 = [Point(0, 0), Point(0, -1)]
         row2 = [Point(1, 0), Point(1, -1)]
         mesh = RectangularMesh.from_points_list([row1, row2])
         dip, strike = mesh.get_mean_inclination_and_azimuth()
         self.assertEqual(dip, 0)
-        self.assertAlmostEqual(strike, 180, delta=0.6)
+        self.assertAlmostEqual(strike, 180, delta=0.5)
 
         row1 = [Point(0, 0), Point(1, 1)]
         row2 = [Point(1, 0), Point(2, 1)]
         mesh = RectangularMesh.from_points_list([row1, row2])
         dip, strike = mesh.get_mean_inclination_and_azimuth()
         self.assertEqual(dip, 0)
-        self.assertAlmostEqual(strike, 45, delta=0.6)
+        self.assertAlmostEqual(strike, 45, delta=0.01)
 
         row1 = [Point(0, 0), Point(1, -1)]
         row2 = [Point(1, 0), Point(2, -1)]
         mesh = RectangularMesh.from_points_list([row1, row2])
         dip, strike = mesh.get_mean_inclination_and_azimuth()
         self.assertEqual(dip, 0)
-        self.assertAlmostEqual(strike, 135, delta=0.6)
+        self.assertAlmostEqual(strike, 135, delta=0.01)
 
         row1 = [Point(0, 0), Point(-1, -1)]
         row2 = [Point(-1, 0), Point(-2, -1)]
         mesh = RectangularMesh.from_points_list([row1, row2])
         dip, strike = mesh.get_mean_inclination_and_azimuth()
         self.assertEqual(dip, 0)
-        self.assertAlmostEqual(strike, -135, delta=0.6)
+        self.assertAlmostEqual(strike, 225, delta=0.01)
 
         row1 = [Point(0, 0), Point(-1, 1)]
         row2 = [Point(-1, 0), Point(-2, 1)]
         mesh = RectangularMesh.from_points_list([row1, row2])
         dip, strike = mesh.get_mean_inclination_and_azimuth()
         self.assertEqual(dip, 0)
-        self.assertAlmostEqual(strike, -45, delta=0.6)
+        self.assertAlmostEqual(strike, 315, delta=0.01)
 
     def test_one_cell(self):
         top = [Point(0, -0.01), Point(0, 0.01)]
@@ -520,25 +520,25 @@ class RectangularMeshGetMeanInclinationAndAzimuthTestCase(unittest.TestCase):
         mesh = RectangularMesh.from_points_list([row1, row2])
         dip, strike = mesh.get_mean_inclination_and_azimuth()
         self.assertAlmostEqual(dip, 90)
-        self.assertAlmostEqual(strike, 0, delta=0.1)
+        self.assertAlmostEqual(strike, 360)
 
         row1 = [Point(-90.1, -0.1), Point(-90, 0), Point(-89.9, 0.1)]
         row2 = [Point(-90.0, -0.1, 1), Point(-89.9, 0, 1), Point(-89.8, 0.1, 1)]
         mesh = RectangularMesh.from_points_list([row1, row2])
         dip, strike = mesh.get_mean_inclination_and_azimuth()
-        self.assertAlmostEqual(strike, 45, delta=0.1)
+        self.assertAlmostEqual(strike, 45, delta=1e-4)
 
         row1 = [Point(-90.1, -0.1), Point(-90, 0), Point(-89.9, 0.1)]
         row2 = [Point(-90.0, -0.1, 1), Point(-89.9, 0, 1), Point(-89.8, 0.1, 1)]
         mesh = RectangularMesh.from_points_list([row1, row2])
         dip, strike = mesh.get_mean_inclination_and_azimuth()
-        self.assertAlmostEqual(strike, 45, delta=0.1)
+        self.assertAlmostEqual(strike, 45, delta=1e-3)
 
         row1 = [Point(-90.1, -0.1), Point(-90, 0), Point(-89.9, 0.1)]
         row2 = [Point(-90.2, -0.1, 1), Point(-90.1, 0, 1), Point(-90, 0.1, 1)]
         mesh = RectangularMesh.from_points_list([row1, row2])
         dip, strike = mesh.get_mean_inclination_and_azimuth()
-        self.assertAlmostEqual(strike, -135, delta=0.1)
+        self.assertAlmostEqual(strike, 225, delta=1e-3)
 
     def test_one_cell_unequal_area(self):
         # top-left triangle is vertical, has dip of 90 degrees, zero
@@ -564,4 +564,4 @@ class RectangularMeshGetMeanInclinationAndAzimuthTestCase(unittest.TestCase):
         # dip must be still in a range 0..90
         self.assertAlmostEqual(dip, 45, delta=0.05)
         # strike must be reversed
-        self.assertAlmostEqual(strike, -180, delta=0.05)
+        self.assertAlmostEqual(strike, 180, delta=0.05)

@@ -367,7 +367,7 @@ class RectangularMesh(Mesh):
 
         :returns:
             Tuple of two float numbers: inclination angle in a range [0, 90]
-            and azimuth in range (-180, 180] (in decimal degrees).
+            and azimuth in range [0, 360) (in decimal degrees).
 
         The mesh is triangulated, the inclination and azimuth for each triangle
         is computed and average values weighted on each triangle's area
@@ -493,7 +493,7 @@ class RectangularMesh(Mesh):
         # as for inclination (see above)
         xx = numpy.sum(tl_area * az_cos)
         # the only difference is that azimuth is defined in a range
-        # (-180, 180], so we need to have two reference planes and change
+        # [0, 360), so we need to have two reference planes and change
         # sign of projection on one normal to sign of projection to another one
         yy = numpy.sum(tl_area * numpy.sqrt(1 - az_cos * az_cos) * sign)
 
@@ -507,6 +507,8 @@ class RectangularMesh(Mesh):
         yy += numpy.sum(br_area * numpy.sqrt(1 - az_cos * az_cos) * sign)
 
         azimuth = numpy.degrees(numpy.arctan2(yy, xx))
+        if azimuth < 0:
+            azimuth += 360
 
         if inclination > 90:
             # average inclination is over 90 degree, that means that we need
@@ -514,7 +516,5 @@ class RectangularMesh(Mesh):
             # in range [0, 90]
             inclination = 180 - inclination
             azimuth = (azimuth + 180) % 360
-            if azimuth > 180:
-                azimuth = azimuth - 360
 
         return inclination, azimuth
