@@ -542,8 +542,8 @@ class DbTestCase(object):
     IMLS = [0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527,
             0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778]
 
-    @staticmethod
-    def teardown_upload(upload, filesystem_only=True):
+    @classmethod
+    def teardown_upload(cls, upload, filesystem_only=True):
         """
         Tear down the file system (and potentially db) artefacts for the
         given upload.
@@ -560,17 +560,25 @@ class DbTestCase(object):
             return
         upload.delete()
 
-    @staticmethod
-    def teardown_inputs(inputs, filesystem_only):
+    @classmethod
+    def teardown_inputs(cls, inputs, filesystem_only):
         if filesystem_only:
             return
         [input.delete() for input in inputs]
 
     @classmethod
-    def setup_job_profile(cls, job):
-        """Create a profile for the given job."""
+    def setup_job_profile(cls, job, force_inputs):
+        """Create a profile for the given job.
+
+        :param job: The :class:`openquake.db.models.OqJob` instance to use
+        :param bool force_inputs: If `True` the model input files will be
+            parsed and the resulting content written to the database no matter
+            what.
+        :returns: a :class:`openquake.db.models.OqJobProfile` instance
+        """
         oqjp = models.OqJobProfile()
         oqjp.owner = job.owner
+        oqjp.force_inputs = force_inputs
         oqjp.calc_mode = "classical"
         oqjp.job_type = ['hazard']
         oqjp.region_grid_spacing = 0.01
@@ -627,7 +635,7 @@ class DbTestCase(object):
 
     @classmethod
     def setup_classic_job(cls, create_job_path=True, upload_id=None,
-                          inputs=None):
+                          inputs=None, force_inputs=False, omit_profile=False):
         """Create a classic job with associated upload and inputs.
 
         :param bool create_job_path: if set the path for the job will be
@@ -635,13 +643,18 @@ class DbTestCase(object):
         :param integer upload_id: if set use upload record with given db key.
         :param list inputs: a list of 2-tuples where the first and the second
             element are the input type and path respectively
+        :param bool force_inputs: If `True` the model input files will be
+            parsed and the resulting content written to the database no matter
+            what.
+        :param bool omit_profile: If `True` no job profile will be created.
         :returns: a :py:class:`db.models.OqJob` instance
         """
         assert upload_id is None  # temporary
 
         job = engine.prepare_job()
-        oqjp = cls.setup_job_profile(job)
-        models.Job2profile(oq_job=job, oq_job_profile=oqjp).save()
+        if not omit_profile:
+            oqjp = cls.setup_job_profile(job, force_inputs)
+            models.Job2profile(oq_job=job, oq_job_profile=oqjp).save()
 
         # Insert input model files
         if inputs:
@@ -656,8 +669,8 @@ class DbTestCase(object):
 
         return job
 
-    @staticmethod
-    def teardown_job(job, filesystem_only=True):
+    @classmethod
+    def teardown_job(cls, job, filesystem_only=True):
         """
         Tear down the file system (and potentially db) artefacts for the
         given job.

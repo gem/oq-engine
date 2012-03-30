@@ -49,9 +49,9 @@ class ExposureModelTestCase(DjangoTestCase, helpers.DbTestCase):
         emdl_input.save()
         i2j = models.Input2job(input=emdl_input, oq_job=self.job)
         i2j.save()
-        self.mdl = models.ExposureModel(input=emdl_input, owner=self.job.owner,
-                                        name="exposure-model-testing",
-                                        category="economic loss")
+        self.mdl = models.ExposureModel(
+            input=emdl_input, owner=self.job.owner,
+            name="exposure-model-testing", category="economic loss")
 
     def test_exposure_model_with_no_area_type_coco_per_area(self):
         # area type not set but contents cost type is 'per_area' -> exception
@@ -314,9 +314,9 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         emdl_input.save()
         i2j = models.Input2job(input=emdl_input, oq_job=self.job)
         i2j.save()
-        self.mdl = models.ExposureModel(input=emdl_input, owner=self.job.owner,
-                                        name="exposure-data-testing",
-                                        category="economic loss")
+        self.mdl = models.ExposureModel(
+            input=emdl_input, owner=self.job.owner,
+            name="exposure-data-testing", category="economic loss")
         self.mdl.stco_type = "aggregated"
         self.mdl.stco_unit = "GYD"
 
