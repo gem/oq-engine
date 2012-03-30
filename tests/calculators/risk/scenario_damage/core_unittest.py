@@ -16,6 +16,7 @@
 import unittest
 import json
 import numpy
+import os
 
 from django.contrib.gis import geos
 
@@ -37,9 +38,10 @@ BLOCK_ID = 1
 class ScenarioDamageRiskCalculatorTestCase(
     unittest.TestCase, helpers.DbTestCase):
 
-    job = None
-
     def setUp(self):
+        inputs = [("fragility", ""), ("exposure", "")]
+        self.job = self.setup_classic_job(inputs=inputs)
+
         kvs.mark_job_as_current(self.job.id)
         kvs.cache_gc(self.job.id)
 
@@ -50,25 +52,21 @@ class ScenarioDamageRiskCalculatorTestCase(
         # this region contains a single site, that is exactly
         # a site with longitude == 1.0 and latitude == 1.0
         params = {"REGION_VERTEX": "1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0",
-                "REGION_GRID_SPACING": "0.5"}
+                "REGION_GRID_SPACING": "0.5", "BASE_PATH": ".",
+                "OUTPUT_DIR": "."}
 
-        job_ctxt = JobContext(params, self.job.id, oq_job=self.job)
+        self.job_ctxt = JobContext(params, self.job.id, oq_job=self.job)
 
         self.em = self._store_em()
         self.fm = self._store_fmodel()
         self._store_gmvs([0.40, 0.30, 0.45, 0.35, 0.40])
 
-        self.calculator = ScenarioDamageRiskCalculator(job_ctxt)
+        self.calculator = ScenarioDamageRiskCalculator(self.job_ctxt)
 
         # just stubbing out some preprocessing stuff...
         ScenarioDamageRiskCalculator.store_exposure_assets = lambda self: None
         ScenarioDamageRiskCalculator.store_fragility_model = lambda self: None
         ScenarioDamageRiskCalculator.partition = lambda self: None
-
-    @classmethod
-    def setUpClass(cls):
-        inputs = [("fragility", ""), ("exposure", "")]
-        cls.job = cls.setup_classic_job(inputs=inputs)
 
     def test_compute_risk(self):
         self.calculator.pre_execute()
@@ -116,6 +114,35 @@ class ScenarioDamageRiskCalculatorTestCase(
 
         self._close_to(19.24979, data.mean)
         self._close_to(7.78725, data.stddev)
+
+    def test_post_execute_serialization(self):
+        # when --output-type=xml is specified, we serialize results
+        self.calculator.pre_execute()
+        self.calculator.compute_risk(BLOCK_ID, fmodel=self.fm)
+
+        self.job_ctxt.serialize_results_to = ["xml"]
+
+        self.calculator.post_execute()
+        file_path = self._results_file()
+
+        self.assertTrue(os.path.exists(file_path))
+        os.unlink(file_path)
+
+    def test_post_execute_no_serialization(self):
+        # otherwise, just on database (default)
+        self.calculator.pre_execute()
+        self.calculator.compute_risk(BLOCK_ID, fmodel=self.fm)
+
+        self.calculator.post_execute()
+        file_path = self._results_file()
+
+        self.assertFalse(os.path.exists(file_path))
+
+    def _results_file(self):
+        target_dir = os.path.join(self.job_ctxt.params.get("BASE_PATH"),
+                self.job_ctxt.params.get("OUTPUT_DIR"))
+
+        return os.path.join(target_dir, "dmg-dist-asset-%s.xml" % self.job.id)
 
     def _close_to(self, expected, actual):
         self.assertTrue(numpy.allclose(actual, expected, atol=0.0, rtol=0.05))
