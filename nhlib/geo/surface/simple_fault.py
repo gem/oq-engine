@@ -21,7 +21,6 @@ import math
 import numpy
 
 from nhlib.geo.surface.base import BaseSurface
-from nhlib.geo.line import Line
 from nhlib.geo.mesh import RectangularMesh
 from nhlib.geo._utils import ensure
 
@@ -40,6 +39,8 @@ class SimpleFaultSurface(BaseSurface):
     def __init__(self, mesh):
         super(SimpleFaultSurface, self).__init__()
         self.mesh = mesh
+        assert not 1 in self.mesh.shape
+        self.strike = self.dip = None
 
     def _create_mesh(self):
         """
@@ -51,32 +52,37 @@ class SimpleFaultSurface(BaseSurface):
         """
         Return the fault dip as the average dip over the fault surface mesh.
 
-        It is computed as the weighted average mean of the top row of the
-        surface's mesh (in case of a simple fault surface the dip is constant
-        over depth, so there is no need to compute the dip angle along width).
-        See :meth:`nhlib.geo.mesh.RectangularMesh.get_mean_dip`.
+        The average dip is defined as the weighted mean inclination of top
+        row of mesh cells. See
+        :meth:`nhlib.geo.mesh.RectangularMesh.get_mean_inclination_and_azimuth`
 
         :returns:
             The average dip, in decimal degrees.
         """
-        dip, strike = self.get_mesh()[0:2].get_mean_inclination_and_azimuth()
-        # TODO: cache values
-        return dip
+        if self.dip is None:
+            # calculate weighted average dip and strike of only the top row
+            # of cells since those values are uniform along dip for simple
+            # faults
+            top_row = self.get_mesh()[0:2]
+            self.dip, self.strike = top_row.get_mean_inclination_and_azimuth()
+        return self.dip
 
     def get_strike(self):
         """
         Return the fault strike as the average strike along the fault trace.
 
-        The average strike is defined as the average of the
-        azimuth values for all the fault trace segments.
+        The average strike is defined as the weighted mean azimuth of top
+        row of mesh cells. See
+        :meth:`nhlib.geo.mesh.RectangularMesh.get_mean_inclination_and_azimuth`
 
         :returns:
             The average strike, in decimal degrees.
         :rtype:
             float
         """
-        # TODO: use mesh get_mean_inclination_and_azimuth()
-        return Line(list(self.get_mesh()[0:1])).average_azimuth()
+        if self.strike is None:
+            self.get_dip()  # this should cache strike value
+        return self.strike
 
     @classmethod
     def check_fault_data(cls, fault_trace, upper_seismogenic_depth,

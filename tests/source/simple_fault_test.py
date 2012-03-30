@@ -75,7 +75,7 @@ class SimpleFaultSourceTestCase(unittest.TestCase):
             self.assertEqual(rupture.hypocenter,
                              Point(*expected_rupture['hypocenter']))
             assert_angles_equal(self, rupture.surface.get_strike(),
-                                expected_rupture['strike'], delta=1e-4)
+                                expected_rupture['strike'], delta=0.5)
             assert_angles_equal(self, rupture.surface.get_dip(),
                                 expected_rupture['dip'], delta=3)
 

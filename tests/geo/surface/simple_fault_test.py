@@ -144,13 +144,13 @@ class SimpleFaultSurfaceGetStrikeTestCase(utils.SurfaceTestCase):
         p3 = Point(0.0860747816618, 0.102533437776)
 
         surface = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3]),
-                1.0, 6.0, 90.0, 1.0)
+                1.0, 6.0, 89.9, 1.0)
 
         self.assertAlmostEquals(40.0, surface.get_strike(), delta=0.02)
 
     def test_get_strike_along_meridian(self):
         line = Line([Point(0, 0), Point(1e-5, 1e-3), Point(0, 2e-3)])
-        surface = SimpleFaultSurface.from_fault_data(line, 1.0, 6.0, 90.0, 0.1)
+        surface = SimpleFaultSurface.from_fault_data(line, 1.0, 6.0, 89.9, 0.1)
         self.assertAlmostEquals(0, surface.get_strike(), delta=6e-2)
 
 
