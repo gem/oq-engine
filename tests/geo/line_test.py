@@ -18,8 +18,7 @@ import unittest
 from nhlib import geo
 
 
-class LineTestCase(unittest.TestCase):
-
+class LineResampleTestCase(unittest.TestCase):
     def test_resample(self):
         p1 = geo.Point(0.0, 0.0, 0.0)
         p2 = geo.Point(0.0, 0.127183341091, 14.1421356237)
@@ -78,6 +77,8 @@ class LineTestCase(unittest.TestCase):
 
         self.assertEqual(geo.Line([p1]), geo.Line([p1]).resample(10.0))
 
+
+class LineCreationTestCase(unittest.TestCase):
     def test_one_point_needed(self):
         self.assertRaises(ValueError, geo.Line, [])
 
@@ -117,3 +118,29 @@ class LineTestCase(unittest.TestCase):
         points = [geo.Point(178, 0), geo.Point(178, 10),
                   geo.Point(179, 5), geo.Point(-178, 5)]
         geo.Line(points)
+
+
+class LineResampleToNumPointsTestCase(unittest.TestCase):
+    def test_simple(self):
+        points = [geo.Point(0, 0), geo.Point(0.1, 0.3)]
+
+        line = geo.Line(points).resample_to_num_points(3)
+        expected_points = [geo.Point(0, 0), geo.Point(0.05, 0.15),
+                           geo.Point(0.1, 0.3)]
+        self.assertEqual(line.points, expected_points)
+
+        line = geo.Line(points).resample_to_num_points(4)
+        expected_points = [geo.Point(0, 0), geo.Point(0.0333333, 0.1),
+                           geo.Point(0.0666666, 0.2), geo.Point(0.1, 0.3)]
+        self.assertEqual(line.points, expected_points)
+
+    def test_fewer_points(self):
+        points = [geo.Point(i / 10., 0) for i in xrange(13)]
+
+        line = geo.Line(points).resample_to_num_points(2)
+        expected_points = [points[0], points[-1]]
+        self.assertEqual(line.points, expected_points)
+
+        line = geo.Line(points).resample_to_num_points(4)
+        expected_points = points[::4]
+        self.assertEqual(line.points, expected_points)

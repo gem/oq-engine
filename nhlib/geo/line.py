@@ -188,3 +188,23 @@ class Line(object):
             resampled_points.extend(points[1:])
 
         return Line(resampled_points)
+
+    def resample_to_num_points(self, num_points):
+        """
+        Resample the line to a specified number of points.
+
+        :param num_points:
+            Integer number of points the resulting line should have.
+        :returns:
+            A new line with that many points as requested.
+
+        Calculates the length of the original line, divides it by number
+        of segments in the resulting line (which is less than num_points
+        by 1) and calls :meth:`resample` with the calculated section length.
+        """
+        length = 0
+        for i, point in enumerate(self.points):
+            if i != 0:
+                length += point.distance(self.points[i - 1])
+        section_length = length / (num_points - 1)
+        return self.resample(section_length)
