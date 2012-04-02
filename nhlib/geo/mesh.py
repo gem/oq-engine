@@ -1,3 +1,4 @@
+# coding: utf-8
 # nhlib: A New Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
@@ -385,23 +386,7 @@ class RectangularMesh(Mesh):
                 "to be not shallower than the previous one"
             )
 
-        # define point vectors in Cartesian space in a form
-        # of 2d array of 3d-vectors:
-        points = geo_utils.spherical_to_cartesian(
-            self.lons, self.lats, self.depths
-        ).transpose(1, 2, 0)
-
-        # triangulate the mesh by defining vectors of triangles edges:
-
-        # vectors pointing from each point (excluding the last column)
-        # to the next one in a same row
-        along_azimuth = points[:, 1:] - points[:, :-1]
-        # vectors pointing from each point (excluding the first row)
-        # to the previous one in a same column
-        updip = points[:-1] - points[1:]
-        # vectors pointing from a bottom right point of each mesh cell
-        # to top left one
-        diag = points[:-1, 1:] - points[1:, :-1]
+        points, along_azimuth, updip, diag = self.triangulate()
 
         # define planes that are perpendicular to each point's vector
         # as normals to those planes
@@ -518,3 +503,39 @@ class RectangularMesh(Mesh):
             azimuth = (azimuth + 180) % 360
 
         return inclination, azimuth
+
+    def triangulate(self):
+        """
+        Convert mesh points to vectors in Cartesian space.
+
+        :returns:
+            Tuple of four elements, each being 2d numpy array of 3d vectors
+            (the same structure and shape as the mesh itself). Those tuples
+            are:
+
+            #. points vectors,
+            #. vectors directed from each point (excluding the last column)
+               to the next one in a same row →,
+            #. vectors directed from each point (excluding the first row)
+               to the previous one in a same column ↑,
+            #. vectors pointing from a bottom left point of each mesh cell
+               to top right one ↗.
+
+            So the last three arrays of vectors allow to construct triangles
+            covering the whole mesh.
+        """
+        # transpose(1, 2, 0) is needed to convert three arrays of 2d arrays
+        # of different coordinate components to one 2d array of 3d vectors.
+        points = geo_utils.spherical_to_cartesian(
+            self.lons, self.lats, self.depths
+        ).transpose(1, 2, 0)
+
+        # triangulate the mesh by defining vectors of triangles edges:
+        # →
+        along_azimuth = points[:, 1:] - points[:, :-1]
+        # ↑
+        updip = points[:-1] - points[1:]
+        # ↗
+        diag = points[:-1, 1:] - points[1:, :-1]
+
+        return points, along_azimuth, updip, diag

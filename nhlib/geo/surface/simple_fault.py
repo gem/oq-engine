@@ -77,8 +77,6 @@ class SimpleFaultSurface(BaseSurface):
 
         :returns:
             The average strike, in decimal degrees.
-        :rtype:
-            float
         """
         if self.strike is None:
             self.get_dip()  # this should cache strike value
