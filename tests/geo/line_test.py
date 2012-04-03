@@ -144,3 +144,12 @@ class LineResampleToNumPointsTestCase(unittest.TestCase):
         line = geo.Line(points).resample_to_num_points(4)
         expected_points = points[::4]
         self.assertEqual(line.points, expected_points)
+
+
+class LineLengthTestCase(unittest.TestCase):
+    def test(self):
+        line = geo.Line([geo.Point(0, 0), geo.Point(0, 1), geo.Point(1, 2)])
+        length = line.get_length()
+        expected_length = line.points[0].distance(line.points[1]) \
+                          + line.points[1].distance(line.points[2])
+        self.assertEqual(length, expected_length)

@@ -189,6 +189,20 @@ class Line(object):
 
         return Line(resampled_points)
 
+    def get_length(self):
+        """
+        Calculate and return the length of the line as a sum of lengths
+        of all its segments.
+
+        :returns:
+            Total length in km.
+        """
+        length = 0
+        for i, point in enumerate(self.points):
+            if i != 0:
+                length += point.distance(self.points[i - 1])
+        return length
+
     def resample_to_num_points(self, num_points):
         """
         Resample the line to a specified number of points.
@@ -198,13 +212,10 @@ class Line(object):
         :returns:
             A new line with that many points as requested.
 
-        Calculates the length of the original line, divides it by number
-        of segments in the resulting line (which is less than num_points
-        by 1) and calls :meth:`resample` with the calculated section length.
+        Calculates the length of the original line using :meth:`get_length`,
+        divides it by number of segments in the resulting line (which is less
+        than num_points by 1) and calls :meth:`resample` with the calculated
+        section length.
         """
-        length = 0
-        for i, point in enumerate(self.points):
-            if i != 0:
-                length += point.distance(self.points[i - 1])
-        section_length = length / (num_points - 1)
+        section_length = self.get_length() / (num_points - 1)
         return self.resample(section_length)
