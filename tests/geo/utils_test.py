@@ -74,6 +74,15 @@ class LineIntersectsItselfTestCase(unittest.TestCase):
         self.assertEqual(False, self.func(lons, lats))
         self.assertEqual(True, self.func(lons, lats, closed_shape=True))
 
+    def test_intersects_on_international_date_line(self):
+        lons = [178, 178, -178, 170]
+        lats = [0, 10, 0, 5]
+        self.assertEqual(True, self.func(lons, lats))
+
+    def test_doesnt_intersect_on_international_date_line(self):
+        lons = [178, 178, 179, -178]
+        lats = [0, 10, 5, 5]
+        self.assertEqual(False, self.func(lons, lats))
 
 class GetLongitudinalExtentTestCase(unittest.TestCase):
     def test_positive(self):

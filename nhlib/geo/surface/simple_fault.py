@@ -22,7 +22,7 @@ import numpy
 
 from nhlib.geo.surface.base import BaseSurface
 from nhlib.geo.mesh import RectangularMesh
-from nhlib.geo._utils import ensure
+from nhlib.geo._utils import ensure, line_intersects_itself
 
 
 class SimpleFaultSurface(BaseSurface):
@@ -95,6 +95,10 @@ class SimpleFaultSurface(BaseSurface):
                "The fault trace must have at least two points!")
         ensure(fault_trace.on_surface(),
                "The fault trace must be defined on the surface!")
+        tlats = [point.latitude for point in fault_trace.points]
+        tlons = [point.longitude for point in fault_trace.points]
+        ensure(not line_intersects_itself(tlons, tlats),
+               "fault trace intersects itself")
         ensure(0.0 < dip <= 90.0, "Dip must be between 0.0 and 90.0!")
         ensure(lower_seismogenic_depth > upper_seismogenic_depth,
                "Lower seismo depth must be > than upper seismo dept!")

@@ -26,9 +26,7 @@ class Line(object):
     This class represents a geographical line, which is basically
     a sequence of geographical points.
 
-    A line is defined by at least one point. The surface projection
-    of a line cannot intersect itself (depth dimension is neglected
-    to check if a line intersects itself or not).
+    A line is defined by at least one point.
 
     :param points:
         The sequence of points defining this line.
@@ -41,11 +39,6 @@ class Line(object):
 
         if len(self.points) < 1:
             raise ValueError("One point needed to create a line!")
-
-        lats = [point.latitude for point in self.points]
-        lons = [point.longitude for point in self.points]
-        if utils.line_intersects_itself(lons, lats):
-            raise ValueError("Line intersects itself!")
 
     def __eq__(self, other):
         """

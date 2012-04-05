@@ -93,32 +93,6 @@ class LineCreationTestCase(unittest.TestCase):
         expected = [p1, p2, p4, p5]
         self.assertEquals(expected, geo.Line([p1, p2, p3, p4, p5, p6]).points)
 
-    def test_must_not_intersect_itself(self):
-        p1 = geo.Point(0.0, 0.0)
-        p2 = geo.Point(0.0, 1.0)
-        p3 = geo.Point(1.0, 1.0)
-        p4 = geo.Point(0.0, 0.5)
-
-        self.assertRaises(ValueError, geo.Line, [p1, p2, p3, p4])
-
-        # doesn't take into account depth
-        p1 = geo.Point(0.0, 0.0, 1.0)
-        p2 = geo.Point(0.0, 1.0, 1.0)
-        p3 = geo.Point(1.0, 1.0, 1.0)
-        p4 = geo.Point(0.0, 0.5, 1.5)
-
-        self.assertRaises(ValueError, geo.Line, [p1, p2, p3, p4])
-
-    def test_invalid_line_crossing_international_date_line(self):
-        broken_points = [geo.Point(178, 0), geo.Point(178, 10),
-                         geo.Point(-178, 0), geo.Point(170, 5)]
-        self.assertRaises(ValueError, geo.Line, broken_points)
-
-    def test_valid_line_crossing_international_date_line(self):
-        points = [geo.Point(178, 0), geo.Point(178, 10),
-                  geo.Point(179, 5), geo.Point(-178, 5)]
-        geo.Line(points)
-
 
 class LineResampleToNumPointsTestCase(unittest.TestCase):
     def test_simple(self):
