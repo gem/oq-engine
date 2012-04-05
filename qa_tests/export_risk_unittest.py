@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import os
 import shutil
 import subprocess
@@ -67,5 +66,50 @@ class ExportAggLossCurvesTestCase(unittest.TestCase):
                     export_target_dir]))
 
             self.assertEqual(expected_export_files, listed_exports)
+        finally:
+            shutil.rmtree(export_target_dir)
+
+
+class ExportDmgDistPerAssetTestCase(unittest.TestCase):
+    """
+    Exercises the full end-to-end functionality for running a
+    Scenario Damage Assessment calculation and exporting the
+    resulting damage distribution per asset.
+    """
+
+    def test_export_dmg_dist_per_asset(self):
+        cfg = helpers.demo_file("scenario_damage_risk/config.gem")
+        export_target_dir = tempfile.mkdtemp()
+
+        try:
+            ret_code = helpers.run_job(cfg)
+            self.assertEqual(0, ret_code)
+
+            job = models.OqJob.objects.latest("id")
+            expected_file = os.path.join(export_target_dir,
+                    "dmg-dist-asset-%s.xml" % job.id)
+
+            [output] = models.Output.objects.filter(
+                oq_job=job.id, output_type="dmg_dist_per_asset")
+
+            calcs = helpers.prepare_cli_output(subprocess.check_output(
+                ["bin/openquake", "--list-calculations"]))
+
+            # we have the calculation...
+            check_list_calcs(self, calcs, job.id)
+
+            outputs = helpers.prepare_cli_output(
+                subprocess.check_output(["bin/openquake", "--list-outputs",
+                str(job.id)]))
+
+            # and the damage distribution per asset as output...
+            check_list_outputs(self, outputs, output.id, "dmg_dist_per_asset")
+
+            exports = helpers.prepare_cli_output(
+                subprocess.check_output(["bin/openquake", "--export",
+                str(output.id), export_target_dir]))
+
+            # and also the exported file
+            self.assertEqual([expected_file], exports)
         finally:
             shutil.rmtree(export_target_dir)
