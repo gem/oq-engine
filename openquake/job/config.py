@@ -277,6 +277,15 @@ class ScenarioComputationValidator(object):
         return (True, [])
 
 
+class ScenarioValidator(MandatoryParamsValidator):
+    """Checks for the presence of mandatory params in the Scenario Risk
+    calculator.
+    """
+
+    SECTION_OF_INTEREST = RISK_SECTION
+    MANDATORY_PARAMS = ['EPSILON_RANDOM_SEED']
+
+
 class ScenarioDamageValidator(MandatoryParamsValidator):
     """
     Ensures the `FRAGILITY` parameter is specified in the
@@ -674,6 +683,9 @@ def default_validators(sections, params):
         validators.add(BCRValidator(params))
     elif calc_mode in (SCENARIO_MODE, SCENARIO_DAMAGE_MODE):
         validators.add(ScenarioComputationValidator(sections, params))
+
+    if calc_mode == SCENARIO_MODE:
+        validators.add(ScenarioValidator(sections, params))
 
     if calc_mode == SCENARIO_DAMAGE_MODE:
         validators.add(ScenarioDamageValidator(sections, params))

@@ -18,7 +18,6 @@
 
 from collections import defaultdict
 from lxml import etree
-from nose.plugins.attrib import attr
 import geohash
 import numpy
 import os
@@ -232,7 +231,6 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         self.teardown_job(self.job)
         self.job = None
 
-    @attr("qa")
     def test_peer_test_set_1_case_2(self):
         expected_results = load_exp_hazcurve_results("PeerTestSet1Case2")
 
@@ -241,7 +239,6 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
         self._assert_hazcurve_results_are(expected_results)
 
-    @attr("qa")
     def test_peer_test_set_1_case_5(self):
         expected_results = load_exp_hazcurve_results("PeerTestSet1Case5")
 
@@ -250,7 +247,6 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
         self._assert_hazcurve_results_are(expected_results)
 
-    @attr("qa")
     def test_peer_test_set_1_case_8a(self):
         expected_results = load_exp_hazcurve_results(
             "PeerTestSet1Case8a")
@@ -260,7 +256,6 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
         self._assert_hazcurve_results_are(expected_results)
 
-    @attr("qa")
     def test_peer_test_set_1_case_10(self):
         expected_results = load_exp_hazcurve_results(
             "PeerTestSet1Case10")
@@ -270,7 +265,6 @@ class ClassicalPSHACalculatorAssuranceTestCase(
 
         self._assert_hazcurve_results_are(expected_results)
 
-    @attr("qa")
     def test_hazard_map_test(self):
         helpers.run_job(helpers.demo_file(
             os.path.join("HazardMapTest", "config.gem")))
@@ -286,7 +280,6 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         verify_hazmap_results(self, self.job, expected_map, poe,
                               statistic_type)
 
-    @attr("qa")
     def test_complex_fault_demo_hazard(self):
         """Run the `complex_fault_demo_hazard` demo and verify all of the
         resulting hazard curve and hazard map data."""
@@ -365,7 +358,6 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         if errors:
             raise AssertionError('\n'.join(errors))
 
-    @attr("qa")
     def test_complex_fault_demo_hazard_nrml(self):
         """
         Run the `complex_fault_demo_hazard` demo and verify all of the
@@ -412,7 +404,6 @@ class ClassicalPSHACalculatorAssuranceTestCase(
         finally:
             shutil.rmtree(copath)
 
-    @attr("qa")
     def test_complex_fault_demo_hazard_nrml_written_once(self):
         """
         Run the `complex_fault_demo_hazard` demo and verify that the
