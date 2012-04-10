@@ -16,8 +16,6 @@
 import unittest
 import numpy
 
-from nose.plugins.attrib import attr
-
 from openquake.db import models
 from openquake.db.models import OqJob
 from openquake.db.models import (
@@ -96,52 +94,50 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
         [asset] = self._asset("a1")
         [data] = self._data(asset, "no_damage")
 
-        print data.mean
-
-        self._close_to(1127.7915052662, data.mean)
-        self._close_to(728.5845790035, data.stddev)
+        self._close_to(554.6860951500, data.mean)
+        self._close_to(598.7552048028, data.stddev)
 
         [data] = self._data(asset, "LS1")
 
-        self._close_to(1193.2879148011, data.mean)
-        self._close_to(471.4571312182, data.stddev)
+        self._close_to(1399.3356341082, data.mean)
+        self._close_to(349.3604258216, data.stddev)
 
         [data] = self._data(asset, "LS2")
 
-        self._close_to(723.4242765613, data.mean)
-        self._close_to(755.9750053225, data.stddev)
+        self._close_to(1045.9782707418, data.mean)
+        self._close_to(749.3971884847, data.stddev)
 
         [asset] = self._asset("a2")
         [data] = self._data(asset, "no_damage")
 
-        self._close_to(42.3377447524, data.mean)
-        self._close_to(70.0892678237, data.stddev)
+        self._close_to(354.7536330800, data.mean)
+        self._close_to(257.9890985575, data.stddev)
 
         [data] = self._data(asset, "LS1")
 
-        self._close_to(730.4180238456, data.mean)
-        self._close_to(494.7514529615, data.stddev)
+        self._close_to(779.0404984000, data.mean)
+        self._close_to(153.3343303635, data.stddev)
 
         [data] = self._data(asset, "LS2")
 
-        self._close_to(1227.2442314019, data.mean)
-        self._close_to(549.4191085089, data.stddev)
+        self._close_to(866.2058685200, data.mean)
+        self._close_to(398.0973556984, data.stddev)
 
         [asset] = self._asset("a3")
         [data] = self._data(asset, "no_damage")
 
-        self._close_to(264.2663623864, data.mean)
-        self._close_to(228.8391071035, data.stddev)
+        self._close_to(108.3440263950, data.mean)
+        self._close_to(122.0563889256, data.stddev)
 
         [data] = self._data(asset, "LS1")
 
-        self._close_to(451.0114061630, data.mean)
-        self._close_to(140.2229465594, data.stddev)
+        self._close_to(477.5115825656, data.mean)
+        self._close_to(138.8593089805, data.stddev)
 
         [data] = self._data(asset, "LS2")
 
-        self._close_to(284.7222314506, data.mean)
-        self._close_to(248.9585500745, data.stddev)
+        self._close_to(414.1443910394, data.mean)
+        self._close_to(232.3139816472, data.stddev)
 
     def _asset(self, asset_ref):
         job = OqJob.objects.latest("id")
