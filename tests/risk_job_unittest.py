@@ -51,7 +51,8 @@ class EpsilonTestCase(unittest.TestCase, helpers.DbTestCase):
         exposure_parser = exposure.ExposureModelFile(path)
         writer.serialize(exposure_parser)
         self.model = writer.model
-        self.epsilon_provider = general.EpsilonProvider(dict())
+        self.epsilon_provider = general.EpsilonProvider(
+            dict(EPSILON_RANDOM_SEED=37))
 
     def tearDown(self):
         self.teardown_job(self.job)
