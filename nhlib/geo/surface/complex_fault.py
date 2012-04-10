@@ -98,23 +98,16 @@ class ComplexFaultSurface(BaseSurface):
         """
         Create and return a fault surface using fault source data.
 
-        :param fault_trace:
-            Geographical line representing the intersection between
-            the fault surface and the earth surface, an instance
-            of :class:`nhlib.Line`.
-        :param upper_seismo_depth:
-            Minimum depth ruptures can reach, in km (i.e. depth
-            to fault's top edge).
-        :param lower_seismo_depth:
-            Maximum depth ruptures can reach, in km (i.e. depth
-            to fault's bottom edge).
-        :param dip:
-            Dip angle (i.e. angle between fault surface
-            and earth surface), in degrees.
+        :param edges:
+            A list of at least two horizontal edges of the surface
+            as instances of :class:`nhlib.geo.line.Line`. The list
+            should be in top-to-bottom order (the shallowest edge
+            first).
         :param mesh_spacing:
             Distance between two subsequent points in a mesh, in km.
         :returns:
-            An instance of :class:`SimpleFaultSurface` created using that data.
+            An instance of :class:`ComplexFaultSurface` created using
+            that data.
 
         Uses :meth:`check_fault_data` for checking parameters.
         """
