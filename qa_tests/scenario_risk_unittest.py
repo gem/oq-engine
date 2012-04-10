@@ -113,7 +113,9 @@ class ScenarioRiskQATest(unittest.TestCase):
 
     @attr('slow')
     def test_scenario_risk_sample_based(self):
-        # This QA is a longer-running test of the Scenario Risk calculator.
+        # This QA test is a longer-running test of the Scenario Risk
+        # calculator.
+
         # The vulnerabiilty model has non-zero Coefficients of Variation and
         # therefore exercises the 'sample-based' path through the calculator.
         # This test is configured to produce 1000 ground motion fields at each
