@@ -132,19 +132,19 @@ class ScenarioDamageRiskCalculatorTestCase(
                 exposure_data=exposure, dmg_state="no_damage")
 
         self._close_to(68.0, data.mean)
-        self._close_to(8.6, data.stddev)
+        self._close_to(8.5513157, data.stddev)
 
         [data] = DmgDistPerAssetData.objects.filter(dmg_dist_per_asset=dda,
                 exposure_data=exposure, dmg_state="LS1")
 
-        # self._close_to(19.0, data.mean)
-        # self._close_to(8.3, data.stddev)
+        self._close_to(21.0, data.mean)
+        self._close_to(4.2756578, data.stddev)
 
         [data] = DmgDistPerAssetData.objects.filter(dmg_dist_per_asset=dda,
                 exposure_data=exposure, dmg_state="LS2")
 
-        # self._close_to(13.0, data.mean)
-        # self._close_to(2.9, data.stddev)
+        self._close_to(11.0, data.mean)
+        self._close_to(4.2756578, data.stddev)
 
         [exposure] = self.em.exposuredata_set.filter(asset_ref="B")
         [data] = DmgDistPerAssetData.objects.filter(dmg_dist_per_asset=dda,
