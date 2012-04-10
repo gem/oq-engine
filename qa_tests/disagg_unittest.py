@@ -20,8 +20,6 @@ import os
 import unittest
 import shutil
 
-from nose.plugins.attrib import attr
-
 from openquake.db.models import OqJob
 
 from tests.utils import helpers
@@ -87,7 +85,6 @@ class DisaggCalcQATestCase(unittest.TestCase, helpers.ConfigTestCase):
         self.teardown_config()
         shutil.rmtree(XML_OUTPUT_DIR)
 
-    @attr('qa')
     def test_disagg(self):
         helpers.run_job(DISAGG_DEMO_CONFIG)
 

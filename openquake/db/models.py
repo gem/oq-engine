@@ -850,6 +850,7 @@ class OqJobProfile(djm.Model):
     depth_to_1pt_0km_per_sec = djm.FloatField(default=100.0)
     asset_life_expectancy = djm.FloatField(null=True)
     interest_rate = djm.FloatField(null=True)
+    epsilon_random_seed = djm.IntegerField(null=True)
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"oq_job_profile'
