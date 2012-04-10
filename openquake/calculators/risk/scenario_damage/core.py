@@ -29,7 +29,8 @@ from django.contrib.gis import geos
 
 from openquake import logs
 from openquake.calculators.risk import general
-from openquake.db.models import Output, FragilityModel, DmgDistPerAsset
+from openquake.db.models import Output, FragilityModel
+from openquake.db.models import DmgDistPerAsset, Ffc, Ffd
 from openquake.db.models import DmgDistPerAssetData
 from openquake.db.models import inputs4job
 from openquake.export.risk import export_dmg_dist_per_asset
@@ -64,9 +65,6 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         output.save()
 
         fm = _fm(oq_job)
-
-        # temporary, will be removed
-        assert fm.format == "continuous"
 
         DmgDistPerAsset(
             output=output,
@@ -121,6 +119,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 output__oq_job=self.job_ctxt.oq_job,
                 output__output_type="dmg_dist_per_asset")
 
+        fset = fm.ffd_set if fm.format == "discrete" else fm.ffc_set
+
         for site in block.sites:
             point = self.job_ctxt.region.grid.point_at(site)
             gmf = general.load_gmvs_at(self.job_ctxt.job_id, point)
@@ -129,7 +129,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 self.job_ctxt.job_id, site)
 
             for asset in assets:
-                funcs = fm.ffc_set.filter(
+                funcs = fset.filter(
                     taxonomy=asset.taxonomy).order_by("lsi")
 
                 assert len(funcs) > 0, ("no limit states associated "
@@ -225,24 +225,35 @@ def compute_dm(funcs, gmv):
     :rtype: 1d `numpy.array`
     """
 
-    def compute_poe(iml, mean, stddev):
+    def compute_poe_con(iml, func):
         """
         Compute the Probability of Exceedance for the given
-        Intensity Measure Level.
+        Intensity Measure Level using continuous functions.
         """
 
-        variance = stddev ** 2.0
-        sigma = math.sqrt(math.log((variance / mean ** 2.0) + 1.0))
-        mu = math.exp(math.log(mean ** 2.0 / math.sqrt(
-                variance + mean ** 2.0)))
+        variance = func.stddev ** 2.0
+        sigma = math.sqrt(math.log((variance / func.mean ** 2.0) + 1.0))
+        mu = math.exp(math.log(func.mean ** 2.0 / math.sqrt(
+                variance + func.mean ** 2.0)))
 
         return scipy.stats.lognorm.cdf(iml, sigma, scale=mu)
+
+    def compute_poe_dsc(iml, func):
+        """
+        Compute the Probability of Exceedance for the given
+        Intensity Measure Level using discrete functions.
+        """
+
+        return scipy.interpolate.interp1d(
+            func.fragility_model.imls, func.poes)(iml)
+
+    ftype_poe_map = {Ffc: compute_poe_con, Ffd: compute_poe_dsc}
 
     # we always have a number of damage states
     # which is len(limit states) + 1
     damage_states = numpy.zeros(len(funcs) + 1)
 
-    first_poe = compute_poe(gmv, funcs[0].mean, funcs[0].stddev)
+    first_poe = ftype_poe_map[funcs[0].__class__](gmv, funcs[0])
 
     # first damage state is always 1 - the probability
     # of exceedance of first limit state
@@ -253,15 +264,14 @@ def compute_dm(funcs, gmv):
     # starting from one, the first damage state
     # is already computed...
     for x in xrange(1, len(funcs)):
-        poe = compute_poe(gmv, funcs[x].mean, funcs[x].stddev)
+        poe = ftype_poe_map[funcs[x].__class__](gmv, funcs[x])
         damage_states[x] = last_poe - poe
         last_poe = poe
 
     # last damage state is equal to the probabily
     # of exceedance of the last limit state
-    damage_states[len(funcs)] = compute_poe(
-        gmv, funcs[len(funcs) - 1].mean,
-        funcs[len(funcs) - 1].stddev)
+    damage_states[len(funcs)] = ftype_poe_map[
+        funcs[len(funcs) - 1].__class__](gmv, funcs[len(funcs) - 1])
 
     return numpy.array(damage_states)
 
