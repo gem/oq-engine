@@ -244,6 +244,10 @@ def compute_dm(funcs, gmv):
         Intensity Measure Level using discrete functions.
         """
 
+# TODO Check with Vitor!..
+        if iml > func.fragility_model.imls[-1]:
+            iml = func.fragility_model.imls[-1]
+
         return scipy.interpolate.interp1d(
             func.fragility_model.imls, func.poes)(iml)
 
