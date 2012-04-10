@@ -31,8 +31,7 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
     QA test for the Scenario Damage Risk calculator.
     """
 
-    @attr("qa")
-    def test_scenario_damage_risk(self):
+    def test_scenario_damage_risk_con(self):
         cfg = helpers.demo_file("scenario_damage_risk/config.gem")
 
         self._run_job(cfg)
@@ -44,6 +43,63 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
 
         self._close_to(1083.2878086376, data.mean)
         self._close_to(926.8114705410, data.stddev)
+
+        [data] = self._data(asset, "LS1")
+
+        self._close_to(1193.2879148011, data.mean)
+        self._close_to(471.4571312182, data.stddev)
+
+        [data] = self._data(asset, "LS2")
+
+        self._close_to(723.4242765613, data.mean)
+        self._close_to(755.9750053225, data.stddev)
+
+        [asset] = self._asset("a2")
+        [data] = self._data(asset, "no_damage")
+
+        self._close_to(42.3377447524, data.mean)
+        self._close_to(70.0892678237, data.stddev)
+
+        [data] = self._data(asset, "LS1")
+
+        self._close_to(730.4180238456, data.mean)
+        self._close_to(494.7514529615, data.stddev)
+
+        [data] = self._data(asset, "LS2")
+
+        self._close_to(1227.2442314019, data.mean)
+        self._close_to(549.4191085089, data.stddev)
+
+        [asset] = self._asset("a3")
+        [data] = self._data(asset, "no_damage")
+
+        self._close_to(264.2663623864, data.mean)
+        self._close_to(228.8391071035, data.stddev)
+
+        [data] = self._data(asset, "LS1")
+
+        self._close_to(451.0114061630, data.mean)
+        self._close_to(140.2229465594, data.stddev)
+
+        [data] = self._data(asset, "LS2")
+
+        self._close_to(284.7222314506, data.mean)
+        self._close_to(248.9585500745, data.stddev)
+
+    def test_scenario_damage_risk_dsc(self):
+        cfg = helpers.demo_file("scenario_damage_risk/config_discrete.gem")
+
+        self._run_job(cfg)
+        self._verify_job_succeeded()
+        self._verify_damage_states()
+
+        [asset] = self._asset("a1")
+        [data] = self._data(asset, "no_damage")
+
+        print data.mean
+
+        self._close_to(1127.7915052662, data.mean)
+        self._close_to(728.5845790035, data.stddev)
 
         [data] = self._data(asset, "LS1")
 
