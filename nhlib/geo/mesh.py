@@ -524,12 +524,8 @@ class RectangularMesh(Mesh):
             So the last three arrays of vectors allow to construct triangles
             covering the whole mesh.
         """
-        # transpose(1, 2, 0) is needed to convert three arrays of 2d arrays
-        # of different coordinate components to one 2d array of 3d vectors.
-        points = geo_utils.spherical_to_cartesian(
-            self.lons, self.lats, self.depths
-        ).transpose(1, 2, 0)
-
+        points = geo_utils.spherical_to_cartesian(self.lons, self.lats,
+                                                  self.depths)
         # triangulate the mesh by defining vectors of triangles edges:
         # →
         along_azimuth = points[:, 1:] - points[:, :-1]
