@@ -51,7 +51,6 @@ LOG_FORMAT = ('[%(asctime)s #%(job_id)s %(hostname)s %(levelname)s '
               '%(processName)s/%(process)s %(name)s] %(message)s')
 
 
-
 def ignore_sigint():
     """
     Setup signal handler on SIGINT in order to ignore it.
@@ -150,7 +149,8 @@ def _update_log_record(self, record):
 
 class SupervisorLogStreamHandler(logging.StreamHandler):
     """
-    Log handler intended to be used with :class:`SupervisorLogMessageConsumer`.
+    Log stream handler intended to be used with
+    :class:`SupervisorLogMessageConsumer`.
     """
 
     def __init__(self, job_id):
@@ -158,12 +158,16 @@ class SupervisorLogStreamHandler(logging.StreamHandler):
         self.setFormatter(logging.Formatter(LOG_FORMAT))
         self.job_id = job_id
 
-    def emit(self, record):
+    def emit(self, record):  # pylint: disable=E0202
         _update_log_record(self, record)
         super(SupervisorLogStreamHandler, self).emit(record)
 
 
 class SupervisorLogFileHandler(logging.FileHandler):
+    """
+    Log file handler intended to be used with
+    :class:`SupervisorLogMessageConsumer`.
+    """
 
     def __init__(self, job_id, log_file):
         super(SupervisorLogFileHandler, self).__init__(log_file)
@@ -171,7 +175,7 @@ class SupervisorLogFileHandler(logging.FileHandler):
         self.job_id = job_id
         self.log_file = log_file
 
-    def emit(self, record):
+    def emit(self, record):  # pylint: disable=E0202
         _update_log_record(self, record)
         super(SupervisorLogFileHandler, self).emit(record)
 
