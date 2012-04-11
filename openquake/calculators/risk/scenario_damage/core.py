@@ -25,8 +25,6 @@ import math
 import numpy
 import scipy
 
-from django.contrib.gis import geos
-
 from openquake import logs
 from openquake.calculators.risk import general
 from openquake.db.models import Output, FragilityModel
@@ -46,8 +44,10 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     """
 
     def __init__(self, job_ctxt):
-        super(ScenarioDamageRiskCalculator, self).__init__(job_ctxt)
+        general.BaseRiskCalculator.__init__(self, job_ctxt)
 
+        # fractions of each damage state per building taxonomy
+        # for the entire computation
         self.ddt_fractions = {}
 
     def pre_execute(self):
@@ -65,7 +65,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         output = Output(
             owner=oq_job.owner,
             oq_job=oq_job,
-            display_name="SDA (damage distributions per asset) results for calculation id %s" % oq_job.id,
+            display_name="SDA (damage distributions per asset) "
+                "results for calculation id %s" % oq_job.id,
             db_backed=True,
             output_type="dmg_dist_per_asset")
 
@@ -78,7 +79,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         output = Output(
             owner=oq_job.owner,
             oq_job=oq_job,
-            display_name="SDA (damage distributions per taxonomy) results for calculation id %s" % oq_job.id,
+            display_name="SDA (damage distributions per taxonomy) "
+                "results for calculation id %s" % oq_job.id,
             db_backed=True,
             output_type="dmg_dist_per_taxonomy")
 
@@ -115,6 +117,11 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         LOGGER.debug("Scenario damage risk computation completed.")
 
     def _collect_ddt_fractions(self, bfractions):
+        """
+        Add the given fractions of each damage state per building
+        taxonomy to the sum of fractions of the entire computation.
+        """
+
         for taxonomy in bfractions.keys():
             fractions = self.ddt_fractions.get(taxonomy, None)
 
@@ -127,9 +134,9 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         """
         Compute the results for a single block.
 
-        Currently we  only support the computation of
-        damage distributions per asset (i.e. mean and stddev
-        of the distribution for each damage state related to the asset).
+        Currently we support the computation of:
+        * damage distributions per asset
+        * damage distributions per building taxonomy
 
         :param block_id: id of the region block data.
         :type block_id: integer
@@ -142,6 +149,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
         fset = fm.ffd_set if fm.format == "discrete" else fm.ffc_set
 
+        # fractions of each damage state per building taxonomy
+        # for the given block
         ddt_fractions = {}
 
         for site in block.sites:
@@ -159,8 +168,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                         "with taxonomy %s of asset %s.") % (
                         asset.taxonomy, asset.asset_ref)
 
-                fractions = compute_fractions(
-                    gmf, funcs, asset) * asset.number_of_units
+                fractions = compute_gmf_fractions(
+                    gmf, funcs) * asset.number_of_units
 
                 current_fractions = ddt_fractions.get(
                     asset.taxonomy, numpy.zeros((len(gmf), len(funcs) + 1)))
@@ -171,6 +180,10 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         return ddt_fractions
 
     def _store_dda(self, fractions, asset, fm):
+        """
+        Store the damage distribution per asset.
+        """
+
         [dds] = DmgDistPerAsset.objects.filter(
                 output__owner=self.job_ctxt.oq_job.owner,
                 output__oq_job=self.job_ctxt.oq_job,
@@ -189,6 +202,10 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 location=asset.site).save()
 
     def _store_ddt(self):
+        """
+        Store the damage distribution per building taxonomy.
+        """
+
         [ddt] = DmgDistPerTaxonomy.objects.filter(
                 output__owner=self.job_ctxt.oq_job.owner,
                 output__oq_job=self.job_ctxt.oq_job,
@@ -228,61 +245,57 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             export_dmg_dist_per_asset(output, target_dir)
 
 
-def compute_fractions(gmf, funcs, asset):
+def compute_gmf_fractions(gmf, funcs):
     """
-    Compute the mean and the standard deviation distribution
-    for the given asset for each damage state.
+    Compute the fractions of each damage state for
+    each ground motion value given.
 
     :param gmf: ground motion values computed in the grid
         point where the asset is located.
     :type gmf: list of floats
     :param funcs: list of fragility functions describing
         the distribution for each limit state. The functions
-        must be in order from the one with the lower
-        limit state to the one with the higher limit state.
+        must be in order from the one with the lowest
+        limit state to the one with the highest limit state.
     :type funcs: list of
         :py:class:`openquake.db.models.Ffc` instances
-    :param asset: asset where the distribution must
-        be computed on.
-    :type asset: instance of
-        :py:class:`openquake.db.models.ExposureData`
-    :returns: the mean and the standard deviation for
-        each damage state.
-    :rtype: two `numpy.array`. The first one contains
-        the mean for each damage state, the second one
-        contains the standard deviation. Both arrays
-        have a number of columns that is equal to the
-        number of damage states.
+    :returns: the fractions for each damage state.
+    :rtype: 2d `numpy.array`. Each column represents
+        a damage state (in order from the lowest
+        to the highest). Each row represents the
+        values for that damage state for a particular
+        ground motion value.
     """
-
-# TODO Update doc!
 
     # we always have a number of damage states
     # which is len(limit states) + 1
-    sum_ds = numpy.zeros((len(gmf), len(funcs) + 1))
+    fractions = numpy.zeros((len(gmf), len(funcs) + 1))
 
     for x, gmv in enumerate(gmf):
-        sum_ds[x] += compute_dm(funcs, gmv)
-    
-    return sum_ds
+        fractions[x] += compute_gmv_fractions(funcs, gmv)
+
+    return fractions
 
 
-def compute_dm(funcs, gmv):
+def compute_gmv_fractions(funcs, gmv):
     """
-    Compute the fraction of buildings for each damage state.
+    Compute the fractions of each damage state for
+    the ground motion value given.
 
     :param gmv: ground motion value that defines the Intensity
         Measure Level used to interpolate the fragility functions.
     :type gmv: float
     :param funcs: list of fragility functions describing
         the distribution for each limit state. The functions
-        must be in order from the one with the lower
-        limit state to the one with the higher limit state.
+        must be in order from the one with the lowest
+        limit state to the one with the highest limit state.
     :type funcs: list of
         :py:class:`openquake.db.models.Ffc` instances
-    :returns: the fraction of buildings for each damage state
-        computed of the given ground motion value.
-    :rtype: 1d `numpy.array`
+    :returns: the fraction of buildings of each damage state
+        computed for the given ground motion value.
+    :rtype: 1d `numpy.array`. Each value represents
+        the fraction of a damage state (in order from the lowest
+        to the highest)
     """
 
     def compute_poe_con(iml, func):
