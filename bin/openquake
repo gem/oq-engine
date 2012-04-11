@@ -52,6 +52,8 @@ Available Risk Analysis
 
 import argparse
 import getpass
+import logging
+import os
 import sys
 
 from openquake.utils import config
@@ -97,6 +99,11 @@ def set_up_arg_parser():
         '--log-level', '-l',
         help='defaults to "warn"', required=False,
         choices=['debug', 'info', 'warn', 'error', 'critical'], default='warn')
+    calc_grp.add_argument(
+        '--log-file', '-L',
+        help=('location to store log messages; if not specified, log messages'
+              ' will be printed to the console'),
+        required=False, metavar='LOG_FILE')
 
     export_grp = parser.add_argument_group('List and export')
     export_grp.add_argument(
@@ -112,6 +119,13 @@ def set_up_arg_parser():
         nargs=2, metavar=('OUTPUT_ID', 'TARGET_DIR'))
 
     return parser
+
+
+def _touch_log_file(log_file):
+    """If a log file destination is specified, attempt to open the file in
+    'append' mode ('a'). If the specified file is not writable, an
+    :exception:`IOError` will be raised."""
+    open(os.path.abspath(log_file), 'a').close()
 
 
 def list_calculations():
@@ -165,6 +179,14 @@ if __name__ == '__main__':
         from openquake import job
         from openquake import engine
         try:
+            if args.log_file is not None:
+                # Capture logging messages to a file.
+                try:
+                    _touch_log_file(args.log_file)
+                except IOError as e:
+                    raise IOError('Error writing to log file %s: %s'
+                              % (args.log_file, e.strerror))
+
             user_name = getpass.getuser()
             ajob = engine.prepare_job(user_name)
             _, params, sections = engine.import_job_profile(
@@ -172,8 +194,9 @@ if __name__ == '__main__':
             engine.run_job(ajob, params, sections,
                            output_type=args.output_type,
                            log_level=args.log_level,
-                           force_inputs=args.force_inputs)
-        except job.config.ValidationException as e:
+                           force_inputs=args.force_inputs,
+                           log_file=args.log_file)
+        except Exception as e:
             print str(e)
     elif args.list_calculations:
         list_calculations()
