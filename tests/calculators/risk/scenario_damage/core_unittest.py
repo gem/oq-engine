@@ -28,7 +28,7 @@ from openquake.db.models import DmgDistPerAsset, DmgDistPerAssetData
 from openquake.kvs.tokens import ground_motion_values_key
 from openquake.calculators.risk.general import Block
 from openquake.calculators.risk.scenario_damage.core import (
-    ScenarioDamageRiskCalculator)
+    ScenarioDamageRiskCalculator, compute_dm)
 
 from tests.utils import helpers
 
@@ -67,7 +67,9 @@ class ScenarioDamageRiskCalculatorTestCase(
         ScenarioDamageRiskCalculator.store_fragility_model = lambda self: None
         ScenarioDamageRiskCalculator.partition = lambda self: None
 
-    def test_compute_risk_con(self):
+    def test_compute_risk_dda_con(self):
+        # test the damage distribution per asset with a continuous
+        # fragility model
         fm = self._store_con_fmodel()
 
         self.calculator.pre_execute()
@@ -116,7 +118,9 @@ class ScenarioDamageRiskCalculatorTestCase(
         self._close_to(19.24979, data.mean)
         self._close_to(7.78725, data.stddev)
 
-    def test_compute_risk_dsc(self):
+    def test_compute_risk_dda_dsc(self):
+        # test the damage distribution per asset with a discrete
+        # fragility model
         fm = self._store_dsc_fmodel()
 
         self.calculator.pre_execute()
@@ -164,6 +168,56 @@ class ScenarioDamageRiskCalculatorTestCase(
 
         self._close_to(5.7, data.mean)
         self._close_to(2.1, data.stddev)
+
+    def test_dda_iml_above_range(self):
+        # corner case where we have a ground motion value
+        # (that corresponds to the intensity measure level in the
+        # fragility function) that is higher than the highest
+        # intensity measure level defined in the model (in this
+        # particular case 0.7). Given this condition, to compute
+        # the fractions of buildings we use the highest intensity
+        # measure level defined in the model (0.7 in this case)
+
+        [ism] = models.inputs4job(self.job.id, input_type="fragility")
+
+        fmodel = models.FragilityModel(
+            owner=ism.owner, input=ism, imls=[0.1, 0.3, 0.5, 0.7],
+            imt="mmi", lss=["LS1"], format="discrete")
+
+        fmodel.save()
+
+        func = models.Ffd(
+            fragility_model=fmodel, taxonomy="RC",
+            ls="LS1", poes=[0.05, 0.20, 0.50, 1.00], lsi=1)
+
+        func.save()
+
+        self._close_to(compute_dm([func], 0.7), compute_dm([func], 0.8))
+
+    def test_dda_iml_below_range(self):
+        # corner case where we have a ground motion value
+        # (that corresponds to the intensity measure level in the
+        # fragility function) that is lower than the lowest
+        # intensity measure level defined in the model (in this
+        # particular case 0.1). Given this condition, the
+        # fractions of buildings is 100% no_damage and 0% for the
+        # remaining limit states defined in the model
+
+        [ism] = models.inputs4job(self.job.id, input_type="fragility")
+
+        fmodel = models.FragilityModel(
+            owner=ism.owner, input=ism, imls=[0.1, 0.3, 0.5, 0.7],
+            imt="mmi", lss=["LS1"], format="discrete")
+
+        fmodel.save()
+
+        func = models.Ffd(
+            fragility_model=fmodel, taxonomy="RC",
+            ls="LS1", poes=[0.05, 0.20, 0.50, 1.00], lsi=1)
+
+        func.save()
+
+        self._close_to([1.0, 0.0], compute_dm([func], 0.05))
 
     def test_post_execute_serialization(self):
         # when --output-type=xml is specified, we serialize results
