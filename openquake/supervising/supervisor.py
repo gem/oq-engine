@@ -136,6 +136,10 @@ def update_job_status_and_error_msg(job_id, status, error_msg=None):
 
 
 def _update_log_record(self, record):
+    """
+    Massage a log record before emitting it. Intended to be used by the
+    customer log handlers defined in this module.
+    """
     if not hasattr(record, 'hostname'):
         record.hostname = '-'
     if not hasattr(record, 'job_id'):
