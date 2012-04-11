@@ -29,7 +29,7 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
     QA test for the Scenario Damage Risk calculator.
     """
 
-    def test_scenario_damage_risk_con(self):
+    def test_dda_con(self):
         cfg = helpers.demo_file("scenario_damage_risk/config.gem")
 
         self._run_job(cfg)
@@ -84,7 +84,7 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
         self._close_to(284.7222314506, data.mean)
         self._close_to(248.9585500745, data.stddev)
 
-    def test_scenario_damage_risk_dsc(self):
+    def test_dda_dsc(self):
         cfg = helpers.demo_file("scenario_damage_risk/config_discrete.gem")
 
         self._run_job(cfg)
