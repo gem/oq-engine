@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-# pylint: disable=W0232
+# pylint: disable=W0232,R0914
 
 """
 This module performs risk calculations using the scenario
@@ -99,10 +99,9 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         """
         Compute the results for a single block.
 
-        Currently we  only support continuous fragility models and
-        the computation of the damage distribution per asset (i.e.
-        mean and stddev of the distribution for each damage state
-        related to the asset).
+        Currently we  only support the computation of
+        damage distributions per asset (i.e. mean and stddev
+        of the distribution for each damage state related to the asset).
 
         :param block_id: id of the region block data.
         :type block_id: integer
@@ -244,6 +243,13 @@ def compute_dm(funcs, gmv):
         Intensity Measure Level using discrete functions.
         """
 
+        highest_iml = func.fragility_model.imls[-1]
+
+        # when the intensity measure level is above
+        # the range, we use the highest one
+        if iml > highest_iml:
+            iml = highest_iml
+
         return scipy.interpolate.interp1d(
             func.fragility_model.imls, func.poes)(iml)
 
@@ -252,6 +258,17 @@ def compute_dm(funcs, gmv):
     # we always have a number of damage states
     # which is len(limit states) + 1
     damage_states = numpy.zeros(len(funcs) + 1)
+
+    fm = funcs[0].fragility_model
+
+    # when we have a discrete fragility model and
+    # the ground motion value is below the lowest
+    # intensity measure level defined in the model
+    # we simply use 100% no_damage and 0% for the
+    # remaining limit states
+    if fm.format == "discrete" and gmv < fm.imls[0]:
+        damage_states[0] = 1.0
+        return numpy.array(damage_states)
 
     first_poe = ftype_poe_map[funcs[0].__class__](gmv, funcs[0])
 
