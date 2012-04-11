@@ -30,12 +30,15 @@ class LogFileTestCase(unittest.TestCase):
         log_file = './%s.log' % helpers.random_string()
         self.assertFalse(os.path.exists(log_file))
 
-        ret_code = helpers.run_job(uhs_cfg, ['--log-file', log_file])
+        ret_code = helpers.run_job(
+            uhs_cfg, ['--log-level', 'debug', '--log-file', log_file])
         self.assertEqual(0, ret_code)
 
         self.assertTrue(os.path.exists(log_file))
         # Make sure there is something in it.
         self.assertTrue(os.path.getsize(log_file) > 0)
+
+        os.unlink(log_file)
 
     def test_log_file_access_denied(self):
         # Attempt to log to a location for which the user does not have write
