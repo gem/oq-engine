@@ -31,7 +31,8 @@ from openquake import logs
 from openquake.calculators.risk import general
 from openquake.db.models import Output, FragilityModel
 from openquake.db.models import DmgDistPerAsset, Ffc, Ffd
-from openquake.db.models import DmgDistPerAssetData
+from openquake.db.models import DmgDistPerAssetData, DmgDistPerTaxonomy
+from openquake.db.models import DmgDistPerTaxonomyData
 from openquake.db.models import inputs4job
 from openquake.export.risk import export_dmg_dist_per_asset
 
@@ -44,6 +45,11 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     Scenario Damage method for performing risk calculations.
     """
 
+    def __init__(self, job_ctxt):
+        super(ScenarioDamageRiskCalculator, self).__init__(job_ctxt)
+
+        self.ddt_fractions = {}
+
     def pre_execute(self):
         """
         Write the initial db container records for the calculation results.
@@ -54,19 +60,31 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         self.partition()
 
         oq_job = self.job_ctxt.oq_job
+        fm = _fm(oq_job)
 
         output = Output(
             owner=oq_job.owner,
             oq_job=oq_job,
-            display_name="SDA results for calculation id %s" % oq_job.id,
+            display_name="SDA (damage distributions per asset) results for calculation id %s" % oq_job.id,
             db_backed=True,
             output_type="dmg_dist_per_asset")
 
         output.save()
 
-        fm = _fm(oq_job)
-
         DmgDistPerAsset(
+            output=output,
+            dmg_states=_damage_states(fm.lss)).save()
+
+        output = Output(
+            owner=oq_job.owner,
+            oq_job=oq_job,
+            display_name="SDA (damage distributions per taxonomy) results for calculation id %s" % oq_job.id,
+            db_backed=True,
+            output_type="dmg_dist_per_taxonomy")
+
+        output.save()
+
+        DmgDistPerTaxonomy(
             output=output,
             dmg_states=_damage_states(fm.lss)).save()
 
@@ -89,11 +107,21 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
         for task in tasks:
             task.wait()
+            self._collect_ddt_fractions(task.result)
 
             if not task.successful():
                 raise Exception(task.result)
 
         LOGGER.debug("Scenario damage risk computation completed.")
+
+    def _collect_ddt_fractions(self, bfractions):
+        for taxonomy in bfractions.keys():
+            fractions = self.ddt_fractions.get(taxonomy, None)
+
+            if not fractions:
+                self.ddt_fractions[taxonomy] = bfractions[taxonomy]
+            else:
+                self.ddt_fractions[taxonomy] += bfractions[taxonomy]
 
     def compute_risk(self, block_id, **kwargs):
         """
@@ -112,13 +140,9 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
         fm = kwargs["fmodel"]
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
-
-        [dds] = DmgDistPerAsset.objects.filter(
-                output__owner=self.job_ctxt.oq_job.owner,
-                output__oq_job=self.job_ctxt.oq_job,
-                output__output_type="dmg_dist_per_asset")
-
         fset = fm.ffd_set if fm.format == "discrete" else fm.ffc_set
+
+        ddt_fractions = {}
 
         for site in block.sites:
             point = self.job_ctxt.region.grid.point_at(site)
@@ -135,23 +159,62 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                         "with taxonomy %s of asset %s.") % (
                         asset.taxonomy, asset.asset_ref)
 
-                mean, stddev = compute_mean_stddev(gmf, funcs, asset)
+                fractions = compute_fractions(
+                    gmf, funcs, asset) * asset.number_of_units
 
-                for x in xrange(len(mean)):
-                    DmgDistPerAssetData(
-                        dmg_dist_per_asset=dds,
-                        exposure_data=asset,
-                        dmg_state=_damage_states(fm.lss)[x],
-                        mean=mean[x],
-                        stddev=stddev[x],
-                        location=geos.GEOSGeometry(
-                        site.point.to_wkt())).save()
+                current_fractions = ddt_fractions.get(
+                    asset.taxonomy, numpy.zeros((len(gmf), len(funcs) + 1)))
+
+                ddt_fractions[asset.taxonomy] = current_fractions + fractions
+                self._store_dda(fractions, asset, fm)
+
+        return ddt_fractions
+
+    def _store_dda(self, fractions, asset, fm):
+        [dds] = DmgDistPerAsset.objects.filter(
+                output__owner=self.job_ctxt.oq_job.owner,
+                output__oq_job=self.job_ctxt.oq_job,
+                output__output_type="dmg_dist_per_asset")
+
+        mean = numpy.mean(fractions, axis=0)
+        stddev = numpy.std(fractions, axis=0, ddof=1)
+
+        for x in xrange(len(mean)):
+            DmgDistPerAssetData(
+                dmg_dist_per_asset=dds,
+                exposure_data=asset,
+                dmg_state=_damage_states(fm.lss)[x],
+                mean=mean[x],
+                stddev=stddev[x],
+                location=asset.site).save()
+
+    def _store_ddt(self):
+        [ddt] = DmgDistPerTaxonomy.objects.filter(
+                output__owner=self.job_ctxt.oq_job.owner,
+                output__oq_job=self.job_ctxt.oq_job,
+                output__output_type="dmg_dist_per_taxonomy")
+
+        fm = _fm(self.job_ctxt.oq_job)
+
+        for taxonomy in self.ddt_fractions.keys():
+            mean = numpy.mean(self.ddt_fractions[taxonomy], axis=0)
+            stddev = numpy.std(self.ddt_fractions[taxonomy], axis=0, ddof=1)
+
+            for x in xrange(len(mean)):
+                DmgDistPerTaxonomyData(
+                    dmg_dist_per_taxonomy=ddt,
+                    taxonomy=taxonomy,
+                    dmg_state=_damage_states(fm.lss)[x],
+                    mean=mean[x],
+                    stddev=stddev[x]).save()
 
     def post_execute(self):
         """
         Export the results to file if the `output-type`
         parameter is set to `xml`.
         """
+
+        self._store_ddt()
 
         if "xml" in self.job_ctxt.serialize_results_to:
             [output] = Output.objects.filter(
@@ -165,7 +228,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             export_dmg_dist_per_asset(output, target_dir)
 
 
-def compute_mean_stddev(gmf, funcs, asset):
+def compute_fractions(gmf, funcs, asset):
     """
     Compute the mean and the standard deviation distribution
     for the given asset for each damage state.
@@ -192,18 +255,16 @@ def compute_mean_stddev(gmf, funcs, asset):
         number of damage states.
     """
 
+# TODO Update doc!
+
     # we always have a number of damage states
     # which is len(limit states) + 1
     sum_ds = numpy.zeros((len(gmf), len(funcs) + 1))
 
     for x, gmv in enumerate(gmf):
         sum_ds[x] += compute_dm(funcs, gmv)
-
-    nou = asset.number_of_units
-    mean = numpy.mean(sum_ds, axis=0) * nou
-    stddev = numpy.std(sum_ds, axis=0, ddof=1) * nou
-
-    return mean, stddev
+    
+    return sum_ds
 
 
 def compute_dm(funcs, gmv):
