@@ -520,7 +520,7 @@ class EpsilonProvider(object):
         self.rnd = random.Random()
         eps_rnd_seed = params.get("EPSILON_RANDOM_SEED")
         if eps_rnd_seed is not None:
-            self.rnd.seed(eps_rnd_seed)
+            self.rnd.seed(int(eps_rnd_seed))
 
     def epsilon(self, asset):
         """Sample from the standard normal distribution for the given asset.
