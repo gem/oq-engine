@@ -149,16 +149,16 @@ class ScenarioRiskQATest(unittest.TestCase):
 
         # Given the random seed in this config file, here's what we expect to
         # get for the region:
-        exp_mean_loss = 1222.58
-        exp_stddev_loss = 470.32
+        exp_mean_loss = 1241.98634506
+        exp_stddev_loss = 496.347910797
         # Expected loss map for the sample-based approach:
         expected_loss_map = [
-            dict(asset='a3', pos='15.48 38.25', mean=193.949563098,
-                 stddev=93.6466713506),
-            dict(asset='a2', pos='15.56 38.17', mean=504.013749752,
-                 stddev=316.913182992),
-            dict(asset='a1', pos='15.48 38.09', mean=524.904984369,
-                 stddev=241.028111194),
+            dict(asset='a3', pos='15.48 38.25', mean=194.872588825,
+                 stddev=92.9001695062),
+            dict(asset='a2', pos='15.56 38.17', mean=510.7005053,
+                 stddev=350.80093426),
+            dict(asset='a1', pos='15.48 38.09', mean=524.710479665,
+                 stddev=243.777756948),
         ]
 
         # Sanity check on the test data defined above, because humans suck at
