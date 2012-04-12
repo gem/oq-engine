@@ -109,8 +109,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
     def _collect_ddt_fractions(self, region_fractions):
         """
-        Add the given fractions of each damage state per building
-        taxonomy to the sum of fractions of the entire computation.
+        Sum the fractions (of each damage state per building taxonomy)
+        of each computation block.
         """
 
         for bfractions in region_fractions:
