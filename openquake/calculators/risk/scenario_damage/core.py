@@ -33,6 +33,7 @@ from openquake.db.models import DmgDistPerAssetData, DmgDistPerTaxonomy
 from openquake.db.models import DmgDistPerTaxonomyData
 from openquake.db.models import inputs4job
 from openquake.export.risk import export_dmg_dist_per_asset
+from openquake.utils.tasks import distribute
 
 
 LOGGER = logs.LOG
@@ -96,39 +97,30 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         """
 
         LOGGER.debug("Executing scenario damage risk computation.")
-        tasks = []
 
-        for block_id in self.job_ctxt.blocks_keys:
-            LOGGER.debug("Dispatching task for block %s of %s" % (
-                    block_id, len(self.job_ctxt.blocks_keys)))
+        region_fractions = distribute(
+            general.compute_risk, ("block_id", self.job_ctxt.blocks_keys),
+            tf_args=dict(job_id=self.job_ctxt.job_id,
+            fmodel=_fm(self.job_ctxt.oq_job)))
 
-            task = general.compute_risk.delay(self.job_ctxt.job_id, block_id,
-                fmodel=_fm(self.job_ctxt.oq_job))
-
-            tasks.append(task)
-
-        for task in tasks:
-            task.wait()
-            self._collect_ddt_fractions(task.result)
-
-            if not task.successful():
-                raise Exception(task.result)
+        self._collect_ddt_fractions(region_fractions)
 
         LOGGER.debug("Scenario damage risk computation completed.")
 
-    def _collect_ddt_fractions(self, bfractions):
+    def _collect_ddt_fractions(self, region_fractions):
         """
         Add the given fractions of each damage state per building
         taxonomy to the sum of fractions of the entire computation.
         """
 
-        for taxonomy in bfractions.keys():
-            fractions = self.ddt_fractions.get(taxonomy, None)
+        for bfractions in region_fractions:
+            for taxonomy in bfractions.keys():
+                fractions = self.ddt_fractions.get(taxonomy, None)
 
-            if not fractions:
-                self.ddt_fractions[taxonomy] = bfractions[taxonomy]
-            else:
-                self.ddt_fractions[taxonomy] += bfractions[taxonomy]
+                if not fractions:
+                    self.ddt_fractions[taxonomy] = bfractions[taxonomy]
+                else:
+                    self.ddt_fractions[taxonomy] += bfractions[taxonomy]
 
     def compute_risk(self, block_id, **kwargs):
         """
