@@ -104,8 +104,8 @@ class SimpleFaultIterRupturesTestCase(_BaseSimpleFaultSourceTestCase):
     def test_4(self):
         # rupture width greater than fault width, number of nodes along
         # length is even, along width is odd
-        mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=5.0, max_mag=6.0,
-                             bin_width=1.0)
+        mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=5.4, max_mag=5.5,
+                             bin_width=0.1)
         self._test(test_data.TEST4_RUPTURES, mfd=mfd, aspect_ratio=0.5)
 
     def test_5(self):
