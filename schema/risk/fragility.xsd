@@ -28,6 +28,9 @@
                     <xs:element ref="ffs" minOccurs="1" maxOccurs="unbounded" />
                 </xs:sequence>
                 <xs:attribute name="format" type="Fmformat" use="required"/>
+                <xs:attribute name="units" type="xs:string" use="optional"/>
+                <xs:attribute name="minIML" type="NonNegativeDoubleType" use="optional"/>
+                <xs:attribute name="maxIML" type="NonNegativeDoubleType" use="optional"/>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>

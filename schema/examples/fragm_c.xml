@@ -4,7 +4,7 @@
       gml:id="n1">
 
     <!-- The fragility function format applies to the entire fragility model -->
-    <fragilityModel gml:id="ep1" format="continuous">
+    <fragilityModel gml:id="ep1" format="continuous" units="m" minIML="0.1" maxIML="9.9">
         <gml:description>Fragility model for Pavia (continuous)</gml:description>
         <!-- limit states apply to the entire fragility model -->
         <limitStates>
