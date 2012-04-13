@@ -62,25 +62,29 @@ class ComplexFaultSourceIterRupturesTestCase(
         )
 
     def test_1(self):
-        self._test_ruptures(test_data.TEST1_RUPTURES, test_data.TEST1_MFD,
-                            test_data.TEST1_RUPTURE_ASPECT_RATIO,
-                            rupture_mesh_spacing=test_data.TEST1_MESH_SPACING,
-                            edges=test_data.TEST1_EDGES)
+        source = self._make_source(test_data.TEST1_MFD,
+                                   test_data.TEST1_RUPTURE_ASPECT_RATIO,
+                                   test_data.TEST1_MESH_SPACING,
+                                   test_data.TEST1_EDGES)
+        self._test_ruptures(test_data.TEST1_RUPTURES, source)
 
     def test_2(self):
-        self._test_ruptures(test_data.TEST2_RUPTURES, test_data.TEST2_MFD,
-                            test_data.TEST2_RUPTURE_ASPECT_RATIO,
-                            rupture_mesh_spacing=test_data.TEST2_MESH_SPACING,
-                            edges=test_data.TEST2_EDGES)
+        source = self._make_source(test_data.TEST2_MFD,
+                                   test_data.TEST2_RUPTURE_ASPECT_RATIO,
+                                   test_data.TEST2_MESH_SPACING,
+                                   test_data.TEST2_EDGES)
+        self._test_ruptures(test_data.TEST2_RUPTURES, source)
 
     def test_3(self):
-        self._test_ruptures(test_data.TEST3_RUPTURES, test_data.TEST3_MFD,
-                            test_data.TEST3_RUPTURE_ASPECT_RATIO,
-                            rupture_mesh_spacing=test_data.TEST3_MESH_SPACING,
-                            edges=test_data.TEST3_EDGES)
+        source = self._make_source(test_data.TEST3_MFD,
+                                   test_data.TEST3_RUPTURE_ASPECT_RATIO,
+                                   test_data.TEST3_MESH_SPACING,
+                                   test_data.TEST3_EDGES)
+        self._test_ruptures(test_data.TEST3_RUPTURES, source)
 
     def test_4(self):
-        self._test_ruptures(test_data.TEST4_RUPTURES, test_data.TEST4_MFD,
-                            test_data.TEST4_RUPTURE_ASPECT_RATIO,
-                            rupture_mesh_spacing=test_data.TEST4_MESH_SPACING,
-                            edges=test_data.TEST4_EDGES)
+        source = self._make_source(test_data.TEST4_MFD,
+                                   test_data.TEST4_RUPTURE_ASPECT_RATIO,
+                                   test_data.TEST4_MESH_SPACING,
+                                   test_data.TEST4_EDGES)
+        self._test_ruptures(test_data.TEST4_RUPTURES, source)
