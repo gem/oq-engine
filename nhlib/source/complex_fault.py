@@ -19,7 +19,6 @@ Module :mod:`nhlib.source.complex_fault` defines :class:`ComplexFaultSource`.
 import numpy
 
 from nhlib.source.base import SeismicSource
-from nhlib.geo.point import Point
 from nhlib.geo.surface.complex_fault import ComplexFaultSurface
 from nhlib.geo.nodalplane import NodalPlane
 from nhlib.source.rupture import ProbabilisticRupture
@@ -90,12 +89,9 @@ class ComplexFaultSource(SeismicSource):
                 rupture_cells_area = cell_area[first_row:last_row,
                                                first_col:last_col]
                 rupture_area = numpy.sum(rupture_cells_area)
-                rupture_cells_centroids = cell_center[first_row:last_row,
-                                                      first_col:last_col]
-                hypocenter = Point.from_vector(
-                    (rupture_cells_centroids
-                     * rupture_cells_area).sum(axis=1).sum(axis=0) / rupture_area
-                )
+                # XXX: use surface centroid as rupture's hypocenter
+                # XXX: instead of point with middle index
+                hypocenter = mesh.get_middle_point()
                 surface = ComplexFaultSurface(mesh)
                 yield ProbabilisticRupture(
                     mag, self.rake, self.tectonic_region_type, hypocenter,
