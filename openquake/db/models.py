@@ -1399,6 +1399,11 @@ class FragilityModel(djm.Model):
     imls = FloatArrayField(null=True, help_text="Intensity measure levels")
     imt = djm.TextField(null=True, choices=OqJobProfile.IMT_CHOICES,
                            help_text="Intensity measure type")
+    iml_unit = djm.TextField(null=True, help_text="IML unit of measurement")
+    min_iml = djm.FloatField(
+        null=True, help_text="Minimum IML value, for continuous models only")
+    max_iml = djm.FloatField(
+        null=True, help_text="Maximum IML value, for continuous models only")
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232
