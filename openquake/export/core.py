@@ -41,6 +41,7 @@ def _export_fn_map():
 
     fn_map = {
         'dmg_dist_per_asset': risk.export_dmg_dist_per_asset,
+        'dmg_dist_per_taxonomy': risk.export_dmg_dist_per_taxonomy,
         'uh_spectra': uhs.export_uhs,
         'agg_loss_curve': risk.export_agg_loss_curve,
     }

@@ -32,8 +32,9 @@ from openquake.db.models import DmgDistPerAsset, Ffc, Ffd
 from openquake.db.models import DmgDistPerAssetData, DmgDistPerTaxonomy
 from openquake.db.models import DmgDistPerTaxonomyData
 from openquake.db.models import inputs4job
-from openquake.export.risk import export_dmg_dist_per_asset
 from openquake.utils.tasks import distribute
+from openquake.export.risk import (
+export_dmg_dist_per_asset, export_dmg_dist_per_taxonomy)
 
 
 LOGGER = logs.LOG
@@ -220,7 +221,10 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     def post_execute(self):
         """
         Export the results to file if the `output-type`
-        parameter is set to `xml`.
+        parameter is set to `xml`. We currently export:
+
+        * damage distributions per asset
+        * damage distributions per building taxonomy
         """
 
         self._store_ddt()
@@ -235,6 +239,12 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 self.job_ctxt.params.get("OUTPUT_DIR"))
 
             export_dmg_dist_per_asset(output, target_dir)
+
+            [output] = Output.objects.filter(
+                oq_job=self.job_ctxt.oq_job.id,
+                output_type="dmg_dist_per_taxonomy")
+
+            export_dmg_dist_per_taxonomy(output, target_dir)
 
 
 def compute_gmf_fractions(gmf, funcs):
