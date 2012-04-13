@@ -33,7 +33,7 @@ def assert_angles_equal(testcase, angle1, angle2, delta):
     testcase.assertAlmostEqual(angle1, angle2, delta=delta)
 
 
-class _BaseSimpleFaultSourceTestCase(unittest.TestCase):
+class _BaseFaultSourceTestCase(unittest.TestCase):
     TRT = TRT.ACTIVE_SHALLOW_CRUST
     RAKE = 0
 
@@ -60,9 +60,7 @@ class _BaseSimpleFaultSourceTestCase(unittest.TestCase):
             fault_trace, dip, rake
         )
 
-
-class SimpleFaultIterRupturesTestCase(_BaseSimpleFaultSourceTestCase):
-    def _test(self, expected_ruptures, mfd, aspect_ratio, **kwargs):
+    def _test_ruptures(self, expected_ruptures, mfd, aspect_ratio, **kwargs):
         source = self._make_source(mfd, aspect_ratio, **kwargs)
         tom = PoissonTOM(time_span=50)
         ruptures = list(source.iter_ruptures(tom))
@@ -87,36 +85,42 @@ class SimpleFaultIterRupturesTestCase(_BaseSimpleFaultSourceTestCase):
             assert_angles_equal(self, rupture.surface.get_dip(),
                                 expected_rupture['dip'], delta=3)
 
+
+class SimpleFaultIterRupturesTestCase(_BaseFaultSourceTestCase):
     def test_2(self):
         # rupture dimensions are larger then mesh_spacing, number of nodes
         # along strike and dip is even
         mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=3.0, max_mag=4.0,
                              bin_width=1.0)
-        self._test(test_data.TEST2_RUPTURES, mfd=mfd, aspect_ratio=1.0)
+        self._test_ruptures(test_data.TEST2_RUPTURES, mfd=mfd,
+                            aspect_ratio=1.0)
 
     def test_3(self):
         # rupture length greater than fault length, number of nodes along
         # length is odd and along width is even
         mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=5.0, max_mag=6.0,
                              bin_width=1.0)
-        self._test(test_data.TEST3_RUPTURES, mfd=mfd, aspect_ratio=4.0)
+        self._test_ruptures(test_data.TEST3_RUPTURES, mfd=mfd,
+                            aspect_ratio=4.0)
 
     def test_4(self):
         # rupture width greater than fault width, number of nodes along
         # length is even, along width is odd
         mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=5.4, max_mag=5.5,
                              bin_width=0.1)
-        self._test(test_data.TEST4_RUPTURES, mfd=mfd, aspect_ratio=0.5)
+        self._test_ruptures(test_data.TEST4_RUPTURES, mfd=mfd,
+                            aspect_ratio=0.5)
 
     def test_5(self):
         # rupture length and width greater than fault length and width
         # respectively
         mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=6.0, max_mag=7.0,
                              bin_width=1.0)
-        self._test(test_data.TEST5_RUPTURES, mfd=mfd, aspect_ratio=1.0)
+        self._test_ruptures(test_data.TEST5_RUPTURES, mfd=mfd,
+                            aspect_ratio=1.0)
 
 
-class SimpleFaultParametersChecksTestCase(_BaseSimpleFaultSourceTestCase):
+class SimpleFaultParametersChecksTestCase(_BaseFaultSourceTestCase):
     def test_mesh_spacing_too_small(self):
         mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=0.5, max_mag=1.5,
                              bin_width=1.0)
