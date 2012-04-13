@@ -70,14 +70,14 @@ class ExportAggLossCurvesTestCase(unittest.TestCase):
             shutil.rmtree(export_target_dir)
 
 
-class ExportDmgDistPerAssetTestCase(unittest.TestCase):
+class ExportDmgDistributionsTestCase(unittest.TestCase):
     """
-    Exercises the full end-to-end functionality for running a
+    Exercise the full end-to-end functionality for running a
     Scenario Damage Assessment calculation and exporting the
-    resulting damage distribution per asset.
+    resulting damage distributions.
     """
 
-    def test_export_dmg_dist_per_asset(self):
+    def test_export_dmg_distributions(self):
         cfg = helpers.demo_file("scenario_damage_risk/config.gem")
         export_target_dir = tempfile.mkdtemp()
 
@@ -86,11 +86,12 @@ class ExportDmgDistPerAssetTestCase(unittest.TestCase):
             self.assertEqual(0, ret_code)
 
             job = models.OqJob.objects.latest("id")
-            expected_file = os.path.join(export_target_dir,
-                    "dmg-dist-asset-%s.xml" % job.id)
 
-            [output] = models.Output.objects.filter(
+            [oasset] = models.Output.objects.filter(
                 oq_job=job.id, output_type="dmg_dist_per_asset")
+
+            [otaxon] = models.Output.objects.filter(
+                oq_job=job.id, output_type="dmg_dist_per_taxonomy")
 
             calcs = helpers.prepare_cli_output(subprocess.check_output(
                 ["bin/openquake", "--list-calculations"]))
@@ -102,14 +103,29 @@ class ExportDmgDistPerAssetTestCase(unittest.TestCase):
                 subprocess.check_output(["bin/openquake", "--list-outputs",
                 str(job.id)]))
 
-            # and the damage distribution per asset as output...
-            check_list_outputs(self, outputs, output.id, "dmg_dist_per_asset")
+            # the damage distribution per asset and taxonomy as output...
+            check_list_outputs(self, outputs, oasset.id, "dmg_dist_per_asset")
+            check_list_outputs(self, outputs, otaxon.id,
+                    "dmg_dist_per_taxonomy")
 
+            # and we exported correctly the damage distribution per asset,
             exports = helpers.prepare_cli_output(
                 subprocess.check_output(["bin/openquake", "--export",
-                str(output.id), export_target_dir]))
+                str(oasset.id), export_target_dir]))
 
-            # and also the exported file
+            expected_file = os.path.join(export_target_dir,
+                    "dmg-dist-asset-%s.xml" % job.id)
+
+            self.assertEqual([expected_file], exports)
+
+            # and per taxonomy
+            exports = helpers.prepare_cli_output(
+                subprocess.check_output(["bin/openquake", "--export",
+                str(otaxon.id), export_target_dir]))
+
+            expected_file = os.path.join(export_target_dir,
+                    "dmg-dist-taxonomy-%s.xml" % job.id)
+
             self.assertEqual([expected_file], exports)
         finally:
             shutil.rmtree(export_target_dir)
