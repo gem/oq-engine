@@ -138,6 +138,14 @@ class LineResampleToNumPointsTestCase(unittest.TestCase):
         line = geo.Line([p1, p2, p3]).resample_to_num_points(3)
         self.assertEqual(line.points, [p1, p2, p3])
 
+    def test_single_segment(self):
+        line = geo.Line([
+            geo.Point(0., 0.00899322029302, 0.),
+            geo.Point(0.03344582378948, -0.00936927115925, 4.24264069)
+        ])
+        line = line.resample_to_num_points(7)
+        self.assertEqual(len(line), 7)
+
 
 class LineLengthTestCase(unittest.TestCase):
     def test(self):
