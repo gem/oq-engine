@@ -117,34 +117,29 @@ class ComplexFaultSurface(BaseSurface):
         """
         cls.check_fault_data(edges, mesh_spacing)
 
-        edges_lengths = []
-        for edge in edges:
-            length = edge.get_length()
-            edges_lengths.append(length)
+        edges_lengths = [edge.get_length() for edge in edges]
         mean_length = sum(edges_lengths) / len(edges)
-        num_hor_segments = int(round(mean_length / mesh_spacing))
-        if num_hor_segments == 0:
+        num_hor_points = int(round(mean_length / mesh_spacing)) + 1
+        if num_hor_points <= 1:
             raise ValueError(
                 'mesh spacing %.1f km is to big for mean length %.1f km' %
                 (mesh_spacing, mean_length)
             )
-        edges = [edge.resample(edges_lengths[i] / num_hor_segments).points
+        edges = [edge.resample_to_num_points(num_hor_points).points
                  for i, edge in enumerate(edges)]
 
         vert_edges = [Line(v_edge) for v_edge in zip(*edges)]
         vert_edges_lengths = [v_edge.get_length() for v_edge in vert_edges]
-        mean_width = sum(vert_edges_lengths) / (num_hor_segments + 1)
-        num_vert_segments = int(round(mean_width / mesh_spacing))
-        if num_vert_segments == 0:
+        mean_width = sum(vert_edges_lengths) / (num_hor_points)
+        num_vert_points = int(round(mean_width / mesh_spacing)) + 1
+        if num_vert_points <= 1:
             raise ValueError(
                 'mesh spacing %.1f km is to big for mean width %.1f km' %
                 (mesh_spacing, mean_width)
             )
 
-        points = zip(*[
-            v_edge.resample(vert_edges_lengths[i] / num_vert_segments).points
-            for v_edge in vert_edges
-        ])
+        points = zip(*[v_edge.resample_to_num_points(num_vert_points).points
+                       for v_edge in vert_edges])
         mesh = RectangularMesh.from_points_list(points)
         assert 1 not in mesh.shape
         return cls(mesh)
