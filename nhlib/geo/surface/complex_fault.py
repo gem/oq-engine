@@ -108,6 +108,10 @@ class ComplexFaultSurface(BaseSurface):
         :returns:
             An instance of :class:`ComplexFaultSurface` created using
             that data.
+        :raises ValueError:
+            If requested mesh spacing is too big for the surface geometry
+            (doesn't allow to put a single mesh cell along length and/or
+            width).
 
         Uses :meth:`check_fault_data` for checking parameters.
         """
@@ -119,7 +123,11 @@ class ComplexFaultSurface(BaseSurface):
             edges_lengths.append(length)
         mean_length = sum(edges_lengths) / len(edges)
         num_hor_segments = int(round(mean_length / mesh_spacing))
-        assert num_hor_segments >= 1
+        if num_hor_segments == 0:
+            raise ValueError(
+                'mesh spacing %.1f km is to big for mean length %.1f km' %
+                (mesh_spacing, mean_length)
+            )
         edges = [edge.resample(edges_lengths[i] / num_hor_segments).points
                  for i, edge in enumerate(edges)]
 
@@ -127,7 +135,11 @@ class ComplexFaultSurface(BaseSurface):
         vert_edges_lengths = [v_edge.get_length() for v_edge in vert_edges]
         mean_width = sum(vert_edges_lengths) / (num_hor_segments + 1)
         num_vert_segments = int(round(mean_width / mesh_spacing))
-        assert num_vert_segments >= 1
+        if num_vert_segments == 0:
+            raise ValueError(
+                'mesh spacing %.1f km is to big for mean width %.1f km' %
+                (mesh_spacing, mean_width)
+            )
 
         points = zip(*[
             v_edge.resample(vert_edges_lengths[i] / num_vert_segments).points
