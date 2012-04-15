@@ -224,6 +224,14 @@ class Line(object):
                 segment += 1
             p1, p2 = self.points[segment - 1:segment + 1]
             offset = tot_length - (acc_length - last_segment_length)
-            resampled_points.append(p1.equally_spaced_points(p2, offset)[1])
+            if offset < 1e-5:
+                # for some reason it takes pyproj a lot of time to do forward
+                # geodetic transformations for small distances. if target point
+                # is just 1 cm away from original (non-resampled) line vertex,
+                # don't even bother calling pyproj.
+                resampled = p1
+            else:
+                resampled = p1.equally_spaced_points(p2, offset)[1]
+            resampled_points.append(resampled)
 
         return Line(resampled_points)
