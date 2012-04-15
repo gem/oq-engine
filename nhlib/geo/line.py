@@ -205,8 +205,7 @@ class Line(object):
         :returns:
             A new line with that many points as requested.
         """
-        if len(self.points) < 2:
-            return Line(self.points)
+        assert len(self.points) > 1, "can not resample the line of one point"
 
         section_length = self.get_length() / (num_points - 1)
         resampled_points = [self.points[0]]
@@ -226,4 +225,5 @@ class Line(object):
             p1, p2 = self.points[segment - 1:segment + 1]
             offset = tot_length - (acc_length - last_segment_length)
             resampled_points.append(p1.equally_spaced_points(p2, offset)[1])
+
         return Line(resampled_points)
