@@ -204,11 +204,26 @@ class Line(object):
             Integer number of points the resulting line should have.
         :returns:
             A new line with that many points as requested.
-
-        Calculates the length of the original line using :meth:`get_length`,
-        divides it by number of segments in the resulting line (which is less
-        than num_points by 1) and calls :meth:`resample` with the calculated
-        section length.
         """
+        if len(self.points) < 2:
+            return Line(self.points)
+
         section_length = self.get_length() / (num_points - 1)
-        return self.resample(section_length)
+        resampled_points = [self.points[0]]
+
+        segment = 0
+        acc_length = 0
+        last_segment_length = 0
+
+        for i in xrange(num_points - 1):
+            tot_length = (i + 1) * section_length
+            while tot_length > acc_length and segment < len(self.points):
+                last_segment_length = self.points[segment].distance(
+                    self.points[segment + 1]
+                )
+                acc_length += last_segment_length
+                segment += 1
+            p1, p2 = self.points[segment - 1:segment + 1]
+            offset = tot_length - (acc_length - last_segment_length)
+            resampled_points.append(p1.equally_spaced_points(p2, offset)[1])
+        return Line(resampled_points)
