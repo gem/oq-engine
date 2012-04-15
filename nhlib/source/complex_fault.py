@@ -83,12 +83,8 @@ class ComplexFaultSource(SeismicSource):
                                                   cell_length, total_area)
             occurrence_rate = mag_occ_rate / float(len(rupture_slices))
 
-            for first_row, last_row, first_col, last_col in rupture_slices:
-                mesh = whole_fault_mesh[first_row:last_row + 1,
-                                        first_col:last_col + 1]
-                rupture_cells_area = cell_area[first_row:last_row,
-                                               first_col:last_col]
-                rupture_area = numpy.sum(rupture_cells_area)
+            for rupture_slice in rupture_slices:
+                mesh = whole_fault_mesh[rupture_slice]
                 # XXX: use surface centroid as rupture's hypocenter
                 # XXX: instead of point with middle index
                 hypocenter = mesh.get_middle_point()
@@ -104,13 +100,12 @@ class ComplexFaultSource(SeismicSource):
         nrows, ncols = cell_length.shape
 
         if rupture_area >= total_area:
-            return [(0, nrows, 0, ncols)]
+            return [slice(None)]
 
         rupture_length = numpy.sqrt(rupture_area * self.rupture_aspect_ratio)
         rupture_slices = []
 
         first_col = 0
-        stop = False
         for row in xrange(nrows):
             for col in xrange(first_col, ncols):
                 lengths_acc = numpy.add.accumulate(
@@ -135,8 +130,7 @@ class ComplexFaultSource(SeismicSource):
                     if row == 0:
                         if last_col == ncols:
                             # there is no place to extend, exiting
-                            stop = True
-                            break
+                            return rupture_slices
                         else:
                             # try to extend along length
                             areas_acc = numpy.sum(cell_area[:, col:], axis=0)
@@ -145,14 +139,11 @@ class ComplexFaultSource(SeismicSource):
                             last_col = rup_cols + col + 1
                             if last_col == ncols and areas_acc[rup_cols] < rupture_area:
                                 # still doesn't fit, return
-                                stop = True
-                                break
+                                return rupture_slices
                     else:
                         # row is not the first
                         first_col += 1
 
-                rupture_slices.append((row, last_row, col, last_col))
-
-            if stop:
-                break
+                rupture_slices.append((slice(row, last_row + 1),
+                                       slice(col, last_col + 1)))
         return rupture_slices
