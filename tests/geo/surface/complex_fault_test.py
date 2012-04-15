@@ -84,3 +84,25 @@ class ComplexFaultFromFaultDataTestCase(utils.SurfaceTestCase):
           (2.91161824e-03, 9.27209551e-03, 1.77023884e+00),
           (2.61757060e-03, 1.86912149e-02, 1.78201896e+00)]
         ])
+
+    def test_mesh_spacing_more_than_two_lengths(self):
+        edge1 = Line([Point(0, 0, 0), Point(0, 0.1, 0)])
+        edge2 = Line([Point(0, 0, 10), Point(0, 0.1, 20)])
+        with self.assertRaises(ValueError) as ar:
+            ComplexFaultSurface.from_fault_data([edge1, edge2],
+                                                mesh_spacing=27)
+        self.assertEqual(
+            str(ar.exception),
+            'mesh spacing 27.0 km is to big for mean length 13.0 km'
+        )
+
+    def test_mesh_spacing_more_than_two_widthss(self):
+        edge1 = Line([Point(0, 0, 0), Point(0, 0.2, 0)])
+        edge2 = Line([Point(0, 0, 10), Point(0, 0.2, 20)])
+        with self.assertRaises(ValueError) as ar:
+            ComplexFaultSurface.from_fault_data([edge1, edge2],
+                                                mesh_spacing=30.1)
+        self.assertEqual(
+            str(ar.exception),
+            'mesh spacing 30.1 km is to big for mean width 15.0 km'
+        )
