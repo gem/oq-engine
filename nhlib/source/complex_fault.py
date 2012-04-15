@@ -62,7 +62,6 @@ class ComplexFaultSource(SeismicSource):
         """
         See :meth:`nhlib.source.base.SeismicSource.iter_ruptures`.
         """
-        # TODO: unittest
         # TODO: document better
         whole_fault_surface = ComplexFaultSurface.from_fault_data(
             self.edges, self.rupture_mesh_spacing
@@ -72,15 +71,16 @@ class ComplexFaultSource(SeismicSource):
             whole_fault_mesh.get_cell_dimensions()
         )
         cell_area = cell_area.reshape(cell_area.shape + (1, ))
-        total_area = numpy.sum(cell_area)
 
         for (mag, mag_occ_rate) in self.mfd.get_annual_occurrence_rates():
             rupture_area = self.magnitude_scaling_relationship.get_median_area(
                 mag, self.rake
             )
 
-            rupture_slices = self._float_ruptures(rupture_area, cell_area,
-                                                  cell_length, total_area)
+            rupture_length = numpy.sqrt(rupture_area
+                                        * self.rupture_aspect_ratio)
+            rupture_slices = _float_ruptures(rupture_area, rupture_length,
+                                             cell_area, cell_length)
             occurrence_rate = mag_occ_rate / float(len(rupture_slices))
 
             for rupture_slice in rupture_slices:
@@ -94,56 +94,58 @@ class ComplexFaultSource(SeismicSource):
                     surface, occurrence_rate, temporal_occurrence_model
                 )
 
-    def _float_ruptures(self, rupture_area, cell_area, cell_length, total_area):
-        # TODO: document
-        # TODO: clean up
-        nrows, ncols = cell_length.shape
+def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
+    # TODO: document
+    nrows, ncols = cell_length.shape
 
-        if rupture_area >= total_area:
-            return [slice(None)]
+    if rupture_area >= numpy.sum(cell_area):
+        return [slice(None)]
 
-        rupture_length = numpy.sqrt(rupture_area * self.rupture_aspect_ratio)
-        rupture_slices = []
+    rupture_slices = []
 
-        first_col = 0
-        for row in xrange(nrows):
-            for col in xrange(first_col, ncols):
-                lengths_acc = numpy.add.accumulate(
-                    cell_length[row, col:]
-                )
-                rup_cols = numpy.argmin(numpy.abs(lengths_acc - rupture_length))
-                last_col = rup_cols + col + 1
-                if last_col == ncols and lengths_acc[rup_cols] < rupture_length:
-                    # rupture doesn't fit along length
-                    if col != 0:
-                        # go to the next row
-                        break
+    dead_ends = set()
+    for row in xrange(nrows):
+        for col in xrange(ncols):
+            if col in dead_ends:
+                continue
+            lengths_acc = numpy.add.accumulate(
+                cell_length[row, col:]
+            )
+            rup_cols = numpy.argmin(numpy.abs(lengths_acc - rupture_length))
+            last_col = rup_cols + col + 1
+            if last_col == ncols and lengths_acc[rup_cols] < rupture_length:
+                # rupture doesn't fit along length
+                if col != 0:
+                    # go to the next row
+                    break
 
-                areas_acc = numpy.sum(cell_area[row:, col:last_col], axis=1)
-                areas_acc = numpy.add.accumulate(areas_acc, axis=0)
-                rup_rows = numpy.argmin(numpy.abs(areas_acc - rupture_area))
-                last_row = rup_rows + row + 1
-                if last_row == nrows and areas_acc[rup_rows] < rupture_area:
-                    # rupture doesn't fit along width.
-                    # we can try to extend it along length but only if we are
-                    # at the first row
-                    if row == 0:
-                        if last_col == ncols:
-                            # there is no place to extend, exiting
-                            return rupture_slices
-                        else:
-                            # try to extend along length
-                            areas_acc = numpy.sum(cell_area[:, col:], axis=0)
-                            areas_acc = numpy.add.accumulate(areas_acc, axis=0)
-                            rup_cols = numpy.argmin(numpy.abs(areas_acc - rupture_area))
-                            last_col = rup_cols + col + 1
-                            if last_col == ncols and areas_acc[rup_cols] < rupture_area:
-                                # still doesn't fit, return
-                                return rupture_slices
+            areas_acc = numpy.sum(cell_area[row:, col:last_col], axis=1)
+            areas_acc = numpy.add.accumulate(areas_acc, axis=0)
+            rup_rows = numpy.argmin(numpy.abs(areas_acc - rupture_area))
+            last_row = rup_rows + row + 1
+            if last_row == nrows and areas_acc[rup_rows] < rupture_area:
+                # rupture doesn't fit along width.
+                # we can try to extend it along length but only if we are
+                # at the first row
+                if row == 0:
+                    if last_col == ncols:
+                        # there is no place to extend, exiting
+                        return rupture_slices
                     else:
-                        # row is not the first
-                        first_col += 1
+                        # try to extend along length
+                        areas_acc = numpy.sum(cell_area[:, col:], axis=0)
+                        areas_acc = numpy.add.accumulate(areas_acc, axis=0)
+                        rup_cols = numpy.argmin(numpy.abs(areas_acc
+                                                          - rupture_area))
+                        last_col = rup_cols + col + 1
+                        if last_col == ncols \
+                                and areas_acc[rup_cols] < rupture_area:
+                            # still doesn't fit, return
+                            return rupture_slices
+                else:
+                    # row is not the first
+                    dead_ends.add(col)
 
-                rupture_slices.append((slice(row, last_row + 1),
-                                       slice(col, last_col + 1)))
-        return rupture_slices
+            rupture_slices.append((slice(row, last_row + 1),
+                                   slice(col, last_col + 1)))
+    return rupture_slices

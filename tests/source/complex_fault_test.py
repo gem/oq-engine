@@ -13,7 +13,11 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
-from nhlib.source.complex_fault import ComplexFaultSource
+import unittest
+
+import numpy
+
+from nhlib.source.complex_fault import ComplexFaultSource, _float_ruptures
 from nhlib.geo import Line, Point
 from nhlib.geo.surface.simple_fault import SimpleFaultSurface
 from nhlib.scalerel.peer import PeerMSR
@@ -227,3 +231,61 @@ class ComplexFaultSourceIterRupturesTestCase(
                                    test_data.TEST4_MESH_SPACING,
                                    test_data.TEST4_EDGES)
         self._test_ruptures(test_data.TEST4_RUPTURES, source)
+
+
+class FloatRupturesTestCase(unittest.TestCase):
+    def test_reshaping_along_length(self):
+        cell_area = numpy.array([ [[1], [1], [1]],
+                                  [[1], [1], [1]] ], dtype=float)
+        cell_length = numpy.array([ [1, 1, 1],
+                                    [1, 1, 1] ], dtype=float)
+        rupture_area = 3.1
+        rupture_length = 1.0
+
+        slices = _float_ruptures(rupture_area, rupture_length,
+                                 cell_area, cell_length)
+        self.assertEqual(len(slices), 2)
+        s1, s2 = slices
+        self.assertEqual(s1, (slice(0, 3), slice(0, 3)))
+        self.assertEqual(s2, (slice(0, 3), slice(1, 4)))
+
+        rupture_area = 4.2
+        slices = _float_ruptures(rupture_area, rupture_length,
+                                 cell_area, cell_length)
+        self.assertEqual(len(slices), 1)
+        self.assertEqual(slices, [s1])
+
+    def test_reshaping_along_width(self):
+        cell_area = numpy.array([ [[4], [4]],
+                                  [[4], [4]],
+                                  [[2], [2]] ], dtype=float)
+        cell_length = numpy.array([ [2, 2], [2, 2], [2, 2] ], dtype=float)
+        rupture_area = 13.0
+        rupture_length = 12.0
+
+        slices = _float_ruptures(rupture_area, rupture_length,
+                                 cell_area, cell_length)
+        self.assertEqual(len(slices), 2)
+        s1, s2 = slices
+        self.assertEqual(s1, (slice(0, 3), slice(0, 3)))
+        self.assertEqual(s2, (slice(1, 4), slice(0, 3)))
+
+    def test_varying_width(self):
+        cell_area = numpy.array([ [[1], [1], [1]],
+                                  [[1], [0.1], [1]],
+                                  [[1], [0.1], [1]] ], dtype=float)
+        cell_length = numpy.array([ [1, 1, 1], [1, 1, 1], [1, 1, 1] ],
+                                  dtype=float)
+        rupture_area = 2.1
+        rupture_length = 1.0
+
+        slices = _float_ruptures(rupture_area, rupture_length,
+                                 cell_area, cell_length)
+        self.assertEqual(len(slices), 6)
+        tl, tm, tr, bl, bm, br = slices
+        self.assertEqual(tl, (slice(0, 3), slice(0, 2)))
+        self.assertEqual(tm, (slice(0, 4), slice(1, 3)))
+        self.assertEqual(tr, (slice(0, 3), slice(2, 4)))
+        self.assertEqual(bl, (slice(1, 4), slice(0, 2)))
+        self.assertEqual(bm, (slice(1, 4), slice(1, 3)))
+        self.assertEqual(br, (slice(1, 4), slice(2, 4)))
