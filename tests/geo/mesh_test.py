@@ -625,3 +625,27 @@ class RectangularMeshGetCellDimensionsTestCase(unittest.TestCase):
             widths=[1, 1],
             areas=[1, 2]
         )
+
+
+class RectangularMeshTriangulateTestCase(unittest.TestCase):
+    def test_simple(self):
+        lons = numpy.array([[0, 0.0089946277931563321],
+                            [0, 0.0089974527390248322]])
+        lats = numpy.array([[0, 0], [0, 0]], dtype=float)
+        depths = numpy.array([[1, 0.99992150706475513],
+                              [3, 2.9999214824129012]])
+        mesh = RectangularMesh(lons, lats, depths)
+        points, along_azimuth, updip, diag = mesh.triangulate()
+        self.assertTrue(numpy.allclose(points, [
+            [(6370, 0, 0), (6370, 1, 0)],
+            [(6368, 0, 0), (6368, 1, 0)]
+        ]))
+        self.assertTrue(numpy.allclose(along_azimuth, [
+            [(0, 1, 0)], [(0, 1, 0)]
+        ]))
+        self.assertTrue(numpy.allclose(updip, [
+            [(2, 0, 0)], [(2, 0, 0)],
+        ]))
+        self.assertTrue(numpy.allclose(diag, [
+            [(2, 1, 0)]
+        ]))

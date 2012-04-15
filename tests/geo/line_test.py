@@ -119,6 +119,14 @@ class LineResampleToNumPointsTestCase(unittest.TestCase):
         expected_points = points[::4]
         self.assertEqual(line.points, expected_points)
 
+    def test_cutting_corners(self):
+        p1 = geo.Point(0., 0.)
+        p2 = p1.point_at(1, 0, 1)
+        p3 = p2.point_at(1, 0, 179)
+        p4 = p3.point_at(5, 0, 90)
+        line = geo.Line([p1, p2, p3, p4]).resample_to_num_points(3)
+        self.assertEqual(len(line), 3)
+
 
 class LineLengthTestCase(unittest.TestCase):
     def test(self):
