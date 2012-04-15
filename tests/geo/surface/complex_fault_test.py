@@ -97,7 +97,7 @@ class ComplexFaultFromFaultDataTestCase(utils.SurfaceTestCase):
                                                 mesh_spacing=27)
         self.assertEqual(
             str(ar.exception),
-            'mesh spacing 27.0 km is to big for mean length 13.0 km'
+            'mesh spacing 27.0 km is too big for mean length 13.0 km'
         )
 
     def test_mesh_spacing_more_than_two_widthss(self):
@@ -108,5 +108,5 @@ class ComplexFaultFromFaultDataTestCase(utils.SurfaceTestCase):
                                                 mesh_spacing=30.1)
         self.assertEqual(
             str(ar.exception),
-            'mesh spacing 30.1 km is to big for mean width 15.0 km'
+            'mesh spacing 30.1 km is too big for mean width 15.0 km'
         )

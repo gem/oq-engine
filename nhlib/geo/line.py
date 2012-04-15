@@ -216,7 +216,7 @@ class Line(object):
 
         for i in xrange(num_points - 1):
             tot_length = (i + 1) * section_length
-            while tot_length > acc_length and segment < len(self.points):
+            while tot_length > acc_length and segment < len(self.points) - 1:
                 last_segment_length = self.points[segment].distance(
                     self.points[segment + 1]
                 )

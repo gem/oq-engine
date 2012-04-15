@@ -17,6 +17,8 @@
 Module :mod:`nhlib.geo.surface.complex_fault` defines
 :class:`ComplexFaultSurface`.
 """
+import numpy
+
 from nhlib.geo.line import Line
 from nhlib.geo.surface.base import BaseSurface
 from nhlib.geo.mesh import RectangularMesh
@@ -117,24 +119,22 @@ class ComplexFaultSurface(BaseSurface):
         """
         cls.check_fault_data(edges, mesh_spacing)
 
-        edges_lengths = [edge.get_length() for edge in edges]
-        mean_length = sum(edges_lengths) / len(edges)
+        mean_length = numpy.mean([edge.get_length() for edge in edges])
         num_hor_points = int(round(mean_length / mesh_spacing)) + 1
         if num_hor_points <= 1:
             raise ValueError(
-                'mesh spacing %.1f km is to big for mean length %.1f km' %
+                'mesh spacing %.1f km is too big for mean length %.1f km' %
                 (mesh_spacing, mean_length)
             )
         edges = [edge.resample_to_num_points(num_hor_points).points
                  for i, edge in enumerate(edges)]
 
         vert_edges = [Line(v_edge) for v_edge in zip(*edges)]
-        vert_edges_lengths = [v_edge.get_length() for v_edge in vert_edges]
-        mean_width = sum(vert_edges_lengths) / (num_hor_points)
+        mean_width = numpy.mean([v_edge.get_length() for v_edge in vert_edges])
         num_vert_points = int(round(mean_width / mesh_spacing)) + 1
         if num_vert_points <= 1:
             raise ValueError(
-                'mesh spacing %.1f km is to big for mean width %.1f km' %
+                'mesh spacing %.1f km is too big for mean width %.1f km' %
                 (mesh_spacing, mean_width)
             )
 
