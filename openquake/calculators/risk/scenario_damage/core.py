@@ -41,7 +41,16 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
     def pre_execute(self):
         """
-        Write the initial db container records for the calculation results.
+        Perform the following pre-execution tasks:
+
+        * store the exposure model specified in the
+        configuration file into database
+        * store the fragility model specified in the
+        configuration file into database
+        * split the interested sites into blocks for
+        later processing
+        * write the initial database container records
+        for calculation results
         """
 
         self.store_exposure_assets()
