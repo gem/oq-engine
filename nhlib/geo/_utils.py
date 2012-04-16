@@ -223,3 +223,42 @@ def ensure(expr, msg):
 
     if not expr:
         raise ValueError(msg)
+
+
+def triangle_area(e1, e2, e3):
+    """
+    Get the area of triangle formed by three vectors.
+
+    Parameters are three three-dimensional numpy arrays representing
+    vectors of triangle's edges in Cartesian space.
+
+    :returns:
+        Float number, the area of the triangle in squared units of coordinates,
+        or numpy array of shape of edges with one dimension less.
+
+    Uses Heron formula, see `http://mathworld.wolfram.com/HeronsFormula.html`_.
+    """
+    # calculating edges length
+    e1_length = numpy.sqrt(numpy.sum(e1 * e1, axis=-1))
+    e2_length = numpy.sqrt(numpy.sum(e2 * e2, axis=-1))
+    e3_length = numpy.sqrt(numpy.sum(e3 * e3, axis=-1))
+    # calculating half perimeter
+    s = (e1_length + e2_length + e3_length) / 2.0
+    # applying Heron's formula
+    return numpy.sqrt(s * (s - e1_length) * (s - e2_length) * (s - e3_length))
+
+
+def normalized(vector):
+    """
+    Get unit vector for a given one.
+
+    :param vector:
+        Numpy vector as coordinates in Cartesian space, or an array of such.
+    :returns:
+        Numpy array of the same shape and structure where all vectors are
+        normalized. That is, each coordinate component is divided by its
+        vector's length.
+    """
+    length = numpy.sum(vector * vector, axis=-1)
+    length = numpy.sqrt(length.reshape(length.shape + (1, )))
+    return vector / length

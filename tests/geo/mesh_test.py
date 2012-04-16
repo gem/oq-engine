@@ -14,6 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
+import math
 
 import numpy
 
@@ -376,7 +377,7 @@ class RectangularMeshJoynerBooreDistanceTestCase(unittest.TestCase):
                    _mesh_test_data.TEST5_JB_DISTANCE)
 
 
-class RectangularMeshGetCentroidTestCase(unittest.TestCase):
+class RectangularMeshGetMiddlePointTestCase(unittest.TestCase):
     def test_odd_rows_odd_columns_no_depths(self):
         lons = numpy.array([numpy.arange(-1, 1.2, 0.2)] * 11)
         lats = lons.transpose() * 10
@@ -429,3 +430,162 @@ class RectangularMeshGetCentroidTestCase(unittest.TestCase):
         mesh = RectangularMesh(lons, lats, depths=depths)
         self.assertEqual(mesh.get_middle_point(),
                          Point(15.996712, -0.250993, 3.5))
+
+
+class RectangularMeshGetMeanInclinationAndAzimuthTestCase(unittest.TestCase):
+    def test_on_surface(self):
+        row1 = [Point(0, 0), Point(0, 1)]
+        row2 = [Point(1, 0), Point(1, 1)]
+        mesh = RectangularMesh.from_points_list([row1, row2])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertEqual(dip, 0)
+        self.assertAlmostEqual(strike, 0, delta=0.5)
+
+        row1 = [Point(0, 0), Point(0, -1)]
+        row2 = [Point(1, 0), Point(1, -1)]
+        mesh = RectangularMesh.from_points_list([row1, row2])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertEqual(dip, 0)
+        self.assertAlmostEqual(strike, 180, delta=0.5)
+
+        row1 = [Point(0, 0), Point(1, 1)]
+        row2 = [Point(1, 0), Point(2, 1)]
+        mesh = RectangularMesh.from_points_list([row1, row2])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertEqual(dip, 0)
+        self.assertAlmostEqual(strike, 45, delta=0.01)
+
+        row1 = [Point(0, 0), Point(1, -1)]
+        row2 = [Point(1, 0), Point(2, -1)]
+        mesh = RectangularMesh.from_points_list([row1, row2])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertEqual(dip, 0)
+        self.assertAlmostEqual(strike, 135, delta=0.01)
+
+        row1 = [Point(0, 0), Point(-1, -1)]
+        row2 = [Point(-1, 0), Point(-2, -1)]
+        mesh = RectangularMesh.from_points_list([row1, row2])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertEqual(dip, 0)
+        self.assertAlmostEqual(strike, 225, delta=0.01)
+
+        row1 = [Point(0, 0), Point(-1, 1)]
+        row2 = [Point(-1, 0), Point(-2, 1)]
+        mesh = RectangularMesh.from_points_list([row1, row2])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertEqual(dip, 0)
+        self.assertAlmostEqual(strike, 315, delta=0.01)
+
+    def test_one_cell(self):
+        top = [Point(0, -0.01), Point(0, 0.01)]
+        bottom = [Point(0.01, -0.01, 1.11), Point(0.01, 0.01, 1.11)]
+
+        mesh = RectangularMesh.from_points_list([top, bottom])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertAlmostEqual(dip, 45, delta=0.05)
+        self.assertAlmostEqual(strike, 0, delta=0.05)
+
+        row1 = [Point(45, -0.1), Point(45.2, 0.1)]
+        row2 = [Point(45, -0.1, 1), Point(45.2, 0.1, 1)]
+        mesh = RectangularMesh.from_points_list([row1, row2])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertAlmostEqual(dip, 90)
+        self.assertAlmostEqual(strike, 45, delta=0.1)
+
+        row1 = [Point(90, -0.1), Point(90, 0.1)]
+        row2 = [Point(90, -0.1, 1), Point(90, 0.1, 1)]
+        mesh = RectangularMesh.from_points_list([row1, row2])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertAlmostEqual(dip, 90)
+        self.assertAlmostEqual(strike, 0, delta=0.1)
+
+    def test_two_cells(self):
+        top = [Point(0, -0.01), Point(0, 0.01)]
+        middle = [Point(0.01, -0.01, 1.11), Point(0.01, 0.01, 1.11)]
+        bottom = [Point(0.01, -0.01, 2.22), Point(0.01, 0.01, 2.22)]
+
+        mesh = RectangularMesh.from_points_list([top, middle, bottom])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertAlmostEqual(dip, math.degrees(math.atan2(2, 1)), delta=0.1)
+        self.assertAlmostEqual(strike, 0, delta=0.02)
+
+        bottom = [Point(0.01, -0.01, 3.33), Point(0.01, 0.01, 3.33)]
+        mesh = RectangularMesh.from_points_list([top, middle, bottom])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertAlmostEqual(dip, math.degrees(math.atan2(3, 1)), delta=0.1)
+        self.assertAlmostEqual(strike, 0, delta=0.02)
+
+        row1 = [Point(90, -0.1), Point(90, 0), Point(90, 0.1)]
+        row2 = [Point(90, -0.1, 1), Point(90, 0, 1), Point(90, 0.1, 1)]
+        mesh = RectangularMesh.from_points_list([row1, row2])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertAlmostEqual(dip, 90)
+        self.assertAlmostEqual(strike, 360)
+
+        row1 = [Point(-90.1, -0.1), Point(-90, 0), Point(-89.9, 0.1)]
+        row2 = [Point(-90.0, -0.1, 1), Point(-89.9, 0, 1), Point(-89.8, 0.1, 1)]
+        mesh = RectangularMesh.from_points_list([row1, row2])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertAlmostEqual(strike, 45, delta=1e-4)
+
+        row1 = [Point(-90.1, -0.1), Point(-90, 0), Point(-89.9, 0.1)]
+        row2 = [Point(-90.0, -0.1, 1), Point(-89.9, 0, 1), Point(-89.8, 0.1, 1)]
+        mesh = RectangularMesh.from_points_list([row1, row2])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertAlmostEqual(strike, 45, delta=1e-3)
+
+        row1 = [Point(-90.1, -0.1), Point(-90, 0), Point(-89.9, 0.1)]
+        row2 = [Point(-90.2, -0.1, 1), Point(-90.1, 0, 1), Point(-90, 0.1, 1)]
+        mesh = RectangularMesh.from_points_list([row1, row2])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertAlmostEqual(strike, 225, delta=1e-3)
+
+    def test_one_cell_unequal_area(self):
+        # top-left triangle is vertical, has dip of 90 degrees, zero
+        # strike and area of 1 by 1 over 2. bottom-right one has dip
+        # of atan2(1, sqrt(2) / 2.0) which is 54.73561 degrees, strike
+        # of 45 degrees and area that is 1.73246136 times area of the
+        # first one's. weighted mean dip is 67.5 degrees and weighted
+        # mean strike is 28.84 degrees
+        top = [Point(0, -0.01), Point(0, 0.01)]
+        bottom = [Point(0, -0.01, 2.22), Point(0.02, 0.01, 2.22)]
+
+        mesh = RectangularMesh.from_points_list([top, bottom])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        self.assertAlmostEqual(dip, 67.5, delta=0.05)
+        self.assertAlmostEqual(strike, 28.84, delta=0.05)
+
+    def test_dip_over_90_degree(self):
+        top = [Point(0, -0.01), Point(0, 0.01)]
+        bottom = [Point(-0.01, -0.01, 1.11), Point(-0.01, 0.01, 1.11)]
+
+        mesh = RectangularMesh.from_points_list([top, bottom])
+        dip, strike = mesh.get_mean_inclination_and_azimuth()
+        # dip must be still in a range 0..90
+        self.assertAlmostEqual(dip, 45, delta=0.05)
+        # strike must be reversed
+        self.assertAlmostEqual(strike, 180, delta=0.05)
+
+
+class RectangularMeshTriangulateTestCase(unittest.TestCase):
+    def test_simple(self):
+        lons = numpy.array([[0, 0.0089946277931563321],
+                            [0, 0.0089974527390248322]])
+        lats = numpy.array([[0, 0], [0, 0]], dtype=float)
+        depths = numpy.array([[1, 0.99992150706475513],
+                              [3, 2.9999214824129012]])
+        mesh = RectangularMesh(lons, lats, depths)
+        points, along_azimuth, updip, diag = mesh.triangulate()
+        self.assertTrue(numpy.allclose(points, [
+            [(6370, 0, 0), (6370, 1, 0)],
+            [(6368, 0, 0), (6368, 1, 0)]
+        ]))
+        self.assertTrue(numpy.allclose(along_azimuth, [
+            [(0, 1, 0)], [(0, 1, 0)]
+        ]))
+        self.assertTrue(numpy.allclose(updip, [
+            [(2, 0, 0)], [(2, 0, 0)],
+        ]))
+        self.assertTrue(numpy.allclose(diag, [
+            [(2, 1, 0)]
+        ]))

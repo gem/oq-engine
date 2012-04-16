@@ -18,8 +18,7 @@ import unittest
 from nhlib import geo
 
 
-class LineTestCase(unittest.TestCase):
-
+class LineResampleTestCase(unittest.TestCase):
     def test_resample(self):
         p1 = geo.Point(0.0, 0.0, 0.0)
         p2 = geo.Point(0.0, 0.127183341091, 14.1421356237)
@@ -78,6 +77,8 @@ class LineTestCase(unittest.TestCase):
 
         self.assertEqual(geo.Line([p1]), geo.Line([p1]).resample(10.0))
 
+
+class LineCreationTestCase(unittest.TestCase):
     def test_one_point_needed(self):
         self.assertRaises(ValueError, geo.Line, [])
 
@@ -92,28 +93,64 @@ class LineTestCase(unittest.TestCase):
         expected = [p1, p2, p4, p5]
         self.assertEquals(expected, geo.Line([p1, p2, p3, p4, p5, p6]).points)
 
-    def test_must_not_intersect_itself(self):
-        p1 = geo.Point(0.0, 0.0)
-        p2 = geo.Point(0.0, 1.0)
-        p3 = geo.Point(1.0, 1.0)
-        p4 = geo.Point(0.0, 0.5)
 
-        self.assertRaises(ValueError, geo.Line, [p1, p2, p3, p4])
+class LineResampleToNumPointsTestCase(unittest.TestCase):
+    def test_simple(self):
+        points = [geo.Point(0, 0), geo.Point(0.1, 0.3)]
 
-        # doesn't take into account depth
-        p1 = geo.Point(0.0, 0.0, 1.0)
-        p2 = geo.Point(0.0, 1.0, 1.0)
-        p3 = geo.Point(1.0, 1.0, 1.0)
-        p4 = geo.Point(0.0, 0.5, 1.5)
+        line = geo.Line(points).resample_to_num_points(3)
+        expected_points = [geo.Point(0, 0), geo.Point(0.05, 0.15),
+                           geo.Point(0.1, 0.3)]
+        self.assertEqual(line.points, expected_points)
 
-        self.assertRaises(ValueError, geo.Line, [p1, p2, p3, p4])
+        line = geo.Line(points).resample_to_num_points(4)
+        expected_points = [geo.Point(0, 0), geo.Point(0.0333333, 0.1),
+                           geo.Point(0.0666666, 0.2), geo.Point(0.1, 0.3)]
+        self.assertEqual(line.points, expected_points)
 
-    def test_invalid_line_crossing_international_date_line(self):
-        broken_points = [geo.Point(178, 0), geo.Point(178, 10),
-                         geo.Point(-178, 0), geo.Point(170, 5)]
-        self.assertRaises(ValueError, geo.Line, broken_points)
+    def test_fewer_points(self):
+        points = [geo.Point(i / 10., 0) for i in xrange(13)]
 
-    def test_valid_line_crossing_international_date_line(self):
-        points = [geo.Point(178, 0), geo.Point(178, 10),
-                  geo.Point(179, 5), geo.Point(-178, 5)]
-        geo.Line(points)
+        line = geo.Line(points).resample_to_num_points(2)
+        expected_points = [points[0], points[-1]]
+        self.assertEqual(line.points, expected_points)
+
+        line = geo.Line(points).resample_to_num_points(4)
+        expected_points = points[::4]
+        self.assertEqual(line.points, expected_points)
+
+    def test_cutting_corners(self):
+        p1 = geo.Point(0., 0.)
+        p2 = p1.point_at(1, 0, 1)
+        p3 = p2.point_at(1, 0, 179)
+        p4 = p3.point_at(5, 0, 90)
+        line = geo.Line([p1, p2, p3, p4]).resample_to_num_points(3)
+        self.assertEqual(len(line), 3)
+
+    def test_line_of_one_point(self):
+        line = geo.Line([geo.Point(0, 0)])
+        self.assertRaises(AssertionError, line.resample_to_num_points, 10)
+
+    def test_hangup(self):
+        p1 = geo.Point(0.00899322032502, 0., 0.)
+        p2 = geo.Point(0.01798644058385, 0., 1.)
+        p3 = geo.Point(0.02697966087241, 0., 2.)
+        line = geo.Line([p1, p2, p3]).resample_to_num_points(3)
+        self.assertEqual(line.points, [p1, p2, p3])
+
+    def test_single_segment(self):
+        line = geo.Line([
+            geo.Point(0., 0.00899322029302, 0.),
+            geo.Point(0.03344582378948, -0.00936927115925, 4.24264069)
+        ])
+        line = line.resample_to_num_points(7)
+        self.assertEqual(len(line), 7)
+
+
+class LineLengthTestCase(unittest.TestCase):
+    def test(self):
+        line = geo.Line([geo.Point(0, 0), geo.Point(0, 1), geo.Point(1, 2)])
+        length = line.get_length()
+        expected_length = line.points[0].distance(line.points[1]) \
+                          + line.points[1].distance(line.points[2])
+        self.assertEqual(length, expected_length)

@@ -13,6 +13,8 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+from math import pi, sin, cos, atan2, degrees
+
 from nhlib.geo.point import Point
 from nhlib.geo.line import Line
 from nhlib.geo.surface.simple_fault import SimpleFaultSurface
@@ -142,13 +144,13 @@ class SimpleFaultSurfaceGetStrikeTestCase(utils.SurfaceTestCase):
         p3 = Point(0.0860747816618, 0.102533437776)
 
         surface = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3]),
-                1.0, 6.0, 90.0, 1.0)
+                1.0, 6.0, 89.9, 1.0)
 
         self.assertAlmostEquals(40.0, surface.get_strike(), delta=0.02)
 
     def test_get_strike_along_meridian(self):
         line = Line([Point(0, 0), Point(1e-5, 1e-3), Point(0, 2e-3)])
-        surface = SimpleFaultSurface.from_fault_data(line, 1.0, 6.0, 90.0, 0.1)
+        surface = SimpleFaultSurface.from_fault_data(line, 1.0, 6.0, 89.9, 0.1)
         self.assertAlmostEquals(0, surface.get_strike(), delta=6e-2)
 
 
@@ -161,7 +163,7 @@ class SimpleFaultSurfaceGetDipTestCase(utils.SurfaceTestCase):
         surface = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3]),
                 1.0, 6.0, 90.0, 1.0)
 
-        self.assertAlmostEquals(90.0, surface.get_dip())
+        self.assertAlmostEquals(90.0, surface.get_dip(), delta=1e-6)
 
     def test_get_dip_2(self):
         p1 = Point(0.0, 0.0)
@@ -179,6 +181,20 @@ class SimpleFaultSurfaceGetDipTestCase(utils.SurfaceTestCase):
         p4 = Point(0.0899323137217, -1.10782376538e-07)
 
         surface = SimpleFaultSurface.from_fault_data(Line([p1, p2, p3, p4]),
-                0.0, 10.0, 45.0, 10.0)
+                                                     0.0, 10.0, 45.0, 1.0)
 
-        self.assertAlmostEquals(75.0, surface.get_dip(), 1)
+        # fault contains three segments. the one in the middle is inclined
+        # with dip of 45 degrees. other two are purely vertical (they are
+        # perpendicular to the middle one). the middle segment is rectangle
+        # and the side ones are parallelograms. area of those parallelograms
+        # is area of middle segment times sine of their acute angle.
+        mid_area = 1.0
+        mid_dip = pi / 4  # 45 degree
+        side_area = sin(mid_dip) * mid_area
+        side_dip = pi / 2  # 90 degree
+
+        expected_dip = degrees(atan2(
+            (mid_area * sin(mid_dip) + 2 * (side_area * sin(side_dip))) / 3.0,
+            (mid_area * cos(mid_dip) + 2 * (side_area * cos(side_dip))) / 3.0
+        ))
+        self.assertAlmostEquals(surface.get_dip(), expected_dip, delta=1e-3)

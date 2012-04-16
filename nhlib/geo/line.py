@@ -26,9 +26,7 @@ class Line(object):
     This class represents a geographical line, which is basically
     a sequence of geographical points.
 
-    A line is defined by at least one point. The surface projection
-    of a line cannot intersect itself (depth dimension is neglected
-    to check if a line intersects itself or not).
+    A line is defined by at least one point.
 
     :param points:
         The sequence of points defining this line.
@@ -41,11 +39,6 @@ class Line(object):
 
         if len(self.points) < 1:
             raise ValueError("One point needed to create a line!")
-
-        lats = [point.latitude for point in self.points]
-        lons = [point.longitude for point in self.points]
-        if utils.line_intersects_itself(lons, lats):
-            raise ValueError("Line intersects itself!")
 
     def __eq__(self, other):
         """
@@ -186,5 +179,59 @@ class Line(object):
                     self.points[i], section_length)
 
             resampled_points.extend(points[1:])
+
+        return Line(resampled_points)
+
+    def get_length(self):
+        """
+        Calculate and return the length of the line as a sum of lengths
+        of all its segments.
+
+        :returns:
+            Total length in km.
+        """
+        length = 0
+        for i, point in enumerate(self.points):
+            if i != 0:
+                length += point.distance(self.points[i - 1])
+        return length
+
+    def resample_to_num_points(self, num_points):
+        """
+        Resample the line to a specified number of points.
+
+        :param num_points:
+            Integer number of points the resulting line should have.
+        :returns:
+            A new line with that many points as requested.
+        """
+        assert len(self.points) > 1, "can not resample the line of one point"
+
+        section_length = self.get_length() / (num_points - 1)
+        resampled_points = [self.points[0]]
+
+        segment = 0
+        acc_length = 0
+        last_segment_length = 0
+
+        for i in xrange(num_points - 1):
+            tot_length = (i + 1) * section_length
+            while tot_length > acc_length and segment < len(self.points) - 1:
+                last_segment_length = self.points[segment].distance(
+                    self.points[segment + 1]
+                )
+                acc_length += last_segment_length
+                segment += 1
+            p1, p2 = self.points[segment - 1:segment + 1]
+            offset = tot_length - (acc_length - last_segment_length)
+            if offset < 1e-5:
+                # for some reason it takes pyproj a lot of time to do forward
+                # geodetic transformations for small distances. if target point
+                # is just 1 cm away from original (non-resampled) line vertex,
+                # don't even bother calling pyproj.
+                resampled = p1
+            else:
+                resampled = p1.equally_spaced_points(p2, offset)[1]
+            resampled_points.append(resampled)
 
         return Line(resampled_points)

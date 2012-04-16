@@ -34,7 +34,7 @@ def assert_angles_equal(testcase, angle1, angle2, delta):
 
 
 class SimpleFaultSourceTestCase(unittest.TestCase):
-    def _test(self, expected_ruptures, mfd, aspect_ratio):
+    def _test(self, expected_ruptures, mfd, aspect_ratio, fault_trace=None):
         source_id = name = 'test-source'
         trt = TRT.ACTIVE_SHALLOW_CRUST
         rake = 0
@@ -44,10 +44,11 @@ class SimpleFaultSourceTestCase(unittest.TestCase):
         lower_seismogenic_depth = 4.2426406871192848
         magnitude_scaling_relationship = PeerMSR()
         rupture_aspect_ratio = aspect_ratio
-        fault_trace = Line([Point(0.0, 0.0),
-                            Point(0.0, 0.0359728811758),
-                            Point(0.0190775080917, 0.0550503815181),
-                            Point(0.03974514139, 0.0723925718855)])
+        if fault_trace is None:
+            fault_trace = Line([Point(0.0, 0.0),
+                                Point(0.0, 0.0359728811758),
+                                Point(0.0190775080917, 0.0550503815181),
+                                Point(0.03974514139, 0.0723925718855)])
 
         source = SimpleFaultSource(
             source_id, name, trt, mfd, rupture_mesh_spacing,
@@ -75,7 +76,7 @@ class SimpleFaultSourceTestCase(unittest.TestCase):
             self.assertEqual(rupture.hypocenter,
                              Point(*expected_rupture['hypocenter']))
             assert_angles_equal(self, rupture.surface.get_strike(),
-                                expected_rupture['strike'], delta=1e-4)
+                                expected_rupture['strike'], delta=0.5)
             assert_angles_equal(self, rupture.surface.get_dip(),
                                 expected_rupture['dip'], delta=3)
 
@@ -115,3 +116,12 @@ class SimpleFaultSourceTestCase(unittest.TestCase):
         self.assertEqual(str(ar.exception),
                          'mesh spacing 1 is too low to represent '
                          'ruptures of magnitude 1.5')
+
+    def test_fault_trace_intersects_itself(self):
+        mfd = TruncatedGRMFD(a_val=0.5, b_val=1.0, min_mag=10, max_mag=20,
+                             bin_width=1.0)
+        fault_trace = Line([Point(0, 0), Point(0, 1),
+                            Point(1, 1), Point(0, 0.5)])
+        with self.assertRaises(ValueError) as ar:
+            self._test([], mfd=mfd, aspect_ratio=1, fault_trace=fault_trace)
+        self.assertEqual(str(ar.exception), 'fault trace intersects itself')

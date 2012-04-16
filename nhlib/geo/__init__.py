@@ -27,5 +27,6 @@ from nhlib.geo.polygon import Polygon
 from nhlib.geo.mesh import Mesh, RectangularMesh
 from nhlib.geo.surface import PlanarSurface
 from nhlib.geo.surface import SimpleFaultSurface
+from nhlib.geo.surface import ComplexFaultSurface
 from nhlib.geo.nodalplane import NodalPlane
 from nhlib.geo import surface

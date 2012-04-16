@@ -74,6 +74,15 @@ class LineIntersectsItselfTestCase(unittest.TestCase):
         self.assertEqual(False, self.func(lons, lats))
         self.assertEqual(True, self.func(lons, lats, closed_shape=True))
 
+    def test_intersects_on_international_date_line(self):
+        lons = [178, 178, -178, 170]
+        lats = [0, 10, 0, 5]
+        self.assertEqual(True, self.func(lons, lats))
+
+    def test_doesnt_intersect_on_international_date_line(self):
+        lons = [178, 178, 179, -178]
+        lats = [0, 10, 5, 5]
+        self.assertEqual(False, self.func(lons, lats))
 
 class GetLongitudinalExtentTestCase(unittest.TestCase):
     def test_positive(self):
@@ -214,3 +223,63 @@ class SphericalToCartesianTestCase(unittest.TestCase):
                    ([6178.89084351, 5986.78168703, 5433.62541707],
                     [1089.50516656, 2179.01033313, 3137.10509722],
                     [-1106.31253992, 0., 1106.31253992]))
+
+
+class TriangleAreaTestCase(unittest.TestCase):
+    def test_one_triangle(self):
+        a = numpy.array([0., 0., 0.])
+        b = numpy.array([1., 0., 0.])
+        c = numpy.array([0., 1., 0.])
+        self.assertAlmostEqual(utils.triangle_area(a - b, a - c, b - c), 0.5)
+        b = numpy.array([1., 0., 1.])
+        self.assertAlmostEqual(utils.triangle_area(a - b, a - c, b - c),
+                               (2 ** 0.5) / 2)
+
+    def test_arrays(self):
+        # 1d array of vectors
+        aa = numpy.array([(0.5, 0., 3.), (0., 2., -1.)])
+        bb = numpy.array([(0.5, 4., 3.), (0, 2, -2.)])
+        cc = numpy.array([(-1.5, 0., 3.), (1, 2, -2)])
+        areas = utils.triangle_area(aa - bb, aa - cc, bb - cc)
+        self.assertTrue(numpy.allclose(areas, [4.0, 0.5]))
+
+        # 2d array
+        aa = numpy.array([aa, aa * 2])
+        bb = numpy.array([bb, bb * 2])
+        cc = numpy.array([cc, cc * 2])
+        expected_area = [[4.0, 0.5], [16.0, 2.0]]
+        areas = utils.triangle_area(aa - bb, aa - cc, bb - cc)
+        self.assertTrue(numpy.allclose(areas, expected_area), msg=str(areas))
+
+        # 3d array
+        aa = numpy.array([aa])
+        bb = numpy.array([bb])
+        cc = numpy.array([cc])
+        expected_area = numpy.array([expected_area])
+        areas = utils.triangle_area(aa - bb, aa - cc, bb - cc)
+        self.assertTrue(numpy.allclose(areas, expected_area), msg=str(areas))
+
+
+class NormalizedTestCase(unittest.TestCase):
+    def test_one_vector(self):
+        v = numpy.array([0., 0., 2.])
+        self.assertTrue(numpy.allclose(utils.normalized(v), [0, 0, 1]))
+        v = numpy.array([0., -1., -1.])
+        n = utils.normalized(v)
+        self.assertTrue(numpy.allclose(n, [0, -2 ** 0.5 / 2., -2 ** 0.5 / 2.]))
+
+    def test_arrays(self):
+        # 1d array of vectors
+        vv = numpy.array([(0., 0., -0.1), (10., 0., 0.)])
+        nn = numpy.array([(0., 0., -1.), (1., 0., 0.)])
+        self.assertTrue(numpy.allclose(utils.normalized(vv), nn))
+
+        # 2d array
+        vv = numpy.array([vv, vv * 2, vv * (-3)])
+        nn = numpy.array([nn, nn, -nn])
+        self.assertTrue(numpy.allclose(utils.normalized(vv), nn))
+
+        # 3d array
+        vv = numpy.array([vv])
+        nn = numpy.array([nn])
+        self.assertTrue(numpy.allclose(utils.normalized(vv), nn))

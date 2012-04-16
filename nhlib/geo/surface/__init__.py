@@ -19,3 +19,4 @@ of earthquake rupture surfaces.
 """
 from nhlib.geo.surface.planar import PlanarSurface
 from nhlib.geo.surface.simple_fault import SimpleFaultSurface
+from nhlib.geo.surface.complex_fault import ComplexFaultSurface
