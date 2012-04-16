@@ -369,6 +369,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         'TRUNCATION_LEVEL': '3',
         'GMPE_TRUNCATION_TYPE': '1 Sided',
         'GROUND_MOTION_CORRELATION': 'true',
+        'EPSILON_RANDOM_SEED': '37',
     }
 
     BASE_EVENT_BASED_PARAMS = {
