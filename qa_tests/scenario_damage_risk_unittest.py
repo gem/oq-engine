@@ -16,8 +16,6 @@
 import unittest
 import numpy
 
-from nose.plugins.attrib import attr
-
 from openquake.db import models
 from openquake.db.models import OqJob
 from openquake.db.models import (
