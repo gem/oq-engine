@@ -20,10 +20,12 @@
 # Silence 'Too many lines in module'
 # pylint: disable=C0302
 
-from collections import defaultdict
-from collections import OrderedDict
 import math
 import os
+import random
+
+from collections import defaultdict
+from collections import OrderedDict
 
 from celery.task import task
 
@@ -38,7 +40,6 @@ from numpy import where
 from numpy import zeros
 from scipy import sqrt, log
 from scipy import stats
-from scipy.stats import norm
 
 from openquake.calculators.base import Calculator
 from openquake.db import models
@@ -515,6 +516,11 @@ class EpsilonProvider(object):
         self.__dict__.update(params)
         self.samples = None
 
+        self.rnd = random.Random()
+        eps_rnd_seed = params.get("EPSILON_RANDOM_SEED")
+        if eps_rnd_seed is not None:
+            self.rnd.seed(int(eps_rnd_seed))
+
     def epsilon(self, asset):
         """Sample from the standard normal distribution for the given asset.
 
@@ -531,7 +537,7 @@ class EpsilonProvider(object):
         correlation = getattr(self, "ASSET_CORRELATION", None)
         if not correlation:
             # Sample per asset
-            return norm.rvs(loc=0, scale=1)
+            return self.rnd.normalvariate(0, 1)
         elif correlation != "perfect":
             raise ValueError('Invalid "ASSET_CORRELATION": %s' % correlation)
         else:
@@ -542,7 +548,7 @@ class EpsilonProvider(object):
                 samples = self.samples = dict()
 
             if asset.taxonomy not in samples:
-                samples[asset.taxonomy] = norm.rvs(loc=0, scale=1)
+                samples[asset.taxonomy] = self.rnd.normalvariate(0, 1)
             return samples[asset.taxonomy]
 
 
