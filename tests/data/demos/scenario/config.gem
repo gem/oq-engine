@@ -66,3 +66,4 @@ EXPOSURE = LA_small_portfolio.xml
 # file containing the vulnerability functions
 VULNERABILITY = vulnerability.xml
 
+EPSILON_RANDOM_SEED = 37
