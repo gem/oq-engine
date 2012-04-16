@@ -24,7 +24,6 @@ event based approach.
 import numpy
 import os
 
-from openquake import kvs
 from openquake import logs
 from openquake import shapes
 
@@ -184,7 +183,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
             # the scientific functions used below
             # require the gmvs to be wrapped in a dict with a single key, IMLs
-            gmvs = {'IMLs': load_gmvs_for_point(
+            gmvs = {'IMLs': general.load_gmvs_at(
                     self.job_ctxt.job_id, point)}
 
             assets = general.BaseRiskCalculator.assets_at(
@@ -211,25 +210,6 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                 collect_block_data(loss_data, asset_site, loss)
 
         return sum_per_gmf.losses, loss_data
-
-
-def load_gmvs_for_point(job_id, point):
-    """
-    From the KVS, load all the ground motion values for the given point. We
-    expect one ground motion value per realization of the job.
-    Since there can be tens of thousands of realizations, this could return a
-    large list.
-
-    Note(LB): In the future, we may want to refactor this (and the code which
-    uses the values) to use a generator instead.
-
-    :param point: :py:class:`openquake.shapes.GridPoint` object
-
-    :returns: List of ground motion values (as floats). Each value represents a
-        realization of the calculation for a single point.
-    """
-    gmfs_key = kvs.tokens.ground_motion_values_key(job_id, point)
-    return [float(x['mag']) for x in kvs.get_list_json_decoded(gmfs_key)]
 
 
 def collect_region_data(block_loss_map_data, region_loss_map_data):
