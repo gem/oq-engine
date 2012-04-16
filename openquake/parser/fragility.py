@@ -91,6 +91,10 @@ class FragilityModelParser(producer.FileProducer):
             "invalid fragility model format (%s)" % mdl["format"])
         if mdl["format"] == "discrete":
             self.discrete = True
+
+        for attr in ("imlUnit", "maxIML", "minIML"):
+            mdl[attr] = element.get(attr)
+
         limits = element.find('%slimitStates' % xml.NRML)
         assert limits is not None, "no limit states found"
         mdl["limits"] = [ls.strip() for ls in limits.text.split()]
@@ -100,6 +104,10 @@ class FragilityModelParser(producer.FileProducer):
             assert imls is not None, "IML not set"
             mdl["imls"] = [float(iml) for iml in imls.text.split()]
             mdl["imt"] = imls.get('IMT')
+            assert mdl["maxIML"] is None, (
+                "'maxIML' is invalid for discrete fragility models")
+            assert mdl["minIML"] is None, (
+                "'minIML' is invalid for discrete fragility models")
 
         desc = element.find('%sdescription' % xml.GML)
         if desc is not None:
