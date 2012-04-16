@@ -16,8 +16,6 @@
 import unittest
 import numpy
 
-from nose.plugins.attrib import attr
-
 from openquake.db import models
 from openquake.db.models import OqJob
 from openquake.db.models import (
@@ -31,7 +29,6 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
     QA test for the Scenario Damage Risk calculator.
     """
 
-    @attr("qa")
     def test_scenario_damage_risk(self):
         cfg = helpers.demo_file("scenario_damage_risk/config.gem")
 
