@@ -31,7 +31,8 @@ from openquake.nrml import nrml_schema_file
 # pylint: disable=R0914
 
 
-FRAGM = namedtuple("FRAGM", "id, format, limits, description, imls, imt")
+FRAGM = namedtuple("FRAGM", "id, format, limits, description, imls, imt, "
+                   "iml_unit, max_iml, min_iml")
 FFD = namedtuple("FFD", "taxonomy, type, limit, poes")
 FFC = namedtuple("FFC", "taxonomy, type, limit, mean, stddev")
 
@@ -92,8 +93,10 @@ class FragilityModelParser(producer.FileProducer):
         if mdl["format"] == "discrete":
             self.discrete = True
 
-        for attr in ("imlUnit", "maxIML", "minIML"):
-            mdl[attr] = element.get(attr)
+        attr_data = (("iml_unit", "imlUnit"), ("max_iml", "maxIML"),
+                     ("min_iml", "minIML"))
+        for key, attr in attr_data:
+            mdl[key] = element.get(attr)
 
         limits = element.find('%slimitStates' % xml.NRML)
         assert limits is not None, "no limit states found"
