@@ -107,10 +107,10 @@ class FragilityModelParser(producer.FileProducer):
             assert imls is not None, "IML not set"
             mdl["imls"] = [float(iml) for iml in imls.text.split()]
             mdl["imt"] = imls.get('IMT')
-            assert mdl["maxIML"] is None, (
-                "'maxIML' is invalid for discrete fragility models")
-            assert mdl["minIML"] is None, (
-                "'minIML' is invalid for discrete fragility models")
+            assert mdl["max_iml"] is None, (
+                "'maxIML' must not be set for discrete fragility models")
+            assert mdl["min_iml"] is None, (
+                "'minIML' must not be set for discrete fragility models")
 
         desc = element.find('%sdescription' % xml.GML)
         if desc is not None:
