@@ -61,8 +61,10 @@ class ComplexFaultSource(SeismicSource):
     def iter_ruptures(self, temporal_occurrence_model):
         """
         See :meth:`nhlib.source.base.SeismicSource.iter_ruptures`.
+
+        Uses :func:`_float_ruptures` for finding possible rupture locations
+        on the whole fault surface.
         """
-        # TODO: document better
         whole_fault_surface = ComplexFaultSurface.from_fault_data(
             self.edges, self.rupture_mesh_spacing
         )
