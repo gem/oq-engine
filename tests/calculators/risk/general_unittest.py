@@ -18,6 +18,7 @@ import itertools
 import os
 import numpy
 import unittest
+import json
 
 from django.contrib.gis import geos
 
@@ -27,8 +28,10 @@ from openquake.calculators.risk.general import BaseRiskCalculator
 from openquake.calculators.risk.general import BetaDistribution
 from openquake.calculators.risk.general import compute_alpha
 from openquake.calculators.risk.general import compute_beta
+from openquake.calculators.risk.general import load_gmvs_at
 from openquake.db import models
 from openquake import engine
+from openquake import kvs
 from openquake import shapes
 from openquake.output.risk import LossMapDBWriter
 from openquake.output.risk import LossMapNonScenarioXMLWriter
@@ -354,3 +357,44 @@ class AssetsAtTestCase(unittest.TestCase, helpers.DbTestCase):
         site = shapes.Site(10.0, 10.0)
 
         self.assertEqual([], BaseRiskCalculator.assets_at(self.job.id, site))
+
+
+class LoadGroundMotionValuesTestCase(unittest.TestCase):
+
+    job_id = "1234"
+    region = shapes.Region.from_simple((0.1, 0.1), (0.2, 0.2))
+
+    def setUp(self):
+        kvs.mark_job_as_current(self.job_id)
+        kvs.cache_gc(self.job_id)
+
+    def tearDown(self):
+        kvs.mark_job_as_current(self.job_id)
+        kvs.cache_gc(self.job_id)
+
+    def test_load_gmvs_at(self):
+        """
+        Exercise the function
+        :func:`openquake.calculators.risk.general.load_gmvs_at`.
+        """
+
+        gmvs = [
+            {'site_lon': 0.1, 'site_lat': 0.2, 'mag': 0.117},
+            {'site_lon': 0.1, 'site_lat': 0.2, 'mag': 0.167},
+            {'site_lon': 0.1, 'site_lat': 0.2, 'mag': 0.542}]
+
+        expected_gmvs = [0.117, 0.167, 0.542]
+        point = self.region.grid.point_at(shapes.Site(0.1, 0.2))
+
+        # we expect this point to be at row 1, column 0
+        self.assertEqual(1, point.row)
+        self.assertEqual(0, point.column)
+
+        key = kvs.tokens.ground_motion_values_key(self.job_id, point)
+
+        # place the test values in kvs
+        for gmv in gmvs:
+            kvs.get_client().rpush(key, json.JSONEncoder().encode(gmv))
+
+        actual_gmvs = load_gmvs_at(self.job_id, point)
+        self.assertEqual(expected_gmvs, actual_gmvs)
