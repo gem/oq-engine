@@ -156,6 +156,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         Currently we support the computation of:
         * damage distributions per asset
         * damage distributions per building taxonomy
+        * total damage distributions
 
         :param block_id: id of the region block data.
         :type block_id: integer
