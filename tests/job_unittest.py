@@ -805,7 +805,8 @@ class RunJobTestCase(unittest.TestCase):
                             field_name='last_update')
 
                         self.assertEqual(1, sv.call_count)
-                        self.assertEqual(((1234, job.id), {}), sv.call_args)
+                        self.assertEqual(((1234, job.id), {'log_file': None}),
+                                         sv.call_args)
             finally:
                 engine._launch_job = before_launch
 
