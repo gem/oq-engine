@@ -193,17 +193,14 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdr.uh_spectrum_data TO oq_reslt_writer;
 
 -- oqmif.exposure_data
 GRANT SELECT ON oqmif.exposure_data TO GROUP openquake;
-GRANT SELECT,INSERT,DELETE ON oqmif.exposure_data TO oq_ged4gem;
 GRANT SELECT,INSERT,DELETE ON oqmif.exposure_data TO oq_job_init;
 
 -- oqmif.exposure_model
 GRANT SELECT ON oqmif.exposure_model TO GROUP openquake;
-GRANT SELECT,INSERT,DELETE ON oqmif.exposure_model TO oq_ged4gem;
 GRANT SELECT,INSERT,DELETE ON oqmif.exposure_model TO oq_job_init;
 
 -- oqmif.occupancy
 GRANT SELECT ON oqmif.occupancy TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.occupancy TO oq_ged4gem;
 GRANT SELECT,INSERT,UPDATE,DELETE ON oqmif.occupancy TO oq_job_init;
 
 -- riski.ffc
