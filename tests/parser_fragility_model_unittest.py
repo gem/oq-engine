@@ -282,6 +282,7 @@ class DiscreteFragilityModelParserTestCase(unittest.TestCase):
         finally:
             os.unlink(parser.path)
 
+
 class ContinuousFragilityModelParserTestCase(unittest.TestCase):
     """Tests for the continuous fragility model parser."""
 
