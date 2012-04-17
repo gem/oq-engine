@@ -28,13 +28,16 @@ class Rupture(object):
     :param mag:
         Magnitude of the rupture.
     :param rake:
-        Rake value of the rupture. See :class:`~nhlib.geo.nodalplane.NodalPlane`.
+        Rake value of the rupture.
+        See :class:`~nhlib.geo.nodalplane.NodalPlane`.
     :param tectonic_region_type:
-        Rupture's tectonic regime. One of constants in :class:`nhlib.const.TRT`.
+        Rupture's tectonic regime. One of constants
+        in :class:`nhlib.const.TRT`.
     :param hypocenter:
         A :class:`~nhlib.geo.point.Point`, rupture's hypocenter.
     :param surface:
-        An instance of subclass of :class:`~nhlib.geo.surface.base.BaseSurface`.
+        An instance of subclass of
+        :class:`~nhlib.geo.surface.base.BaseSurface`.
         Object representing the rupture surface geometry.
 
     :raises ValueError:
