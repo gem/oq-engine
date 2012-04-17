@@ -83,3 +83,14 @@ class ProbabilisticRupture(Rupture):
         )
         self.temporal_occurrence_model = temporal_occurrence_model
         self.occurrence_rate = occurrence_rate
+
+    def get_probability(self):
+        """
+        Return the probability of this rupture to occur.
+
+        Uses :meth:`~nhlib.tom.PoissonTOM.get_probability` of an assigned
+        temporal occurrence model.
+        """
+        return self.temporal_occurrence_model.get_probability(
+            self.occurrence_rate
+        )
