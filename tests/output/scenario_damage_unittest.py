@@ -23,7 +23,7 @@ from openquake import xml
 from openquake import shapes
 from openquake.db import models
 from openquake.output.scenario_damage import (
-DmgDistPerAssetXMLWriter, DmgDistPerTaxonomyXMLWriter)
+DmgDistPerAssetXMLWriter, DmgDistPerTaxonomyXMLWriter, DmgDistTotalXMLWriter)
 
 from tests.utils import helpers
 
@@ -245,6 +245,90 @@ class DmgDistPerTaxonomyXMLWriterTestCase(
         data = models.DmgDistPerTaxonomyData(
             dmg_dist_per_taxonomy = self.ddt,
             taxonomy = taxonomy,
+            dmg_state = dmg_state,
+            mean = mean,
+            stddev = stddev)
+
+        data.save()
+        self.data.append(data)
+
+
+class DmgDistTotalXMLWriterTestCase(
+    unittest.TestCase, helpers.DbTestCase):
+
+    job = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.job = cls.setup_classic_job(inputs=[])
+
+    def setUp(self):
+        self.data = []
+        self.ddt = None
+
+        self.damage_states = ["no_damage", "slight", "moderate",
+                "extensive", "complete"]
+
+    def test_serialize(self):
+        expected_file = helpers.get_data_path(
+            "expected-dmg-dist-total.xml")
+
+        expected_text = open(expected_file, "r").readlines()
+
+        self.make_dist()
+
+        self.make_data("no_damage", 1.0, 1.6)
+        self.make_data("slight", 34.8, 18.3)
+        self.make_data("moderate", 64.2, 19.8)
+        self.make_data("extensive", 64.3, 19.7)
+        self.make_data("complete", 64.3, 19.7)
+
+        try:
+            _, result_xml = tempfile.mkstemp()
+
+            writer = DmgDistTotalXMLWriter(result_xml,
+                    "ebl1", self.damage_states)
+
+            writer.serialize(self.data)
+            actual_text = open(result_xml, "r").readlines()
+
+            self.assertEqual(expected_text, actual_text)
+
+            self.assertTrue(xml.validates_against_xml_schema(
+                    result_xml))
+        finally:
+            os.unlink(result_xml)
+
+    def test_no_empty_dist(self):
+        # an empty distribution is not supported by the schema
+        writer = DmgDistTotalXMLWriter("output.xml",
+                "ebl1", self.damage_states)
+
+        self.assertRaises(RuntimeError, writer.serialize, [])
+        self.assertFalse(os.path.exists("output.xml"))
+
+        self.assertRaises(RuntimeError, writer.serialize, None)
+        self.assertFalse(os.path.exists("output.xml"))
+
+    def make_dist(self):
+        output = models.Output(
+            owner=self.job.owner,
+            oq_job=self.job,
+            display_name="",
+            db_backed=True,
+            output_type="dmg_dist_total")
+
+        output.save()
+
+        self.ddt = models.DmgDistTotal(
+            output=output,
+            dmg_states=self.damage_states)
+
+        self.ddt.save()
+
+    def make_data(self, dmg_state, mean, stddev):
+        data = models.DmgDistTotalData(
+            dmg_dist_total = self.ddt,
             dmg_state = dmg_state,
             mean = mean,
             stddev = stddev)
