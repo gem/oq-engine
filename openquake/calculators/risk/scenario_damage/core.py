@@ -35,7 +35,7 @@ DmgDistTotal, DmgDistTotalData)
 from openquake.db.models import inputs4job
 from openquake.utils.tasks import distribute
 from openquake.export.risk import (
-export_dmg_dist_per_asset, export_dmg_dist_per_taxonomy)
+export_dmg_dist_per_asset, export_dmg_dist_per_taxonomy, export_dmg_dist_total)
 
 
 LOGGER = logs.LOG
@@ -295,6 +295,12 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 output_type="dmg_dist_per_taxonomy")
 
             export_dmg_dist_per_taxonomy(output, target_dir)
+
+            [output] = Output.objects.filter(
+                oq_job=self.job_ctxt.oq_job.id,
+                output_type="dmg_dist_total")
+
+            export_dmg_dist_total(output, target_dir)
 
 
 def compute_gmf_fractions(gmf, funcs):
