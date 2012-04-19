@@ -93,6 +93,9 @@ class ExportDmgDistributionsTestCase(unittest.TestCase):
             [otaxon] = models.Output.objects.filter(
                 oq_job=job.id, output_type="dmg_dist_per_taxonomy")
 
+            [ototal] = models.Output.objects.filter(
+                oq_job=job.id, output_type="dmg_dist_total")
+
             calcs = helpers.prepare_cli_output(subprocess.check_output(
                 ["bin/openquake", "--list-calculations"]))
 
@@ -103,8 +106,9 @@ class ExportDmgDistributionsTestCase(unittest.TestCase):
                 subprocess.check_output(["bin/openquake", "--list-outputs",
                 str(job.id)]))
 
-            # the damage distribution per asset and taxonomy as output...
+            # the damage distributios as output...
             check_list_outputs(self, outputs, oasset.id, "dmg_dist_per_asset")
+            check_list_outputs(self, outputs, ototal.id, "dmg_dist_total")
             check_list_outputs(self, outputs, otaxon.id,
                     "dmg_dist_per_taxonomy")
 
@@ -125,6 +129,16 @@ class ExportDmgDistributionsTestCase(unittest.TestCase):
 
             expected_file = os.path.join(export_target_dir,
                     "dmg-dist-taxonomy-%s.xml" % job.id)
+
+            self.assertEqual([expected_file], exports)
+
+            # and total damage distribution
+            exports = helpers.prepare_cli_output(
+                subprocess.check_output(["bin/openquake", "--export",
+                str(ototal.id), export_target_dir]))
+
+            expected_file = os.path.join(export_target_dir,
+                    "dmg-dist-total-%s.xml" % job.id)
 
             self.assertEqual([expected_file], exports)
         finally:
