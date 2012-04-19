@@ -62,7 +62,6 @@ def hazard_curves(sources, sites, imts, time_span,
         differentiates IMLs (the order and length are the same as
         corresponding value in ``imts`` dict).
     """
-    # TODO: unittest
     curves = dict((imt, numpy.ones([len(sites), len(imts[imt])]))
                   for imt in imts)
     tom = PoissonTOM(time_span)
