@@ -1,0 +1,49 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.3"
+      gml:id="n1">
+
+    <!-- sourceModel is a gml:Feature -->
+    <sourceModel gml:id="sm1">
+        <config/>
+
+        <!-- complexFaultSource is a gml:Feature -->
+        <complexFaultSource gml:id="src02">
+            <gml:name>Cascadia Megathrust</gml:name>
+
+            <tectonicRegion>Subduction Interface</tectonicRegion>
+            <rake>90.0</rake>
+
+            <truncatedGutenbergRichter type="ML">
+                <aValueCumulative>1.0</aValueCumulative>
+                <bValue>0.8</bValue>
+                <minMagnitude>6.5</minMagnitude>
+                <maxMagnitude>9.0</maxMagnitude>
+            </truncatedGutenbergRichter>
+
+            <complexFaultGeometry>
+                <faultEdges>
+                    <faultTopEdge>
+                        <gml:LineString srsName="urn:ogc:def:crs:EPSG::4979">
+                            <gml:posList>
+                                -124.704  40.363  0.5493260E+01
+                                -124.977  41.214  0.4988560E+01
+                                -125.140  42.096  0.4897340E+01
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultTopEdge>
+                    <faultBottomEdge>
+                        <gml:LineString srsName="urn:ogc:def:crs:EPSG::4979">
+                            <gml:posList>
+                                -123.829  40.347  0.2038490E+02
+                                -124.137  41.218  0.1741390E+02
+                                -124.252  42.115  0.1752740E+02
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultBottomEdge>
+                </faultEdges>
+            </complexFaultGeometry>
+        </complexFaultSource>
+
+    </sourceModel>
+</nrml>

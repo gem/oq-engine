@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.3"
+      gml:id="n1">
+
+    <!-- sourceModel is a gml:Feature -->
+    <sourceModel gml:id="sm1">
+        <config/>
+
+        <!-- pointSource is a gml:Feature -->
+        <pointSource gml:id="src04">
+            <gml:name>point</gml:name>
+            <tectonicRegion>Active Shallow Crust</tectonicRegion>
+
+            <!-- this is the geospatial property, of type gml:PointPropertyType -->
+            <location>
+                <gml:Point srsName="epsg:4326">
+                    <gml:pos>-122.0 38.0</gml:pos>
+                </gml:Point>
+            </location>
+
+            <ruptureRateModel>
+                <truncatedGutenbergRichter type="ML">
+                    <aValueCumulative>5.0</aValueCumulative>
+                    <bValue>0.8</bValue>
+                    <minMagnitude>5.0</minMagnitude>
+                    <maxMagnitude>7.0</maxMagnitude>
+                </truncatedGutenbergRichter>
+
+                <strike>0.0</strike>
+                <dip>90.0</dip>
+                <rake>0.0</rake>
+            </ruptureRateModel>
+
+            <ruptureDepthDistribution>
+                <magnitude type="ML">6.0 6.5 7.0</magnitude>
+                <depth>5000.0 3000.0 0.0</depth>
+            </ruptureDepthDistribution>
+
+            <hypocentralDepth>5000.0</hypocentralDepth>
+
+        </pointSource>
+
+    </sourceModel>
+</nrml>
