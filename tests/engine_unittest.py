@@ -359,86 +359,98 @@ class IdenticalInputTestCase(unittest.TestCase, helpers.DbTestCase):
     EXPOM = helpers.get_data_path("exposure.xml")
     FRAGM = os.path.join(helpers.SCHEMA_DIR, "examples/fragm_d.xml")
 
-    # list of jobs, first job failed
-    fjf = []
-    # older jobs (first one succeeded)
-    jold = []
+    # jobs (first succeeded) with newer inputs but ran by a different user
+    newer_u2 = []
+    # jobs (first failed) with newer inputs
+    newer_failed_u1 = []
+    # jobs (first succeeded) with older inputs
+    first_job_ok_u1 = []
     job = None
+    digest = None
 
     @classmethod
     def setUpClass(cls):
-        # In 'fjf' we want the first job to have status "failed".
-        # In 'jold' the second job should be "failed".
-        jdata = ((cls.fjf, 0), (cls.jold, 1))
-        for ji, (jl, fidx) in enumerate(jdata):
+        # In 'newer_failed_u1' we want the first job to have status "failed".
+        # In 'first_job_ok_u1' the second job should be "failed".
+        jdata = (("u1", cls.newer_failed_u1, 0),
+                 ("u1", cls.first_job_ok_u1, 1), ("u2", cls.newer_u2, 2))
+        for ji, (user_name, jl, fidx) in enumerate(jdata):
             num_jobs = ji + 2
             for jj in range(num_jobs):
-                job = cls.setup_classic_job(omit_profile=True)
+                job = cls.setup_classic_job(omit_profile=True,
+                                            user_name=user_name)
                 job.status = "failed" if jj == fidx else "succeeded"
                 job.save()
                 jl.append(job)
-        cls.job = cls.setup_classic_job()
+        cls.job = cls.setup_classic_job(user_name="u1")
         cls.job.status = "succeeded"
         cls.job.save()
+        if sys.platform == 'darwin':
+            cls.digest = subprocess.check_output(
+                ["md5", cls.FRAGM]).split()[-1]
+        else:
+            cls.digest = subprocess.check_output(
+                ["md5sum", cls.FRAGM]).split()[0]
 
     @classmethod
     def tearDownClass(cls):
         cls.teardown_job(cls.job)
 
-    def setUp(self):
-        # md5sum digest incorrect
-        emdl_input = models.Input(
-            input_type="exposure", size=123, path=self.EXPOM,
-            owner=self.job.owner, digest="0" * 32)
-        emdl_input.save()
-        i2j = models.Input2job(input=emdl_input, oq_job=self.job)
-        i2j.save()
-        # md5sum digest correct
-        if sys.platform == 'darwin':
-            digest = subprocess.check_output(["md5", self.FRAGM]).split()[-1]
-        else:
-            digest = subprocess.check_output(
-                ["md5sum", self.FRAGM]).split()[0]
+    def setup_input(self, input_type, size, path, digest, jobs):
+        """Create a model input and associate it with the given jobs.
 
-        # The 'fmdl_input' will be linked to a sequence of jobs so that the
-        # first/oldest of them *was* successful i.e. ot should be found an
-        # considered for reuse.
-        self.fmdl_input = models.Input(
-            input_type="fragility", size=123, path=self.FRAGM,
-            owner=self.job.owner, digest=digest)
-        self.fmdl_input.save()
-        jdata = (self.jold,)
-        for jl in jdata:
-            for job in jl:
-                i2j = models.Input2job(input=self.fmdl_input, oq_job=job)
-                i2j.save()
-
-        # Despite being more recent (inserted into the db after 'fmdl_input')
-        # the 'failed_input' will not be found and/or considered for reuse
-        # because the first/oldest job that is linked to it was not successful.
-        self.failed_input = models.Input(
-            input_type="fragility", size=123, path=self.FRAGM,
-            owner=self.job.owner, digest=digest)
-        self.failed_input.save()
-        # Link 'failed_input' to a sequence of jobs where the oldest one of
-        # them was not successful.
-        jdata = (self.fjf,)
-        for jl in jdata:
-            for job in jl:
-                i2j = models.Input2job(input=self.failed_input, oq_job=job)
-                i2j.save()
+        Its owner will be the same as the owner of the first job.
+        """
+        # In order for the tests to work we need to disable any other model
+        # inputs that might still be in the database.
+        models.Input2job.objects.all().delete()
+        mdl = models.Input(input_type=input_type, size=size, path=path,
+                           owner=jobs[0].owner, digest=digest)
+        mdl.save()
+        for job in jobs:
+            i2j = models.Input2job(input=mdl, oq_job=job)
+            i2j.save()
+        return mdl
 
     def test__identical_input(self):
         # The matching fragility model input is found
-        expected = self.fmdl_input
-        actual = engine._identical_input("fragility", expected.digest)
+        expected = self.setup_input(
+            input_type="fragility", size=123, path=self.FRAGM,
+            digest=self.digest, jobs=self.first_job_ok_u1)
+        actual = engine._identical_input("fragility", self.digest,
+                                         self.job.owner.id)
         self.assertEqual(expected.id, actual.id)
 
-    def test__identical_input_and_no_match(self):
+    def test__identical_input_and_non_matching_digest(self):
         # The exposure model input is not found since the md5sum digest does
         # not match.
-        actual = engine._identical_input("exposure", "x" * 32)
+        self.setup_input(
+            input_type="exposure", size=123, path=self.EXPOM,
+            digest="0" * 32, jobs=self.first_job_ok_u1)
+        actual = engine._identical_input("exposure", "x" * 32,
+                                         self.job.owner.id)
         self.assertIs(None, actual)
+
+    def test__identical_input_and_failed_first_job(self):
+        # The exposure model input is not found since the first job to have
+        # used it has failed.
+        self.setup_input(
+            input_type="exposure", size=123, path=self.EXPOM,
+            digest="0" * 32, jobs=self.newer_failed_u1)
+        actual = engine._identical_input("exposure", "0" * 32,
+                                         self.job.owner.id)
+        self.assertIs(None, actual)
+
+    def test__identical_input_and_owner_differing_from_user(self):
+        # The exposure model input is not found since its owner is not the user
+        # that is running the current job.
+        self.setup_input(
+            input_type="exposure", size=123, path=self.EXPOM,
+            digest="0" * 32, jobs=self.newer_u2)
+        actual = engine._identical_input("exposure", "0" * 32,
+                                         self.job.owner.id)
+        self.assertIs(None, actual)
+
 
 
 class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
