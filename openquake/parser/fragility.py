@@ -31,7 +31,8 @@ from openquake.nrml import nrml_schema_file
 # pylint: disable=R0914
 
 
-FRAGM = namedtuple("FRAGM", "id, format, limits, description, imls, imt")
+FRAGM = namedtuple("FRAGM", "id, format, limits, description, imls, imt, "
+                   "iml_unit, max_iml, min_iml")
 FFD = namedtuple("FFD", "taxonomy, type, limit, poes")
 FFC = namedtuple("FFC", "taxonomy, type, limit, mean, stddev")
 
@@ -91,6 +92,12 @@ class FragilityModelParser(producer.FileProducer):
             "invalid fragility model format (%s)" % mdl["format"])
         if mdl["format"] == "discrete":
             self.discrete = True
+
+        attr_data = (("iml_unit", "imlUnit"), ("max_iml", "maxIML"),
+                     ("min_iml", "minIML"))
+        for key, attr in attr_data:
+            mdl[key] = element.get(attr)
+
         limits = element.find('%slimitStates' % xml.NRML)
         assert limits is not None, "no limit states found"
         mdl["limits"] = [ls.strip() for ls in limits.text.split()]
@@ -100,6 +107,10 @@ class FragilityModelParser(producer.FileProducer):
             assert imls is not None, "IML not set"
             mdl["imls"] = [float(iml) for iml in imls.text.split()]
             mdl["imt"] = imls.get('IMT')
+            assert mdl["max_iml"] is None, (
+                "'maxIML' must not be set for discrete fragility models")
+            assert mdl["min_iml"] is None, (
+                "'minIML' must not be set for discrete fragility models")
 
         desc = element.find('%sdescription' % xml.GML)
         if desc is not None:

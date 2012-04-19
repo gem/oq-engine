@@ -270,11 +270,14 @@ COMMENT ON COLUMN riski.ffd.last_update IS 'Date/time of the last change of the 
 COMMENT ON TABLE riski.fragility_model IS 'A risk fragility model';
 COMMENT ON COLUMN riski.fragility_model.format IS 'One of "discrete", "continuous"';
 COMMENT ON COLUMN riski.fragility_model.lss IS 'A list of limit states';
-COMMENT ON COLUMN riski.fragility_model.imls IS 'Optional list of intensity measure levels, only applicable to discrete fragility models';
+COMMENT ON COLUMN riski.fragility_model.imls IS 'List of intensity measure levels, mandatory for discrete fragility models';
+COMMENT ON COLUMN riski.fragility_model.iml_unit IS 'Optional: unit of measurement for the intensity measure levels.';
 COMMENT ON COLUMN riski.fragility_model.imt IS 'An optional intensity measure type, only applicable to discrete fragility models';
 COMMENT ON COLUMN riski.fragility_model.description IS 'An optional description of the risk fragility model at hand';
 COMMENT ON COLUMN riski.fragility_model.input_id IS 'The foreign key to the associated input model file';
 COMMENT ON COLUMN riski.fragility_model.last_update IS 'Date/time of the last change of the model at hand';
+COMMENT ON COLUMN riski.fragility_model.max_iml IS 'Optional: maximum intensity measure level, only allowed for continuous models.';
+COMMENT ON COLUMN riski.fragility_model.min_iml IS 'Optional: minimum intensity measure level, only allowed for continuous models.';
 
 
 COMMENT ON TABLE riski.vulnerability_function IS 'A risk vulnerability function';
