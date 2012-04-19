@@ -747,7 +747,7 @@ def _store_input_parameters(params, calc_mode, job_profile):
 
 
 def run_job(job, params, sections, output_type='db', log_level='warn',
-            force_inputs=False):
+            force_inputs=False, log_file=None):
     """Given an :class:`openquake.db.models.OqJobProfile` object, create a new
     :class:`openquake.db.models.OqJob` object and run the job.
 
@@ -771,6 +771,8 @@ def run_job(job, params, sections, output_type='db', log_level='warn',
         Defaults to 'warn'.
     :param bool force_inputs: If `True` the model input files will be parsed
         and the resulting content written to the database no matter what.
+    :param str log_file:
+        Optional log file location.
 
     :returns:
         :class:`openquake.db.models.OqJob` instance.
@@ -830,7 +832,7 @@ def run_job(job, params, sections, output_type='db', log_level='warn',
         job.supervisor_pid = supervisor_pid
         job.job_pid = job_pid
         job.save()
-        supervisor.supervise(job_pid, job.id)
+        supervisor.supervise(job_pid, job.id, log_file=log_file)
         return
 
     # parent process
