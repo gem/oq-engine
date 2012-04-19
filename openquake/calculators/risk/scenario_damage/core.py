@@ -20,16 +20,20 @@ This module performs risk calculations using the scenario
 damage assessment approach.
 """
 
+import os
 import math
 import numpy
 import scipy
+
+from django.contrib.gis import geos
 
 from openquake import logs
 from openquake.calculators.risk import general
 from openquake.db.models import Output, FragilityModel, DmgDistPerAsset
 from openquake.db.models import DmgDistPerAssetData
 from openquake.db.models import inputs4job
-from django.contrib.gis import geos
+from openquake.export.risk import export_dmg_dist_per_asset
+
 
 LOGGER = logs.LOG
 
@@ -158,7 +162,17 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         Export the results to file if the `output-type`
         parameter is set to `xml`.
         """
-        pass
+
+        if "xml" in self.job_ctxt.serialize_results_to:
+            [output] = Output.objects.filter(
+                oq_job=self.job_ctxt.oq_job.id,
+                output_type="dmg_dist_per_asset")
+
+            target_dir = os.path.join(
+                self.job_ctxt.params.get("BASE_PATH"),
+                self.job_ctxt.params.get("OUTPUT_DIR"))
+
+            export_dmg_dist_per_asset(output, target_dir)
 
 
 def compute_mean_stddev(gmf, funcs, asset):
