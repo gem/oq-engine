@@ -167,7 +167,8 @@ class DiscreteFragilityModelParserTestCase(unittest.TestCase):
             id='ep1', format='discrete',
             limits=['minor', 'moderate', 'severe', 'collapse'],
             description='Fragility model for Pavia (discrete)',
-            imls=[7.0, 8.0, 9.0, 10.0, 11.0], imt='MMI')
+            imls=[7.0, 8.0, 9.0, 10.0, 11.0], imt='MMI', iml_unit="g",
+            max_iml=None, min_iml=None)
         self.assertEqual(expected, parser.model)
 
     def test_parser_with_no_imls(self):
@@ -223,6 +224,64 @@ class DiscreteFragilityModelParserTestCase(unittest.TestCase):
         finally:
             os.unlink(parser.path)
 
+    def test_parser_with_max_iml(self):
+        # A discrete fragility model with 'maxIML' results in errors.
+        content = """
+            <?xml version='1.0' encoding='utf-8'?>
+            <nrml xmlns:gml="http://www.opengis.net/gml"
+                  xmlns="http://openquake.org/xmlns/nrml/0.3"
+                  gml:id="n2">
+                <fragilityModel gml:id="ep2" format="discrete" maxIML="1.1">
+                    <IML IMT="MMI">7 8</IML>
+                    <limitStates>collapse</limitStates>
+                    <ffs gml:id="PAV01-ff02-d">
+                        <taxonomy>RC/DMRF-D/LR</taxonomy>
+                        <ffd ls="collapse"><poE>0.03 0.63</poE></ffd>
+                    </ffs>
+                </fragilityModel>
+            </nrml>"""
+        try:
+            parser = setup_parser(content)
+            try:
+                list(parser)
+            except AssertionError, exc:
+                self.assertEqual(
+                    "'maxIML' must not be set for discrete fragility models",
+                    exc.args[0])
+            else:
+                self.fail("exception not raised")
+        finally:
+            os.unlink(parser.path)
+
+    def test_parser_with_min_iml(self):
+        # A discrete fragility model with 'minIML' results in errors.
+        content = """
+            <?xml version='1.0' encoding='utf-8'?>
+            <nrml xmlns:gml="http://www.opengis.net/gml"
+                  xmlns="http://openquake.org/xmlns/nrml/0.3"
+                  gml:id="n2">
+                <fragilityModel gml:id="ep2" format="discrete" minIML="1.1">
+                    <IML IMT="MMI">7 8</IML>
+                    <limitStates>collapse</limitStates>
+                    <ffs gml:id="PAV01-ff02-d">
+                        <taxonomy>RC/DMRF-D/LR</taxonomy>
+                        <ffd ls="collapse"><poE>0.03 0.63</poE></ffd>
+                    </ffs>
+                </fragilityModel>
+            </nrml>"""
+        try:
+            parser = setup_parser(content)
+            try:
+                list(parser)
+            except AssertionError, exc:
+                self.assertEqual(
+                    "'minIML' must not be set for discrete fragility models",
+                    exc.args[0])
+            else:
+                self.fail("exception not raised")
+        finally:
+            os.unlink(parser.path)
+
 
 class ContinuousFragilityModelParserTestCase(unittest.TestCase):
     """Tests for the continuous fragility model parser."""
@@ -255,7 +314,7 @@ class ContinuousFragilityModelParserTestCase(unittest.TestCase):
             id='ep1', format='continuous',
             limits=['slight', 'moderate', 'extensive', 'complete'],
             description='Fragility model for Pavia (continuous)',
-            imls=None, imt=None)
+            imls=None, imt=None, iml_unit="m", max_iml="9.9", min_iml="0.1")
         self.assertEqual(expected, parser.model)
 
     def test_parser_with_no_params(self):
