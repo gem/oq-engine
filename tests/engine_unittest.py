@@ -359,25 +359,25 @@ class IdenticalInputTestCase(unittest.TestCase, helpers.DbTestCase):
     EXPOM = helpers.get_data_path("exposure.xml")
     FRAGM = os.path.join(helpers.SCHEMA_DIR, "examples/fragm_d.xml")
 
-    # some jobs (first succeeded) but ran by a different user
-    newer_u2 = []
-    # some jobs (first failed)
-    newer_failed_u1 = []
-    # some jobs (first succeeded)
-    first_job_ok_u1 = []
-    # This is the job for which we invoke _identical_input()
+    # some jobs (first succeeded) ran by user "u2"
+    jobs_u2 = []
+    # some jobs (first failed) ran by user "u1"
+    failed_jobs_u1 = []
+    # some jobs (first succeeded) ran by user "u1"
+    jobs_u1 = []
+    # "New" job for user "u1", _identical_input() will be run for it.
     job = None
     # Fragility model md5sum digest
     fragm_digest = None
 
     @classmethod
     def setUpClass(cls):
-        # In 'newer_failed_u1' we want the first job to have status "failed".
-        # In 'first_job_ok_u1' the first job is fine/"succeeded".
-        # In 'newer_u2' the first job is fine but all the jobs are owned by a
-        # different user.
-        jdata = (("u1", cls.newer_failed_u1, 0),
-                 ("u1", cls.first_job_ok_u1, 1), ("u2", cls.newer_u2, 2))
+        # In 'failed_jobs_u1' we want the first job to have status "failed".
+        # In 'jobs_u1' the first job is fine/"succeeded".
+        # In 'jobs_u2' the first job is fine but all the jobs are owned by a
+        # different user "u2".
+        jdata = (("u1", cls.failed_jobs_u1, 0),
+                 ("u1", cls.jobs_u1, 1), ("u2", cls.jobs_u2, 2))
         for ji, (user_name, jl, fidx) in enumerate(jdata):
             num_jobs = ji + 2
             for jj in range(num_jobs):
@@ -421,7 +421,7 @@ class IdenticalInputTestCase(unittest.TestCase, helpers.DbTestCase):
         # The matching fragility model input is found
         expected = self._setup_input(
             input_type="fragility", size=123, path=self.FRAGM,
-            digest=self.fragm_digest, jobs=self.first_job_ok_u1)
+            digest=self.fragm_digest, jobs=self.jobs_u1)
         actual = engine._identical_input("fragility", self.fragm_digest,
                                          self.job.owner.id)
         self.assertEqual(expected.id, actual.id)
@@ -430,8 +430,8 @@ class IdenticalInputTestCase(unittest.TestCase, helpers.DbTestCase):
         # The exposure model input is not found since the md5sum digest does
         # not match.
         self._setup_input(
-            input_type="exposure", size=123, path=self.EXPOM,
-            digest="0" * 32, jobs=self.first_job_ok_u1)
+            input_type="exposure", size=123, path=self.EXPOM, digest="0" * 32,
+            jobs=self.jobs_u1)
         actual = engine._identical_input("exposure", "x" * 32,
                                          self.job.owner.id)
         self.assertIs(None, actual)
@@ -440,8 +440,8 @@ class IdenticalInputTestCase(unittest.TestCase, helpers.DbTestCase):
         # The exposure model input is not found since the first job to have
         # used it has failed.
         self._setup_input(
-            input_type="exposure", size=123, path=self.EXPOM,
-            digest="0" * 32, jobs=self.newer_failed_u1)
+            input_type="exposure", size=123, path=self.EXPOM, digest="0" * 32,
+            jobs=self.failed_jobs_u1)
         actual = engine._identical_input("exposure", "0" * 32,
                                          self.job.owner.id)
         self.assertIs(None, actual)
@@ -450,8 +450,8 @@ class IdenticalInputTestCase(unittest.TestCase, helpers.DbTestCase):
         # The exposure model input is not found since its owner is not the user
         # that is running the current job.
         self._setup_input(
-            input_type="exposure", size=123, path=self.EXPOM,
-            digest="0" * 32, jobs=self.newer_u2)
+            input_type="exposure", size=123, path=self.EXPOM, digest="0" * 32,
+            jobs=self.jobs_u2)
         actual = engine._identical_input("exposure", "0" * 32,
                                          self.job.owner.id)
         self.assertIs(None, actual)
