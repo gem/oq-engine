@@ -83,7 +83,7 @@ def set_up_arg_parser():
     general_grp.add_argument(
         '--version', action='store_true', help='display version information')
     general_grp.add_argument(
-        '--force-inputs', action='store_false',
+        '--force-inputs', action='store_true',
         help='parse model inputs and write them to the db no matter what')
 
     calc_grp = parser.add_argument_group('Run calculations')
