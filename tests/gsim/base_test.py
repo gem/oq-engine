@@ -127,7 +127,7 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
         imts = {imt: [0, 1, 2, 1.1, 1.05]}
         poes = self._get_poes(imts=imts, truncation_level=0)[imt]
         self.assertIsInstance(poes, numpy.ndarray)
-        expected_poes = [0, 0, 1, 1, 0]
+        expected_poes = [1, 1, 0, 1, 1]
         self.assertEqual(list(poes), expected_poes)
 
         self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(

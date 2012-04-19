@@ -229,7 +229,7 @@ class GroundShakingIntensityModel(object):
                 imls = self._convert_imls(imls)
                 mean, _ = self.get_mean_and_stddevs(ctx, imt, [],
                                                     component_type)
-                ret[imt] = (imls >= mean).astype(float)
+                ret[imt] = (imls <= mean).astype(float)
         else:
             # use real normal distribution
             assert (const.StdDev.TOTAL
