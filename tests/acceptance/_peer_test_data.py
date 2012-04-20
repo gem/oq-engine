@@ -4,13 +4,16 @@ Seismic Hazard Analysis Computer Programs" by  Patricia Thomas, Ivan Wong,
 Norman Abrahamson, see
 `http://peer.berkeley.edu/publications/peer_reports/reports_2010/web_PEER_10106_THOMASetal.pdf`_.
 """
-from nhlib.geo import Polygon, Point
+from nhlib.geo import Polygon, Point, Line
 from nhlib.site import Site
 from nhlib.imt import PGA
 from nhlib.mfd import TruncatedGRMFD
 
 
 IMT = PGA()
+
+# page 12
+SET1_RUPTURE_ASPECT_RATIO = 2.0
 
 # page A-3
 SET1_CASE10_SOURCE_POLYGON = SET1_CASE11_SOURCE_POLYGON = Polygon([
@@ -176,4 +179,86 @@ SET1_CASE11_SITE4_POES = [
     3.84E-02, 5.33E-03, 1.18E-04, 1.24E-06, 0,
     0, 0, 0, 0, 0,
     0
+]
+
+# page 13
+SET1_CASE2_MFD = TruncatedGRMFD(a_val=3.2828, b_val=0.9, min_mag=5.95,
+                                max_mag=6.05, bin_width=0.1)
+SET1_CASE2_RAKE = 0
+
+# page A-3
+SET1_CASE2_FAULT_TRACE = Line([Point(-122.0, 38.0), Point(-122.0, 38.22480)])
+
+# page A-17
+SET1_CASE2_UPPER_SEISMOGENIC_DEPTH = 0.0
+SET1_CASE2_LOWER_SEISMOGENIC_DEPTH = 12.0
+SET1_CASE2_DIP = 90
+
+# page A-3
+SET1_CASE2_SITE1 = Site(
+    location=Point(-122.000, 38.113), vs30=800.0, vs30measured=True,
+    z1pt0=1.0, z2pt5=2.0
+)
+SET1_CASE2_SITE2 = Site(
+    location=Point(-122.114, 38.113), vs30=800.0, vs30measured=True,
+    z1pt0=1.0, z2pt5=2.0
+)
+SET1_CASE2_SITE3 = Site(
+    location=Point(-122.570, 38.111), vs30=800.0, vs30measured=True,
+    z1pt0=1.0, z2pt5=2.0
+)
+SET1_CASE2_SITE4 = Site(
+    location=Point(-122.000, 38.000), vs30=800.0, vs30measured=True,
+    z1pt0=1.0, z2pt5=2.0
+)
+SET1_CASE2_SITE5 = Site(
+    location=Point(-122.000, 37.910), vs30=800.0, vs30measured=True,
+    z1pt0=1.0, z2pt5=2.0
+)
+SET1_CASE2_SITE6 = Site(
+    location=Point(-122.000, 38.225), vs30=800.0, vs30measured=True,
+    z1pt0=1.0, z2pt5=2.0
+)
+SET1_CASE2_SITE7 = Site(
+    location=Point(-121.886, 38.113), vs30=800.0, vs30measured=True,
+    z1pt0=1.0, z2pt5=2.0
+)
+
+# page A-8
+SET1_CASE2_IMLS = [0.001, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3,
+                   0.35063, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65]
+SET1_CASE2_SITE1_POES = [
+    1.59E-02, 1.59E-02, 1.59E-02, 1.59E-02, 1.59E-02,
+    1.59E-02, 1.59E-02, 1.59E-02, 1.59E-02, 1.18E-02,
+    8.23E-03, 5.23E-03, 2.64E-03, 3.63E-04, 0.00E+00
+]
+SET1_CASE2_SITE2_POES = [
+    1.59E-02, 1.59E-02, 1.59E-02, 1.59E-02, 1.59E-02,
+    1.59E-02, 0.00E+00, 0.00E+00, 0.00E+00, 0.00E+00,
+    0.00E+00, 0.00E+00, 0.00E+00, 0.00E+00, 0.00E+00
+]
+SET1_CASE2_SITE3_POES = [
+    1.59E-02, 1.59E-02, 0.00E+00, 0.00E+00, 0.00E+00,
+    0.00E+00, 0.00E+00, 0.00E+00, 0.00E+00, 0.00E+00,
+    0.00E+00, 0.00E+00, 0.00E+00, 0.00E+00, 0.00E+00
+]
+SET1_CASE2_SITE4_POES = [
+    1.59E-02, 1.59E-02, 1.59E-02, 1.59E-02, 1.59E-02,
+    1.58E-02, 1.20E-02, 8.64E-03, 5.68E-03, 3.09E-03,
+    1.51E-03, 6.08E-04, 1.54E-04, 2.92E-06, 0.00E+00
+]
+SET1_CASE2_SITE5_POES = [
+    1.59E-02, 1.59E-02, 1.59E-02, 1.56E-02, 7.69E-03,
+    1.60E-03, 0.00E+00, 0.00E+00, 0.00E+00, 0.00E+00,
+    0.00E+00, 0.00E+00, 0.00E+00, 0.00E+00, 0.00E+00
+]
+SET1_CASE2_SITE6_POES = [
+    1.59E-02, 1.59E-02, 1.59E-02, 1.59E-02, 1.59E-02,
+    1.58E-02, 1.20E-02, 8.64E-03, 5.68E-03, 3.09E-03,
+    1.51E-03, 6.08E-04, 1.54E-04, 2.92E-06, 0.00E+00
+]
+SET1_CASE2_SITE7_POES = [
+    1.59E-02, 1.59E-02, 1.59E-02, 1.59E-02, 1.59E-02,
+    1.59E-02, 0.00E+00, 0.00E+00, 0.00E+00, 0.00E+00,
+    0.00E+00, 0.00E+00, 0.00E+00, 0.00E+00, 0.00E+00
 ]
