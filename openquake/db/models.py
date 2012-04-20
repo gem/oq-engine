@@ -213,6 +213,9 @@ class OqUser(djm.Model):
     data_is_open = djm.BooleanField(default=True)
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
+    def __str__(self):
+        return "%s||%s" % (self.user_name, self.organization.id)
+
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'admin\".\"oq_user'
 
