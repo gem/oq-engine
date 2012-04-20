@@ -532,15 +532,18 @@ def _file_digest(path):
         return checksum.hexdigest()
 
 
-def _identical_input(input_type, digest):
+def _identical_input(input_type, digest, owner_id):
     """Get an identical input with the same type or `None`.
 
     Identical inputs are found by comparing md5sum digests. In order to avoid
     reusing corrupted/broken input models we ignore all the inputs that are
     associated with a first job that failed.
+    Also, we only want inputs owned by the user who is running the current job
+    and if there is more than one input we want the most recent one.
 
     :param str input_type: input model type
     :param str digest: md5sum digest
+    :param int owner_id: the database key of the owner
     :returns: an `:class:openquake.db.models.Input` instance or `None`
     """
     q = """
@@ -549,12 +552,13 @@ def _identical_input(input_type, digest):
             uiapi.oq_job, (
                 SELECT DISTINCT MIN(j.id) AS min_job_id, i.id AS input_id
                 FROM uiapi.oq_job AS j, uiapi.input2job AS i2j,
-                     uiapi.input AS i
+                     uiapi.input AS i, admin.oq_user u
                 WHERE i2j.oq_job_id = j.id AND i2j.input_id = i.id
                     AND i.digest = %s AND i.input_type = %s
+                    AND j.owner_id = u.id AND u.id = %s
                 GROUP BY i.id ORDER BY i.id DESC) AS mjq
             WHERE id = mjq.min_job_id AND status = 'succeeded')"""
-    ios = list(Input.objects.raw(q, [digest, input_type]))
+    ios = list(Input.objects.raw(q, [digest, input_type, owner_id]))
     return ios[0] if ios else None
 
 
@@ -577,7 +581,7 @@ def _insert_input_files(params, job, force_inputs):
                for li in linked_inputs):
             return
 
-        in_model = (_identical_input(input_type, digest)
+        in_model = (_identical_input(input_type, digest, job.owner.id)
                     if not force_inputs else None)
         if in_model is None:
             in_model = Input(path=path, input_type=input_type, owner=job.owner,
