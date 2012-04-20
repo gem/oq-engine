@@ -219,92 +219,92 @@ class GridPoint(object):
 
 
 class BoundsException(Exception):
-    """Point is outside of region"""
+    """
+    Point is outside of region.
+    """
     pass
 
 
 class Grid(object):
-    """Grid is a proxy interface to Region, which translates
-    lat/lon to col/row"""
+    """
+    A proxy interface to Region.
+
+    It translates geographical points identified
+    by longitude and latitude to the corresponding grid point
+    according to the grid spacing given.
+    """
 
     def __init__(self, region, cell_size):
         self.region = region
         self.cell_size = cell_size
         self.lower_left_corner = self.region.lower_left_corner
+
         self.columns = self._longitude_to_column(
-                    self.region.upper_right_corner.longitude) + 1
+            self.region.upper_right_corner.longitude) + 1
+
         self.rows = self._latitude_to_row(
-                    self.region.upper_right_corner.latitude) + 1
-
-    def check_site(self, site):
-        """Confirm that the site is contained by the region"""
-        check = False
-
-        try:
-            check = self.check_point(site.point)
-        except BoundsException:
-            LOGGER.debug("Site %s %s isn't on region" %
-                         (site.longitude, site.latitude))
-
-        return check
-
-    def check_point(self, point):
-        """ Confirm that the point is within the polygon
-        underlying the gridded region"""
-        if (self.region.polygon.contains(point)):
-            return True
-        if self.region.polygon.touches(point):
-            return True
-        raise BoundsException("Point is not on the Grid")
-
-    def check_gridpoint(self, gridpoint):
-        """Confirm that the point is contained by the region"""
-        point = Point(round_float(self._column_to_longitude(gridpoint.column)),
-                      round_float(self._row_to_latitude(gridpoint.row)))
-        return self.check_point(point)
+            self.region.upper_right_corner.latitude) + 1
 
     def _latitude_to_row(self, latitude):
-        """Calculate row from latitude value"""
-        latitude_offset = math.fabs(latitude - self.lower_left_corner.latitude)
+        """
+        Return the corresponding grid row for the given
+        latitude, according to grid spacing.
+        """
+
+        latitude_offset = math.fabs(
+            latitude - self.lower_left_corner.latitude)
+
         return int(round(latitude_offset / self.cell_size))
 
     def _row_to_latitude(self, row):
-        """Determine latitude from given grid row"""
+        """
+        Return the corresponding latitude for the given
+        grid row, according to grid spacing.
+        """
+
         return self.lower_left_corner.latitude + ((row) * self.cell_size)
 
     def _longitude_to_column(self, longitude):
-        """Calculate column from longitude value"""
+        """
+        Return the corresponding grid column for the given
+        longitude, according to grid spacing.
+        """
+
         longitude_offset = longitude - self.lower_left_corner.longitude
         return int(round(longitude_offset / self.cell_size))
 
     def _column_to_longitude(self, column):
-        """Determine longitude from given grid column"""
+        """
+        Return the corresponding longitude for the given
+        grid column, according to grid spacing.
+        """
+
         return self.lower_left_corner.longitude + ((column) * self.cell_size)
 
     def point_at(self, site):
-        """Translates a site into a matrix bidimensional point."""
-        self.check_site(site)
+        """
+        Return the grid point where the given site falls in.
+        """
+
         row = self._latitude_to_row(site.latitude)
         column = self._longitude_to_column(site.longitude)
+
         return GridPoint(self, column, row)
 
-    def site_at(self, gridpoint):
-        """Construct a site at the given grid point"""
-        return Site(self._column_to_longitude(gridpoint.column),
-                             self._row_to_latitude(gridpoint.row))
+    def site_at(self, grid_point):
+        """
+        Return the site corresponding to the center of the
+        cell identified by the given grid point.
+        """
+
+        return Site(self._column_to_longitude(
+                grid_point.column), self._row_to_latitude(grid_point.row))
 
     def __iter__(self):
         for row in range(0, self.rows):
             for col in range(0, self.columns):
-                try:
-                    point = GridPoint(self, col, row)
-                    self.check_gridpoint(point)
-                    yield point
-                except BoundsException:
-                    LOGGER.debug(
-                            "Point (col %s row %s) at %s %s isn't on grid"
-                            % (col, row, point.site.longitude,
-                                point.site.latitude))
+                point = GridPoint(self, col, row)
+                yield point
 
 
 def c_mul(val_a, val_b):
