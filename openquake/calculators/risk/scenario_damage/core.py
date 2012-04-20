@@ -139,13 +139,15 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
                 # sum per taxonomy
                 if not fractions:
-                    self.ddt_fractions[taxonomy] = bfractions[taxonomy]
+                    self.ddt_fractions[taxonomy] = numpy.array(
+                        bfractions[taxonomy])
                 else:
                     self.ddt_fractions[taxonomy] += bfractions[taxonomy]
 
                 # global sum
                 if self.total_fractions is None:
-                    self.total_fractions = bfractions[taxonomy]
+                    self.total_fractions = numpy.array(
+                        bfractions[taxonomy])
                 else:
                     self.total_fractions += bfractions[taxonomy]
 
