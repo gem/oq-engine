@@ -1084,6 +1084,10 @@ CREATE TABLE uiapi.oq_job_profile (
         CHECK(depth_to_1pt_0km_per_sec > 0.0),
     vs30_type VARCHAR NOT NULL DEFAULT 'measured' CONSTRAINT vs30_type_value
         CHECK(vs30_type IN ('measured', 'inferred')),
+    epsilon_random_seed INTEGER CONSTRAINT epsilon_rnd_seed_is_set
+        CHECK(
+            (calc_mode = 'scenario' AND epsilon_random_seed IS NOT NULL)
+            OR (calc_mode != 'scenario' AND epsilon_random_seed IS NULL)),
     -- timestamp
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
@@ -1609,10 +1613,16 @@ CREATE TABLE riski.fragility_model (
         CHECK(format IN ('continuous', 'discrete')),
     -- Limit states
     lss VARCHAR[] NOT NULL,
-    -- Intensity measure levels, only applicable for discrete fragility models.
+    -- Intensity measure levels, only applicable to discrete fragility models.
     imls float[],
-    -- Intensity measure type, only applicable for discrete fragility models.
-    imt VARCHAR,
+    -- Intensity measure type, only applicable to discrete fragility models.
+    imt VARCHAR(16),
+    -- IML unit of measurement
+    iml_unit VARCHAR(16),
+    -- minimum IML value, only applicable to continuous fragility models.
+    min_iml float,
+    -- maximum IML value, only applicable to continuous fragility models.
+    max_iml float,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE riski_ts;
