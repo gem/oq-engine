@@ -457,6 +457,8 @@ AS $$
     imls = NEW["imls"]
     imt = NEW["imt"]
     if NEW["format"] == "discrete":
+        assert NEW.get("max_iml") is None, "Maximum IML not allowed for discrete fragility model"
+        assert NEW.get("min_iml") is None, "Minimum IML not allowed for discrete fragility model"
         assert imls and len(imls) > 0, "no IMLs for discrete fragility model"
         assert imt, "no IMT for discrete fragility model"
         assert imt in imts, "invalid IMT (%s)" % imt
