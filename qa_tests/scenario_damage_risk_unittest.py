@@ -17,7 +17,6 @@ import unittest
 import numpy
 
 from lxml import etree
-from nose.plugins.attrib import attr
 
 from openquake.nrml import nrml_schema_file
 from openquake.xml import NRML_NS
@@ -33,7 +32,6 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
     QA test for the Scenario Damage Risk calculator.
     """
 
-    @attr("qa")
     def test_scenario_damage_risk(self):
         cfg = helpers.demo_file("scenario_damage_risk/config.gem")
 
