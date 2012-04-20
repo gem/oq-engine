@@ -131,17 +131,17 @@ class Set1TestCase(unittest.TestCase):
             rupture_mesh_spacing=1.0,
             magnitude_scaling_relationship=PeerMSR(),
             rupture_aspect_ratio=test_data.SET1_RUPTURE_ASPECT_RATIO,
-            upper_seismogenic_depth=test_data.SET1_CASE2_UPPER_SEISMOGENIC_DEPTH,
-            lower_seismogenic_depth=test_data.SET1_CASE2_LOWER_SEISMOGENIC_DEPTH,
-            fault_trace=test_data.SET1_CASE2_FAULT_TRACE,
-            dip=test_data.SET1_CASE2_DIP,
-            rake=test_data.SET1_CASE2_RAKE
+            upper_seismogenic_depth=test_data.SET1_CASE1TO9_UPPER_SEISMOGENIC_DEPTH,
+            lower_seismogenic_depth=test_data.SET1_CASE1TO9_LOWER_SEISMOGENIC_DEPTH,
+            fault_trace=test_data.SET1_CASE1TO9_FAULT_TRACE,
+            dip=test_data.SET1_CASE1TO9_DIP,
+            rake=test_data.SET1_CASE1TO9_RAKE
         )]
         sites = [
-            test_data.SET1_CASE2_SITE1, test_data.SET1_CASE2_SITE2,
-            test_data.SET1_CASE2_SITE3, test_data.SET1_CASE2_SITE4,
-            test_data.SET1_CASE2_SITE5, test_data.SET1_CASE2_SITE6,
-            test_data.SET1_CASE2_SITE7
+            test_data.SET1_CASE1TO9_SITE1, test_data.SET1_CASE1TO9_SITE2,
+            test_data.SET1_CASE1TO9_SITE3, test_data.SET1_CASE1TO9_SITE4,
+            test_data.SET1_CASE1TO9_SITE5, test_data.SET1_CASE1TO9_SITE6,
+            test_data.SET1_CASE1TO9_SITE7
         ]
         gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
         component_type = const.IMC.AVERAGE_HORIZONTAL
@@ -167,3 +167,48 @@ class Set1TestCase(unittest.TestCase):
                                tolerance=1.5e-2)
         assert_hazard_curve_is(self, s7hc, test_data.SET1_CASE2_SITE7_POES,
                                tolerance=1.5e-2)
+
+    def test_case_5(self):
+        # only mfd differs from case 2
+        sources = [SimpleFaultSource(source_id='fault1', name='fault1',
+            tectonic_region_type=const.TRT.ACTIVE_SHALLOW_CRUST,
+            mfd=test_data.SET1_CASE5_MFD,
+            rupture_mesh_spacing=1.0,
+            magnitude_scaling_relationship=PeerMSR(),
+            rupture_aspect_ratio=test_data.SET1_RUPTURE_ASPECT_RATIO,
+            upper_seismogenic_depth=test_data.SET1_CASE1TO9_UPPER_SEISMOGENIC_DEPTH,
+            lower_seismogenic_depth=test_data.SET1_CASE1TO9_LOWER_SEISMOGENIC_DEPTH,
+            fault_trace=test_data.SET1_CASE1TO9_FAULT_TRACE,
+            dip=test_data.SET1_CASE1TO9_DIP,
+            rake=test_data.SET1_CASE1TO9_RAKE
+        )]
+        sites = [
+            test_data.SET1_CASE1TO9_SITE1, test_data.SET1_CASE1TO9_SITE2,
+            test_data.SET1_CASE1TO9_SITE3, test_data.SET1_CASE1TO9_SITE4,
+            test_data.SET1_CASE1TO9_SITE5, test_data.SET1_CASE1TO9_SITE6,
+            test_data.SET1_CASE1TO9_SITE7
+        ]
+        gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
+        component_type = const.IMC.AVERAGE_HORIZONTAL
+        truncation_level = 0
+        time_span = 1.0
+        imts = {test_data.IMT: test_data.SET1_CASE5_IMLS}
+
+        curves = hazard_curves(sources, sites, imts, time_span,
+                               gsims, component_type, truncation_level)
+        s1hc, s2hc, s3hc, s4hc, s5hc, s6hc, s7hc = curves[test_data.IMT]
+
+        assert_hazard_curve_is(self, s1hc, test_data.SET1_CASE5_SITE1_POES,
+                               tolerance=1e-3)
+        assert_hazard_curve_is(self, s2hc, test_data.SET1_CASE5_SITE2_POES,
+                               tolerance=1e-3)
+        assert_hazard_curve_is(self, s3hc, test_data.SET1_CASE5_SITE3_POES,
+                               tolerance=1e-3)
+        assert_hazard_curve_is(self, s4hc, test_data.SET1_CASE5_SITE4_POES,
+                               tolerance=1e-3)
+        assert_hazard_curve_is(self, s5hc, test_data.SET1_CASE5_SITE5_POES,
+                               tolerance=1e-3)
+        assert_hazard_curve_is(self, s6hc, test_data.SET1_CASE5_SITE6_POES,
+                               tolerance=1e-3)
+        assert_hazard_curve_is(self, s7hc, test_data.SET1_CASE5_SITE7_POES,
+                               tolerance=1e-3)

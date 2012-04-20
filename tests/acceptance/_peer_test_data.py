@@ -184,49 +184,50 @@ SET1_CASE11_SITE4_POES = [
 # page 13
 SET1_CASE2_MFD = TruncatedGRMFD(a_val=3.2828, b_val=0.9, min_mag=5.95,
                                 max_mag=6.05, bin_width=0.1)
-SET1_CASE2_RAKE = 0
+SET1_CASE1TO9_RAKE = 0
 
 # page A-3
-SET1_CASE2_FAULT_TRACE = Line([Point(-122.0, 38.0), Point(-122.0, 38.22480)])
+SET1_CASE1TO9_FAULT_TRACE = Line([Point(-122.0, 38.0),
+                                  Point(-122.0, 38.22480)])
 
 # page A-17
-SET1_CASE2_UPPER_SEISMOGENIC_DEPTH = 0.0
-SET1_CASE2_LOWER_SEISMOGENIC_DEPTH = 12.0
-SET1_CASE2_DIP = 90
+SET1_CASE1TO9_UPPER_SEISMOGENIC_DEPTH = 0.0
+SET1_CASE1TO9_LOWER_SEISMOGENIC_DEPTH = 12.0
+SET1_CASE1TO9_DIP = 90
 
 # page A-3
-SET1_CASE2_SITE1 = Site(
+SET1_CASE1TO9_SITE1 = Site(
     location=Point(-122.000, 38.113), vs30=800.0, vs30measured=True,
     z1pt0=1.0, z2pt5=2.0
 )
-SET1_CASE2_SITE2 = Site(
+SET1_CASE1TO9_SITE2 = Site(
     location=Point(-122.114, 38.113), vs30=800.0, vs30measured=True,
     z1pt0=1.0, z2pt5=2.0
 )
-SET1_CASE2_SITE3 = Site(
+SET1_CASE1TO9_SITE3 = Site(
     location=Point(-122.570, 38.111), vs30=800.0, vs30measured=True,
     z1pt0=1.0, z2pt5=2.0
 )
-SET1_CASE2_SITE4 = Site(
+SET1_CASE1TO9_SITE4 = Site(
     location=Point(-122.000, 38.000), vs30=800.0, vs30measured=True,
     z1pt0=1.0, z2pt5=2.0
 )
-SET1_CASE2_SITE5 = Site(
+SET1_CASE1TO9_SITE5 = Site(
     location=Point(-122.000, 37.910), vs30=800.0, vs30measured=True,
     z1pt0=1.0, z2pt5=2.0
 )
-SET1_CASE2_SITE6 = Site(
+SET1_CASE1TO9_SITE6 = Site(
     location=Point(-122.000, 38.225), vs30=800.0, vs30measured=True,
     z1pt0=1.0, z2pt5=2.0
 )
-SET1_CASE2_SITE7 = Site(
+SET1_CASE1TO9_SITE7 = Site(
     location=Point(-121.886, 38.113), vs30=800.0, vs30measured=True,
     z1pt0=1.0, z2pt5=2.0
 )
 
 # page A-8
 SET1_CASE2_IMLS = [0.001, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3,
-                   0.35063, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65]
+                   0.35, 0.4, 0.45, 0.5, 0.55, 0.6, 0.65]
 SET1_CASE2_SITE1_POES = [
     1.59E-02, 1.59E-02, 1.59E-02, 1.59E-02, 1.59E-02,
     1.59E-02, 1.59E-02, 1.59E-02, 1.59E-02, 1.18E-02,
@@ -261,4 +262,56 @@ SET1_CASE2_SITE7_POES = [
     1.59E-02, 1.59E-02, 1.59E-02, 1.59E-02, 1.59E-02,
     1.59E-02, 0.00E+00, 0.00E+00, 0.00E+00, 0.00E+00,
     0.00E+00, 0.00E+00, 0.00E+00, 0.00E+00, 0.00E+00
+]
+
+# page 13
+SET1_CASE5_MFD = TruncatedGRMFD(a_val=3.1292, b_val=0.9, min_mag=5.0,
+                                max_mag=6.5, bin_width=0.1)
+
+# page A-9
+SET1_CASE5_IMLS = [0.001, 0.01, 0.05, 0.1, 0.15, 0.2, 0.25, 0.3, 0.35, 0.4,
+                   0.45, 0.5, 0.55, 0.6, 0.7, 0.8]
+SET1_CASE5_SITE4_POES = [
+    3.99E-02, 3.99E-02, 3.98E-02, 2.99E-02, 2.00E-02,
+    1.30E-02, 8.58E-03, 5.72E-03, 3.88E-03, 2.69E-03,
+    1.91E-03, 1.37E-03, 9.74E-04, 6.75E-04, 2.52E-04,
+    0.00E+00
+]
+SET1_CASE5_SITE5_POES = [
+    3.99E-02, 3.99E-02, 3.14E-02, 1.21E-02, 4.41E-03,
+    1.89E-03, 7.53E-04, 1.25E-04, 0.00E+00, 0.00E+00,
+    0.00E+00, 0.00E+00, 0.00E+00, 0.00E+00, 0.00E+00,
+    0.00E+00
+]
+SET1_CASE5_SITE6_POES = [
+    3.99E-02, 3.99E-02, 3.98E-02, 2.99E-02, 2.00E-02,
+    1.30E-02, 8.58E-03, 5.72E-03, 3.88E-03, 2.69E-03,
+    1.91E-03, 1.37E-03, 9.74E-04, 6.75E-04, 2.52E-04,
+    0.00E+00
+]
+
+# page A-11
+SET1_CASE5_SITE1_POES = [
+    4.00E-02, 4.00E-02, 4.00E-02, 3.99E-02, 3.46E-02,
+    2.57E-02, 1.89E-02, 1.37E-02, 9.88E-03, 6.93E-03,
+    4.84E-03, 3.36E-03, 2.34E-03, 1.52E-03, 5.12E-04,
+    0
+]
+SET1_CASE5_SITE2_POES = [
+    4.00E-02, 4.00E-02, 4.00E-02, 3.31E-02, 1.22E-02,
+    4.85E-03, 1.76E-03, 2.40E-04, 0, 0,
+    0, 0, 0, 0, 0,
+    0
+]
+SET1_CASE5_SITE3_POES = [
+    4.00E-02, 4.00E-02, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0,
+    0
+]
+SET1_CASE5_SITE7_POES = [
+    4.00E-02, 4.00E-02, 4.00E-02, 3.31E-02, 1.22E-02,
+    4.85E-03, 1.76E-03, 2.40E-04, 0, 0,
+    0, 0, 0, 0, 0,
+    0
 ]
