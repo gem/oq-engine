@@ -20,6 +20,7 @@ Norman Abrahamson, see
 `http://peer.berkeley.edu/publications/peer_reports/reports_2010/web_PEER_10106_THOMASetal.pdf`_.
 """
 import unittest
+from decimal import Decimal
 
 import numpy
 
@@ -76,4 +77,49 @@ class Set1TestCase(unittest.TestCase):
         assert_hazard_curve_is(self, s3hc, test_data.SET1_CASE10_SITE3_POES,
                                tolerance=2e-3)
         assert_hazard_curve_is(self, s4hc, test_data.SET1_CASE10_SITE4_POES,
+                               tolerance=2e-3)
+
+    def test_case_11(self):
+        hypocenter_probability = (
+            Decimal(1) / len(test_data.SET1_CASE11_HYPOCENTERS)
+        )
+        hypocenter_pmf = PMF([
+            (hypocenter_probability, hypocenter)
+            for hypocenter in test_data.SET1_CASE11_HYPOCENTERS
+        ])
+        # apart from hypocenter pmf repeats case 10
+        sources = [AreaSource(source_id='src1', name='src1',
+            tectonic_region_type=const.TRT.ACTIVE_SHALLOW_CRUST,
+            mfd=test_data.SET1_CASE11_MFD,
+            nodal_plane_distribution=PMF([(1, NodalPlane(0.0, 90.0, 0.0))]),
+            hypocenter_distribution=hypocenter_pmf,
+            upper_seismogenic_depth=0.0,
+            lower_seismogenic_depth=10.0,
+            magnitude_scaling_relationship = PeerMSR(),
+            rupture_aspect_ratio=1.0,
+            polygon=test_data.SET1_CASE11_SOURCE_POLYGON,
+            area_discretization=30.0,
+            rupture_mesh_spacing=10.0
+        )]
+        sites = [
+            test_data.SET1_CASE11_SITE1, test_data.SET1_CASE11_SITE2,
+            test_data.SET1_CASE11_SITE3, test_data.SET1_CASE11_SITE4
+        ]
+        gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
+        component_type = const.IMC.AVERAGE_HORIZONTAL
+        truncation_level = 0
+        time_span = 1.0
+        imts = {test_data.IMT: test_data.SET1_CASE11_IMLS}
+
+        curves = hazard_curves(sources, sites, imts, time_span,
+                               gsims, component_type, truncation_level)
+        s1hc, s2hc, s3hc, s4hc = curves[test_data.IMT]
+
+        assert_hazard_curve_is(self, s1hc, test_data.SET1_CASE11_SITE1_POES,
+                               tolerance=2e-3)
+        assert_hazard_curve_is(self, s2hc, test_data.SET1_CASE11_SITE2_POES,
+                               tolerance=2e-3)
+        assert_hazard_curve_is(self, s3hc, test_data.SET1_CASE11_SITE3_POES,
+                               tolerance=2e-3)
+        assert_hazard_curve_is(self, s4hc, test_data.SET1_CASE11_SITE4_POES,
                                tolerance=2e-3)
