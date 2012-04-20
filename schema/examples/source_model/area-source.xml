@@ -3,18 +3,15 @@
       xmlns="http://openquake.org/xmlns/nrml/0.3"
       gml:id="n1">
 
-    <!-- sourceModel is a gml:Feature -->
     <sourceModel gml:id="sm1">
         <config/>
 
-        <!-- areaSource is a gml:Feature -->
+        <!-- Note: Area sources are identical to point sources, except for the geometry. -->
         <areaSource gml:id="src03">
             <gml:name>Quito</gml:name>
-
             <tectonicRegion>Active Shallow Crust</tectonicRegion>
 
-            <!-- this is the geospatial property, of type gml:SurfacePropertyType -->
-            <areaBoundary>
+            <areaGeometry>
                 <gml:Polygon>
                     <gml:exterior>
                         <gml:LinearRing srsName="urn:ogc:def:crs:EPSG::4326">
@@ -27,33 +24,27 @@
                         </gml:LinearRing>
                     </gml:exterior>
                 </gml:Polygon>
-            </areaBoundary>
+            </areaGeometry>
 
-            <ruptureRateModel>
-                <truncatedGutenbergRichter type="ML">
-                    <aValueCumulative>5.0</aValueCumulative>
-                    <bValue>0.8</bValue>
-                    <minMagnitude>5.0</minMagnitude>
-                    <maxMagnitude>7.0</maxMagnitude>
-                </truncatedGutenbergRichter>
+            <magnitudeScalingRelationship>PeerMSR</magnitudeScalingRelationship>
+            <ruptureAspectRatio>1.5</ruptureAspectRatio>
 
-                <nodalPlaneDistribution>
-                    <nodalPlane probability="0.3">
-                        <strike>0.0</strike>
-                        <dip>90.0</dip>
-                        <rake>0.0</rake>
-                    </nodalPlane>
-                    <nodalPlane probability="0.7">
-                        <strike>90.0</strike>
-                        <dip>45.0</dip>
-                        <rake>90.0</rake>
-                    </nodalPlane>
-                </nodalPlaneDistribution>
-            </ruptureRateModel>
+            <upperSeismogenicDepth>0.0</upperSeismogenicDepth>
+            <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
 
-            <ruptureDepthDistribution>
-                <magnitude type="ML">6.0 6.5 7.0</magnitude>
-                <depth>5000.0 3000.0 0.0</depth>
+            <evenlyDiscretizedIncrementalMFD minMag="6.55" binSize="0.1" type="ML">
+                <occurrenceRates>0.0010614989 8.8291627E-4 7.3437777E-4 6.108288E-4 5.080653E-4</occurrenceRates>
+            </evenlyDiscretizedIncrementalMFD>
+
+            <nodalPlaneDistribution>
+                <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.7" strike="90.0" dip="45.0" rake="90.0" />
+            </nodalPlaneDistribution>
+
+            <ruptureDepthDistribution type="ML">
+                <rupture magnitude="6.0" depth="5000.0" />
+                <rupture magnitude="6.5" depth="3000.0" />
+                <rupture magnitude="7.0" depth="0.0" />
             </ruptureDepthDistribution>
 
             <hypocenterDistribution>
@@ -61,8 +52,7 @@
                 <hypocenter probability="0.5" depth="8.0" />
             </hypocenterDistribution>
 
-            <!-- TODO(larsbutler): do we get rid of this? -->
-            <hypocentralDepth>5000.0</hypocentralDepth>
         </areaSource>
+
     </sourceModel>
 </nrml>

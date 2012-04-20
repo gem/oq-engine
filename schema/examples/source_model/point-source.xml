@@ -3,41 +3,42 @@
       xmlns="http://openquake.org/xmlns/nrml/0.3"
       gml:id="n1">
 
-    <!-- sourceModel is a gml:Feature -->
     <sourceModel gml:id="sm1">
         <config/>
 
-        <!-- pointSource is a gml:Feature -->
         <pointSource gml:id="src04">
             <gml:name>point</gml:name>
             <tectonicRegion>Active Shallow Crust</tectonicRegion>
 
-            <!-- this is the geospatial property, of type gml:PointPropertyType -->
-            <location>
+            <pointGeometry>
                 <gml:Point srsName="epsg:4326">
                     <gml:pos>-122.0 38.0</gml:pos>
                 </gml:Point>
-            </location>
+            </pointGeometry>
 
-            <ruptureRateModel>
-                <truncatedGutenbergRichter type="ML">
-                    <aValueCumulative>5.0</aValueCumulative>
-                    <bValue>0.8</bValue>
-                    <minMagnitude>5.0</minMagnitude>
-                    <maxMagnitude>7.0</maxMagnitude>
-                </truncatedGutenbergRichter>
+            <magnitudeScalingRelationship>WC1994</magnitudeScalingRelationship>
+            <ruptureAspectRatio>0.5</ruptureAspectRatio>
 
-                <strike>0.0</strike>
-                <dip>90.0</dip>
-                <rake>0.0</rake>
-            </ruptureRateModel>
+            <upperSeismogenicDepth>0.0</upperSeismogenicDepth>
+            <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
 
-            <ruptureDepthDistribution>
-                <magnitude type="ML">6.0 6.5 7.0</magnitude>
-                <depth>5000.0 3000.0 0.0</depth>
+            <truncatedGutenbergRichterMFD aValue="-3.5" bValue="1.0" minMag="5.0" maxMag="6.5" type="ML" />
+
+            <nodalPlaneDistribution>
+                <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.7" strike="90.0" dip="45.0" rake="90.0" />
+            </nodalPlaneDistribution>
+
+            <ruptureDepthDistribution type="ML">
+                <rupture magnitude="6.0" depth="5000.0" />
+                <rupture magnitude="6.5" depth="3000.0" />
+                <rupture magnitude="7.0" depth="0.0" />
             </ruptureDepthDistribution>
 
-            <hypocentralDepth>5000.0</hypocentralDepth>
+            <hypocenterDistribution>
+                <hypocenter probability="0.5" depth="4.0" />
+                <hypocenter probability="0.5" depth="8.0" />
+            </hypocenterDistribution>
 
         </pointSource>
 

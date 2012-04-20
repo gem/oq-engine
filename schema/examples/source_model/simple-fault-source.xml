@@ -3,41 +3,33 @@
       xmlns="http://openquake.org/xmlns/nrml/0.3"
       gml:id="n1">
 
-    <!-- sourceModel is a gml:Feature -->
-    <sourceModel gml:id="sm1">
-        <config/>
+    <sourceModel id="sm1">
 
-        <!-- simpleFaultSource is a gml:Feature -->
-        <!-- put original element sourceID into attribute gml:id and
-             sourceName into element gml:name -->
-        <simpleFaultSource gml:id="src01">
-            <gml:name>Mount Diablo Thrust</gml:name>
-
+        <simpleFaultSource id="src01" name="Mount Diablo Thrust">
             <tectonicRegion>Active Shallow Crust</tectonicRegion>
-            <rake>90.0</rake>
 
-            <evenlyDiscretizedIncrementalMFD minVal="6.55" binSize="0.1" type="ML">
-                0.0010614989 8.8291627E-4 7.3437777E-4 6.108288E-4 5.080653E-4
+            <simpleFaultGeometry>
+                <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                    <gml:posList>
+                        -121.82290 37.73010
+                        -122.03880 37.87710
+                    </gml:posList>
+                </gml:LineString>
+            </simpleFaultGeometry>
+
+            <magnitudeScalingRelationship>WC1994</magnitudeScalingRelationship>
+            <ruptureAspectRatio>1.5</ruptureAspectRatio>
+
+            <upperSeismogenicDepth>10.0</upperSeismogenicDepth>
+            <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
+
+            <!-- TODO(larsbutler): Do we need the 'type'? -->
+            <evenlyDiscretizedIncrementalMFD minMag="5.0" binWidth="0.1" type="ML">
+                <occurrenceRates>0.0010614989 8.8291627E-4 7.3437777E-4 6.108288E-4 5.080653E-4</occurrenceRates>
             </evenlyDiscretizedIncrementalMFD>
 
-            <!-- simpleFaultGeometry is a gml:Feature -->
-            <simpleFaultGeometry gml:id="sfg_1">
-
-                <!-- geospatial property: restriction of gml:CurvePropertyType -->
-                <faultTrace>
-                    <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
-                        <gml:posList>
-                            -121.82290 37.73010
-                            -122.03880 37.87710
-                        </gml:posList>
-                    </gml:LineString>
-                </faultTrace>
-
-                <!-- non-geospatial properties -->
-                <dip>50.0</dip>
-                <upperSeismogenicDepth>0.0</upperSeismogenicDepth>
-                <lowerSeismogenicDepth>19.5</lowerSeismogenicDepth>
-            </simpleFaultGeometry>
+            <dip>45.0</dip>
+            <rake>30.0</rake>
 
         </simpleFaultSource>
 
