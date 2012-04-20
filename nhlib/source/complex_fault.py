@@ -94,6 +94,7 @@ class ComplexFaultSource(SeismicSource):
                     surface, occurrence_rate, temporal_occurrence_model
                 )
 
+
 def _float_ruptures(rupture_area, rupture_length, cell_area, cell_length):
     """
     Get all possible unique rupture placements on the fault surface.
