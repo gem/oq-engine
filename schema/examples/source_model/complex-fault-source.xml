@@ -3,11 +3,9 @@
       xmlns="http://openquake.org/xmlns/nrml/0.3"
       gml:id="n1">
 
-    <sourceModel gml:id="sm1">
-        <config/>
+    <sourceModel id="optional" name="Some Source Model">
 
-        <complexFaultSource gml:id="src02">
-            <gml:name>Cascadia Megathrust</gml:name>
+        <complexFaultSource id="optional" name="Cascadia Megathrust">
             <tectonicRegion>Subduction Interface</tectonicRegion>
 
             <complexFaultGeometry>

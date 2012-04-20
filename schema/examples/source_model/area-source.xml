@@ -3,12 +3,10 @@
       xmlns="http://openquake.org/xmlns/nrml/0.3"
       gml:id="n1">
 
-    <sourceModel gml:id="sm1">
-        <config/>
+    <sourceModel id="optional" name="Source model for the Foo region">
 
         <!-- Note: Area sources are identical to point sources, except for the geometry. -->
-        <areaSource gml:id="src03">
-            <gml:name>Quito</gml:name>
+        <areaSource id="optional" name="Quito">
             <tectonicRegion>Active Shallow Crust</tectonicRegion>
 
             <areaGeometry>

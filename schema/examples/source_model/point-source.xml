@@ -3,11 +3,9 @@
       xmlns="http://openquake.org/xmlns/nrml/0.3"
       gml:id="n1">
 
-    <sourceModel gml:id="sm1">
-        <config/>
+    <sourceModel id="optional" name="Some Source Model">
 
-        <pointSource gml:id="src04">
-            <gml:name>point</gml:name>
+        <pointSource id="optional" name="point">
             <tectonicRegion>Active Shallow Crust</tectonicRegion>
 
             <pointGeometry>
