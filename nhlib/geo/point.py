@@ -18,7 +18,7 @@ Module :mod:`nhlib.geo.point` defines :class:`Point`.
 """
 import math
 
-from nhlib.geo._utils import GEOD, EARTH_RADIUS, ensure
+from nhlib.geo._utils import GEOD, EARTH_RADIUS, ensure, cartesian_to_spherical
 
 
 class Point(object):
@@ -245,3 +245,16 @@ class Point(object):
                     horizontal_increment, vertical_increment, azimuth))
 
         return points
+
+    @classmethod
+    def from_vector(cls, vector):
+        """
+        Create a point object from a 3d vector in Cartesian space.
+
+        :param vector:
+            Tuple, list or numpy array of three float numbers representing
+            point coordinates in Cartesian 3d space.
+        :returns:
+            A :class:`Point` object created from those coordinates.
+        """
+        return cls(*cartesian_to_spherical(vector))

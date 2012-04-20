@@ -504,13 +504,57 @@ class RectangularMesh(Mesh):
 
         return inclination, azimuth
 
+    def get_cell_dimensions(self):
+        """
+        Calculate centroid, width, length and area of each mesh cell.
+
+        :returns:
+            Tuple of four elements, each being 2d numpy array.
+            Each array has both dimensions less by one the dimensions
+            of the mesh, since they represent cells, not vertices.
+            Arrays contain the following cell information:
+
+            #. centroids, 3d vectors in a Cartesian space,
+            #. length (size along row of points) in km,
+            #. width (size along column of points) in km,
+            #. area in square km.
+        """
+        points, along_azimuth, updip, diag = self.triangulate()
+        top = along_azimuth[:-1]
+        left = updip[:, :-1]
+        tl_area = geo_utils.triangle_area(top, left, diag)
+        top_length = numpy.sqrt(numpy.sum(top * top, axis=-1))
+        left_length = numpy.sqrt(numpy.sum(left * left, axis=-1))
+
+        bottom = along_azimuth[1:]
+        right = updip[:, 1:]
+        br_area = geo_utils.triangle_area(bottom, right, diag)
+        bottom_length = numpy.sqrt(numpy.sum(bottom * bottom, axis=-1))
+        right_length = numpy.sqrt(numpy.sum(right * right, axis=-1))
+
+        cell_area = tl_area + br_area
+
+        tl_center = (points[:-1, :-1] + points[:-1, 1:] + points[1:, :-1]) / 3
+        br_center = (points[:-1, 1:] + points[1:, :-1] + points[1:, 1:]) / 3
+
+        cell_center = ((tl_center * tl_area.reshape(tl_area.shape + (1, ))
+                        + br_center * br_area.reshape(br_area.shape + (1, )))
+                       / cell_area.reshape(cell_area.shape + (1, )))
+
+        cell_length = ((top_length * tl_area + bottom_length * br_area)
+                       / cell_area)
+        cell_width = ((left_length * tl_area + right_length * br_area)
+                      / cell_area)
+
+        return cell_center, cell_length, cell_width, cell_area
+
     def triangulate(self):
         """
         Convert mesh points to vectors in Cartesian space.
 
         :returns:
             Tuple of four elements, each being 2d numpy array of 3d vectors
-            (the same structure and shape as the mesh itself). Those tuples
+            (the same structure and shape as the mesh itself). Those arrays
             are:
 
             #. points vectors,
@@ -524,12 +568,8 @@ class RectangularMesh(Mesh):
             So the last three arrays of vectors allow to construct triangles
             covering the whole mesh.
         """
-        # transpose(1, 2, 0) is needed to convert three arrays of 2d arrays
-        # of different coordinate components to one 2d array of 3d vectors.
-        points = geo_utils.spherical_to_cartesian(
-            self.lons, self.lats, self.depths
-        ).transpose(1, 2, 0)
-
+        points = geo_utils.spherical_to_cartesian(self.lons, self.lats,
+                                                  self.depths)
         # triangulate the mesh by defining vectors of triangles edges:
         # →
         along_azimuth = points[:, 1:] - points[:, :-1]
