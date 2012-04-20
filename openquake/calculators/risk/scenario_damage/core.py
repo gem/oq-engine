@@ -31,7 +31,7 @@ from openquake.db.models import Output, FragilityModel
 from openquake.db.models import DmgDistPerAsset, Ffc, Ffd
 from openquake.db.models import DmgDistPerAssetData, DmgDistPerTaxonomy
 from openquake.db.models import (DmgDistPerTaxonomyData,
-DmgDistTotal, DmgDistTotalData)
+DmgDistTotal, DmgDistTotalData, ExposureModel, CollapseMap, CollapseMapData)
 from openquake.db.models import inputs4job
 from openquake.utils.tasks import distribute
 from openquake.export.risk import (
@@ -110,6 +110,23 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         DmgDistTotal(
             output=output,
             dmg_states=_damage_states(fm.lss)).save()
+
+        output = Output(
+            owner=oq_job.owner,
+            oq_job=oq_job,
+            display_name="SDA (collapse map) "
+                "results for calculation id %s" % oq_job.id,
+            db_backed=True,
+            output_type="collapse_map")
+
+        output.save()
+
+        [ism] = inputs4job(oq_job.id, input_type="exposure")
+        [em] = ExposureModel.objects.filter(input=ism, owner=oq_job.owner)
+
+        CollapseMap(
+            output=output,
+            exposure_model=em).save()
 
     def execute(self):
         """
@@ -197,9 +214,28 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                     asset.taxonomy, numpy.zeros((len(gmf), len(funcs) + 1)))
 
                 ddt_fractions[asset.taxonomy] = current_fractions + fractions
+
                 self._store_dda(fractions, asset, fm)
+                self._store_cmap(fractions[:, -1], asset)
 
         return ddt_fractions
+
+    def _store_cmap(self, dstate, asset):
+        """
+        Store the collapse map data for the given asset.
+        """
+
+        [cm] = CollapseMap.objects.filter(
+            output__owner=self.job_ctxt.oq_job.owner,
+            output__oq_job=self.job_ctxt.oq_job,
+            output__output_type="collapse_map")
+
+        CollapseMapData(
+            collapse_map=cm,
+            asset_ref=asset.asset_ref,
+            value=numpy.mean(dstate),
+            std_dev=numpy.std(dstate, ddof=1),
+            location=asset.site).save()
 
     def _store_dda(self, fractions, asset, fm):
         """
