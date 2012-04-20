@@ -122,8 +122,6 @@ if [ "$(id -u)" != "0" ]; then
     if [ "$user_interaction" = "on" ]; then
         echo "!! Press <enter> to continue, or <ctrl>-C to abort"
         read
-    else
-        exit 4
     fi
 fi
 
