@@ -41,6 +41,23 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
 
         self._verify_dist_per_asset_con()
         self._verify_dist_per_taxonomy_con()
+        self._verify_total_dist_con()
+
+    def _verify_total_dist_con(self):
+        ds = self._ds_td("no_damage")
+
+        self._close_to(1389.8919157764, float(ds.get("mean")))
+        self._close_to(1117.5296792718, float(ds.get("stddev")))
+
+        ds = self._ds_td("LS1")
+
+        self._close_to(2374.7173448098, float(ds.get("mean")))
+        self._close_to(634.5153398045, float(ds.get("stddev")))
+
+        ds = self._ds_td("LS2")
+
+        self._close_to(2235.3907394139, float(ds.get("mean")))
+        self._close_to(1153.0186229650, float(ds.get("stddev")))
 
     def _verify_dist_per_asset_con(self):
         ds = self._ds_dda("a1", "no_damage")
@@ -128,6 +145,23 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
 
         self._verify_dist_per_asset_dsc()
         self._verify_dist_per_taxonomy_dsc()
+        self._verify_total_dist_dsc()
+
+    def _verify_total_dist_dsc(self):
+        ds = self._ds_td("no_damage")
+
+        self._close_to(1017.7837546250, float(ds.get("mean")))
+        self._close_to(841.6197577706, float(ds.get("stddev")))
+
+        ds = self._ds_td("LS1")
+
+        self._close_to(2655.8877150738, float(ds.get("mean")))
+        self._close_to(386.9947115143, float(ds.get("stddev")))
+
+        ds = self._ds_td("LS2")
+
+        self._close_to(2326.3285303012, float(ds.get("mean")))
+        self._close_to(1054.2981969103, float(ds.get("stddev")))
 
     def _verify_dist_per_taxonomy_dsc(self):
         ds = self._ds_ddt("RM", "no_damage")
@@ -205,6 +239,15 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
 
         self._close_to(414.1443910394, float(ds.get("mean")))
         self._close_to(232.3139816472, float(ds.get("stddev")))
+
+    def _ds_td(self, damage_state):
+        job = OqJob.objects.latest("id")
+        filename = "%s/dmg-dist-total-%s.xml" % (OUTPUT_DIR, job.id)
+
+        xpath = ("{%(ns)s}totalDmgDist/"
+            "{%(ns)s}damage[@ds='" + damage_state + "']")
+
+        return self._get(filename, xpath)
 
     def _ds_dda(self, asset_ref, damage_state):
         job = OqJob.objects.latest("id")
