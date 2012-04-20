@@ -198,9 +198,13 @@ def spherical_to_cartesian(lons, lats, depths):
     considered zero for all points.
 
     :returns:
-        ``numpy.array`` of shape (3, n), where n is the number of points
-        in original spherical coordinates lists. Those three rows in the
-        returned array are the Cartesian coordinates x, y and z.
+        ``numpy.array`` of 3d vectors representing points' coordinates in
+        Cartesian space. The array has the same shape as parameter arrays.
+        In particular it means that if ``lons`` and ``lats`` are scalars,
+        the result is a single 3d vector. Vector of length ``1`` represents
+        distance of 1 km.
+
+    See also :func:`cartesian_to_spherical`.
     """
     phi = numpy.radians(lons)
     theta = numpy.radians(lats)
@@ -212,7 +216,33 @@ def spherical_to_cartesian(lons, lats, depths):
     xx = cos_theta_r * numpy.cos(phi)
     yy = cos_theta_r * numpy.sin(phi)
     zz = rr * numpy.sin(theta)
-    return numpy.array([xx, yy, zz])
+    vectors = numpy.array([xx.transpose(), yy.transpose(), zz.transpose()]) \
+                   .transpose()
+    return vectors
+
+
+def cartesian_to_spherical(vectors):
+    """
+    Return the spherical coordinates for coordinates in Cartesian space.
+
+    This function does an opposite to :func:`spherical_to_cartesian`.
+
+    :param vectors:
+        Array of 3d vectors in Cartesian space.
+    :returns:
+        Tuple of three arrays of the same shape as ``vectors`` representing
+        longitude (decimal degrees), latitude (decimal degrees) and depth (km)
+        in specified order.
+    """
+    rr = numpy.sqrt(numpy.sum(vectors * vectors, axis=-1))
+    xx, yy, zz = vectors.transpose()
+    xx = xx.transpose()
+    yy = yy.transpose()
+    zz = zz.transpose()
+    lats = numpy.degrees(numpy.arcsin((zz / rr).clip(-1., 1.)))
+    lons = numpy.degrees(numpy.arctan2(yy, xx))
+    depths = EARTH_RADIUS - rr
+    return lons, lats, depths
 
 
 def ensure(expr, msg):
