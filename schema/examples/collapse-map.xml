@@ -1,0 +1,34 @@
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.3" gml:id="n1">
+    <collapseMap endBranchLabel="VM1">
+        <CMNode gml:id="n2">
+            <site>
+                <gml:Point srsName="epsg:4326">
+                    <gml:pos>-72.20 18.00</gml:pos>
+                </gml:Point>
+            </site>
+            <cf assetRef="a1">
+                <mean>1.6</mean>
+                <stdDev>1.7</stdDev>
+            </cf>
+            <cf assetRef="a2">
+                <mean>2.9</mean>
+                <stdDev>3.1</stdDev>
+            </cf>
+            <cf assetRef="a3">
+                <mean>4.9</mean>
+                <stdDev>5.1</stdDev>
+            </cf>
+        </CMNode>
+        <CMNode gml:id="n3">
+            <site>
+                <gml:Point srsName="epsg:4326">
+                    <gml:pos>-72.25 18.00</gml:pos>
+                </gml:Point>
+            </site>
+            <cf assetRef="a4">
+                <mean>10.6</mean>
+                <stdDev>11.7</stdDev>
+            </cf>
+        </CMNode>
+    </collapseMap>
+</nrml>
