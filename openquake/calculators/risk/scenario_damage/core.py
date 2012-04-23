@@ -175,7 +175,8 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         Currently we support the computation of:
         * damage distributions per asset
         * damage distributions per building taxonomy
-        * total damage distributions
+        * total damage distribution
+        * collapse maps
 
         :param block_id: id of the region block data.
         :type block_id: integer
@@ -216,6 +217,10 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                 ddt_fractions[asset.taxonomy] = current_fractions + fractions
 
                 self._store_dda(fractions, asset, fm)
+
+                # the collapse map needs the fractions
+                # for each ground motion value of the
+                # last damage state (the last column)
                 self._store_cmap(fractions[:, -1], asset)
 
         return ddt_fractions
@@ -312,6 +317,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
         * damage distributions per asset
         * damage distributions per building taxonomy
+        * total damage distribution
         """
 
         self._store_ddt()
