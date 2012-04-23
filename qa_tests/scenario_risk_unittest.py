@@ -68,15 +68,15 @@ class ScenarioRiskQATest(unittest.TestCase):
         # 100% predictable.
         scen_cfg = helpers.demo_file('scenario_risk/config.gem')
 
-        exp_mean_loss = 1272.7
-        exp_stddev_loss = 455.83
+        exp_mean_loss = 1053.09006046940
+        exp_stddev_loss = 246.624987789238
         expected_loss_map = [
-            dict(asset='a3', pos='15.48 38.25', mean=217.510673644,
-                 stddev=86.3215466446),
-            dict(asset='a2', pos='15.56 38.17', mean=469.375607933,
-                 stddev=271.423557166),
-            dict(asset='a1', pos='15.48 38.09', mean=585.814597,
-                 stddev=270.632803227),
+            dict(asset='a3', pos='15.48 38.25', mean=180.717534009275,
+                 stddev=92.2122644809969),
+            dict(asset='a2', pos='15.56 38.17', mean=432.225448142534,
+                 stddev=186.864456949986),
+            dict(asset='a1', pos='15.48 38.09', mean=440.147078317589,
+                 stddev=182.615976701858),
         ]
 
         result = helpers.run_job(scen_cfg, ['--output-type=xml'],
@@ -94,8 +94,8 @@ class ScenarioRiskQATest(unittest.TestCase):
 
         # We expected the shell output to look something like the following
         # two lines:
-        # Mean region loss value: 1272.70087858
-        # Standard deviation region loss value: 455.834734995
+        # Mean region loss value: 1053.09006046940
+        # Standard deviation region loss value: 246.624987789238
 
         # split on newline and filter out empty lines
         result = [line for line in result.split('\n') if len(line) > 0]
