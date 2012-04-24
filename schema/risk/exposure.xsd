@@ -78,7 +78,7 @@
 
     <xs:complexType name="OccupantsType">
         <xs:simpleContent>
-            <xs:extension base="NonNegativeIntegerType">
+            <xs:extension base="PositiveIntegerType">
                 <xs:attribute name="description" type="xs:string" use="required"/>
             </xs:extension>
         </xs:simpleContent>

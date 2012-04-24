@@ -135,7 +135,7 @@
     </xs:simpleType>
 
     <!-- [0, inf) -->
-	<xs:simpleType name="NonNegativeIntegerType">
+	<xs:simpleType name="PositiveIntegerType">
 		<xs:restriction base="xs:integer">
 			<xs:minInclusive value="0"/>
 		</xs:restriction>
