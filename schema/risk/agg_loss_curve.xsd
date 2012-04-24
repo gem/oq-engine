@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:gml="http://www.opengis.net/gml"
-           xmlns="http://openquake.org/xmlns/nrml/0.3"
-           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
            elementFormDefault="qualified"
            xml:lang="en">
 

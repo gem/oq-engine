@@ -1,36 +1,34 @@
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.3"
+      xmlns="http://openquake.org/xmlns/nrml/0.4"
       gml:id="n1">
 
-    <sourceModel id="optional" name="Some Source Model">
+    <sourceModel name="Some Source Model">
 
-        <simpleFaultSource id="optional" name="Mount Diablo Thrust">
-            <tectonicRegion>Active Shallow Crust</tectonicRegion>
+        <simpleFaultSource id="required" name="Mount Diablo Thrust" tectonicRegion="Active Shallow Crust">
 
             <simpleFaultGeometry>
-                <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                <gml:LineString>
                     <gml:posList>
                         -121.82290 37.73010
                         -122.03880 37.87710
                     </gml:posList>
                 </gml:LineString>
+
+                <dip>45.0</dip>
+                <upperSeismoDepth>10.0</upperSeismoDepth>
+                <lowerSeismoDepth>20.0</lowerSeismoDepth>
             </simpleFaultGeometry>
 
-            <magnitudeScalingRelationship>WC1994</magnitudeScalingRelationship>
-            <ruptureAspectRatio>1.5</ruptureAspectRatio>
+            <magScaleRel>WC1994</magScaleRel>
 
-            <upperSeismogenicDepth>10.0</upperSeismogenicDepth>
-            <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
+            <ruptAspectRatio>1.5</ruptAspectRatio>
 
-            <!-- TODO(larsbutler): Do we need the 'type'? -->
-            <evenlyDiscretizedIncrementalMFD minMag="5.0" binWidth="0.1" type="ML">
-                <occurrenceRates>0.0010614989 8.8291627E-4 7.3437777E-4 6.108288E-4 5.080653E-4</occurrenceRates>
-            </evenlyDiscretizedIncrementalMFD>
+            <incrementalMFD minMag="5.0" binWidth="0.1" />
+                <occurRates>0.0010614989 8.8291627E-4 7.3437777E-4 6.108288E-4 5.080653E-4</occurRates>
+            </incrementalMFD>
 
-            <dip>45.0</dip>
             <rake>30.0</rake>
-
         </simpleFaultSource>
 
     </sourceModel>

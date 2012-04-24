@@ -1,42 +1,35 @@
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.3"
+      xmlns="http://openquake.org/xmlns/nrml/0.4"
       gml:id="n1">
 
     <sourceModel id="optional" name="Some Source Model">
 
-        <pointSource id="optional" name="point">
-            <tectonicRegion>Active Shallow Crust</tectonicRegion>
+        <pointSource id="optional" name="point" tectonicRegion="Stable Continental Crust">
 
             <pointGeometry>
-                <gml:Point srsName="epsg:4326">
+                <gml:Point>
                     <gml:pos>-122.0 38.0</gml:pos>
                 </gml:Point>
+
+                <upperSeismoDepth>0.0</upperSeismogenicDepth>
+                <lowerSeismoDepth>10.0</lowerSeismogenicDepth>
             </pointGeometry>
 
-            <magnitudeScalingRelationship>WC1994</magnitudeScalingRelationship>
-            <ruptureAspectRatio>0.5</ruptureAspectRatio>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>0.5</ruptAspectRatio>
 
-            <upperSeismogenicDepth>0.0</upperSeismogenicDepth>
-            <lowerSeismogenicDepth>10.0</lowerSeismogenicDepth>
+            <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0" minMag="5.0" maxMag="6.5" />
 
-            <truncatedGutenbergRichterMFD aValue="-3.5" bValue="1.0" minMag="5.0" maxMag="6.5" type="ML" />
-
-            <nodalPlaneDistribution>
+            <nodalPlaneDist>
                 <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
                 <nodalPlane probability="0.7" strike="90.0" dip="45.0" rake="90.0" />
-            </nodalPlaneDistribution>
+            </nodalPlaneDist>
 
-            <ruptureDepthDistribution type="ML">
-                <rupture magnitude="6.0" depth="5000.0" />
-                <rupture magnitude="6.5" depth="3000.0" />
-                <rupture magnitude="7.0" depth="0.0" />
-            </ruptureDepthDistribution>
-
-            <hypocenterDistribution>
-                <hypocenter probability="0.5" depth="4.0" />
-                <hypocenter probability="0.5" depth="8.0" />
-            </hypocenterDistribution>
+            <hypoDepthDist>
+                <hypoDepth probability="0.5" depth="4.0" />
+                <hypoDepth probability="0.5" depth="8.0" />
+            </hypoDepthDist>
 
         </pointSource>
 

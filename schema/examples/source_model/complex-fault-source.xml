@@ -1,16 +1,15 @@
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.3"
+      xmlns="http://openquake.org/xmlns/nrml/0.4"
       gml:id="n1">
 
-    <sourceModel id="optional" name="Some Source Model">
+    <sourceModel name="Some Source Model">
 
-        <complexFaultSource id="optional" name="Cascadia Megathrust">
-            <tectonicRegion>Subduction Interface</tectonicRegion>
+        <complexFaultSource id="required" name="Cascadia Megathrust" tectonicRegion="Subduction Interface">
 
             <complexFaultGeometry>
                 <faultTopEdge>
-                    <gml:LineString srsName="urn:ogc:def:crs:EPSG::4979">
+                    <gml:LineString>
                         <gml:posList>
                             -124.704  40.363  0.5493260E+01
                             -124.977  41.214  0.4988560E+01
@@ -20,25 +19,25 @@
                 </faultTopEdge>
 
                 <intermediateEdge>
-                    <gml:LineString srsName="urn:ogc:def:crs:EPSG::4979">
+                    <gml:LineString>
                     ...
                     </gml:LineString>
                 </intermediateEdge>
 
                 <intermediateEdge>
-                    <gml:LineString srsName="urn:ogc:def:crs:EPSG::4979">
+                    <gml:LineString>
                     ...
                     </gml:LineString>
                 </intermediateEdge>
 
                 <intermediateEdge>
-                    <gml:LineString srsName="urn:ogc:def:crs:EPSG::4979">
+                    <gml:LineString>
                     ...
                     </gml:LineString>
                 </intermediateEdge>
 
                 <faultBottomEdge>
-                    <gml:LineString srsName="urn:ogc:def:crs:EPSG::4979">
+                    <gml:LineString>
                         <gml:posList>
                             -123.829  40.347  0.2038490E+02
                             -124.137  41.218  0.1741390E+02
@@ -48,10 +47,10 @@
                 </faultBottomEdge>
             </complexFaultGeometry>
 
-            <magnitudeScalingRelationship>WC1994</magnitudeScalingRelationship>
-            <ruptureAspectRatio>2.0</ruptureAspectRatio>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>2.0</ruptAspectRatio>
 
-            <truncatedGutenbergRichterMFD aValue="-3.5" bValue="1.0" minMag="5.0" maxMag="6.5" type="ML" />
+            <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0" minMag="5.0" maxMag="6.5" type="ML" />
 
             <rake>30.0</rake>
 
