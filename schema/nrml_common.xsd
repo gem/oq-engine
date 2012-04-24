@@ -37,7 +37,7 @@
 
     <xs:complexType name="Magnitude">
         <xs:simpleContent>
-            <xs:extension base="NonNegativeDoubleType">
+            <xs:extension base="PositiveDoubleType">
                 <xs:attribute name="type" type="MagnitudeType"/>
             </xs:extension>
         </xs:simpleContent>
@@ -88,7 +88,7 @@
         <xs:simpleContent>
             <xs:extension base="gml:doubleList">
                 <xs:attribute name="minVal" type="xs:double" use="required"/>
-                <xs:attribute name="binSize" type="NonNegativeDoubleType" use="required"/>
+                <xs:attribute name="binSize" type="PositiveDoubleType" use="required"/>
 
                 <!-- NOTE: removed attribute 'binCount', since it's given implicitly throgh the
                     number of values given in the element -->
@@ -121,7 +121,7 @@
     <xs:element name="site" type="gml:PointPropertyType"/>
 
     <!-- [0.0, inf) -->
-	<xs:simpleType name="NonNegativeDoubleType">
+	<xs:simpleType name="PositiveDoubleType">
 		<xs:restriction base="xs:double">
 			<xs:minInclusive value="0.0"/>
 		</xs:restriction>
@@ -150,7 +150,7 @@
     </xs:simpleType>
 	
 	<xs:simpleType name="NonNegativeDoubleList">
-        <xs:list itemType="NonNegativeDoubleType"/>
+        <xs:list itemType="PositiveDoubleType"/>
 	</xs:simpleType>
 	
 	<xs:simpleType name="NormalizedDoubleList">

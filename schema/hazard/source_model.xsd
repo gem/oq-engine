@@ -44,7 +44,7 @@
     <xs:complexType name="TruncatedGutenbergRichter">
         <xs:sequence>
             <xs:element name="aValueCumulative" type="xs:double"/>
-            <xs:element name="bValue" type="NonNegativeDoubleType"/>
+            <xs:element name="bValue" type="PositiveDoubleType"/>
             <xs:element name="minMagnitude" type="Magnitude"/>
             <xs:element name="maxMagnitude" type="Magnitude"/>
         </xs:sequence>
@@ -121,7 +121,7 @@
                 <xs:element name="ruptureRateModel" type="RuptureRateModel"/>
             </xs:sequence>
             <xs:element name="ruptureDepthDistribution" type="RuptureDepthDistribution"/>
-            <xs:element name="hypocentralDepth" type="NonNegativeDoubleType"/>
+            <xs:element name="hypocentralDepth" type="PositiveDoubleType"/>
         </xs:sequence>
     </xs:group>
 

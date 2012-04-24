@@ -38,7 +38,7 @@
             <xs:element name="IML" type="IMLType" minOccurs="0" maxOccurs="1"/>
             <xs:element name="poE" type="NormalizedDoubleList"/>
         </xs:sequence>
-        <xs:attribute name="investigationTimeSpan" type="NonNegativeDoubleType"/>
+        <xs:attribute name="investigationTimeSpan" type="PositiveDoubleType"/>
     </xs:complexType>
 
 </xs:schema>

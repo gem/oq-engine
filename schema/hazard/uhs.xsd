@@ -27,12 +27,12 @@
         </xs:simpleType>
     </xs:element>
 
-    <xs:element name="timeSpan" type="NonNegativeDoubleType"/>
+    <xs:element name="timeSpan" type="PositiveDoubleType"/>
 
     <!-- UHS result node -->
     <xs:element name="uhsResult">
         <xs:complexType>
-            <xs:attribute name="poE" type="NonNegativeDoubleType" use="required"/>
+            <xs:attribute name="poE" type="PositiveDoubleType" use="required"/>
             <xs:attribute name="path" type="xs:string" use="required"/>
         </xs:complexType>
     </xs:element>

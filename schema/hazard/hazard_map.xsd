@@ -49,7 +49,7 @@
         <xs:complexContent>
             <xs:extension base="gml:PointPropertyType">
                 <xs:sequence>
-                    <xs:element name="vs30" type="NonNegativeDoubleType" minOccurs="0" maxOccurs="1"/>
+                    <xs:element name="vs30" type="PositiveDoubleType" minOccurs="0" maxOccurs="1"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>

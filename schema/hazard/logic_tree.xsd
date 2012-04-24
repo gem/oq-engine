@@ -38,7 +38,7 @@
     <xs:complexType name="LogicTreeBranch">
         <xs:sequence>
             <xs:element name="uncertaintyModel" type="xs:string"/>
-            <xs:element name="uncertaintyWeight" type="NonNegativeDoubleType"/>
+            <xs:element name="uncertaintyWeight" type="PositiveDoubleType"/>
         </xs:sequence>
         <xs:attribute name="branchID" type="xs:ID" use="required">
         </xs:attribute>

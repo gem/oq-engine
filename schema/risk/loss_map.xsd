@@ -46,9 +46,9 @@
     <xs:complexType name="LMLossType">
         <xs:sequence>
             <xs:choice minOccurs="1" maxOccurs="2">
-                <xs:element name="mean" type="NonNegativeDoubleType"/>
-                <xs:element name="stdDev" type="NonNegativeDoubleType"/>
-                <xs:element name="value" type="NonNegativeDoubleType"/>
+                <xs:element name="mean" type="PositiveDoubleType"/>
+                <xs:element name="stdDev" type="PositiveDoubleType"/>
+                <xs:element name="value" type="PositiveDoubleType"/>
             </xs:choice>
         </xs:sequence>
         <xs:attribute name="assetRef" type="xs:ID" use="required"/>
