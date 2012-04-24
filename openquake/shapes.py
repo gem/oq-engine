@@ -230,7 +230,7 @@ class Grid(object):
     A proxy interface to Region.
 
     It translates geographical points identified
-    by longitude and latitude to the corresponding grid point
+    by longitude and latitude to the corresponding grid points
     according to the grid spacing given.
     """
 
