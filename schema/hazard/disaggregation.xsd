@@ -100,7 +100,7 @@
         <xs:attribute name="magnitudeBin" type="gml:doubleList"></xs:attribute>
         <xs:attribute name="distanceBin" type="gml:doubleList"></xs:attribute>
         <xs:attribute name="epsilonBin" type="gml:doubleList"></xs:attribute>
-        <xs:attribute name="tectonicRegionTypeBin" type="TectonicRegion"></xs:attribute>
+        <xs:attribute name="tectonicRegionTypeBin" type="xs:string"></xs:attribute>
     </xs:complexType>
 
 </xs:schema>
