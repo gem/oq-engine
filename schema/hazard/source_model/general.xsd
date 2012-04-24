@@ -22,13 +22,14 @@
         <xs:attribute name="tectonicRegion" type="xs:string" />
     </xs:complexType>
 
-    <xs:element name="upperSeismoDepth" type="xs:double" /> [0, inf)
-    <xs:element name="lowerSeismoDepth" type="xs:double" /> (0, inf) 
+    <xs:element name="upperSeismoDepth" type="PositiveDoubleType" />
+    <xs:element name="lowerSeismoDepth" type="PositiveNonZeroDoubleType" />
 
     <xs:element name="magScaleRel" type="xs:string" />
-    <xs:element name="ruptAspectRatio" type="xs:double" />  (0, inf)
+    <xs:element name="ruptAspectRatio" type="PositiveNonZeroDoubleType" />
 
 
+    <!--
     occurRates >= 0.0
     binwidth > 0.0
     minmag > 0.0
@@ -38,5 +39,6 @@
     probability [0.0, 1.0]
 
     depths must be >= 0.0
+    -->
 
 </xs:schema>
