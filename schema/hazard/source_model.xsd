@@ -10,16 +10,6 @@
     <!-- We need general.xsd for fault geometry definitions. -->
     <xs:include schemaLocation="./general.xsd"/>
 
-    <xs:simpleType name="TectonicRegion">
-        <xs:restriction base="xs:string">
-            <xs:enumeration value="Active Shallow Crust"/>
-            <xs:enumeration value="Stable Shallow Crust"/>
-            <xs:enumeration value="Subduction Interface"/>
-            <xs:enumeration value="Subduction IntraSlab"/>
-            <xs:enumeration value="Volcanic"/>
-        </xs:restriction>
-    </xs:simpleType>
-
     <!-- Top-level source model element. -->
     <xs:element name="sourceModel" type="SourceModel" substitutionGroup="gml:_Feature"/>
     <xs:complexType name="SourceModel">
@@ -39,7 +29,7 @@
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
-                    <xs:element name="tectonicRegion" type="TectonicRegion"/>
+                    <xs:element name="tectonicRegion" type="xs:string"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>

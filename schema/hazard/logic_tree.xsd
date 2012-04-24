@@ -56,7 +56,7 @@
         <xs:attribute name="applyToBranches" type="gml:NCNameList" use="optional" default="ALL"></xs:attribute>
         <xs:attribute name="applyToSources" type="gml:NCNameList" use="optional"></xs:attribute>
         <xs:attribute name="applyToSourceType" type="SourceType" use="optional"></xs:attribute>
-        <xs:attribute name="applyToTectonicRegionType" type="TectonicRegion" use="optional"></xs:attribute>
+        <xs:attribute name="applyToTectonicRegionType" type="xs:string" use="optional"></xs:attribute>
     </xs:complexType>
     <!-- a LogicTreeBranchSet is defined as a sequence of LogicTreeBranch elements. A branch set has two required
     attributes (ID and uncertaintyType (defining the type of epistemic uncertainty the branch set is defining)).
