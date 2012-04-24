@@ -12,8 +12,8 @@
                     <gml:pos>-122.0 38.0</gml:pos>
                 </gml:Point>
 
-                <upperSeismoDepth>0.0</upperSeismogenicDepth>
-                <lowerSeismoDepth>10.0</lowerSeismogenicDepth>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>10.0</lowerSeismoDepth>
             </pointGeometry>
 
             <magScaleRel>WC1994</magScaleRel>
