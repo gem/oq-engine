@@ -120,18 +120,28 @@
     <!-- NOTE: site is the head of a substitution group -->
     <xs:element name="site" type="gml:PointPropertyType"/>
 
+    <!-- [0.0, inf) -->
 	<xs:simpleType name="NonNegativeDoubleType">
 		<xs:restriction base="xs:double">
 			<xs:minInclusive value="0.0"/>
 		</xs:restriction>
 	</xs:simpleType>
 	
+    <!-- (0.0, inf) -->
+    <xs:simpleType name="PositiveNonZeroDoubleType">
+        <xs:restriction base="xs:double">
+            <xs:minExclusive value="0.0" />
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- [0, inf) -->
 	<xs:simpleType name="NonNegativeIntegerType">
 		<xs:restriction base="xs:integer">
 			<xs:minInclusive value="0"/>
 		</xs:restriction>
 	</xs:simpleType>
 
+    <!-- [0.0, 1.0] -->
 	<xs:simpleType name="NormalizedDoubleType">
         <xs:restriction base="xs:double">
             <xs:minInclusive value="0.0"/>
