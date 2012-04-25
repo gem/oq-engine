@@ -76,16 +76,4 @@
         <xs:attribute name="depth" type="PositiveDoubleType" />
     </xs:complexType>
 
-    <!--
-    occurRates >= 0.0
-    binwidth > 0.0
-    minmag > 0.0
-    maxmag > 0.0
-    bval > 0.0
-    aval any double
-    probability [0.0, 1.0]
-
-    depths must be >= 0.0
-    -->
-
 </xs:schema>
