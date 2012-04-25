@@ -15,7 +15,6 @@
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
                     <xs:element name="magnitude" type="Magnitude"/>
-                    <xs:element name="tectonicRegion" type="xs:string"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>

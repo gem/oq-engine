@@ -20,7 +20,6 @@
 
                 <!-- non-geospatial properties -->
                 <magnitude type="Mw">8.0</magnitude>
-                <tectonicRegion>Active Shallow Crust</tectonicRegion>
                 <rake>0.0</rake>
 
                 <!-- geospatial property -->

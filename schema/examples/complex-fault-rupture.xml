@@ -5,7 +5,6 @@
 
 	<complexFaultRupture gml:id="cfr_1">
 		<magnitude type="Mw">9.0</magnitude>
-		<tectonicRegion>Subduction Interface</tectonicRegion>
 		<rake>0.0</rake>
 
 		<complexFaultGeometry>

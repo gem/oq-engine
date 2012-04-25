@@ -5,7 +5,6 @@
 
 	<pointRupture gml:id="pr_1">
 		<magnitude type="Mw">6.5</magnitude>
-		<tectonicRegion>Active Shallow Crust</tectonicRegion>
         <strike>20.0</strike>
         <dip>90.0</dip>
         <rake>10.0</rake>
