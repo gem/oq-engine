@@ -3,7 +3,7 @@
       xmlns="http://openquake.org/xmlns/nrml/0.4"
       gml:id="n1">
 
-    <sourceModel id="optional" name="Some Source Model">
+    <sourceModel name="Some Source Model">
 
         <pointSource id="optional" name="point" tectonicRegion="Stable Continental Crust">
 
