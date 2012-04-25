@@ -20,19 +20,21 @@
 
                 <intermediateEdge>
                     <gml:LineString>
-                    ...
+                        <gml:posList>
+                            -124.704  40.363  0.5593260E+01
+                            -124.977  41.214  0.5088560E+01
+                            -125.140  42.096  0.4997340E+01
+                        </gml:posList>
                     </gml:LineString>
                 </intermediateEdge>
 
                 <intermediateEdge>
                     <gml:LineString>
-                    ...
-                    </gml:LineString>
-                </intermediateEdge>
-
-                <intermediateEdge>
-                    <gml:LineString>
-                    ...
+                        <gml:posList>
+                            -124.704  40.363  0.5693260E+01
+                            -124.977  41.214  0.5188560E+01
+                            -125.140  42.096  0.5097340E+01
+                        </gml:posList>
                     </gml:LineString>
                 </intermediateEdge>
 
@@ -50,7 +52,7 @@
             <magScaleRel>WC1994</magScaleRel>
             <ruptAspectRatio>2.0</ruptAspectRatio>
 
-            <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0" minMag="5.0" maxMag="6.5" type="ML" />
+            <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0" minMag="5.0" maxMag="6.5" />
 
             <rake>30.0</rake>
 
