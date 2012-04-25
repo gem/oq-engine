@@ -8,7 +8,7 @@
 
     <xs:import namespace="http://www.opengis.net/gml" />
 
-    <xs:include schemaLocation="./general.xsd"/>
+    <xs:include schemaLocation="./general.xsd" />
 
 
     <xs:element name="areaSource" type="AreaSource" substitutionGroup="_abstractSource" />
@@ -19,6 +19,12 @@
                     <xs:element name="areaGeometry" type="AreaGeometry" minOccurs="1" maxOccurs="1" />
                     <xs:element ref="magScaleRel" minOccurs="1" maxOccurs="1" />
                     <xs:element ref="ruptAspectRatio" minOccurs="1" maxOccurs="1" />
+                    <xs:choice>
+                        <xs:element ref="incrementalMFD" minOccurs="1" maxOccurs="1" />
+                        <xs:element ref="truncGutenbergRichterMFD" minOccurs="1" maxOccurs="1" />
+                    </xs:choice>
+                    <xs:element ref="nodalPlaneDist" minOccurs="1" maxOccurs="1" />
+                    <xs:element ref="hypoDepthDist" minOccurs="1" maxOccurs="1" />
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
