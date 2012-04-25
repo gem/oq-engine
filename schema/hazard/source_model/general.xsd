@@ -46,7 +46,6 @@
         <xs:attribute name="maxMag" type="PositiveNonZeroDoubleType" />
     </xs:complexType>
 
-
     <!-- Nodal Plane Distribution -->
     <xs:element name="nodalPlaneDist" type="NodalPlaneDistribution" />
     <xs:complexType name="NodalPlaneDistribution">
