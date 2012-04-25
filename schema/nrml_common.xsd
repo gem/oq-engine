@@ -149,7 +149,7 @@
         </xs:restriction>
     </xs:simpleType>
 	
-	<xs:simpleType name="NonNegativeDoubleList">
+	<xs:simpleType name="PositiveDoubleList">
         <xs:list itemType="PositiveDoubleType"/>
 	</xs:simpleType>
 	

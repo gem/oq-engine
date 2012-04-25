@@ -128,7 +128,7 @@
     <xs:complexType name="RuptureDepthDistribution">
         <xs:sequence>
             <xs:element name="magnitude" type="MagnitudeList"/>
-            <xs:element name="depth" type="NonNegativeDoubleList"/>
+            <xs:element name="depth" type="PositiveDoubleList"/>
         </xs:sequence>
     </xs:complexType>
 
