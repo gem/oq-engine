@@ -95,8 +95,7 @@
 
     <!-- Geometry defintions. Used by rupture and source models. -->
 
-    <xs:element name="simpleFaultGeometry" type="SimpleFaultGeometry" substitutionGroup="gml:_Feature"/>
-    <xs:complexType name="SimpleFaultGeometry">
+    <xs:complexType name="SimpleFaultRuptureGeometry">
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
