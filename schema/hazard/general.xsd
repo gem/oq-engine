@@ -108,7 +108,7 @@
         </xs:complexContent>
     </xs:complexType>
 
-    <xs:complexType name="ComplexFaultGeometry">
+    <xs:complexType name="ComplexFaultRuptureGeometry">
         <xs:complexContent>
             <xs:restriction base="gml:MultiGeometryPropertyType">
                 <xs:sequence>

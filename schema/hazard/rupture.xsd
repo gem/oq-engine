@@ -53,7 +53,7 @@
             <xs:extension base="Rupture">
                 <xs:sequence>
                     <xs:element name="rake" type="Rake"/>
-                    <xs:element name="complexFaultGeometry" type="ComplexFaultGeometry"/>
+                    <xs:element name="complexFaultGeometry" type="ComplexFaultRuptureGeometry"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
