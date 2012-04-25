@@ -24,7 +24,7 @@
 
             <ruptAspectRatio>1.5</ruptAspectRatio>
 
-            <incrementalMFD minMag="5.0" binWidth="0.1" />
+            <incrementalMFD minMag="5.0" binWidth="0.1">
                 <occurRates>0.0010614989 8.8291627E-4 7.3437777E-4 6.108288E-4 5.080653E-4</occurRates>
             </incrementalMFD>
 
