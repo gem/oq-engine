@@ -49,7 +49,7 @@
 
     <xs:complexType name="LossCurve">
         <xs:sequence>
-            <xs:element name="loss" type="PostiveDoubleList" minOccurs="0" maxOccurs="unbounded"/>
+            <xs:element name="loss" type="PositiveDoubleList" minOccurs="0" maxOccurs="unbounded"/>
             <xs:element name="poE" type="NormalizedDoubleList" minOccurs="0" maxOccurs="unbounded"/>
         </xs:sequence>
         <xs:attribute name="endBranchLabel" type="xs:string"/>
