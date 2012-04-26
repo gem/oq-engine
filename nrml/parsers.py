@@ -20,10 +20,13 @@ data.
 See :module:`nrml.models`.
 """
 
+import re
+
 from lxml import etree
 
 import nrml
 
+from nrml import exceptions
 from nrml import models
 
 
@@ -85,17 +88,27 @@ class SourceModelParser(object):
 
         tree = etree.iterparse(self.source, events=('start', 'end'))
 
-        while src_model.name is None:
-            try:
-                event, element = tree.next()
-                if event == 'start':
-                    if element.tag == self._SM_TAG:
-                        src_model.name = element.get('name')
-                        break
-            except StopIteration:
-                # Worst case, we parse the entire file without ever finding the
-                # <sourceModel> element. This prevents an infinite loop.
-                break
+        # First thing, validate the nrml namespace version. If it not the
+        # version we expected, stop immediately and raise an error.
+
+        # The first node should be the <nrml> element.
+        _, nrml_elem = tree.next()
+        # Extract the namespace url and the element name.
+        ns, el_name = re.search('^{(.+)}(.+)', nrml_elem.tag).groups()
+        if not el_name == 'nrml':
+            raise exceptions.UnexpectedElementError('nrml', el_name)
+        if not ns == nrml.NAMESPACE:
+            raise exceptions.UnexpectedNamespaceError(nrml.NAMESPACE, ns)
+
+        for event, element in tree:
+            # Find the <sourceModel> element and get the 'name' attr.
+            if event == 'start':
+                if element.tag == self._SM_TAG:
+                    src_model.name = element.get('name')
+                    break
+            else:
+                # If we get to here, we didn't find the <sourceModel> element.
+                raise exceptions.NrmlError('<sourceModel> element not found.')
 
         src_model.sources = self._source_gen(tree)
 
