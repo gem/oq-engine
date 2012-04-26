@@ -20,54 +20,7 @@ serializers.
 """
 
 
-def _deep_eq(a, b):
-    """Deep compare two objects for equality by traversing __dict__s.
-
-    :returns:
-        True if the two objects are deeply equal, otherwise false.
-    """
-    try:
-        _do_deep_eq(a, b)
-    except ValueError:
-        return False
-    return True
-
-
-def _do_deep_eq(a, b):
-    """Do the actual deep comparison. If two items up for comparison is not
-    equal, a :exception:`ValueError` is raised (to :function:`_deep_eq`).
-    """
-    if getattr(a, '__dict__', None) is None:
-        # 'primitive' values with no __dict__
-        if hasattr(a, '__class__'):
-            _ensure(a.__class__ == b.__class__)
-        _ensure(a == b)
-    else:  # there's a __dict__
-        for key, value in a.__dict__.items():
-            if hasattr(value, '__dict__'):
-                if hasattr(value, '__class__'):
-                    _ensure(value.__class__ == b.__dict__[key].__class__)
-                _do_deep_eq(value, b.__dict__[key])
-            else:
-                if hasattr(value, '__class__'):
-                    _ensure(value.__class__ == b.__dict__[key].__class__)
-                _ensure(value == b.__dict__[key])
-
-
-def _ensure(expr):
-    """Better than `assert`, because `python -O` can't turn this off."""
-    if not expr:
-        raise ValueError()
-
-
-class BaseModel(object):
-    """Base class for NRML models."""
-
-    def __eq__(self, other):
-        return _deep_eq(self, other)
-
-
-class SourceModel(BaseModel):
+class SourceModel(object):
     """Simple container for source objects, plus metadata.
 
     :param str name:
@@ -90,7 +43,7 @@ class SourceModel(BaseModel):
             yield src
 
 
-class PointSource(BaseModel):
+class PointSource(object):
     """Basic object representation of a Point Source.
 
     :param str id:
@@ -130,7 +83,7 @@ class PointSource(BaseModel):
         self.hypo_depth_dist = hypo_depth_dist
 
 
-class PointGeometry(BaseModel):
+class PointGeometry(object):
     """Basic object representation of a geometry for a :class:`PointSource`.
 
     :param str wkt:
@@ -187,7 +140,7 @@ class AreaGeometry(PointGeometry):
     """
 
 
-class SimpleFaultSource(BaseModel):
+class SimpleFaultSource(object):
     """Basic object representation of a Simple Fault Source.
 
    :param str id:
@@ -222,7 +175,7 @@ class SimpleFaultSource(BaseModel):
         self.rake = rake
 
 
-class SimpleFaultGeometry(BaseModel):
+class SimpleFaultGeometry(object):
     """Basic object representation of a geometry for a
     :class:`SimpleFaultSource`.
 
@@ -265,7 +218,7 @@ class ComplexFaultSource(SimpleFaultSource):
     """
 
 
-class ComplexFaultGeometry(BaseModel):
+class ComplexFaultGeometry(object):
     """Basic object representation of a geometry for a
     :class:`ComplexFaultSource`.
 
@@ -288,7 +241,7 @@ class ComplexFaultGeometry(BaseModel):
         self.int_edges = int_edges if int_edges is not None else []
 
 
-class IncrementalMFD(BaseModel):
+class IncrementalMFD(object):
     """Basic object representation of an Incremental Magnitude Frequency
     Distribtion.
 
@@ -306,7 +259,7 @@ class IncrementalMFD(BaseModel):
         self.occur_rates = occur_rates
 
 
-class TGRMFD(BaseModel):
+class TGRMFD(object):
     """Basic object representation of a Truncated Gutenberg-Richter Magnitude
     Frequency Distribution.
 
@@ -328,7 +281,7 @@ class TGRMFD(BaseModel):
         self.max_mag = max_mag
 
 
-class NodalPlane(BaseModel):
+class NodalPlane(object):
     """Basic object representation of a single node in a Nodal Plane
     Distribution.
 
@@ -349,7 +302,7 @@ class NodalPlane(BaseModel):
         self.rake = rake
 
 
-class HypocentralDepth(BaseModel):
+class HypocentralDepth(object):
     """Basic object representation of a single node in a Hypocentral Depth
     Distribution.
 

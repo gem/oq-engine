@@ -100,6 +100,8 @@ class SourceModelParser(object):
         if not ns == nrml.NAMESPACE:
             raise exceptions.UnexpectedNamespaceError(nrml.NAMESPACE, ns)
 
+        # TODO(larsbutler): Run schema validation?
+
         for event, element in tree:
             # Find the <sourceModel> element and get the 'name' attr.
             if event == 'start':

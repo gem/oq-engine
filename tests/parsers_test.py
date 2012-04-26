@@ -106,14 +106,54 @@ class SourceModelParserTestCase(unittest.TestCase):
         )
 
         # Simple:
-        simple_src = models.SimpleFaultSource()
+        simple_geom = models.SimpleFaultGeometry(
+            wkt='LINESTRING(-121.82290 37.73010, -122.03880 37.87710)',
+            dip=45.0, upper_seismo_depth=10.0, lower_seismo_depth=20.0,
+        )
+        simple_mfd = models.IncrementalMFD(
+            min_mag=6.55, bin_width=0.1,
+            occur_rates=[0.0010614989, 8.8291627E-4, 7.3437777E-4, 6.108288E-4,
+                         5.080653E-4],
+        )
+        simple_src = models.SimpleFaultSource(
+            id='3', name='Mount Diablo Thrust', trt='Active Shallow Crust',
+            geometry=simple_geom, mag_scale_rel='WC1994',
+            rupt_aspect_ratio=1.5, mfd=simple_mfd, rake=30.0,
+        )
 
         # Complex:
-        complex_src = models.ComplexFaultSource()
+        complex_geom = models.ComplexFaultGeometry(
+            top_edge_wkt=(
+                'LINESTRING(-124.704  40.363  0.5493260E+01, '
+                '-124.977  41.214  0.4988560E+01, '
+                '-125.140  42.096  0.4897340E+01)'),
+            bottom_edge_wkt=(
+                'LINESTRING(-123.829  40.347  0.2038490E+02, '
+                '-124.137  41.218  0.1741390E+02, '
+                '-124.252  42.115  0.1752740E+02)'),
+            int_edges=[
+                ('LINESTRING(-124.704  40.363  0.5593260E+01, '
+                 '-124.977  41.214  0.5088560E+01, '
+                 '-125.140  42.096  0.4997340E+01)'),
+                ('LINESTRING(-124.704  40.363  0.5693260E+01, ' 
+                 '-124.977  41.214  0.5188560E+01, '
+                 '-125.140  42.096  0.5097340E+01'),
+            ]
+        )
+        complex_mfd = models.TGRMFD(
+            a_val=-3.5, b_val=1.0, min_mag=5.0, max_mag=6.5)
+        complex_src = models.ComplexFaultSource(
+            id='4', name='Cascadia Megathrust', trt='Subduction Interface',
+            geometry=complex_geom, mag_scale_rel='WC1994',
+            rupt_aspect_ratio=2.0, mfd=complex_mfd, rake=30.0,
+        )
 
         source_model = models.SourceModel()
         source_model.name = 'Some Source Model'
-        source_model.sources = [area_src, point_src, simple_src, complex_src]
+        # Generator:
+        source_model.sources = (
+            x for x in [area_src, point_src, simple_src, complex_src]
+        )
         return source_model
 
     def test_wrong_namespace(self):
