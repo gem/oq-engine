@@ -6,7 +6,7 @@
     <sourceModel name="Some Source Model">
 
         <!-- Note: Area sources are identical to point sources, except for the geometry. -->
-        <areaSource id="required" name="Quito" tectonicRegion="Active Shallow Crust">
+        <areaSource id="1" name="Quito" tectonicRegion="Active Shallow Crust">
             <areaGeometry>
                 <gml:Polygon>
                     <gml:exterior>
@@ -45,7 +45,7 @@
 
         </areaSource>
 
-        <pointSource id="optional" name="point" tectonicRegion="Stable Continental Crust">
+        <pointSource id="2" name="point" tectonicRegion="Stable Continental Crust">
 
             <pointGeometry>
                 <gml:Point>
@@ -73,7 +73,7 @@
 
         </pointSource>
 
-        <simpleFaultSource id="required" name="Mount Diablo Thrust" tectonicRegion="Active Shallow Crust">
+        <simpleFaultSource id="3" name="Mount Diablo Thrust" tectonicRegion="Active Shallow Crust">
 
             <simpleFaultGeometry>
                 <gml:LineString>
@@ -99,7 +99,7 @@
             <rake>30.0</rake>
         </simpleFaultSource>
 
-        <complexFaultSource id="required" name="Cascadia Megathrust" tectonicRegion="Subduction Interface">
+        <complexFaultSource id="4" name="Cascadia Megathrust" tectonicRegion="Subduction Interface">
 
             <complexFaultGeometry>
                 <faultTopEdge>

@@ -5,7 +5,7 @@
 
     <sourceModel name="Some Source Model">
 
-        <simpleFaultSource id="required" name="Mount Diablo Thrust" tectonicRegion="Active Shallow Crust">
+        <simpleFaultSource id="1" name="Mount Diablo Thrust" tectonicRegion="Active Shallow Crust">
 
             <simpleFaultGeometry>
                 <gml:LineString>

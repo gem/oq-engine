@@ -5,7 +5,7 @@
 
     <sourceModel name="Some Source Model">
 
-        <complexFaultSource id="required" name="Cascadia Megathrust" tectonicRegion="Subduction Interface">
+        <complexFaultSource id="1" name="Cascadia Megathrust" tectonicRegion="Subduction Interface">
 
             <complexFaultGeometry>
                 <faultTopEdge>
