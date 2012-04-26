@@ -52,9 +52,63 @@ class SourceModelParserTestCase(unittest.TestCase):
 
     @classmethod
     def _expected_source_model(cls):
-        area_src = models.AreaSource()
-        point_src = models.PointSource()
+        # Area:
+        area_geom = models.AreaGeometry(
+            wkt=('POLYGON((-122.5 37.5, -121.5 37.5, -121.5 38.5, -122.5 38.5,'
+                 ' -122.5 37.5))'),
+            upper_seismo_depth=0.0, lower_seismo_depth=10.0,
+        )
+        area_mfd = models.IncrementalMFD(
+            min_mag=6.55, bin_width=0.1,
+            occur_rates=[0.0010614989, 8.8291627E-4, 7.3437777E-4, 6.108288E-4,
+                         5.080653E-4],
+        )
+        area_npd = [
+            models.NodalPlane(probability=0.3, strike=0.0, dip=90.0,
+                              rake=0.0),
+            models.NodalPlane(probability=0.7, strike=90.0, dip=45.0,
+                              rake=90.0),
+        ]
+        area_hdd = [
+            models.HypocentralDepth(probability=0.5, depth=4.0),
+            models.HypocentralDepth(probability=0.5, depth=8.0),
+        ]
+        area_src = models.AreaSource(
+            id='1', name='Quito', trt='Active Shallow Crust',
+            geometry=area_geom, mag_scale_rel='PeerMSR',
+            rupt_aspect_ratio=1.5, mfd=area_mfd, nodal_plane_dist=area_npd,
+            hypo_depth_dist=area_hdd,
+        )
+
+        # Point:
+        point_geom = models.PointGeometry(
+            wkt='POINT(-122.0 38.0)', upper_seismo_depth=0.0,
+            lower_seismo_depth=10.0,
+        )
+        point_mfd = models.TGRMFD(
+            a_val=-3.5, b_val=1.0, min_mag=5.0, max_mag=6.5,
+        )
+        point_npd = [
+            models.NodalPlane(probability=0.3, strike=0.0, dip=90.0,
+                              rake=0.0),
+            models.NodalPlane(probability=0.7, strike=90.0, dip=45.0,
+                              rake=90.0),
+        ]
+        point_hdd = [
+            models.HypocentralDepth(probability=0.5, depth=4.0),
+            models.HypocentralDepth(probability=0.5, depth=8.0),
+        ]
+        point_src = models.PointSource(
+            id='2', name='point', trt='Stable Continental Crust',
+            geometry=point_geom, mag_scale_rel='WC1994', rupt_aspect_ratio=0.5,
+            mfd=point_mfd, nodal_plane_dist=point_npd,
+            hypo_depth_dist=point_hdd,
+        )
+
+        # Simple:
         simple_src = models.SimpleFaultSource()
+
+        # Complex:
         complex_src = models.ComplexFaultSource()
 
         source_model = models.SourceModel()
