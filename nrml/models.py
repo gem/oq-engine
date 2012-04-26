@@ -347,3 +347,18 @@ class NodalPlane(BaseModel):
         self.strike = strike
         self.dip = dip
         self.rake = rake
+
+
+class HypocentralDepth(BaseModel):
+    """Basic object representation of a single node in a Hypocentral Depth
+    Distribution.
+
+    :param float probability:
+        Probability for this node in a Hypocentral Depth Distribution.
+    :param float depth:
+        Depth (in km).
+    """
+
+    def __init__(self, probability=None, depth=None):
+        self.probability = probability
+        self.depth = depth
