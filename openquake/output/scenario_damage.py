@@ -136,7 +136,7 @@ class CollapseMapXMLWriter(object):
 
     def __init__(self, path, end_branch_label):
         self.path = path
-        self.cm_node_id = 1
+        self.elems_id = 1
         self.end_branch_label = end_branch_label
 
         # <nrml /> element
@@ -192,8 +192,8 @@ class CollapseMapXMLWriter(object):
         """
 
         cm_node_el = etree.SubElement(self.collapse_map_el, "CMNode")
-        cm_node_el.set("%sid" % xml.GML, "n" + self.cm_node_id)
-        self.cm_node_id += 1
+        cm_node_el.set("%sid" % xml.GML, "n" + str(self.elems_id))
+        self.elems_id += 1
 
         site_el = etree.SubElement(cm_node_el, xml.RISK_SITE_TAG)
 
@@ -211,7 +211,8 @@ class CollapseMapXMLWriter(object):
         """
 
         root = etree.Element("nrml", nsmap=xml.NSMAP)
-        root.set("%sid" % xml.GML, "n1")
+        root.set("%sid" % xml.GML, "n" + str(self.elems_id))
+        self.elems_id += 1
 
         cm_el = etree.SubElement(root, "collapseMap")
         cm_el.set("endBranchLabel", self.end_branch_label)
