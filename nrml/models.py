@@ -268,3 +268,24 @@ class TGRMFD(object):
         self.b_val = b_val
         self.min_mag = min_mag
         self.max_mag = max_mag
+
+
+class NodalPlane(object):
+    """Basic object representation of a single node in a Nodal Plane
+    Distribution.
+
+    :param float probability:
+        Probability for this node in a Nodal Plane Distribution.
+    :param float strike:
+        Strike angle.
+    :param float dip:
+        Dip angle.
+    :param float rake:
+        Rake angle.
+    """
+
+    def __init__(self, probability=None, strike=None, dip=None, rake=None):
+        self.probability = probability
+        self.strike = strike
+        self.dip = dip
+        self.rake = rake
