@@ -32,21 +32,27 @@ def _deep_eq(a, b):
         return False
     return True
 
+
 def _do_deep_eq(a, b):
     """Do the actual deep comparison. If two items up for comparison is not
     equal, a :exception:`ValueError` is raised (to :function:`_deep_eq`).
     """
     if getattr(a, '__dict__', None) is None:
         # 'primitive' values with no __dict__
-        if not getattr(a, '__class__', None) is None:
+        if hasattr(a, '__class__'):
             _ensure(a.__class__ == b.__class__)
         _ensure(a == b)
     else:  # there's a __dict__
         for key, value in a.__dict__.items():
-            if not getattr(value, '__dict__', None) is None:
+            if hasattr(value, '__dict__'):
+                if hasattr(value, '__class__'):
+                    _ensure(value.__class__ == b.__dict__[key].__class__)
                 _do_deep_eq(value, b.__dict__[key])
             else:
+                if hasattr(value, '__class__'):
+                    _ensure(value.__class__ == b.__dict__[key].__class__)
                 _ensure(value == b.__dict__[key])
+
 
 def _ensure(expr):
     """Better than `assert`, because `python -O` can't turn this off."""
@@ -59,6 +65,7 @@ class BaseModel(object):
 
     def __eq__(self, other):
         return _deep_eq(self, other)
+
 
 class SourceModel(BaseModel):
     """Simple container for source objects, plus metadata.
@@ -187,7 +194,7 @@ class SimpleFaultSource(BaseModel):
         Source identifier, unique within a given model.
    :param str name:
         Human-readable name for the source.
-   :param str trt: 
+   :param str trt:
         Tectonic Region Type.
    :param geometry:
         :class:`SimpleFaultGeometry` object.

@@ -28,7 +28,6 @@ class DeepEqTestCase(unittest.TestCase):
 
     POINT = 'POINT(-122.0 38.113)'
 
-
     def setUp(self):
         self.s1 = models.SourceModel(name='s1')
         self.a1 = models.AreaSource(
