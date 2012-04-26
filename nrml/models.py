@@ -20,7 +20,47 @@ serializers.
 """
 
 
-class SourceModel(object):
+def _deep_eq(a, b):
+    """Deep compare two objects for equality by traversing __dict__s.
+
+    :returns:
+        True if the two objects are deeply equal, otherwise false.
+    """
+    try:
+        _do_deep_eq(a, b)
+    except ValueError:
+        return False
+    return True
+
+def _do_deep_eq(a, b):
+    """Do the actual deep comparison. If two items up for comparison is not
+    equal, a :exception:`ValueError` is raised (to :function:`_deep_eq`).
+    """
+    if getattr(a, '__dict__', None) is None:
+        # 'primitive' values with no __dict__
+        if not getattr(a, '__class__', None) is None:
+            _ensure(a.__class__ == b.__class__)
+        _ensure(a == b)
+    else:  # there's a __dict__
+        for key, value in a.__dict__.items():
+            if not getattr(value, '__dict__', None) is None:
+                _do_deep_eq(value, b.__dict__[key])
+            else:
+                _ensure(value == b.__dict__[key])
+
+def _ensure(expr):
+    """Better than `assert`, because `python -O` can't turn this off."""
+    if not expr:
+        raise ValueError()
+
+
+class BaseModel(object):
+    """Base class for NRML models."""
+
+    def __eq__(self, other):
+        return _deep_eq(self, other)
+
+class SourceModel(BaseModel):
     """Simple container for source objects, plus metadata.
 
     :param str name:
@@ -42,20 +82,16 @@ class SourceModel(object):
         for src in self.sources:
             yield src
 
-    def __eq__(self, other):
-        return (
-            self.name == other.name
-            and list(self.sources) == list(other.sources)
-        )
 
-
-class PointSource(object):
+class PointSource(BaseModel):
     """Basic object representation of a Point Source.
 
     :param str id:
         Source identifier, unique within a given model.
     :param str name:
         Human-readable name for the source.
+    :param str trt:
+        Tectonic Region Type.
     :param geometry:
         :class:`PointGeometry` instance.
     :param str mag_scale_rel:
@@ -73,11 +109,12 @@ class PointSource(object):
         Hypocentral Depth Distribution.
     """
 
-    def __init__(self, id=None, name=None, geometry=None, mag_scale_rel=None,
-                 rupt_aspect_ratio=None, mfd=None, nodal_plane_dist=None,
-                 hypo_depth_dist=None):
+    def __init__(self, id=None, name=None, trt=None, geometry=None,
+                 mag_scale_rel=None, rupt_aspect_ratio=None, mfd=None,
+                 nodal_plane_dist=None, hypo_depth_dist=None):
         self.id = id
         self.name = name
+        self.trt = trt
         self.geometry = geometry
         self.mag_scale_rel = mag_scale_rel
         self.rupt_aspect_ratio = rupt_aspect_ratio
@@ -85,19 +122,8 @@ class PointSource(object):
         self.nodal_plane_dist = nodal_plane_dist
         self.hypo_depth_dist = hypo_depth_dist
 
-    def __eq__(self, other):
-        return (
-            self.id == other.id and self.name == other.name
-            and self.geometry == other.geometry
-            and self.mag_scale_rel == other.mag_scale_rel
-            and self.rupt_aspect_ratio == other.rupt_aspect_ratio
-            and self.mfd == self.mfd
-            and self.nodal_plane_dist == other.nodal_plane_dist
-            and self.hypo_depth_dist == other.hypo_depth_dist
-        )
 
-
-class PointGeometry(object):
+class PointGeometry(BaseModel):
     """Basic object representation of a geometry for a :class:`PointSource`.
 
     :param str wkt:
@@ -114,13 +140,6 @@ class PointGeometry(object):
         self.upper_seismo_depth = upper_seismo_depth
         self.lower_seismo_depth = lower_seismo_depth
 
-    def __eq__(self, other):
-        return (
-            self.wkt == other.wkt
-            and self.upper_seismo_depth == other.upper_seismo_depth
-            and self.lower_seismo_depth == other.lower_seismo_depth
-        )
-
 
 class AreaSource(PointSource):
     """Basic object representation of an Area Source.
@@ -129,7 +148,9 @@ class AreaSource(PointSource):
         Source identifier, unique within a given model.
     :param str name:
         Human-readable name for the source.
-    :param geometry:
+   :param str trt:
+        Tectonic Region Type.
+   :param geometry:
         :class:`AreaGeometry` instance.
     :param str mag_scale_rel:
         Magnitude Scaling Relationship.
@@ -159,13 +180,15 @@ class AreaGeometry(PointGeometry):
     """
 
 
-class SimpleFaultSource(object):
+class SimpleFaultSource(BaseModel):
     """Basic object representation of a Simple Fault Source.
 
    :param str id:
         Source identifier, unique within a given model.
    :param str name:
         Human-readable name for the source.
+   :param str trt: 
+        Tectonic Region Type.
    :param geometry:
         :class:`SimpleFaultGeometry` object.
     :param str mag_scale_rel:
@@ -179,26 +202,20 @@ class SimpleFaultSource(object):
         Rake angle.
     """
 
-    def __init__(self, id=None, name=None, geometry=None, mag_scale_rel=None,
-                 rupt_aspect_ratio=None, mfd=None, rake=None):
+    def __init__(self, id=None, name=None, trt=None, geometry=None,
+                 mag_scale_rel=None, rupt_aspect_ratio=None, mfd=None,
+                 rake=None):
         self.id = id
         self.name = name
+        self.trt = trt
         self.geometry = geometry
         self.mag_scale_rel = mag_scale_rel
         self.rupt_aspect_ratio = rupt_aspect_ratio
         self.mfd = mfd
         self.rake = rake
 
-    def __eq__(self, other):
-        return (
-            self.geometry == other.geometry
-            and self.mag_scale_rel == other.mag_scale_rel
-            and self.rupt_aspect_ratio == other.rupt_aspect_ratio
-            and self.mfd == other.mfd and self.rake == other.rake
-        )
 
-
-class SimpleFaultGeometry(object):
+class SimpleFaultGeometry(BaseModel):
     """Basic object representation of a geometry for a
     :class:`SimpleFaultSource`.
 
@@ -217,17 +234,16 @@ class SimpleFaultGeometry(object):
         self.upper_seismo_depth = upper_seismo_depth
         self.lower_seismo_depth = lower_seismo_depth
 
-    def __eq__(self, other):
-        return (
-            self.wkt == other.wkt and self.dip == other.dip
-            and self.upper_seismo_depth == other.upper_seismo_depth
-            and self.lower_seismo_depth == other.lower_seismo_depth
-        )
-
 
 class ComplexFaultSource(SimpleFaultSource):
     """Basic object representation of a Complex Fault Source.
 
+    :param str id:
+        Source identifier, unique within a given model.
+    :param str name:
+        Human-readable name for the source.
+   :param str trt:
+        Tectonic Region Type.
     :param geometry:
         :class:`ComplexFaultGeometry` object.
     :param str mag_scale_rel:
@@ -242,7 +258,7 @@ class ComplexFaultSource(SimpleFaultSource):
     """
 
 
-class ComplexFaultGeometry(object):
+class ComplexFaultGeometry(BaseModel):
     """Basic object representation of a geometry for a
     :class:`ComplexFaultSource`.
 
@@ -264,15 +280,8 @@ class ComplexFaultGeometry(object):
         self.bottom_edge_wkt = bottom_edge_wkt
         self.int_edges = int_edges if int_edges is not None else []
 
-    def __eq__(self, other):
-        return (
-            self.top_edge_wkt == other.top_edge_wkt
-            and self.bottom_edge_wkt == other.bottom_edge_wkt
-            and self.int_edges == other.int_edges
-        )
 
-
-class IncrementalMFD(object):
+class IncrementalMFD(BaseModel):
     """Basic object representation of an Incremental Magnitude Frequency
     Distribtion.
 
@@ -289,14 +298,8 @@ class IncrementalMFD(object):
         self.bin_width = bin_width
         self.occur_rates = occur_rates
 
-    def __eq__(self, other):
-        return (
-            self.min_mag == other.min_mag and self.max_mag == other.max_mag
-            and self.occur_rates == other.occur_rates
-        )
 
-
-class TGRMFD(object):
+class TGRMFD(BaseModel):
     """Basic object representation of a Truncated Gutenberg-Richter Magnitude
     Frequency Distribution.
 
@@ -317,14 +320,8 @@ class TGRMFD(object):
         self.min_mag = min_mag
         self.max_mag = max_mag
 
-    def __eq__(self, other):
-        return (
-            self.a_val == other.a_val and self.b_val == other.b_val
-            and self.min_mag == other.min_mag and self.max_mag == other.max_mag
-        )
 
-
-class NodalPlane(object):
+class NodalPlane(BaseModel):
     """Basic object representation of a single node in a Nodal Plane
     Distribution.
 
@@ -343,10 +340,3 @@ class NodalPlane(object):
         self.strike = strike
         self.dip = dip
         self.rake = rake
-
-    def __eq__(self, other):
-        return (
-            self.probability == other.probability
-            and self.strike == other.strike and self.dip == other.dip
-            and self.rake == other.rake
-        )
