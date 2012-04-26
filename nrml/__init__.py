@@ -18,8 +18,6 @@
 
 import os
 
-from nrml import models
-
 
 NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
 GML_NAMESPACE = 'http://www.opengis.net/gml'
