@@ -17,9 +17,14 @@
 import unittest
 
 from nrml import models
+import _utils
 
 
 class DeepEqTestCase(unittest.TestCase):
+    """:function:`_utils.deep_eq` is a non-trivial util function used for
+    test. We want to make sure it's working properly and not giving false
+    positives or negatives.
+    """
 
     POLY = ('POLYGON((-122.0 38.113, -122.114 38.113, -122.57 38.111, '
             '-122.0 38.113))')
@@ -49,17 +54,17 @@ class DeepEqTestCase(unittest.TestCase):
 
     def test__deep_eq(self):
         # Typical case.
-        self.assertTrue(models._deep_eq(self.s1, self.s2))
+        self.assertTrue(_utils.deep_eq(self.s1, self.s2))
 
     def test__deep_eq_mixed_up_types(self):
         # Here, we specify the wrong type of geometry (area geom for a point)
         self.p2.geometry = models.AreaGeometry(wkt=self.POINT)
 
-        self.assertFalse(models._deep_eq(self.s1, self.s2))
+        self.assertFalse(_utils.deep_eq(self.s1, self.s2))
 
     def test__deep_eq_neq(self):
         # Test with different polygon geometries nested inside of source model
         # objects.
         self.a2.geometry = models.AreaGeometry(wkt=self.POLY2)
 
-        self.assertFalse(models._deep_eq(self.s1, self.s2))
+        self.assertFalse(_utils.deep_eq(self.s1, self.s2))
