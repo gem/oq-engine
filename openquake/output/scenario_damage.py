@@ -215,7 +215,7 @@ class CollapseMapXMLWriter(object):
         self.elems_id += 1
 
         cm_el = etree.SubElement(root, "collapseMap")
-        cm_el.set("endBranchLabel", self.end_branch_label)
+        cm_el.set("endBranchLabel", str(self.end_branch_label))
 
         return root, cm_el
 
