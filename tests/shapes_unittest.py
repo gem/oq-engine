@@ -872,7 +872,7 @@ class RegionTestCase(unittest.TestCase):
         self._check_match(constraint)
 
     def test_region_sites_boundary_1(self):
-        # check that points really closed to the
+        # check that points really close to the
         # border of the region (longitude) have a corresponding
         # grid point. This is done by adding an additional
         # column to the grid (in this case [(2.5, 2.0),
