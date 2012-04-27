@@ -41,7 +41,9 @@ def _do_deep_eq(a, b):
         # must be a 'primitive'
         assert a == b
 
+
 def _test_dict(a, b):
+    """Compare `dict` types recursively."""
     assert len(a) == len(b)
 
     for key in a:
@@ -53,6 +55,7 @@ def _test_dict(a, b):
         elif isinstance(left, dict):
             _test_dict(left, right)
         elif hasattr(left, '__dict__'):
+            assert left.__class__ == right.__class__
             _test_dict(left.__dict__, right.__dict__)
         else:
             # must be a 'primitive'
