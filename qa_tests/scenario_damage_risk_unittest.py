@@ -42,6 +42,23 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
         self._verify_dist_per_asset_con()
         self._verify_dist_per_taxonomy_con()
         self._verify_total_dist_con()
+        self._verify_collapse_map_con()
+
+    def _verify_collapse_map_con(self):
+        mean, stddev = self._map_asset_values("a1")
+
+        self._close_to(723.4242765613, mean)
+        self._close_to(755.9750053225, stddev)
+
+        mean, stddev = self._map_asset_values("a2")
+
+        self._close_to(1227.2442314019, mean)
+        self._close_to(549.4191085089, stddev)
+
+        mean, stddev = self._map_asset_values("a3")
+
+        self._close_to(284.7222314506, mean)
+        self._close_to(248.9585500745, stddev)
 
     def _verify_total_dist_con(self):
         ds = self._ds_td("no_damage")
@@ -146,6 +163,23 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
         self._verify_dist_per_asset_dsc()
         self._verify_dist_per_taxonomy_dsc()
         self._verify_total_dist_dsc()
+        self._verify_collapse_map_dsc()
+
+    def _verify_collapse_map_dsc(self):
+        mean, stddev = self._map_asset_values("a1")
+
+        self._close_to(1045.9782707418, mean)
+        self._close_to(749.3971884847, stddev)
+
+        mean, stddev = self._map_asset_values("a3")
+
+        self._close_to(414.1443910394, mean)
+        self._close_to(232.3139816472, stddev)
+
+        mean, stddev = self._map_asset_values("a2")
+
+        self._close_to(866.2058685200, mean)
+        self._close_to(398.0973556984, stddev)
 
     def _verify_total_dist_dsc(self):
         ds = self._ds_td("no_damage")
@@ -240,6 +274,21 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
         self._close_to(414.1443910394, float(ds.get("mean")))
         self._close_to(232.3139816472, float(ds.get("stddev")))
 
+    def _map_asset_values(self, asset_ref):
+        job = OqJob.objects.latest("id")
+        filename = "%s/collapse-map-%s.xml" % (OUTPUT_DIR, job.id)
+
+        xpath_mean = ("{%(ns)s}collapseMap/"
+            "{%(ns)s}CMNode/{%(ns)s}cf[@assetRef='"
+            + asset_ref+ "']/{%(ns)s}mean")
+
+        xpath_stddev = ("{%(ns)s}collapseMap/"
+            "{%(ns)s}CMNode/{%(ns)s}cf[@assetRef='"
+            + asset_ref+ "']/{%(ns)s}stdDev")
+
+        return float(self._get(filename, xpath_mean).text), float(
+                self._get(filename, xpath_stddev).text)
+
     def _ds_td(self, damage_state):
         job = OqJob.objects.latest("id")
         filename = "%s/dmg-dist-total-%s.xml" % (OUTPUT_DIR, job.id)
@@ -291,7 +340,6 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
     def _get(self, filename, xpath):
         schema = etree.XMLSchema(file=nrml_schema_file())
         parser = etree.XMLParser(schema=schema)
-
         tree = etree.parse(filename, parser=parser)
 
-        return tree.getroot().find(xpath % {'ns': NRML_NS})
+        return tree.getroot().find(xpath % {"ns": NRML_NS})
