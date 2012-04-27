@@ -73,6 +73,23 @@ class SourceModelParser(object):
     @classmethod
     def _parse_area(cls, element):
         area = models.AreaSource()
+        area.id = element.get('id')
+        area.name = element.get('name')
+        area.trt = element.get('tectonicRegion')
+
+        area_geom = models.AreaGeometry()
+        [gml_pos_list] = element.xpath(
+            './/nrml:areaGeometry//gml:posList', namespaces=nrml.NS_MAP)
+        # TODO(larsbutler): Is it 2d or 3d?
+        coords = gml_pos_list.text.split()
+        # if len(coords) % 3 == 0:
+        #     <3d>
+        # elif len(coords) % 2 == 0:
+        #     <2d>
+        # else:
+        #     <error>
+        # TODO(larsbutler): See if gml schema validation can find such errors.
+        import nose; nose.tools.set_trace()
         return area
 
     @classmethod
