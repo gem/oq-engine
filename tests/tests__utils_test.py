@@ -52,17 +52,51 @@ class DeepEqTestCase(unittest.TestCase):
             geometry=models.PointGeometry(wkt=self.POINT))
         self.s2.sources = [self.a2, self.p2]
 
-    def test__deep_eq(self):
+    def test_deep_eq_primitives(self):
+        # It should work with primitives also.
+        self.assertTrue(_utils.deep_eq(5, 5.0))
+        self.assertTrue(_utils.deep_eq(5, 5))
+        self.assertTrue(_utils.deep_eq('foo', 'foo'))
+
+        self.assertFalse(_utils.deep_eq('foo', 'bar'))
+        self.assertFalse(_utils.deep_eq(5, '5'))
+
+    def test_deep_eq_generators(self):
+        gen_a = (x for x in range(10))
+        gen_b = (x for x in range(10))
+        self.assertTrue(_utils.deep_eq(gen_a, gen_b))
+
+        gen_c = (x for x in range(9))
+        self.assertFalse(_utils.deep_eq(gen_a, gen_c))
+
+    def test_deep_eq_mixed_iterables(self):
+        gen = (x for x in range(10))
+        xr = xrange(10)
+        self.assertTrue(_utils.deep_eq(gen, xr))
+
+    def test_deep_eq_list_with_generator(self):
+        a = [1, 2, 3, (x for x in range(10))]
+        b = [1, 2, 3, xrange(10)]
+
+        self.assertTrue(_utils.deep_eq(a, b))
+
+    def test_deep_eq_dict_with_generator(self):
+        a = dict(a=1, b=2, c=(x for x in range(10)))
+        b = dict(a=1, b=2, c=xrange(10))
+
+        self.assertTrue(_utils.deep_eq(a, b))
+
+    def test_deep_eq(self):
         # Typical case.
         self.assertTrue(_utils.deep_eq(self.s1, self.s2))
 
-    def test__deep_eq_mixed_up_types(self):
+    def test_deep_eq_mixed_up_types(self):
         # Here, we specify the wrong type of geometry (area geom for a point)
         self.p2.geometry = models.AreaGeometry(wkt=self.POINT)
 
         self.assertFalse(_utils.deep_eq(self.s1, self.s2))
 
-    def test__deep_eq_neq(self):
+    def test_deep_eq_neq(self):
         # Test with different polygon geometries nested inside of source model
         # objects.
         self.a2.geometry = models.AreaGeometry(wkt=self.POLY2)
