@@ -89,7 +89,9 @@ class SourceModelParser(object):
         # else:
         #     <error>
         # TODO(larsbutler): See if gml schema validation can find such errors.
-        import nose; nose.tools.set_trace()
+        # TODO(larsbutler): Abstract the gml:posList -> WKT conversion to
+        # its own function; this is something that can be reused for simple and
+        # complex geometries as well.
         return area
 
     @classmethod
@@ -117,7 +119,10 @@ class SourceModelParser(object):
         if not ns == nrml.NAMESPACE:
             raise exceptions.UnexpectedNamespaceError(nrml.NAMESPACE, ns)
 
-        # TODO(larsbutler): Run schema validation?
+        # TODO(larsbutler): Run schema validation here. In a sense, that means
+        # we techincally have to traverse the file twice (once to validate,
+        # once to parse), but it's simple enough. With large files there may be
+        # a performance hit, but that remains to be seen.
 
         for event, element in tree:
             # Find the <sourceModel> element and get the 'name' attr.
