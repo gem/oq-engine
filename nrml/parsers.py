@@ -28,6 +28,11 @@ import nrml
 
 from nrml import exceptions
 from nrml import models
+from nrml import utils
+
+
+def _xpath(elem, expr, namespaces=nrml.NS_MAP):
+    return elem.xpath(expr, namespaces=namespaces)
 
 
 class SourceModelParser(object):
@@ -67,40 +72,102 @@ class SourceModelParser(object):
                     yield parse_fn(element)
 
     @classmethod
-    def _parse_point(cls, element):
-        return element.tag
+    def _parse_mfd(cls, src_elem):
+        [mfd_elem] = _xpath(src_elem, ('.//nrml:truncGutenbergRichterMFD | '
+                                       './/nrml:incrementalMFD'))
+
+        if mfd_elem.tag == '{%s}truncGutenbergRichterMFD' % nrml.NAMESPACE:
+            mfd = models.TGRMFD()
+            mfd.a_val = float(mfd_elem.get('aValue'))
+            mfd.b_val = float(mfd_elem.get('bValue'))
+            mfd.min_mag = float(mfd_elem.get('minMag'))
+            mfd.max_mag = float(mfd_elem.get('maxMag'))
+
+        elif mfd_elem.tag == '{%s}incrementalMFD' % nrml.NAMESPACE:
+            mfd = models.IncrementalMFD()
+            mfd.min_mag = float(mfd_elem.get('minMag'))
+            mfd.bin_width = float(mfd_elem.get('binWidth'))
+
+            [occur_rates] = _xpath(mfd_elem, './nrml:occurRates')
+            mfd.occur_rates = [float(x) for x in occur_rates.text.split()]
+
+        return mfd
 
     @classmethod
-    def _parse_area(cls, element):
+    def _parse_nodal_plane_dist(cls, src_elem):
+        npd = []
+
+        for elem in _xpath(src_elem, './/nrml:nodalPlane'):
+            np = models.NodalPlane()
+            np.probability = float(elem.get('probability'))
+            np.strike = float(elem.get('strike'))
+            np.dip = float(elem.get('dip'))
+            np.rake = float(elem.get('rake'))
+
+            npd.append(np)
+
+        return npd
+
+    @classmethod
+    def _parse_hypo_depth_dist(cls, src_elem):
+        hdd = []
+
+        for elem in _xpath(src_elem, './/nrml:hypoDepth'):
+            hd = models.HypocentralDepth()
+            hd.probability = float(elem.get('probability'))
+            hd.depth = float(elem.get('depth'))
+
+            hdd.append(hd)
+
+        return hdd
+
+    @classmethod
+    def _parse_point(cls, elem):
+        return None
+
+    @classmethod
+    def _parse_area(cls, src_elem):
         area = models.AreaSource()
-        area.id = element.get('id')
-        area.name = element.get('name')
-        area.trt = element.get('tectonicRegion')
+        area.id = src_elem.get('id')
+        area.name = src_elem.get('name')
+        area.trt = src_elem.get('tectonicRegion')
 
         area_geom = models.AreaGeometry()
-        [gml_pos_list] = element.xpath(
+        area.geometry = area_geom
+
+        [gml_pos_list] = src_elem.xpath(
             './/nrml:areaGeometry//gml:posList', namespaces=nrml.NS_MAP)
-        # TODO(larsbutler): Is it 2d or 3d?
         coords = gml_pos_list.text.split()
-        # if len(coords) % 3 == 0:
-        #     <3d>
-        # elif len(coords) % 2 == 0:
-        #     <2d>
-        # else:
-        #     <error>
-        # TODO(larsbutler): See if gml schema validation can find such errors.
-        # TODO(larsbutler): Abstract the gml:posList -> WKT conversion to
-        # its own function; this is something that can be reused for simple and
-        # complex geometries as well.
+        # Area source polygon geometries are always 2-dimensional and on the
+        # Earth's surface (depth == 0.0).
+        area_geom.wkt = utils.coords_to_poly_wkt(coords, 2)
+
+        area_geom.upper_seismo_depth = float(src_elem.xpath(
+            './/nrml:areaGeometry/nrml:upperSeismoDepth',
+            namespaces=nrml.NS_MAP)[0].text.strip())
+        area_geom.lower_seismo_depth = float(src_elem.xpath(
+            './/nrml:areaGeometry/nrml:lowerSeismoDepth',
+            namespaces=nrml.NS_MAP)[0].text.strip())
+
+        area.mag_scale_rel = src_elem.xpath(
+            './/nrml:magScaleRel', namespaces=nrml.NS_MAP)[0].text.strip()
+        area.rupt_aspect_ratio = float(src_elem.xpath(
+            './/nrml:ruptAspectRatio', namespaces=nrml.NS_MAP)[0].text.strip())
+
+        area.mfd = cls._parse_mfd(src_elem)
+        area.nodal_plane_dist = cls._parse_nodal_plane_dist(src_elem)
+        area.hypo_depth_dist = cls._parse_hypo_depth_dist(src_elem)
+
+        import nose; nose.tools.set_trace()
         return area
 
     @classmethod
-    def _parse_simple(cls, element):
-        return element.tag
+    def _parse_simple(cls, elem):
+        return None
 
     @classmethod
-    def _parse_complex(cls, element):
-        return element.tag
+    def _parse_complex(cls, elem):
+        return None
 
     def parse(self):
         src_model = models.SourceModel()
