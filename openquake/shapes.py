@@ -218,13 +218,6 @@ class GridPoint(object):
         return self.__repr__()
 
 
-class BoundsException(Exception):
-    """
-    Point is outside of region.
-    """
-    pass
-
-
 class Grid(object):
     """
     A proxy interface to Region.
@@ -244,6 +237,27 @@ class Grid(object):
 
         self.rows = self._latitude_to_row(
             self.region.upper_right_corner.latitude) + 1
+
+    def site_inside(self, site):
+        """
+        Confirm that the site is contained by the region.
+        """
+
+        return self._point_inside(site.point)
+
+    def _point_inside(self, point):
+        """
+        Confirm that the point is within the polygon
+        underlying the gridded region.
+        """
+
+        if (self.region.polygon.contains(point)):
+            return True
+
+        if self.region.polygon.touches(point):
+            return True
+
+        return False
 
     def _latitude_to_row(self, latitude):
         """
@@ -286,19 +300,22 @@ class Grid(object):
         Return the grid point where the given site falls in.
         """
 
+        if not self.site_inside(site):
+            raise ValueError("Site <%s> is outside region." % site)
+
         row = self._latitude_to_row(site.latitude)
         column = self._longitude_to_column(site.longitude)
 
         return GridPoint(self, column, row)
 
-    def site_at(self, grid_point):
+    def site_at(self, point):
         """
         Return the site corresponding to the center of the
         cell identified by the given grid point.
         """
 
-        return Site(self._column_to_longitude(
-                grid_point.column), self._row_to_latitude(grid_point.row))
+        return Site(self._column_to_longitude(point.column),
+                self._row_to_latitude(point.row))
 
     def __iter__(self):
         for row in range(0, self.rows):
