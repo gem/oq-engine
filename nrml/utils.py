@@ -14,6 +14,9 @@
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
 
+"""General utility functions for NRML."""
+
+
 _LINESTRING_FMT = 'LINESTRING(%s)'
 _POLYGON_FMT = 'POLYGON((%s))'
 

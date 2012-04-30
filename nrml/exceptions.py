@@ -14,6 +14,9 @@
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
 
+"""Custom exception types for NRML."""
+
+
 class NrmlError(Exception):
     """Base or general error type for NRML."""
 
