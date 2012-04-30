@@ -235,6 +235,25 @@ class SourceModelParser(object):
             Fully populated :class:`nrml.models.SimpleFaultSource` object.
         """
         simple = models.SimpleFaultSource()
+        cls._set_common_attrs(simple, src_elem)
+
+        simple_geom = models.SimpleFaultGeometry()
+        simple.geometry = simple_geom
+
+        [gml_pos_list] = _xpath(src_elem, './/gml:posList')
+        coords = gml_pos_list.text.split()
+        simple_geom.wkt = utils.coords_to_linestr_wkt(coords, 2)
+
+        simple_geom.dip = float(
+            _xpath(src_elem, './/nrml:dip')[0].text)
+        simple_geom.upper_seismo_depth = float(
+            _xpath(src_elem, './/nrml:upperSeismoDepth')[0].text)
+        simple_geom.lower_seismo_depth = float(
+            _xpath(src_elem, './/nrml:lowerSeismoDepth')[0].text)
+
+        simple.mfd = cls._parse_mfd(src_elem)
+        simple.rake = float(
+            _xpath(src_elem, './/nrml:rake')[0].text)
 
         return simple
 
@@ -247,6 +266,31 @@ class SourceModelParser(object):
             Fully populated :class:`nrml.models.ComplexFaultSource` object.
         """
         complx = models.ComplexFaultSource()
+        cls._set_common_attrs(complx, src_elem)
+
+        complex_geom = models.ComplexFaultGeometry()
+        complx.geometry = complex_geom
+
+        [top_edge] = _xpath(src_elem, './/nrml:faultTopEdge//gml:posList')
+        top_coords = top_edge.text.split()
+        complex_geom.top_edge_wkt = utils.coords_to_linestr_wkt(top_coords, 3)
+
+        [bottom_edge] = _xpath(
+            src_elem, './/nrml:faultBottomEdge//gml:posList')
+        bottom_coords = bottom_edge.text.split()
+        complex_geom.bottom_edge_wkt = utils.coords_to_linestr_wkt(
+            bottom_coords, 3)
+
+        # Optional itermediate edges:
+        int_edges = _xpath(src_elem, './/nrml:intermediateEdge//gml:posList')
+        for edge in int_edges:
+            coords = edge.text.split()
+            complex_geom.int_edges.append(
+                utils.coords_to_linestr_wkt(coords, 3))
+
+        complx.mfd = cls._parse_mfd(src_elem)
+        complx.rake = float(
+            _xpath(src_elem, './/nrml:rake')[0].text)
 
         return complx
 
