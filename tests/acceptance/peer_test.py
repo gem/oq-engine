@@ -30,7 +30,7 @@ from nhlib.pmf import PMF
 from nhlib.geo import NodalPlane
 from nhlib.scalerel import PeerMSR
 from nhlib.gsim.sadigh_1997 import SadighEtAl1997
-from nhlib.calc import hazard_curves
+from nhlib.calc import hazard_curves_poissonian as hazard_curves
 
 from tests.acceptance import _peer_test_data as test_data
 

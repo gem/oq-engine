@@ -16,4 +16,4 @@
 """
 Package :mod:`nhlib.calc` contains hazard calculator modules.
 """
-from nhlib.calc.hazard_curve import hazard_curves
+from nhlib.calc.hazard_curve import hazard_curves_poissonian
