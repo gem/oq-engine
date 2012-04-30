@@ -902,6 +902,11 @@ class RegionTestCase(unittest.TestCase):
         self.assertTrue(region.grid.site_at(
                 region.grid.point_at(shapes.Site(2.30, 2.0))) in region.sites)
 
+        # check we can ask for valid grid points from
+        # the sites that represent the center of the cells
+        for cell_center in region.sites:
+            self.assertTrue(region.grid.site_inside(cell_center))
+
     def test_region_sites_boundary_2(self):
         # same as above, but for latitude
         region = shapes.Region.from_coordinates(
@@ -923,6 +928,11 @@ class RegionTestCase(unittest.TestCase):
 
         self.assertTrue(region.grid.site_at(
                 region.grid.point_at(shapes.Site(1.5, 1.8))) in region.sites)
+
+        # check we can ask for valid grid points from
+        # the sites that represent the center of the cells
+        for cell_center in region.sites:
+            self.assertTrue(region.grid.site_inside(cell_center))
 
     def test_region_sites_outside(self):
         region = shapes.Region.from_simple((0.0, 1.0), (1.0, 0.0))
