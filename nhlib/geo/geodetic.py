@@ -20,7 +20,7 @@ import numpy
 EARTH_RADIUS = 6371.0
 
 
-def distance(lons1, lats1, lons2, lats2):
+def geodetic_distance(lons1, lats1, lons2, lats2):
     """
     Calculate the geodetic distance between two points or two collections
     of points.
@@ -32,7 +32,6 @@ def distance(lons1, lats1, lons2, lats2):
     :returns:
         Distance in km, floating point scalar or numpy array of such.
     """
-    # TODO: add support for depth
     lons1 = numpy.radians(lons1)
     lats1 = numpy.radians(lats1)
     assert lons1.shape == lats1.shape
