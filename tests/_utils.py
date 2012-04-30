@@ -57,6 +57,7 @@ def _test_dict(a, b):
     for key in a:
         _deep_eq(a[key], b[key])
 
+
 def _test_seq(a, b):
     """Compare `list` or `tuple` types recursively."""
     assert len(a) == len(b)
