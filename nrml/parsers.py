@@ -31,8 +31,17 @@ from nrml import models
 from nrml import utils
 
 
-def _xpath(elem, expr, namespaces=nrml.NS_MAP):
-    return elem.xpath(expr, namespaces=namespaces)
+def _xpath(elem, expr):
+    """Helper function for executing xpath queries on an XML element. This
+    function uses the default mapping of namespaces (which includes NRML and
+    GML).
+
+    :param str expr:
+        XPath expression.
+    :param elem:
+        A :class:`lxml.etree._Element` instance.
+    """
+    return elem.xpath(expr, namespaces=nrml.NS_MAP)
 
 
 class SourceModelParser(object):
@@ -72,7 +81,31 @@ class SourceModelParser(object):
                     yield parse_fn(element)
 
     @classmethod
+    def _set_common_attrs(cls, model, src_elem):
+        """Given a source object and a source XML element, set common
+        attributes on the model, such as id, name, trt, mag_scale_rel, and
+        rupt_aspect_ratio.
+
+        :param model:
+            Instance of a source class from :module:`nrml.models`.
+        :param src_elem:
+            :class:`lxml.etree._Element` instance representing a source.
+        """
+        model.id = src_elem.get('id')
+        model.name = src_elem.get('name')
+        model.trt = src_elem.get('tectonicRegion')
+
+        model.mag_scale_rel = _xpath(
+            src_elem, './nrml:magScaleRel')[0].text.strip()
+        model.rupt_aspect_ratio = float(_xpath(
+            src_elem, './nrml:ruptAspectRatio')[0].text)
+
+    @classmethod
     def _parse_mfd(cls, src_elem):
+        """
+        :param src_elem:
+            :class:`lxml.etree._Element` instance representing a source.
+        """
         [mfd_elem] = _xpath(src_elem, ('.//nrml:truncGutenbergRichterMFD | '
                                        './/nrml:incrementalMFD'))
 
@@ -95,81 +128,135 @@ class SourceModelParser(object):
 
     @classmethod
     def _parse_nodal_plane_dist(cls, src_elem):
+        """
+        :param src_elem:
+            :class:`lxml.etree._Element` instance representing a source.
+        :returns:
+            `list` of :class:`nrml.models.NodalPlane` objects.
+        """
         npd = []
 
         for elem in _xpath(src_elem, './/nrml:nodalPlane'):
-            np = models.NodalPlane()
-            np.probability = float(elem.get('probability'))
-            np.strike = float(elem.get('strike'))
-            np.dip = float(elem.get('dip'))
-            np.rake = float(elem.get('rake'))
+            nplane = models.NodalPlane()
+            nplane.probability = float(elem.get('probability'))
+            nplane.strike = float(elem.get('strike'))
+            nplane.dip = float(elem.get('dip'))
+            nplane.rake = float(elem.get('rake'))
 
-            npd.append(np)
+            npd.append(nplane)
 
         return npd
 
     @classmethod
     def _parse_hypo_depth_dist(cls, src_elem):
+        """
+        :param src_elem:
+            :class:`lxml.etree._Element` instance representing a source.
+        :returns:
+            `list` of :class:`nrml.models.HypocentralDepth` objects.
+        """
         hdd = []
 
         for elem in _xpath(src_elem, './/nrml:hypoDepth'):
-            hd = models.HypocentralDepth()
-            hd.probability = float(elem.get('probability'))
-            hd.depth = float(elem.get('depth'))
+            hdepth = models.HypocentralDepth()
+            hdepth.probability = float(elem.get('probability'))
+            hdepth.depth = float(elem.get('depth'))
 
-            hdd.append(hd)
+            hdd.append(hdepth)
 
         return hdd
 
     @classmethod
-    def _parse_point(cls, elem):
-        return None
+    def _parse_point(cls, src_elem):
+        """
+        :param src_elem:
+            :class:`lxml.etree._Element` instance representing a source.
+        :returns:
+            Fully populated :class:`nrml.models.PointSource` object.
+        """
+        point = models.PointSource()
+        cls._set_common_attrs(point, src_elem)
+
+        point_geom = models.PointGeometry()
+        point.geometry = point_geom
+
+        [gml_pos] = _xpath(src_elem, './/gml:pos')
+        coords = gml_pos.text.split()
+        point_geom.wkt = 'POINT(%s)' % ' '.join(coords)
+
+        point_geom.upper_seismo_depth = float(
+            _xpath(src_elem, './/nrml:upperSeismoDepth')[0].text)
+        point_geom.lower_seismo_depth = float(
+            _xpath(src_elem, './/nrml:lowerSeismoDepth')[0].text)
+
+        point.mfd = cls._parse_mfd(src_elem)
+        point.nodal_plane_dist = cls._parse_nodal_plane_dist(src_elem)
+        point.hypo_depth_dist = cls._parse_hypo_depth_dist(src_elem)
+
+        return point
 
     @classmethod
     def _parse_area(cls, src_elem):
+        """
+        :param src_elem:
+            :class:`lxml.etree._Element` instance representing a source.
+        :returns:
+            Fully populated :class:`nrml.models.AreaSource` object.
+        """
         area = models.AreaSource()
-        area.id = src_elem.get('id')
-        area.name = src_elem.get('name')
-        area.trt = src_elem.get('tectonicRegion')
+        cls._set_common_attrs(area, src_elem)
 
         area_geom = models.AreaGeometry()
         area.geometry = area_geom
 
-        [gml_pos_list] = src_elem.xpath(
-            './/nrml:areaGeometry//gml:posList', namespaces=nrml.NS_MAP)
+        [gml_pos_list] = _xpath(src_elem, './/gml:posList')
         coords = gml_pos_list.text.split()
         # Area source polygon geometries are always 2-dimensional and on the
         # Earth's surface (depth == 0.0).
         area_geom.wkt = utils.coords_to_poly_wkt(coords, 2)
 
-        area_geom.upper_seismo_depth = float(src_elem.xpath(
-            './/nrml:areaGeometry/nrml:upperSeismoDepth',
-            namespaces=nrml.NS_MAP)[0].text.strip())
-        area_geom.lower_seismo_depth = float(src_elem.xpath(
-            './/nrml:areaGeometry/nrml:lowerSeismoDepth',
-            namespaces=nrml.NS_MAP)[0].text.strip())
-
-        area.mag_scale_rel = src_elem.xpath(
-            './/nrml:magScaleRel', namespaces=nrml.NS_MAP)[0].text.strip()
-        area.rupt_aspect_ratio = float(src_elem.xpath(
-            './/nrml:ruptAspectRatio', namespaces=nrml.NS_MAP)[0].text.strip())
+        area_geom.upper_seismo_depth = float(
+            _xpath(src_elem, './/nrml:upperSeismoDepth')[0].text)
+        area_geom.lower_seismo_depth = float(
+            _xpath(src_elem, './/nrml:lowerSeismoDepth')[0].text)
 
         area.mfd = cls._parse_mfd(src_elem)
         area.nodal_plane_dist = cls._parse_nodal_plane_dist(src_elem)
         area.hypo_depth_dist = cls._parse_hypo_depth_dist(src_elem)
 
-        import nose; nose.tools.set_trace()
         return area
 
     @classmethod
-    def _parse_simple(cls, elem):
-        return None
+    def _parse_simple(cls, src_elem):
+        """
+        :param src_elem:
+            :class:`lxml.etree._Element` instance representing a source.
+        :returns:
+            Fully populated :class:`nrml.models.SimpleFaultSource` object.
+        """
+        simple = models.SimpleFaultSource()
+
+        return simple
 
     @classmethod
-    def _parse_complex(cls, elem):
-        return None
+    def _parse_complex(cls, src_elem):
+        """
+        :param src_elem:
+            :class:`lxml.etree._Element` instance representing a source.
+        :returns:
+            Fully populated :class:`nrml.models.ComplexFaultSource` object.
+        """
+        complx = models.ComplexFaultSource()
+
+        return complx
 
     def parse(self):
+        """Parse the source XML content and generate a source model in object
+        form.
+
+        :returns:
+            :class:`nrml.models.SourceModel` instance.
+        """
         src_model = models.SourceModel()
 
         tree = etree.iterparse(self.source, events=('start', 'end'))
@@ -180,11 +267,12 @@ class SourceModelParser(object):
         # The first node should be the <nrml> element.
         _, nrml_elem = tree.next()
         # Extract the namespace url and the element name.
-        ns, el_name = re.search('^{(.+)}(.+)', nrml_elem.tag).groups()
+        namespace, el_name = re.search('^{(.+)}(.+)', nrml_elem.tag).groups()
         if not el_name == 'nrml':
             raise exceptions.UnexpectedElementError('nrml', el_name)
-        if not ns == nrml.NAMESPACE:
-            raise exceptions.UnexpectedNamespaceError(nrml.NAMESPACE, ns)
+        if not namespace == nrml.NAMESPACE:
+            raise exceptions.UnexpectedNamespaceError(
+                nrml.NAMESPACE, namespace)
 
         # TODO(larsbutler): Run schema validation here. In a sense, that means
         # we techincally have to traverse the file twice (once to validate,
