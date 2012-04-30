@@ -1,3 +1,24 @@
 #!/bin/bash
 
+error=0
+
 xmllint --noout --schema nrml/schema/nrml.xsd `find nrml/schema/examples/ -name "*.xml"`
+validation_retcode=$?
+
+nosetests --with-doctest "$@"
+nosetests_ret_code=$?
+
+if [ "$validation_retcode" -ne "0" ]; then
+    echo "Validation of example files failed."
+    error=1
+fi
+
+if [ "$nosetests_ret_code" -ne "0" ]; then
+    echo "Unit test suite failed."
+    error=1
+fi
+
+if [ "$error" -ne "0" ]; then
+    echo "Tests failed."
+    exit 1
+fi
