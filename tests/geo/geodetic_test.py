@@ -81,3 +81,40 @@ class TestGeodeticDistance(unittest.TestCase):
                                                 [[0, 0], [0, 0]])
         self.assertTrue(numpy.allclose(dist, [[111.195, 0], [111.195, 0]]),
                         str(dist))
+
+
+class TestAzimuth(unittest.TestCase):
+    def test_LAX_to_JFK(self):
+        az = geodetic.azimuth(*(LAX + JFK))
+        self.assertAlmostEqual(az, 360 - 65.8922, places=4)
+
+    def test_meridians(self):
+        az = geodetic.azimuth(0, 0, 0, 1)
+        self.assertEqual(az, 0)
+        az = geodetic.azimuth(0, 2, 0, 1)
+        self.assertEqual(az, 180)
+
+    def test_equator(self):
+        az = geodetic.azimuth(0, 0, 1, 0)
+        self.assertEqual(az, 90)
+        az = geodetic.azimuth(1, 0, 0, 0)
+        self.assertEqual(az, 270)
+
+    def test_quadrants(self):
+        az = geodetic.azimuth(0, 0, [0.01, 0.01, -0.01, -0.01],
+                                    [0.01, -0.01, -0.01, 0.01])
+        self.assertTrue(numpy.allclose(az, [45, 135, 225, 315]), str(az))
+
+    def test_arrays(self):
+        lons1 = numpy.array([[156.49676849, 150.03697145],
+                             [-77.96053914, -109.36694411]])
+        lats1 = numpy.array([[-79.78522764, -89.15044328],
+                             [-32.28244296, -25.11092309]])
+        lons2 = numpy.array([[-84.6732372, 140.08382287],
+                             [82.69227935, -18.9919318]])
+        lats2 = numpy.array([[82.16896786, 26.16081412],
+                             [41.21501474, -2.88241099]])
+        eazimuths = numpy.array([[47.07336955, 350.11740733],
+                                 [54.46959147, 92.76923701]])
+        az = geodetic.azimuth(lons1, lats1, lons2, lats2)
+        self.assertTrue(numpy.allclose(az, eazimuths), str(az))

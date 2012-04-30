@@ -46,6 +46,31 @@ def geodetic_distance(lons1, lats1, lons2, lats2):
     return (2.0 * EARTH_RADIUS) * distance
 
 
+def azimuth(lons1, lats1, lons2, lats2):
+    """
+    Calculate the azimuth between two points or two collections of points.
+
+    Parameters are the same as for :func:`geodetic_distance`.
+
+    :returns:
+        Azimuth as an angle between direction to north from first point and
+        direction to the second point measured clockwise in decimal degrees.
+    """
+    lons1 = numpy.radians(lons1)
+    lats1 = numpy.radians(lats1)
+    assert lons1.shape == lats1.shape
+    lons2 = numpy.radians(lons2)
+    lats2 = numpy.radians(lats2)
+    assert lons2.shape == lats2.shape
+    cos_lat2 = numpy.cos(lats2)
+    true_course = numpy.degrees(numpy.arctan2(
+        numpy.sin(lons1 - lons2) * cos_lat2,
+        numpy.cos(lats1) * numpy.sin(lats2)
+        - numpy.sin(lats1) * cos_lat2 * numpy.cos(lons1 - lons2)
+    ))
+    return (360 - true_course) % 360
+
+
 def min_distance(lons1, lats1, lons2, lats2):
     """
     Calculate the minimum geodetic distance between a collection of points and
