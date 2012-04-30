@@ -118,3 +118,11 @@ class TestAzimuth(unittest.TestCase):
                                  [54.46959147, 92.76923701]])
         az = geodetic.azimuth(lons1, lats1, lons2, lats2)
         self.assertTrue(numpy.allclose(az, eazimuths), str(az))
+
+
+class TestDistance(unittest.TestCase):
+    def test(self):
+        p1 = (0, 0, 10)
+        p2 = (0.5, -0.3, 5)
+        distance = geodetic.distance(*(p1 + p2))
+        self.assertAlmostEqual(distance, 65.0295143)

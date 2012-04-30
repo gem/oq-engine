@@ -15,9 +15,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import numpy
 
-
-#: Earth radius in km.
-EARTH_RADIUS = 6371.0
+from nhlib.geo._utils import EARTH_RADIUS
 
 
 def geodetic_distance(lons1, lats1, lons2, lats2):
@@ -69,6 +67,21 @@ def azimuth(lons1, lats1, lons2, lats2):
         - numpy.sin(lats1) * cos_lat2 * numpy.cos(lons1 - lons2)
     ))
     return (360 - true_course) % 360
+
+
+def distance(lons1, lats1, depths1, lons2, lats2, depths2):
+    """
+    Calculate a distance between two points (or collections of points)
+    considering points' depth.
+
+    :returns:
+        Distance in km, a square root of sum of squares of :func:`geodetic
+        <geodetic_distance>` distance and vertical distance, which is just
+        a difference between depths.
+    """
+    hdist = geodetic_distance(lons1, lats1, lons2, lats2)
+    vdist = depths1 - depths2
+    return numpy.sqrt(hdist ** 2 + vdist ** 2)
 
 
 def min_distance(lons1, lats1, lons2, lats2):
