@@ -19,6 +19,6 @@ if [ "$nosetests_ret_code" -ne "0" ]; then
 fi
 
 if [ "$error" -ne "0" ]; then
-    echo "Tests failed."
+    echo "NRML tests failed."
     exit 1
 fi
