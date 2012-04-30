@@ -923,3 +923,32 @@ class RegionTestCase(unittest.TestCase):
 
         self.assertTrue(region.grid.site_at(
                 region.grid.point_at(shapes.Site(1.5, 1.8))) in region.sites)
+
+    def test_region_sites_outside(self):
+        region = shapes.Region.from_simple((0.0, 1.0), (1.0, 0.0))
+        self.assertRaises(ValueError,
+                region.grid.point_at, shapes.Site(1.1, 1.1))
+
+        self.assertRaises(ValueError,
+                region.grid.point_at, shapes.Site(30.0, 30.0))
+
+        self.assertRaises(ValueError,
+                region.grid.point_at, shapes.Site(1.04, 1.04))
+
+        self.assertRaises(ValueError,
+                region.grid.point_at, shapes.Site(1.05, 1.05))
+
+        region = shapes.Region.from_simple((0.0, 1.0), (1.0, 0.0))
+        region.cell_size = 0.5
+
+        self.assertRaises(ValueError,
+                region.grid.point_at, shapes.Site(1.24, 1.24))
+
+        self.assertRaises(ValueError,
+                region.grid.point_at, shapes.Site(1.25, 1.25))
+
+        self.assertRaises(ValueError,
+                region.grid.point_at, shapes.Site(-0.24, -0.24))
+
+        self.assertRaises(ValueError,
+                region.grid.point_at, shapes.Site(-0.25, -0.25))
