@@ -84,34 +84,48 @@ def distance(lons1, lats1, depths1, lons2, lats2, depths2):
     return numpy.sqrt(hdist ** 2 + vdist ** 2)
 
 
-def min_distance(lons1, lats1, lons2, lats2):
+def min_distance(mlons, mlats, mdepths, slons, slats, sdepths):
     """
-    Calculate the minimum geodetic distance between a collection of points and
-    a point.
+    Calculate the minimum distance between a collection of points and a point.
 
-    TBD
+    This function allows to calculate a closest distance to a collection
+    of points for each point in another collection. Both collection can be
+    of any shape, although it doesn't make sense to use scalars for the first
+    one.
 
+    :param mlons, mlats, mdepths:
+        Numpy arrays of the same shape representing a first collection
+        of points, the one distance to which is of interest -- longitudes,
+        latitudes (both in decimal degrees) and depths (in km).
+    :param slons, slats, sdepths:
+        Scalars, python lists or tuples or numpy arrays of the same shape,
+        representing a second collection: a list of points to find a minimum
+        distance from for.
     :returns:
-        Minimum distance in km, a scalar if ``lons2`` and ``lats2`` are scalars
-        and numpy array of the same shape of those two otherwise.
+        Minimum distance in km, a scalar if ``slons``, ``slats``
+        and ``sdepths`` are scalars and numpy array of the same shape
+        of those three otherwise.
     """
-    # TODO: add support for depth
-    assert lons1.shape == lats1.shape
-    lons2, lats2 = numpy.array(lons2), numpy.array(lats2)
-    assert lons2.shape == lats2.shape
-    orig_shape = lons2.shape
-    lons1 = numpy.radians(lons1.flat)
-    lats1 = numpy.radians(lats1.flat)
-    lons2 = numpy.radians(lons2.flat)
-    lats2 = numpy.radians(lats2.flat)
-    cos_lats1 = numpy.cos(lats1)
-    cos_lats2 = numpy.cos(lats2)
+    assert mlons.shape == mlats.shape == mdepths.shape
+    slons, slats = numpy.array(slons), numpy.array(slats)
+    sdepths = numpy.array(sdepths)
+    assert slons.shape == slats.shape == sdepths.shape
+    orig_shape = slons.shape
+    mlons = numpy.radians(mlons.flat)
+    mlats = numpy.radians(mlats.flat)
+    slons = numpy.radians(slons.flat)
+    slats = numpy.radians(slats.flat)
+    cos_mlats = numpy.cos(mlats)
+    cos_slats = numpy.cos(slats)
     distance = numpy.array([
-        numpy.min(numpy.arcsin(numpy.sqrt(
-            numpy.sin((lats1 - lats2[i]) / 2.0) ** 2.0
-            + cos_lats1 * cos_lats2[i]
-              * numpy.sin((lons1 - lons2[i]) / 2.0) ** 2.0
-        ).clip(-1., 1.)))
-        for i in xrange(len(lats2))
+        numpy.sqrt(numpy.min(
+            (numpy.arcsin(numpy.sqrt(
+                numpy.sin((mlats - slats[i]) / 2.0) ** 2.0
+                + cos_mlats * cos_slats[i]
+                  * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
+            ).clip(-1., 1.)) * 2 * EARTH_RADIUS) ** 2
+            + (mdepths - sdepths) ** 2
+        ))
+        for i in xrange(len(slats))
     ])
-    return (2.0 * EARTH_RADIUS) * distance.reshape(orig_shape)
+    return distance.reshape(orig_shape)

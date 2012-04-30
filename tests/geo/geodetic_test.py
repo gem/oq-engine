@@ -126,3 +126,35 @@ class TestDistance(unittest.TestCase):
         p2 = (0.5, -0.3, 5)
         distance = geodetic.distance(*(p1 + p2))
         self.assertAlmostEqual(distance, 65.0295143)
+
+
+class MinDistanceTest(unittest.TestCase):
+    def _test(self, mlons, mlats, mdepths, slons, slats, sdepths,
+              expected_mpoint_indexes):
+        mlons, mlats, mdepths = map(numpy.array, (mlons, mlats, mdepths))
+        dists = geodetic.min_distance(mlons, mlats, mdepths,
+                                      slons, slats, sdepths)
+        expected_closest_mlons = mlons[expected_mpoint_indexes]
+        expected_closest_mlats = mlats[expected_mpoint_indexes]
+        expected_closest_mdepths = mdepths[expected_mpoint_indexes]
+        expected_distances = geodetic.distance(
+            expected_closest_mlons, expected_closest_mlats,
+            expected_closest_mdepths,
+            slons, slats, sdepths
+        )
+        self.assertTrue((dists == expected_distances).all())
+
+    def test_one_point(self):
+        mlons = numpy.array([-0.1, 0.0, 0.1])
+        mlats = numpy.array([0.0, 0.0, 0.0])
+        mdepths = numpy.array([0.0, 10.0, 20.0])
+
+        self._test(mlons, mlats, mdepths, -0.05, 0.0, 0,
+                   expected_mpoint_indexes=0)
+        self._test(mlons, mlats, mdepths, -0.1, 0.0, 20.0,
+                   expected_mpoint_indexes=1)
+
+    def test_several_points(self):
+        self._test(mlons=[10., 11.], mlats=[-40, -41], mdepths=[10., 20.],
+                   slons=[9., 9.], slats=[-39, -45], sdepths=[0.1, 0.2],
+                   expected_mpoint_indexes=[0, 1])
