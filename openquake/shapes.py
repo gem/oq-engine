@@ -265,7 +265,7 @@ class Grid(object):
 
         # Workaround. Basically, this let some points outside
         # the region boundaries to be treated like points inside
-        # the region. The reason is that we add addiotional cells
+        # the region. The reason is that we add additional cells
         # to the region borders in order to cover points that
         # are really close to the region itself. For example,
         # if we have:
