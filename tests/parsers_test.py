@@ -21,6 +21,8 @@ from nrml import exceptions
 from nrml import models
 from nrml import parsers
 
+import _utils
+
 
 class SourceModelParserTestCase(unittest.TestCase):
     """Tests for the :class:`nrml.parsers.SourceModelParser` parser."""
@@ -111,7 +113,7 @@ class SourceModelParserTestCase(unittest.TestCase):
             dip=45.0, upper_seismo_depth=10.0, lower_seismo_depth=20.0,
         )
         simple_mfd = models.IncrementalMFD(
-            min_mag=6.55, bin_width=0.1,
+            min_mag=5.0, bin_width=0.1,
             occur_rates=[0.0010614989, 8.8291627E-4, 7.3437777E-4, 6.108288E-4,
                          5.080653E-4],
         )
@@ -124,20 +126,20 @@ class SourceModelParserTestCase(unittest.TestCase):
         # Complex:
         complex_geom = models.ComplexFaultGeometry(
             top_edge_wkt=(
-                'LINESTRING(-124.704  40.363  0.5493260E+01, '
-                '-124.977  41.214  0.4988560E+01, '
-                '-125.140  42.096  0.4897340E+01)'),
+                'LINESTRING(-124.704 40.363 0.5493260E+01, '
+                '-124.977 41.214 0.4988560E+01, '
+                '-125.140 42.096 0.4897340E+01)'),
             bottom_edge_wkt=(
-                'LINESTRING(-123.829  40.347  0.2038490E+02, '
-                '-124.137  41.218  0.1741390E+02, '
-                '-124.252  42.115  0.1752740E+02)'),
+                'LINESTRING(-123.829 40.347 0.2038490E+02, '
+                '-124.137 41.218 0.1741390E+02, '
+                '-124.252 42.115 0.1752740E+02)'),
             int_edges=[
-                ('LINESTRING(-124.704  40.363  0.5593260E+01, '
-                 '-124.977  41.214  0.5088560E+01, '
-                 '-125.140  42.096  0.4997340E+01)'),
-                ('LINESTRING(-124.704  40.363  0.5693260E+01, ' 
-                 '-124.977  41.214  0.5188560E+01, '
-                 '-125.140  42.096  0.5097340E+01'),
+                ('LINESTRING(-124.704 40.363 0.5593260E+01, '
+                 '-124.977 41.214 0.5088560E+01, '
+                 '-125.140 42.096 0.4997340E+01)'),
+                ('LINESTRING(-124.704 40.363 0.5693260E+01, '
+                 '-124.977 41.214 0.5188560E+01, '
+                 '-125.140 42.096 0.5097340E+01)'),
             ]
         )
         complex_mfd = models.TGRMFD(
@@ -188,4 +190,4 @@ class SourceModelParserTestCase(unittest.TestCase):
         exp_src_model = self._expected_source_model()
         src_model = parser.parse()
 
-        self.assertEqual('Some Source Model', src_model.name)
+        self.assertTrue(_utils.deep_eq(exp_src_model, src_model))
