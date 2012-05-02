@@ -17,7 +17,8 @@
 import StringIO
 import unittest
 
-from nrml import exceptions
+from lxml import etree
+
 from nrml import models
 from nrml import parsers
 
@@ -37,19 +38,48 @@ class SourceModelParserTestCase(unittest.TestCase):
 
     # The NRML element should be first
     NO_NRML_ELEM_FIRST = '''\
-<?xml version='1.0' encoding='utf-8'?>
+m?ml version='1.0' encoding='utf-8'?>
 <sourceModel xmlns="http://openquake.org/xmlns/nrml/0.4" name="test">
-    <nrml xmlns:gml="http://www.opengis.net/gml"
-          xmlns="http://openquake.org/xmlns/nrml/0.3"
-          gml:id="n1">
-    </nrml>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4"
+      gml:id="n1">
+</nrml>
 </sourceModel>'''
 
     NO_SRC_MODEL = '''\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
+  xmlns="http://openquake.org/xmlns/nrml/0.4"
+  gml:id="n1">
+</nrml>'''
+
+    INVALID_SCHEMA = '''\
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns="http://openquake.org/xmlns/nrml/0.4"
       gml:id="n1">
+    <sourceModel name="Some Source Model">
+        <pointSource id="1" name="point" tectonicRegion="Stable Continental Crust">
+            <pointGeometry>
+                <gml:Point>
+                    <gml:pos>-122.0 38.0</gml:pos>
+                </gml:Point>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>10.0</lowerSeismoDepth>
+            </pointGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>0.5</ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="-3.5" invalidAttr="foo" bValue="1.0" minMag="5.0" maxMag="6.5" />
+            <nodalPlaneDist>
+                <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.7" strike="90.0" dip="45.0" rake="90.0" />
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth probability="0.5" depth="4.0" />
+                <hypoDepth probability="0.5" depth="8.0" />
+            </hypoDepthDist>
+        </pointSource>
+    </sourceModel>
 </nrml>'''
 
     @classmethod
@@ -159,30 +189,44 @@ class SourceModelParserTestCase(unittest.TestCase):
         return source_model
 
     def test_wrong_namespace(self):
-        test_file = StringIO.StringIO(self.BAD_NAMESPACE)
+        parser = parsers.SourceModelParser(
+            StringIO.StringIO(self.BAD_NAMESPACE))
 
-        parser = parsers.SourceModelParser(test_file)
-
-        self.assertRaises(exceptions.UnexpectedNamespaceError, parser.parse)
+        self.assertRaises(etree.XMLSyntaxError, parser.parse)
 
     def test_nrml_elem_not_found(self):
-        test_file = StringIO.StringIO(self.NO_NRML_ELEM_FIRST)
+        parser = parsers.SourceModelParser(
+            StringIO.StringIO(self.NO_NRML_ELEM_FIRST))
 
-        parser = parsers.SourceModelParser(test_file)
-
-        self.assertRaises(exceptions.UnexpectedElementError, parser.parse)
+        self.assertRaises(etree.XMLSyntaxError, parser.parse)
 
     def test_no_source_model_elem(self):
-        test_file = StringIO.StringIO(self.NO_SRC_MODEL)
-
-        parser = parsers.SourceModelParser(test_file)
+        parser = parsers.SourceModelParser(
+            StringIO.StringIO(self.NO_SRC_MODEL))
 
         try:
             parser.parse()
-        except exceptions.NrmlError, err:
+        except ValueError, err:
             self.assertEqual('<sourceModel> element not found.', err.message)
         else:
             self.fail('NrmlError not raised.')
+
+    def test_invalid_schema_validation_on(self):
+        # By default, schema validation is on.
+        parser = parsers.SourceModelParser(
+            StringIO.StringIO(self.INVALID_SCHEMA))
+
+        self.assertRaises(etree.XMLSyntaxError, parser.parse)
+
+    def test_invalid_schema_validation_off(self):
+        # Apart from failing to validate schema, our test input here doesn't
+        # cause any real problems for the parser. If we turn schema validation,
+        # we can be more forgiving.
+        parser = parsers.SourceModelParser(
+            StringIO.StringIO(self.INVALID_SCHEMA), schema_validation=False)
+
+        # This should succeed with no errors.
+        parser.parse()
 
     def test_parse(self):
         parser = parsers.SourceModelParser(self.SAMPLE_FILE)

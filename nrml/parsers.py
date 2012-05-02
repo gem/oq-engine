@@ -26,7 +26,6 @@ from lxml import etree
 
 import nrml
 
-from nrml import exceptions
 from nrml import models
 from nrml import utils
 
@@ -50,6 +49,10 @@ class SourceModelParser(object):
 
     :param source:
         Filename or file-like object containing the XML data.
+    :param bool schema_validation:
+        If set to `True`, validate the input source against the current XML
+        schema. Otherwise, we will try to parse the ``source``, even if the
+        document structure or content is incorrect.
     """
 
     _SM_TAG = '{%s}sourceModel' % nrml.NAMESPACE
@@ -58,8 +61,9 @@ class SourceModelParser(object):
     _SIMPLE_TAG = '{%s}simpleFaultSource' % nrml.NAMESPACE
     _COMPLEX_TAG = '{%s}complexFaultSource' % nrml.NAMESPACE
 
-    def __init__(self, source):
+    def __init__(self, source, schema_validation=True):
         self.source = source
+        self.schema_validation = schema_validation
 
         self._parse_fn_map = {
             self._PT_TAG: self._parse_point,
@@ -303,25 +307,12 @@ class SourceModelParser(object):
         """
         src_model = models.SourceModel()
 
-        tree = etree.iterparse(self.source, events=('start', 'end'))
-
-        # First thing, validate the nrml namespace version. If it not the
-        # version we expected, stop immediately and raise an error.
-
-        # The first node should be the <nrml> element.
-        _, nrml_elem = tree.next()
-        # Extract the namespace url and the element name.
-        namespace, el_name = re.search('^{(.+)}(.+)', nrml_elem.tag).groups()
-        if not el_name == 'nrml':
-            raise exceptions.UnexpectedElementError('nrml', el_name)
-        if not namespace == nrml.NAMESPACE:
-            raise exceptions.UnexpectedNamespaceError(
-                nrml.NAMESPACE, namespace)
-
-        # TODO(larsbutler): Run schema validation here. In a sense, that means
-        # we techincally have to traverse the file twice (once to validate,
-        # once to parse), but it's simple enough. With large files there may be
-        # a performance hit, but that remains to be seen.
+        if self.schema_validation:
+            schema = etree.XMLSchema(etree.parse(nrml.nrml_schema_file()))
+        else:
+            schema = None
+        tree = etree.iterparse(self.source, events=('start', 'end'),
+                               schema=schema)
 
         for event, element in tree:
             # Find the <sourceModel> element and get the 'name' attr.
@@ -331,7 +322,7 @@ class SourceModelParser(object):
                     break
             else:
                 # If we get to here, we didn't find the <sourceModel> element.
-                raise exceptions.NrmlError('<sourceModel> element not found.')
+                raise ValueError('<sourceModel> element not found.')
 
         src_model.sources = self._source_gen(tree)
 
