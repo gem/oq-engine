@@ -110,13 +110,13 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths):
     slons, slats = numpy.array(slons), numpy.array(slats)
     sdepths = numpy.array(sdepths)
     assert slons.shape == slats.shape == sdepths.shape
-    sdepths = sdepths.reshape(-1)
     orig_shape = slons.shape
     mlons = numpy.radians(mlons.flat)
     mlats = numpy.radians(mlats.flat)
     mdepths = mdepths.reshape(-1)
     slons = numpy.radians(slons.flat)
     slats = numpy.radians(slats.flat)
+    sdepths = sdepths.reshape(-1)
     cos_mlats = numpy.cos(mlats)
     cos_slats = numpy.cos(slats)
     distance = numpy.array([
@@ -135,3 +135,62 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths):
         return distance
     else:
         return distance.reshape(orig_shape)
+
+
+def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):
+    # TODO: document
+    # TODO: unittest
+    assert length > 0
+    hdist = geodetic_distance(lon1, lat1, lon2, lat2)
+    vdist = depth2 - depth1
+    total_distance = numpy.sqrt(hdist ** 2 + vdist ** 2)
+    num_intervals = int(round(total_distance / length))
+    if num_intervals == 0:
+        return numpy.array([lon1]), numpy.array([lat1]), numpy.array([depth1])
+    dist_factor = (length * num_intervals) / total_distance
+    return npoints_towards(
+        lon1, lat1, depth1, azimuth(lon1, lat1, lon2, lat2),
+        hdist * dist_factor, vdist * dist_factor, num_intervals + 1
+    )
+
+
+def npoints_between(lon1, lat1, depth1, lon2, lat2, depth2, npoints):
+    # TODO: document
+    # TODO: unittest
+    hdist = geodetic_distance(lon1, lat1, lon2, lat2)
+    vdist = depth2 - depth1
+    return npoints_towards(
+        lon1, lat1, depth1, azimuth(lon1, lat1, lon2, lat2),
+        hdist, vdist, npoints
+    )
+
+
+def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
+    # TODO: document
+    # TODO: unittest
+    assert npoints > 1
+    lon, lat = numpy.radians(lon), numpy.radians(lat)
+    tc = numpy.radians(360 - azimuth)
+    hdists = numpy.arange(npoints, dtype=float)
+    hdists *= (hdist / EARTH_RADIUS) / (npoints - 1)
+    vdists = numpy.arange(npoints, dtype=float)
+    vdists *= vdist / (npoints - 1)
+
+    sin_dists = numpy.sin(hdists)
+    cos_dists = numpy.cos(hdists)
+    sin_lat = numpy.sin(lat)
+    cos_lat = numpy.cos(lat)
+
+    sin_lats = sin_lat * cos_dists + cos_lat * sin_dists * numpy.cos(tc)
+    sin_lats = sin_lats.clip(-1., 1.)
+    lats = numpy.degrees(numpy.arcsin(sin_lats))
+
+    dlon = numpy.arctan2(numpy.sin(tc) * sin_dists * cos_lat,
+                         cos_dists - sin_lat * sin_lats)
+    lons = numpy.mod(lon - dlon + numpy.pi, 2 * numpy.pi) - numpy.pi
+    lons = numpy.degrees(lons)
+    lons = numpy.where(lons > -180, lons, 180.0)
+
+    depths = vdists + depth
+
+    return lons, lats, depths
