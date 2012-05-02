@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Clean pyc files, in case any modules were removed or renamed.
+find . -name "*.pyc" -delete
+
 error=0
 
 xmllint --noout --schema nrml/schema/nrml.xsd `find nrml/schema/examples/ -name "*.xml"`
