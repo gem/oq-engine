@@ -190,7 +190,6 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
         self.params = {}
         self.params["OUTPUT_DIR"] = helpers.OUTPUT_DIR
-        self.params["AGGREGATE_LOSS_CURVE"] = 1
         self.params["BASE_PATH"] = "."
         self.params["INVESTIGATION_TIME"] = 50.0
 

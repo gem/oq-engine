@@ -161,9 +161,6 @@ LOSS_MAP = loss_map.tiff
 # name of the loss ratio map file to generate
 LOSS_RATIO_MAP = loss_ratio_map.tiff
 
-# uncomment this if you want to compute the aggregate loss curve
-AGGREGATE_LOSS_CURVE = true
-
 # uncomment this if you want to compute hazard only on sites defined in the exposure
 # COMPUTE_HAZARD_AT_ASSETS_LOCATIONS = true
 LOSS_HISTOGRAM_BINS = 25
