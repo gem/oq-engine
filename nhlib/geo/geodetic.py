@@ -194,3 +194,40 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
     depths = vdists + depth
 
     return lons, lats, depths
+
+
+def distance_to_arc(alon, alat, aazimuth, plons, plats):
+    """
+    Calculate a closest distance between a great circle arc and a point
+    (or a collection of points).
+
+    :param alon, alat:
+        Arc reference point longitude and latitude, in decimal degrees.
+    :param azimuth:
+        Arc azimuth (an angle between direction to a north and arc in clockwise
+        direction), measured in a reference point, in decimal degrees.
+    :param plons, plats:
+        Longitudes and latitudes of points to measure distance. Either scalar
+        values or numpy arrays of decimal degrees.
+    :returns:
+        Distance in km, a scalar value or numpy array depending on ``plons``
+        and ``plats``. A distance is negative if the target point lies on the
+        right hand side of the arc.
+    """
+    # TODO: unittest
+    azimuth_to_target = azimuth(alon, alat, plons, plats)
+    distance_to_target = geodetic_distance(alon, alat, plons, plats)
+
+    # find an angle between an arc and a great circle arc connecting
+    # arc's reference point and a target point
+    t_angle = (azimuth_to_target - aazimuth + 360) % 360
+
+    # in a spherical right triangle cosine of the angle of a cathetus
+    # augmented to pi/2 is equal to sine of an opposite angle times
+    # sine of hypotenuse, see
+    # http://en.wikipedia.org/wiki/Spherical_trigonometry#Napier.27s_Pentagon
+    angle = numpy.arccos(
+        (numpy.sin(numpy.radians(t_angle))
+         * numpy.sin(distance_to_target / EARTH_RADIUS)).clip(-1, 1)
+    )
+    return (numpy.pi / 2 - angle) * EARTH_RADIUS

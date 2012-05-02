@@ -22,6 +22,7 @@ import math
 import numpy
 
 from nhlib.geo.mesh import Mesh
+from nhlib.geo import geodetic
 from nhlib.geo import _utils as geo_utils
 
 
@@ -87,31 +88,12 @@ class BaseSurface(object):
 
         :returns:
             Distance in km.
-
-        Base class implementation gives reasonable precision (mistake
-        of less than 1 km) up to the distance of six hundred kilometers
-        between the point and the surface.
         """
         top_edge_centroid = self._get_top_edge_centroid()
-        azimuth_to_target, _, distance_to_target = geo_utils.GEOD.inv(
+        return geodetic.distance_to_arc(
             top_edge_centroid.longitude, top_edge_centroid.latitude,
-            point.longitude, point.latitude
+            self.get_strike(), point.longitude, point.latitude
         )
-        distance_to_target *= 1e-3
-        # find an angle between a great circle arc of the surface and
-        # a great circle arc connecting top edge middle point and
-        # a target point
-        t_angle = azimuth_to_target - self.get_strike()
-        if t_angle <= -180:
-            t_angle += 360
-        # in a spherical right triangle cosine of the angle of a cathetus
-        # augmented to pi/2 is equal to sine of an opposite angle times
-        # sine of hypotenuse
-        angle = math.acos(
-            math.sin(math.radians(t_angle))
-            * math.sin(distance_to_target / geo_utils.EARTH_RADIUS)
-        )
-        return (math.pi / 2 - angle) * geo_utils.EARTH_RADIUS
 
     def get_top_edge_depth(self):
         """
