@@ -92,24 +92,26 @@ class BaseSurface(object):
         of less than 1 km) up to the distance of six hundred kilometers
         between the point and the surface.
         """
-        # Here we find the distance (in linear units) between the target
-        # point and the top edge centroid, an angle between the surface
-        # strike and azimuth from top edge centroid to the target point
-        # and treat those values as ones in a Cartesian space -- find
-        # the projection of vector directed from top edge centroid
-        # pointing to the target point to the line perpendicular to the
-        # surface plane. Better way would be using spherical law of cosines
-        # but that would require expressing distances in angular units.
         top_edge_centroid = self._get_top_edge_centroid()
         azimuth_to_target, _, distance_to_target = geo_utils.GEOD.inv(
             top_edge_centroid.longitude, top_edge_centroid.latitude,
             point.longitude, point.latitude
         )
-        azimuth = azimuth_to_target - self.get_strike()
-        if azimuth <= -180:
-            azimuth += 360
-        # distance to target is returned in meters, so multiply it by 0.001
-        return math.sin(math.radians(azimuth)) * distance_to_target * 1e-3
+        distance_to_target *= 1e-3
+        # find an angle between a great circle arc of the surface and
+        # a great circle arc connecting top edge middle point and
+        # a target point
+        t_angle = azimuth_to_target - self.get_strike()
+        if t_angle <= -180:
+            t_angle += 360
+        # in a spherical right triangle cosine of the angle of a cathetus
+        # augmented to pi/2 is equal to sine of an opposite angle times
+        # sine of hypotenuse
+        angle = math.acos(
+            math.sin(math.radians(t_angle))
+            * math.sin(distance_to_target / geo_utils.EARTH_RADIUS)
+        )
+        return (math.pi / 2 - angle) * geo_utils.EARTH_RADIUS
 
     def get_top_edge_depth(self):
         """
