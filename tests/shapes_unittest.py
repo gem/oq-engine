@@ -891,20 +891,20 @@ class RegionTestCase(unittest.TestCase):
             shapes.Site(2.0, 2.0), shapes.Site(2.5, 2.0),
             shapes.Site(2.5, 1.0), shapes.Site(2.5, 1.5)])
 
-        self.assertEquals(expected_sites, set(region.sites))
+        self.assertEquals(expected_sites, set(region.grid.centers()))
 
-        self.assertTrue(region.grid.site_at(
-                region.grid.point_at(shapes.Site(2.25, 2.0))) in region.sites)
+        self.assertTrue(region.grid.site_at(region.grid.point_at(
+                shapes.Site(2.25, 2.0))) in region.grid.centers())
 
-        self.assertTrue(region.grid.site_at(
-                region.grid.point_at(shapes.Site(2.27, 2.0))) in region.sites)
+        self.assertTrue(region.grid.site_at(region.grid.point_at(
+                shapes.Site(2.27, 2.0))) in region.grid.centers())
 
-        self.assertTrue(region.grid.site_at(
-                region.grid.point_at(shapes.Site(2.30, 2.0))) in region.sites)
+        self.assertTrue(region.grid.site_at(region.grid.point_at(
+                shapes.Site(2.30, 2.0))) in region.grid.centers())
 
         # check we can ask for valid grid points from
         # the sites that represent the center of the cells
-        for cell_center in region.sites:
+        for cell_center in region.grid.centers():
             self.assertTrue(region.grid.site_inside(cell_center))
 
     def test_region_sites_boundary_2(self):
@@ -914,51 +914,66 @@ class RegionTestCase(unittest.TestCase):
 
         region.cell_size = 0.5
 
-        self.assertTrue(region.grid.site_at(
-                region.grid.point_at(shapes.Site(1.5, 0.61))) in region.sites)
+        self.assertTrue(region.grid.site_at(region.grid.point_at(
+                shapes.Site(1.5, 0.61))) in region.grid.centers())
 
-        self.assertTrue(region.grid.site_at(
-                region.grid.point_at(shapes.Site(1.5, 0.60))) in region.sites)
+        self.assertTrue(region.grid.site_at(region.grid.point_at(
+                shapes.Site(1.5, 0.60))) in region.grid.centers())
 
-        self.assertTrue(region.grid.site_at(
-                region.grid.point_at(shapes.Site(1.5, 2.0))) in region.sites)
+        self.assertTrue(region.grid.site_at(region.grid.point_at(
+                shapes.Site(1.5, 2.0))) in region.grid.centers())
 
-        self.assertTrue(region.grid.site_at(
-                region.grid.point_at(shapes.Site(1.5, 1.9))) in region.sites)
+        self.assertTrue(region.grid.site_at(region.grid.point_at(
+                shapes.Site(1.5, 1.9))) in region.grid.centers())
 
-        self.assertTrue(region.grid.site_at(
-                region.grid.point_at(shapes.Site(1.5, 1.8))) in region.sites)
+        self.assertTrue(region.grid.site_at(region.grid.point_at(
+                shapes.Site(1.5, 1.8))) in region.grid.centers())
 
         # check we can ask for valid grid points from
         # the sites that represent the center of the cells
-        for cell_center in region.sites:
+        for cell_center in region.grid.centers():
             self.assertTrue(region.grid.site_inside(cell_center))
 
-    def test_region_sites_outside(self):
-        region = shapes.Region.from_simple((0.0, 1.0), (1.0, 0.0))
-        self.assertRaises(ValueError,
-                region.grid.point_at, shapes.Site(1.1, 1.1))
+    def test_region_sites_boundary_3(self):
+        region = shapes.RegionConstraint.from_simple((0.0, 1.0), (1.0, 0.0))
 
+        # Site(1.1, 1.1) is outside the region
+        self.assertFalse(region.match(shapes.Site(1.1, 1.1)))
+
+        # but inside the underlying grid because we add an
+        # additional row and column
+        self.assertTrue(region.grid.site_inside(shapes.Site(1.1, 1.1)))
+
+        # same as above
+        self.assertFalse(region.match(shapes.Site(1.04, 1.04)))
+        self.assertFalse(region.match(shapes.Site(1.05, 1.05)))
+
+        self.assertTrue(region.grid.site_inside(shapes.Site(1.04, 1.04)))
+        self.assertTrue(region.grid.site_inside(shapes.Site(1.05, 1.05)))
+
+        # this is too far away, even outside the grid
         self.assertRaises(ValueError,
                 region.grid.point_at, shapes.Site(30.0, 30.0))
 
-        self.assertRaises(ValueError,
-                region.grid.point_at, shapes.Site(1.04, 1.04))
-
-        self.assertRaises(ValueError,
-                region.grid.point_at, shapes.Site(1.05, 1.05))
-
-        region = shapes.Region.from_simple((0.0, 1.0), (1.0, 0.0))
+        region = shapes.RegionConstraint.from_simple((0.0, 1.0), (1.0, 0.0))
         region.cell_size = 0.5
 
-        self.assertRaises(ValueError,
-                region.grid.point_at, shapes.Site(1.24, 1.24))
+        # same, points are outside the region
+        self.assertFalse(region.match(shapes.Site(1.24, 1.24)))
+        self.assertFalse(region.match(shapes.Site(1.25, 1.25)))
+        self.assertFalse(region.match(shapes.Site(-0.24, -0.24)))
+        self.assertFalse(region.match(shapes.Site(-0.25, -0.25)))
 
-        self.assertRaises(ValueError,
-                region.grid.point_at, shapes.Site(1.25, 1.25))
+        # but inside the grid
+        self.assertTrue(region.grid.site_inside(shapes.Site(1.24, 1.24)))
+        self.assertTrue(region.grid.site_inside(shapes.Site(1.25, 1.25)))
+        self.assertTrue(region.grid.site_inside(shapes.Site(-0.25, -0.25)))
+        self.assertTrue(region.grid.site_inside(shapes.Site(-0.25, -0.24)))
 
-        self.assertRaises(ValueError,
-                region.grid.point_at, shapes.Site(-0.24, -0.24))
+        # latitude too low, too high
+        self.assertFalse(region.grid.site_inside(shapes.Site(-0.25, -0.26)))
+        self.assertFalse(region.grid.site_inside(shapes.Site(-0.25, 1.76)))
 
-        self.assertRaises(ValueError,
-                region.grid.point_at, shapes.Site(-0.25, -0.25))
+        # longitude too low, too high
+        self.assertFalse(region.grid.site_inside(shapes.Site(1.76, 1.5)))
+        self.assertFalse(region.grid.site_inside(shapes.Site(-0.26, 1.5)))
