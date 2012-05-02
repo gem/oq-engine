@@ -210,7 +210,7 @@ class Grid(object):
 
     def __init__(self, region, cell_size):
         self.cell_size = cell_size
-        
+
         # center of the lower left cell of this grid
         self.llc = region.lower_left_corner
 
@@ -230,13 +230,15 @@ class Grid(object):
         # since we are always considering the center of the
         # cells, we must include half of the cell size
         # to the borders
-        min_lon = self.llc.longitude - (self.cell_size / 2)
-        max_lon = (self.llc.longitude + (self.columns * self.cell_size)
-                + (self.cell_size / 2))
+        half_cell_size = self.cell_size / 2.0
 
-        min_lat = self.llc.latitude - (self.cell_size / 2)
+        min_lon = self.llc.longitude - half_cell_size
+        max_lon = (self.llc.longitude + (self.columns * self.cell_size)
+                + half_cell_size)
+
+        min_lat = self.llc.latitude - half_cell_size
         max_lat = (self.llc.latitude + (self.rows * self.cell_size)
-                + (self.cell_size / 2))
+                + half_cell_size)
 
         coords = [(min_lon, max_lat), (max_lon, max_lat),
                   (max_lon, min_lat), (min_lon, min_lat)]
