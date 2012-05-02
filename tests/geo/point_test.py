@@ -43,17 +43,11 @@ class PointTestCase(unittest.TestCase):
         p2 = geo.Point(0.5, 0.5)
         self.assertAlmostEqual(225.0010908, p2.azimuth(p1))
 
-    def test_horizontal_distance(self):
-        p1 = geo.Point(0.0, 0.0)
-        p2 = geo.Point(0.5, 0.5)
-
-        self.assertAlmostEqual(78.6261876769, p1.horizontal_distance(p2), 4)
-
     def test_distance(self):
         p1 = geo.Point(0.0, 0.0, 0.0)
         p2 = geo.Point(0.5, 0.5, 5.0)
 
-        self.assertAlmostEqual(78.7849704355, p1.distance(p2))
+        self.assertAlmostEqual(78.7849704355, p1.distance(p2), places=4)
 
     def test_equally_spaced_points_1(self):
         p1 = geo.Point(0.0, 0.0)

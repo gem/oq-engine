@@ -16,9 +16,8 @@
 """
 Module :mod:`nhlib.geo.point` defines :class:`Point`.
 """
-import math
-
-from nhlib.geo._utils import GEOD, EARTH_RADIUS, ensure
+from nhlib.geo._utils import EARTH_RADIUS, ensure
+from nhlib.geo import geodetic
 
 
 class Point(object):
@@ -83,10 +82,11 @@ class Point(object):
         :rtype:
             Instance of :class:`Point`
         """
-        # 1e-3 is needed to convert from km to m
-        longitude, latitude, _ = GEOD.fwd(self.longitude, self.latitude,
-                                          azimuth, horizontal_distance * 1e3)
-        return Point(longitude, latitude, self.depth + vertical_increment)
+        lons, lats, depths = geodetic.npoints_towards(
+            self.longitude, self.latitude, self.depth,
+            azimuth, horizontal_distance, vertical_increment, 2
+        )
+        return Point(lons[1], lats[1], depths[1])
 
     def azimuth(self, point):
         """
@@ -102,31 +102,8 @@ class Point(object):
         :rtype:
             float
         """
-        forward_azimuth, _, _ = GEOD.inv(self.longitude, self.latitude,
-                                         point.longitude, point.latitude)
-        if forward_azimuth < 0:
-            return 360 + forward_azimuth
-
-        return forward_azimuth
-
-    def horizontal_distance(self, point):
-        """
-        Compute the horizontal distance (great circle distance, in km) between
-        this point and the given point.
-
-        :param point:
-            Destination point.
-        :type point:
-            Instance of :class:`Point`
-        :returns:
-            The horizontal distance.
-        :rtype:
-            float
-        """
-        _, _, horizontal_distance = GEOD.inv(self.longitude, self.latitude,
-                                             point.longitude, point.latitude)
-        # 1e-3 is needed to convert from m to km
-        return horizontal_distance * 1e-3
+        return geodetic.azimuth(self.longitude, self.latitude,
+                                point.longitude, point.latitude)
 
     def distance(self, point):
         """
@@ -146,9 +123,8 @@ class Point(object):
         :rtype:
             float
         """
-        vertical_distance = point.depth - self.depth
-        horizontal_distance = self.horizontal_distance(point)
-        return math.sqrt(horizontal_distance ** 2 + vertical_distance ** 2)
+        return geodetic.distance(self.longitude, self.latitude, self.depth,
+                                 point.longitude, point.latitude, point.depth)
 
     def __str__(self):
         """
@@ -196,7 +172,6 @@ class Point(object):
         :rtype:
             boolean
         """
-
         return self.depth == 0.0
 
     def equally_spaced_points(self, point, distance):
@@ -217,31 +192,9 @@ class Point(object):
         :rtype:
             list of :class:`Point` instances
         """
-        points = [self]
-
-        if self == point:
-            return points
-
-        total_distance = self.distance(point)
-        horizontal_distance = self.horizontal_distance(point)
-        azimuth = self.azimuth(point)
-
-        bearing_angle = math.acos(horizontal_distance / total_distance)
-
-        vertical_increment_step = distance * math.sin(bearing_angle)
-        horizontal_increment_step = distance * math.cos(bearing_angle)
-
-        if self.depth > point.depth:
-            # the depth is decreasing
-            vertical_increment_step *= -1
-
-        locations = int(round(total_distance / distance) + 1)
-
-        horizontal_increment = vertical_increment = 0
-        for _ in xrange(1, locations):
-            horizontal_increment += horizontal_increment_step
-            vertical_increment += vertical_increment_step
-            points.append(self.point_at(
-                    horizontal_increment, vertical_increment, azimuth))
-
-        return points
+        lons, lats, depths = geodetic.intervals_between(
+            self.longitude, self.latitude, self.depth,
+            point.longitude, point.latitude, point.depth,
+            distance
+        )
+        return [Point(lons[i], lats[i], depths[i]) for i in xrange(len(lons))]
