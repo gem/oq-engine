@@ -21,6 +21,7 @@ import math
 
 import numpy
 
+from nhlib.geo.mesh import Mesh
 from nhlib.geo import _utils as geo_utils
 
 
@@ -53,7 +54,7 @@ class BaseSurface(object):
         of knowledge of a specific surface shape and thus perform
         better.
         """
-        return self.get_mesh().get_min_distance(point)
+        return self.get_mesh().get_min_distance(Mesh.from_points_list([point]))
 
     def get_joyner_boore_distance(self, point):
         """
@@ -67,7 +68,9 @@ class BaseSurface(object):
         Base class calls surface mesh's method
         :meth:`~nhlib.geo.mesh.RectangularMesh.get_joyner_boore_distance`.
         """
-        return self.get_mesh().get_joyner_boore_distance(point)
+        return self.get_mesh().get_joyner_boore_distance(
+            Mesh.from_points_list([point])
+        )
 
     def get_rx_distance(self, point):
         """
