@@ -134,7 +134,7 @@ class SimpleFaultSurfaceGetStrikeTestCase(utils.SurfaceTestCase):
         p2 = Point(0.0635916966572, 0.0635916574897)
 
         surface = SimpleFaultSurface.from_fault_data(Line([p1, p2]),
-                1.0, 6.0, 90.0, 1.0)
+                1.0, 6.0, 89.9, 1.0)
 
         self.assertAlmostEquals(45.0, surface.get_strike(), delta=1e-4)
 

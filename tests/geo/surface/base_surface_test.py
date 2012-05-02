@@ -50,7 +50,7 @@ class GetMinDistanceTestCase(unittest.TestCase):
         surface = DummySurface(test_data.TEST_7_RUPTURE_6_MESH)
         self.assertAlmostEqual(40.1213468,
                                surface.get_min_distance(Point(-0.25, 0.25)),
-                               places=6)
+                               places=4)
 
     def test_3(self):
         surface = DummySurface(test_data.TEST_7_RUPTURE_2_MESH)
@@ -61,7 +61,7 @@ class GetMinDistanceTestCase(unittest.TestCase):
         surface = DummySurface(test_data.TEST_7_RUPTURE_2_MESH)
         self.assertAlmostEqual(55.6159556,
                                surface.get_min_distance(Point(-0.3, 0.4)),
-                               places=5)
+                               places=4)
 
 
 class GetJoynerBooreDistanceTestCase(unittest.TestCase):

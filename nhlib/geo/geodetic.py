@@ -110,9 +110,11 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths):
     slons, slats = numpy.array(slons), numpy.array(slats)
     sdepths = numpy.array(sdepths)
     assert slons.shape == slats.shape == sdepths.shape
+    sdepths = sdepths.reshape(-1)
     orig_shape = slons.shape
     mlons = numpy.radians(mlons.flat)
     mlats = numpy.radians(mlats.flat)
+    mdepths = mdepths.reshape(-1)
     slons = numpy.radians(slons.flat)
     slats = numpy.radians(slats.flat)
     cos_mlats = numpy.cos(mlats)
@@ -128,4 +130,8 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths):
         ))
         for i in xrange(len(slats))
     ])
-    return distance.reshape(orig_shape)
+    if not orig_shape:
+        [distance] = distance
+        return distance
+    else:
+        return distance.reshape(orig_shape)

@@ -197,7 +197,8 @@ class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):
     def test_2(self):
         surface = PlanarSurface(1, 2, 3, *test_data.TEST_7_RUPTURE_6_CORNERS)
         self.assertAlmostEqual(40.1213468,
-                               surface.get_min_distance(Point(-0.25, 0.25)))
+                               surface.get_min_distance(Point(-0.25, 0.25)),
+                               places=4)
 
     def test_3(self):
         surface = PlanarSurface(1, 2, 3, *test_data.TEST_7_RUPTURE_2_CORNERS)
@@ -207,7 +208,8 @@ class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):
     def test_4(self):
         surface = PlanarSurface(1, 2, 3, *test_data.TEST_7_RUPTURE_2_CORNERS)
         self.assertAlmostEqual(55.6159556,
-                               surface.get_min_distance(Point(-0.3, 0.4)))
+                               surface.get_min_distance(Point(-0.3, 0.4)),
+                               places=4)
 
 
 class PlanarSurfaceGetJoynerBooreDistanceTestCase(unittest.TestCase):
