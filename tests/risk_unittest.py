@@ -638,7 +638,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
         self.block_id = 7
         SITE = shapes.Site(1.0, 1.0)
-        block = Block(self.job_id, self.block_id, (SITE, SITE))
+        block = Block(self.job_id, self.block_id, (SITE, ))
         block.to_kvs()
 
         location = GEOSGeometry(SITE.point.to_wkt())
@@ -903,7 +903,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         self.region = shapes.RegionConstraint.from_simple(
                 (0.0, 0.0), (2.0, 2.0))
 
-        block = Block(self.job_id, self.block_id, (SITE, SITE))
+        block = Block(self.job_id, self.block_id, (SITE, ))
         block.to_kvs()
 
         writer = hazard.HazardCurveDBWriter('test_path.xml', self.job_id)
@@ -1008,6 +1008,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         res = kvs.get_value_json_decoded(result_key)
         expected_result = {'bcr': 0.0, 'eal_original': 0.003032,
                            'eal_retrofitted': 0.003032}
+
         helpers.assertDeepAlmostEqual(
             self, res, [[[1, 1], [[expected_result, "rubcr"]]]])
 
@@ -1325,6 +1326,7 @@ class RiskCommonTestCase(unittest.TestCase):
 
 
 class RiskJobGeneralTestCase(unittest.TestCase):
+
     def _make_job(self, params):
         self.job = helpers.create_job(params, base_path=".")
         self.job_id = self.job.job_id
