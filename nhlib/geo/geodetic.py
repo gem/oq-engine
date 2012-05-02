@@ -126,7 +126,7 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths):
                 + cos_mlats * cos_slats[i]
                   * numpy.sin((mlons - slons[i]) / 2.0) ** 2.0
             ).clip(-1., 1.)) * 2 * EARTH_RADIUS) ** 2
-            + (mdepths - sdepths) ** 2
+            + (mdepths - sdepths[i]) ** 2
         ))
         for i in xrange(len(slats))
     ])

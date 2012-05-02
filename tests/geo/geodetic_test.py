@@ -158,3 +158,8 @@ class MinDistanceTest(unittest.TestCase):
         self._test(mlons=[10., 11.], mlats=[-40, -41], mdepths=[10., 20.],
                    slons=[9., 9.], slats=[-39, -45], sdepths=[0.1, 0.2],
                    expected_mpoint_indexes=[0, 1])
+
+    def test_different_shapes(self):
+        self._test(mlons=[0.5, 0.7], mlats=[0.7, 0.9], mdepths=[13., 17.],
+                   slons=[-0.5] * 3, slats=[0.6] * 3, sdepths=[0.1] * 3,
+                   expected_mpoint_indexes=[0, 0, 0])
