@@ -22,27 +22,29 @@ from nhlib.tom import PoissonTOM
 from nhlib.source.rupture import Rupture, ProbabilisticRupture
 
 
-class RuptureCreationTestCase(unittest.TestCase):
-    def make_rupture(self, rupture_class, **kwargs):
-        default_arguments = {
-            'mag': 5.5,
-            'rake': 123.45,
-            'tectonic_region_type': const.TRT.STABLE_CONTINENTAL,
-            'hypocenter': Point(5, 6, 7),
-            'surface': PlanarSurface(10, 11, 12,
-                Point(0, 0, 1), Point(1, 0, 1),
-                Point(1, 0, 2), Point(0, 0, 2)
-            )
-        }
-        default_arguments.update(kwargs)
-        kwargs = default_arguments
-        rupture = rupture_class(**kwargs)
-        for key in kwargs:
-            self.assertIs(getattr(rupture, key), kwargs[key])
+def make_rupture(rupture_class, **kwargs):
+    default_arguments = {
+        'mag': 5.5,
+        'rake': 123.45,
+        'tectonic_region_type': const.TRT.STABLE_CONTINENTAL,
+        'hypocenter': Point(5, 6, 7),
+        'surface': PlanarSurface(10, 11, 12,
+            Point(0, 0, 1), Point(1, 0, 1),
+            Point(1, 0, 2), Point(0, 0, 2)
+        )
+    }
+    default_arguments.update(kwargs)
+    kwargs = default_arguments
+    rupture = rupture_class(**kwargs)
+    for key in kwargs:
+        assert getattr(rupture, key) is kwargs[key]
+    return rupture
 
+
+class RuptureCreationTestCase(unittest.TestCase):
     def assert_failed_creation(self, rupture_class, exc, msg, **kwargs):
         with self.assertRaises(exc) as ae:
-            self.make_rupture(rupture_class, **kwargs)
+            make_rupture(rupture_class, **kwargs)
         self.assertEqual(ae.exception.message, msg)
 
     def test_wrong_trt(self):
@@ -80,3 +82,11 @@ class RuptureCreationTestCase(unittest.TestCase):
             'occurrence rate must be positive',
             occurrence_rate=0, temporal_occurrence_model=PoissonTOM(10)
         )
+
+
+class ProbabilisticRuptureTestCase(unittest.TestCase):
+    def test_get_probability(self):
+        rupture = make_rupture(ProbabilisticRupture,
+                               occurrence_rate=1e-2,
+                               temporal_occurrence_model=PoissonTOM(10))
+        self.assertAlmostEqual(rupture.get_probability(), 0.0951626)

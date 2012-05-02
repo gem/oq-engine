@@ -28,13 +28,16 @@ class Rupture(object):
     :param mag:
         Magnitude of the rupture.
     :param rake:
-        Rake value of the rupture. See :class:`~nhlib.geo.nodalplane.NodalPlane`.
+        Rake value of the rupture.
+        See :class:`~nhlib.geo.nodalplane.NodalPlane`.
     :param tectonic_region_type:
-        Rupture's tectonic regime. One of constants in :class:`nhlib.const.TRT`.
+        Rupture's tectonic regime. One of constants
+        in :class:`nhlib.const.TRT`.
     :param hypocenter:
         A :class:`~nhlib.geo.point.Point`, rupture's hypocenter.
     :param surface:
-        An instance of subclass of :class:`~nhlib.geo.surface.base.BaseSurface`.
+        An instance of subclass of
+        :class:`~nhlib.geo.surface.base.BaseSurface`.
         Object representing the rupture surface geometry.
 
     :raises ValueError:
@@ -80,3 +83,14 @@ class ProbabilisticRupture(Rupture):
         )
         self.temporal_occurrence_model = temporal_occurrence_model
         self.occurrence_rate = occurrence_rate
+
+    def get_probability(self):
+        """
+        Return the probability of this rupture to occur.
+
+        Uses :meth:`~nhlib.tom.PoissonTOM.get_probability` of an assigned
+        temporal occurrence model.
+        """
+        return self.temporal_occurrence_model.get_probability(
+            self.occurrence_rate
+        )
