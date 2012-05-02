@@ -130,6 +130,4 @@ VULNERABILITY = Messina_vulnerability_model.xml
 
 LOSS_CURVES_OUTPUT_PREFIX = loss_curves
 
-AGGREGATE_LOSS_CURVE = true
-
 LOSS_HISTOGRAM_BINS = 25
