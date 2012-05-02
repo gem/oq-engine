@@ -21,14 +21,21 @@ import numpy
 from nhlib.tom import PoissonTOM
 
 
-def hazard_curves(sources, sites, imts, time_span,
-                  gsims, component_type, truncation_level):
+def hazard_curves_poissonian(sources, sites, imts, time_span,
+                             gsims, component_type, truncation_level):
     """
     Compute hazard curves on a list of sites, given a set of seismic sources
     and a set of ground shaking intensity models (one per tectonic region type
     considered in the seismic sources).
 
-    The calculator assumes Poissonian temporal occurrence model.
+    The calculator assumes :class:`Poissonian <nhlib.tom.PoissonianTOM>`
+    temporal occurrence model.
+
+    The calculator computes probability of ground motion exceedance according
+    to the equation as described in pag. 419 of "OpenSHA: A Developing
+    Community-modeling Environment for Seismic Hazard Analysis, Edward
+    H. Field, Thomas H. Jordan and C. Allin Cornell. Seismological Research
+    Letters July/August 2003 v. 74 no. 4 p. 406-419".
 
     :param sources:
         An iterator of seismic sources objects (instances of subclasses

@@ -20,6 +20,7 @@ import numpy
 
 from nhlib.geo.point import Point
 from nhlib.geo.mesh import Mesh, RectangularMesh
+from nhlib.geo import _utils as geo_utils
 
 from tests.geo import _mesh_test_data
 
@@ -565,6 +566,65 @@ class RectangularMeshGetMeanInclinationAndAzimuthTestCase(unittest.TestCase):
         self.assertAlmostEqual(dip, 45, delta=0.05)
         # strike must be reversed
         self.assertAlmostEqual(strike, 180, delta=0.05)
+
+
+class RectangularMeshGetCellDimensionsTestCase(unittest.TestCase):
+    def setUp(self):
+        super(RectangularMeshGetCellDimensionsTestCase, self).setUp()
+        self.original_spherical_to_cartesian = geo_utils.spherical_to_cartesian
+        geo_utils.spherical_to_cartesian = lambda lons, lats, depths: (
+            self.points
+        )
+
+    def tearDown(self):
+        geo_utils.spherical_to_cartesian = self.original_spherical_to_cartesian
+
+    def _test(self, points, centroids, lengths, widths, areas):
+        fake_coords = numpy.array([[0]])
+        self.points = numpy.array(points, dtype=float)
+        mesh = RectangularMesh(fake_coords, fake_coords, fake_coords)
+        cell_center, cell_length, cell_width, cell_area \
+                = mesh.get_cell_dimensions()
+        self.assertTrue(numpy.allclose(cell_length, lengths),
+                        '%s != %s' % (cell_length, lengths))
+        self.assertTrue(numpy.allclose(cell_width, widths),
+                        '%s != %s' % (cell_width, widths))
+        self.assertTrue(numpy.allclose(cell_area, areas),
+                        '%s != %s' % (cell_area, areas))
+        self.assertTrue(numpy.allclose(cell_center, centroids),
+                        '%s != %s' % (cell_center, centroids))
+
+    def test_one_cell(self):
+        self._test(
+            points=[[(1., 1., 1.), (2., 1., 1.)],
+                    [(1., 1., -2.), (2., 1., -2.)]],
+            centroids=[(1.5, 1, -0.5)],
+            lengths=[1],
+            widths=[3],
+            areas=[3]
+        )
+
+    def test_unequal_triangle_areas(self):
+        self._test(
+            points=[[(10, 0, 0), (11, 0, 0)],
+                    [(10, -1, 0), (11, -2, 0)]],
+            centroids=[(((10 + 1/3.) * 0.5 + (10 + 2/3.) * 1) / 1.5,
+                        ((-1/3.) * 0.5 + (-1) * 1) / 1.5,
+                        0)],
+            lengths=[(1 * 0.5 + math.sqrt(2) * 1) / (0.5 + 1)],
+            widths=[(1 * 0.5 + 2 * 1) / (0.5 + 1)],
+            areas=[0.5 + 1]
+        )
+
+    def test_two_unequal_cells(self):
+        self._test(
+            points=[[(0, 0, 0), (0, 0, 1), (0, 0, 3)],
+                    [(0, 1, 0), (0, 1, 1), (0, 1, 3)]],
+            centroids=[(0, 0.5, 0.5), (0, 0.5, 2)],
+            lengths=[1, 2],
+            widths=[1, 1],
+            areas=[1, 2]
+        )
 
 
 class RectangularMeshTriangulateTestCase(unittest.TestCase):

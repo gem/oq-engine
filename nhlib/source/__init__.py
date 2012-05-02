@@ -20,3 +20,4 @@ from nhlib.source.rupture import Rupture, ProbabilisticRupture
 from nhlib.source.point import PointSource
 from nhlib.source.area import AreaSource
 from nhlib.source.simple_fault import SimpleFaultSource
+from nhlib.source.complex_fault import ComplexFaultSource

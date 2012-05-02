@@ -14,10 +14,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
-import numpy
 
 from nhlib import geo
-from nhlib.geo._utils import EARTH_RADIUS
+from nhlib.geo._utils import EARTH_RADIUS, spherical_to_cartesian
 
 
 class PointTestCase(unittest.TestCase):
@@ -126,3 +125,9 @@ class PointTestCase(unittest.TestCase):
         self.assertRaises(ValueError, geo.Point, 0.0, 0.0, EARTH_RADIUS + 0.1)
 
         geo.Point(0.0, 90.0, EARTH_RADIUS - 0.1)
+
+    def test_from_vector(self):
+        point = geo.Point(12.34, -56.78, 91.011)
+        vector = spherical_to_cartesian(point.longitude, point.latitude,
+                                        point.depth)
+        self.assertEqual(point, geo.Point.from_vector(vector))

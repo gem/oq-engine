@@ -20,7 +20,7 @@ import numpy
 from nhlib import const
 from nhlib import imt
 from nhlib.tom import PoissonTOM
-from nhlib.calc.hazard_curve import hazard_curves
+from nhlib.calc.hazard_curve import hazard_curves_poissonian
 
 
 class HazardCurvesTestCase(unittest.TestCase):
@@ -100,8 +100,10 @@ class HazardCurvesTestCase(unittest.TestCase):
         site1_pgd_poe_expected = [0.16146619, 0.1336553]
         site2_pgd_poe_expected = [0.15445961, 0.13437589]
 
-        curves = hazard_curves(sources, sites, imts, time_span, gsims,
-                               component_type, truncation_level)
+        curves = hazard_curves_poissonian(
+            sources, sites, imts, time_span, gsims,
+            component_type, truncation_level
+        )
         self.assertIsInstance(curves, dict)
         self.assertEqual(set(curves.keys()), set([imt.PGA(), imt.PGD()]))
 
