@@ -15,7 +15,7 @@
 
 
 """Simple objects models to represent elements of NRML artifacts. These models
-are intended to be produced by NRML XML parsers and consumed by NRMl XML
+are intended to be produced by NRML XML parsers and consumed by NRML XML
 serializers.
 """
 
