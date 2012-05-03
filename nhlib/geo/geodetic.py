@@ -189,7 +189,6 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
                          cos_dists - sin_lat * sin_lats)
     lons = numpy.mod(lon - dlon + numpy.pi, 2 * numpy.pi) - numpy.pi
     lons = numpy.degrees(lons)
-    lons = numpy.where(lons > -180, lons, 180.0)
 
     depths = vdists + depth
 
