@@ -339,7 +339,6 @@ def distance_to_arc(alon, alat, aazimuth, plons, plats):
     Solves a spherical triangle formed by reference point, target point and
     a projection of target point to a reference great circle arc.
     """
-    # TODO: unittest
     azimuth_to_target = azimuth(alon, alat, plons, plats)
     distance_to_target = geodetic_distance(alon, alat, plons, plats)
 

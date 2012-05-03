@@ -163,3 +163,20 @@ class MinDistanceTest(unittest.TestCase):
         self._test(mlons=[0.5, 0.7], mlats=[0.7, 0.9], mdepths=[13., 17.],
                    slons=[-0.5] * 3, slats=[0.6] * 3, sdepths=[0.1] * 3,
                    expected_mpoint_indexes=[0, 0, 0])
+
+
+class DistanceToArcTest(unittest.TestCase):
+    def test_one_point(self):
+        dist = geodetic.distance_to_arc(12.3, 44.5, 39.4,
+                                        plons=13.4, plats=46.9)
+        self.assertAlmostEqual(dist, -105.12464364)
+        dist = geodetic.distance_to_arc(12.3, 44.5, 39.4,
+                                        plons=13.4, plats=44.9)
+        self.assertAlmostEqual(dist, 38.34459954)
+
+    def test_several_points(self):
+        plons = numpy.array([3.3, 4.3])
+        plats = numpy.array([20.3, 15.3])
+        dists = geodetic.distance_to_arc(4.0, 17.0, -123.0, plons, plats)
+        expected_dists = [347.61490787, -176.03785187]
+        self.assertTrue(numpy.allclose(dists, expected_dists))
