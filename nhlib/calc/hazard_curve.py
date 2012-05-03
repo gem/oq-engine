@@ -19,6 +19,7 @@ Module :mod:`nhlib.calc.hazard_curve` implements :func:`hazard_curves`.
 import numpy
 
 from nhlib.tom import PoissonTOM
+from nhlib.geo import Mesh
 
 
 def hazard_curves_poissonian(sources, sites, imts, time_span,
@@ -73,14 +74,16 @@ def hazard_curves_poissonian(sources, sites, imts, time_span,
                   for imt in imts)
     tom = PoissonTOM(time_span)
 
+    sites_mesh = Mesh.from_points_list([site.location for site in sites])
+
     for source in sources:
         for rupture in source.iter_ruptures(tom):
             prob = rupture.get_probability()
             gsim = gsims[rupture.tectonic_region_type]
 
-            # TODO: precompute distances to all the sites at once
+            distances = gsim.prepare_distances(sites_mesh, rupture)
             for i, site in enumerate(sites):
-                ctx = gsim.make_context(site, rupture)
+                ctx = gsim.make_context(site, rupture, distances[i])
                 poes = gsim.get_poes(ctx, imts, component_type,
                                      truncation_level)
                 for imt in imts:
