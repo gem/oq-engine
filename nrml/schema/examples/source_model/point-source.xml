@@ -5,7 +5,7 @@
 
     <sourceModel name="Some Source Model">
 
-        <pointSource id="optional" name="point" tectonicRegion="Stable Continental Crust">
+        <pointSource id="1" name="point" tectonicRegion="Stable Continental Crust">
 
             <pointGeometry>
                 <gml:Point>

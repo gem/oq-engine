@@ -18,11 +18,17 @@
 
 import os
 
-NRML_SCHEMA_FILE = 'nrml.xsd'
+
+NAMESPACE = 'http://openquake.org/xmlns/nrml/0.4'
+GML_NAMESPACE = 'http://www.opengis.net/gml'
+
+NS_MAP = dict(nrml=NAMESPACE, gml=GML_NAMESPACE)
+
+_NRML_SCHEMA_FILE = 'nrml.xsd'
 
 
 def nrml_schema_file():
     """Returns the absolute path to the NRML schema file"""
     return os.path.join(
         os.path.abspath(os.path.dirname(__file__)),
-        'schema', NRML_SCHEMA_FILE)
+        'schema', _NRML_SCHEMA_FILE)

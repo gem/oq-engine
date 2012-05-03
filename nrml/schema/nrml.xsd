@@ -35,6 +35,7 @@
     <xs:include schemaLocation="./risk/loss_curve.xsd"/>
     <xs:include schemaLocation="./risk/loss_map.xsd"/>
     <xs:include schemaLocation="./risk/vulnerability.xsd"/>
+    <xs:include schemaLocation="./risk/collapse_map.xsd"/>
 
     <xs:annotation>
         <xs:appinfo>
@@ -63,6 +64,7 @@
                         <xs:element ref="dmgDistPerAsset"/>
                         <xs:element ref="dmgDistPerTaxonomy"/>
                         <xs:element ref="totalDmgDist"/>
+                        <xs:element ref="collapseMap"/>
                     </xs:choice>
                 </xs:sequence>
             </xs:extension>

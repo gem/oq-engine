@@ -6,7 +6,7 @@
     <sourceModel name="Some Source Model">
 
         <!-- Note: Area sources are identical to point sources, except for the geometry. -->
-        <areaSource id="required" name="Quito" tectonicRegion="Active Shallow Crust">
+        <areaSource id="1" name="Quito" tectonicRegion="Active Shallow Crust">
             <areaGeometry>
                 <gml:Polygon>
                     <gml:exterior>
