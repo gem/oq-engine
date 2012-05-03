@@ -19,6 +19,7 @@ import numpy
 
 from nhlib import const
 from nhlib import imt
+from nhlib.geo import Point
 from nhlib.tom import PoissonTOM
 from nhlib.calc.hazard_curve import hazard_curves_poissonian
 
@@ -46,7 +47,10 @@ class HazardCurvesTestCase(unittest.TestCase):
             self.component_type = component_type
             self.imts = imts
             self.poes = poes
-        def make_context(self, site, rupture):
+        def prepare_distances(self, sites_mesh, rupture):
+            return list(sites_mesh)
+        def make_context(self, site, rupture, distances):
+            assert distances == site.location
             return (site, rupture)
         def get_poes(self, ctx, imts, component_type, truncation_level):
             assert component_type is self.component_type
@@ -56,7 +60,8 @@ class HazardCurvesTestCase(unittest.TestCase):
                         for imt_ in imts)
 
     class FakeSite(object):
-        pass
+        def __init__(self, location):
+            self.location = location
 
     def test1(self):
         truncation_level = 3.4
@@ -70,8 +75,8 @@ class HazardCurvesTestCase(unittest.TestCase):
         source1 = self.FakeSource([rup11, rup12], time_span=time_span)
         source2 = self.FakeSource([rup21], time_span=time_span)
         sources = iter([source1, source2])
-        site1 = self.FakeSite()
-        site2 = self.FakeSite()
+        site1 = self.FakeSite(Point(10, 20))
+        site2 = self.FakeSite(Point(20, 30))
         sites = [site1, site2]
 
         gsim1 = self.FakeGSIM(truncation_level, component_type, imts, poes={
