@@ -15,7 +15,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
+import numpy
+
 from nhlib.geo import Point
+from nhlib.geo.mesh import Mesh
 from nhlib.geo.surface.planar import PlanarSurface
 
 from tests.geo.surface import _planar_test_data as test_data
@@ -191,25 +194,27 @@ class PlanarSurfaceGetMeshTestCase(utils.SurfaceTestCase):
 class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):
     def test_1(self):
         surface = PlanarSurface(1, 2, 3, *test_data.TEST_7_RUPTURE_6_CORNERS)
+        sites = Mesh.from_points_list([Point(0, 0)])
         self.assertAlmostEqual(8.01185807319,
-                               surface.get_min_distance(Point(0, 0)))
+                               surface.get_min_distance(sites)[0])
 
     def test_2(self):
         surface = PlanarSurface(1, 2, 3, *test_data.TEST_7_RUPTURE_6_CORNERS)
+        sites = Mesh.from_points_list([Point(-0.25, 0.25)])
         self.assertAlmostEqual(40.1213468,
-                               surface.get_min_distance(Point(-0.25, 0.25)),
-                               places=4)
+                               surface.get_min_distance(sites)[0], places=4)
 
     def test_3(self):
         surface = PlanarSurface(1, 2, 3, *test_data.TEST_7_RUPTURE_2_CORNERS)
+        sites = Mesh.from_points_list([Point(0, 0)])
         self.assertAlmostEqual(7.01186304977,
-                               surface.get_min_distance(Point(0, 0)))
+                               surface.get_min_distance(sites)[0])
 
     def test_4(self):
         surface = PlanarSurface(1, 2, 3, *test_data.TEST_7_RUPTURE_2_CORNERS)
+        sites = Mesh.from_points_list([Point(-0.3, 0.4)])
         self.assertAlmostEqual(55.6159556,
-                               surface.get_min_distance(Point(-0.3, 0.4)),
-                               places=4)
+                               surface.get_min_distance(sites)[0], places=4)
 
 
 class PlanarSurfaceGetJoynerBooreDistanceTestCase(unittest.TestCase):
@@ -217,31 +222,37 @@ class PlanarSurfaceGetJoynerBooreDistanceTestCase(unittest.TestCase):
         corners = [Point(-1, -1, 1), Point(1, -1, 1),
                    Point(1, 1, 2), Point(-1, 1, 2)]
         surface = PlanarSurface(10, 0, 45, *corners)
-        self.assertEqual(surface.get_joyner_boore_distance(Point(0, 0)), 0)
-        self.assertEqual(surface.get_joyner_boore_distance(Point(0, 0, 20)), 0)
-        self.assertEqual(surface.get_joyner_boore_distance(Point(0.1, 0.3)), 0)
+        sites = Mesh.from_points_list([Point(0, 0), Point(0, 0, 20),
+                                       Point(0.1, 0.3)])
+        dists = surface.get_joyner_boore_distance(sites)
+        expected_dists = [0] * 3
+        self.assertTrue(numpy.allclose(dists, expected_dists))
 
     def test_point_on_the_border(self):
         corners = [Point(0.1, -0.1, 1), Point(-0.1, -0.1, 1),
                    Point(-0.1, 0.1, 2), Point(0.1, 0.1, 2)]
         surface = PlanarSurface(1, 0, 45, *corners)
-        aae = self.assertAlmostEqual
-        aae(surface.get_joyner_boore_distance(Point(-0.1, 0.04)), 0, delta=0.3)
-        aae(surface.get_joyner_boore_distance(Point(0.1, 0.03)), 0, delta=0.3)
+        sites = Mesh.from_points_list([Point(-0.1, 0.04), Point(0.1, 0.03)])
+        dists = surface.get_joyner_boore_distance(sites)
+        expected_dists = [0] * 2
+        self.assertTrue(numpy.allclose(dists, expected_dists, atol=0.3))
 
     def test_point_outside(self):
         corners = [Point(0.1, -0.1, 1), Point(-0.1, -0.1, 1),
                    Point(-0.1, 0.1, 2), Point(0.1, 0.1, 2)]
         surface = PlanarSurface(1, 0, 45, *corners)
-        aae = self.assertAlmostEqual
-        aae(surface.get_joyner_boore_distance(Point(-0.2, -0.2)),
-            Point(-0.2, -0.2).distance(Point(-0.1, -0.1)), delta=0.2)
-        aae(surface.get_joyner_boore_distance(Point(1, 1, 1)),
-            Point(1, 1).distance(Point(0.1, 0.1)), delta=0.4)
-        aae(surface.get_joyner_boore_distance(Point(4, 5)),
-            Point(4, 5).distance(Point(0.1, 0.1)), delta=0.3)
-        aae(surface.get_joyner_boore_distance(Point(8, 10.4)),
-            Point(8, 10.4).distance(Point(0.1, 0.1)), delta=0.3)
+        sites = Mesh.from_points_list([Point(-0.2, -0.2), Point(1, 1, 1),
+                                       Point(4, 5), Point(8, 10.4),
+                                       Point(0.05, 0.15, 10)])
+        dists = surface.get_joyner_boore_distance(sites)
+        expected_dists = [
+            Point(-0.2, -0.2).distance(Point(-0.1, -0.1)),
+            Point(1, 1).distance(Point(0.1, 0.1)),
+            Point(4, 5).distance(Point(0.1, 0.1)),
+            Point(8, 10.4).distance(Point(0.1, 0.1)),
+            Point(0.05, 0.15).distance(Point(0.05, 0.1))
+        ]
+        self.assertTrue(numpy.allclose(dists, expected_dists, atol=0.4))
 
 
 class PlanarSurfaceGetRXDistanceTestCase(unittest.TestCase):
@@ -253,42 +264,57 @@ class PlanarSurfaceGetRXDistanceTestCase(unittest.TestCase):
 
     def test1_site_on_the_footwall(self):
         surface = self._test1to7surface()
-        self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, 0.05)),
-                               -5.559752615413244, places=3)
+        sites = Mesh.from_points_list([Point(0.05, 0.05), Point(40.0, 0.05)])
+        dists = surface.get_rx_distance(sites)
+        expected_dists = [-5.559752615413244] * 2
+        self.assertTrue(numpy.allclose(dists, expected_dists))
 
     def test2_site_on_the_hanging_wall(self):
         surface = self._test1to7surface()
-        self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, -0.05)),
-                               5.559752615413244, places=3)
+        sites = Mesh.from_points_list([Point(0.05, -0.05), Point(-140, -0.05)])
+        dists = surface.get_rx_distance(sites)
+        expected_dists = [5.559752615413244] * 2
+        self.assertTrue(numpy.allclose(dists, expected_dists))
 
     def test3_site_on_centroid(self):
         surface = self._test1to7surface()
-        self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, 0)),
-                               0, places=3)
+        sites = Mesh.from_points_list([Point(0.05, 0)])
+        self.assertAlmostEqual(surface.get_rx_distance(sites)[0], 0)
 
     def test4_site_along_strike(self):
         surface = self._test1to7surface()
-        self.assertAlmostEqual(surface.get_rx_distance(Point(0.2, 0)),
-                               0, places=3)
+        sites = Mesh.from_points_list([Point(0.2, 0), Point(67.6, 0),
+                                       Point(90.33, 0)])
+        dists = surface.get_rx_distance(sites)
+        expected_dists = [0] * 3
+        self.assertTrue(numpy.allclose(dists, expected_dists))
 
     def test5_site_opposite_to_strike_direction(self):
         surface = self._test1to7surface()
-        self.assertAlmostEqual(surface.get_rx_distance(Point(-0.2, 0)),
-                               0, places=3)
+        sites = Mesh.from_points_list([Point(-0.2, 0), Point(-67.6, 0),
+                                       Point(-90.33, 0)])
+        dists = surface.get_rx_distance(sites)
+        expected_dists = [0] * 3
+        self.assertTrue(numpy.allclose(dists, expected_dists))
 
     def test6_one_degree_distance(self):
         surface = self._test1to7surface()
-        self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, -1)),
-                               111.19505230826488, places=3)
+        sites = Mesh.from_points_list([Point(0.05, -1), Point(20, 1)])
+        dists = surface.get_rx_distance(sites)
+        expected_dists = [111.19505230826488, -111.19505230826488]
+        self.assertTrue(numpy.allclose(dists, expected_dists))
 
     def test7_ten_degrees_distance(self):
         surface = self._test1to7surface()
-        self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, -10)),
-                               1111.9505230826487, places=2)
+        sites = Mesh.from_points_list([Point(0, -10), Point(-15, 10)])
+        dists = surface.get_rx_distance(sites)
+        expected_dists = [1111.9505230826488, -1111.9505230826488]
+        self.assertTrue(numpy.allclose(dists, expected_dists))
 
     def test8_strike_of_45_degrees(self):
         corners = [Point(-0.05, -0.05, 8), Point(0.05, 0.05, 8),
                    Point(0.05, 0.05, 9), Point(-0.05, -0.05, 9)]
         surface = PlanarSurface(1, 45, 60, *corners)
-        self.assertAlmostEqual(surface.get_rx_distance(Point(0.05, 0)),
-                               3.9313415355436705, places=3)
+        sites = Mesh.from_points_list([Point(0.05, 0)])
+        self.assertAlmostEqual(surface.get_rx_distance(sites)[0],
+                               3.9313415355436705, places=4)

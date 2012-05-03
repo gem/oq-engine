@@ -20,7 +20,6 @@ import abc
 
 import numpy
 
-from nhlib.geo.mesh import Mesh
 from nhlib.geo import geodetic
 
 
@@ -37,13 +36,16 @@ class BaseSurface(object):
     def __init__(self):
         self._mesh = None
 
-    def get_min_distance(self, point):
+    def get_min_distance(self, mesh):
         """
-        Compute and return the minimum distance from the surface to ``point``.
-        This distance is sometimes called ``Rrup``.
+        Compute and return the minimum distance from the surface to each point
+        of ``mesh``. This distance is sometimes called ``Rrup``.
 
+        :param mesh:
+            :class:`~nhlib.geo.mesh.Mesh` of points to calculate minimum
+            distance to.
         :returns:
-            Distance in km.
+            A numpy array of distances in km.
 
         Base class implementation calls the :meth:`corresponding
         <nhlib.geo.mesh.Mesh.get_min_distance>` method of the
@@ -53,27 +55,29 @@ class BaseSurface(object):
         of knowledge of a specific surface shape and thus perform
         better.
         """
-        return self.get_mesh().get_min_distance(Mesh.from_points_list([point]))
+        return self.get_mesh().get_min_distance(mesh)
 
-    def get_joyner_boore_distance(self, point):
+    def get_joyner_boore_distance(self, mesh):
         """
         Compute and return Joyner-Boore (also known as ``Rjb``) distance
-        to ``point``.
+        to each point of ``mesh``.
 
+        :param mesh:
+            :class:`~nhlib.geo.mesh.Mesh` of points to calculate Joyner-Boore
+            distance to.
         :returns:
-            The closest distance between the projections of the point
-            and the surface to the earth surface.
+            Numpy array of closest distances between the projections of surface
+            and each point of the ``mesh`` to the earth surface.
 
         Base class calls surface mesh's method
         :meth:`~nhlib.geo.mesh.RectangularMesh.get_joyner_boore_distance`.
         """
-        return self.get_mesh().get_joyner_boore_distance(
-            Mesh.from_points_list([point])
-        )
+        return self.get_mesh().get_joyner_boore_distance(mesh)
 
-    def get_rx_distance(self, point):
+    def get_rx_distance(self, mesh):
         """
-        Compute distance between ``point`` and surface's great circle arc.
+        Compute distance between each point of mesh and surface's great circle
+        arc.
 
         Distance is measured perpendicular to the rupture strike, from
         the surface projection of the updip edge of the rupture, with
@@ -84,13 +88,18 @@ class BaseSurface(object):
         measured perpendicular to the strike. Values on the hanging wall
         are positive, values on the footwall are negative.
 
+        Base class calls :func:`nhlib.geo.geodetic.distance_to_arc`.
+
+        :param mesh:
+            :class:`~nhlib.geo.mesh.Mesh` of points to calculate Rx-distance
+            to.
         :returns:
-            Distance in km.
+            Numpy array of distances in km.
         """
         top_edge_centroid = self._get_top_edge_centroid()
         return geodetic.distance_to_arc(
             top_edge_centroid.longitude, top_edge_centroid.latitude,
-            self.get_strike(), point.longitude, point.latitude
+            self.get_strike(), mesh.lons, mesh.lats
         )
 
     def get_top_edge_depth(self):
