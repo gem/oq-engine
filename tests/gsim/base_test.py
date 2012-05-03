@@ -20,6 +20,7 @@ import numpy
 
 from nhlib import const
 from nhlib.gsim.base import IPE, GSIMContext
+from nhlib.geo.mesh import Mesh
 from nhlib.geo.point import Point
 from nhlib.imt import PGA, PGV
 from nhlib.site import Site
@@ -175,17 +176,23 @@ class MakeContextTestCase(_FakeGSIMTestCase):
                 self.call_counts['get_dip'] += 1
                 return 45.4545
 
-            def get_min_distance(fake_surface, point):
+            def get_min_distance(fake_surface, mesh):
+                self.assertIsInstance(mesh, Mesh)
+                [point] = mesh
                 self.assertEqual(point, self.site_location)
                 fake_surface.call_counts['get_min_distance'] += 1
                 return min_distance
 
-            def get_rx_distance(fake_surface, point):
+            def get_rx_distance(fake_surface, mesh):
+                self.assertIsInstance(mesh, Mesh)
+                [point] = mesh
                 self.assertEqual(point, self.site_location)
                 fake_surface.call_counts['get_rx_distance'] += 1
                 return rx_distance
 
-            def get_joyner_boore_distance(fake_surface, point):
+            def get_joyner_boore_distance(fake_surface, mesh):
+                self.assertIsInstance(mesh, Mesh)
+                [point] = mesh
                 self.assertEqual(point, self.site_location)
                 fake_surface.call_counts['get_joyner_boore_distance'] += 1
                 return jb_distance

@@ -26,6 +26,7 @@ import scipy.stats
 import numpy
 
 from nhlib import const
+from nhlib.geo.mesh import Mesh
 from nhlib import imt as imt_module
 
 
@@ -324,16 +325,16 @@ class GroundShakingIntensityModel(object):
                                      ', '.join(self.REQUIRES_DISTANCES))
                 value = distances[param]
             else:
-                if param == 'rrup':
-                    value = rupture.surface.get_min_distance(site.location)
-                elif param == 'rx':
-                    value = rupture.surface.get_rx_distance(site.location)
-                elif param == 'rjb':
-                    value = rupture.surface.get_joyner_boore_distance(
-                        site.location
-                    )
-                elif param == 'ztor':
+                if param == 'ztor':
                     value = rupture.surface.get_top_edge_depth()
+                else:
+                    mesh = Mesh.from_points_list([site.location])
+                    if param == 'rrup':
+                        value = rupture.surface.get_min_distance(mesh)
+                    elif param == 'rx':
+                        value = rupture.surface.get_rx_distance(mesh)
+                    elif param == 'rjb':
+                        value = rupture.surface.get_joyner_boore_distance(mesh)
             setattr(context, attr, value)
 
         return context
