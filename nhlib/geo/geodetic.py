@@ -195,6 +195,28 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
     return lons, lats, depths
 
 
+def point_at(lon, lat, azimuth, distance):
+    # TODO: document
+    # TODO: unittest
+    lon, lat = numpy.radians(lon), numpy.radians(lat)
+    tc = numpy.radians(360 - azimuth)
+    sin_dists = numpy.sin(distance / EARTH_RADIUS)
+    cos_dists = numpy.cos(distance / EARTH_RADIUS)
+    sin_lat = numpy.sin(lat)
+    cos_lat = numpy.cos(lat)
+
+    sin_lats = sin_lat * cos_dists + cos_lat * sin_dists * numpy.cos(tc)
+    sin_lats = sin_lats.clip(-1., 1.)
+    lats = numpy.degrees(numpy.arcsin(sin_lats))
+
+    dlon = numpy.arctan2(numpy.sin(tc) * sin_dists * cos_lat,
+                         cos_dists - sin_lat * sin_lats)
+    lons = numpy.mod(lon - dlon + numpy.pi, 2 * numpy.pi) - numpy.pi
+    lons = numpy.degrees(lons)
+
+    return lons, lats
+
+
 def distance_to_arc(alon, alat, aazimuth, plons, plats):
     """
     Calculate a closest distance between a great circle arc and a point

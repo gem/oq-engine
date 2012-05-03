@@ -82,11 +82,9 @@ class Point(object):
         :rtype:
             Instance of :class:`Point`
         """
-        lons, lats, depths = geodetic.npoints_towards(
-            self.longitude, self.latitude, self.depth,
-            azimuth, horizontal_distance, vertical_increment, 2
-        )
-        return Point(lons[1], lats[1], depths[1])
+        lon, lat = geodetic.point_at(self.longitude, self.latitude,
+                                     azimuth, horizontal_distance)
+        return Point(lon, lat, self.depth + vertical_increment)
 
     def azimuth(self, point):
         """
