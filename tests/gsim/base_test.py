@@ -156,17 +156,17 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
         self.assertAlmostEqual(poe2, 0.43432352175355504, places=6)
 
 
-class MakeContextTestCase(_FakeGSIMTestCase):
+class MakeContextAndPrepareDistancesTestCase(_FakeGSIMTestCase):
     def setUp(self):
-        super(MakeContextTestCase, self).setUp()
+        super(MakeContextAndPrepareDistancesTestCase, self).setUp()
         self.site_location = Point(10, 20)
         self.site = Site(vs30=456, vs30measured=False,
                          z1pt0=12.1, z2pt5=15.1,
                          location=self.site_location)
-        min_distance = 10
-        rx_distance = 4
-        jb_distance = 6
-        top_edge_depth = 30
+        min_distance = numpy.array([10])
+        rx_distance = numpy.array([4])
+        jb_distance = numpy.array([6])
+        top_edge_depth = numpy.array([30])
         self.distances = {'rrup': 123, 'rx': 456, 'ztor': 789, 'rjb': 779}
 
         class FakeSurface(object):
@@ -326,3 +326,14 @@ class MakeContextTestCase(_FakeGSIMTestCase):
         self.assertEqual(ctx.dist_ztor, 17)
         self.assertEqual(ctx.dist_rrup, 33)
         self.assertEqual(self.fake_surface.call_counts, {})
+
+    def test_prepare_distances(self):
+        self.gsim.REQUIRES_DISTANCES = set(('ztor', 'rrup'))
+        sites_mesh = Mesh.from_points_list([self.site_location])
+        dists = self.gsim.prepare_distances(sites_mesh, self.rupture)
+        self.assertEqual(dists, [{'ztor': 30, 'rrup': 10}])
+
+        self.gsim.REQUIRES_DISTANCES = set(('ztor', 'rrup', 'rx', 'rjb'))
+        sites_mesh = Mesh.from_points_list([self.site_location])
+        dists = self.gsim.prepare_distances(sites_mesh, self.rupture)
+        self.assertEqual(dists, [{'ztor': 30, 'rrup': 10, 'rjb': 6, 'rx': 4}])

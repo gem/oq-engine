@@ -276,7 +276,6 @@ class GroundShakingIntensityModel(object):
             as in ``sites_mesh``). Those dictionaries are intended to be passed
             directly into :meth:`make_context`.
         """
-        # TODO: unittest
         dist = {}
         for param in self.REQUIRES_DISTANCES:
             if param == 'ztor':
