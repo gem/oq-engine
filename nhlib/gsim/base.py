@@ -261,7 +261,21 @@ class GroundShakingIntensityModel(object):
         """
 
     def prepare_distances(self, sites_mesh, rupture):
-        # TODO: document
+        """
+        Calculate all the distances required by this GSIM from a single rupture
+        to many sites.
+
+        :param sites_mesh:
+            An instance of :class:`nhlib.geo.mesh.Mesh` containing sites
+            locations.
+        :param rupture:
+            An instance of :class:`nhlib.source.rupture.Rupture` to calculate
+            distances to.
+        :returns:
+            List of dictionaries, one dictionary per site (in the same order
+            as in ``sites_mesh``). Those dictionaries are intended to be passed
+            directly into :meth:`make_context`.
+        """
         # TODO: unittest
         dist = {}
         for param in self.REQUIRES_DISTANCES:
@@ -295,6 +309,7 @@ class GroundShakingIntensityModel(object):
             If provided should be a dictionary mapping distance types (strings
             like ``'rrup'`` or ``'rjb'``, see :attr:`REQUIRES_DISTANCES`)
             to actual distances between corresponding ``site`` and ``rupture``.
+            Such dictionaries are returned by :meth:`prepare_distances`.
             If this value is not None, it's expected to contain all the
             distance information the GSIM requires, those values are used
             without checks. Otherwise distances will be calculated.
