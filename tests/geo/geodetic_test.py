@@ -197,6 +197,11 @@ class PointAtTest(unittest.TestCase):
         self.assertAlmostEqual(lon, -14.245910669126582, places=6)
         self.assertAlmostEqual(lat, 21.57159463157223, places=6)
 
+    def test_zero_distance(self):
+        lon, lat = geodetic.point_at(1.3, -5.6, -35.0, 0)
+        self.assertAlmostEqual(lon, 1.3)
+        self.assertAlmostEqual(lat, -5.6)
+
 
 class NPointsBetweenTest(unittest.TestCase):
     # values are verified using pyproj's spherical Geod
@@ -217,6 +222,18 @@ class NPointsBetweenTest(unittest.TestCase):
         self.assertTrue(numpy.allclose(lats, expected_lats))
         self.assertTrue(numpy.allclose(depths, expected_depths))
 
+    def test_same_points(self):
+        lon, lat, depth = 1.2, 3.4, 5.6
+        lons, lats, depths = geodetic.npoints_between(
+            lon, lat, depth, lon, lat, depth, npoints=7
+        )
+        expected_lons = [lon] * 7
+        expected_lats = [lat] * 7
+        expected_depths = [depth] * 7
+        self.assertTrue(numpy.allclose(lons, expected_lons))
+        self.assertTrue(numpy.allclose(lats, expected_lats))
+        self.assertTrue(numpy.allclose(depths, expected_depths))
+
 
 class NPointsTowardsTest(unittest.TestCase):
     # values in this test have not been checked by hand
@@ -230,6 +247,18 @@ class NPointsTowardsTest(unittest.TestCase):
         expected_lats = [23.6, 23.43314083, 23.26038177,
                          23.08178673, 22.8974212]
         expected_depths = [55, 45, 35, 25, 15]
+        self.assertTrue(numpy.allclose(lons, expected_lons))
+        self.assertTrue(numpy.allclose(lats, expected_lats))
+        self.assertTrue(numpy.allclose(depths, expected_depths))
+
+    def test_zero_distance(self):
+        lon, lat, depth, azimuth = 12, 34, 56, 78
+        lons, lats, depths = geodetic.npoints_towards(
+            lon, lat, depth, azimuth, hdist=0, vdist=0, npoints=5
+        )
+        expected_lons = [lon] * 5
+        expected_lats = [lat] * 5
+        expected_depths = [depth] * 5
         self.assertTrue(numpy.allclose(lons, expected_lons))
         self.assertTrue(numpy.allclose(lats, expected_lats))
         self.assertTrue(numpy.allclose(depths, expected_depths))
