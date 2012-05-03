@@ -215,7 +215,6 @@ def npoints_between(lon1, lat1, depth1, lon2, lat2, depth2, npoints):
     Finds distance between two reference points and calls
     :func:`npoints_towards`.
     """
-    # TODO: unittest
     hdist = geodetic_distance(lon1, lat1, lon2, lat2)
     vdist = depth2 - depth1
     return npoints_towards(

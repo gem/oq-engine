@@ -196,3 +196,23 @@ class PointAtTest(unittest.TestCase):
         lon, lat = geodetic.point_at(-13.5, 22.4, -140.0, 120.0)
         self.assertAlmostEqual(lon, -14.245910669126582, places=6)
         self.assertAlmostEqual(lat, 21.57159463157223, places=6)
+
+
+class NPointsBetweenTest(unittest.TestCase):
+    # values are verified using pyproj's spherical Geod
+    def test(self):
+        lons, lats, depths = geodetic.npoints_between(
+            lon1=40.77, lat1=38.9, depth1=17.5,
+            lon2=31.14, lat2=46.23, depth2=5.2,
+            npoints=7
+        )
+        expected_lons = [40.77, 39.316149154562076, 37.8070559966114,
+                         36.23892429550906, 34.60779411051164,
+                         32.90956020775102, 31.14]
+        expected_lats = [38.9, 40.174608368560094, 41.43033989236144,
+                         42.66557829138413, 43.87856696738466,
+                         45.067397797471415, 46.23]
+        expected_depths = [17.5, 15.45, 13.4, 11.35, 9.3, 7.25, 5.2]
+        self.assertTrue(numpy.allclose(lons, expected_lons))
+        self.assertTrue(numpy.allclose(lats, expected_lats))
+        self.assertTrue(numpy.allclose(depths, expected_depths))
