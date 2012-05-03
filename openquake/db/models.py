@@ -750,7 +750,6 @@ class OqJobProfile(djm.Model):
     region_grid_spacing = djm.FloatField(null=True)
     sites = djm.MultiPointField(srid=4326, null=True)
 
-    aggregate_loss_curve = djm.NullBooleanField(null=True)  # 1/0 ?
     area_source_discretization = djm.FloatField(null=True)
     area_source_magnitude_scaling_relationship = djm.TextField(null=True)
     compute_mean_hazard_curve = djm.NullBooleanField(null=True)
