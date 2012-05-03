@@ -17,13 +17,11 @@
 Module :mod:`nhlib.geo.surface.base` implements :class:`BaseSurface`.
 """
 import abc
-import math
 
 import numpy
 
 from nhlib.geo.mesh import Mesh
 from nhlib.geo import geodetic
-from nhlib.geo import _utils as geo_utils
 
 
 class BaseSurface(object):
