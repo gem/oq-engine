@@ -36,14 +36,7 @@ class SourceModel(object):
         self.sources = sources
 
     def __iter__(self):
-        return self.sources
-
-    def next(self):
-        """Yields the next seismic source model object and raises
-        :exception:`StopIteration` there are no more sources, in typical
-        generator fashion."""
-        for src in self.sources:
-            yield src
+        return iter(self.sources)
 
 
 class PointSource(object):
