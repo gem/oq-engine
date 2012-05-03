@@ -675,6 +675,7 @@ CREATE TABLE uiapi.oq_job_profile (
              AND (rupture_surface_discretization IS NULL))),
 
     aggregate_loss_curve boolean,
+    asset_correlation VARCHAR,
     area_source_discretization float
         CONSTRAINT area_source_discretization_is_set
         CHECK(
