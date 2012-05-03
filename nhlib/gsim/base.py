@@ -260,6 +260,28 @@ class GroundShakingIntensityModel(object):
         so there is no need to override it in actual GSIM implementations.
         """
 
+    def prepare_distances(self, sites_mesh, rupture):
+        # TODO: document
+        # TODO: unittest
+        dist = {}
+        for param in self.REQUIRES_DISTANCES:
+            if param == 'ztor':
+                value = numpy.empty(len(sites_mesh))
+                value.fill(rupture.surface.get_top_edge_depth())
+                dist['ztor'] = value
+            else:
+                if param == 'rrup':
+                    dist['rrup'] = rupture.surface.get_min_distance(sites_mesh)
+                elif param == 'rx':
+                    dist['rx'] = rupture.surface.get_rx_distance(sites_mesh)
+                elif param == 'rjb':
+                    dist['rjb'] = rupture.surface.get_joyner_boore_distance(
+                        sites_mesh
+                    )
+        keys = dist.keys()
+        return [dict((key, dist[key][site]) for key in keys)
+                for site in xrange(len(sites_mesh))]
+
     def make_context(self, site, rupture, distances=None):
         """
         Create a :meth:`GSIMContext` object for given site and rupture.
