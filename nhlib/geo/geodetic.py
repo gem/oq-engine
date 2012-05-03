@@ -296,7 +296,6 @@ def point_at(lon, lat, azimuth, distance):
 
     Implements the same approach as :func:`npoints_towards`.
     """
-    # TODO: unittest
     # this is a simplified version of npoints_towards().
     # code duplication is justified by performance reasons.
     lon, lat = numpy.radians(lon), numpy.radians(lat)

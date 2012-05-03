@@ -20,6 +20,8 @@ import numpy
 from nhlib.geo import geodetic
 
 
+# these points and tests that use them are from
+# http://williams.best.vwh.net/avform.htm#Example
 LAX = (118 + 24 / 60., 33 + 57 / 60.)
 JFK = (73 + 47 / 60., 40 + 38 / 60.)
 
@@ -129,6 +131,7 @@ class TestDistance(unittest.TestCase):
 
 
 class MinDistanceTest(unittest.TestCase):
+    # test relies on geodetic.distance() to work right
     def _test(self, mlons, mlats, mdepths, slons, slats, sdepths,
               expected_mpoint_indexes):
         mlons, mlats, mdepths = map(numpy.array, (mlons, mlats, mdepths))
@@ -166,6 +169,7 @@ class MinDistanceTest(unittest.TestCase):
 
 
 class DistanceToArcTest(unittest.TestCase):
+    # values in this test have not been checked by hand
     def test_one_point(self):
         dist = geodetic.distance_to_arc(12.3, 44.5, 39.4,
                                         plons=13.4, plats=46.9)
@@ -180,3 +184,15 @@ class DistanceToArcTest(unittest.TestCase):
         dists = geodetic.distance_to_arc(4.0, 17.0, -123.0, plons, plats)
         expected_dists = [347.61490787, -176.03785187]
         self.assertTrue(numpy.allclose(dists, expected_dists))
+
+
+class PointAtTest(unittest.TestCase):
+    # values are verified using pyproj's spherical Geod
+    def test(self):
+        lon, lat = geodetic.point_at(10.0, 20.0, 30.0, 50.0)
+        self.assertAlmostEqual(lon, 10.239856504796101, places=6)
+        self.assertAlmostEqual(lat, 20.38925590463351, places=6)
+
+        lon, lat = geodetic.point_at(-13.5, 22.4, -140.0, 120.0)
+        self.assertAlmostEqual(lon, -14.245910669126582, places=6)
+        self.assertAlmostEqual(lat, 21.57159463157223, places=6)
