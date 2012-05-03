@@ -154,7 +154,4 @@ LOSS_MAP = loss_map.tiff
 # name of the loss ratio map file to generate
 LOSS_RATIO_MAP = loss_ratio_map.tiff
 
-# uncomment this if you want to compute the aggregate loss curve
-AGGREGATE_LOSS_CURVE = 1
-
 LREM_STEPS_PER_INTERVAL = 5
