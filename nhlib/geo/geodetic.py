@@ -249,7 +249,6 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
     Implements "completely general but more complicated algorithm" from
     `http://williams.best.vwh.net/avform.htm#LL`_.
     """
-    # TODO: unittest
     assert npoints > 1
     lon, lat = numpy.radians(lon), numpy.radians(lat)
     tc = numpy.radians(360 - azimuth)

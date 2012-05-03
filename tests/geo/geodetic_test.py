@@ -216,3 +216,20 @@ class NPointsBetweenTest(unittest.TestCase):
         self.assertTrue(numpy.allclose(lons, expected_lons))
         self.assertTrue(numpy.allclose(lats, expected_lats))
         self.assertTrue(numpy.allclose(depths, expected_depths))
+
+
+class NPointsTowardsTest(unittest.TestCase):
+    # values in this test have not been checked by hand
+    def test(self):
+        lons, lats, depths = geodetic.npoints_towards(
+            lon=-30.5, lat=23.6, depth=55, azimuth=-100.5,
+            hdist=400, vdist=-40, npoints=5
+        )
+        expected_lons = [-30.5, -31.46375358, -32.42503446,
+                         -33.3837849, -34.33995063]
+        expected_lats = [23.6, 23.43314083, 23.26038177,
+                         23.08178673, 22.8974212]
+        expected_depths = [55, 45, 35, 25, 15]
+        self.assertTrue(numpy.allclose(lons, expected_lons))
+        self.assertTrue(numpy.allclose(lats, expected_lats))
+        self.assertTrue(numpy.allclose(depths, expected_depths))
