@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:gml="http://www.opengis.net/gml"
-           xmlns:nrml="http://openquake.org/xmlns/nrml/0.3"
-           xmlns="http://openquake.org/xmlns/nrml/0.3"
-           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           xmlns:nrml="http://openquake.org/xmlns/nrml/0.4"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
            elementFormDefault="qualified"
            xml:lang="en">
 
@@ -37,7 +37,7 @@
 
     <xs:complexType name="Magnitude">
         <xs:simpleContent>
-            <xs:extension base="NonNegativeDoubleType">
+            <xs:extension base="PositiveDoubleType">
                 <xs:attribute name="type" type="MagnitudeType"/>
             </xs:extension>
         </xs:simpleContent>
@@ -88,7 +88,7 @@
         <xs:simpleContent>
             <xs:extension base="gml:doubleList">
                 <xs:attribute name="minVal" type="xs:double" use="required"/>
-                <xs:attribute name="binSize" type="NonNegativeDoubleType" use="required"/>
+                <xs:attribute name="binSize" type="PositiveDoubleType" use="required"/>
 
                 <!-- NOTE: removed attribute 'binCount', since it's given implicitly throgh the
                     number of values given in the element -->
@@ -120,18 +120,28 @@
     <!-- NOTE: site is the head of a substitution group -->
     <xs:element name="site" type="gml:PointPropertyType"/>
 
-	<xs:simpleType name="NonNegativeDoubleType">
+    <!-- [0.0, inf) -->
+	<xs:simpleType name="PositiveDoubleType">
 		<xs:restriction base="xs:double">
 			<xs:minInclusive value="0.0"/>
 		</xs:restriction>
 	</xs:simpleType>
 	
-	<xs:simpleType name="NonNegativeIntegerType">
+    <!-- (0.0, inf) -->
+    <xs:simpleType name="PositiveNonZeroDoubleType">
+        <xs:restriction base="xs:double">
+            <xs:minExclusive value="0.0" />
+        </xs:restriction>
+    </xs:simpleType>
+
+    <!-- [0, inf) -->
+	<xs:simpleType name="PositiveIntegerType">
 		<xs:restriction base="xs:integer">
 			<xs:minInclusive value="0"/>
 		</xs:restriction>
 	</xs:simpleType>
 
+    <!-- [0.0, 1.0] -->
 	<xs:simpleType name="NormalizedDoubleType">
         <xs:restriction base="xs:double">
             <xs:minInclusive value="0.0"/>
@@ -139,8 +149,8 @@
         </xs:restriction>
     </xs:simpleType>
 	
-	<xs:simpleType name="NonNegativeDoubleList">
-        <xs:list itemType="NonNegativeDoubleType"/>
+	<xs:simpleType name="PositiveDoubleList">
+        <xs:list itemType="PositiveDoubleType"/>
 	</xs:simpleType>
 	
 	<xs:simpleType name="NormalizedDoubleList">

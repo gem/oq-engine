@@ -1,6 +1,6 @@
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.3"
+      xmlns="http://openquake.org/xmlns/nrml/0.4"
       gml:id="n1">
 
     <hazardResult gml:id="hr1">
@@ -17,7 +17,6 @@
             <pointRupture gml:id="pr_1">
 
                 <magnitude type="Mw">6.5</magnitude>
-                <tectonicRegion>Active Shallow Crust</tectonicRegion>
                 <strike>0.0</strike>
                 <dip>90.0</dip>
                 <rake>0.0</rake>
@@ -32,7 +31,6 @@
             <pointRupture gml:id="pr_2">
 
                 <magnitude type="Mw">7.5</magnitude>
-                <tectonicRegion>Active Shallow Crust</tectonicRegion>
                 <strike>0.0</strike>
                 <dip>60.0</dip>
                 <rake>0.0</rake>

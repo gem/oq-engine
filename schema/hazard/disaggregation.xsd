@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:gml="http://www.opengis.net/gml"
-           xmlns="http://openquake.org/xmlns/nrml/0.3"
-           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
            elementFormDefault="qualified"
            xml:lang="en">
 
@@ -57,13 +57,13 @@
         <xs:sequence>
             <xs:element name="disaggregationMatrix" type="DisaggregationMatrixType" maxOccurs="unbounded"/>
         </xs:sequence>
-        <xs:attribute name="groundMotionValue" type="NonNegativeDoubleType" use="required"/>
+        <xs:attribute name="groundMotionValue" type="PositiveDoubleType" use="required"/>
     </xs:complexType>
 
     <!-- For binary disaggregation results.
          Indicates the GMV and a path to the file containing all of the disagg. results for this node. -->
     <xs:complexType name="DisaggregationResultType">
-        <xs:attribute name="groundMotionValue" type="NonNegativeDoubleType" use="required"/>
+        <xs:attribute name="groundMotionValue" type="PositiveDoubleType" use="required"/>
         <xs:attribute name="path" type="xs:string" use="required"/>
     </xs:complexType>
 
@@ -100,7 +100,7 @@
         <xs:attribute name="magnitudeBin" type="gml:doubleList"></xs:attribute>
         <xs:attribute name="distanceBin" type="gml:doubleList"></xs:attribute>
         <xs:attribute name="epsilonBin" type="gml:doubleList"></xs:attribute>
-        <xs:attribute name="tectonicRegionTypeBin" type="TectonicRegion"></xs:attribute>
+        <xs:attribute name="tectonicRegionTypeBin" type="xs:string"></xs:attribute>
     </xs:complexType>
 
 </xs:schema>

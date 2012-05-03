@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:gml="http://www.opengis.net/gml"
-           xmlns="http://openquake.org/xmlns/nrml/0.3"
-           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
            elementFormDefault="qualified"
            xml:lang="en">
 
@@ -30,8 +30,8 @@
                     <xs:element name="strike" type="Strike"/>
                     <xs:element name="dip" type="Dip"/>
                     <xs:element name="rake" type="Rake"/>
-                    <xs:element name="upperSeismogenicDepth" type="NonNegativeDoubleType"/>
-                    <xs:element name="lowerSeismogenicDepth" type="NonNegativeDoubleType"/>
+                    <xs:element name="upperSeismogenicDepth" type="PositiveDoubleType"/>
+                    <xs:element name="lowerSeismogenicDepth" type="PositiveDoubleType"/>
                     <xs:element name="magnitude" type="Magnitude"/>
                     <xs:element name="minMagnitude" type="Magnitude"/>
                     <xs:element name="maxMagnitude" type="Magnitude"/>

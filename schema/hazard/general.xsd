@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:gml="http://www.opengis.net/gml"
-           xmlns="http://openquake.org/xmlns/nrml/0.3"
-           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
            elementFormDefault="qualified"
            xml:lang="en">
 
@@ -14,10 +14,10 @@
              SI unit (seconds) would yield values that are not instructive.
              We use a simple non-negative float here, not the xs:duration type,
              because xs:duration could be hard to match with a database type -->
-        <xs:attribute name="investigationTimeSpan" type="NonNegativeDoubleType"/>
+        <xs:attribute name="investigationTimeSpan" type="PositiveDoubleType"/>
         <xs:attribute name="IDmodel" type="xs:string"/>
-        <xs:attribute name="saPeriod" type="NonNegativeDoubleType"/>
-        <xs:attribute name="saDamping" type="NonNegativeDoubleType"/>
+        <xs:attribute name="saPeriod" type="PositiveDoubleType"/>
+        <xs:attribute name="saDamping" type="PositiveDoubleType"/>
     </xs:complexType>
 
 	<xs:simpleType name="Vs30Method">
@@ -67,11 +67,11 @@
         <xs:attribute name="vs30method" type="Vs30Method"/>
         <xs:attribute name="groundMotionComponent" type="GroundMotionComponent"/>
 
-        <xs:attribute name="period" type="NonNegativeDoubleType"/>
-        <xs:attribute name="damping" type="NonNegativeDoubleType"/>
+        <xs:attribute name="period" type="PositiveDoubleType"/>
+        <xs:attribute name="damping" type="PositiveDoubleType"/>
 
         <xs:attribute name="truncationType" type="TruncationType"/>
-        <xs:attribute name="truncationLevel" type="NonNegativeDoubleType"/>
+        <xs:attribute name="truncationLevel" type="PositiveDoubleType"/>
         <xs:attribute name="stdDevType" type="StdDevType"/>
     </xs:complexType>
 
@@ -95,21 +95,20 @@
 
     <!-- Geometry defintions. Used by rupture and source models. -->
 
-    <xs:element name="simpleFaultGeometry" type="SimpleFaultGeometry" substitutionGroup="gml:_Feature"/>
-    <xs:complexType name="SimpleFaultGeometry">
+    <xs:complexType name="SimpleFaultRuptureGeometry">
         <xs:complexContent>
             <xs:extension base="gml:AbstractFeatureType">
                 <xs:sequence>
                     <xs:element name="faultTrace" type="FaultEdge"/>
                     <xs:element name="dip" type="Dip"/>
-                    <xs:element name="upperSeismogenicDepth" type="NonNegativeDoubleType"/>
-                    <xs:element name="lowerSeismogenicDepth" type="NonNegativeDoubleType"/>
+                    <xs:element name="upperSeismogenicDepth" type="PositiveDoubleType"/>
+                    <xs:element name="lowerSeismogenicDepth" type="PositiveDoubleType"/>
                 </xs:sequence>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
 
-    <xs:complexType name="ComplexFaultGeometry">
+    <xs:complexType name="ComplexFaultRuptureGeometry">
         <xs:complexContent>
             <xs:restriction base="gml:MultiGeometryPropertyType">
                 <xs:sequence>

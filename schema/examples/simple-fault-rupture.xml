@@ -1,10 +1,9 @@
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
-	  xmlns="http://openquake.org/xmlns/nrml/0.3" gml:id="n1">
+	  xmlns="http://openquake.org/xmlns/nrml/0.4" gml:id="n1">
 
 	<simpleFaultRupture gml:id="sfr_1">
 		<magnitude type="Mw">7.65</magnitude>
-		<tectonicRegion>Active Shallow Crust</tectonicRegion>
 		<rake>15.0</rake>
 
 		<simpleFaultGeometry gml:id="sfg_1">

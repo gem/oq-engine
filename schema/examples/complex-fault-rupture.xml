@@ -1,11 +1,10 @@
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
-	  xmlns="http://openquake.org/xmlns/nrml/0.3"
+	  xmlns="http://openquake.org/xmlns/nrml/0.4"
       gml:id="n1">
 
 	<complexFaultRupture gml:id="cfr_1">
 		<magnitude type="Mw">9.0</magnitude>
-		<tectonicRegion>Subduction Interface</tectonicRegion>
 		<rake>0.0</rake>
 
 		<complexFaultGeometry>

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
            xmlns:gml="http://www.opengis.net/gml"
-           xmlns="http://openquake.org/xmlns/nrml/0.3"
-           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           xmlns="http://openquake.org/xmlns/nrml/0.4"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.4"
            elementFormDefault="qualified"
            xml:lang="en">
 
@@ -50,15 +50,15 @@
         <xs:complexContent>
             <xs:extension base="FieldNode">
                 <xs:sequence>
-                    <xs:element name="area" minOccurs="0" maxOccurs="1" type="NonNegativeDoubleType"/>
+                    <xs:element name="area" minOccurs="0" maxOccurs="1" type="PositiveDoubleType"/>
                     <!-- contents cost -->
                     <xs:element name="coco" minOccurs="0" maxOccurs="1" type="AssetValue"/>
                     <!-- insurance deductible -->
-                    <xs:element name="deductible" minOccurs="0" maxOccurs="1" type="NonNegativeDoubleType"/>
+                    <xs:element name="deductible" minOccurs="0" maxOccurs="1" type="PositiveDoubleType"/>
                     <!-- insurance coverage limit -->
-                    <xs:element name="limit" minOccurs="0" maxOccurs="1" type="NonNegativeDoubleType"/>
+                    <xs:element name="limit" minOccurs="0" maxOccurs="1" type="PositiveDoubleType"/>
                     <!-- number of assets, people etc. -->
-                    <xs:element name="number" minOccurs="0" maxOccurs="1" type="NonNegativeDoubleType"/>
+                    <xs:element name="number" minOccurs="0" maxOccurs="1" type="PositiveDoubleType"/>
                     <xs:element name="occupants" minOccurs="0" maxOccurs="unbounded" type="OccupantsType"/>
                     <!-- retrofitting cost -->
                     <xs:element name="reco" minOccurs="0" maxOccurs="1" type="AssetValue"/>
@@ -72,13 +72,13 @@
 
     <xs:complexType name="AssetValue">
         <xs:simpleContent>
-            <xs:extension base="NonNegativeDoubleType"/>
+            <xs:extension base="PositiveDoubleType"/>
         </xs:simpleContent>
     </xs:complexType>
 
     <xs:complexType name="OccupantsType">
         <xs:simpleContent>
-            <xs:extension base="NonNegativeIntegerType">
+            <xs:extension base="PositiveIntegerType">
                 <xs:attribute name="description" type="xs:string" use="required"/>
             </xs:extension>
         </xs:simpleContent>
