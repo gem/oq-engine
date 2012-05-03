@@ -753,6 +753,13 @@ class OqJobProfile(djm.Model):
     aggregate_loss_curve = djm.NullBooleanField(null=True)  # 1/0 ?
     area_source_discretization = djm.FloatField(null=True)
     area_source_magnitude_scaling_relationship = djm.TextField(null=True)
+
+    ASSET_CORRELATION_CHOICES = (
+        (u'perfect', u'Perfect'),
+        (u'uncorrelated', u'Uncorrelated'),
+    )
+    asset_correlation = djm.TextField(null=True,
+                                      choices=ASSET_CORRELATION_CHOICES)
     compute_mean_hazard_curve = djm.NullBooleanField(null=True)
     conditional_loss_poe = FloatArrayField(null=True)
     fault_magnitude_scaling_relationship = djm.TextField(null=True)
