@@ -13,6 +13,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+Module :mod:`nhlib.geo.geodetic` contains functions for geodetic
+transformations, optimized for massive calculations.
+"""
 import numpy
 
 from nhlib.geo._utils import EARTH_RADIUS
@@ -138,7 +142,25 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths):
 
 
 def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):
-    # TODO: document
+    """
+    Find a list of points between two given ones that lie on the same
+    great circle arc and are equally spaced by ``length`` km.
+
+    :param lon1, lat1, depth1:
+        Coordinates of a point to start placing intervals from. The first
+        point in the resulting list has these coordinates.
+    :param lon2, lat2, depth2:
+        Coordinates of the other end of the great circle arc segment
+        to put intervals on. The last resulting point might be closer
+        to the first reference point than the second one or further,
+        since the number of segments is taken as rounded division of
+        length between two reference points and ``length``.
+    :param length:
+        Required distance between two subsequent resulting points, in km.
+    :returns:
+        Tuple of three 1d numpy arrays: longitudes, latitudes and depths
+        of resulting points respectively.
+    """
     # TODO: unittest
     assert length > 0
     hdist = geodetic_distance(lon1, lat1, lon2, lat2)
@@ -155,7 +177,23 @@ def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):
 
 
 def npoints_between(lon1, lat1, depth1, lon2, lat2, depth2, npoints):
-    # TODO: document
+    """
+    Find a list of specified number of points between two given ones that are
+    equally spaced along the great circle arc connecting given points.
+
+    :param lon1, lat1, depth1:
+        Coordinates of a point to start from. The first point in a resulting
+        list has these coordinates.
+    :param lon2, lat2, depth2:
+        Coordinates of a point to finish at. The last point in a resulting
+        list has these coordinates.
+    :param npoints:
+        Integer number of points to return. First and last points count,
+        so if there have to be two intervals, ``npoints`` should be 3.
+    :returns:
+        Tuple of three 1d numpy arrays: longitudes, latitudes and depths
+        of resulting points respectively.
+    """
     # TODO: unittest
     hdist = geodetic_distance(lon1, lat1, lon2, lat2)
     vdist = depth2 - depth1
@@ -166,7 +204,28 @@ def npoints_between(lon1, lat1, depth1, lon2, lat2, depth2, npoints):
 
 
 def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
-    # TODO: document
+    """
+    Find a list of specified number of points starting from a given one
+    along a great circle arc with a given azimuth measured in a given point.
+
+    :param lon, lat, depth:
+        Coordinates of a point to start from. The first point in a resulting
+        list has these coordinates.
+    :param azimuth:
+        A direction representing a great circle arc together with a reference
+        point.
+    :param hdist:
+        Horizontal (geodetic) distance from reference point to the last point
+        of the resulting list, in km.
+    :param vdist:
+        Vertical (depth) distance between reference and the last point, in km.
+    :param npoints:
+        Integer number of points to return. First and last points count,
+        so if there have to be two intervals, ``npoints`` should be 3.
+    :returns:
+        Tuple of three 1d numpy arrays: longitudes, latitudes and depths
+        of resulting points respectively.
+    """
     # TODO: unittest
     assert npoints > 1
     lon, lat = numpy.radians(lon), numpy.radians(lat)
@@ -196,8 +255,24 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
 
 
 def point_at(lon, lat, azimuth, distance):
-    # TODO: document
+    """
+    Perform a forward geodetic transformation: find a point lying at a given
+    distance from a given one on a great circle arc defined by azimuth.
+
+    :param lon, lat:
+        Coordinates of a reference point, in decimal degrees.
+    :param azimuth:
+        An azimuth of a great circle arc of interest measured in a reference
+        point in decimal degrees.
+    :param distance:
+        Distance to target point in km.
+    :returns:
+        Tuple of two float numbers: longitude and latitude of a target point
+        in decimal degrees respectively.
+    """
     # TODO: unittest
+    # this is a simplified version of npoints_towards().
+    # code duplication is justified by performance reasons.
     lon, lat = numpy.radians(lon), numpy.radians(lat)
     tc = numpy.radians(360 - azimuth)
     sin_dists = numpy.sin(distance / EARTH_RADIUS)
