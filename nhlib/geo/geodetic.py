@@ -179,7 +179,6 @@ def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):
     Rounds the distance between two reference points with respect
     to ``length`` and calls :func:`npoints_towards`.
     """
-    # TODO: unittest
     assert length > 0
     hdist = geodetic_distance(lon1, lat1, lon2, lat2)
     vdist = depth2 - depth1

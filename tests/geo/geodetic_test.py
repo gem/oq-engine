@@ -233,3 +233,44 @@ class NPointsTowardsTest(unittest.TestCase):
         self.assertTrue(numpy.allclose(lons, expected_lons))
         self.assertTrue(numpy.allclose(lats, expected_lats))
         self.assertTrue(numpy.allclose(depths, expected_depths))
+
+
+class IntervalsBetweenTest(unittest.TestCase):
+    # values in this test have not been checked by hand
+    def test_round_down(self):
+        lons, lats, depths = geodetic.intervals_between(
+            lon1=10, lat1=-4, depth1=100,
+            lon2=12, lat2=4, depth2=60,
+            length=380
+        )
+        expected_lons = [10., 10.82836972, 11.65558943]
+        expected_lats = [-4, -0.68763949, 2.62486454]
+        expected_depths = [100, 83.43802828, 66.87605655]
+        self.assertTrue(numpy.allclose(lons, expected_lons))
+        self.assertTrue(numpy.allclose(lats, expected_lats))
+        self.assertTrue(numpy.allclose(depths, expected_depths))
+
+    def test_round_up(self):
+        lons, lats, depths = geodetic.intervals_between(
+            lon1=10, lat1=-4, depth1=100,
+            lon2=12, lat2=4, depth2=60,
+            length=350
+        )
+        expected_lons = [10., 10.76308634, 11.52482625, 12.28955192]
+        expected_lats = [-4, -0.94915589, 2.10185625, 5.15249576]
+        expected_depths = [100, 84.74555236, 69.49110472, 54.23665708]
+        self.assertTrue(numpy.allclose(lons, expected_lons))
+        self.assertTrue(numpy.allclose(lats, expected_lats))
+        self.assertTrue(numpy.allclose(depths, expected_depths))
+
+    def test_zero_intervals(self):
+        lons, lats, depths = geodetic.intervals_between(
+            lon1=10, lat1=1, depth1=100, lon2=10.04, lat2=1.5, depth2=90,
+            length=140
+        )
+        expected_lons = [10]
+        expected_lats = [1]
+        expected_depths = [100]
+        self.assertTrue(numpy.allclose(lons, expected_lons))
+        self.assertTrue(numpy.allclose(lats, expected_lats))
+        self.assertTrue(numpy.allclose(depths, expected_depths))
