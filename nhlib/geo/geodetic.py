@@ -31,6 +31,8 @@ def geodetic_distance(lons1, lats1, lons2, lats2):
     float numbers or numpy arrays, in which case the should "broadcast
     together".
 
+    Implements `http://williams.best.vwh.net/avform.htm#Dist`_.
+
     :returns:
         Distance in km, floating point scalar or numpy array of such.
     """
@@ -53,6 +55,9 @@ def azimuth(lons1, lats1, lons2, lats2):
     Calculate the azimuth between two points or two collections of points.
 
     Parameters are the same as for :func:`geodetic_distance`.
+
+    Implements an "alternative formula" from
+    `http://williams.best.vwh.net/avform.htm#Crs`_.
 
     :returns:
         Azimuth as an angle between direction to north from first point and
@@ -78,6 +83,10 @@ def distance(lons1, lats1, depths1, lons2, lats2, depths2):
     Calculate a distance between two points (or collections of points)
     considering points' depth.
 
+    Calls :func:`geodetic_distance`, finds the "vertical" distance between
+    points by subtracting one depth from another and combine both using
+    Pythagoras theorem.
+
     :returns:
         Distance in km, a square root of sum of squares of :func:`geodetic
         <geodetic_distance>` distance and vertical distance, which is just
@@ -96,6 +105,10 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths):
     of points for each point in another collection. Both collection can be
     of any shape, although it doesn't make sense to use scalars for the first
     one.
+
+    Implements the same formula as in :func:`geodetic_distance` for distance
+    along great circle arc and the same approach as in :func:`distance`
+    for combining it with depth distance.
 
     :param mlons, mlats, mdepths:
         Numpy arrays of the same shape representing a first collection
@@ -125,6 +138,7 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths):
     cos_slats = numpy.cos(slats)
     distance = numpy.array([
         numpy.sqrt(numpy.min(
+            # next five lines are the same as in geodetic_distance()
             (numpy.arcsin(numpy.sqrt(
                 numpy.sin((mlats - slats[i]) / 2.0) ** 2.0
                 + cos_mlats * cos_slats[i]
@@ -135,6 +149,7 @@ def min_distance(mlons, mlats, mdepths, slons, slats, sdepths):
         for i in xrange(len(slats))
     ])
     if not orig_shape:
+        # original target point was a scalar, so return scalar as well
         [distance] = distance
         return distance
     else:
@@ -160,6 +175,9 @@ def intervals_between(lon1, lat1, depth1, lon2, lat2, depth2, length):
     :returns:
         Tuple of three 1d numpy arrays: longitudes, latitudes and depths
         of resulting points respectively.
+
+    Rounds the distance between two reference points with respect
+    to ``length`` and calls :func:`npoints_towards`.
     """
     # TODO: unittest
     assert length > 0
@@ -193,6 +211,9 @@ def npoints_between(lon1, lat1, depth1, lon2, lat2, depth2, npoints):
     :returns:
         Tuple of three 1d numpy arrays: longitudes, latitudes and depths
         of resulting points respectively.
+
+    Finds distance between two reference points and calls
+    :func:`npoints_towards`.
     """
     # TODO: unittest
     hdist = geodetic_distance(lon1, lat1, lon2, lat2)
@@ -225,6 +246,9 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
     :returns:
         Tuple of three 1d numpy arrays: longitudes, latitudes and depths
         of resulting points respectively.
+
+    Implements "completely general but more complicated algorithm" from
+    `http://williams.best.vwh.net/avform.htm#LL`_.
     """
     # TODO: unittest
     assert npoints > 1
@@ -269,6 +293,8 @@ def point_at(lon, lat, azimuth, distance):
     :returns:
         Tuple of two float numbers: longitude and latitude of a target point
         in decimal degrees respectively.
+
+    Implements the same approach as :func:`npoints_towards`.
     """
     # TODO: unittest
     # this is a simplified version of npoints_towards().
@@ -309,6 +335,9 @@ def distance_to_arc(alon, alat, aazimuth, plons, plats):
         Distance in km, a scalar value or numpy array depending on ``plons``
         and ``plats``. A distance is negative if the target point lies on the
         right hand side of the arc.
+
+    Solves a spherical triangle formed by reference point, target point and
+    a projection of target point to a reference great circle arc.
     """
     # TODO: unittest
     azimuth_to_target = azimuth(alon, alat, plons, plats)
