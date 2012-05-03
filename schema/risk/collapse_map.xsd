@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.3"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:import namespace="http://www.opengis.net/gml" schemaLocation="../gml/gmlsf.xsd"/>
+
+    <xs:element name="collapseMap" type="CollapseMap"/>
+    <xs:complexType name="CollapseMap">
+        <xs:sequence>
+            <xs:element ref="CMNode" minOccurs="1" maxOccurs="unbounded"/>
+        </xs:sequence>
+        <xs:attribute name="endBranchLabel" type="xs:string"/>
+    </xs:complexType>
+
+    <xs:element name="CMNode" type="CMNodeType" substitutionGroup="fieldNode"/>
+    <xs:complexType name="CMNodeType">
+        <xs:complexContent>
+            <xs:extension base="FieldNode">
+                <xs:sequence minOccurs="1" maxOccurs="unbounded">
+                    <xs:element name="cf" type="CMCollapseType"/>
+                </xs:sequence>
+            </xs:extension>
+        </xs:complexContent>
+    </xs:complexType>
+
+    <xs:complexType name="CMCollapseType">
+        <xs:sequence>
+            <xs:element name="mean" type="NonNegativeDoubleType"/>
+            <xs:element name="stdDev" type="NonNegativeDoubleType"/>
+        </xs:sequence>
+        <xs:attribute name="assetRef" type="xs:ID" use="required"/>
+    </xs:complexType>
+
+</xs:schema>
