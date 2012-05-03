@@ -16,8 +16,11 @@
 """
 Module :mod:`nhlib.geo.surface.planar` contains :class:`PlanarSurface`.
 """
+import numpy
+
 from nhlib.geo.surface.base import BaseSurface
 from nhlib.geo.mesh import RectangularMesh
+from nhlib.geo import geodetic
 from nhlib.geo.nodalplane import NodalPlane
 
 
@@ -101,15 +104,31 @@ class PlanarSurface(BaseSurface):
         """
         See :meth:`nhlib.surface.base.BaseSurface._create_mesh`.
         """
-        mesh = []
-        l_line = self.top_left.equally_spaced_points(self.bottom_left,
-                                                     self.mesh_spacing)
-        r_line = self.top_right.equally_spaced_points(self.bottom_right,
-                                                      self.mesh_spacing)
-        for i, left in enumerate(l_line):
-            right = r_line[i]
-            mesh.append(left.equally_spaced_points(right, self.mesh_spacing))
-        return RectangularMesh.from_points_list(mesh)
+        llons, llats, ldepths = geodetic.intervals_between(
+            self.top_left.longitude, self.top_left.latitude,
+            self.top_left.depth,
+            self.bottom_left.longitude, self.bottom_left.latitude,
+            self.bottom_left.depth,
+            self.mesh_spacing
+        )
+        rlons, rlats, rdepths = geodetic.intervals_between(
+            self.top_right.longitude, self.top_right.latitude,
+            self.top_right.depth,
+            self.bottom_right.longitude, self.bottom_right.latitude,
+            self.bottom_right.depth,
+            self.mesh_spacing
+        )
+        mlons, mlats, mdepths = [], [], []
+        for i in xrange(len(llons)):
+            lons, lats, depths = geodetic.intervals_between(
+                llons[i], llats[i], ldepths[i], rlons[i], rlats[i], rdepths[i],
+                self.mesh_spacing
+            )
+            mlons.append(lons)
+            mlats.append(lats)
+            mdepths.append(depths)
+        return RectangularMesh(numpy.array(mlons), numpy.array(mlats),
+                               numpy.array(mdepths))
 
     def get_strike(self):
         """
