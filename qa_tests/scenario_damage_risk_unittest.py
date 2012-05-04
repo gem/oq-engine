@@ -41,48 +41,48 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
 
         ds = self._ds("a1", "no_damage")
 
-        self._close_to(1083.2878086376, float(ds.get("mean")))
-        self._close_to(926.8114705410, float(ds.get("stddev")))
+        self._close_to(1562.6067550208, float(ds.get("mean")))
+        self._close_to(968.9350257674, float(ds.get("stddev")))
 
         ds = self._ds("a1", "LS1")
 
-        self._close_to(1193.2879148011, float(ds.get("mean")))
-        self._close_to(471.4571312182, float(ds.get("stddev")))
+        self._close_to(1108.0189275488, float(ds.get("mean")))
+        self._close_to(652.7358505746, float(ds.get("stddev")))
 
         ds = self._ds("a1", "LS2")
 
-        self._close_to(723.4242765613, float(ds.get("mean")))
-        self._close_to(755.9750053225, float(ds.get("stddev")))
+        self._close_to(329.3743174305, float(ds.get("mean")))
+        self._close_to(347.3929450270, float(ds.get("stddev")))
 
         ds = self._ds("a2", "no_damage")
 
-        self._close_to(42.3377447524, float(ds.get("mean")))
-        self._close_to(70.0892678237, float(ds.get("stddev")))
+        self._close_to(56.7201291212, float(ds.get("mean")))
+        self._close_to(117.7802813522, float(ds.get("stddev")))
 
         ds = self._ds("a2", "LS1")
 
-        self._close_to(730.4180238456, float(ds.get("mean")))
-        self._close_to(494.7514529615, float(ds.get("stddev")))
+        self._close_to(673.1047565606, float(ds.get("mean")))
+        self._close_to(485.2023172324, float(ds.get("stddev")))
 
         ds = self._ds("a2", "LS2")
 
-        self._close_to(1227.2442314019, float(ds.get("mean")))
-        self._close_to(549.4191085089, float(ds.get("stddev")))
+        self._close_to(1270.1751143182, float(ds.get("mean")))
+        self._close_to(575.8724057319, float(ds.get("stddev")))
 
         ds = self._ds("a3", "no_damage")
 
-        self._close_to(264.2663623864, float(ds.get("mean")))
-        self._close_to(228.8391071035, float(ds.get("stddev")))
+        self._close_to(417.3296948271, float(ds.get("mean")))
+        self._close_to(304.4769498434, float(ds.get("stddev")))
 
         ds = self._ds("a3", "LS1")
 
-        self._close_to(451.0114061630, float(ds.get("mean")))
-        self._close_to(140.2229465594, float(ds.get("stddev")))
+        self._close_to(387.2084383654, float(ds.get("mean")))
+        self._close_to(181.1415598664, float(ds.get("stddev")))
 
         ds = self._ds("a3", "LS2")
 
-        self._close_to(284.7222314506, float(ds.get("mean")))
-        self._close_to(248.9585500745, float(ds.get("stddev")))
+        self._close_to(195.4618668074, float(ds.get("mean")))
+        self._close_to(253.91309010185, float(ds.get("stddev")))
 
     def test_dda_dsc(self):
         cfg = helpers.demo_file("scenario_damage_risk/config_discrete.gem")
