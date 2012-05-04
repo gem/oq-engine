@@ -55,7 +55,7 @@ class _FakeGSIMTestCase(unittest.TestCase):
 
     def _get_poes(self, **kwargs):
         default_kwargs = dict(
-            ctx=GSIMContext(),
+            ctxs=[GSIMContext()],
             imts={self.DEFAULT_IMT(): [1.0, 2.0, 3.0]},
             component_type=self.DEFAULT_COMPONENT,
             truncation_level=1.0
@@ -126,7 +126,7 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
         self.gsim.get_mean_and_stddevs = get_mean_and_stddevs
         imt = self.DEFAULT_IMT()
         imts = {imt: [0, 1, 2, 1.1, 1.05]}
-        poes = self._get_poes(imts=imts, truncation_level=0)[imt]
+        [poes] = self._get_poes(imts=imts, truncation_level=0)[imt]
         self.assertIsInstance(poes, numpy.ndarray)
         expected_poes = [1, 1, 0, 1, 1]
         self.assertEqual(list(poes), expected_poes)
@@ -134,7 +134,7 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
         self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
             const.StdDev.TOTAL
         )
-        poes = self._get_poes(imts=imts, truncation_level=0)[imt]
+        [poes] = self._get_poes(imts=imts, truncation_level=0)[imt]
         self.assertEqual(list(poes), expected_poes)
 
     def test_truncated(self):
@@ -150,24 +150,52 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
         poes = self._get_poes(imts={self.DEFAULT_IMT(): imls},
                               truncation_level=2.0)[self.DEFAULT_IMT()]
         self.assertIsInstance(poes, numpy.ndarray)
-        poe1, poe2, poe3 = poes
+        [[poe1, poe2, poe3]] = poes
         self.assertEqual(poe1, 1)
         self.assertEqual(poe3, 0)
         self.assertAlmostEqual(poe2, 0.43432352175355504, places=6)
 
+    def test_several_contexts(self):
+        self.gsim_class.DEFINED_FOR_STANDARD_DEVIATION_TYPES.add(
+            const.StdDev.TOTAL
+        )
+        mean_stddev = [3, 4]
+        def get_mean_and_stddevs(ctx, imt, stddev_types, component_type):
+            mean, stddev = mean_stddev
+            mean_stddev[0] += 1
+            mean_stddev[1] += 2
+            return mean, [stddev]
+        self.gsim.get_mean_and_stddevs = get_mean_and_stddevs
+        imls = [2, 3, 4]
+        ctxs = [GSIMContext(), GSIMContext()]
+        poes = self._get_poes(imts={self.DEFAULT_IMT(): imls},
+                              truncation_level=2.0,
+                              ctxs=ctxs)[self.DEFAULT_IMT()]
+        self.assertIsInstance(poes, numpy.ndarray)
+        [[poe11, poe12, poe13], [poe21, poe22, poe23]] = poes
+        self.assertAlmostEqual(poe11, 0.6034116)
+        self.assertAlmostEqual(poe12, 0.5)
+        self.assertAlmostEqual(poe13, 0.3965884)
+        self.assertAlmostEqual(poe21, 0.6367823)
+        self.assertAlmostEqual(poe22, 0.5693388)
+        self.assertAlmostEqual(poe23, 0.5)
 
-class MakeContextAndPrepareDistancesTestCase(_FakeGSIMTestCase):
+
+class MakeContextsTestCase(_FakeGSIMTestCase):
     def setUp(self):
-        super(MakeContextAndPrepareDistancesTestCase, self).setUp()
-        self.site_location = Point(10, 20)
-        self.site = Site(vs30=456, vs30measured=False,
-                         z1pt0=12.1, z2pt5=15.1,
-                         location=self.site_location)
-        min_distance = numpy.array([10])
-        rx_distance = numpy.array([4])
-        jb_distance = numpy.array([6])
-        top_edge_depth = numpy.array([30])
-        self.distances = {'rrup': 123, 'rx': 456, 'ztor': 789, 'rjb': 779}
+        super(MakeContextsTestCase, self).setUp()
+        self.site1_location = Point(10, 20)
+        self.site2_location = Point(-20, -30)
+        self.site1 = Site(vs30=456, vs30measured=False,
+                          z1pt0=12.1, z2pt5=15.1,
+                          location=self.site1_location)
+        self.site2 = Site(vs30=1456, vs30measured=True,
+                          z1pt0=112.1, z2pt5=115.1,
+                          location=self.site2_location)
+        min_distance = numpy.array([10, 11])
+        rx_distance = numpy.array([4, 5])
+        jb_distance = numpy.array([6, 7])
+        top_edge_depth = numpy.array([30, 30])
 
         class FakeSurface(object):
             call_counts = collections.Counter()
@@ -178,22 +206,25 @@ class MakeContextAndPrepareDistancesTestCase(_FakeGSIMTestCase):
 
             def get_min_distance(fake_surface, mesh):
                 self.assertIsInstance(mesh, Mesh)
-                [point] = mesh
-                self.assertEqual(point, self.site_location)
+                [point1, point2] = mesh
+                self.assertEqual(point1, self.site1_location)
+                self.assertEqual(point2, self.site2_location)
                 fake_surface.call_counts['get_min_distance'] += 1
                 return min_distance
 
             def get_rx_distance(fake_surface, mesh):
                 self.assertIsInstance(mesh, Mesh)
-                [point] = mesh
-                self.assertEqual(point, self.site_location)
+                [point1, point2] = mesh
+                self.assertEqual(point1, self.site1_location)
+                self.assertEqual(point2, self.site2_location)
                 fake_surface.call_counts['get_rx_distance'] += 1
                 return rx_distance
 
             def get_joyner_boore_distance(fake_surface, mesh):
                 self.assertIsInstance(mesh, Mesh)
-                [point] = mesh
-                self.assertEqual(point, self.site_location)
+                [point1, point2] = mesh
+                self.assertEqual(point1, self.site1_location)
+                self.assertEqual(point2, self.site2_location)
                 fake_surface.call_counts['get_joyner_boore_distance'] += 1
                 return jb_distance
 
@@ -215,40 +246,22 @@ class MakeContextAndPrepareDistancesTestCase(_FakeGSIMTestCase):
     def test_unknown_site_param_error(self):
         self.gsim_class.REQUIRES_SITE_PARAMETERS.add('unknown!')
         err = "FakeGSIM requires unknown site parameter 'unknown!'"
-        self._assert_value_error(self.gsim.make_context, err,
-                                 site=self.site, rupture=self.rupture)
-        self._assert_value_error(self.gsim.make_context, err,
-                                 site=self.site, rupture=self.rupture,
-                                 distances=self.distances)
+        self._assert_value_error(self.gsim.make_contexts, err,
+                                 sites=[self.site1], rupture=self.rupture)
 
     def test_unknown_rupture_param_error(self):
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS.add('stuff')
         err = "FakeGSIM requires unknown rupture parameter 'stuff'"
-        self._assert_value_error(self.gsim.make_context, err,
-                                 site=self.site, rupture=self.rupture)
-        self._assert_value_error(self.gsim.make_context, err,
-                                 site=self.site, rupture=self.rupture,
-                                 distances=self.distances)
+        self._assert_value_error(self.gsim.make_contexts, err,
+                                 sites=[self.site1], rupture=self.rupture)
 
     def test_unknown_distance_error(self):
         self.gsim_class.REQUIRES_DISTANCES.add('jump height')
         err = "FakeGSIM requires unknown distance measure 'jump height'"
-        self._assert_value_error(self.gsim.make_context, err,
-                                 site=self.site, rupture=self.rupture)
-        self._assert_value_error(self.gsim.make_context, err,
-                                 site=self.site, rupture=self.rupture,
-                                 distances=self.distances)
+        self._assert_value_error(self.gsim.make_contexts, err,
+                                 sites=[self.site1], rupture=self.rupture)
 
-    def test_precalc_distance_is_missing_error(self):
-        self.gsim_class.REQUIRES_DISTANCES |= set(('rjb', 'ztor'))
-        distances = {'rjb': 444}
-        err = "'distances' dict should include all the required distance " \
-              "measures: rjb, ztor"
-        self._assert_value_error(self.gsim.make_context, err,
-                                 site=self.site, rupture=self.rupture,
-                                 distances=distances)
-
-    def test_all_values_no_precalc_distances(self):
+    def test_all_values(self):
         self.gsim_class.REQUIRES_DISTANCES = set('rjb ztor rx rrup'.split())
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set(
             'mag rake trt dip'.split()
@@ -256,51 +269,45 @@ class MakeContextAndPrepareDistancesTestCase(_FakeGSIMTestCase):
         self.gsim_class.REQUIRES_SITE_PARAMETERS = set(
             'vs30 vs30measured z1pt0 z2pt5'.split()
         )
-        ctx = self.gsim.make_context(self.site, self.rupture)
-        self.assertIsInstance(ctx, GSIMContext)
-        self.assertEqual(ctx.rup_mag, 123.45)
-        self.assertEqual(ctx.rup_rake, 123.56)
-        self.assertEqual(ctx.rup_trt, const.TRT.VOLCANIC)
-        self.assertEqual(ctx.rup_dip, 45.4545)
-        self.assertEqual(ctx.site_vs30, 456)
-        self.assertEqual(ctx.site_vs30measured, False)
-        self.assertEqual(ctx.site_z1pt0, 12.1)
-        self.assertEqual(ctx.site_z2pt5, 15.1)
-        self.assertEqual(ctx.dist_rjb, 6)
-        self.assertEqual(ctx.dist_rx, 4)
-        self.assertEqual(ctx.dist_rrup, 10)
-        self.assertEqual(ctx.dist_ztor, 30)
+        ctx1, ctx2 = self.gsim.make_contexts([self.site1, self.site2],
+                                             self.rupture)
+        self.assertIsInstance(ctx1, GSIMContext)
+        self.assertEqual(ctx1.rup_mag, 123.45)
+        self.assertEqual(ctx1.rup_rake, 123.56)
+        self.assertEqual(ctx1.rup_trt, const.TRT.VOLCANIC)
+        self.assertEqual(ctx1.rup_dip, 45.4545)
+        self.assertEqual(ctx1.site_vs30, 456)
+        self.assertEqual(ctx1.site_vs30measured, False)
+        self.assertEqual(ctx1.site_z1pt0, 12.1)
+        self.assertEqual(ctx1.site_z2pt5, 15.1)
+        self.assertEqual(ctx1.dist_rjb, 6)
+        self.assertEqual(ctx1.dist_rx, 4)
+        self.assertEqual(ctx1.dist_rrup, 10)
+        self.assertEqual(ctx1.dist_ztor, 30)
+        self.assertIsInstance(ctx2, GSIMContext)
+        self.assertEqual(ctx2.rup_mag, 123.45)
+        self.assertEqual(ctx2.rup_rake, 123.56)
+        self.assertEqual(ctx2.rup_trt, const.TRT.VOLCANIC)
+        self.assertEqual(ctx2.rup_dip, 45.4545)
+        self.assertEqual(ctx2.site_vs30, 1456)
+        self.assertEqual(ctx2.site_vs30measured, True)
+        self.assertEqual(ctx2.site_z1pt0, 112.1)
+        self.assertEqual(ctx2.site_z2pt5, 115.1)
+        self.assertEqual(ctx2.dist_rjb, 7)
+        self.assertEqual(ctx2.dist_rx, 5)
+        self.assertEqual(ctx2.dist_rrup, 11)
+        self.assertEqual(ctx2.dist_ztor, 30)
         self.assertEqual(self.fake_surface.call_counts,
                          {'get_top_edge_depth': 1, 'get_rx_distance': 1,
                           'get_joyner_boore_distance': 1, 'get_dip': 1,
                           'get_min_distance': 1})
 
-    def test_all_values_with_precalc_distances(self):
-        self.gsim_class.REQUIRES_DISTANCES = set('rjb ztor rx rrup'.split())
-        self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set(
-            'mag rake trt dip'.split()
-        )
-        self.gsim_class.REQUIRES_SITE_PARAMETERS = set(
-            'vs30 vs30measured z1pt0 z2pt5'.split()
-        )
-        ctx = self.gsim.make_context(self.site, self.rupture,
-                                     distances=self.distances)
-        self.assertEqual((ctx.rup_mag, ctx.rup_rake, ctx.rup_trt, ctx.rup_dip),
-                         (123.45, 123.56, const.TRT.VOLCANIC, 45.4545))
-        self.assertEqual((ctx.site_vs30, ctx.site_vs30measured,
-                          ctx.site_z1pt0, ctx.site_z2pt5),
-                         (456, False, 12.1, 15.1))
-        self.assertEqual(ctx.dist_rrup, 123)
-        self.assertEqual(ctx.dist_rx, 456)
-        self.assertEqual(ctx.dist_ztor, 789)
-        self.assertEqual(ctx.dist_rjb, 779)
-        self.assertEqual(self.fake_surface.call_counts, {'get_dip': 1})
-
-    def test_some_values_no_precalc_distances(self):
+    def test_some_values(self):
         self.gsim_class.REQUIRES_DISTANCES = set('rjb rx'.split())
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set('mag rake'.split())
         self.gsim_class.REQUIRES_SITE_PARAMETERS = set('vs30 z1pt0'.split())
-        ctx = self.gsim.make_context(self.site, self.rupture)
+        ctx, ctx2 = self.gsim.make_contexts([self.site1, self.site2],
+                                            self.rupture)
         self.assertEqual((ctx.rup_mag, ctx.rup_rake), (123.45, 123.56))
         self.assertEqual((ctx.site_vs30, ctx.site_z1pt0), (456, 12.1))
         self.assertEqual((ctx.dist_rjb, ctx.dist_rx), (6, 4))
@@ -313,27 +320,3 @@ class MakeContextAndPrepareDistancesTestCase(_FakeGSIMTestCase):
         self.assertEqual(self.fake_surface.call_counts,
                          {'get_rx_distance': 1,
                           'get_joyner_boore_distance': 1})
-
-    def test_some_values_with_precalc_distances(self):
-        self.gsim_class.REQUIRES_DISTANCES = set('ztor rrup'.split())
-        self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set(('trt',))
-        self.gsim_class.REQUIRES_SITE_PARAMETERS = set(('vs30measured',))
-        distances = {'ztor': 17, 'rrup': 33}
-        ctx = self.gsim.make_context(self.site, self.rupture,
-                                     distances=distances)
-        self.assertEqual(ctx.rup_trt, const.TRT.VOLCANIC)
-        self.assertEqual(ctx.site_vs30measured, False)
-        self.assertEqual(ctx.dist_ztor, 17)
-        self.assertEqual(ctx.dist_rrup, 33)
-        self.assertEqual(self.fake_surface.call_counts, {})
-
-    def test_prepare_distances(self):
-        self.gsim.REQUIRES_DISTANCES = set(('ztor', 'rrup'))
-        sites_mesh = Mesh.from_points_list([self.site_location])
-        dists = self.gsim.prepare_distances(sites_mesh, self.rupture)
-        self.assertEqual(dists, [{'ztor': 30, 'rrup': 10}])
-
-        self.gsim.REQUIRES_DISTANCES = set(('ztor', 'rrup', 'rx', 'rjb'))
-        sites_mesh = Mesh.from_points_list([self.site_location])
-        dists = self.gsim.prepare_distances(sites_mesh, self.rupture)
-        self.assertEqual(dists, [{'ztor': 30, 'rrup': 10, 'rjb': 6, 'rx': 4}])
