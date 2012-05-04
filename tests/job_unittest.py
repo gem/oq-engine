@@ -326,7 +326,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         'NUMBER_OF_LOGIC_TREE_SAMPLES': '2',
         'PERIOD': '0.0',
         'DAMPING': '5.0',
-        'AGGREGATE_LOSS_CURVE': '1',
         'INCLUDE_FAULT_SOURCE': 'true',
         'FAULT_RUPTURE_OFFSET': '5.0',
         'FAULT_SURFACE_DISCRETIZATION': '1.0',
@@ -394,7 +393,6 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         'NUMBER_OF_LOGIC_TREE_SAMPLES': '5',
         'PERIOD': '1.0',
         'DAMPING': '5.0',
-        'AGGREGATE_LOSS_CURVE': 'true',
         'NUMBER_OF_SEISMICITY_HISTORIES': '1',
         'INCLUDE_FAULT_SOURCE': 'true',
         'FAULT_RUPTURE_OFFSET': '5.0',
@@ -805,7 +803,8 @@ class RunJobTestCase(unittest.TestCase):
                             field_name='last_update')
 
                         self.assertEqual(1, sv.call_count)
-                        self.assertEqual(((1234, job.id), {}), sv.call_args)
+                        self.assertEqual(((1234, job.id), {'log_file': None}),
+                                         sv.call_args)
             finally:
                 engine._launch_job = before_launch
 

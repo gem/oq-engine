@@ -200,6 +200,36 @@ class DiscreteFragilityModelTestCase(DjangoTestCase, helpers.DbTestCase):
         else:
             self.fail("DatabaseError not raised")
 
+    def test_discrete_fragility_model_with_max_iml(self):
+        # discrete fragility model and max_iml -> exception
+        self.mdl.lss = "a b c".split()
+        self.mdl.imls = [0.1]
+        self.mdl.max_iml = 11.1
+        try:
+            self.mdl.save()
+        except DatabaseError, de:
+            self.assertTrue(
+                "Maximum IML not allowed for discrete fragility model"
+                in de.args[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_discrete_fragility_model_with_min_iml(self):
+        # discrete fragility model and min_iml -> exception
+        self.mdl.lss = "a b c".split()
+        self.mdl.imls = [0.1]
+        self.mdl.min_iml = 11.1
+        try:
+            self.mdl.save()
+        except DatabaseError, de:
+            self.assertTrue(
+                "Minimum IML not allowed for discrete fragility model"
+                in de.args[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
 
 class FfcTestCase(DjangoTestCase, helpers.DbTestCase):
     """Test the continuous fragility function database constraints."""

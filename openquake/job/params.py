@@ -319,7 +319,6 @@ define_param('SUBDUCTION_RUPTURE_FLOATING_TYPE',
              to_db=map_enum)
 
 # Everything else; please maintain alphabetical ordering.
-define_param('AGGREGATE_LOSS_CURVE', 'aggregate_loss_curve', to_job=str2bool)
 define_param('ASSET_LIFE_EXPECTANCY', 'asset_life_expectancy', to_job=float,
              modes=("classical_bcr", "event_based_bcr"))
 define_param('COMPONENT', 'component', to_db=map_enum)
