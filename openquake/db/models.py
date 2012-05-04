@@ -213,6 +213,9 @@ class OqUser(djm.Model):
     data_is_open = djm.BooleanField(default=True)
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
+    def __str__(self):
+        return "%s||%s" % (self.user_name, self.organization.id)
+
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'admin\".\"oq_user'
 
@@ -747,7 +750,6 @@ class OqJobProfile(djm.Model):
     region_grid_spacing = djm.FloatField(null=True)
     sites = djm.MultiPointField(srid=4326, null=True)
 
-    aggregate_loss_curve = djm.NullBooleanField(null=True)  # 1/0 ?
     area_source_discretization = djm.FloatField(null=True)
     area_source_magnitude_scaling_relationship = djm.TextField(null=True)
     compute_mean_hazard_curve = djm.NullBooleanField(null=True)
@@ -1401,6 +1403,11 @@ class FragilityModel(djm.Model):
     imls = FloatArrayField(null=True, help_text="Intensity measure levels")
     imt = djm.TextField(null=True, choices=OqJobProfile.IMT_CHOICES,
                            help_text="Intensity measure type")
+    iml_unit = djm.TextField(null=True, help_text="IML unit of measurement")
+    min_iml = djm.FloatField(
+        null=True, help_text="Minimum IML value, for continuous models only")
+    max_iml = djm.FloatField(
+        null=True, help_text="Maximum IML value, for continuous models only")
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:  # pylint: disable=C0111,W0232

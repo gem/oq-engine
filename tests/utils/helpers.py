@@ -194,7 +194,7 @@ def run_job(config_file, params=None, check_output=False):
         If the return code of the subprocess call is not 0, a
         :exception:`subprocess.CalledProcessError` is raised.
     """
-    args = ["bin/openquake", "--config-file=" + config_file]
+    args = ["bin/openquake", "--force-inputs", "--config-file=" + config_file]
     if not params is None:
         args.extend(params)
     if check_output:
@@ -646,7 +646,8 @@ class DbTestCase(object):
 
     @classmethod
     def setup_classic_job(cls, create_job_path=True, upload_id=None,
-                          inputs=None, force_inputs=False, omit_profile=False):
+                          inputs=None, force_inputs=False, omit_profile=False,
+                          user_name="openquake"):
         """Create a classic job with associated upload and inputs.
 
         :param bool create_job_path: if set the path for the job will be
@@ -658,11 +659,12 @@ class DbTestCase(object):
             parsed and the resulting content written to the database no matter
             what.
         :param bool omit_profile: If `True` no job profile will be created.
+        :param str user_name: The name of the user that is running the job.
         :returns: a :py:class:`db.models.OqJob` instance
         """
         assert upload_id is None  # temporary
 
-        job = engine.prepare_job()
+        job = engine.prepare_job(user_name)
         if not omit_profile:
             oqjp = cls.setup_job_profile(job, force_inputs)
             models.Job2profile(oq_job=job, oq_job_profile=oqjp).save()
