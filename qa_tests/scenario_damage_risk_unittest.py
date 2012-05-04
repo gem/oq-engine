@@ -93,48 +93,48 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
 
         ds = self._ds("a1", "no_damage")
 
-        self._close_to(554.6860951500, float(ds.get("mean")))
-        self._close_to(598.7552048028, float(ds.get("stddev")))
+        self._close_to(875.8107820287, float(ds.get("mean")))
+        self._close_to(757.5401928931, float(ds.get("stddev")))
 
         ds = self._ds("a1", "LS1")
 
-        self._close_to(1399.3356341082, float(ds.get("mean")))
-        self._close_to(349.3604258216, float(ds.get("stddev")))
+        self._close_to(1448.2962869440, float(ds.get("mean")))
+        self._close_to(256.1531925368, float(ds.get("stddev")))
 
         ds = self._ds("a1", "LS2")
 
-        self._close_to(1045.9782707418, float(ds.get("mean")))
-        self._close_to(749.3971884847, float(ds.get("stddev")))
+        self._close_to(675.8929310273, float(ds.get("mean")))
+        self._close_to(556.7659393118, float(ds.get("stddev")))
 
         ds = self._ds("a2", "no_damage")
 
-        self._close_to(354.7536330800, float(ds.get("mean")))
-        self._close_to(257.9890985575, float(ds.get("stddev")))
+        self._close_to(344.9084922789, float(ds.get("mean")))
+        self._close_to(300.6112307894, float(ds.get("stddev")))
 
         ds = self._ds("a2", "LS1")
 
-        self._close_to(779.0404984000, float(ds.get("mean")))
-        self._close_to(153.3343303635, float(ds.get("stddev")))
+        self._close_to(747.6241297573, float(ds.get("mean")))
+        self._close_to(144.6485296163, float(ds.get("stddev")))
 
         ds = self._ds("a2", "LS2")
 
-        self._close_to(866.2058685200, float(ds.get("mean")))
-        self._close_to(398.0973556984, float(ds.get("stddev")))
+        self._close_to(907.4673779638, float(ds.get("mean")))
+        self._close_to(417.3073783656, float(ds.get("stddev")))
 
         ds = self._ds("a3", "no_damage")
 
-        self._close_to(108.3440263950, float(ds.get("mean")))
-        self._close_to(122.0563889256, float(ds.get("stddev")))
+        self._close_to(224.4178071959, float(ds.get("mean")))
+        self._close_to(220.6516140873, float(ds.get("stddev")))
 
         ds = self._ds("a3", "LS1")
 
-        self._close_to(477.5115825656, float(ds.get("mean")))
-        self._close_to(138.8593089805, float(ds.get("stddev")))
+        self._close_to(465.6439615527, float(ds.get("mean")))
+        self._close_to(136.9281761924, float(ds.get("stddev")))
 
         ds = self._ds("a3", "LS2")
 
-        self._close_to(414.1443910394, float(ds.get("mean")))
-        self._close_to(232.3139816472, float(ds.get("stddev")))
+        self._close_to(309.9382312514, float(ds.get("mean")))
+        self._close_to(246.8442491255, float(ds.get("stddev")))
 
     def _ds(self, asset_ref, damage_state):
         job = OqJob.objects.latest("id")
