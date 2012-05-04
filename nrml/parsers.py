@@ -83,6 +83,7 @@ class SourceModelParser(object):
                 parse_fn = self._parse_fn_map.get(element.tag, None)
                 if parse_fn is not None:
                     yield parse_fn(element)
+                    element.clear()
 
     @classmethod
     def _set_common_attrs(cls, model, src_elem):
