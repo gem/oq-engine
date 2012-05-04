@@ -28,7 +28,7 @@ from openquake.db.models import DmgDistPerAsset, DmgDistPerAssetData
 from openquake.kvs.tokens import ground_motion_values_key
 from openquake.calculators.risk.general import Block
 from openquake.calculators.risk.scenario_damage.core import (
-    ScenarioDamageRiskCalculator)
+    ScenarioDamageRiskCalculator, compute_dm)
 
 from tests.utils import helpers
 
@@ -58,7 +58,6 @@ class ScenarioDamageRiskCalculatorTestCase(
         self.job_ctxt = JobContext(params, self.job.id, oq_job=self.job)
 
         self.em = self._store_em()
-        self.fm = self._store_fmodel()
         self._store_gmvs([0.40, 0.30, 0.45, 0.35, 0.40])
 
         self.calculator = ScenarioDamageRiskCalculator(self.job_ctxt)
@@ -68,9 +67,13 @@ class ScenarioDamageRiskCalculatorTestCase(
         ScenarioDamageRiskCalculator.store_fragility_model = lambda self: None
         ScenarioDamageRiskCalculator.partition = lambda self: None
 
-    def test_compute_risk(self):
+    def test_compute_risk_dda_con(self):
+        # test the damage distribution per asset with a continuous
+        # fragility model
+        fm = self._store_con_fmodel()
+
         self.calculator.pre_execute()
-        self.calculator.compute_risk(BLOCK_ID, fmodel=self.fm)
+        self.calculator.compute_risk(BLOCK_ID, fmodel=fm)
 
         [dda] = DmgDistPerAsset.objects.filter(output__oq_job=self.job.id,
                 output__output_type="dmg_dist_per_asset")
@@ -115,10 +118,113 @@ class ScenarioDamageRiskCalculatorTestCase(
         self._close_to(19.24979, data.mean)
         self._close_to(7.78725, data.stddev)
 
+    def test_compute_risk_dda_dsc(self):
+        # test the damage distribution per asset with a discrete
+        # fragility model
+        fm = self._store_dsc_fmodel()
+
+        self.calculator.pre_execute()
+        self.calculator.compute_risk(BLOCK_ID, fmodel=fm)
+
+        [dda] = DmgDistPerAsset.objects.filter(output__oq_job=self.job.id,
+                output__output_type="dmg_dist_per_asset")
+
+        self.assertEquals(["no_damage", "LS1", "LS2"], dda.dmg_states)
+
+        [exposure] = self.em.exposuredata_set.filter(asset_ref="A")
+        [data] = DmgDistPerAssetData.objects.filter(dmg_dist_per_asset=dda,
+                exposure_data=exposure, dmg_state="no_damage")
+
+        self._close_to(68.0, data.mean)
+        self._close_to(8.5513157, data.stddev)
+
+        [data] = DmgDistPerAssetData.objects.filter(dmg_dist_per_asset=dda,
+                exposure_data=exposure, dmg_state="LS1")
+
+        self._close_to(21.0, data.mean)
+        self._close_to(4.2756578, data.stddev)
+
+        [data] = DmgDistPerAssetData.objects.filter(dmg_dist_per_asset=dda,
+                exposure_data=exposure, dmg_state="LS2")
+
+        self._close_to(11.0, data.mean)
+        self._close_to(4.2756578, data.stddev)
+
+        [exposure] = self.em.exposuredata_set.filter(asset_ref="B")
+        [data] = DmgDistPerAssetData.objects.filter(dmg_dist_per_asset=dda,
+                exposure_data=exposure, dmg_state="no_damage")
+
+        self._close_to(30.4, data.mean)
+        self._close_to(3.4, data.stddev)
+
+        [data] = DmgDistPerAssetData.objects.filter(dmg_dist_per_asset=dda,
+                exposure_data=exposure, dmg_state="LS1")
+
+        self._close_to(3.9, data.mean)
+        self._close_to(1.4, data.stddev)
+
+        [data] = DmgDistPerAssetData.objects.filter(dmg_dist_per_asset=dda,
+                exposure_data=exposure, dmg_state="LS2")
+
+        self._close_to(5.7, data.mean)
+        self._close_to(2.1, data.stddev)
+
+    def test_dda_iml_above_range(self):
+        # corner case where we have a ground motion value
+        # (that corresponds to the intensity measure level in the
+        # fragility function) that is higher than the highest
+        # intensity measure level defined in the model (in this
+        # particular case 0.7). Given this condition, to compute
+        # the fractions of buildings we use the highest intensity
+        # measure level defined in the model (0.7 in this case)
+
+        [ism] = models.inputs4job(self.job.id, input_type="fragility")
+
+        fmodel = models.FragilityModel(
+            owner=ism.owner, input=ism, imls=[0.1, 0.3, 0.5, 0.7],
+            imt="mmi", lss=["LS1"], format="discrete")
+
+        fmodel.save()
+
+        func = models.Ffd(
+            fragility_model=fmodel, taxonomy="RC",
+            ls="LS1", poes=[0.05, 0.20, 0.50, 1.00], lsi=1)
+
+        func.save()
+
+        self._close_to(compute_dm([func], 0.7), compute_dm([func], 0.8))
+
+    def test_dda_iml_below_range(self):
+        # corner case where we have a ground motion value
+        # (that corresponds to the intensity measure level in the
+        # fragility function) that is lower than the lowest
+        # intensity measure level defined in the model (in this
+        # particular case 0.1). Given this condition, the
+        # fractions of buildings is 100% no_damage and 0% for the
+        # remaining limit states defined in the model
+
+        [ism] = models.inputs4job(self.job.id, input_type="fragility")
+
+        fmodel = models.FragilityModel(
+            owner=ism.owner, input=ism, imls=[0.1, 0.3, 0.5, 0.7],
+            imt="mmi", lss=["LS1"], format="discrete")
+
+        fmodel.save()
+
+        func = models.Ffd(
+            fragility_model=fmodel, taxonomy="RC",
+            ls="LS1", poes=[0.05, 0.20, 0.50, 1.00], lsi=1)
+
+        func.save()
+
+        self._close_to([1.0, 0.0], compute_dm([func], 0.05))
+
     def test_post_execute_serialization(self):
         # when --output-type=xml is specified, we serialize results
+        fm = self._store_con_fmodel()
+
         self.calculator.pre_execute()
-        self.calculator.compute_risk(BLOCK_ID, fmodel=self.fm)
+        self.calculator.compute_risk(BLOCK_ID, fmodel=fm)
 
         self.job_ctxt.serialize_results_to = ["xml"]
 
@@ -130,8 +236,10 @@ class ScenarioDamageRiskCalculatorTestCase(
 
     def test_post_execute_no_serialization(self):
         # otherwise, just on database (default)
+        fm = self._store_con_fmodel()
+
         self.calculator.pre_execute()
-        self.calculator.compute_risk(BLOCK_ID, fmodel=self.fm)
+        self.calculator.compute_risk(BLOCK_ID, fmodel=fm)
 
         self.calculator.post_execute()
         file_path = self._results_file()
@@ -156,7 +264,7 @@ class ScenarioDamageRiskCalculatorTestCase(
         for gmv in gmvs:
             client.rpush(key, encoder.encode({"mag": gmv}))
 
-    def _store_fmodel(self):
+    def _store_con_fmodel(self):
         [ism] = models.inputs4job(self.job.id, input_type="fragility")
 
         fmodel = models.FragilityModel(
@@ -180,6 +288,33 @@ class ScenarioDamageRiskCalculatorTestCase(
         models.Ffc(
             fragility_model=fmodel, taxonomy="RM",
             ls="LS1", mean="0.25", stddev="0.08", lsi=1).save()
+
+        return fmodel
+
+    def _store_dsc_fmodel(self):
+        [ism] = models.inputs4job(self.job.id, input_type="fragility")
+
+        fmodel = models.FragilityModel(
+            owner=ism.owner, input=ism, imls=[0.1, 0.3, 0.5, 0.7],
+            imt="mmi", lss=["LS1", "LS2"], format="discrete")
+
+        fmodel.save()
+
+        models.Ffd(
+            fragility_model=fmodel, taxonomy="RC",
+            ls="LS2", poes=[0.00, 0.05, 0.20, 0.50], lsi=2).save()
+
+        models.Ffd(
+            fragility_model=fmodel, taxonomy="RC",
+            ls="LS1", poes=[0.05, 0.20, 0.50, 1.00], lsi=1).save()
+
+        models.Ffd(
+            fragility_model=fmodel, taxonomy="RM",
+            ls="LS2", poes=[0.02, 0.07, 0.25, 0.60], lsi=2).save()
+
+        models.Ffd(
+            fragility_model=fmodel, taxonomy="RM",
+            ls="LS1", poes=[0.03, 0.12, 0.42, 0.90], lsi=1).save()
 
         return fmodel
 
