@@ -83,6 +83,13 @@ class SourceModelParser(object):
                 parse_fn = self._parse_fn_map.get(element.tag, None)
                 if parse_fn is not None:
                     yield parse_fn(element)
+                    element.clear()
+                    while element.getprevious() is not None:
+                        # Delete previous sibling elements.
+                        # We need to loop here in case there are comments in
+                        # the input file which are considered siblings to
+                        # source elements.
+                        del element.getparent()[0]
 
     @classmethod
     def _set_common_attrs(cls, model, src_elem):
