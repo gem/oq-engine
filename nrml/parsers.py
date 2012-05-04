@@ -84,6 +84,7 @@ class SourceModelParser(object):
                 if parse_fn is not None:
                     yield parse_fn(element)
                     element.clear()
+                    del element
 
     @classmethod
     def _set_common_attrs(cls, model, src_elem):
