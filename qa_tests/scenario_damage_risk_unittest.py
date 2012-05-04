@@ -32,7 +32,7 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
     QA test for the Scenario Damage Risk calculator.
     """
 
-    def test_scenario_damage_risk(self):
+    def test_dda_con(self):
         cfg = helpers.demo_file("scenario_damage_risk/config.gem")
 
         self._run_job(cfg)
@@ -83,6 +83,58 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
 
         self._close_to(195.4618668074, float(ds.get("mean")))
         self._close_to(253.91309010185, float(ds.get("stddev")))
+
+    def test_dda_dsc(self):
+        cfg = helpers.demo_file("scenario_damage_risk/config_discrete.gem")
+
+        self._run_job(cfg)
+        self._verify_job_succeeded()
+        self._verify_damage_states()
+
+        ds = self._ds("a1", "no_damage")
+
+        self._close_to(875.8107820287, float(ds.get("mean")))
+        self._close_to(757.5401928931, float(ds.get("stddev")))
+
+        ds = self._ds("a1", "LS1")
+
+        self._close_to(1448.2962869440, float(ds.get("mean")))
+        self._close_to(256.1531925368, float(ds.get("stddev")))
+
+        ds = self._ds("a1", "LS2")
+
+        self._close_to(675.8929310273, float(ds.get("mean")))
+        self._close_to(556.7659393118, float(ds.get("stddev")))
+
+        ds = self._ds("a2", "no_damage")
+
+        self._close_to(344.9084922789, float(ds.get("mean")))
+        self._close_to(300.6112307894, float(ds.get("stddev")))
+
+        ds = self._ds("a2", "LS1")
+
+        self._close_to(747.6241297573, float(ds.get("mean")))
+        self._close_to(144.6485296163, float(ds.get("stddev")))
+
+        ds = self._ds("a2", "LS2")
+
+        self._close_to(907.4673779638, float(ds.get("mean")))
+        self._close_to(417.3073783656, float(ds.get("stddev")))
+
+        ds = self._ds("a3", "no_damage")
+
+        self._close_to(224.4178071959, float(ds.get("mean")))
+        self._close_to(220.6516140873, float(ds.get("stddev")))
+
+        ds = self._ds("a3", "LS1")
+
+        self._close_to(465.6439615527, float(ds.get("mean")))
+        self._close_to(136.9281761924, float(ds.get("stddev")))
+
+        ds = self._ds("a3", "LS2")
+
+        self._close_to(309.9382312514, float(ds.get("mean")))
+        self._close_to(246.8442491255, float(ds.get("stddev")))
 
     def _ds(self, asset_ref, damage_state):
         job = OqJob.objects.latest("id")
