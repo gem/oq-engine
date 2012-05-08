@@ -22,6 +22,7 @@ from nhlib.geo.surface.base import BaseSurface
 from nhlib.geo.mesh import RectangularMesh
 from nhlib.geo import geodetic
 from nhlib.geo.nodalplane import NodalPlane
+from nhlib.geo import _utils as geo_utils
 
 
 class PlanarSurface(BaseSurface):
@@ -52,12 +53,9 @@ class PlanarSurface(BaseSurface):
         is not parallel to the bottom edge, if top edge differs in length
         from the bottom one, or if mesh spacing is not positive.
     """
-    #: The maximum angle between top and bottom edges for them
-    #: to be considered parallel, in degrees.
-    ANGLE_TOLERANCE = 0.1
-    #: Maximum difference between lengths of top and bottom edges
+    #: XXX: TBD
     #: in kilometers.
-    LENGTH_TOLERANCE = 1e-3
+    IMPERFECT_RECTANGLE_TOLERANCE = 1e-1
 
     def __init__(self, mesh_spacing, strike, dip,
                  top_left, top_right, bottom_right, bottom_left):
@@ -66,21 +64,6 @@ class PlanarSurface(BaseSurface):
                 and bottom_left.depth == bottom_right.depth):
             raise ValueError("top and bottom edges must be parallel "
                              "to the earth surface")
-
-        top_azimuth = top_left.azimuth(top_right)
-        bottom_azimuth = bottom_left.azimuth(bottom_right)
-        azimuth_diff = abs(top_azimuth - bottom_azimuth)
-        if azimuth_diff > 180:
-            azimuth_diff = abs(360 - azimuth_diff)
-        if not (azimuth_diff < self.ANGLE_TOLERANCE):
-            raise ValueError("top and bottom edges must be parallel")
-
-        top_length = top_left.distance(top_right)
-        bottom_length = bottom_left.distance(bottom_right)
-        if not abs(top_length - bottom_length) < self.LENGTH_TOLERANCE:
-            raise ValueError("top and bottom edges must have "
-                             "the same length")
-        self.length = top_length
 
         if not mesh_spacing > 0:
             raise ValueError("mesh spacing must be positive")
@@ -91,14 +74,48 @@ class PlanarSurface(BaseSurface):
         self.dip = dip
         self.strike = strike
 
-        # we don't need to check if left edge has the same length
-        # as right one because previous checks guarantee that.
-        self.width = top_left.distance(bottom_left)
-
         self.top_left = top_left
         self.top_right = top_right
         self.bottom_right = bottom_right
         self.bottom_left = bottom_left
+
+        lons = [top_left.longitude, top_right.longitude,
+                bottom_left.longitude, bottom_right.longitude]
+        lats = [top_left.latitude, top_right.latitude,
+                bottom_left.latitude, bottom_right.latitude]
+        depths = [top_left.depth, top_right.depth,
+                  bottom_left.depth, bottom_right.depth]
+        tl, tr, bl, br = geo_utils.spherical_to_cartesian(lons, lats, depths)
+
+        # these two parameters define the plane that contains the surface
+        # (in 3d Cartesian space): a normal unit vector,
+        self.normal = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
+        # ... and scalar "d" parameter from the plane equation (uses
+        # an equation (3) from http://mathworld.wolfram.com/Plane.html)
+        self.d = - (self.normal * tl).sum()
+
+        # these two 3d vectors together with a zero point represent surface's
+        # coordinate space (the way to translate 3d Cartesian space with
+        # a center in earth's center to 2d space centered in surface's top
+        # left corner with basis vectors directed to top right and bottom left
+        # corners. see :meth:`_project`.
+        self.uv1 = geo_utils.normalized(tr - tl)
+        self.uv2 = numpy.cross(self.normal, self.uv1)
+        self.zero_zero = tl
+
+        # now we can check surface for validity
+        dists, xx, yy = self._project(lons, lats, depths)
+        width1, width2 = xx[1] - xx[0], xx[3] - xx[2]
+        length1, length2 = yy[1] - yy[0], yy[3] - yy[2]
+        if numpy.max(numpy.abs(dists)) > self.IMPERFECT_RECTANGLE_TOLERANCE \
+                or abs(width1 - width2) > self.IMPERFECT_RECTANGLE_TOLERANCE \
+                or width2 < 0 \
+                or abs(xx[0] - xx[2]) > self.IMPERFECT_RECTANGLE_TOLERANCE \
+                or abs(length1 - length2) > self.IMPERFECT_RECTANGLE_TOLERANCE:
+            raise ValueError("planar surface corners must "
+                             "represent a rectangle")
+        self.width = (width1 + width2) / 2.0
+        self.length = (length1 + length2) / 2.0
 
     def _create_mesh(self):
         """
@@ -141,3 +158,109 @@ class PlanarSurface(BaseSurface):
         Return dip value that was provided to the constructor.
         """
         return self.dip
+
+    def _project(self, lons, lats, depths):
+        """
+        Project points to a surface's plane.
+
+        Parameters are lists or numpy arrays of coordinates of points
+        to project.
+
+        :returns:
+            A tuple of three items: distances between original points
+            and surface's plane in km, "x" and "y" coordinates of points'
+            projections to the plane (in a surface's coordinate space).
+        """
+        points = geo_utils.spherical_to_cartesian(lons, lats, depths)
+
+        # uses method from http://www.9math.com/book/projection-point-plane
+        dists = (self.normal * points).sum(axis=-1) + self.d
+        t0 = - dists
+        projs = points + self.normal * t0.reshape(t0.shape + (1, ))
+
+        # translate projected points' to surface's coordinate space
+        vectors2d = projs - self.zero_zero
+        xx = (vectors2d * self.uv1).sum(axis=-1)
+        yy = (vectors2d * self.uv2).sum(axis=-1)
+        return dists, xx, yy
+
+    def get_min_distance(self, mesh):
+        """
+        See :meth:`superclass' method
+        <nhlib.geo.surface.base.get_min_distance>`.
+
+        This is an optimized version specific to planar surface that doesn't
+        make use of the mesh.
+        """
+        dists, xx, yy = self._project(mesh.lons, mesh.lats, mesh.depths)
+        dists2d = []
+
+        for i in xrange(len(xx)):
+            x = xx[i]
+            y = yy[i]
+            # consider nine possible relative positions of surface rectangle
+            # and a point and collect distances in ``dists2d`` list. note
+            # that some of those distances can be negative, but that doesn't
+            # matter since we use them in Pythagorean formula anyway
+            if y < 0:
+                if x < 0:
+                    # *
+                    #   0---
+                    #   |  |
+                    #   ----
+                    dist = (x ** 2 + y ** 2) ** 0.5
+                elif x > self.width:
+                    #      *
+                    # 0---
+                    # |  |
+                    # ----
+                    dist = ((x - self.width) ** 2 + y ** 2) ** 0.5
+                else:
+                    #  *
+                    # 0---
+                    # |  |
+                    # ----
+                    dist = y
+            elif y > self.width:
+                if x < 0:
+                    #   0---
+                    #   |  |
+                    #   ----
+                    # *
+                    dist = (x ** 2 + (y - self.length) ** 2) ** 0.5
+                elif x > self.width:
+                    # 0---
+                    # |  |
+                    # ----
+                    #      *
+                    dist = ((x - self.width) ** 2
+                            + (y - self.length) ** 2) ** 0.5
+                else:
+                    # 0---
+                    # |  |
+                    # ----
+                    #  *
+                    dist = y - self.length
+            elif x < 0:
+                #   0---
+                # * |  |
+                #   ----
+                dist = x
+            elif x > self.width:
+                # 0---
+                # |  | *
+                # ----
+                dist = x - self.width
+            else:
+                # 0---
+                # | *|
+                # ----
+                dist = 0.0
+
+            dists2d.append(dist)
+
+        # the actual minimum distance between a point and a surface is
+        # a Pythagorean combination of distance between a point and a plane
+        # and distance between point's projection on a surface's plane
+        # and a surface rectangle.
+        return numpy.sqrt(dists ** 2 + numpy.array(dists2d) ** 2)

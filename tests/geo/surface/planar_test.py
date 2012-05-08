@@ -153,7 +153,8 @@ class PlanarSurfaceGetMeshTestCase(utils.SurfaceTestCase):
                 expected_mesh=test_data.TEST_5_MESH)
 
     def test_6(self):
-        corners = [Point(0, 0, 9)] * 4
+        corners = [Point(0, 0, 9), Point(0, 1e-9, 9),
+                   Point(0, 1e-9, 9.0 + 1e-9), Point(0, 0, 9.0 + 1e-9)]
         mesh = [[(0, 0, 9)]]
         self.assert_mesh_is(self._surface(corners),
                 expected_mesh=mesh)
@@ -196,25 +197,25 @@ class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):
         surface = PlanarSurface(1, 2, 3, *test_data.TEST_7_RUPTURE_6_CORNERS)
         sites = Mesh.from_points_list([Point(0, 0)])
         self.assertAlmostEqual(8.01185807319,
-                               surface.get_min_distance(sites)[0])
+                               surface.get_min_distance(sites)[0], places=2)
 
     def test_2(self):
         surface = PlanarSurface(1, 2, 3, *test_data.TEST_7_RUPTURE_6_CORNERS)
         sites = Mesh.from_points_list([Point(-0.25, 0.25)])
         self.assertAlmostEqual(40.1213468,
-                               surface.get_min_distance(sites)[0], places=4)
+                               surface.get_min_distance(sites)[0], places=1)
 
     def test_3(self):
         surface = PlanarSurface(1, 2, 3, *test_data.TEST_7_RUPTURE_2_CORNERS)
         sites = Mesh.from_points_list([Point(0, 0)])
         self.assertAlmostEqual(7.01186304977,
-                               surface.get_min_distance(sites)[0])
+                               surface.get_min_distance(sites)[0], places=2)
 
     def test_4(self):
         surface = PlanarSurface(1, 2, 3, *test_data.TEST_7_RUPTURE_2_CORNERS)
         sites = Mesh.from_points_list([Point(-0.3, 0.4)])
         self.assertAlmostEqual(55.6159556,
-                               surface.get_min_distance(sites)[0], places=4)
+                               surface.get_min_distance(sites)[0], places=1)
 
 
 class PlanarSurfaceGetJoynerBooreDistanceTestCase(unittest.TestCase):
