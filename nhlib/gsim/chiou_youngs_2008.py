@@ -17,7 +17,10 @@
 Module exports :class:`ChiouYoungs2008`.
 """
 from __future__ import division
-from math import log, tanh, cosh, cos, radians, sqrt, exp
+#from math import log, tanh, cosh, cos, radians, sqrt, exp
+
+import numpy
+from numpy import log, tanh, cosh, cos, radians, sqrt, exp, min, max, abs
 
 from nhlib.gsim.base import GMPE, CoeffsTable
 from nhlib import const
@@ -86,7 +89,7 @@ class ChiouYoungs2008(GMPE):
         ln_y_ref = self._get_ln_y_ref(ctx, C)
         # exp1 and exp2 are parts of eq. 10 and eq. 13b,
         # calculate it once for both.
-        exp1 = exp(C['phi3'] * (min(ctx.site_vs30, 1130) - 360))
+        exp1 = exp(C['phi3'] * (numpy.where(ctx.site_vs30 < 1130, ctx.site_vs30, 1130) - 360))
         exp2 = exp(C['phi3'] * (1130 - 360))
 
         mean = self._get_mean(ctx, C, ln_y_ref, exp1, exp2)
@@ -109,16 +112,20 @@ class ChiouYoungs2008(GMPE):
         # to find the exact mean value.
         eta = epsilon = 0
 
+        qwerty = log(ctx.site_vs30 / 1130.0)
+        foo = z1pt0 - C['phi7']
+        bar = z1pt0 - 15.0
+
         ln_y = (
             # first line of eq. 13b
-            ln_y_ref + C['phi1'] * min(log(ctx.site_vs30 / 1130), 0)
+            ln_y_ref + C['phi1'] * numpy.where(qwerty < 0, qwerty, 0)
             # second line
             + C['phi2'] * (exp1 - exp2)
               * log((exp(ln_y_ref) + C['phi4']) / C['phi4'])
             # third line
             + C['phi5']
-              * (1.0 - 1.0 / cosh(C['phi6'] * max(0.0, z1pt0 - C['phi7'])))
-              + C['phi8'] / cosh(0.15 * max(0.0, z1pt0 - 15.0))
+              * (1.0 - 1.0 / cosh(C['phi6'] * numpy.where(foo > 0, foo, 0)))
+              + C['phi8'] / cosh(0.15 * numpy.where(bar > 0, bar, 0))
             # fourth line
             + eta + epsilon
         )
@@ -133,10 +140,8 @@ class ChiouYoungs2008(GMPE):
         """
         # aftershock flag is zero, we consider only main shock.
         AS = 0
-        if ctx.site_vs30measured:
-            Fmeasured, Finferred = 1, 0
-        else:
-            Fmeasured, Finferred = 0, 1
+        Fmeasured = ctx.site_vs30measured
+        Finferred = 1 - ctx.site_vs30measured
 
         # eq. 19 to calculate inter-event standard error
         mag_test = min(max(ctx.rup_mag, 5.0), 7.0) - 5.0
@@ -178,7 +183,7 @@ class ChiouYoungs2008(GMPE):
         # normal faulting flag
         Fnm = 1 if -120 <= ctx.rup_rake <= -60 else 0
         # hanging wall flag
-        Fhw = 1 if ctx.dist_rx >= 0 else 0
+        Fhw = (ctx.dist_rx >= 0).astype(float)
         # aftershock flag. always zero since we only consider main shock
         AS = 0
 

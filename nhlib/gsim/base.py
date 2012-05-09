@@ -231,11 +231,10 @@ class GroundShakingIntensityModel(object):
             for imt, imls in imts.items():
                 imls = self._convert_imls(imls)
                 ret_imt = []
-                for ctx in ctxs:
-                    mean, _ = self.get_mean_and_stddevs(ctx, imt, [],
-                                                        component_type)
-                    ret_imt.append((imls <= mean).astype(float))
-                ret[imt] = numpy.array(ret_imt)
+                mean, _ = self.get_mean_and_stddevs(ctxs, imt, [],
+                                                    component_type)
+                imls = imls.repeat(len(mean)).reshape((len(imls), len(ctxs.site_vs30)))
+                ret[imt] = (imls <= mean).astype(float).transpose()
         else:
             # use real normal distribution
             assert (const.StdDev.TOTAL
@@ -248,11 +247,10 @@ class GroundShakingIntensityModel(object):
             for imt, imls in imts.items():
                 imls = self._convert_imls(imls)
                 ret_imt = []
-                for ctx in ctxs:
-                    mean, [stddev] = self.get_mean_and_stddevs(
-                        ctx, imt, [const.StdDev.TOTAL], component_type
-                    )
-                    ret_imt.append(distribution.sf((imls - mean) / stddev))
+                mean, [stddev] = self.get_mean_and_stddevs(
+                    ctxs, imt, [const.StdDev.TOTAL], component_type
+                )
+                ret_imt.append(distribution.sf((imls - mean) / stddev))
                 ret[imt] = numpy.array(ret_imt)
 
         return ret
@@ -293,7 +291,7 @@ class GroundShakingIntensityModel(object):
 
         clsname = type(self).__name__
 
-        contexts = [GSIMContext() for i in xrange(len(sites))]
+        ctx = GSIMContext()
 
         sites_mesh = Mesh.from_points_list([site.location for site in sites])
         for param in self.REQUIRES_DISTANCES:
@@ -313,16 +311,15 @@ class GroundShakingIntensityModel(object):
                     dist = rupture.surface.get_joyner_boore_distance(
                         sites_mesh
                     )
-            for i, context in enumerate(contexts):
-                setattr(context, attr, dist[i])
+            setattr(ctx, attr, dist)
 
         for param in self.REQUIRES_SITE_PARAMETERS:
             attr = 'site_%s' % param
             if not attr in all_ctx_attrs:
                 raise ValueError('%s requires unknown site parameter %r' %
                                  (clsname, param))
-            for i, site in enumerate(sites):
-                setattr(contexts[i], attr, getattr(site, param))
+            val = numpy.array([getattr(site, param) for site in sites])
+            setattr(ctx, attr, val)
 
         for param in self.REQUIRES_RUPTURE_PARAMETERS:
             attr = 'rup_%s' % param
@@ -337,10 +334,9 @@ class GroundShakingIntensityModel(object):
                 value = rupture.surface.get_dip()
             elif param == 'rake':
                 value = rupture.rake
-            for context in contexts:
-                setattr(context, attr, value)
+            setattr(ctx, attr, value)
 
-        return contexts
+        return ctx
 
 
 class GMPE(GroundShakingIntensityModel):

@@ -17,7 +17,9 @@
 Module exports :class:`SadighEtAl1997`.
 """
 from __future__ import division
-from math import log, exp
+
+import numpy
+from numpy import log, exp
 
 from nhlib.gsim.base import GMPE, CoeffsTable
 from nhlib import const
@@ -88,17 +90,13 @@ class SadighEtAl1997(GMPE):
         # but combines normal and strike-slip into one category. See page 180.
         is_reverse = (45 <= ctx.rup_rake <= 135)
 
-        if ctx.site_vs30 > self.ROCK_VS30:
-            # site is rock
-            fmean = self._get_mean_rock
-            fstddev = self._get_stddev_rock
-        else:
-            # site is deep soil
-            fmean = self._get_mean_deep_soil
-            fstddev = self._get_stddev_deep_soil
-
-        mean = fmean(ctx.rup_mag, ctx.rup_rake, ctx.dist_rrup, is_reverse, imt)
-        stddevs = [fstddev(ctx.rup_mag, imt) for stddev_type in stddev_types]
+        mean_rock = self._get_mean_rock(ctx.rup_mag, ctx.rup_rake, ctx.dist_rrup, is_reverse, imt)
+        stddevs_rock = [self._get_stddev_rock(ctx.rup_mag, imt) for stddev_type in stddev_types]
+        mean_soil = self._get_mean_deep_soil(ctx.rup_mag, ctx.rup_rake, ctx.dist_rrup, is_reverse, imt)
+        stddevs_soil = [self._get_stddev_deep_soil(ctx.rup_mag, imt) for stddev_type in stddev_types]
+        mean = numpy.where(ctx.site_vs30 > self.ROCK_VS30, mean_rock, mean_soil)
+        stddevs = [numpy.where(ctx.site_vs30 > self.ROCK_VS30, stddevs_rock[i], stddevs_soil[i])
+                   for i in xrange(len(stddevs_rock))]
         return mean, stddevs
 
     def _get_mean_deep_soil(self, mag, rake, rrup, is_reverse, imt):
