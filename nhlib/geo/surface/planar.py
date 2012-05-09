@@ -55,7 +55,7 @@ class PlanarSurface(BaseSurface):
     """
     #: XXX: TBD
     #: in kilometers.
-    IMPERFECT_RECTANGLE_TOLERANCE = 1e-1
+    IMPERFECT_RECTANGLE_TOLERANCE = 0.3
 
     def __init__(self, mesh_spacing, strike, dip,
                  top_left, top_right, bottom_right, bottom_left):

@@ -50,21 +50,21 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(0, -1, 2), Point(0, 1, 2)]
         self.assert_failed_creation(1, 0, 90, corners, ValueError,
-            'top and bottom edges must be parallel'
+            'planar surface corners must represent a rectangle'
         )
 
     def test_edges_not_parallel(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(-0.3, 1, 2), Point(0.3, -1, 2)]
         self.assert_failed_creation(1, 0, 90, corners, ValueError,
-            'top and bottom edges must be parallel'
+            'planar surface corners must represent a rectangle'
         )
 
     def test_top_edge_shorter_than_bottom_edge(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(0, 1.2, 2), Point(0, -1.2, 2)]
         self.assert_failed_creation(1, 0, 90, corners, ValueError,
-            'top and bottom edges must have the same length'
+            'planar surface corners must represent a rectangle'
         )
 
     def test_non_positive_mesh_spacing(self):
@@ -101,8 +101,8 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
         self.assertEqual(surface.get_strike(), strike)
         self.assertEqual(surface.dip, dip)
         self.assertEqual(surface.get_dip(), dip)
-        self.assertAlmostEqual(surface.length, tl.distance(tr))
-        self.assertAlmostEqual(surface.width, tl.distance(bl))
+        self.assertAlmostEqual(surface.length, tl.distance(tr), delta=0.2)
+        self.assertAlmostEqual(surface.width, tl.distance(bl), delta=0.2)
 
     def test_edges_not_parallel_within_tolerance(self):
         self.assert_successfull_creation(
@@ -146,7 +146,7 @@ class PlanarSurfaceGetMeshTestCase(utils.SurfaceTestCase):
 
     def test_4(self):
         self.assert_mesh_is(self._surface(test_data.TEST_4_CORNERS),
-                expected_mesh=test_data.TEST_4_MESH)
+                            expected_mesh=test_data.TEST_4_MESH)
 
     def test_5(self):
         self.assert_mesh_is(self._surface(test_data.TEST_5_CORNERS),
@@ -215,7 +215,7 @@ class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):
         surface = PlanarSurface(1, 2, 3, *test_data.TEST_7_RUPTURE_2_CORNERS)
         sites = Mesh.from_points_list([Point(-0.3, 0.4)])
         self.assertAlmostEqual(55.6159556,
-                               surface.get_min_distance(sites)[0], places=1)
+                               surface.get_min_distance(sites)[0], delta=0.6)
 
 
 class PlanarSurfaceGetJoynerBooreDistanceTestCase(unittest.TestCase):
