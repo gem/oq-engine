@@ -53,8 +53,10 @@ class PlanarSurface(BaseSurface):
         is not parallel to the bottom edge, if top edge differs in length
         from the bottom one, or if mesh spacing is not positive.
     """
-    #: XXX: TBD
-    #: in kilometers.
+    #: Maximum difference in surface's rectangle side lengths, maximum offset
+    #: of a bottom right corner from a plane that contains other corners,
+    #: as well as maximum offset of a bottom left corner from a line drawn
+    #: downdip perpendicular to top edge from top left corner, in kilometers.
     IMPERFECT_RECTANGLE_TOLERANCE = 0.3
 
     def __init__(self, mesh_spacing, strike, dip,
