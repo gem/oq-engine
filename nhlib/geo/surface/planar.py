@@ -18,6 +18,7 @@ Module :mod:`nhlib.geo.surface.planar` contains :class:`PlanarSurface`.
 """
 import numpy
 
+from nhlib.geo import Point
 from nhlib.geo.surface.base import BaseSurface
 from nhlib.geo.mesh import RectangularMesh
 from nhlib.geo import geodetic
@@ -81,13 +82,21 @@ class PlanarSurface(BaseSurface):
         self.bottom_right = bottom_right
         self.bottom_left = bottom_left
 
-        lons = [top_left.longitude, top_right.longitude,
-                bottom_left.longitude, bottom_right.longitude]
-        lats = [top_left.latitude, top_right.latitude,
-                bottom_left.latitude, bottom_right.latitude]
-        depths = [top_left.depth, top_right.depth,
-                  bottom_left.depth, bottom_right.depth]
-        tl, tr, bl, br = geo_utils.spherical_to_cartesian(lons, lats, depths)
+        self.corner_lons = numpy.array([
+            top_left.longitude, top_right.longitude,
+            bottom_left.longitude, bottom_right.longitude
+        ])
+        self.corner_lats = numpy.array([
+            top_left.latitude, top_right.latitude,
+            bottom_left.latitude, bottom_right.latitude
+        ])
+        self.corner_depths = numpy.array([
+            top_left.depth, top_right.depth,
+            bottom_left.depth, bottom_right.depth
+        ])
+        tl, tr, bl, br = geo_utils.spherical_to_cartesian(
+            self.corner_lons, self.corner_lats, self.corner_depths
+        )
 
         # these two parameters define the plane that contains the surface
         # (in 3d Cartesian space): a normal unit vector,
@@ -106,7 +115,8 @@ class PlanarSurface(BaseSurface):
         self.zero_zero = tl
 
         # now we can check surface for validity
-        dists, xx, yy = self._project(lons, lats, depths)
+        dists, xx, yy = self._project(self.corner_lons, self.corner_lats,
+                                      self.corner_depths)
         length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
         width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
         if numpy.max(numpy.abs(dists)) > self.IMPERFECT_RECTANGLE_TOLERANCE \
@@ -266,3 +276,66 @@ class PlanarSurface(BaseSurface):
         # and distance between point's projection on a surface's plane
         # and a surface rectangle.
         return numpy.sqrt(dists ** 2 + numpy.array(dists2d) ** 2)
+
+    def _get_top_edge_centroid(self):
+        """
+        Overrides :meth:`superclass' method
+        <nhlib.geo.surface.BaseSurface._get_top_edge_centroid>`
+        in order to avoid creating a mesh.
+        """
+        lon, lat = geo_utils.get_middle_point(
+            self.top_left.longitude, self.top_left.latitude,
+            self.top_right.longitude, self.top_right.latitude
+        )
+        return Point(lon, lat, self.top_left.depth)
+
+    def get_top_edge_depth(self):
+        """
+        Overrides :meth:`superclass' method
+        <nhlib.geo.surface.BaseSurface.get_top_edge_depth>`
+        in order to avoid creating a mesh.
+        """
+        return self.top_left.depth
+
+    def get_joyner_boore_distance(self, mesh):
+        """
+        See :meth:`superclass' method
+        <nhlib.geo.surface.base.get_joyner_boore_distance>`.
+
+        This is an optimized version specific to planar surface that doesn't
+        make use of the mesh.
+        """
+        # TODO: document the code
+        arcs_lons = [self.top_left.longitude, self.bottom_left.longitude,
+                     self.top_left.longitude, self.top_right.longitude]
+        arcs_lats = [self.top_left.latitude, self.bottom_left.latitude,
+                     self.top_left.latitude, self.top_right.latitude]
+        downdip_azimuth = (self.strike + 90) % 360
+        arcs_azimuths = [self.strike, self.strike,
+                         downdip_azimuth, downdip_azimuth]
+        dists_to_arcs = geodetic.distance_to_arc(
+            arcs_lons, arcs_lats, arcs_azimuths,
+            mesh.lons.reshape((-1, 1)), mesh.lats.reshape((-1, 1))
+        )
+
+        dists_to_corners = geodetic.min_distance(
+            self.corner_lons, self.corner_lats, self.corner_depths,
+            mesh.lons, mesh.lats, numpy.zeros_like(mesh.lons)
+        )
+
+        dists = numpy.zeros(len(mesh))
+        dists_to_arcs_signs = numpy.sign(dists_to_arcs)
+        dists_to_arcs = numpy.abs(dists_to_arcs).reshape(-1, 2, 2).min(axis=-1)
+        for i, (ds1, ds2, ds3, ds4) in enumerate(dists_to_arcs_signs):
+            if ds1 == ds2:
+                if ds3 == ds4:
+                    dists[i] = dists_to_corners[i]
+                else:
+                    dists[i] = dists_to_arcs[i][0]
+            else:
+                if ds3 == ds4:
+                    dists[i] = dists_to_arcs[i][1]
+                else:
+                    dists[i] = 0
+
+        return dists
