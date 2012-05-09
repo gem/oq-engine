@@ -19,6 +19,7 @@ import numpy
 
 from nhlib.geo import Point
 from nhlib.geo.mesh import Mesh
+from nhlib.geo import _utils as geo_utils
 from nhlib.geo.surface.planar import PlanarSurface
 
 from tests.geo.surface import _planar_test_data as test_data
@@ -216,6 +217,38 @@ class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):
         sites = Mesh.from_points_list([Point(-0.3, 0.4)])
         self.assertAlmostEqual(55.6159556,
                                surface.get_min_distance(sites)[0], delta=0.6)
+
+    def test_nine_positions(self):
+        def v2p(*vectors):  # "vectors to points"
+            return [Point(*coords)
+                    for coords in zip(*geo_utils.cartesian_to_spherical(
+                        numpy.array(vectors, dtype=float)
+                    ))]
+
+        corners = v2p([6370, 0, -0.5], [6370, 0, 0.5],
+                      [6369, 1, 0.5], [6369, 1, -0.5])
+        surface = PlanarSurface(1, 2, 3, *corners)
+
+        # first three positions: point projection is above the top edge
+        dists = surface.get_min_distance(Mesh.from_points_list(
+            v2p([6371, 0, -1.5], [6371, 0, 1.5], [6371, 0, 0.33])
+        ))
+        self.assertTrue(numpy.allclose(dists, [2 ** 0.5, 2 ** 0.5, 1.0],
+                                       atol=1e-4))
+
+        # next three positions: point projection is below the bottom edge
+        dists = surface.get_min_distance(Mesh.from_points_list(
+            v2p([6368, 1, -1.5], [6368, 1, 1.5], [6368, 1, -0.45])
+        ))
+        self.assertTrue(numpy.allclose(dists, [2 ** 0.5, 2 ** 0.5, 1.0],
+                                       atol=1e-4))
+
+        # next three positions: point projection is left to rectangle,
+        # right to it or lies inside
+        dists = surface.get_min_distance(Mesh.from_points_list(
+            v2p([6369.5, 0.5, -1.5], [6369.5, 0.5, 1.5], [6369.5, 0.5, -0.1])
+        ))
+        self.assertTrue(numpy.allclose(dists, [1, 1, 0], atol=1e-4))
 
 
 class PlanarSurfaceGetJoynerBooreDistanceTestCase(unittest.TestCase):
