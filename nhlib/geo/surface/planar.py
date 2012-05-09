@@ -105,8 +105,8 @@ class PlanarSurface(BaseSurface):
 
         # now we can check surface for validity
         dists, xx, yy = self._project(lons, lats, depths)
-        width1, width2 = xx[1] - xx[0], xx[3] - xx[2]
-        length1, length2 = yy[1] - yy[0], yy[3] - yy[2]
+        length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
+        width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
         if numpy.max(numpy.abs(dists)) > self.IMPERFECT_RECTANGLE_TOLERANCE \
                 or abs(width1 - width2) > self.IMPERFECT_RECTANGLE_TOLERANCE \
                 or width2 < 0 \
@@ -209,12 +209,12 @@ class PlanarSurface(BaseSurface):
                     #   |  |
                     #   ----
                     dist = (x ** 2 + y ** 2) ** 0.5
-                elif x > self.width:
+                elif x > self.length:
                     #      *
                     # 0---
                     # |  |
                     # ----
-                    dist = ((x - self.width) ** 2 + y ** 2) ** 0.5
+                    dist = ((x - self.length) ** 2 + y ** 2) ** 0.5
                 else:
                     #  *
                     # 0---
@@ -227,30 +227,30 @@ class PlanarSurface(BaseSurface):
                     #   |  |
                     #   ----
                     # *
-                    dist = (x ** 2 + (y - self.length) ** 2) ** 0.5
-                elif x > self.width:
+                    dist = (x ** 2 + (y - self.width) ** 2) ** 0.5
+                elif x > self.length:
                     # 0---
                     # |  |
                     # ----
                     #      *
-                    dist = ((x - self.width) ** 2
-                            + (y - self.length) ** 2) ** 0.5
+                    dist = ((x - self.length) ** 2
+                            + (y - self.width) ** 2) ** 0.5
                 else:
                     # 0---
                     # |  |
                     # ----
                     #  *
-                    dist = y - self.length
+                    dist = y - self.width
             elif x < 0:
                 #   0---
                 # * |  |
                 #   ----
                 dist = x
-            elif x > self.width:
+            elif x > self.length:
                 # 0---
                 # |  | *
                 # ----
-                dist = x - self.width
+                dist = x - self.length
             else:
                 # 0---
                 # | *|
