@@ -21,6 +21,7 @@ import shapely.geometry
 
 from nhlib.geo.mesh import Mesh
 from nhlib.geo._utils import GEOD
+from nhlib.geo import geodetic
 from nhlib.geo import _utils as utils
 
 
@@ -84,23 +85,18 @@ class Polygon(object):
             lon1, lat1 = self.lons[i], self.lats[i]
             lon2, lat2 = self.lons[next_point], self.lats[next_point]
             lon_extent = abs(utils.get_longitudinal_extent(lon1, lon2))
-            num_points = int(lon_extent / self.LONGITUDINAL_DISCRETIZATION) - 1
-            if num_points > 0:
-                for lon, lat in GEOD.npts(lon1, lat1, lon2, lat2, num_points):
-                    # sometimes pyproj geod object may return values
-                    # that are slightly out of range and that can
-                    # break _get_spherical_bounding_box().
-                    if lon <= -180:
-                        lon += 360
-                    elif lon > 180:
-                        lon -= 360
-                    assert -90 <= lat <= 90
-                    resampled_lons.append(lon)
-                    resampled_lats.append(lat)
-            # since npts() accepts the last argument as the number of points
-            # in the middle, we need to add the last point unconditionally
-            resampled_lons.append(lon2)
-            resampled_lats.append(lat2)
+            num_points = int(lon_extent / self.LONGITUDINAL_DISCRETIZATION) + 1
+            if num_points >= 2:
+                lons, lats, _ = geodetic.npoints_between(
+                    lon1, lat1, 0, lon2, lat2, 0, num_points
+                )
+                resampled_lons.extend(lons[1:])
+                resampled_lats.extend(lats[1:])
+            else:
+                resampled_lons.append(lon2)
+                resampled_lats.append(lat2)
+        if not resampled_lons:
+            return self.lons, self.lats
         # we don't cut off the last point so it repeats the first one.
         # shapely polygon is ok with that (we even save it from extra
         # work of copying the last point for us).

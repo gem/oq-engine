@@ -88,9 +88,9 @@ class PolygonResampleSegmentsTestCase(unittest.TestCase):
             geo.Point(177, 43)
         ])
         lons, lats = poly._get_resampled_coordinates()
-        self.assertTrue(all(-180 < lon <= 180 for lon in lons))
-        expected_lons = [177, 178, 179, 180, -179, -178, -177,
-                         -177, -178, -179, 180, 179, 178, 177, 177]
+        self.assertTrue(all(-180 <= lon <= 180 for lon in lons))
+        expected_lons = [177, 178, 179, -180, -179, -178, -177,
+                         -177, -178, -179, -180, 179, 178, 177, 177]
         self.assertTrue(
             numpy.allclose(lons, expected_lons, atol=1e-4, rtol=0),
             msg='%s != %s' % (lons, expected_lons)
