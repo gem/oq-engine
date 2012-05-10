@@ -21,13 +21,8 @@ import numpy
 import pyproj
 import shapely.geometry
 
-
-#: Geod object to be used whenever we need to deal with
-#: spherical coordinates.
-GEOD = pyproj.Geod(ellps='sphere')
-
-#: Earth radius in km.
-EARTH_RADIUS = 6371.0
+from nhlib.geo import geodetic
+from nhlib.geo.geodetic import EARTH_RADIUS
 
 
 def clean_points(points):
@@ -180,10 +175,9 @@ def get_middle_point(lon1, lat1, lon2, lat2):
     """
     if lon1 == lon2 and lat1 == lat2:
         return lon1, lat1
-    [[lon, lat]] = GEOD.npts(lon1, lat1, lon2, lat2, 1)
-    if lon <= -180:
-        lon += 360
-    return lon, lat
+    dist = geodetic.geodetic_distance(lon1, lat1, lon2, lat2)
+    azimuth = geodetic.azimuth(lon1, lat1, lon2, lat2)
+    return geodetic.point_at(lon1, lat1, azimuth, dist / 2.0)
 
 
 def spherical_to_cartesian(lons, lats, depths):

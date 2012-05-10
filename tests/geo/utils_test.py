@@ -50,12 +50,6 @@ class LineIntersectsItselfTestCase(unittest.TestCase):
         self.assertEqual(False, self.func(lons, lats))
         self.assertEqual(False, self.func(lons, lats, closed_shape=True))
 
-    def test_doesnt_intersect_on_a_pole(self):
-        lons = [80] * 4
-        lats = [10, 100, -360 + 190, -360 + 280]
-        self.assertEqual(False, self.func(lons, lats))
-        self.assertEqual(False, self.func(lons, lats, closed_shape=True))
-
     def test_intersects(self):
         lons = [0, 0, 1, -1]
         lats = [0, 1, 0,  1]
