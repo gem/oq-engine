@@ -148,7 +148,6 @@ class Polygon(object):
                 # move by mesh spacing along parallel...
                 longitude, _, = geodetic.point_at(longitude, latitude,
                                                   90, mesh_spacing)
-                #print longitude, latitude
             # ... and by the same distance along meridian in outer one
             _, latitude = geodetic.point_at(west, latitude, 180, mesh_spacing)
 
