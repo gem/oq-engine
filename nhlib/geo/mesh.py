@@ -296,8 +296,9 @@ class RectangularMesh(Mesh):
             point_2d = shapely.geometry.Point(mesh_xx[i], mesh_yy[i])
             dist = mesh_2d.distance(point_2d)
             if dist < 500:
-                # if the distance is below threshold of 500 kilometers, consider
-                # the distance measured on the projection accurate enough.
+                # if the distance is below threshold of 500 kilometers,
+                # consider the distance measured on the projection accurate
+                # enough (an error doesn't exceed half km).
                 distances.append(dist)
             else:
                 # ... otherwise get the precise distance between bounding mesh
