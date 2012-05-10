@@ -94,8 +94,6 @@ class Polygon(object):
             else:
                 resampled_lons.append(lon2)
                 resampled_lats.append(lat2)
-        if not resampled_lons:
-            return self.lons, self.lats
         # we don't cut off the last point so it repeats the first one.
         # shapely polygon is ok with that (we even save it from extra
         # work of copying the last point for us).
