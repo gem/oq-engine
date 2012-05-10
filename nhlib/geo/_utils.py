@@ -18,7 +18,6 @@ Package-private module :mod:`nhlib.geo._utils` contains functions that are
 common to several geographical primitives.
 """
 import numpy
-import pyproj
 import shapely.geometry
 
 from nhlib.geo import geodetic
@@ -136,8 +135,9 @@ def get_orthographic_projection(west, east, north, south):
     Create and return a projection object for a given bounding box.
 
     :returns:
-        A pyproj's projection object. See
-        `http://pyproj.googlecode.com/svn/trunk/docs/pyproj.Proj-class.html`_.
+        Function that takes two arguments: (longitudes and latitudes
+        as a form of scalars or numpy arrays) and returns a tuple
+        of two items: x and y coordinates of projected points.
 
     Parameters are given as floats, representing decimal degrees (first two
     are longitudes and last two are latitudes). They define a bounding box
@@ -149,7 +149,7 @@ def get_orthographic_projection(west, east, north, south):
     circle arc.
 
     The result projection is of type `Orthographic
-    <http://www.remotesensing.org/geotiff/proj_list/orthographic.html>`_.
+    <http://mathworld.wolfram.com/OrthographicProjection.html>`_.
     This projection is prone to distance, area and angle distortions
     everywhere outside of the center point, but still can be used for
     checking shapes: verifying if line intersects itself (like in
@@ -158,9 +158,14 @@ def get_orthographic_projection(west, east, north, south):
     distance to an extent of around 700 kilometers (error doesn't exceed
     1 km up until then).
     """
-    middle_lon, middle_lat = get_middle_point(west, north, east, south)
-    return pyproj.Proj(proj='ortho', lat_0=middle_lat, lon_0=middle_lon,
-                       units='km', preserve_units=True)
+    lambda0, phi0 = numpy.radians(get_middle_point(west, north, east, south))
+    def proj(lons, lats):
+        lambdas, phis = numpy.radians(lons), numpy.radians(lats)
+        xx = numpy.cos(phis) * numpy.sin(lambdas - lambda0)
+        yy = numpy.cos(phi0) * numpy.sin(phis) \
+             - numpy.sin(phi0) * numpy.cos(phis) * numpy.cos(lambdas - lambda0)
+        return xx * EARTH_RADIUS, yy * EARTH_RADIUS
+    return proj
 
 
 def get_middle_point(lon1, lat1, lon2, lat2):
