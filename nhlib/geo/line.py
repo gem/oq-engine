@@ -18,6 +18,7 @@ Module :mod:`nhlib.geo.line` defines :class:`Line`.
 """
 import numpy
 
+from nhlib.geo import geodetic
 from nhlib.geo import _utils as utils
 
 
@@ -97,21 +98,12 @@ class Line(object):
         """
         if len(self.points) == 2:
             return self.points[0].azimuth(self.points[1])
-        points = iter(self.points)
-        prev_point = next(points)
-        azimuths = []
-        distances = []
-        for point in points:
-            # collect all the segments' lengths and azimuths
-            assert point.depth == prev_point.depth
-            azimuth, _, distance = utils.GEOD.inv(
-                prev_point.longitude, prev_point.latitude,
-                point.longitude, point.latitude
-            )
-            azimuths.append(azimuth)
-            distances.append(distance)
-            prev_point = point
-        azimuths, distances = numpy.radians(azimuths), numpy.array(distances)
+        lons = numpy.array([point.longitude for point in self.points])
+        lats = numpy.array([point.latitude for point in self.points])
+        azimuths = geodetic.azimuth(lons[:-1], lats[:-1], lons[1:], lats[1:])
+        distances = geodetic.geodetic_distance(lons[:-1], lats[:-1],
+                                               lons[1:], lats[1:])
+        azimuths = numpy.radians(azimuths)
         # convert polar coordinates to Cartesian ones and calculate
         # the average coordinate of each component
         avg_x = numpy.mean(distances * numpy.sin(azimuths))
