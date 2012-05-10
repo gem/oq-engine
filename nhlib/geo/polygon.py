@@ -20,7 +20,6 @@ import numpy
 import shapely.geometry
 
 from nhlib.geo.mesh import Mesh
-from nhlib.geo._utils import GEOD
 from nhlib.geo import geodetic
 from nhlib.geo import _utils as utils
 
@@ -112,9 +111,6 @@ class Polygon(object):
             the points data. Mesh is created with no depth information
             (all the points are on the Earth surface).
         """
-        # cast from km to m
-        mesh_spacing *= 1e3
-
         # resample longitudinally-extended lines:
         lons, lats = self._get_resampled_coordinates()
 
@@ -149,11 +145,12 @@ class Polygon(object):
                     lons.append(longitude)
                     lats.append(latitude)
 
-                # move by mesh spacing along parallel in inner loop...
-                longitude, _, _ = GEOD.fwd(longitude, latitude,
-                                           90, mesh_spacing)
+                # move by mesh spacing along parallel...
+                longitude, _, = geodetic.point_at(longitude, latitude,
+                                                  90, mesh_spacing)
+                #print longitude, latitude
             # ... and by the same distance along meridian in outer one
-            _, latitude, _ = GEOD.fwd(west, latitude, 180, mesh_spacing)
+            _, latitude = geodetic.point_at(west, latitude, 180, mesh_spacing)
 
         lons = numpy.array(lons)
         lats = numpy.array(lats)
