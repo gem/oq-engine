@@ -305,7 +305,17 @@ class PlanarSurface(BaseSurface):
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
         """
-        # TODO: document the code
+        # we define four great circle arcs that contain four sides
+        # of projected planar surface. first two are directed from
+        # left corners to right ones (the direction has an effect
+        # on the sign of the distance to an arc), other two are
+        # directed from top corners to bottom ones. then we measure
+        # distance from each of the point in a mesh to each of those
+        # arcs and compare signs of distances in order to find
+        # a relative positions of projections of points and projection
+        # of a surface. then we consider four special cases (see below)
+        # and either pick one of distances to arcs or a closest
+        # distance to corner.
         arcs_lons = [self.top_left.longitude, self.bottom_left.longitude,
                      self.top_left.longitude, self.top_right.longitude]
         arcs_lats = [self.top_left.latitude, self.bottom_left.latitude,
@@ -315,26 +325,46 @@ class PlanarSurface(BaseSurface):
                          downdip_azimuth, downdip_azimuth]
         mesh_lons = mesh.lons.reshape((-1, 1))
         mesh_lats = mesh.lats.reshape((-1, 1))
+        # calculate distances from all the target points to all four arcs
         dists_to_arcs = geodetic.distance_to_arc(
             arcs_lons, arcs_lats, arcs_azimuths, mesh_lons, mesh_lats
         )
+        # ... and distances from all the target points to each of surface's
+        # corners' projections (we might not need all of those but it's
+        # better to do that calculation once for all).
         dists_to_corners = geodetic.geodetic_distance(
             self.corner_lons, self.corner_lats, mesh_lons, mesh_lats
         ).min(axis=-1)
 
         dists = numpy.zeros(len(mesh))
+        # extract from ``dists_to_arcs`` signs (represent relative positions
+        # of an arc and a point: -1 means on the left hand side, 0 means
+        # on arc and +1 means on the right hand side) and minimum absolute
+        # values of distances to each pair of parallel arcs.
         dists_to_arcs_signs = numpy.sign(dists_to_arcs)
         dists_to_arcs = numpy.abs(dists_to_arcs).reshape(-1, 2, 2).min(axis=-1)
         for i, (ds1, ds2, ds3, ds4) in enumerate(dists_to_arcs_signs):
+            # consider four possible relative positions of point and arcs:
             if ds1 == ds2:
+                # if signs of distances to both parallel arcs are the same,
+                # it means that point lies outside of the surface projection
                 if ds3 == ds4:
+                    # if signs of distances to other two parallel arcs are
+                    # the same as well, than the closest distance is the one
+                    # to a closest corner point.
                     dists[i] = dists_to_corners[i]
                 else:
+                    # otherwise (if point lies in between other two arcs)
+                    # the closest distance is a closest distance to first
+                    # pair of arcs
                     dists[i] = dists_to_arcs[i][0]
             else:
                 if ds3 == ds4:
                     dists[i] = dists_to_arcs[i][1]
                 else:
+                    # distance is zero (point lies inside the surface's
+                    # projection) if signs of distances to both pairs
+                    # of arcs are different.
                     dists[i] = 0
 
         return dists
