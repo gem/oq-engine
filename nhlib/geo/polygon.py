@@ -20,7 +20,7 @@ import numpy
 import shapely.geometry
 
 from nhlib.geo.mesh import Mesh
-from nhlib.geo._utils import GEOD
+from nhlib.geo import geodetic
 from nhlib.geo import _utils as utils
 
 
@@ -84,23 +84,16 @@ class Polygon(object):
             lon1, lat1 = self.lons[i], self.lats[i]
             lon2, lat2 = self.lons[next_point], self.lats[next_point]
             lon_extent = abs(utils.get_longitudinal_extent(lon1, lon2))
-            num_points = int(lon_extent / self.LONGITUDINAL_DISCRETIZATION) - 1
-            if num_points > 0:
-                for lon, lat in GEOD.npts(lon1, lat1, lon2, lat2, num_points):
-                    # sometimes pyproj geod object may return values
-                    # that are slightly out of range and that can
-                    # break _get_spherical_bounding_box().
-                    if lon <= -180:
-                        lon += 360
-                    elif lon > 180:
-                        lon -= 360
-                    assert -90 <= lat <= 90
-                    resampled_lons.append(lon)
-                    resampled_lats.append(lat)
-            # since npts() accepts the last argument as the number of points
-            # in the middle, we need to add the last point unconditionally
-            resampled_lons.append(lon2)
-            resampled_lats.append(lat2)
+            num_points = int(lon_extent / self.LONGITUDINAL_DISCRETIZATION) + 1
+            if num_points >= 2:
+                lons, lats, _ = geodetic.npoints_between(
+                    lon1, lat1, 0, lon2, lat2, 0, num_points
+                )
+                resampled_lons.extend(lons[1:])
+                resampled_lats.extend(lats[1:])
+            else:
+                resampled_lons.append(lon2)
+                resampled_lats.append(lat2)
         # we don't cut off the last point so it repeats the first one.
         # shapely polygon is ok with that (we even save it from extra
         # work of copying the last point for us).
@@ -116,9 +109,6 @@ class Polygon(object):
             the points data. Mesh is created with no depth information
             (all the points are on the Earth surface).
         """
-        # cast from km to m
-        mesh_spacing *= 1e3
-
         # resample longitudinally-extended lines:
         lons, lats = self._get_resampled_coordinates()
 
@@ -153,11 +143,11 @@ class Polygon(object):
                     lons.append(longitude)
                     lats.append(latitude)
 
-                # move by mesh spacing along parallel in inner loop...
-                longitude, _, _ = GEOD.fwd(longitude, latitude,
-                                           90, mesh_spacing)
+                # move by mesh spacing along parallel...
+                longitude, _, = geodetic.point_at(longitude, latitude,
+                                                  90, mesh_spacing)
             # ... and by the same distance along meridian in outer one
-            _, latitude, _ = GEOD.fwd(west, latitude, 180, mesh_spacing)
+            _, latitude = geodetic.point_at(west, latitude, 180, mesh_spacing)
 
         lons = numpy.array(lons)
         lats = numpy.array(lats)

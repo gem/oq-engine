@@ -22,7 +22,7 @@ suggestions and criticisms from the community are always very welcome.
 Requirements
 ------------
 nhlib depends on numpy and scipy for fast numerical calculations and on
-shapely and pyproj for geospatial routines.
+shapely for geometric primitives routines.
 
 Development and support
 -----------------------
