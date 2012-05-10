@@ -313,15 +313,14 @@ class PlanarSurface(BaseSurface):
         downdip_azimuth = (self.strike + 90) % 360
         arcs_azimuths = [self.strike, self.strike,
                          downdip_azimuth, downdip_azimuth]
+        mesh_lons = mesh.lons.reshape((-1, 1))
+        mesh_lats = mesh.lats.reshape((-1, 1))
         dists_to_arcs = geodetic.distance_to_arc(
-            arcs_lons, arcs_lats, arcs_azimuths,
-            mesh.lons.reshape((-1, 1)), mesh.lats.reshape((-1, 1))
+            arcs_lons, arcs_lats, arcs_azimuths, mesh_lons, mesh_lats
         )
-
-        dists_to_corners = geodetic.min_distance(
-            self.corner_lons, self.corner_lats, self.corner_depths,
-            mesh.lons, mesh.lats, numpy.zeros_like(mesh.lons)
-        )
+        dists_to_corners = geodetic.geodetic_distance(
+            self.corner_lons, self.corner_lats, mesh_lons, mesh_lats
+        ).min(axis=-1)
 
         dists = numpy.zeros(len(mesh))
         dists_to_arcs_signs = numpy.sign(dists_to_arcs)
