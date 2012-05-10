@@ -22,6 +22,7 @@ import numpy
 import shapely.geometry
 
 from nhlib.geo.point import Point
+from nhlib.geo import geodetic
 from nhlib.geo import _utils as geo_utils
 
 
@@ -137,47 +138,31 @@ class Mesh(object):
         """
         return self.lons.size
 
-    def get_min_distance(self, point):
+    def get_min_distance(self, mesh):
         """
-        Compute and return the minimum distance from the mesh to ``point``.
+        Compute and return the minimum distance from the mesh to each point
+        in another mesh.
 
         :returns:
-            Distance in km.
+            numpy array of distances in km of the same shape as ``mesh``.
 
         Method doesn't make any assumptions on arrangement of the points
-        and instead calculates the distance from each point of the mesh
-        to the target point and returns the lowest found. Therefore,
-        the method's time complexity grows linearly with the number
-        of points in the mesh.
+        in either mesh and instead calculates the distance from each point of
+        this mesh to each point of the target mesh and returns the lowest found
+        for each.
+
+        Uses :func:`nhlib.geo.geodetic.min_distance`.
         """
-        # here the same approach as in :meth:`nhlib.geo.point.Point.distance`
-        # is used. we find the great circle distance between the target
-        # point and each point of the mesh, independently calculate
-        # the vertical distance (just subtracting values) and combine
-        # these distances using Pythagoras theorem.
-        target_lons = numpy.repeat(point.longitude, len(self))
-        target_lats = numpy.repeat(point.latitude, len(self))
-        _, _, hor_distances = geo_utils.GEOD.inv(
-            self.lons.flatten(), self.lats.flatten(), target_lons, target_lats
-        )
         if self.depths is None:
-            min_hor_distance = numpy.min(hor_distances) * 1e-3
-            if point.depth == 0:
-                # mesh and point have no depth, the actual distance
-                # is the horizontal one
-                return min_hor_distance
-            else:
-                # mesh is lying on earth surface and point has some depth
-                return (min_hor_distance ** 2 + point.depth ** 2) ** 0.5
-        elif point.depth == 0:
-            # point is lying on earth surface and the mesh is below
-            vert_distances = self.depths
+            depths1 = numpy.zeros_like(self.lons)
         else:
-            # both point and mesh are below earth surface
-            vert_distances = self.depths - point.depth
-        vert_distances = vert_distances.flatten()
-        hor_distances *= 1e-3
-        return numpy.min(hor_distances ** 2 + vert_distances ** 2) ** 0.5
+            depths1 = self.depths
+        if mesh.depths is None:
+            depths2 = numpy.zeros_like(mesh.lons)
+        else:
+            depths2 = mesh.depths
+        return geodetic.min_distance(self.lons, self.lats, depths1,
+                                     mesh.lons, mesh.lats, depths2)
 
 
 class RectangularMesh(Mesh):
@@ -274,27 +259,27 @@ class RectangularMesh(Mesh):
             components_bounding.append(None)
         return Mesh(*components_bounding)
 
-    def get_joyner_boore_distance(self, point):
+    def get_joyner_boore_distance(self, mesh):
         """
-        Compute and return Joyner-Boore distance to ``point``.
+        Compute and return Joyner-Boore distance to each point of ``mesh``.
         Point's depth is ignored.
 
         See :meth:`nhlib.geo.surface.BaseSurface.get_joyner_boore_distance`
         for definition of this distance.
 
         :returns:
-            Distance in km. Value is considered to be zero if ``point``
+            numpy array of distances in km of the same shape as ``mesh``.
+            Distance value is considered to be zero if a point
             lies inside the polygon enveloping the projection of the mesh
             or on one of its edges.
         """
         bounding_mesh = self._get_bounding_mesh(with_depths=False)
         assert bounding_mesh.depths is None
         lons, lats = bounding_mesh.lons, bounding_mesh.lats
+        depths = numpy.zeros_like(lons)
         proj = geo_utils.get_orthographic_projection(
             *geo_utils.get_spherical_bounding_box(lons, lats)
         )
-        point_2d = shapely.geometry.Point(*proj(point.longitude,
-                                                point.latitude))
         xx, yy = proj(lons, lats)
         mesh_2d = numpy.array([xx, yy], dtype=float).transpose().copy()
         if len(xx) == 2:
@@ -303,16 +288,25 @@ class RectangularMesh(Mesh):
             mesh_2d = shapely.geometry.Point(*mesh_2d)
         elif len(xx) > 2:
             mesh_2d = shapely.geometry.Polygon(mesh_2d)
-        dist = mesh_2d.distance(point_2d)
-        if dist < 500:
-            # if the distance is below threshold of 500 kilometers, consider
-            # the distance measured on the projection accurate enough.
-            return dist
-        else:
-            # ... otherwise get the precise distance between bounding mesh
-            # projection and the point projection using pure numerical way
-            return bounding_mesh.get_min_distance(Point(point.longitude,
-                                                        point.latitude))
+        mesh_lons, mesh_lats = mesh.lons.flatten(), mesh.lats.flatten()
+        mesh_xx, mesh_yy = proj(mesh_lons, mesh_lats)
+
+        distances = []
+        for i in xrange(len(mesh_lons)):
+            point_2d = shapely.geometry.Point(mesh_xx[i], mesh_yy[i])
+            dist = mesh_2d.distance(point_2d)
+            if dist < 500:
+                # if the distance is below threshold of 500 kilometers,
+                # consider the distance measured on the projection accurate
+                # enough (an error doesn't exceed half km).
+                distances.append(dist)
+            else:
+                # ... otherwise get the precise distance between bounding mesh
+                # projection and the point projection using pure numerical way
+                distances.append(geodetic.min_distance(
+                    lons, lats, depths, mesh_lons[i], mesh_lats[i], 0
+                ))
+        return numpy.array(distances).reshape(mesh.shape)
 
     def get_middle_point(self):
         """

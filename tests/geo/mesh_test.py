@@ -173,29 +173,32 @@ class MeshSlicingTestCase(_BaseMeshTestCase):
 
 class MeshGetMinDistanceTestCase(unittest.TestCase):
     # test case depends on Point.distance() working right
+    def _test(self, mesh_points, target_points, expected_distance_indexes):
+        mesh = Mesh.from_points_list(mesh_points)
+        target_mesh = Mesh.from_points_list(target_points)
+        dists = mesh.get_min_distance(target_mesh)
+        expected_dists = [mesh_points[mi].distance(target_points[ti])
+                          for ti, mi in enumerate(expected_distance_indexes)]
+        self.assertEqual(list(dists), expected_dists)
+
     def test_mesh_and_point_on_surface(self):
-        mesh = Mesh.from_points_list([Point(0, 0), Point(0, 1), Point(0, 2)])
-        self.assertEqual(mesh.get_min_distance(Point(1, 1)),
-                         Point(1, 1).distance(Point(0, 1)))
-        self.assertEqual(mesh.get_min_distance(Point(-1, 0)),
-                         Point(-1, 0).distance(Point(0, 0)))
+        self._test([Point(0, 0), Point(0, 1), Point(0, 2)],
+                   [Point(1, 1), Point(-1, 0)],
+                   expected_distance_indexes=[1, 0])
 
     def test_mesh_on_surface(self):
-        mesh = Mesh.from_points_list([Point(0, 0), Point(0, 1), Point(0, 2)])
-        self.assertEqual(mesh.get_min_distance(Point(-1, -1, 3.4)),
-                         Point(-1, -1, 3.4).distance(Point(0, 0)))
+        self._test([Point(0, 0), Point(0, 1), Point(0, 2)],
+                   [Point(-1, -1, 3.4), Point(2, 5)],
+                   expected_distance_indexes=[0, 2])
 
     def test_point_on_surface(self):
-        mesh = Mesh.from_points_list([Point(0, 0, 1), Point(0, 1, 2),
-                                      Point(0, 2, 3)])
-        self.assertEqual(mesh.get_min_distance(Point(0.5, 1.5)),
-                         Point(0.5, 1.5).distance(Point(0, 1, 2)))
+        self._test([Point(0, 0, 1), Point(0, 1, 2), Point(0, 2, 3)],
+                   [Point(0.5, 1.5)], expected_distance_indexes=[1])
 
     def test_mesh_and_point_not_on_surface(self):
-        mesh = Mesh.from_points_list([Point(0, 0, 1), Point(0, 1, 2),
-                                      Point(0, 2, 3)])
-        self.assertEqual(mesh.get_min_distance(Point(0, 1.5, 3)),
-                         Point(0, 1.5, 3).distance(Point(0, 2, 3)))
+        self._test([Point(0, 0, 1), Point(0, 1, 2), Point(0, 2, 3)],
+                   [Point(0, 1.5, 3), Point(0, 1.5, 0.9)],
+                   expected_distance_indexes=[2, 1])
 
 
 class RectangularMeshCreationTestCase(unittest.TestCase):
@@ -307,7 +310,9 @@ class RectangularMeshJoynerBooreDistanceTestCase(unittest.TestCase):
 
         check = lambda lon, lat, depth, expected_distance, **kwargs: \
             self.assertAlmostEqual(
-                mesh.get_joyner_boore_distance(Point(lon, lat, depth)),
+                mesh.get_joyner_boore_distance(
+                    Mesh.from_points_list([Point(lon, lat, depth)])
+                )[0],
                 expected_distance, **kwargs
             )
 
@@ -328,33 +333,34 @@ class RectangularMeshJoynerBooreDistanceTestCase(unittest.TestCase):
         lats = numpy.array([[0, 0, 0], [0, 0, 0]])
         depths = numpy.array([[1, 1, 1], [2, 2, 2]])
         mesh = RectangularMesh(lons, lats, depths)
-        self.assertEqual(mesh.get_joyner_boore_distance(Point(0.5, 0, 0)), 0)
-        self.assertAlmostEqual(
-            mesh.get_joyner_boore_distance(Point(0.5, 1, 0)),
-            Point(0.5, 1).distance(Point(0.5, 0)), delta=0.3
-        )
+        target_mesh = Mesh.from_points_list([Point(0.5, 0), Point(0.5, 1),
+                                             Point(0.5, 5)])
+        dists = mesh.get_joyner_boore_distance(target_mesh)
+        expected_dists = [
+            0, Point(0.5, 1).distance(Point(0.5, 0)),
+            Point(0.5, 5).distance(Point(0.5, 0))
+        ]
+        self.assertTrue(numpy.allclose(dists, expected_dists, atol=3))
 
     def test_mesh_of_two_points(self):
         lons = numpy.array([[0, 1]])
         lats = numpy.array([[0, 0]])
         depths = numpy.array([[1, 1]])
         mesh = RectangularMesh(lons, lats, depths)
-        self.assertEqual(mesh.get_joyner_boore_distance(Point(0.5, 0, 0)), 0)
-        self.assertAlmostEqual(
-            mesh.get_joyner_boore_distance(Point(0.5, 1, 0)),
-            Point(0.5, 1).distance(Point(0.5, 0)), delta=0.3
-        )
+        target_mesh = Mesh.from_points_list([Point(0.5, 1), Point(0.5, 0)])
+        dists = mesh.get_joyner_boore_distance(target_mesh)
+        expected_dists = [Point(0.5, 1).distance(Point(0.5, 0)), 0]
+        self.assertTrue(numpy.allclose(dists, expected_dists, atol=0.3))
 
     def test_mesh_of_one_point(self):
         lons = numpy.array([[1]])
         lats = numpy.array([[0]])
         depths = numpy.array([[1]])
         mesh = RectangularMesh(lons, lats, depths)
-        self.assertEqual(mesh.get_joyner_boore_distance(Point(1, 0, 0)), 0)
-        self.assertAlmostEqual(
-            mesh.get_joyner_boore_distance(Point(0.5, 0, 0)),
-            Point(0.5, 0).distance(Point(1, 0)), delta=0.2
-        )
+        target_mesh = Mesh.from_points_list([Point(1, 0), Point(0.5, 0)])
+        dists = mesh.get_joyner_boore_distance(target_mesh)
+        expected_dists = [0, Point(0.5, 0).distance(Point(1, 0))]
+        self.assertTrue(numpy.allclose(dists, expected_dists, atol=0.2))
 
     def _test(self, points, site, expected_distance):
         lons, lats, depths = numpy.array(points).transpose()
@@ -362,7 +368,9 @@ class RectangularMeshJoynerBooreDistanceTestCase(unittest.TestCase):
         lats = lats.transpose()
         depths = depths.transpose()
         mesh = RectangularMesh(lons, lats, depths)
-        distance = mesh.get_joyner_boore_distance(Point(*site))
+        distance = mesh.get_joyner_boore_distance(
+            Mesh.from_points_list([Point(*site)])
+        )[0]
         self.assertAlmostEqual(distance, expected_distance, delta=0.02)
 
     def test3(self):

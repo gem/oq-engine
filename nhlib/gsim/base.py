@@ -26,6 +26,7 @@ import scipy.stats
 import numpy
 
 from nhlib import const
+from nhlib.geo.mesh import Mesh
 from nhlib import imt as imt_module
 
 
@@ -152,15 +153,15 @@ class GroundShakingIntensityModel(object):
         compute interim steps).
         """
 
-    def get_poes(self, ctx, imts, component_type, truncation_level):
+    def get_poes(self, ctxs, imts, component_type, truncation_level):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
         intensity measure levels (IMLs) of one or more intensity measure types
-        (IMTs).
+        (IMTs) for one or more pairs "site -- rupture".
 
-        :param ctx:
-            An instance of :class:`GSIMContext` with the same meaning
-            as for :meth:`get_mean_and_stddevs`.
+        :param ctxs:
+            A list of instances of :class:`GSIMContext` which have the same
+            meaning as for :meth:`get_mean_and_stddevs`.
         :param imts:
             Dictionary mapping intensity measure type objects (that is,
             instances of classes from :mod:`nhlib.imt`) to lists of
@@ -193,7 +194,9 @@ class GroundShakingIntensityModel(object):
         :returns:
             A dictionary of the same structure as parameter ``imts`` (see
             above). Instead of lists of IMLs values of the dictionaries
-            have numpy arrays of corresponding PoEs.
+            have 2d numpy arrays of corresponding PoEs, first dimension
+            represents contexts from ``ctxs`` and the second represents
+            IMLs.
 
         :raises ValueError:
             If truncation level is not ``None`` and neither non-negative
@@ -227,9 +230,12 @@ class GroundShakingIntensityModel(object):
             # zero truncation mode, just compare imls to mean
             for imt, imls in imts.items():
                 imls = self._convert_imls(imls)
-                mean, _ = self.get_mean_and_stddevs(ctx, imt, [],
-                                                    component_type)
-                ret[imt] = (imls <= mean).astype(float)
+                ret_imt = []
+                for ctx in ctxs:
+                    mean, _ = self.get_mean_and_stddevs(ctx, imt, [],
+                                                        component_type)
+                    ret_imt.append((imls <= mean).astype(float))
+                ret[imt] = numpy.array(ret_imt)
         else:
             # use real normal distribution
             assert (const.StdDev.TOTAL
@@ -241,10 +247,13 @@ class GroundShakingIntensityModel(object):
                                                      truncation_level)
             for imt, imls in imts.items():
                 imls = self._convert_imls(imls)
-                mean, [stddev] = self.get_mean_and_stddevs(
-                    ctx, imt, [const.StdDev.TOTAL], component_type
-                )
-                ret[imt] = distribution.sf((imls - mean) / stddev)
+                ret_imt = []
+                for ctx in ctxs:
+                    mean, [stddev] = self.get_mean_and_stddevs(
+                        ctx, imt, [const.StdDev.TOTAL], component_type
+                    )
+                    ret_imt.append(distribution.sf((imls - mean) / stddev))
+                ret[imt] = numpy.array(ret_imt)
 
         return ret
 
@@ -259,43 +268,61 @@ class GroundShakingIntensityModel(object):
         so there is no need to override it in actual GSIM implementations.
         """
 
-    def make_context(self, site, rupture, distances=None):
+    def make_contexts(self, sites, rupture):
         """
-        Create a :meth:`GSIMContext` object for given site and rupture.
+        Create a list of :meth:`GSIMContext` objects for given rupture and
+        a list of sites.
 
-        :param site:
-            Instance of :class:`nhlib.site.Site`.
+        :param sites:
+            List of instances of :class:`nhlib.site.Site`.
         :param rupture:
             Instance of :class:`~nhlib.source.rupture.Rupture` (or its subclass
             :class:`~nhlib.source.rupture.ProbabilisticRupture`).
-        :param distances:
-            If provided should be a dictionary mapping distance types (strings
-            like ``'rrup'`` or ``'rjb'``, see :attr:`REQUIRES_DISTANCES`)
-            to actual distances between corresponding ``site`` and ``rupture``.
-            If this value is not None, it's expected to contain all the
-            distance information the GSIM requires, those values are used
-            without checks. Otherwise distances will be calculated.
 
         :returns:
-            An instance of :class:`GSIMContext` with those (and only those)
-            attributes that are required by GSIM filled in.
+            A list of instances of :class:`GSIMContext` with those (and only
+            those) attributes that are required by GSIM filled in, one context
+            per site.
 
         :raises ValueError:
             If any of declared required parameters (that includes site, rupture
             and distance parameters) is unknown. If distances dict is provided
             but is missing some of the required distance information.
         """
-        context = GSIMContext()
         all_ctx_attrs = set(GSIMContext.__slots__)
 
         clsname = type(self).__name__
+
+        contexts = [GSIMContext() for i in xrange(len(sites))]
+
+        sites_mesh = Mesh.from_points_list([site.location for site in sites])
+        for param in self.REQUIRES_DISTANCES:
+            attr = 'dist_%s' % param
+            if not attr in all_ctx_attrs:
+                raise ValueError('%s requires unknown distance measure %r' %
+                                 (clsname, param))
+            if param == 'ztor':
+                dist = numpy.empty(len(sites_mesh))
+                dist.fill(rupture.surface.get_top_edge_depth())
+            else:
+                if param == 'rrup':
+                    dist = rupture.surface.get_min_distance(sites_mesh)
+                elif param == 'rx':
+                    dist = rupture.surface.get_rx_distance(sites_mesh)
+                elif param == 'rjb':
+                    dist = rupture.surface.get_joyner_boore_distance(
+                        sites_mesh
+                    )
+            for i, context in enumerate(contexts):
+                setattr(context, attr, dist[i])
 
         for param in self.REQUIRES_SITE_PARAMETERS:
             attr = 'site_%s' % param
             if not attr in all_ctx_attrs:
                 raise ValueError('%s requires unknown site parameter %r' %
                                  (clsname, param))
-            setattr(context, attr, getattr(site, param))
+            for i, site in enumerate(sites):
+                setattr(contexts[i], attr, getattr(site, param))
 
         for param in self.REQUIRES_RUPTURE_PARAMETERS:
             attr = 'rup_%s' % param
@@ -310,33 +337,10 @@ class GroundShakingIntensityModel(object):
                 value = rupture.surface.get_dip()
             elif param == 'rake':
                 value = rupture.rake
-            setattr(context, attr, value)
+            for context in contexts:
+                setattr(context, attr, value)
 
-        for param in self.REQUIRES_DISTANCES:
-            attr = 'dist_%s' % param
-            if not attr in all_ctx_attrs:
-                raise ValueError('%s requires unknown distance measure %r' %
-                                 (clsname, param))
-            if distances is not None:
-                if not param in distances:
-                    raise ValueError("'distances' dict should include all "
-                                     "the required distance measures: %s" %
-                                     ', '.join(self.REQUIRES_DISTANCES))
-                value = distances[param]
-            else:
-                if param == 'rrup':
-                    value = rupture.surface.get_min_distance(site.location)
-                elif param == 'rx':
-                    value = rupture.surface.get_rx_distance(site.location)
-                elif param == 'rjb':
-                    value = rupture.surface.get_joyner_boore_distance(
-                        site.location
-                    )
-                elif param == 'ztor':
-                    value = rupture.surface.get_top_edge_depth()
-            setattr(context, attr, value)
-
-        return context
+        return contexts
 
 
 class GMPE(GroundShakingIntensityModel):

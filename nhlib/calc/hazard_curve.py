@@ -78,13 +78,10 @@ def hazard_curves_poissonian(sources, sites, imts, time_span,
             prob = rupture.get_probability()
             gsim = gsims[rupture.tectonic_region_type]
 
-            # TODO: precompute distances to all the sites at once
-            for i, site in enumerate(sites):
-                ctx = gsim.make_context(site, rupture)
-                poes = gsim.get_poes(ctx, imts, component_type,
-                                     truncation_level)
-                for imt in imts:
-                    curves[imt][i] *= (1 - prob) ** poes[imt]
+            ctxs = gsim.make_contexts(sites, rupture)
+            poes = gsim.get_poes(ctxs, imts, component_type, truncation_level)
+            for imt in imts:
+                curves[imt] *= (1 - prob) ** poes[imt]
 
     for imt in imts:
         curves[imt] = 1 - curves[imt]

@@ -1504,7 +1504,7 @@ TEST4_RUPTURE_ASPECT_RATIO = 1.0
 TEST4_RUPTURES = [
     dict(
         mag=4.0,
-        strike=270.0,
+        strike=90.0,
         dip=90.0,
         rake=0.0,
         hypocenter=(0.00674491521945, 1.75459031793e-15, 0.5),
@@ -1540,7 +1540,7 @@ TEST4_RUPTURES = [
     ),
     dict(
         mag=4.0,
-        strike=270.0,
+        strike=90.0,
         dip=90.0,
         rake=0.0,
         hypocenter=(0.0112415253732, 3.50904297142e-15, 1.5),

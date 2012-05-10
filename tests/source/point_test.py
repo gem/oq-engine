@@ -166,16 +166,16 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         self._check_dimensions(surface, 5.623413252, 5.623413252)
         self.assertAlmostEqual(0, surface.top_left.distance(Point(
             -0.0333647435005, -0.00239548066924, 6.59414668702
-        )))
+        )), places=5)
         self.assertAlmostEqual(0, surface.top_right.distance(Point(
             0.00239548107539, 0.0333647434713, 6.59414668702
-        )))
+        )), places=5)
         self.assertAlmostEqual(0, surface.bottom_left.distance(Point(
             -0.00239548107539, -0.0333647434713, 9.40585331298
-        )))
+        )), places=5)
         self.assertAlmostEqual(0, surface.bottom_right.distance(Point(
             0.0333647435005, 0.00239548066924, 9.40585331298
-        )))
+        )), places=5)
 
     def test_2_rupture_shallower_than_upper_seismogenic_depth(self):
         rupture = self._get_rupture(min_mag=5, max_mag=6, hypocenter_depth=3,
@@ -189,16 +189,16 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         self._check_dimensions(surface, 5.623413252, 5.623413252)
         self.assertAlmostEqual(0, surface.top_left.distance(Point(
             -0.0288945127134, -0.0068657114195, 2.0
-        )))
+        )), places=5)
         self.assertAlmostEqual(0, surface.top_right.distance(Point(
             0.00686571229256, 0.028894512506, 2.0
-        )))
+        )), places=5)
         self.assertAlmostEqual(0, surface.bottom_left.distance(Point(
             0.00207475040284, -0.0378349743787, 4.81170662595
-        )))
+        )), places=5)
         self.assertAlmostEqual(0, surface.bottom_right.distance(Point(
             0.0378349744035, -0.00207474995049, 4.81170662595
-        )))
+        )), places=5)
 
     def test_3_rupture_deeper_than_lower_seismogenic_depth(self):
         rupture = self._get_rupture(min_mag=5, max_mag=6, hypocenter_depth=15,
@@ -210,16 +210,16 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         self._check_dimensions(surface, 5.623413252, 5.623413252)
         self.assertAlmostEqual(0, surface.top_left.distance(Point(
             -0.0378349744035, 0.00207474995049, 13.188293374
-        )))
+        )), places=5)
         self.assertAlmostEqual(0, surface.top_right.distance(Point(
             -0.00207475040284, 0.0378349743787, 13.188293374
-        )))
+        )), places=5)
         self.assertAlmostEqual(0, surface.bottom_left.distance(Point(
             -0.00686571229256, -0.028894512506, 16.0
-        )))
+        )), places=5)
         self.assertAlmostEqual(0, surface.bottom_right.distance(Point(
             0.0288945127134, 0.0068657114195, 16.0
-        )))
+        )), places=5)
 
     def test_4_rupture_wider_than_seismogenic_layer(self):
         rupture = self._get_rupture(min_mag=7, max_mag=8, hypocenter_depth=9,
@@ -257,16 +257,16 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
 
         self.assertAlmostEqual(0, surface.top_left.distance(Point(
             -0.0252862987308, -0.0252862962683, 7.01182317808
-        )))
+        )), places=5)
         self.assertAlmostEqual(0, surface.top_right.distance(Point(
             0.0252862987308, 0.0252862962683, 7.01182317808
-        )))
+        )), places=5)
         self.assertAlmostEqual(0, surface.bottom_left.distance(Point(
             -0.0252862987308, -0.0252862962683, 10.9881768219
-        )))
+        )), places=5)
         self.assertAlmostEqual(0, surface.bottom_right.distance(Point(
             0.0252862987308, 0.0252862962683, 10.9881768219
-        )))
+        )), places=5)
 
     def test_7_many_ruptures(self):
         source_id = name = 'test7-source'
@@ -354,7 +354,7 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
             surface = actual_rupture.surface
 
             tl, tr, br, bl = expected_corners
-            self.assertAlmostEqual(0, tl.distance(surface.top_left))
-            self.assertAlmostEqual(0, tr.distance(surface.top_right))
-            self.assertAlmostEqual(0, bl.distance(surface.bottom_left))
-            self.assertAlmostEqual(0, br.distance(surface.bottom_right))
+            self.assertEqual(tl, surface.top_left)
+            self.assertEqual(tr, surface.top_right)
+            self.assertEqual(bl, surface.bottom_left)
+            self.assertEqual(br, surface.bottom_right)
