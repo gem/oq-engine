@@ -22,6 +22,7 @@ from nhlib.geo.point import Point
 from nhlib.geo.mesh import Mesh, RectangularMesh
 from nhlib.geo import _utils as geo_utils
 
+from tests import assert_angles_equal
 from tests.geo import _mesh_test_data
 
 
@@ -529,7 +530,7 @@ class RectangularMeshGetMeanInclinationAndAzimuthTestCase(unittest.TestCase):
         mesh = RectangularMesh.from_points_list([row1, row2])
         dip, strike = mesh.get_mean_inclination_and_azimuth()
         self.assertAlmostEqual(dip, 90)
-        self.assertAlmostEqual(strike, 360)
+        assert_angles_equal(self, strike, 360, delta=1e-7)
 
         row1 = [Point(-90.1, -0.1), Point(-90, 0), Point(-89.9, 0.1)]
         row2 = [Point(-90.0, -0.1, 1), Point(-89.9, 0, 1), Point(-89.8, 0.1, 1)]
