@@ -535,6 +535,29 @@ class FocalMechanism(djm.Model):
         db_table = 'hzrdi\".\"focal_mechanism'
 
 
+class SiteModel(djm.Model):
+    '''
+     A model for site-specific parameters.
+
+    Used in Hazard calculations.
+    '''
+
+    input = djm.ForeignKey('Input')
+    # Average shear wave velocity for top 30 m. Units m/s.
+    vs30 = djm.FloatField()
+    # 'measured' or 'inferred'. Identifies if vs30 value has been measured or
+    # inferred.
+    vs30_type = djm.TextField()
+    # Depth to shear wave velocity of 1.0 km/s. Units m.
+    z1pt0 = djm.FloatField()
+    # Depth to shear wave velocity of 2.5 km/s. Units km.
+    z2pt5 = djm.FloatField()
+    location = djm.PointField(srid=4326)
+
+    class Meta:  # pylint: disable=C0111,W0232
+        db_table = 'hzrdi\".\"site_model'
+
+
 ## Tables in the 'uiapi' schema.
 
 

@@ -245,6 +245,25 @@ SELECT AddGeometryColumn('hzrdi', 'simple_fault', 'edge', 4326, 'LINESTRING', 3)
 ALTER TABLE hzrdi.simple_fault ALTER COLUMN edge SET NOT NULL;
 SELECT AddGeometryColumn('hzrdi', 'simple_fault', 'outline', 4326, 'POLYGON', 3);
 
+-- Site-specific parameters for hazard calculations.
+CREATE TABLE hzrdi.site_model (
+    id SERIAL PRIMARY KEY,
+    input_id INTEGER NOT NULL,
+    -- Average shear wave velocity for top 30 m. Units m/s.
+    vs30 float NOT NULL CONSTRAINT site_model_vs30
+        CHECK(vs30 > 0.0),
+    -- 'measured' or 'inferred'. Identifies if vs30 value has been measured or inferred.
+    vs30_type VARCHAR NOT NULL CONSTRAINT site_model_vs30_type
+        CHECK(vs30_type in ('measured', 'inferred')),
+    -- Depth to shear wave velocity of 1.0 km/s. Units m.
+    z1pt0 float NOT NULL CONSTRAINT site_model_z1pt0
+        CHECK(z1pt0 > 0.0),
+    -- Depth to shear wave velocity of 2.5 km/s. Units km.
+    z2pt5 float NOT NULL CONSTRAINT site_model_z2pt5
+        CHECK(z2pt5 > 0.0)
+) TABLESPACE hzrdi_ts;
+SELECT AddGeometryColumn('hzrdi', 'site_model', 'location', 4326, 'POINT', 2);
+
 -- Magnitude frequency distribution, Evenly discretized
 CREATE TABLE hzrdi.mfd_evd (
     id SERIAL PRIMARY KEY,
@@ -1737,6 +1756,10 @@ FOREIGN KEY (mfd_tgr_id) REFERENCES hzrdi.mfd_tgr(id) ON DELETE RESTRICT;
 
 ALTER TABLE hzrdi.simple_fault ADD CONSTRAINT hzrdi_simple_fault_mfd_evd_fk
 FOREIGN KEY (mfd_evd_id) REFERENCES hzrdi.mfd_evd(id) ON DELETE RESTRICT;
+
+-- hzrdi.site_model
+ALTER TABLE hzrdi.site_model ADD CONSTRAINT hzrdi_site_model_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE hzrdi.complex_fault ADD CONSTRAINT hzrdi_complex_fault_mfd_tgr_fk
 FOREIGN KEY (mfd_tgr_id) REFERENCES hzrdi.mfd_tgr(id) ON DELETE RESTRICT;
