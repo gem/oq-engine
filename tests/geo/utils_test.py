@@ -15,7 +15,6 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
-import pyproj
 import numpy
 
 from nhlib import geo
@@ -47,12 +46,6 @@ class LineIntersectsItselfTestCase(unittest.TestCase):
     def test_doesnt_intersect(self):
         lons = [-1, -2, -3, -5]
         lats = [ 0,  2,  4,  6]
-        self.assertEqual(False, self.func(lons, lats))
-        self.assertEqual(False, self.func(lons, lats, closed_shape=True))
-
-    def test_doesnt_intersect_on_a_pole(self):
-        lons = [80] * 4
-        lats = [10, 100, -360 + 190, -360 + 280]
         self.assertEqual(False, self.func(lons, lats))
         self.assertEqual(False, self.func(lons, lats, closed_shape=True))
 
@@ -132,29 +125,15 @@ class GetSphericalBoundingBox(unittest.TestCase):
 
 
 class GetOrthographicProjectionTestCase(unittest.TestCase):
-    def _get_proj_params(self, bounding_box):
-        proj = utils.get_orthographic_projection(*bounding_box)
-        self.assertIsInstance(proj, pyproj.Proj)
-        params = dict(param.strip().split('=')
-                      for param in proj.srs.split('+')
-                      if param)
-        return params
-
-    def test_simple(self):
-        params = self._get_proj_params((10, 16, -29.98, 30))
-        self.assertEqual(params.pop('proj'), 'ortho')
-        self.assertEqual(params.pop('units'), 'km')
-        self.assertAlmostEqual(float(params.pop('lat_0')), 0.01, delta=0.0001)
-        self.assertAlmostEqual(float(params.pop('lon_0')), 13, delta=0.0004)
-        self.assertEqual(params, {})
-        params = self._get_proj_params((-20, 40, 55, 56))
-        self.assertAlmostEqual(float(params.pop('lat_0')), 59.2380983)
-        self.assertAlmostEqual(float(params.pop('lon_0')), 9.5799719)
-
-    def test_international_date_line(self):
-        params = self._get_proj_params((177.6, -175.8, -10, 10))
-        self.assertAlmostEqual(float(params.pop('lat_0')), 0)
-        self.assertAlmostEqual(float(params.pop('lon_0')), -179.1)
+    def test_projection(self):
+        # values verified against pyproj's implementation
+        proj = utils.get_orthographic_projection(10, 16, -2, 30)
+        xx, yy = proj(numpy.array([10, 20, 30, 40]),
+                      numpy.array([-1, -2, -3, -4]))
+        exx = [-309.89151465, 800.52541443, 1885.04014687, 2909.78079661]
+        eyy = [-1650.93260348, -1747.79256663, -1797.62444771, -1802.28117183]
+        self.assertTrue(numpy.allclose(xx, exx, atol=0.01, rtol=0.005))
+        self.assertTrue(numpy.allclose(yy, eyy, atol=0.01, rtol=0.005))
 
 
 class GetMiddlePointTestCase(unittest.TestCase):

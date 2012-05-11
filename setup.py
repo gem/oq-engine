@@ -45,8 +45,7 @@ setup(
     install_requires=[
         'numpy',
         'scipy',
-        'shapely',
-        'pyproj<1.9.0'
+        'shapely'
     ],
     scripts=['tests/gsim/check_gsim.py'],
     maintainer='Anton Gritsay',

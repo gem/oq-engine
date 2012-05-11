@@ -18,6 +18,7 @@ Module :mod:`nhlib.geo.line` defines :class:`Line`.
 """
 import numpy
 
+from nhlib.geo import geodetic
 from nhlib.geo import _utils as utils
 
 
@@ -97,21 +98,12 @@ class Line(object):
         """
         if len(self.points) == 2:
             return self.points[0].azimuth(self.points[1])
-        points = iter(self.points)
-        prev_point = next(points)
-        azimuths = []
-        distances = []
-        for point in points:
-            # collect all the segments' lengths and azimuths
-            assert point.depth == prev_point.depth
-            azimuth, _, distance = utils.GEOD.inv(
-                prev_point.longitude, prev_point.latitude,
-                point.longitude, point.latitude
-            )
-            azimuths.append(azimuth)
-            distances.append(distance)
-            prev_point = point
-        azimuths, distances = numpy.radians(azimuths), numpy.array(distances)
+        lons = numpy.array([point.longitude for point in self.points])
+        lats = numpy.array([point.latitude for point in self.points])
+        azimuths = geodetic.azimuth(lons[:-1], lats[:-1], lons[1:], lats[1:])
+        distances = geodetic.geodetic_distance(lons[:-1], lats[:-1],
+                                               lons[1:], lats[1:])
+        azimuths = numpy.radians(azimuths)
         # convert polar coordinates to Cartesian ones and calculate
         # the average coordinate of each component
         avg_x = numpy.mean(distances * numpy.sin(azimuths))
@@ -225,10 +217,10 @@ class Line(object):
             p1, p2 = self.points[segment - 1:segment + 1]
             offset = tot_length - (acc_length - last_segment_length)
             if offset < 1e-5:
-                # for some reason it takes pyproj a lot of time to do forward
-                # geodetic transformations for small distances. if target point
+                # forward geodetic transformations for very small distances
+                # are very inefficient (and also unneeded). if target point
                 # is just 1 cm away from original (non-resampled) line vertex,
-                # don't even bother calling pyproj.
+                # don't even bother doing geodetic calculations.
                 resampled = p1
             else:
                 resampled = p1.equally_spaced_points(p2, offset)[1]

@@ -19,7 +19,9 @@ transformations, optimized for massive calculations.
 """
 import numpy
 
-from nhlib.geo._utils import EARTH_RADIUS
+
+#: Earth radius in km.
+EARTH_RADIUS = 6371.0
 
 
 def geodetic_distance(lons1, lats1, lons2, lats2):
@@ -28,7 +30,7 @@ def geodetic_distance(lons1, lats1, lons2, lats2):
     of points.
 
     Parameters are coordinates in decimal degrees. They could be scalar
-    float numbers or numpy arrays, in which case the should "broadcast
+    float numbers or numpy arrays, in which case they should "broadcast
     together".
 
     Implements `http://williams.best.vwh.net/avform.htm#Dist`_.
