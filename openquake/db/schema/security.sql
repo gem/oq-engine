@@ -40,6 +40,7 @@ GRANT ALL ON SEQUENCE hzrdi.r_depth_distr_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.r_rate_mdl_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.rupture_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.simple_fault_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE hzrdi.site_model_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.source_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE hzrdr.gmf_data_id_seq to GROUP openquake;
@@ -151,6 +152,10 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.r_rate_mdl TO oq_job_init;
 -- hzrdi.rupture
 GRANT SELECT ON hzrdi.rupture TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.rupture TO oq_job_init;
+
+-- hzrdi.site_model
+GRANT SELECT ON hzrdi.site_model TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.site_model TO oq_job_init;
 
 -- hzrdi.simple_fault
 GRANT SELECT ON hzrdi.simple_fault TO GROUP openquake;
