@@ -542,7 +542,8 @@ CREATE TABLE uiapi.input (
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
         CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gmpe',
                              'exposure', 'fragility', 'rupture',
-                             'vulnerability', 'vulnerability_retrofitted')),
+                             'vulnerability', 'vulnerability_retrofitted',
+                             'site_model')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
     last_update timestamp without time zone
