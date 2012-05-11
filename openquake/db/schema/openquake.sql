@@ -651,7 +651,6 @@ CREATE TABLE uiapi.oq_job_profile (
     truncation_type VARCHAR NOT NULL CONSTRAINT truncation_type_value
         CHECK(truncation_type IN ('none', 'onesided', 'twosided')),
     truncation_level float NOT NULL DEFAULT 3.0,
-    reference_vs30_value float NOT NULL,
     -- Intensity measure levels
     imls float[] CONSTRAINT imls_are_set
         CHECK(
@@ -887,7 +886,6 @@ CREATE TABLE uiapi.oq_job_profile (
             OR
             ((calc_mode != 'classical')
              AND (quantile_levels IS NULL))),
-    reference_depth_to_2pt5km_per_sec_param float,
     rupture_aspect_ratio float
         CONSTRAINT rupture_aspect_ratio_is_set
         CHECK(
@@ -1101,11 +1099,13 @@ CREATE TABLE uiapi.oq_job_profile (
             ((calc_mode = 'uhs') AND (uhs_periods IS NOT NULL) AND (array_length(uhs_periods, 1) > 0))
             OR
             ((calc_mode != 'uhs') AND (uhs_periods IS NULL))),
+    reference_vs30_value float NOT NULL,
+    vs30_type VARCHAR NOT NULL DEFAULT 'measured' CONSTRAINT vs30_type_value
+        CHECK(vs30_type IN ('measured', 'inferred')),
     depth_to_1pt_0km_per_sec float NOT NULL DEFAULT 100.0
         CONSTRAINT depth_to_1pt_0km_per_sec_above_zero
         CHECK(depth_to_1pt_0km_per_sec > 0.0),
-    vs30_type VARCHAR NOT NULL DEFAULT 'measured' CONSTRAINT vs30_type_value
-        CHECK(vs30_type IN ('measured', 'inferred')),
+    reference_depth_to_2pt5km_per_sec_param float,
     epsilon_random_seed INTEGER CONSTRAINT epsilon_rnd_seed_is_set
         CHECK(
             (calc_mode = 'scenario' AND epsilon_random_seed IS NOT NULL)
