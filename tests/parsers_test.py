@@ -240,6 +240,36 @@ m?ml version='1.0' encoding='utf-8'?>
 class SiteModelParserTestCase(unittest.TestCase):
     """Tests for :class:`parsers.SiteModelParser`."""
 
+    SAMPLE_FILE = 'nrml/schema/examples/site_model.xml'
+
+    INVALID_SCHEMA = '''\
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.3"
+      gml:id="n1">
+    <siteModel>
+        <site lon="-122.5" lat="37.5" vs30="800.0" vs30Type="measured" z1pt0="100.0" z2pt5="5.0" />
+        <site lon="-122.6" lat="37.6" vs30="801.0" vs30Type="measured" z1pt0="101.0" z2pt5="5.1" />
+        <site lon="-122.7" lat="37.7" vs30="802.0" vs30Type="measured" z1pt0="102.0" z2pt5="5.2" />
+        <site lon="-122.8" lat="37.8" vs30="803.0" vs30Type="measured" z1pt0="103.0" z2pt5="5.3" />
+        <site lon="-122.9" lat="37.9" vs30="804.0" vs30Type="measured" z1pt0="104.0" z2pt5="5.4" />
+    </siteModel>
+</nrml>'''
+
+    def test_invalid_schema_validation_on(self):
+        parser = parsers.SiteModelParser(
+            StringIO.StringIO(self.INVALID_SCHEMA))
+
+        # parser.parse() is a generator
+        # parsing is lazy, hence the call to `list`
+        self.assertRaises(etree.XMLSyntaxError, list, parser.parse())
+
+    def test_invalid_schema_validation_off(self):
+        parser = parsers.SiteModelParser(
+            StringIO.StringIO(self.INVALID_SCHEMA))
+
+        parser.parse()  # Should succeed with no errors
+
     def test_parse(self):
         expected_raw = [
             {'z2pt5': 5.0, 'z1pt0': 100.0, 'vs30': 800.0,
@@ -255,9 +285,7 @@ class SiteModelParserTestCase(unittest.TestCase):
         ]
         expected = [models.SiteModel(**x) for x in expected_raw]
 
-        test_file = 'nrml/schema/examples/site_model.xml'
-
-        parser = parsers.SiteModelParser(test_file)
+        parser = parsers.SiteModelParser(self.SAMPLE_FILE)
         actual = [x for x in parser.parse()]
 
         self.assertTrue(_utils.deep_eq(expected, actual))
