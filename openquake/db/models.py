@@ -645,7 +645,7 @@ class ModelContent(djm.Model):
     content_type = djm.TextField()
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"model_content'
 
 
