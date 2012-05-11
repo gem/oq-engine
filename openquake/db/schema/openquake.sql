@@ -509,6 +509,7 @@ CREATE TABLE uiapi.upload (
 CREATE TABLE uiapi.input (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
+    model_content_id INTEGER,  -- TODO(larsbutler), May 11th 2012: Eventually make this is a required FK (NOT NULL).
     -- The full path of the input file on the server
     path VARCHAR NOT NULL,
     digest VARCHAR(32) NOT NULL,
@@ -525,6 +526,16 @@ CREATE TABLE uiapi.input (
                              'vulnerability', 'vulnerability_retrofitted')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE uiapi_ts;
+
+
+CREATE TABLE uiapi.model_content (
+    id SERIAL PRIMARY KEY,
+    -- contains the raw text of an input file
+    raw_content TEXT NOT NULL,
+    content_type VARCHAR NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
@@ -1796,6 +1807,9 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_model_content_fk
+FOREIGN KEY (model_content_id) REFERENCES uiapi.model_content(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;

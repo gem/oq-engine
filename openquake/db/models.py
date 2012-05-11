@@ -561,11 +561,12 @@ class Upload(djm.Model):
 
 class Input(djm.Model):
     '''
-    A single OpenQuake input file uploaded by the user
+    A single OpenQuake input file uploaded by the user.
     '''
     owner = djm.ForeignKey('OqUser')
+    model_content = djm.ForeignKey('ModelContent')
     digest = djm.TextField(help_text="32 byte md5sum digest, used to "
-                                        "detect identical input model files")
+                                     "detect identical input model files")
     path = djm.TextField()
     INPUT_TYPE_CHOICES = (
         (u'unknown', u'Unknown'),
@@ -603,6 +604,19 @@ class Input(djm.Model):
 
     class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"input'
+
+
+class ModelContent(djm.model):
+    '''
+    Stores raw content for the various input model files.
+    '''
+
+    # contains the raw text of an input file
+    raw_content = djm.TextField()
+    # `content_type` should be used to indicate the file format
+    # (xml, csv, etc.)
+    content_type = djm.CharField()
+    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
 
 class Input2job(djm.Model):
