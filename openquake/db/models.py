@@ -629,7 +629,7 @@ class Input(djm.Model):
         db_table = 'uiapi\".\"input'
 
 
-class ModelContent(djm.model):
+class ModelContent(djm.Model):
     '''
     Stores raw content for the various input model files.
     '''
