@@ -597,10 +597,11 @@ class Input(djm.Model):
         (u'lt_source', u'Source Model Logic Tree'),
         (u'lt_gmpe', u'GMPE Logic Tree'),
         (u'exposure', u'Exposure'),
-        (u'vulnerability', u'Vulnerability'),
         (u'fragility', u'Fragility'),
+        (u'vulnerability', u'Vulnerability'),
         (u'vulnerability_retrofitted', u'Vulnerability Retroffited'),
         (u'rupture', u'Rupture'),
+        (u'site_model', u'Site Model'),
     )
     input_type = djm.TextField(choices=INPUT_TYPE_CHOICES)
     # Number of bytes in the file:
