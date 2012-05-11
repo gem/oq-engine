@@ -78,6 +78,7 @@ GRANT ALL ON SEQUENCE riskr.dmg_dist_total_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE riskr.dmg_dist_total_data_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE uiapi.input_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.model_content_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_job_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.job_stats_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.oq_job_profile_id_seq to GROUP openquake;
@@ -286,6 +287,10 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON riskr.dmg_dist_total_data TO oq_reslt_write
 -- uiapi.input
 GRANT SELECT ON uiapi.input TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.input TO oq_job_init;
+
+-- uiapi.model_content
+GRANT SELECT ON uiapi.model_content TO GROUP openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.model_content to oq_job_init;
 
 -- uiapi.input2job
 GRANT SELECT ON uiapi.input2job TO GROUP openquake;
