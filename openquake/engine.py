@@ -44,6 +44,7 @@ from openquake.db.models import Input2job
 from openquake.db.models import inputs4job
 from openquake.db.models import Job2profile
 from openquake.db.models import JobStats
+from openquake.db.models import ModelContent
 from openquake.db.models import OqJob
 from openquake.db.models import OqJobProfile
 from openquake.db.models import OqUser
@@ -562,6 +563,19 @@ def _identical_input(input_type, digest, owner_id):
     return ios[0] if ios else None
 
 
+def _get_content_type(path):
+    """Given the path to a file, guess the content type by looking at the file
+    extension. If there is none, simple return 'unknown'.
+    """
+    _, ext = os.path.splitext(path)
+    if ext == '':
+        return 'unknown'
+    else:
+        # This gives us the . and extension (such as '.xml').
+        # Don't include the period.
+        return ext[1:]
+
+
 def _insert_input_files(params, job, force_inputs):
     """Create uiapi.input records for all input files
 
@@ -584,8 +598,15 @@ def _insert_input_files(params, job, force_inputs):
         in_model = (_identical_input(input_type, digest, job.owner.id)
                     if not force_inputs else None)
         if in_model is None:
+            model_content = ModelContent()
+            with open(path, 'rb') as fh:
+                model_content.raw_content = fh.read()
+            model_content.content_type = _get_content_type(path)
+            model_content.save()
+
             in_model = Input(path=path, input_type=input_type, owner=job.owner,
-                             size=os.path.getsize(path), digest=digest)
+                             size=os.path.getsize(path), digest=digest,
+                             model_content=model_content)
             in_model.save()
 
         # Make sure we don't link to the same input more than once.
