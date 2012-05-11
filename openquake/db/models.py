@@ -638,7 +638,7 @@ class ModelContent(djm.Model):
     raw_content = djm.TextField()
     # `content_type` should be used to indicate the file format
     # (xml, csv, etc.)
-    content_type = djm.CharField()
+    content_type = djm.TextField()
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
 
