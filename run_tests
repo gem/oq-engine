@@ -1,7 +1,5 @@
 #!/bin/bash
 
-#!/bin/bash
-
 # Clean pyc files, in case any modules were removed or renamed.
 find . -name "*.pyc" -delete
 
