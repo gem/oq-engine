@@ -220,7 +220,7 @@ class EngineAPITestCase(unittest.TestCase):
                 models.model_equals(
                     exp_inp, act_inp, ignore=(
                         "id",  "last_update", "path", "model", "_owner_cache",
-                        "owner_id")))
+                        "owner_id", "model_content_id")))
 
     def test_import_job_profile_as_specified_user(self):
         # Test importing of a job profile when a user is specified
