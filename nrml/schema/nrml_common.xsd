@@ -126,7 +126,7 @@
 			<xs:minInclusive value="0.0"/>
 		</xs:restriction>
 	</xs:simpleType>
-	
+
     <!-- (0.0, inf) -->
     <xs:simpleType name="PositiveNonZeroDoubleType">
         <xs:restriction base="xs:double">

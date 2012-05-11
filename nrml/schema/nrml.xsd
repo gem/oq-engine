@@ -20,6 +20,7 @@
     <xs:include schemaLocation="./hazard/logic_tree.xsd"/>
     <xs:include schemaLocation="./hazard/raw_source_model.xsd"/>
     <xs:include schemaLocation="./hazard/rupture.xsd"/>
+    <xs:include schemaLocation="./hazard/site_model.xsd"/>
     <xs:include schemaLocation="./hazard/source_model/general.xsd"/>
     <xs:include schemaLocation="./hazard/source_model/area_source.xsd"/>
     <xs:include schemaLocation="./hazard/source_model/complex_fault.xsd"/>
@@ -65,6 +66,7 @@
                         <xs:element ref="dmgDistPerTaxonomy"/>
                         <xs:element ref="totalDmgDist"/>
                         <xs:element ref="collapseMap"/>
+                        <xs:element ref="siteModel"/>
                     </xs:choice>
                 </xs:sequence>
             </xs:extension>

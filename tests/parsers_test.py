@@ -235,3 +235,29 @@ m?ml version='1.0' encoding='utf-8'?>
         src_model = parser.parse()
 
         self.assertTrue(_utils.deep_eq(exp_src_model, src_model))
+
+
+class SiteModelParserTestCase(unittest.TestCase):
+    """Tests for :class:`parsers.SiteModelParser`."""
+
+    def test_parse(self):
+        expected_raw = [
+            {'z2pt5': 5.0, 'z1pt0': 100.0, 'vs30': 800.0,
+             'wkt': 'POINT(-122.5 37.5)', 'vs30_type': 'measured'},
+            {'z2pt5': 5.1, 'z1pt0': 101.0, 'vs30': 801.0,
+             'wkt': 'POINT(-122.6 37.6)', 'vs30_type': 'measured'},
+            {'z2pt5': 5.2, 'z1pt0': 102.0, 'vs30': 802.0,
+             'wkt': 'POINT(-122.7 37.7)', 'vs30_type': 'measured'},
+            {'z2pt5': 5.3, 'z1pt0': 103.0, 'vs30': 803.0,
+             'wkt': 'POINT(-122.8 37.8)', 'vs30_type': 'measured'},
+            {'z2pt5': 5.4, 'z1pt0': 104.0, 'vs30': 804.0,
+             'wkt': 'POINT(-122.9 37.9)', 'vs30_type': 'measured'},
+        ]
+        expected = [models.SiteModel(**x) for x in expected_raw]
+
+        test_file = 'nrml/schema/examples/site_model.xml'
+
+        parser = parsers.SiteModelParser(test_file)
+        actual = [x for x in parser.parse()]
+
+        self.assertTrue(_utils.deep_eq(expected, actual))
