@@ -291,3 +291,5 @@ def normalized(vector):
     length = numpy.sum(vector * vector, axis=-1)
     length = numpy.sqrt(length.reshape(length.shape + (1, )))
     return vector / length
+
+from nhlib.geo._utils_speedups import normalized, spherical_to_cartesian

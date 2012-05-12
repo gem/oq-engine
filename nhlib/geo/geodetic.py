@@ -353,3 +353,6 @@ def distance_to_arc(alon, alat, aazimuth, plons, plats):
          * numpy.sin(distance_to_target / EARTH_RADIUS)).clip(-1, 1)
     )
     return (numpy.pi / 2 - angle) * EARTH_RADIUS
+
+
+from nhlib.geo._utils_speedups import point_at
