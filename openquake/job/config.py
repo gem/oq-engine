@@ -649,6 +649,30 @@ class EventBasedRiskValidator(object):
         return (True, [])
 
 
+class AssetCorrelationValidator(object):
+    """Validator for ASSET_CORRELATION parameter (Scenario and Event-Based
+    Risk only).
+    """
+
+    def __init__(self, sections, params):
+        self.sections = sections
+        self.params = params
+
+    def is_valid(self):
+        """If this is a risk job of type Scenario or Event-Based, make sure
+        ASSET_CORRELATION is either a) undefined, b) 'perfect', or c)
+        'uncorrelated'."""
+        if RISK_SECTION in self.sections:
+            asset_corr = self.params.get('ASSET_CORRELATION')
+
+            if asset_corr is not None:
+                if not asset_corr in ('uncorrelated', 'perfect'):
+                    return (False, ['ASSET_CORRELATION must be undefined,'
+                                    ' "uncorrelated", or "perfect".'])
+
+        return (True, [])
+
+
 def default_validators(sections, params):
     """Create the set of default validators for a job.
 
@@ -702,5 +726,8 @@ def default_validators(sections, params):
     if (calc_mode in (BCR_EVENT_BASED_MODE, EVENT_BASED_MODE)
         and set([HAZARD_SECTION, RISK_SECTION]).issubset(sections)):
         validators.add(EventBasedRiskValidator(params))
+
+    if calc_mode in (SCENARIO_MODE, EVENT_BASED_MODE):
+        validators.add(AssetCorrelationValidator(sections, params))
 
     return validators
