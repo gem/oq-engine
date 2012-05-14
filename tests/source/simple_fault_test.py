@@ -23,14 +23,9 @@ from nhlib.scalerel.peer import PeerMSR
 from nhlib.geo import Point, Line
 from nhlib.tom import PoissonTOM
 
+from tests import assert_angles_equal
 from tests.geo.surface._utils import assert_mesh_is
 from tests.source import _simple_fault_test_data as test_data
-
-
-def assert_angles_equal(testcase, angle1, angle2, delta):
-    if abs(angle1 - angle2) > 180:
-        angle1, angle2 = 360 - max((angle1, angle2)), min((angle1, angle2))
-    testcase.assertAlmostEqual(angle1, angle2, delta=delta)
 
 
 class _BaseFaultSourceTestCase(unittest.TestCase):
