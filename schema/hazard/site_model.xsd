@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema"
+           xmlns:gml="http://www.opengis.net/gml"
+           xmlns="http://openquake.org/xmlns/nrml/0.3"
+           targetNamespace="http://openquake.org/xmlns/nrml/0.3"
+           elementFormDefault="qualified"
+           xml:lang="en">
+
+    <xs:element name="siteModel" type="SiteModel" />
+    <xs:complexType name="SiteModel">
+        <xs:sequence>
+            <xs:element name="site" type="SiteModelNode" minOccurs="1" maxOccurs="unbounded" />
+        </xs:sequence>
+    </xs:complexType>
+
+    <xs:complexType name="SiteModelNode">
+        <xs:attribute name="lon" type="Longitude" />
+        <xs:attribute name="lat" type="Latitude" />
+        <!-- Average shear wave velocity for top 30 m. Units m/s. -->
+        <xs:attribute name="vs30" type="PositiveNonZeroDoubleType" />
+        <!-- 'measured' or 'inferred'. Identifies if vs30 value has been measured or inferred. -->
+        <xs:attribute name="vs30Type" type="VS30Type" />
+        <!-- Depth to shear wave velocity of 1.0 km/s. Units m. -->
+        <xs:attribute name="z1pt0" type="PositiveNonZeroDoubleType" />
+        <!-- Depth to shear wave velocity of 2.5 km/s. Units km. -->
+        <xs:attribute name="z2pt5" type="PositiveNonZeroDoubleType" />
+    </xs:complexType>
+
+    <xs:simpleType name="VS30Type">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="measured" />
+            <xs:enumeration value="inferred" />
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="Latitude">
+        <xs:restriction base="xs:double">
+            <xs:minInclusive value="-90.0" />
+            <xs:maxInclusive value="90.0" />
+        </xs:restriction>
+    </xs:simpleType>
+
+    <xs:simpleType name="Longitude">
+        <xs:restriction base="xs:double">
+            <xs:minInclusive value="-180.0" />
+            <xs:maxInclusive value="180.0" />
+        </xs:restriction>
+    </xs:simpleType>
+
+</xs:schema>

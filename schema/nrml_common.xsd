@@ -125,6 +125,13 @@
 			<xs:minInclusive value="0.0"/>
 		</xs:restriction>
 	</xs:simpleType>
+
+    <xs:simpleType name="PositiveNonZeroDoubleType">
+        <xs:restriction base="xs:double">
+            <xs:minExclusive value="0.0" />
+        </xs:restriction>
+    </xs:simpleType>
+
 	
 	<xs:simpleType name="NonNegativeIntegerType">
 		<xs:restriction base="xs:integer">
