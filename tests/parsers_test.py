@@ -19,6 +19,7 @@ import unittest
 import models
 import parsers
 
+
 class SiteModelParserTestCase(unittest.TestCase):
     """Tests for :class:`parsers.SiteModelParser`."""
 
