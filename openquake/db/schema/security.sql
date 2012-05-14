@@ -155,7 +155,7 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.rupture TO oq_job_init;
 
 -- hzrdi.site_model
 GRANT SELECT ON hzrdi.site_model TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.site_model TO oq_job_init;
+GRANT SELECT,INSERT,DELETE ON hzrdi.site_model TO oq_job_init;
 
 -- hzrdi.simple_fault
 GRANT SELECT ON hzrdi.simple_fault TO GROUP openquake;
@@ -295,7 +295,7 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.input TO oq_job_init;
 
 -- uiapi.model_content
 GRANT SELECT ON uiapi.model_content TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.model_content to oq_job_init;
+GRANT SELECT,INSERT,DELETE ON uiapi.model_content to oq_job_init;
 
 -- uiapi.input2job
 GRANT SELECT ON uiapi.input2job TO GROUP openquake;
