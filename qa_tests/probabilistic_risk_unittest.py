@@ -13,28 +13,82 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+import os
+import numpy
 import unittest
 
-from nose.plugins.attrib import attr
+from lxml import etree
 
 from openquake.db.models import OqJob
-
+from openquake.nrml import nrml_schema_file
+from openquake.xml import NRML_NS
 from tests.utils import helpers
+
+OUTPUT_DIR = helpers.demo_file(
+    "probabilistic_event_based_risk/computed_output")
 
 
 class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
     """QA tests for the Probabilistic Event Based Risk calculator."""
 
-    @attr('qa')
     def test_probabilistic_risk(self):
-        # The rudimentary beginnings of a QA test for the probabilistic
-        # calculator. For now, just run it end-to-end
-        # to make sure it doesn't blow up.
         cfg = helpers.demo_file(
-            'probabilistic_event_based_risk/config_stest.gem')
+            "probabilistic_event_based_risk/config_qa.gem")
 
-        ret_code = helpers.run_job(cfg, ['--output-type=xml'])
-        self.assertEqual(0, ret_code)
+        self._run_job(cfg)
+        self._verify_job_succeeded()
+        self._verify_loss_maps()
 
-        job = OqJob.objects.latest('id')
-        self.assertEqual('succeeded', job.status)
+    def _verify_job_succeeded(self):
+        job = OqJob.objects.latest("id")
+        self.assertEqual("succeeded", job.status)
+
+        expected_files = [
+            "loss_curves-block-#%s-block#0.xml" % job.id,
+            "loss_curves-loss-block-#%s-block#0.xml" % job.id,
+            "losses_at-0.99.xml"
+        ]
+
+        for f in expected_files:
+            self.assertTrue(os.path.exists(os.path.join(OUTPUT_DIR, f)))
+
+    def _verify_loss_maps(self):
+
+        def xpath(asset_ref):
+            return ("{%(ns)s}riskResult/{%(ns)s}lossMap/"
+                "{%(ns)s}LMNode/{%(ns)s}loss[@assetRef='"
+                + asset_ref + "']/{%(ns)s}value")
+
+        filename = "%s/losses_at-0.99.xml" % OUTPUT_DIR
+        expected_closs = 78.1154725900
+
+        closs = float(self._get(filename, xpath("a1")))
+
+        self.assertTrue(numpy.allclose(
+                closs, expected_closs, atol=0.0, rtol=0.05))
+
+        expected_closs = 36.2507008221
+
+        closs = float(self._get(filename, xpath("a2")))
+
+        self.assertTrue(numpy.allclose(
+                closs, expected_closs, atol=0.0, rtol=0.05))
+
+        expected_closs = 23.4782545574
+
+        closs = float(self._get(filename, xpath("a3")))
+
+        self.assertTrue(numpy.allclose(
+                closs, expected_closs, atol=0.0, rtol=0.05))
+
+    def _run_job(self, config):
+        ret_code = helpers.run_job(config, ["--output-type=xml"])
+        self.assertEquals(0, ret_code)
+
+    def _get(self, filename, xpath):
+        schema = etree.XMLSchema(file=nrml_schema_file())
+        parser = etree.XMLParser(schema=schema)
+
+        tree = etree.parse(filename, parser=parser)
+
+        return tree.getroot().find(xpath % {'ns': NRML_NS}).text
