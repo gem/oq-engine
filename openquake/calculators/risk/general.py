@@ -73,14 +73,8 @@ def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
     """Compute the conditional loss for a loss curve and Probability of
     Exceedance (PoE)."""
 
-    loss_conditional = _compute_conditional_loss(
-        loss_curve, loss_poe)
-
+    loss_conditional = _compute_conditional_loss(loss_curve, loss_poe)
     key = kvs.tokens.loss_key(job_id, row, col, asset.asset_ref, loss_poe)
-
-    LOG.debug("Conditional loss is %s, write to key %s" %
-            (loss_conditional, key))
-
     kvs.get_client().set(key, loss_conditional)
 
 
@@ -396,9 +390,6 @@ class BaseRiskCalculator(Calculator):
                                       point.column, asset.asset_ref, loss_poe)
 
             loss_value = kvs.get_client().get(key)
-
-            LOG.debug("Loss for asset %s at %s %s is %s" %
-                (asset.asset_ref, asset.site.x, asset.site.y, loss_value))
 
             if loss_value:
                 risk_site = shapes.Site(asset.site.x, asset.site.y)
