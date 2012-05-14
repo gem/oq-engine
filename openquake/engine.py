@@ -605,9 +605,11 @@ def _insert_input_files(params, job, force_inputs):
         in_model = (_identical_input(input_type, digest, job.owner.id)
                     if not force_inputs else None)
         if in_model is None:
+            # Save the raw input file contents to the DB:
             model_content = ModelContent()
             with open(path, 'rb') as fh:
                 model_content.raw_content = fh.read()
+            # Try to guess the content type:
             model_content.content_type = _get_content_type(path)
             model_content.save()
 
