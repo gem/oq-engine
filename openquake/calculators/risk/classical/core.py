@@ -270,13 +270,13 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
         vuln_curves = vulnerability.load_vuln_model_from_kvs(
             self.job_ctxt.job_id)
 
-        for point in block.grid(self.job_ctxt.region):
+        for site in block.sites:
+            point = self.job_ctxt.region.grid.point_at(site)
             hazard_curve = self._get_db_curve(point.site)
+            assets = general.BaseRiskCalculator.assets_at(
+                self.job_ctxt.job_id, site)
 
-            assets = self.assets_for_cell(self.job_ctxt.job_id, point.site)
             for asset in assets:
-                LOGGER.debug("processing asset %s" % asset)
-
                 loss_ratio_curve = self.compute_loss_ratio_curve(
                     point, asset, hazard_curve, vuln_curves)
 
