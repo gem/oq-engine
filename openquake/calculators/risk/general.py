@@ -535,12 +535,11 @@ class EpsilonProvider(object):
         correlated jobs and unlikely to be available for uncorrelated ones.
         """
         correlation = getattr(self, "ASSET_CORRELATION", None)
-        if not correlation:
+
+        if correlation is None or correlation == 'uncorrelated':
             # Sample per asset
             return self.rnd.normalvariate(0, 1)
-        elif correlation != "perfect":
-            raise ValueError('Invalid "ASSET_CORRELATION": %s' % correlation)
-        else:
+        elif correlation == 'perfect':
             # Sample per building typology
             samples = getattr(self, "samples", None)
             if samples is None:
@@ -550,6 +549,8 @@ class EpsilonProvider(object):
             if asset.taxonomy not in samples:
                 samples[asset.taxonomy] = self.rnd.normalvariate(0, 1)
             return samples[asset.taxonomy]
+        else:
+            raise ValueError('Invalid "ASSET_CORRELATION": %s' % correlation)
 
 
 class Block(object):
