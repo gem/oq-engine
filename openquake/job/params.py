@@ -319,6 +319,8 @@ define_param('SUBDUCTION_RUPTURE_FLOATING_TYPE',
              to_db=map_enum)
 
 # Everything else; please maintain alphabetical ordering.
+define_param('ASSET_CORRELATION', 'asset_correlation',
+             modes=("scenario", "event_based"))
 define_param('ASSET_LIFE_EXPECTANCY', 'asset_life_expectancy', to_job=float,
              modes=("classical_bcr", "event_based_bcr"))
 define_param('COMPONENT', 'component', to_db=map_enum)
