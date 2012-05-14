@@ -334,3 +334,55 @@ class SourceModelParser(object):
         src_model.sources = self._source_gen(tree)
 
         return src_model
+
+
+class SiteModelParser(object):
+    """NRML site model parser. Reads site-specific parameters from a given
+    source.
+
+    :param source:
+        Filename or file-like object containing the XML data.
+    :param bool schema_validation:
+        If set to `True`, validate the input source against the current XML
+        schema. Otherwise, we will try to parse the ``source``, even if the
+        document structure or content is incorrect.
+    """
+
+    def __init__(self, source, schema_validation=True):
+        self.source = source
+        self.schema_validation = schema_validation
+
+    def parse(self):
+        """Parse the site model XML content and generate
+        :class:`nrml.model.SiteModel` objects.
+
+        :returns:
+            A iterable of :class:`nrml.model.SiteModel` objects.
+        """
+        if self.schema_validation:
+            schema = etree.XMLSchema(etree.parse(nrml.nrml_schema_file()))
+        else:
+            schema = None
+        tree = etree.iterparse(self.source, events=('start',),
+                               schema=schema)
+
+        for _, element in tree:
+            if element.tag == '{%s}site' % nrml.NAMESPACE:
+                site = models.SiteModel()
+                site.vs30 = float(element.get('vs30'))
+                site.vs30_type = element.get('vs30Type').strip()
+                site.z1pt0 = float(element.get('z1pt0'))
+                site.z2pt5 = float(element.get('z2pt5'))
+                lonlat = dict(lon=element.get('lon').strip(),
+                              lat=element.get('lat').strip())
+                site.wkt = 'POINT(%(lon)s %(lat)s)' % lonlat
+
+                yield site
+
+                # Now do some clean up to free memory.
+                while element.getprevious() is not None:
+                    # Delete previous sibling elements.
+                    # We need to loop here in case there are comments in
+                    # the input file which are considered siblings to
+                    # source elements.
+                    del element.getparent()[0]
