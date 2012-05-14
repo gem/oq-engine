@@ -703,6 +703,7 @@ CREATE TABLE uiapi.oq_job_profile (
             OR
             ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (rupture_surface_discretization IS NULL))),
+    asset_correlation VARCHAR,
     area_source_discretization float
         CONSTRAINT area_source_discretization_is_set
         CHECK(
