@@ -21,7 +21,7 @@ from lxml import etree
 
 from openquake.db.models import OqJob
 from openquake.nrml import nrml_schema_file
-from openquake.xml import NRML_NS
+from openquake.xml import NRML_NS, GML_NS
 from tests.utils import helpers
 
 OUTPUT_DIR = helpers.demo_file(
@@ -38,6 +38,70 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         self._run_job(cfg)
         self._verify_job_succeeded()
         self._verify_loss_maps()
+        self._verify_loss_ratio_curves()
+
+    def _verify_loss_ratio_curves(self):
+
+        def xpath_poes(asset_ref):
+            return ("{%(ns)s}riskResult/{%(ns)s}lossRatioCurveList/"
+                "{%(ns)s}asset[@gml:id='" + asset_ref +
+                "']/{%(ns)s}lossRatioCurves/{%(ns)s}"
+                "lossRatioCurve/{%(ns)s}poE")
+
+        def xpath_ratios(asset_ref):
+            return ("{%(ns)s}riskResult/{%(ns)s}lossRatioCurveList/"
+                "{%(ns)s}asset[@gml:id='" + asset_ref +
+                "']/{%(ns)s}lossRatioCurves/"
+                "{%(ns)s}lossRatioCurve/{%(ns)s}lossRatio")
+
+        job = OqJob.objects.latest("id")
+
+        filename = "%s/loss_curves-block-#%s-block#0.xml" % (
+                OUTPUT_DIR, job.id)
+
+        poes = [float(x) for x in self._get(
+            filename, xpath_poes("a2")).split()]
+
+        expected_poes = [1.0000000000, 1.0000000000,
+            0.9999999586, 0.9996645695, 0.9975213681,
+            0.9816858268, 0.8646666370, 0.8646704246,
+            0.6321542453]
+
+        self.assertTrue(numpy.allclose(
+                poes, expected_poes, atol=0.0, rtol=0.05))
+
+        loss_ratios = [float(x) for x in self._get(
+            filename, xpath_ratios("a2")).split()]
+
+        expected_loss_ratios = [0.0018204915, 0.0054614744,
+            0.0091024573, 0.0127434402, 0.0163844231,
+            0.0200254060, 0.0236663889, 0.0273073718,
+            0.0309483547]
+
+        self.assertTrue(numpy.allclose(
+                loss_ratios, expected_loss_ratios, atol=0.0, rtol=0.05))
+
+        poes = [float(x) for x in self._get(
+                filename, xpath_poes("a3")).split()]
+
+        expected_poes = [1.0000000000, 1.0000000000,
+            1.0000000000, 1.0000000000, 1.0000000000,
+            0.9999998875, 0.9999977397, 0.9998765914,
+            0.9816858693]
+
+        self.assertTrue(numpy.allclose(
+                poes, expected_poes, atol=0.0, rtol=0.05))
+
+        loss_ratios = [float(x) for x in self._get(
+            filename, xpath_ratios("a3")).split()]
+
+        expected_loss_ratios = [0.0014593438, 0.0043780315,
+            0.0072967191, 0.0102154068, 0.0131340944,
+            0.0160527820, 0.0189714697, 0.0218901573,
+            0.0248088450]
+
+        self.assertTrue(numpy.allclose(
+                loss_ratios, expected_loss_ratios, atol=0.0, rtol=0.05))
 
     def _verify_job_succeeded(self):
         job = OqJob.objects.latest("id")
@@ -91,4 +155,5 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
 
         tree = etree.parse(filename, parser=parser)
 
-        return tree.getroot().find(xpath % {'ns': NRML_NS}).text
+        return tree.getroot().find(xpath % {"ns": NRML_NS},
+                namespaces={"gml": GML_NS}).text
