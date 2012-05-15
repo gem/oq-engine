@@ -14,6 +14,7 @@
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import os
 import unittest
 
 import models
@@ -38,7 +39,8 @@ class SiteModelParserTestCase(unittest.TestCase):
         ]
         expected = [models.SiteModel(**x) for x in expected_raw]
 
-        test_file = 'schema/examples/site_model.xml'
+        test_file = os.path.join(
+            os.path.dirname(__file__), '..', 'schema/examples/site_model.xml')
 
         parser = parsers.SiteModelParser(test_file)
         actual = [x for x in parser.parse()]
