@@ -32,17 +32,16 @@ import unittest
 from openquake import engine
 from openquake import kvs
 from openquake import logs
-from openquake import nrml
 from openquake import shapes
 from openquake import xml
-
+from openquake.calculators.hazard import CALCULATORS
+from openquake.calculators.hazard import general as hazard_general
+from openquake.calculators.hazard.classical import core as classical
 from openquake.engine import JobContext
 from openquake.job.config import HazardMandatoryParamsValidator
 from openquake.job.config import PARAMS
 from openquake.kvs import tokens
-from openquake.calculators.hazard import CALCULATORS
-from openquake.calculators.hazard import general as hazard_general
-from openquake.calculators.hazard.classical import core as classical
+from openquake.nrml.utils import nrml_schema_file
 
 from tests.utils import helpers
 
@@ -56,7 +55,7 @@ MEAN_GROUND_INTENSITY = (
 
 TEST_JOB_FILE = helpers.testdata_path('simplecase/config.gem')
 
-NRML_SCHEMA_PATH = nrml.utils.nrml_schema_file()
+NRML_SCHEMA_PATH = nrml_schema_file()
 
 SIMPLE_FAULT_SRC_MODEL_LT = helpers.demo_file(
     'simple_fault_demo_hazard/source_model_logic_tree.xml')
