@@ -18,7 +18,7 @@ import numpy
 
 from lxml import etree
 
-from openquake.nrml import nrml_schema_file
+from openquake.nrml.utils import nrml_schema_file
 from openquake.xml import NRML_NS
 from openquake.db.models import OqJob
 
