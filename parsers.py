@@ -23,7 +23,7 @@ See :module:`models`.
 
 from lxml import etree
 
-import __init__
+import utils
 import models
 
 
@@ -51,7 +51,7 @@ class SiteModelParser(object):
             A iterable of :class:`model.SiteModel` objects.
         """
         if self.schema_validation:
-            schema = etree.XMLSchema(etree.parse(__init__.nrml_schema_file()))
+            schema = etree.XMLSchema(etree.parse(utils.nrml_schema_file()))
         else:
             schema = None
         tree = etree.iterparse(self.source, events=('start',),
