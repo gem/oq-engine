@@ -421,7 +421,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
             '0.007': [0.3, 0.4],
             0.0098: [0.5, 0.6]}
 
-        vuln_curve = shapes.VulnerabilityFunction.from_dict(("BT", data_dict))
+        vuln_curve = shapes.VulnerabilityFunction.from_tuple(("BT", data_dict))
 
         self.assertEqual([0.005, 0.007, 0.0098], vuln_curve._imls)
         self.assertEqual([0.1, 0.3, 0.5], vuln_curve._loss_ratios)
