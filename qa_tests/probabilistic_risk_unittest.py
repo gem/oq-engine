@@ -19,7 +19,8 @@ import unittest
 
 from lxml import etree
 
-from openquake.db.models import OqJob
+from openquake.db.models import OqJob, Output
+from openquake.export.risk import export_agg_loss_curve
 from openquake.nrml import nrml_schema_file
 from openquake.xml import NRML_NS, GML_NS
 from tests.utils import helpers
@@ -39,6 +40,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         self._verify_job_succeeded()
         self._verify_loss_maps()
         self._verify_loss_ratio_curves()
+        self._verify_aggregate_curve()
 
     def _verify_loss_ratio_curves(self):
 
@@ -144,6 +146,38 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
 
         self.assertTrue(numpy.allclose(
                 closs, expected_closs, atol=0.0, rtol=0.05))
+
+    def _verify_aggregate_curve(self):
+        job = OqJob.objects.latest("id")
+        
+        [output] = Output.objects.filter(
+            oq_job=job.id,
+            output_type="agg_loss_curve")
+
+        export_agg_loss_curve(output, OUTPUT_DIR)
+        filename = "%s/aggregate_loss_curve.xml" % OUTPUT_DIR
+
+        xpath = "{%(ns)s}riskResult/{%(ns)s}aggregateLossCurve/{%(ns)s}poE"
+
+        poes = [float(x) for x in self._get(filename, xpath).split()]
+
+        expected_poes = [1.0000000000, 1.0000000000, 0.9999991685,
+            0.9932621249, 0.9502177204, 0.8646647795,
+            0.8646752036, 0.6321506245, 0.6321525149]
+
+        self.assertTrue(numpy.allclose(
+                poes, expected_poes, atol=0.0, rtol=0.05))
+
+        xpath = "{%(ns)s}riskResult/{%(ns)s}aggregateLossCurve/{%(ns)s}loss"
+
+        losses = [float(x) for x in self._get(filename, xpath).split()]
+
+        expected_losses = [18.5629274028, 55.6887822085, 92.8146370142,
+            129.9404918199, 167.0663466256, 204.1922014313,
+            241.3180562370, 278.4439110427, 315.5697658484]
+
+        self.assertTrue(numpy.allclose(
+                losses, expected_losses, atol=0.0, rtol=0.05))
 
     def _run_job(self, config):
         ret_code = helpers.run_job(config, ["--output-type=xml"])
