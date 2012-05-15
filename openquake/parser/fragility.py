@@ -24,7 +24,7 @@ from lxml import etree
 
 from openquake import producer
 from openquake import xml
-from openquake.nrml import nrml_schema_file
+from openquake.nrml.utils import nrml_schema_file
 
 
 # Disabling pylint checks: too many local vars
