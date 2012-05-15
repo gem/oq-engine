@@ -40,7 +40,71 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         self._verify_job_succeeded()
         self._verify_loss_maps()
         self._verify_loss_ratio_curves()
+        self._verify_loss_curves()
         self._verify_aggregate_curve()
+
+    def _verify_loss_curves(self):
+
+        def xpath_poes(asset_ref):
+            return ("{%(ns)s}riskResult/{%(ns)s}lossCurveList/"
+                "{%(ns)s}asset[@gml:id='" + asset_ref +
+                "']/{%(ns)s}lossCurves/{%(ns)s}"
+                "lossCurve/{%(ns)s}poE")
+
+        def xpath_losses(asset_ref):
+            return ("{%(ns)s}riskResult/{%(ns)s}lossCurveList/"
+                "{%(ns)s}asset[@gml:id='" + asset_ref +
+                "']/{%(ns)s}lossCurves/"
+                "{%(ns)s}lossCurve/{%(ns)s}loss")
+
+        job = OqJob.objects.latest("id")
+
+        filename = "%s/loss_curves-loss-block-#%s-block#0.xml" % (
+                OUTPUT_DIR, job.id)
+
+        poes = [float(x) for x in self._get(
+            filename, xpath_poes("a2")).split()]
+
+        expected_poes = [1.0000000000, 1.0000000000,
+            0.9999999586, 0.9996645695, 0.9975213681,
+            0.9816858268, 0.8646666370, 0.8646704246,
+            0.6321542453]
+
+        self.assertTrue(numpy.allclose(
+                poes, expected_poes, atol=0.0, rtol=0.05))
+
+        losses = [float(x) for x in self._get(
+            filename, xpath_losses("a2")).split()]
+
+        expected_losses = [3.6409829079, 10.9229487236,
+            18.2049145394, 25.4868803551, 32.7688461709,
+            40.0508119866, 47.3327778023, 54.6147436181,
+            61.8967094338]
+
+        self.assertTrue(numpy.allclose(
+                losses, expected_losses, atol=0.0, rtol=0.05))
+
+        poes = [float(x) for x in self._get(
+                filename, xpath_poes("a3")).split()]
+
+        expected_poes = [1.0000000000, 1.0000000000,
+            1.0000000000, 1.0000000000, 1.0000000000,
+            0.9999998875, 0.9999977397, 0.9998765914,
+            0.9816858693]
+
+        self.assertTrue(numpy.allclose(
+                poes, expected_poes, atol=0.0, rtol=0.05))
+
+        losses = [float(x) for x in self._get(
+            filename, xpath_losses("a3")).split()]
+
+        expected_losses = [1.4593438219, 4.3780314657,
+            7.2967191094, 10.2154067532, 13.1340943970,
+            16.0527820408, 18.9714696845, 21.8901573283,
+            24.8088449721]
+
+        self.assertTrue(numpy.allclose(
+                losses, expected_losses, atol=0.0, rtol=0.05))
 
     def _verify_loss_ratio_curves(self):
 
@@ -149,7 +213,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
 
     def _verify_aggregate_curve(self):
         job = OqJob.objects.latest("id")
-        
+
         [output] = Output.objects.filter(
             oq_job=job.id,
             output_type="agg_loss_curve")
