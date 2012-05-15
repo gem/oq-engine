@@ -319,6 +319,8 @@ define_param('SUBDUCTION_RUPTURE_FLOATING_TYPE',
              to_db=map_enum)
 
 # Everything else; please maintain alphabetical ordering.
+define_param('ASSET_CORRELATION', 'asset_correlation',
+             modes=("scenario", "event_based"))
 define_param('ASSET_LIFE_EXPECTANCY', 'asset_life_expectancy', to_job=float,
              modes=("classical_bcr", "event_based_bcr"))
 define_param('COMPONENT', 'component', to_db=map_enum)
@@ -349,7 +351,10 @@ define_param('INTENSITY_MEASURE_LEVELS', 'imls',
              modes=('classical', 'event_based', 'disaggregation', 'uhs',
                     'classical_bcr', 'event_based_bcr'),
              to_job=cttfl)
-define_param('INTENSITY_MEASURE_TYPE', 'imt', to_db=map_enum)
+define_param('INTENSITY_MEASURE_TYPE', 'imt', to_db=map_enum,
+             modes=('classical', 'event_based', 'disaggregation',
+                    'classical_bcr', 'event_based_bcr', 'scenario',
+                    'scenario_damage'))
 define_param('INTEREST_RATE', 'interest_rate', to_job=float,
              modes=("classical_bcr", "event_based_bcr"))
 define_param('INVESTIGATION_TIME', 'investigation_time', default=0.0,

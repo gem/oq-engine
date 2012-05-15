@@ -517,6 +517,13 @@ def _prepare_config_parameters(params, sections):
         # config params to be strings at this point:
         new_params['COMPUTE_MEAN_HAZARD_CURVE'] = 'true'
 
+    # Fri, 11 May 2012 11:03:03 +0200, al-maisan
+    # According to dmonelli and larsbutler the intensity measure type for UHS
+    # jobs is *always* SA irrespective of the value specified in the config
+    # file.
+    if calc_mode == "uhs":
+        new_params["INTENSITY_MEASURE_TYPE"] = "SA"
+
     return new_params, sections
 
 

@@ -578,13 +578,16 @@ class DbTestCase(object):
         [input.delete() for input in inputs]
 
     @classmethod
-    def setup_job_profile(cls, job, force_inputs):
+    def setup_job_profile(cls, job, force_inputs, save2db=True):
         """Create a profile for the given job.
 
         :param job: The :class:`openquake.db.models.OqJob` instance to use
         :param bool force_inputs: If `True` the model input files will be
             parsed and the resulting content written to the database no matter
             what.
+        :param bool save2db: If `False` the job profile instance will be
+            returned but not saved to the database. Otherwise it is saved to
+            the database and returned then.
         :returns: a :class:`openquake.db.models.OqJobProfile` instance
         """
         oqjp = models.OqJobProfile()
@@ -641,7 +644,8 @@ class DbTestCase(object):
             "POLYGON((-81.3 37.2, -80.63 38.04, -80.02 37.49, -81.3 37.2))")
         oqjp.source_model_lt_random_seed = 23
         oqjp.gmpe_lt_random_seed = 5
-        oqjp.save()
+        if save2db:
+            oqjp.save()
         return oqjp
 
     @classmethod

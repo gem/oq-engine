@@ -48,6 +48,7 @@ class Region(object):
     """A container of polygons, used for bounds checking."""
 
     def __init__(self, polygon):
+        self._grid = None
         self.cell_size = 0.1
         self.polygon = polygon
 
@@ -146,7 +147,10 @@ class Region(object):
             raise Exception(
                 "Can't generate grid without cell_size being set")
 
-        return Grid(self, self.cell_size)
+        if not self._grid:
+            self._grid = Grid(self, self.cell_size)
+
+        return self._grid
 
 
 class RegionConstraint(Region):
