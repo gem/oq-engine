@@ -18,6 +18,7 @@ Module :mod:`nhlib.geo.surface.planar` contains :class:`PlanarSurface`.
 """
 import numpy
 
+from nhlib.geo import Point
 from nhlib.geo.surface.base import BaseSurface
 from nhlib.geo.mesh import RectangularMesh
 from nhlib.geo import geodetic
@@ -53,9 +54,11 @@ class PlanarSurface(BaseSurface):
         is not parallel to the bottom edge, if top edge differs in length
         from the bottom one, or if mesh spacing is not positive.
     """
-    #: XXX: TBD
-    #: in kilometers.
-    IMPERFECT_RECTANGLE_TOLERANCE = 1e-1
+    #: Maximum difference in surface's rectangle side lengths, maximum offset
+    #: of a bottom right corner from a plane that contains other corners,
+    #: as well as maximum offset of a bottom left corner from a line drawn
+    #: downdip perpendicular to top edge from top left corner, in kilometers.
+    IMPERFECT_RECTANGLE_TOLERANCE = 0.3
 
     def __init__(self, mesh_spacing, strike, dip,
                  top_left, top_right, bottom_right, bottom_left):
@@ -79,13 +82,21 @@ class PlanarSurface(BaseSurface):
         self.bottom_right = bottom_right
         self.bottom_left = bottom_left
 
-        lons = [top_left.longitude, top_right.longitude,
-                bottom_left.longitude, bottom_right.longitude]
-        lats = [top_left.latitude, top_right.latitude,
-                bottom_left.latitude, bottom_right.latitude]
-        depths = [top_left.depth, top_right.depth,
-                  bottom_left.depth, bottom_right.depth]
-        tl, tr, bl, br = geo_utils.spherical_to_cartesian(lons, lats, depths)
+        self.corner_lons = numpy.array([
+            top_left.longitude, top_right.longitude,
+            bottom_left.longitude, bottom_right.longitude
+        ])
+        self.corner_lats = numpy.array([
+            top_left.latitude, top_right.latitude,
+            bottom_left.latitude, bottom_right.latitude
+        ])
+        self.corner_depths = numpy.array([
+            top_left.depth, top_right.depth,
+            bottom_left.depth, bottom_right.depth
+        ])
+        tl, tr, bl, br = geo_utils.spherical_to_cartesian(
+            self.corner_lons, self.corner_lats, self.corner_depths
+        )
 
         # these two parameters define the plane that contains the surface
         # (in 3d Cartesian space): a normal unit vector,
@@ -104,9 +115,10 @@ class PlanarSurface(BaseSurface):
         self.zero_zero = tl
 
         # now we can check surface for validity
-        dists, xx, yy = self._project(lons, lats, depths)
-        width1, width2 = xx[1] - xx[0], xx[3] - xx[2]
-        length1, length2 = yy[1] - yy[0], yy[3] - yy[2]
+        dists, xx, yy = self._project(self.corner_lons, self.corner_lats,
+                                      self.corner_depths)
+        length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
+        width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
         if numpy.max(numpy.abs(dists)) > self.IMPERFECT_RECTANGLE_TOLERANCE \
                 or abs(width1 - width2) > self.IMPERFECT_RECTANGLE_TOLERANCE \
                 or width2 < 0 \
@@ -209,12 +221,12 @@ class PlanarSurface(BaseSurface):
                     #   |  |
                     #   ----
                     dist = (x ** 2 + y ** 2) ** 0.5
-                elif x > self.width:
+                elif x > self.length:
                     #      *
                     # 0---
                     # |  |
                     # ----
-                    dist = ((x - self.width) ** 2 + y ** 2) ** 0.5
+                    dist = ((x - self.length) ** 2 + y ** 2) ** 0.5
                 else:
                     #  *
                     # 0---
@@ -227,30 +239,30 @@ class PlanarSurface(BaseSurface):
                     #   |  |
                     #   ----
                     # *
-                    dist = (x ** 2 + (y - self.length) ** 2) ** 0.5
-                elif x > self.width:
+                    dist = (x ** 2 + (y - self.width) ** 2) ** 0.5
+                elif x > self.length:
                     # 0---
                     # |  |
                     # ----
                     #      *
-                    dist = ((x - self.width) ** 2
-                            + (y - self.length) ** 2) ** 0.5
+                    dist = ((x - self.length) ** 2
+                            + (y - self.width) ** 2) ** 0.5
                 else:
                     # 0---
                     # |  |
                     # ----
                     #  *
-                    dist = y - self.length
+                    dist = y - self.width
             elif x < 0:
                 #   0---
                 # * |  |
                 #   ----
                 dist = x
-            elif x > self.width:
+            elif x > self.length:
                 # 0---
                 # |  | *
                 # ----
-                dist = x - self.width
+                dist = x - self.length
             else:
                 # 0---
                 # | *|
@@ -264,3 +276,95 @@ class PlanarSurface(BaseSurface):
         # and distance between point's projection on a surface's plane
         # and a surface rectangle.
         return numpy.sqrt(dists ** 2 + numpy.array(dists2d) ** 2)
+
+    def _get_top_edge_centroid(self):
+        """
+        Overrides :meth:`superclass' method
+        <nhlib.geo.surface.BaseSurface._get_top_edge_centroid>`
+        in order to avoid creating a mesh.
+        """
+        lon, lat = geo_utils.get_middle_point(
+            self.top_left.longitude, self.top_left.latitude,
+            self.top_right.longitude, self.top_right.latitude
+        )
+        return Point(lon, lat, self.top_left.depth)
+
+    def get_top_edge_depth(self):
+        """
+        Overrides :meth:`superclass' method
+        <nhlib.geo.surface.BaseSurface.get_top_edge_depth>`
+        in order to avoid creating a mesh.
+        """
+        return self.top_left.depth
+
+    def get_joyner_boore_distance(self, mesh):
+        """
+        See :meth:`superclass' method
+        <nhlib.geo.surface.base.get_joyner_boore_distance>`.
+
+        This is an optimized version specific to planar surface that doesn't
+        make use of the mesh.
+        """
+        # we define four great circle arcs that contain four sides
+        # of projected planar surface. first two are directed from
+        # left corners to right ones (the direction has an effect
+        # on the sign of the distance to an arc), other two are
+        # directed from top corners to bottom ones. then we measure
+        # distance from each of the point in a mesh to each of those
+        # arcs and compare signs of distances in order to find
+        # a relative positions of projections of points and projection
+        # of a surface. then we consider four special cases (see below)
+        # and either pick one of distances to arcs or a closest
+        # distance to corner.
+        arcs_lons = [self.top_left.longitude, self.bottom_left.longitude,
+                     self.top_left.longitude, self.top_right.longitude]
+        arcs_lats = [self.top_left.latitude, self.bottom_left.latitude,
+                     self.top_left.latitude, self.top_right.latitude]
+        downdip_azimuth = (self.strike + 90) % 360
+        arcs_azimuths = [self.strike, self.strike,
+                         downdip_azimuth, downdip_azimuth]
+        mesh_lons = mesh.lons.reshape((-1, 1))
+        mesh_lats = mesh.lats.reshape((-1, 1))
+        # calculate distances from all the target points to all four arcs
+        dists_to_arcs = geodetic.distance_to_arc(
+            arcs_lons, arcs_lats, arcs_azimuths, mesh_lons, mesh_lats
+        )
+        # ... and distances from all the target points to each of surface's
+        # corners' projections (we might not need all of those but it's
+        # better to do that calculation once for all).
+        dists_to_corners = geodetic.geodetic_distance(
+            self.corner_lons, self.corner_lats, mesh_lons, mesh_lats
+        ).min(axis=-1)
+
+        dists = numpy.zeros(len(mesh))
+        # extract from ``dists_to_arcs`` signs (represent relative positions
+        # of an arc and a point: -1 means on the left hand side, 0 means
+        # on arc and +1 means on the right hand side) and minimum absolute
+        # values of distances to each pair of parallel arcs.
+        dists_to_arcs_signs = numpy.sign(dists_to_arcs)
+        dists_to_arcs = numpy.abs(dists_to_arcs).reshape(-1, 2, 2).min(axis=-1)
+        for i, (ds1, ds2, ds3, ds4) in enumerate(dists_to_arcs_signs):
+            # consider four possible relative positions of point and arcs:
+            if ds1 == ds2:
+                # if signs of distances to both parallel arcs are the same,
+                # it means that point lies outside of the surface projection
+                if ds3 == ds4:
+                    # if signs of distances to other two parallel arcs are
+                    # the same as well, than the closest distance is the one
+                    # to a closest corner point.
+                    dists[i] = dists_to_corners[i]
+                else:
+                    # otherwise (if point lies in between other two arcs)
+                    # the closest distance is a closest distance to first
+                    # pair of arcs
+                    dists[i] = dists_to_arcs[i][0]
+            else:
+                if ds3 == ds4:
+                    dists[i] = dists_to_arcs[i][1]
+                else:
+                    # distance is zero (point lies inside the surface's
+                    # projection) if signs of distances to both pairs
+                    # of arcs are different.
+                    dists[i] = 0
+
+        return dists

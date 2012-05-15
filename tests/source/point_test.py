@@ -163,7 +163,7 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         self.assertAlmostEqual(rupture.occurrence_rate, 0.0009)
 
         surface = rupture.surface
-        self._check_dimensions(surface, 5.623413252, 5.623413252)
+        self._check_dimensions(surface, 5.623413252, 5.623413252, delta=0.01)
         self.assertAlmostEqual(0, surface.top_left.distance(Point(
             -0.0333647435005, -0.00239548066924, 6.59414668702
         )), places=5)
@@ -186,7 +186,7 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         self.assertAlmostEqual(rupture.occurrence_rate, 0.0009)
 
         surface = rupture.surface
-        self._check_dimensions(surface, 5.623413252, 5.623413252)
+        self._check_dimensions(surface, 5.623413252, 5.623413252, delta=0.01)
         self.assertAlmostEqual(0, surface.top_left.distance(Point(
             -0.0288945127134, -0.0068657114195, 2.0
         )), places=5)
@@ -207,7 +207,7 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         self.assertEqual(rupture.hypocenter, Point(0, 0, 15))
 
         surface = rupture.surface
-        self._check_dimensions(surface, 5.623413252, 5.623413252)
+        self._check_dimensions(surface, 5.623413252, 5.623413252, delta=0.02)
         self.assertAlmostEqual(0, surface.top_left.distance(Point(
             -0.0378349744035, 0.00207474995049, 13.188293374
         )), places=5)
@@ -231,7 +231,7 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         surface = rupture.surface
         # in this test we need to increase the tolerance because the rupture
         # created is rather big and float imprecision starts to be noticeable
-        self._check_dimensions(surface, 112.93848786315641, 28, delta=2e-3)
+        self._check_dimensions(surface, 112.93848786315641, 28, delta=0.2)
 
         self.assertAlmostEqual(0, surface.top_left.distance(Point(
             -0.436201680751, -0.281993828512, 2.0
@@ -253,7 +253,8 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         self.assertEqual(rupture.hypocenter, Point(0, 0, 9))
 
         surface = rupture.surface
-        self._check_dimensions(surface, 7.9527072876705063, 3.9763536438352536)
+        self._check_dimensions(surface, 7.9527072876705063, 3.9763536438352536,
+                               delta=0.02)
 
         self.assertAlmostEqual(0, surface.top_left.distance(Point(
             -0.0252862987308, -0.0252862962683, 7.01182317808
