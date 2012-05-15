@@ -675,7 +675,6 @@ class VulnerabilityFunction(object):
     as Y values.
     """
 
-# TODO (ac): Update doc!
     def __init__(self, imls, loss_ratios, covs, distribution):
         """
         :param imls: Intensity Measure Levels for the vulnerability function.
