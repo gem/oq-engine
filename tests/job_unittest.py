@@ -259,6 +259,31 @@ class ConfigParseTestCase(unittest.TestCase):
             params)
         self.assertEqual(['GENERAL', 'HAZARD'], sorted(sections))
 
+    def test_prepare_parameters_for_uhs_set_imt_to_sa(self):
+        # The imt is always set to "sa" for uhs jobs.
+        content = '''
+            [general]
+
+            CALCULATION_MODE = UHS
+
+            SITES = 0.0, 0.0
+
+            DESCRIPTION = Uniform Hazard Spectra Demo
+
+            [HAZARD]
+
+            # parameters for UHS calculations
+            UHS_PERIODS = 0.025, 0.45, 2.5
+            POES = 0.1, 0.02
+            INTENSITY_MEASURE_TYPE = PGA
+            '''
+        config_path = helpers.touch(
+            dir=gettempdir(), content=textwrap.dedent(content))
+
+        params, sections = _parse_config_file(config_path)
+        params, sections = _prepare_config_parameters(params, sections)
+        self.assertEqual("SA", params["INTENSITY_MEASURE_TYPE"])
+
     def test_prepare_path_parameters(self):
         content = '''
             [GENERAL]

@@ -2,17 +2,17 @@
   Functions used in the OpenQuake database.
 
   Copyright (c) 2010-2012, GEM Foundation.
- 
+
   OpenQuake is free software: you can redistribute it and/or modify it
   under the terms of the GNU Affero General Public License as published
   by the Free Software Foundation, either version 3 of the License, or
   (at your option) any later version.
- 
+
   OpenQuake is distributed in the hope that it will be useful,
   but WITHOUT ANY WARRANTY; without even the implied warranty of
   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
   GNU General Public License for more details.
- 
+
   You should have received a copy of the GNU Affero General Public License
   along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 */
@@ -541,6 +541,44 @@ COMMENT ON FUNCTION pcheck_ffd() IS
 'Make sure the inserted discrete fragility function record is consistent.';
 
 
+CREATE OR REPLACE FUNCTION pcheck_oq_job_profile()
+  RETURNS TRIGGER
+AS $$
+    # By default we will merely consent to the insert/update operation.
+    result = "OK"
+
+    NEW = TD["new"] # new data resulting from insert or update
+
+    if NEW["calc_mode"] != "uhs":
+        imt = NEW["imt"]
+        assert imt in ("pga", "sa", "pgv", "pgd", "ia", "rsd", "mmi"), (
+            "Invalid intensity measure type: '%s'" % imt)
+
+        if imt == "sa":
+            assert NEW["period"] is not None, (
+                "Period must be set for intensity measure type 'sa'")
+        else:
+            assert NEW["period"] is None, (
+                "Period must not be set for intensity measure type '%s'" % imt)
+    else:
+        # This is a uhs job.
+        if NEW["imt"] != "sa" or NEW["period"] is not None:
+            # The trigger will return a modified row.
+            result = "MODIFY"
+
+        if NEW["imt"] != "sa":
+            NEW["imt"] = "sa"
+        if NEW["period"] is not None:
+            NEW["period"] = None
+
+    return result
+$$ LANGUAGE plpythonu;
+
+
+COMMENT ON FUNCTION pcheck_oq_job_profile() IS
+'Make sure the inserted/updated job profile record is consistent.';
+
+
 CREATE TRIGGER riskr_dmg_dist_total_data_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON riskr.dmg_dist_total_data
 FOR EACH ROW EXECUTE PROCEDURE
@@ -586,6 +624,10 @@ FOR EACH ROW EXECUTE PROCEDURE pcheck_ffc();
 CREATE TRIGGER riski_ffd_before_insert_update_trig
 BEFORE INSERT ON riski.ffd
 FOR EACH ROW EXECUTE PROCEDURE pcheck_ffd();
+
+CREATE TRIGGER uiapi_oq_job_profile_before_insert_update_trig
+BEFORE INSERT OR UPDATE ON uiapi.oq_job_profile
+FOR EACH ROW EXECUTE PROCEDURE pcheck_oq_job_profile();
 
 CREATE TRIGGER eqcat_magnitude_before_insert_update_trig
 BEFORE INSERT OR UPDATE ON eqcat.magnitude

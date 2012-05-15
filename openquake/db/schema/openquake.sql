@@ -643,15 +643,8 @@ CREATE TABLE uiapi.oq_job_profile (
     --      relative significant duration (rsd)
     --      Modified Mercalli Intensity
     -- For UHS calculations, IMT should always be 'sa'.
-    imt VARCHAR NOT NULL CONSTRAINT imt_value
-        CHECK(((calc_mode = 'uhs') AND (imt = 'sa'))
-            OR (imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd', 'mmi'))),
-    period float CONSTRAINT period_is_set
-        -- The 'period' parameter is only used when the intensity measure type is SA.
-        -- This rule only applies to calc modes != 'uhs' (the Uniform Hazard Spectra
-        -- calculator instead defines an array of periods).
-        CHECK(((imt = 'sa' AND calc_mode != 'uhs') AND (period IS NOT NULL))
-              OR ((imt != 'sa' OR calc_mode = 'uhs') AND (period IS NULL))),
+    imt VARCHAR,
+    period float,
     damping float CONSTRAINT damping_is_set
         CHECK(((imt = 'sa') AND (damping IS NOT NULL))
               OR ((imt != 'sa') AND (damping IS NULL))),
