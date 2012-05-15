@@ -60,7 +60,7 @@ class SadighEtAl1997(GMPE):
 
     #: Required site parameter is only Vs30 (used to distinguish rock
     #: and deep soil).
-    REQUIRES_SITE_PARAMETERS = set(('vs30', ))
+    REQUIRES_SITES_PARAMETERS = set(('vs30', ))
 
     #: Required rupture parameters are magnitude and rake (eq. 1).
     REQUIRES_RUPTURE_PARAMETERS = set(('rake', 'mag'))
@@ -76,7 +76,8 @@ class SadighEtAl1997(GMPE):
     #: saturation effect is 6.5. See page 184.
     NEAR_FIELD_SATURATION_MAG = 6.5
 
-    def get_mean_and_stddevs(self, ctx, imt, stddev_types, component_type):
+    def get_mean_and_stddevs(self, sites, rup, dists, imt,
+                             stddev_types, component_type):
         """
         See :meth:`superclass method
         <nhlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
@@ -88,15 +89,20 @@ class SadighEtAl1997(GMPE):
 
         # GMPE differentiates strike-slip, reverse and normal ruptures,
         # but combines normal and strike-slip into one category. See page 180.
-        is_reverse = (45 <= ctx.rup_rake <= 135)
+        is_reverse = (45 <= rup.rake <= 135)
 
-        mean_rock = self._get_mean_rock(ctx.rup_mag, ctx.rup_rake, ctx.dist_rrup, is_reverse, imt)
-        stddevs_rock = [self._get_stddev_rock(ctx.rup_mag, imt) for stddev_type in stddev_types]
-        mean_soil = self._get_mean_deep_soil(ctx.rup_mag, ctx.rup_rake, ctx.dist_rrup, is_reverse, imt)
-        stddevs_soil = [self._get_stddev_deep_soil(ctx.rup_mag, imt) for stddev_type in stddev_types]
-        mean = numpy.where(ctx.site_vs30 > self.ROCK_VS30, mean_rock, mean_soil)
-        stddevs = [numpy.where(ctx.site_vs30 > self.ROCK_VS30, stddevs_rock[i], stddevs_soil[i])
-                   for i in xrange(len(stddevs_rock))]
+        mean_rock = self._get_mean_rock(rup.mag, rup.rake, dists.rrup,
+                                        is_reverse, imt)
+        mean_soil = self._get_mean_deep_soil(rup.mag, rup.rake, dists.rrup,
+                                             is_reverse, imt)
+        mean = numpy.where(sites.vs30 > self.ROCK_VS30, mean_rock, mean_soil)
+
+        stddevs = []
+        for stddev_type in stddev_types:
+            stddev_rock = self._get_stddev_rock(rup.mag, imt)
+            stddev_soil = self._get_stddev_deep_soil(rup.mag, imt)
+            stddevs.append(numpy.where(sites.vs30 > self.ROCK_VS30,
+                                       stddev_rock, stddev_soil))
         return mean, stddevs
 
     def _get_mean_deep_soil(self, mag, rake, rrup, is_reverse, imt):
@@ -120,8 +126,8 @@ class SadighEtAl1997(GMPE):
         else:
             c1 = self.COEFFS_SOIL_IMT_INDEPENDENT['c1ss']
             c6 = C['c6ss']
-        return (c1 + c2 * mag - c3 * log(rrup + c4 * exp(c5 * mag))
-                + c6 + C['c7'] * ((8.5 - mag) ** 2.5))
+        return (c1 + c2 * mag + c6 + C['c7'] * ((8.5 - mag) ** 2.5)
+                - c3 * log(rrup + c4 * exp(c5 * mag)))
 
     def _get_mean_rock(self, mag, rake, rrup, is_reverse, imt):
         """
