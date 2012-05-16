@@ -202,6 +202,7 @@ define_param('GMPE_LOGIC_TREE_FILE', None,
 define_param('SOURCE_MODEL_LOGIC_TREE_FILE', None,
              modes=('classical', 'event_based', 'disaggregation', 'uhs',
                     'classical_bcr', 'event_based_bcr'))
+define_param('SITE_MODEL', None)
 
 # Disaggregation parameters:
 define_param('DISAGGREGATION_RESULTS', 'disagg_results',
