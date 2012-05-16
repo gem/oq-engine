@@ -212,11 +212,11 @@ def set_gmpe_params(gmpe_map, params):
         gmpe_map.put(tect_region, gmpe)
 
 
-def store_site_model(input_id, source):
+def store_site_model(input_mdl, source):
     """Invoke site model parser and save the site-specified parameter data to
     the database.
 
-    :param int input_id:
+    :param input_mdl:
         The `uiapi.input` record which the new `hzrdi.site_model` records
         reference. This `input` record acts as a container for the site model
         data.
@@ -231,7 +231,7 @@ def store_site_model(input_id, source):
         sm.z1pt0 = node.z1pt0
         sm.z2pt5 = node.z2pt5
         sm.location = node.wkt
-        sm.input_id = input_id
+        sm.input = input_mdl
         sm.save()
 
 
@@ -250,7 +250,10 @@ class BaseHazardCalculator(Calculator):
             return
 
         [site_model] = site_model  # Should only be 1 record.
-        store_site_model(site_model, StringIO.StringIO(site_model.raw_content))
+        # Explicit cast to `str` here because the XML parser doesn't like
+        # unicode. (More specifically, lxml doesn't like unicode.)
+        site_model_content = str(site_model.model_content.raw_content)
+        store_site_model(site_model, StringIO.StringIO(site_model_content))
 
     def pre_execute(self):
         basepath = self.job_ctxt.params.get('BASE_PATH')
