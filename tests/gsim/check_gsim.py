@@ -31,8 +31,7 @@ from nhlib.gsim.base import SitesContext, RuptureContext, DistancesContext
 from nhlib.imt import PGA, PGV, SA
 
 
-def check_gsim(gsim_cls, datafile, max_discrep_percentage,
-                 max_errors=1, verbose=False):
+def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     """
     Test GSIM against the data file and return test result.
 
@@ -44,29 +43,26 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage,
     :param max_discrep_percentage:
         The maximum discrepancy in percentage points. The check fails
         if expected value diverges from actual by more than that.
-    :param max_errors:
-        Maximum errors to allow. If set to 0 or negative values, all
-        tests are executed. Otherwise execution stops after that number
-        of failed checks.
-    :param verbose:
-        If ``True`` every failed check is printed immediately.
+    :param debug:
+        If ``True`` the execution will stop immediately if there is an error
+        and a message pointing to a line with a test that failed will show up.
+        If ``False`` the GSIM is executed in a vectorized way (if possible)
+        and all the tests are executed even if there are errors.
 
     :returns:
         A tuple of two elements: a number of errors and a string representing
         statistics about the test run.
     """
-    reader = csv.reader(datafile)
     gsim = gsim_cls()
 
-    linenum = 1
     errors = 0
+    linenum = 1
     discrepancies = []
-    headers = [param_name.lower() for param_name in reader.next()]
     started = time.time()
-    for values in reader:
+    for testcase in _parse_csv(datafile, debug):
         linenum += 1
         (sctx, rctx, dctx, stddev_types, component_type,
-         expected_results, result_type) = _parse_csv_line(headers, values)
+         expected_results, result_type) = testcase
         for imt, expected_result in expected_results.items():
             mean, stddevs = gsim.get_mean_and_stddevs(
                 sctx, rctx, dctx, imt, stddev_types, component_type
@@ -76,25 +72,21 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage,
             else:
                 [result] = stddevs
             assert isinstance(result, numpy.ndarray), result_type
-            [result] = result
-            discrep_percentage = abs(
-                result / float(expected_result) * 100 - 100
+            discrep_percentage = numpy.abs(
+                result / expected_result * 100 - 100
             )
-            discrepancies.append(discrep_percentage)
-            if discrep_percentage > max_discrep_percentage:
-                # check failed
-                errors += 1
-                if verbose:
-                    msg = 'file %r line %r imt %r: expected %s %f != %f ' \
-                          '(delta %.4f%%)' % (
-                              datafile.name, linenum, imt, result_type.lower(),
-                              expected_result, result, discrep_percentage
-                          )
-                    print >> sys.stderr, msg
-                if max_errors > 0 and errors >= max_errors:
-                    break
+            discrepancies.extend(discrep_percentage)
+            errors += (discrep_percentage > max_discrep_percentage).sum()
+            if errors and debug:
+                msg = 'file %r line %r imt %r: expected %s %f != %f ' \
+                      '(delta %.4f%%)' % (
+                          datafile.name, linenum, imt, result_type.lower(),
+                          expected_result[0], result[0], discrep_percentage[0]
+                      )
+                print >> sys.stderr, msg
+                break
 
-        if max_errors > 0 and errors >= max_errors:
+        if debug and errors:
             break
 
     return errors, _format_stats(time.time() - started, discrepancies, errors)
@@ -137,6 +129,56 @@ standard deviation = %.4f%%'''
     return stats
 
 
+def _parse_csv(datafile, debug):
+    """
+    Parse a data file in csv format and generate everything needed to exercise
+    GSIM and check the result.
+
+    :param datafile:
+        File-like object to read csv from.
+    :param debug:
+        If ``False``, parser will try to combine several subsequent rows from
+        the data file into one vectorized call.
+    :returns:
+        A generator of tuples of :func:`_parse_csv_line` result format.
+    """
+    reader = iter(csv.reader(datafile))
+    headers = [param_name.lower() for param_name in next(reader)]
+    (sctx, rctx, dctx, stddev_types, component_type,
+     expected_results, result_type) = _parse_csv_line(headers, next(reader))
+    sattrs = [slot for slot in SitesContext.__slots__ if hasattr(sctx, slot)]
+    dattrs = [slot for slot in DistancesContext.__slots__
+              if hasattr(dctx, slot)]
+    for line in reader:
+        (sctx2, rctx2, dctx2, stddev_types2, component_type2,
+         expected_results2, result_type2) = _parse_csv_line(headers, line)
+        if not debug \
+                and stddev_types2 == stddev_types \
+                and component_type2 == component_type \
+                and result_type2 == result_type \
+                and all(getattr(rctx2, slot, None) == getattr(rctx, slot, None)
+                        for slot in RuptureContext.__slots__):
+            for slot in sattrs:
+                setattr(sctx, slot, numpy.hstack((getattr(sctx, slot),
+                                                  getattr(sctx2, slot))))
+            for slot in dattrs:
+                setattr(dctx, slot, numpy.hstack((getattr(dctx, slot),
+                                                  getattr(dctx2, slot))))
+            for imt in expected_results:
+                expected_results[imt] = numpy.hstack((expected_results[imt],
+                                                      expected_results2[imt]))
+        else:
+            yield (sctx, rctx, dctx, stddev_types, component_type,
+                   expected_results, result_type)
+            (sctx, rctx, dctx, stddev_types, component_type,
+             expected_results, result_type) \
+            = (sctx2, rctx2, dctx2, stddev_types2, component_type2,
+            expected_results2, result_type2)
+
+    yield (sctx, rctx, dctx, stddev_types, component_type,
+           expected_results, result_type)
+
+
 def _parse_csv_line(headers, values):
     """
     Parse a single line from data file.
@@ -148,9 +190,14 @@ def _parse_csv_line(headers, values):
     :returns:
         A tuple of the following values (in specified order):
 
-        context
-            An instance of :class:`nhlib.gsim.base.GSIMContext` with
-            attributes populated by the information from in row.
+        sctx
+            An instance of :class:`nhlib.gsim.base.SitesContext` with
+            attributes populated by the information from in row in a form
+            of single-element numpy arrays.
+        rctx
+            An instance of :class:`nhlib.gsim.base.RuptureContext`.
+        dctx
+            An instance of :class:`nhlib.gsim.base.DistancesContext`.
         stddev_types
             An empty list, if the ``result_type`` column says "MEAN"
             for that row, otherwise it is a list with one item --
@@ -159,9 +206,9 @@ def _parse_csv_line(headers, values):
             An intensity measure component, taken from the column
             ``component_type``.
         expected_results
-            A dictionary mapping IMT-objects to expected result values.
-            Those results represent either standard deviation or mean
-            value of corresponding IMT depending on ``result_type``.
+            A dictionary mapping IMT-objects to one-element arrays of expected
+            result values. Those results represent either standard deviation
+            or mean value of corresponding IMT depending on ``result_type``.
         result_type
             A string literal, one of ``'STDDEV'`` or ``'MEAN'``. Value
             is taken from column ``result_type``.
@@ -216,7 +263,7 @@ def _parse_csv_line(headers, values):
                 assert damping is not None
                 imt = SA(period, damping)
 
-            expected_results[imt] = value
+            expected_results[imt] = numpy.array([value])
 
     assert component_type is not None and result_type is not None
     return (sctx, rctx, dctx, stddev_types,
@@ -265,25 +312,22 @@ if __name__ == '__main__':
                              'value to be considered matching, expressed ' \
                              'in percentage points. default value is 0.5.',
                         nargs='?', default=0.5, dest='max_discrep_percentage')
-    parser.add_argument('-e', '--max-errors', type=int, required=False,
-                        help='maximum number of tests to fail before ' \
-                             'stopping execution. by default all tests ' \
-                             'are executed.',
-                        default=0, metavar='num')
-    verb_group = parser.add_mutually_exclusive_group()
-    verb_group.add_argument('-v', '--verbose', action='store_true',
-                            help='print information about each error ' \
-                                 'immediately.')
-    verb_group.add_argument('-q', '--quiet', action='store_true',
-                            help="don't print stats at the end. use exit " \
-                                 "code to determine if test succeeded.")
+    dbg_group = parser.add_mutually_exclusive_group()
+    dbg_group.add_argument('-d', '--debug', required=False,
+                           action='store_true',
+                           help='run unvectorized, stop on first error '
+                                'and print information about line containing '
+                                'failing test')
+    dbg_group.add_argument('-q', '--quiet', action='store_true',
+                           help="don't print stats at the end. use exit " \
+                                "code to determine if test succeeded.")
 
     args = parser.parse_args()
 
     errors, stats = check_gsim(
         gsim_cls=args.gsim, datafile=args.datafile,
         max_discrep_percentage=args.max_discrep_percentage,
-        max_errors=args.max_errors, verbose=args.verbose
+        debug=args.debug
     )
     if not args.quiet:
         print >> sys.stderr, stats
