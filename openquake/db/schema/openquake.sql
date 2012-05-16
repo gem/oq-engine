@@ -1107,10 +1107,10 @@ CREATE TABLE uiapi.oq_job_profile (
             ((calc_mode = 'uhs') AND (uhs_periods IS NOT NULL) AND (array_length(uhs_periods, 1) > 0))
             OR
             ((calc_mode != 'uhs') AND (uhs_periods IS NULL))),
-    reference_vs30_value float NOT NULL,
-    vs30_type VARCHAR NOT NULL DEFAULT 'measured' CONSTRAINT vs30_type_value
+    reference_vs30_value float,
+    vs30_type VARCHAR DEFAULT 'measured' CONSTRAINT vs30_type_value
         CHECK(vs30_type IN ('measured', 'inferred')),
-    depth_to_1pt_0km_per_sec float NOT NULL DEFAULT 100.0
+    depth_to_1pt_0km_per_sec float DEFAULT 100.0
         CONSTRAINT depth_to_1pt_0km_per_sec_above_zero
         CHECK(depth_to_1pt_0km_per_sec > 0.0),
     reference_depth_to_2pt5km_per_sec_param float,
