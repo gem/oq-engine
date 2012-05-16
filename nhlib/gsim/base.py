@@ -81,6 +81,9 @@ class GroundShakingIntensityModel(object):
     #:     Angle describing the slip propagation on the rupture surface,
     #:     in decimal degrees. See :mod:`~nhlib.geo.nodalplane` for more
     #:     detailed description of dip and rake.
+    #: ``ztor``
+    #:     Depth of rupture's top edge in km. See
+    #:     :meth:`~nhlib.geo.surface.base.BaseSurface.get_top_edge_depth`.
     #:
     #: These parameters are available from the :class:`RuptureContext` object
     #: attributes with same names.
@@ -98,9 +101,6 @@ class GroundShakingIntensityModel(object):
     #: ``rx``
     #:     Perpendicular distance to rupture top edge projection.
     #:     See :meth:`~nhlib.geo.surface.base.BaseSurface.get_rx_distance`.
-    #: ``ztor``
-    #:     Rupture's top edge depth. See
-    #:     :meth:`~nhlib.geo.surface.base.BaseSurface.get_top_edge_depth`.
     #:
     #: All the distances are available from the :class:`DistancesContext`
     #: object attributes with same names. Values are in kilometers.
@@ -276,45 +276,43 @@ class GroundShakingIntensityModel(object):
             If any of declared required parameters (that includes site, rupture
             and distance parameters) is unknown.
         """
-        clsname = type(self).__name__
-
         dctx = DistancesContext()
         for param in self.REQUIRES_DISTANCES:
-            if not param in DistancesContext.__slots__:
-                raise ValueError('%s requires unknown distance measure %r' %
-                                 (clsname, param))
-            if param == 'ztor':
-                dist = numpy.empty(len(site_collection))
-                dist.fill(rupture.surface.get_top_edge_depth())
+            if param == 'rrup':
+                dist = rupture.surface.get_min_distance(site_collection.mesh)
+            elif param == 'rx':
+                dist = rupture.surface.get_rx_distance(site_collection.mesh)
+            elif param == 'rjb':
+                dist = rupture.surface.get_joyner_boore_distance(
+                    site_collection.mesh
+                )
             else:
-                if param == 'rrup':
-                    dist = rupture.surface.get_min_distance(site_collection.mesh)
-                elif param == 'rx':
-                    dist = rupture.surface.get_rx_distance(site_collection.mesh)
-                elif param == 'rjb':
-                    dist = rupture.surface.get_joyner_boore_distance(
-                        site_collection.mesh
-                    )
+                raise ValueError('%s requires unknown distance measure %r' %
+                                 (type(self).__name__, param))
             setattr(dctx, param, dist)
 
         sctx = SitesContext()
         for param in self.REQUIRES_SITES_PARAMETERS:
-            if not param in SitesContext.__slots__:
+            try:
+                value = getattr(site_collection, param)
+            except AttributeError:
                 raise ValueError('%s requires unknown site parameter %r' %
-                                 (clsname, param))
-            setattr(sctx, param, getattr(site_collection, param))
+                                 (type(self).__name__, param))
+            setattr(sctx, param, value)
 
         rctx = RuptureContext()
         for param in self.REQUIRES_RUPTURE_PARAMETERS:
-            if not param in RuptureContext.__slots__:
-                raise ValueError('%s requires unknown rupture parameter %r' %
-                                 (clsname, param))
             if param == 'mag':
                 value = rupture.mag
             elif param == 'dip':
                 value = rupture.surface.get_dip()
             elif param == 'rake':
                 value = rupture.rake
+            elif param == 'ztor':
+                value = rupture.surface.get_top_edge_depth()
+            else:
+                raise ValueError('%s requires unknown rupture parameter %r' %
+                                 (type(self).__name__, param))
             setattr(rctx, param, value)
 
         return sctx, rctx, dctx
@@ -378,7 +376,7 @@ class DistancesContext(object):
     does it need. Only those required values are calculated and made available
     in a result context object.
     """
-    __slots__ = ('rrup', 'rx', 'rjb', 'ztor')
+    __slots__ = ('rrup', 'rx', 'rjb')
 
 
 class RuptureContext(object):
@@ -393,7 +391,7 @@ class RuptureContext(object):
     Only those required parameters are made available in a result context
     object.
     """
-    __slots__ = ('mag', 'dip', 'rake')
+    __slots__ = ('mag', 'dip', 'rake', 'ztor')
 
 
 class CoeffsTable(object):

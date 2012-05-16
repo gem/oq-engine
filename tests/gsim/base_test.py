@@ -183,7 +183,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         min_distance = numpy.array([10, 11])
         rx_distance = numpy.array([4, 5])
         jb_distance = numpy.array([6, 7])
-        top_edge_depth = numpy.array([30, 30])
+        top_edge_depth = 30
 
         class FakeSurface(object):
             call_counts = collections.Counter()
@@ -251,9 +251,9 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
                                  site_collection=sites, rupture=self.rupture)
 
     def test_all_values(self):
-        self.gsim_class.REQUIRES_DISTANCES = set('rjb ztor rx rrup'.split())
+        self.gsim_class.REQUIRES_DISTANCES = set('rjb rx rrup'.split())
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set(
-            'mag rake dip'.split()
+            'mag rake dip ztor'.split()
         )
         self.gsim_class.REQUIRES_SITES_PARAMETERS = set(
             'vs30 vs30measured z1pt0 z2pt5'.split()
@@ -266,6 +266,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertEqual(rctx.mag, 123.45)
         self.assertEqual(rctx.rake, 123.56)
         self.assertEqual(rctx.dip, 45.4545)
+        self.assertEqual(rctx.ztor, 30)
         self.assertTrue((sctx.vs30 == [456, 1456]).all())
         self.assertTrue((sctx.vs30measured == [False, True]).all())
         self.assertTrue((sctx.z1pt0 == [12.1, 112.1]).all())
@@ -273,7 +274,6 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertTrue((dctx.rjb == [6, 7]).all())
         self.assertTrue((dctx.rx == [4, 5]).all())
         self.assertTrue((dctx.rrup == [10, 11]).all())
-        self.assertTrue((dctx.ztor == [30, 30]).all())
         self.assertEqual(self.fake_surface.call_counts,
                          {'get_top_edge_depth': 1, 'get_rx_distance': 1,
                           'get_joyner_boore_distance': 1, 'get_dip': 1,

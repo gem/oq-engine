@@ -60,13 +60,12 @@ class ChiouYoungs2008(GMPE):
     #: and Z1.0 (eq. 13b).
     REQUIRES_SITES_PARAMETERS = set(('vs30', 'vs30measured', 'z1pt0'))
 
-    #: Required rupture parameters are magnitude, rake (eq. 13a and 13b)
-    #: and dip (eq. 13a).
-    REQUIRES_RUPTURE_PARAMETERS = set(('dip', 'rake', 'mag'))
+    #: Required rupture parameters are magnitude, rake (eq. 13a and 13b),
+    #: dip (eq. 13a) and ztor (eq. 13a).
+    REQUIRES_RUPTURE_PARAMETERS = set(('dip', 'rake', 'mag', 'ztor'))
 
-    #: Required distance measures are RRup, Rjb, Rx and Ztor
-    #: (all are in eq. 13a).
-    REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx', 'ztor'))
+    #: Required distance measures are RRup, Rjb and Rx (all are in eq. 13a).
+    REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx'))
 
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
@@ -186,9 +185,9 @@ class ChiouYoungs2008(GMPE):
             C['c1']
               + (C['c1a'] * Frv
                    + C['c1b'] * Fnm
-                   + C['c7'] * (dists.ztor - 4))
+                   + C['c7'] * (rup.ztor - 4))
                 * (1 - AS)
-            + (C['c10'] + C['c7a'] * (dists.ztor - 4)) * AS
+            + (C['c10'] + C['c7a'] * (rup.ztor - 4)) * AS
             # second line
             + C['c2'] * (rup.mag - 6)
               + ((C['c2'] - C['c3']) / C['cn'])
@@ -209,7 +208,7 @@ class ChiouYoungs2008(GMPE):
               * np.tanh(dists.rx
                         * (np.cos(np.radians(rup.dip)) ** 2)
                         / C['c9a'])
-              * (1 - np.sqrt(dists.rjb ** 2 + dists.ztor ** 2)
+              * (1 - np.sqrt(dists.rjb ** 2 + rup.ztor ** 2)
                   / (dists.rrup + 0.001))
         )
         return ln_y_ref
