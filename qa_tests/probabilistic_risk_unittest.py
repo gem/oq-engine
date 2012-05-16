@@ -63,6 +63,28 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
                 OUTPUT_DIR, job.id)
 
         poes = [float(x) for x in self._get(
+            filename, xpath_poes("a1")).split()]
+
+        expected_poes = [1.0000000000, 1.0000000000,
+            0.9975213575, 0.9502134626, 0.8646777340,
+            0.8646647795, 0.6321490651, 0.6321506245,
+            0.6321525149]
+
+        self.assertTrue(numpy.allclose(
+                poes, expected_poes, atol=0.0, rtol=0.05))
+
+        losses = [float(x) for x in self._get(
+            filename, xpath_losses("a1")).split()]
+
+        expected_losses = [14.6792147571, 44.0376442714,
+            73.3960737856, 102.7545032998, 132.1129328141,
+            161.4713623283, 190.8297918425, 220.1882213568,
+            249.5466508710]
+
+        self.assertTrue(numpy.allclose(
+                losses, expected_losses, atol=0.0, rtol=0.05))
+
+        poes = [float(x) for x in self._get(
             filename, xpath_poes("a2")).split()]
 
         expected_poes = [1.0000000000, 1.0000000000,
@@ -124,6 +146,28 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
 
         filename = "%s/loss_curves-block-#%s-block#0.xml" % (
                 OUTPUT_DIR, job.id)
+
+        poes = [float(x) for x in self._get(
+            filename, xpath_poes("a1")).split()]
+
+        expected_poes = [1.0000000000, 1.0000000000,
+            0.9975213575, 0.9502134626, 0.8646777340,
+            0.8646647795, 0.6321490651, 0.6321506245,
+            0.6321525149]
+
+        self.assertTrue(numpy.allclose(
+                poes, expected_poes, atol=0.0, rtol=0.05))
+
+        loss_ratios = [float(x) for x in self._get(
+            filename, xpath_ratios("a1")).split()]
+
+        expected_loss_ratios = [0.004893071586, 0.014679214757,
+            0.024465357929, 0.034251501100, 0.044037644271,
+            0.053823787443, 0.063609930614, 0.073396073786,
+            0.083182216957]
+
+        self.assertTrue(numpy.allclose(
+                loss_ratios, expected_loss_ratios, atol=0.0, rtol=0.05))
 
         poes = [float(x) for x in self._get(
             filename, xpath_poes("a2")).split()]
