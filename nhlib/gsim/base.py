@@ -55,9 +55,10 @@ class GroundShakingIntensityModel(object):
     #: calculate. A set should contain classes from module :mod:`nhlib.imt`.
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = abc.abstractproperty()
 
-    #: Set of :class:`intensity measure component types <nhlib.const.IMC>`
-    #: this GSIM can calculate mean and standard deviation for.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS = abc.abstractproperty()
+    #: Reference to a :class:`intensity measure component type
+    #: <nhlib.const.IMC>` this GSIM can calculate mean and standard
+    #: deviation for.
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = abc.abstractproperty()
 
     #: Set of :class:`standard deviation types <nhlib.const.StdDev>`
     #: this GSIM can calculate.
@@ -221,14 +222,14 @@ class GroundShakingIntensityModel(object):
         :raises ValueError:
             If truncation level is not ``None`` and neither non-negative
             float number, if intensity measure component is not supported
-            by the GSIM (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS`)
+            by the GSIM (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_COMPONENT`)
             and if ``imts`` dictionary contain wrong or unsupported IMTs (see
             :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
         """
         if truncation_level is not None and truncation_level < 0:
             raise ValueError('truncation level must be zero, positive number '
                              'or None')
-        if not component_type in self.DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS:
+        if not component_type == self.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT:
             raise ValueError(
                 'intensity measure component %r is not supported by %s' %
                 (component_type, type(self).__name__)

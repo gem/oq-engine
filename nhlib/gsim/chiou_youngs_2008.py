@@ -44,11 +44,9 @@ class ChiouYoungs2008(GMPE):
         SA
     ])
 
-    #: Supported intensity measure component is only orientation-independent
+    #: Supported intensity measure component is orientation-independent
     #: measure :attr:`~nhlib.const.IMC.GMRotI50`, see page 174.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS = set([
-        const.IMC.GMRotI50
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.GMRotI50
 
     #: Supported standard deviation types are inter-event, intra-event
     #: and total, see chapter "Variance model".

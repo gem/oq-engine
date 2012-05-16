@@ -35,7 +35,7 @@ class _FakeGSIMTestCase(unittest.TestCase):
         class FakeGSIM(IPE):
             DEFINED_FOR_TECTONIC_REGION_TYPE = None
             DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
-            DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS = set()
+            DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
             DEFINED_FOR_STANDARD_DEVIATION_TYPES = set()
             REQUIRES_SITES_PARAMETERS = set()
             REQUIRES_RUPTURE_PARAMETERS = set()
@@ -48,9 +48,8 @@ class _FakeGSIMTestCase(unittest.TestCase):
         super(_FakeGSIMTestCase, self).setUp()
         self.gsim_class = FakeGSIM
         self.gsim = self.gsim_class()
-        self.gsim.DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS.add(
+        self.gsim.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = \
             self.DEFAULT_COMPONENT
-        )
         self.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES.add(self.DEFAULT_IMT)
 
     def _get_poes(self, **kwargs):
