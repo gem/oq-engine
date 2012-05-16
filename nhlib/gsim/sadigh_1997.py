@@ -32,11 +32,9 @@ class SadighEtAl1997(GMPE):
     relationships for shallow crustal earthquakes based on California
     strong motion data", Seismological Research Letters, 68(1), 180-189.
     """
-    #: Supported tectonic region type is only active shallow crust,
+    #: Supported tectonic region type is active shallow crust,
     #: since data consists of California earthquakes mainly.
-    DEFINED_FOR_TECTONIC_REGION_TYPES = set([
-        const.TRT.ACTIVE_SHALLOW_CRUST
-    ])
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure types are spectral acceleration,
     #: and peak ground acceleration, see page 180.

@@ -33,7 +33,7 @@ class _FakeGSIMTestCase(unittest.TestCase):
 
     def setUp(self):
         class FakeGSIM(IPE):
-            DEFINED_FOR_TECTONIC_REGION_TYPES = set()
+            DEFINED_FOR_TECTONIC_REGION_TYPE = None
             DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
             DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS = set()
             DEFINED_FOR_STANDARD_DEVIATION_TYPES = set()
@@ -243,9 +243,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
             tectonic_region_type=const.TRT.VOLCANIC,
             hypocenter=self.rupture_hypocenter, surface=FakeSurface()
         )
-        self.gsim_class.DEFINED_FOR_TECTONIC_REGION_TYPES.add(
-            const.TRT.VOLCANIC
-        )
+        self.gsim_class.DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.VOLCANIC
         self.fake_surface = FakeSurface
 
     def test_unknown_site_param_error(self):

@@ -47,9 +47,9 @@ class GroundShakingIntensityModel(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    #: Set of :class:`tectonic region types <nhlib.const.TRT>` this GSIM
-    #: is defined for.
-    DEFINED_FOR_TECTONIC_REGION_TYPES = abc.abstractproperty()
+    #: Reference to a :class:`tectonic region type <nhlib.const.TRT>` this GSIM
+    #: is defined for. One GSIM can implement only one tectonic region type.
+    DEFINED_FOR_TECTONIC_REGION_TYPE = abc.abstractproperty()
 
     #: Set of :mod:`intensity measure types <nhlib.imt>` this GSIM can
     #: calculate. A set should contain classes from module :mod:`nhlib.imt`.

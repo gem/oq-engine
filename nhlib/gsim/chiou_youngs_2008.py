@@ -32,11 +32,8 @@ class ChiouYoungs2008(GMPE):
     of Peak Ground Motion and Response Spectra" (2008, Earthquake Spectra,
     Volume 24, No. 1, pages 173-215).
     """
-    #: Supported tectonic region type is only active shallow crust,
-    #: see page 174.
-    DEFINED_FOR_TECTONIC_REGION_TYPES = set([
-        const.TRT.ACTIVE_SHALLOW_CRUST
-    ])
+    #: Supported tectonic region type is active shallow crust, see page 174.
+    DEFINED_FOR_TECTONIC_REGION_TYPE = const.TRT.ACTIVE_SHALLOW_CRUST
 
     #: Supported intensity measure types are spectral acceleration,
     #: peak ground velocity and peak ground acceleration, see tables
