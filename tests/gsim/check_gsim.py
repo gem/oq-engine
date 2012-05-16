@@ -23,8 +23,11 @@ import math
 import sys
 import time
 
+import numpy
+
 from nhlib import const
-from nhlib.gsim.base import GSIMContext, GroundShakingIntensityModel
+from nhlib.gsim.base import GroundShakingIntensityModel
+from nhlib.gsim.base import SitesContext, RuptureContext, DistancesContext
 from nhlib.imt import PGA, PGV, SA
 
 
@@ -62,16 +65,18 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage,
     started = time.time()
     for values in reader:
         linenum += 1
-        context, stddev_types, component_type, expected_results, result_type =\
-                _parse_csv_line(headers, values)
+        (sctx, rctx, dctx, stddev_types, component_type,
+         expected_results, result_type) = _parse_csv_line(headers, values)
         for imt, expected_result in expected_results.items():
             mean, stddevs = gsim.get_mean_and_stddevs(
-                context, imt, stddev_types, component_type
+                sctx, rctx, dctx, imt, stddev_types, component_type
             )
             if result_type == 'MEAN':
-                result = math.exp(mean)
+                result = numpy.exp(mean)
             else:
                 [result] = stddevs
+            assert isinstance(result, numpy.ndarray), result_type
+            [result] = result
             discrep_percentage = abs(
                 result / float(expected_result) * 100 - 100
             )
@@ -161,8 +166,9 @@ def _parse_csv_line(headers, values):
             A string literal, one of ``'STDDEV'`` or ``'MEAN'``. Value
             is taken from column ``result_type``.
     """
-    context_params = set(GSIMContext.__slots__)
-    context = GSIMContext()
+    rctx = RuptureContext()
+    sctx = SitesContext()
+    dctx = DistancesContext()
     expected_results = {}
     stddev_types = result_type = damping = component_type = None
 
@@ -183,13 +189,21 @@ def _parse_csv_line(headers, values):
             damping = float(value)
         elif param == 'component_type':
             component_type = getattr(const.IMC, value)
-        elif param in context_params:
-            # value is context object attribute
+        elif param.startswith('site_'):
+            # value is sites context object attribute
             if param == 'site_vs30measured':
                 value = float(value) != 0
             else:
                 value = float(value)
-            setattr(context, param, value)
+            setattr(sctx, param[len('site_'):], numpy.array([value]))
+        elif param.startswith('dist_'):
+            # value is a distance measure
+            value = float(value)
+            setattr(dctx, param[len('dist_'):], numpy.array([value]))
+        elif param.startswith('rup_'):
+            # value is a rupture context attribute
+            value = float(value)
+            setattr(rctx, param[len('rup_'):], value)
         else:
             # value is the expected result (of result_type type)
             value = float(value)
@@ -205,7 +219,8 @@ def _parse_csv_line(headers, values):
             expected_results[imt] = value
 
     assert component_type is not None and result_type is not None
-    return context, stddev_types, component_type, expected_results, result_type
+    return (sctx, rctx, dctx, stddev_types,
+            component_type, expected_results, result_type)
 
 
 if __name__ == '__main__':
