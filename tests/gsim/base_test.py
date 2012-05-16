@@ -253,7 +253,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
     def test_all_values(self):
         self.gsim_class.REQUIRES_DISTANCES = set('rjb ztor rx rrup'.split())
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set(
-            'mag rake trt dip'.split()
+            'mag rake dip'.split()
         )
         self.gsim_class.REQUIRES_SITES_PARAMETERS = set(
             'vs30 vs30measured z1pt0 z2pt5'.split()
@@ -265,7 +265,6 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertIsInstance(dctx, DistancesContext)
         self.assertEqual(rctx.mag, 123.45)
         self.assertEqual(rctx.rake, 123.56)
-        self.assertEqual(rctx.trt, const.TRT.VOLCANIC)
         self.assertEqual(rctx.dip, 45.4545)
         self.assertTrue((sctx.vs30 == [456, 1456]).all())
         self.assertTrue((sctx.vs30measured == [False, True]).all())
@@ -290,7 +289,6 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertTrue((sctx.vs30 == (456, 1456)).all())
         self.assertTrue((sctx.z1pt0 == (12.1, 112.1)).all())
         self.assertTrue((dctx.rx == (4, 5)).all())
-        self.assertFalse(hasattr(rctx, 'trt'))
         self.assertFalse(hasattr(rctx, 'dip'))
         self.assertFalse(hasattr(sctx, 'vs30measured'))
         self.assertFalse(hasattr(sctx, 'z2pt0'))

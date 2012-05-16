@@ -75,9 +75,6 @@ class GroundShakingIntensityModel(object):
     #:
     #: ``mag``
     #:     Magnitude of the rupture.
-    #: ``trt``
-    #:     Rupture's tectonic region type. A constant from
-    #:     :class:`nhlib.const.TRT`.
     #: ``dip``
     #:     Rupture's surface dip angle in decimal degrees.
     #: ``rake``
@@ -314,8 +311,6 @@ class GroundShakingIntensityModel(object):
                                  (clsname, param))
             if param == 'mag':
                 value = rupture.mag
-            elif param == 'trt':
-                value = rupture.tectonic_region_type
             elif param == 'dip':
                 value = rupture.surface.get_dip()
             elif param == 'rake':
@@ -398,7 +393,7 @@ class RuptureContext(object):
     Only those required parameters are made available in a result context
     object.
     """
-    __slots__ = ('mag', 'trt', 'dip', 'rake')
+    __slots__ = ('mag', 'dip', 'rake')
 
 
 class CoeffsTable(object):
