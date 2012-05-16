@@ -19,7 +19,6 @@ Module exports :class:`SadighEtAl1997`.
 from __future__ import division
 
 import numpy
-from numpy import log, exp
 
 from nhlib.gsim.base import GMPE, CoeffsTable
 from nhlib import const
@@ -91,19 +90,30 @@ class SadighEtAl1997(GMPE):
         # but combines normal and strike-slip into one category. See page 180.
         is_reverse = (45 <= rup.rake <= 135)
 
-        mean_rock = self._get_mean_rock(rup.mag, rup.rake, dists.rrup,
-                                        is_reverse, imt)
-        mean_soil = self._get_mean_deep_soil(rup.mag, rup.rake, dists.rrup,
-                                             is_reverse, imt)
-        mean = numpy.where(sites.vs30 > self.ROCK_VS30, mean_rock, mean_soil)
+        stddevs = [numpy.zeros_like(sites.vs30) for _ in stddev_types]
+        means = numpy.zeros_like(sites.vs30)
 
-        stddevs = []
-        for stddev_type in stddev_types:
-            stddev_rock = self._get_stddev_rock(rup.mag, imt)
-            stddev_soil = self._get_stddev_deep_soil(rup.mag, imt)
-            stddevs.append(numpy.where(sites.vs30 > self.ROCK_VS30,
-                                       stddev_rock, stddev_soil))
-        return mean, stddevs
+        [rocks_i] = (sites.vs30 > self.ROCK_VS30).nonzero()
+        if len(rocks_i):
+            rrup = dists.rrup.take(rocks_i)
+            mean_rock = self._get_mean_rock(rup.mag, rup.rake, rrup,
+                                            is_reverse, imt)
+            means.put(rocks_i, mean_rock)
+            for stddev_arr in stddevs:
+                stddev_rock = self._get_stddev_rock(rup.mag, imt)
+                stddev_arr.put(rocks_i, stddev_rock)
+
+        [soils_i] = (sites.vs30 <= self.ROCK_VS30).nonzero()
+        if len(soils_i):
+            rrup = dists.rrup.take(soils_i)
+            mean_soil = self._get_mean_deep_soil(rup.mag, rup.rake, rrup,
+                                                 is_reverse, imt)
+            means.put(soils_i, mean_soil)
+            for stddev_arr in stddevs:
+                stddev_soil = self._get_stddev_deep_soil(rup.mag, imt)
+                stddev_arr.put(soils_i, stddev_soil)
+
+        return means, stddevs
 
     def _get_mean_deep_soil(self, mag, rake, rrup, is_reverse, imt):
         """
@@ -127,7 +137,7 @@ class SadighEtAl1997(GMPE):
             c1 = self.COEFFS_SOIL_IMT_INDEPENDENT['c1ss']
             c6 = C['c6ss']
         return (c1 + c2 * mag + c6 + C['c7'] * ((8.5 - mag) ** 2.5)
-                - c3 * log(rrup + c4 * exp(c5 * mag)))
+                - c3 * numpy.log(rrup + c4 * numpy.exp(c5 * mag)))
 
     def _get_mean_rock(self, mag, rake, rrup, is_reverse, imt):
         """
@@ -141,8 +151,8 @@ class SadighEtAl1997(GMPE):
             C = self.COEFFS_ROCK_HIMAG[imt]
         mean = (
             C['c1'] + C['c2'] * mag + C['c3'] * ((8.5 - mag) ** 2.5)
-            + C['c4'] * log(rrup + exp(C['c5'] + C['c6'] * mag))
-            + C['c7'] * log(rrup + 2)
+            + C['c4'] * numpy.log(rrup + numpy.exp(C['c5'] + C['c6'] * mag))
+            + C['c7'] * numpy.log(rrup + 2)
         )
         if is_reverse:
             # footnote in table 2 says that for reverse ruptures
