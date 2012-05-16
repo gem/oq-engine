@@ -16,6 +16,7 @@
 
 import unittest
 
+from openquake import engine
 from openquake.calculators.hazard import general
 from openquake.db import models
 
@@ -46,7 +47,7 @@ class StoreSiteModelTestCase(unittest.TestCase):
         ]
 
         # Function under test
-        general.store_site_model(inp.id, site_model)
+        general.store_site_model(inp, site_model)
 
         # Expected results
         actual_site_model = models.SiteModel.objects.filter(
@@ -62,3 +63,31 @@ class StoreSiteModelTestCase(unittest.TestCase):
             self.assertEqual(exp['vs30_type'], act.vs30_type)
             self.assertAlmostEqual(exp['z1pt0'], act.z1pt0)
             self.assertAlmostEqual(exp['z2pt5'], act.z2pt5)
+
+    def test_initialize_stores_site_model(self):
+        job = engine.prepare_job()
+        cfg = helpers.demo_file(
+            'simple_fault_demo_hazard/config_with_site_model.gem')
+        job_profile, params, sections = engine.import_job_profile(
+            cfg, job, force_inputs=True)
+
+        job_ctxt = engine.JobContext(
+            params, job.id, sections=sections, oq_job_profile=job_profile,
+            oq_job=job)
+
+        calc = general.BaseHazardCalculator(job_ctxt)
+        [site_model_input] = models.inputs4job(job.id, input_type='site_model')
+        site_model_nodes = models.SiteModel.objects.filter(
+            input=site_model_input)
+
+        # Test precondition: The site_model table shouldn't be populated yet.
+        self.assertEqual(0, len(site_model_nodes))
+
+        calc.initialize()
+
+        # Now it should be populated.
+        site_model_nodes = models.SiteModel.objects.filter(
+            input=site_model_input)
+        # It would be overkill to test the contents; just check that the number
+        # of records is correct.
+        self.assertEqual(2601, len(site_model_nodes))
