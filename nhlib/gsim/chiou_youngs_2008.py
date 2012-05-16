@@ -68,8 +68,7 @@ class ChiouYoungs2008(GMPE):
     #: (all are in eq. 13a).
     REQUIRES_DISTANCES = set(('rrup', 'rjb', 'rx', 'ztor'))
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt,
-                             stddev_types, component_type):
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
         <nhlib.gsim.base.GroundShkingIntensityModel.get_mean_and_stddevs>`

@@ -110,8 +110,7 @@ class GroundShakingIntensityModel(object):
     REQUIRES_DISTANCES = abc.abstractproperty()
 
     @abc.abstractmethod
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types,
-                             component_type):
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Calculate and return mean value of intensity distribution and it's
         standard deviation.
@@ -141,9 +140,6 @@ class GroundShakingIntensityModel(object):
             List of standard deviation types, constants from
             :class:`nhlib.const.StdDev`. Method result value should include
             standard deviation values for each of types in this list.
-        :param component_type:
-            A component of interest of intensity measure. A constant from
-            :class:`nhlib.const.IMC`.
 
         :returns:
             Method should return a tuple of two items. First item should be
@@ -165,8 +161,7 @@ class GroundShakingIntensityModel(object):
         compute interim steps).
         """
 
-    def get_poes(self, sctx, rctx, dctx, imt, imls, component_type,
-                 truncation_level):
+    def get_poes(self, sctx, rctx, dctx, imt, imls, truncation_level):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
         intensity measure levels (IMLs) of one intensity measure type (IMT)
@@ -190,9 +185,6 @@ class GroundShakingIntensityModel(object):
             of classes from :mod:`nhlib.imt`).
         :param imls:
             List of interested intensity measure levels (of type ``imt``).
-        :param component_type:
-            A component of interest of intensity measure. A constant from
-            :class:`nhlib.const.IMC`.
         :param truncation_level:
             Can be ``None``, which means that the distribution of intensity
             is treated as Gaussian distribution with possible values ranging
@@ -221,19 +213,12 @@ class GroundShakingIntensityModel(object):
 
         :raises ValueError:
             If truncation level is not ``None`` and neither non-negative
-            float number, if intensity measure component is not supported
-            by the GSIM (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_COMPONENT`)
-            and if ``imts`` dictionary contain wrong or unsupported IMTs (see
-            :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
+            float number, and if ``imts`` dictionary contain wrong or
+            unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
         """
         if truncation_level is not None and truncation_level < 0:
             raise ValueError('truncation level must be zero, positive number '
                              'or None')
-        if not component_type == self.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT:
-            raise ValueError(
-                'intensity measure component %r is not supported by %s' %
-                (component_type, type(self).__name__)
-            )
         if not issubclass(type(imt), imt_module._IMT):
             raise ValueError('imt must be an instance of IMT subclass')
         if not type(imt) in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
@@ -243,8 +228,7 @@ class GroundShakingIntensityModel(object):
         if truncation_level == 0:
             # zero truncation mode, just compare imls to mean
             imls = self._convert_imls(imls)
-            mean, _ = self.get_mean_and_stddevs(sctx, rctx, dctx, imt, [],
-                                                component_type)
+            mean, _ = self.get_mean_and_stddevs(sctx, rctx, dctx, imt, [])
             mean = mean.reshape(mean.shape + (1, ))
             return (imls <= mean).astype(float)
         else:
@@ -257,9 +241,8 @@ class GroundShakingIntensityModel(object):
                 distribution = scipy.stats.truncnorm(- truncation_level,
                                                      truncation_level)
             imls = self._convert_imls(imls)
-            mean, [stddev] = self.get_mean_and_stddevs(
-                sctx, rctx, dctx, imt, [const.StdDev.TOTAL], component_type
-            )
+            mean, [stddev] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
+                                                       [const.StdDev.TOTAL])
             mean = mean.reshape(mean.shape + (1, ))
             stddev = stddev.reshape(stddev.shape + (1, ))
             return distribution.sf((imls - mean) / stddev)

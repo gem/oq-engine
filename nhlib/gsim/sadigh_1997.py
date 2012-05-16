@@ -71,8 +71,7 @@ class SadighEtAl1997(GMPE):
     #: saturation effect is 6.5. See page 184.
     NEAR_FIELD_SATURATION_MAG = 6.5
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt,
-                             stddev_types, component_type):
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
         <nhlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`

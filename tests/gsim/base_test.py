@@ -42,7 +42,7 @@ class _FakeGSIMTestCase(unittest.TestCase):
             REQUIRES_DISTANCES = set()
 
             def get_mean_and_stddevs(self, sites, rup, dists, imt,
-                                     stddev_types, component_type):
+                                     stddev_types):
                 pass
 
         super(_FakeGSIMTestCase, self).setUp()
@@ -59,7 +59,6 @@ class _FakeGSIMTestCase(unittest.TestCase):
             dctx=DistancesContext(),
             imt=self.DEFAULT_IMT(),
             imls=[1.0, 2.0, 3.0],
-            component_type=self.DEFAULT_COMPONENT,
             truncation_level=1.0
         )
         default_kwargs.update(kwargs)
@@ -79,16 +78,6 @@ class GetPoEsWrongInputTestCase(_FakeGSIMTestCase):
         err = 'imt PGV is not supported by FakeGSIM'
         self._assert_value_error(self._get_poes, err, imt=PGV())
 
-    def test_wrong_components(self):
-        err = "intensity measure component 'something' " \
-              "is not supported by FakeGSIM"
-        self._assert_value_error(self._get_poes, err,
-                                 component_type='something')
-        err = "intensity measure component 'Random horizontal' " \
-              "is not supported by FakeGSIM"
-        self._assert_value_error(self._get_poes, err,
-                                 component_type=const.IMC.RANDOM_HORIZONTAL)
-
     def test_wrong_truncation_level(self):
         err = 'truncation level must be zero, positive number or None'
         self._assert_value_error(self._get_poes, err, truncation_level=-0.1)
@@ -101,11 +90,9 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
             const.StdDev.TOTAL
         )
 
-        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types,
-                                 component_type):
+        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
             self.assertEqual(imt, self.DEFAULT_IMT())
             self.assertEqual(stddev_types, [const.StdDev.TOTAL])
-            self.assertEqual(component_type, self.DEFAULT_COMPONENT)
             mean = numpy.array([-0.7872268528578843])
             stddev = numpy.array([0.5962393527251486])
             get_mean_and_stddevs.call_count += 1
@@ -123,8 +110,7 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
         self.assertEqual(get_mean_and_stddevs.call_count, 1)
 
     def test_zero_truncation(self):
-        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types,
-                                 component_type):
+        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
             return numpy.array([1.1]), [numpy.array([123.45])]
         self.gsim.get_mean_and_stddevs = get_mean_and_stddevs
         imt = self.DEFAULT_IMT()
@@ -145,8 +131,7 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
             const.StdDev.TOTAL
         )
 
-        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types,
-                                 component_type):
+        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
             return numpy.array([-0.7872268528578843]), \
                    [numpy.array([0.5962393527251486])]
 
@@ -165,8 +150,7 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
             const.StdDev.TOTAL
         )
         mean_stddev = numpy.array([[3, 4], [5, 6]])
-        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types,
-                                 component_type):
+        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
             mean, stddev = mean_stddev
             mean_stddev[0] += 1
             mean_stddev[1] += 2
