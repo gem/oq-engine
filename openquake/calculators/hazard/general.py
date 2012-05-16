@@ -245,7 +245,6 @@ class BaseHazardCalculator(Calculator):
         site_model = models.inputs4job(
             self.job_ctxt.job_id, input_type='site_model')
 
-        import nose; nose.tools.set_trace()
         if len(site_model) == 0:
             # No site model found for this job. Nothing to do here.
             return
