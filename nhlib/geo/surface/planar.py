@@ -1,3 +1,4 @@
+# coding: utf-8
 # nhlib: A New Hazard Library
 # Copyright (C) 2012 GEM Foundation
 #
@@ -306,16 +307,35 @@ class PlanarSurface(BaseSurface):
         make use of the mesh.
         """
         # we define four great circle arcs that contain four sides
-        # of projected planar surface. first two are directed from
-        # left corners to right ones (the direction has an effect
-        # on the sign of the distance to an arc), other two are
-        # directed from top corners to bottom ones. then we measure
-        # distance from each of the point in a mesh to each of those
-        # arcs and compare signs of distances in order to find
-        # a relative positions of projections of points and projection
-        # of a surface. then we consider four special cases (see below)
-        # and either pick one of distances to arcs or a closest
-        # distance to corner.
+        # of projected planar surface:
+        #
+        #       ↓     II    ↓
+        #    I  ↓           ↓  I
+        #       ↓     +     ↓
+        #  →→→→→TL→→→→1→→→→TR→→→→→     → azimuth direction →
+        #       ↓     -     ↓
+        #       ↓           ↓
+        # III  -3+   IV    -4+  III             ↓
+        #       ↓           ↓            downdip direction
+        #       ↓     +     ↓                   ↓
+        #  →→→→→BL→→→→2→→→→BR→→→→→
+        #       ↓     -     ↓
+        #    I  ↓           ↓  I
+        #       ↓     II    ↓
+        #
+        # arcs 1 and 2 are directed from left corners to right ones (the
+        # direction has an effect on the sign of the distance to an arc,
+        # as it shown on the figure), arcs 3 and 4 are directed from top
+        # corners to bottom ones.
+        #
+        # then we measure distance from each of the points in a mesh
+        # to each of those arcs and compare signs of distances in order
+        # to find a relative positions of projections of points and
+        # projection of a surface.
+        #
+        # then we consider four special cases (labeled with Roman numerals)
+        # and either pick one of distances to arcs or a closest distance
+        # to corner.
         arcs_lons = [self.top_left.longitude, self.bottom_left.longitude,
                      self.top_left.longitude, self.top_right.longitude]
         arcs_lats = [self.top_left.latitude, self.bottom_left.latitude,
@@ -336,35 +356,39 @@ class PlanarSurface(BaseSurface):
             self.corner_lons, self.corner_lats, mesh_lons, mesh_lats
         ).min(axis=-1)
 
-        dists = numpy.zeros(len(mesh))
         # extract from ``dists_to_arcs`` signs (represent relative positions
-        # of an arc and a point: -1 means on the left hand side, 0 means
-        # on arc and +1 means on the right hand side) and minimum absolute
+        # of an arc and a point: +1 means on the left hand side, 0 means
+        # on arc and -1 means on the right hand side) and minimum absolute
         # values of distances to each pair of parallel arcs.
-        dists_to_arcs_signs = numpy.sign(dists_to_arcs)
+        ds1, ds2, ds3, ds4 = numpy.sign(dists_to_arcs).transpose()
         dists_to_arcs = numpy.abs(dists_to_arcs).reshape(-1, 2, 2).min(axis=-1)
-        for i, (ds1, ds2, ds3, ds4) in enumerate(dists_to_arcs_signs):
-            # consider four possible relative positions of point and arcs:
-            if ds1 == ds2:
-                # if signs of distances to both parallel arcs are the same,
-                # it means that point lies outside of the surface projection
-                if ds3 == ds4:
-                    # if signs of distances to other two parallel arcs are
-                    # the same as well, than the closest distance is the one
-                    # to a closest corner point.
-                    dists[i] = dists_to_corners[i]
-                else:
-                    # otherwise (if point lies in between other two arcs)
-                    # the closest distance is a closest distance to first
-                    # pair of arcs
-                    dists[i] = dists_to_arcs[i][0]
-            else:
-                if ds3 == ds4:
-                    dists[i] = dists_to_arcs[i][1]
-                else:
-                    # distance is zero (point lies inside the surface's
-                    # projection) if signs of distances to both pairs
-                    # of arcs are different.
-                    dists[i] = 0
 
-        return dists
+        return numpy.select(
+            # consider four possible relative positions of point and arcs:
+            condlist=[
+                # signs of distances to both parallel arcs are the same
+                # in both pairs, case "I" on a figure above
+                (ds1 == ds2) & (ds3 == ds4),
+                # sign of distances to two parallels is the same only
+                # in one pair, case "II"
+                ds1 == ds2,
+                # ... or another (case "III")
+                ds3 == ds4
+                # signs are different in both pairs (this is a "default"),
+                # case "IV"
+            ],
+
+            choicelist=[
+                # case "I": closest distance is the closest distance to corners
+                dists_to_corners,
+                # case "II": closest distance is distance to arc "1" or "2",
+                # whichever is closer
+                dists_to_arcs[:, 0],
+                # case "III": closest distance is distance to either
+                # arc "3" or "4"
+                dists_to_arcs[:, 1]
+            ],
+
+            # default -- case "IV"
+            default=0
+        )
