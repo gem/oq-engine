@@ -205,78 +205,82 @@ class PlanarSurface(BaseSurface):
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
         """
+        # we project all the points of the mesh on a plane that contains
+        # the surface (translating coordinates of the projections to a local
+        # 2d space) and at the same time calculate the distance to that
+        # plane.
         dists, xx, yy = self._project(mesh.lons, mesh.lats, mesh.depths)
-        dists2d = []
-
-        for i in xrange(len(xx)):
-            x = xx[i]
-            y = yy[i]
-            # consider nine possible relative positions of surface rectangle
-            # and a point and collect distances in ``dists2d`` list. note
-            # that some of those distances can be negative, but that doesn't
-            # matter since we use them in Pythagorean formula anyway
-            if y < 0:
-                if x < 0:
-                    # *
-                    #   0---
-                    #   |  |
-                    #   ----
-                    dist = (x ** 2 + y ** 2) ** 0.5
-                elif x > self.length:
-                    #      *
-                    # 0---
-                    # |  |
-                    # ----
-                    dist = ((x - self.length) ** 2 + y ** 2) ** 0.5
-                else:
-                    #  *
-                    # 0---
-                    # |  |
-                    # ----
-                    dist = y
-            elif y > self.width:
-                if x < 0:
-                    #   0---
-                    #   |  |
-                    #   ----
-                    # *
-                    dist = (x ** 2 + (y - self.width) ** 2) ** 0.5
-                elif x > self.length:
-                    # 0---
-                    # |  |
-                    # ----
-                    #      *
-                    dist = ((x - self.length) ** 2
-                            + (y - self.width) ** 2) ** 0.5
-                else:
-                    # 0---
-                    # |  |
-                    # ----
-                    #  *
-                    dist = y - self.width
-            elif x < 0:
-                #   0---
-                # * |  |
-                #   ----
-                dist = x
-            elif x > self.length:
-                # 0---
-                # |  | *
-                # ----
-                dist = x - self.length
-            else:
-                # 0---
-                # | *|
-                # ----
-                dist = 0.0
-
-            dists2d.append(dist)
-
-        # the actual minimum distance between a point and a surface is
-        # a Pythagorean combination of distance between a point and a plane
-        # and distance between point's projection on a surface's plane
-        # and a surface rectangle.
-        return numpy.sqrt(dists ** 2 + numpy.array(dists2d) ** 2)
+        # the actual resulting distance is a square root of squares
+        # of a distance from a point to a plane that contains the surface
+        # and a distance from a projection of that point on that plane
+        # and a surface rectangle. we have former (``dists``), now we need
+        # to find latter.
+        #
+        # we process separately to coordinate components of the point
+        # projection. for abscissa we consider three possible cases:
+        #
+        #  I  . III .  II
+        #     .     .
+        #     0-----+                → x axis direction
+        #     |     |
+        #     +-----+
+        #     .     .
+        #     .     .
+        #
+        mxx = numpy.select(
+            condlist=[
+                # case "I": point on the left hand side from the rectangle
+                xx < 0,
+                # case "II": point is on the right hand side
+                xx > self.width
+                # default -- case "III": point is in between vertical sides
+            ],
+            choicelist=[
+                # case "I": we need to consider distance between a point
+                # and a line containing left side of the rectangle
+                xx,
+                # case "II": considering a distance between a point and
+                # a line containing the right side
+                xx - self.width
+            ],
+            # case "III": abscissa doesn't have an effect on a distance
+            # to the rectangle
+            default=0
+        )
+        # for ordinate we do the same operation (again three cases):
+        #
+        #    I
+        #  - - - 0---+ - - -         ↓ y axis direction
+        #   III  |   |
+        #  - - - +---+ - - -
+        #    II
+        #
+        myy = numpy.select(
+            condlist=[
+                # case "I": point is above the rectangle top edge
+                yy < 0,
+                # case "II": point is below the rectangle bottom edge
+                yy > self.length
+                # default -- case "III": point is in between lines containing
+                # top and bottom edges
+            ],
+            choicelist=[
+                # case "I": considering a distance to a line containing
+                # a top edge
+                yy,
+                # case "II": considering a distance to a line containing
+                # a bottom edge
+                yy - self.length
+            ],
+            # case "III": ordinate doesn't affect the distance
+            default=0
+        )
+        # distance between a point project and a rectangle combines from
+        # both components
+        dists2d_squares = mxx ** 2 + myy ** 2
+        # finding a resulting distance combining a distance on a plane
+        # with a distance to a plane
+        return numpy.sqrt(dists ** 2 + dists2d_squares)
 
     def _get_top_edge_centroid(self):
         """
