@@ -53,8 +53,11 @@ class EvenlyDiscretizedMFD(BaseMFD):
         if not self.occurrence_rates:
             raise ValueError('at least one bin must be specified')
 
-        if not all(value > 0 for value in self.occurrence_rates):
-            raise ValueError('all occurrence rates must be positive')
+        if not all(value >= 0 for value in self.occurrence_rates):
+            raise ValueError('all occurrence rates must not be negative')
+
+        if not any(value > 0 for value in self.occurrence_rates):
+            raise ValueError('at least one occurrence rate must be positive')
 
         if not self.min_mag >= 0:
             raise ValueError('minimum magnitude must be non-negative')
@@ -63,10 +66,9 @@ class EvenlyDiscretizedMFD(BaseMFD):
         """
         Returns the predefined annual occurrence rates.
         """
-        return [
-            (self.min_mag + i * self.bin_width, occurence_rate)
-            for i, occurence_rate in enumerate(self.occurrence_rates)
-        ]
+        return [(self.min_mag + i * self.bin_width, occurrence_rate)
+                for i, occurrence_rate in enumerate(self.occurrence_rates)
+                if occurrence_rate > 0]
 
     def get_min_mag(self):
         """
