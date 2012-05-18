@@ -78,11 +78,6 @@ class PlanarSurface(BaseSurface):
         self.dip = dip
         self.strike = strike
 
-        self.top_left = top_left
-        self.top_right = top_right
-        self.bottom_right = bottom_right
-        self.bottom_left = bottom_left
-
         self.corner_lons = numpy.array([
             top_left.longitude, top_right.longitude,
             bottom_left.longitude, bottom_right.longitude
@@ -95,25 +90,7 @@ class PlanarSurface(BaseSurface):
             top_left.depth, top_right.depth,
             bottom_left.depth, bottom_right.depth
         ])
-        tl, tr, bl, br = geo_utils.spherical_to_cartesian(
-            self.corner_lons, self.corner_lats, self.corner_depths
-        )
-
-        # these two parameters define the plane that contains the surface
-        # (in 3d Cartesian space): a normal unit vector,
-        self.normal = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
-        # ... and scalar "d" parameter from the plane equation (uses
-        # an equation (3) from http://mathworld.wolfram.com/Plane.html)
-        self.d = - (self.normal * tl).sum()
-
-        # these two 3d vectors together with a zero point represent surface's
-        # coordinate space (the way to translate 3d Cartesian space with
-        # a center in earth's center to 2d space centered in surface's top
-        # left corner with basis vectors directed to top right and bottom left
-        # corners. see :meth:`_project`.
-        self.uv1 = geo_utils.normalized(tr - tl)
-        self.uv2 = numpy.cross(self.normal, self.uv1)
-        self.zero_zero = tl
+        self._init_plane()
 
         # now we can check surface for validity
         dists, xx, yy = self._project(self.corner_lons, self.corner_lats,
@@ -131,6 +108,83 @@ class PlanarSurface(BaseSurface):
                              "represent a rectangle")
         self.width = (width1 + width2) / 2.0
         self.length = (length1 + length2) / 2.0
+
+    def _init_plane(self):
+        """
+        Prepare everything needed for projecting arbitrary points on a plane
+        containing the surface.
+        """
+        tl, tr, bl, br = geo_utils.spherical_to_cartesian(
+            self.corner_lons, self.corner_lats, self.corner_depths
+        )
+        # these two parameters define the plane that contains the surface
+        # (in 3d Cartesian space): a normal unit vector,
+        self.normal = geo_utils.normalized(numpy.cross(tl - tr, tl - bl))
+        # ... and scalar "d" parameter from the plane equation (uses
+        # an equation (3) from http://mathworld.wolfram.com/Plane.html)
+        self.d = - (self.normal * tl).sum()
+        # these two 3d vectors together with a zero point represent surface's
+        # coordinate space (the way to translate 3d Cartesian space with
+        # a center in earth's center to 2d space centered in surface's top
+        # left corner with basis vectors directed to top right and bottom left
+        # corners. see :meth:`_project`.
+        self.uv1 = geo_utils.normalized(tr - tl)
+        self.uv2 = numpy.cross(self.normal, self.uv1)
+        self.zero_zero = tl
+
+    def translate(self, p1, p2):
+        """
+        Translate the surface on a specific distance with a specific azimuth.
+
+        Parameters are two points (instances of :class:`nhlib.geo.point.Point`)
+        representing the direction and an azimuth for translation. The
+        resulting surface corner points will be that far along that azimuth
+        from respective corner points of this surface as ``p2`` is located
+        with respect to ``p1``.
+
+        :returns:
+            A new :class:`PlanarSurface` object with the same mesh spacing,
+            dip, strike, width, length and depth but with corners longitudes
+            and latitudes translated.
+        """
+        # TODO: unittest
+        azimuth = geodetic.azimuth(p1.longitude, p1.latitude,
+                                   p2.longitude, p2.latitude)
+        distance = geodetic.geodetic_distance(p1.longitude, p1.latitude,
+                                              p2.longitude, p2.latitude)
+        # avoid calling PlanarSurface's constructor
+        nsurf = object.__new__(PlanarSurface)
+        nsurf.mesh_spacing = self.mesh_spacing
+        nsurf.dip = self.dip
+        nsurf.strike = self.strike
+        nsurf.corner_lons, nsurf.corner_lats = geodetic.point_at(
+            self.corner_lons, self.corner_lats, azimuth, distance
+        )
+        nsurf.corner_depths = self.corner_depths.copy()
+        nsurf._init_plane()
+        nsurf.width = self.width
+        nsurf.length = self.length
+        return nsurf
+
+    @property
+    def top_left(self):
+        return Point(self.corner_lons[0], self.corner_lats[0],
+                     self.corner_depths[0])
+
+    @property
+    def top_right(self):
+        return Point(self.corner_lons[1], self.corner_lats[1],
+                     self.corner_depths[1])
+
+    @property
+    def bottom_left(self):
+        return Point(self.corner_lons[2], self.corner_lats[2],
+                     self.corner_depths[2])
+
+    @property
+    def bottom_right(self):
+        return Point(self.corner_lons[3], self.corner_lats[3],
+                     self.corner_depths[3])
 
     def _create_mesh(self):
         """
@@ -291,10 +345,10 @@ class PlanarSurface(BaseSurface):
         in order to avoid creating a mesh.
         """
         lon, lat = geo_utils.get_middle_point(
-            self.top_left.longitude, self.top_left.latitude,
-            self.top_right.longitude, self.top_right.latitude
+            self.corner_lons[0], self.corner_lats[0],
+            self.corner_lons[1], self.corner_lats[1]
         )
-        return Point(lon, lat, self.top_left.depth)
+        return Point(lon, lat, self.corner_depths[0])
 
     def get_top_edge_depth(self):
         """
@@ -302,7 +356,7 @@ class PlanarSurface(BaseSurface):
         <nhlib.geo.surface.BaseSurface.get_top_edge_depth>`
         in order to avoid creating a mesh.
         """
-        return self.top_left.depth
+        return self.corner_depths[0]
 
     def get_joyner_boore_distance(self, mesh):
         """
@@ -342,10 +396,10 @@ class PlanarSurface(BaseSurface):
         # then we consider four special cases (labeled with Roman numerals)
         # and either pick one of distances to arcs or a closest distance
         # to corner.
-        arcs_lons = [self.top_left.longitude, self.bottom_left.longitude,
-                     self.top_left.longitude, self.top_right.longitude]
-        arcs_lats = [self.top_left.latitude, self.bottom_left.latitude,
-                     self.top_left.latitude, self.top_right.latitude]
+        #
+        # indices 0, 2 and 1 represent corners TL, BL and TR respectively.
+        arcs_lons = self.corner_lons.take([0, 2, 0, 1])
+        arcs_lats = self.corner_lats.take([0, 2, 0, 1])
         downdip_azimuth = (self.strike + 90) % 360
         arcs_azimuths = [self.strike, self.strike,
                          downdip_azimuth, downdip_azimuth]
