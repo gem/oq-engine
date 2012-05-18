@@ -138,13 +138,13 @@ def get_resampled_coordinates(lons, lats):
     We don't need to resample latitudinally-extended lines because
     all meridians are great circles.
     """
-    num_points = len(lons)
-    assert num_points == len(lats)
+    num_coords = len(lons)
+    assert num_coords == len(lats)
 
     resampled_lons = [lons[0]]
     resampled_lats = [lats[0]]
-    for i in xrange(num_points):
-        next_point = (i + 1) % num_points
+    for i in xrange(num_coords):
+        next_point = (i + 1) % num_coords
         lon1, lat1 = lons[i], lats[i]
         lon2, lat2 = lons[next_point], lats[next_point]
         lon_extent = abs(utils.get_longitudinal_extent(lon1, lon2))
