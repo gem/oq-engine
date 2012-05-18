@@ -118,7 +118,9 @@ class PlanarSurface(BaseSurface):
         # now we can check surface for validity
         dists, xx, yy = self._project(self.corner_lons, self.corner_lats,
                                       self.corner_depths)
+        # "length" of the rupture is measured along the top edge
         length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
+        # "width" of the rupture is measured along downdip direction
         width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
         if numpy.max(numpy.abs(dists)) > self.IMPERFECT_RECTANGLE_TOLERANCE \
                 or abs(width1 - width2) > self.IMPERFECT_RECTANGLE_TOLERANCE \
@@ -232,7 +234,7 @@ class PlanarSurface(BaseSurface):
                 # case "I": point on the left hand side from the rectangle
                 xx < 0,
                 # case "II": point is on the right hand side
-                xx > self.width
+                xx > self.length
                 # default -- case "III": point is in between vertical sides
             ],
             choicelist=[
@@ -241,7 +243,7 @@ class PlanarSurface(BaseSurface):
                 xx,
                 # case "II": considering a distance between a point and
                 # a line containing the right side
-                xx - self.width
+                xx - self.length
             ],
             # case "III": abscissa doesn't have an effect on a distance
             # to the rectangle
@@ -260,7 +262,7 @@ class PlanarSurface(BaseSurface):
                 # case "I": point is above the rectangle top edge
                 yy < 0,
                 # case "II": point is below the rectangle bottom edge
-                yy > self.length
+                yy > self.width
                 # default -- case "III": point is in between lines containing
                 # top and bottom edges
             ],
@@ -270,7 +272,7 @@ class PlanarSurface(BaseSurface):
                 yy,
                 # case "II": considering a distance to a line containing
                 # a bottom edge
-                yy - self.length
+                yy - self.width
             ],
             # case "III": ordinate doesn't affect the distance
             default=0
