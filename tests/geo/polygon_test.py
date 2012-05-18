@@ -19,6 +19,7 @@ import numpy
 
 from nhlib import geo
 from nhlib.geo import _utils as geo_utils
+from nhlib.geo import polygon
 
 
 class PolygonCreationTestCase(unittest.TestCase):
@@ -66,9 +67,10 @@ class PolygonCreationTestCase(unittest.TestCase):
 
 class PolygonResampleSegmentsTestCase(unittest.TestCase):
     def test_1(self):
-        poly = geo.Polygon([geo.Point(-2, -2), geo.Point(0, -2),
-                            geo.Point(0, 0), geo.Point(-2, 0)])
-        lons, lats = poly._get_resampled_coordinates()
+        input_lons = [-2, 0, 0, -2]
+        input_lats = [-2, -2, 0, 0]
+
+        lons, lats = polygon.get_resampled_coordinates(input_lons, input_lats)
         expected_lons = [-2, -1,  0,  0, -1, -2, -2]
         expected_lats = [-2, -2, -2,  0,  0,  0, -2]
         self.assertTrue(
@@ -81,13 +83,10 @@ class PolygonResampleSegmentsTestCase(unittest.TestCase):
         )
 
     def test_international_date_line(self):
-        poly = geo.Polygon([
-            geo.Point(177, 40), geo.Point(179, 40), geo.Point(-179, 40),
-            geo.Point(-177, 40),
-            geo.Point(-177, 43), geo.Point(-179, 43), geo.Point(179, 43),
-            geo.Point(177, 43)
-        ])
-        lons, lats = poly._get_resampled_coordinates()
+        input_lons = [177, 179, -179, -177, -177, -179, 179, 177]
+        input_lats = [40, 40, 40, 40, 43, 43, 43, 43]
+
+        lons, lats = polygon.get_resampled_coordinates(input_lons, input_lats)
         self.assertTrue(all(-180 <= lon <= 180 for lon in lons))
         expected_lons = [177, 178, 179, -180, -179, -178, -177,
                          -177, -178, -179, -180, 179, 178, 177, 177]
