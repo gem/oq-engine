@@ -16,7 +16,9 @@
 """
 Module :mod:`nhlib.source.area` defines :class:`AreaSource`.
 """
+from nhlib.geo import Point
 from nhlib.source.point import PointSource
+from nhlib.source.rupture import ProbabilisticRupture
 
 
 class AreaSource(PointSource):
@@ -74,9 +76,38 @@ class AreaSource(PointSource):
         """
         polygon_mesh = self.polygon.discretize(self.area_discretization)
         rate_scaling_factor = 1.0 / len(polygon_mesh)
-        for location in polygon_mesh:
-            ruptures_at_location = self._iter_ruptures_at_location(
-                temporal_occurrence_model, location, rate_scaling_factor
-            )
-            for rupture in ruptures_at_location:
+
+        # take the very first point of the polygon mesh
+        [epicenter0] = polygon_mesh[0:1]
+        # generate "reference ruptures" -- all the ruptures that have the same
+        # epicenter location (first point of the polygon's mesh) but different
+        # magnitudes, nodal planes, hypocenters' depths and occurrence rates
+        ref_ruptures = []
+        for (mag, mag_occ_rate) in self.mfd.get_annual_occurrence_rates():
+            for (np_prob, np) in self.nodal_plane_distribution.data:
+                for (hc_prob, hc_depth) in self.hypocenter_distribution.data:
+                    hypocenter = Point(latitude=epicenter0.latitude,
+                                       longitude=epicenter0.longitude,
+                                       depth=hc_depth)
+                    occurrence_rate = (mag_occ_rate
+                                       * float(np_prob) * float(hc_prob))
+                    occurrence_rate *= rate_scaling_factor
+                    surface = self._get_rupture_surface(mag, np, hypocenter)
+                    ref_ruptures.append((mag, np.rake, hc_depth,
+                                         surface, occurrence_rate))
+
+        # for each of the epicenter positions generate as many ruptures
+        # as we generated "reference" ones: new ruptures differ only
+        # in hypocenter and surface location
+        for epicenter in polygon_mesh:
+            for mag, rake, hc_depth, surface, occ_rate in ref_ruptures:
+                # translate the surface from first epicenter position
+                # to the target one preserving it's geometry
+                surface = surface.translate(epicenter0, epicenter)
+                hypocenter = epicenter
+                hypocenter.depth = hc_depth
+                rupture = ProbabilisticRupture(
+                    mag, rake, self.tectonic_region_type, hypocenter,
+                    surface, occ_rate, temporal_occurrence_model
+                )
                 yield rupture
