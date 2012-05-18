@@ -51,7 +51,6 @@ class Polygon(object):
 
         self.lons = numpy.array([float(point.longitude) for point in points])
         self.lats = numpy.array([float(point.latitude) for point in points])
-        self.num_points = len(points)
 
         if utils.line_intersects_itself(self.lons, self.lats,
                                         closed_shape=True):

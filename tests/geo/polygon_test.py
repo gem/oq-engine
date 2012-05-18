@@ -57,7 +57,8 @@ class PolygonCreationTestCase(unittest.TestCase):
                   geo.Point(-170, -5), geo.Point(-175, -10),
                   geo.Point(-178, -6)]
         polygon = geo.Polygon(points)
-        self.assertEqual(polygon.num_points, 6)
+        self.assertEqual(len(polygon.lons), 6)
+        self.assertEqual(len(polygon.lats), 6)
         self.assertEqual(list(polygon.lons),
                          [170,  170,  176, -170, -175, -178])
         self.assertEqual(list(polygon.lats), [-10, 10, 0, -5, -10, -6])
