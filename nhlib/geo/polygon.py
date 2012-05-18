@@ -149,11 +149,13 @@ def get_resampled_coordinates(lons, lats):
         lon_extent = abs(utils.get_longitudinal_extent(lon1, lon2))
         num_points = int(lon_extent / LONGITUDINAL_DISCRETIZATION) + 1
         if num_points >= 2:
-            lons, lats, _ = geodetic.npoints_between(
+            # We need to increase the resolution of this arc by adding new
+            # points.
+            new_lons, new_lats, _ = geodetic.npoints_between(
                 lon1, lat1, 0, lon2, lat2, 0, num_points
             )
-            resampled_lons.extend(lons[1:])
-            resampled_lats.extend(lats[1:])
+            resampled_lons.extend(new_lons[1:])
+            resampled_lats.extend(new_lats[1:])
         else:
             resampled_lons.append(lon2)
             resampled_lats.append(lat2)
