@@ -147,7 +147,6 @@ class PlanarSurface(BaseSurface):
             dip, strike, width, length and depth but with corners longitudes
             and latitudes translated.
         """
-        # TODO: unittest
         azimuth = geodetic.azimuth(p1.longitude, p1.latitude,
                                    p2.longitude, p2.latitude)
         distance = geodetic.geodetic_distance(p1.longitude, p1.latitude,
