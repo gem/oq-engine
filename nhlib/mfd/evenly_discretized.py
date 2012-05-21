@@ -67,8 +67,7 @@ class EvenlyDiscretizedMFD(BaseMFD):
         Returns the predefined annual occurrence rates.
         """
         return [(self.min_mag + i * self.bin_width, occurrence_rate)
-                for i, occurrence_rate in enumerate(self.occurrence_rates)
-                if occurrence_rate > 0]
+                for i, occurrence_rate in enumerate(self.occurrence_rates)]
 
     def get_min_mag(self):
         """

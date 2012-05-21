@@ -69,7 +69,7 @@ class EvenlyDiscretizedMFDTestCase(BaseMFDTestCase):
             min_mag=1, bin_width=2, occurrence_rates=[4, 0, 5]
         )
         self.assertEqual(evenly_discretized.get_annual_occurrence_rates(),
-                         [(1, 4), (5, 5)])
+                         [(1, 4), (3, 0), (5, 5)])
 
     def test(self):
         evenly_discretized = EvenlyDiscretizedMFD(
