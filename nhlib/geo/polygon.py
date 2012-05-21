@@ -169,6 +169,12 @@ def get_resampled_coordinates(lons, lats):
     num_coords = len(lons)
     assert num_coords == len(lats)
 
+    lons1 = numpy.array(lons)
+    lats1 = numpy.array(lats)
+    lons2 = numpy.concatenate((lons1[1:], lons1[0:1]))
+    lats2 = numpy.concatenate((lats1[1:], lats1[0:1]))
+    distances = geodetic.geodetic_distance(lons1, lats1, lons2, lats2)
+
     resampled_lons = [lons[0]]
     resampled_lats = [lats[0]]
     for i in xrange(num_coords):
@@ -176,8 +182,8 @@ def get_resampled_coordinates(lons, lats):
         lon1, lat1 = lons[i], lats[i]
         lon2, lat2 = lons[next_point], lats[next_point]
 
-        # TODO(larsbutler): Move this outside of loop and use numpy.
-        distance = geodetic.geodetic_distance(lon1, lat1, lon2, lat2)
+        # distance = geodetic.geodetic_distance(lon1, lat1, lon2, lat2)
+        distance = distances[i]
         num_points = int(distance / COORDINATE_DISCRETIZATION) + 1
         if num_points >= 2:
             # We need to increase the resolution of this arc by adding new
