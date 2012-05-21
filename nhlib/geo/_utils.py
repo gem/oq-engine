@@ -135,9 +135,17 @@ def get_orthographic_projection(west, east, north, south):
     Create and return a projection object for a given bounding box.
 
     :returns:
-        Function that takes two arguments: (longitudes and latitudes
-        as a form of scalars or numpy arrays) and returns a tuple
-        of two items: x and y coordinates of projected points.
+        Function that can perform both forward and reverse projection
+        (converting from longitudes and latitudes to x and y values
+        on 2d-space and vice versa). Function takes three arguments:
+        first two are numpy arrays of longitudes and latitudes *or*
+        abscissae and ordinates of points to project and the third one
+        is a boolean that allows to choose what operation is requested --
+        is it forward or reverse one. ``True`` values give to third
+        positional argument (or keyword argument "reverse") indicates
+        that the projection of points in 2d space back to earth surface
+        is needed. The default value for "reverse" argument is ``False``,
+        which means forward projection (degrees to kilometers).
 
     Parameters are given as floats, representing decimal degrees (first two
     are longitudes and last two are latitudes). They define a bounding box
@@ -159,12 +167,23 @@ def get_orthographic_projection(west, east, north, south):
     1 km up until then).
     """
     lambda0, phi0 = numpy.radians(get_middle_point(west, north, east, south))
-    def proj(lons, lats):
-        lambdas, phis = numpy.radians(lons), numpy.radians(lats)
-        xx = numpy.cos(phis) * numpy.sin(lambdas - lambda0)
-        yy = numpy.cos(phi0) * numpy.sin(phis) \
-             - numpy.sin(phi0) * numpy.cos(phis) * numpy.cos(lambdas - lambda0)
-        return xx * EARTH_RADIUS, yy * EARTH_RADIUS
+    cos_phi0 = numpy.cos(phi0)
+    sin_phi0 = numpy.sin(phi0)
+    def proj(lons, lats, reverse=False):
+        if not reverse:
+            lambdas, phis = numpy.radians(lons), numpy.radians(lats)
+            xx = numpy.cos(phis) * numpy.sin(lambdas - lambda0)
+            yy = cos_phi0 * numpy.sin(phis) \
+                 - sin_phi0 * numpy.cos(phis) * numpy.cos(lambdas - lambda0)
+            return xx * EARTH_RADIUS, yy * EARTH_RADIUS
+        else:
+            # "reverse" mode, arguments are actually abscissae
+            # and ordinates in 2d space
+            xx, yy = lons / EARTH_RADIUS, lats / EARTH_RADIUS
+            cos_c = numpy.sqrt(1 - (xx ** 2 + yy ** 2))
+            phis = numpy.arcsin(cos_c * sin_phi0 + yy * cos_phi0)
+            lambdas = numpy.arctan2(xx, cos_phi0 * cos_c - yy * sin_phi0)
+            return numpy.degrees(lambda0 + lambdas), numpy.degrees(phis)
     return proj
 
 
