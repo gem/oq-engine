@@ -19,6 +19,7 @@
 
 import os
 import unittest
+import shutil
 
 from openquake.parser import fragility
 from openquake import xml
@@ -28,6 +29,7 @@ from tests.utils import helpers
 
 CONTINUOUS_MODEL = os.path.join(helpers.SCHEMA_DIR, "examples/fragm_c.xml")
 DISCRETE_MODEL = os.path.join(helpers.SCHEMA_DIR, "examples/fragm_d.xml")
+TEMP_FILE = os.path.join(helpers.SCHEMA_DIR, "examples/temp.xml")
 
 
 def setup_parser(content):
@@ -37,6 +39,12 @@ def setup_parser(content):
 
 class FragilityModelParserTestCase(unittest.TestCase):
     """General fragility model parser tests."""
+
+    def setUp(self):
+        self.parser = None
+
+    def tearDown(self):
+        os.unlink(self.parser.path)
 
     def test_parser_with_invalid_format(self):
         # An invalid fragility model format results in errors.
@@ -48,17 +56,13 @@ class FragilityModelParserTestCase(unittest.TestCase):
                 <fragilityModel gml:id="ep2" format="--invalid--">
                 </fragilityModel>
             </nrml>"""
-        try:
-            parser = setup_parser(content)
-            try:
-                list(parser)
-            except xml.XMLValidationError, exc:
-                self.assertTrue("'--invalid--' is not an element" in
-                                exc.args[0])
-            else:
-                self.fail("exception not raised")
-        finally:
-            os.unlink(parser.path)
+        self.parser = setup_parser(content)
+
+        with self.assertRaises(xml.XMLValidationError) as e:
+            list(self.parser)
+
+            self.assertTrue("'--invalid--' is not an element" in
+                e.exception.mesagge)
 
     def test_parser_with_no_limit_states(self):
         # A fragility model without limit states results in errors.
@@ -70,16 +74,12 @@ class FragilityModelParserTestCase(unittest.TestCase):
                 <fragilityModel gml:id="ep2" format="discrete">
                 </fragilityModel>
             </nrml>"""
-        try:
-            parser = setup_parser(content)
-            try:
-                list(parser)
-            except xml.XMLValidationError, exc:
-                self.assertTrue("limitStates" in exc.args[0])
-            else:
-                self.fail("exception not raised")
-        finally:
-            os.unlink(parser.path)
+        self.parser = setup_parser(content)
+
+        with self.assertRaises(xml.XMLValidationError) as e:
+            list(self.parser)
+
+            self.assertTrue("limitStates" in e.exception.message)
 
     def test_parser_with_no_taxonomy(self):
         # A fragility function set without a taxonomy results in errors.
@@ -96,16 +96,12 @@ class FragilityModelParserTestCase(unittest.TestCase):
                     </ffs>
                 </fragilityModel>
             </nrml>"""
-        try:
-            parser = setup_parser(content)
-            try:
-                list(parser)
-            except xml.XMLValidationError, exc:
-                self.assertTrue("taxonomy" in exc.args[0])
-            else:
-                self.fail("exception not raised")
-        finally:
-            os.unlink(parser.path)
+        self.parser = setup_parser(content)
+
+        with self.assertRaises(xml.XMLValidationError) as e:
+            list(self.parser)
+
+            self.assertTrue("taxonomy" in e.exception.message)
 
     def test_parser_with_invalid_limit_state(self):
         # A fragility function with an invalid limit state results in errors.
@@ -123,26 +119,27 @@ class FragilityModelParserTestCase(unittest.TestCase):
                     </ffs>
                 </fragilityModel>
             </nrml>"""
-        try:
-            parser = setup_parser(content)
-            try:
-                list(parser)
-            except AssertionError, exc:
-                self.assertEqual("invalid limit state (!all-is-fine!) for "
-                                 "function with taxonomy RC/DMRF-D/HR",
-                                 exc.args[0])
-            else:
-                self.fail("exception not raised")
-        finally:
-            os.unlink(parser.path)
+        self.parser = setup_parser(content)
+
+        with self.assertRaises(AssertionError) as e:
+            list(self.parser)
+
+            self.assertEqual("invalid limit state (!all-is-fine!) for "
+                             "function with taxonomy RC/DMRF-D/HR",
+                             e.exception.message)
 
 
 class DiscreteFragilityModelParserTestCase(unittest.TestCase):
     """Tests for the discrete fragility model parser."""
 
+    def setUp(self):
+        self.parser = None
+
+    def tearDown(self):
+        os.unlink(self.parser.path)
+
     def test_parser(self):
         # A valid discrete fragility model is parsed without errors.
-
         expected = [
             fragility.FFD(taxonomy='RC/DMRF-D/LR', type=None, limit='minor',
                           poes=[0.0, 0.09, 0.56, 0.91, 0.98]),
@@ -160,16 +157,20 @@ class DiscreteFragilityModelParserTestCase(unittest.TestCase):
                           poes=[0.0, 0.0, 0.0, 0.3, 0.89]),
             fragility.FFD(taxonomy='RC/DMRF-D/HR', type=None, limit='collapse',
                           poes=[0.0, 0.0, 0.0, 0.04, 0.64])]
-        parser = fragility.FragilityModelParser(DISCRETE_MODEL)
-        results = list(parser)
+        shutil.copyfile(DISCRETE_MODEL, TEMP_FILE)
+        self.parser = fragility.FragilityModelParser(TEMP_FILE)
+        results = list(self.parser)
+
         self.assertEqual(expected, results)
+
         expected = fragility.FRAGM(
             id='ep1', format='discrete',
             limits=['minor', 'moderate', 'severe', 'collapse'],
             description='Fragility model for Pavia (discrete)',
             imls=[7.0, 8.0, 9.0, 10.0, 11.0], imt='MMI', iml_unit="g",
             max_iml=None, min_iml=None)
-        self.assertEqual(expected, parser.model)
+
+        self.assertEqual(expected, self.parser.model)
 
     def test_parser_with_no_imls(self):
         # A fragility model without IMLs results in errors.
@@ -186,16 +187,12 @@ class DiscreteFragilityModelParserTestCase(unittest.TestCase):
                     </ffs>
                 </fragilityModel>
             </nrml>"""
-        try:
-            parser = setup_parser(content)
-            try:
-                list(parser)
-            except AssertionError, exc:
-                self.assertEqual("IML not set", exc.args[0])
-            else:
-                self.fail("exception not raised")
-        finally:
-            os.unlink(parser.path)
+        self.parser = setup_parser(content)
+
+        with self.assertRaises(AssertionError) as e:
+            list(self.parser)
+
+            self.assertEqual("IML not set", e.exception.message)
 
     def test_parser_with_no_poes(self):
         # A fragility function without poes will results in errors.
@@ -213,16 +210,12 @@ class DiscreteFragilityModelParserTestCase(unittest.TestCase):
                     </ffs>
                 </fragilityModel>
             </nrml>"""
-        try:
-            parser = setup_parser(content)
-            try:
-                list(parser)
-            except xml.XMLValidationError, exc:
-                self.assertTrue("poE" in exc.args[0])
-            else:
-                self.fail("exception not raised")
-        finally:
-            os.unlink(parser.path)
+        self.parser = setup_parser(content)
+
+        with self.assertRaises(xml.XMLValidationError) as e:
+            list(self.parser)
+
+            self.assertTrue("poE" in e.exception.message)
 
     def test_parser_with_max_iml(self):
         # A discrete fragility model with 'maxIML' results in errors.
@@ -240,18 +233,14 @@ class DiscreteFragilityModelParserTestCase(unittest.TestCase):
                     </ffs>
                 </fragilityModel>
             </nrml>"""
-        try:
-            parser = setup_parser(content)
-            try:
-                list(parser)
-            except AssertionError, exc:
-                self.assertEqual(
-                    "'maxIML' must not be set for discrete fragility models",
-                    exc.args[0])
-            else:
-                self.fail("exception not raised")
-        finally:
-            os.unlink(parser.path)
+        self.parser = setup_parser(content)
+
+        with self.assertRaises(AssertionError) as e:
+            list(self.parser)
+
+            self.assertEqual(
+                "'maxIML' must not be set for discrete fragility models",
+                e.exception.message)
 
     def test_parser_with_min_iml(self):
         # A discrete fragility model with 'minIML' results in errors.
@@ -269,22 +258,24 @@ class DiscreteFragilityModelParserTestCase(unittest.TestCase):
                     </ffs>
                 </fragilityModel>
             </nrml>"""
-        try:
-            parser = setup_parser(content)
-            try:
-                list(parser)
-            except AssertionError, exc:
-                self.assertEqual(
-                    "'minIML' must not be set for discrete fragility models",
-                    exc.args[0])
-            else:
-                self.fail("exception not raised")
-        finally:
-            os.unlink(parser.path)
+        self.parser = setup_parser(content)
+
+        with self.assertRaises(AssertionError) as e:
+            list(self.parser)
+
+            self.assertEqual(
+                "'minIML' must not be set for discrete fragility models",
+                e.exception.message)
 
 
 class ContinuousFragilityModelParserTestCase(unittest.TestCase):
     """Tests for the continuous fragility model parser."""
+
+    def setUp(self):
+        self.parser = None
+
+    def tearDown(self):
+        os.unlink(self.parser.path)
 
     def test_parser(self):
         # A valid continuous fragility model is parsed without errors.
@@ -307,15 +298,19 @@ class ContinuousFragilityModelParserTestCase(unittest.TestCase):
             fragility.FFC(taxonomy='RC/DMRF-D/HR', type=None,
                           limit='complete', mean=108.8, stddev=123.6)]
 
-        parser = fragility.FragilityModelParser(CONTINUOUS_MODEL)
-        results = list(parser)
+        shutil.copyfile(CONTINUOUS_MODEL, TEMP_FILE)
+        self.parser = fragility.FragilityModelParser(TEMP_FILE)
+        results = list(self.parser)
+
         self.assertEqual(expected, results)
+
         expected = fragility.FRAGM(
             id='ep1', format='continuous',
             limits=['slight', 'moderate', 'extensive', 'complete'],
             description='Fragility model for Pavia (continuous)',
             imls=None, imt=None, iml_unit="m", max_iml="9.9", min_iml="0.1")
-        self.assertEqual(expected, parser.model)
+
+        self.assertEqual(expected, self.parser.model)
 
     def test_parser_with_no_params(self):
         # A continuous fragility function without parameters will result in
@@ -334,16 +329,12 @@ class ContinuousFragilityModelParserTestCase(unittest.TestCase):
                     </ffs>
                 </fragilityModel>
             </nrml>"""
-        try:
-            parser = setup_parser(content)
-            try:
-                list(parser)
-            except xml.XMLValidationError, exc:
-                self.assertTrue("params" in exc.args[0])
-            else:
-                self.fail("exception not raised")
-        finally:
-            os.unlink(parser.path)
+        self.parser = setup_parser(content)
+
+        with self.assertRaises(xml.XMLValidationError) as e:
+            list(self.parser)
+
+            self.assertTrue("params" in e.exception.message)
 
     def test_parser_with_params_but_no_means(self):
         # A continuous fragility function without a mean parameter will result
@@ -364,17 +355,13 @@ class ContinuousFragilityModelParserTestCase(unittest.TestCase):
                     </ffs>
                 </fragilityModel>
             </nrml>"""
-        try:
-            parser = setup_parser(content)
-            try:
-                list(parser)
-            except xml.XMLValidationError, exc:
-                self.assertTrue("'mean' is required but missing"
-                                in exc.args[0])
-            else:
-                self.fail("exception not raised")
-        finally:
-            os.unlink(parser.path)
+        self.parser = setup_parser(content)
+
+        with self.assertRaises(xml.XMLValidationError) as e:
+            list(self.parser)
+
+            self.assertTrue("'mean' is required but missing"
+                                in e.exception.message)
 
     def test_parser_with_params_but_no_stddevs(self):
         # A continuous fragility function without a stddev parameter will
@@ -395,14 +382,10 @@ class ContinuousFragilityModelParserTestCase(unittest.TestCase):
                     </ffs>
                 </fragilityModel>
             </nrml>"""
-        try:
-            parser = setup_parser(content)
-            try:
-                list(parser)
-            except xml.XMLValidationError, exc:
-                self.assertTrue("'stddev' is required but missing"
-                                in exc.args[0])
-            else:
-                self.fail("exception not raised")
-        finally:
-            os.unlink(parser.path)
+        self.parser = setup_parser(content)
+
+        with self.assertRaises(xml.XMLValidationError) as e:
+            list(self.parser)
+
+            self.assertTrue("'stddev' is required but missing"
+                                in e.exception.message)
