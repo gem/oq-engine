@@ -134,7 +134,8 @@ class PlanarSurface(BaseSurface):
 
     def translate(self, p1, p2):
         """
-        Translate the surface on a specific distance with a specific azimuth.
+        Translate the surface for a specific distance along a specific azimuth
+        direction.
 
         Parameters are two points (instances of :class:`nhlib.geo.point.Point`)
         representing the direction and an azimuth for translation. The
