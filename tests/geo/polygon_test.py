@@ -190,7 +190,7 @@ class PolygonEdgesTestCase(unittest.TestCase):
     #   .       .
     #   *.......*
     #
-    # Projecting onto a sphere, however gives us a rather different shape.
+    # Projecting onto a sphere, however, gives us a rather different shape.
     # The lines connecting the points become arcs. The resulting shape
     # looks like this:
     #     ..---..
