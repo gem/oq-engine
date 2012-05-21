@@ -148,6 +148,14 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(blons, lons))
         self.assertTrue(numpy.allclose(blats, lats))
 
+    def test_points_too_far(self):
+        proj = utils.get_orthographic_projection(180, 180, 45, 45)
+        with self.assertRaises(ValueError) as ar:
+            proj(90, -45)
+        self.assertEqual(ar.exception.message,
+                         'some points are too far from the projection '
+                         'center lon=180.0 lat=45.0')
+
 
 class GetMiddlePointTestCase(unittest.TestCase):
     def test_same_points(self):

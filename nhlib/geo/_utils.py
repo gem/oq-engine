@@ -147,6 +147,10 @@ def get_orthographic_projection(west, east, north, south):
         is needed. The default value for "reverse" argument is ``False``,
         which means forward projection (degrees to kilometers).
 
+        Resulting function raises ``ValueError`` in forward projection
+        mode if any of the target points is further than 90 degree
+        (along the great circle arc) from the projection center.
+
     Parameters are given as floats, representing decimal degrees (first two
     are longitudes and last two are latitudes). They define a bounding box
     in a spherical coordinates of the collection of points that is about
@@ -169,12 +173,25 @@ def get_orthographic_projection(west, east, north, south):
     lambda0, phi0 = numpy.radians(get_middle_point(west, north, east, south))
     cos_phi0 = numpy.cos(phi0)
     sin_phi0 = numpy.sin(phi0)
+    sin_pi_over_4 = (2 ** 0.5) / 2
     def proj(lons, lats, reverse=False):
         if not reverse:
             lambdas, phis = numpy.radians(lons), numpy.radians(lats)
-            xx = numpy.cos(phis) * numpy.sin(lambdas - lambda0)
+            cos_phis = numpy.cos(phis)
+            lambdas -= lambda0
+            # calculate the sine of the distance between projection center
+            # and each of the points to project
+            sin_dist = numpy.sqrt(
+                numpy.sin((phi0 - phis) / 2.0) ** 2.0
+                + cos_phi0 * cos_phis * numpy.sin(lambdas / 2.0) ** 2.0
+            )
+            if (sin_dist > sin_pi_over_4).any():
+                raise ValueError('some points are too far from the projection '
+                                 'center lon=%s lat=%s' %
+                                 (numpy.degrees(lambda0), numpy.degrees(phi0)))
+            xx = numpy.cos(phis) * numpy.sin(lambdas)
             yy = cos_phi0 * numpy.sin(phis) \
-                 - sin_phi0 * numpy.cos(phis) * numpy.cos(lambdas - lambda0)
+                 - sin_phi0 * cos_phis * numpy.cos(lambdas)
             return xx * EARTH_RADIUS, yy * EARTH_RADIUS
         else:
             # "reverse" mode, arguments are actually abscissae
