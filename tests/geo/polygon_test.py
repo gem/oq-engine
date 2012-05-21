@@ -72,8 +72,8 @@ class PolygonResampleSegmentsTestCase(unittest.TestCase):
         input_lats = [-2, -2, 0, 0]
 
         lons, lats = polygon.get_resampled_coordinates(input_lons, input_lats)
-        expected_lons = [-2, -1,  0,  0, -1, -2, -2]
-        expected_lats = [-2, -2, -2,  0,  0,  0, -2]
+        expected_lons = [-2, -1, 0, 0, 0, -1, -2, -2, -2]
+        expected_lats = [-2, -2, -2, -1, 0, 0, 0, -1, -2]
         self.assertTrue(
             numpy.allclose(lons, expected_lons, atol=1e-3, rtol=0),
             msg='%s != %s' % (lons, expected_lons)
@@ -89,8 +89,8 @@ class PolygonResampleSegmentsTestCase(unittest.TestCase):
 
         lons, lats = polygon.get_resampled_coordinates(input_lons, input_lats)
         self.assertTrue(all(-180 <= lon <= 180 for lon in lons))
-        expected_lons = [177, 178, 179, -180, -179, -178, -177,
-                         -177, -178, -179, -180, 179, 178, 177, 177]
+        expected_lons = [177, 179, -179, -177, -177, -177, -177, -179, 179,
+                         177, 177, 177, 177]
         self.assertTrue(
             numpy.allclose(lons, expected_lons, atol=1e-4, rtol=0),
             msg='%s != %s' % (lons, expected_lons)
@@ -173,23 +173,6 @@ class PolygonDiscretizeTestCase(unittest.TestCase):
             geo.Point(dist * 4, -dist * 3),
             geo.Point(dist * 4, -dist * 4),
         ])
-
-    def test_longitudinally_extended_boundary(self):
-        points = [geo.Point(lon, -60) for lon in xrange(-10, 11)]
-        points += [geo.Point(10, -60.1), geo.Point(-10, -60.1)]
-        poly = geo.Polygon(points)
-        mesh = list(poly.discretize(mesh_spacing=10.62))
-
-        south = mesh[0]
-        for point in mesh:
-            if point.latitude < south.latitude:
-                south = point
-
-        # the point with the lowest latitude should be somewhere
-        # in the middle longitudinally (around Greenwich meridian)
-        # and be below -60th parallel.
-        self.assertTrue(-0.1 < south.longitude < 0.1)
-        self.assertTrue(-60.5 < south.latitude < -60.4)
 
 
 class PolygonEdgesTestCase(unittest.TestCase):
