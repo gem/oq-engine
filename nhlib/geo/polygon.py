@@ -60,7 +60,7 @@ class Polygon(object):
         self._projection = None
         self._polygon2d = None
 
-    def _check_cache(self):
+    def _init_polygon2d(self):
         """Spherical bounding box, projection, and Cartesian polygon are all
         cached to prevent redundant computations.
 
@@ -83,35 +83,29 @@ class Polygon(object):
             xx, yy = self._projection(lons, lats)
             self._polygon2d = shapely.geometry.Polygon(zip(xx, yy))
 
-    def contains(self, lon, lat):
-        """Check for containment of 1 or more points.
+    def contains(self, mesh):
+        """Check for containment of a :class:`~nhlib.geo.mesh.Mesh` of points.
 
-        Parameters are coordinates in decimal degrees. Values can either be
-        scalar float numbers or numpy arrays.
+        Mesh coordinate values are in decimal degrees.
 
+        :param mesh:
+            :class:`nhlib.geo.mesh.Mesh` instance.
         :returns:
-            `True` or `False` for scalar inputs.
-
-            If input is specified as numpy arrays, the result will be a numpy
-            array of booleans.
+            Numpy array of `bool` values in the same shapes in the input
+            coordinate arrays.
         """
-        self._check_cache()
-        plon, plat = self._projection(lon, lat)
+        self._init_polygon2d()
+        plons, plats = self._projection(mesh.lons, mesh.lats)
 
-        if isinstance(lon, numpy.ndarray):
-            assert isinstance(lat, numpy.ndarray)
-            assert lon.shape == lat.shape
+        result = numpy.empty(mesh.lons.shape, dtype=bool)
 
-            bools = []
-            for i in xrange(lat.size):
-                contains = self._polygon2d.contains(
-                    shapely.geometry.Point(plon.item(i), plat.item(i))
-                )
-                bools.append(contains)
+        for i in xrange(mesh.lons.size):
+            contains = self._polygon2d.contains(
+                shapely.geometry.Point(plons.item(i), plats.item(i))
+            )
+            result.itemset(i, contains)
 
-            return numpy.array(bools).reshape(lon.shape)
-        else:
-            return self._polygon2d.contains(shapely.geometry.Point(plon, plat))
+        return result
 
     def discretize(self, mesh_spacing):
         """
@@ -123,7 +117,7 @@ class Polygon(object):
             the points data. Mesh is created with no depth information
             (all the points are on the Earth surface).
         """
-        self._check_cache()
+        self._init_polygon2d()
 
         west, east, north, south = self._bbox
 

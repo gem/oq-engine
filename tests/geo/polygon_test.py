@@ -267,8 +267,12 @@ class PolygonEdgesTestCase(unittest.TestCase):
         self.poly = geo.Polygon(self.corners)
 
     def test_corners(self):
-        for pt in self.corners:
-            self.assertFalse(self.poly.contains(pt.longitude, pt.latitude))
+        mesh = geo.Mesh.from_points_list(self.corners)
+
+        result = self.poly.contains(mesh)
+
+        for x in result.flatten():
+            self.assertFalse(x)
 
     def test_points_close_to_edges(self):
         # Test points close to the edges:
@@ -279,25 +283,29 @@ class PolygonEdgesTestCase(unittest.TestCase):
         # between North/South lines and East/West lines.
 
         # [North, South, East, West]
-        points = [(0, 10), (0, -10.0), (9.9999999, 0), (-9.9999999, 0)]
+        points = [
+            geo.Point(0, 10), geo.Point(0, -10.0),
+            geo.Point(9.9999999, 0), geo.Point(-9.9999999, 0),
+        ]
 
-        for pt in points:
-            self.assertTrue(self.poly.contains(*pt))
+        mesh = geo.Mesh.from_points_list(points)
+
+        self.assertTrue(self.poly.contains(mesh).all())
 
     def test_points_close_to_corners(self):
         # The same boundary conditions apply here (as noted in the test above).
         points = [
-            (-9.999999, 10), (9.999999, 10),
-            (-9.999999, 9.999999), (9.999999, 9.999999),
-            (-9.999999, -9.99999), (-9.999999, 9.999999),
-            (-9.999999, -10), (9.999999, -10),
+            geo.Point(-9.999999, 10), geo.Point(9.999999, 10),
+            geo.Point(-9.999999, 9.999999), geo.Point(9.999999, 9.999999),
+            geo.Point(-9.999999, -9.99999), geo.Point(-9.999999, 9.999999),
+            geo.Point(-9.999999, -10), geo.Point(9.999999, -10),
         ]
+        mesh = geo.Mesh.from_points_list(points)
 
-        for pt in points:
-            self.assertTrue(self.poly.contains(*pt))
+        self.assertTrue(self.poly.contains(mesh).all())
 
 
-class PolgonContainsTestCase(unittest.TestCase):
+class PolygonContainsTestCase(unittest.TestCase):
     """Test that :class:`nhlib.geo.polygon.Polygon.contains` can be called on
     either scalar inputs or numpy arrays.
     """
@@ -324,6 +332,6 @@ class PolgonContainsTestCase(unittest.TestCase):
             [0.0, 10, -10, 0, 0, 10, 10.0000001, 5]
         ).reshape((2,2,2))
 
-        actual = self.poly.contains(lons, lats)
+        actual = self.poly.contains(geo.Mesh(lons, lats, depths=None))
 
         self.assertTrue((expected == actual).all())
