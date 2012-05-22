@@ -89,11 +89,13 @@ class ComplexFaultSurface(BaseSurface):
         This method doesn't have to be called by hands before creating the
         surface object, because it is called from :meth:`from_fault_data`.
         """
-        ensure(len(edges) >= 2, "at least two edges are required")
-        ensure(all(len(edge) >= 2 for edge in edges),
-               "at least two points must be defined in each edge")
-        ensure(mesh_spacing > 0.0, "mesh spacing must be positive")
-        # TODO: more strict/sophisticated checks for edges?
+        if not len(edges) >= 2:
+            raise ValueError("at least two edges are required")
+        if not all(len(edge) >= 2 for edge in edges):
+            raise ValueError("at least two points must be defined "
+                             "in each edge")
+        if not mesh_spacing > 0.0:
+            raise ValueError("mesh spacing must be positive")
 
     @classmethod
     def from_fault_data(cls, edges, mesh_spacing):
