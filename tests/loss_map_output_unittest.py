@@ -40,7 +40,7 @@ EXPECTED_TEST_LOSS_MAP = helpers.get_data_path('expected-test-loss-map.xml')
 EXPECTED_TEST_NON_SCN_LOSS_MAP = helpers.get_data_path(
     'expected-non-det-test-loss-map.xml')
 
-NRML_SCHEMA_PATH = nrml.nrml_schema_file()
+NRML_SCHEMA_PATH = nrml.utils.nrml_schema_file()
 
 LOSS_MAP_METADATA = {
     'nrmlID': 'test_nrml_id',
