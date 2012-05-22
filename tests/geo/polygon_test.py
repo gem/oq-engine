@@ -56,14 +56,14 @@ class PolygonCreationTestCase(unittest.TestCase):
         points = [geo.Point(170, -10), geo.Point(170, 10), geo.Point(176, 0),
                   geo.Point(-170, -5), geo.Point(-175, -10),
                   geo.Point(-178, -6)]
-        polygon = geo.Polygon(points)
-        self.assertEqual(len(polygon.lons), 6)
-        self.assertEqual(len(polygon.lats), 6)
-        self.assertEqual(list(polygon.lons),
+        poly = geo.Polygon(points)
+        self.assertEqual(len(poly.lons), 6)
+        self.assertEqual(len(poly.lats), 6)
+        self.assertEqual(list(poly.lons),
                          [170,  170,  176, -170, -175, -178])
-        self.assertEqual(list(polygon.lats), [-10, 10, 0, -5, -10, -6])
-        self.assertEqual(polygon.lons.dtype, 'float')
-        self.assertEqual(polygon.lats.dtype, 'float')
+        self.assertEqual(list(poly.lats), [-10, 10, 0, -5, -10, -6])
+        self.assertEqual(poly.lons.dtype, 'float')
+        self.assertEqual(poly.lats.dtype, 'float')
 
 
 class PolygonResampleSegmentsTestCase(unittest.TestCase):
