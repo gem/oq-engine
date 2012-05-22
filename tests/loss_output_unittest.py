@@ -42,7 +42,7 @@ SINGLE_LOSS_RATIO_XML_OUTPUT_FILE = 'loss-ratio-curves-single.xml'
 
 LOSS_XML_FAIL_OUTPUT_FILE = 'loss-curves-fail.xml'
 
-NRML_SCHEMA_PATH = nrml.nrml_schema_file()
+NRML_SCHEMA_PATH = nrml.utils.nrml_schema_file()
 
 TEST_LOSS_CURVE = shapes.Curve(
     [(0.0, 0.44), (256.0, 0.23), (512.0, 0.2), (832.0, 0.16), (1216.0, 0.06)])
