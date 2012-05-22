@@ -74,7 +74,7 @@ class ChiouYoungs2008(GMPE):
                              stddev_types, component_type):
         """
         See :meth:`superclass method
-        <nhlib.gsim.base.GroundShkingIntensityModel.get_mean_and_stddevs>`
+        <nhlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         # extracting dictionary of coefficients specific to required
