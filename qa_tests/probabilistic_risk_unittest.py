@@ -21,7 +21,7 @@ from lxml import etree
 
 from openquake.db.models import OqJob, Output
 from openquake.export.risk import export_agg_loss_curve
-from openquake.nrml import nrml_schema_file
+from openquake.nrml.utils import nrml_schema_file
 from openquake.xml import NRML_NS, GML_NS
 from tests.utils import helpers
 
