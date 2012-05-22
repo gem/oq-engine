@@ -70,7 +70,7 @@ class ChiouYoungs2008(GMPE):
     def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
-        <nhlib.gsim.base.GroundShkingIntensityModel.get_mean_and_stddevs>`
+        <nhlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
         # extracting dictionary of coefficients specific to required
