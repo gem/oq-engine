@@ -1458,6 +1458,8 @@ class FragilityModel(djm.Model):
         null=True, help_text="Minimum IML value, for continuous models only")
     max_iml = djm.FloatField(
         null=True, help_text="Maximum IML value, for continuous models only")
+    no_damage_limit = djm.FloatField(
+        null=True, help_text="No Damage Limit value, for discrete models only")
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:
