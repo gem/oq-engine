@@ -22,7 +22,7 @@ from nhlib.tom import PoissonTOM
 
 
 def hazard_curves_poissonian(sources, sites, imts, time_span,
-                             gsims, component_type, truncation_level):
+                             gsims, truncation_level):
     """
     Compute hazard curves on a list of sites, given a set of seismic sources
     and a set of ground shaking intensity models (one per tectonic region type
@@ -53,10 +53,6 @@ def hazard_curves_poissonian(sources, sites, imts, time_span,
         Dictionary mapping tectonic region types (members
         of :class:`nhlib.const.TRT`) to :class:`~nhlib.gsim.base.GMPE`
         or :class:`~nhlib.gsim.base.IPE` objects.
-    :param component_type:
-        Component of ground shaking intensity to consider. Must be one
-        of constants in :class:`nhlib.const.IMC`. That component must
-        be supported by all the GSIMs in ``gsims`` dict.
     :param trunctation_level:
         Float, number of standard deviations for truncation of the intensity
         distribution.
@@ -80,7 +76,7 @@ def hazard_curves_poissonian(sources, sites, imts, time_span,
             sctx, rctx, dctx = gsim.make_contexts(sites, rupture)
             for imt in imts:
                 poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
-                                     component_type, truncation_level)
+                                     truncation_level)
                 curves[imt] *= (1 - prob) ** poes
 
     for imt in imts:

@@ -43,12 +43,10 @@ class SadighEtAl1997(GMPE):
         SA
     ])
 
-    #: Supported intensity measure component is the geometric mean
-    #: of two horizontal components :attr:`~nhlib.const.IMC.AVERAGE_HORIZONTAL`,
+    #: Supported intensity measure component is the geometric mean of two
+    #: horizontal components :attr:`~nhlib.const.IMC.AVERAGE_HORIZONTAL`,
     #: see page 180.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS = set([
-        const.IMC.AVERAGE_HORIZONTAL
-    ])
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = const.IMC.AVERAGE_HORIZONTAL
 
     #: Supported standard deviation type is only total, see table 3.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = set([
@@ -73,14 +71,12 @@ class SadighEtAl1997(GMPE):
     #: saturation effect is 6.5. See page 184.
     NEAR_FIELD_SATURATION_MAG = 6.5
 
-    def get_mean_and_stddevs(self, sites, rup, dists, imt,
-                             stddev_types, component_type):
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         See :meth:`superclass method
         <nhlib.gsim.base.GroundShakingIntensityModel.get_mean_and_stddevs>`
         for spec of input and result values.
         """
-        assert component_type in self.DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS
         assert all(stddev_type in self.DEFINED_FOR_STANDARD_DEVIATION_TYPES
                    for stddev_type in stddev_types)
 

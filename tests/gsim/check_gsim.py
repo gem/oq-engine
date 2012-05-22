@@ -61,12 +61,11 @@ def check_gsim(gsim_cls, datafile, max_discrep_percentage, debug=False):
     started = time.time()
     for testcase in _parse_csv(datafile, debug):
         linenum += 1
-        (sctx, rctx, dctx, stddev_types, component_type,
-         expected_results, result_type) = testcase
+        (sctx, rctx, dctx, stddev_types, expected_results, result_type) \
+                = testcase
         for imt, expected_result in expected_results.items():
-            mean, stddevs = gsim.get_mean_and_stddevs(
-                sctx, rctx, dctx, imt, stddev_types, component_type
-            )
+            mean, stddevs = gsim.get_mean_and_stddevs(sctx, rctx, dctx,
+                                                      imt, stddev_types)
             if result_type == 'MEAN':
                 result = numpy.exp(mean)
             else:
@@ -144,17 +143,16 @@ def _parse_csv(datafile, debug):
     """
     reader = iter(csv.reader(datafile))
     headers = [param_name.lower() for param_name in next(reader)]
-    (sctx, rctx, dctx, stddev_types, component_type,
-     expected_results, result_type) = _parse_csv_line(headers, next(reader))
+    sctx, rctx, dctx, stddev_types, expected_results, result_type \
+            = _parse_csv_line(headers, next(reader))
     sattrs = [slot for slot in SitesContext.__slots__ if hasattr(sctx, slot)]
     dattrs = [slot for slot in DistancesContext.__slots__
               if hasattr(dctx, slot)]
     for line in reader:
-        (sctx2, rctx2, dctx2, stddev_types2, component_type2,
-         expected_results2, result_type2) = _parse_csv_line(headers, line)
+        (sctx2, rctx2, dctx2, stddev_types2, expected_results2, result_type2) \
+                = _parse_csv_line(headers, line)
         if not debug \
                 and stddev_types2 == stddev_types \
-                and component_type2 == component_type \
                 and result_type2 == result_type \
                 and all(getattr(rctx2, slot, None) == getattr(rctx, slot, None)
                         for slot in RuptureContext.__slots__):
@@ -168,15 +166,12 @@ def _parse_csv(datafile, debug):
                 expected_results[imt] = numpy.hstack((expected_results[imt],
                                                       expected_results2[imt]))
         else:
-            yield (sctx, rctx, dctx, stddev_types, component_type,
-                   expected_results, result_type)
-            (sctx, rctx, dctx, stddev_types, component_type,
-             expected_results, result_type) \
-            = (sctx2, rctx2, dctx2, stddev_types2, component_type2,
-            expected_results2, result_type2)
+            yield sctx, rctx, dctx, stddev_types, expected_results, result_type
+            (sctx, rctx, dctx, stddev_types, expected_results, result_type) \
+            = (sctx2, rctx2, dctx2, stddev_types2,
+               expected_results2, result_type2)
 
-    yield (sctx, rctx, dctx, stddev_types, component_type,
-           expected_results, result_type)
+    yield sctx, rctx, dctx, stddev_types, expected_results, result_type
 
 
 def _parse_csv_line(headers, values):
@@ -202,9 +197,6 @@ def _parse_csv_line(headers, values):
             An empty list, if the ``result_type`` column says "MEAN"
             for that row, otherwise it is a list with one item --
             a requested standard deviation type.
-        component_type
-            An intensity measure component, taken from the column
-            ``component_type``.
         expected_results
             A dictionary mapping IMT-objects to one-element arrays of expected
             result values. Those results represent either standard deviation
@@ -217,7 +209,7 @@ def _parse_csv_line(headers, values):
     sctx = SitesContext()
     dctx = DistancesContext()
     expected_results = {}
-    stddev_types = result_type = damping = component_type = None
+    stddev_types = result_type = damping = None
 
     for param, value in zip(headers, values):
         if param == 'result_type':
@@ -234,8 +226,6 @@ def _parse_csv_line(headers, values):
                 result_type = 'MEAN'
         elif param == 'damping':
             damping = float(value)
-        elif param == 'component_type':
-            component_type = getattr(const.IMC, value)
         elif param.startswith('site_'):
             # value is sites context object attribute
             if param == 'site_vs30measured':
@@ -251,6 +241,8 @@ def _parse_csv_line(headers, values):
             # value is a rupture context attribute
             value = float(value)
             setattr(rctx, param[len('rup_'):], value)
+        elif param == 'component_type':
+            pass
         else:
             # value is the expected result (of result_type type)
             value = float(value)
@@ -265,9 +257,8 @@ def _parse_csv_line(headers, values):
 
             expected_results[imt] = numpy.array([value])
 
-    assert component_type is not None and result_type is not None
-    return (sctx, rctx, dctx, stddev_types,
-            component_type, expected_results, result_type)
+    assert result_type is not None
+    return sctx, rctx, dctx, stddev_types, expected_results, result_type
 
 
 if __name__ == '__main__':

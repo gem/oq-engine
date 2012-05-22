@@ -35,22 +35,21 @@ class _FakeGSIMTestCase(unittest.TestCase):
         class FakeGSIM(IPE):
             DEFINED_FOR_TECTONIC_REGION_TYPE = None
             DEFINED_FOR_INTENSITY_MEASURE_TYPES = set()
-            DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS = set()
+            DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
             DEFINED_FOR_STANDARD_DEVIATION_TYPES = set()
             REQUIRES_SITES_PARAMETERS = set()
             REQUIRES_RUPTURE_PARAMETERS = set()
             REQUIRES_DISTANCES = set()
 
             def get_mean_and_stddevs(self, sites, rup, dists, imt,
-                                     stddev_types, component_type):
+                                     stddev_types):
                 pass
 
         super(_FakeGSIMTestCase, self).setUp()
         self.gsim_class = FakeGSIM
         self.gsim = self.gsim_class()
-        self.gsim.DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS.add(
+        self.gsim.DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = \
             self.DEFAULT_COMPONENT
-        )
         self.gsim.DEFINED_FOR_INTENSITY_MEASURE_TYPES.add(self.DEFAULT_IMT)
 
     def _get_poes(self, **kwargs):
@@ -60,7 +59,6 @@ class _FakeGSIMTestCase(unittest.TestCase):
             dctx=DistancesContext(),
             imt=self.DEFAULT_IMT(),
             imls=[1.0, 2.0, 3.0],
-            component_type=self.DEFAULT_COMPONENT,
             truncation_level=1.0
         )
         default_kwargs.update(kwargs)
@@ -80,16 +78,6 @@ class GetPoEsWrongInputTestCase(_FakeGSIMTestCase):
         err = 'imt PGV is not supported by FakeGSIM'
         self._assert_value_error(self._get_poes, err, imt=PGV())
 
-    def test_wrong_components(self):
-        err = "intensity measure component 'something' " \
-              "is not supported by FakeGSIM"
-        self._assert_value_error(self._get_poes, err,
-                                 component_type='something')
-        err = "intensity measure component 'Random horizontal' " \
-              "is not supported by FakeGSIM"
-        self._assert_value_error(self._get_poes, err,
-                                 component_type=const.IMC.RANDOM_HORIZONTAL)
-
     def test_wrong_truncation_level(self):
         err = 'truncation level must be zero, positive number or None'
         self._assert_value_error(self._get_poes, err, truncation_level=-0.1)
@@ -102,11 +90,9 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
             const.StdDev.TOTAL
         )
 
-        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types,
-                                 component_type):
+        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
             self.assertEqual(imt, self.DEFAULT_IMT())
             self.assertEqual(stddev_types, [const.StdDev.TOTAL])
-            self.assertEqual(component_type, self.DEFAULT_COMPONENT)
             mean = numpy.array([-0.7872268528578843])
             stddev = numpy.array([0.5962393527251486])
             get_mean_and_stddevs.call_count += 1
@@ -124,8 +110,7 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
         self.assertEqual(get_mean_and_stddevs.call_count, 1)
 
     def test_zero_truncation(self):
-        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types,
-                                 component_type):
+        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
             return numpy.array([1.1]), [numpy.array([123.45])]
         self.gsim.get_mean_and_stddevs = get_mean_and_stddevs
         imt = self.DEFAULT_IMT()
@@ -146,8 +131,7 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
             const.StdDev.TOTAL
         )
 
-        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types,
-                                 component_type):
+        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
             return numpy.array([-0.7872268528578843]), \
                    [numpy.array([0.5962393527251486])]
 
@@ -166,8 +150,7 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
             const.StdDev.TOTAL
         )
         mean_stddev = numpy.array([[3, 4], [5, 6]])
-        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types,
-                                 component_type):
+        def get_mean_and_stddevs(sites, rup, dists, imt, stddev_types):
             mean, stddev = mean_stddev
             mean_stddev[0] += 1
             mean_stddev[1] += 2
@@ -200,7 +183,7 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         min_distance = numpy.array([10, 11])
         rx_distance = numpy.array([4, 5])
         jb_distance = numpy.array([6, 7])
-        top_edge_depth = numpy.array([30, 30])
+        top_edge_depth = 30
 
         class FakeSurface(object):
             call_counts = collections.Counter()
@@ -268,9 +251,9 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
                                  site_collection=sites, rupture=self.rupture)
 
     def test_all_values(self):
-        self.gsim_class.REQUIRES_DISTANCES = set('rjb ztor rx rrup'.split())
+        self.gsim_class.REQUIRES_DISTANCES = set('rjb rx rrup'.split())
         self.gsim_class.REQUIRES_RUPTURE_PARAMETERS = set(
-            'mag rake trt dip'.split()
+            'mag rake dip ztor'.split()
         )
         self.gsim_class.REQUIRES_SITES_PARAMETERS = set(
             'vs30 vs30measured z1pt0 z2pt5'.split()
@@ -282,8 +265,8 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertIsInstance(dctx, DistancesContext)
         self.assertEqual(rctx.mag, 123.45)
         self.assertEqual(rctx.rake, 123.56)
-        self.assertEqual(rctx.trt, const.TRT.VOLCANIC)
         self.assertEqual(rctx.dip, 45.4545)
+        self.assertEqual(rctx.ztor, 30)
         self.assertTrue((sctx.vs30 == [456, 1456]).all())
         self.assertTrue((sctx.vs30measured == [False, True]).all())
         self.assertTrue((sctx.z1pt0 == [12.1, 112.1]).all())
@@ -291,7 +274,6 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertTrue((dctx.rjb == [6, 7]).all())
         self.assertTrue((dctx.rx == [4, 5]).all())
         self.assertTrue((dctx.rrup == [10, 11]).all())
-        self.assertTrue((dctx.ztor == [30, 30]).all())
         self.assertEqual(self.fake_surface.call_counts,
                          {'get_top_edge_depth': 1, 'get_rx_distance': 1,
                           'get_joyner_boore_distance': 1, 'get_dip': 1,
@@ -307,7 +289,6 @@ class MakeContextsTestCase(_FakeGSIMTestCase):
         self.assertTrue((sctx.vs30 == (456, 1456)).all())
         self.assertTrue((sctx.z1pt0 == (12.1, 112.1)).all())
         self.assertTrue((dctx.rx == (4, 5)).all())
-        self.assertFalse(hasattr(rctx, 'trt'))
         self.assertFalse(hasattr(rctx, 'dip'))
         self.assertFalse(hasattr(sctx, 'vs30measured'))
         self.assertFalse(hasattr(sctx, 'z2pt0'))

@@ -55,9 +55,10 @@ class GroundShakingIntensityModel(object):
     #: calculate. A set should contain classes from module :mod:`nhlib.imt`.
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = abc.abstractproperty()
 
-    #: Set of :class:`intensity measure component types <nhlib.const.IMC>`
-    #: this GSIM can calculate mean and standard deviation for.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS = abc.abstractproperty()
+    #: Reference to a :class:`intensity measure component type
+    #: <nhlib.const.IMC>` this GSIM can calculate mean and standard
+    #: deviation for.
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = abc.abstractproperty()
 
     #: Set of :class:`standard deviation types <nhlib.const.StdDev>`
     #: this GSIM can calculate.
@@ -74,15 +75,15 @@ class GroundShakingIntensityModel(object):
     #:
     #: ``mag``
     #:     Magnitude of the rupture.
-    #: ``trt``
-    #:     Rupture's tectonic region type. A constant from
-    #:     :class:`nhlib.const.TRT`.
     #: ``dip``
     #:     Rupture's surface dip angle in decimal degrees.
     #: ``rake``
     #:     Angle describing the slip propagation on the rupture surface,
     #:     in decimal degrees. See :mod:`~nhlib.geo.nodalplane` for more
     #:     detailed description of dip and rake.
+    #: ``ztor``
+    #:     Depth of rupture's top edge in km. See
+    #:     :meth:`~nhlib.geo.surface.base.BaseSurface.get_top_edge_depth`.
     #:
     #: These parameters are available from the :class:`RuptureContext` object
     #: attributes with same names.
@@ -100,17 +101,13 @@ class GroundShakingIntensityModel(object):
     #: ``rx``
     #:     Perpendicular distance to rupture top edge projection.
     #:     See :meth:`~nhlib.geo.surface.base.BaseSurface.get_rx_distance`.
-    #: ``ztor``
-    #:     Rupture's top edge depth. See
-    #:     :meth:`~nhlib.geo.surface.base.BaseSurface.get_top_edge_depth`.
     #:
     #: All the distances are available from the :class:`DistancesContext`
     #: object attributes with same names. Values are in kilometers.
     REQUIRES_DISTANCES = abc.abstractproperty()
 
     @abc.abstractmethod
-    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types,
-                             component_type):
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Calculate and return mean value of intensity distribution and it's
         standard deviation.
@@ -140,9 +137,6 @@ class GroundShakingIntensityModel(object):
             List of standard deviation types, constants from
             :class:`nhlib.const.StdDev`. Method result value should include
             standard deviation values for each of types in this list.
-        :param component_type:
-            A component of interest of intensity measure. A constant from
-            :class:`nhlib.const.IMC`.
 
         :returns:
             Method should return a tuple of two items. First item should be
@@ -164,8 +158,7 @@ class GroundShakingIntensityModel(object):
         compute interim steps).
         """
 
-    def get_poes(self, sctx, rctx, dctx, imt, imls, component_type,
-                 truncation_level):
+    def get_poes(self, sctx, rctx, dctx, imt, imls, truncation_level):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
         intensity measure levels (IMLs) of one intensity measure type (IMT)
@@ -189,9 +182,6 @@ class GroundShakingIntensityModel(object):
             of classes from :mod:`nhlib.imt`).
         :param imls:
             List of interested intensity measure levels (of type ``imt``).
-        :param component_type:
-            A component of interest of intensity measure. A constant from
-            :class:`nhlib.const.IMC`.
         :param truncation_level:
             Can be ``None``, which means that the distribution of intensity
             is treated as Gaussian distribution with possible values ranging
@@ -220,19 +210,12 @@ class GroundShakingIntensityModel(object):
 
         :raises ValueError:
             If truncation level is not ``None`` and neither non-negative
-            float number, if intensity measure component is not supported
-            by the GSIM (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS`)
-            and if ``imts`` dictionary contain wrong or unsupported IMTs (see
-            :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
+            float number, and if ``imts`` dictionary contain wrong or
+            unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
         """
         if truncation_level is not None and truncation_level < 0:
             raise ValueError('truncation level must be zero, positive number '
                              'or None')
-        if not component_type in self.DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS:
-            raise ValueError(
-                'intensity measure component %r is not supported by %s' %
-                (component_type, type(self).__name__)
-            )
         if not issubclass(type(imt), imt_module._IMT):
             raise ValueError('imt must be an instance of IMT subclass')
         if not type(imt) in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
@@ -242,8 +225,7 @@ class GroundShakingIntensityModel(object):
         if truncation_level == 0:
             # zero truncation mode, just compare imls to mean
             imls = self._convert_imls(imls)
-            mean, _ = self.get_mean_and_stddevs(sctx, rctx, dctx, imt, [],
-                                                component_type)
+            mean, _ = self.get_mean_and_stddevs(sctx, rctx, dctx, imt, [])
             mean = mean.reshape(mean.shape + (1, ))
             return (imls <= mean).astype(float)
         else:
@@ -256,9 +238,8 @@ class GroundShakingIntensityModel(object):
                 distribution = scipy.stats.truncnorm(- truncation_level,
                                                      truncation_level)
             imls = self._convert_imls(imls)
-            mean, [stddev] = self.get_mean_and_stddevs(
-                sctx, rctx, dctx, imt, [const.StdDev.TOTAL], component_type
-            )
+            mean, [stddev] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
+                                                       [const.StdDev.TOTAL])
             mean = mean.reshape(mean.shape + (1, ))
             stddev = stddev.reshape(stddev.shape + (1, ))
             return distribution.sf((imls - mean) / stddev)
@@ -295,47 +276,43 @@ class GroundShakingIntensityModel(object):
             If any of declared required parameters (that includes site, rupture
             and distance parameters) is unknown.
         """
-        clsname = type(self).__name__
-
         dctx = DistancesContext()
         for param in self.REQUIRES_DISTANCES:
-            if not param in DistancesContext.__slots__:
-                raise ValueError('%s requires unknown distance measure %r' %
-                                 (clsname, param))
-            if param == 'ztor':
-                dist = numpy.empty(len(site_collection))
-                dist.fill(rupture.surface.get_top_edge_depth())
+            if param == 'rrup':
+                dist = rupture.surface.get_min_distance(site_collection.mesh)
+            elif param == 'rx':
+                dist = rupture.surface.get_rx_distance(site_collection.mesh)
+            elif param == 'rjb':
+                dist = rupture.surface.get_joyner_boore_distance(
+                    site_collection.mesh
+                )
             else:
-                if param == 'rrup':
-                    dist = rupture.surface.get_min_distance(site_collection.mesh)
-                elif param == 'rx':
-                    dist = rupture.surface.get_rx_distance(site_collection.mesh)
-                elif param == 'rjb':
-                    dist = rupture.surface.get_joyner_boore_distance(
-                        site_collection.mesh
-                    )
+                raise ValueError('%s requires unknown distance measure %r' %
+                                 (type(self).__name__, param))
             setattr(dctx, param, dist)
 
         sctx = SitesContext()
         for param in self.REQUIRES_SITES_PARAMETERS:
-            if not param in SitesContext.__slots__:
+            try:
+                value = getattr(site_collection, param)
+            except AttributeError:
                 raise ValueError('%s requires unknown site parameter %r' %
-                                 (clsname, param))
-            setattr(sctx, param, getattr(site_collection, param))
+                                 (type(self).__name__, param))
+            setattr(sctx, param, value)
 
         rctx = RuptureContext()
         for param in self.REQUIRES_RUPTURE_PARAMETERS:
-            if not param in RuptureContext.__slots__:
-                raise ValueError('%s requires unknown rupture parameter %r' %
-                                 (clsname, param))
             if param == 'mag':
                 value = rupture.mag
-            elif param == 'trt':
-                value = rupture.tectonic_region_type
             elif param == 'dip':
                 value = rupture.surface.get_dip()
             elif param == 'rake':
                 value = rupture.rake
+            elif param == 'ztor':
+                value = rupture.surface.get_top_edge_depth()
+            else:
+                raise ValueError('%s requires unknown rupture parameter %r' %
+                                 (type(self).__name__, param))
             setattr(rctx, param, value)
 
         return sctx, rctx, dctx
@@ -399,7 +376,7 @@ class DistancesContext(object):
     does it need. Only those required values are calculated and made available
     in a result context object.
     """
-    __slots__ = ('rrup', 'rx', 'rjb', 'ztor')
+    __slots__ = ('rrup', 'rx', 'rjb')
 
 
 class RuptureContext(object):
@@ -414,7 +391,7 @@ class RuptureContext(object):
     Only those required parameters are made available in a result context
     object.
     """
-    __slots__ = ('mag', 'trt', 'dip', 'rake')
+    __slots__ = ('mag', 'dip', 'rake', 'ztor')
 
 
 class CoeffsTable(object):
