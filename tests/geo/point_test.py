@@ -19,8 +19,7 @@ from nhlib import geo
 from nhlib.geo._utils import EARTH_RADIUS, spherical_to_cartesian
 
 
-class PointTestCase(unittest.TestCase):
-
+class PointPointAtTestCase(unittest.TestCase):
     def test_point_at_1(self):
         p1 = geo.Point(0.0, 0.0, 10.0)
         expected = geo.Point(0.0635916667129, 0.0635916275455, 15.0)
@@ -31,6 +30,8 @@ class PointTestCase(unittest.TestCase):
         expected = geo.Point(0.0635916667129, 0.0635916275455, 5.0)
         self.assertEqual(expected, p1.point_at(10.0, -5.0, 45.0))
 
+
+class PointAzimuthTestCase(unittest.TestCase):
     def test_azimuth(self):
         p1 = geo.Point(0.0, 0.0)
         p2 = geo.Point(0.5, 0.5)
@@ -42,12 +43,16 @@ class PointTestCase(unittest.TestCase):
         p2 = geo.Point(0.5, 0.5)
         self.assertAlmostEqual(225.0010908, p2.azimuth(p1))
 
+
+class PointDistanceTestCase(unittest.TestCase):
     def test_distance(self):
         p1 = geo.Point(0.0, 0.0, 0.0)
         p2 = geo.Point(0.5, 0.5, 5.0)
 
         self.assertAlmostEqual(78.7849704355, p1.distance(p2), places=4)
 
+
+class PointEquallySpacedPointsTestCase(unittest.TestCase):
     def test_equally_spaced_points_1(self):
         p1 = geo.Point(0.0, 0.0)
         p2 = geo.Point(0.190775520815, 0.190774854966)
@@ -106,6 +111,8 @@ class PointTestCase(unittest.TestCase):
         points = geo.Point(0, 50).equally_spaced_points(geo.Point(10, 50), 10)
         self.assertAlmostEqual(points[-1].latitude, 50, places=2)
 
+
+class PointCreationTestCase(unittest.TestCase):
     def test_longitude_inside_range(self):
         self.assertRaises(ValueError, geo.Point, 180.1, 0.0, 0.0)
         self.assertRaises(ValueError, geo.Point, -180.1, 0.0, 0.0)
@@ -126,6 +133,8 @@ class PointTestCase(unittest.TestCase):
 
         geo.Point(0.0, 90.0, EARTH_RADIUS - 0.1)
 
+
+class PointFromVectorTestCase(unittest.TestCase):
     def test_from_vector(self):
         point = geo.Point(12.34, -56.78, 91.011)
         vector = spherical_to_cartesian(point.longitude, point.latitude,
