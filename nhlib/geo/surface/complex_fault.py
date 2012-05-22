@@ -18,11 +18,13 @@ Module :mod:`nhlib.geo.surface.complex_fault` defines
 :class:`ComplexFaultSurface`.
 """
 import numpy
+import shapely.geometry
 
+from nhlib.geo.polygon import Polygon
 from nhlib.geo.line import Line
 from nhlib.geo.surface.base import BaseSurface
 from nhlib.geo.mesh import RectangularMesh
-from nhlib.geo._utils import ensure
+from nhlib.geo import _utils as geo_utils
 
 
 class ComplexFaultSurface(BaseSurface):
@@ -145,3 +147,31 @@ class ComplexFaultSurface(BaseSurface):
         mesh = RectangularMesh.from_points_list(points)
         assert 1 not in mesh.shape
         return cls(mesh)
+
+    @classmethod
+    def surface_projection_from_fault_data(cls, edges):
+        """
+        Get a surface projection of the complex fault surface.
+
+        :param edges:
+            A list of horizontal edges of the surface as instances
+            of :class:`nhlib.geo.line.Line`.
+        :returns:
+            Instance of :class:`~nhlib.geo.polygon.Polygon` describing
+            the surface projection of the complex fault.
+        """
+        # collect lons and lats of all the vertices of all the edges
+        lons, lats = numpy.array(
+            [[[point.longitude, point.latitude] for point in edge]
+             for edge in edges], dtype=float
+        ).reshape((-1, 2)).transpose()
+        # create a projection centered in the center of points collection
+        proj = geo_utils.get_orthographic_projection(
+            *geo_utils.get_spherical_bounding_box(lons, lats)
+        )
+        # project all the points and create a shapely multipoint object.
+        # need to copy an array because otherwise shapely misinterprets it
+        vertices = numpy.vstack(proj(lons, lats)).transpose().copy()
+        multipoint = shapely.geometry.MultiPoint(vertices)
+        # create a polygon from a convex hull around that multipoint
+        return Polygon._from_2d(multipoint.convex_hull, proj)

@@ -13,6 +13,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import unittest
+
+import numpy
+
 from nhlib.geo.point import Point
 from nhlib.geo.line import Line
 from nhlib.geo.surface.complex_fault import ComplexFaultSurface
@@ -110,3 +114,14 @@ class ComplexFaultFromFaultDataTestCase(utils.SurfaceTestCase):
             str(ar.exception),
             'mesh spacing 30.1 km is too big for mean width 15.0 km'
         )
+
+
+class ComplexFaultSurfaceProjectionTestCase(unittest.TestCase):
+    def test(self):
+        edges = [Line([Point(-3.4, 5.5, 0), Point(-3.9, 5.3, 0)]),
+                 Line([Point(-2.4, 4.6, 10), Point(-3.6, 4.9, 20)])]
+        polygon = ComplexFaultSurface.surface_projection_from_fault_data(edges)
+        elons = [-2.4, -3.6, -3.9, -3.4]
+        elats = [4.6,  4.9,  5.3,  5.5]
+        numpy.testing.assert_allclose(polygon.lons, elons)
+        numpy.testing.assert_allclose(polygon.lats, elats)
