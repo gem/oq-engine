@@ -383,6 +383,10 @@ class Site(object):
         """Verbose wrapper around =="""
         return self == other
 
+    def hash(self):
+        """Needed e.g. for comparing dictionaries whose keys are sites."""
+        return self.__hash__()
+
     def __hash__(self):
         return hash(
             hashlib.md5(repr((self.longitude, self.latitude))).hexdigest())
