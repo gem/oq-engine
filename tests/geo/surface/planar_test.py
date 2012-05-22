@@ -92,18 +92,21 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
 
     def assert_successfull_creation(self, mesh_spacing, strike, dip,
                                     tl, tr, br, bl):
-        surface = PlanarSurface(mesh_spacing, strike, dip, tl, tr, br, bl)
-        self.assertEqual(surface.top_left, tl)
-        self.assertEqual(surface.top_right, tr)
-        self.assertEqual(surface.bottom_left, bl)
-        self.assertEqual(surface.bottom_right, br)
-        self.assertEqual(surface.mesh_spacing, mesh_spacing)
-        self.assertEqual(surface.strike, strike)
-        self.assertEqual(surface.get_strike(), strike)
-        self.assertEqual(surface.dip, dip)
-        self.assertEqual(surface.get_dip(), dip)
-        self.assertAlmostEqual(surface.length, tl.distance(tr), delta=0.2)
-        self.assertAlmostEqual(surface.width, tl.distance(bl), delta=0.2)
+        surface1 = PlanarSurface(mesh_spacing, strike, dip, tl, tr, br, bl)
+        translated = surface1.translate(tl, tr).translate(tr, tl)
+        for surface in [surface1, translated]:
+            self.assertIsInstance(surface, PlanarSurface)
+            self.assertEqual(surface.top_left, tl)
+            self.assertEqual(surface.top_right, tr)
+            self.assertEqual(surface.bottom_left, bl)
+            self.assertEqual(surface.bottom_right, br)
+            self.assertEqual(surface.mesh_spacing, mesh_spacing)
+            self.assertEqual(surface.strike, strike)
+            self.assertEqual(surface.get_strike(), strike)
+            self.assertEqual(surface.dip, dip)
+            self.assertEqual(surface.get_dip(), dip)
+            self.assertAlmostEqual(surface.length, tl.distance(tr), delta=0.2)
+            self.assertAlmostEqual(surface.width, tl.distance(bl), delta=0.2)
 
     def test_edges_not_parallel_within_tolerance(self):
         self.assert_successfull_creation(
@@ -226,7 +229,7 @@ class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):
                     ))]
 
         corners = v2p([6370, 0, -0.5], [6370, 0, 0.5],
-                      [6369, 1, 0.5], [6369, 1, -0.5])
+                      [6369, 2, 0.5], [6369, 2, -0.5])
         surface = PlanarSurface(1, 2, 3, *corners)
 
         # first three positions: point projection is above the top edge
@@ -238,7 +241,7 @@ class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):
 
         # next three positions: point projection is below the bottom edge
         dists = surface.get_min_distance(Mesh.from_points_list(
-            v2p([6368, 1, -1.5], [6368, 1, 1.5], [6368, 1, -0.45])
+            v2p([6368, 2, -1.5], [6368, 2, 1.5], [6368, 2, -0.45])
         ))
         self.assertTrue(numpy.allclose(dists, [2 ** 0.5, 2 ** 0.5, 1.0],
                                        atol=1e-4))
@@ -246,7 +249,7 @@ class PlanarSurfaceGetMinDistanceTestCase(unittest.TestCase):
         # next three positions: point projection is left to rectangle,
         # right to it or lies inside
         dists = surface.get_min_distance(Mesh.from_points_list(
-            v2p([6369.5, 0.5, -1.5], [6369.5, 0.5, 1.5], [6369.5, 0.5, -0.1])
+            v2p([6369.5, 1, -1.5], [6369.5, 1, 1.5], [6369.5, 1, -0.1])
         ))
         self.assertTrue(numpy.allclose(dists, [1, 1, 0], atol=1e-4))
 
