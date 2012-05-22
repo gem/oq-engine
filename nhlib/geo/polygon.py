@@ -24,9 +24,9 @@ from nhlib.geo import geodetic
 from nhlib.geo import _utils as utils
 
 
-#: The distance measure of latitudinally- and longitudinally-extended
-#: line resampling in kilometers. See :function:`get_resampled_coordinates`.
-COORDINATE_DISCRETIZATION = 100
+#: Polygon upsampling step for long edges, in kilometers.
+#: See :function:`get_resampled_coordinates`. 
+UPSAMPLING_STEP_KM = 100
 
 
 class Polygon(object):
@@ -183,7 +183,7 @@ def get_resampled_coordinates(lons, lats):
         lon2, lat2 = lons[next_point], lats[next_point]
 
         distance = distances[i]
-        num_points = int(distance / COORDINATE_DISCRETIZATION) + 1
+        num_points = int(distance / UPSAMPLING_STEP_KM) + 1
         if num_points >= 2:
             # We need to increase the resolution of this arc by adding new
             # points.
