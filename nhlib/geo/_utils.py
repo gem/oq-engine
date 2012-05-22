@@ -280,16 +280,6 @@ def cartesian_to_spherical(vectors):
     return lons, lats, depths
 
 
-def ensure(expr, msg):
-    """
-    Utility method that raises an error if the
-    given condition is not true.
-    """
-
-    if not expr:
-        raise ValueError(msg)
-
-
 def triangle_area(e1, e2, e3):
     """
     Get the area of triangle formed by three vectors.
