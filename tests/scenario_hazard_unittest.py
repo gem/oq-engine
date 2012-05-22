@@ -21,8 +21,11 @@ This module tests the hazard side of the scenario
 event based job.
 """
 
+import os
 import math
 import unittest
+
+from django.contrib.gis.geos import GEOSGeometry
 
 from tests.utils import helpers
 from tests.utils.helpers import patch
@@ -76,6 +79,7 @@ class ScenarioHazardCalculatorTestCase(unittest.TestCase):
         self.job_ctxt.params[NUMBER_OF_CALC_KEY] = "1"
 
         self.job_ctxt.params['SERIALIZE_RESULTS_TO'] = 'xml'
+        self.job_ctxt.serialize_results_to = ["xml"]
 
         # saving the default java implementation
         self.default = (
@@ -113,6 +117,103 @@ class ScenarioHazardCalculatorTestCase(unittest.TestCase):
             calculator.execute()
 
         self.assertEquals(3, compute_gmf_mock.call_count)
+
+    def test__serialize_gmf_one_gmf_serialization_per_calculation(self):
+        # A GMF is serialized for each calculation.
+        self.job_ctxt.params[NUMBER_OF_CALC_KEY] = "3"
+        self.job_ctxt.params["SAVE_GMFS"] = "true"
+        self.job_profile.gmf_calculation_number = 3
+        self.job_profile.save()
+
+        calculator = scenario.ScenarioHazardCalculator(self.job_ctxt)
+
+        with patch('openquake.calculators.hazard.scenario.core'
+                   '.ScenarioHazardCalculator'
+                   '.compute_ground_motion_field') as compute_gmf_mock:
+            # the return value needs to be a Java HashMap
+            compute_gmf_mock.return_value = java.jclass('HashMap')()
+            with patch('openquake.calculators.hazard.scenario.core'
+                       '.ScenarioHazardCalculator'
+                       '._serialize_gmf') as serialize_mock:
+                calculator.execute()
+
+        self.assertEquals(3, serialize_mock.call_count)
+
+    def test__serialize_gmf_no_serialization_if_gmf_output_not_set(self):
+        # The GMFs will only be serialized if SAVE_GMFS == True
+        calculator = scenario.ScenarioHazardCalculator(self.job_ctxt)
+        self.assertEqual(False, calculator._serialize_gmf(None, "pga", 0))
+
+    def test__serialize_gmf(self):
+        # GMFs are serialized as expected.
+        location1 = java.jclass("Location")(1.0, 2.0)
+        location2 = java.jclass("Location")(1.1, 2.1)
+        site1 = java.jclass("Site")(location1)
+        site2 = java.jclass("Site")(location2)
+        hashmap = java.jclass("HashMap")()
+        hashmap.put(site1, 0.1)
+        hashmap.put(site2, 0.2)
+
+        self.job_ctxt.params[NUMBER_OF_CALC_KEY] = "2"
+        self.job_ctxt.params["SAVE_GMFS"] = "true"
+        self.job_ctxt.params["REGION_VERTEX"] = ("0.0, 0.0, 0.0, 3.0, "
+                                                 "3.0, 3.0, 3.0, 0.0")
+        self.job_profile.region = GEOSGeometry(shapes.polygon_ewkt_from_coords(
+            '0.0, 0.0, 0.0, 3.0, 3.0, 3.0, 3.0, 0.0'))
+        self.job_profile.gmf_calculation_number = 2
+        self.job_profile.save()
+
+        calculator = scenario.ScenarioHazardCalculator(self.job_ctxt)
+
+        with patch('openquake.calculators.hazard.scenario.core'
+                   '.ScenarioHazardCalculator'
+                   '.compute_ground_motion_field') as compute_gmf_mock:
+            # the return value needs to be a Java HashMap
+            compute_gmf_mock.return_value = hashmap
+            calculator.execute()
+
+        patht = os.path.join(self.job_ctxt.base_path,
+                            self.job_ctxt['OUTPUT_DIR'], "gmf-%s.xml")
+        for cnum in range(self.job_profile.gmf_calculation_number):
+            path = patht % cnum
+            self.assertTrue(
+                os.path.isfile(path), "GMF file not found (%s)" % path)
+
+    def test__prepare_gmf_serialization_with_mmi(self):
+        # In case of imt == mmi the GMF values are left unchanged
+        location1 = java.jclass("Location")(1.0, 2.0)
+        location2 = java.jclass("Location")(1.1, 2.1)
+
+        site1 = java.jclass("Site")(location1)
+        site2 = java.jclass("Site")(location2)
+
+        hashmap = java.jclass("HashMap")()
+
+        hashmap.put(site1, 0.1)
+        hashmap.put(site2, 0.2)
+
+        expected = {shapes.Site(2.0, 1.0): {"groundMotion": 0.1},
+                    shapes.Site(2.1, 1.1): {"groundMotion": 0.2}}
+        actual = scenario._prepare_gmf_serialization(hashmap, "MMI")
+        self.assertEqual(expected, actual)
+
+    def test__prepare_gmf_serialization_with_imt_other_than_mmi(self):
+        # In case of imt != mmi the GMF values are transformed as needed.
+        location1 = java.jclass("Location")(1.0, 2.0)
+        location2 = java.jclass("Location")(1.1, 2.1)
+
+        site1 = java.jclass("Site")(location1)
+        site2 = java.jclass("Site")(location2)
+
+        hashmap = java.jclass("HashMap")()
+
+        hashmap.put(site1, 0.1)
+        hashmap.put(site2, 0.2)
+
+        expected = {shapes.Site(2.0, 1.0): {"groundMotion": math.exp(0.1)},
+                    shapes.Site(2.1, 1.1): {"groundMotion": math.exp(0.2)}}
+        actual = scenario._prepare_gmf_serialization(hashmap, "PGA")
+        self.assertEqual(expected, actual)
 
     def test_transforms_a_java_gmf_to_dict(self):
         location1 = java.jclass("Location")(1.0, 2.0)
