@@ -75,7 +75,7 @@ class FragilityModelTestCase(DjangoTestCase, helpers.DbTestCase):
         else:
             self.fail("DatabaseError not raised")
 
-    def test_fragility_model_invalid_no_damage_limit_and_imls(self):
+    def test_fragility_model_invalid_no_damage_limit_imls(self):
         self.mdl.format = "discrete"
         self.mdl.imt = "pga"
         self.mdl.lss = "minor"
@@ -117,7 +117,6 @@ class FragilityModelTestCase(DjangoTestCase, helpers.DbTestCase):
         try:
             self.mdl.save()
         except DatabaseError, de:
-            print de.args[0]
             self.assertTrue(
                 "No Damage Limit defined for continuous fragility model"
                 in de.args[0])
