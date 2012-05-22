@@ -4,7 +4,7 @@
       gml:id="n1">
 
     <!-- The fragility function format applies to the entire fragility model -->
-    <fragilityModel gml:id="ep1" format="discrete" imlUnit="g">
+    <fragilityModel gml:id="ep1" format="discrete" imlUnit="g" noDamageLimit="0.2">
         <gml:description>Fragility model for Pavia (discrete)</gml:description>
 
         <IML IMT="MMI">7 8 9 10 11</IML>
