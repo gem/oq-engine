@@ -1645,6 +1645,9 @@ CREATE TABLE riski.fragility_model (
     min_iml float,
     -- maximum IML value, only applicable to continuous fragility models.
     max_iml float,
+    -- defines the IML after which damage is observed, only applicable to
+    -- discrete fragility models.
+    no_damage_limit float,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE riski_ts;
