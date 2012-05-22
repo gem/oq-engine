@@ -61,7 +61,8 @@ class Polygon(object):
         self._polygon2d = None
 
     def _init_polygon2d(self):
-        """Spherical bounding box, projection, and Cartesian polygon are all
+        """
+        Spherical bounding box, projection, and Cartesian polygon are all
         cached to prevent redundant computations.
 
         If any of them are `None`, recalculate all of them.
@@ -84,7 +85,8 @@ class Polygon(object):
             self._polygon2d = shapely.geometry.Polygon(zip(xx, yy))
 
     def contains(self, mesh):
-        """Check for containment of a :class:`~nhlib.geo.mesh.Mesh` of points.
+        """
+        Check for containment of a :class:`~nhlib.geo.mesh.Mesh` of points.
 
         Mesh coordinate values are in decimal degrees.
 

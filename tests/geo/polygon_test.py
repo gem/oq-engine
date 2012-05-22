@@ -289,7 +289,8 @@ class PolygonEdgesTestCase(unittest.TestCase):
 
 
 class PolygonContainsTestCase(unittest.TestCase):
-    """Test that :class:`nhlib.geo.polygon.Polygon.contains` can be called on
+    """
+    Test that :class:`nhlib.geo.polygon.Polygon.contains` can be called on
     either scalar inputs or numpy arrays.
     """
 
