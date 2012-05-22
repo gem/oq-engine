@@ -92,7 +92,7 @@ class SiteCollection(object):
         # because we pass these arrays directly to a GMPE through
         # a SiteContext object and if a GMPE is implemented poorly it could
         # modify the site values, thereby corrupting site and all the
-        # subsequent calculation. NB that this doesn't protect arrays from
+        # subsequent calculation. note that this doesn't protect arrays from
         # being changed by calling itemset()
         for arr in (self.vs30, self.vs30measured, self.z1pt0, self.z2pt5,
                     self.mesh.lons, self.mesh.lats):
