@@ -42,20 +42,18 @@ class HazardCurvesTestCase(unittest.TestCase):
             return iter(self.ruptures)
 
     class FakeGSIM(object):
-        def __init__(self, truncation_level, component_type, imts, poes):
+        def __init__(self, truncation_level, imts, poes):
             self.truncation_level = truncation_level
-            self.component_type = component_type
             self.imts = imts
             self.poes = poes
+            self.dists = object()
         def make_contexts(self, sites, rupture):
-            return [(site, rupture) for site in sites]
-        def get_poes(self, ctxs, imts, component_type, truncation_level):
-            assert component_type is self.component_type
+            return (sites, rupture, self.dists)
+        def get_poes(self, sctx, rctx, dctx, imt, imls, truncation_level):
             assert truncation_level is self.truncation_level
-            assert imts is self.imts
-            return dict((imt_, numpy.array([self.poes[ctx + (imt_,)]
-                                            for ctx in ctxs]))
-                        for imt_ in imts)
+            assert dctx is self.dists
+            return numpy.array([self.poes[(site, rctx, imt)]
+                                for site in sctx])
 
     class FakeSite(object):
         def __init__(self, location):
@@ -64,7 +62,6 @@ class HazardCurvesTestCase(unittest.TestCase):
     def test1(self):
         truncation_level = 3.4
         imts = {imt.PGA(): [1, 2, 3], imt.PGD(): [2, 4]}
-        component_type = const.IMC.VERTICAL
         time_span = 49.2
 
         rup11 = self.FakeRupture(0.23, const.TRT.ACTIVE_SHALLOW_CRUST)
@@ -77,7 +74,7 @@ class HazardCurvesTestCase(unittest.TestCase):
         site2 = self.FakeSite(Point(20, 30))
         sites = [site1, site2]
 
-        gsim1 = self.FakeGSIM(truncation_level, component_type, imts, poes={
+        gsim1 = self.FakeGSIM(truncation_level, imts, poes={
             (site1, rup11, imt.PGA()): [0.1, 0.05, 0.03],
             (site2, rup11, imt.PGA()): [0.11, 0.051, 0.034],
             (site1, rup12, imt.PGA()): [0.12, 0.052, 0.035],
@@ -88,7 +85,7 @@ class HazardCurvesTestCase(unittest.TestCase):
             (site1, rup12, imt.PGD()): [0.38, 0.332],
             (site2, rup12, imt.PGD()): [0.37, 0.333],
         })
-        gsim2 = self.FakeGSIM(truncation_level, component_type, imts, poes={
+        gsim2 = self.FakeGSIM(truncation_level, imts, poes={
             (site1, rup21, imt.PGA()): [0.5, 0.3, 0.2],
             (site2, rup21, imt.PGA()): [0.4, 0.2, 0.1],
 
@@ -103,10 +100,8 @@ class HazardCurvesTestCase(unittest.TestCase):
         site1_pgd_poe_expected = [0.16146619, 0.1336553]
         site2_pgd_poe_expected = [0.15445961, 0.13437589]
 
-        curves = hazard_curves_poissonian(
-            sources, sites, imts, time_span, gsims,
-            component_type, truncation_level
-        )
+        curves = hazard_curves_poissonian(sources, sites, imts, time_span,
+                                          gsims, truncation_level)
         self.assertIsInstance(curves, dict)
         self.assertEqual(set(curves.keys()), set([imt.PGA(), imt.PGD()]))
 

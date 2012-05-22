@@ -73,7 +73,7 @@ class ComplexFaultSource(SeismicSource):
             whole_fault_mesh.get_cell_dimensions()
         )
 
-        for (mag, mag_occ_rate) in self.mfd.get_annual_occurrence_rates():
+        for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
             rupture_area = self.magnitude_scaling_relationship.get_median_area(
                 mag, self.rake
             )

@@ -25,6 +25,7 @@ from decimal import Decimal
 import numpy
 
 from nhlib import const
+from nhlib.site import SiteCollection
 from nhlib.source import AreaSource, SimpleFaultSource
 from nhlib.pmf import PMF
 from nhlib.geo import NodalPlane
@@ -56,18 +57,17 @@ class Set1TestCase(unittest.TestCase):
             area_discretization=30.0,
             rupture_mesh_spacing=10.0
         )]
-        sites = [
+        sites = SiteCollection([
             test_data.SET1_CASE10_SITE1, test_data.SET1_CASE10_SITE2,
             test_data.SET1_CASE10_SITE3, test_data.SET1_CASE10_SITE4
-        ]
+        ])
         gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
-        component_type = const.IMC.AVERAGE_HORIZONTAL
         truncation_level = 0
         time_span = 1.0
         imts = {test_data.IMT: test_data.SET1_CASE10_IMLS}
 
         curves = hazard_curves(sources, sites, imts, time_span,
-                               gsims, component_type, truncation_level)
+                               gsims, truncation_level)
         s1hc, s2hc, s3hc, s4hc = curves[test_data.IMT]
 
         assert_hazard_curve_is(self, s1hc, test_data.SET1_CASE10_SITE1_POES,
@@ -101,18 +101,17 @@ class Set1TestCase(unittest.TestCase):
             area_discretization=30.0,
             rupture_mesh_spacing=10.0
         )]
-        sites = [
+        sites = SiteCollection([
             test_data.SET1_CASE11_SITE1, test_data.SET1_CASE11_SITE2,
             test_data.SET1_CASE11_SITE3, test_data.SET1_CASE11_SITE4
-        ]
+        ])
         gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
-        component_type = const.IMC.AVERAGE_HORIZONTAL
         truncation_level = 0
         time_span = 1.0
         imts = {test_data.IMT: test_data.SET1_CASE11_IMLS}
 
         curves = hazard_curves(sources, sites, imts, time_span,
-                               gsims, component_type, truncation_level)
+                               gsims, truncation_level)
         s1hc, s2hc, s3hc, s4hc = curves[test_data.IMT]
 
         assert_hazard_curve_is(self, s1hc, test_data.SET1_CASE11_SITE1_POES,
@@ -137,20 +136,19 @@ class Set1TestCase(unittest.TestCase):
             dip=test_data.SET1_CASE1TO9_DIP,
             rake=test_data.SET1_CASE1TO9_RAKE
         )]
-        sites = [
+        sites = SiteCollection([
             test_data.SET1_CASE1TO9_SITE1, test_data.SET1_CASE1TO9_SITE2,
             test_data.SET1_CASE1TO9_SITE3, test_data.SET1_CASE1TO9_SITE4,
             test_data.SET1_CASE1TO9_SITE5, test_data.SET1_CASE1TO9_SITE6,
             test_data.SET1_CASE1TO9_SITE7
-        ]
+        ])
         gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
-        component_type = const.IMC.AVERAGE_HORIZONTAL
         truncation_level = 0
         time_span = 1.0
         imts = {test_data.IMT: test_data.SET1_CASE2_IMLS}
 
         curves = hazard_curves(sources, sites, imts, time_span,
-                               gsims, component_type, truncation_level)
+                               gsims, truncation_level)
         s1hc, s2hc, s3hc, s4hc, s5hc, s6hc, s7hc = curves[test_data.IMT]
 
         assert_hazard_curve_is(self, s1hc, test_data.SET1_CASE2_SITE1_POES,
@@ -182,20 +180,19 @@ class Set1TestCase(unittest.TestCase):
             dip=test_data.SET1_CASE1TO9_DIP,
             rake=test_data.SET1_CASE1TO9_RAKE
         )]
-        sites = [
+        sites = SiteCollection([
             test_data.SET1_CASE1TO9_SITE1, test_data.SET1_CASE1TO9_SITE2,
             test_data.SET1_CASE1TO9_SITE3, test_data.SET1_CASE1TO9_SITE4,
             test_data.SET1_CASE1TO9_SITE5, test_data.SET1_CASE1TO9_SITE6,
             test_data.SET1_CASE1TO9_SITE7
-        ]
+        ])
         gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
-        component_type = const.IMC.AVERAGE_HORIZONTAL
         truncation_level = 0
         time_span = 1.0
         imts = {test_data.IMT: test_data.SET1_CASE5_IMLS}
 
         curves = hazard_curves(sources, sites, imts, time_span,
-                               gsims, component_type, truncation_level)
+                               gsims, truncation_level)
         s1hc, s2hc, s3hc, s4hc, s5hc, s6hc, s7hc = curves[test_data.IMT]
 
         assert_hazard_curve_is(self, s1hc, test_data.SET1_CASE5_SITE1_POES,

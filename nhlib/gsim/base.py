@@ -26,7 +26,6 @@ import scipy.stats
 import numpy
 
 from nhlib import const
-from nhlib.geo.mesh import Mesh
 from nhlib import imt as imt_module
 
 
@@ -48,48 +47,49 @@ class GroundShakingIntensityModel(object):
     """
     __metaclass__ = abc.ABCMeta
 
-    #: Set of :class:`tectonic region types <nhlib.const.TRT>` this GSIM
-    #: is defined for.
-    DEFINED_FOR_TECTONIC_REGION_TYPES = abc.abstractproperty()
+    #: Reference to a :class:`tectonic region type <nhlib.const.TRT>` this GSIM
+    #: is defined for. One GSIM can implement only one tectonic region type.
+    DEFINED_FOR_TECTONIC_REGION_TYPE = abc.abstractproperty()
 
     #: Set of :mod:`intensity measure types <nhlib.imt>` this GSIM can
     #: calculate. A set should contain classes from module :mod:`nhlib.imt`.
     DEFINED_FOR_INTENSITY_MEASURE_TYPES = abc.abstractproperty()
 
-    #: Set of :class:`intensity measure component types <nhlib.const.IMC>`
-    #: this GSIM can calculate mean and standard deviation for.
-    DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS = abc.abstractproperty()
+    #: Reference to a :class:`intensity measure component type
+    #: <nhlib.const.IMC>` this GSIM can calculate mean and standard
+    #: deviation for.
+    DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = abc.abstractproperty()
 
     #: Set of :class:`standard deviation types <nhlib.const.StdDev>`
     #: this GSIM can calculate.
     DEFINED_FOR_STANDARD_DEVIATION_TYPES = abc.abstractproperty()
 
     #: Set of site parameters names this GSIM needs. The set should include
-    #: strings that match names of the :class:`site <nhlib.site.Site>` object.
-    #: Those attributes are then available in the context object with the same
-    #: names prefixed with ``site_`` (like ``site_vs30`` for instance).
-    REQUIRES_SITE_PARAMETERS = abc.abstractproperty()
+    #: strings that match names of the attributes of a :class:`site
+    #: <nhlib.site.Site>` object. Those attributes are then available in the
+    #: :class:`SitesContext` object with the same names.
+    REQUIRES_SITES_PARAMETERS = abc.abstractproperty()
 
     #: Set of rupture parameters (excluding distance information) required
     #: by GSIM. Supported parameters are:
     #:
     #: ``mag``
     #:     Magnitude of the rupture.
-    #: ``trt``
-    #:     Rupture's tectonic region type. A constant from
-    #:     :class:`nhlib.const.TRT`.
     #: ``dip``
     #:     Rupture's surface dip angle in decimal degrees.
     #: ``rake``
     #:     Angle describing the slip propagation on the rupture surface,
     #:     in decimal degrees. See :mod:`~nhlib.geo.nodalplane` for more
     #:     detailed description of dip and rake.
+    #: ``ztor``
+    #:     Depth of rupture's top edge in km. See
+    #:     :meth:`~nhlib.geo.surface.base.BaseSurface.get_top_edge_depth`.
     #:
-    #: These parameters are available from the context object attributes
-    #: with same names prefixed with ``rup_``.
+    #: These parameters are available from the :class:`RuptureContext` object
+    #: attributes with same names.
     REQUIRES_RUPTURE_PARAMETERS = abc.abstractproperty()
 
-    #: Set of types of distance measures between rupture and site. Possible
+    #: Set of types of distance measures between rupture and sites. Possible
     #: values are:
     #:
     #: ``rrup``
@@ -101,28 +101,35 @@ class GroundShakingIntensityModel(object):
     #: ``rx``
     #:     Perpendicular distance to rupture top edge projection.
     #:     See :meth:`~nhlib.geo.surface.base.BaseSurface.get_rx_distance`.
-    #: ``ztor``
-    #:     Rupture's top edge depth. See
-    #:     :meth:`~nhlib.geo.surface.base.BaseSurface.get_top_edge_depth`.
     #:
-    #: All the distances are available from the context object attributes
-    #: with same names prefixed with ``dist_``. Values are in kilometers.
+    #: All the distances are available from the :class:`DistancesContext`
+    #: object attributes with same names. Values are in kilometers.
     REQUIRES_DISTANCES = abc.abstractproperty()
 
     @abc.abstractmethod
-    def get_mean_and_stddevs(self, ctx, imt, stddev_types, component_type):
+    def get_mean_and_stddevs(self, sites, rup, dists, imt, stddev_types):
         """
         Calculate and return mean value of intensity distribution and it's
         standard deviation.
 
         Method must be implemented by subclasses.
 
-        :param ctx:
-            Instance of :class:`GSIMContext` with parameters of rupture, site
-            and their relative position (read, distances) assigned
-            to respective attributes. Only those attributes that are listed in
-            class' :attr:`REQUIRES_SITE_PARAMETERS`, :attr:`REQUIRES_DISTANCES`
-            and :attr:`REQUIRES_RUPTURE_PARAMETERS` are available.
+        :param sites:
+            Instance of :class:`SitesContext` with parameters of sites
+            collection assigned to respective values as numpy arrays.
+            Only those attributes that are listed in class'
+            :attr:`REQUIRES_SITES_PARAMETERS` set are available.
+        :param rup:
+            Instance of :class:`RuptureContext` with parameters of a rupture
+            assigned to respective values. Only those attributes that are
+            listed in class' :attr:`REQUIRES_RUPTURE_PARAMETERS` set are
+            available.
+        :param dists:
+            Instance of :class:`DistancesContext` with values of distance
+            measures between the rupture and each site of the collection
+            assigned to respective values as numpy arrays. Only those
+            attributes that are listed in class' :attr:`REQUIRES_DISTANCES`
+            set are available.
         :param imt:
             An instance (not a class) of intensity measure type.
             See :mod:`nhlib.imt`.
@@ -130,16 +137,14 @@ class GroundShakingIntensityModel(object):
             List of standard deviation types, constants from
             :class:`nhlib.const.StdDev`. Method result value should include
             standard deviation values for each of types in this list.
-        :param component_type:
-            A component of interest of intensity measure. A constant from
-            :class:`nhlib.const.IMC`.
 
         :returns:
             Method should return a tuple of two items. First item should be
-            a mean value of respective component of a chosen intensity measure
-            type and the second should be a list of standard deviation values
-            for the same single component of the same single intensity measure
-            type, one for each type in ``stddev_types`` parameter, preserving
+            a numpy array of floats -- mean values of respective component
+            of a chosen intensity measure type, and the second should be
+            a list of numpy arrays of standard deviation values for the same
+            single component of the same single intensity measure type, one
+            array for each type in ``stddev_types`` parameter, preserving
             the order.
 
         Combining interface to mean and standard deviation values in a single
@@ -153,24 +158,30 @@ class GroundShakingIntensityModel(object):
         compute interim steps).
         """
 
-    def get_poes(self, ctxs, imts, component_type, truncation_level):
+    def get_poes(self, sctx, rctx, dctx, imt, imls, truncation_level):
         """
         Calculate and return probabilities of exceedance (PoEs) of one or more
-        intensity measure levels (IMLs) of one or more intensity measure types
-        (IMTs) for one or more pairs "site -- rupture".
+        intensity measure levels (IMLs) of one intensity measure type (IMT)
+        for one or more pairs "site -- rupture".
 
-        :param ctxs:
-            A list of instances of :class:`GSIMContext` which have the same
-            meaning as for :meth:`get_mean_and_stddevs`.
-        :param imts:
-            Dictionary mapping intensity measure type objects (that is,
-            instances of classes from :mod:`nhlib.imt`) to lists of
-            interested intensity measure levels. Those lists contain
-            just floats representing the value of intensity exceedance
-            of which is of interest.
-        :param component_type:
-            A component of interest of intensity measure. A constant from
-            :class:`nhlib.const.IMC`.
+        :param sctx:
+            An instance of :class:`SitesContext` with sites information
+            to calculate PoEs on.
+        :param rctx:
+            An instance of :class:`RuptureContext` with a single rupture
+            information.
+        :param dctx:
+            An instance of :class:`DistancesContext` with information about
+            the distances between sites and a rupture.
+
+            All three contexts (``sctx``, ``rctx`` and ``dctx``) must conform
+            to each other. The easiest way to get them is to call
+            :meth:`make_contexts`.
+        :param imt:
+            An intensity measure type object (that is, an instance of one
+            of classes from :mod:`nhlib.imt`).
+        :param imls:
+            List of interested intensity measure levels (of type ``imt``).
         :param truncation_level:
             Can be ``None``, which means that the distribution of intensity
             is treated as Gaussian distribution with possible values ranging
@@ -195,47 +206,28 @@ class GroundShakingIntensityModel(object):
             A dictionary of the same structure as parameter ``imts`` (see
             above). Instead of lists of IMLs values of the dictionaries
             have 2d numpy arrays of corresponding PoEs, first dimension
-            represents contexts from ``ctxs`` and the second represents
-            IMLs.
+            represents sites and the second represents IMLs.
 
         :raises ValueError:
             If truncation level is not ``None`` and neither non-negative
-            float number, if intensity measure component is not supported
-            by the GSIM (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS`)
-            and if ``imts`` dictionary contain wrong or unsupported IMTs (see
-            :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
+            float number, and if ``imts`` dictionary contain wrong or
+            unsupported IMTs (see :attr:`DEFINED_FOR_INTENSITY_MEASURE_TYPES`).
         """
         if truncation_level is not None and truncation_level < 0:
             raise ValueError('truncation level must be zero, positive number '
                              'or None')
+        if not issubclass(type(imt), imt_module._IMT):
+            raise ValueError('imt must be an instance of IMT subclass')
+        if not type(imt) in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
+            raise ValueError('imt %s is not supported by %s' %
+                             (type(imt).__name__, type(self).__name__))
 
-        if not component_type in self.DEFINED_FOR_INTENSITY_MEASURE_COMPONENTS:
-            raise ValueError(
-                'intensity measure component %r is not supported by %s' %
-                (component_type, type(self).__name__)
-            )
-
-        for imt in imts.keys():
-            if not issubclass(type(imt), imt_module._IMT):
-                raise ValueError('keys of imts dictionary must be instances ' \
-                                 'of IMT classes')
-            if not type(imt) in self.DEFINED_FOR_INTENSITY_MEASURE_TYPES:
-                raise ValueError(
-                    'intensity measure type %s is not supported by %s' %
-                    (type(imt).__name__, type(self).__name__)
-                )
-
-        ret = {}
         if truncation_level == 0:
             # zero truncation mode, just compare imls to mean
-            for imt, imls in imts.items():
-                imls = self._convert_imls(imls)
-                ret_imt = []
-                for ctx in ctxs:
-                    mean, _ = self.get_mean_and_stddevs(ctx, imt, [],
-                                                        component_type)
-                    ret_imt.append((imls <= mean).astype(float))
-                ret[imt] = numpy.array(ret_imt)
+            imls = self._convert_imls(imls)
+            mean, _ = self.get_mean_and_stddevs(sctx, rctx, dctx, imt, [])
+            mean = mean.reshape(mean.shape + (1, ))
+            return (imls <= mean).astype(float)
         else:
             # use real normal distribution
             assert (const.StdDev.TOTAL
@@ -245,17 +237,12 @@ class GroundShakingIntensityModel(object):
             else:
                 distribution = scipy.stats.truncnorm(- truncation_level,
                                                      truncation_level)
-            for imt, imls in imts.items():
-                imls = self._convert_imls(imls)
-                ret_imt = []
-                for ctx in ctxs:
-                    mean, [stddev] = self.get_mean_and_stddevs(
-                        ctx, imt, [const.StdDev.TOTAL], component_type
-                    )
-                    ret_imt.append(distribution.sf((imls - mean) / stddev))
-                ret[imt] = numpy.array(ret_imt)
-
-        return ret
+            imls = self._convert_imls(imls)
+            mean, [stddev] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
+                                                       [const.StdDev.TOTAL])
+            mean = mean.reshape(mean.shape + (1, ))
+            stddev = stddev.reshape(stddev.shape + (1, ))
+            return distribution.sf((imls - mean) / stddev)
 
     @abc.abstractmethod
     def _convert_imls(self, imls):
@@ -268,79 +255,67 @@ class GroundShakingIntensityModel(object):
         so there is no need to override it in actual GSIM implementations.
         """
 
-    def make_contexts(self, sites, rupture):
+    def make_contexts(self, site_collection, rupture):
         """
-        Create a list of :meth:`GSIMContext` objects for given rupture and
-        a list of sites.
+        Create context objects for given site collection and rupture.
 
-        :param sites:
-            List of instances of :class:`nhlib.site.Site`.
+        :param site_collection:
+            Instance of :class:`nhlib.site.SiteCollection`.
         :param rupture:
             Instance of :class:`~nhlib.source.rupture.Rupture` (or its subclass
             :class:`~nhlib.source.rupture.ProbabilisticRupture`).
 
         :returns:
-            A list of instances of :class:`GSIMContext` with those (and only
-            those) attributes that are required by GSIM filled in, one context
-            per site.
+            Tuple of three items: sites context, rupture context and
+            distances context, that is, instances of :class:`SitesContext`,
+            :class:`RuptureContext` and :class:`DistancesContext` in a specified
+            order. Only those values that are required by GSIM are filled in
+            in contexts.
 
         :raises ValueError:
             If any of declared required parameters (that includes site, rupture
-            and distance parameters) is unknown. If distances dict is provided
-            but is missing some of the required distance information.
+            and distance parameters) is unknown.
         """
-        all_ctx_attrs = set(GSIMContext.__slots__)
-
-        clsname = type(self).__name__
-
-        contexts = [GSIMContext() for i in xrange(len(sites))]
-
-        sites_mesh = Mesh.from_points_list([site.location for site in sites])
+        dctx = DistancesContext()
         for param in self.REQUIRES_DISTANCES:
-            attr = 'dist_%s' % param
-            if not attr in all_ctx_attrs:
-                raise ValueError('%s requires unknown distance measure %r' %
-                                 (clsname, param))
-            if param == 'ztor':
-                dist = numpy.empty(len(sites_mesh))
-                dist.fill(rupture.surface.get_top_edge_depth())
+            if param == 'rrup':
+                dist = rupture.surface.get_min_distance(site_collection.mesh)
+            elif param == 'rx':
+                dist = rupture.surface.get_rx_distance(site_collection.mesh)
+            elif param == 'rjb':
+                dist = rupture.surface.get_joyner_boore_distance(
+                    site_collection.mesh
+                )
             else:
-                if param == 'rrup':
-                    dist = rupture.surface.get_min_distance(sites_mesh)
-                elif param == 'rx':
-                    dist = rupture.surface.get_rx_distance(sites_mesh)
-                elif param == 'rjb':
-                    dist = rupture.surface.get_joyner_boore_distance(
-                        sites_mesh
-                    )
-            for i, context in enumerate(contexts):
-                setattr(context, attr, dist[i])
+                raise ValueError('%s requires unknown distance measure %r' %
+                                 (type(self).__name__, param))
+            setattr(dctx, param, dist)
 
-        for param in self.REQUIRES_SITE_PARAMETERS:
-            attr = 'site_%s' % param
-            if not attr in all_ctx_attrs:
+        sctx = SitesContext()
+        for param in self.REQUIRES_SITES_PARAMETERS:
+            try:
+                value = getattr(site_collection, param)
+            except AttributeError:
                 raise ValueError('%s requires unknown site parameter %r' %
-                                 (clsname, param))
-            for i, site in enumerate(sites):
-                setattr(contexts[i], attr, getattr(site, param))
+                                 (type(self).__name__, param))
+            setattr(sctx, param, value)
 
+        rctx = RuptureContext()
         for param in self.REQUIRES_RUPTURE_PARAMETERS:
-            attr = 'rup_%s' % param
-            if not attr in all_ctx_attrs:
-                raise ValueError('%s requires unknown rupture parameter %r' %
-                                 (clsname, param))
             if param == 'mag':
                 value = rupture.mag
-            elif param == 'trt':
-                value = rupture.tectonic_region_type
             elif param == 'dip':
                 value = rupture.surface.get_dip()
             elif param == 'rake':
                 value = rupture.rake
-            for context in contexts:
-                setattr(context, attr, value)
+            elif param == 'ztor':
+                value = rupture.surface.get_top_edge_depth()
+            else:
+                raise ValueError('%s requires unknown rupture parameter %r' %
+                                 (type(self).__name__, param))
+            setattr(rctx, param, value)
 
-        return contexts
+        return sctx, rctx, dctx
 
 
 class GMPE(GroundShakingIntensityModel):
@@ -374,29 +349,49 @@ class IPE(GroundShakingIntensityModel):
         return numpy.array(imls, dtype=float)
 
 
-class GSIMContext(object):
+class SitesContext(object):
     """
-    Calculation context for ground shaking intensity models.
+    Sites calculation context for ground shaking intensity models.
 
     Instances of this class are passed into
-    :meth:`GroundShakingIntensityModel.get_mean_and_stddevs`. They are intended
-    to represent relevant features of the site, the rupture and their relative
-    position. Every GSIM class is required to declare what
-    :attr:`site <GroundShakingIntensityModel.REQUIRES_SITE_PARAMETERS>`,
-    :attr:`rupture <GroundShakingIntensityModel.REQUIRES_RUPTURE_PARAMETERS>`
-    and :attr:`distance <GroundShakingIntensityModel.REQUIRES_DISTANCES>`
-    information does it need. Only those required parameters are calculated
-    and made available in a result
-    of :meth:`GroundShakingIntensityModel.make_context`.
+    :meth:`GroundShakingIntensityModel.get_mean_and_stddevs`. They are
+    intended to represent relevant features of the sites collection.
+    Every GSIM class is required to declare what :attr:`sites parameters
+    <GroundShakingIntensityModel.REQUIRES_SITES_PARAMETERS>` does it need.
+    Only those required parameters are made available in a result context
+    object.
     """
-    __slots__ = (
-        # site parameters
-        'site_vs30 site_vs30measured site_z1pt0 site_z2pt5 '
-        # rupture parameters
-        'rup_mag rup_trt rup_dip rup_rake '
-        # distance parameters
-        'dist_rrup dist_rx dist_rjb dist_ztor'
-    ).split()
+    __slots__ = ('vs30', 'vs30measured', 'z1pt0', 'z2pt5')
+
+
+class DistancesContext(object):
+    """
+    Distances context for ground shaking intensity models.
+
+    Instances of this class are passed into
+    :meth:`GroundShakingIntensityModel.get_mean_and_stddevs`. They are
+    intended to represent relevant distances between sites from the collection
+    and the rupture. Every GSIM class is required to declare what
+    :attr:`distance measures <GroundShakingIntensityModel.REQUIRES_DISTANCES>`
+    does it need. Only those required values are calculated and made available
+    in a result context object.
+    """
+    __slots__ = ('rrup', 'rx', 'rjb')
+
+
+class RuptureContext(object):
+    """
+    Rupture calculation context for ground shaking intensity models.
+
+    Instances of this class are passed into
+    :meth:`GroundShakingIntensityModel.get_mean_and_stddevs`. They are
+    intended to represent relevant features of a single rupture. Every
+    GSIM class is required to declare what :attr:`rupture parameters
+    <GroundShakingIntensityModel.REQUIRES_RUPTURE_PARAMETERS>` does it need.
+    Only those required parameters are made available in a result context
+    object.
+    """
+    __slots__ = ('mag', 'dip', 'rake', 'ztor')
 
 
 class CoeffsTable(object):
