@@ -31,6 +31,7 @@
                 <xs:attribute name="imlUnit" type="xs:string" use="optional"/>
                 <xs:attribute name="minIML" type="NonNegativeDoubleType" use="optional"/>
                 <xs:attribute name="maxIML" type="NonNegativeDoubleType" use="optional"/>
+                <!-- noDamageLimit defines the IML after which damage is observed -->
                 <xs:attribute name="noDamageLimit" type="NonNegativeDoubleType" use="optional"/>
             </xs:extension>
         </xs:complexContent>
