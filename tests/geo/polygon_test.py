@@ -286,36 +286,3 @@ class PolygonEdgesTestCase(unittest.TestCase):
         mesh = geo.Mesh.from_points_list(points)
 
         self.assertTrue(self.poly.contains(mesh).all())
-
-
-class PolygonContainsTestCase(unittest.TestCase):
-    """
-    Test that :class:`nhlib.geo.polygon.Polygon.contains` can be called on
-    either scalar inputs or numpy arrays.
-    """
-
-    def setUp(self):
-        corners = [
-            geo.Point(-10, 10), geo.Point(10, 10), geo.Point(10, -10),
-            geo.Point(-10, -10),
-        ]
-        self.poly = geo.Polygon(corners)
-
-    def test_contains_with_numpy_array(self):
-        # If `contains` is called with numpy arrays as input, the output should
-        # be a numpy array of `bool` values with the same shape.
-        expected = numpy.array(
-            [True, True, True, True, True, False, False, True]
-        ).reshape((2, 2, 2))
-
-        lons = numpy.array(
-            [0.0, 0, 0, 9.999999, -9.999999, 10, 9.999999, 5]
-        ).reshape((2, 2, 2))
-
-        lats = numpy.array(
-            [0.0, 10, -10, 0, 0, 10, 10.0000001, 5]
-        ).reshape((2,2,2))
-
-        actual = self.poly.contains(geo.Mesh(lons, lats, depths=None))
-
-        self.assertTrue((expected == actual).all())
