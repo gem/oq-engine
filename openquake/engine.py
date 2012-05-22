@@ -572,7 +572,7 @@ def _identical_input(input_type, digest, owner_id):
 
 def _get_content_type(path):
     """Given the path to a file, guess the content type by looking at the file
-    extension. If there is none, simple return 'unknown'.
+    extension. If there is none, simply return 'unknown'.
     """
     _, ext = os.path.splitext(path)
     if ext == '':
