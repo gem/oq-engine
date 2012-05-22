@@ -47,5 +47,8 @@ Helper for coefficients tables
 Calculation context
 -------------------
 
-.. autoclass:: GSIMContext
-    :members:
+.. autoclass:: SitesContext
+
+.. autoclass:: RuptureContext
+
+.. autoclass:: DistancesContext
