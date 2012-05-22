@@ -231,7 +231,7 @@ def jvm():
             "-Djava.ext.dirs=%s:%s" % jarpaths,
             # setting Schema path here is ugly, but it's better than
             # doing it before all XML parsing calls
-            "-Dopenquake.nrml.schema=%s" % nrml.nrml_schema_file(),
+            "-Dopenquake.nrml.schema=%s" % nrml.utils.nrml_schema_file(),
             # force the default Xerces parser configuration, otherwise
             # some random system-installed JAR might override it
             "-Dorg.apache.xerces.xni.parser.XMLParserConfiguration=" \

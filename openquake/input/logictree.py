@@ -33,7 +33,7 @@ except ImportError:
 
 from lxml import etree
 
-from openquake.nrml import nrml_schema_file
+from openquake.nrml.utils import nrml_schema_file
 from openquake.java import jvm
 
 
