@@ -25,7 +25,7 @@ from nhlib.geo import _utils as utils
 
 
 #: Polygon upsampling step for long edges, in kilometers.
-#: See :function:`get_resampled_coordinates`. 
+#: See :function:`get_resampled_coordinates`.
 UPSAMPLING_STEP_KM = 100
 
 
@@ -111,6 +111,24 @@ class Polygon(object):
             # a shapely polygon object:
             xx, yy = self._projection(lons, lats)
             self._polygon2d = shapely.geometry.Polygon(zip(xx, yy))
+
+    def dilate(self, dilation):
+        """
+        Extend the polygon to a specified buffer distance.
+
+        :param dilation:
+            Distance in km to extend polygon borders to.
+        :returns:
+            New :class:`Polygon` object with (in general) more vertices
+            and border that is approximately is ``dilation`` km far
+            (measured perpendicularly to edges and circularly to vertices)
+            from the border of original polygon.
+        """
+        assert dilation > 0
+        self._init_polygon2d()
+        # use shapely buffer() method
+        new_2d_polygon = self._polygon2d.buffer(dilation)
+        return type(self)._from_2d(new_2d_polygon, self._projection)
 
     def contains(self, mesh):
         """
