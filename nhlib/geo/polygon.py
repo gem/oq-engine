@@ -60,6 +60,34 @@ class Polygon(object):
         self._projection = None
         self._polygon2d = None
 
+    @classmethod
+    def _from_2d(cls, polygon2d, proj):
+        """
+        Create a polygon object from a 2d polygon and a projection.
+
+        :param polygon2d:
+            Instance of ``shapely.geometry.Polygon``.
+        :param proj:
+            Projection object created
+            by :func:`~nhlib.geo._utils.get_orthographic_projection`
+            that was used to project ``polygon2d``. That projection
+            will be used for projecting it back to get spherical
+            coordinates from Cartesian ones.
+        :returns:
+            New :class:`Polygon` object.
+        """
+        # avoid calling class' constructor
+        polygon = object.__new__(cls)
+        # project polygon2d back on the sphere
+        xx, yy = numpy.transpose(polygon2d.boundary.coords)
+        polygon.lons, polygon.lats = proj(xx, yy, reverse=True)
+        # initialize the instance (as constructor would do)
+        polygon._bbox = utils.get_spherical_bounding_box(polygon.lons,
+                                                         polygon.lats)
+        polygon._polygon2d = polygon2d
+        polygon._projection = proj
+        return polygon
+
     def _init_polygon2d(self):
         """
         Spherical bounding box, projection, and Cartesian polygon are all

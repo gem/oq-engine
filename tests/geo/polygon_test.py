@@ -16,6 +16,7 @@
 import unittest
 
 import numpy
+import shapely.geometry
 
 from nhlib import geo
 from nhlib.geo import _utils as geo_utils
@@ -286,3 +287,29 @@ class PolygonEdgesTestCase(unittest.TestCase):
         mesh = geo.Mesh.from_points_list(points)
 
         self.assertTrue(self.poly.contains(mesh).all())
+
+
+class PolygonFrom2dTestCase(unittest.TestCase):
+    def test(self):
+        polygon2d = shapely.geometry.Polygon([
+            (-12, 0), (0, 14.5), (17.1, 3), (18, 0), (16.5, -3), (0, -10)
+        ])
+        proj = geo_utils.get_orthographic_projection(0, 0, 0, 0)
+        poly = polygon.Polygon._from_2d(polygon2d, proj)
+        elons = [-0.10791866, 0., 0.1537842, 0.1618781, 0.14838825,
+                 0., -0.10791866]
+        elats = [0., 0.13040175, 0.02697965, 0., -0.02697965,
+                 -0.0899322, 0.]
+        ebbox = [-0.10791866, 0.1618781, 0.13040175, -0.0899322]
+        numpy.testing.assert_allclose(poly.lons, elons)
+        numpy.testing.assert_allclose(poly.lats, elats)
+        numpy.testing.assert_allclose(poly._bbox, ebbox)
+        self.assertIs(poly._polygon2d, polygon2d)
+        self.assertIs(poly._projection, proj)
+
+        poly = polygon.Polygon._from_2d(poly._polygon2d, poly._projection)
+        numpy.testing.assert_allclose(poly.lons, elons)
+        numpy.testing.assert_allclose(poly.lats, elats)
+        numpy.testing.assert_allclose(poly._bbox, ebbox)
+        self.assertIs(poly._polygon2d, polygon2d)
+        self.assertIs(poly._projection, proj)
