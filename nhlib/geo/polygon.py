@@ -80,7 +80,8 @@ class Polygon(object):
         polygon = object.__new__(cls)
         # project polygon2d back on the sphere
         xx, yy = numpy.transpose(polygon2d.boundary.coords)
-        polygon.lons, polygon.lats = proj(xx, yy, reverse=True)
+        # need to cut off the last point -- it repeats the first one
+        polygon.lons, polygon.lats = proj(xx[:-1], yy[:-1], reverse=True)
         # initialize the instance (as constructor would do)
         polygon._bbox = utils.get_spherical_bounding_box(polygon.lons,
                                                          polygon.lats)

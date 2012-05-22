@@ -296,10 +296,8 @@ class PolygonFrom2dTestCase(unittest.TestCase):
         ])
         proj = geo_utils.get_orthographic_projection(0, 0, 0, 0)
         poly = polygon.Polygon._from_2d(polygon2d, proj)
-        elons = [-0.10791866, 0., 0.1537842, 0.1618781, 0.14838825,
-                 0., -0.10791866]
-        elats = [0., 0.13040175, 0.02697965, 0., -0.02697965,
-                 -0.0899322, 0.]
+        elons = [-0.10791866, 0., 0.1537842, 0.1618781, 0.14838825, 0.]
+        elats = [0., 0.13040175, 0.02697965, 0., -0.02697965, -0.0899322]
         ebbox = [-0.10791866, 0.1618781, 0.13040175, -0.0899322]
         numpy.testing.assert_allclose(poly.lons, elons)
         numpy.testing.assert_allclose(poly.lats, elats)
@@ -334,7 +332,7 @@ class PolygonDilateTestCase(unittest.TestCase):
             -0.17718599, -0.17935175, -0.17983554, -0.17863283, -0.17575489,
             -0.17122872, -0.16509676, -0.15741653, -0.14826004, -0.13771318,
             -0.12587485, -0.11285608, -0.09877895, -0.08377549, -0.06798640,
-            -0.05155976, -0.03464961, -0.01741453, -0.00001616, -0.00001616
+            -0.05155976, -0.03464961, -0.01741453, -0.00001616
         ]
         elons = [
             -0.17987393, -0.17990133, -0.17906009, -0.17653968, -0.17236372,
@@ -350,11 +348,12 @@ class PolygonDilateTestCase(unittest.TestCase):
             0.03096383, 0.01367988, -0.00373238, -0.02110967, -0.03828900,
             -0.05510927, -0.07141274, -0.08704649, -0.10186393, -0.11572609,
             -0.12850296, -0.14007473, -0.15033288, -0.15918121, -0.16653674,
-            -0.17233050, -0.17650814, -0.17903051, -0.17987393, -0.17987393
+            -0.17233050, -0.17650814, -0.17903051, -0.17987393
         ]
         ebbox = [-0.17990133, 1.17967345, 1.17983512, -0.17983554]
         numpy.testing.assert_allclose(dilated.lons, elons, rtol=0, atol=1e-7)
         numpy.testing.assert_allclose(dilated.lats, elats, rtol=0, atol=1e-7)
         numpy.testing.assert_allclose(dilated._bbox, ebbox)
         self.assertIs(dilated._projection, poly._projection)
-        self.assertEqual(len(dilated._polygon2d.boundary.coords), len(elons))
+        self.assertEqual(len(dilated._polygon2d.boundary.coords),
+                         len(elons) + 1)
