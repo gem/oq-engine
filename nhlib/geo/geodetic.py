@@ -33,7 +33,7 @@ def geodetic_distance(lons1, lats1, lons2, lats2):
     float numbers or numpy arrays, in which case they should "broadcast
     together".
 
-    Implements `http://williams.best.vwh.net/avform.htm#Dist`_.
+    Implements http://williams.best.vwh.net/avform.htm#Dist
 
     :returns:
         Distance in km, floating point scalar or numpy array of such.
@@ -59,7 +59,7 @@ def azimuth(lons1, lats1, lons2, lats2):
     Parameters are the same as for :func:`geodetic_distance`.
 
     Implements an "alternative formula" from
-    `http://williams.best.vwh.net/avform.htm#Crs`_.
+    http://williams.best.vwh.net/avform.htm#Crs
 
     :returns:
         Azimuth as an angle between direction to north from first point and
@@ -248,7 +248,7 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
         of resulting points respectively.
 
     Implements "completely general but more complicated algorithm" from
-    `http://williams.best.vwh.net/avform.htm#LL`_.
+    http://williams.best.vwh.net/avform.htm#LL
     """
     assert npoints > 1
     lon, lat = numpy.radians(lon), numpy.radians(lat)

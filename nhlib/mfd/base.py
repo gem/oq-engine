@@ -96,7 +96,8 @@ class BaseMFD(object):
 
     def reset(self):
         """
-        Reset an MFD to its original state after any number of :meth:`modify`s.
+        Reset an MFD to its original state after any number of :meth:`modify`
+        calls.
         """
         self.set_parameters(self._original_parameters)
 

@@ -265,7 +265,7 @@ def triangle_area(e1, e2, e3):
         Float number, the area of the triangle in squared units of coordinates,
         or numpy array of shape of edges with one dimension less.
 
-    Uses Heron formula, see `http://mathworld.wolfram.com/HeronsFormula.html`_.
+    Uses Heron formula, see http://mathworld.wolfram.com/HeronsFormula.html.
     """
     # calculating edges length
     e1_length = numpy.sqrt(numpy.sum(e1 * e1, axis=-1))
