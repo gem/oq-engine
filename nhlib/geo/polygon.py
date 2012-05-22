@@ -25,7 +25,7 @@ from nhlib.geo import _utils as utils
 
 
 #: Polygon upsampling step for long edges, in kilometers.
-#: See :function:`get_resampled_coordinates`. 
+#: See :function:`get_resampled_coordinates`.
 UPSAMPLING_STEP_KM = 100
 
 
