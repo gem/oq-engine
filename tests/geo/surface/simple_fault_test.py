@@ -13,7 +13,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
+import unittest
 from math import pi, sin, cos, atan2, degrees
+
+import numpy
 
 from nhlib.geo.point import Point
 from nhlib.geo.line import Line
@@ -198,3 +201,20 @@ class SimpleFaultSurfaceGetDipTestCase(utils.SurfaceTestCase):
             (mid_area * cos(mid_dip) + 2 * (side_area * cos(side_dip))) / 3.0
         ))
         self.assertAlmostEquals(surface.get_dip(), expected_dip, delta=1e-3)
+
+
+class SimpleFaultSurfaceProjectionTestCase(unittest.TestCase):
+    def test(self):
+        trace = [Point(10, -20), Point(11, -20.2), Point(12, -19.7)]
+        dip = 30
+        upper_seismogenic_depth = 25.3
+        lower_seismogenic_depth = 53.6
+        polygon = SimpleFaultSurface.surface_projection_from_fault_data(
+            trace, upper_seismogenic_depth, lower_seismogenic_depth, dip
+        )
+        elons = [10.06374285, 11.06382605, 12.06361991, 12.13515987,
+                 11.13560807, 10.1354272]
+        elats = [-20.3895235, -20.58952337, -20.08952368, -20.52520878,
+                 -21.02520738, -20.82520794]
+        numpy.testing.assert_allclose(polygon.lons, elons)
+        numpy.testing.assert_allclose(polygon.lats, elats)

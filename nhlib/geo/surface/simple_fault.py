@@ -22,6 +22,7 @@ import numpy
 
 from nhlib.geo.surface.base import BaseSurface
 from nhlib.geo.mesh import RectangularMesh
+from nhlib.geo.polygon import Polygon
 from nhlib.geo._utils import ensure, line_intersects_itself
 
 
@@ -159,3 +160,39 @@ class SimpleFaultSurface(BaseSurface):
         mesh = RectangularMesh.from_points_list(surface_points)
         assert 1 not in mesh.shape
         return cls(mesh)
+
+    @classmethod
+    def surface_projection_from_fault_data(cls, fault_trace,
+                                           upper_seismogenic_depth,
+                                           lower_seismogenic_depth, dip):
+        """
+        Get a surface projection of the simple fault surface.
+
+        Parameters are the same as for :meth:`from_fault_data`, excluding
+        mesh spacing.
+
+        :returns:
+            Instance of :class:`~nhlib.geo.polygon.Polygon` describing
+            the surface projection of the simple fault with specified
+            parameters.
+        """
+        # similar to :meth:`from_fault_data`, we just don't resample edges
+        dip_tan = math.tan(math.radians(dip))
+        hdist_top = upper_seismogenic_depth / dip_tan
+        hdist_bottom = lower_seismogenic_depth / dip_tan
+
+        strike = fault_trace[0].azimuth(fault_trace[-1])
+        azimuth = (strike + 90.0) % 360
+
+        top_edge = []
+        bottom_edge = []
+        for point in fault_trace:
+            top_edge.append(point.point_at(hdist_top, 0, azimuth))
+            bottom_edge.append(point.point_at(hdist_bottom, 0, azimuth))
+
+        # collect points of the top edge, concatenate it with points
+        # of a bottom edge in a reversed order, and use the resulting
+        # list of points to initialize a polygon
+        bottom_edge.reverse()
+        top_edge.extend(bottom_edge)
+        return Polygon(top_edge)
