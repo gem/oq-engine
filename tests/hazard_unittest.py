@@ -56,7 +56,7 @@ MEAN_GROUND_INTENSITY = (
 
 TEST_JOB_FILE = helpers.testdata_path('simplecase/config.gem')
 
-NRML_SCHEMA_PATH = nrml.nrml_schema_file()
+NRML_SCHEMA_PATH = nrml.utils.nrml_schema_file()
 
 SIMPLE_FAULT_SRC_MODEL_LT = helpers.demo_file(
     'simple_fault_demo_hazard/source_model_logic_tree.xml')
