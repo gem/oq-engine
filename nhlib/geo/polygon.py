@@ -182,7 +182,6 @@ def get_resampled_coordinates(lons, lats):
         lon1, lat1 = lons[i], lats[i]
         lon2, lat2 = lons[next_point], lats[next_point]
 
-        # distance = geodetic.geodetic_distance(lon1, lat1, lon2, lat2)
         distance = distances[i]
         num_points = int(distance / COORDINATE_DISCRETIZATION) + 1
         if num_points >= 2:
