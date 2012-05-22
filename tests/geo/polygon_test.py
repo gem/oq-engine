@@ -19,6 +19,7 @@ import numpy
 
 from nhlib import geo
 from nhlib.geo import _utils as geo_utils
+from nhlib.geo import polygon
 
 
 class PolygonCreationTestCase(unittest.TestCase):
@@ -56,7 +57,8 @@ class PolygonCreationTestCase(unittest.TestCase):
                   geo.Point(-170, -5), geo.Point(-175, -10),
                   geo.Point(-178, -6)]
         polygon = geo.Polygon(points)
-        self.assertEqual(polygon.num_points, 6)
+        self.assertEqual(len(polygon.lons), 6)
+        self.assertEqual(len(polygon.lats), 6)
         self.assertEqual(list(polygon.lons),
                          [170,  170,  176, -170, -175, -178])
         self.assertEqual(list(polygon.lats), [-10, 10, 0, -5, -10, -6])
@@ -66,11 +68,12 @@ class PolygonCreationTestCase(unittest.TestCase):
 
 class PolygonResampleSegmentsTestCase(unittest.TestCase):
     def test_1(self):
-        poly = geo.Polygon([geo.Point(-2, -2), geo.Point(0, -2),
-                            geo.Point(0, 0), geo.Point(-2, 0)])
-        lons, lats = poly._get_resampled_coordinates()
-        expected_lons = [-2, -1,  0,  0, -1, -2, -2]
-        expected_lats = [-2, -2, -2,  0,  0,  0, -2]
+        input_lons = [-2, 0, 0, -2]
+        input_lats = [-2, -2, 0, 0]
+
+        lons, lats = polygon.get_resampled_coordinates(input_lons, input_lats)
+        expected_lons = [-2, -1, 0, 0, 0, -1, -2, -2, -2]
+        expected_lats = [-2, -2, -2, -1, 0, 0, 0, -1, -2]
         self.assertTrue(
             numpy.allclose(lons, expected_lons, atol=1e-3, rtol=0),
             msg='%s != %s' % (lons, expected_lons)
@@ -81,16 +84,13 @@ class PolygonResampleSegmentsTestCase(unittest.TestCase):
         )
 
     def test_international_date_line(self):
-        poly = geo.Polygon([
-            geo.Point(177, 40), geo.Point(179, 40), geo.Point(-179, 40),
-            geo.Point(-177, 40),
-            geo.Point(-177, 43), geo.Point(-179, 43), geo.Point(179, 43),
-            geo.Point(177, 43)
-        ])
-        lons, lats = poly._get_resampled_coordinates()
+        input_lons = [177, 179, -179, -177, -177, -179, 179, 177]
+        input_lats = [40, 40, 40, 40, 43, 43, 43, 43]
+
+        lons, lats = polygon.get_resampled_coordinates(input_lons, input_lats)
         self.assertTrue(all(-180 <= lon <= 180 for lon in lons))
-        expected_lons = [177, 178, 179, -180, -179, -178, -177,
-                         -177, -178, -179, -180, 179, 178, 177, 177]
+        expected_lons = [177, 179, -179, -177, -177, -177, -177, -179, 179,
+                         177, 177, 177, 177]
         self.assertTrue(
             numpy.allclose(lons, expected_lons, atol=1e-4, rtol=0),
             msg='%s != %s' % (lons, expected_lons)
@@ -174,19 +174,115 @@ class PolygonDiscretizeTestCase(unittest.TestCase):
             geo.Point(dist * 4, -dist * 4),
         ])
 
-    def test_longitudinally_extended_boundary(self):
-        points = [geo.Point(lon, -60) for lon in xrange(-10, 11)]
-        points += [geo.Point(10, -60.1), geo.Point(-10, -60.1)]
-        poly = geo.Polygon(points)
-        mesh = list(poly.discretize(mesh_spacing=10.62))
 
-        south = mesh[0]
-        for point in mesh:
-            if point.latitude < south.latitude:
-                south = point
+class PolygonEdgesTestCase(unittest.TestCase):
+    # Test that points very close to the edges of a polygon are actually
+    # 'contained' by the polygon.
 
-        # the point with the lowest latitude should be somewhere
-        # in the middle longitudinally (around Greenwich meridian)
-        # and be below -60th parallel.
-        self.assertTrue(-0.1 < south.longitude < 0.1)
-        self.assertTrue(-60.5 < south.latitude < -60.4)
+    # Simple case:
+    # We create a 'rectangular' polygon, defined by 4 corner points.
+    # In Cartesian space, the shape would look something like this:
+    #   *.......*
+    #   .       .
+    #   .       .
+    #   .       .
+    #   .       .
+    #   .       .
+    #   *.......*
+    #
+    # Projecting onto a sphere, however, gives us a rather different shape.
+    # The lines connecting the points become arcs. The resulting shape
+    # looks like this:
+    #     ..---..
+    #    *       *
+    #   .         .
+    #   .         .
+    #   .         .
+    #   .         .
+    #   .         .
+    #    *       *
+    #     --...--
+    #
+    # Constructing a realistic polygon to represent this shapes requires us
+    # to resample the lines between points--adding points where necessary
+    # to increase the resolution of a line. (Resampling only occurs if a
+    # given line segment exceeds a certain distance threshold.)
+    #
+    # If we don't do this, we get a distorted shape (with concave edges):
+    #   *-.....-*
+    #   .       .
+    #    .     .
+    #    .     .
+    #    .     .
+    #   .       .
+    #   *.-----.*
+    #
+    # This distortion can cause points, which lie near the edges of the
+    # polygon, to be considered 'outside'. This is of course not correct.
+    # Example:
+    #   *-.....-*
+    #   .       .
+    #    .     .
+    #    .     .o  <--
+    #    .     .
+    #   .       .
+    #   *.-----.*
+    # Note that, with this distortion, there is a greater margin of error
+    # toward the center of each line segement. Areas near the points
+    # (corners in this cases) are less error prone.
+    #
+    # With proper resampling, such errors can be minimized:
+    #     ..---..
+    #    *       *
+    #   .         .
+    #   .         .
+    #   .        o.  <--
+    #   .         .
+    #   .         .
+    #    *       *
+    #     --...--
+
+    def setUp(self):
+        self.corners = [
+            geo.Point(-10, 10), geo.Point(10, 10), geo.Point(10, -10),
+            geo.Point(-10, -10),
+        ]
+        self.poly = geo.Polygon(self.corners)
+
+    def test_corners(self):
+        mesh = geo.Mesh.from_points_list(self.corners)
+
+        result = self.poly.contains(mesh)
+
+        for x in result.flatten():
+            self.assertFalse(x)
+
+    def test_points_close_to_edges(self):
+        # Test points close to the edges:
+        # Note that any point which lies directly on a meridian (with a
+        # longitude component of -10 or 10, in this case) intersects but is not
+        # contained by the polygon. This is because meridians are great circle
+        # arcs themselves. This test illustrates the difference in behavior
+        # between North/South lines and East/West lines.
+
+        # [North, South, East, West]
+        points = [
+            geo.Point(0, 10), geo.Point(0, -10.0),
+            geo.Point(9.9999999, 0), geo.Point(-9.9999999, 0),
+        ]
+
+        mesh = geo.Mesh.from_points_list(points)
+
+        self.assertTrue(self.poly.contains(mesh).all())
+
+    def test_points_close_to_corners(self):
+        # The same boundary conditions apply here (as noted in the test above).
+        points = [
+            geo.Point(-9.999999, 10), geo.Point(9.999999, 10),
+            geo.Point(-9.999999, 9.999999), geo.Point(9.999999, 9.999999),
+            geo.Point(-9.999999, -9.99999), geo.Point(-9.999999, 9.999999),
+            geo.Point(-9.999999, -10), geo.Point(9.999999, -10),
+        ]
+        mesh = geo.Mesh.from_points_list(points)
+
+        self.assertTrue(self.poly.contains(mesh).all())
