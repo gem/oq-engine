@@ -23,7 +23,7 @@ import numpy
 from nhlib.geo.surface.base import BaseSurface
 from nhlib.geo.mesh import RectangularMesh
 from nhlib.geo.polygon import Polygon
-from nhlib.geo._utils import ensure, line_intersects_itself
+from nhlib.geo._utils import line_intersects_itself
 
 
 class SimpleFaultSurface(BaseSurface):
@@ -92,20 +92,23 @@ class SimpleFaultSurface(BaseSurface):
         This method doesn't have to be called by hands before creating the
         surface object, because it is called from :meth:`from_fault_data`.
         """
-        ensure(len(fault_trace) >= 2,
-               "The fault trace must have at least two points!")
-        ensure(fault_trace.on_surface(),
-               "The fault trace must be defined on the surface!")
+        if not len(fault_trace) >= 2:
+            raise ValueError("the fault trace must have at least two points")
+        if not fault_trace.on_surface():
+            raise ValueError("the fault trace must be defined on the surface")
         tlats = [point.latitude for point in fault_trace.points]
         tlons = [point.longitude for point in fault_trace.points]
-        ensure(not line_intersects_itself(tlons, tlats),
-               "fault trace intersects itself")
-        ensure(0.0 < dip <= 90.0, "Dip must be between 0.0 and 90.0!")
-        ensure(lower_seismogenic_depth > upper_seismogenic_depth,
-               "Lower seismo depth must be > than upper seismo dept!")
-        ensure(upper_seismogenic_depth >= 0.0,
-               "Upper seismo depth must be >= 0.0!")
-        ensure(mesh_spacing > 0.0, "Mesh spacing must be > 0.0!")
+        if line_intersects_itself(tlons, tlats):
+            raise ValueError("fault trace intersects itself")
+        if not 0.0 < dip <= 90.0:
+            raise ValueError("dip must be between 0.0 and 90.0")
+        if not lower_seismogenic_depth > upper_seismogenic_depth:
+            raise ValueError("lower seismogenic depth must be greater than "
+                             "upper seismogenic depth")
+        if not upper_seismogenic_depth >= 0.0:
+            raise ValueError("upper seismo depth must be non-negative")
+        if not mesh_spacing > 0.0:
+            raise ValueError("mesh spacing must be positive")
 
     @classmethod
     def from_fault_data(cls, fault_trace, upper_seismogenic_depth,
