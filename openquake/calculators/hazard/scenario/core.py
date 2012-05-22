@@ -78,7 +78,7 @@ class ScenarioHazardCalculator(BaseHazardCalculator):
         :returns: `True` if the GMF contained in the `hashmap` was serialized,
             `False` otherwise.
         """
-        if not self.job_ctxt['GMF_OUTPUT']:
+        if not self.job_ctxt['SAVE_GMFS']:
             return False
 
         path = os.path.join(self.job_ctxt.base_path,

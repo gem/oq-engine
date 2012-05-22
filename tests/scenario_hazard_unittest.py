@@ -121,7 +121,7 @@ class ScenarioHazardCalculatorTestCase(unittest.TestCase):
     def test__serialize_gmf_one_gmf_serialization_per_calculation(self):
         # A GMF is serialized for each calculation.
         self.job_ctxt.params[NUMBER_OF_CALC_KEY] = "3"
-        self.job_ctxt.params["GMF_OUTPUT"] = "true"
+        self.job_ctxt.params["SAVE_GMFS"] = "true"
         self.job_profile.gmf_calculation_number = 3
         self.job_profile.save()
 
@@ -140,7 +140,7 @@ class ScenarioHazardCalculatorTestCase(unittest.TestCase):
         self.assertEquals(3, serialize_mock.call_count)
 
     def test__serialize_gmf_no_serialization_if_gmf_output_not_set(self):
-        # The GMFs will only be serialized if GMF_OUTPUT == True
+        # The GMFs will only be serialized if SAVE_GMFS == True
         calculator = scenario.ScenarioHazardCalculator(self.job_ctxt)
         self.assertEqual(False, calculator._serialize_gmf(None, "pga", 0))
 
@@ -155,7 +155,7 @@ class ScenarioHazardCalculatorTestCase(unittest.TestCase):
         hashmap.put(site2, 0.2)
 
         self.job_ctxt.params[NUMBER_OF_CALC_KEY] = "2"
-        self.job_ctxt.params["GMF_OUTPUT"] = "true"
+        self.job_ctxt.params["SAVE_GMFS"] = "true"
         self.job_ctxt.params["REGION_VERTEX"] = ("0.0, 0.0, 0.0, 3.0, "
                                                  "3.0, 3.0, 3.0, 0.0")
         self.job_profile.region = GEOSGeometry(shapes.polygon_ewkt_from_coords(
