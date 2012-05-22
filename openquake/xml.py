@@ -124,8 +124,8 @@ class XMLMismatchError(Exception):
         return self.message
 
 
-def validates_against_xml_schema(
-    xml_instance_path, schema_path=nrml_utils.nrml_schema_file()):
+def validates_against_xml_schema(xml_instance_path,
+                                 schema_path=nrml_utils.nrml_schema_file()):
     """
     Checks whether an XML file validates against an XML Schema
 
