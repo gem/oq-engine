@@ -128,6 +128,69 @@ class FragilityModelParserTestCase(unittest.TestCase):
                              "function with taxonomy RC/DMRF-D/HR",
                              e.exception.message)
 
+    def test_invalid_iml_state_and_no_damage_limit(self):
+        # A fragility function with an invalid iml and no_damage_limit
+        # state results in errors.
+        content = """
+            <?xml version='1.0' encoding='utf-8'?>
+            <nrml xmlns:gml="http://www.opengis.net/gml"
+              xmlns="http://openquake.org/xmlns/nrml/0.3"
+              gml:id="n1">
+            <fragilityModel gml:id="ep1" format="discrete" imlUnit="g"
+                noDamageLimit="9.2">
+            <gml:description>Fragility model (discrete)</gml:description>
+            <IML IMT="MMI">7 8 9 10 11</IML>
+            <limitStates>
+            minor
+            </limitStates>
+            <ffs gml:id="PAV01-ff01-d">
+            <taxonomy>RC/DMRF-D/LR</taxonomy>
+            <ffd ls="minor">
+                <poE>0.0 0.09 0.56 0.91 0.98</poE>
+            </ffd>
+            </ffs>
+            </fragilityModel>
+            </nrml>"""
+        self.parser = setup_parser(content)
+
+        with self.assertRaises(AssertionError) as e:
+            list(self.parser)
+
+            self.assertEqual("'noDamageLimit' must be minor than values"
+                             "defined for IML",
+                             e.exception.message)
+
+    def test_continuous_fragil_model_and_no_damage_limit(self):
+
+        content = """
+            <?xml version='1.0' encoding='utf-8'?>
+            <nrml xmlns:gml="http://www.opengis.net/gml"
+                  xmlns="http://openquake.org/xmlns/nrml/0.3"
+                  gml:id="n1">
+            <fragilityModel gml:id="ep1" format="continuous"
+            imlUnit="m" minIML="0.1" maxIML="9.9" noDamageLimit="4.5">
+            <gml:description>Fragility model (continuous)</gml:description>
+            <limitStates>
+                slight
+            </limitStates>
+
+            <ffs gml:id="PAV01-ff02-c" type="lognormal">
+            <taxonomy>RC/DMRF-D/LR</taxonomy>
+
+            <ffc ls="slight">
+                <params mean="11.19" stddev="8.27" />
+            </ffc>
+            </ffs>
+            </fragilityModel>
+            </nrml>"""
+        self.parser = setup_parser(content)
+
+        with self.assertRaises(AssertionError) as e:
+            list(self.parser)
+
+            self.assertEqual("'noDamageLimit' must not be set for the "
+                             "continuous fragility model", e.exception.message)
+
 
 class DiscreteFragilityModelParserTestCase(unittest.TestCase):
     """Tests for the discrete fragility model parser."""
@@ -168,7 +231,7 @@ class DiscreteFragilityModelParserTestCase(unittest.TestCase):
             limits=['minor', 'moderate', 'severe', 'collapse'],
             description='Fragility model for Pavia (discrete)',
             imls=[7.0, 8.0, 9.0, 10.0, 11.0], imt='MMI', iml_unit="g",
-            max_iml=None, min_iml=None)
+            max_iml=None, min_iml=None, no_damage_limit=0.2)
 
         self.assertEqual(expected, self.parser.model)
 
@@ -308,7 +371,8 @@ class ContinuousFragilityModelParserTestCase(unittest.TestCase):
             id='ep1', format='continuous',
             limits=['slight', 'moderate', 'extensive', 'complete'],
             description='Fragility model for Pavia (continuous)',
-            imls=None, imt=None, iml_unit="m", max_iml="9.9", min_iml="0.1")
+            imls=None, imt=None, iml_unit="m", max_iml="9.9",
+            min_iml="0.1", no_damage_limit=None)
 
         self.assertEqual(expected, self.parser.model)
 
