@@ -111,7 +111,7 @@ class FragilityModelParser(producer.FileProducer):
             if mdl["no_damage_limit"]:
                 mdl["no_damage_limit"] = float(mdl["no_damage_limit"])
                 assert mdl["no_damage_limit"] < mdl["imls"][0], (
-                "'noDamageLimit' must be minor than values defined for IML")
+                "'noDamageLimit' must be less than values defined for IML")
             assert mdl["max_iml"] is None, (
                 "'maxIML' must not be set for discrete fragility models")
             assert mdl["min_iml"] is None, (
