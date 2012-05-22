@@ -173,7 +173,7 @@ class ScenarioHazardCalculatorTestCase(unittest.TestCase):
             calculator.execute()
 
         patht = os.path.join(self.job_ctxt.base_path,
-                            self.job_ctxt['OUTPUT_DIR'], "gmf-%s")
+                            self.job_ctxt['OUTPUT_DIR'], "gmf-%s.xml")
         for cnum in range(self.job_profile.gmf_calculation_number):
             path = patht % cnum
             self.assertTrue(
