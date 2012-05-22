@@ -47,15 +47,16 @@ class HazardCurvesTestCase(unittest.TestCase):
             self.component_type = component_type
             self.imts = imts
             self.poes = poes
+            self.dists = object()
         def make_contexts(self, sites, rupture):
-            return [(site, rupture) for site in sites]
-        def get_poes(self, ctxs, imts, component_type, truncation_level):
+            return (sites, rupture, self.dists)
+        def get_poes(self, sctx, rctx, dctx, imt, imls,
+                     component_type, truncation_level):
             assert component_type is self.component_type
             assert truncation_level is self.truncation_level
-            assert imts is self.imts
-            return dict((imt_, numpy.array([self.poes[ctx + (imt_,)]
-                                            for ctx in ctxs]))
-                        for imt_ in imts)
+            assert dctx is self.dists
+            return numpy.array([self.poes[(site, rctx, imt)]
+                                for site in sctx])
 
     class FakeSite(object):
         def __init__(self, location):
