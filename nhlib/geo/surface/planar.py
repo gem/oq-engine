@@ -272,7 +272,7 @@ class PlanarSurface(BaseSurface):
         # and a surface rectangle. we have former (``dists``), now we need
         # to find latter.
         #
-        # we process separately to coordinate components of the point
+        # we process separately two coordinate components of the point
         # projection. for abscissa we consider three possible cases:
         #
         #  I  . III .  II
