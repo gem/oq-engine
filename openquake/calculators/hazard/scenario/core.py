@@ -82,7 +82,7 @@ class ScenarioHazardCalculator(BaseHazardCalculator):
             return False
 
         path = os.path.join(self.job_ctxt.base_path,
-                            self.job_ctxt['OUTPUT_DIR'], "gmf-%s" % cnum)
+                            self.job_ctxt['OUTPUT_DIR'], "gmf-%s.xml" % cnum)
         gmf_writer = hazard_output.create_gmf_writer(
             self.job_ctxt.job_id, self.job_ctxt.serialize_results_to, path)
 
