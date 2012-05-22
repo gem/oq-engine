@@ -46,24 +46,18 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
     def _verify_loss_curves(self):
 
         def xpath_poes(asset_ref):
-            return ("{%(ns)s}riskResult/{%(ns)s}lossCurveList/"
-                "{%(ns)s}asset[@gml:id='" + asset_ref +
-                "']/{%(ns)s}lossCurves/{%(ns)s}"
-                "lossCurve/{%(ns)s}poE")
+            return ("//nrml:asset[@gml:id='" + asset_ref + "']//nrml:poE")
 
         def xpath_losses(asset_ref):
-            return ("{%(ns)s}riskResult/{%(ns)s}lossCurveList/"
-                "{%(ns)s}asset[@gml:id='" + asset_ref +
-                "']/{%(ns)s}lossCurves/"
-                "{%(ns)s}lossCurve/{%(ns)s}loss")
+            return ("//nrml:asset[@gml:id='" + asset_ref + "']//nrml:loss")
 
         job = OqJob.objects.latest("id")
 
         filename = "%s/loss_curves-loss-block-#%s-block#0.xml" % (
                 OUTPUT_DIR, job.id)
 
-        poes = [float(x) for x in self._get(
-            filename, xpath_poes("a1")).split()]
+        root = self._root(filename)
+        poes = [float(x) for x in self._get(root, xpath_poes("a1")).split()]
 
         expected_poes = [1.0000000000, 1.0000000000,
             0.9975213575, 0.9502134626, 0.8646777340,
@@ -74,7 +68,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
                 poes, expected_poes, atol=0.0, rtol=0.05))
 
         losses = [float(x) for x in self._get(
-            filename, xpath_losses("a1")).split()]
+                root, xpath_losses("a1")).split()]
 
         expected_losses = [14.6792147571, 44.0376442714,
             73.3960737856, 102.7545032998, 132.1129328141,
@@ -84,8 +78,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         self.assertTrue(numpy.allclose(
                 losses, expected_losses, atol=0.0, rtol=0.05))
 
-        poes = [float(x) for x in self._get(
-            filename, xpath_poes("a2")).split()]
+        poes = [float(x) for x in self._get(root, xpath_poes("a2")).split()]
 
         expected_poes = [1.0000000000, 1.0000000000,
             0.9999999586, 0.9996645695, 0.9975213681,
@@ -96,7 +89,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
                 poes, expected_poes, atol=0.0, rtol=0.05))
 
         losses = [float(x) for x in self._get(
-            filename, xpath_losses("a2")).split()]
+                root, xpath_losses("a2")).split()]
 
         expected_losses = [3.6409829079, 10.9229487236,
             18.2049145394, 25.4868803551, 32.7688461709,
@@ -106,8 +99,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         self.assertTrue(numpy.allclose(
                 losses, expected_losses, atol=0.0, rtol=0.05))
 
-        poes = [float(x) for x in self._get(
-                filename, xpath_poes("a3")).split()]
+        poes = [float(x) for x in self._get(root, xpath_poes("a3")).split()]
 
         expected_poes = [1.0000000000, 1.0000000000,
             1.0000000000, 1.0000000000, 1.0000000000,
@@ -118,7 +110,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
                 poes, expected_poes, atol=0.0, rtol=0.05))
 
         losses = [float(x) for x in self._get(
-            filename, xpath_losses("a3")).split()]
+                root, xpath_losses("a3")).split()]
 
         expected_losses = [1.4593438219, 4.3780314657,
             7.2967191094, 10.2154067532, 13.1340943970,
@@ -131,24 +123,19 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
     def _verify_loss_ratio_curves(self):
 
         def xpath_poes(asset_ref):
-            return ("{%(ns)s}riskResult/{%(ns)s}lossRatioCurveList/"
-                "{%(ns)s}asset[@gml:id='" + asset_ref +
-                "']/{%(ns)s}lossRatioCurves/{%(ns)s}"
-                "lossRatioCurve/{%(ns)s}poE")
+            return ("//nrml:asset[@gml:id='" + asset_ref + "']//nrml:poE")
 
         def xpath_ratios(asset_ref):
-            return ("{%(ns)s}riskResult/{%(ns)s}lossRatioCurveList/"
-                "{%(ns)s}asset[@gml:id='" + asset_ref +
-                "']/{%(ns)s}lossRatioCurves/"
-                "{%(ns)s}lossRatioCurve/{%(ns)s}lossRatio")
+            return ("//nrml:asset[@gml:id='"
+                    + asset_ref + "']//nrml:lossRatio")
 
         job = OqJob.objects.latest("id")
 
         filename = "%s/loss_curves-block-#%s-block#0.xml" % (
                 OUTPUT_DIR, job.id)
 
-        poes = [float(x) for x in self._get(
-            filename, xpath_poes("a1")).split()]
+        root = self._root(filename)
+        poes = [float(x) for x in self._get(root, xpath_poes("a1")).split()]
 
         expected_poes = [1.0000000000, 1.0000000000,
             0.9975213575, 0.9502134626, 0.8646777340,
@@ -159,7 +146,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
                 poes, expected_poes, atol=0.0, rtol=0.05))
 
         loss_ratios = [float(x) for x in self._get(
-            filename, xpath_ratios("a1")).split()]
+                root, xpath_ratios("a1")).split()]
 
         expected_loss_ratios = [0.004893071586, 0.014679214757,
             0.024465357929, 0.034251501100, 0.044037644271,
@@ -169,8 +156,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         self.assertTrue(numpy.allclose(
                 loss_ratios, expected_loss_ratios, atol=0.0, rtol=0.05))
 
-        poes = [float(x) for x in self._get(
-            filename, xpath_poes("a2")).split()]
+        poes = [float(x) for x in self._get(root, xpath_poes("a2")).split()]
 
         expected_poes = [1.0000000000, 1.0000000000,
             0.9999999586, 0.9996645695, 0.9975213681,
@@ -181,7 +167,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
                 poes, expected_poes, atol=0.0, rtol=0.05))
 
         loss_ratios = [float(x) for x in self._get(
-            filename, xpath_ratios("a2")).split()]
+                root, xpath_ratios("a2")).split()]
 
         expected_loss_ratios = [0.0018204915, 0.0054614744,
             0.0091024573, 0.0127434402, 0.0163844231,
@@ -192,7 +178,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
                 loss_ratios, expected_loss_ratios, atol=0.0, rtol=0.05))
 
         poes = [float(x) for x in self._get(
-                filename, xpath_poes("a3")).split()]
+                root, xpath_poes("a3")).split()]
 
         expected_poes = [1.0000000000, 1.0000000000,
             1.0000000000, 1.0000000000, 1.0000000000,
@@ -203,7 +189,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
                 poes, expected_poes, atol=0.0, rtol=0.05))
 
         loss_ratios = [float(x) for x in self._get(
-            filename, xpath_ratios("a3")).split()]
+                root, xpath_ratios("a3")).split()]
 
         expected_loss_ratios = [0.0014593438, 0.0043780315,
             0.0072967191, 0.0102154068, 0.0131340944,
@@ -229,28 +215,25 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
     def _verify_loss_maps(self):
 
         def xpath(asset_ref):
-            return ("{%(ns)s}riskResult/{%(ns)s}lossMap/"
-                "{%(ns)s}LMNode/{%(ns)s}loss[@assetRef='"
-                + asset_ref + "']/{%(ns)s}value")
+            return ("//nrml:loss[@assetRef='" + asset_ref + "']//nrml:value")
 
         filename = "%s/losses_at-0.99.xml" % OUTPUT_DIR
-        expected_closs = 78.1154725900
+        root = self._root(filename)
 
-        closs = float(self._get(filename, xpath("a1")))
+        expected_closs = 78.1154725900
+        closs = float(self._get(root, xpath("a1")))
 
         self.assertTrue(numpy.allclose(
                 closs, expected_closs, atol=0.0, rtol=0.05))
 
         expected_closs = 36.2507008221
-
-        closs = float(self._get(filename, xpath("a2")))
+        closs = float(self._get(root, xpath("a2")))
 
         self.assertTrue(numpy.allclose(
                 closs, expected_closs, atol=0.0, rtol=0.05))
 
         expected_closs = 23.4782545574
-
-        closs = float(self._get(filename, xpath("a3")))
+        closs = float(self._get(root, xpath("a3")))
 
         self.assertTrue(numpy.allclose(
                 closs, expected_closs, atol=0.0, rtol=0.05))
@@ -265,9 +248,9 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         export_agg_loss_curve(output, OUTPUT_DIR)
         filename = "%s/aggregate_loss_curve.xml" % OUTPUT_DIR
 
-        xpath = "{%(ns)s}riskResult/{%(ns)s}aggregateLossCurve/{%(ns)s}poE"
-
-        poes = [float(x) for x in self._get(filename, xpath).split()]
+        root = self._root(filename)
+        xpath = "//nrml:aggregateLossCurve//nrml:poE"
+        poes = [float(x) for x in self._get(root, xpath).split()]
 
         expected_poes = [1.0000000000, 1.0000000000, 0.9999991685,
             0.9932621249, 0.9502177204, 0.8646647795,
@@ -276,9 +259,8 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         self.assertTrue(numpy.allclose(
                 poes, expected_poes, atol=0.0, rtol=0.05))
 
-        xpath = "{%(ns)s}riskResult/{%(ns)s}aggregateLossCurve/{%(ns)s}loss"
-
-        losses = [float(x) for x in self._get(filename, xpath).split()]
+        xpath = "//nrml:aggregateLossCurve//nrml:loss"
+        losses = [float(x) for x in self._get(root, xpath).split()]
 
         expected_losses = [18.5629274028, 55.6887822085, 92.8146370142,
             129.9404918199, 167.0663466256, 204.1922014313,
@@ -291,11 +273,11 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         ret_code = helpers.run_job(config, ["--output-type=xml"])
         self.assertEquals(0, ret_code)
 
-    def _get(self, filename, xpath):
+    def _root(self, filename):
         schema = etree.XMLSchema(file=nrml_schema_file())
         parser = etree.XMLParser(schema=schema)
+        return etree.parse(filename, parser=parser)
 
-        tree = etree.parse(filename, parser=parser)
-
-        return tree.getroot().find(xpath % {"ns": NRML_NS},
-                namespaces={"gml": GML_NS}).text
+    def _get(self, root, xpath):
+        return root.find(xpath,
+                namespaces={"gml": GML_NS, "nrml": NRML_NS}).text
