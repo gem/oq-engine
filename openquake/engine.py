@@ -33,6 +33,8 @@ from django.db import transaction
 from django.contrib.gis.db import models
 from django.contrib.gis.geos import GEOSGeometry
 from django.core.exceptions import ObjectDoesNotExist
+from nhlib import geo as nhlib_geo
+
 
 from openquake.calculators.hazard import CALCULATORS as HAZ_CALCS
 from openquake.calculators.risk import CALCULATORS as RISK_CALCS
@@ -267,7 +269,8 @@ class JobContext(object):
             sites = []
 
             for coord in coords:
-                sites.append(shapes.Site(coord[0], coord[1]))
+                sites.append(nhlib_geo.Point(coord[0], coord[1]))
+                # sites.append(shapes.Site(coord[0], coord[1]))
 
             self.sites = sites
         else:
@@ -286,7 +289,8 @@ class JobContext(object):
             self._extract_coords('REGION_VERTEX'))
 
         region.cell_size = self['REGION_GRID_SPACING']
-        return region.grid.centers()
+        return [nhlib_geo.Point(x.longitude, x.latitude)
+                for x in region.grid.centers()]
 
     def build_nrml_path(self, nrml_file):
         """Return the complete output path for the given nrml_file"""
