@@ -204,17 +204,50 @@ class SimpleFaultSurfaceGetDipTestCase(utils.SurfaceTestCase):
 
 
 class SimpleFaultSurfaceProjectionTestCase(unittest.TestCase):
-    def test(self):
-        trace = [Point(10, -20), Point(11, -20.2), Point(12, -19.7)]
-        dip = 30
-        upper_seismogenic_depth = 25.3
-        lower_seismogenic_depth = 53.6
+    def test_three_points(self):
         polygon = SimpleFaultSurface.surface_projection_from_fault_data(
-            trace, upper_seismogenic_depth, lower_seismogenic_depth, dip
+            Line([Point(10, -20), Point(11, -20.2), Point(12, -19.7)]),
+            dip=30,
+            upper_seismogenic_depth=25.3, lower_seismogenic_depth=53.6,
         )
-        elons = [10.06374285, 11.06382605, 12.06361991, 12.13515987,
-                 11.13560807, 10.1354272]
-        elats = [-20.3895235, -20.58952337, -20.08952368, -20.52520878,
-                 -21.02520738, -20.82520794]
+        elons = [11.13560807, 10.1354272, 10.06374285, 12.06361991,
+                 12.13515987]
+        elats = [-21.02520738, -20.82520794, -20.3895235, -20.08952368,
+                 -20.52520878]
+        numpy.testing.assert_allclose(polygon.lons, elons)
+        numpy.testing.assert_allclose(polygon.lats, elats)
+
+    def test_dip_90_three_points(self):
+        polygon = SimpleFaultSurface.surface_projection_from_fault_data(
+            Line([Point(1, -20), Point(1, -20.2), Point(2, -19.7)]),
+            dip=90,
+            upper_seismogenic_depth=30, lower_seismogenic_depth=50,
+        )
+        elons = [1, 1, 2]
+        elats = [-20.2, -20., -19.7]
+        numpy.testing.assert_allclose(polygon.lons, elons)
+        numpy.testing.assert_allclose(polygon.lats, elats)
+
+    def test_dip_90_two_points(self):
+        polygon = SimpleFaultSurface.surface_projection_from_fault_data(
+            Line([Point(2, 2), Point(1, 1)]),
+            dip=90,
+            upper_seismogenic_depth=10, lower_seismogenic_depth=20,
+        )
+        elons = [1.00003181, 0.99996821, 0.99996819, 1.99996819, 2.00003182,
+                 2.00003181]
+        elats = [0.99996822, 0.99996819, 1.00003178, 2.0000318, 2.0000318,
+                 1.9999682]
+        numpy.testing.assert_allclose(polygon.lons, elons)
+        numpy.testing.assert_allclose(polygon.lats, elats)
+
+    def test_dip_90_self_intersection(self):
+        polygon = SimpleFaultSurface.surface_projection_from_fault_data(
+            Line([Point(1, -2), Point(2, -1.9), Point(3, -2.1), Point(4, -2)]),
+            dip=90,
+            upper_seismogenic_depth=10, lower_seismogenic_depth=20,
+        )
+        elons = [3., 1., 2., 4.]
+        elats = [-2.1, -2., -1.9, -2.]
         numpy.testing.assert_allclose(polygon.lons, elons)
         numpy.testing.assert_allclose(polygon.lats, elats)

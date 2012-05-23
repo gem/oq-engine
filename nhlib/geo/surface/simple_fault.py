@@ -18,12 +18,12 @@ Module :mod:`nhlib.geo.surface.simple_fault` defines
 :class:`SimpleFaultSurface`.
 """
 import math
+
 import numpy
 
 from nhlib.geo.surface.base import BaseSurface
-from nhlib.geo.mesh import RectangularMesh
-from nhlib.geo.polygon import Polygon
-from nhlib.geo._utils import line_intersects_itself
+from nhlib.geo.mesh import Mesh, RectangularMesh
+from nhlib.geo import _utils as geo_utils
 
 
 class SimpleFaultSurface(BaseSurface):
@@ -98,7 +98,7 @@ class SimpleFaultSurface(BaseSurface):
             raise ValueError("the fault trace must be defined on the surface")
         tlats = [point.latitude for point in fault_trace.points]
         tlons = [point.longitude for point in fault_trace.points]
-        if line_intersects_itself(tlons, tlats):
+        if geo_utils.line_intersects_itself(tlons, tlats):
             raise ValueError("fault trace intersects itself")
         if not 0.0 < dip <= 90.0:
             raise ValueError("dip must be between 0.0 and 90.0")
@@ -187,15 +187,17 @@ class SimpleFaultSurface(BaseSurface):
         strike = fault_trace[0].azimuth(fault_trace[-1])
         azimuth = (strike + 90.0) % 360
 
-        top_edge = []
-        bottom_edge = []
-        for point in fault_trace:
-            top_edge.append(point.point_at(hdist_top, 0, azimuth))
-            bottom_edge.append(point.point_at(hdist_bottom, 0, azimuth))
+        # collect coordinates of vertices in both top and bottom edges
+        lons = []
+        lats = []
+        for point in fault_trace.points:
+            top_edge_point = point.point_at(hdist_top, 0, azimuth)
+            bottom_edge_point = point.point_at(hdist_bottom, 0, azimuth)
+            lons.append(top_edge_point.longitude)
+            lats.append(top_edge_point.latitude)
+            lons.append(bottom_edge_point.longitude)
+            lats.append(bottom_edge_point.latitude)
 
-        # collect points of the top edge, concatenate it with points
-        # of a bottom edge in a reversed order, and use the resulting
-        # list of points to initialize a polygon
-        bottom_edge.reverse()
-        top_edge.extend(bottom_edge)
-        return Polygon(top_edge)
+        lons = numpy.array(lons, float)
+        lats = numpy.array(lats, float)
+        return Mesh(lons, lats, depths=None).get_convex_hull()
