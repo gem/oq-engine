@@ -23,7 +23,7 @@ import shapely.geometry
 from nhlib.geo.polygon import Polygon
 from nhlib.geo.line import Line
 from nhlib.geo.surface.base import BaseSurface
-from nhlib.geo.mesh import RectangularMesh
+from nhlib.geo.mesh import Mesh, RectangularMesh
 from nhlib.geo import _utils as geo_utils
 
 
@@ -165,13 +165,4 @@ class ComplexFaultSurface(BaseSurface):
             [[[point.longitude, point.latitude] for point in edge]
              for edge in edges], dtype=float
         ).reshape((-1, 2)).transpose()
-        # create a projection centered in the center of points collection
-        proj = geo_utils.get_orthographic_projection(
-            *geo_utils.get_spherical_bounding_box(lons, lats)
-        )
-        # project all the points and create a shapely multipoint object.
-        # need to copy an array because otherwise shapely misinterprets it
-        vertices = numpy.vstack(proj(lons, lats)).transpose().copy()
-        multipoint = shapely.geometry.MultiPoint(vertices)
-        # create a polygon from a convex hull around that multipoint
-        return Polygon._from_2d(multipoint.convex_hull, proj)
+        return Mesh(lons, lats, depths=None).get_convex_hull()

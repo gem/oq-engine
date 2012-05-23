@@ -125,3 +125,37 @@ class ComplexFaultSurfaceProjectionTestCase(unittest.TestCase):
         elats = [4.6,  4.9,  5.3,  5.5]
         numpy.testing.assert_allclose(polygon.lons, elons)
         numpy.testing.assert_allclose(polygon.lats, elats)
+
+    # next three tests are ported from simple fault surface tests
+    def test_dip_90_three_points(self):
+        edges = [Line([Point(1, -20, 30), Point(1, -20.2, 30),
+                       Point(2, -19.7, 30)]),
+                 Line([Point(1, -20, 50), Point(1, -20.2, 50),
+                       Point(2, -19.7, 50)])]
+        polygon = ComplexFaultSurface.surface_projection_from_fault_data(edges)
+        elons = [1, 1, 2]
+        elats = [-20.2, -20., -19.7]
+        numpy.testing.assert_allclose(polygon.lons, elons)
+        numpy.testing.assert_allclose(polygon.lats, elats)
+
+    def test_dip_90_two_points(self):
+        edges = [Line([Point(2, 2, 10), Point(1, 1, 10)]),
+                 Line([Point(2, 2, 20), Point(1, 1, 20)])]
+        polygon = ComplexFaultSurface.surface_projection_from_fault_data(edges)
+        elons = [1.00003181, 0.99996821, 0.99996819, 1.99996819, 2.00003182,
+                 2.00003181]
+        elats = [0.99996822, 0.99996819, 1.00003178, 2.0000318, 2.0000318,
+                 1.9999682]
+        numpy.testing.assert_allclose(polygon.lons, elons)
+        numpy.testing.assert_allclose(polygon.lats, elats)
+
+    def test_dip_90_self_intersection(self):
+        edges = [Line([Point(1, -2, 10), Point(2, -1.9, 10),
+                       Point(3, -2.1, 10), Point(4, -2, 10)]),
+                 Line([Point(1, -2, 20), Point(2, -1.9, 20),
+                       Point(3, -2.1, 20), Point(4, -2, 20)])]
+        polygon = ComplexFaultSurface.surface_projection_from_fault_data(edges)
+        elons = [3., 1., 2., 4.]
+        elats = [-2.1, -2., -1.9, -2.]
+        numpy.testing.assert_allclose(polygon.lons, elons)
+        numpy.testing.assert_allclose(polygon.lats, elats)
