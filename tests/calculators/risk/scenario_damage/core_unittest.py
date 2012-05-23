@@ -252,8 +252,8 @@ class ScenarioDamageRiskCalculatorTestCase(
         funcs = fm.ffd_set.filter(
             taxonomy="RC").order_by("lsi")
 
-        print compute_dm(funcs, 0.075)
-        self.assertTrue(False)
+        self._close_to([0.975, 0.025, 0.],
+            compute_dm(funcs, 0.075))
 
     def test_post_execute_serialization(self):
         # when --output-type=xml is specified, we serialize results
