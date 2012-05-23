@@ -54,6 +54,18 @@ class AreaSource(PointSource):
         self.polygon = polygon
         self.area_discretization = area_discretization
 
+    def get_rupture_enclosing_polygon(self, dilation=0):
+        """
+        Extends the area source polygon by ``dilation`` plus
+        :meth:`~nhlib.source.point.PointSource._get_max_rupture_projection_radius`.
+
+        See :meth:`superclass method
+        <nhlib.source.base.SeismicSource.get_rupture_enclosing_polygon>`
+        for parameter and return value definition.
+        """
+        max_rup_radius = self._get_max_rupture_projection_radius()
+        return self.polygon.dilate(max_rup_radius + dilation)
+
     def iter_ruptures(self, temporal_occurrence_model):
         """
         See :meth:`nhlib.source.base.SeismicSource.iter_ruptures`
