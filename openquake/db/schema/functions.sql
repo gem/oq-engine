@@ -455,6 +455,7 @@ AS $$
         raise Exception(fmt("no limit states supplied"))
 
     imls = NEW["imls"]
+    no_damage_limit = NEW["no_damage_limit"]
     imt = NEW["imt"]
     if NEW["format"] == "discrete":
         assert NEW.get("max_iml") is None, "Maximum IML not allowed for discrete fragility model"
@@ -462,9 +463,15 @@ AS $$
         assert imls and len(imls) > 0, "no IMLs for discrete fragility model"
         assert imt, "no IMT for discrete fragility model"
         assert imt in imts, "invalid IMT (%s)" % imt
+        if no_damage_limit is not None:
+            assert no_damage_limit < imls[0], "No Damage Limit must be less than IML values"
+            assert no_damage_limit >= 0, "No Damage Limit must be a positive value"
+        
     else:
         assert imls is None, "IMLs defined for continuous fragility model"
         assert not imt, "IMT defined for continuous fragility model"
+        assert no_damage_limit is None, ("No Damage Limit defined for "
+            "continuous fragility model")
 
     return "OK"
 $$ LANGUAGE plpythonu;
