@@ -164,6 +164,39 @@ class Mesh(object):
         return geodetic.min_distance(self.lons, self.lats, depths1,
                                      mesh.lons, mesh.lats, depths2)
 
+    def get_convex_hull(self):
+        """
+        Get a convex polygon object that contains projections of all the points
+        of the mesh.
+
+        :returns:
+            Instance of :class:`nhlib.geo.polygon.Polygon` that is a convex
+            hull around all the points in this mesh. If the original mesh
+            had only one point, the resulting polygon has a square shape
+            with a side length of 10 meters. If there were only two points,
+            resulting polygon is a stripe 10 meters wide.
+        """
+        # avoid circular imports
+        from nhlib.geo.polygon import Polygon
+        # create a projection centered in the center of points collection
+        proj = geo_utils.get_orthographic_projection(
+            *geo_utils.get_spherical_bounding_box(self.lons, self.lats)
+        )
+        # project all the points and create a shapely multipoint object.
+        # need to copy an array because otherwise shapely misinterprets it
+        coords = numpy.transpose(proj(self.lons, self.lats)).copy()
+        multipoint = shapely.geometry.MultiPoint(coords)
+        # create a 2d polygon from a convex hull around that multipoint
+        polygon2d = multipoint.convex_hull
+        # if mesh had only one point, the convex hull is a point. if there
+        # were two, it is a line string. we need to return a convex polygon
+        # object, so extend that area-less geometries by some arbitrarily
+        # small distance, like five meters.
+        if isinstance(polygon2d, (shapely.geometry.LineString,
+                                  shapely.geometry.Point)):
+            polygon2d = polygon2d.buffer(0.005, 1)
+        return Polygon._from_2d(polygon2d, proj)
+
 
 class RectangularMesh(Mesh):
     """

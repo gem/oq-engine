@@ -19,6 +19,7 @@ import math
 import numpy
 
 from nhlib.geo.point import Point
+from nhlib.geo.polygon import Polygon
 from nhlib.geo.mesh import Mesh, RectangularMesh
 from nhlib.geo import _utils as geo_utils
 
@@ -200,6 +201,37 @@ class MeshGetMinDistanceTestCase(unittest.TestCase):
         self._test([Point(0, 0, 1), Point(0, 1, 2), Point(0, 2, 3)],
                    [Point(0, 1.5, 3), Point(0, 1.5, 0.9)],
                    expected_distance_indexes=[2, 1])
+
+
+class MeshConvexHullTestCase(unittest.TestCase):
+    def test_two_points(self):
+        mesh = Mesh(numpy.array([-10., -11.]), numpy.array([-12., -13.]), None)
+        polygon = mesh.get_convex_hull()
+        self.assertIsInstance(polygon, Polygon)
+        elons = [-10.99996704, -11.0000323, -11.00003296, -10.00003295,
+                 -9.99996795, -9.99996705]
+        elats = [-13.00003147, -13.00003212, -12.99996853, -11.99996865,
+                 -11.99996776, -12.00003135]
+        numpy.testing.assert_allclose(polygon.lons, elons)
+        numpy.testing.assert_allclose(polygon.lats, elats)
+
+    def test_many_points(self):
+        lons = numpy.array([0.7, 0.6, 0.4, 0.6, 0.3, 0.9, 0.5, 0.4])
+        lats = numpy.array([0.8, 0.5, 0.2, 0.7, 0.2, 0.4, 0.9, 0.4])
+        mesh = Mesh(lons, lats, None)
+        polygon = mesh.get_convex_hull()
+        elons = [0.4, 0.3, 0.5, 0.7, 0.9]
+        elats = [0.2, 0.2, 0.9, 0.8, 0.4]
+        numpy.testing.assert_allclose(polygon.lons, elons)
+        numpy.testing.assert_allclose(polygon.lats, elats)
+
+    def test_one_point(self):
+        mesh = Mesh.from_points_list([Point(7, 7)])
+        polygon = mesh.get_convex_hull()
+        elons = [7.0000453, 7., 6.9999547, 7]
+        elats = [7., 6.99995503, 7., 7.00004497]
+        numpy.testing.assert_allclose(polygon.lons, elons)
+        numpy.testing.assert_allclose(polygon.lats, elats)
 
 
 class RectangularMeshCreationTestCase(unittest.TestCase):
