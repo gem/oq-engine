@@ -796,16 +796,6 @@ class ShapesUtilsTestCase(unittest.TestCase):
         test(48.2952067, site5, site3)
         test(43.7518411, site5, site6)
 
-    def test_java_site(self):
-        lon = -118.3
-        lat = 34.12
-        site = shapes.java_site(lon, lat)
-
-        self.assertEquals('org.opensha.commons.data.Site',
-                          site.__class__.__name__)
-        self.assertAlmostEqual(lon, site.getLocation().getLongitude())
-        self.assertAlmostEqual(lat, site.getLocation().getLatitude())
-
 
 class FieldTestCase(unittest.TestCase):
 
@@ -839,7 +829,7 @@ class GridTestCase(unittest.TestCase):
     def test_grid_iterates_all_points(self):
         # basic grid
         constraint = shapes.RegionConstraint.from_simple(
-            (10.0, 10.0), (100.0, 100.0))
+            (120.0, 30.0), (100.0, 10.0))
         constraint.cell_size = 10.0
         self._test_expected_points(constraint.grid)
 
