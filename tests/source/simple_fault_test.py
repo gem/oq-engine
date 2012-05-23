@@ -22,7 +22,7 @@ from nhlib.source.simple_fault import SimpleFaultSource
 from nhlib.source.rupture import ProbabilisticRupture
 from nhlib.mfd import TruncatedGRMFD
 from nhlib.scalerel.peer import PeerMSR
-from nhlib.geo import Point, Line, Polygon
+from nhlib.geo import Point, Line
 from nhlib.tom import PoissonTOM
 
 from tests import assert_angles_equal
