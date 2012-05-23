@@ -60,7 +60,8 @@ class ScenarioRiskQATest(unittest.TestCase):
             actual_lm_data.append(node_data)
 
         helpers.assertDeepAlmostEqual(
-            self, expected_data, actual_lm_data, places=self.LOSSMAP_PRECISION)
+            self, sorted(expected_data), sorted(actual_lm_data),
+            places=self.LOSSMAP_PRECISION)
 
     def test_scenario_risk(self):
         # This test exercises the 'mean-based' path through the Scenario Risk
