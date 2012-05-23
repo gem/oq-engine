@@ -73,8 +73,8 @@ class PolygonResampleSegmentsTestCase(unittest.TestCase):
         input_lats = [-2, -2, 0, 0]
 
         lons, lats = polygon.get_resampled_coordinates(input_lons, input_lats)
-        expected_lons = [-2, -1, 0, 0, 0, -1, -2, -2, -2]
-        expected_lats = [-2, -2, -2, -1, 0, 0, 0, -1, -2]
+        expected_lons = [-2, -1, 0, 0, 0, -1, -2, -2]
+        expected_lats = [-2, -2, -2, -1, 0, 0, 0, -1]
         self.assertTrue(
             numpy.allclose(lons, expected_lons, atol=1e-3, rtol=0),
             msg='%s != %s' % (lons, expected_lons)
@@ -91,7 +91,7 @@ class PolygonResampleSegmentsTestCase(unittest.TestCase):
         lons, lats = polygon.get_resampled_coordinates(input_lons, input_lats)
         self.assertTrue(all(-180 <= lon <= 180 for lon in lons))
         expected_lons = [177, 179, -179, -177, -177, -177, -177, -179, 179,
-                         177, 177, 177, 177]
+                         177, 177, 177]
         self.assertTrue(
             numpy.allclose(lons, expected_lons, atol=1e-4, rtol=0),
             msg='%s != %s' % (lons, expected_lons)

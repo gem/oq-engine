@@ -213,7 +213,7 @@ def get_resampled_coordinates(lons, lats):
 
     :return:
         A tuple of two numpy arrays: longitudes and latitudes
-        of resampled vertices. The last point repeats the first one.
+        of resampled vertices.
     """
     num_coords = len(lons)
     assert num_coords == len(lats)
@@ -244,7 +244,5 @@ def get_resampled_coordinates(lons, lats):
         else:
             resampled_lons.append(lon2)
             resampled_lats.append(lat2)
-    # we don't cut off the last point so it repeats the first one.
-    # shapely polygon is ok with that (we even save it from extra
-    # work of copying the last point for us).
-    return numpy.array(resampled_lons), numpy.array(resampled_lats)
+    # we cut off the last point because it repeats the first one.
+    return numpy.array(resampled_lons[:-1]), numpy.array(resampled_lats[:-1])
