@@ -79,6 +79,26 @@ class SimpleFaultSource(SeismicSource):
                              'ruptures of magnitude %s' %
                              (rupture_mesh_spacing, min_mag))
 
+    def get_rupture_enclosing_polygon(self, dilation=0):
+        """
+        Uses :meth:`nhlib.geo.surface.simple_fault.SimpleFaultSurface.surface_projection_from_fault_data`
+        for getting the fault's surface projection and then calls
+        its :meth:`~nhlib.geo.polygon.Polygon.dilate` method passing
+        in ``dilation`` parameter.
+
+        See :meth:`superclass method
+        <nhlib.source.base.SeismicSource.get_rupture_enclosing_polygon>`
+        for parameter and return value definition.
+        """
+        polygon = SimpleFaultSurface.surface_projection_from_fault_data(
+            self.fault_trace, self.upper_seismogenic_depth,
+            self.lower_seismogenic_depth, self.dip
+        )
+        if dilation:
+            return polygon.dilate(dilation)
+        else:
+            return polygon
+
     def iter_ruptures(self, temporal_occurrence_model):
         """
         See :meth:`nhlib.source.base.SeismicSource.iter_ruptures`.
