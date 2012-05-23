@@ -30,10 +30,12 @@ from scipy.stats.mstats import mquantiles
 
 from openquake import java
 from openquake import kvs
+from openquake import shapes
 from openquake.calculators.base import Calculator
 from openquake.db import models
 from openquake.input import logictree
 from openquake.java import list_to_jdouble_array
+from openquake.job.config import ValidationException
 from openquake.logs import LOG
 from openquake.nrml import parsers as nrml_parsers
 from openquake.utils import config
@@ -235,6 +237,25 @@ def store_site_model(input_mdl, source):
         sm.save()
 
 
+def validate_site_model(sm_nodes, sites):
+    """Given the geometry for a site model and the geometry of interest for the
+    calculation, make sure the geometry of interest lies completely inside of
+    the convex hull formed by the site model locations.
+
+    :param sm_nodes:
+        Sequence of :class:`~openquake.db.models.SiteModel` objects.
+    :param sites:
+        Sequence of :class:`~openquake.shapes.Site` objects which represent the
+        calculation points of interest.
+
+    :raises:
+        :exception:`~openquake.job.config.ValidationException` if the area of
+        interest (given as a collection of sites) is not entirely contained by
+        the site model.
+    """
+
+
+
 class BaseHazardCalculator(Calculator):
     """Contains common functionality for Hazard calculators"""
 
@@ -306,7 +327,7 @@ class BaseHazardCalculator(Calculator):
         jpype = java.jvm()
         jsite_list = java.jclass("ArrayList")()
         for x in site_list:
-            site = x.to_java()
+            site = shapes.java_site(x.longitude, x.latitude)
 
             vs30 = java.jclass("DoubleParameter")(jpype.JString("Vs30"))
             vs30.setValue(

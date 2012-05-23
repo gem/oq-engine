@@ -40,9 +40,6 @@ LOGGER = logs.LOG
 
 logs.set_logger_level(LOGGER, logs.LEVELS.get('debug'))
 
-LineString = geometry.LineString  # pylint: disable=C0103
-Point = geometry.Point            # pylint: disable=C0103
-
 
 class Region(object):
     """A container of polygons, used for bounds checking."""
@@ -956,3 +953,19 @@ def hdistance(lat1, lon1, lat2, lon2):
 
     # earth's mean radius
     return 6371.0072 * c
+
+
+def java_site(lon, lat):
+    """Construct a `org.opensha.commons.data.Site` object using jpype.
+
+    :param float lon:
+        Site longitude.
+    :param float lat:
+        Site latitude.
+    :returns:
+        A `org.opensha.commons.data.Site` jpype object.
+    """
+    jpype = java.jvm()
+    loc_class = jpype.JClass("org.opensha.commons.geo.Location")
+    site_class = jpype.JClass("org.opensha.commons.data.Site")
+    return site_class(loc_class(lat, lon))
