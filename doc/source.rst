@@ -18,6 +18,7 @@ Point source
 
 .. automodule:: nhlib.source.point
     :members:
+    :private-members:
 
 
 -----------
