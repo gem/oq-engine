@@ -465,8 +465,7 @@ AS $$
         assert imt in imts, "invalid IMT (%s)" % imt
         if no_damage_limit:
             assert no_damage_limit < imls[0], "No Damage Limit must be less than IML values"
-            assert no_damage_limit >= 0, "No Damage Limit must be a positive
-            value"
+            assert no_damage_limit >= 0, "No Damage Limit must be a positive value"
         
     else:
         assert imls is None, "IMLs defined for continuous fragility model"
