@@ -25,6 +25,7 @@ class _BaseSeismicSourceTestCase(unittest.TestCase):
     def setUp(self):
         class FakeSource(SeismicSource):
             iter_ruptures = None
+            get_rupture_enclosing_polygon = None
         self.source_class = FakeSource
         mfd = EvenlyDiscretizedMFD(min_mag=3, bin_width=1,
                                    occurrence_rates=[5, 6, 7])
