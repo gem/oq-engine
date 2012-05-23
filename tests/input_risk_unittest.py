@@ -354,6 +354,7 @@ class CFragilityDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         expected_lss = ["slight", "moderate", "extensive", "complete"]
         self.assertEqual(expected_lss, model.lss)
         self.assertIs(self.input, model.input)
+        self.assertIs(None, model.no_damage_limit)
 
         ffcs = model.ffc_set.all().order_by("taxonomy", "lsi")
         ffds = model.ffd_set.all()
@@ -424,6 +425,7 @@ class DFragilityDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         expected_lss = ["minor", "moderate", "severe", "collapse"]
         self.assertEqual(expected_lss, model.lss)
         self.assertIs(self.input, model.input)
+        self.assertEqual(0.2, model.no_damage_limit)
 
         ffcs = model.ffc_set.all()
         ffds = model.ffd_set.all().order_by("taxonomy", "lsi")
