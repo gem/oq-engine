@@ -16,6 +16,9 @@
 """
 Module :mod:`nhlib.site` defines :class:`Site`.
 """
+import numpy
+
+from nhlib.geo.mesh import Mesh
 
 
 class Site(object):
@@ -55,3 +58,48 @@ class Site(object):
         self.vs30measured = vs30measured
         self.z1pt0 = z1pt0
         self.z2pt5 = z2pt5
+
+
+class SiteCollection(object):
+    """
+    A collection of :class:`sites <Site>`.
+
+    Instances of this class are intended to represent a large collection
+    of sites in a most efficient way in terms of memory usage.
+
+    :param sites:
+        A list of instances of :class:`Site` class.
+    """
+    def __init__(self, sites):
+        self.vs30 = numpy.zeros(len(sites))
+        self.vs30measured = numpy.zeros(len(sites), dtype=bool)
+        self.z1pt0 = self.vs30.copy()
+        self.z2pt5 = self.vs30.copy()
+        lons = self.vs30.copy()
+        lats = self.vs30.copy()
+
+        for i in xrange(len(sites)):
+            self.vs30[i] = sites[i].vs30
+            self.vs30measured[i] = sites[i].vs30measured
+            self.z1pt0[i] = sites[i].z1pt0
+            self.z2pt5[i] = sites[i].z2pt5
+            lons[i] = sites[i].location.longitude
+            lats[i] = sites[i].location.latitude
+
+        self.mesh = Mesh(lons, lats, depths=None)
+
+        # protect arrays from being accidentally changed. it is useful
+        # because we pass these arrays directly to a GMPE through
+        # a SiteContext object and if a GMPE is implemented poorly it could
+        # modify the site values, thereby corrupting site and all the
+        # subsequent calculation. note that this doesn't protect arrays from
+        # being changed by calling itemset()
+        for arr in (self.vs30, self.vs30measured, self.z1pt0, self.z2pt5,
+                    self.mesh.lons, self.mesh.lats):
+            arr.flags.writeable = False
+
+    def __len__(self):
+        """
+        Return a number of sites in a collection.
+        """
+        return len(self.mesh)

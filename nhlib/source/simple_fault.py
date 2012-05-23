@@ -99,7 +99,7 @@ class SimpleFaultSource(SeismicSource):
         fault_length = (mesh_cols - 1) * self.rupture_mesh_spacing
         fault_width = (mesh_rows - 1) * self.rupture_mesh_spacing
 
-        for (mag, mag_occ_rate) in self.mfd.get_annual_occurrence_rates():
+        for (mag, mag_occ_rate) in self.get_annual_occurrence_rates():
             rup_cols, rup_rows = self._get_rupture_dimensions(
                 fault_length, fault_width, mag
             )

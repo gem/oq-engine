@@ -92,3 +92,22 @@ class SeismicSource(object):
             Generator of instances
             of :class:`~nhlib.source.rupture.ProbabilisticRupture`.
         """
+
+    def get_annual_occurrence_rates(self, min_rate=0):
+        """
+        Get a list of pairs "magnitude -- annual occurrence rate".
+
+        The list is taken from assigned MFD object
+        (see :meth:`nhlib.mfd.base.BaseMFD.get_annual_occurrence_rate`)
+        with simple filtering by rate applied.
+
+        :param min_rate:
+            A non-negative value to filter magnitudes by minimum annual
+            occurrence rate. Only magnitudes with rates greater than that
+            are included in the result list.
+        :returns:
+            A list of two-item tuples -- magnitudes and occurrence rates.
+        """
+        return [(mag, occ_rate)
+                for (mag, occ_rate) in self.mfd.get_annual_occurrence_rates()
+                if min_rate is None or occ_rate > min_rate]
