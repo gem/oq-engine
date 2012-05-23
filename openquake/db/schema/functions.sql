@@ -463,7 +463,7 @@ AS $$
         assert imls and len(imls) > 0, "no IMLs for discrete fragility model"
         assert imt, "no IMT for discrete fragility model"
         assert imt in imts, "invalid IMT (%s)" % imt
-        if no_damage_limit:
+        if no_damage_limit is not None:
             assert no_damage_limit < imls[0], "No Damage Limit must be less than IML values"
             assert no_damage_limit >= 0, "No Damage Limit must be a positive value"
         
