@@ -269,8 +269,7 @@ class JobContext(object):
             sites = []
 
             for coord in coords:
-                sites.append(nhlib_geo.Point(coord[0], coord[1]))
-                # sites.append(shapes.Site(coord[0], coord[1]))
+                sites.append(shapes.Site(coord[0], coord[1]))
 
             self.sites = sites
         else:
@@ -289,8 +288,7 @@ class JobContext(object):
             self._extract_coords('REGION_VERTEX'))
 
         region.cell_size = self['REGION_GRID_SPACING']
-        return [nhlib_geo.Point(x.longitude, x.latitude)
-                for x in region.grid.centers()]
+        return region.grid.centers()
 
     def build_nrml_path(self, nrml_file):
         """Return the complete output path for the given nrml_file"""
