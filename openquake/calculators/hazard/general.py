@@ -327,7 +327,7 @@ class BaseHazardCalculator(Calculator):
         jpype = java.jvm()
         jsite_list = java.jclass("ArrayList")()
         for x in site_list:
-            site = shapes.java_site(x.longitude, x.latitude)
+            site = x.to_java()
 
             vs30 = java.jclass("DoubleParameter")(jpype.JString("Vs30"))
             vs30.setValue(
