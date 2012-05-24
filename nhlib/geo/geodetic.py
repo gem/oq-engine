@@ -251,7 +251,7 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
     http://williams.best.vwh.net/avform.htm#LL
     """
     assert npoints > 1
-    lon, lat = numpy.radians(lon), numpy.radians(lat)
+    rlon, rlat = numpy.radians(lon), numpy.radians(lat)
     tc = numpy.radians(360 - azimuth)
     hdists = numpy.arange(npoints, dtype=float)
     hdists *= (hdist / EARTH_RADIUS) / (npoints - 1)
@@ -260,8 +260,8 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
 
     sin_dists = numpy.sin(hdists)
     cos_dists = numpy.cos(hdists)
-    sin_lat = numpy.sin(lat)
-    cos_lat = numpy.cos(lat)
+    sin_lat = numpy.sin(rlat)
+    cos_lat = numpy.cos(rlat)
 
     sin_lats = sin_lat * cos_dists + cos_lat * sin_dists * numpy.cos(tc)
     sin_lats = sin_lats.clip(-1., 1.)
@@ -269,10 +269,15 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
 
     dlon = numpy.arctan2(numpy.sin(tc) * sin_dists * cos_lat,
                          cos_dists - sin_lat * sin_lats)
-    lons = numpy.mod(lon - dlon + numpy.pi, 2 * numpy.pi) - numpy.pi
+    lons = numpy.mod(rlon - dlon + numpy.pi, 2 * numpy.pi) - numpy.pi
     lons = numpy.degrees(lons)
 
     depths = vdists + depth
+
+    # the first point should be left intact
+    lons[0] = lon
+    lats[0] = lat
+    depths[0] = depth
 
     return lons, lats, depths
 

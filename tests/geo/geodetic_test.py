@@ -250,6 +250,11 @@ class NPointsTowardsTest(unittest.TestCase):
         self.assertTrue(numpy.allclose(lons, expected_lons))
         self.assertTrue(numpy.allclose(lats, expected_lats))
         self.assertTrue(numpy.allclose(depths, expected_depths))
+        # the first point should be exactly the same
+        # as the original starting point
+        self.assertEqual(lons[0], -30.5)
+        self.assertEqual(lats[0], 23.6)
+        self.assertEqual(depths[0], 55)
 
     def test_zero_distance(self):
         lon, lat, depth, azimuth = 12, 34, 56, 78
