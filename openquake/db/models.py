@@ -901,7 +901,8 @@ class OqJobProfile(djm.Model):
        (u"measured", u"Value obtained from on-site measurements"),
        (u"inferred", u"Estimated value"),
     )
-    vs30_type = djm.TextField(choices=VS30_TYPE_CHOICES, default="measured")
+    vs30_type = djm.TextField(choices=VS30_TYPE_CHOICES, default="measured",
+                              null=True)
     depth_to_1pt_0km_per_sec = djm.FloatField(default=100.0)
     asset_life_expectancy = djm.FloatField(null=True)
     interest_rate = djm.FloatField(null=True)
