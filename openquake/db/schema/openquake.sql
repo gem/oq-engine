@@ -509,7 +509,7 @@ CREATE TABLE hzrdi.focal_mechanism (
 CREATE TABLE hzrdi.parsed_source (
     id SERIAL PRIMARY KEY,
     input_id INTEGER NOT NULL,
-    source_type VARCHAR NOT NULL DEFAULT 'simple'
+    source_type VARCHAR NOT NULL
         CONSTRAINT enforce_source_type CHECK
         (source_type IN ('area', 'point', 'complex', 'simple')),
     blob TEXT NOT NULL,
