@@ -16,9 +16,13 @@
 
 import unittest
 
+from nhlib import geo
+
 from openquake import engine
+from openquake import shapes
 from openquake.calculators.hazard import general
 from openquake.db import models
+from openquake.job.config import ValidationException
 
 from tests.utils import helpers
 
@@ -91,3 +95,102 @@ class StoreSiteModelTestCase(unittest.TestCase):
         # It would be overkill to test the contents; just check that the number
         # of records is correct.
         self.assertEqual(2601, len(site_model_nodes))
+
+
+class ValidateSiteModelTestCase(unittest.TestCase):
+    """Tests for
+    :function:`openquake.calculators.hazard.general.validate_site_model`.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+
+        # This site model has five points, arranged in an X-shaped pattern:
+        #
+        #   a.....b
+        #   .......
+        #   ...c...
+        #   .......
+        #   d.....e
+        cls.site_model_nodes = [
+            models.SiteModel(location='POINT(-10 10)'),
+            models.SiteModel(location='POINT(10 10)'),
+            models.SiteModel(location='POINT(0 0)'),
+            models.SiteModel(location='POINT(-10 -10)'),
+            models.SiteModel(location='POINT(10 -10)'),
+        ]
+
+    def test_validate_site_model(self):
+        sites_of_interest = [
+            # NOTE(larsbutler): Some of the coordinates which are very close to
+            # 10 or -10 have been set to 9.9999999 or -9.9999999 instead.
+            #
+            # This only applies to __longitude__ coordinate values.
+            #
+            # In theory, these cases should work (especially in the case of the
+            # corners), but in reality this is not true. Probably this is due
+            # to the combination of shapely, polygon, upsampling, and the
+            # coordinates chosen for the test case.
+            # Hopefully this test will serve to clearly document some of
+            # the boundary conditions, and also where we can look if unexpected
+            # errors occur.
+
+            # the edges of the polygon
+            # East edge
+            shapes.Site(9.9999999, 0),
+            # West edge
+            shapes.Site(-9.9999999, 0),
+            # NOTE: The values for the north and south edges were obtained by
+            # trial and error.
+            # North edge
+            shapes.Site(0, 10.1507381),
+            # South edge
+            shapes.Site(0, -10.1507381),
+            # the corners
+            shapes.Site(-9.9999999, 10),
+            shapes.Site(9.9999999, 10),
+            shapes.Site(-10, -10),
+            shapes.Site(9.9999999, -10),
+            # a few points somewhere in the middle, which are obviously inside
+            # the target area
+            shapes.Site(0.0, 0.0),
+            shapes.Site(-2.5, 2.5),
+            shapes.Site(2.5, 2.5),
+            shapes.Site(-2.5, -2.5),
+            shapes.Site(2.5, -2.5),
+        ]
+
+        # this should work without raising any errors
+        general.validate_site_model(self.site_model_nodes, sites_of_interest)
+
+    def test_validate_site_model_invalid(self):
+        test_cases = [
+            # outside of the edges
+            # East edge
+            [shapes.Site(10.0000001, 0)],
+            # West edge
+            [shapes.Site(-10.0000001, 0)],
+            # NOTE: The values for the north south edges were obtained by
+            # trial and error.
+            # North edge
+            [shapes.Site(0, 10.1507382)],
+            # South edge
+            [shapes.Site(0, -10.1507382)],
+            # outside of the corners
+            # first corner (a)
+            [shapes.Site(-10, 10)],
+            [shapes.Site(-9.9999999, 10.0000001)],
+            # second corner (b)
+            [shapes.Site(10, 10)],
+            [shapes.Site(9.9999999, 10.0000001)],
+            # third corner (d)
+            [shapes.Site(-10.0000001, -10)],
+            [shapes.Site(-10, -10.0000001)],
+            # fourth corner (e)
+            [shapes.Site(10.0000001, -10)],
+            [shapes.Site(10, -10.0000001)],
+        ]
+
+        for tc in test_cases:
+            self.assertRaises(ValidationException, general.validate_site_model,
+                              self.site_model_nodes, tc)
