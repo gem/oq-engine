@@ -253,10 +253,10 @@ class PolygonEdgesTestCase(unittest.TestCase):
     def test_corners(self):
         mesh = geo.Mesh.from_points_list(self.corners)
 
-        result = self.poly.contains(mesh)
+        result = self.poly.intersects(mesh)
 
         for x in result.flatten():
-            self.assertFalse(x)
+            self.assertTrue(x)
 
     def test_points_close_to_edges(self):
         # Test points close to the edges:
@@ -274,7 +274,7 @@ class PolygonEdgesTestCase(unittest.TestCase):
 
         mesh = geo.Mesh.from_points_list(points)
 
-        self.assertTrue(self.poly.contains(mesh).all())
+        self.assertTrue(self.poly.intersects(mesh).all())
 
     def test_points_close_to_corners(self):
         # The same boundary conditions apply here (as noted in the test above).
@@ -286,7 +286,7 @@ class PolygonEdgesTestCase(unittest.TestCase):
         ]
         mesh = geo.Mesh.from_points_list(points)
 
-        self.assertTrue(self.poly.contains(mesh).all())
+        self.assertTrue(self.poly.intersects(mesh).all())
 
 
 class PolygonFrom2dTestCase(unittest.TestCase):

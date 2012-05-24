@@ -131,7 +131,7 @@ class Polygon(object):
         new_2d_polygon = self._polygon2d.buffer(dilation)
         return type(self)._from_2d(new_2d_polygon, self._projection)
 
-    def contains(self, mesh):
+    def intersects(self, mesh):
         """
         Check for containment of a :class:`~nhlib.geo.mesh.Mesh` of points.
 
@@ -141,18 +141,20 @@ class Polygon(object):
             :class:`nhlib.geo.mesh.Mesh` instance.
         :returns:
             Numpy array of `bool` values in the same shapes in the input
-            coordinate arrays.
+            coordinate arrays with ``True`` on indexes of points that
+            lie inside the polygon or on one of its edges and ``False``
+            for points that neither lie inside nor touch the boundary.
         """
         self._init_polygon2d()
-        plons, plats = self._projection(mesh.lons, mesh.lats)
+        xx, yy = self._projection(mesh.lons, mesh.lats)
 
         result = numpy.empty(mesh.lons.shape, dtype=bool)
 
         for i in xrange(mesh.lons.size):
-            contains = self._polygon2d.contains(
-                shapely.geometry.Point(plons.item(i), plats.item(i))
+            intersects = self._polygon2d.intersects(
+                shapely.geometry.Point(xx.item(i), yy.item(i))
             )
-            result.itemset(i, contains)
+            result.itemset(i, intersects)
 
         return result
 
