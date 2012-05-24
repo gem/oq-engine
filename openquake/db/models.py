@@ -383,8 +383,7 @@ class ParsedSource(djm.Model):
     """Stores parsed hazard input model sources in serialized python object
        tree format."""
     input = djm.ForeignKey('Input')
-    source_type = djm.TextField(choices=Source.SI_TYPE_CHOICES,
-                                default='simple')
+    source_type = djm.TextField(choices=Source.SI_TYPE_CHOICES)
     blob = djm.TextField(help_text="The BLOB that holds the serialized "
                                    "python object tree.")
     geom = djm.GeometryField(
