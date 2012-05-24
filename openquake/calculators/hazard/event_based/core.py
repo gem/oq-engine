@@ -108,7 +108,7 @@ class EventBasedHazardCalculator(general.BaseHazardCalculator):
         for event_set in ses:
             for rupture in ses[event_set]:
 
-                if self.job_ctxt['GMF_OUTPUT']:
+                if self.job_ctxt['SAVE_GMFS']:
                     common_path = os.path.join(
                         self.job_ctxt.base_path, self.job_ctxt['OUTPUT_DIR'],
                         "gmf-%s-%s" % (str(event_set.replace("!", "_")),
