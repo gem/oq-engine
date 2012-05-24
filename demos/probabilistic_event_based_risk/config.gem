@@ -16,7 +16,7 @@ SOURCE_MODEL_LT_RANDOM_SEED = 23
 GMPE_LT_RANDOM_SEED = 5
 
 # NRML serialization of gmf-* files
-GMF_OUTPUT = false
+SAVE_GMFS = false
 
 GMF_RANDOM_SEED = 3
 
@@ -129,7 +129,5 @@ VULNERABILITY = Messina_vulnerability_model.xml
 # HAZARD_CURVES = hazard_curves.xml
 
 LOSS_CURVES_OUTPUT_PREFIX = loss_curves
-
-AGGREGATE_LOSS_CURVE = true
 
 LOSS_HISTOGRAM_BINS = 25
