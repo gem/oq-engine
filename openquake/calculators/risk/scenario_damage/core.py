@@ -152,12 +152,12 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         :keyword fmodel: fragility model associated to this computation.
         :type fmodel: instance of
             :py:class:`openquake.db.models.FragilityModel`
-        :return: the sum of the fractions per asset taxonomy for the
-            computed block.
+        :return: the sum of the fractions (for each damage state)
+            per asset taxonomy for the computed block.
         :rtype: `dict` where each key is a string representing a
             taxonomy and each value is the sum of fractions of all
             the assets related to that taxonomy (represented as
-            a `numpy.array`)
+            a 2d `numpy.array`)
         """
 
         fm = kwargs["fmodel"]
