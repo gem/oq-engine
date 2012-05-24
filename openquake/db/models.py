@@ -603,10 +603,11 @@ class Input(djm.Model):
         (u'lt_source', u'Source Model Logic Tree'),
         (u'lt_gmpe', u'GMPE Logic Tree'),
         (u'exposure', u'Exposure'),
-        (u'vulnerability', u'Vulnerability'),
         (u'fragility', u'Fragility'),
+        (u'vulnerability', u'Vulnerability'),
         (u'vulnerability_retrofitted', u'Vulnerability Retroffited'),
         (u'rupture', u'Rupture'),
+        (u'site_model', u'Site Model'),
     )
     input_type = djm.TextField(choices=INPUT_TYPE_CHOICES)
     # Number of bytes in the file:
@@ -647,7 +648,7 @@ class ModelContent(djm.Model):
     content_type = djm.TextField()
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"model_content'
 
 
@@ -903,7 +904,8 @@ class OqJobProfile(djm.Model):
        (u"measured", u"Value obtained from on-site measurements"),
        (u"inferred", u"Estimated value"),
     )
-    vs30_type = djm.TextField(choices=VS30_TYPE_CHOICES, default="measured")
+    vs30_type = djm.TextField(choices=VS30_TYPE_CHOICES, default="measured",
+                              null=True)
     depth_to_1pt_0km_per_sec = djm.FloatField(default=100.0)
     asset_life_expectancy = djm.FloatField(null=True)
     interest_rate = djm.FloatField(null=True)
