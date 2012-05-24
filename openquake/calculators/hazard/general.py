@@ -328,7 +328,6 @@ def get_closest_site_model_data(input_model, site):
 
         If there is no site model data, return `None`.
     """
-
     query = """
     SELECT
         hzrdi.site_model.*,
