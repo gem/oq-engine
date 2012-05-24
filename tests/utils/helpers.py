@@ -194,7 +194,7 @@ def run_job(config_file, params=None, check_output=False):
         If the return code of the subprocess call is not 0, a
         :exception:`subprocess.CalledProcessError` is raised.
     """
-    args = ["bin/openquake", "--config-file=" + config_file]
+    args = ["bin/openquake", "--force-inputs", "--config-file=" + config_file]
     if not params is None:
         args.extend(params)
     if check_output:
@@ -578,13 +578,16 @@ class DbTestCase(object):
         [input.delete() for input in inputs]
 
     @classmethod
-    def setup_job_profile(cls, job, force_inputs):
+    def setup_job_profile(cls, job, force_inputs, save2db=True):
         """Create a profile for the given job.
 
         :param job: The :class:`openquake.db.models.OqJob` instance to use
         :param bool force_inputs: If `True` the model input files will be
             parsed and the resulting content written to the database no matter
             what.
+        :param bool save2db: If `False` the job profile instance will be
+            returned but not saved to the database. Otherwise it is saved to
+            the database and returned then.
         :returns: a :class:`openquake.db.models.OqJobProfile` instance
         """
         oqjp = models.OqJobProfile()
@@ -641,12 +644,14 @@ class DbTestCase(object):
             "POLYGON((-81.3 37.2, -80.63 38.04, -80.02 37.49, -81.3 37.2))")
         oqjp.source_model_lt_random_seed = 23
         oqjp.gmpe_lt_random_seed = 5
-        oqjp.save()
+        if save2db:
+            oqjp.save()
         return oqjp
 
     @classmethod
     def setup_classic_job(cls, create_job_path=True, upload_id=None,
-                          inputs=None, force_inputs=False, omit_profile=False):
+                          inputs=None, force_inputs=False, omit_profile=False,
+                          user_name="openquake"):
         """Create a classic job with associated upload and inputs.
 
         :param bool create_job_path: if set the path for the job will be
@@ -658,11 +663,12 @@ class DbTestCase(object):
             parsed and the resulting content written to the database no matter
             what.
         :param bool omit_profile: If `True` no job profile will be created.
+        :param str user_name: The name of the user that is running the job.
         :returns: a :py:class:`db.models.OqJob` instance
         """
         assert upload_id is None  # temporary
 
-        job = engine.prepare_job()
+        job = engine.prepare_job(user_name)
         if not omit_profile:
             oqjp = cls.setup_job_profile(job, force_inputs)
             models.Job2profile(oq_job=job, oq_job_profile=oqjp).save()

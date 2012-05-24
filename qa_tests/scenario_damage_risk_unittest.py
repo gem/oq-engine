@@ -16,12 +16,15 @@
 import unittest
 import numpy
 
-from openquake.db import models
+from lxml import etree
+
+from openquake.nrml.utils import nrml_schema_file
+from openquake.xml import NRML_NS
 from openquake.db.models import OqJob
-from openquake.db.models import (
-DmgDistPerAsset, DmgDistPerAssetData, ExposureModel)
 
 from tests.utils import helpers
+
+OUTPUT_DIR = helpers.demo_file("scenario_damage_risk/computed_output")
 
 
 class ScenarioDamageRiskQATest(unittest.TestCase):
@@ -36,53 +39,50 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
         self._verify_job_succeeded()
         self._verify_damage_states()
 
-        [asset] = self._asset("a1")
-        [data] = self._data(asset, "no_damage")
+        ds = self._ds("a1", "no_damage")
 
-        self._close_to(1083.2878086376, data.mean)
-        self._close_to(926.8114705410, data.stddev)
+        self._close_to(1562.6067550208, float(ds.get("mean")))
+        self._close_to(968.9350257674, float(ds.get("stddev")))
 
-        [data] = self._data(asset, "LS1")
+        ds = self._ds("a1", "LS1")
 
-        self._close_to(1193.2879148011, data.mean)
-        self._close_to(471.4571312182, data.stddev)
+        self._close_to(1108.0189275488, float(ds.get("mean")))
+        self._close_to(652.7358505746, float(ds.get("stddev")))
 
-        [data] = self._data(asset, "LS2")
+        ds = self._ds("a1", "LS2")
 
-        self._close_to(723.4242765613, data.mean)
-        self._close_to(755.9750053225, data.stddev)
+        self._close_to(329.3743174305, float(ds.get("mean")))
+        self._close_to(347.3929450270, float(ds.get("stddev")))
 
-        [asset] = self._asset("a2")
-        [data] = self._data(asset, "no_damage")
+        ds = self._ds("a2", "no_damage")
 
-        self._close_to(42.3377447524, data.mean)
-        self._close_to(70.0892678237, data.stddev)
+        self._close_to(56.7201291212, float(ds.get("mean")))
+        self._close_to(117.7802813522, float(ds.get("stddev")))
 
-        [data] = self._data(asset, "LS1")
+        ds = self._ds("a2", "LS1")
 
-        self._close_to(730.4180238456, data.mean)
-        self._close_to(494.7514529615, data.stddev)
+        self._close_to(673.1047565606, float(ds.get("mean")))
+        self._close_to(485.2023172324, float(ds.get("stddev")))
 
-        [data] = self._data(asset, "LS2")
+        ds = self._ds("a2", "LS2")
 
-        self._close_to(1227.2442314019, data.mean)
-        self._close_to(549.4191085089, data.stddev)
+        self._close_to(1270.1751143182, float(ds.get("mean")))
+        self._close_to(575.8724057319, float(ds.get("stddev")))
 
-        [asset] = self._asset("a3")
-        [data] = self._data(asset, "no_damage")
+        ds = self._ds("a3", "no_damage")
 
-        self._close_to(264.2663623864, data.mean)
-        self._close_to(228.8391071035, data.stddev)
+        self._close_to(417.3296948271, float(ds.get("mean")))
+        self._close_to(304.4769498434, float(ds.get("stddev")))
 
-        [data] = self._data(asset, "LS1")
+        ds = self._ds("a3", "LS1")
 
-        self._close_to(451.0114061630, data.mean)
-        self._close_to(140.2229465594, data.stddev)
+        self._close_to(387.2084383654, float(ds.get("mean")))
+        self._close_to(181.1415598664, float(ds.get("stddev")))
 
-        [data] = self._data(asset, "LS2")
+        ds = self._ds("a3", "LS2")
 
-        self._close_to(284.7222314506, data.mean)
-        self._close_to(248.9585500745, data.stddev)
+        self._close_to(195.4618668074, float(ds.get("mean")))
+        self._close_to(253.91309010185, float(ds.get("stddev")))
 
     def test_dda_dsc(self):
         cfg = helpers.demo_file("scenario_damage_risk/config_discrete.gem")
@@ -91,87 +91,85 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
         self._verify_job_succeeded()
         self._verify_damage_states()
 
-        [asset] = self._asset("a1")
-        [data] = self._data(asset, "no_damage")
+        ds = self._ds("a1", "no_damage")
 
-        self._close_to(554.6860951500, data.mean)
-        self._close_to(598.7552048028, data.stddev)
+        self._close_to(875.8107820287, float(ds.get("mean")))
+        self._close_to(757.5401928931, float(ds.get("stddev")))
 
-        [data] = self._data(asset, "LS1")
+        ds = self._ds("a1", "LS1")
 
-        self._close_to(1399.3356341082, data.mean)
-        self._close_to(349.3604258216, data.stddev)
+        self._close_to(1448.2962869440, float(ds.get("mean")))
+        self._close_to(256.1531925368, float(ds.get("stddev")))
 
-        [data] = self._data(asset, "LS2")
+        ds = self._ds("a1", "LS2")
 
-        self._close_to(1045.9782707418, data.mean)
-        self._close_to(749.3971884847, data.stddev)
+        self._close_to(675.8929310273, float(ds.get("mean")))
+        self._close_to(556.7659393118, float(ds.get("stddev")))
 
-        [asset] = self._asset("a2")
-        [data] = self._data(asset, "no_damage")
+        ds = self._ds("a2", "no_damage")
 
-        self._close_to(354.7536330800, data.mean)
-        self._close_to(257.9890985575, data.stddev)
+        self._close_to(344.9084922789, float(ds.get("mean")))
+        self._close_to(300.6112307894, float(ds.get("stddev")))
 
-        [data] = self._data(asset, "LS1")
+        ds = self._ds("a2", "LS1")
 
-        self._close_to(779.0404984000, data.mean)
-        self._close_to(153.3343303635, data.stddev)
+        self._close_to(747.6241297573, float(ds.get("mean")))
+        self._close_to(144.6485296163, float(ds.get("stddev")))
 
-        [data] = self._data(asset, "LS2")
+        ds = self._ds("a2", "LS2")
 
-        self._close_to(866.2058685200, data.mean)
-        self._close_to(398.0973556984, data.stddev)
+        self._close_to(907.4673779638, float(ds.get("mean")))
+        self._close_to(417.3073783656, float(ds.get("stddev")))
 
-        [asset] = self._asset("a3")
-        [data] = self._data(asset, "no_damage")
+        ds = self._ds("a3", "no_damage")
 
-        self._close_to(108.3440263950, data.mean)
-        self._close_to(122.0563889256, data.stddev)
+        self._close_to(224.4178071959, float(ds.get("mean")))
+        self._close_to(220.6516140873, float(ds.get("stddev")))
 
-        [data] = self._data(asset, "LS1")
+        ds = self._ds("a3", "LS1")
 
-        self._close_to(477.5115825656, data.mean)
-        self._close_to(138.8593089805, data.stddev)
+        self._close_to(465.6439615527, float(ds.get("mean")))
+        self._close_to(136.9281761924, float(ds.get("stddev")))
 
-        [data] = self._data(asset, "LS2")
+        ds = self._ds("a3", "LS2")
 
-        self._close_to(414.1443910394, data.mean)
-        self._close_to(232.3139816472, data.stddev)
+        self._close_to(309.9382312514, float(ds.get("mean")))
+        self._close_to(246.8442491255, float(ds.get("stddev")))
 
-    def _asset(self, asset_ref):
+    def _ds(self, asset_ref, damage_state):
         job = OqJob.objects.latest("id")
+        filename = "%s/dmg-dist-asset-%s.xml" % (OUTPUT_DIR, job.id)
 
-        [ism] = models.inputs4job(job.id, input_type="exposure")
-        [em] = ExposureModel.objects.filter(owner=ism.owner, input=ism)
+        xpath = ("{%(ns)s}dmgDistPerAsset/{%(ns)s}DDNode/"
+            "{%(ns)s}asset[@assetRef='" + asset_ref + "']/"
+            "{%(ns)s}damage[@ds='" + damage_state + "']")
 
-        return em.exposuredata_set.filter(asset_ref=asset_ref)
+        return self._get(filename, xpath)
 
     def _close_to(self, expected, actual):
         self.assertTrue(numpy.allclose(actual, expected, atol=0.0, rtol=0.001))
 
-    def _data(self, asset, damage_state):
-        job = OqJob.objects.latest("id")
-
-        [dda] = DmgDistPerAsset.objects.filter(output__oq_job=job.id,
-                output__output_type="dmg_dist_per_asset")
-
-        return DmgDistPerAssetData.objects.filter(
-            dmg_dist_per_asset=dda, exposure_data=asset,
-            dmg_state=damage_state)
-
     def _verify_damage_states(self):
         job = OqJob.objects.latest("id")
+        filename = "%s/dmg-dist-asset-%s.xml" % (OUTPUT_DIR, job.id)
 
-        [dda] = DmgDistPerAsset.objects.filter(output__oq_job=job.id,
-                output__output_type="dmg_dist_per_asset")
+        xpath = ('{%(ns)s}dmgDistPerAsset/{%(ns)s}damageStates')
+        dmg_states = self._get(filename, xpath).text.split()
 
-        self.assertEquals(["no_damage", "LS1", "LS2"], dda.dmg_states)
+        self.assertEquals(["no_damage", "LS1", "LS2"], dmg_states)
 
     def _verify_job_succeeded(self):
         job = OqJob.objects.latest("id")
         self.assertEqual("succeeded", job.status)
 
     def _run_job(self, config):
-        ret_code = helpers.run_job(config)
+        ret_code = helpers.run_job(config, ["--output-type=xml"])
         self.assertEquals(0, ret_code)
+
+    def _get(self, filename, xpath):
+        schema = etree.XMLSchema(file=nrml_schema_file())
+        parser = etree.XMLParser(schema=schema)
+
+        tree = etree.parse(filename, parser=parser)
+
+        return tree.getroot().find(xpath % {'ns': NRML_NS})

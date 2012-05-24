@@ -192,22 +192,29 @@ class HazardMandatoryParamsValidator(MandatoryParamsValidator):
             (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
             tuple is returned
         """
-        result, msgs = super(HazardMandatoryParamsValidator, self).is_valid()
-        # The check failed in the base class already, just return.
-        if not result:
-            return (result, msgs)
-        # The check in the base class succeeded. Now -- in addition -- make
-        # sure that we have a 'java_name' set for each mandatory hazard
-        # parameter.
-        params_lacking_java_name = [p for p in self.MANDATORY_PARAMS
-                                    if PARAMS[p].java_name is None]
-        if params_lacking_java_name:
-            msg = ("The following mandatory hazard parameter(s) lack "
-                   "a 'java_name' property: %s"
-                   % ", ".join(params_lacking_java_name))
-            return(False, [msg])
+        if 'SITE_MODEL' in self.params:
+            # We can ignore the other mandatory parameters.
+            # The site model will provide site-specific vs30, vs30 type,
+            # z 1.0, and z 2.5 values.
+            return (True, [])
         else:
-            return (result, msgs)
+            result, msgs = super(
+                HazardMandatoryParamsValidator, self).is_valid()
+            # The check failed in the base class already, just return.
+            if not result:
+                return (result, msgs)
+            # The check in the base class succeeded. Now -- in addition -- make
+            # sure that we have a 'java_name' set for each mandatory hazard
+            # parameter.
+            params_lacking_java_name = [p for p in self.MANDATORY_PARAMS
+                                        if PARAMS[p].java_name is None]
+            if params_lacking_java_name:
+                msg = ("The following mandatory hazard parameter(s) lack "
+                       "a 'java_name' property: %s"
+                       % ", ".join(params_lacking_java_name))
+                return(False, [msg])
+            else:
+                return (result, msgs)
 
 
 class ComputationTypeValidator(object):
@@ -649,6 +656,30 @@ class EventBasedRiskValidator(object):
         return (True, [])
 
 
+class AssetCorrelationValidator(object):
+    """Validator for ASSET_CORRELATION parameter (Scenario and Event-Based
+    Risk only).
+    """
+
+    def __init__(self, sections, params):
+        self.sections = sections
+        self.params = params
+
+    def is_valid(self):
+        """If this is a risk job of type Scenario or Event-Based, make sure
+        ASSET_CORRELATION is either a) undefined, b) 'perfect', or c)
+        'uncorrelated'."""
+        if RISK_SECTION in self.sections:
+            asset_corr = self.params.get('ASSET_CORRELATION')
+
+            if asset_corr is not None:
+                if not asset_corr in ('uncorrelated', 'perfect'):
+                    return (False, ['ASSET_CORRELATION must be undefined,'
+                                    ' "uncorrelated", or "perfect".'])
+
+        return (True, [])
+
+
 def default_validators(sections, params):
     """Create the set of default validators for a job.
 
@@ -702,5 +733,8 @@ def default_validators(sections, params):
     if (calc_mode in (BCR_EVENT_BASED_MODE, EVENT_BASED_MODE)
         and set([HAZARD_SECTION, RISK_SECTION]).issubset(sections)):
         validators.add(EventBasedRiskValidator(params))
+
+    if calc_mode in (SCENARIO_MODE, EVENT_BASED_MODE):
+        validators.add(AssetCorrelationValidator(sections, params))
 
     return validators
