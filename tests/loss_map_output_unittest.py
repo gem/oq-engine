@@ -25,9 +25,10 @@ import unittest
 
 from lxml import etree
 
-from openquake import nrml
 from openquake import shapes
 from openquake import xml
+from openquake.nrml.utils import nrml_schema_file
+
 from tests.utils import helpers
 
 from openquake.db.models import ExposureData
@@ -40,7 +41,7 @@ EXPECTED_TEST_LOSS_MAP = helpers.get_data_path('expected-test-loss-map.xml')
 EXPECTED_TEST_NON_SCN_LOSS_MAP = helpers.get_data_path(
     'expected-non-det-test-loss-map.xml')
 
-NRML_SCHEMA_PATH = nrml.nrml_schema_file()
+NRML_SCHEMA_PATH = nrml_schema_file()
 
 LOSS_MAP_METADATA = {
     'nrmlID': 'test_nrml_id',
