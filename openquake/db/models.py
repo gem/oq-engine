@@ -81,6 +81,7 @@ def per_asset_value(exd):
     The same "formula" applies to contenst/retrofitting cost analogously.
 
     :param exd: a named tuple with the following properties:
+        - category
         - cost
         - cost_type
         - area
@@ -89,6 +90,8 @@ def per_asset_value(exd):
     :returns: the per-asset value as a `float`
     :raises: `ValueError` in case of a malformed (risk exposure data) input
     """
+    if exd.category is not None and exd.category == "population":
+        return exd.number_of_units
     if exd.cost_type == "aggregated":
         return exd.cost
     elif exd.cost_type == "per_asset":
@@ -1355,7 +1358,7 @@ class ExposureData(djm.Model):
     '''
 
     REXD = namedtuple(
-        "REXD", "cost, cost_type, area, area_type, number_of_units")
+        "REXD", "category, cost, cost_type, area, area_type, number_of_units")
 
     exposure_model = djm.ForeignKey("ExposureModel")
     asset_ref = djm.TextField()
@@ -1386,7 +1389,8 @@ class ExposureData(djm.Model):
         exd = self.REXD(
             cost=self.stco, cost_type=self.exposure_model.stco_type,
             area=self.area, area_type=self.exposure_model.area_type,
-            number_of_units=self.number_of_units)
+            number_of_units=self.number_of_units,
+            category=self.exposure_model.category)
         return per_asset_value(exd)
 
     @property
@@ -1395,7 +1399,8 @@ class ExposureData(djm.Model):
         exd = self.REXD(
             cost=self.reco, cost_type=self.exposure_model.reco_type,
             area=self.area, area_type=self.exposure_model.area_type,
-            number_of_units=self.number_of_units)
+            number_of_units=self.number_of_units,
+            category=self.exposure_model.category)
         return per_asset_value(exd)
 
     class Meta:
