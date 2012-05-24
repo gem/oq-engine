@@ -281,6 +281,31 @@ def validate_site_model(sm_nodes, sites):
         )
 
 
+def get_site_model(job_id):
+    """Get the site model :class:`~openquake.db.models.Input` record for the
+    given job id.
+
+    :param int job_id:
+        ID of a job.
+
+    :returns:
+        The site model :class:`~openquake.db.models.Input` record for this job.
+    :raises:
+        :exception:`RuntimeError` if the job has more than 1 site model.
+    """
+    site_model = models.inputs4job(job_id, input_type='site_model')
+
+    if len(site_model) == 0:
+        return None
+    elif len(site_model) > 1:
+        # Multiple site models for 1 job are not allowed.
+        raise RuntimeError("Only 1 site model per job is allowed, found %s."
+                           % len(site_model))
+
+    # There's only one site model.
+    return site_model[0]
+
+
 class BaseHazardCalculator(Calculator):
     """Contains common functionality for Hazard calculators"""
 
