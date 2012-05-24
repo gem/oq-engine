@@ -120,7 +120,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         """
         Sum the fractions (of each damage state per building taxonomy)
         of each computation block.
-        
+
         :param region_fractions: fractions for each damage state
             per building taxonomy for each different block computed.
         :type region_fractions: `list` of 2d `numpy.array`.
@@ -197,12 +197,12 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     def _store_dda(self, fractions, asset, fm):
         """
         Store the damage distribution per asset.
-        
+
         :param fm: fragility model associated to
             the distribution being stored.
         :type fm: instance of
             :py:class:`openquake.db.models.FragilityModel`
-        :param asset: asset associated to the distribution being stored. 
+        :param asset: asset associated to the distribution being stored.
         :type asset: instance of :py:class:`openquake.db.model.ExposureData`
         :param fractions: fractions for each damage state associated
             to the given asset.
