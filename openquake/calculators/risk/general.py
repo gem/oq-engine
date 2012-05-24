@@ -73,14 +73,8 @@ def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
     """Compute the conditional loss for a loss curve and Probability of
     Exceedance (PoE)."""
 
-    loss_conditional = _compute_conditional_loss(
-        loss_curve, loss_poe)
-
+    loss_conditional = _compute_conditional_loss(loss_curve, loss_poe)
     key = kvs.tokens.loss_key(job_id, row, col, asset.asset_ref, loss_poe)
-
-    LOG.debug("Conditional loss is %s, write to key %s" %
-            (loss_conditional, key))
-
     kvs.get_client().set(key, loss_conditional)
 
 
@@ -397,9 +391,6 @@ class BaseRiskCalculator(Calculator):
 
             loss_value = kvs.get_client().get(key)
 
-            LOG.debug("Loss for asset %s at %s %s is %s" %
-                (asset.asset_ref, asset.site.x, asset.site.y, loss_value))
-
             if loss_value:
                 risk_site = shapes.Site(asset.site.x, asset.site.y)
                 loss = {
@@ -535,12 +526,11 @@ class EpsilonProvider(object):
         correlated jobs and unlikely to be available for uncorrelated ones.
         """
         correlation = getattr(self, "ASSET_CORRELATION", None)
-        if not correlation:
+
+        if correlation is None or correlation == 'uncorrelated':
             # Sample per asset
             return self.rnd.normalvariate(0, 1)
-        elif correlation != "perfect":
-            raise ValueError('Invalid "ASSET_CORRELATION": %s' % correlation)
-        else:
+        elif correlation == 'perfect':
             # Sample per building typology
             samples = getattr(self, "samples", None)
             if samples is None:
@@ -550,6 +540,8 @@ class EpsilonProvider(object):
             if asset.taxonomy not in samples:
                 samples[asset.taxonomy] = self.rnd.normalvariate(0, 1)
             return samples[asset.taxonomy]
+        else:
+            raise ValueError('Invalid "ASSET_CORRELATION": %s' % correlation)
 
 
 class Block(object):
