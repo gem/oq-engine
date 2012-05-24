@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 # Copyright (c) 2010-2012, GEM Foundation.
 #
 # OpenQuake is free software: you can redistribute it and/or modify it
@@ -237,3 +238,58 @@ class GetSiteModelTestCase(unittest.TestCase):
 
         self.assertEqual('Only 1 site model per job is allowed, found 2.',
                          assert_raises.exception.message)
+
+
+class ClosestSiteModelTestCase(unittest.TestCase):
+
+    def setUp(self):
+        owner = engine.prepare_user('openquake')
+        self.site_model_inp = models.Input(
+            owner=owner, digest='fake', path='fake',
+            input_type='site_model', size=0
+        )
+        self.site_model_inp.save()
+
+
+    def test_get_closest_site_model_data_no_data(self):
+        # We haven't yet linked any site model data to this input, so we
+        # expect a result of `None`.
+        self.assertIsNone(general.get_closest_site_model_data(
+            self.site_model_inp, shapes.Site(0, 0))
+        )
+
+    def test_get_closest_site_model_data(self):
+        # This test scenario is the following:
+        # Site model data nodes arranged 2 degrees apart (longitudinally) along
+        # the same parallel (indicated below by 'd' characters).
+        #
+        # The sites of interest are located at (-0.0000001, 0), (0, 0),
+        # and (0.0000001, 0) (from left to right). Sites of interest are
+        # indicated by 's' characters.
+        #
+        # To illustrate, a nethack-style diagram:
+        #
+        # -1.........0.........1   V ← oh no, a vampire!
+        #  d        sss        d
+
+        sm1 = models.SiteModel(
+            input=self.site_model_inp, vs30_type='measured', vs30=0.0000001,
+            z1pt0=0.0000001, z2pt5=0.0000001, location='POINT(-1 0)'
+        )
+        sm1.save()
+        sm2 = models.SiteModel(
+            input=self.site_model_inp, vs30_type='inferred', vs30=0.0000002,
+            z1pt0=0.0000002, z2pt5=0.0000002, location='POINT(1 0)'
+        )
+        sm2.save()
+
+        site1 = shapes.Site(0, 0)
+        site2 = shapes.Site(-0.0000001, 0)
+        site3 = shapes.Site(0.0000001, 0)
+
+        res1 = general.get_closest_site_model_data(self.site_model_inp, site1)
+        self.assertEqual(sm2, res1)
+        res2 = general.get_closest_site_model_data(self.site_model_inp, site2)
+        self.assertEqual(sm1, res2)
+        res3 = general.get_closest_site_model_data(self.site_model_inp, site3)
+        self.assertEqual(sm2, res3)
