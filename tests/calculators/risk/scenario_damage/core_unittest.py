@@ -28,7 +28,7 @@ from openquake.db.models import DmgDistPerAsset, DmgDistPerAssetData
 from openquake.kvs.tokens import ground_motion_values_key
 from openquake.calculators.risk.general import Block
 from openquake.calculators.risk.scenario_damage.core import (
-    ScenarioDamageRiskCalculator, compute_dm)
+    ScenarioDamageRiskCalculator, compute_gmv_fractions)
 
 from tests.utils import helpers
 
@@ -192,7 +192,8 @@ class ScenarioDamageRiskCalculatorTestCase(
 
         func.save()
 
-        self._close_to(compute_dm([func], 0.7), compute_dm([func], 0.8))
+        self._close_to(compute_gmv_fractions([func], 0.7),
+                compute_gmv_fractions([func], 0.8))
 
     def test_dda_iml_below_range(self):
         # corner case where we have a ground motion value
@@ -217,7 +218,8 @@ class ScenarioDamageRiskCalculatorTestCase(
 
         func.save()
 
-        self._close_to([1.0, 0.0], compute_dm([func], 0.05))
+        self._close_to([1.0, 0.0],
+                compute_gmv_fractions([func], 0.05))
 
     def test_post_execute_serialization(self):
         # when --output-type=xml is specified, we serialize results
