@@ -336,12 +336,6 @@ class Grid(object):
         return [point.site for point in self]
 
 
-def c_mul(val_a, val_b):
-    """Ugly method of hashing string to integer
-    TODO(jmc): Get rid of points as dict keys!"""
-    return eval(hex((long(val_a) * val_b) & 0xFFFFFFFFL)[:-1])
-
-
 class Site(nhlib_geo.Point):
     """Site is a dictionary-keyable point"""
 
