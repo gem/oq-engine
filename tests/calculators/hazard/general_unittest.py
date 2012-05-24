@@ -194,3 +194,46 @@ class ValidateSiteModelTestCase(unittest.TestCase):
         for tc in test_cases:
             self.assertRaises(ValidationException, general.validate_site_model,
                               self.site_model_nodes, tc)
+
+
+class GetSiteModelTestCase(unittest.TestCase):
+
+    def test_get_site_model(self):
+        job = engine.prepare_job()
+        site_model_inp = models.Input(
+            owner=job.owner, digest='fake', path='fake',
+            input_type='site_model', size=0,
+        )
+        site_model_inp.save()
+
+        # The link has not yet been made in the input2job table.
+        self.assertIsNone(general.get_site_model(job.id))
+
+        # Complete the link:
+        models.Input2job(input=site_model_inp, oq_job=job).save()
+
+        actual_site_model = general.get_site_model(job.id)
+        self.assertEqual(site_model_inp, actual_site_model)
+
+    def test_get_site_model_too_many_site_models(self):
+        job = engine.prepare_job()
+        site_model_inp1 = models.Input(
+            owner=job.owner, digest='fake', path='fake',
+            input_type='site_model', size=0,
+        )
+        site_model_inp1.save()
+        site_model_inp2 = models.Input(
+            owner=job.owner, digest='fake', path='fake',
+            input_type='site_model', size=0,
+        )
+        site_model_inp2.save()
+
+        # link both site models to the job:
+        models.Input2job(input=site_model_inp1, oq_job=job).save()
+        models.Input2job(input=site_model_inp2, oq_job=job).save()
+
+        with self.assertRaises(RuntimeError) as assert_raises:
+            general.get_site_model(job.id)
+
+        self.assertEqual('Only 1 site model per job is allowed, found 2.',
+                         assert_raises.exception.message)
