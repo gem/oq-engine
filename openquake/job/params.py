@@ -53,6 +53,7 @@ INPUT_FILE_TYPES = {
     'VULNERABILITY': 'vulnerability',
     'VULNERABILITY_RETROFITTED': 'vulnerability_retrofitted',
     'SINGLE_RUPTURE_MODEL': 'rupture',
+    'SITE_MODEL': 'site_model',
 }
 
 ENUM_MAP = {
@@ -90,9 +91,7 @@ REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
 
 CALCULATION_MODES = set(CALCULATION_MODE.values())
 PARAMS = {}
-PATH_PARAMS = ['VULNERABILITY', 'FRAGILITY', 'VULNERABILITY_RETROFITTED',
-               'SINGLE_RUPTURE_MODEL', 'EXPOSURE',
-               'SOURCE_MODEL_LOGIC_TREE_FILE', 'GMPE_LOGIC_TREE_FILE']
+PATH_PARAMS = INPUT_FILE_TYPES.keys()
 
 
 def config_text_to_list(text, transform=lambda x: x):
@@ -203,6 +202,7 @@ define_param('GMPE_LOGIC_TREE_FILE', None,
 define_param('SOURCE_MODEL_LOGIC_TREE_FILE', None,
              modes=('classical', 'event_based', 'disaggregation', 'uhs',
                     'classical_bcr', 'event_based_bcr'))
+define_param('SITE_MODEL', None)
 
 # Disaggregation parameters:
 define_param('DISAGGREGATION_RESULTS', 'disagg_results',

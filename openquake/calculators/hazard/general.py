@@ -23,17 +23,20 @@ import hashlib
 import json
 import math
 import numpy
+import StringIO
 
 from scipy.interpolate import interp1d
 from scipy.stats.mstats import mquantiles
 
 from openquake import java
 from openquake import kvs
+from openquake.calculators.base import Calculator
+from openquake.db import models
 from openquake.input import logictree
 from openquake.java import list_to_jdouble_array
 from openquake.logs import LOG
+from openquake.nrml import parsers as nrml_parsers
 from openquake.utils import config
-from openquake.calculators.base import Calculator
 
 
 QUANTILE_PARAM_NAME = "QUANTILE_LEVELS"
@@ -209,8 +212,48 @@ def set_gmpe_params(gmpe_map, params):
         gmpe_map.put(tect_region, gmpe)
 
 
+def store_site_model(input_mdl, source):
+    """Invoke site model parser and save the site-specified parameter data to
+    the database.
+
+    :param input_mdl:
+        The `uiapi.input` record which the new `hzrdi.site_model` records
+        reference. This `input` record acts as a container for the site model
+        data.
+    :param source:
+        Filename or file-like object containing the site model XML data.
+    ."""
+    parser = nrml_parsers.SiteModelParser(source)
+    for node in parser.parse():
+        sm = models.SiteModel()
+        sm.vs30 = node.vs30
+        sm.vs30_type = node.vs30_type
+        sm.z1pt0 = node.z1pt0
+        sm.z2pt5 = node.z2pt5
+        sm.location = node.wkt
+        sm.input = input_mdl
+        sm.save()
+
+
 class BaseHazardCalculator(Calculator):
     """Contains common functionality for Hazard calculators"""
+
+    def initialize(self):
+        """Read the raw site model from the database and populate the
+        `uiapi.site_model`.
+        """
+        site_model = models.inputs4job(
+            self.job_ctxt.job_id, input_type='site_model')
+
+        if len(site_model) == 0:
+            # No site model found for this job. Nothing to do here.
+            return
+
+        [site_model] = site_model  # Should only be 1 record.
+        # Explicit cast to `str` here because the XML parser doesn't like
+        # unicode. (More specifically, lxml doesn't like unicode.)
+        site_model_content = str(site_model.model_content.raw_content)
+        store_site_model(site_model, StringIO.StringIO(site_model_content))
 
     def pre_execute(self):
         basepath = self.job_ctxt.params.get('BASE_PATH')
