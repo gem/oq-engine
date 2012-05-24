@@ -18,13 +18,10 @@ Module :mod:`nhlib.geo.surface.complex_fault` defines
 :class:`ComplexFaultSurface`.
 """
 import numpy
-import shapely.geometry
 
-from nhlib.geo.polygon import Polygon
 from nhlib.geo.line import Line
 from nhlib.geo.surface.base import BaseSurface
 from nhlib.geo.mesh import Mesh, RectangularMesh
-from nhlib.geo import _utils as geo_utils
 
 
 class ComplexFaultSurface(BaseSurface):
