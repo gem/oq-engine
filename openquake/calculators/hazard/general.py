@@ -25,8 +25,10 @@ import math
 import numpy
 import StringIO
 
+from nhlib import geo as nhlib_geo
 from scipy.interpolate import interp1d
 from scipy.stats.mstats import mquantiles
+from shapely import geometry
 
 from openquake import java
 from openquake import kvs
@@ -242,6 +244,9 @@ def validate_site_model(sm_nodes, sites):
     calculation, make sure the geometry of interest lies completely inside of
     the convex hull formed by the site model locations.
 
+    If a site of interest lies directly on top of a vertex or edge of the site
+    model area (a polygon), it is considered "inside"
+
     :param sm_nodes:
         Sequence of :class:`~openquake.db.models.SiteModel` objects.
     :param sites:
@@ -253,7 +258,27 @@ def validate_site_model(sm_nodes, sites):
         interest (given as a collection of sites) is not entirely contained by
         the site model.
     """
+    sm_mp = geometry.MultiPoint(
+        [(n.location.x, n.location.y) for n in sm_nodes]
+    )
+    sm_poly = nhlib_geo.Polygon(
+        [nhlib_geo.Point(*x) for x in sm_mp.convex_hull.exterior.coords]
+    )
 
+    interest_mesh = nhlib_geo.Mesh.from_points_list(sites)
+
+    # "Intersects" is the correct operation (not "contains"), since we're just
+    # checking a collection of points (mesh). "Contains" would tell us if the
+    # points are inside the polygon, but would return `False` if a point was
+    # directly on top of a polygon edge or vertex. We want these points to be
+    # included.
+    intersects = sm_poly.intersects(interest_mesh)
+
+    if not intersects.all():
+        raise ValidationException(
+            ['Sites of interest are outside of the site model coverage area.'
+             ' This configuration is invalid.']
+        )
 
 
 class BaseHazardCalculator(Calculator):
