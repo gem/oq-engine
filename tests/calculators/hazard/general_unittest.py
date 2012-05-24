@@ -147,10 +147,10 @@ class ValidateSiteModelTestCase(unittest.TestCase):
             # South edge
             shapes.Site(0, -10.1507381),
             # the corners
-            shapes.Site(-9.9999999, 10),
-            shapes.Site(9.9999999, 10),
+            shapes.Site(-10, 10),
+            shapes.Site(10, 10),
             shapes.Site(-10, -10),
-            shapes.Site(9.9999999, -10),
+            shapes.Site(10, -10),
             # a few points somewhere in the middle, which are obviously inside
             # the target area
             shapes.Site(0.0, 0.0),
@@ -178,11 +178,11 @@ class ValidateSiteModelTestCase(unittest.TestCase):
             [shapes.Site(0, -10.1507382)],
             # outside of the corners
             # first corner (a)
-            [shapes.Site(-10, 10)],
-            [shapes.Site(-9.9999999, 10.0000001)],
+            [shapes.Site(-10.0000001, 10)],
+            [shapes.Site(-10, 10.0000001)],
             # second corner (b)
-            [shapes.Site(10, 10)],
-            [shapes.Site(9.9999999, 10.0000001)],
+            [shapes.Site(10.0000001, 10)],
+            [shapes.Site(10, 10.0000001)],
             # third corner (d)
             [shapes.Site(-10.0000001, -10)],
             [shapes.Site(-10, -10.0000001)],
@@ -202,7 +202,7 @@ class GetSiteModelTestCase(unittest.TestCase):
         job = engine.prepare_job()
         site_model_inp = models.Input(
             owner=job.owner, digest='fake', path='fake',
-            input_type='site_model', size=0,
+            input_type='site_model', size=0
         )
         site_model_inp.save()
 
@@ -219,12 +219,12 @@ class GetSiteModelTestCase(unittest.TestCase):
         job = engine.prepare_job()
         site_model_inp1 = models.Input(
             owner=job.owner, digest='fake', path='fake',
-            input_type='site_model', size=0,
+            input_type='site_model', size=0
         )
         site_model_inp1.save()
         site_model_inp2 = models.Input(
             owner=job.owner, digest='fake', path='fake',
-            input_type='site_model', size=0,
+            input_type='site_model', size=0
         )
         site_model_inp2.save()
 
