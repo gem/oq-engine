@@ -285,7 +285,7 @@ class JobContext(object):
             self._extract_coords('REGION_VERTEX'))
 
         region.cell_size = self['REGION_GRID_SPACING']
-        return [site for site in region]
+        return region.grid.centers()
 
     def build_nrml_path(self, nrml_file):
         """Return the complete output path for the given nrml_file"""
@@ -517,6 +517,13 @@ def _prepare_config_parameters(params, sections):
         # config params to be strings at this point:
         new_params['COMPUTE_MEAN_HAZARD_CURVE'] = 'true'
 
+    # Fri, 11 May 2012 11:03:03 +0200, al-maisan
+    # According to dmonelli and larsbutler the intensity measure type for UHS
+    # jobs is *always* SA irrespective of the value specified in the config
+    # file.
+    if calc_mode == "uhs":
+        new_params["INTENSITY_MEASURE_TYPE"] = "SA"
+
     return new_params, sections
 
 
@@ -532,15 +539,18 @@ def _file_digest(path):
         return checksum.hexdigest()
 
 
-def _identical_input(input_type, digest):
+def _identical_input(input_type, digest, owner_id):
     """Get an identical input with the same type or `None`.
 
     Identical inputs are found by comparing md5sum digests. In order to avoid
     reusing corrupted/broken input models we ignore all the inputs that are
     associated with a first job that failed.
+    Also, we only want inputs owned by the user who is running the current job
+    and if there is more than one input we want the most recent one.
 
     :param str input_type: input model type
     :param str digest: md5sum digest
+    :param int owner_id: the database key of the owner
     :returns: an `:class:openquake.db.models.Input` instance or `None`
     """
     q = """
@@ -549,12 +559,13 @@ def _identical_input(input_type, digest):
             uiapi.oq_job, (
                 SELECT DISTINCT MIN(j.id) AS min_job_id, i.id AS input_id
                 FROM uiapi.oq_job AS j, uiapi.input2job AS i2j,
-                     uiapi.input AS i
+                     uiapi.input AS i, admin.oq_user u
                 WHERE i2j.oq_job_id = j.id AND i2j.input_id = i.id
                     AND i.digest = %s AND i.input_type = %s
+                    AND j.owner_id = u.id AND u.id = %s
                 GROUP BY i.id ORDER BY i.id DESC) AS mjq
             WHERE id = mjq.min_job_id AND status = 'succeeded')"""
-    ios = list(Input.objects.raw(q, [digest, input_type]))
+    ios = list(Input.objects.raw(q, [digest, input_type, owner_id]))
     return ios[0] if ios else None
 
 
@@ -577,7 +588,7 @@ def _insert_input_files(params, job, force_inputs):
                for li in linked_inputs):
             return
 
-        in_model = (_identical_input(input_type, digest)
+        in_model = (_identical_input(input_type, digest, job.owner.id)
                     if not force_inputs else None)
         if in_model is None:
             in_model = Input(path=path, input_type=input_type, owner=job.owner,
@@ -747,7 +758,7 @@ def _store_input_parameters(params, calc_mode, job_profile):
 
 
 def run_job(job, params, sections, output_type='db', log_level='warn',
-            force_inputs=False):
+            force_inputs=False, log_file=None):
     """Given an :class:`openquake.db.models.OqJobProfile` object, create a new
     :class:`openquake.db.models.OqJob` object and run the job.
 
@@ -771,6 +782,8 @@ def run_job(job, params, sections, output_type='db', log_level='warn',
         Defaults to 'warn'.
     :param bool force_inputs: If `True` the model input files will be parsed
         and the resulting content written to the database no matter what.
+    :param str log_file:
+        Optional log file location.
 
     :returns:
         :class:`openquake.db.models.OqJob` instance.
@@ -830,7 +843,7 @@ def run_job(job, params, sections, output_type='db', log_level='warn',
         job.supervisor_pid = supervisor_pid
         job.job_pid = job_pid
         job.save()
-        supervisor.supervise(job_pid, job.id)
+        supervisor.supervise(job_pid, job.id, log_file=log_file)
         return
 
     # parent process

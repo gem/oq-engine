@@ -245,6 +245,25 @@ SELECT AddGeometryColumn('hzrdi', 'simple_fault', 'edge', 4326, 'LINESTRING', 3)
 ALTER TABLE hzrdi.simple_fault ALTER COLUMN edge SET NOT NULL;
 SELECT AddGeometryColumn('hzrdi', 'simple_fault', 'outline', 4326, 'POLYGON', 3);
 
+-- Site-specific parameters for hazard calculations.
+CREATE TABLE hzrdi.site_model (
+    id SERIAL PRIMARY KEY,
+    input_id INTEGER NOT NULL,
+    -- Average shear wave velocity for top 30 m. Units m/s.
+    vs30 float NOT NULL CONSTRAINT site_model_vs30
+        CHECK(vs30 > 0.0),
+    -- 'measured' or 'inferred'. Identifies if vs30 value has been measured or inferred.
+    vs30_type VARCHAR NOT NULL CONSTRAINT site_model_vs30_type
+        CHECK(vs30_type in ('measured', 'inferred')),
+    -- Depth to shear wave velocity of 1.0 km/s. Units m.
+    z1pt0 float NOT NULL CONSTRAINT site_model_z1pt0
+        CHECK(z1pt0 > 0.0),
+    -- Depth to shear wave velocity of 2.5 km/s. Units km.
+    z2pt5 float NOT NULL CONSTRAINT site_model_z2pt5
+        CHECK(z2pt5 > 0.0)
+) TABLESPACE hzrdi_ts;
+SELECT AddGeometryColumn('hzrdi', 'site_model', 'location', 4326, 'POINT', 2);
+
 -- Magnitude frequency distribution, Evenly discretized
 CREATE TABLE hzrdi.mfd_evd (
     id SERIAL PRIMARY KEY,
@@ -509,6 +528,7 @@ CREATE TABLE uiapi.upload (
 CREATE TABLE uiapi.input (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
+    model_content_id INTEGER,  -- TODO(larsbutler), May 11th 2012: Eventually make this is a required FK (NOT NULL).
     -- The full path of the input file on the server
     path VARCHAR NOT NULL,
     digest VARCHAR(32) NOT NULL,
@@ -525,6 +545,16 @@ CREATE TABLE uiapi.input (
                              'vulnerability', 'vulnerability_retrofitted')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE uiapi_ts;
+
+
+CREATE TABLE uiapi.model_content (
+    id SERIAL PRIMARY KEY,
+    -- contains the raw text of an input file
+    raw_content TEXT NOT NULL,
+    content_type VARCHAR NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
@@ -613,15 +643,8 @@ CREATE TABLE uiapi.oq_job_profile (
     --      relative significant duration (rsd)
     --      Modified Mercalli Intensity
     -- For UHS calculations, IMT should always be 'sa'.
-    imt VARCHAR NOT NULL CONSTRAINT imt_value
-        CHECK(((calc_mode = 'uhs') AND (imt = 'sa'))
-            OR (imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd', 'mmi'))),
-    period float CONSTRAINT period_is_set
-        -- The 'period' parameter is only used when the intensity measure type is SA.
-        -- This rule only applies to calc modes != 'uhs' (the Uniform Hazard Spectra
-        -- calculator instead defines an array of periods).
-        CHECK(((imt = 'sa' AND calc_mode != 'uhs') AND (period IS NOT NULL))
-              OR ((imt != 'sa' OR calc_mode = 'uhs') AND (period IS NULL))),
+    imt VARCHAR,
+    period float,
     damping float CONSTRAINT damping_is_set
         CHECK(((imt = 'sa') AND (damping IS NOT NULL))
               OR ((imt != 'sa') AND (damping IS NULL))),
@@ -673,8 +696,7 @@ CREATE TABLE uiapi.oq_job_profile (
             OR
             ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (rupture_surface_discretization IS NULL))),
-
-    aggregate_loss_curve boolean,
+    asset_correlation VARCHAR,
     area_source_discretization float
         CONSTRAINT area_source_discretization_is_set
         CHECK(
@@ -1613,10 +1635,19 @@ CREATE TABLE riski.fragility_model (
         CHECK(format IN ('continuous', 'discrete')),
     -- Limit states
     lss VARCHAR[] NOT NULL,
-    -- Intensity measure levels, only applicable for discrete fragility models.
+    -- Intensity measure levels, only applicable to discrete fragility models.
     imls float[],
-    -- Intensity measure type, only applicable for discrete fragility models.
-    imt VARCHAR,
+    -- Intensity measure type, only applicable to discrete fragility models.
+    imt VARCHAR(16),
+    -- IML unit of measurement
+    iml_unit VARCHAR(16),
+    -- minimum IML value, only applicable to continuous fragility models.
+    min_iml float,
+    -- maximum IML value, only applicable to continuous fragility models.
+    max_iml float,
+    -- defines the IML after which damage is observed, only applicable to
+    -- discrete fragility models.
+    no_damage_limit float,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE riski_ts;
@@ -1723,6 +1754,10 @@ FOREIGN KEY (mfd_tgr_id) REFERENCES hzrdi.mfd_tgr(id) ON DELETE RESTRICT;
 ALTER TABLE hzrdi.simple_fault ADD CONSTRAINT hzrdi_simple_fault_mfd_evd_fk
 FOREIGN KEY (mfd_evd_id) REFERENCES hzrdi.mfd_evd(id) ON DELETE RESTRICT;
 
+-- hzrdi.site_model
+ALTER TABLE hzrdi.site_model ADD CONSTRAINT hzrdi_site_model_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
+
 ALTER TABLE hzrdi.complex_fault ADD CONSTRAINT hzrdi_complex_fault_mfd_tgr_fk
 FOREIGN KEY (mfd_tgr_id) REFERENCES hzrdi.mfd_tgr(id) ON DELETE RESTRICT;
 
@@ -1792,6 +1827,9 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_model_content_fk
+FOREIGN KEY (model_content_id) REFERENCES uiapi.model_content(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;
