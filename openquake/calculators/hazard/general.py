@@ -25,6 +25,7 @@ import math
 import numpy
 import StringIO
 
+from django.db import transaction
 from nhlib import geo as nhlib_geo
 from scipy.interpolate import interp1d
 from scipy.stats.mstats import mquantiles
@@ -216,6 +217,7 @@ def set_gmpe_params(gmpe_map, params):
         gmpe_map.put(tect_region, gmpe)
 
 
+@transaction.commit_on_success(using='job_init')
 def store_site_model(input_mdl, source):
     """Invoke site model parser and save the site-specified parameter data to
     the database.
@@ -254,7 +256,7 @@ def validate_site_model(sm_nodes, sites):
         calculation points of interest.
 
     :raises:
-        :exception:`~openquake.job.config.ValidationException` if the area of
+        :exc:`openquake.job.config.ValidationException` if the area of
         interest (given as a collection of sites) is not entirely contained by
         the site model.
     """
@@ -291,7 +293,7 @@ def get_site_model(job_id):
     :returns:
         The site model :class:`~openquake.db.models.Input` record for this job.
     :raises:
-        :exception:`RuntimeError` if the job has more than 1 site model.
+        :exc:`RuntimeError` if the job has more than 1 site model.
     """
     site_model = models.inputs4job(job_id, input_type='site_model')
 
@@ -304,6 +306,52 @@ def get_site_model(job_id):
 
     # There's only one site model.
     return site_model[0]
+
+
+def get_closest_site_model_data(input_model, site):
+    """Get the closest available site model data from the database for a given
+    site model :class:`~openquake.db.models.Input` and
+    :class:`~openquake.shapes.Site`.
+
+    :param input_model:
+        :class:`openquake.db.models.Input` with `input_type` of 'site_model'.
+    :param site:
+        :class:`openquake.shapes.Site` instance.
+
+    :returns:
+        The closest :class:`openquake.db.models.SiteModel` for the given
+        ``input_model`` and ``site`` of interest.
+
+        This function uses the PostGIS `ST_Distance_Sphere
+        <http://postgis.refractions.net/docs/ST_Distance_Sphere.html>`_
+        function to calculate distance.
+
+        If there is no site model data, return `None`.
+    """
+
+    query = """
+    SELECT
+        hzrdi.site_model.*,
+        min(ST_Distance_Sphere(location, %s))
+            AS min_distance
+    FROM hzrdi.site_model where input_id = %s
+    GROUP BY id
+    ORDER BY min_distance
+    LIMIT 1;"""
+
+    raw_query_set = models.SiteModel.objects.raw(
+        query, ['SRID=4326; %s' % site.point.wkt, input_model.id]
+    )
+
+    site_model_data = list(raw_query_set)
+
+    assert len(site_model_data) <= 1, (
+        "This query should return at most 1 record.")
+
+    if len(site_model_data) == 1:
+        return site_model_data[0]
+    else:
+        return None
 
 
 class BaseHazardCalculator(Calculator):
