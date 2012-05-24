@@ -218,10 +218,15 @@ def npoints_between(lon1, lat1, depth1, lon2, lat2, depth2, npoints):
     """
     hdist = geodetic_distance(lon1, lat1, lon2, lat2)
     vdist = depth2 - depth1
-    return npoints_towards(
+    rlons, rlats, rdepths = npoints_towards(
         lon1, lat1, depth1, azimuth(lon1, lat1, lon2, lat2),
         hdist, vdist, npoints
     )
+    # the last point should be left intact
+    rlons[-1] = lon2
+    rlats[-1] = lat2
+    rdepths[-1] = depth2
+    return rlons, rlats, rdepths
 
 
 def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
