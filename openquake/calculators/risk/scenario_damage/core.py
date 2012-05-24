@@ -235,7 +235,9 @@ def compute_dm(funcs, gmv):
 
     def _no_damage(fm, gmv):
         """
-        Evaluate condition to apply algorithm.
+        There is no damage when ground motions values are less
+        than the first iml or when the no damage limit value
+        is greater than the ground motions value.
         """
         discrete = fm.format == "discrete"
         no_damage_limit = fm.no_damage_limit != None
@@ -272,7 +274,7 @@ def compute_dm(funcs, gmv):
 
         imls = [no_damage_limit] + func.fragility_model.imls
         poes = [0.0] + func.poes
-        
+
         return scipy.interpolate.interp1d(imls, poes)(iml)
 
     ftype_poe_map = {Ffc: compute_poe_con, Ffd: compute_poe_dsc}

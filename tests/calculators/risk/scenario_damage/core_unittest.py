@@ -228,7 +228,7 @@ class ScenarioDamageRiskCalculatorTestCase(
         # particular case 0.1) and lower than the no_damage_limit
         # attribute defined in the model. Given this condition, the
         # fractions of buildings is 100% no_damage and 0% for the
-        # remaining limit states defined in the model
+        # remaining limit states defined in the model.
 
         [ism] = models.inputs4job(self.job.id, input_type="fragility")
 
@@ -248,6 +248,15 @@ class ScenarioDamageRiskCalculatorTestCase(
             compute_dm([func], 0.02))
 
     def test_gmv_between_no_damage_limit_and_first_iml(self):
+        # corner case where we have a ground motion value
+        # (that corresponds to the intensity measure level in the
+        # fragility function) that is lower than the lowest
+        # intensity measure level defined in the model (in this
+        # particular case 0.1) but bigger than the no_damage_limit
+        # attribute defined in the model. Given this condition, the
+        # fractions of buildings is 97.5% no_damage and 2.5% for the
+        # remaining limit states defined in the model.
+
         fm = self._store_dsc_fmodel()
         funcs = fm.ffd_set.filter(
             taxonomy="RC").order_by("lsi")
