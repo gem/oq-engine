@@ -36,6 +36,7 @@ GRANT ALL ON SEQUENCE hzrdi.fault_edge_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.focal_mechanism_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.mfd_evd_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.mfd_tgr_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE hzrdi.parsed_source_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.r_depth_distr_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.r_rate_mdl_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.rupture_id_seq to GROUP openquake;
@@ -92,6 +93,7 @@ GRANT ALL ON SEQUENCE uiapi.job2profile_id_seq to GROUP openquake;
 
 GRANT SELECT ON geography_columns TO GROUP openquake;
 GRANT SELECT ON geometry_columns TO GROUP openquake;
+GRANT SELECT ON spatial_ref_sys TO GROUP openquake;
 
 GRANT SELECT ON hzrdi.complex_source TO GROUP openquake;
 GRANT SELECT ON hzrdi.simple_source TO GROUP openquake;
@@ -140,6 +142,10 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.mfd_evd TO oq_job_init;
 -- hzrdi.mfd_tgr
 GRANT SELECT ON hzrdi.mfd_tgr TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.mfd_tgr TO oq_job_init;
+
+-- hzrdi.parsed_source
+GRANT SELECT ON hzrdi.parsed_source TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON hzrdi.parsed_source TO oq_job_init;
 
 -- hzrdi.r_depth_distr
 GRANT SELECT ON hzrdi.r_depth_distr TO GROUP openquake;
