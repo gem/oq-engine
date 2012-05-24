@@ -505,6 +505,22 @@ CREATE TABLE hzrdi.focal_mechanism (
 ) TABLESPACE hzrdi_ts;
 
 
+-- Parsed sources
+CREATE TABLE hzrdi.parsed_source (
+    id SERIAL PRIMARY KEY,
+    input_id INTEGER NOT NULL,
+    source_type VARCHAR NOT NULL
+        CONSTRAINT enforce_source_type CHECK
+        (source_type IN ('area', 'point', 'complex', 'simple')),
+    blob TEXT NOT NULL,
+    geom geometry NOT NULL,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL,
+    CONSTRAINT enforce_dims_geom CHECK (ndims(geom) = 2),
+    CONSTRAINT enforce_srid_geom CHECK (srid(geom) = 4326)
+) TABLESPACE hzrdi_ts;
+
+
 -- A batch of OpenQuake input files uploaded by the user
 CREATE TABLE uiapi.upload (
     id SERIAL PRIMARY KEY,
@@ -1784,6 +1800,9 @@ ALTER TABLE hzrdi.rupture ADD CONSTRAINT hzrdi_rupture_complex_fault_fk
 FOREIGN KEY (complex_fault_id) REFERENCES hzrdi.complex_fault(id) ON DELETE RESTRICT;
 
 ALTER TABLE hzrdi.rupture ADD CONSTRAINT hzrdi_rupture_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
+
+ALTER TABLE hzrdi.parsed_source ADD CONSTRAINT hzrdi_parsed_source_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_owner_fk
