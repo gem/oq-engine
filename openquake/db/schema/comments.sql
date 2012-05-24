@@ -103,6 +103,13 @@ COMMENT ON COLUMN hzrdi.mfd_tgr.min_val IS 'Minimum magnitude value.';
 COMMENT ON COLUMN hzrdi.mfd_tgr.max_val IS 'Maximum magnitude value.';
 
 
+COMMENT ON TABLE hzrdi.parsed_source IS 'Stores parsed hazard input model sources in serialized python object tree format';
+COMMENT ON COLUMN hzrdi.parsed_source.blob IS 'The BLOB that holds the serialized python object tree.';
+COMMENT ON COLUMN hzrdi.parsed_source.geom IS 'A generic 2-dimensional geometry column that will hold the various source geometries.';
+COMMENT ON COLUMN hzrdi.parsed_source.input_id IS 'The foreign key to the associated input model file';
+COMMENT ON COLUMN hzrdi.parsed_source.source_type IS 'The source''s seismic input type: can be one of: area, point, complex or simple.';
+
+
 COMMENT ON TABLE hzrdi.r_depth_distr IS 'Rupture depth distribution.';
 COMMENT ON COLUMN hzrdi.r_depth_distr.magnitude_type IS 'Magnitude type i.e. one of:
     - body wave magnitude (Mb)
