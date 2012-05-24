@@ -68,15 +68,15 @@ class ScenarioRiskQATest(unittest.TestCase):
         # 100% predictable.
         scen_cfg = helpers.demo_file('scenario_risk/config.gem')
 
-        exp_mean_loss = 1272.7
-        exp_stddev_loss = 455.83
+        exp_mean_loss = 1053.09
+        exp_stddev_loss = 246.62
         expected_loss_map = [
-            dict(asset='a3', pos='15.48 38.25', mean=217.510673644,
-                 stddev=86.3215466446),
-            dict(asset='a2', pos='15.56 38.17', mean=469.375607933,
-                 stddev=271.423557166),
-            dict(asset='a1', pos='15.48 38.09', mean=585.814597,
-                 stddev=270.632803227),
+            dict(asset='a3', pos='15.48 38.25', mean=180.717534009275,
+                 stddev=92.2122644809969),
+            dict(asset='a2', pos='15.56 38.17', mean=432.225448142534,
+                 stddev=186.864456949986),
+            dict(asset='a1', pos='15.48 38.09', mean=440.147078317589,
+                 stddev=182.615976701858),
         ]
 
         result = helpers.run_job(scen_cfg, ['--output-type=xml'],
@@ -94,8 +94,8 @@ class ScenarioRiskQATest(unittest.TestCase):
 
         # We expected the shell output to look something like the following
         # two lines:
-        # Mean region loss value: 1272.70087858
-        # Standard deviation region loss value: 455.834734995
+        # Mean region loss value: 1053.09
+        # Standard deviation region loss value: 246.62
 
         # split on newline and filter out empty lines
         result = [line for line in result.split('\n') if len(line) > 0]
@@ -135,30 +135,30 @@ class ScenarioRiskQATest(unittest.TestCase):
         # For comparison, mean and stddev values for the region were computed
         # with 1000 GMFs using the mean-based approach. These values (rounded
         # to 2 decimal places) are:
-        mb_mean_loss = 1222.09
-        mb_stddev_loss = 411.38
+        mb_mean_loss = 1233.26
+        mb_stddev_loss = 443.63
         # Loss map for the mean-based approach:
         mb_loss_map = [
-            dict(asset='a3', pos='15.48 38.25', mean=193.695291394,
-                 stddev=92.1588328045),
-            dict(asset='a2', pos='15.56 38.17', mean=504.736840362,
-                 stddev=246.792898999),
-            dict(asset='a1', pos='15.48 38.09', mean=523.661439794,
-                 stddev=237.575081332),
+            dict(asset='a3', pos='15.48 38.25', mean=200.54874638,
+                 stddev=94.2302991022),
+            dict(asset='a2', pos='15.56 38.17', mean=510.821363253,
+                 stddev=259.964152622),
+            dict(asset='a1', pos='15.48 38.09', mean=521.885458891,
+                 stddev=244.825980356),
         ]
 
         # Given the random seed in this config file, here's what we expect to
         # get for the region:
-        exp_mean_loss = 1241.98634506
-        exp_stddev_loss = 496.347910797
+        exp_mean_loss = 1255.09
+        exp_stddev_loss = 530.00
         # Expected loss map for the sample-based approach:
         expected_loss_map = [
-            dict(asset='a3', pos='15.48 38.25', mean=194.872588825,
-                 stddev=92.9001695062),
-            dict(asset='a2', pos='15.56 38.17', mean=510.7005053,
-                 stddev=350.80093426),
-            dict(asset='a1', pos='15.48 38.09', mean=524.710479665,
-                 stddev=243.777756948),
+            dict(asset='a3', pos='15.48 38.25', mean=201.976066147,
+                 stddev=95.1493297113),
+            dict(asset='a2', pos='15.56 38.17', mean=516.750292227,
+                 stddev=379.617139967),
+            dict(asset='a1', pos='15.48 38.09', mean=522.856225188,
+                 stddev=248.025575687),
         ]
 
         # Sanity check on the test data defined above, because humans suck at
