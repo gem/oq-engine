@@ -268,7 +268,6 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         )
         self.site_model_inp.save()
 
-
     def test_get_closest_site_model_data_no_data(self):
         # We haven't yet linked any site model data to this input, so we
         # expect a result of `None`.
@@ -316,3 +315,27 @@ class ClosestSiteModelTestCase(unittest.TestCase):
 
         self.assertEqual(sm1, res1)
         self.assertEqual(sm2, res2)
+
+
+class SetJavaSiteParamsTestCase(unittest.TestCase):
+
+    def test_set_java_site_parameters(self):
+        jsite = shapes.Site(0, 0).to_java()
+        sm_data = models.SiteModel(
+            vs30=800.0, vs30_type='measured', z1pt0=10.0, z2pt5=15.0
+        )
+
+        general.set_java_site_parameters(jsite, sm_data)
+
+        self.assertEqual(
+            800.0, jsite.getParameter('Vs30').getValue().value
+        )
+        self.assertEqual(
+            'measured', jsite.getParameter('Vs30 Type').getValue()
+        )
+        self.assertEqual(
+            10.0, jsite.getParameter('Depth 1.0 km/sec').getValue().value
+        )
+        self.assertEqual(
+            15.0, jsite.getParameter('Depth 2.5 km/sec').getValue().value
+        )
