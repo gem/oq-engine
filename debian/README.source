@@ -1,0 +1,5 @@
+This package uses the quilt(1) patching tool. Please see
+
+    /usr/share/doc/quilt/README.source
+
+for more information.

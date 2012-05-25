@@ -1,0 +1,52 @@
+--- a/openquake/db/routers.py
++++ b/openquake/db/routers.py
+@@ -55,10 +55,10 @@
+         '''
+         schema = self._schema_table_from_model(model)[0]
+ 
+-        if schema in ("admin", "oqmif"):
++        if schema in ("admin",):
+             # The db name for these is the same as the schema
+             return schema
+-        elif schema in ("hzrdr", "riskr"):
++        elif schema in ("hzrdr", "riskr", "oqmif"):
+             return "job_init"
+         elif schema in ("hzrdi", "riski", "uiapi"):
+             return "reslt_writer"
+@@ -72,12 +72,12 @@
+         '''
+         schema, table = self._schema_table_from_model(model)
+ 
+-        if schema in ('admin', 'oqmif'):
++        if schema in ('admin',):
+             # The db name for these is the same as the schema
+             return schema
+         elif schema == "uiapi" and table == "output":
+             return "reslt_writer"
+-        elif schema in ("hzrdi", "riski", "uiapi"):
++        elif schema in ("hzrdi", "riski", "uiapi", "oqmif"):
+             return "job_init"
+         elif schema in ("hzrdr", "riskr"):
+             return "reslt_writer"
+--- a/openquake/openquake.cfg
++++ b/openquake/openquake.cfg
+@@ -52,9 +52,6 @@
+ job_superv_password = openquake
+ job_superv_user = oq_job_superv
+ 
+-oqmif_password = openquake
+-oqmif_user = oq_job_init
+-
+ reslt_writer_password = openquake
+ reslt_writer_user = oq_reslt_writer
+ 
+--- a/openquake/settings.py
++++ b/openquake/settings.py
+@@ -60,7 +60,6 @@
+     'admin',
+     'job_init',
+     'job_superv',
+-    'oqmif',
+     'reslt_writer',
+ )
+ 
