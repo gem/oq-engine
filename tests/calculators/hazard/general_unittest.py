@@ -51,14 +51,11 @@ class StoreSiteModelTestCase(unittest.TestCase):
                  z1pt0=104.0, z2pt5=5.4),
         ]
 
-        # Function under test
-        general.store_site_model(inp, site_model)
+        ret_val = general.store_site_model(inp, site_model)
 
-        # Expected results
         actual_site_model = models.SiteModel.objects.filter(
             input=inp.id).order_by('id')
 
-        # The actual test
         for i, exp in enumerate(exp_site_model):
             act = actual_site_model[i]
 
@@ -68,6 +65,12 @@ class StoreSiteModelTestCase(unittest.TestCase):
             self.assertEqual(exp['vs30_type'], act.vs30_type)
             self.assertAlmostEqual(exp['z1pt0'], act.z1pt0)
             self.assertAlmostEqual(exp['z2pt5'], act.z2pt5)
+
+        # last, check that the `store_site_model` function returns all of the
+        # newly-inserted records
+        # an `equals` check just compares the ids
+        for i, val in enumerate(ret_val):
+            self.assertEqual(val, actual_site_model[i])
 
     def test_initialize_stores_site_model(self):
         job = engine.prepare_job()
