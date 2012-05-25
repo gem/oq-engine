@@ -12,7 +12,6 @@ REGION_GRID_SPACING = 0.1
 
 SOURCE_MODEL_LT_RANDOM_SEED = 23
 GMPE_LT_RANDOM_SEED = 5
-GMF_RANDOM_SEED = 3
 
 # file containing erf logic tree structure
 SOURCE_MODEL_LOGIC_TREE_FILE = source_model_logic_tree.xml
