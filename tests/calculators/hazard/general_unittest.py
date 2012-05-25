@@ -263,14 +263,14 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         # Site model data nodes arranged 2 degrees apart (longitudinally) along
         # the same parallel (indicated below by 'd' characters).
         #
-        # The sites of interest are located at (-0.0000001, 0), (0, 0),
-        # and (0.0000001, 0) (from left to right). Sites of interest are
-        # indicated by 's' characters.
+        # The sites of interest are located at (-0.0000001, 0) and
+        # (0.0000001, 0) (from left to right).
+        # Sites of interest are indicated by 's' characters.
         #
-        # To illustrate, a nethack-style diagram:
+        # To illustrate, a super high-tech nethack-style diagram:
         #
         # -1.........0.........1   V ← oh no, a vampire!
-        #  d        sss        d
+        #  d        s s        d
 
         sm1 = models.SiteModel(
             input=self.site_model_inp, vs30_type='measured', vs30=0.0000001,
@@ -283,13 +283,18 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         )
         sm2.save()
 
-        site1 = shapes.Site(0, 0)
-        site2 = shapes.Site(-0.0000001, 0)
-        site3 = shapes.Site(0.0000001, 0)
+        # NOTE(larsbutler): I tried testing the site (0, 0), but the result
+        # actually alternated between the the two site model nodes on each test
+        # run. It's very strange indeed. It must be a PostGIS thing.
+        # (Or we can blame the vampire.)
+        #
+        # Thus, I decided to not include this in my test case, since it caused
+        # the test to intermittently fail.
+        site1 = shapes.Site(-0.0000001, 0)
+        site2 = shapes.Site(0.0000001, 0)
 
         res1 = general.get_closest_site_model_data(self.site_model_inp, site1)
-        self.assertEqual(sm2, res1)
         res2 = general.get_closest_site_model_data(self.site_model_inp, site2)
-        self.assertEqual(sm1, res2)
-        res3 = general.get_closest_site_model_data(self.site_model_inp, site3)
-        self.assertEqual(sm2, res3)
+
+        self.assertEqual(sm1, res1)
+        self.assertEqual(sm2, res2)
