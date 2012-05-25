@@ -228,8 +228,14 @@ def store_site_model(input_mdl, source):
         data.
     :param source:
         Filename or file-like object containing the site model XML data.
+    :returns:
+        `list` of :class:`openquake.db.models.SiteModel` objects. These
+        represent to newly-inserted `hzrdi.site_model` records.
     ."""
     parser = nrml_parsers.SiteModelParser(source)
+
+    sm_data = []
+
     for node in parser.parse():
         sm = models.SiteModel()
         sm.vs30 = node.vs30
@@ -239,6 +245,9 @@ def store_site_model(input_mdl, source):
         sm.location = node.wkt
         sm.input = input_mdl
         sm.save()
+        sm_data.append(sm)
+
+    return sm_data
 
 
 def validate_site_model(sm_nodes, sites):
