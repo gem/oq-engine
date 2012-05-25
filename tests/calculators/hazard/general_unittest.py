@@ -73,18 +73,15 @@ class StoreSiteModelTestCase(unittest.TestCase):
             self.assertEqual(val, actual_site_model[i])
 
     def test_initialize_stores_site_model(self):
-        job = engine.prepare_job()
-        cfg = helpers.demo_file(
-            'simple_fault_demo_hazard/config_with_site_model.gem')
-        job_profile, params, sections = engine.import_job_profile(
-            cfg, job, force_inputs=True)
-
-        job_ctxt = engine.JobContext(
-            params, job.id, sections=sections, oq_job_profile=job_profile,
-            oq_job=job)
+        job_ctxt = helpers.prepare_job_context(
+            helpers.demo_file(
+                'simple_fault_demo_hazard/config_with_site_model.gem'))
 
         calc = general.BaseHazardCalculator(job_ctxt)
-        [site_model_input] = models.inputs4job(job.id, input_type='site_model')
+
+        [site_model_input] = models.inputs4job(
+            job_ctxt.oq_job.id, input_type='site_model')
+
         site_model_nodes = models.SiteModel.objects.filter(
             input=site_model_input)
 
@@ -198,6 +195,24 @@ class ValidateSiteModelTestCase(unittest.TestCase):
         for tc in test_cases:
             self.assertRaises(ValidationException, general.validate_site_model,
                               self.site_model_nodes, tc)
+
+    def test_initialize_calls_validate(self):
+        # Test make sure the calculator `initialize` calls
+        # `validate_site_model`.
+        job_ctxt = helpers.prepare_job_context(
+            helpers.demo_file(
+                'simple_fault_demo_hazard/config_with_site_model.gem'
+            )
+        )
+
+        calc = general.BaseHazardCalculator(job_ctxt)
+        patch_path = 'openquake.calculators.hazard.general.validate_site_model'
+
+        with helpers.patch(patch_path) as validate_patch:
+            calc.initialize()
+            # validate_site_model itself is tested in another test
+            # here, we just make sure it gets called
+            self.assertEqual(1, validate_patch.call_count)
 
 
 class GetSiteModelTestCase(unittest.TestCase):

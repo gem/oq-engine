@@ -380,7 +380,11 @@ class BaseHazardCalculator(Calculator):
         # Explicit cast to `str` here because the XML parser doesn't like
         # unicode. (More specifically, lxml doesn't like unicode.)
         site_model_content = str(site_model.model_content.raw_content)
-        store_site_model(site_model, StringIO.StringIO(site_model_content))
+        site_model_data = store_site_model(
+            site_model, StringIO.StringIO(site_model_content)
+        )
+
+        validate_site_model(site_model_data, self.job_ctxt.sites_to_compute())
 
     def pre_execute(self):
         basepath = self.job_ctxt.params.get('BASE_PATH')
