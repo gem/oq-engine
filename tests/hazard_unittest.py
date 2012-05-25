@@ -881,42 +881,80 @@ class MeanQuantileHazardMapsComputationTestCase(unittest.TestCase):
 class ParameterizeSitesTestCase(unittest.TestCase):
     """Tests relating to BaseHazardCalculator.parameterize_sites()."""
 
-    def setUp(self):
-        self.params = dict(
-            CALCULATION_MODE='Hazard',
-            REFERENCE_VS30_VALUE=500,
-            SADIGH_SITE_TYPE='Rock',
-            REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM='5.0',
-            DEPTHTO1PT0KMPERSEC='33.33',
-            VS30_TYPE='measured',
-            SOURCE_MODEL_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_SRC_MODEL_LT,
-            GMPE_LOGIC_TREE_FILE_PATH=SIMPLE_FAULT_GMPE_LT,
-            BASE_PATH=SIMPLE_FAULT_BASE_PATH)
+    def test_parameterize_sites_no_site_model(self):
+        job_ctxt = helpers.prepare_job_context(
+            helpers.demo_file('simple_fault_demo_hazard/config.gem')
+        )
 
-        self.job_ctxt = helpers.create_job(self.params)
-        self.calculator = classical.ClassicalHazardCalculator(self.job_ctxt)
-        self.job_id = self.job_ctxt.job_id
+        calc = classical.ClassicalHazardCalculator(job_ctxt)
 
-    def test_all_mandatory_params_covered(self):
-        """Make sure we add defaults for all mandatory hazard parameters."""
-        # The mandatory parameters below must be set on each Java site object.
-        hmps = HazardMandatoryParamsValidator.MANDATORY_PARAMS
-        mandatory_params = set([PARAMS[p].java_name for p in hmps])
+        jsites = calc.parameterize_sites(job_ctxt.sites_to_compute())
 
-        # Parameterise a single site and see what we got.
-        params_handled = set()
-        [jsite] = self.calculator.parameterize_sites([shapes.Site(3.0, 3.0)])
-        param_name_iter = jsite.getParameterNamesIterator()
-        while True:
-            try:
-                params_handled.add(param_name_iter.next())
-            except StopIteration:
-                break
+        # expected params:
+        jp = job_ctxt.oq_job_profile
 
-        self.assertTrue(
-            mandatory_params.issubset(params_handled),
-            "The following parameters have no defaults: %s" % (
-                mandatory_params - params_handled))
+        exp_sadigh = jp.sadigh_site_type
+        exp_vs30 = jp.reference_vs30_value
+        exp_vs30_type = jp.vs30_type
+        exp_z1pt0 = jp.depth_to_1pt_0km_per_sec
+        exp_z2pt5 = jp.reference_depth_to_2pt5km_per_sec_param
+
+        for jsite in jsites:
+            self.assertEqual(
+                exp_vs30, jsite.getParameter('Vs30').getValue().value
+            )
+            self.assertEqual(
+                exp_vs30_type, jsite.getParameter('Vs30 Type').getValue()
+            )
+            self.assertEqual(
+                exp_z1pt0,
+                jsite.getParameter('Depth 1.0 km/sec').getValue().value
+            )
+            self.assertEqual(
+                exp_z2pt5,
+                jsite.getParameter('Depth 2.5 km/sec').getValue().value
+            )
+            self.assertEqual(
+                exp_sadigh, jsite.getParameter('Sadigh Site Type').getValue()
+            )
+
+    def test_parameterize_sites_with_site_model(self):
+        job_ctxt = helpers.prepare_job_context(
+            helpers.demo_file(
+                'simple_fault_demo_hazard/config_with_site_model.gem'
+            )
+        )
+
+        calc = classical.ClassicalHazardCalculator(job_ctxt)
+        calc.initialize()
+
+        # This tests to ensure that the `initialize` implementation for this
+        # calculator properly stores the site model in the DB.
+
+        # NOTE: If this test ever breaks, it's probably because the
+        # ClassicalHazardCalculator is no longer calling the `initalize` code
+        # in its super class (BaseHazardCalculator).
+        site_model = hazard_general.get_site_model(job_ctxt.oq_job.id)
+        self.assertIsNotNone(site_model)
+
+        set_params_patch = helpers.patch(
+            'openquake.calculators.hazard.general.set_java_site_parameters'
+        )
+        closest_data_patch = helpers.patch(
+            'openquake.calculators.hazard.general.get_closest_site_model_data'
+        )
+        sp_mock = set_params_patch.start()
+        cd_mock = closest_data_patch.start()
+
+        calc.parameterize_sites(job_ctxt.sites_to_compute())
+
+        exp_call_count = len(job_ctxt.sites_to_compute())
+        self.assertEqual(exp_call_count, sp_mock.call_count)
+        self.assertEqual(exp_call_count, cd_mock.call_count)
+
+        # tear down the patches
+        set_params_patch.stop()
+        closest_data_patch.stop()
 
 
 class IMLTestCase(unittest.TestCase):
