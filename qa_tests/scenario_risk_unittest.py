@@ -176,7 +176,8 @@ class ScenarioRiskQATest(unittest.TestCase):
             self.assertTrue(exp_lm_node['stddev'] > lm_node['stddev'])
 
         # Sanity checks are done. Let's do this.
-        scen_cfg = helpers.demo_file('scenario_risk/config_sample-based.gem')
+        scen_cfg = helpers.demo_file(
+            'scenario_risk/config_sample-based_qa.gem')
         result = helpers.run_job(scen_cfg, ['--output-type=xml'],
                                  check_output=True)
 
