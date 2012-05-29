@@ -52,8 +52,7 @@ OUTPUT_DIR = computed_output
 
 GMPE_MODEL_NAME = BA_2008_AttenRel
 
-# Should be 1000
-NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS = 10
+NUMBER_OF_GROUND_MOTION_FIELDS_CALCULATIONS = 1000
 
 GMF_RANDOM_SEED = 3
 
@@ -66,5 +65,3 @@ EXPOSURE = exposure_model.xml
 
 # file containing the vulnerability functions
 VULNERABILITY = vulnerability_model_non-zero_covs.xml
-
-#EPSILON_RANDOM_SEED = 37
