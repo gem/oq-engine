@@ -122,7 +122,7 @@ class Polygon(object):
             Distance in km to extend polygon borders to.
         :returns:
             New :class:`Polygon` object with (in general) more vertices
-            and border that is approximately is ``dilation`` km far
+            and border that is approximately ``dilation`` km far
             (measured perpendicularly to edges and circularly to vertices)
             from the border of original polygon.
         """
