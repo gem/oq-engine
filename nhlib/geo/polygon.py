@@ -74,7 +74,8 @@ class Polygon(object):
             will be used for projecting it back to get spherical
             coordinates from Cartesian ones.
         :returns:
-            New :class:`Polygon` object.
+            New :class:`Polygon` object. Note that spherical coordinates
+            of that polygon do not get upsampled even for longer edges.
         """
         # avoid calling class' constructor
         polygon = object.__new__(cls)
