@@ -116,10 +116,8 @@ class UHSCoreTestCase(UHSBaseTestCase):
         get_closest_mock.return_value = SiteModel(
             vs30=800, vs30_type='measured', z1pt0=100, z2pt5=200)
         try:
-            import nose; nose.tools.set_trace()
             compute_uhs(the_job, site)
 
-            import nose; nose.tools.set_trace()
             self.assertEqual(1, get_sm_mock.call_count)
             self.assertEqual(1, get_closest_mock.call_count)
             self.assertEqual(1, compute_mock.call_count)
