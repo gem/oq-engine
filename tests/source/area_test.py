@@ -76,6 +76,7 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
                     self.assertAlmostEqual(rupture.hypocenter.latitude,
                                            lat, delta=1e-3)
                     self.assertEqual(rupture.surface.mesh_spacing, 5)
+                    self.assertIs(rupture.source_typology, AreaSource)
                 self.assertEqual(r1.mag, 5.5)
                 self.assertEqual(r2.mag, 6.5)
         self.assertEqual(len(ruptures), 9 * 2)
