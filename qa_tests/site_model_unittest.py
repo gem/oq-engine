@@ -50,14 +50,12 @@ class SiteModelConfigsTestCase(unittest.TestCase):
         )
 
 
-    @helpers.skipit
     @attr('slow')
     def test_disagg(self):
         self._do_test(
             helpers.demo_file('disaggregation/config_with_site_model.gem')
         )
 
-    @helpers.skipit
     @attr('slow')
     def test_uhs(self):
         self._do_test(
