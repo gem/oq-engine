@@ -25,6 +25,7 @@ from openquake.calculators.hazard.uhs.core import compute_uhs_task
 from openquake.calculators.hazard.uhs.core import write_uh_spectra
 from openquake.calculators.hazard.uhs.core import write_uhs_spectrum_data
 from openquake.db.models import Output
+from openquake.db.models import SiteModel
 from openquake.db.models import UhSpectra
 from openquake.db.models import UhSpectrum
 from openquake.db.models import UhSpectrumData
@@ -91,6 +92,43 @@ class UHSCoreTestCase(UHSBaseTestCase):
             self.assertEquals(self.UHS_RESULTS[i][0], poe)
             self.assertTrue(numpy.allclose(self.UHS_RESULTS[i][1],
                                            [x.value for x in uhs]))
+
+    def test_compute_uhs_with_site_model(self):
+        the_job = helpers.prepare_job_context(
+            helpers.demo_file('uhs/config_with_site_model.gem'))
+        the_job.to_kvs()
+
+        site = Site(0, 0)
+
+        helpers.store_hazard_logic_trees(the_job)
+
+        get_sm_patch = helpers.patch(
+            'openquake.calculators.hazard.general.get_site_model')
+        get_closest_patch = helpers.patch(
+            'openquake.calculators.hazard.general.get_closest_site_model_data')
+        compute_patch = helpers.patch(
+            'openquake.calculators.hazard.uhs.core._compute_uhs')
+
+        get_sm_mock = get_sm_patch.start()
+        get_closest_mock = get_closest_patch.start()
+        compute_mock = compute_patch.start()
+
+        get_closest_mock.return_value = SiteModel(
+            vs30=800, vs30_type='measured', z1pt0=100, z2pt5=200)
+        try:
+            import nose; nose.tools.set_trace()
+            compute_uhs(the_job, site)
+
+            import nose; nose.tools.set_trace()
+            self.assertEqual(1, get_sm_mock.call_count)
+            self.assertEqual(1, get_closest_mock.call_count)
+            self.assertEqual(1, compute_mock.call_count)
+        finally:
+            get_sm_patch.stop()
+            get_closest_patch.stop()
+            compute_patch.stop()
+
+
 
     def test_write_uh_spectra(self):
         # Test the writing of the intial database records for UHS results.
