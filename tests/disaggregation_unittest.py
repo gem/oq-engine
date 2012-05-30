@@ -18,6 +18,7 @@
 import h5py
 import numpy
 import os
+import shutil
 import tempfile
 import unittest
 
@@ -66,7 +67,7 @@ class DisaggregationTaskTestCase(unittest.TestCase):
     """Tests for the disaggregation matrix computation task."""
 
     def test_compute_disagg_matrix(self):
-        """Test the core function of the main disaggregation task."""
+        # Test the core function of the main disaggregation task.
 
         # for the given test input data, we expect the calculator to return
         # this gmv:
@@ -88,15 +89,58 @@ class DisaggregationTaskTestCase(unittest.TestCase):
         # 2) The matrix file has a size > 0
         # 3) Check that the returned GMV is what we expect
         # Here we don't test the actual matrix contents or the hdf5 file;
-        # there are tests on the Java side which verify the actual data in the
-        # matrix, plus other tests on the Python side which deal with saving
-        # the matrix.
+        # there are tests on the Java side which verify the actual data in
+        # the matrix, plus other tests on the Python side which deal with
+        # saving the matrix.
         self.assertTrue(os.path.exists(matrix_path))
         self.assertTrue(os.path.getsize(matrix_path) > 0)
         self.assertEqual(expected_gmv, gmv)
 
         # For clean up, delete the hdf5 we generated.
         os.unlink(matrix_path)
+
+    def test_compute_disagg_matrix_calls_site_model_fns(self):
+        # Test that `compute_disagg_matrix` calls the required site model
+        # functions when the configuration defines a site model.
+        cfg = helpers.demo_file('disaggregation/config_with_site_model.gem')
+
+        the_job = helpers.prepare_job_context(cfg)
+        the_job.to_kvs()
+        calc = disagg_core.DisaggHazardCalculator(the_job)
+        calc.initialize()  # store the site model
+
+        helpers.store_hazard_logic_trees(the_job)
+
+        site = shapes.Site(0.0, 0.0)
+        poe = 0.1
+        result_dir = tempfile.gettempdir()
+
+        get_sm_patch = helpers.patch(
+            'openquake.calculators.hazard.general.get_site_model')
+        get_closest_patch = helpers.patch(
+            'openquake.calculators.hazard.general.get_closest_site_model_data')
+        compute_patch = helpers.patch(
+            'openquake.calculators.hazard.disagg.core._compute_matrix')
+        save_patch = helpers.patch(
+            'openquake.calculators.hazard.disagg.core.save_5d_matrix_to_h5')
+
+        get_sm_mock = get_sm_patch.start()
+        get_closest_mock = get_closest_patch.start()
+        compute_mock = compute_patch.start()
+        save_mock = save_patch.start()
+
+        try:
+            _, _ = disagg_core.compute_disagg_matrix(the_job, site, poe,
+                                                     result_dir)
+
+            self.assertEqual(1, get_sm_mock.call_count)
+            self.assertEqual(1, get_closest_mock.call_count)
+            self.assertEqual(1, compute_mock.call_count)
+        finally:
+            get_sm_patch.stop()
+            get_closest_patch.stop()
+            compute_patch.stop()
+            save_patch.stop()
 
 
 class DisaggHazardCalculatorTestCase(unittest.TestCase):
