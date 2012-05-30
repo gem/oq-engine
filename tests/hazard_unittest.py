@@ -947,15 +947,17 @@ class ParameterizeSitesTestCase(unittest.TestCase):
         sp_mock = set_params_patch.start()
         cd_mock = closest_data_patch.start()
 
-        calc.parameterize_sites(job_ctxt.sites_to_compute())
+        try:
+            calc.parameterize_sites(job_ctxt.sites_to_compute())
 
-        exp_call_count = len(job_ctxt.sites_to_compute())
-        self.assertEqual(exp_call_count, sp_mock.call_count)
-        self.assertEqual(exp_call_count, cd_mock.call_count)
+            exp_call_count = len(job_ctxt.sites_to_compute())
+            self.assertEqual(exp_call_count, sp_mock.call_count)
+            self.assertEqual(exp_call_count, cd_mock.call_count)
 
-        # tear down the patches
-        set_params_patch.stop()
-        closest_data_patch.stop()
+        finally:
+            # tear down the patches
+            set_params_patch.stop()
+            closest_data_patch.stop()
 
 
 class IMLTestCase(unittest.TestCase):
