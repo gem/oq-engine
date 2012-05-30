@@ -28,7 +28,9 @@ from openquake import java
 from openquake.calculators.hazard.general import BaseHazardCalculator
 from openquake.calculators.hazard.general import generate_erf
 from openquake.calculators.hazard.general import generate_gmpe_map
+from openquake.calculators.hazard.general import get_closest_site_model_data
 from openquake.calculators.hazard.general import get_iml_list
+from openquake.calculators.hazard.general import get_site_model
 from openquake.calculators.hazard.general import set_gmpe_params
 from openquake.calculators.hazard.general import store_gmpe_map
 from openquake.calculators.hazard.general import store_source_model
@@ -108,13 +110,25 @@ def compute_uhs(the_job, site):
     uhs_calc = java.jclass('UHSCalculator')(periods, poes, imls, erf, gmpe_map,
                                             max_distance)
 
+    site_model = get_site_model(the_job.oq_job.id)
+
+    if site_model is not None:
+        sm_data = get_closest_site_model_data(site_model, site)
+        vs30_type = sm_data.vs30_type.capitalize()
+        vs30 = sm_data.vs30
+        z1pt0 = sm_data.z1pt0
+        z2pt5 = sm_data.z2pt5
+    else:
+        jp = the_job.oq_job_profile
+
+        vs30_type = jp.vs30_type.capitalize()
+        vs30 = jp.reference_vs30_value
+        z1pt0 = jp.depth_to_1pt_0km_per_sec
+        z2pt5 = jp.reference_depth_to_2pt5km_per_sec_param
+
     uhs_results = uhs_calc.computeUHS(
-        site.latitude,
-        site.longitude,
-        the_job['VS30_TYPE'],
-        the_job['REFERENCE_VS30_VALUE'],
-        the_job['DEPTHTO1PT0KMPERSEC'],
-        the_job['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM'])
+        site.latitude, site.longitude, vs30_type, vs30, z1pt0, z2pt5
+    )
 
     return uhs_results
 

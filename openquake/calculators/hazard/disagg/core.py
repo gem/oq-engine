@@ -31,17 +31,10 @@ from openquake.java import list_to_jdouble_array
 from openquake.job import config as job_cfg
 from openquake.output import hazard_disagg as hazard_output
 from openquake.utils import config
-from openquake.calculators.base import Calculator
 from openquake.utils.tasks import get_running_job
 from openquake.calculators.hazard.disagg import FULL_DISAGG_MATRIX
 from openquake.calculators.hazard.disagg import subsets
-from openquake.calculators.hazard.general import generate_erf
-from openquake.calculators.hazard.general import generate_gmpe_map
-from openquake.calculators.hazard.general import get_iml_list
-from openquake.calculators.hazard.general import preload
-from openquake.calculators.hazard.general import set_gmpe_params
-from openquake.calculators.hazard.general import store_gmpe_map
-from openquake.calculators.hazard.general import store_source_model
+from openquake.calculators.hazard import general
 
 
 LOG = logs.LOG
@@ -85,25 +78,51 @@ def compute_disagg_matrix(job_ctxt, site, poe, result_dir):
         config.get('kvs', 'host'),
         int(config.get('kvs', 'port')))
 
-    erf = generate_erf(job_ctxt.job_id, cache)
-    gmpe_map = generate_gmpe_map(job_ctxt.job_id, cache)
-    set_gmpe_params(gmpe_map, job_ctxt.params)
+    erf = general.generate_erf(job_ctxt.job_id, cache)
+    gmpe_map = general.generate_gmpe_map(job_ctxt.job_id, cache)
+    general.set_gmpe_params(gmpe_map, job_ctxt.params)
 
-    imls = get_iml_list(job_ctxt['INTENSITY_MEASURE_LEVELS'],
-                        job_ctxt['INTENSITY_MEASURE_TYPE'])
-    vs30_type = job_ctxt['VS30_TYPE']
-    vs30_value = job_ctxt['REFERENCE_VS30_VALUE']
-    depth_to_1pt0 = job_ctxt['DEPTHTO1PT0KMPERSEC']
-    depth_to_2pt5 = job_ctxt['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM']
+    imls = general.get_iml_list(job_ctxt['INTENSITY_MEASURE_LEVELS'],
+                                job_ctxt['INTENSITY_MEASURE_TYPE'])
 
-    matrix_result = disagg_calc.computeMatrix(
-        site.latitude, site.longitude, erf, gmpe_map, poe, imls,
-        vs30_type, vs30_value, depth_to_1pt0, depth_to_2pt5)
+    site_model = general.get_site_model(job_ctxt.oq_job.id)
+
+    if site_model is not None:
+        sm_data = general.get_closest_site_model_data(site_model, site)
+        vs30_type = sm_data.vs30_type.capitalize()
+        vs30 = sm_data.vs30
+        z1pt0 = sm_data.z1pt0
+        z2pt5 = sm_data.z2pt5
+    else:
+        jp = job_ctxt.oq_job_profile
+
+        vs30_type = jp.vs30_type.capitalize()
+        vs30 = jp.reference_vs30_value
+        z1pt0 = jp.depth_to_1pt_0km_per_sec
+        z2pt5 = jp.reference_depth_to_2pt5km_per_sec_param
+
+    matrix_result = _compute_matrix(
+        disagg_calc, site.latitude, site.longitude, erf, gmpe_map, poe, imls,
+        vs30_type, vs30, z1pt0, z2pt5)
 
     matrix_path = save_5d_matrix_to_h5(result_dir,
                                        numpy.array(matrix_result.getMatrix()))
 
     return (matrix_result.getGMV(), matrix_path)
+
+
+# Disabling 'Too many arguments'
+# pylint: disable=R0913
+def _compute_matrix(calc, lat, lon, erf, gmpe_map, poe, imls, vs30_type, vs30,
+                    z1pt0, z2pt5):
+    """Helper function for executing `computeMatrix` in the java calculator.
+
+    As a separate function, this makes it easier to mock.
+
+    See also :function:`compute_disagg_matrix`.
+    """
+    return calc.computeMatrix(
+        lat, lon, erf, gmpe_map, poe, imls, vs30_type, vs30, z1pt0, z2pt5)
 
 
 def save_5d_matrix_to_h5(directory, matrix):
@@ -159,7 +178,7 @@ def compute_disagg_matrix_task(job_id, site, realization, poe,
     return compute_disagg_matrix(job_ctxt, site, poe, result_dir)
 
 
-class DisaggHazardCalculator(Calculator):
+class DisaggHazardCalculator(general.BaseHazardCalculator):
     """The Python part of the Disaggregation calculator. This calculator
     computes disaggregation matrix results in the following manner:
 
@@ -175,7 +194,7 @@ class DisaggHazardCalculator(Calculator):
         the final output.
     """
 
-    @preload
+    @general.preload
     def execute(self):
         """Main execution point for the Disaggregation calculator.
 
@@ -297,11 +316,11 @@ class DisaggHazardCalculator(Calculator):
             # cache the source model and gmpe model in the KVS
             # so the Java code can access it
 
-            store_source_model(self.job_ctxt.job_id,
-                               src_model_rnd.getrandbits(32),
-                               self.job_ctxt.params, self.calc)
-            store_gmpe_map(self.job_ctxt.job_id, gmpe_rnd.getrandbits(32),
-                           self.calc)
+            general.store_source_model(self.job_ctxt.job_id,
+                                       src_model_rnd.getrandbits(32),
+                                       self.job_ctxt.params, self.calc)
+            general.store_gmpe_map(
+                self.job_ctxt.job_id, gmpe_rnd.getrandbits(32), self.calc)
 
             for poe in poes:
                 task_site_pairs = []
