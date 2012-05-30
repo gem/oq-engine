@@ -38,6 +38,7 @@ from openquake.calculators.hazard import CALCULATORS
 from openquake.calculators.hazard import general as hazard_general
 from openquake.calculators.hazard.classical import core as classical
 from openquake.engine import JobContext
+from openquake.job import params as job_params
 from openquake.job.config import HazardMandatoryParamsValidator
 from openquake.job.config import PARAMS
 from openquake.kvs import tokens
@@ -893,7 +894,7 @@ class ParameterizeSitesTestCase(unittest.TestCase):
         # expected params:
         jp = job_ctxt.oq_job_profile
 
-        exp_sadigh = jp.sadigh_site_type
+        exp_sadigh = job_params.REVERSE_ENUM_MAP[jp.sadigh_site_type]
         exp_vs30 = jp.reference_vs30_value
         exp_vs30_type = jp.vs30_type
         exp_z1pt0 = jp.depth_to_1pt_0km_per_sec
