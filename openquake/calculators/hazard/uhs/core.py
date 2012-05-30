@@ -25,15 +25,7 @@ from django.db import transaction
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
 from openquake import java
-from openquake.calculators.hazard.general import BaseHazardCalculator
-from openquake.calculators.hazard.general import generate_erf
-from openquake.calculators.hazard.general import generate_gmpe_map
-from openquake.calculators.hazard.general import get_closest_site_model_data
-from openquake.calculators.hazard.general import get_iml_list
-from openquake.calculators.hazard.general import get_site_model
-from openquake.calculators.hazard.general import set_gmpe_params
-from openquake.calculators.hazard.general import store_gmpe_map
-from openquake.calculators.hazard.general import store_source_model
+from openquake.calculators.hazard import general
 from openquake.calculators.hazard.uhs.ath import completed_task_count
 from openquake.calculators.hazard.uhs.ath import uhs_task_handler
 from openquake.db.models import Output
@@ -95,25 +87,25 @@ def compute_uhs(the_job, site):
 
     periods = list_to_jdouble_array(the_job['UHS_PERIODS'])
     poes = list_to_jdouble_array(the_job['POES'])
-    imls = get_iml_list(the_job['INTENSITY_MEASURE_LEVELS'],
-                        the_job['INTENSITY_MEASURE_TYPE'])
+    imls = general.get_iml_list(the_job['INTENSITY_MEASURE_LEVELS'],
+                                the_job['INTENSITY_MEASURE_TYPE'])
     max_distance = the_job['MAXIMUM_DISTANCE']
 
     cache = java.jclass('KVS')(
         config.get('kvs', 'host'),
         int(config.get('kvs', 'port')))
 
-    erf = generate_erf(the_job.job_id, cache)
-    gmpe_map = generate_gmpe_map(the_job.job_id, cache)
-    set_gmpe_params(gmpe_map, the_job.params)
+    erf = general.generate_erf(the_job.job_id, cache)
+    gmpe_map = general.generate_gmpe_map(the_job.job_id, cache)
+    general.set_gmpe_params(gmpe_map, the_job.params)
 
     uhs_calc = java.jclass('UHSCalculator')(periods, poes, imls, erf, gmpe_map,
                                             max_distance)
 
-    site_model = get_site_model(the_job.oq_job.id)
+    site_model = general.get_site_model(the_job.oq_job.id)
 
     if site_model is not None:
-        sm_data = get_closest_site_model_data(site_model, site)
+        sm_data = general.get_closest_site_model_data(site_model, site)
         vs30_type = sm_data.vs30_type.capitalize()
         vs30 = sm_data.vs30
         z1pt0 = sm_data.z1pt0
@@ -126,11 +118,22 @@ def compute_uhs(the_job, site):
         z1pt0 = jp.depth_to_1pt_0km_per_sec
         z2pt5 = jp.reference_depth_to_2pt5km_per_sec_param
 
-    uhs_results = uhs_calc.computeUHS(
-        site.latitude, site.longitude, vs30_type, vs30, z1pt0, z2pt5
+    uhs_results = _compute_uhs(
+        uhs_calc, site.latitude, site.longitude, vs30_type, vs30, z1pt0, z2pt5
     )
 
     return uhs_results
+
+
+def _compute_uhs(calc, lat, lon, vs30_type, vs30, z1pt0, z2pt5):
+    """Helper function for executing `computeUHS` in the java calculator.
+
+    As a separate function, this makes it easier to mock (since we can't really
+    mock the java code).
+
+    See also :function:`compute_uhs`.
+    """
+    return calc.computeUHS(lat, lon, vs30_type, vs30, z1pt0, z2pt5)
 
 
 @transaction.commit_on_success(using='reslt_writer')
@@ -215,7 +218,7 @@ def write_uhs_spectrum_data(job_ctxt, realization, site, uhs_results):
         uh_spectrum_data.save()
 
 
-class UHSCalculator(BaseHazardCalculator):
+class UHSCalculator(general.BaseHazardCalculator):
     """Uniform Hazard Spectra calculator"""
 
     # LogicTreeProcessor for sampling the source model and gmpe logic trees.
@@ -260,10 +263,10 @@ class UHSCalculator(BaseHazardCalculator):
         for rlz in xrange(job_ctxt.oq_job_profile.realizations):
 
             # Sample the gmpe and source models:
-            store_source_model(
+            general.store_source_model(
                 job_ctxt.job_id, src_model_rnd.getrandbits(32),
                 job_ctxt.params, self.lt_processor)
-            store_gmpe_map(
+            general.store_gmpe_map(
                 job_ctxt.job_id, gmpe_rnd.getrandbits(32), self.lt_processor)
 
             for site_block in block_splitter(all_sites, site_block_size):
