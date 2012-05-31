@@ -235,6 +235,9 @@ class ScenarioDamageRiskCalculatorTestCase(
         self.calculator.ddt_fractions = {"RC": numpy.array(
                 [[1.0, 0.0, 0.0], [1.0, 0.0, 0.0]])}
 
+        # stubbing out also the total distribution
+        self.calculator.total_fractions = numpy.array([[1.0, 0.0, 0.0]])
+
         self.job_ctxt.serialize_results_to = ["xml"]
         self.calculator.post_execute()
 
@@ -247,6 +250,9 @@ class ScenarioDamageRiskCalculatorTestCase(
     def test_post_execute_no_serialization(self):
         # otherwise, just on database (default)
         fm = self._store_con_fmodel()
+
+        # stubbing out the total distribution
+        self.calculator.total_fractions = numpy.array([[1.0, 0.0, 0.0]])
 
         self.calculator.pre_execute()
         self.calculator.compute_risk(BLOCK_ID, fmodel=fm)
