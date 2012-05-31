@@ -30,7 +30,8 @@ from openquake.calculators.risk import general
 from openquake.db.models import Output, FragilityModel
 from openquake.db.models import DmgDistPerAsset, Ffc, Ffd
 from openquake.db.models import DmgDistPerAssetData, DmgDistPerTaxonomy
-from openquake.db.models import DmgDistPerTaxonomyData
+from openquake.db.models import (DmgDistPerTaxonomyData,
+DmgDistTotal, DmgDistTotalData)
 from openquake.db.models import inputs4job
 from openquake.utils.tasks import distribute
 from openquake.export.risk import (
@@ -51,6 +52,10 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         # fractions of each damage state per building taxonomy
         # for the entire computation
         self.ddt_fractions = {}
+
+        # fractions of each damage state for the distribution
+        # of the entire computation
+        self.total_fractions = None
 
     def pre_execute(self):
         """
@@ -101,6 +106,20 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             output=output,
             dmg_states=_damage_states(fm.lss)).save()
 
+        output = Output(
+            owner=oq_job.owner,
+            oq_job=oq_job,
+            display_name="SDA (total damage distributions) "
+                "results for calculation id %s" % oq_job.id,
+            db_backed=True,
+            output_type="dmg_dist_total")
+
+        output.save()
+
+        DmgDistTotal(
+            output=output,
+            dmg_states=_damage_states(fm.lss)).save()
+
     def execute(self):
         """
         Dispatch the computation into multiple tasks.
@@ -113,11 +132,11 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             tf_args=dict(job_id=self.job_ctxt.job_id,
             fmodel=_fm(self.job_ctxt.oq_job)))
 
-        self._collect_ddt_fractions(region_fractions)
+        self._collect_fractions(region_fractions)
 
         LOGGER.debug("Scenario damage risk computation completed.")
 
-    def _collect_ddt_fractions(self, region_fractions):
+    def _collect_fractions(self, region_fractions):
         """
         Sum the fractions (of each damage state per building taxonomy)
         of each computation block.
@@ -135,10 +154,19 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
             for taxonomy in bfractions.keys():
                 fractions = self.ddt_fractions.get(taxonomy, None)
 
+                # sum per taxonomy
                 if not fractions:
-                    self.ddt_fractions[taxonomy] = bfractions[taxonomy]
+                    self.ddt_fractions[taxonomy] = numpy.array(
+                        bfractions[taxonomy])
                 else:
                     self.ddt_fractions[taxonomy] += bfractions[taxonomy]
+
+                # global sum
+                if self.total_fractions is None:
+                    self.total_fractions = numpy.array(
+                        bfractions[taxonomy])
+                else:
+                    self.total_fractions += bfractions[taxonomy]
 
     def compute_risk(self, block_id, **kwargs):
         """
@@ -147,6 +175,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         Currently we support the computation of:
         * damage distributions per asset
         * damage distributions per building taxonomy
+        * total damage distributions
 
         :param block_id: id of the region block data.
         :type block_id: integer
@@ -255,6 +284,28 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
                     mean=mean[x],
                     stddev=stddev[x]).save()
 
+    def _store_total_distribution(self):
+        """
+        Store the total damage distribution.
+        """
+
+        [dd] = DmgDistTotal.objects.filter(
+                output__owner=self.job_ctxt.oq_job.owner,
+                output__oq_job=self.job_ctxt.oq_job,
+                output__output_type="dmg_dist_total")
+
+        fm = _fm(self.job_ctxt.oq_job)
+
+        mean = numpy.mean(self.total_fractions, axis=0)
+        stddev = numpy.std(self.total_fractions, axis=0, ddof=1)
+
+        for x in xrange(len(mean)):
+            DmgDistTotalData(
+                dmg_dist_total=dd,
+                dmg_state=_damage_states(fm.lss)[x],
+                mean=mean[x],
+                stddev=stddev[x]).save()
+
     def post_execute(self):
         """
         Export the results to file if the `output-type`
@@ -265,6 +316,7 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         """
 
         self._store_ddt()
+        self._store_total_distribution()
 
         if "xml" in self.job_ctxt.serialize_results_to:
             [output] = Output.objects.filter(
