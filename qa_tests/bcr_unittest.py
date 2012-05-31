@@ -20,7 +20,7 @@ import unittest
 from lxml import etree
 
 from openquake.db.models import OqJob
-from openquake.nrml import nrml_schema_file
+from openquake.nrml.utils import nrml_schema_file
 
 from tests.utils import helpers
 

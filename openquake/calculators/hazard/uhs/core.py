@@ -25,7 +25,7 @@ from django.db import transaction
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
 from openquake import java
-from openquake.calculators.base import Calculator
+from openquake.calculators.hazard.general import BaseHazardCalculator
 from openquake.calculators.hazard.general import generate_erf
 from openquake.calculators.hazard.general import generate_gmpe_map
 from openquake.calculators.hazard.general import get_iml_list
@@ -201,7 +201,7 @@ def write_uhs_spectrum_data(job_ctxt, realization, site, uhs_results):
         uh_spectrum_data.save()
 
 
-class UHSCalculator(Calculator):
+class UHSCalculator(BaseHazardCalculator):
     """Uniform Hazard Spectra calculator"""
 
     # LogicTreeProcessor for sampling the source model and gmpe logic trees.
@@ -209,6 +209,7 @@ class UHSCalculator(Calculator):
 
     def initialize(self):
         """Set the task total counter."""
+        super(UHSCalculator, self).initialize()
         task_total = (self.job_ctxt.oq_job_profile.realizations
                       * len(self.job_ctxt.sites_to_compute()))
         stats.set_total(self.job_ctxt.job_id, 'h', 'uhs:tasks', task_total)
