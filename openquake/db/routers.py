@@ -55,10 +55,10 @@ class OQRouter(object):
         '''
         schema = self._schema_table_from_model(model)[0]
 
-        if schema in ("admin", "oqmif"):
+        if schema in ("admin",):
             # The db name for these is the same as the schema
             return schema
-        elif schema in ("hzrdr", "riskr"):
+        elif schema in ("hzrdr", "riskr", "oqmif"):
             return "job_init"
         elif schema in ("hzrdi", "riski", "uiapi"):
             return "reslt_writer"
@@ -72,12 +72,12 @@ class OQRouter(object):
         '''
         schema, table = self._schema_table_from_model(model)
 
-        if schema in ('admin', 'oqmif'):
+        if schema in ('admin',):
             # The db name for these is the same as the schema
             return schema
         elif schema == "uiapi" and table == "output":
             return "reslt_writer"
-        elif schema in ("hzrdi", "riski", "uiapi"):
+        elif schema in ("hzrdi", "riski", "uiapi", "oqmif"):
             return "job_init"
         elif schema in ("hzrdr", "riskr"):
             return "reslt_writer"
