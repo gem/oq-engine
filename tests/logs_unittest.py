@@ -328,7 +328,7 @@ class InitLogsAmqpSendTestCase(unittest.TestCase):
         root logger if none is present.
         """
         mm = mock.MagicMock(spec=kombu.messaging.Producer)
-        with mock.patch_object(logs.AMQPHandler, "_initialize") as minit:
+        with mock.patch.object(logs.AMQPHandler, "_initialize") as minit:
             minit.return_value = mm
             with helpers.patch("logging.root.addHandler") as mah:
                 logs.init_logs_amqp_send("info", 321)
@@ -343,7 +343,7 @@ class InitLogsAmqpSendTestCase(unittest.TestCase):
         instance to the root logger.
         """
         mm = mock.MagicMock(spec=kombu.messaging.Producer)
-        with mock.patch_object(logs.AMQPHandler, "_initialize") as minit:
+        with mock.patch.object(logs.AMQPHandler, "_initialize") as minit:
             minit.return_value = mm
             handler = logs.AMQPHandler()
             handler.set_job_id = mock.Mock()
@@ -359,7 +359,7 @@ class InitLogsAmqpSendTestCase(unittest.TestCase):
         init_logs_amqp_send() will change the root level logger anyway.
         """
         mm = mock.MagicMock(spec=kombu.messaging.Producer)
-        with mock.patch_object(logs.AMQPHandler, "_initialize") as minit:
+        with mock.patch.object(logs.AMQPHandler, "_initialize") as minit:
             minit.return_value = mm
             handler = logs.AMQPHandler()
             logging.root.handlers.append(handler)

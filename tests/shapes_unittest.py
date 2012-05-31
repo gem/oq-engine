@@ -16,7 +16,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import decimal
 import json
 import numpy
@@ -70,7 +69,7 @@ class ShapesTestCase(unittest.TestCase):
             121.00000006)
         out_values = (29.0, -121.0000001, -121.0, 121.0, 121.0000001)
 
-        for i, val in enumerate(in_values):
+        for i, _ in enumerate(in_values):
             self.assertEqual(out_values[i], round_float(in_values[i]))
 
     def test_round_float_rounding(self):
@@ -804,7 +803,7 @@ class FieldTestCase(unittest.TestCase):
         self.gmf_string = open(helpers.get_data_path("gmfs.json")).readline()
         region = shapes.Region.from_coordinates(
                  [(-118.30, 34.12), (-118.18, 34.12),
-                 (-118.18,  34.00), (-118.30,  34.00)])
+                 (-118.18, 34.00), (-118.30, 34.00)])
         region.cell_size = 0.02
         self.grid = region.grid
 
@@ -817,6 +816,7 @@ class FieldTestCase(unittest.TestCase):
 
 
 class GridTestCase(unittest.TestCase):
+
     def _test_expected_points(self, grid):
         for i, point in enumerate(grid):
             # check point iteration order
@@ -871,6 +871,109 @@ class RegionTestCase(unittest.TestCase):
             (10.0, 10.0), (100.0, 100.0))
         self._check_match(constraint)
 
-    def test_bounding_box(self):
-        switzerland = shapes.Region.from_coordinates(
-            [(10.0, 100.0), (100.0, 100.0), (100.0, 10.0), (10.0, 10.0)])
+    def test_region_sites_boundary_1(self):
+        # check that points really close to the
+        # border of the region (longitude) have a corresponding
+        # grid point. This is done by adding an additional
+        # column to the grid (in this case [(2.5, 2.0),
+        # (2.5, 1.5), (2.5, 1.0)]), even if the points that
+        # are the center of the cell are outside the region.
+        region = shapes.Region.from_coordinates(
+            [(1.0, 2.0), (2.3, 2.0), (2.3, 1.0), (1.0, 1.0)])
+
+        region.cell_size = 0.5
+
+        expected_sites = set([
+            shapes.Site(1.0, 1.0), shapes.Site(1.5, 1.0),
+            shapes.Site(2.0, 1.0), shapes.Site(1.0, 1.5),
+            shapes.Site(1.5, 1.5), shapes.Site(2.0, 1.5),
+            shapes.Site(1.0, 2.0), shapes.Site(1.5, 2.0),
+            shapes.Site(2.0, 2.0), shapes.Site(2.5, 2.0),
+            shapes.Site(2.5, 1.0), shapes.Site(2.5, 1.5)])
+
+        self.assertEquals(expected_sites, set(region.grid.centers()))
+
+        self.assertTrue(region.grid.site_at(region.grid.point_at(
+                shapes.Site(2.25, 2.0))) in region.grid.centers())
+
+        self.assertTrue(region.grid.site_at(region.grid.point_at(
+                shapes.Site(2.27, 2.0))) in region.grid.centers())
+
+        self.assertTrue(region.grid.site_at(region.grid.point_at(
+                shapes.Site(2.30, 2.0))) in region.grid.centers())
+
+        # check we can ask for valid grid points from
+        # the sites that represent the center of the cells
+        for cell_center in region.grid.centers():
+            self.assertTrue(region.grid.site_inside(cell_center))
+
+    def test_region_sites_boundary_2(self):
+        # same as above, but for latitude
+        region = shapes.Region.from_coordinates(
+            [(1.0, 2.0), (2.0, 2.0), (2.0, 0.6), (1.0, 0.6)])
+
+        region.cell_size = 0.5
+
+        self.assertTrue(region.grid.site_at(region.grid.point_at(
+                shapes.Site(1.5, 0.61))) in region.grid.centers())
+
+        self.assertTrue(region.grid.site_at(region.grid.point_at(
+                shapes.Site(1.5, 0.60))) in region.grid.centers())
+
+        self.assertTrue(region.grid.site_at(region.grid.point_at(
+                shapes.Site(1.5, 2.0))) in region.grid.centers())
+
+        self.assertTrue(region.grid.site_at(region.grid.point_at(
+                shapes.Site(1.5, 1.9))) in region.grid.centers())
+
+        self.assertTrue(region.grid.site_at(region.grid.point_at(
+                shapes.Site(1.5, 1.8))) in region.grid.centers())
+
+        # check we can ask for valid grid points from
+        # the sites that represent the center of the cells
+        for cell_center in region.grid.centers():
+            self.assertTrue(region.grid.site_inside(cell_center))
+
+    def test_region_sites_boundary_3(self):
+        region = shapes.RegionConstraint.from_simple((0.0, 1.0), (1.0, 0.0))
+
+        # Site(1.1, 1.1) is outside the region
+        self.assertFalse(region.match(shapes.Site(1.1, 1.1)))
+
+        # but inside the underlying grid because we add an
+        # additional row and column
+        self.assertTrue(region.grid.site_inside(shapes.Site(1.1, 1.1)))
+
+        # same as above
+        self.assertFalse(region.match(shapes.Site(1.04, 1.04)))
+        self.assertFalse(region.match(shapes.Site(1.05, 1.05)))
+
+        self.assertTrue(region.grid.site_inside(shapes.Site(1.04, 1.04)))
+        self.assertTrue(region.grid.site_inside(shapes.Site(1.05, 1.05)))
+
+        # this is too far away, even outside the grid
+        self.assertRaises(ValueError,
+                region.grid.point_at, shapes.Site(30.0, 30.0))
+
+        region = shapes.RegionConstraint.from_simple((0.0, 1.0), (1.0, 0.0))
+        region.cell_size = 0.5
+
+        # same, points are outside the region
+        self.assertFalse(region.match(shapes.Site(1.24, 1.24)))
+        self.assertFalse(region.match(shapes.Site(1.25, 1.25)))
+        self.assertFalse(region.match(shapes.Site(-0.24, -0.24)))
+        self.assertFalse(region.match(shapes.Site(-0.25, -0.25)))
+
+        # but inside the grid
+        self.assertTrue(region.grid.site_inside(shapes.Site(1.24, 1.24)))
+        self.assertTrue(region.grid.site_inside(shapes.Site(1.25, 1.25)))
+        self.assertTrue(region.grid.site_inside(shapes.Site(-0.25, -0.25)))
+        self.assertTrue(region.grid.site_inside(shapes.Site(-0.25, -0.24)))
+
+        # latitude too low, too high
+        self.assertFalse(region.grid.site_inside(shapes.Site(-0.25, -0.26)))
+        self.assertFalse(region.grid.site_inside(shapes.Site(-0.25, 1.76)))
+
+        # longitude too low, too high
+        self.assertFalse(region.grid.site_inside(shapes.Site(1.76, 1.5)))
+        self.assertFalse(region.grid.site_inside(shapes.Site(-0.26, 1.5)))
