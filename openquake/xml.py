@@ -23,8 +23,8 @@ including namespaces, and namespace maps.
 
 from lxml import etree
 
-from openquake.nrml import utils
 from openquake import shapes
+from openquake.nrml import utils as nrml_utils
 
 
 NRML_NS = 'http://openquake.org/xmlns/nrml/0.3'
@@ -125,7 +125,7 @@ class XMLMismatchError(Exception):
 
 
 def validates_against_xml_schema(xml_instance_path,
-        schema_path=utils.nrml_schema_file()):
+                                 schema_path=nrml_utils.nrml_schema_file()):
     """
     Checks whether an XML file validates against an XML Schema
 

@@ -28,7 +28,7 @@ from openquake.db.models import DmgDistPerAsset, DmgDistPerAssetData
 from openquake.kvs.tokens import ground_motion_values_key
 from openquake.calculators.risk.general import Block
 from openquake.calculators.risk.scenario_damage.core import (
-    ScenarioDamageRiskCalculator, compute_dm)
+    ScenarioDamageRiskCalculator, compute_gmv_fractions)
 
 from tests.utils import helpers
 
@@ -192,7 +192,8 @@ class ScenarioDamageRiskCalculatorTestCase(
 
         func.save()
 
-        self._close_to(compute_dm([func], 0.7), compute_dm([func], 0.8))
+        self._close_to(compute_gmv_fractions([func], 0.7),
+                compute_gmv_fractions([func], 0.8))
 
     def test_dda_iml_below_range_damage_limit_undefined(self):
         # corner case where we have a ground motion value
@@ -218,7 +219,7 @@ class ScenarioDamageRiskCalculatorTestCase(
         func.save()
 
         self._close_to([1.0, 0.0],
-            compute_dm([func], 0.05))
+            compute_gmv_fractions([func], 0.05))
 
     def test_dda_iml_below_range_damage_limit_defined(self):
         # corner case where we have a ground motion value
@@ -245,7 +246,7 @@ class ScenarioDamageRiskCalculatorTestCase(
         func.save()
 
         self._close_to([1.0, 0.0],
-            compute_dm([func], 0.02))
+            compute_gmv_fractions([func], 0.02))
 
     def test_gmv_between_no_damage_limit_and_first_iml(self):
         # corner case where we have a ground motion value
@@ -262,7 +263,7 @@ class ScenarioDamageRiskCalculatorTestCase(
             taxonomy="RC").order_by("lsi")
 
         self._close_to([0.975, 0.025, 0.],
-            compute_dm(funcs, 0.075))
+            compute_gmv_fractions(funcs, 0.075))
 
     def test_post_execute_serialization(self):
         # when --output-type=xml is specified, we serialize results
@@ -271,13 +272,21 @@ class ScenarioDamageRiskCalculatorTestCase(
         self.calculator.pre_execute()
         self.calculator.compute_risk(BLOCK_ID, fmodel=fm)
 
+        # since the taxonomy data is computed and aggregated
+        # per block in the execute() method and we are not
+        # testing it here, just stubbing out some values to
+        # produce the taxonomy distribution
+        self.calculator.ddt_fractions = {"RC": numpy.array(
+                [[1.0, 0.0, 0.0], [1.0, 0.0, 0.0]])}
+
         self.job_ctxt.serialize_results_to = ["xml"]
-
         self.calculator.post_execute()
-        file_path = self._results_file()
 
-        self.assertTrue(os.path.exists(file_path))
-        os.unlink(file_path)
+        paths = self._results_files()
+
+        for path in paths:
+            self.assertTrue(os.path.exists(path))
+            os.unlink(path)
 
     def test_post_execute_no_serialization(self):
         # otherwise, just on database (default)
@@ -285,17 +294,20 @@ class ScenarioDamageRiskCalculatorTestCase(
 
         self.calculator.pre_execute()
         self.calculator.compute_risk(BLOCK_ID, fmodel=fm)
-
         self.calculator.post_execute()
-        file_path = self._results_file()
 
-        self.assertFalse(os.path.exists(file_path))
+        paths = self._results_files()
 
-    def _results_file(self):
+        for path in paths:
+            self.assertFalse(os.path.exists(path))
+
+    def _results_files(self):
         target_dir = os.path.join(self.job_ctxt.params.get("BASE_PATH"),
                 self.job_ctxt.params.get("OUTPUT_DIR"))
 
-        return os.path.join(target_dir, "dmg-dist-asset-%s.xml" % self.job.id)
+        return [os.path.join(
+            target_dir, "dmg-dist-asset-%s.xml" % self.job.id), os.path.join(
+            target_dir, "dmg-dist-taxonomy-%s.xml" % self.job.id)]
 
     def _close_to(self, expected, actual):
         self.assertTrue(numpy.allclose(actual, expected, atol=0.0, rtol=0.05))
