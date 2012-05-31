@@ -59,7 +59,16 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
     def pre_execute(self):
         """
-        Write the initial db container records for the calculation results.
+        Perform the following pre-execution tasks:
+
+        * store the exposure model specified in the
+        configuration file into database
+        * store the fragility model specified in the
+        configuration file into database
+        * split the interested sites into blocks for
+        later processing
+        * write the initial database container records
+        for calculation results
         """
 
         self.store_exposure_assets()
@@ -131,6 +140,14 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         """
         Sum the fractions (of each damage state per building taxonomy)
         of each computation block.
+
+        :param region_fractions: fractions for each damage state
+            per building taxonomy for each different block computed.
+        :type region_fractions: `list` of 2d `numpy.array`.
+            Each column of the array represents a damage state (in order from
+            the lowest to the highest). Each row represents the
+            values for that damage state for a particular
+            ground motion value.
         """
 
         for bfractions in region_fractions:
@@ -165,6 +182,12 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         :keyword fmodel: fragility model associated to this computation.
         :type fmodel: instance of
             :py:class:`openquake.db.models.FragilityModel`
+        :return: the sum of the fractions (for each damage state)
+            per asset taxonomy for the computed block.
+        :rtype: `dict` where each key is a string representing a
+            taxonomy and each value is the sum of fractions of all
+            the assets related to that taxonomy (represented as
+            a 2d `numpy.array`)
         """
 
         fm = kwargs["fmodel"]
@@ -204,6 +227,20 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     def _store_dda(self, fractions, asset, fm):
         """
         Store the damage distribution per asset.
+
+        :param fm: fragility model associated to
+            the distribution being stored.
+        :type fm: instance of
+            :py:class:`openquake.db.models.FragilityModel`
+        :param asset: asset associated to the distribution being stored.
+        :type asset: instance of :py:class:`openquake.db.model.ExposureData`
+        :param fractions: fractions for each damage state associated
+            to the given asset.
+        :type fractions: 2d `numpy.array`. Each column represents
+            a damage state (in order from the lowest
+            to the highest). Each row represents the
+            values for that damage state for a particular
+            ground motion value.
         """
 
         [dds] = DmgDistPerAsset.objects.filter(
