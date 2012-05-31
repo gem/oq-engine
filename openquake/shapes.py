@@ -340,8 +340,8 @@ class Site(nhlib_geo.Point):
     """Site is a dictionary-keyable point"""
 
     def __init__(self, longitude, latitude, depth=0.0):
-        super(Site, self).__init__(
-            round_float(longitude), round_float(latitude), depth=depth)
+        nhlib_geo.Point.__init__(
+            self, round_float(longitude), round_float(latitude), depth=depth)
 
         self.point = geometry.Point(self.longitude, self.latitude)
 
