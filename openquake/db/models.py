@@ -81,6 +81,7 @@ def per_asset_value(exd):
     The same "formula" applies to contenst/retrofitting cost analogously.
 
     :param exd: a named tuple with the following properties:
+        - category
         - cost
         - cost_type
         - area
@@ -89,6 +90,8 @@ def per_asset_value(exd):
     :returns: the per-asset value as a `float`
     :raises: `ValueError` in case of a malformed (risk exposure data) input
     """
+    if exd.category is not None and exd.category == "population":
+        return exd.number_of_units
     if exd.cost_type == "aggregated":
         return exd.cost
     elif exd.cost_type == "per_asset":
@@ -379,6 +382,21 @@ class Source(djm.Model):
         db_table = 'hzrdi\".\"source'
 
 
+class ParsedSource(djm.Model):
+    """Stores parsed hazard input model sources in serialized python object
+       tree format."""
+    input = djm.ForeignKey('Input')
+    source_type = djm.TextField(choices=Source.SI_TYPE_CHOICES)
+    blob = djm.TextField(help_text="The BLOB that holds the serialized "
+                                   "python object tree.")
+    geom = djm.GeometryField(
+        srid=4326, dim=2, help_text="A generic 2-dimensional geometry column "
+                                    "with the various source geometries.")
+
+    class Meta:
+        db_table = 'hzrdi\".\"parsed_source'
+
+
 class SimpleFault(djm.Model):
     '''
     Simple fault geometry
@@ -600,10 +618,11 @@ class Input(djm.Model):
         (u'lt_source', u'Source Model Logic Tree'),
         (u'lt_gmpe', u'GMPE Logic Tree'),
         (u'exposure', u'Exposure'),
-        (u'vulnerability', u'Vulnerability'),
         (u'fragility', u'Fragility'),
+        (u'vulnerability', u'Vulnerability'),
         (u'vulnerability_retrofitted', u'Vulnerability Retroffited'),
         (u'rupture', u'Rupture'),
+        (u'site_model', u'Site Model'),
     )
     input_type = djm.TextField(choices=INPUT_TYPE_CHOICES)
     # Number of bytes in the file:
@@ -644,7 +663,7 @@ class ModelContent(djm.Model):
     content_type = djm.TextField()
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
-    class Meta:
+    class Meta:  # pylint: disable=C0111,W0232
         db_table = 'uiapi\".\"model_content'
 
 
@@ -900,7 +919,8 @@ class OqJobProfile(djm.Model):
        (u"measured", u"Value obtained from on-site measurements"),
        (u"inferred", u"Estimated value"),
     )
-    vs30_type = djm.TextField(choices=VS30_TYPE_CHOICES, default="measured")
+    vs30_type = djm.TextField(choices=VS30_TYPE_CHOICES, default="measured",
+                              null=True)
     depth_to_1pt_0km_per_sec = djm.FloatField(default=100.0)
     asset_life_expectancy = djm.FloatField(null=True)
     interest_rate = djm.FloatField(null=True)
@@ -1355,7 +1375,7 @@ class ExposureData(djm.Model):
     '''
 
     REXD = namedtuple(
-        "REXD", "cost, cost_type, area, area_type, number_of_units")
+        "REXD", "category, cost, cost_type, area, area_type, number_of_units")
 
     exposure_model = djm.ForeignKey("ExposureModel")
     asset_ref = djm.TextField()
@@ -1386,7 +1406,8 @@ class ExposureData(djm.Model):
         exd = self.REXD(
             cost=self.stco, cost_type=self.exposure_model.stco_type,
             area=self.area, area_type=self.exposure_model.area_type,
-            number_of_units=self.number_of_units)
+            number_of_units=self.number_of_units,
+            category=self.exposure_model.category)
         return per_asset_value(exd)
 
     @property
@@ -1395,7 +1416,8 @@ class ExposureData(djm.Model):
         exd = self.REXD(
             cost=self.reco, cost_type=self.exposure_model.reco_type,
             area=self.area, area_type=self.exposure_model.area_type,
-            number_of_units=self.number_of_units)
+            number_of_units=self.number_of_units,
+            category=self.exposure_model.category)
         return per_asset_value(exd)
 
     class Meta:
