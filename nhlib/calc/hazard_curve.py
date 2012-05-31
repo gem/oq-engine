@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhlib.calc.hazard_curve` implements :func:`hazard_curves`.
+:mod:`nhlib.calc.hazard_curve` implements :func:`hazard_curves_poissonian`.
 """
 import numpy
 
