@@ -49,7 +49,6 @@ class SiteModelConfigsTestCase(unittest.TestCase):
             helpers.demo_file('event_based_hazard/config_with_site_model.gem')
         )
 
-
     @attr('slow')
     def test_disagg(self):
         self._do_test(
