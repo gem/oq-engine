@@ -33,12 +33,11 @@ from shapely import geometry
 
 from openquake import java
 from openquake import kvs
-from openquake import shapes
 from openquake.calculators.base import Calculator
 from openquake.db import models
 from openquake.input import logictree
 from openquake.java import list_to_jdouble_array
-from openquake.job import params
+from openquake.job import params as job_params
 from openquake.job.config import ValidationException
 from openquake.logs import LOG
 from openquake.nrml import parsers as nrml_parsers
@@ -488,7 +487,7 @@ class BaseHazardCalculator(Calculator):
         # The `sadigh site type` is the same in any case
         sadigh_param = java.jclass("StringParameter")("Sadigh Site Type")
         sadigh_param.setValue(
-            params.REVERSE_ENUM_MAP[job_profile.sadigh_site_type]
+            job_params.REVERSE_ENUM_MAP[job_profile.sadigh_site_type]
         )
 
         site_model = get_site_model(self.job_ctxt.oq_job.id)
