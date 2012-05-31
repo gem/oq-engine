@@ -39,8 +39,6 @@ from openquake.calculators.hazard import general as hazard_general
 from openquake.calculators.hazard.classical import core as classical
 from openquake.engine import JobContext
 from openquake.job import params as job_params
-from openquake.job.config import HazardMandatoryParamsValidator
-from openquake.job.config import PARAMS
 from openquake.kvs import tokens
 from openquake.nrml.utils import nrml_schema_file
 

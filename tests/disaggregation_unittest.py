@@ -18,7 +18,6 @@
 import h5py
 import numpy
 import os
-import shutil
 import tempfile
 import unittest
 
@@ -136,6 +135,7 @@ class DisaggregationTaskTestCase(unittest.TestCase):
             self.assertEqual(1, get_sm_mock.call_count)
             self.assertEqual(1, get_closest_mock.call_count)
             self.assertEqual(1, compute_mock.call_count)
+            self.assertEqual(1, save_mock.call_count)
         finally:
             get_sm_patch.stop()
             get_closest_patch.stop()
