@@ -141,7 +141,7 @@ def get_orthographic_projection(west, east, north, south):
         first two are numpy arrays of longitudes and latitudes *or*
         abscissae and ordinates of points to project and the third one
         is a boolean that allows to choose what operation is requested --
-        is it forward or reverse one. ``True`` values give to third
+        is it forward or reverse one. ``True`` value given to third
         positional argument (or keyword argument "reverse") indicates
         that the projection of points in 2d space back to earth surface
         is needed. The default value for "reverse" argument is ``False``,
