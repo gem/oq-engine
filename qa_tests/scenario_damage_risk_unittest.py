@@ -243,7 +243,7 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
         filename = "%s/dmg-dist-asset-%s.xml" % (OUTPUT_DIR, job.id)
         root = self._root(filename)
 
-        xpath = ('//nrml:dmgDistPerAsset//nrml:damageStates')
+        xpath = ("//nrml:dmgDistPerAsset//nrml:damageStates")
         dmg_states = self._get(root, xpath).text.split()
 
         self.assertEquals(["no_damage", "LS1", "LS2"], dmg_states)
