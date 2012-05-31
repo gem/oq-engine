@@ -17,8 +17,6 @@
 
 import unittest
 
-from nhlib import geo
-
 from openquake import engine
 from openquake import shapes
 from openquake.calculators.hazard import general

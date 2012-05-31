@@ -126,8 +126,6 @@ class UHSCoreTestCase(UHSBaseTestCase):
             get_closest_patch.stop()
             compute_patch.stop()
 
-
-
     def test_write_uh_spectra(self):
         # Test the writing of the intial database records for UHS results.
         # The function under test (`write_uh_spectra`) should write:

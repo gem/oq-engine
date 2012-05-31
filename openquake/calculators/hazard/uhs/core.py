@@ -42,6 +42,8 @@ from openquake.utils import tasks as utils_tasks
 from openquake.utils.general import block_splitter
 
 
+# Disabling 'Too many local variables'
+# pylint: disable=R0914
 @task(ignore_results=True)
 @stats.progress_indicator('h')
 @java.unpack_exception
@@ -73,6 +75,8 @@ def compute_uhs_task(job_id, realization, site):
     write_uhs_spectrum_data(job_ctxt, realization, site, uhs_results)
 
 
+# Disabling 'Too many arguments'
+# pylint: disable=R0913
 def compute_uhs(the_job, site):
     """Given a `JobContext` and a site of interest, compute UHS. The Java
     `UHSCalculator` is called to do perform the core computation.
