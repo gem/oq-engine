@@ -33,6 +33,9 @@ CREATE INDEX hzrdi_rupture_point_idx ON hzrdi.rupture USING gist(point);
 CREATE INDEX hzrdi_simple_fault_edge_idx ON hzrdi.simple_fault USING gist(edge);
 CREATE INDEX hzrdi_simple_fault_outline_idx ON hzrdi.simple_fault USING gist(outline);
 
+-- hzrdi.site_model
+CREATE INDEX hzrdi_site_model_input_id_idx ON hzrdi.site_model(input_id);
+
 -- hzrdi.source
 CREATE INDEX hzrdi_source_area_idx ON hzrdi.source USING gist(area);
 CREATE INDEX hzrdi_source_point_idx ON hzrdi.source USING gist(point);
@@ -90,3 +93,4 @@ CREATE INDEX oqmif_exposure_data_site_idx ON oqmif.exposure_data USING gist(site
 -- uiapi indexes
 CREATE INDEX uiapi_job2profile_oq_job_profile_id_idx on uiapi.job2profile(oq_job_profile_id);
 CREATE INDEX uiapi_job2profile_job_id_idx on uiapi.job2profile(oq_job_id);
+CREATE INDEX uiapi_input_model_content_id_idx on uiapi.input(model_content_id);
