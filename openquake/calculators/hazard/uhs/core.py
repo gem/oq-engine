@@ -132,6 +132,26 @@ def _compute_uhs(calc, lat, lon, vs30_type, vs30, z1pt0, z2pt5):
     mock the java code).
 
     See also :function:`compute_uhs`.
+
+    :param calc:
+        jpype `org.gem.calc.UHSCalculator` object.
+    :param float lat:
+        Site latitude.
+    :param float lon:
+        Site longitude.
+    :param vs30_type:
+        'measured' or 'inferred'. Identifies if vs30 value has been measured or
+        inferred.
+    :param float vs30:
+        Average shear wave velocity for top 30 m. Units m/s.
+    :param float z1pt0:
+        Depth to shear wave velocity of 1.0 km/s. Units m.
+    :param float z2pt5:
+        Depth to shear wave velocity of 2.5 km/s. Units km.
+
+    :returns:
+        jpype `java.util.List` of `org.gem.calc.UHSResult` objects, one for
+        each PoE value (which is provided to the ``calc``).
     """
     return calc.computeUHS(lat, lon, vs30_type, vs30, z1pt0, z2pt5)
 
