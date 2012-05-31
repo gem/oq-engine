@@ -115,6 +115,16 @@ class SeismicSourceFilterSitesTestCase(_BaseSeismicSourceTestCase):
         self.assertIs(filtered, self.sitecol)
         self.assertIs(filtered.indices, None)
 
+    def test_source_filter_filter_all_out(self):
+        col = SiteCollection([Site(Point(10, 10), 1, True, 2, 3),
+                              Site(Point(11, 12), 2, True, 2, 3),
+                              Site(Point(13, 14), 1, True, 2, 3)])
+        for int_dist in (0, 1, 10, 100, 1000):
+            filtered = self.source.filter_sites_by_distance_to_source(
+                integration_distance=int_dist, sites=col
+            )
+            self.assertIs(filtered, None)
+
     def test_rupture_filter(self):
         filtered = self.source_class.filter_sites_by_distance_to_rupture(
             rupture=None, integration_distance=12, sites=self.sitecol
