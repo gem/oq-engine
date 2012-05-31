@@ -75,6 +75,55 @@ class FragilityModelTestCase(DjangoTestCase, helpers.DbTestCase):
         else:
             self.fail("DatabaseError not raised")
 
+    def test_fragility_model_invalid_no_damage_limit_imls(self):
+        self.mdl.format = "discrete"
+        self.mdl.imt = "pga"
+        self.mdl.lss = "minor"
+        self.mdl.no_damage_limit = 9.4
+        self.mdl.imls = [6, 7, 8]
+
+        try:
+            self.mdl.save()
+        except DatabaseError, de:
+            self.assertTrue(
+                "No Damage Limit must be less than IML values"
+                in de.args[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_fragility_model_invalid_no_damage_limit(self):
+        self.mdl.format = "discrete"
+        self.mdl.imt = "pga"
+        self.mdl.lss = "minor"
+        self.mdl.no_damage_limit = -4.5
+        self.mdl.imls = [6, 7, 8]
+
+        try:
+            self.mdl.save()
+        except DatabaseError, de:
+            self.assertTrue(
+                "No Damage Limit must be a positive value"
+                in de.args[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_cont_fragility_model_and_damage_limit(self):
+        self.mdl.format = "continuous"
+        self.mdl.lss = "minor"
+        self.mdl.no_damage_limit = 5.6
+
+        try:
+            self.mdl.save()
+        except DatabaseError, de:
+            self.assertTrue(
+                "No Damage Limit defined for continuous fragility model"
+                in de.args[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
 
 class ContinuousFragilityModelTestCase(DjangoTestCase, helpers.DbTestCase):
     """Test the continuous fragility model database constraints."""
@@ -196,6 +245,36 @@ class DiscreteFragilityModelTestCase(DjangoTestCase, helpers.DbTestCase):
             self.mdl.save()
         except DatabaseError, de:
             self.assertTrue('invalid IMT (xyz)' in de.args[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_discrete_fragility_model_with_max_iml(self):
+        # discrete fragility model and max_iml -> exception
+        self.mdl.lss = "a b c".split()
+        self.mdl.imls = [0.1]
+        self.mdl.max_iml = 11.1
+        try:
+            self.mdl.save()
+        except DatabaseError, de:
+            self.assertTrue(
+                "Maximum IML not allowed for discrete fragility model"
+                in de.args[0])
+            transaction.rollback()
+        else:
+            self.fail("DatabaseError not raised")
+
+    def test_discrete_fragility_model_with_min_iml(self):
+        # discrete fragility model and min_iml -> exception
+        self.mdl.lss = "a b c".split()
+        self.mdl.imls = [0.1]
+        self.mdl.min_iml = 11.1
+        try:
+            self.mdl.save()
+        except DatabaseError, de:
+            self.assertTrue(
+                "Minimum IML not allowed for discrete fragility model"
+                in de.args[0])
             transaction.rollback()
         else:
             self.fail("DatabaseError not raised")

@@ -36,7 +36,6 @@ LOGGER = logs.LOG
 # Too many public methods
 # pylint: disable=R0904
 
-
 class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
     """Calculator for Event-Based Risk computations."""
 
@@ -228,21 +227,24 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         # aggregate the losses for this block
         aggregate_curve = general.AggregateLossCurve()
 
-        for point in block.grid(self.job_ctxt.region):
-            key = kvs.tokens.gmf_set_key(self.job_ctxt.job_id, point.column,
-                                         point.row)
-            gmf_slice = kvs.get_value_json_decoded(key)
+        for site in block.sites:
+            point = self.job_ctxt.region.grid.point_at(site)
 
-            assets = self.assets_for_cell(self.job_ctxt.job_id, point.site)
+            key = kvs.tokens.gmf_set_key(
+                self.job_ctxt.job_id, point.column, point.row)
+
+            gmf = kvs.get_value_json_decoded(key)
+            assets = general.BaseRiskCalculator.assets_at(
+                self.job_ctxt.job_id, site)
+
             for asset in assets:
-                LOGGER.debug("Processing asset %s" % asset)
 
                 # loss ratios, used both to produce the curve
                 # and to aggregate the losses
-                loss_ratios = self.compute_loss_ratios(asset, gmf_slice)
+                loss_ratios = self.compute_loss_ratios(asset, gmf)
 
                 loss_ratio_curve = self.compute_loss_ratio_curve(
-                    point.column, point.row, asset, gmf_slice, loss_ratios)
+                    point.column, point.row, asset, gmf, loss_ratios)
 
                 aggregate_curve.append(loss_ratios * asset.value)
 
