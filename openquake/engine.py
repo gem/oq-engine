@@ -33,7 +33,6 @@ from django.db import transaction
 from django.contrib.gis.db import models
 from django.contrib.gis.geos import GEOSGeometry
 from django.core.exceptions import ObjectDoesNotExist
-from nhlib import geo as nhlib_geo
 
 
 from openquake.calculators.hazard import CALCULATORS as HAZ_CALCS
