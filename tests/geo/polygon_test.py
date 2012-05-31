@@ -16,6 +16,7 @@
 import unittest
 
 import numpy
+import shapely.geometry
 
 from nhlib import geo
 from nhlib.geo import _utils as geo_utils
@@ -56,14 +57,14 @@ class PolygonCreationTestCase(unittest.TestCase):
         points = [geo.Point(170, -10), geo.Point(170, 10), geo.Point(176, 0),
                   geo.Point(-170, -5), geo.Point(-175, -10),
                   geo.Point(-178, -6)]
-        polygon = geo.Polygon(points)
-        self.assertEqual(len(polygon.lons), 6)
-        self.assertEqual(len(polygon.lats), 6)
-        self.assertEqual(list(polygon.lons),
+        poly = geo.Polygon(points)
+        self.assertEqual(len(poly.lons), 6)
+        self.assertEqual(len(poly.lats), 6)
+        self.assertEqual(list(poly.lons),
                          [170,  170,  176, -170, -175, -178])
-        self.assertEqual(list(polygon.lats), [-10, 10, 0, -5, -10, -6])
-        self.assertEqual(polygon.lons.dtype, 'float')
-        self.assertEqual(polygon.lats.dtype, 'float')
+        self.assertEqual(list(poly.lats), [-10, 10, 0, -5, -10, -6])
+        self.assertEqual(poly.lons.dtype, 'float')
+        self.assertEqual(poly.lats.dtype, 'float')
 
 
 class PolygonResampleSegmentsTestCase(unittest.TestCase):
@@ -72,8 +73,8 @@ class PolygonResampleSegmentsTestCase(unittest.TestCase):
         input_lats = [-2, -2, 0, 0]
 
         lons, lats = polygon.get_resampled_coordinates(input_lons, input_lats)
-        expected_lons = [-2, -1, 0, 0, 0, -1, -2, -2, -2]
-        expected_lats = [-2, -2, -2, -1, 0, 0, 0, -1, -2]
+        expected_lons = [-2, -1, 0, 0, 0, -1, -2, -2]
+        expected_lats = [-2, -2, -2, -1, 0, 0, 0, -1]
         self.assertTrue(
             numpy.allclose(lons, expected_lons, atol=1e-3, rtol=0),
             msg='%s != %s' % (lons, expected_lons)
@@ -90,7 +91,7 @@ class PolygonResampleSegmentsTestCase(unittest.TestCase):
         lons, lats = polygon.get_resampled_coordinates(input_lons, input_lats)
         self.assertTrue(all(-180 <= lon <= 180 for lon in lons))
         expected_lons = [177, 179, -179, -177, -177, -177, -177, -179, 179,
-                         177, 177, 177, 177]
+                         177, 177, 177]
         self.assertTrue(
             numpy.allclose(lons, expected_lons, atol=1e-4, rtol=0),
             msg='%s != %s' % (lons, expected_lons)
@@ -252,10 +253,10 @@ class PolygonEdgesTestCase(unittest.TestCase):
     def test_corners(self):
         mesh = geo.Mesh.from_points_list(self.corners)
 
-        result = self.poly.contains(mesh)
+        result = self.poly.intersects(mesh)
 
         for x in result.flatten():
-            self.assertFalse(x)
+            self.assertTrue(x)
 
     def test_points_close_to_edges(self):
         # Test points close to the edges:
@@ -273,7 +274,7 @@ class PolygonEdgesTestCase(unittest.TestCase):
 
         mesh = geo.Mesh.from_points_list(points)
 
-        self.assertTrue(self.poly.contains(mesh).all())
+        self.assertTrue(self.poly.intersects(mesh).all())
 
     def test_points_close_to_corners(self):
         # The same boundary conditions apply here (as noted in the test above).
@@ -285,4 +286,113 @@ class PolygonEdgesTestCase(unittest.TestCase):
         ]
         mesh = geo.Mesh.from_points_list(points)
 
-        self.assertTrue(self.poly.contains(mesh).all())
+        self.assertTrue(self.poly.intersects(mesh).all())
+
+
+class PolygonFrom2dTestCase(unittest.TestCase):
+    def test(self):
+        polygon2d = shapely.geometry.Polygon([
+            (-12, 0), (0, 14.5), (17.1, 3), (18, 0), (16.5, -3), (0, -10)
+        ])
+        proj = geo_utils.get_orthographic_projection(0, 0, 0, 0)
+        poly = polygon.Polygon._from_2d(polygon2d, proj)
+        elons = [-0.10791866, 0., 0.1537842, 0.1618781, 0.14838825, 0.]
+        elats = [0., 0.13040175, 0.02697965, 0., -0.02697965, -0.0899322]
+        ebbox = [-0.10791866, 0.1618781, 0.13040175, -0.0899322]
+        numpy.testing.assert_allclose(poly.lons, elons)
+        numpy.testing.assert_allclose(poly.lats, elats)
+        numpy.testing.assert_allclose(poly._bbox, ebbox)
+        self.assertIs(poly._polygon2d, polygon2d)
+        self.assertIs(poly._projection, proj)
+
+        poly = polygon.Polygon._from_2d(poly._polygon2d, poly._projection)
+        numpy.testing.assert_allclose(poly.lons, elons)
+        numpy.testing.assert_allclose(poly.lats, elats)
+        numpy.testing.assert_allclose(poly._bbox, ebbox)
+        self.assertIs(poly._polygon2d, polygon2d)
+        self.assertIs(poly._projection, proj)
+
+
+class PolygonDilateTestCase(unittest.TestCase):
+    def test_clockwise(self):
+        poly = polygon.Polygon([geo.Point(0, 0), geo.Point(0, 1),
+                                geo.Point(1, 0.5)])
+        dilated = poly.dilate(20)
+        elons = [
+            0.0804399, 0.0645005, 0.0479561, 0.0309619, 0.0136773,
+            -0.0037356, -0.0211136, -0.0382935, -0.0551142, -0.0714181,
+            -0.0870522, -0.1018698, -0.1157321, -0.1285089, -0.1400805,
+            -0.1503383, -0.1591861, -0.1665409, -0.1723339, -0.1765105,
+            -0.1790318, -0.1798739, -0.1799013, -0.1790601, -0.1765397,
+            -0.1723637, -0.1665713, -0.1592168, -0.1503691, -0.1401112,
+            -0.1285392, -0.1157618, -0.1018986, -0.0870797, -0.0714441,
+            -0.0551384, -0.0383156, -0.0211335, -0.0037531, 0.0136624,
+            0.0309498, 0.0479468, 0.0644941, 0.0804365, 1.0804671,
+            1.0955589, 1.1097657, 1.1229560, 1.1350074, 1.1458085,
+            1.1552592, 1.1632720, 1.1697727, 1.1747011, 1.1780116,
+            1.1796735, 1.1796714, 1.1780054, 1.1746910, 1.1697588,
+            1.1632545, 1.1552383, 1.1457846, 1.1349808, 1.1229271,
+            1.1097349, 1.0955266, 1.0804337
+        ]
+        elats = [
+            -0.1608776, -0.1679056, -0.1733589, -0.1771863, -0.1793519,
+            -0.1798355, -0.1786324, -0.1757539, -0.1712271, -0.1650944,
+            -0.1574134, -0.1482560, -0.1377081, -0.1258688, -0.1128490,
+            -0.0987708, -0.0837663, -0.0679761, -0.0515485, -0.0346374,
+            -0.0174015, -0.0000025, 0.9999975, 1.0173956, 1.0346306,
+            1.0515410, 1.0679680, 1.0837578, 1.0987621, 1.1128403,
+            1.1258603, 1.1377001, 1.1482485, 1.1574067, 1.1650887,
+            1.1712225, 1.1757506, 1.1786305, 1.1798351, 1.1793533,
+            1.1771894, 1.1733639, 1.1679125, 1.1608864, 0.6608661,
+            0.6523872, 0.6424971, 0.6312873, 0.6188616, 0.6053351,
+            0.5908330, 0.5754898, 0.5594475, 0.5428546, 0.5258649,
+            0.5086357, 0.4913265, 0.4740977, 0.4571088, 0.4405171,
+            0.4244763, 0.4091349, 0.3946351, 0.3811110, 0.3686880,
+            0.3574810, 0.3475939, 0.3391182
+        ]
+        ebbox = [-0.17990133, 1.17967345, 1.17983512, -0.17983547]
+        numpy.testing.assert_allclose(dilated.lons, elons, rtol=0, atol=1e-7)
+        numpy.testing.assert_allclose(dilated.lats, elats, rtol=0, atol=1e-7)
+        numpy.testing.assert_allclose(dilated._bbox, ebbox)
+        self.assertIs(dilated._projection, poly._projection)
+        self.assertEqual(len(dilated._polygon2d.boundary.coords),
+                         len(elons) + 1)
+
+    def test_counterclockwise(self):
+        poly = polygon.Polygon([geo.Point(5, 6), geo.Point(4, 6), geo.Point(4, 5)])
+        dilated = poly.dilate(20)
+        elons = [
+            5.1280424, 4.1280406, 4.1149304, 4.1007112, 4.0855200, 4.0695036,
+            4.0528165, 4.0356198, 4.0180793, 4.0003644, 3.9826460, 3.9650949,
+            3.9478807, 3.9311693, 3.9151220, 3.8998938, 3.8856315, 3.8724729,
+            3.8605451, 3.8499631, 3.8408293, 3.8332319, 3.8272443, 3.8229245,
+            3.8203143, 3.8194390, 3.8191353, 3.8199981, 3.8225928, 3.8268944,
+            3.8328618, 3.8404377, 3.8495493, 3.8601090, 3.8720154, 3.8851539,
+            3.8993981, 3.9146108, 3.9306458, 3.9473485, 3.9645582, 3.9821092,
+            3.9998325, 5.0001675, 5.0178827, 5.0354259, 5.0526283, 5.0693244,
+            5.0853535, 5.1005616, 5.1148024, 5.1279389, 5.1398448, 5.1504059,
+            5.1595205, 5.1671011, 5.1730751, 5.1773852, 5.1799900, 5.1808646,
+            5.1800010, 5.1774074, 5.1731090, 5.1671473, 5.1595797, 5.1504790,
+            5.1399327
+        ]
+        elats = [
+            5.8729890, 4.8731997, 4.8612916, 4.8507226, 4.8415948, 4.8339963,
+            4.8280004, 4.8236650, 4.8210319, 4.8201265, 4.8209575, 4.8235169,
+            4.8277800, 4.8337058, 4.8412369, 4.8503008, 4.8608099, 4.8726630,
+            4.8857454, 4.8999311, 4.9150831, 4.9310551, 4.9476930, 4.9648361,
+            4.9823190, 4.9999728, 5.9999728, 6.0175942, 6.0350466, 6.0521621,
+            6.0687761, 6.0847286, 6.0998661, 6.1140429, 6.1271226, 6.1389792,
+            6.1494986, 6.1585795, 6.1661344, 6.1720906, 6.1763909, 6.1789936,
+            6.1798739, 6.1798739, 6.1789944, 6.1763940, 6.1720977, 6.1661467,
+            6.1585984, 6.1495254, 6.1390149, 6.1271681, 6.1140988, 6.0999329,
+            6.0848065, 6.0688651, 6.0522620, 6.0351568, 6.0177140, 6.0001013,
+            5.9824878, 5.9650430, 5.9479344, 5.9313265, 5.9153789, 5.9002447,
+            5.8860693
+        ]
+        ebbox = [3.81913534, 5.18086464, 6.17987385, 4.82012646]
+        numpy.testing.assert_allclose(dilated.lons, elons, rtol=0, atol=1e-7)
+        numpy.testing.assert_allclose(dilated.lats, elats, rtol=0, atol=1e-7)
+        numpy.testing.assert_allclose(dilated._bbox, ebbox)
+        self.assertIs(dilated._projection, poly._projection)
+        self.assertEqual(len(dilated._polygon2d.boundary.coords),
+                         len(elons) + 1)

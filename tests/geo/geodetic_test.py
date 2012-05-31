@@ -221,6 +221,14 @@ class NPointsBetweenTest(unittest.TestCase):
         self.assertTrue(numpy.allclose(lons, expected_lons))
         self.assertTrue(numpy.allclose(lats, expected_lats))
         self.assertTrue(numpy.allclose(depths, expected_depths))
+        # the last and the first points should be exactly the same as two
+        # original corner points, so no "assertAlmostEqual" for them
+        self.assertEqual(lons[0], 40.77)
+        self.assertEqual(lats[0], 38.9)
+        self.assertEqual(depths[0], 17.5)
+        self.assertEqual(lons[-1], 31.14)
+        self.assertEqual(lats[-1], 46.23)
+        self.assertEqual(depths[-1], 5.2)
 
     def test_same_points(self):
         lon, lat, depth = 1.2, 3.4, 5.6
@@ -250,6 +258,11 @@ class NPointsTowardsTest(unittest.TestCase):
         self.assertTrue(numpy.allclose(lons, expected_lons))
         self.assertTrue(numpy.allclose(lats, expected_lats))
         self.assertTrue(numpy.allclose(depths, expected_depths))
+        # the first point should be exactly the same
+        # as the original starting point
+        self.assertEqual(lons[0], -30.5)
+        self.assertEqual(lats[0], 23.6)
+        self.assertEqual(depths[0], 55)
 
     def test_zero_distance(self):
         lon, lat, depth, azimuth = 12, 34, 56, 78

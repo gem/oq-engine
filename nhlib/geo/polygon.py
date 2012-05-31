@@ -60,6 +60,36 @@ class Polygon(object):
         self._projection = None
         self._polygon2d = None
 
+    @classmethod
+    def _from_2d(cls, polygon2d, proj):
+        """
+        Create a polygon object from a 2d polygon and a projection.
+
+        :param polygon2d:
+            Instance of ``shapely.geometry.Polygon``.
+        :param proj:
+            Projection object created
+            by :func:`~nhlib.geo._utils.get_orthographic_projection`
+            that was used to project ``polygon2d``. That projection
+            will be used for projecting it back to get spherical
+            coordinates from Cartesian ones.
+        :returns:
+            New :class:`Polygon` object. Note that spherical coordinates
+            of that polygon do not get upsampled even for longer edges.
+        """
+        # avoid calling class' constructor
+        polygon = object.__new__(cls)
+        # project polygon2d back on the sphere
+        xx, yy = numpy.transpose(polygon2d.boundary.coords)
+        # need to cut off the last point -- it repeats the first one
+        polygon.lons, polygon.lats = proj(xx[:-1], yy[:-1], reverse=True)
+        # initialize the instance (as constructor would do)
+        polygon._bbox = utils.get_spherical_bounding_box(polygon.lons,
+                                                         polygon.lats)
+        polygon._polygon2d = polygon2d
+        polygon._projection = proj
+        return polygon
+
     def _init_polygon2d(self):
         """
         Spherical bounding box, projection, and Cartesian polygon are all
@@ -84,7 +114,25 @@ class Polygon(object):
             xx, yy = self._projection(lons, lats)
             self._polygon2d = shapely.geometry.Polygon(zip(xx, yy))
 
-    def contains(self, mesh):
+    def dilate(self, dilation):
+        """
+        Extend the polygon to a specified buffer distance.
+
+        :param dilation:
+            Distance in km to extend polygon borders to.
+        :returns:
+            New :class:`Polygon` object with (in general) more vertices
+            and border that is approximately ``dilation`` km far
+            (measured perpendicularly to edges and circularly to vertices)
+            from the border of original polygon.
+        """
+        assert dilation > 0
+        self._init_polygon2d()
+        # use shapely buffer() method
+        new_2d_polygon = self._polygon2d.buffer(dilation)
+        return type(self)._from_2d(new_2d_polygon, self._projection)
+
+    def intersects(self, mesh):
         """
         Check for containment of a :class:`~nhlib.geo.mesh.Mesh` of points.
 
@@ -94,18 +142,20 @@ class Polygon(object):
             :class:`nhlib.geo.mesh.Mesh` instance.
         :returns:
             Numpy array of `bool` values in the same shapes in the input
-            coordinate arrays.
+            coordinate arrays with ``True`` on indexes of points that
+            lie inside the polygon or on one of its edges and ``False``
+            for points that neither lie inside nor touch the boundary.
         """
         self._init_polygon2d()
-        plons, plats = self._projection(mesh.lons, mesh.lats)
+        xx, yy = self._projection(mesh.lons, mesh.lats)
 
         result = numpy.empty(mesh.lons.shape, dtype=bool)
 
         for i in xrange(mesh.lons.size):
-            contains = self._polygon2d.contains(
-                shapely.geometry.Point(plons.item(i), plats.item(i))
+            intersects = self._polygon2d.intersects(
+                shapely.geometry.Point(xx.item(i), yy.item(i))
             )
-            result.itemset(i, contains)
+            result.itemset(i, intersects)
 
         return result
 
@@ -166,7 +216,7 @@ def get_resampled_coordinates(lons, lats):
 
     :return:
         A tuple of two numpy arrays: longitudes and latitudes
-        of resampled vertices. The last point repeats the first one.
+        of resampled vertices.
     """
     num_coords = len(lons)
     assert num_coords == len(lats)
@@ -197,7 +247,5 @@ def get_resampled_coordinates(lons, lats):
         else:
             resampled_lons.append(lon2)
             resampled_lats.append(lat2)
-    # we don't cut off the last point so it repeats the first one.
-    # shapely polygon is ok with that (we even save it from extra
-    # work of copying the last point for us).
-    return numpy.array(resampled_lons), numpy.array(resampled_lats)
+    # we cut off the last point because it repeats the first one.
+    return numpy.array(resampled_lons[:-1]), numpy.array(resampled_lats[:-1])

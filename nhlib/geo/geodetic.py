@@ -218,10 +218,15 @@ def npoints_between(lon1, lat1, depth1, lon2, lat2, depth2, npoints):
     """
     hdist = geodetic_distance(lon1, lat1, lon2, lat2)
     vdist = depth2 - depth1
-    return npoints_towards(
+    rlons, rlats, rdepths = npoints_towards(
         lon1, lat1, depth1, azimuth(lon1, lat1, lon2, lat2),
         hdist, vdist, npoints
     )
+    # the last point should be left intact
+    rlons[-1] = lon2
+    rlats[-1] = lat2
+    rdepths[-1] = depth2
+    return rlons, rlats, rdepths
 
 
 def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
@@ -251,7 +256,7 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
     http://williams.best.vwh.net/avform.htm#LL
     """
     assert npoints > 1
-    lon, lat = numpy.radians(lon), numpy.radians(lat)
+    rlon, rlat = numpy.radians(lon), numpy.radians(lat)
     tc = numpy.radians(360 - azimuth)
     hdists = numpy.arange(npoints, dtype=float)
     hdists *= (hdist / EARTH_RADIUS) / (npoints - 1)
@@ -260,8 +265,8 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
 
     sin_dists = numpy.sin(hdists)
     cos_dists = numpy.cos(hdists)
-    sin_lat = numpy.sin(lat)
-    cos_lat = numpy.cos(lat)
+    sin_lat = numpy.sin(rlat)
+    cos_lat = numpy.cos(rlat)
 
     sin_lats = sin_lat * cos_dists + cos_lat * sin_dists * numpy.cos(tc)
     sin_lats = sin_lats.clip(-1., 1.)
@@ -269,10 +274,15 @@ def npoints_towards(lon, lat, depth, azimuth, hdist, vdist, npoints):
 
     dlon = numpy.arctan2(numpy.sin(tc) * sin_dists * cos_lat,
                          cos_dists - sin_lat * sin_lats)
-    lons = numpy.mod(lon - dlon + numpy.pi, 2 * numpy.pi) - numpy.pi
+    lons = numpy.mod(rlon - dlon + numpy.pi, 2 * numpy.pi) - numpy.pi
     lons = numpy.degrees(lons)
 
     depths = vdists + depth
+
+    # the first point should be left intact
+    lons[0] = lon
+    lats[0] = lat
+    depths[0] = depth
 
     return lons, lats, depths
 

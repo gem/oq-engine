@@ -82,6 +82,40 @@ class PointSource(SeismicSource):
         self.upper_seismogenic_depth = upper_seismogenic_depth
         self.lower_seismogenic_depth = lower_seismogenic_depth
 
+    def _get_max_rupture_projection_radius(self):
+        """
+        Find a maximum radius of a circle on Earth surface enveloping a rupture
+        produced by this source.
+
+        :returns:
+            Half of maximum rupture's diagonal surface projection.
+        """
+        # extract maximum magnitude
+        max_mag, _rate = self.get_annual_occurrence_rates()[-1]
+        max_radius = 0.0
+        for (np_prob, np) in self.nodal_plane_distribution.data:
+            # compute rupture dimensions
+            rup_length, rup_width = self._get_rupture_dimensions(max_mag, np)
+            # compute rupture width surface projection
+            rup_width = rup_width * math.cos(math.radians(np.dip))
+            # the projection radius is half of the rupture diagonal
+            rds = math.sqrt((rup_length / 2.0) ** 2 + (rup_width / 2.0) ** 2)
+            if rds > max_radius:
+                max_radius = rds
+        return max_radius
+
+    def get_rupture_enclosing_polygon(self, dilation=0):
+        """
+        Returns a circle-shaped polygon with radius equal to ``dilation`` plus
+        :meth:`_get_max_rupture_projection_radius`.
+
+        See :meth:`superclass method
+        <nhlib.source.base.SeismicSource.get_rupture_enclosing_polygon>`
+        for parameter and return value definition.
+        """
+        max_rup_radius = self._get_max_rupture_projection_radius()
+        return self.location.to_polygon(max_rup_radius + dilation)
+
     def iter_ruptures(self, temporal_occurrence_model):
         """
         See :meth:`nhlib.source.base.SeismicSource.iter_ruptures`.

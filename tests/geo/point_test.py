@@ -15,12 +15,13 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 import unittest
 
+import numpy
+
 from nhlib import geo
 from nhlib.geo._utils import EARTH_RADIUS, spherical_to_cartesian
 
 
-class PointTestCase(unittest.TestCase):
-
+class PointPointAtTestCase(unittest.TestCase):
     def test_point_at_1(self):
         p1 = geo.Point(0.0, 0.0, 10.0)
         expected = geo.Point(0.0635916667129, 0.0635916275455, 15.0)
@@ -31,6 +32,8 @@ class PointTestCase(unittest.TestCase):
         expected = geo.Point(0.0635916667129, 0.0635916275455, 5.0)
         self.assertEqual(expected, p1.point_at(10.0, -5.0, 45.0))
 
+
+class PointAzimuthTestCase(unittest.TestCase):
     def test_azimuth(self):
         p1 = geo.Point(0.0, 0.0)
         p2 = geo.Point(0.5, 0.5)
@@ -42,12 +45,16 @@ class PointTestCase(unittest.TestCase):
         p2 = geo.Point(0.5, 0.5)
         self.assertAlmostEqual(225.0010908, p2.azimuth(p1))
 
+
+class PointDistanceTestCase(unittest.TestCase):
     def test_distance(self):
         p1 = geo.Point(0.0, 0.0, 0.0)
         p2 = geo.Point(0.5, 0.5, 5.0)
 
         self.assertAlmostEqual(78.7849704355, p1.distance(p2), places=4)
 
+
+class PointEquallySpacedPointsTestCase(unittest.TestCase):
     def test_equally_spaced_points_1(self):
         p1 = geo.Point(0.0, 0.0)
         p2 = geo.Point(0.190775520815, 0.190774854966)
@@ -106,6 +113,8 @@ class PointTestCase(unittest.TestCase):
         points = geo.Point(0, 50).equally_spaced_points(geo.Point(10, 50), 10)
         self.assertAlmostEqual(points[-1].latitude, 50, places=2)
 
+
+class PointCreationTestCase(unittest.TestCase):
     def test_longitude_inside_range(self):
         self.assertRaises(ValueError, geo.Point, 180.1, 0.0, 0.0)
         self.assertRaises(ValueError, geo.Point, -180.1, 0.0, 0.0)
@@ -126,8 +135,50 @@ class PointTestCase(unittest.TestCase):
 
         geo.Point(0.0, 90.0, EARTH_RADIUS - 0.1)
 
+
+class PointFromVectorTestCase(unittest.TestCase):
     def test_from_vector(self):
         point = geo.Point(12.34, -56.78, 91.011)
         vector = spherical_to_cartesian(point.longitude, point.latitude,
                                         point.depth)
         self.assertEqual(point, geo.Point.from_vector(vector))
+
+
+class PointToPolygonTestCase(unittest.TestCase):
+    def test(self):
+        point = geo.Point(10.43, -35.1)
+        polygon = point.to_polygon(radius=20)
+        elons = [10.6498428, 10.6488315, 10.6457115, 10.6405114, 10.6332800,
+                 10.6240861, 10.6130172, 10.6001793, 10.5856956, 10.5697055,
+                 10.5523630, 10.5338356, 10.5143024, 10.4939523, 10.4729824,
+                 10.4515959, 10.4300000, 10.4084041, 10.3870176, 10.3660477,
+                 10.3456976, 10.3261644, 10.3076370, 10.2902945, 10.2743044,
+                 10.2598207, 10.2469828, 10.2359139, 10.2267200, 10.2194886,
+                 10.2142885, 10.2111685, 10.2101572, 10.2112631, 10.2144741,
+                 10.2197581, 10.2270629, 10.2363172, 10.2474309, 10.2602964,
+                 10.2747894, 10.2907702, 10.3080851, 10.3265677, 10.3460406,
+                 10.3663172, 10.3872032, 10.4084987, 10.4300000, 10.4515013,
+                 10.4727968, 10.4936828, 10.5139594, 10.5334323, 10.5519149,
+                 10.5692298, 10.5852106, 10.5997036, 10.6125691, 10.6236828,
+                 10.6329371, 10.6402419, 10.6455259, 10.6487369, 10.6498428]
+        elats = [-35.0998016, -35.1174332, -35.1348988, -35.1520301,
+                 -35.1686616, -35.1846330, -35.1997900, -35.2139861,
+                 -35.2270840, -35.2389571, -35.2494905, -35.2585822,
+                 -35.2661441, -35.2721029, -35.2764010, -35.2789966,
+                 -35.2798646, -35.2789966, -35.2764010, -35.2721029,
+                 -35.2661441, -35.2585822, -35.2494905, -35.2389571,
+                 -35.2270840, -35.2139861, -35.1997900, -35.1846330,
+                 -35.1686616, -35.1520301, -35.1348988, -35.1174332,
+                 -35.0998016, -35.0821737, -35.0647194, -35.0476066,
+                 -35.0309997, -35.0150583, -34.9999357, -34.9857768,
+                 -34.9727176, -34.9608831, -34.9503870, -34.9413296,
+                 -34.9337978, -34.9278636, -34.9235839, -34.9209996,
+                 -34.9201354, -34.9209996, -34.9235839, -34.9278636,
+                 -34.9337978, -34.9413296, -34.9503870, -34.9608831,
+                 -34.9727176, -34.9857768, -34.9999357, -35.0150583,
+                 -35.0309997, -35.0476066, -35.0647194, -35.0821737,
+                 -35.0998016]
+        numpy.testing.assert_allclose(polygon.lons, elons)
+        numpy.testing.assert_allclose(polygon.lats, elats)
+        self.assertAlmostEqual(polygon.lons.mean(), point.longitude, delta=1e-2)
+        self.assertAlmostEqual(polygon.lats.mean(), point.latitude, delta=1e-2)

@@ -128,12 +128,33 @@ class GetOrthographicProjectionTestCase(unittest.TestCase):
     def test_projection(self):
         # values verified against pyproj's implementation
         proj = utils.get_orthographic_projection(10, 16, -2, 30)
-        xx, yy = proj(numpy.array([10, 20, 30, 40]),
-                      numpy.array([-1, -2, -3, -4]))
+        lons = numpy.array([10., 20., 30., 40.])
+        lats = numpy.array([-1., -2., -3., -4.])
+        xx, yy = proj(lons, lats)
         exx = [-309.89151465, 800.52541443, 1885.04014687, 2909.78079661]
         eyy = [-1650.93260348, -1747.79256663, -1797.62444771, -1802.28117183]
         self.assertTrue(numpy.allclose(xx, exx, atol=0.01, rtol=0.005))
         self.assertTrue(numpy.allclose(yy, eyy, atol=0.01, rtol=0.005))
+
+    def test_projecting_back_and_forth(self):
+        lon0, lat0 = -10.4, 20.3
+        proj = utils.get_orthographic_projection(lon0, lat0, lon0, lat0)
+        lons = lon0 + (numpy.random.random((20, 10)) * 50 - 25)
+        lats = lat0 + (numpy.random.random((20, 10)) * 50 - 25)
+        xx, yy = proj(lons, lats, reverse=False)
+        self.assertEqual(xx.shape, (20, 10))
+        self.assertEqual(yy.shape, (20, 10))
+        blons, blats = proj(xx, yy, reverse=True)
+        self.assertTrue(numpy.allclose(blons, lons))
+        self.assertTrue(numpy.allclose(blats, lats))
+
+    def test_points_too_far(self):
+        proj = utils.get_orthographic_projection(180, 180, 45, 45)
+        with self.assertRaises(ValueError) as ar:
+            proj(90, -45)
+        self.assertEqual(ar.exception.message,
+                         'some points are too far from the projection '
+                         'center lon=180.0 lat=45.0')
 
 
 class GetMiddlePointTestCase(unittest.TestCase):
