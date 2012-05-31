@@ -117,9 +117,39 @@ def _compute_matrix(calc, lat, lon, erf, gmpe_map, poe, imls, vs30_type, vs30,
                     z1pt0, z2pt5):
     """Helper function for executing `computeMatrix` in the java calculator.
 
-    As a separate function, this makes it easier to mock.
+    As a separate function, this makes it easier to mock (since we can't really
+    mock the java code).
 
     See also :function:`compute_disagg_matrix`.
+
+    :param calc:
+        jpype `org.gem.calc.DisaggregationCalculator` object.
+    :param float lat:
+        Site latitude.
+    :param float lon:
+        Site longitude.
+    :param erf:
+        Earthquake Rupture Forecast; a jpype object which implements
+        `org.opensha.sha.earthquake.EqkRupForecastAPI`.
+    :param gmpe_map:
+        jpype `Map<TectonicRegionType, ScalarIntensityMeasureRelationshipAPI>`.
+    :param float poe:
+        Probability of Exceedence value.
+    :param imls:
+        jpype `Double` array of intensity measure levels.
+    :param vs30_type:
+        'measured' or 'inferred'. Identifies if vs30 value has been measured or
+        inferred.
+    :param float vs30:
+        Average shear wave velocity for top 30 m. Units m/s.
+    :param float z1pt0:
+        Depth to shear wave velocity of 1.0 km/s. Units m.
+    :param float z2pt5:
+        Depth to shear wave velocity of 2.5 km/s. Units km.
+
+    :returns:
+        jpype `org.gem.calc.DisaggregationResult` object containing the 5d
+        disaggregation matrix and the ground motion value for this site.
     """
     return calc.computeMatrix(
         lat, lon, erf, gmpe_map, poe, imls, vs30_type, vs30, z1pt0, z2pt5)
