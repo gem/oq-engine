@@ -220,7 +220,7 @@ class EngineAPITestCase(unittest.TestCase):
                 models.model_equals(
                     exp_inp, act_inp, ignore=(
                         "id",  "last_update", "path", "model", "_owner_cache",
-                        "owner_id")))
+                        "owner_id", "model_content_id")))
 
     def test_import_job_profile_as_specified_user(self):
         # Test importing of a job profile when a user is specified
@@ -513,3 +513,53 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertNotEqual(self.glt_i.id, glt_i.id)
         [slt_i] = models.inputs4job(self.job.id, input_type="lt_source")
         self.assertEqual(self.slt_i.id, slt_i.id)
+
+    def test_model_content_single_file(self):
+        # The contents of input files (such as logic trees, exposure models,
+        # etc.) should be saved to the uiapi.model_content table.
+
+        expected_content = open(self.SLT, 'r').read()
+        params = dict(SOURCE_MODEL_LOGIC_TREE_FILE=self.SLT)
+
+        engine._insert_input_files(params, self.job, True)
+        [slt] = models.inputs4job(self.job.id, input_type="lt_source")
+
+        self.assertEqual('xml', slt.model_content.content_type)
+        self.assertEqual(expected_content, slt.model_content.raw_content)
+
+    def test_model_content_many_files(self):
+        slt_content = open(self.SLT, 'r').read()
+        glt_content = open(self.GLT, 'r').read()
+
+        engine._insert_input_files(self.PARAMS, self.job, True)
+        [slt] = models.inputs4job(self.job.id, input_type="lt_source")
+        [glt] = models.inputs4job(self.job.id, input_type="lt_gmpe")
+
+        self.assertEqual('xml', slt.model_content.content_type)
+        self.assertEqual(slt_content, slt.model_content.raw_content)
+
+        self.assertEqual('xml', glt.model_content.content_type)
+        self.assertEqual(glt_content, glt.model_content.raw_content)
+
+    def test_model_content_detect_content_type(self):
+        # Test detection of the content type (using the file extension).
+        test_file = helpers.touch(suffix=".html")
+
+        # We use the gmpe logic tree as our test target because there is no
+        # parsing required in the function under test. Thus, we can put
+        # whatever test garbage we want in the file, or just use an empty file
+        # (which is the case here).
+        params = dict(GMPE_LOGIC_TREE_FILE=test_file)
+        engine._insert_input_files(params, self.job, True)
+
+        [glt] = models.inputs4job(self.job.id, input_type="lt_gmpe")
+        self.assertEqual('html', glt.model_content.content_type)
+
+    def test_model_content_unknown_content_type(self):
+        test_file = helpers.touch()
+
+        params = dict(GMPE_LOGIC_TREE_FILE=test_file)
+        engine._insert_input_files(params, self.job, True)
+
+        [glt] = models.inputs4job(self.job.id, input_type="lt_gmpe")
+        self.assertEqual('unknown', glt.model_content.content_type)
