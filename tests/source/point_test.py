@@ -545,3 +545,70 @@ class PointSourceSourceFilterTestCase(unittest.TestCase):
                 integration_distance=int_dist, sites=self.sitecol
             )
             self.assertIs(filtered, None)
+
+
+class PointSourceRuptureFilterTestCase(unittest.TestCase):
+    SITES = PointSourceSourceFilterTestCase.SITES
+
+    def setUp(self):
+        super(PointSourceRuptureFilterTestCase, self).setUp()
+        self.hypocenter = Point(2, 0, 50)
+        self.sitecol = SiteCollection(self.SITES)
+
+    def _make_rupture(self, width, length, dip):
+        mid_left = self.hypocenter.point_at(length / 2.0, 0, azimuth=270)
+        mid_right = self.hypocenter.point_at(length / 2.0, 0, azimuth=90)
+        hwidth = width * numpy.cos(numpy.radians(dip)) / 2.0
+        vwidth = width * numpy.sin(numpy.radians(dip)) / 2.0
+        top_left = mid_left.point_at(hwidth, -vwidth, azimuth=0)
+        bottom_left = mid_left.point_at(hwidth, vwidth, azimuth=180)
+        top_right = mid_right.point_at(hwidth, -vwidth, azimuth=0)
+        bottom_right = mid_right.point_at(hwidth, vwidth, azimuth=180)
+        surface = PlanarSurface(1, 2, dip, top_left, top_right,
+                                bottom_right, bottom_left)
+        rupture = ProbabilisticRupture(
+            mag=1, rake=2, tectonic_region_type=TRT.VOLCANIC,
+            hypocenter=self.hypocenter, surface=surface,
+            source_typology=PointSource, occurrence_rate=3,
+            temporal_occurrence_model=PoissonTOM(1)
+        )
+        return rupture
+
+    def test_zero_integration_distance(self):
+        rup = self._make_rupture(10, 15, 45)  # 8 km radius
+        filtered = PointSource.filter_sites_by_distance_to_rupture(
+            rup, integration_distance=0, sites=self.sitecol
+        )
+        self.assertIsInstance(filtered, SiteCollection)
+        self.assertIsNot(filtered, self.sitecol)
+        numpy.testing.assert_array_equal(filtered.indices, [0])
+        numpy.testing.assert_array_equal(filtered.vs30, [0.1])
+
+        rup = self._make_rupture(50, 30, 90)  # 14.8 km radius
+        filtered = PointSource.filter_sites_by_distance_to_rupture(
+            rup, integration_distance=0, sites=self.sitecol
+        )
+        numpy.testing.assert_array_equal(filtered.indices, [0, 1])
+
+    def test_495_km(self):
+        rup = self._make_rupture(5, 8, 5)  # 4.68 km radius
+        filtered = PointSource.filter_sites_by_distance_to_rupture(
+            rup, integration_distance=495, sites=self.sitecol
+        )
+        numpy.testing.assert_array_equal(filtered.indices, [0, 1, 2, 3])
+
+        rup = self._make_rupture(7, 10, 30)  # 5.8 km radius
+        filtered = PointSource.filter_sites_by_distance_to_rupture(
+            rup, integration_distance=495, sites=self.sitecol
+        )
+        self.assertIs(filtered.indices, None)
+        self.assertIs(filtered, self.sitecol)
+
+    def test_filter_all_out(self):
+        rup = self._make_rupture(50, 80, 9)  # 46.64 km radius
+        self.hypocenter.longitude = 11.515
+        for int_dist in (0, 1, 10, 100, 1000):
+            filtered = PointSource.filter_sites_by_distance_to_rupture(
+                rup, integration_distance=int_dist, sites=self.sitecol
+            )
+            self.assertIs(filtered, None)
