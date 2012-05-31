@@ -85,7 +85,7 @@ def hazard_curves_poissonian(
         for rupture, r_sites in rupture_site_filter(ruptures_sites):
             prob = rupture.get_probability()
             gsim = gsims[rupture.tectonic_region_type]
-            sctx, rctx, dctx = gsim.make_contexts(sites, rupture)
+            sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
             for imt in imts:
                 poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
                                      truncation_level)
