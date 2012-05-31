@@ -228,13 +228,21 @@ class ScenarioDamageRiskCalculatorTestCase(
         self.calculator.pre_execute()
         self.calculator.compute_risk(BLOCK_ID, fmodel=fm)
 
+        # since the taxonomy data is computed and aggregated
+        # per block in the execute() method and we are not
+        # testing it here, just stubbing out some values to
+        # produce the taxonomy distribution
+        self.calculator.ddt_fractions = {"RC": numpy.array(
+                [[1.0, 0.0, 0.0], [1.0, 0.0, 0.0]])}
+
         self.job_ctxt.serialize_results_to = ["xml"]
-
         self.calculator.post_execute()
-        file_path = self._results_file()
 
-        self.assertTrue(os.path.exists(file_path))
-        os.unlink(file_path)
+        paths = self._results_files()
+
+        for path in paths:
+            self.assertTrue(os.path.exists(path))
+            os.unlink(path)
 
     def test_post_execute_no_serialization(self):
         # otherwise, just on database (default)
@@ -242,17 +250,20 @@ class ScenarioDamageRiskCalculatorTestCase(
 
         self.calculator.pre_execute()
         self.calculator.compute_risk(BLOCK_ID, fmodel=fm)
-
         self.calculator.post_execute()
-        file_path = self._results_file()
 
-        self.assertFalse(os.path.exists(file_path))
+        paths = self._results_files()
 
-    def _results_file(self):
+        for path in paths:
+            self.assertFalse(os.path.exists(path))
+
+    def _results_files(self):
         target_dir = os.path.join(self.job_ctxt.params.get("BASE_PATH"),
                 self.job_ctxt.params.get("OUTPUT_DIR"))
 
-        return os.path.join(target_dir, "dmg-dist-asset-%s.xml" % self.job.id)
+        return [os.path.join(
+            target_dir, "dmg-dist-asset-%s.xml" % self.job.id), os.path.join(
+            target_dir, "dmg-dist-taxonomy-%s.xml" % self.job.id)]
 
     def _close_to(self, expected, actual):
         self.assertTrue(numpy.allclose(actual, expected, atol=0.0, rtol=0.05))
