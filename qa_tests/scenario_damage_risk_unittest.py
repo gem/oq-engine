@@ -89,35 +89,35 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
         self._close_to(253.91309010185, float(ds.get("stddev")))
 
     def _verify_dist_per_taxonomy_con(self):
-        ds = self._ds_ddt("RM", "no_damage")
-
-        self._close_to(1347.5541710239, float(ds.get("mean")))
-        self._close_to(1076.1623058256, float(ds.get("stddev")))
-
-        ds = self._ds_ddt("RM", "LS1")
-
-        self._close_to(1644.2993209642, float(ds.get("mean")))
-        self._close_to(526.0713208184, float(ds.get("stddev")))
-
-        ds = self._ds_ddt("RM", "LS2")
-
-        self._close_to(1008.1465080119, float(ds.get("mean")))
-        self._close_to(813.5518643136, float(ds.get("stddev")))
-
         ds = self._ds_ddt("RC", "no_damage")
 
-        self._close_to(42.33774475249, float(ds.get("mean")))
-        self._close_to(70.0892678237, float(ds.get("stddev")))
+        self._close_to(56.7201291212, float(ds.get("mean")))
+        self._close_to(117.7802813522, float(ds.get("stddev")))
 
         ds = self._ds_ddt("RC", "LS1")
 
-        self._close_to(730.4180238456, float(ds.get("mean")))
-        self._close_to(494.7514529615, float(ds.get("stddev")))
+        self._close_to(673.1047565606, float(ds.get("mean")))
+        self._close_to(485.2023172324, float(ds.get("stddev")))
 
         ds = self._ds_ddt("RC", "LS2")
 
-        self._close_to(1227.2442314019, float(ds.get("mean")))
-        self._close_to(549.4191085089, float(ds.get("stddev")))
+        self._close_to(1270.1751143182, float(ds.get("mean")))
+        self._close_to(575.8724057319, float(ds.get("stddev")))
+
+        ds = self._ds_ddt("RM", "no_damage")
+
+        self._close_to(1979.9364498479, float(ds.get("mean")))
+        self._close_to(1103.6005152909, float(ds.get("stddev")))
+
+        ds = self._ds_ddt("RM", "LS1")
+
+        self._close_to(1495.2273659142, float(ds.get("mean")))
+        self._close_to(745.3252495731, float(ds.get("stddev")))
+
+        ds = self._ds_ddt("RM", "LS2")
+
+        self._close_to(524.8361842379, float(ds.get("mean")))
+        self._close_to(401.9195159565, float(ds.get("stddev")))
 
     def test_scenario_damage_dsc(self):
         cfg = helpers.demo_file("scenario_damage_risk/config_discrete.gem")
@@ -132,33 +132,33 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
     def _verify_dist_per_taxonomy_dsc(self):
         ds = self._ds_ddt("RM", "no_damage")
 
-        self._close_to(663.0301215450, float(ds.get("mean")))
-        self._close_to(688.3640351301, float(ds.get("stddev")))
+        self._close_to(1100.2285892246, float(ds.get("mean")))
+        self._close_to(880.2774984768, float(ds.get("stddev")))
 
         ds = self._ds_ddt("RM", "LS1")
 
-        self._close_to(1876.8472166738, float(ds.get("mean")))
-        self._close_to(338.9229707614, float(ds.get("stddev")))
+        self._close_to(1913.9402484967, float(ds.get("mean")))
+        self._close_to(296.2197411105, float(ds.get("stddev")))
 
         ds = self._ds_ddt("RM", "LS2")
 
-        self._close_to(1460.1226617812, float(ds.get("mean")))
-        self._close_to(843.4328216613, float(ds.get("stddev")))
+        self._close_to(985.8311622787, float(ds.get("mean")))
+        self._close_to(616.5632580754, float(ds.get("stddev")))
 
         ds = self._ds_ddt("RC", "no_damage")
 
-        self._close_to(354.753633080, float(ds.get("mean")))
-        self._close_to(257.9890985575, float(ds.get("stddev")))
+        self._close_to(344.9084922789, float(ds.get("mean")))
+        self._close_to(300.6112307894, float(ds.get("stddev")))
 
         ds = self._ds_ddt("RC", "LS1")
 
-        self._close_to(779.0404984000, float(ds.get("mean")))
-        self._close_to(153.3343303635, float(ds.get("stddev")))
+        self._close_to(747.6241297573, float(ds.get("mean")))
+        self._close_to(144.6485296163, float(ds.get("stddev")))
 
         ds = self._ds_ddt("RC", "LS2")
 
-        self._close_to(866.2058685200, float(ds.get("mean")))
-        self._close_to(398.0973556984, float(ds.get("stddev")))
+        self._close_to(907.4673779638, float(ds.get("mean")))
+        self._close_to(417.3073783656, float(ds.get("stddev")))
 
     def _verify_dist_per_asset_dsc(self):
         ds = self._ds_dda("a1", "no_damage")
