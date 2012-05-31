@@ -243,11 +243,11 @@ class DmgDistPerTaxonomyXMLWriterTestCase(
 
     def make_data(self, taxonomy, dmg_state, mean, stddev):
         data = models.DmgDistPerTaxonomyData(
-            dmg_dist_per_taxonomy = self.ddt,
-            taxonomy = taxonomy,
-            dmg_state = dmg_state,
-            mean = mean,
-            stddev = stddev)
+            dmg_dist_per_taxonomy=self.ddt,
+            taxonomy=taxonomy,
+            dmg_state=dmg_state,
+            mean=mean,
+            stddev=stddev)
 
         data.save()
         self.data.append(data)
