@@ -123,3 +123,14 @@ class AreaSource(PointSource):
                     surface, type(self), occ_rate, temporal_occurrence_model
                 )
                 yield rupture
+
+    def filter_sites_by_distance_to_source(self, integration_distance, sites):
+        """
+        Overrides :meth:`implementation
+        <nhlib.source.point.PointSource.filter_sites_by_distance_to_source>`
+        of the point source class just to call the :meth:`base class one
+        <nhlib.source.base.SeismicSource.filter_sites_by_distance_to_source>`.
+        """
+        return super(PointSource, self).filter_sites_by_distance_to_source(
+            integration_distance, sites
+        )

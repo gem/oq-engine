@@ -73,15 +73,16 @@ class SeismicSourceFilterSitesTestCase(_BaseSeismicSourceTestCase):
         Site(Point(0.3, 0.3), 10, True, 3, 4),  # 47 km away
         Site(Point(0., -1), 11, True, 3, 4),  # 111.2 km away
     ]
+    POLYGON = Polygon([Point(0, 0), Point(0, 0.001),
+                       Point(0.001, 0.001), Point(0.001, 0)])
 
     def setUp(self):
         super(SeismicSourceFilterSitesTestCase, self).setUp()
         def get_rup_encl_poly(dilation=0):
-            poly = Polygon([Point(0, 0), Point(0, 0.001),
-                            Point(0.001, 0.001), Point(0.001, 0)])
             if dilation:
-                poly = poly.dilate(dilation)
-            return poly
+                return self.POLYGON.dilate(dilation)
+            else:
+                return self.POLYGON
         self.source.get_rupture_enclosing_polygon = get_rup_encl_poly
         self.sitecol = SiteCollection(self.SITES)
 

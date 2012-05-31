@@ -26,6 +26,7 @@ from nhlib.scalerel.peer import PeerMSR
 from nhlib.geo import Point, PlanarSurface, NodalPlane, Polygon
 from nhlib.pmf import PMF
 from nhlib.tom import PoissonTOM
+from nhlib.site import Site, SiteCollection
 
 from tests.geo.surface import _planar_test_data as planar_surface_test_data
 
@@ -458,3 +459,89 @@ class PointSourceRupEncPolygon(unittest.TestCase):
         ]
         numpy.testing.assert_allclose(polygon.lons, elons)
         numpy.testing.assert_allclose(polygon.lats, elats)
+
+
+class PointSourceSourceFilterTestCase(unittest.TestCase):
+    SITES = [
+        Site(Point(2.0, 0.0), 0.1, True, 3, 4),  # on epicenter
+        Site(Point(2.1, 0.0), 1, True, 3, 4),  # 11.1 km away
+        Site(Point(2.0, -0.15), 2, True, 3, 4),  # 16.7 km away
+        Site(Point(2.0, 4.49), 3, True, 3, 4),  # 499.3 km away
+        Site(Point(2.0, -4.5), 4, True, 3, 4),  # 500.3 km away
+    ]
+
+    def setUp(self):
+        super(PointSourceSourceFilterTestCase, self).setUp()
+        self.sitecol = SiteCollection(self.SITES)
+
+        self.source1 = make_point_source(
+            mfd=EvenlyDiscretizedMFD(min_mag=5, bin_width=1,
+                                     occurrence_rates=[1]),
+            rupture_aspect_ratio=1.9,
+            upper_seismogenic_depth=0,
+            lower_seismogenic_depth=18.5,
+            magnitude_scaling_relationship=PeerMSR(),
+            nodal_plane_distribution=PMF([
+                (0.5, NodalPlane(strike=1, dip=2, rake=3)),
+                (0.5, NodalPlane(strike=1, dip=20, rake=3)),
+            ]),
+            location=Point(2.0, 0.0),
+        )
+        self.source2 = make_point_source(
+            mfd=EvenlyDiscretizedMFD(min_mag=6.5, bin_width=1,
+                                     occurrence_rates=[1]),
+            rupture_aspect_ratio=0.5,
+            upper_seismogenic_depth=0,
+            lower_seismogenic_depth=18.5,
+            magnitude_scaling_relationship=PeerMSR(),
+            nodal_plane_distribution=PMF([
+                (0.5, NodalPlane(strike=1, dip=10, rake=3)),
+                (0.5, NodalPlane(strike=1, dip=20, rake=3)),
+            ]),
+            location=Point(2.0, 0.0),
+        )
+
+    def test_zero_integration_distance(self):
+        filtered = self.source1.filter_sites_by_distance_to_source(
+            integration_distance=0, sites=self.sitecol
+        )
+        self.assertIsInstance(filtered, SiteCollection)
+        self.assertIsNot(filtered, self.sitecol)
+        numpy.testing.assert_array_equal(filtered.indices, [0])
+        numpy.testing.assert_array_equal(filtered.vs30, [0.1])
+
+        filtered = self.source2.filter_sites_by_distance_to_source(
+            integration_distance=0, sites=self.sitecol
+        )
+        numpy.testing.assert_array_equal(filtered.indices, [0, 1])
+
+    def test_fifty_km(self):
+        filtered = self.source1.filter_sites_by_distance_to_source(
+            integration_distance=50, sites=self.sitecol
+        )
+        numpy.testing.assert_array_equal(filtered.indices, [0, 1, 2])
+
+        filtered = self.source2.filter_sites_by_distance_to_source(
+            integration_distance=50, sites=self.sitecol
+        )
+        numpy.testing.assert_array_equal(filtered.indices, [0, 1, 2])
+
+    def test_495_km(self):
+        filtered = self.source1.filter_sites_by_distance_to_source(
+            integration_distance=495, sites=self.sitecol
+        )
+        numpy.testing.assert_array_equal(filtered.indices, [0, 1, 2])
+
+        filtered = self.source2.filter_sites_by_distance_to_source(
+            integration_distance=495, sites=self.sitecol
+        )
+        self.assertIs(filtered, self.sitecol)
+        numpy.testing.assert_array_equal(filtered.indices, None)
+
+    def test_filter_all_out(self):
+        self.source1.location.latitude = 13.6
+        for int_dist in (0, 1, 10, 100, 1000):
+            filtered = self.source1.filter_sites_by_distance_to_source(
+                integration_distance=int_dist, sites=self.sitecol
+            )
+            self.assertIs(filtered, None)
