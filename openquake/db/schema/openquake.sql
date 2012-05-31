@@ -505,6 +505,22 @@ CREATE TABLE hzrdi.focal_mechanism (
 ) TABLESPACE hzrdi_ts;
 
 
+-- Parsed sources
+CREATE TABLE hzrdi.parsed_source (
+    id SERIAL PRIMARY KEY,
+    input_id INTEGER NOT NULL,
+    source_type VARCHAR NOT NULL
+        CONSTRAINT enforce_source_type CHECK
+        (source_type IN ('area', 'point', 'complex', 'simple')),
+    blob TEXT NOT NULL,
+    geom geometry NOT NULL,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL,
+    CONSTRAINT enforce_dims_geom CHECK (ndims(geom) = 2),
+    CONSTRAINT enforce_srid_geom CHECK (srid(geom) = 4326)
+) TABLESPACE hzrdi_ts;
+
+
 -- A batch of OpenQuake input files uploaded by the user
 CREATE TABLE uiapi.upload (
     id SERIAL PRIMARY KEY,
@@ -542,7 +558,8 @@ CREATE TABLE uiapi.input (
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
         CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gmpe',
                              'exposure', 'fragility', 'rupture',
-                             'vulnerability', 'vulnerability_retrofitted')),
+                             'vulnerability', 'vulnerability_retrofitted',
+                             'site_model')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
     last_update timestamp without time zone
@@ -651,7 +668,6 @@ CREATE TABLE uiapi.oq_job_profile (
     truncation_type VARCHAR NOT NULL CONSTRAINT truncation_type_value
         CHECK(truncation_type IN ('none', 'onesided', 'twosided')),
     truncation_level float NOT NULL DEFAULT 3.0,
-    reference_vs30_value float NOT NULL,
     -- Intensity measure levels
     imls float[] CONSTRAINT imls_are_set
         CHECK(
@@ -887,7 +903,6 @@ CREATE TABLE uiapi.oq_job_profile (
             OR
             ((calc_mode != 'classical')
              AND (quantile_levels IS NULL))),
-    reference_depth_to_2pt5km_per_sec_param float,
     rupture_aspect_ratio float
         CONSTRAINT rupture_aspect_ratio_is_set
         CHECK(
@@ -1101,11 +1116,13 @@ CREATE TABLE uiapi.oq_job_profile (
             ((calc_mode = 'uhs') AND (uhs_periods IS NOT NULL) AND (array_length(uhs_periods, 1) > 0))
             OR
             ((calc_mode != 'uhs') AND (uhs_periods IS NULL))),
-    depth_to_1pt_0km_per_sec float NOT NULL DEFAULT 100.0
+    reference_vs30_value float,
+    vs30_type VARCHAR DEFAULT 'measured' CONSTRAINT vs30_type_value
+        CHECK(vs30_type IN ('measured', 'inferred')),
+    depth_to_1pt_0km_per_sec float DEFAULT 100.0
         CONSTRAINT depth_to_1pt_0km_per_sec_above_zero
         CHECK(depth_to_1pt_0km_per_sec > 0.0),
-    vs30_type VARCHAR NOT NULL DEFAULT 'measured' CONSTRAINT vs30_type_value
-        CHECK(vs30_type IN ('measured', 'inferred')),
+    reference_depth_to_2pt5km_per_sec_param float,
     epsilon_random_seed INTEGER CONSTRAINT epsilon_rnd_seed_is_set
         CHECK(
             (calc_mode = 'scenario' AND epsilon_random_seed IS NOT NULL)
@@ -1783,6 +1800,9 @@ ALTER TABLE hzrdi.rupture ADD CONSTRAINT hzrdi_rupture_complex_fault_fk
 FOREIGN KEY (complex_fault_id) REFERENCES hzrdi.complex_fault(id) ON DELETE RESTRICT;
 
 ALTER TABLE hzrdi.rupture ADD CONSTRAINT hzrdi_rupture_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
+
+ALTER TABLE hzrdi.parsed_source ADD CONSTRAINT hzrdi_parsed_source_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
 ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_owner_fk
