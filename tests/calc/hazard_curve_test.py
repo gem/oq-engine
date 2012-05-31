@@ -19,6 +19,7 @@ import numpy
 
 from nhlib import const
 from nhlib import imt
+from nhlib.site import Site, SiteCollection
 from nhlib.geo import Point
 from nhlib.tom import PoissonTOM
 from nhlib.calc.hazard_curve import hazard_curves_poissonian
@@ -52,12 +53,8 @@ class HazardCurvesTestCase(unittest.TestCase):
         def get_poes(self, sctx, rctx, dctx, imt, imls, truncation_level):
             assert truncation_level is self.truncation_level
             assert dctx is self.dists
-            return numpy.array([self.poes[(site, rctx, imt)]
-                                for site in sctx])
-
-    class FakeSite(object):
-        def __init__(self, location):
-            self.location = location
+            return numpy.array([self.poes[(epicenter.latitude, rctx, imt)]
+                                for epicenter in sctx.mesh])
 
     def test1(self):
         truncation_level = 3.4
@@ -70,27 +67,27 @@ class HazardCurvesTestCase(unittest.TestCase):
         source1 = self.FakeSource([rup11, rup12], time_span=time_span)
         source2 = self.FakeSource([rup21], time_span=time_span)
         sources = iter([source1, source2])
-        site1 = self.FakeSite(Point(10, 20))
-        site2 = self.FakeSite(Point(20, 30))
-        sites = [site1, site2]
+        site1 = Site(Point(10, 20), 1, True, 2, 3)
+        site2 = Site(Point(20, 30), 2, False, 4, 5)
+        sites = SiteCollection([site1, site2])
 
         gsim1 = self.FakeGSIM(truncation_level, imts, poes={
-            (site1, rup11, imt.PGA()): [0.1, 0.05, 0.03],
-            (site2, rup11, imt.PGA()): [0.11, 0.051, 0.034],
-            (site1, rup12, imt.PGA()): [0.12, 0.052, 0.035],
-            (site2, rup12, imt.PGA()): [0.13, 0.053, 0.036],
+            (site1.location.latitude, rup11, imt.PGA()): [0.1, 0.05, 0.03],
+            (site2.location.latitude, rup11, imt.PGA()): [0.11, 0.051, 0.034],
+            (site1.location.latitude, rup12, imt.PGA()): [0.12, 0.052, 0.035],
+            (site2.location.latitude, rup12, imt.PGA()): [0.13, 0.053, 0.036],
 
-            (site1, rup11, imt.PGD()): [0.4, 0.33],
-            (site2, rup11, imt.PGD()): [0.39, 0.331],
-            (site1, rup12, imt.PGD()): [0.38, 0.332],
-            (site2, rup12, imt.PGD()): [0.37, 0.333],
+            (site1.location.latitude, rup11, imt.PGD()): [0.4, 0.33],
+            (site2.location.latitude, rup11, imt.PGD()): [0.39, 0.331],
+            (site1.location.latitude, rup12, imt.PGD()): [0.38, 0.332],
+            (site2.location.latitude, rup12, imt.PGD()): [0.37, 0.333],
         })
         gsim2 = self.FakeGSIM(truncation_level, imts, poes={
-            (site1, rup21, imt.PGA()): [0.5, 0.3, 0.2],
-            (site2, rup21, imt.PGA()): [0.4, 0.2, 0.1],
+            (site1.location.latitude, rup21, imt.PGA()): [0.5, 0.3, 0.2],
+            (site2.location.latitude, rup21, imt.PGA()): [0.4, 0.2, 0.1],
 
-            (site1, rup21, imt.PGD()): [0.24, 0.08],
-            (site2, rup21, imt.PGD()): [0.14, 0.09],
+            (site1.location.latitude, rup21, imt.PGD()): [0.24, 0.08],
+            (site2.location.latitude, rup21, imt.PGD()): [0.14, 0.09],
         })
         gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: gsim1,
                  const.TRT.VOLCANIC: gsim2}
