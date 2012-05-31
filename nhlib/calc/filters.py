@@ -51,7 +51,7 @@ of each kind (see :func:`source_site_distance_filter` and
 (:func:`source_site_noop_filter` and :func:`rupture_site_noop_filter`).
 """
 
-# TODO: unittest
+
 def source_site_distance_filter(integration_distance):
     """
     Source-site filter based on distance.
@@ -72,7 +72,6 @@ def source_site_distance_filter(integration_distance):
     return filter_func
 
 
-# TODO: unittest
 def rupture_site_distance_filter(integration_distance):
     """
     Rupture-site filter based on distance.
