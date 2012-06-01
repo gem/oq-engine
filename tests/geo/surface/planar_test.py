@@ -51,21 +51,28 @@ class PlanarSurfaceCreationTestCase(unittest.TestCase):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(0, -1, 2), Point(0, 1, 2)]
         self.assert_failed_creation(1, 0, 90, corners, ValueError,
-            'planar surface corners must represent a rectangle'
+            'corners are in the wrong order'
         )
 
-    def test_edges_not_parallel(self):
+    def test_corners_not_on_the_same_plane(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(-0.3, 1, 2), Point(0.3, -1, 2)]
         self.assert_failed_creation(1, 0, 90, corners, ValueError,
-            'planar surface corners must represent a rectangle'
+            'corner points do not lie on the same plane'
         )
 
     def test_top_edge_shorter_than_bottom_edge(self):
         corners = [Point(0, -1, 1), Point(0, 1, 1),
                    Point(0, 1.2, 2), Point(0, -1.2, 2)]
         self.assert_failed_creation(1, 0, 90, corners, ValueError,
-            'planar surface corners must represent a rectangle'
+            'top and bottom edges have different lengths'
+        )
+
+    def test_non_right_angles(self):
+        corners = [Point(0, 0, 1), Point(1, 0, 1),
+                   Point(1.045, 0, 2), Point(0.045, 0, 2)]
+        self.assert_failed_creation(1, 0, 90, corners, ValueError,
+            "surface's angles are not right"
         )
 
     def test_non_positive_mesh_spacing(self):

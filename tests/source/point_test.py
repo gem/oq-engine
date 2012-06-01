@@ -118,7 +118,9 @@ class PointSourceCreationTestCase(unittest.TestCase):
 
 class PointSourceIterRupturesTestCase(unittest.TestCase):
     def _get_rupture(self, min_mag, max_mag, hypocenter_depth,
-                     aspect_ratio, dip, rupture_mesh_spacing):
+                     aspect_ratio, dip, rupture_mesh_spacing,
+                     upper_seismogenic_depth=2,
+                     lower_seismogenic_depth=16):
         source_id = name = 'test-source'
         trt = TRT.ACTIVE_SHALLOW_CRUST
         mfd = TruncatedGRMFD(a_val=2, b_val=1, min_mag=min_mag,
@@ -127,8 +129,6 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
         nodal_plane = NodalPlane(strike=45, dip=dip, rake=-123.23)
         nodal_plane_distribution = PMF([(1, nodal_plane)])
         hypocenter_distribution = PMF([(1, hypocenter_depth)])
-        upper_seismogenic_depth = 2
-        lower_seismogenic_depth = 16
         magnitude_scaling_relationship = PeerMSR()
         rupture_aspect_ratio = aspect_ratio
         point_source = PointSource(
@@ -366,6 +366,18 @@ class PointSourceIterRupturesTestCase(unittest.TestCase):
             self.assertEqual(tr, surface.top_right)
             self.assertEqual(bl, surface.bottom_left)
             self.assertEqual(br, surface.bottom_right)
+
+    def test_high_magnitude(self):
+        rupture = self._get_rupture(min_mag=9, max_mag=10, hypocenter_depth=8,
+                                    aspect_ratio=1, dip=90,
+                                    rupture_mesh_spacing=1)
+        self.assertEqual(rupture.mag, 9.5)
+        rupture = self._get_rupture(min_mag=9, max_mag=10, hypocenter_depth=40,
+                                    aspect_ratio=1, dip=90,
+                                    rupture_mesh_spacing=1,
+                                    upper_seismogenic_depth=0,
+                                    lower_seismogenic_depth=150)
+        self.assertEqual(rupture.mag, 9.5)
 
 
 class PointSourceMaxRupProjRadiusTestCase(unittest.TestCase):
