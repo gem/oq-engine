@@ -14,6 +14,8 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import ConfigParser
+import os
 import unittest
 
 from nose.plugins.attrib import attr
@@ -23,7 +25,7 @@ from openquake.db import models
 from tests.utils import helpers
 
 
-class SiteModelConfigsTestCase(unittest.TestCase):
+class SiteModelConfigsTestCase(unittest.TestCase, helpers.ConfigTestCase):
     """Run each of the hazard calculators end-to-end with a site model defined
     in the configuration.
 
@@ -51,9 +53,19 @@ class SiteModelConfigsTestCase(unittest.TestCase):
 
     @attr('slow')
     def test_disagg(self):
-        self._do_test(
-            helpers.demo_file('disaggregation/config_with_site_model.gem')
-        )
+        self.setup_config()
+        os.environ.update(self.orig_env)
+        cp = ConfigParser.SafeConfigParser()
+        cp.read('openquake.cfg.test_bakk')
+        cp.set('nfs', 'base_dir', '/tmp')
+        cp.write(open('openquake.cfg', 'w'))
+
+        try:
+            self._do_test(
+                helpers.demo_file('disaggregation/config_with_site_model.gem')
+            )
+        finally:
+            self.teardown_config()
 
     @attr('slow')
     def test_uhs(self):
