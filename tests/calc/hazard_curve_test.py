@@ -17,6 +17,7 @@ import unittest
 
 import numpy
 
+import nhlib
 from nhlib import const
 from nhlib import imt
 from nhlib.site import Site, SiteCollection
@@ -119,3 +120,94 @@ class HazardCurvesTestCase(unittest.TestCase):
                         str(site1_pgd_poe))
         self.assertTrue(numpy.allclose(site2_pgd_poe, site2_pgd_poe_expected),
                         str(site2_pgd_poe))
+
+
+class HazardCurvesFiltersTestCase(unittest.TestCase):
+    class SitesCounterSourceFilter(object):
+        def __init__(self, chained_generator):
+            self.counts = []
+            self.chained_generator = chained_generator
+
+        def __call__(self, sources_sites):
+            for source, sites in self.chained_generator(sources_sites):
+                self.counts.append((source.source_id, map(int, sites.vs30)))
+                yield source, sites
+
+    class SitesCounterRuptureFilter(object):
+        def __init__(self, chained_generator):
+            self.counts = []
+            self.chained_generator = chained_generator
+
+        def __call__(self, ruptures_sites):
+            for rupture, sites in self.chained_generator(ruptures_sites):
+                self.counts.append((rupture.mag, map(int, sites.vs30)))
+                yield rupture, sites
+
+    def test_point_sources(self):
+        sources = [
+            nhlib.source.PointSource(source_id='point1', name='point1',
+                tectonic_region_type=const.TRT.ACTIVE_SHALLOW_CRUST,
+                mfd=nhlib.mfd.EvenlyDiscretizedMFD(min_mag=4, bin_width=1,
+                                                   occurrence_rates=[5]),
+                nodal_plane_distribution=nhlib.pmf.PMF([
+                    (1, nhlib.geo.NodalPlane(strike=0.0, dip=90.0, rake=0.0))
+                ]),
+                hypocenter_distribution=nhlib.pmf.PMF([(1, 10)]),
+                upper_seismogenic_depth=0.0,
+                lower_seismogenic_depth=10.0,
+                magnitude_scaling_relationship = nhlib.scalerel.PeerMSR(),
+                rupture_aspect_ratio=2,
+                rupture_mesh_spacing=1.0,
+                location=Point(10, 10)
+            ),
+            nhlib.source.PointSource(source_id='point2', name='point2',
+                tectonic_region_type=const.TRT.ACTIVE_SHALLOW_CRUST,
+                mfd=nhlib.mfd.EvenlyDiscretizedMFD(min_mag=4, bin_width=2,
+                                                   occurrence_rates=[5, 6, 7]),
+                nodal_plane_distribution=nhlib.pmf.PMF([
+                    (1, nhlib.geo.NodalPlane(strike=0, dip=90, rake=0.0)),
+                ]),
+                hypocenter_distribution=nhlib.pmf.PMF([(1, 10)]),
+                upper_seismogenic_depth=0.0,
+                lower_seismogenic_depth=10.0,
+                magnitude_scaling_relationship = nhlib.scalerel.PeerMSR(),
+                rupture_aspect_ratio=2,
+                rupture_mesh_spacing=1.0,
+                location=Point(10, 11)
+            ),
+        ]
+        sites = [nhlib.site.Site(Point(11, 10), 1, True, 2, 3),
+                 nhlib.site.Site(Point(10, 16), 2, True, 2, 3),
+                 nhlib.site.Site(Point(10, 10.6), 3, True, 2, 3),
+                 nhlib.site.Site(Point(10, 10.7), 4, True, 2, 3)]
+        sitecol = nhlib.site.SiteCollection(sites)
+
+        from nhlib.gsim.sadigh_1997 import SadighEtAl1997
+        gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
+        truncation_level = 1
+        time_span = 1.0
+        imts = {nhlib.imt.PGA(): [0.1, 0.5, 1.3]}
+
+        from nhlib.calc import filters
+        source_site_filter = self.SitesCounterSourceFilter(
+            filters.source_site_distance_filter(30)
+        )
+        rupture_site_filter = self.SitesCounterRuptureFilter(
+            filters.rupture_site_distance_filter(30)
+        )
+        hazard_curves_poissonian(
+            iter(sources), sitecol, imts, time_span, gsims, truncation_level,
+            source_site_filter=source_site_filter,
+            rupture_site_filter=rupture_site_filter
+        )
+        # there are two sources and four sites. first source should
+        # be filtered completely since it is too far from all the sites.
+        # the second one should take only three sites -- all except (10, 16).
+        # it generates three ruptures with magnitudes 4, 6 and 8, from which
+        # the first one doesn't affect any of sites and should be ignored,
+        # second only affects site (10, 10.7) and the last one affects all
+        # three.
+        self.assertEqual(source_site_filter.counts,
+                         [('point2', [1, 3, 4])])
+        self.assertEqual(rupture_site_filter.counts,
+                         [(6, [4]), (8, [1, 3, 4])])
