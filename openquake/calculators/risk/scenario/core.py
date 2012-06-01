@@ -60,8 +60,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
             LOGGER.debug("Dispatching task for block %s of %s"
                 % (block_id, len(self.job_ctxt.blocks_keys)))
             a_task = general.compute_risk.delay(
-                self.job_ctxt.job_id, block_id, vuln_model=vuln_model,
-                epsilon_provider=epsilon_provider)
+                self.job_ctxt.job_id, block_id, vuln_model=vuln_model)
             tasks.append(a_task)
 
         for task in tasks:
@@ -170,7 +169,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         """
 
         vuln_model = kwargs['vuln_model']
-        epsilon_provider = kwargs['epsilon_provider']
+        epsilon_provider = general.EpsilonProvider(self.job_ctxt.params)
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
 
         loss_data = {}

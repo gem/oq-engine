@@ -65,5 +65,3 @@ EXPOSURE = exposure_model.xml
 
 # file containing the vulnerability functions
 VULNERABILITY = vulnerability_model_non-zero_covs.xml
-
-EPSILON_RANDOM_SEED = 37
