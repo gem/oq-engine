@@ -1123,10 +1123,6 @@ CREATE TABLE uiapi.oq_job_profile (
         CONSTRAINT depth_to_1pt_0km_per_sec_above_zero
         CHECK(depth_to_1pt_0km_per_sec > 0.0),
     reference_depth_to_2pt5km_per_sec_param float,
-    epsilon_random_seed INTEGER CONSTRAINT epsilon_rnd_seed_is_set
-        CHECK(
-            (calc_mode = 'scenario' AND epsilon_random_seed IS NOT NULL)
-            OR (calc_mode != 'scenario' AND epsilon_random_seed IS NULL)),
     -- timestamp
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
