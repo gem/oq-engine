@@ -328,10 +328,10 @@ class DmgDistTotalXMLWriterTestCase(
 
     def make_data(self, dmg_state, mean, stddev):
         data = models.DmgDistTotalData(
-            dmg_dist_total = self.ddt,
-            dmg_state = dmg_state,
-            mean = mean,
-            stddev = stddev)
+            dmg_dist_total=self.ddt,
+            dmg_state=dmg_state,
+            mean=mean,
+            stddev=stddev)
 
         data.save()
         self.data.append(data)
