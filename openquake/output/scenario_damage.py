@@ -206,6 +206,58 @@ class DmgDistPerTaxonomyXMLWriter(object):
         return dd_node_el
 
 
+class DmgDistTotalXMLWriter(object):
+    """
+    Write the total damage distribution artifact
+    to the defined NRML format.
+
+    :param path: full path to the resulting XML file (including file name).
+    :type path: string
+    :param end_branch_label: logic tree branch which was used for the
+        realization associated with this distribution.
+    :type end_branch_label: string
+    :param damage_states: the damage states considered in this distribution.
+    :type damage_states: list of strings, for example:
+        ["no_damage", "slight", "moderate", "extensive", "complete"]
+    """
+
+    def __init__(self, path, end_branch_label, damage_states):
+        self.path = path
+        self.damage_states = damage_states
+        self.end_branch_label = end_branch_label
+
+        # <nrml /> element
+        self.root = None
+
+    def serialize(self, total_dist_data):
+        """
+        Serialize the entire distribution.
+
+        :param total_dist_data: the distribution to be written.
+        :type total_dist_data: list of
+            :py:class:`openquake.db.models.DmgDistTotalData` instances.
+        :raises: `RuntimeError` in case of list empty or `None`.
+        """
+
+        if total_dist_data is None or not len(total_dist_data):
+            raise RuntimeError(
+                "empty damage distributions are not supported by the schema.")
+
+        with open(self.path, "w") as fh:
+            self.root, dmg_dist_el = _create_root_elems(
+                self.end_branch_label, self.damage_states,
+                "totalDmgDist")
+
+            for tdata in total_dist_data:
+
+                _create_damage_elem(dmg_dist_el, tdata.dmg_state,
+                        tdata.mean, tdata.stddev)
+
+            fh.write(etree.tostring(
+                    self.root, pretty_print=True, xml_declaration=True,
+                    encoding="UTF-8"))
+
+
 def _create_root_elems(end_branch_label, damage_states, distribution):
     """
     Create the <nrml /> and <dmgDistPer{Taxonomy,Asset} /> elements.
