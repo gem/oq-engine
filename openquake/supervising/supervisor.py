@@ -47,6 +47,10 @@ from openquake import logs
 from openquake.utils import stats
 
 
+LOG_FORMAT = ('[%(asctime)s #%(job_id)s %(hostname)s %(levelname)s '
+              '%(processName)s/%(process)s %(name)s] %(message)s')
+
+
 def ignore_sigint():
     """
     Setup signal handler on SIGINT in order to ignore it.
@@ -131,29 +135,53 @@ def update_job_status_and_error_msg(job_id, status, error_msg=None):
                         .create(oq_job=job, detailed=error_msg)
 
 
-class SupervisorLogHandler(logging.StreamHandler):
+def _update_log_record(self, record):
     """
-    Log handler intended to be used with :class:`SupervisorLogMessageConsumer`.
+    Massage a log record before emitting it. Intended to be used by the
+    custom log handlers defined in this module.
     """
-    LOG_FORMAT = '[%(asctime)s #%(job_id)s %(hostname)s %(levelname)s ' \
-                 '%(processName)s/%(process)s %(name)s] %(message)s'
+    if not hasattr(record, 'hostname'):
+        record.hostname = '-'
+    if not hasattr(record, 'job_id'):
+        record.job_id = self.job_id
+    logger_name_prefix = 'oq.job.%s' % record.job_id
+    if record.name.startswith(logger_name_prefix):
+        record.name = record.name[len(logger_name_prefix):].lstrip('.')
+        if not record.name:
+            record.name = 'root'
+
+
+class SupervisorLogStreamHandler(logging.StreamHandler):
+    """
+    Log stream handler intended to be used with
+    :class:`SupervisorLogMessageConsumer`.
+    """
 
     def __init__(self, job_id):
-        super(SupervisorLogHandler, self).__init__()
-        self.setFormatter(logging.Formatter(self.LOG_FORMAT))
+        super(SupervisorLogStreamHandler, self).__init__()
+        self.setFormatter(logging.Formatter(LOG_FORMAT))
         self.job_id = job_id
 
     def emit(self, record):  # pylint: disable=E0202
-        if not hasattr(record, 'hostname'):
-            record.hostname = '-'
-        if not hasattr(record, 'job_id'):
-            record.job_id = self.job_id
-        logger_name_prefix = 'oq.job.%s' % record.job_id
-        if record.name.startswith(logger_name_prefix):
-            record.name = record.name[len(logger_name_prefix):].lstrip('.')
-            if not record.name:
-                record.name = 'root'
-        super(SupervisorLogHandler, self).emit(record)
+        _update_log_record(self, record)
+        super(SupervisorLogStreamHandler, self).emit(record)
+
+
+class SupervisorLogFileHandler(logging.FileHandler):
+    """
+    Log file handler intended to be used with
+    :class:`SupervisorLogMessageConsumer`.
+    """
+
+    def __init__(self, job_id, log_file):
+        super(SupervisorLogFileHandler, self).__init__(log_file)
+        self.setFormatter(logging.Formatter(LOG_FORMAT))
+        self.job_id = job_id
+        self.log_file = log_file
+
+    def emit(self, record):  # pylint: disable=E0202
+        _update_log_record(self, record)
+        super(SupervisorLogFileHandler, self).emit(record)
 
 
 class SupervisorLogMessageConsumer(logs.AMQPLogSource):
@@ -264,7 +292,7 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
             raise StopIteration()
 
 
-def supervise(pid, job_id, timeout=1):
+def supervise(pid, job_id, timeout=1, log_file=None):
     """
     Supervise a job process, entering a loop that ends only when the job
     terminates.
@@ -275,15 +303,20 @@ def supervise(pid, job_id, timeout=1):
     :type job_id: int
     :param timeout: timeout value in seconds
     :type timeout: float
-    :param str log_level:
-        One of 'debug', 'info', 'warn', 'error', or 'critical'.
+    :param str log_file:
+        Optional log file location. If specified, log messages will be appended
+        to this file. If not specified, log messages will be printed to the
+        console.
     """
     # Set the name of this process (as reported by /bin/ps)
     setproctitle('openquake supervisor for job_id=%s job_pid=%s'
                  % (job_id, pid))
     ignore_sigint()
 
-    logging.root.addHandler(SupervisorLogHandler(job_id))
+    if log_file is not None:
+        logging.root.addHandler(SupervisorLogFileHandler(job_id, log_file))
+    else:
+        logging.root.addHandler(SupervisorLogStreamHandler(job_id))
 
     supervisor = SupervisorLogMessageConsumer(job_id, pid, timeout)
     supervisor.run()
