@@ -41,6 +41,27 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
 
         self._verify_dist_per_asset_con()
         self._verify_dist_per_taxonomy_con()
+        self._verify_total_dist_con()
+
+    def _verify_total_dist_con(self):
+        job = OqJob.objects.latest("id")
+        filename = "%s/dmg-dist-total-%s.xml" % (OUTPUT_DIR, job.id)
+        root = self._root(filename)
+
+        ds = self._ds_td("no_damage", root)
+
+        self._close_to(2036.6565789692, float(ds.get("mean")))
+        self._close_to(1075.3192939160, float(ds.get("stddev")))
+
+        ds = self._ds_td("LS1", root)
+
+        self._close_to(2168.3321224748, float(ds.get("mean")))
+        self._close_to(1076.4342601834, float(ds.get("stddev")))
+
+        ds = self._ds_td("LS2", root)
+
+        self._close_to(1795.0112985561, float(ds.get("mean")))
+        self._close_to(687.0910669304, float(ds.get("stddev")))
 
     def _verify_dist_per_asset_con(self):
         job = OqJob.objects.latest("id")
@@ -136,6 +157,27 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
 
         self._verify_dist_per_asset_dsc()
         self._verify_dist_per_taxonomy_dsc()
+        self._verify_total_dist_dsc()
+
+    def _verify_total_dist_dsc(self):
+        job = OqJob.objects.latest("id")
+        filename = "%s/dmg-dist-total-%s.xml" % (OUTPUT_DIR, job.id)
+        root = self._root(filename)
+
+        ds = self._ds_td("no_damage", root)
+
+        self._close_to(1445.1370815035, float(ds.get("mean")))
+        self._close_to(824.7812010370, float(ds.get("stddev")))
+
+        ds = self._ds_td("LS1", root)
+
+        self._close_to(2661.5643782540, float(ds.get("mean")))
+        self._close_to(374.0010314384, float(ds.get("stddev")))
+
+        ds = self._ds_td("LS2", root)
+
+        self._close_to(1893.2985402425, float(ds.get("mean")))
+        self._close_to(661.8114364615, float(ds.get("stddev")))
 
     def _verify_dist_per_taxonomy_dsc(self):
         job = OqJob.objects.latest("id")
@@ -221,6 +263,12 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
 
         self._close_to(309.9382312514, float(ds.get("mean")))
         self._close_to(246.8442491255, float(ds.get("stddev")))
+
+    def _ds_td(self, damage_state, root):
+        xpath = ("nrml:totalDmgDist/"
+            "nrml:damage[@ds='" + damage_state + "']")
+
+        return self._get(root, xpath)
 
     def _ds_dda(self, asset_ref, damage_state, root):
         xpath = ("nrml:dmgDistPerAsset/nrml:DDNode/"
