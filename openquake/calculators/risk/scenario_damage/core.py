@@ -395,6 +395,18 @@ def compute_gmv_fractions(funcs, gmv):
         to the highest)
     """
 
+    def _no_damage(fm, gmv):
+        """
+        There is no damage when ground motions values are less
+        than the first iml or when the no damage limit value
+        is greater than the ground motions value.
+        """
+        discrete = fm.format == "discrete"
+        no_damage_limit = fm.no_damage_limit is not None
+
+        return ((discrete and not no_damage_limit and gmv < fm.imls[0]) or
+            (discrete and no_damage_limit and gmv < fm.no_damage_limit))
+
     def compute_poe_con(iml, func):
         """
         Compute the Probability of Exceedance for the given
@@ -415,14 +427,17 @@ def compute_gmv_fractions(funcs, gmv):
         """
 
         highest_iml = func.fragility_model.imls[-1]
+        no_damage_limit = func.fragility_model.no_damage_limit
 
         # when the intensity measure level is above
         # the range, we use the highest one
         if iml > highest_iml:
             iml = highest_iml
 
-        return scipy.interpolate.interp1d(
-            func.fragility_model.imls, func.poes)(iml)
+        imls = [no_damage_limit] + func.fragility_model.imls
+        poes = [0.0] + func.poes
+
+        return scipy.interpolate.interp1d(imls, poes)(iml)
 
     ftype_poe_map = {Ffc: compute_poe_con, Ffd: compute_poe_dsc}
 
@@ -437,7 +452,7 @@ def compute_gmv_fractions(funcs, gmv):
     # intensity measure level defined in the model
     # we simply use 100% no_damage and 0% for the
     # remaining limit states
-    if fm.format == "discrete" and gmv < fm.imls[0]:
+    if _no_damage(fm, gmv):
         damage_states[0] = 1.0
         return numpy.array(damage_states)
 
