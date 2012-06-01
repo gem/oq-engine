@@ -33,7 +33,6 @@ from openquake.job.config import HazardMandatoryParamsValidator
 from openquake.job.config import RiskMandatoryParamsValidator
 from openquake.job.config import ScenarioComputationValidator
 from openquake.job.config import ScenarioDamageValidator
-from openquake.job.config import ScenarioValidator
 from openquake.job.config import UHSValidator
 from openquake.job.config import to_float_array
 from openquake.job.config import to_str_array
@@ -515,8 +514,6 @@ class DefaultValidatorsTestCase(unittest.TestCase):
 
         self.assertTrue(any(
             isinstance(v, ScenarioComputationValidator) for v in validators))
-        self.assertTrue(any(
-            isinstance(v, ScenarioValidator) for v in validators))
 
     def test_default_validators_scenario_damage_job(self):
         # Ensures that a Scenario Damage job always includes the
