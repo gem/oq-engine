@@ -678,6 +678,24 @@ class Input2job(djm.Model):
         db_table = 'uiapi\".\"input2job'
 
 
+class Src2ltsrc(djm.Model):
+    '''
+    Associate an "lt_source" type input (a logic tree source) with "source"
+    type inputs (hazard sources referenced by the logic tree source).
+    This is needed for worker-side logic tree processing.
+    '''
+    hzrd_src = djm.ForeignKey("Input", related_name='+',
+                              help_text="Hazard source input referenced "
+                                        "by the logic tree source")
+    lt_src = djm.ForeignKey("Input", related_name='+',
+                            help_text="Logic tree source input")
+    filename = djm.TextField(
+        help_text="Name of the referenced hazard source file")
+
+    class Meta:
+        db_table = 'uiapi\".\"src2ltsrc'
+
+
 class Input2upload(djm.Model):
     '''
     Associates input model files and uploads.
