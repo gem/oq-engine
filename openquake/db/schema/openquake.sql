@@ -1202,6 +1202,22 @@ CREATE TABLE uiapi.input2job (
 ) TABLESPACE uiapi_ts;
 
 
+-- Associate an 'lt_source' type input (a logic tree source) with 'source'
+-- type inputs (hazard sources referenced by the logic tree source).
+-- This is needed for worker-side logic tree processing.
+CREATE TABLE uiapi.src2ltsrc (
+    id SERIAL PRIMARY KEY,
+    -- foreign key to the input of type 'source'
+    hzrd_src_id INTEGER NOT NULL,
+    -- foreign key to the input of type 'lt_source'
+    lt_src_id INTEGER NOT NULL,
+    -- Due to input file reuse, the original file name may deviate from
+    -- the current. We hence need to capture the latter.
+    filename VARCHAR NOT NULL,
+    UNIQUE (hzrd_src_id, lt_src_id)
+) TABLESPACE uiapi_ts;
+
+
 -- Associate inputs and uploads
 CREATE TABLE uiapi.input2upload (
     id SERIAL PRIMARY KEY,
@@ -1824,6 +1840,12 @@ FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.input2job ADD CONSTRAINT  uiapi_input2job_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.src2ltsrc ADD CONSTRAINT  uiapi_src2ltsrc_src_fk
+FOREIGN KEY (hzrd_src_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.src2ltsrc ADD CONSTRAINT  uiapi_src2ltsrc_ltsrc_fk
+FOREIGN KEY (lt_src_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.job2profile ADD CONSTRAINT
 uiapi_job2profile_oq_job_profile_fk FOREIGN KEY (oq_job_profile_id) REFERENCES
