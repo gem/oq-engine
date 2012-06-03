@@ -88,6 +88,7 @@ GRANT ALL ON SEQUENCE uiapi.output_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.upload_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.error_msg_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.input2job_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.src2ltsrc_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.input2upload_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.job2profile_id_seq to GROUP openquake;
 
@@ -306,6 +307,10 @@ GRANT SELECT,INSERT,DELETE ON uiapi.model_content to oq_job_init;
 -- uiapi.input2job
 GRANT SELECT ON uiapi.input2job TO GROUP openquake;
 GRANT SELECT,INSERT,DELETE ON uiapi.input2job TO oq_job_init;
+
+-- uiapi.src2ltsrc
+GRANT SELECT ON uiapi.src2ltsrc TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON uiapi.src2ltsrc TO oq_job_init;
 
 -- uiapi.input2upload
 GRANT SELECT ON uiapi.input2upload TO GROUP openquake;

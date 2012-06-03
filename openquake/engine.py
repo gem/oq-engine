@@ -49,6 +49,7 @@ from openquake.db.models import OqJob
 from openquake.db.models import OqJobProfile
 from openquake.db.models import OqUser
 from openquake.db.models import profile4job
+from openquake.db.models import Src2ltsrc
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
@@ -594,7 +595,7 @@ def _insert_input_files(params, job, force_inputs):
 
     inputs_seen = []
 
-    def ln_input2job(job, path, input_type):
+    def ln_input2job(path, input_type):
         """Link identical or newly created input to the given job."""
         digest = _file_digest(path)
         linked_inputs = inputs4job(job.id)
@@ -619,25 +620,40 @@ def _insert_input_files(params, job, force_inputs):
             in_model.save()
 
         # Make sure we don't link to the same input more than once.
-        if in_model.id in inputs_seen:
-            return
-        else:
+        if in_model.id not in inputs_seen:
             inputs_seen.append(in_model.id)
 
-        i2j = Input2job(input=in_model, oq_job=job)
-        i2j.save()
+            i2j = Input2job(input=in_model, oq_job=job)
+            i2j.save()
+
+        return in_model
+
+    def _insert_referenced_sources(lt_src_input, lt_src_path):
+        """
+        :param lt_src_input: an `:class:openquake.db.models.Input` of type
+            "lt_source"
+        :param str lt_src_path: path to the current logic tree source
+        """
+        # insert source models referenced in the logic tree
+        for path in _get_source_models(lt_src_path):
+            hzrd_src_input = ln_input2job(path, "source")
+            one_or_none = Src2ltsrc.objects.filter(hzrd_src=hzrd_src_input,
+                                                   lt_src=lt_src_input)
+            if len(one_or_none) == 0:
+                # No link table entry found, create one.
+                src_link = Src2ltsrc(
+                    hzrd_src=hzrd_src_input, lt_src=lt_src_input,
+                    filename=os.path.basename(path))
+                src_link.save()
 
     # insert input files in input table
     for param_key, file_type in INPUT_FILE_TYPES.items():
         if param_key not in params:
             continue
         path = params[param_key]
-        ln_input2job(job, path, file_type)
-
-    # insert source models referenced in the logic tree
-    if 'SOURCE_MODEL_LOGIC_TREE_FILE' in params:
-        for path in _get_source_models(params['SOURCE_MODEL_LOGIC_TREE_FILE']):
-            ln_input2job(job, path, "source")
+        input_obj = ln_input2job(path, file_type)
+        if file_type == "lt_source":
+            _insert_referenced_sources(input_obj, path)
 
 
 def prepare_job(user_name="openquake"):
