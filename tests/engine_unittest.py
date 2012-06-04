@@ -513,6 +513,12 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertNotEqual(self.glt_i.id, glt_i.id)
         [slt_i] = models.inputs4job(self.job.id, input_type="lt_source")
         self.assertEqual(self.slt_i.id, slt_i.id)
+        # Make sure the LT and the hazard source have been associated.
+        [src_link] = models.Src2ltsrc.objects.filter(lt_src=slt_i)
+        self.assertEqual("dissFaultModel.xml", src_link.filename)
+        self.assertEqual(slt_i, src_link.lt_src)
+        [hzrd_i] = models.inputs4job(self.job.id, input_type="source")
+        self.assertEqual(hzrd_i, src_link.hzrd_src)
 
     def test_model_content_single_file(self):
         # The contents of input files (such as logic trees, exposure models,
