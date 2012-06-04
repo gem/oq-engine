@@ -342,7 +342,8 @@ def get_closest_site_model_data(input_model, site):
         hzrdi.site_model.*,
         min(ST_Distance_Sphere(location, %s))
             AS min_distance
-    FROM hzrdi.site_model where input_id = %s
+    FROM hzrdi.site_model
+    WHERE input_id = %s
     GROUP BY id
     ORDER BY min_distance
     LIMIT 1;"""
