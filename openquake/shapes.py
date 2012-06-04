@@ -32,6 +32,8 @@ from numpy import sin, cos, arctan2, sqrt, radians
 from shapely import geometry
 from scipy.interpolate import interp1d
 
+from nhlib import geo as nhlib_geo
+
 from openquake import java
 from openquake.utils import round_float
 from openquake import logs
@@ -39,9 +41,6 @@ from openquake import logs
 LOGGER = logs.LOG
 
 logs.set_logger_level(LOGGER, logs.LEVELS.get('debug'))
-
-LineString = geometry.LineString  # pylint: disable=C0103
-Point = geometry.Point            # pylint: disable=C0103
 
 
 class Region(object):
@@ -337,34 +336,19 @@ class Grid(object):
         return [point.site for point in self]
 
 
-def c_mul(val_a, val_b):
-    """Ugly method of hashing string to integer
-    TODO(jmc): Get rid of points as dict keys!"""
-    return eval(hex((long(val_a) * val_b) & 0xFFFFFFFFL)[:-1])
-
-
-class Site(object):
+class Site(nhlib_geo.Point):
     """Site is a dictionary-keyable point"""
 
-    def __init__(self, longitude, latitude):
-        longitude = round_float(longitude)
-        latitude = round_float(latitude)
-        self.point = geometry.Point(longitude, latitude)
+    def __init__(self, longitude, latitude, depth=0.0):
+        nhlib_geo.Point.__init__(
+            self, round_float(longitude), round_float(latitude), depth=depth)
+
+        self.point = geometry.Point(self.longitude, self.latitude)
 
     @property
     def coords(self):
         """Return a tuple with the coordinates of this point"""
         return (self.longitude, self.latitude)
-
-    @property
-    def longitude(self):
-        """Point x value is longitude"""
-        return self.point.x
-
-    @property
-    def latitude(self):
-        """Point y value is latitude"""
-        return self.point.y
 
     def __eq__(self, other):
         """
@@ -373,8 +357,9 @@ class Site(object):
         :param other: another Site
         :type other: :py:class:`openquake.shapes.Site`
         """
-        return self.longitude == other.longitude \
-            and self.latitude == other.latitude
+        return (self.longitude == other.longitude
+                and self.latitude == other.latitude
+                and self.depth == other.depth)
 
     def __ne__(self, other):
         return not self == other
@@ -389,24 +374,18 @@ class Site(object):
 
     def __hash__(self):
         return hash(
-            hashlib.md5(repr((self.longitude, self.latitude))).hexdigest())
+            hashlib.md5(
+                repr((self.longitude, self.latitude, self.depth))).hexdigest())
 
     def to_java(self):
         """Converts to a Java Site object"""
         jpype = java.jvm()
         loc_class = jpype.JClass("org.opensha.commons.geo.Location")
         site_class = jpype.JClass("org.opensha.commons.data.Site")
-        # TODO(JMC): Support named sites?
         return site_class(loc_class(self.latitude, self.longitude))
 
     def __cmp__(self, other):
         return self.hash() == other.hash()
-
-    def __repr__(self):
-        return "Site(%s, %s)" % (self.longitude, self.latitude)
-
-    def __str__(self):
-        return self.__repr__()
 
 
 class Field(object):

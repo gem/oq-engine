@@ -15,14 +15,6 @@ The :mod:`output` Module
     :undoc-members:
     :show-inheritance:
 
-The :mod:`geotiff` Module
--------------------------
-
-.. automodule:: openquake.output.geotiff
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 
 The :mod:`hazard` Module
 -------------------------
