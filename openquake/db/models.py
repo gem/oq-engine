@@ -33,6 +33,12 @@ from django.contrib.gis.db import models as djm
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
 
+VS30_TYPE_CHOICES = (
+   (u"measured", u"Value obtained from on-site measurements"),
+   (u"inferred", u"Estimated value"),
+)
+
+
 def profile4job(job_id):
     """Return the job profile for the given job.
 
@@ -568,7 +574,7 @@ class SiteModel(djm.Model):
     vs30 = djm.FloatField()
     # 'measured' or 'inferred'. Identifies if vs30 value has been measured or
     # inferred.
-    vs30_type = djm.TextField()
+    vs30_type = djm.TextField(choices=VS30_TYPE_CHOICES)
     # Depth to shear wave velocity of 1.0 km/s. Units m.
     z1pt0 = djm.FloatField()
     # Depth to shear wave velocity of 2.5 km/s. Units km.
@@ -915,10 +921,6 @@ class OqJobProfile(djm.Model):
     #       Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
     disagg_results = CharArrayField(null=True)
     uhs_periods = FloatArrayField(null=True)
-    VS30_TYPE_CHOICES = (
-       (u"measured", u"Value obtained from on-site measurements"),
-       (u"inferred", u"Estimated value"),
-    )
     vs30_type = djm.TextField(choices=VS30_TYPE_CHOICES, default="measured",
                               null=True)
     depth_to_1pt_0km_per_sec = djm.FloatField(default=100.0)
