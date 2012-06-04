@@ -1,28 +1,28 @@
 [general]
 
-CALCULATION_MODE = Classical
+CALCULATION_MODE = Event Based
 
 # NOTE: The order of the vertices is to be kept!!!
 # lat, lon of polygon vertices (in clock or counter-clock wise order)
+
 REGION_VERTEX = 40.1, 10.1, 44.9, 10.1, 44.9, 14.9, 40.1, 14.9
 # degrees
-REGION_GRID_SPACING = 0.1
+REGION_GRID_SPACING = 0.03
 
 [HAZARD]
 
 SOURCE_MODEL_LT_RANDOM_SEED = 23
 GMPE_LT_RANDOM_SEED = 5
 
+# NRML serialization of gmf-* files
+SAVE_GMFS = true
+
+GMF_RANDOM_SEED = 3
+
 # file containing erf logic tree structure
 SOURCE_MODEL_LOGIC_TREE_FILE = source_model_logic_tree.xml
-
 # file containing gmpe logic tree structure
 GMPE_LOGIC_TREE_FILE = gmpe_logic_tree.xml
-
-# File containing site-specific parameters for hazard calculations
-# (VS30, VS30 type, Z 1.0, Z 2.5).
-# The calculations sites or region of interest must be completely contained
-# by the convex hull formed by the sites in the SITE_MODEL.
 SITE_MODEL = ../_site_model/site_model.xml
 
 # output directory - relative to this file
@@ -32,9 +32,7 @@ OUTPUT_DIR = computed_output
 # moment magnitude (Mw)
 MINIMUM_MAGNITUDE = 5.0
 # years
-INVESTIGATION_TIME = 50.0
-# maximum integration distance (km)
-MAXIMUM_DISTANCE = 200.0
+INVESTIGATION_TIME = 25.0
 # bin width of the magnitude frequency distribution
 WIDTH_OF_MFD_BIN = 0.2
 
@@ -49,20 +47,21 @@ PERIOD = 0.0
 DAMPING = 5.0
 # (in the same units of the intensity measure type)
 # TODO make it a comma separated list and adapt code (CalculatorConfigHelper.makeArbitrarilyDiscretizedFunc())
-INTENSITY_MEASURE_LEVELS = 0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527, 0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556
-#0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527, 0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778, 1.09, 1.52, 2.13
+INTENSITY_MEASURE_LEVELS = 0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527, 0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778, 1.09, 1.52, 2.13
 # (None, 1 Sided, 2 Sided)
 GMPE_TRUNCATION_TYPE = 2 Sided
 # (1,2,3,...)
-TRUNCATION_LEVEL = 3
+TRUNCATION_LEVEL = 1
 # (Total, Inter-Event, Intra-Event, None (zero), Total (Mag Dependent), Total (PGA Dependent), Intra-Event (Mag Dependent))
-STANDARD_DEVIATION_TYPE = None (zero)
+STANDARD_DEVIATION_TYPE = Total
 
 # Rock, Deep-Soil
 SADIGH_SITE_TYPE = Rock
+# if true compute ground motion fields using correlated model of Jayaram and Baker 2009
+GROUND_MOTION_CORRELATION = false
 
 # true or false
-INCLUDE_AREA_SOURCES = true
+INCLUDE_AREA_SOURCES = false
 # (Point Sources, Line Sources (random or given strike), Cross Hair Line Sources, 16 Spoked Line Sources)
 TREAT_AREA_SOURCE_AS = Point Sources
 # degrees
@@ -72,7 +71,7 @@ AREA_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP = W&C 1994 Mag-Length Rel.
 
 
 # true or false
-INCLUDE_GRID_SOURCES = true
+INCLUDE_GRID_SOURCES = false
 # (Point Sources, Line Sources (random or given strike), Cross Hair Line Sources, 16 Spoked Line Sources)
 TREAT_GRID_SOURCE_AS = Point Sources
 # (W&C 1994 Mag-Length Rel.)
@@ -84,18 +83,18 @@ INCLUDE_FAULT_SOURCE = true
 # km
 FAULT_RUPTURE_OFFSET = 5.0
 # km
-FAULT_SURFACE_DISCRETIZATION = 5.0
+FAULT_SURFACE_DISCRETIZATION = 1.0
 # (W&C 1994 Mag-Length Rel.)
-FAULT_MAGNITUDE_SCALING_RELATIONSHIP = PEER Tests Mag-Area Rel.
+FAULT_MAGNITUDE_SCALING_RELATIONSHIP = W&C 1994 Mag-Length Rel.
 FAULT_MAGNITUDE_SCALING_SIGMA = 0.0
 # (rupture length/rupture width)
-RUPTURE_ASPECT_RATIO = 2.0
+RUPTURE_ASPECT_RATIO = 1.5
 # (Only along strike ( rupture full DDW), Along strike and down dip, Along strike & centered down dip)
 RUPTURE_FLOATING_TYPE = Along strike and down dip
 
 
 # true or false
-INCLUDE_SUBDUCTION_FAULT_SOURCE = true
+INCLUDE_SUBDUCTION_FAULT_SOURCE = false
 # km
 SUBDUCTION_FAULT_RUPTURE_OFFSET = 10.0
 # km
@@ -108,13 +107,8 @@ SUBDUCTION_RUPTURE_ASPECT_RATIO = 1.5
 # (Only along strike ( rupture full DDW), Along strike and down dip, Along strike & centered down dip)
 SUBDUCTION_RUPTURE_FLOATING_TYPE = Along strike and down dip
 
+
+# (used if Event Based approach is chosen)
 NUMBER_OF_LOGIC_TREE_SAMPLES = 1
-
-# List of quantiles to compute
-QUANTILE_LEVELS =
-
-# Compute mean hazard curve
-COMPUTE_MEAN_HAZARD_CURVE = true
-
-# List of POEs to use for computing hazard maps
-POES = 0.1 0.02
+# (used if probabilistic event based approach is chosen)
+NUMBER_OF_SEISMICITY_HISTORIES = 1
