@@ -107,12 +107,12 @@ class SiteCollection(object):
 
         The typical workflow is the following: there is a whole site
         collection, the one that has an information about all the sites.
-        Than it gets filtered for performing some calculation on a limited
+        Then it gets filtered for performing some calculation on a limited
         set of sites (like for instance filtering sites by their proximity
         to a rupture). That filtering process can be repeated arbitrary
         number of times, i.e. a collection that is already filtered can
         be filtered for further limiting the set of sites to compute on.
-        Than the (supposedly expensive) computation is done on a limited
+        Then the (supposedly expensive) computation is done on a limited
         set of sites which still appears as just a :class:`SiteCollection`
         instance, so that computation code doesn't need to worry about
         filtering, it just needs to handle site collection objects. The
@@ -138,7 +138,7 @@ class SiteCollection(object):
             were filtered out and no real calculation was performed for them.
         :returns:
             Array of length ``total_sites`` with values from ``data``
-            distributed in an appropriate places.
+            distributed in the appropriate places.
         """
         num_sites_computed = data.shape[0]
         assert num_sites_computed == len(self)
