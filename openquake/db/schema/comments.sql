@@ -433,6 +433,10 @@ COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
     - bcr_distribution';
 COMMENT ON COLUMN uiapi.output.shapefile_path IS 'The full path of the shapefile generated for a hazard or loss map (optional).';
 
+COMMENT ON TABLE uiapi.src2ltsrc IS '
+Associate an "lt_source" type input (a logic tree source) with "source"
+type inputs (hazard sources referenced by the logic tree source).
+This is needed for worker-side logic tree processing.';
 
 COMMENT ON TABLE uiapi.upload IS 'A batch of OpenQuake input files uploaded by the user';
 COMMENT ON COLUMN uiapi.upload.job_pid IS 'The process id (PID) of the NRML loader process';
