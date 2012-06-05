@@ -353,9 +353,9 @@ class SiteModelParserTestCase(unittest.TestCase):
 
     def test_invalid_schema_validation_off(self):
         parser = parsers.SiteModelParser(
-            StringIO.StringIO(self.INVALID_SCHEMA))
+            StringIO.StringIO(self.INVALID_SCHEMA), schema_validation=False)
 
-        parser.parse()  # Should succeed with no errors
+        list(parser.parse())  # Should succeed with no errors
 
     def test_parse(self):
         expected_raw = [
