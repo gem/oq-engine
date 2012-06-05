@@ -20,7 +20,7 @@ data.
 See :module:`nrml.models`.
 """
 
-import re
+import decimal
 
 from lxml import etree
 
@@ -149,7 +149,7 @@ class SourceModelParser(object):
 
         for elem in _xpath(src_elem, './/nrml:nodalPlane'):
             nplane = models.NodalPlane()
-            nplane.probability = float(elem.get('probability'))
+            nplane.probability = decimal.Decimal(elem.get('probability'))
             nplane.strike = float(elem.get('strike'))
             nplane.dip = float(elem.get('dip'))
             nplane.rake = float(elem.get('rake'))
@@ -170,7 +170,7 @@ class SourceModelParser(object):
 
         for elem in _xpath(src_elem, './/nrml:hypoDepth'):
             hdepth = models.HypocentralDepth()
-            hdepth.probability = float(elem.get('probability'))
+            hdepth.probability = decimal.Decimal(elem.get('probability'))
             hdepth.depth = float(elem.get('depth'))
 
             hdd.append(hdepth)

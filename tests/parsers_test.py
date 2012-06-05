@@ -14,6 +14,7 @@
 # along with NRML.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import decimal
 import StringIO
 import unittest
 
@@ -96,14 +97,16 @@ m?ml version='1.0' encoding='utf-8'?>
                          5.080653E-4],
         )
         area_npd = [
-            models.NodalPlane(probability=0.3, strike=0.0, dip=90.0,
-                              rake=0.0),
-            models.NodalPlane(probability=0.7, strike=90.0, dip=45.0,
-                              rake=90.0),
+            models.NodalPlane(probability=decimal.Decimal("0.3"), strike=0.0,
+                              dip=90.0, rake=0.0),
+            models.NodalPlane(probability=decimal.Decimal("0.7"), strike=90.0,
+                              dip=45.0, rake=90.0),
         ]
         area_hdd = [
-            models.HypocentralDepth(probability=0.5, depth=4.0),
-            models.HypocentralDepth(probability=0.5, depth=8.0),
+            models.HypocentralDepth(probability=decimal.Decimal("0.5"),
+                                    depth=4.0),
+            models.HypocentralDepth(probability=decimal.Decimal("0.5"),
+                                    depth=8.0),
         ]
         area_src = models.AreaSource(
             id='1', name='Quito', trt='Active Shallow Crust',
@@ -121,14 +124,16 @@ m?ml version='1.0' encoding='utf-8'?>
             a_val=-3.5, b_val=1.0, min_mag=5.0, max_mag=6.5,
         )
         point_npd = [
-            models.NodalPlane(probability=0.3, strike=0.0, dip=90.0,
-                              rake=0.0),
-            models.NodalPlane(probability=0.7, strike=90.0, dip=45.0,
-                              rake=90.0),
+            models.NodalPlane(probability=decimal.Decimal("0.3"), strike=0.0,
+                              dip=90.0, rake=0.0),
+            models.NodalPlane(probability=decimal.Decimal("0.7"), strike=90.0,
+                              dip=45.0, rake=90.0),
         ]
         point_hdd = [
-            models.HypocentralDepth(probability=0.5, depth=4.0),
-            models.HypocentralDepth(probability=0.5, depth=8.0),
+            models.HypocentralDepth(probability=decimal.Decimal("0.5"),
+                                    depth=4.0),
+            models.HypocentralDepth(probability=decimal.Decimal("0.5"),
+                                    depth=8.0),
         ]
         point_src = models.PointSource(
             id='2', name='point', trt='Stable Continental Crust',
@@ -235,6 +240,88 @@ m?ml version='1.0' encoding='utf-8'?>
         src_model = parser.parse()
 
         self.assertTrue(_utils.deep_eq(exp_src_model, src_model))
+
+    def test_probs_sum_to_1(self):
+        # We want to test that distribution probabilities sum to 1.
+        # Example source model with an area and a point source.
+        source_xml = '''\
+<?xml version='1.0' encoding='utf-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4"
+      gml:id="n1">
+    <sourceModel name="Some Source Model">
+        <areaSource id="1" name="Quito" tectonicRegion="Active Shallow Crust">
+            <areaGeometry>
+                <gml:Polygon>
+                    <gml:exterior>
+                        <gml:LinearRing>
+                            <gml:posList>
+                             -122.5 37.5
+                             -121.5 37.5
+                             -121.5 38.5
+                             -122.5 38.5
+                            </gml:posList>
+                        </gml:LinearRing>
+                    </gml:exterior>
+                </gml:Polygon>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>10.0</lowerSeismoDepth>
+            </areaGeometry>
+            <magScaleRel>PeerMSR</magScaleRel>
+            <ruptAspectRatio>1.5</ruptAspectRatio>
+            <incrementalMFD minMag="6.55" binWidth="0.1">
+                <occurRates>0.0010614989 8.8291627E-4 7.3437777E-4 6.108288E-4 5.080653E-4</occurRates>
+            </incrementalMFD>
+            <nodalPlaneDist>
+                <nodalPlane probability="0.1" strike="1.0" dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.1" strike="2.0" dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.1" strike="3.0" dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.1" strike="4.0" dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.1" strike="5.0" dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.1" strike="6.0" dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.1" strike="7.0" dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.1" strike="8.0" dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.1" strike="9.0" dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.1" strike="10.0" dip="90.0" rake="0.0" />
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth probability="0.3" depth="4.0" />
+                <hypoDepth probability="0.3" depth="5.0" />
+                <hypoDepth probability="0.3" depth="6.0" />
+                <hypoDepth probability="0.1" depth="7.0" />
+            </hypoDepthDist>
+        </areaSource>
+        <pointSource id="2" name="point" tectonicRegion="Stable Continental Crust">
+            <pointGeometry>
+                <gml:Point>
+                    <gml:pos>-122.0 38.0</gml:pos>
+                </gml:Point>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>10.0</lowerSeismoDepth>
+            </pointGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>0.5</ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0" minMag="5.0" maxMag="6.5" />
+            <nodalPlaneDist>
+                <nodalPlane probability="0.3" strike="0.0" dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.7" strike="90.0" dip="45.0" rake="90.0" />
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth probability="0.5" depth="4.0" />
+                <hypoDepth probability="0.5" depth="8.0" />
+            </hypoDepthDist>
+        </pointSource>
+    </sourceModel>
+</nrml>'''
+        parser = parsers.SourceModelParser(StringIO.StringIO(source_xml))
+
+        src_model = list(parser.parse())
+
+        for src in src_model:
+            self.assertEqual(
+                1.0, sum([x.probability for x in src.hypo_depth_dist]))
+            self.assertEqual(
+                1.0, sum([x.probability for x in src.nodal_plane_dist]))
 
 
 class SiteModelParserTestCase(unittest.TestCase):

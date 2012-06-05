@@ -281,8 +281,9 @@ class NodalPlane(object):
     """Basic object representation of a single node in a Nodal Plane
     Distribution.
 
-    :param float probability:
-        Probability for this node in a Nodal Plane Distribution.
+    :param probability:
+        Probability for this node in a Nodal Plane Distribution, as a
+        :class:`decimal.Decimal`.
     :param float strike:
         Strike angle.
     :param float dip:
@@ -302,8 +303,9 @@ class HypocentralDepth(object):
     """Basic object representation of a single node in a Hypocentral Depth
     Distribution.
 
-    :param float probability:
-        Probability for this node in a Hypocentral Depth Distribution.
+    :param probability:
+        Probability for this node in a Hypocentral Depth Distribution, as a
+        :calss:`decimal.Decimal`.
     :param float depth:
         Depth (in km).
     """
