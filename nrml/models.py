@@ -305,7 +305,7 @@ class HypocentralDepth(object):
 
     :param probability:
         Probability for this node in a Hypocentral Depth Distribution, as a
-        :calss:`decimal.Decimal`.
+        :class:`decimal.Decimal`.
     :param float depth:
         Depth (in km).
     """
