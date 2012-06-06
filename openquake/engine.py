@@ -20,6 +20,7 @@
 """
 
 
+import md5
 import os
 import re
 
@@ -33,6 +34,7 @@ from django.contrib.gis.db import models
 from django.contrib.gis.geos import GEOSGeometry
 from django.core.exceptions import ObjectDoesNotExist
 
+
 from openquake.calculators.hazard import CALCULATORS as HAZ_CALCS
 from openquake.calculators.risk import CALCULATORS as RISK_CALCS
 from openquake.db.models import CharArrayField
@@ -43,10 +45,12 @@ from openquake.db.models import Input2job
 from openquake.db.models import inputs4job
 from openquake.db.models import Job2profile
 from openquake.db.models import JobStats
+from openquake.db.models import ModelContent
 from openquake.db.models import OqJob
 from openquake.db.models import OqJobProfile
 from openquake.db.models import OqUser
 from openquake.db.models import profile4job
+from openquake.db.models import Src2ltsrc
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
@@ -83,7 +87,7 @@ class JobContext(object):
     # pylint: disable=R0913
     def __init__(self, params, job_id, sections=list(), base_path=None,
                  serialize_results_to=list(), oq_job_profile=None,
-                 oq_job=None, log_level='warn'):
+                 oq_job=None, log_level='warn', force_inputs=False):
         """
         :param dict params: Dict of job config params.
         :param int job_id:
@@ -100,8 +104,10 @@ class JobContext(object):
             'calculation'.
         :param str log_level:
             One of 'debug', 'info', 'warn', 'error', 'critical'.
-
             Defaults to 'warn'.
+        :param bool force_inputs: If `True` the model input files will be
+            parsed and the resulting content written to the database no matter
+            what.
         """
         self._job_id = job_id
         mark_job_as_current(job_id)  # enables KVS gc
@@ -118,6 +124,7 @@ class JobContext(object):
         self.oq_job = oq_job
         self.params['debug'] = log_level
         self._log_level = log_level
+        self.force_inputs = force_inputs
 
     @property
     def log_level(self):
@@ -281,7 +288,7 @@ class JobContext(object):
             self._extract_coords('REGION_VERTEX'))
 
         region.cell_size = self['REGION_GRID_SPACING']
-        return [site for site in region]
+        return region.grid.centers()
 
     def build_nrml_path(self, nrml_file):
         """Return the complete output path for the given nrml_file"""
@@ -355,7 +362,10 @@ def read_sites_from_exposure(job_ctxt):
     return sites
 
 
-def _job_from_file(config_file, output_type, owner_username='openquake'):
+# Too many local variables
+# pylint: disable=R0914
+def _job_from_file(config_file, output_type, owner_username='openquake',
+                   force_inputs=False):
     """
     Create a job from external configuration files.
 
@@ -371,6 +381,8 @@ def _job_from_file(config_file, output_type, owner_username='openquake'):
     :param owner_username:
         oq_user.user_name which defines the owner of all DB artifacts created
         by this function.
+    :param bool force_inputs: If `True` the model input files will be parsed
+        and the resulting content written to the database no matter what.
     """
 
     # output_type can be set, in addition to 'db' and 'xml', also to
@@ -402,7 +414,8 @@ def _job_from_file(config_file, output_type, owner_username='openquake'):
     else:
         job = OqJob.objects.get(job_id)
 
-    job_profile = _prepare_job(params, sections, owner_username, job)
+    job_profile = _prepare_job(params, sections, owner_username, job,
+                               force_inputs)
 
     if output_type == 'db':
         serialize_results_to = ['db']
@@ -507,31 +520,141 @@ def _prepare_config_parameters(params, sections):
         # config params to be strings at this point:
         new_params['COMPUTE_MEAN_HAZARD_CURVE'] = 'true'
 
+    # Fri, 11 May 2012 11:03:03 +0200, al-maisan
+    # According to dmonelli and larsbutler the intensity measure type for UHS
+    # jobs is *always* SA irrespective of the value specified in the config
+    # file.
+    if calc_mode == "uhs":
+        new_params["INTENSITY_MEASURE_TYPE"] = "SA"
+
     return new_params, sections
 
 
-def _insert_input_files(params, job):
-    """Create uiapi.input records for all input files"""
+def _file_digest(path):
+    """Return a 32 character digest for the file with the given path.
+
+    :param str path: file path
+    :returns: a string of length 32 with the md5sum digest
+    """
+    checksum = md5.new()
+    with open(path) as fh:
+        checksum.update(fh.read())
+        return checksum.hexdigest()
+
+
+def _identical_input(input_type, digest, owner_id):
+    """Get an identical input with the same type or `None`.
+
+    Identical inputs are found by comparing md5sum digests. In order to avoid
+    reusing corrupted/broken input models we ignore all the inputs that are
+    associated with a first job that failed.
+    Also, we only want inputs owned by the user who is running the current job
+    and if there is more than one input we want the most recent one.
+
+    :param str input_type: input model type
+    :param str digest: md5sum digest
+    :param int owner_id: the database key of the owner
+    :returns: an `:class:openquake.db.models.Input` instance or `None`
+    """
+    q = """
+    SELECT * from uiapi.input WHERE id = (
+        SELECT MAX(input_id) AS max_input_id FROM
+            uiapi.oq_job, (
+                SELECT DISTINCT MIN(j.id) AS min_job_id, i.id AS input_id
+                FROM uiapi.oq_job AS j, uiapi.input2job AS i2j,
+                     uiapi.input AS i, admin.oq_user u
+                WHERE i2j.oq_job_id = j.id AND i2j.input_id = i.id
+                    AND i.digest = %s AND i.input_type = %s
+                    AND j.owner_id = u.id AND u.id = %s
+                GROUP BY i.id ORDER BY i.id DESC) AS mjq
+            WHERE id = mjq.min_job_id AND status = 'succeeded')"""
+    ios = list(Input.objects.raw(q, [digest, input_type, owner_id]))
+    return ios[0] if ios else None
+
+
+def _get_content_type(path):
+    """Given the path to a file, guess the content type by looking at the file
+    extension. If there is none, simply return 'unknown'.
+    """
+    _, ext = os.path.splitext(path)
+    if ext == '':
+        return 'unknown'
+    else:
+        # This gives us the . and extension (such as '.xml').
+        # Don't include the period.
+        return ext[1:]
+
+
+def _insert_input_files(params, job, force_inputs):
+    """Create uiapi.input records for all input files
+
+    :param dict params: The job config params.
+    :param job: The :class:`openquake.db.models.OqJob` instance to use
+    :param bool force_inputs: If `True` the model input files will be parsed
+        and the resulting content written to the database no matter what.
+    """
+
+    inputs_seen = []
+
+    def ln_input2job(path, input_type):
+        """Link identical or newly created input to the given job."""
+        digest = _file_digest(path)
+        linked_inputs = inputs4job(job.id)
+        if any(li.digest == digest and li.input_type == input_type
+               for li in linked_inputs):
+            return
+
+        in_model = (_identical_input(input_type, digest, job.owner.id)
+                    if not force_inputs else None)
+        if in_model is None:
+            # Save the raw input file contents to the DB:
+            model_content = ModelContent()
+            with open(path, 'rb') as fh:
+                model_content.raw_content = fh.read()
+            # Try to guess the content type:
+            model_content.content_type = _get_content_type(path)
+            model_content.save()
+
+            in_model = Input(path=path, input_type=input_type, owner=job.owner,
+                             size=os.path.getsize(path), digest=digest,
+                             model_content=model_content)
+            in_model.save()
+
+        # Make sure we don't link to the same input more than once.
+        if in_model.id not in inputs_seen:
+            inputs_seen.append(in_model.id)
+
+            i2j = Input2job(input=in_model, oq_job=job)
+            i2j.save()
+
+        return in_model
+
+    def _insert_referenced_sources(lt_src_input, lt_src_path):
+        """
+        :param lt_src_input: an `:class:openquake.db.models.Input` of type
+            "lt_source"
+        :param str lt_src_path: path to the current logic tree source
+        """
+        # insert source models referenced in the logic tree
+        for path in _get_source_models(lt_src_path):
+            hzrd_src_input = ln_input2job(path, "source")
+            one_or_none = Src2ltsrc.objects.filter(hzrd_src=hzrd_src_input,
+                                                   lt_src=lt_src_input)
+            if len(one_or_none) == 0:
+                # No link table entry found, create one.
+                src_link = Src2ltsrc(
+                    hzrd_src=hzrd_src_input, lt_src=lt_src_input,
+                    filename=os.path.basename(path))
+                src_link.save()
 
     # insert input files in input table
     for param_key, file_type in INPUT_FILE_TYPES.items():
         if param_key not in params:
             continue
         path = params[param_key]
-        in_model = Input(path=path, input_type=file_type, owner=job.owner,
-                         size=os.path.getsize(path))
-        in_model.save()
-        i2j = Input2job(input=in_model, oq_job=job)
-        i2j.save()
-
-    # insert soft-linked source models in input table
-    if 'SOURCE_MODEL_LOGIC_TREE_FILE' in params:
-        for path in _get_source_models(params['SOURCE_MODEL_LOGIC_TREE_FILE']):
-            in_model = Input(path=path, input_type='source', owner=job.owner,
-                             size=os.path.getsize(path))
-            in_model.save()
-            i2j = Input2job(input=in_model, oq_job=job)
-            i2j.save()
+        input_obj = ln_input2job(path, file_type)
+        if file_type == "lt_source":
+            _insert_referenced_sources(input_obj, path)
 
 
 def prepare_job(user_name="openquake"):
@@ -561,7 +684,7 @@ def prepare_user(user_name):
 
 
 @transaction.commit_on_success(using='job_init')
-def _prepare_job(params, sections, owner_username, job):
+def _prepare_job(params, sections, owner_username, job, force_inputs):
     """
     Create a new OqJob and fill in the related OqJobProfile entry.
 
@@ -575,6 +698,8 @@ def _prepare_job(params, sections, owner_username, job):
         The username of the user who will own the returned job profile.
     :param job:
         The :class:`openquake.db.models.OqJob` instance to use
+    :param bool force_inputs: If `True` the model input files will be parsed
+        and the resulting content written to the database no matter what.
 
     :returns:
         A new :class:`openquake.db.models.OqJobProfile` object.
@@ -585,10 +710,11 @@ def _prepare_job(params, sections, owner_username, job):
         """Create an OqJobProfile, save it to the db, commit, and return."""
         job_profile = OqJobProfile(calc_mode=calc_mode, job_type=job_type)
 
-        _insert_input_files(params, job)
+        _insert_input_files(params, job, force_inputs)
         _store_input_parameters(params, calc_mode, job_profile)
 
         job_profile.owner = owner
+        job_profile.force_inputs = force_inputs
         job_profile.save()
         Job2profile(oq_job=job, oq_job_profile=job_profile).save()
 
@@ -602,7 +728,6 @@ def _prepare_job(params, sections, owner_username, job):
         if s.upper() in [jobconf.HAZARD_SECTION, jobconf.RISK_SECTION]]
 
     job_profile = _get_job_profile(calc_mode, job_type, owner)
-    job_profile.owner = owner
 
     # When querying this record from the db, Django changes the values
     # slightly (with respect to geometry, for example). Thus, we want a
@@ -672,7 +797,8 @@ def _store_input_parameters(params, calc_mode, job_profile):
         job_profile.damping = None
 
 
-def run_job(job, params, sections, output_type='db', log_level='warn'):
+def run_job(job, params, sections, output_type='db', log_level='warn',
+            force_inputs=False, log_file=None):
     """Given an :class:`openquake.db.models.OqJobProfile` object, create a new
     :class:`openquake.db.models.OqJob` object and run the job.
 
@@ -682,7 +808,7 @@ def run_job(job, params, sections, output_type='db', log_level='warn'):
 
     Returns the calculation object when the calculation concludes.
 
-    :param job_profile:
+    :param job:
         :class:`openquake.db.models.OqJob` instance
     :param params:
         A dictionary of config parameters parsed from the calculation
@@ -693,8 +819,12 @@ def run_job(job, params, sections, output_type='db', log_level='warn'):
         'db' or 'xml' (defaults to 'db')
     :param str log_level:
         One of 'debug', 'info', 'warn', 'error', or 'critical'.
-
         Defaults to 'warn'.
+    :param bool force_inputs: If `True` the model input files will be parsed
+        and the resulting content written to the database no matter what.
+    :param str log_file:
+        Optional log file location.
+
     :returns:
         :class:`openquake.db.models.OqJob` instance.
     """
@@ -721,7 +851,7 @@ def run_job(job, params, sections, output_type='db', log_level='warn'):
     job_ctxt = JobContext(params, job.id, sections=sections,
                           serialize_results_to=serialize_results_to,
                           oq_job_profile=job.profile(), oq_job=job,
-                          log_level=log_level)
+                          log_level=log_level, force_inputs=force_inputs)
 
     # closing all db connections to make sure they're not shared between
     # supervisor and job executor processes. otherwise if one of them closes
@@ -753,7 +883,7 @@ def run_job(job, params, sections, output_type='db', log_level='warn'):
         job.supervisor_pid = supervisor_pid
         job.job_pid = job_pid
         job.save()
-        supervisor.supervise(job_pid, job.id)
+        supervisor.supervise(job_pid, job.id, log_file=log_file)
         return
 
     # parent process
@@ -810,7 +940,8 @@ def _launch_job(job_ctxt, sections):
         calculator.post_execute()
 
 
-def import_job_profile(path_to_cfg, job, user_name='openquake'):
+def import_job_profile(path_to_cfg, job, user_name='openquake',
+                       force_inputs=False):
     """Given the path to a job config file, create a new
     :class:`openquake.db.models.OqJobProfile`, save it to the DB, and return
     it.
@@ -821,6 +952,8 @@ def import_job_profile(path_to_cfg, job, user_name='openquake'):
         The :class:`openquake.db.models.OqJob` instance to use
     :param user_name:
         The user performing this action.
+    :param bool force_inputs: If `True` the model input files will be parsed
+        and the resulting content written to the database no matter what.
 
     :returns:
         A tuple of :class:`openquake.db.models.OqJobProfile` instance,
@@ -838,5 +971,5 @@ def import_job_profile(path_to_cfg, job, user_name='openquake'):
     if not is_valid:
         raise jobconf.ValidationException(errors)
 
-    job_profile = _prepare_job(params, sections, user_name, job)
+    job_profile = _prepare_job(params, sections, user_name, job, force_inputs)
     return job_profile, params, sections

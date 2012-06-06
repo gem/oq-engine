@@ -23,9 +23,10 @@ and its validation.
 
 from openquake import engine
 from openquake.job import config
+from openquake.job.config import AssetCorrelationValidator
 from openquake.job.config import BCRValidator
-from openquake.job.config import ClassicalValidator
 from openquake.job.config import ClassicalRiskValidator
+from openquake.job.config import ClassicalValidator
 from openquake.job.config import DisaggregationValidator
 from openquake.job.config import EventBasedRiskValidator
 from openquake.job.config import HazardMandatoryParamsValidator
@@ -864,3 +865,54 @@ class EventBasedRiskValidatorTestCase(unittest.TestCase):
         # `int`.
         val = EventBasedRiskValidator(dict(LOSS_HISTOGRAM_BINS='one'))
         self.assertFalse(val.is_valid()[0])
+
+
+class AssetCorrelationValidatorTestCase(unittest.TestCase):
+    """Tests for :class:`openquake.job.config.AssetCorrelationValidator`."""
+
+    def test_in_default_validators(self):
+        sections = ['HAZARD', 'RISK']
+        params = dict(CALCULATION_MODE='Scenario')
+        validators = config.default_validators(sections, params)
+
+        self.assertTrue(any(
+            isinstance(v, AssetCorrelationValidator) for v in validators))
+
+        params = dict(CALCULATION_MODE='Event Based')
+        validators = config.default_validators(sections, params)
+
+        self.assertTrue(any(
+            isinstance(v, AssetCorrelationValidator) for v in validators))
+
+    def test_check_asset_correlation(self):
+        sections = ['HAZARD', 'RISK']
+
+        params_list = [
+            dict(CALCULATION_MODE='Scenario', ASSET_CORRELATION='perfect'),
+            dict(CALCULATION_MODE='Scenario',
+                 ASSET_CORRELATION='uncorrelated'),
+            dict(CALCULATION_MODE='Scenario'),
+            dict(CALCULATION_MODE='Event Based', ASSET_CORRELATION='perfect'),
+            dict(CALCULATION_MODE='Event Based',
+                 ASSET_CORRELATION='uncorrelated'),
+            dict(CALCULATION_MODE='Event Based'),
+        ]
+
+        for params in params_list:
+            validator = AssetCorrelationValidator(sections, params)
+            self.assertEqual((True, []), validator.is_valid())
+
+    def test_check_asset_correlation_fails(self):
+        sections = ['HAZARD', 'RISK']
+
+        params_list = [
+            dict(CALCULATION_MODE='Scenario', ASSET_CORRELATION='imperfect'),
+            dict(CALCULATION_MODE='Event Based', ASSET_CORRELATION='none'),
+        ]
+
+        for params in params_list:
+            validator = AssetCorrelationValidator(sections, params)
+            self.assertEqual(
+                (False, ['ASSET_CORRELATION must be undefined,'
+                         ' "uncorrelated", or "perfect".']),
+                validator.is_valid())

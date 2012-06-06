@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
 """Functions for getting information about completed jobs and
 calculation outputs, as well as exporting outputs from the database to various
 file formats."""
@@ -41,6 +40,9 @@ def _export_fn_map():
     from openquake.export import risk
 
     fn_map = {
+        'dmg_dist_per_asset': risk.export_dmg_dist_per_asset,
+        'dmg_dist_per_taxonomy': risk.export_dmg_dist_per_taxonomy,
+        'dmg_dist_total': risk.export_dmg_dist_total,
         'uh_spectra': uhs.export_uhs,
         'agg_loss_curve': risk.export_agg_loss_curve,
     }

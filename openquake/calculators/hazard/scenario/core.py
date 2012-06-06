@@ -29,6 +29,7 @@ from openquake import java
 from openquake import kvs
 from openquake import shapes
 from openquake.calculators.hazard.general import BaseHazardCalculator
+from openquake.output import hazard as hazard_output
 
 
 class ScenarioHazardCalculator(BaseHazardCalculator):
@@ -46,19 +47,49 @@ class ScenarioHazardCalculator(BaseHazardCalculator):
 
         grid = self.job_ctxt.region.grid
 
-        for _ in xrange(self._number_of_calculations()):
+        for cnum in xrange(self._number_of_calculations()):
             gmf = self.compute_ground_motion_field(random_generator)
+            imt = self.job_ctxt.params["INTENSITY_MEASURE_TYPE"]
+            self._serialize_gmf(gmf, imt, cnum)
 
-            for gmv in gmf_to_dict(
-                gmf, self.job_ctxt.params["INTENSITY_MEASURE_TYPE"]):
-
+            for gmv in gmf_to_dict(gmf, imt):
                 site = shapes.Site(gmv["site_lon"], gmv["site_lat"])
                 point = grid.point_at(site)
 
                 key = kvs.tokens.ground_motion_values_key(
                     self.job_ctxt.job_id, point)
-
                 kvs_client.rpush(key, encoder.encode(gmv))
+
+    def _serialize_gmf(self, hashmap, imt, cnum):
+        """Write the GMF as returned by the java calculator to file.
+
+        The java calculator returns an implementation of java.util.Map
+        where the key is an instance of org.opensha.commons.data.Site
+        and the value is an instance of java.lang.Double.
+
+        :param hashmap: map containing the ground motion field.
+        :type hashmap: jpype wrapper around java.util.Map. The map
+            contains instances of org.opensha.commons.data.Site as
+            keys and java.lang.Double as values (the ground motion
+            value for that specific site)
+        :param str imt: the intensity measure type specified for this job.
+            If the type is not "MMI" we need to save the exponential.
+        :param int cnum: the calculation number, part of the GMF file name.
+        :returns: `True` if the GMF contained in the `hashmap` was serialized,
+            `False` otherwise.
+        """
+        if not self.job_ctxt['SAVE_GMFS']:
+            return False
+
+        path = os.path.join(self.job_ctxt.base_path,
+                            self.job_ctxt['OUTPUT_DIR'], "gmf-%s.xml" % cnum)
+        gmf_writer = hazard_output.create_gmf_writer(
+            self.job_ctxt.job_id, self.job_ctxt.serialize_results_to, path)
+
+        gmf_data = _prepare_gmf_serialization(hashmap, imt)
+        gmf_writer.serialize(gmf_data)
+
+        return True
 
     def _number_of_calculations(self):
         """Return the number of calculations to trigger.
@@ -208,3 +239,36 @@ def gmf_to_dict(hashmap, intensity_measure_type):
 
         gmv = {"site_lat": lat, "site_lon": lon, "mag": mag}
         yield gmv
+
+
+def _prepare_gmf_serialization(hashmap, imt):
+    """Returns a GMF in the format expected by the GMF serializer.
+
+    The java calculator returns an implementation of java.util.Map
+    where the key is an instance of org.opensha.commons.data.Site
+    and the value is an instance of java.lang.Double.
+
+    :param hashmap: map containing the ground motion field.
+    :type hashmap: jpype wrapper around java.util.Map. The map
+        contains instances of org.opensha.commons.data.Site as
+        keys and java.lang.Double as values (the ground motion
+        value for that specific site)
+    :param str imt: the intensity measure type specified for this job.
+        If the type is not "MMI" we need to save the exponential.
+    :returns: the ground motion field as :py:class:`dict`.
+        The dictionary key is the site, the value is another `dict`
+        with the GMF value.
+    """
+    gmf_data = {}
+    for site in hashmap.keySet():
+        gmf_value = hashmap.get(site).doubleValue()
+
+        if imt.lower() != "mmi":
+            gmf_value = math.exp(gmf_value)
+
+        lat = site.getLocation().getLatitude()
+        lon = site.getLocation().getLongitude()
+        site = shapes.Site(lon, lat)
+        gmf_data[site] = {'groundMotion': gmf_value}
+
+    return gmf_data
