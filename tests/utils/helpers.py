@@ -169,7 +169,7 @@ def create_job(params, **kwargs):
     return JobContext(params, job_id, **kwargs)
 
 
-def run_job(config_file, params=None):
+def run_job(config_file, params=None, check_output=False):
     """Given a path to a config file, run openquake as a separate process using
     `subprocess`.
 
@@ -179,17 +179,28 @@ def run_job(config_file, params=None):
         Path to the calculation config file.
     :param list params:
         List of additional command line params to bin/openquake. Optional.
+    :param bool check_output:
+        If `True`, use :func:`subprocess.check_output` instead of
+        :func:`subprocess.check_call`.
 
     :returns:
-        The return code of the subprocess.
+        With the default input, return the return code of the subprocess.
+
+        If ``check_output`` is set to True, return the output of the subprocess
+        call to bin/openquake as a `str`. See
+        http://docs.python.org/library/subprocess.html#subprocess.check_output
+        for more details.
     :raises:
-        If the return code is not 0, a
+        If the return code of the subprocess call is not 0, a
         :exception:`subprocess.CalledProcessError` is raised.
     """
-    args = ["bin/openquake", "--config-file=" + config_file]
+    args = ["bin/openquake", "--force-inputs", "--config-file=" + config_file]
     if not params is None:
         args.extend(params)
-    return subprocess.check_call(args)
+    if check_output:
+        return subprocess.check_output(args)
+    else:
+        return subprocess.check_call(args)
 
 
 def store_hazard_logic_trees(a_job):
@@ -542,8 +553,8 @@ class DbTestCase(object):
     IMLS = [0.005, 0.007, 0.0098, 0.0137, 0.0192, 0.0269, 0.0376, 0.0527,
             0.0738, 0.103, 0.145, 0.203, 0.284, 0.397, 0.556, 0.778]
 
-    @staticmethod
-    def teardown_upload(upload, filesystem_only=True):
+    @classmethod
+    def teardown_upload(cls, upload, filesystem_only=True):
         """
         Tear down the file system (and potentially db) artefacts for the
         given upload.
@@ -560,17 +571,28 @@ class DbTestCase(object):
             return
         upload.delete()
 
-    @staticmethod
-    def teardown_inputs(inputs, filesystem_only):
+    @classmethod
+    def teardown_inputs(cls, inputs, filesystem_only):
         if filesystem_only:
             return
         [input.delete() for input in inputs]
 
     @classmethod
-    def setup_job_profile(cls, job):
-        """Create a profile for the given job."""
+    def setup_job_profile(cls, job, force_inputs, save2db=True):
+        """Create a profile for the given job.
+
+        :param job: The :class:`openquake.db.models.OqJob` instance to use
+        :param bool force_inputs: If `True` the model input files will be
+            parsed and the resulting content written to the database no matter
+            what.
+        :param bool save2db: If `False` the job profile instance will be
+            returned but not saved to the database. Otherwise it is saved to
+            the database and returned then.
+        :returns: a :class:`openquake.db.models.OqJobProfile` instance
+        """
         oqjp = models.OqJobProfile()
         oqjp.owner = job.owner
+        oqjp.force_inputs = force_inputs
         oqjp.calc_mode = "classical"
         oqjp.job_type = ['hazard']
         oqjp.region_grid_spacing = 0.01
@@ -622,12 +644,14 @@ class DbTestCase(object):
             "POLYGON((-81.3 37.2, -80.63 38.04, -80.02 37.49, -81.3 37.2))")
         oqjp.source_model_lt_random_seed = 23
         oqjp.gmpe_lt_random_seed = 5
-        oqjp.save()
+        if save2db:
+            oqjp.save()
         return oqjp
 
     @classmethod
     def setup_classic_job(cls, create_job_path=True, upload_id=None,
-                          inputs=None):
+                          inputs=None, force_inputs=False, omit_profile=False,
+                          user_name="openquake"):
         """Create a classic job with associated upload and inputs.
 
         :param bool create_job_path: if set the path for the job will be
@@ -635,13 +659,19 @@ class DbTestCase(object):
         :param integer upload_id: if set use upload record with given db key.
         :param list inputs: a list of 2-tuples where the first and the second
             element are the input type and path respectively
+        :param bool force_inputs: If `True` the model input files will be
+            parsed and the resulting content written to the database no matter
+            what.
+        :param bool omit_profile: If `True` no job profile will be created.
+        :param str user_name: The name of the user that is running the job.
         :returns: a :py:class:`db.models.OqJob` instance
         """
         assert upload_id is None  # temporary
 
-        job = engine.prepare_job()
-        oqjp = cls.setup_job_profile(job)
-        models.Job2profile(oq_job=job, oq_job_profile=oqjp).save()
+        job = engine.prepare_job(user_name)
+        if not omit_profile:
+            oqjp = cls.setup_job_profile(job, force_inputs)
+            models.Job2profile(oq_job=job, oq_job_profile=oqjp).save()
 
         # Insert input model files
         if inputs:
@@ -656,8 +686,8 @@ class DbTestCase(object):
 
         return job
 
-    @staticmethod
-    def teardown_job(job, filesystem_only=True):
+    @classmethod
+    def teardown_job(cls, job, filesystem_only=True):
         """
         Tear down the file system (and potentially db) artefacts for the
         given job.
@@ -784,3 +814,24 @@ def prepare_cli_output(raw_output, discard_header=True):
         lines.pop(0)
 
     return lines
+
+
+def prepare_job_context(path_to_cfg):
+    """Given a path to a config file, prepare and return a
+    :class:`openquake.engine.JobContext`. This convenient because it can be
+    immediately passed to a calculator constructor.
+
+    This also creates the necessary job and oq_job_profile records.
+    """
+    job = engine.prepare_job()
+
+    cfg = demo_file(path_to_cfg)
+
+    job_profile, params, sections = engine.import_job_profile(
+        cfg, job, force_inputs=True)
+
+    job_ctxt = engine.JobContext(
+        params, job.id, sections=sections, oq_job_profile=job_profile,
+        oq_job=job)
+
+    return job_ctxt

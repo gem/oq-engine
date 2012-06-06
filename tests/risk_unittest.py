@@ -110,15 +110,11 @@ class EpsilonProvider(object):
         return self.epsilons.pop(0)
 
 
-TEST_REGION = shapes.Region.from_simple((11.1, 11.1), (100.2, 100.2))
-
-
 class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
     job = None
     assets = []
     peb_gmfs = []
-    points = []
     emdl = None
 
     @classmethod
@@ -129,16 +125,17 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
         [input] = models.inputs4job(cls.job.id, input_type="exposure",
                                     path=path)
         owner = models.OqUser.objects.get(user_name="openquake")
-        cls.emdl = models.ExposureModel(
-            owner=owner, input=input, description="PEB test exposure model",
-            category="PEB storages sheds", stco_unit="nuts",
-            stco_type="aggregated", reco_unit="pebbles",
-            reco_type="aggregated")
-        cls.emdl.save()
+        cls.emdl = input.model()
+        if not cls.emdl:
+            cls.emdl = models.ExposureModel(
+                owner=owner, input=input, description="PEB exposure model",
+                category="PEB storages sheds", stco_unit="nuts",
+                stco_type="aggregated", reco_unit="pebbles",
+                reco_type="aggregated")
+            cls.emdl.save()
         values = [22.61, 124.27, 42.93, 29.37, 40.68, 178.47]
         for x, value in zip([float(v) for v in range(20, 27)], values):
             site = shapes.Site(x, x + 11)
-            cls.points.append(TEST_REGION.grid.point_at(site))
             location = GEOSGeometry(site.point.to_wkt())
             asset = models.ExposureData(exposure_model=cls.emdl, taxonomy="ID",
                                         asset_ref="asset_%s" % x, stco=value,
@@ -188,7 +185,6 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
         self.params = {}
         self.params["OUTPUT_DIR"] = helpers.OUTPUT_DIR
-        self.params["AGGREGATE_LOSS_CURVE"] = 1
         self.params["BASE_PATH"] = "."
         self.params["INVESTIGATION_TIME"] = 50.0
 
@@ -636,7 +632,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
         self.block_id = 7
         SITE = shapes.Site(1.0, 1.0)
-        block = Block(self.job_id, self.block_id, (SITE, SITE))
+        block = Block(self.job_id, self.block_id, (SITE, ))
         block.to_kvs()
 
         location = GEOSGeometry(SITE.point.to_wkt())
@@ -901,7 +897,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         self.region = shapes.RegionConstraint.from_simple(
                 (0.0, 0.0), (2.0, 2.0))
 
-        block = Block(self.job_id, self.block_id, (SITE, SITE))
+        block = Block(self.job_id, self.block_id, (SITE, ))
         block.to_kvs()
 
         writer = hazard.HazardCurveDBWriter('test_path.xml', self.job_id)
@@ -982,26 +978,33 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         calculator = classical_core.ClassicalRiskCalculator(job_ctxt)
 
         [input] = models.inputs4job(self.job.id, input_type="exposure")
-        emdl = models.ExposureModel(
-            owner=self.job.owner, input=input,
-            description="c-psha test exposure model",
-            category="c-psha power plants", stco_unit="watt",
-            stco_type="aggregated", reco_unit="joule", reco_type="aggregated")
-        emdl.save()
+        emdl = input.model()
+        if not emdl:
+            emdl = models.ExposureModel(
+                owner=self.job.owner, input=input,
+                description="c-psha test exposure model",
+                category="c-psha power plants", stco_unit="watt",
+                stco_type="aggregated", reco_unit="joule",
+                reco_type="aggregated")
+            emdl.save()
+
+        assets = emdl.exposuredata_set.filter(asset_ref="rubcr")
+        if not assets:
+            asset = models.ExposureData(exposure_model=emdl, taxonomy="ID",
+                                        asset_ref="rubcr", stco=1, reco=123.45,
+                                        site=GEOSGeometry("POINT(1.0 1.0)"))
+            asset.save()
 
         Block.from_kvs(self.job_id, self.block_id)
-        asset = models.ExposureData(exposure_model=emdl, taxonomy="ID",
-                                    asset_ref=22.61, stco=1, reco=123.45,
-                                    site=GEOSGeometry("POINT(1.0 1.0)"))
-        asset.save()
         calculator.compute_risk(self.block_id)
 
         result_key = kvs.tokens.bcr_block_key(self.job_id, self.block_id)
         res = kvs.get_value_json_decoded(result_key)
         expected_result = {'bcr': 0.0, 'eal_original': 0.003032,
                            'eal_retrofitted': 0.003032}
+
         helpers.assertDeepAlmostEqual(
-            self, res, [[[1, 1], [[expected_result, "22.61"]]]])
+            self, res, [[[1, 1], [[expected_result, "rubcr"]]]])
 
     def test_splits_with_real_values_from_turkey(self):
         loss_ratios = [0.0, 1.96E-15, 2.53E-12, 8.00E-10, 8.31E-08, 3.52E-06,
@@ -1130,11 +1133,13 @@ class ScenarioEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
         [input] = models.inputs4job(cls.job.id, input_type="exposure",
                                     path=path)
         owner = models.OqUser.objects.get(user_name="openquake")
-        cls.emdl = models.ExposureModel(
-            owner=owner, input=input, description="SEB test exposure model",
-            category="SEB factory buildings", stco_unit="screws",
-            stco_type="aggregated")
-        cls.emdl.save()
+        cls.emdl = input.model()
+        if not cls.emdl:
+            cls.emdl = models.ExposureModel(
+                owner=owner, input=input, description="SEB exposure model",
+                category="SEB factory buildings", stco_unit="screws",
+                stco_type="aggregated")
+            cls.emdl.save()
 
     @classmethod
     def tearDownClass(cls):
@@ -1315,6 +1320,7 @@ class RiskCommonTestCase(unittest.TestCase):
 
 
 class RiskJobGeneralTestCase(unittest.TestCase):
+
     def _make_job(self, params):
         self.job = helpers.create_job(params, base_path=".")
         self.job_id = self.job.job_id

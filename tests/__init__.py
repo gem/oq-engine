@@ -39,6 +39,7 @@ from loss_output_unittest import *
 from output_hazard_unittest import *
 from output_risk_unittest import *
 from output.risk_unittest import *
+from output.scenario_damage_unittest import *
 from output_unittest import *
 from output_writers_unittest import *
 from parser_exposure_model_unittest import *
@@ -52,7 +53,6 @@ from risk_job_unittest import *
 from risk_parser_unittest import *
 from risk_unittest import *
 from scenario_hazard_unittest import *
-from scenario_risk_unittest import *
 from schema_unittest import *
 from shapes_unittest import *
 from signalling_unittest import *

@@ -20,10 +20,12 @@
 # Silence 'Too many lines in module'
 # pylint: disable=C0302
 
-from collections import defaultdict
-from collections import OrderedDict
 import math
 import os
+import random
+
+from collections import defaultdict
+from collections import OrderedDict
 
 from celery.task import task
 
@@ -38,7 +40,6 @@ from numpy import where
 from numpy import zeros
 from scipy import sqrt, log
 from scipy import stats
-from scipy.stats import norm
 
 from openquake.calculators.base import Calculator
 from openquake.db import models
@@ -72,14 +73,8 @@ def compute_conditional_loss(job_id, col, row, loss_curve, asset, loss_poe):
     """Compute the conditional loss for a loss curve and Probability of
     Exceedance (PoE)."""
 
-    loss_conditional = _compute_conditional_loss(
-        loss_curve, loss_poe)
-
+    loss_conditional = _compute_conditional_loss(loss_curve, loss_poe)
     key = kvs.tokens.loss_key(job_id, row, col, asset.asset_ref, loss_poe)
-
-    LOG.debug("Conditional loss is %s, write to key %s" %
-            (loss_conditional, key))
-
     kvs.get_client().set(key, loss_conditional)
 
 
@@ -143,7 +138,6 @@ class BaseRiskCalculator(Calculator):
     def pre_execute(self):
         """Make sure the exposure and vulnerability data is in the database."""
         self.store_exposure_assets()
-        self.store_fragility_model()
         self.store_vulnerability_model()
         self.partition()
 
@@ -246,21 +240,29 @@ class BaseRiskCalculator(Calculator):
 
     def store_exposure_assets(self):
         """Load exposure assets and write them to database."""
-        [emdl] = models.inputs4job(self.job_ctxt.job_id, "exposure")
-        path = os.path.join(self.job_ctxt.base_path, emdl.path)
+        [emi] = models.inputs4job(self.job_ctxt.job_id, "exposure")
+        if emi.exposuremodel_set.all().count() > 0:
+            return
 
+        path = os.path.join(self.job_ctxt.base_path, emi.path)
         exposure_parser = exposure.ExposureModelFile(path)
-        writer = ExposureDBWriter(emdl)
+        writer = ExposureDBWriter(emi)
         writer.serialize(exposure_parser)
+        return emi.model()
 
     def store_fragility_model(self):
         """Load fragility model and write it to database."""
-        fmodels = models.inputs4job(self.job_ctxt.job_id, "fragility")
-        for fmdl in fmodels:
-            path = os.path.join(self.job_ctxt.base_path, fmdl.path)
+        new_models = []
+        fmis = models.inputs4job(self.job_ctxt.job_id, "fragility")
+        for fmi in fmis:
+            if fmi.fragilitymodel_set.all().count() > 0:
+                continue
+            path = os.path.join(self.job_ctxt.base_path, fmi.path)
             parser = fragility.FragilityModelParser(path)
-            writer = FragilityDBWriter(fmdl, parser)
+            writer = FragilityDBWriter(fmi, parser)
             writer.serialize()
+            new_models.append(writer.model)
+        return new_models if new_models else None
 
     def store_vulnerability_model(self):
         """ load vulnerability and write to kvs """
@@ -389,9 +391,6 @@ class BaseRiskCalculator(Calculator):
 
             loss_value = kvs.get_client().get(key)
 
-            LOG.debug("Loss for asset %s at %s %s is %s" %
-                (asset.asset_ref, asset.site.x, asset.site.y, loss_value))
-
             if loss_value:
                 risk_site = shapes.Site(asset.site.x, asset.site.y)
                 loss = {
@@ -508,6 +507,11 @@ class EpsilonProvider(object):
         self.__dict__.update(params)
         self.samples = None
 
+        self.rnd = random.Random()
+        eps_rnd_seed = params.get("EPSILON_RANDOM_SEED")
+        if eps_rnd_seed is not None:
+            self.rnd.seed(int(eps_rnd_seed))
+
     def epsilon(self, asset):
         """Sample from the standard normal distribution for the given asset.
 
@@ -522,12 +526,11 @@ class EpsilonProvider(object):
         correlated jobs and unlikely to be available for uncorrelated ones.
         """
         correlation = getattr(self, "ASSET_CORRELATION", None)
-        if not correlation:
+
+        if correlation is None or correlation == 'uncorrelated':
             # Sample per asset
-            return norm.rvs(loc=0, scale=1)
-        elif correlation != "perfect":
-            raise ValueError('Invalid "ASSET_CORRELATION": %s' % correlation)
-        else:
+            return self.rnd.normalvariate(0, 1)
+        elif correlation == 'perfect':
             # Sample per building typology
             samples = getattr(self, "samples", None)
             if samples is None:
@@ -535,8 +538,10 @@ class EpsilonProvider(object):
                 samples = self.samples = dict()
 
             if asset.taxonomy not in samples:
-                samples[asset.taxonomy] = norm.rvs(loc=0, scale=1)
+                samples[asset.taxonomy] = self.rnd.normalvariate(0, 1)
             return samples[asset.taxonomy]
+        else:
+            raise ValueError('Invalid "ASSET_CORRELATION": %s' % correlation)
 
 
 class Block(object):
@@ -1165,3 +1170,22 @@ class AggregateLossCurve(object):
                 self.losses, loss_range), tses), time_span)
 
         return _generate_curve(loss_range, probs_of_exceedance)
+
+
+def load_gmvs_at(job_id, point):
+    """
+    From the KVS, load all the ground motion values for the given point. We
+    expect one ground motion value per realization of the job.
+    Since there can be tens of thousands of realizations, this could return a
+    large list.
+
+    Note(LB): In the future, we may want to refactor this (and the code which
+    uses the values) to use a generator instead.
+
+    :param point: :py:class:`openquake.shapes.GridPoint` object
+
+    :returns: List of ground motion values (as floats). Each value represents a
+                realization of the calculation for a single point.
+    """
+    gmfs_key = kvs.tokens.ground_motion_values_key(job_id, point)
+    return [float(x['mag']) for x in kvs.get_list_json_decoded(gmfs_key)]

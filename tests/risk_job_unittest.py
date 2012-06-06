@@ -51,7 +51,8 @@ class EpsilonTestCase(unittest.TestCase, helpers.DbTestCase):
         exposure_parser = exposure.ExposureModelFile(path)
         writer.serialize(exposure_parser)
         self.model = writer.model
-        self.epsilon_provider = general.EpsilonProvider(dict())
+        self.epsilon_provider = general.EpsilonProvider(
+            dict(EPSILON_RANDOM_SEED=37))
 
     def tearDown(self):
         self.teardown_job(self.job)
@@ -248,7 +249,7 @@ class BaseRiskCalculatorTestCase(unittest.TestCase):
     def test_partition(self):
         job_cfg = helpers.demo_file('classical_psha_based_risk/config.gem')
         job_profile, params, sections = engine.import_job_profile(
-            job_cfg, self.job)
+            job_cfg, self.job, force_inputs=True)
         job_ctxt = engine.JobContext(
             params, self.job.id, sections=sections, oq_job_profile=job_profile)
 
@@ -283,33 +284,41 @@ class RiskCalculatorTestCase(unittest.TestCase):
         [input] = models.inputs4job(self.job_ctxt.job_id,
                                     input_type="exposure")
         owner = models.OqUser.objects.get(user_name="openquake")
-        emdl = models.ExposureModel(
-            owner=owner, input=input, description="RCT test exposure model",
-            category="RCT villas", stco_unit="roofs", stco_type="aggregated")
-        emdl.save()
+        emdl = input.model()
+        if not emdl:
+            emdl = models.ExposureModel(
+                owner=owner, input=input, description="RCT exposure model",
+                category="RCT villas", stco_unit="roofs",
+                stco_type="aggregated")
+            emdl.save()
 
         asset_data = [
             ((0, 0), shapes.Site(10.0, 10.0),
              {u'stco': 5.07, u'asset_ref': u'a5625',
-              u'taxonomy': u'HAZUS_RM1L_LC'}),
+              u'taxonomy': u'rctc-ad-83'}),
 
             ((0, 1), shapes.Site(10.1, 10.0),
              {u'stco': 5.63, u'asset_ref': u'a5629',
-              u'taxonomy': u'HAZUS_URML_LC'}),
+              u'taxonomy': u'rctc-ad-83'}),
 
             ((1, 0), shapes.Site(10.0, 10.1),
              {u'stco': 11.26, u'asset_ref': u'a5630',
-              u'taxonomy': u'HAZUS_URML_LS'}),
+              u'taxonomy': u'rctc-ad-83'}),
 
             ((1, 1), shapes.Site(10.1, 10.1),
              {u'stco': 5.5, u'asset_ref': u'a5636',
-              u'taxonomy': u'HAZUS_C3L_MC'}),
+              u'taxonomy': u'rctc-ad-83'}),
         ]
-        for (gcoo, site, adata) in asset_data:
-            location = geos.GEOSGeometry(site.point.to_wkt())
-            asset = models.ExposureData(exposure_model=emdl, site=location,
-                                        **adata)
-            asset.save()
+        assets = emdl.exposuredata_set.filter(taxonomy="rctc-ad-83"). \
+                                       order_by("id")
+        for idx, (gcoo, site, adata) in enumerate(asset_data):
+            if not assets:
+                location = geos.GEOSGeometry(site.point.to_wkt())
+                asset = models.ExposureData(exposure_model=emdl, site=location,
+                                            **adata)
+                asset.save()
+            else:
+                asset = assets[idx]
             GRID_ASSETS[gcoo] = asset
 
         self.grid = shapes.Grid(shapes.Region.from_coordinates(
