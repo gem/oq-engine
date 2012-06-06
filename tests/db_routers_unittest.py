@@ -181,7 +181,7 @@ class OQRouterTestCase(unittest.TestCase):
         for read operations.
         '''
         classes = [ExposureModel, ExposureData]
-        expected_db = 'oqmif'
+        expected_db = 'job_init'
 
         self._db_for_read_helper(classes, expected_db)
 
@@ -191,7 +191,7 @@ class OQRouterTestCase(unittest.TestCase):
         for write operations.
         '''
         classes = [ExposureModel, ExposureData]
-        expected_db = 'oqmif'
+        expected_db = 'job_init'
 
         self._db_for_write_helper(classes, expected_db)
 
