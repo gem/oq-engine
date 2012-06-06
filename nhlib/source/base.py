@@ -60,10 +60,6 @@ class SeismicSource(object):
                  mfd, rupture_mesh_spacing,
                  magnitude_scaling_relationship, rupture_aspect_ratio):
 
-        if not const.TRT.is_valid(tectonic_region_type):
-            raise ValueError('unknown tectonic region type %r' %
-                              tectonic_region_type)
-
         if not rupture_mesh_spacing > 0:
             raise ValueError('rupture mesh spacing must be positive')
 

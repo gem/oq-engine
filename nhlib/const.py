@@ -36,7 +36,8 @@ use class properties instead
 
 class TRT(ConstantContainer):
     """
-    Container for constants that define Tectonic Region Types.
+    Container for constants that define some of the common Tectonic Region
+    Types.
     """
     # Constant values correspond to the NRML schema definition.
     ACTIVE_SHALLOW_CRUST = 'Active Shallow Crust'
@@ -44,22 +45,6 @@ class TRT(ConstantContainer):
     SUBDUCTION_INTERFACE = 'Subduction Interface'
     SUBDUCTION_INTRASLAB = 'Subduction IntraSlab'
     VOLCANIC = 'Volcanic'
-
-    ALL = set((ACTIVE_SHALLOW_CRUST, STABLE_CONTINENTAL,
-               SUBDUCTION_INTERFACE, SUBDUCTION_INTRASLAB,
-               VOLCANIC))
-
-    @classmethod
-    def is_valid(cls, value):
-        """
-        Return ``True`` if ``value`` references a correct tectonic region type.
-
-        >>> TRT.is_valid('Active Shallow Crust')
-        True
-        >>> TRT.is_valid('Active Shallo Crust')
-        False
-        """
-        return value in cls.ALL
 
 
 class IMC(ConstantContainer):

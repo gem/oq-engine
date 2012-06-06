@@ -61,12 +61,6 @@ class PointSourceCreationTestCase(unittest.TestCase):
             self.make_point_source(**kwargs)
         self.assertEqual(ae.exception.message, msg)
 
-    def test_wrong_trt(self):
-        self.assert_failed_creation(ValueError,
-            "unknown tectonic region type 'Sand'",
-            tectonic_region_type='Sand'
-        )
-
     def test_negative_upper_seismogenic_depth(self):
         self.assert_failed_creation(ValueError,
             'upper seismogenic depth must be non-negative',
