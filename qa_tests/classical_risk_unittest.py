@@ -18,10 +18,9 @@ import os
 import unittest
 
 from lxml import etree
-from nose.plugins.attrib import attr
 
 from openquake.db.models import OqJob
-from openquake.nrml import nrml_schema_file
+from openquake.nrml.utils import nrml_schema_file
 from openquake.xml import NRML_NS
 
 from tests.utils import helpers
@@ -32,7 +31,6 @@ OUTPUT_DIR = helpers.demo_file('classical_psha_based_risk/computed_output')
 class ClassicalRiskQATestCase(unittest.TestCase):
     """Single site QA tests for the Classical Risk calculator."""
 
-    @attr('qa')
     def test_classical_psha_based_risk(self):
         cfg = helpers.demo_file(
             'classical_psha_based_risk/config.gem')

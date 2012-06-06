@@ -49,9 +49,9 @@ class ExposureModelTestCase(DjangoTestCase, helpers.DbTestCase):
         emdl_input.save()
         i2j = models.Input2job(input=emdl_input, oq_job=self.job)
         i2j.save()
-        self.mdl = models.ExposureModel(input=emdl_input, owner=self.job.owner,
-                                        name="exposure-model-testing",
-                                        category="economic loss")
+        self.mdl = models.ExposureModel(
+            input=emdl_input, owner=self.job.owner,
+            name="exposure-model-testing", category="economic loss")
 
     def test_exposure_model_with_no_area_type_coco_per_area(self):
         # area type not set but contents cost type is 'per_area' -> exception
@@ -314,9 +314,9 @@ class ExposureDataTestCase(DjangoTestCase, helpers.DbTestCase):
         emdl_input.save()
         i2j = models.Input2job(input=emdl_input, oq_job=self.job)
         i2j.save()
-        self.mdl = models.ExposureModel(input=emdl_input, owner=self.job.owner,
-                                        name="exposure-data-testing",
-                                        category="economic loss")
+        self.mdl = models.ExposureModel(
+            input=emdl_input, owner=self.job.owner,
+            name="exposure-data-testing", category="economic loss")
         self.mdl.stco_type = "aggregated"
         self.mdl.stco_unit = "GYD"
 
@@ -606,40 +606,47 @@ class PerAssetValueTestCase(DjangoTestCase):
 
     # risk exposure data
     REXD = namedtuple(
-        "REXD", "cost, cost_type, area, area_type, number_of_units")
+        "REXD", "category, cost, cost_type, area, area_type, number_of_units")
 
     def test_per_asset_value_with_cost_type_aggreggated(self):
         # When the cost type is 'aggregated' per_asset_value() simply returns
         # the cost value.
-        exd = self.REXD(cost=22.0, cost_type="aggregated", area=0.0,
-                        area_type="aggregated", number_of_units=0.0)
+        exd = self.REXD(category="eval", cost=22.0, cost_type="aggregated",
+                        area=0.0, area_type="aggregated", number_of_units=0.0)
         self.assertEqual(exd.cost, models.per_asset_value(exd))
 
     def test_per_asset_value_with_cost_type_per_asset(self):
         # When the cost type is 'per_asset' per_asset_value() returns:
         # cost * number_of_units
-        exd = self.REXD(cost=23.0, cost_type="per_asset", area=0.0,
-                        area_type="aggregated", number_of_units=2.0)
+        exd = self.REXD(category="eval", cost=23.0, cost_type="per_asset",
+                        area=0.0, area_type="aggregated", number_of_units=2.0)
         self.assertEqual(exd.cost * exd.number_of_units,
                          models.per_asset_value(exd))
 
     def test_per_asset_value_with_cost_type_per_area_and_aggregated(self):
         # When the cost type is 'per_area' and the area type is 'aggregated'
         # per_asset_value() returns: cost * area
-        exd = self.REXD(cost=24.0, cost_type="per_area", area=3.0,
-                        area_type="aggregated", number_of_units=0.0)
+        exd = self.REXD(category="eval", cost=24.0, cost_type="per_area",
+                        area=3.0, area_type="aggregated", number_of_units=0.0)
         self.assertEqual(exd.cost * exd.area, models.per_asset_value(exd))
 
     def test_per_asset_value_with_cost_type_per_area_and_per_asset(self):
         # When the cost type is 'per_area' and the area type is 'per_asset'
         # per_asset_value() returns: cost * area * number_of_units
-        exd = self.REXD(cost=25.0, cost_type="per_area", area=4.0,
-                        area_type="per_asset", number_of_units=5.0)
+        exd = self.REXD(category="eval", cost=25.0, cost_type="per_area",
+                        area=4.0, area_type="per_asset", number_of_units=5.0)
         self.assertEqual(exd.cost * exd.area * exd.number_of_units,
                          models.per_asset_value(exd))
 
     def test_per_asset_value_with_invalid_exposure_data(self):
-        # When the exposure data is invalid per_asset_value() returns: -1.0
-        exd = self.REXD(cost=26.0, cost_type="too-expensive", area=0.0,
-                        area_type="rough", number_of_units=0.0)
+        # When the exposure data is invalid per_asset_value() raises
+        # `ValueError`
+        exd = self.REXD(category="eval", cost=26.0, cost_type="too-expensive",
+                        area=0.0, area_type="rough", number_of_units=0.0)
         self.assertRaises(ValueError, models.per_asset_value, exd)
+
+    def test_per_asset_value_with_population_exposure_data(self):
+        # For population exposure data the `number_of_units` is returned
+        exd = self.REXD(category="population", cost=None, cost_type=None,
+                        area=None, area_type=None, number_of_units=111.1)
+        self.assertEqual(111.1, models.per_asset_value(exd))

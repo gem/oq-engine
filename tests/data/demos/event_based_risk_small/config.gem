@@ -113,7 +113,6 @@ EXPOSURE = exposure.xml
 # files containing the vulnerability functions
 VULNERABILITY = vulnerability.xml
 
-AGGREGATE_LOSS_CURVE = true
 LOSS_HISTOGRAM_BINS = 25
 
 LOSS_CURVES_OUTPUT_PREFIX = losscurves

@@ -49,9 +49,11 @@ INPUT_FILE_TYPES = {
     'SOURCE_MODEL_LOGIC_TREE_FILE': 'lt_source',
     'GMPE_LOGIC_TREE_FILE': 'lt_gmpe',
     'EXPOSURE': 'exposure',
+    'FRAGILITY': 'fragility',
     'VULNERABILITY': 'vulnerability',
     'VULNERABILITY_RETROFITTED': 'vulnerability_retrofitted',
     'SINGLE_RUPTURE_MODEL': 'rupture',
+    'SITE_MODEL': 'site_model',
 }
 
 ENUM_MAP = {
@@ -89,9 +91,7 @@ REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
 
 CALCULATION_MODES = set(CALCULATION_MODE.values())
 PARAMS = {}
-PATH_PARAMS = ['VULNERABILITY', 'FRAGILITY', 'VULNERABILITY_RETROFITTED',
-               'SINGLE_RUPTURE_MODEL', 'EXPOSURE',
-               'SOURCE_MODEL_LOGIC_TREE_FILE', 'GMPE_LOGIC_TREE_FILE']
+PATH_PARAMS = INPUT_FILE_TYPES.keys()
 
 
 def config_text_to_list(text, transform=lambda x: x):
@@ -202,6 +202,7 @@ define_param('GMPE_LOGIC_TREE_FILE', None,
 define_param('SOURCE_MODEL_LOGIC_TREE_FILE', None,
              modes=('classical', 'event_based', 'disaggregation', 'uhs',
                     'classical_bcr', 'event_based_bcr'))
+define_param('SITE_MODEL', None)
 
 # Disaggregation parameters:
 define_param('DISAGGREGATION_RESULTS', 'disagg_results',
@@ -318,7 +319,8 @@ define_param('SUBDUCTION_RUPTURE_FLOATING_TYPE',
              to_db=map_enum)
 
 # Everything else; please maintain alphabetical ordering.
-define_param('AGGREGATE_LOSS_CURVE', 'aggregate_loss_curve', to_job=str2bool)
+define_param('ASSET_CORRELATION', 'asset_correlation',
+             modes=("scenario", "event_based"))
 define_param('ASSET_LIFE_EXPECTANCY', 'asset_life_expectancy', to_job=float,
              modes=("classical_bcr", "event_based_bcr"))
 define_param('COMPONENT', 'component', to_db=map_enum)
@@ -330,7 +332,9 @@ define_param('COMPUTE_MEAN_HAZARD_CURVE', 'compute_mean_hazard_curve',
              modes=('classical', 'classical_bcr'), to_job=str2bool)
 define_param('CONDITIONAL_LOSS_POE', 'conditional_loss_poe', to_job=cttfl)
 define_param('DAMPING', 'damping', default=0.0, to_job=float)
-define_param('GMF_OUTPUT', None,
+define_param('EPSILON_RANDOM_SEED', None, modes='scenario',
+             to_job=int)
+define_param('SAVE_GMFS', None,
              modes=('event_based', 'scenario', 'scenario_damage'),
              to_job=str2bool)
 define_param('GMF_RANDOM_SEED', 'gmf_random_seed',
@@ -347,7 +351,10 @@ define_param('INTENSITY_MEASURE_LEVELS', 'imls',
              modes=('classical', 'event_based', 'disaggregation', 'uhs',
                     'classical_bcr', 'event_based_bcr'),
              to_job=cttfl)
-define_param('INTENSITY_MEASURE_TYPE', 'imt', to_db=map_enum)
+define_param('INTENSITY_MEASURE_TYPE', 'imt', to_db=map_enum,
+             modes=('classical', 'event_based', 'disaggregation',
+                    'classical_bcr', 'event_based_bcr', 'scenario',
+                    'scenario_damage'))
 define_param('INTEREST_RATE', 'interest_rate', to_job=float,
              modes=("classical_bcr", "event_based_bcr"))
 define_param('INVESTIGATION_TIME', 'investigation_time', default=0.0,

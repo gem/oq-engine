@@ -18,10 +18,9 @@ import shutil
 import unittest
 
 from lxml import etree
-from nose.plugins.attrib import attr
 
 from openquake.db.models import OqJob
-from openquake.nrml import nrml_schema_file
+from openquake.nrml.utils import nrml_schema_file
 
 from tests.utils import helpers
 
@@ -39,7 +38,6 @@ GML = 'http://www.opengis.net/gml'
 
 class BCRQATestCase(unittest.TestCase):
 
-    @attr('qa')
     def test_bcr(self):
         # Verify the EAL (Original and Retrofitted) and BCR values to
         # hand-computed results.
@@ -125,7 +123,6 @@ class BCRQATestCase(unittest.TestCase):
 
         return result
 
-    @attr('qa')
     def test_bcr_event_based(self):
         # First implementation of the QA test for the event based
         # bcr calculator. For now, just run it end-to-end
