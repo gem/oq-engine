@@ -66,8 +66,11 @@ def _point_to_nhlib(src, mesh_spacing, bin_width):
     hd = pmf.PMF([(x.probability, x.depth) for x in src.hypo_depth_dist])
 
     point = source.PointSource(
-        source_id=src.id, name=src.name, tectonic_region_type=src.trt,
-        mfd=mf_dist, rupture_mesh_spacing=mesh_spacing,
+        source_id=src.id,
+        name=src.name,
+        tectonic_region_type=src.trt,
+        mfd=mf_dist,
+        rupture_mesh_spacing=mesh_spacing,
         magnitude_scaling_relationship=src.mag_scale_rel,
         rupture_aspect_ratio=src.rupt_aspect_ratio,
         upper_seismogenic_depth=src.geometry.upper_seismo_depth,
@@ -101,14 +104,18 @@ def _area_to_nhlib(src, mesh_spacing, bin_width, area_src_disc):
     hd = pmf.PMF([(x.probability, x.depth) for x in src.hypo_depth_dist])
 
     area = source.AreaSource(
-        source_id=src.id, name=src.name, tectonic_region_type=src.trt,
-        mfd=mf_dist, rupture_mesh_spacing=mesh_spacing,
+        source_id=src.id,
+        name=src.name,
+        tectonic_region_type=src.trt,
+        mfd=mf_dist,
+        rupture_mesh_spacing=mesh_spacing,
         magnitude_scaling_relationship=src.mag_scale_rel,
         rupture_aspect_ratio=src.rupt_aspect_ratio,
         upper_seismogenic_depth=src.geometry.upper_seismo_depth,
         lower_seismogenic_depth=src.geometry.lower_seismo_depth,
         nodal_plane_distribution=npd, hypocenter_distribution=hd,
-        polygon=nhlib_polygon, area_discretization=area_src_disc
+        polygon=nhlib_polygon,
+        area_discretization=area_src_disc
     )
 
     return area
@@ -130,9 +137,6 @@ def _mfd_to_nhlib(src_mfd, bin_width):
             min_mag=src_mfd.min_mag, bin_width=src_mfd.bin_width,
             occurrence_rates=src_mfd.occur_rates
         )
-    else:
-        return None
-    return mfd
 
 
 def _source_type(src_model):
