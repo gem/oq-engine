@@ -20,6 +20,7 @@ import unittest
 from nhlib import geo
 from nhlib import mfd
 from nhlib import pmf
+from nhlib import scalerel
 from nhlib import source
 from nrml import parsers as nrml_parsers
 
@@ -63,13 +64,18 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
         )
 
         point = source.PointSource(
-            source_id="2", name="point",
-            tectonic_region_type="Stable Continental Crust", mfd=tgr_mfd,
+            source_id="2",
+            name="point",
+            tectonic_region_type="Stable Continental Crust",
+            mfd=tgr_mfd,
             rupture_mesh_spacing=self.MESH_SPACING,
-            magnitude_scaling_relationship="WC1994", rupture_aspect_ratio=0.5,
+            magnitude_scaling_relationship=scalerel.WC1994(),
+            rupture_aspect_ratio=0.5,
             upper_seismogenic_depth=0.0,
-            lower_seismogenic_depth=10.0, location=geo.Point(-122.0, 38.0),
-            nodal_plane_distribution=npd, hypocenter_distribution=hd
+            lower_seismogenic_depth=10.0,
+            location=geo.Point(-122.0, 38.0),
+            nodal_plane_distribution=npd,
+            hypocenter_distribution=hd
         )
         return point
 
@@ -99,17 +105,55 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
         )
 
         area = source.AreaSource(
-            source_id="1", name="Quito",
-            tectonic_region_type="Active Shallow Crust", mfd=incr_mfd,
+            source_id="1",
+            name="Quito",
+            tectonic_region_type="Active Shallow Crust",
+            mfd=incr_mfd,
             rupture_mesh_spacing=self.MESH_SPACING,
-            magnitude_scaling_relationship="PeerMSR", rupture_aspect_ratio=1.5,
+            magnitude_scaling_relationship=scalerel.PeerMSR(),
+            rupture_aspect_ratio=1.5,
             upper_seismogenic_depth=0.0,
             lower_seismogenic_depth=10.0,
-            nodal_plane_distribution=npd, hypocenter_distribution=hd,
+            nodal_plane_distribution=npd,
+            hypocenter_distribution=hd,
             polygon=polygon, area_discretization=self.AREA_SRC_DISC
         )
 
         return area
+
+    @property
+    def _expected_simple(self):
+        incr_mfd = mfd.EvenlyDiscretizedMFD(
+            min_mag=6.55, bin_width=0.1,
+            occurrence_rates=[
+                0.0010614989, 8.8291627E-4, 7.3437777E-4, 6.108288E-4,
+                5.080653E-4,
+            ]
+        )
+
+        simple = source.SimpleFaultSource(
+            source_id="3",
+            name="Mount Diablo Thrust",
+            tectonic_region_type="Active Shallow Crust",
+            mfd=incr_mfd,
+            rupture_mesh_spacing=self.MESH_SPACING,
+            magnitude_scaling_relationship=scalerel.WC1994(),
+            rupture_aspect_ratio=1.5,
+            upper_seismogenic_depth=10.0,
+            lower_seismogenic_depth=20.0,
+            fault_trace=geo.Line([geo.Point(-121.82290, 37.73010),
+                                  geo.Point(-122.03880, 37.87710)]
+            ),
+            dip=45.0,
+            rake=30.0
+        )
+
+        return simple
+
+
+    @property
+    def _expected_complex(self):
+        return None
 
     def test_point_to_nhlib(self):
         exp = self._expected_point
@@ -125,6 +169,26 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
         exp = self._expected_area
         actual = source_input.nrml_to_nhlib(
             self.area, self.MESH_SPACING, self.BIN_WIDTH, self.AREA_SRC_DISC
+        )
+
+        eq, msg = helpers.deep_eq(exp, actual)
+
+        self.assertTrue(eq, msg)
+
+    def test_simple_to_nhlib(self):
+        exp = self._expected_simple
+        actual = source_input.nrml_to_nhlib(
+            self.simple, self.MESH_SPACING, self.BIN_WIDTH, self.AREA_SRC_DISC
+        )
+
+        eq, msg = helpers.deep_eq(exp, actual)
+
+        self.assertTrue(eq, msg)
+
+    def test_complex_to_nhlib(self):
+        exp = self._expected_simple
+        actual = source_input.nrml_to_nhlib(
+            self.cmplx, self.MESH_SPACING, self.BIN_WIDTH, self.AREA_SRC_DISC
         )
 
         eq, msg = helpers.deep_eq(exp, actual)

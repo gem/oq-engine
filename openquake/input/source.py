@@ -24,11 +24,18 @@ from django.db import transaction
 from nhlib import geo
 from nhlib import mfd
 from nhlib import pmf
+from nhlib import scalerel
 from nhlib import source
 from nrml import models as nrml_models
 from shapely import wkt
 
 from openquake.db import models
+
+
+_SCALE_REL_MAP = {
+    'PeerMSR': scalerel.PeerMSR,
+    'WC1994': scalerel.WC1994,
+}
 
 
 def nrml_to_nhlib(src, mesh_spacing, bin_width, area_src_disc):
@@ -71,7 +78,7 @@ def _point_to_nhlib(src, mesh_spacing, bin_width):
         tectonic_region_type=src.trt,
         mfd=mf_dist,
         rupture_mesh_spacing=mesh_spacing,
-        magnitude_scaling_relationship=src.mag_scale_rel,
+        magnitude_scaling_relationship=_SCALE_REL_MAP[src.mag_scale_rel](),
         rupture_aspect_ratio=src.rupt_aspect_ratio,
         upper_seismogenic_depth=src.geometry.upper_seismo_depth,
         lower_seismogenic_depth=src.geometry.lower_seismo_depth,
@@ -109,7 +116,7 @@ def _area_to_nhlib(src, mesh_spacing, bin_width, area_src_disc):
         tectonic_region_type=src.trt,
         mfd=mf_dist,
         rupture_mesh_spacing=mesh_spacing,
-        magnitude_scaling_relationship=src.mag_scale_rel,
+        magnitude_scaling_relationship=_SCALE_REL_MAP[src.mag_scale_rel](),
         rupture_aspect_ratio=src.rupt_aspect_ratio,
         upper_seismogenic_depth=src.geometry.upper_seismo_depth,
         lower_seismogenic_depth=src.geometry.lower_seismo_depth,
@@ -119,6 +126,10 @@ def _area_to_nhlib(src, mesh_spacing, bin_width, area_src_disc):
     )
 
     return area
+
+
+def _simple_to_nhlib(src, mesh_spacing, bin_width, area_src_disc):
+    return None
 
 
 def _mfd_to_nhlib(src_mfd, bin_width):
@@ -192,4 +203,3 @@ class SourceDBWriter(object):
                 input=self.inp, source_type=_source_type(source), blob=blob,
                 geom=wkt
             )
-
