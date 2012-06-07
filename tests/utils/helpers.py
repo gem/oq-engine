@@ -838,11 +838,15 @@ def prepare_job_context(path_to_cfg):
     return job_ctxt
 
 
-def deep_eq(a, b):
+def deep_eq(a, b, decimal=7):
     """Deep compare two objects for equality by traversing __dict__ and
     __slots__.
 
     Caution: This function will exhaust generators.
+
+    :param decimal:
+        Desired precision (digits after the decimal point) for numerical
+        comparisons.
 
     :returns:
         Return `True` or `False` (to indicate if objects are equal) and a `str`
@@ -851,61 +855,69 @@ def deep_eq(a, b):
         comparison failed.
     """
     try:
-        _deep_eq(a, b)
+        _deep_eq(a, b, decimal=decimal)
     except AssertionError, err:
         return False, err.message
     return True, ''
 
 
-def _deep_eq(a, b):
-    """Do the actual deep comparison. If two items up for comparison is not
-    equal, a :exception:`AssertionError` is raised (to :function:`deep_eq`).
+def _deep_eq(a, b, decimal):
+    """Do the actual deep comparison. If the two items up for comparison are
+    not equal, a :exception:`AssertionError` is raised (to
+    :function:`deep_eq`).
     """
+
+    def _test_dict(a, b):
+        """Compare `dict` types recursively."""
+        assert len(a) == len(b), (
+            "Dicts %(a)s and %(b)s do not have the same length."
+            " Actual lengths: %(len_a)s and %(len_b)s") % dict(
+                a=a, b=b, len_a=len(a), len_b=len(b))
+
+        for key in a:
+            _deep_eq(a[key], b[key], decimal)
+
+
+    def _test_seq(a, b):
+        """Compare `list` or `tuple` types recursively."""
+        assert len(a) == len(b), (
+            "Sequences %(a)s and %(b)s do not have the same length."
+            " Actual lengths: %(len_a)s and %(len_b)s") % \
+            dict(a=a, b=b, len_a=len(a), len_b=len(b))
+
+        for i, item in enumerate(a):
+            _deep_eq(item, b[i], decimal)
+
+
+    # lists or tuples
     if isinstance(a, (list, tuple)):
         _test_seq(a, b)
+    # dicts
     elif isinstance(a, dict):
         _test_dict(a, b)
+    # objects with a __dict__
     elif hasattr(a, '__dict__'):
         assert a.__class__ == b.__class__, (
             "%s and %s are different classes") % (a.__class__, b.__class__)
         _test_dict(a.__dict__, b.__dict__)
+    # iterables (not strings)
     elif isinstance(a, collections.Iterable) and not isinstance(a, str):
         # If there's a generator or another type of iterable, treat it as a
         # `list`. NOTE: Generators will be exhausted if you do this.
         _test_seq(list(a), list(b))
+    # objects with __slots__
     elif hasattr(a, '__slots__'):
         assert a.__class__ == b.__class__, (
             "%s and %s are different classes") % (a.__class__, b.__class__)
         assert a.__slots__ == b.__slots__, (
             "slots %s and %s are not the same") % (a.__slots__, b.__slots__)
         for slot in a.__slots__:
-            _deep_eq(getattr(a, slot), getattr(b, slot))
+            _deep_eq(getattr(a, slot), getattr(b, slot), decimal)
     else:
-        # must be a 'primitive'
-        try:
+        # Objects must be primitives
+
+        # Are they numbers?
+        if isinstance(a, (int, long, float, complex)):
+            numpy.testing.assert_almost_equal(a, b, decimal=decimal)
+        else:
             assert a == b, "%s != %s" % (a, b)
-        except Exception, err:
-            pass
-            import nose; nose.tools.set_trace()
-
-
-def _test_dict(a, b):
-    """Compare `dict` types recursively."""
-    assert len(a) == len(b), (
-        "Dicts %(a)s and %(b)s do not have the same length."
-        " Actual lengths: %(len_a)s and %(len_b)s") % dict(
-            a=a, b=b, len_a=len(a), len_b=len(b))
-
-    for key in a:
-        _deep_eq(a[key], b[key])
-
-
-def _test_seq(a, b):
-    """Compare `list` or `tuple` types recursively."""
-    assert len(a) == len(b), (
-        "Sequences %(a)s and %(b)s do not have the same length."
-        " Actual lengths: %(len_a)s and %(len_b)s") % \
-        dict(a=a, b=b, len_a=len(a), len_b=len(b))
-
-    for i, item in enumerate(a):
-        _deep_eq(item, b[i])
