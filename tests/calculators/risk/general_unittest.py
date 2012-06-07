@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import itertools
 import os
 import numpy
@@ -160,7 +159,7 @@ class BetaDistributionTestCase(unittest.TestCase):
 
         expected_alphas = [3.750, 5.525, 8.689, 14.600, 19.200]
 
-        alphas = [compute_alpha(mean_loss_ratio, stddev) for  mean_loss_ratio,
+        alphas = [compute_alpha(mean_loss_ratio, stddev) for mean_loss_ratio,
                 stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
         self.assertTrue(numpy.allclose(alphas, expected_alphas, atol=0.0002))
 
@@ -169,7 +168,7 @@ class BetaDistributionTestCase(unittest.TestCase):
 
         expected_betas = [71.250, 49.725, 34.756, 21.900, 4.800]
 
-        betas = [compute_beta(mean_loss_ratio, stddev) for  mean_loss_ratio,
+        betas = [compute_beta(mean_loss_ratio, stddev) for mean_loss_ratio,
                 stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
         self.assertTrue(numpy.allclose(betas, expected_betas, atol=0.0001))
 
@@ -272,7 +271,7 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
 
     def test_assets_for_cell_with_more_than_one(self):
         # All assets in the risk cell are found.
-        site = shapes.Site(10.0, 46.0)
+        site = shapes.Site(10.3, 46.3)
         self.job_ctxt.oq_job_profile.region_grid_spacing = 0.6
         self.job_ctxt.oq_job_profile.save()
 
@@ -285,7 +284,7 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
 
     def test_assets_for_cell_with_one(self):
         # A single asset in the risk cell is found.
-        site = shapes.Site(10.0, 46.0)
+        site = shapes.Site(10.15, 46.15)
         self.job_ctxt.oq_job_profile.region_grid_spacing = 0.3
         self.job_ctxt.oq_job_profile.save()
         [asset] = BaseRiskCalculator.assets_for_cell(self.job.id, site)
