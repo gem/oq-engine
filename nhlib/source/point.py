@@ -172,7 +172,7 @@ class PointSource(SeismicSource):
             Tuple of two items: rupture length in width in km.
 
         The rupture area is calculated using method
-        :meth:`~nhlib.msr.base.BaseMSR.get_median_area` of source's
+        :meth:`~nhlib.scalerel.base.BaseMSR.get_median_area` of source's
         magnitude-scaling relationship. In any case the returned
         dimensions multiplication is equal to that value. Than
         the area is decomposed to length and width with respect
