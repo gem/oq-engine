@@ -111,7 +111,6 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
 
         return area
 
-
     def test_point_to_nhlib(self):
         exp = self._expected_point
         actual = source_input.nrml_to_nhlib(
@@ -129,4 +128,5 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
         )
 
         eq, msg = helpers.deep_eq(exp, actual)
+
         self.assertTrue(eq, msg)
