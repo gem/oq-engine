@@ -21,6 +21,7 @@ Helper functions for our unit and smoke tests.
 """
 
 
+import collections
 import functools
 import guppy
 import logging
@@ -835,3 +836,76 @@ def prepare_job_context(path_to_cfg):
         oq_job=job)
 
     return job_ctxt
+
+
+def deep_eq(a, b):
+    """Deep compare two objects for equality by traversing __dict__ and
+    __slots__.
+
+    Caution: This function will exhaust generators.
+
+    :returns:
+        Return `True` or `False` (to indicate if objects are equal) and a `str`
+        message. If the two objects are equal, the message is empty. If the two
+        objects are not equal, the message indicates which part of the
+        comparison failed.
+    """
+    try:
+        _deep_eq(a, b)
+    except AssertionError, err:
+        return False, err.message
+    return True, ''
+
+
+def _deep_eq(a, b):
+    """Do the actual deep comparison. If two items up for comparison is not
+    equal, a :exception:`AssertionError` is raised (to :function:`deep_eq`).
+    """
+    if isinstance(a, (list, tuple)):
+        _test_seq(a, b)
+    elif isinstance(a, dict):
+        _test_dict(a, b)
+    elif hasattr(a, '__dict__'):
+        assert a.__class__ == b.__class__, (
+            "%s and %s are different classes") % (a.__class__, b.__class__)
+        _test_dict(a.__dict__, b.__dict__)
+    elif isinstance(a, collections.Iterable) and not isinstance(a, str):
+        # If there's a generator or another type of iterable, treat it as a
+        # `list`. NOTE: Generators will be exhausted if you do this.
+        _test_seq(list(a), list(b))
+    elif hasattr(a, '__slots__'):
+        assert a.__class__ == b.__class__, (
+            "%s and %s are different classes") % (a.__class__, b.__class__)
+        assert a.__slots__ == b.__slots__, (
+            "slots %s and %s are not the same") % (a.__slots__, b.__slots__)
+        for slot in a.__slots__:
+            _deep_eq(getattr(a, slot), getattr(b, slot))
+    else:
+        # must be a 'primitive'
+        try:
+            assert a == b, "%s != %s" % (a, b)
+        except Exception, err:
+            pass
+            import nose; nose.tools.set_trace()
+
+
+def _test_dict(a, b):
+    """Compare `dict` types recursively."""
+    assert len(a) == len(b), (
+        "Dicts %(a)s and %(b)s do not have the same length."
+        " Actual lengths: %(len_a)s and %(len_b)s") % dict(
+            a=a, b=b, len_a=len(a), len_b=len(b))
+
+    for key in a:
+        _deep_eq(a[key], b[key])
+
+
+def _test_seq(a, b):
+    """Compare `list` or `tuple` types recursively."""
+    assert len(a) == len(b), (
+        "Sequences %(a)s and %(b)s do not have the same length."
+        " Actual lengths: %(len_a)s and %(len_b)s") % \
+        dict(a=a, b=b, len_a=len(a), len_b=len(b))
+
+    for i, item in enumerate(a):
+        _deep_eq(item, b[i])
