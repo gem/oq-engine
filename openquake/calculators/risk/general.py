@@ -327,37 +327,43 @@ class BaseRiskCalculator(Calculator):
                 yield point, asset
 
     def _write_output_for_block(self, job_id, block_id):
-        """ Given a job and a block, write out a plotted curve """
-        loss_ratio_curves = []
+        """
+        Write loss / loss ratio curves to xml for a single block.
+        """
+
         loss_curves = []
+        loss_ratio_curves = []
         block = Block.from_kvs(job_id, block_id)
-        for point, asset in self.grid_assets_iterator(
-                block.grid(self.job_ctxt.region)):
-            site = shapes.Site(asset.site.x, asset.site.y)
 
-            loss_curve = kvs.get_client().get(
-                kvs.tokens.loss_curve_key(
+        for site in block.sites:
+            point = self.job_ctxt.region.grid.point_at(site)
+            assets = BaseRiskCalculator.assets_at(self.job_ctxt.job_id, site)
+
+            for asset in assets:
+                loss_curve = kvs.get_client().get(
+                    kvs.tokens.loss_curve_key(
                     job_id, point.row, point.column, asset.asset_ref))
-            loss_ratio_curve = kvs.get_client().get(
-                kvs.tokens.loss_ratio_key(
+
+                loss_ratio_curve = kvs.get_client().get(
+                    kvs.tokens.loss_ratio_key(
                     job_id, point.row, point.column, asset.asset_ref))
 
-            if loss_curve:
-                loss_curve = shapes.Curve.from_json(loss_curve)
-                loss_curves.append((site, (loss_curve, asset)))
+                if loss_curve:
+                    loss_curve = shapes.Curve.from_json(loss_curve)
+                    loss_curves.append((site, (loss_curve, asset)))
 
-            if loss_ratio_curve:
-                loss_ratio_curve = shapes.Curve.from_json(loss_ratio_curve)
-                loss_ratio_curves.append((site, (loss_ratio_curve, asset)))
+                if loss_ratio_curve:
+                    loss_ratio_curve = shapes.Curve.from_json(loss_ratio_curve)
+                    loss_ratio_curves.append((site, (loss_ratio_curve, asset)))
 
-        results = self._serialize(block_id,
-                                           curves=loss_ratio_curves,
-                                           curve_mode='loss_ratio')
+        results = self._serialize(block_id, curves=loss_ratio_curves,
+                curve_mode="loss_ratio")
+
         if loss_curves:
-            results.extend(
-                self._serialize(
-                    block_id, curves=loss_curves, curve_mode='loss',
-                    curve_mode_prefix='loss_curve', render_multi=True))
+            results.extend(self._serialize(
+                block_id, curves=loss_curves, curve_mode="loss",
+                curve_mode_prefix="loss_curve", render_multi=True))
+
         return results
 
     def asset_losses_per_site(self, loss_poe, assets_iterator):
