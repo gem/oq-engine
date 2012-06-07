@@ -54,6 +54,8 @@ def nrml_to_nhlib(src, mesh_spacing, bin_width, area_src_disc):
     elif isinstance(src, nrml_models.PointSource):
         return _point_to_nhlib(src, mesh_spacing, bin_width)
     # Then complex
+    elif isinstance(src, nrml_models.SimpleFaultSource):
+        return _simple_to_nhlib(src, mesh_spacing, bin_width)
     # Then simple
 
 
@@ -128,8 +130,29 @@ def _area_to_nhlib(src, mesh_spacing, bin_width, area_src_disc):
     return area
 
 
-def _simple_to_nhlib(src, mesh_spacing, bin_width, area_src_disc):
-    return None
+def _simple_to_nhlib(src, mesh_spacing, bin_width):
+    shapely_line = wkt.loads(src.geometry.wkt)
+    fault_trace = geo.Line([geo.Point(*x) for x in shapely_line.coords])
+
+    mf_dist = _mfd_to_nhlib(src.mfd, bin_width)
+
+
+    simple = source.SimpleFaultSource(
+        source_id=src.id,
+        name=src.name,
+        tectonic_region_type=src.trt,
+        mfd=mf_dist,
+        rupture_mesh_spacing=mesh_spacing,
+        magnitude_scaling_relationship=_SCALE_REL_MAP[src.mag_scale_rel](),
+        rupture_aspect_ratio=src.rupt_aspect_ratio,
+        upper_seismogenic_depth=src.geometry.upper_seismo_depth,
+        lower_seismogenic_depth=src.geometry.lower_seismo_depth,
+        fault_trace=fault_trace,
+        dip=src.geometry.dip,
+        rake=src.rake
+    )
+
+    return simple
 
 
 def _mfd_to_nhlib(src_mfd, bin_width):
