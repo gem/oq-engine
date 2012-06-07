@@ -31,7 +31,7 @@ from shapely import wkt
 from openquake.db import models
 
 
-def nrml_to_nhlib(src, mesh_spacing, bin_width=None, area_src_disc=None):
+def nrml_to_nhlib(src, mesh_spacing, bin_width, area_src_disc):
     """
 
     :param mesh_spacing:
@@ -42,29 +42,32 @@ def nrml_to_nhlib(src, mesh_spacing, bin_width=None, area_src_disc=None):
     :param area_src_disc:
         Area source discretization, in km. Applies only to area sources.
     """
-    if isinstance(src, nrml_models.PointSource):
-        return _point_to_nhlib(src, mesh_spacing, bin_width=bin_width)
-    elif isinstance(src, nrml_models.AreaSource):
-        assert area_src_disc is not None, (
-            "`area_src_disc` is required for area sources"
-        )
-        return None
+    if isinstance(src, nrml_models.AreaSource):
+        return _area_to_nhlib(src, mesh_spacing, bin_width, area_src_disc)
+    elif isinstance(src, nrml_models.PointSource):
+        return _point_to_nhlib(src, mesh_spacing, bin_width)
+    # Then complex
+    # Then simple
 
 
-def _point_to_nhlib(src, mesh_spacing, bin_width=None):
+def _point_to_nhlib(src, mesh_spacing, bin_width):
     shapely_pt = wkt.loads(src.geometry.wkt)
 
+    mf_dist = _mfd_to_nhlib(src.mfd, bin_width)
+
+    # nodal plane distribution:
     npd = pmf.PMF(
         [(x.probability,
           geo.NodalPlane(strike=x.strike, dip=x.dip, rake=x.rake))
          for x in src.nodal_plane_dist]
     )
+
+    # hypocentral depth distribution:
     hd = pmf.PMF([(x.probability, x.depth) for x in src.hypo_depth_dist])
 
     point = source.PointSource(
         source_id=src.id, name=src.name, tectonic_region_type=src.trt,
-        mfd=_mfd_to_nhlib(src.mfd, bin_width=bin_width),
-        rupture_mesh_spacing=mesh_spacing,
+        mfd=mf_dist, rupture_mesh_spacing=mesh_spacing,
         magnitude_scaling_relationship=src.mag_scale_rel,
         rupture_aspect_ratio=src.rupt_aspect_ratio,
         upper_seismogenic_depth=src.geometry.upper_seismo_depth,
@@ -73,10 +76,45 @@ def _point_to_nhlib(src, mesh_spacing, bin_width=None):
         nodal_plane_distribution=npd,
         hypocenter_distribution=hd
     )
+
     return point
 
 
-def _mfd_to_nhlib(src_mfd, bin_width=None):
+def _area_to_nhlib(src, mesh_spacing, bin_width, area_src_disc):
+    shapely_polygon = wkt.loads(src.geometry.wkt)
+    nhlib_polygon = geo.Polygon(
+        # We ignore the last coordinate in the sequence here, since it is a
+        # duplicate of the first. nhlib will close the loop for us.
+        [geo.Point(*x) for x in list(shapely_polygon.exterior.coords)[:-1]]
+    )
+
+    mf_dist = _mfd_to_nhlib(src.mfd, bin_width)
+
+    # nodal plane distribution:
+    npd = pmf.PMF(
+        [(x.probability,
+          geo.NodalPlane(strike=x.strike, dip=x.dip, rake=x.rake))
+         for x in src.nodal_plane_dist]
+    )
+
+    # hypocentral depth distribution:
+    hd = pmf.PMF([(x.probability, x.depth) for x in src.hypo_depth_dist])
+
+    area = source.AreaSource(
+        source_id=src.id, name=src.name, tectonic_region_type=src.trt,
+        mfd=mf_dist, rupture_mesh_spacing=mesh_spacing,
+        magnitude_scaling_relationship=src.mag_scale_rel,
+        rupture_aspect_ratio=src.rupt_aspect_ratio,
+        upper_seismogenic_depth=src.geometry.upper_seismo_depth,
+        lower_seismogenic_depth=src.geometry.lower_seismo_depth,
+        nodal_plane_distribution=npd, hypocenter_distribution=hd,
+        polygon=nhlib_polygon, area_discretization=area_src_disc
+    )
+
+    return area
+
+
+def _mfd_to_nhlib(src_mfd, bin_width):
     """
     :param float bin_width:
         Optional. Required only for Truncated Gutenberg-Richter MFDs.
@@ -90,7 +128,7 @@ def _mfd_to_nhlib(src_mfd, bin_width=None):
     elif isinstance(src_mfd, nrml_models.IncrementalMFD):
         return mfd.EvenlyDiscretizedMFD(
             min_mag=src_mfd.min_mag, bin_width=src_mfd.bin_width,
-            occurence_rates=src_mfd.occur_rates
+            occurrence_rates=src_mfd.occur_rates
         )
     else:
         return None
