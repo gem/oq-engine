@@ -33,9 +33,12 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
     representation.
     """
 
+    # These 3 parameters would typically be specified in the job configuration.
     MESH_SPACING = 1  # km
     BIN_WIDTH = 1  # for Truncated GR MFDs
     AREA_SRC_DISC = 1  # area source discretization, in km
+
+    # Test NRML to use (contains 1 of each source type).
     MIXED_SRC_MODEL = helpers.get_data_path('mixed_source_model.xml')
 
     def setUp(self):
@@ -54,6 +57,7 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
         npd = pmf.PMF(
             [(decimal.Decimal("0.3"), np1), (decimal.Decimal("0.7"), np2)]
         )
+
         hd = pmf.PMF(
             [(decimal.Decimal("0.5"), 4.0), (decimal.Decimal("0.5"), 8.0)]
         )
@@ -65,18 +69,64 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
             magnitude_scaling_relationship="WC1994", rupture_aspect_ratio=0.5,
             upper_seismogenic_depth=0.0,
             lower_seismogenic_depth=10.0, location=geo.Point(-122.0, 38.0),
-            nodal_plane_distribution=npd,
-            hypocenter_distribution=hd,
+            nodal_plane_distribution=npd, hypocenter_distribution=hd
         )
         return point
 
-    def test__point_to_nhlib(self):
-        exp = self._expected_point
-        actual = source_input.nrml_to_nhlib(
-            self.point, self.MESH_SPACING, self.BIN_WIDTH
+    @property
+    def _expected_area(self):
+        incr_mfd = mfd.EvenlyDiscretizedMFD(
+            min_mag=6.55, bin_width=0.1,
+            occurrence_rates=[
+                0.0010614989, 8.8291627E-4, 7.3437777E-4, 6.108288E-4,
+                5.080653E-4,
+            ]
         )
 
-        import nose; nose.tools.set_trace()
+        np1 = geo.NodalPlane(strike=0.0, dip=90.0, rake=0.0)
+        np2 = geo.NodalPlane(strike=90.0, dip=45.0, rake=90.0)
+        npd = pmf.PMF(
+            [(decimal.Decimal("0.3"), np1), (decimal.Decimal("0.7"), np2)]
+        )
+
+        hd = pmf.PMF(
+            [(decimal.Decimal("0.5"), 4.0), (decimal.Decimal("0.5"), 8.0)]
+        )
+
+        polygon = geo.Polygon(
+            [geo.Point(-122.5, 37.5), geo.Point(-121.5, 37.5),
+             geo.Point(-121.5, 38.5), geo.Point(-122.5, 38.5)]
+        )
+
+        area = source.AreaSource(
+            source_id="1", name="Quito",
+            tectonic_region_type="Active Shallow Crust", mfd=incr_mfd,
+            rupture_mesh_spacing=self.MESH_SPACING,
+            magnitude_scaling_relationship="PeerMSR", rupture_aspect_ratio=1.5,
+            upper_seismogenic_depth=0.0,
+            lower_seismogenic_depth=10.0,
+            nodal_plane_distribution=npd, hypocenter_distribution=hd,
+            polygon=polygon, area_discretization=self.AREA_SRC_DISC
+        )
+
+        return area
+
+
+    def test_point_to_nhlib(self):
+        exp = self._expected_point
+        actual = source_input.nrml_to_nhlib(
+            self.point, self.MESH_SPACING, self.BIN_WIDTH, self.AREA_SRC_DISC
+        )
+
         eq, msg = helpers.deep_eq(exp, actual)
 
+        self.assertTrue(eq, msg)
+
+    def test_area_to_nhlib(self):
+        exp = self._expected_area
+        actual = source_input.nrml_to_nhlib(
+            self.area, self.MESH_SPACING, self.BIN_WIDTH, self.AREA_SRC_DISC
+        )
+
+        eq, msg = helpers.deep_eq(exp, actual)
         self.assertTrue(eq, msg)
