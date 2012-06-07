@@ -545,6 +545,8 @@ CREATE TABLE uiapi.input (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     model_content_id INTEGER,  -- TODO(larsbutler), May 11th 2012: Eventually make this is a required FK (NOT NULL).
+    -- Optional name for the input.
+    name VARCHAR,
     -- The full path of the input file on the server
     path VARCHAR NOT NULL,
     digest VARCHAR(32) NOT NULL,
