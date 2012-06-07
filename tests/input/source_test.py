@@ -124,7 +124,7 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
     @property
     def _expected_simple(self):
         incr_mfd = mfd.EvenlyDiscretizedMFD(
-            min_mag=6.55, bin_width=0.1,
+            min_mag=5.0, bin_width=0.1,
             occurrence_rates=[
                 0.0010614989, 8.8291627E-4, 7.3437777E-4, 6.108288E-4,
                 5.080653E-4,
