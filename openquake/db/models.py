@@ -615,6 +615,7 @@ class Input(djm.Model):
     '''
     owner = djm.ForeignKey('OqUser')
     model_content = djm.ForeignKey('ModelContent')
+    name = djm.TextField(null=True)
     digest = djm.TextField(help_text="32 byte md5sum digest, used to "
                                      "detect identical input model files")
     path = djm.TextField()
