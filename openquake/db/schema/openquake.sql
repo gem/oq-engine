@@ -513,12 +513,15 @@ CREATE TABLE hzrdi.parsed_source (
         CONSTRAINT enforce_source_type CHECK
         (source_type IN ('area', 'point', 'complex', 'simple')),
     blob TEXT NOT NULL,
-    geom geometry NOT NULL,
     last_update timestamp without time zone
-        DEFAULT timezone('UTC'::text, now()) NOT NULL,
-    CONSTRAINT enforce_dims_geom CHECK (ndims(geom) = 2),
-    CONSTRAINT enforce_srid_geom CHECK (srid(geom) = 4326)
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE hzrdi_ts;
+-- The surface projection (2D) of the "rupture enclosing" polygon for each source.
+-- This is relevant to all source types, including point sources.
+-- When considering a parsed_source record given a minimum integration distance,
+-- use this polygon in distance calculations.
+SELECT AddGeometryColumn('hzrdi', 'parsed_source', 'polygon', 4326, 'POLYGON', 2);
+ALTER TABLE hzrdi.parsed_source ALTER COLUMN polygon SET NOT NULL;
 
 
 -- A batch of OpenQuake input files uploaded by the user
