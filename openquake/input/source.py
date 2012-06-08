@@ -49,14 +49,17 @@ def nrml_to_nhlib(src, mesh_spacing, bin_width, area_src_disc):
     :param area_src_disc:
         Area source discretization, in km. Applies only to area sources.
     """
+    # The ordering of the switch here matters because:
+    #   - AreaSource inherits from PointSource
+    #   - ComplexFaultSource inherits from SimpleFaultSource
     if isinstance(src, nrml_models.AreaSource):
         return _area_to_nhlib(src, mesh_spacing, bin_width, area_src_disc)
     elif isinstance(src, nrml_models.PointSource):
         return _point_to_nhlib(src, mesh_spacing, bin_width)
-    # Then complex
+    elif isinstance(src, nrml_models.ComplexFaultSource):
+        return _complex_to_nhlib(src, mesh_spacing, bin_width)
     elif isinstance(src, nrml_models.SimpleFaultSource):
         return _simple_to_nhlib(src, mesh_spacing, bin_width)
-    # Then simple
 
 
 def _point_to_nhlib(src, mesh_spacing, bin_width):
@@ -136,7 +139,6 @@ def _simple_to_nhlib(src, mesh_spacing, bin_width):
 
     mf_dist = _mfd_to_nhlib(src.mfd, bin_width)
 
-
     simple = source.SimpleFaultSource(
         source_id=src.id,
         name=src.name,
@@ -153,6 +155,36 @@ def _simple_to_nhlib(src, mesh_spacing, bin_width):
     )
 
     return simple
+
+
+def _complex_to_nhlib(src, mesh_spacing, bin_width):
+    edges_wkt = []
+    edges_wkt.append(src.geometry.top_edge_wkt)
+    edges_wkt.extend(src.geometry.int_edges)
+    edges_wkt.append(src.geometry.bottom_edge_wkt)
+
+    edges = []
+
+    for edge in edges_wkt:
+        shapely_line = wkt.loads(edge)
+        line = geo.Line([geo.Point(*x) for x in shapely_line.coords])
+        edges.append(line)
+
+    mf_dist = _mfd_to_nhlib(src.mfd, bin_width)
+
+    cmplx = source.ComplexFaultSource(
+        source_id=src.id,
+        name=src.name,
+        tectonic_region_type=src.trt,
+        mfd=mf_dist,
+        rupture_mesh_spacing=mesh_spacing,
+        magnitude_scaling_relationship=_SCALE_REL_MAP[src.mag_scale_rel](),
+        rupture_aspect_ratio=src.rupt_aspect_ratio,
+        edges=edges,
+        rake=src.rake,
+    )
+
+    return cmplx
 
 
 def _mfd_to_nhlib(src_mfd, bin_width):
@@ -177,14 +209,14 @@ def _source_type(src_model):
     """Given of the source types defined in :mod:`nrml.models`, get the
     `source_type` for a :class:`~openquake.db.models.ParsedSource`.
     """
-    if isinstance(nrml_models.PointSource):
-        return 'point'
-    elif isinstance(nrml_models.AreaSource):
+    if isinstance(nrml_models.AreaSource):
         return 'area'
-    elif isinstance(nrml_models.SimpleFaultSource):
-        return 'simple'
+    elif isinstance(nrml_models.PointSource):
+        return 'point'
     elif isinstance(nrml_models.ComplexFaultSource):
         return 'complex'
+    elif isinstance(nrml_models.SimpleFaultSource):
+        return 'simple'
 
 
 class SourceDBWriter(object):
@@ -220,9 +252,9 @@ class SourceDBWriter(object):
             nhlib_src = nrml_to_nhlib(source)
             geom = nhlib_src.get_rupture_enclosing_polygon()
             geom._init_polygon2d()
-            wkt = geom._polygon2d.wkt
+            geom_wkt = geom._polygon2d.wkt
 
             ps = models.ParsedSource(
                 input=self.inp, source_type=_source_type(source), blob=blob,
-                geom=wkt
+                geom=geom_wkt
             )
