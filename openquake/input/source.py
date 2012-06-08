@@ -39,7 +39,11 @@ _SCALE_REL_MAP = {
 
 
 def nrml_to_nhlib(src, mesh_spacing, bin_width, area_src_disc):
-    """
+    """Convert a seismic source object from the NRML representation to the
+    NHLib representation. Inputs can be point, area, simple fault, or complex
+    fault sources.
+
+    See :mod:`nrml.models` and :mod:`nhlib.source`.
 
     :param mesh_spacing:
         Rupture mesh spacing, in km.
@@ -48,6 +52,10 @@ def nrml_to_nhlib(src, mesh_spacing, bin_width, area_src_disc):
         width.
     :param area_src_disc:
         Area source discretization, in km. Applies only to area sources.
+        If the input source is known to be a type other than an area source,
+        you can specify `area_src_disc=None`.
+    :returns:
+        The NHLib representation of the input source.
     """
     # The ordering of the switch here matters because:
     #   - AreaSource inherits from PointSource
@@ -63,6 +71,20 @@ def nrml_to_nhlib(src, mesh_spacing, bin_width, area_src_disc):
 
 
 def _point_to_nhlib(src, mesh_spacing, bin_width):
+    """Convert a NRML point source to the NHLib equivalent.
+
+    See :mod:`nrml.models` and :mod:`nhlib.source`.
+
+    :param src:
+        :class:`nrml.models.PointSource` instance.
+    :param mesh_spacing:
+        Rupture mesh spacing, in km.
+    :param bin_width:
+        Truncated Gutenberg-Richter MFD (Magnitude Frequency Distribution) bin
+        width.
+    :returns:
+        The NHLib representation of the input source.
+    """
     shapely_pt = wkt.loads(src.geometry.wkt)
 
     mf_dist = _mfd_to_nhlib(src.mfd, bin_width)
@@ -96,6 +118,22 @@ def _point_to_nhlib(src, mesh_spacing, bin_width):
 
 
 def _area_to_nhlib(src, mesh_spacing, bin_width, area_src_disc):
+    """Convert a NRML area source to the NHLib equivalent.
+
+    See :mod:`nrml.models` and :mod:`nhlib.source`.
+
+    :param src:
+        :class:`nrml.models.PointSource` instance.
+    :param mesh_spacing:
+        Rupture mesh spacing, in km.
+    :param bin_width:
+        Truncated Gutenberg-Richter MFD (Magnitude Frequency Distribution) bin
+        width.
+    :param area_src_disc:
+        Area source discretization, in km. Applies only to area sources.
+    :returns:
+        The NHLib representation of the input source.
+    """
     shapely_polygon = wkt.loads(src.geometry.wkt)
     nhlib_polygon = geo.Polygon(
         # We ignore the last coordinate in the sequence here, since it is a
@@ -134,6 +172,20 @@ def _area_to_nhlib(src, mesh_spacing, bin_width, area_src_disc):
 
 
 def _simple_to_nhlib(src, mesh_spacing, bin_width):
+    """Convert a NRML simple fault source to the NHLib equivalent.
+
+    See :mod:`nrml.models` and :mod:`nhlib.source`.
+
+    :param src:
+        :class:`nrml.models.PointSource` instance.
+    :param mesh_spacing:
+        Rupture mesh spacing, in km.
+    :param bin_width:
+        Truncated Gutenberg-Richter MFD (Magnitude Frequency Distribution) bin
+        width.
+    :returns:
+        The NHLib representation of the input source.
+    """
     shapely_line = wkt.loads(src.geometry.wkt)
     fault_trace = geo.Line([geo.Point(*x) for x in shapely_line.coords])
 
@@ -158,6 +210,20 @@ def _simple_to_nhlib(src, mesh_spacing, bin_width):
 
 
 def _complex_to_nhlib(src, mesh_spacing, bin_width):
+    """Convert a NRML complex fault source to the NHLib equivalent.
+
+    See :mod:`nrml.models` and :mod:`nhlib.source`.
+
+    :param src:
+        :class:`nrml.models.PointSource` instance.
+    :param mesh_spacing:
+        Rupture mesh spacing, in km.
+    :param bin_width:
+        Truncated Gutenberg-Richter MFD (Magnitude Frequency Distribution) bin
+        width.
+    :returns:
+        The NHLib representation of the input source.
+    """
     edges_wkt = []
     edges_wkt.append(src.geometry.top_edge_wkt)
     edges_wkt.extend(src.geometry.int_edges)
