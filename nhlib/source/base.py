@@ -42,8 +42,8 @@ class SeismicSource(object):
         <nhlib.geo.surface.base.BaseSurface.get_min_distance>` between
         the rupture surface and a site and the precision of that computation.
     :param magnitude_scaling_relationship:
-        Instance of subclass of :class:`nhlib.msr.base.BaseMSR` to describe
-        how does the area of the rupture depend on magnitude and rake.
+        Instance of subclass of :class:`nhlib.scalerel.base.BaseMSR` to
+        describe how does the area of the rupture depend on magnitude and rake.
     :param rupture_aspect_ratio:
         Float number representing how much source's ruptures are more wide
         than tall. Aspect ratio of 1 means ruptures have square shape,
