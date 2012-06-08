@@ -49,9 +49,6 @@ class Rupture(object):
             raise ValueError('magnitude must be positive')
         if not hypocenter.depth > 0:
             raise ValueError('rupture hypocenter must have positive depth')
-        if not const.TRT.is_valid(tectonic_region_type):
-            raise ValueError('unknown tectonic region type %r' %
-                             tectonic_region_type)
         NodalPlane.check_rake(rake)
         self.tectonic_region_type = tectonic_region_type
         self.rake = rake

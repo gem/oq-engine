@@ -47,12 +47,6 @@ class RuptureCreationTestCase(unittest.TestCase):
             make_rupture(rupture_class, **kwargs)
         self.assertEqual(ae.exception.message, msg)
 
-    def test_wrong_trt(self):
-        self.assert_failed_creation(Rupture, ValueError,
-            "unknown tectonic region type 'Swamp'",
-            tectonic_region_type='Swamp'
-        )
-
     def test_negative_magnitude(self):
         self.assert_failed_creation(Rupture, ValueError,
             'magnitude must be positive',
