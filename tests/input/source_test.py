@@ -24,9 +24,19 @@ from nhlib import scalerel
 from nhlib import source
 from nrml import parsers as nrml_parsers
 
+from openquake.db import models
 from openquake.input import source as source_input
 
 from tests.utils import helpers
+
+
+# Test NRML to use (contains 1 of each source type).
+MIXED_SRC_MODEL = helpers.get_data_path('mixed_source_model.xml')
+
+# These 3 parameters would typically be specified in the job configuration.
+MESH_SPACING = 1  # km
+BIN_WIDTH = 1  # for Truncated GR MFDs
+AREA_SRC_DISC = 1  # area source discretization, in km
 
 
 class NrmlSourceToNhlibTestCase(unittest.TestCase):
@@ -34,18 +44,12 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
     representation.
     """
 
-    # These 3 parameters would typically be specified in the job configuration.
-    MESH_SPACING = 1  # km
-    BIN_WIDTH = 1  # for Truncated GR MFDs
-    AREA_SRC_DISC = 1  # area source discretization, in km
 
-    # Test NRML to use (contains 1 of each source type).
-    MIXED_SRC_MODEL = helpers.get_data_path('mixed_source_model.xml')
+    @classmethod
+    def setUpClass(cls):
+        parser = nrml_parsers.SourceModelParser(MIXED_SRC_MODEL)
 
-    def setUp(self):
-        parser = nrml_parsers.SourceModelParser(self.MIXED_SRC_MODEL)
-
-        self.area, self.point, self.simple, self.cmplx = list(parser.parse())
+        cls.area, cls.point, cls.simple, cls.cmplx = list(parser.parse())
 
     @property
     def _expected_point(self):
@@ -68,7 +72,7 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
             name="point",
             tectonic_region_type="Stable Continental Crust",
             mfd=tgr_mfd,
-            rupture_mesh_spacing=self.MESH_SPACING,
+            rupture_mesh_spacing=MESH_SPACING,
             magnitude_scaling_relationship=scalerel.WC1994(),
             rupture_aspect_ratio=0.5,
             upper_seismogenic_depth=0.0,
@@ -109,14 +113,14 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
             name="Quito",
             tectonic_region_type="Active Shallow Crust",
             mfd=incr_mfd,
-            rupture_mesh_spacing=self.MESH_SPACING,
+            rupture_mesh_spacing=MESH_SPACING,
             magnitude_scaling_relationship=scalerel.PeerMSR(),
             rupture_aspect_ratio=1.5,
             upper_seismogenic_depth=0.0,
             lower_seismogenic_depth=10.0,
             nodal_plane_distribution=npd,
             hypocenter_distribution=hd,
-            polygon=polygon, area_discretization=self.AREA_SRC_DISC
+            polygon=polygon, area_discretization=AREA_SRC_DISC
         )
 
         return area
@@ -136,7 +140,7 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
             name="Mount Diablo Thrust",
             tectonic_region_type="Active Shallow Crust",
             mfd=incr_mfd,
-            rupture_mesh_spacing=self.MESH_SPACING,
+            rupture_mesh_spacing=MESH_SPACING,
             magnitude_scaling_relationship=scalerel.WC1994(),
             rupture_aspect_ratio=1.5,
             upper_seismogenic_depth=10.0,
@@ -185,7 +189,7 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
             name="Cascadia Megathrust",
             tectonic_region_type="Subduction Interface",
             mfd=tgr_mfd,
-            rupture_mesh_spacing=self.MESH_SPACING,
+            rupture_mesh_spacing=MESH_SPACING,
             magnitude_scaling_relationship=scalerel.WC1994(),
             rupture_aspect_ratio=2.0,
             edges=edges,
@@ -198,7 +202,7 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
     def test_point_to_nhlib(self):
         exp = self._expected_point
         actual = source_input.nrml_to_nhlib(
-            self.point, self.MESH_SPACING, self.BIN_WIDTH, self.AREA_SRC_DISC
+            self.point, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
         )
 
         eq, msg = helpers.deep_eq(exp, actual)
@@ -208,7 +212,7 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
     def test_area_to_nhlib(self):
         exp = self._expected_area
         actual = source_input.nrml_to_nhlib(
-            self.area, self.MESH_SPACING, self.BIN_WIDTH, self.AREA_SRC_DISC
+            self.area, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
         )
 
         eq, msg = helpers.deep_eq(exp, actual)
@@ -218,7 +222,7 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
     def test_simple_to_nhlib(self):
         exp = self._expected_simple
         actual = source_input.nrml_to_nhlib(
-            self.simple, self.MESH_SPACING, self.BIN_WIDTH, self.AREA_SRC_DISC
+            self.simple, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
         )
 
         eq, msg = helpers.deep_eq(exp, actual)
@@ -228,9 +232,33 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
     def test_complex_to_nhlib(self):
         exp = self._expected_complex
         actual = source_input.nrml_to_nhlib(
-            self.cmplx, self.MESH_SPACING, self.BIN_WIDTH, self.AREA_SRC_DISC
+            self.cmplx, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
         )
 
         eq, msg = helpers.deep_eq(exp, actual)
 
         self.assertTrue(eq, msg)
+
+
+class SourceDBWriterTestCase(unittest.TestCase):
+    """Test DB serialization of seismic sources using
+    :class:`openquake.input.source.SourceDBWriter`.
+    """
+
+    def test_serialize(self):
+        parser = nrml_parsers.SourceModelParser(MIXED_SRC_MODEL)
+
+        inp = models.Input(
+            owner=helpers.default_user(),
+            digest='fake',
+            path='fake',
+            input_type='source',
+            size=0
+        )
+        inp.save()
+
+        db_writer = source_input.SourceDBWriter(
+            inp, parser.parse(), MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
+        )
+        db_writer.serialize()
+        import nose; nose.tools.set_trace()
