@@ -395,9 +395,14 @@ class ParsedSource(djm.Model):
     source_type = djm.TextField(choices=Source.SI_TYPE_CHOICES)
     blob = djm.TextField(help_text="The BLOB that holds the serialized "
                                    "python object tree.")
-    geom = djm.GeometryField(
-        srid=4326, dim=2, help_text="A generic 2-dimensional geometry column "
-                                    "with the various source geometries.")
+    polygon = djm.PolygonField(
+        srid=4326, dim=2,
+        help_text=('The surface projection (2D) of the "rupture enclosing" '
+                   'polygon for each source. This is relevant to all source '
+                   'types, including point sources. When considering a '
+                   'parsed_source record given a minimum integration distance,'
+                   ' use this polygon in distance calculations.')
+    )
 
     class Meta:
         db_table = 'hzrdi\".\"parsed_source'
