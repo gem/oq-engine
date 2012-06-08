@@ -6,4 +6,4 @@ find . -name "*.pyc" -delete
 # in addition to doctests within the openquake codebase.
 (export DJANGO_SETTINGS_MODULE="openquake.settings";
  PYTHONPATH="$PYTHONPATH:openquake/nrml";
- nosetests --with-doctest "$@" tests 2>&1 | tee last_test_run.log)
+ nosetests --with-doctest "$@" tests openquake 2>&1 | tee last_test_run.log)
