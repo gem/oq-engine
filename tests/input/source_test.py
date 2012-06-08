@@ -153,7 +153,47 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
 
     @property
     def _expected_complex(self):
-        return None
+        tgr_mfd = mfd.TruncatedGRMFD(
+            a_val=-3.5, b_val=1.0, min_mag=5.0, max_mag=6.5, bin_width=1.0
+        )
+
+        edges = [
+            geo.Line([
+                geo.Point(-124.704, 40.363, 0.5493260E+01),
+                geo.Point(-124.977, 41.214, 0.4988560E+01),
+                geo.Point(-125.140, 42.096, 0.4897340E+01),
+            ]),
+            geo.Line([
+                geo.Point(-124.704, 40.363, 0.5593260E+01),
+                geo.Point(-124.977, 41.214, 0.5088560E+01),
+                geo.Point(-125.140, 42.096, 0.4997340E+01),
+            ]),
+            geo.Line([
+                geo.Point(-124.704, 40.363, 0.5693260E+01),
+                geo.Point(-124.977, 41.214, 0.5188560E+01),
+                geo.Point(-125.140, 42.096, 0.5097340E+01),
+            ]),
+            geo.Line([
+                geo.Point(-123.829, 40.347, 0.2038490E+02),
+                geo.Point(-124.137, 41.218, 0.1741390E+02),
+                geo.Point(-124.252, 42.115, 0.1752740E+02),
+            ]),
+        ]
+
+        cmplx = source.ComplexFaultSource(
+            source_id="4",
+            name="Cascadia Megathrust",
+            tectonic_region_type="Subduction Interface",
+            mfd=tgr_mfd,
+            rupture_mesh_spacing=self.MESH_SPACING,
+            magnitude_scaling_relationship=scalerel.WC1994(),
+            rupture_aspect_ratio=2.0,
+            edges=edges,
+            rake=30.0
+        )
+
+        return cmplx
+
 
     def test_point_to_nhlib(self):
         exp = self._expected_point
@@ -186,7 +226,7 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
         self.assertTrue(eq, msg)
 
     def test_complex_to_nhlib(self):
-        exp = self._expected_simple
+        exp = self._expected_complex
         actual = source_input.nrml_to_nhlib(
             self.cmplx, self.MESH_SPACING, self.BIN_WIDTH, self.AREA_SRC_DISC
         )
