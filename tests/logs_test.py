@@ -246,7 +246,7 @@ class PythonAMQPLogTestCase(unittest.TestCase):
         self.assertEqual(info['levelname'], 'INFO')
         self.assertEqual(info['levelno'], logging.INFO)
 
-        self.assertEqual(info['module'], "logs_unittest")
+        self.assertEqual(info['module'], "logs_test")
         self.assertEqual(info['funcName'], 'test_amqp_handler')
         thisfile = __file__.rstrip('c')
         self.assertEqual(info['pathname'], thisfile)
