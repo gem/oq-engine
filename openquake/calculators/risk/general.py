@@ -132,8 +132,7 @@ class BaseRiskCalculator(Calculator):
         """
         return self.job_ctxt.params[job_config.CALCULATION_MODE] in (
             job_config.BCR_CLASSICAL_MODE,
-            job_config.BCR_EVENT_BASED_MODE
-        )
+            job_config.BCR_EVENT_BASED_MODE)
 
     def pre_execute(self):
         """Make sure the exposure and vulnerability data is in the database."""
@@ -142,16 +141,19 @@ class BaseRiskCalculator(Calculator):
         self.partition()
 
     @staticmethod
-    def _cell_to_polygon(lowerleft, cell_size):
+    def _cell_to_polygon(center, cell_size):
         """Return the cell with the given mid point and size.
 
-        :param lowerleft: the lower left corner of the risk cell
-        :type lowerleft: a :py:class:`openquake.shapes.Site` instance
+        :param center: the center of the risk cell
+        :type center: a :py:class:`openquake.shapes.Site` instance
         :param float cell_size: the configured risk cell size
 
         :return: the risk cell as a :py:class:`django.contrib.gis.geos.Polygon`
         """
-        lon, lat = lowerleft.coords
+        clon, clat = center.coords
+        half_csize = cell_size / 2.0
+        lon, lat = (clon - half_csize, clat - half_csize)
+
         coos = [(lon, lat),                             # lower left
                 (lon, lat + cell_size),                 # upper left
                 (lon + cell_size, lat + cell_size),     # upper right
@@ -171,12 +173,12 @@ class BaseRiskCalculator(Calculator):
             cls._em_job_id = job_id
 
     @classmethod
-    def assets_for_cell(cls, job_id, lowerleft):
+    def assets_for_cell(cls, job_id, center):
         """Return exposure assets for the given job and risk cell mid-point.
 
         :param int job_id: the database key of the job in question
-        :param lowerleft: a :py:class:`openquake.shapes.Site` instance
-            with the location of the lower left corner of the risk cell
+        :param center: a :py:class:`openquake.shapes.Site` instance
+            with the location of the risk cell center
         :returns: a potentially empty list of
             :py:class:`openquake.db.models.ExposureData` instances
         """
@@ -187,7 +189,7 @@ class BaseRiskCalculator(Calculator):
         if not cls._em_inputs:
             return []
 
-        risk_cell = cls._cell_to_polygon(lowerleft, jp.region_grid_spacing)
+        risk_cell = cls._cell_to_polygon(center, jp.region_grid_spacing)
         result = models.ExposureData.objects.filter(
             exposure_model__input__in=cls._em_inputs,
             site__contained=risk_cell)
@@ -327,37 +329,43 @@ class BaseRiskCalculator(Calculator):
                 yield point, asset
 
     def _write_output_for_block(self, job_id, block_id):
-        """ Given a job and a block, write out a plotted curve """
-        loss_ratio_curves = []
+        """
+        Write loss / loss ratio curves to xml for a single block.
+        """
+
         loss_curves = []
+        loss_ratio_curves = []
         block = Block.from_kvs(job_id, block_id)
-        for point, asset in self.grid_assets_iterator(
-                block.grid(self.job_ctxt.region)):
-            site = shapes.Site(asset.site.x, asset.site.y)
 
-            loss_curve = kvs.get_client().get(
-                kvs.tokens.loss_curve_key(
+        for site in block.sites:
+            point = self.job_ctxt.region.grid.point_at(site)
+            assets = BaseRiskCalculator.assets_at(self.job_ctxt.job_id, site)
+
+            for asset in assets:
+                loss_curve = kvs.get_client().get(
+                    kvs.tokens.loss_curve_key(
                     job_id, point.row, point.column, asset.asset_ref))
-            loss_ratio_curve = kvs.get_client().get(
-                kvs.tokens.loss_ratio_key(
+
+                loss_ratio_curve = kvs.get_client().get(
+                    kvs.tokens.loss_ratio_key(
                     job_id, point.row, point.column, asset.asset_ref))
 
-            if loss_curve:
-                loss_curve = shapes.Curve.from_json(loss_curve)
-                loss_curves.append((site, (loss_curve, asset)))
+                if loss_curve:
+                    loss_curve = shapes.Curve.from_json(loss_curve)
+                    loss_curves.append((site, (loss_curve, asset)))
 
-            if loss_ratio_curve:
-                loss_ratio_curve = shapes.Curve.from_json(loss_ratio_curve)
-                loss_ratio_curves.append((site, (loss_ratio_curve, asset)))
+                if loss_ratio_curve:
+                    loss_ratio_curve = shapes.Curve.from_json(loss_ratio_curve)
+                    loss_ratio_curves.append((site, (loss_ratio_curve, asset)))
 
-        results = self._serialize(block_id,
-                                           curves=loss_ratio_curves,
-                                           curve_mode='loss_ratio')
+        results = self._serialize(block_id, curves=loss_ratio_curves,
+                curve_mode="loss_ratio")
+
         if loss_curves:
-            results.extend(
-                self._serialize(
-                    block_id, curves=loss_curves, curve_mode='loss',
-                    curve_mode_prefix='loss_curve', render_multi=True))
+            results.extend(self._serialize(
+                block_id, curves=loss_curves, curve_mode="loss",
+                curve_mode_prefix="loss_curve", render_multi=True))
+
         return results
 
     def asset_losses_per_site(self, loss_poe, assets_iterator):
