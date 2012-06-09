@@ -33,6 +33,8 @@ except ImportError:
 
 from lxml import etree
 
+from nhlib.gsim.base import GroundShakingIntensityModel
+
 from openquake.java import jvm
 from openquake.nrml.utils import nrml_schema_file
 
@@ -869,10 +871,8 @@ class GMPELogicTree(BaseLogicTree):
         source models. Used to check that there are GMPEs for each, but
         no unattended ones.
     """
-    #: Java package to look for GMPE classes.
-    GMPE_PACKAGE = 'org.opensha.sha.imr.attenRelImpl'
-    #: Base GMPE java class (all valid GMPEs must extend it).
-    BASE_GMPE = 'org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI'
+    #: Base GMPE class (all valid GMPEs must extend it).
+    BASE_GMPE = GroundShakingIntensityModel
 
     def __init__(self, tectonic_region_types, *args, **kwargs):
         self.tectonic_region_types = frozenset(tectonic_region_types)
@@ -883,23 +883,30 @@ class GMPELogicTree(BaseLogicTree):
         """
         See superclass' method for description and signature specification.
 
-        Checks that the value is the name of the class inside java package
-        :attr:`GMPE_PACKAGE` which implements interface :attr:`BASE_GMPE`.
+        Checks that the value is the import name of the class that extends
+        :attr:`BASE_GMPE` abstract base class.
         """
-        base_gmpe = jvm().JClass(self.BASE_GMPE)
+        if not '.' in value:
+            raise ValidationError(
+                node, self.filename, self.basepath,
+                'gmpe name must be fully-qualified import path'
+            )
+        module, classname = value.rsplit('.', 1)
         try:
-            gmpe = jvm().JClass('%s.%s' % (self.GMPE_PACKAGE, value))
-        except jvm().JavaException:
-            # Class not found
-            pass
-        else:
-            if issubclass(gmpe, base_gmpe):
-                # Class exists and implements the proper interface.
-                return value
-        raise ValidationError(
-            node, self.filename, self.basepath,
-            'gmpe %r is not available' % value
-        )
+            module = __import__(module, fromlist=[classname])
+        except ImportError as exc:
+            raise ValidationError(node, self.filename, self.basepath,
+                                  'could not import module %r: %s'
+                                  % (module, exc))
+        if not hasattr(module, classname):
+            raise ValidationError(node, self.filename, self.basepath,
+                                  'module %r does not contain name %r'
+                                  % (module.__name__, classname))
+        gmpe_class = getattr(module, classname)
+        if not issubclass(gmpe_class, self.BASE_GMPE):
+            raise ValidationError(node, self.filename, self.basepath,
+                                  '%r is not a gmpe class' % gmpe_class)
+        return gmpe_class()
 
     def validate_filters(self, node, uncertainty_type, filters):
         """
