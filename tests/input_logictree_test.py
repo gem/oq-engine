@@ -27,6 +27,9 @@ import json
 
 from mock import Mock
 
+from nhlib.gsim.sadigh_1997 import SadighEtAl1997
+from nhlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
+
 from openquake.java import jvm
 from openquake.input import logictree
 from tests.utils.helpers import patch, get_data_path, assertDeepAlmostEqual
@@ -1003,7 +1006,9 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                                     branchSetID="bs1"
                                     applyToTectonicRegionType="Volcanic">
                     <logicTreeBranch branchID="b1">
-                        <uncertaintyModel>CL_2002_AttenRel</uncertaintyModel>
+                        <uncertaintyModel>
+                            nhlib.gsim.sadigh_1997.SadighEtAl1997
+                        </uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
@@ -1011,7 +1016,9 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                             branchSetID="bs2"
                             applyToTectonicRegionType="Subduction IntraSlab">
                     <logicTreeBranch branchID="b2">
-                        <uncertaintyModel>CB_2008_AttenRel</uncertaintyModel>
+                        <uncertaintyModel>
+                            nhlib.gsim.sadigh_1997.SadighEtAl1997
+                        </uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
@@ -1026,9 +1033,9 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                 'in gmpe logic tree'
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
-        self.assertEqual(exc.lineno, 13)
+        self.assertEqual(exc.lineno, 15)
 
-    def test_unavailable_gmpe_no_such_class(self):
+    def test_unavailable_gmpe_not_fully_qualified_import_path(self):
         gmpe = _make_nrml("""\
         <logicTree logicTreeID="lt1">
             <logicTreeBranchingLevel branchingLevelID="bl1">
@@ -1046,11 +1053,12 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
                                             set(['Volcanic']),
                                             logictree.ValidationError)
-        self.assertEqual(exc.message, "gmpe 'no_such_gmpe' is not available",
-                        "wrong exception message: %s" % exc.message)
+        self.assertEqual(exc.message,
+                         "gmpe name must be fully-qualified import path",
+                         "wrong exception message: %s" % exc.message)
         self.assertEqual(exc.lineno, 7)
 
-    def test_unavailable_gmpe_wrong_class(self):
+    def test_unavailable_gmpe_module_not_importable(self):
         gmpe = _make_nrml("""\
         <logicTree logicTreeID="lt1">
             <logicTreeBranchingLevel branchingLevelID="bl1">
@@ -1058,9 +1066,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                                     branchSetID="bs1"
                                     applyToTectonicRegionType="Volcanic">
                     <logicTreeBranch branchID="b1">
-                        <uncertaintyModel>
-                            constants.AkB2010Constants
-                        </uncertaintyModel>
+                        <uncertaintyModel>gmpe_mod.gmpe_cls</uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
@@ -1070,7 +1076,53 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
                                             set(['Volcanic']),
                                             logictree.ValidationError)
-        error = "gmpe 'constants.AkB2010Constants' is not available"
+        error = "could not import module 'gmpe_mod': No module named gmpe_mod"
+        self.assertEqual(exc.message, error,
+                        "wrong exception message: %s" % exc.message)
+        self.assertEqual(exc.lineno, 7)
+
+    def test_unavailable_gmpe_module_doesnt_export_class(self):
+        gmpe = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                    branchSetID="bs1"
+                                    applyToTectonicRegionType="Volcanic">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>nhlib.gsim.GMPE</uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
+                                            set(['Volcanic']),
+                                            logictree.ValidationError)
+        error = "module 'nhlib.gsim' does not contain name 'GMPE'"
+        self.assertEqual(exc.message, error,
+                        "wrong exception message: %s" % exc.message)
+        self.assertEqual(exc.lineno, 7)
+
+    def test_unavailable_gmpe_not_subclass_of_base_class(self):
+        gmpe = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                    branchSetID="bs1"
+                                    applyToTectonicRegionType="Volcanic">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>nhlib.site.Site</uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
+                                            set(['Volcanic']),
+                                            logictree.ValidationError)
+        error = "<class 'nhlib.site.Site'> is not a gmpe class"
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
         self.assertEqual(exc.lineno, 7)
@@ -1135,7 +1187,9 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                             branchSetID="bs1"
                             applyToTectonicRegionType="Subduction Interface">
                     <logicTreeBranch branchID="b1">
-                        <uncertaintyModel>AS_1997_AttenRel</uncertaintyModel>
+                        <uncertaintyModel>
+                            nhlib.gsim.sadigh_1997.SadighEtAl1997
+                        </uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
@@ -1145,7 +1199,9 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                             branchSetID="bs2"
                             applyToTectonicRegionType="Subduction Interface">
                     <logicTreeBranch branchID="b2">
-                        <uncertaintyModel>BA_2008_AttenRel</uncertaintyModel>
+                        <uncertaintyModel>
+                            nhlib.gsim.chiou_youngs_2008.ChiouYoungs2008
+                        </uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
@@ -1159,7 +1215,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                 "'Subduction Interface' has already been defined"
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
-        self.assertEqual(exc.lineno, 15)
+        self.assertEqual(exc.lineno, 17)
 
     def test_missing_tectonic_region_type(self):
         gmpe = _make_nrml("""\
@@ -1169,7 +1225,9 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                             branchSetID="bs1"
                             applyToTectonicRegionType="Subduction Interface">
                   <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>Campbell_1997_AttenRel</uncertaintyModel>
+                    <uncertaintyModel>
+                        nhlib.gsim.sadigh_1997.SadighEtAl1997
+                    </uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                   </logicTreeBranch>
                 </logicTreeBranchSet>
@@ -1504,7 +1562,7 @@ class GMPELogicTreeTestCase(unittest.TestCase):
             self.assertNotEqual(len(branchset.branches), 0)
             trt = branchset.filters['applyToTectonicRegionType']
             actual_result[trt] = [
-                (branch.branch_id, str(branch.weight), branch.value)
+                (branch.branch_id, str(branch.weight), type(branch.value))
                 for branch in branchset.branches
             ]
             next_branchset = branchset.branches[0].child_branchset
@@ -1524,11 +1582,15 @@ class GMPELogicTreeTestCase(unittest.TestCase):
                             branchSetID="bs1"
                             applyToTectonicRegionType="Subduction Interface">
                     <logicTreeBranch branchID="b1">
-                        <uncertaintyModel>AS_1997_AttenRel</uncertaintyModel>
+                        <uncertaintyModel>
+                            nhlib.gsim.sadigh_1997.SadighEtAl1997
+                        </uncertaintyModel>
                         <uncertaintyWeight>0.7</uncertaintyWeight>
                     </logicTreeBranch>
                     <logicTreeBranch branchID="b2">
-                        <uncertaintyModel>BW_1997_AttenRel</uncertaintyModel>
+                        <uncertaintyModel>
+                            nhlib.gsim.chiou_youngs_2008.ChiouYoungs2008
+                        </uncertaintyModel>
                         <uncertaintyWeight>0.3</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
@@ -1538,7 +1600,9 @@ class GMPELogicTreeTestCase(unittest.TestCase):
                             branchSetID="bs2"
                             applyToTectonicRegionType="Active Shallow Crust">
                     <logicTreeBranch branchID="b3">
-                        <uncertaintyModel>BA_2008_AttenRel</uncertaintyModel>
+                        <uncertaintyModel>
+                            nhlib.gsim.sadigh_1997.SadighEtAl1997
+                        </uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
@@ -1549,21 +1613,15 @@ class GMPELogicTreeTestCase(unittest.TestCase):
                             applyToTectonicRegionType="Volcanic">
                     <logicTreeBranch branchID="b4">
                         <uncertaintyModel>
-                            Abrahamson_2000_AttenRel
+                            nhlib.gsim.chiou_youngs_2008.ChiouYoungs2008
                         </uncertaintyModel>
                         <uncertaintyWeight>0.1</uncertaintyWeight>
                     </logicTreeBranch>
                     <logicTreeBranch branchID="b5">
                         <uncertaintyModel>
-                            GouletEtAl_2006_AttenRel
+                            nhlib.gsim.sadigh_1997.SadighEtAl1997
                         </uncertaintyModel>
-                        <uncertaintyWeight>0.8</uncertaintyWeight>
-                    </logicTreeBranch>
-                    <logicTreeBranch branchID="b6">
-                        <uncertaintyModel>
-                            Field_2000_AttenRel
-                        </uncertaintyModel>
-                        <uncertaintyWeight>0.1</uncertaintyWeight>
+                        <uncertaintyWeight>0.9</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
             </logicTreeBranchingLevel>
@@ -1573,16 +1631,15 @@ class GMPELogicTreeTestCase(unittest.TestCase):
         gmpe_lt = _TesteableGMPELogicTree('gmpe', gmpe, '/base', trts)
         self.assert_result(gmpe_lt, {
             'Subduction Interface': [
-                ('b1', '0.7', 'AS_1997_AttenRel'),
-                ('b2', '0.3', 'BW_1997_AttenRel')
+                ('b1', '0.7', SadighEtAl1997),
+                ('b2', '0.3', ChiouYoungs2008)
             ],
             'Active Shallow Crust': [
-                ('b3', '1.0', 'BA_2008_AttenRel')
+                ('b3', '1.0', SadighEtAl1997)
             ],
             'Volcanic': [
-                ('b4', '0.1', 'Abrahamson_2000_AttenRel'),
-                ('b5', '0.8', 'GouletEtAl_2006_AttenRel'),
-                ('b6', '0.1', 'Field_2000_AttenRel')
+                ('b4', '0.1', ChiouYoungs2008),
+                ('b5', '0.9', SadighEtAl1997),
             ]
         })
 
