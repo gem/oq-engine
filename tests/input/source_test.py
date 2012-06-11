@@ -269,15 +269,27 @@ class SourceDBWriterTestCase(unittest.TestCase):
         self.assertEquals(source_model.name, inp.name)
 
         # re-reparse the test file for comparisons:
-        exp_area, exp_point, exp_simple, exp_cmplx = list(
+        nrml_sources = list(
             nrml_parsers.SourceModelParser(MIXED_SRC_MODEL).parse()
         )
 
-        parsed_sources = models.ParsedSource.objects.filter(input=inp.id)
-        area, point, simple, cmplx = [pickle.loads(x.blob)
-                                      for x in parsed_sources]
+        parsed_sources = list(models.ParsedSource.objects.filter(input=inp.id))
 
-        self.assertTrue(helpers.deep_eq(exp_area, area))
-        self.assertTrue(helpers.deep_eq(exp_point, point))
-        self.assertTrue(helpers.deep_eq(exp_simple, simple))
-        self.assertTrue(helpers.deep_eq(exp_cmplx, cmplx))
+        # compare pristine nrml sources to those stored in pickled form in the
+        # database (by unpickling them first, of course):
+        for i, ns in enumerate(nrml_sources):
+            self.assertTrue(
+                *helpers.deep_eq(ns, pickle.loads(parsed_sources[i].blob))
+            )
+
+        # now check that the ParsedSource geometry is correct
+        # it should be the same as the 'rupture-enclosing' geometry for the
+        # nhlib representation of each source
+        for i, (ns, ps) in enumerate(zip(nrml_sources, parsed_sources)):
+            nhlib_src = source_input.nrml_to_nhlib(
+                ns, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
+            )
+
+            nhlib_poly = nhlib_src.get_rupture_enclosing_polygon()
+            nhlib_poly._init_polygon2d()
+            self.assertEquals(ps.polygon.wkt, nhlib_poly._polygon2d.wkt)
