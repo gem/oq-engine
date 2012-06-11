@@ -332,6 +332,9 @@ class SourceDBWriter(object):
 
     @transaction.commit_on_success(router.db_for_write(models.ParsedSource))
     def serialize(self):
+        """Save NRML sources to the database along with
+        'rupture-enclosing polygon' geometry for each source.
+        """
 
         assert self.inp.input_type == 'source', (
             "`Input` object has the wrong `input_type`. Expected: 'source'."
@@ -341,17 +344,17 @@ class SourceDBWriter(object):
         self.inp.name = self.source_model.name
         self.inp.save()
 
-        for source in self.source_model:
-            blob = pickle.dumps(source, pickle.HIGHEST_PROTOCOL)
+        for src in self.source_model:
+            blob = pickle.dumps(src, pickle.HIGHEST_PROTOCOL)
             nhlib_src = nrml_to_nhlib(
-                source, self.mesh_spacing, self.bin_width, self.area_src_disc
+                src, self.mesh_spacing, self.bin_width, self.area_src_disc
             )
             geom = nhlib_src.get_rupture_enclosing_polygon()
             # Resample and initialize the `shapely` polygon
             geom._init_polygon2d()
 
             ps = models.ParsedSource(
-                input=self.inp, source_type=_source_type(source), blob=blob,
+                input=self.inp, source_type=_source_type(src), blob=blob,
                 polygon=geom._polygon2d.wkt
             )
             ps.save()
