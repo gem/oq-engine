@@ -15,6 +15,7 @@
 
 
 import decimal
+import pickle
 import unittest
 
 from nhlib import geo
@@ -43,7 +44,6 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
     """Tests for converting NRML source model objects to the nhlib
     representation.
     """
-
 
     @classmethod
     def setUpClass(cls):
@@ -154,7 +154,6 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
 
         return simple
 
-
     @property
     def _expected_complex(self):
         tgr_mfd = mfd.TruncatedGRMFD(
@@ -197,7 +196,6 @@ class NrmlSourceToNhlibTestCase(unittest.TestCase):
         )
 
         return cmplx
-
 
     def test_point_to_nhlib(self):
         exp = self._expected_point
@@ -247,6 +245,7 @@ class SourceDBWriterTestCase(unittest.TestCase):
 
     def test_serialize(self):
         parser = nrml_parsers.SourceModelParser(MIXED_SRC_MODEL)
+        source_model = parser.parse()
 
         inp = models.Input(
             owner=helpers.default_user(),
@@ -258,7 +257,27 @@ class SourceDBWriterTestCase(unittest.TestCase):
         inp.save()
 
         db_writer = source_input.SourceDBWriter(
-            inp, parser.parse(), MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
+            inp, source_model, MESH_SPACING, BIN_WIDTH, AREA_SRC_DISC
         )
         db_writer.serialize()
-        import nose; nose.tools.set_trace()
+
+        # Check that everything was saved properly.
+
+        # First, check the Input:
+        # refresh the record
+        [inp] = models.Input.objects.filter(id=inp.id)
+        self.assertEquals(source_model.name, inp.name)
+
+        # re-reparse the test file for comparisons:
+        exp_area, exp_point, exp_simple, exp_cmplx = list(
+            nrml_parsers.SourceModelParser(MIXED_SRC_MODEL).parse()
+        )
+
+        parsed_sources = models.ParsedSource.objects.filter(input=inp.id)
+        area, point, simple, cmplx = [pickle.loads(x.blob)
+                                      for x in parsed_sources]
+
+        self.assertTrue(helpers.deep_eq(exp_area, area))
+        self.assertTrue(helpers.deep_eq(exp_point, point))
+        self.assertTrue(helpers.deep_eq(exp_simple, simple))
+        self.assertTrue(helpers.deep_eq(exp_cmplx, cmplx))
