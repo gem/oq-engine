@@ -25,6 +25,7 @@
 Model representations of the OpenQuake DB tables.
 '''
 
+import base64
 import os
 
 from collections import namedtuple
@@ -393,11 +394,25 @@ class ParsedSource(djm.Model):
        tree format."""
     input = djm.ForeignKey('Input')
     source_type = djm.TextField(choices=Source.SI_TYPE_CHOICES)
-    blob = djm.TextField(help_text="The BLOB that holds the serialized "
-                                   "python object tree.")
-    geom = djm.GeometryField(
-        srid=4326, dim=2, help_text="A generic 2-dimensional geometry column "
-                                    "with the various source geometries.")
+    _blob = djm.TextField(db_column='blob', help_text=(
+        "The BLOB that holds the serialized python object tree.")
+    )
+    polygon = djm.PolygonField(
+        srid=4326, dim=2,
+        help_text=('The surface projection (2D) of the "rupture enclosing" '
+                   'polygon for each source. This is relevant to all source '
+                   'types, including point sources. When considering a '
+                   'parsed_source record given a minimum integration distance,'
+                   ' use this polygon in distance calculations.')
+    )
+
+    def set_blob(self, blob):
+        self._blob = base64.encodestring(blob)
+
+    def get_blob(self):
+        return base64.decodestring(self._blob)
+
+    blob = property(get_blob, set_blob)
 
     class Meta:
         db_table = 'hzrdi\".\"parsed_source'
@@ -615,6 +630,7 @@ class Input(djm.Model):
     '''
     owner = djm.ForeignKey('OqUser')
     model_content = djm.ForeignKey('ModelContent')
+    name = djm.TextField(null=True)
     digest = djm.TextField(help_text="32 byte md5sum digest, used to "
                                      "detect identical input model files")
     path = djm.TextField()
