@@ -907,6 +907,17 @@ class GMPELogicTree(BaseLogicTree):
         self.defined_tectonic_region_types = set()
         super(GMPELogicTree, self).__init__(*args, **kwargs)
 
+    def parse_uncertainty_value(self, node, branchset, value):
+        """
+        See superclass' method for description and signature specification.
+
+        Convert gmpe import path to a gmpe object.
+        """
+        module, classname = value.rsplit('.', 1)
+        module = __import__(module, fromlist=[classname])
+        gmpe_class = getattr(module, classname)
+        return gmpe_class()
+
     def validate_uncertainty_value(self, node, branchset, value):
         """
         See superclass' method for description and signature specification.
@@ -934,7 +945,14 @@ class GMPELogicTree(BaseLogicTree):
         if not issubclass(gmpe_class, self.BASE_GMPE):
             raise ValidationError(node, self.filename, self.basepath,
                                   '%r is not a gmpe class' % gmpe_class)
-        return gmpe_class()
+
+    def parse_filters(self, node, uncertainty_type, filters):
+        """
+        See superclass' method for description and signature specification.
+
+        Does nothing, simply returns ``filters``.
+        """
+        return filters
 
     def validate_filters(self, node, uncertainty_type, filters):
         """
@@ -966,7 +984,6 @@ class GMPELogicTree(BaseLogicTree):
                 'been defined' % trt
             )
         self.defined_tectonic_region_types.add(trt)
-        return filters
 
     def validate_tree(self, tree_node, root_branchset):
         """
