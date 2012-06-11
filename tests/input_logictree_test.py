@@ -36,10 +36,19 @@ from tests.utils.helpers import patch, get_data_path, assertDeepAlmostEqual
 
 
 class _TesteableSourceModelLogicTree(logictree.SourceModelLogicTree):
-    def __init__(self, filename, files, basepath):
+    def __init__(self, filename, files, basepath, validate=True):
         self.files = files
-        super(_TesteableSourceModelLogicTree, self).__init__(basepath,
-                                                             filename)
+        if not validate:
+            self.validate_branchset = self.__fail
+            self.validate_tree = self.__fail
+            self.validate_filters = self.__fail
+            self.validate_uncertainty_value = self.__fail
+        super(_TesteableSourceModelLogicTree, self).__init__(
+            basepath, filename, validate
+        )
+
+    def __fail(self, *args, **kwargs):
+        raise AssertionError("this method shouldn't be called")
 
     def _open_file(self, filename):
         if not filename in self.files:
@@ -50,12 +59,21 @@ class _TesteableSourceModelLogicTree(logictree.SourceModelLogicTree):
 
 
 class _TesteableGMPELogicTree(logictree.GMPELogicTree):
-    def __init__(self, filename, content, basepath, tectonic_region_types):
+    def __init__(self, filename, content, basepath, tectonic_region_types,
+                 validate=True):
         self.content = content
+        if not validate:
+            self.validate_branchset = self.__fail
+            self.validate_tree = self.__fail
+            self.validate_filters = self.__fail
+            self.validate_uncertainty_value = self.__fail
         super(_TesteableGMPELogicTree, self).__init__(
             tectonic_region_types, basepath=basepath,
-            filename=filename
+            filename=filename, validate=validate
         )
+
+    def __fail(self, *args, **kwargs):
+        raise AssertionError("this method shouldn't be called")
 
     def _open_file(self, filename):
         if not self.content:
@@ -1215,7 +1233,8 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         lt = _TesteableSourceModelLogicTree(
-            'lt', {'lt': lt_source, 'sm1': sm, 'sm2': sm}, 'basepath'
+            'lt', {'lt': lt_source, 'sm1': sm, 'sm2': sm}, 'basepath',
+            validate=False
         )
         self.assert_branchset_equal(lt.root_branchset, 'sourceModel', {},
                                     [('b1', '0.6', 'basepath/sm1'),
@@ -1250,7 +1269,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         lt = _TesteableSourceModelLogicTree('lt', {'lt': lt_source, 'sm': sm},
-                                            '/base')
+                                            '/base', validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
             [('b1', '1.0', '/base/sm',
@@ -1290,7 +1309,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         lt = _TesteableSourceModelLogicTree('lt', {'lt': lt_source, 'sm': sm},
-                                            '/base')
+                                            '/base', validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
             [('b1', '1.0', '/base/sm',
@@ -1343,7 +1362,8 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         lt = _TesteableSourceModelLogicTree(
-            'lt', {'lt': lt_source, 'sm1': sm, 'sm2': sm, 'sm3': sm}, '/base'
+            'lt', {'lt': lt_source, 'sm1': sm, 'sm2': sm, 'sm3': sm}, '/base',
+            validate=False
         )
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
@@ -1391,7 +1411,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         lt = _TesteableSourceModelLogicTree('lt', {'lt': lt_source, 'sm': sm},
-                                            '/base')
+                                            '/base', validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
             [('b1', '1.0', '/base/sm')]
@@ -1472,7 +1492,8 @@ class GMPELogicTreeTestCase(unittest.TestCase):
         </logicTree>
         """)
         trts = ['Subduction Interface', 'Active Shallow Crust', 'Volcanic']
-        gmpe_lt = _TesteableGMPELogicTree('gmpe', gmpe, '/base', trts)
+        gmpe_lt = _TesteableGMPELogicTree('gmpe', gmpe, '/base', trts,
+                                          validate=False)
         self.assert_result(gmpe_lt, {
             'Subduction Interface': [
                 ('b1', '0.7', SadighEtAl1997),
