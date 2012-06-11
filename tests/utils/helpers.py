@@ -877,7 +877,6 @@ def _deep_eq(a, b, decimal):
         for key in a:
             _deep_eq(a[key], b[key], decimal)
 
-
     def _test_seq(a, b):
         """Compare `list` or `tuple` types recursively."""
         assert len(a) == len(b), (
@@ -887,7 +886,6 @@ def _deep_eq(a, b, decimal):
 
         for i, item in enumerate(a):
             _deep_eq(item, b[i], decimal)
-
 
     # lists or tuples
     if isinstance(a, (list, tuple)):
