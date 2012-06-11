@@ -485,81 +485,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ValidationError)
         self.assertEqual(exc.lineno, 16)
-        error = "expected list of 2 float(s) separated by space, " \
-                "as source 'src01' has 1 GR MFD(s)"
-        self.assertEqual(exc.message, error,
-                        "wrong exception message: %s" % exc.message)
-
-    def test_ab_gr_absolute_wrong_number_of_pairs(self):
-        lt = _make_nrml("""\
-            <logicTree logicTreeID="lt1">
-              <logicTreeBranchingLevel branchingLevelID="bl1">
-                <logicTreeBranchSet uncertaintyType="sourceModel"
-                                    branchSetID="bs1">
-                  <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>sm</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                  </logicTreeBranch>
-                </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-              <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="abGRAbsolute"
-                                    applyToSources="doublemfd"
-                                    branchSetID="bs1">
-                  <logicTreeBranch branchID="b2">
-                    <uncertaintyModel>
-                        123 321
-                        345 567
-                        142 555
-                    </uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                  </logicTreeBranch>
-                </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-            </logicTree>
-        """)
-        sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ValidationError)
-        self.assertEqual(exc.lineno, 16)
-        error = "expected list of 4 float(s) separated by space, " \
-                "as source 'doublemfd' has 2 GR MFD(s)"
-        self.assertEqual(exc.message, error,
-                        "wrong exception message: %s" % exc.message)
-
-    def test_max_mag_absolute_wrong_number_of_numbers(self):
-        lt = _make_nrml("""\
-            <logicTree logicTreeID="lt1">
-              <logicTreeBranchingLevel branchingLevelID="bl1">
-                <logicTreeBranchSet uncertaintyType="sourceModel"
-                                    branchSetID="bs1">
-                  <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>sm</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                  </logicTreeBranch>
-                </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-              <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
-                                    applyToSources="doublemfd"
-                                    branchSetID="bs1">
-                  <logicTreeBranch branchID="b2">
-                    <uncertaintyModel>
-                        345 567
-                        142 555
-                    </uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                  </logicTreeBranch>
-                </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-            </logicTree>
-        """)
-        sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ValidationError)
-        self.assertEqual(exc.lineno, 16)
-        error = "expected list of 2 float(s) separated by space, " \
-                "as source 'doublemfd' has 2 GR MFD(s)"
+        error = "expected a pair of floats separated by space"
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
 
@@ -797,7 +723,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ValidationError)
         self.assertEqual(exc.lineno, 14)
-        error = "source ids ['bzzz'] are not defined in source models"
+        error = "source with id 'bzzz' is not defined in source models"
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
 
@@ -1369,8 +1295,8 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
             'sourceModel', {},
             [('b1', '1.0', '/base/sm',
                 ('abGRAbsolute', {'applyToSources': ['src01']},
-                    [('b2', '0.9', [(100, 500)]),
-                     ('b3', '0.1', [(-1.23, +0.1)])])
+                    [('b2', '0.9', (100, 500)),
+                     ('b3', '0.1', (-1.23, +0.1))])
             )]
         )
 
@@ -1427,7 +1353,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                 )),
              ('sb2', '0.3', '/base/sm2',
                  ('maxMagGRAbsolute', {'applyToSources': ['src01']},
-                    [('b3', '1.0', [-3])]
+                    [('b3', '1.0', -3)]
                 )),
              ('sb3', '0.1', '/base/sm3',
                 ('bGRRelative', {},
@@ -1437,88 +1363,6 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         )
         sb1, sb2, sb3 = lt.root_branchset.branches
         self.assertTrue(sb1.child_branchset is sb3.child_branchset)
-
-    def test_mixed_mfd_types_absolute_uncertainties(self):
-        lt = _make_nrml("""\
-        <logicTree logicTreeID="lt1">
-            <logicTreeBranchingLevel branchingLevelID="bl1">
-                <logicTreeBranchSet uncertaintyType="sourceModel"
-                                    branchSetID="bs1">
-                    <logicTreeBranch branchID="b1">
-                        <uncertaintyModel>sm</uncertaintyModel>
-                        <uncertaintyWeight>1.0</uncertaintyWeight>
-                    </logicTreeBranch>
-                </logicTreeBranchSet>
-            </logicTreeBranchingLevel>
-            <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
-                                    branchSetID="bs2"
-                                    applyToSources="triplemfd">
-                    <logicTreeBranch branchID="b2">
-                        <uncertaintyModel>10 11</uncertaintyModel>
-                        <uncertaintyWeight>1.0</uncertaintyWeight>
-                    </logicTreeBranch>
-                </logicTreeBranchSet>
-            </logicTreeBranchingLevel>
-        </logicTree>
-        """)
-        # source model has three mfds, from which
-        # only first and third are GR.
-        sm = _make_nrml("""\
-        <sourceModel gml:id="sm1">
-            <config/>
-            <pointSource gml:id="triplemfd">
-              <gml:name></gml:name>
-              <tectonicRegion>Active Shallow Crust</tectonicRegion>
-              <location>
-                <gml:Point><gml:pos>-125.4 42.9</gml:pos></gml:Point>
-              </location>
-
-              <ruptureRateModel>
-                <truncatedGutenbergRichter>
-                    <aValueCumulative>3.6786313049897035</aValueCumulative>
-                    <bValue>1.0</bValue>
-                    <minMagnitude>5.0</minMagnitude>
-                    <maxMagnitude>7.0</maxMagnitude>
-                </truncatedGutenbergRichter>
-                <strike>0.0</strike>
-                <dip>90.0</dip>
-                <rake>0.0</rake>
-              </ruptureRateModel>
-
-              <ruptureRateModel>
-                <evenlyDiscretizedIncrementalMFD minVal="6.55" binSize="0.1"
-                    type="ML">
-                    0.0010614989 8.8291627E-4 7.3437777E-4
-                    6.108288E-4 5.080653E-4
-                </evenlyDiscretizedIncrementalMFD>
-                <strike>0.0</strike>
-                <dip>90.0</dip>
-                <rake>0.0</rake>
-              </ruptureRateModel>
-
-              <ruptureRateModel>
-                <truncatedGutenbergRichter>
-                    <aValueCumulative>3.6786313049897035</aValueCumulative>
-                    <bValue>1.0</bValue>
-                    <minMagnitude>5.0</minMagnitude>
-                    <maxMagnitude>7.0</maxMagnitude>
-                </truncatedGutenbergRichter>
-                <strike>0.0</strike>
-                <dip>90.0</dip>
-                <rake>0.0</rake>
-              </ruptureRateModel>
-
-              <ruptureDepthDistribution>
-                <magnitude>6.0 6.5</magnitude>
-                <depth>5.0 1.0</depth>
-              </ruptureDepthDistribution>
-              <hypocentralDepth>5.0</hypocentralDepth>
-            </pointSource>
-        </sourceModel>
-        """)
-        # check that source and logic tree are valid
-        _TesteableSourceModelLogicTree('lt', {'lt': lt, 'sm': sm}, '')
 
     def test_comments(self):
         lt_source = _make_nrml("""\
