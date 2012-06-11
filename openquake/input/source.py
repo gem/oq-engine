@@ -31,6 +31,8 @@ from shapely import wkt
 
 from openquake.db import models
 
+# Silencing 'Access to protected member' (WRT nhlib polygons)
+# pylint: disable=W0212
 
 _SCALE_REL_MAP = {
     'PeerMSR': scalerel.PeerMSR,
