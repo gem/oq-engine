@@ -1,3 +1,4 @@
+# NRML: Natural hazards' Risk Markup Language
 # Copyright (c) 2010-2012, GEM Foundation.
 #
 # NRML is free software: you can redistribute it and/or modify it
@@ -31,7 +32,7 @@ Copyright (C) 2010-2012 GEM Foundation.
 
 import os
 
-from distutils.core import setup
+from setuptools import setup
 
 
 version = '0.4'
@@ -59,14 +60,25 @@ package_data = _package_data()
 setup(
     name='NRML',
     version=version,
-    author='The OpenQuake Team',
-    author_email='devops@openquake.org',
-    maintainer='Lars Butler',
-    maintainer_email='lars@openquake.org',
+    maintainer='The OpenQuake Team',
+    maintainer_email='devops@openquake.org',
     url=url,
     description="Natural hazards' Risk Markup Language",
     long_description=__doc__,
     platforms=['any'],
     packages=['nrml'],
     package_data={'nrml': package_data},
+    install_requires=['lxml'],
+    license='GNU AGPL v3',
+    keywords='seismic hazard risk',
+    classifiers=(
+        'Development Status :: 4 - Beta',
+        'License :: OSI Approved :: GNU Affero General Public License v3',
+        'Intended Audience :: Education',
+        'Intended Audience :: Science/Research',
+        'Intended Audience :: Financial and Insurance Industry',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python :: 2',
+        'Topic :: Scientific/Engineering',
+    ),
 )
