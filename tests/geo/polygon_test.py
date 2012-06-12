@@ -396,3 +396,44 @@ class PolygonDilateTestCase(unittest.TestCase):
         self.assertIs(dilated._projection, poly._projection)
         self.assertEqual(len(dilated._polygon2d.boundary.coords),
                          len(elons) + 1)
+
+
+class PolygonWKTTestCase(unittest.TestCase):
+    """
+    Test generation of WKT from a :class:`~nhlib.geo.polygon.Polygon`.
+    """
+
+    def test_wkt(self):
+        expected_wkt = (
+            'POLYGON((-1.111111 2.222222, -3.333333 4.444444, '
+            '5.555555 -6.666666, -1.111111 2.222222))'
+        )
+
+        poly = polygon.Polygon(
+            [geo.Point(-1.111111, 2.222222), geo.Point(-3.333333, 4.444444),
+             geo.Point(5.555555, -6.666666)]
+        )
+
+        self.assertEqual(expected_wkt, poly.wkt)
+
+    def test_wkt_is_refreshed(self):
+        # `wkt` is a property of the polygon. If you change coordinates, the
+        # wkt should be updated.
+        expected_wkt1 = (
+            'POLYGON((-1.111111 2.222222, -3.333333 4.444444, '
+            '5.555555 -6.666666, -1.111111 2.222222))'
+        )
+        expected_wkt2 = (
+            'POLYGON((-7.777777 2.222222, -3.333333 4.444444, '
+            '5.555555 -6.666666, -7.777777 2.222222))'
+        )
+
+        poly = polygon.Polygon(
+            [geo.Point(-1.111111, 2.222222), geo.Point(-3.333333, 4.444444),
+             geo.Point(5.555555, -6.666666)]
+        )
+
+        self.assertEqual(expected_wkt1, poly.wkt)
+
+        poly.lons[0] = -7.777777
+        self.assertEqual(expected_wkt2, poly.wkt)
