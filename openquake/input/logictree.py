@@ -33,10 +33,10 @@ except ImportError:
 
 from lxml import etree
 
+import nrml
 from nhlib.gsim.base import GroundShakingIntensityModel
 
 from openquake.java import jvm
-from openquake.nrml.utils import nrml_schema_file
 
 
 class LogicTreeError(Exception):
@@ -352,7 +352,7 @@ class BaseLogicTree(object):
         If logic tree file has a logic error, which can not be prevented
         by xml schema rules (like referencing sources with missing id).
     """
-    NRML = 'http://openquake.org/xmlns/nrml/0.3'
+    NRML = nrml.NAMESPACE
     FILTERS = ('applyToTectonicRegionType',
                'applyToSources',
                'applyToSourceType')
@@ -369,7 +369,7 @@ class BaseLogicTree(object):
         class attribute.
         """
         if not cls._xmlschema:
-            cls._xmlschema = etree.XMLSchema(file=nrml_schema_file())
+            cls._xmlschema = etree.XMLSchema(file=nrml.nrml_schema_file())
         return cls._xmlschema
 
     def __init__(self, basepath, filename, validate=True):
@@ -860,7 +860,6 @@ class SourceModelLogicTree(BaseLogicTree):
         """
         all_source_types = set('{%s}%sSource' % (self.NRML, tagname)
                                for tagname in self.SOURCE_TYPES)
-        tectonic_region_type_tag = '{%s}tectonicRegion' % self.NRML
         sourcetype_slice = slice(len('{%s}' % self.NRML), - len('Source'))
         eventstream = etree.iterparse(self._open_file(filename),
                                       tag='{%s}*' % self.NRML,
@@ -873,22 +872,21 @@ class SourceModelLogicTree(BaseLogicTree):
             except etree.XMLSyntaxError as exc:
                 raise ParsingError(filename, self.basepath, str(exc))
             if not node.tag in all_source_types:
-                if node.tag == tectonic_region_type_tag:
-                    self.tectonic_region_types.add(node.text)
-            else:
-                source_id = node.attrib['{http://www.opengis.net/gml}id']
-                source_type = node.tag[sourcetype_slice]
-                self.source_ids.add(source_id)
-                self.source_types.add(source_type)
+                continue
+            self.tectonic_region_types.add(node.attrib['tectonicRegion'])
+            source_id = node.attrib['id']
+            source_type = node.tag[sourcetype_slice]
+            self.source_ids.add(source_id)
+            self.source_types.add(source_type)
 
-                # saving memory by removing already processed nodes.
-                # see http://lxml.de/parsing.html#modifying-the-tree
-                node.clear()
-                parent = node.getparent()
+            # saving memory by removing already processed nodes.
+            # see http://lxml.de/parsing.html#modifying-the-tree
+            node.clear()
+            parent = node.getparent()
+            prev = node.getprevious()
+            while prev is not None:
+                parent.remove(prev)
                 prev = node.getprevious()
-                while prev is not None:
-                    parent.remove(prev)
-                    prev = node.getprevious()
 
 
 class GMPELogicTree(BaseLogicTree):
