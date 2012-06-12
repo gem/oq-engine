@@ -29,6 +29,9 @@ import shutil
 
 from mock import Mock
 
+import nhlib
+from nhlib.pmf import PMF
+from nhlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from nhlib.gsim.sadigh_1997 import SadighEtAl1997
 from nhlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
 
@@ -1664,26 +1667,30 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
         mfd = Mock()
         bs = logictree.BranchSet('abGRAbsolute', {})
         bs._apply_uncertainty_to_mfd(mfd, (0.1, 33.4))
-        self.assertEqual(mfd.method_calls, [('setAB', (0.1, 33.4), {})])
+        self.assertEqual(mfd.method_calls,
+                         [('modify', ('set_ab',
+                                      {'a_val': 0.1, 'b_val': 33.4}), {})])
 
     def test_apply_uncertainty_b_relative(self):
         mfd = Mock()
         bs = logictree.BranchSet('bGRRelative', {})
         bs._apply_uncertainty_to_mfd(mfd, -1.6)
-        self.assertEqual(mfd.method_calls, [('incrementB', (-1.6, ), {})])
+        self.assertEqual(mfd.method_calls,
+                         [('modify', ('increment_b', {'value': -1.6}), {})])
 
     def test_apply_uncertainty_mmax_relative(self):
         mfd = Mock()
         bs = logictree.BranchSet('maxMagGRRelative', {})
         bs._apply_uncertainty_to_mfd(mfd, 32.1)
         self.assertEqual(mfd.method_calls,
-                         [('incrementMagUpper', (32.1, ), {})])
+                    [('modify', ('increment_max_mag', {'value': 32.1}), {})])
 
     def test_apply_uncertainty_mmax_absolute(self):
         mfd = Mock()
         bs = logictree.BranchSet('maxMagGRAbsolute', {})
         bs._apply_uncertainty_to_mfd(mfd, 55)
-        self.assertEqual(mfd.method_calls, [('setMagUpper', (55, ), {})])
+        self.assertEqual(mfd.method_calls,
+                         [('modify', ('set_max_mag', {'value': 55}), {})])
 
     def test_apply_uncertainty_unknown_uncertainty_type(self):
         bs = logictree.BranchSet('makeMeFeelGood', {})
@@ -1693,116 +1700,115 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
 
 class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
     def setUp(self):
-        super(BranchSetApplyUncertaintyTestCase, self).setUp()
-        self.MFD = jvm().JClass(
-            'org.opensha.sha.magdist.GutenbergRichterMagFreqDist'
+        self.point_source = nhlib.source.PointSource(
+            source_id='point', name='point',
+            tectonic_region_type=nhlib.const.TRT.ACTIVE_SHALLOW_CRUST,
+            mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
+                               max_mag=6.5, bin_width=0.1),
+            nodal_plane_distribution=PMF(
+                [(1, nhlib.geo.NodalPlane(0.0, 90.0, 0.0))]
+            ),
+            hypocenter_distribution=PMF([(1, 10)]),
+            upper_seismogenic_depth=0.0, lower_seismogenic_depth=10.0,
+            magnitude_scaling_relationship=nhlib.scalerel.PeerMSR(),
+            rupture_aspect_ratio=1, location=nhlib.geo.Point(5, 6),
+            rupture_mesh_spacing=1.0
         )
-        SourceModelReader = jvm().JClass('org.gem.engine.hazard.' \
-                                         'parsers.SourceModelReader')
-        srcfile = get_data_path('example-source-model.xml')
-        self.single_mfd_sources = list(SourceModelReader(srcfile, 0.1).read())
-        self.non_gr_mfd_source = self.single_mfd_sources[0]
-        # filtering out first source (has non-gr mfd)
-        self.single_mfd_sources = self.single_mfd_sources[1:]
-        srcfile = get_data_path('example-source-model-double-mfds.xml')
-        self.double_mfd_sources = list(SourceModelReader(srcfile, 0.1).read())
-        _apply_uncertainty = logictree.BranchSet._apply_uncertainty_to_mfd
-        self.mock = patch('openquake.input.logictree.' \
-                          'BranchSet._apply_uncertainty_to_mfd').start()
-        self.mock.side_effect = _apply_uncertainty
-
-    def tearDown(self):
-        super(BranchSetApplyUncertaintyTestCase, self).tearDown()
-        self.mock.stop()
 
     def test_unknown_source_type(self):
-        bs = logictree.BranchSet('maxMagGRRelative', {})
+        bs = logictree.BranchSet('maxMagGRRelative',
+                                 {'applyToSourceType': 'forest'})
         self.assertRaises(AssertionError, bs.apply_uncertainty,
-                          -1, None)
+                          -1, self.point_source)
 
-    def test_relative_uncertainty_single_mfd(self):
+    def test_relative_uncertainty(self):
         uncertainties = [('maxMagGRRelative', +1),
                          ('bGRRelative', -0.2)]
         for uncertainty, value in uncertainties:
             branchset = logictree.BranchSet(uncertainty, {})
-            for source in self.single_mfd_sources:
-                branchset.apply_uncertainty(value, source)
-                self.assertEqual(self.mock.call_count, 1)
-                [(bs, mfd, call_value), kwargs] = self.mock.call_args
-                self.assertEqual(kwargs, {})
-                self.assertEqual(type(mfd), self.MFD)
-                self.assertEqual(value, call_value)
-                self.mock.reset_mock()
+            branchset.apply_uncertainty(value, self.point_source)
+        self.assertEqual(self.point_source.mfd.max_mag, 6.5 + 1)
+        self.assertEqual(self.point_source.mfd.b_val, 0.9 - 0.2)
 
-    def test_relative_uncertainty_double_mfd(self):
-        uncertainties = [('maxMagGRRelative', -1.1),
-                         ('bGRRelative', +2)]
+    def test_absolute_uncertainty(self):
+        uncertainties = [('maxMagGRAbsolute', 9),
+                         ('abGRAbsolute', (-1, 0.2))]
         for uncertainty, value in uncertainties:
             branchset = logictree.BranchSet(uncertainty, {})
-            for source in self.double_mfd_sources:
-                branchset.apply_uncertainty(value, source)
-                self.assertEqual(self.mock.call_count, 2)
-                [((bs, mfd, call_value), kwargs),
-                 ((bs, mfd2, call_value2), kwargs2)] = self.mock.call_args_list
-                self.assertEqual(kwargs, {})
-                self.assertEqual(kwargs2, {})
-                self.assertEqual(type(mfd), self.MFD)
-                self.assertEqual(type(mfd2), self.MFD)
-                self.assertTrue(mfd2 is not mfd)
-                self.assertEqual(value, call_value)
-                self.assertEqual(value, call_value2)
-                self.mock.reset_mock()
-
-    def test_absolute_uncertainty_single_mfd(self):
-        uncertainties = [('maxMagGRAbsolute', [9]),
-                         ('abGRAbsolute', [(-1, -0.2)])]
-        for uncertainty, value in uncertainties:
-            branchset = logictree.BranchSet(uncertainty, {})
-            for source in self.single_mfd_sources:
-                branchset.apply_uncertainty(value, source)
-                self.assertEqual(self.mock.call_count, 1)
-                [(bs, mfd, call_value), kwargs] = self.mock.call_args
-                self.assertEqual(kwargs, {})
-                self.assertEqual(type(mfd), self.MFD)
-                self.assertEqual(value, [call_value])
-                self.mock.reset_mock()
-
-    def test_absolute_uncertainty_double_mfd(self):
-        uncertainties = [('maxMagGRAbsolute', [10, 11.1]),
-                         ('abGRAbsolute', [(-1, -0.2), (+1, +2)])]
-        for uncertainty, value in uncertainties:
-            branchset = logictree.BranchSet(uncertainty, {})
-            for source in self.double_mfd_sources:
-                branchset.apply_uncertainty(value, source)
-                self.assertEqual(self.mock.call_count, 2)
-                [((bs, mfd, call_value), kwargs),
-                 ((bs, mfd2, call_value2), kwargs2)] = self.mock.call_args_list
-                self.assertEqual(kwargs, {})
-                self.assertEqual(kwargs2, {})
-                self.assertEqual(type(mfd), self.MFD)
-                self.assertEqual(type(mfd2), self.MFD)
-                self.assertTrue(mfd2 is not mfd)
-                self.assertEqual(value[0], call_value)
-                self.assertEqual(value[1], call_value2)
-                self.mock.reset_mock()
+            branchset.apply_uncertainty(value, self.point_source)
+        self.assertEqual(self.point_source.mfd.max_mag, 9)
+        self.assertEqual(self.point_source.mfd.b_val, 0.2)
+        self.assertEqual(self.point_source.mfd.a_val, -1)
 
     def test_ignore_non_gr_mfd(self):
-        uncertainties = [('maxMagGRAbsolute', [10, 11.1]),
-                         ('abGRAbsolute', [(-1, -0.2), (+1, +2)])]
+        uncertainties = [('maxMagGRAbsolute', 10),
+                         ('abGRAbsolute', (-1, 0.3))]
+        source = self.point_source
+        source.mfd = EvenlyDiscretizedMFD(min_mag=3, bin_width=1,
+                                          occurrence_rates=[1, 2, 3])
+        source.mfd.modify = lambda *args, **kwargs: self.fail()
         for uncertainty, value in uncertainties:
             branchset = logictree.BranchSet(uncertainty, {})
-            branchset.apply_uncertainty(value, self.non_gr_mfd_source)
-            self.assertEqual(self.mock.call_count, 0)
+            branchset.apply_uncertainty(value, source)
 
 
 class BranchSetFilterTestCase(unittest.TestCase):
     def setUp(self):
-        super(BranchSetFilterTestCase, self).setUp()
-        SourceModelReader = jvm().JClass('org.gem.engine.hazard.' \
-                                         'parsers.SourceModelReader')
-        srcfile = get_data_path('example-source-model.xml')
-        self.simple_fault, self.complex_fault, self.area, self.point, _ \
-                = SourceModelReader(srcfile, 0.1).read()
+        self.point = nhlib.source.PointSource(
+            source_id='point', name='point',
+            tectonic_region_type=nhlib.const.TRT.ACTIVE_SHALLOW_CRUST,
+            mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
+                               max_mag=6.5, bin_width=0.1),
+            nodal_plane_distribution=PMF(
+                [(1, nhlib.geo.NodalPlane(0.0, 90.0, 0.0))]
+            ),
+            hypocenter_distribution=PMF([(1, 10)]),
+            upper_seismogenic_depth=0.0, lower_seismogenic_depth=10.0,
+            magnitude_scaling_relationship=nhlib.scalerel.PeerMSR(),
+            rupture_aspect_ratio=1, location=nhlib.geo.Point(5, 6),
+            rupture_mesh_spacing=1.0
+        )
+        self.area = nhlib.source.AreaSource(
+            source_id='area', name='area',
+            tectonic_region_type=nhlib.const.TRT.ACTIVE_SHALLOW_CRUST,
+            mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
+                               max_mag=6.5, bin_width=0.1),
+            nodal_plane_distribution=PMF(
+                [(1, nhlib.geo.NodalPlane(0.0, 90.0, 0.0))]
+            ),
+            hypocenter_distribution=PMF([(1, 10)]),
+            upper_seismogenic_depth=0.0, lower_seismogenic_depth=10.0,
+            magnitude_scaling_relationship=nhlib.scalerel.PeerMSR(),
+            rupture_aspect_ratio=1,
+            polygon=nhlib.geo.Polygon([nhlib.geo.Point(0, 0),
+                                       nhlib.geo.Point(0, 1),
+                                       nhlib.geo.Point(1, 0)]),
+            area_discretization=10, rupture_mesh_spacing=1.0
+        )
+        self.simple_fault = nhlib.source.SimpleFaultSource(
+            source_id='simple_fault', name='simple fault',
+            tectonic_region_type=nhlib.const.TRT.VOLCANIC,
+            mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
+                               max_mag=6.5, bin_width=0.1),
+            upper_seismogenic_depth=0.0, lower_seismogenic_depth=10.0,
+            magnitude_scaling_relationship=nhlib.scalerel.PeerMSR(),
+            rupture_aspect_ratio=1, rupture_mesh_spacing=2.0,
+            fault_trace=nhlib.geo.Line([nhlib.geo.Point(0, 0),
+                                        nhlib.geo.Point(1, 1)]),
+            dip=45, rake=180
+        )
+        self.complex_fault = nhlib.source.ComplexFaultSource(
+            source_id='complex_fault', name='complex fault',
+            tectonic_region_type=nhlib.const.TRT.VOLCANIC,
+            mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
+                               max_mag=6.5, bin_width=0.1),
+            magnitude_scaling_relationship=nhlib.scalerel.PeerMSR(),
+            rupture_aspect_ratio=1, rupture_mesh_spacing=2.0, rake=0,
+            edges=[nhlib.geo.Line([nhlib.geo.Point(0, 0, 1),
+                                   nhlib.geo.Point(1, 1, 1)]),
+                   nhlib.geo.Line([nhlib.geo.Point(0, 0, 2),
+                                   nhlib.geo.Point(1, 1, 2)])]
+        )
 
     def test_unknown_filter(self):
         bs = logictree.BranchSet(None, {'applyToSources': [1], 'foo': 'bar'})
@@ -1842,36 +1848,36 @@ class BranchSetFilterTestCase(unittest.TestCase):
 
         source = self.simple_fault
 
-        source.tectReg.name = sic
+        source.tectonic_region_type = sic
         for wrong_trt in (asc, vlc, ssc, sif):
             self.assertEqual(test(wrong_trt, source), False)
         self.assertEqual(test(sic, source), True)
 
-        source.tectReg.name = vlc
+        source.tectonic_region_type = vlc
         for wrong_trt in (asc, sic, ssc, sif):
             self.assertEqual(test(wrong_trt, source), False)
         self.assertEqual(test(vlc, source), True)
 
-        source.tectReg.name = sif
+        source.tectonic_region_type = sif
         for wrong_trt in (asc, vlc, ssc, sic):
             self.assertEqual(test(wrong_trt, source), False)
         self.assertEqual(test(sif, source), True)
 
-        source.tectReg.name = ssc
+        source.tectonic_region_type = ssc
         for wrong_trt in (asc, vlc, sic, sif):
             self.assertEqual(test(wrong_trt, source), False)
         self.assertEqual(test(ssc, source), True)
 
-        source.tectReg.name = asc
+        source.tectonic_region_type = asc
         for wrong_trt in (sic, vlc, ssc, sif):
             self.assertEqual(test(wrong_trt, source), False)
         self.assertEqual(test(asc, source), True)
 
     def test_sources(self):
         test = lambda sources, source, expected_result: self.assertEqual(
-            logictree.BranchSet(None,
-                                {'applyToSources': [s.id for s in sources]}) \
-                     .filter_source(source),
+            logictree.BranchSet(
+                None, {'applyToSources': [s.source_id for s in sources]}
+            ).filter_source(source),
             expected_result
         )
 
