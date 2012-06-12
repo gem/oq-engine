@@ -61,7 +61,8 @@ class LogicTreeError(Exception):
         return os.path.join(self.basepath, self.filename)
 
     def __str__(self):
-        return 'file %r: %s' % (self.get_filepath(), self.message)
+        return 'basepath %r, filename %r: %s' % (self.basepath, self.filename,
+                                                 self.message)
 
 
 class ParsingError(LogicTreeError):
@@ -86,8 +87,8 @@ class ValidationError(LogicTreeError):
         self.lineno = node.sourceline
 
     def __str__(self):
-        return 'file %r line %r: %s' % (self.get_filepath(), self.lineno,
-                                        self.message)
+        return 'basepath %r, filename %r, line %r: %s' % (
+                self.basepath, self.filename, self.lineno, self.message)
 
 
 class Branch(object):
