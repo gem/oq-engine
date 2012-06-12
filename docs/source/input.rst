@@ -7,10 +7,13 @@ Input Formats
 Classes to take NRML input and serialize it to the database.
 
 
-The :mod:`exposure` Module
--------------------------
+Seismic Sources
+---------------
+
+.. automodule:: openquake.input.source
+
+
+Risk Exposure Model
+-------------------
 
 .. automodule:: openquake.input.exposure
-    :members:
-    :undoc-members:
-    :show-inheritance:

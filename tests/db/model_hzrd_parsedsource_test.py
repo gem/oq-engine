@@ -21,6 +21,7 @@ from django.contrib.gis.geos import GEOSGeometry
 from django.db import transaction
 from django.db.utils import DatabaseError
 from django.test import TestCase as DjangoTestCase
+from shapely import wkt
 
 from openquake.db import models
 
@@ -50,22 +51,30 @@ class ParsedSourceTestCase(DjangoTestCase, helpers.DbTestCase):
     def test_parsed_source_with_wrong_srid(self):
         # Coordinates with an SRID other than 4326 are transformed.
         psrc = models.ParsedSource(input=self.input, source_type="point")
-        psrc.geom = GEOSGeometry("SRID=32140;POINT(954158.1 4215137.1)")
+        poly_wkt = (
+            "POLYGON((954158 4215137, 954159 4215138, "
+            "954160 4215139, 954158 4215137))"
+        )
+
+        psrc.polygon = GEOSGeometry("SRID=32140;%s" % poly_wkt)
         psrc.save()
         psrc = models.ParsedSource.objects.get(id=psrc.id)
-        self.assertEqual(4326, psrc.geom.get_srid())
-        self.assertNotEqual(954158.1, psrc.geom.x)
-        self.assertNotEqual(4215137.1, psrc.geom.y)
+        self.assertEqual(4326, psrc.polygon.get_srid())
+        self.assertNotEqual(wkt.loads(poly_wkt).wkt, psrc.polygon.wkt)
 
     def test_parsed_source_with_invalid_number_of_dimensions(self):
         # An exception is raised in cases where the number of dimensions is not
         # two.
         psrc = models.ParsedSource(input=self.input, source_type="point")
-        psrc.geom = GEOSGeometry("SRID=4326;POINT(9.1 4.1 12.2)")
+        # 3D geometries are not allowed:
+        psrc.polygon = GEOSGeometry(
+            "SRID=4326;POLYGON((20.1 42.1 10, 20.2 42.2 10, "
+            "20.3 42.3 10, 20.1 42.1 10))"
+        )
         try:
             psrc.save()
         except DatabaseError, de:
-            self.assertTrue('violates check constraint "enforce_dims_geom"'
+            self.assertTrue('violates check constraint "enforce_dims_polygon"'
                             in de.args[0])
             transaction.rollback()
         else:
