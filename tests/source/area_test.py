@@ -25,6 +25,8 @@ from nhlib.pmf import PMF
 from nhlib.tom import PoissonTOM
 from nhlib.source.area import AreaSource
 
+from tests.source.base_test import SeismicSourceFilterSitesTestCase
+
 
 def make_area_source(polygon, discretization, **kwargs):
     default_arguments = {
@@ -76,6 +78,7 @@ class AreaSourceIterRupturesTestCase(unittest.TestCase):
                     self.assertAlmostEqual(rupture.hypocenter.latitude,
                                            lat, delta=1e-3)
                     self.assertEqual(rupture.surface.mesh_spacing, 5)
+                    self.assertIs(rupture.source_typology, AreaSource)
                 self.assertEqual(r1.mag, 5.5)
                 self.assertEqual(r2.mag, 6.5)
         self.assertEqual(len(ruptures), 9 * 2)
@@ -170,3 +173,13 @@ class AreaSourceRupEncPolyTestCase(unittest.TestCase):
         ]
         numpy.testing.assert_allclose(polygon.lons, elons)
         numpy.testing.assert_allclose(polygon.lats, elats)
+
+
+class AreaSourceFilterSitesBySourceTestCase(SeismicSourceFilterSitesTestCase):
+    # test that area source uses base implementation of source-site filtering
+    def setUp(self):
+        super(AreaSourceFilterSitesBySourceTestCase, self).setUp()
+        mfd = TruncatedGRMFD(a_val=3, b_val=1, min_mag=1,
+                             max_mag=2, bin_width=1)
+        self.source = make_area_source(self.POLYGON, discretization=1,
+                                       mfd=mfd)

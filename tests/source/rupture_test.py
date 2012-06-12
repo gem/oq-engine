@@ -31,7 +31,8 @@ def make_rupture(rupture_class, **kwargs):
         'surface': PlanarSurface(10, 11, 12,
             Point(0, 0, 1), Point(1, 0, 1),
             Point(1, 0, 2), Point(0, 0, 2)
-        )
+        ),
+        'source_typology': object()
     }
     default_arguments.update(kwargs)
     kwargs = default_arguments

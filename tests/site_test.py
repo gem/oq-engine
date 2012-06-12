@@ -60,7 +60,7 @@ class SiteTestCase(unittest.TestCase):
         self._assert_creation()
 
 
-class SiteCollectionTestCase(unittest.TestCase):
+class SiteCollectionCreationTestCase(unittest.TestCase):
     def test(self):
         s1 = Site(location=Point(10, 20, 30),
                   vs30=1.2, vs30measured=True,
@@ -85,3 +85,106 @@ class SiteCollectionTestCase(unittest.TestCase):
         self.assertEqual(cll.vs30measured.dtype, bool)
 
         self.assertEqual(len(cll), 2)
+
+
+class SiteCollectionFilterTestCase(unittest.TestCase):
+    SITES = [
+        Site(location=Point(10, 20, 30), vs30=1.2, vs30measured=True,
+             z1pt0=3, z2pt5=5),
+        Site(location=Point(11, 12, 13), vs30=55.4, vs30measured=False,
+             z1pt0=6, z2pt5=8),
+        Site(location=Point(0, 2, 0), vs30=2, vs30measured=True,
+             z1pt0=9, z2pt5=17),
+        Site(location=Point(1, 1, 3), vs30=4, vs30measured=False,
+             z1pt0=22, z2pt5=11)
+    ]
+
+    def test_filter(self):
+        col = SiteCollection(self.SITES)
+        filtered = col.filter(numpy.array([True, False, True, False]))
+        self.assertIsInstance(filtered, SiteCollection)
+        arreq = numpy.testing.assert_array_equal
+        arreq(filtered.vs30, [1.2, 2])
+        arreq(filtered.vs30measured, [True, True])
+        arreq(filtered.z1pt0, [3, 9])
+        arreq(filtered.z2pt5, [5, 17])
+        arreq(filtered.mesh.lons, [10, 0])
+        arreq(filtered.mesh.lats, [20, 2])
+        self.assertIs(filtered.mesh.depths, None)
+
+        filtered = col.filter(numpy.array([False, True, True, True]))
+        self.assertIsInstance(filtered, SiteCollection)
+        arreq(filtered.vs30, [55.4, 2, 4])
+        arreq(filtered.vs30measured, [False, True, False])
+        arreq(filtered.z1pt0, [6, 9, 22])
+        arreq(filtered.z2pt5, [8, 17, 11])
+        arreq(filtered.mesh.lons, [11, 0, 1])
+        arreq(filtered.mesh.lats, [12, 2, 1])
+        self.assertIs(filtered.mesh.depths, None)
+
+    def test_filter_all_out(self):
+        col = SiteCollection(self.SITES)
+        filtered = col.filter(numpy.zeros(len(self.SITES), bool))
+        self.assertIs(filtered, None)
+
+    def test_filter_all_in(self):
+        col = SiteCollection(self.SITES)
+        filtered = col.filter(numpy.ones(len(self.SITES), bool))
+        self.assertIs(filtered, col)
+
+    def test_double_filter(self):
+        col = SiteCollection(self.SITES)
+        filtered = col.filter(numpy.array([True, False, True, True]))
+        filtered2 = filtered.filter(numpy.array([False, True, False]))
+        arreq = numpy.testing.assert_array_equal
+        arreq(filtered2.vs30, [2])
+        arreq(filtered2.vs30measured, [True])
+        arreq(filtered2.z1pt0, [9])
+        arreq(filtered2.z2pt5, [17])
+        arreq(filtered2.mesh.lons, [0])
+        arreq(filtered2.mesh.lats, [2])
+        self.assertIs(filtered2.mesh.depths, None)
+        arreq(filtered.indices, [0, 2, 3])
+        arreq(filtered2.indices, [2])
+        filtered2 = filtered.filter(numpy.array([True, False, True]))
+        arreq(filtered2.indices, [0, 3])
+
+    def test_expand_2d(self):
+        col = SiteCollection(self.SITES)
+        col.indices = numpy.array([1, 3, 5, 6])
+        data_condensed = numpy.array([
+            [1, 2, 3],
+            [5, 6, 7],
+            [10, 11, 12],
+            [15, 16, 17]
+        ])
+        data_expanded = col.expand(data_condensed, total_sites=8,
+                                   placeholder=-1)
+        data_expanded_expected = numpy.array([
+            [-1, -1, -1],
+            [1, 2, 3],
+            [-1, -1, -1],
+            [5, 6, 7],
+            [-1, -1, -1],
+            [10, 11, 12],
+            [15, 16, 17],
+            [-1, -1, -1]
+        ])
+        numpy.testing.assert_array_equal(data_expanded, data_expanded_expected)
+
+    def test_expand_1d(self):
+        col = SiteCollection(self.SITES)
+        col = col.filter(numpy.array([1, 0, 1, 1]))
+        data_condensed = numpy.array([5, 6, 7])
+        data_expanded = col.expand(data_condensed, total_sites=4,
+                                   placeholder=100)
+        data_expanded_expected = numpy.array([5, 100, 6, 7])
+        numpy.testing.assert_array_equal(data_expanded, data_expanded_expected)
+
+    def test_expand_no_filtering(self):
+        col = SiteCollection(self.SITES)
+        data_condensed = numpy.array([3, 2, 1, 0])
+        data_expanded = col.expand(data_condensed, total_sites=4,
+                                   placeholder=100)
+        data_expanded_expected = data_condensed
+        numpy.testing.assert_array_equal(data_expanded, data_expanded_expected)
