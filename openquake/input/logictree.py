@@ -654,11 +654,11 @@ class SourceModelLogicTree(BaseLogicTree):
         """
         See superclass' method for description and signature specification.
 
-        Convert value to an absolute path of the source model file name,
+        Doesn't change source model file name, converts other values to either
         pair of floats or a single float depending on uncertainty type.
         """
         if branchset.uncertainty_type == 'sourceModel':
-            return os.path.join(self.basepath, value)
+            return value
         elif branchset.uncertainty_type == 'abGRAbsolute':
             [a, b] = value.strip().split()
             return float(a), float(b)
@@ -1022,6 +1022,29 @@ class GMPELogicTree(BaseLogicTree):
                 'only one branchset on each branching level is allowed '
                 'in gmpe logic tree'
             )
+
+
+def read_logic_trees(basepath, source_model_logictree_path,
+                     gmpe_logictree_path):
+    """
+    Read, parse and validate both logic trees.
+
+    :param basepath:
+        Base path for both logic tree files.
+    :param source_model_logictree_path:
+        Source model logic tree's filename, relative to ``basepath``.
+    :param gmpe_logictree_path:
+        GMPE logic tree's filename, relative to ``basepath``.
+    :returns:
+        A list of filenames (relative to ``basepath``) of source model files
+        that need to be read, parsed and saved into the database and thus
+        be available for :class:`LogicTreeProcessor`.
+    """
+    smlt = SourceModelLogicTree(basepath, source_model_logictree_path,
+                                validate=True)
+    GMPELogicTree(smlt.tectonic_region_types, basepath,
+                  gmpe_logictree_path, validate=True)
+    return [branch.value for branch in smlt.root_branchset.branches]
 
 
 class LogicTreeProcessor(object):

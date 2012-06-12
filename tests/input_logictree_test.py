@@ -19,11 +19,13 @@
 Tests for python logic tree processor.
 """
 
-import os
+import os, os.path
 import unittest
 from StringIO import StringIO
 from decimal import Decimal
 import json
+import tempfile
+import shutil
 
 from mock import Mock
 
@@ -1237,8 +1239,8 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
             validate=False
         )
         self.assert_branchset_equal(lt.root_branchset, 'sourceModel', {},
-                                    [('b1', '0.6', 'basepath/sm1'),
-                                     ('b2', '0.4', 'basepath/sm2')])
+                                    [('b1', '0.6', 'sm1'),
+                                     ('b2', '0.4', 'sm2')])
 
     def test_two_levels(self):
         lt_source = _make_nrml("""\
@@ -1272,7 +1274,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                                             '/base', validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
-            [('b1', '1.0', '/base/sm',
+            [('b1', '1.0', 'sm',
                 ('maxMagGRRelative', {},
                     [('b2', '0.6', +123),
                      ('b3', '0.4', -123)])
@@ -1312,7 +1314,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                                             '/base', validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
-            [('b1', '1.0', '/base/sm',
+            [('b1', '1.0', 'sm',
                 ('abGRAbsolute', {'applyToSources': ['src01']},
                     [('b2', '0.9', (100, 500)),
                      ('b3', '0.1', (-1.23, +0.1))])
@@ -1367,15 +1369,15 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         )
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
-            [('sb1', '0.6', '/base/sm1',
+            [('sb1', '0.6', 'sm1',
                 ('bGRRelative', {},
                     [('b2', '1.0', +1)]
                 )),
-             ('sb2', '0.3', '/base/sm2',
+             ('sb2', '0.3', 'sm2',
                  ('maxMagGRAbsolute', {'applyToSources': ['src01']},
                     [('b3', '1.0', -3)]
                 )),
-             ('sb3', '0.1', '/base/sm3',
+             ('sb3', '0.1', 'sm3',
                 ('bGRRelative', {},
                     [('b2', '1.0', +1)]
                 ))
@@ -1414,7 +1416,7 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
                                             '/base', validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
-            [('b1', '1.0', '/base/sm')]
+            [('b1', '1.0', 'sm')]
         )
 
 
@@ -1507,6 +1509,149 @@ class GMPELogicTreeTestCase(unittest.TestCase):
                 ('b5', '0.9', SadighEtAl1997),
             ]
         })
+
+
+class ReadLogicTreesTestCase(unittest.TestCase):
+    def setUp(self):
+        self.base_path = tempfile.mkdtemp()
+        self.gmpelt_filename = 'gmpelt.xml'
+        self.gmpelt_path = os.path.join(self.base_path, self.gmpelt_filename)
+        self.smlt_filename = 'smlt.xml'
+        self.smlt_path = os.path.join(self.base_path, self.smlt_filename)
+        sm_path = os.path.basename(tempfile.mkdtemp(dir=self.base_path))
+        self.sm1_filename = os.path.join(sm_path, 'sm1.xml')
+        self.sm1_path = os.path.join(self.base_path, self.sm1_filename)
+        self.sm2_filename = os.path.join(sm_path, 'sm2.xml')
+        self.sm2_path = os.path.join(self.base_path, self.sm2_filename)
+
+        gmpelt = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl2">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                            branchSetID="bs2"
+                            applyToTectonicRegionType="Active Shallow Crust">
+                    <logicTreeBranch branchID="b3">
+                        <uncertaintyModel>
+                            nhlib.gsim.sadigh_1997.SadighEtAl1997
+                        </uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+            <logicTreeBranchingLevel branchingLevelID="bl3">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                            branchSetID="bs3"
+                            applyToTectonicRegionType="Volcanic">
+                    <logicTreeBranch branchID="b4">
+                        <uncertaintyModel>
+                            nhlib.gsim.chiou_youngs_2008.ChiouYoungs2008
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.4</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b5">
+                        <uncertaintyModel>
+                            nhlib.gsim.sadigh_1997.SadighEtAl1997
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.6</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        with open(self.gmpelt_path, 'w') as gmpef:
+            gmpef.write(gmpelt)
+
+        smlt = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                    <logicTreeBranch branchID="sb1">
+                        <uncertaintyModel>%s</uncertaintyModel>
+                        <uncertaintyWeight>0.99</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="sb2">
+                        <uncertaintyModel>%s</uncertaintyModel>
+                        <uncertaintyWeight>0.01</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """) % (self.sm1_filename, self.sm2_filename)
+        with open(self.smlt_path, 'w') as smf:
+            smf.write(smlt)
+
+        sm1 = _make_nrml("""\
+        <sourceModel gml:id="sm1">
+            <config/>
+            <simpleFaultSource gml:id="src01">
+                <gml:name>Mount Diablo Thrust</gml:name>
+                <tectonicRegion>Active Shallow Crust</tectonicRegion>
+                <rake>90.0</rake>
+                <truncatedGutenbergRichter>
+                    <aValueCumulative>3.6786313049897035</aValueCumulative>
+                    <bValue>1.0</bValue>
+                    <minMagnitude>5.0</minMagnitude>
+                    <maxMagnitude>7.0</maxMagnitude>
+                </truncatedGutenbergRichter>
+                <simpleFaultGeometry gml:id="sfg_1">
+                    <faultTrace>
+                        <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                            <gml:posList>
+                                -121.82290 37.73010  0.0
+                                -122.03880 37.87710  0.0
+                            </gml:posList>
+                        </gml:LineString>
+                    </faultTrace>
+                    <dip>38</dip>
+                    <upperSeismogenicDepth>8.0</upperSeismogenicDepth>
+                    <lowerSeismogenicDepth>13.0</lowerSeismogenicDepth>
+                </simpleFaultGeometry>
+            </simpleFaultSource>
+        </sourceModel>
+        """)
+        with open(self.sm1_path, 'w') as smf:
+            smf.write(sm1)
+
+        sm2 = _make_nrml("""\
+        <sourceModel gml:id="sm2">
+            <config/>
+            <pointSource gml:id="doublemfd">
+              <gml:name></gml:name>
+              <tectonicRegion>Volcanic</tectonicRegion>
+              <location>
+                <gml:Point><gml:pos>-125.4 42.9</gml:pos></gml:Point>
+              </location>
+              <ruptureRateModel>
+                <truncatedGutenbergRichter>
+                    <aValueCumulative>3.6786313049897035</aValueCumulative>
+                    <bValue>1.0</bValue>
+                    <minMagnitude>5.0</minMagnitude>
+                    <maxMagnitude>7.0</maxMagnitude>
+                </truncatedGutenbergRichter>
+                <strike>0.0</strike>
+                <dip>90.0</dip>
+                <rake>0.0</rake>
+              </ruptureRateModel>
+              <ruptureDepthDistribution>
+                <magnitude>6.0 6.5</magnitude>
+                <depth>5.0 1.0</depth>
+              </ruptureDepthDistribution>
+              <hypocentralDepth>5.0</hypocentralDepth>
+            </pointSource>
+        </sourceModel>
+        """)
+        with open(self.sm2_path, 'w') as smf:
+            smf.write(sm2)
+
+    def tearDown(self):
+        shutil.rmtree(self.base_path)
+
+    def test(self):
+        sm_filenames = logictree.read_logic_trees(
+            self.base_path, self.smlt_filename, self.gmpelt_filename
+        )
+        self.assertEqual(sm_filenames, [self.sm1_filename, self.sm2_filename])
 
 
 class BranchSetSampleTestCase(unittest.TestCase):
