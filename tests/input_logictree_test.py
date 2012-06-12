@@ -88,7 +88,7 @@ class _TesteableGMPELogicTree(logictree.GMPELogicTree):
 def _make_nrml(content):
     return """\
     <nrml xmlns:gml="http://www.opengis.net/gml"\
-          xmlns="http://openquake.org/xmlns/nrml/0.3"\
+          xmlns="http://openquake.org/xmlns/nrml/0.4"\
           gml:id="n1">\
         %s
     </nrml>""" % content
@@ -96,89 +96,70 @@ def _make_nrml(content):
 
 def _whatever_sourcemodel():
     return _make_nrml("""\
-    <sourceModel gml:id="sm1">
-        <config/>
-        <simpleFaultSource gml:id="src01">
-            <gml:name>Mount Diablo Thrust</gml:name>
-            <tectonicRegion>Active Shallow Crust</tectonicRegion>
-            <rake>90.0</rake>
-            <truncatedGutenbergRichter>
-                <aValueCumulative>3.6786313049897035</aValueCumulative>
-                <bValue>1.0</bValue>
-                <minMagnitude>5.0</minMagnitude>
-                <maxMagnitude>7.0</maxMagnitude>
-            </truncatedGutenbergRichter>
-            <simpleFaultGeometry gml:id="sfg_1">
-                <faultTrace>
-                    <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
-                        <gml:posList>
-                            -121.82290 37.73010  0.0
-                            -122.03880 37.87710  0.0
-                        </gml:posList>
-                    </gml:LineString>
-                </faultTrace>
+    <sourceModel>
+        <simpleFaultSource id="src01" name="Mount Diablo Thrust"
+                           tectonicRegion="Active Shallow Crust">
+            <simpleFaultGeometry>
+                <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                    <gml:posList>
+                        -121.82290 37.73010  0.0
+                        -122.03880 37.87710  0.0
+                    </gml:posList>
+                </gml:LineString>
                 <dip>38</dip>
-                <upperSeismogenicDepth>8.0</upperSeismogenicDepth>
-                <lowerSeismogenicDepth>13.0</lowerSeismogenicDepth>
+                <upperSeismoDepth>8.0</upperSeismoDepth>
+                <lowerSeismoDepth>13.0</lowerSeismoDepth>
             </simpleFaultGeometry>
-        </simpleFaultSource>
-        <simpleFaultSource gml:id="src02">
-            <gml:name>Mount Diablo Thrust</gml:name>
-            <tectonicRegion>Active Shallow Crust</tectonicRegion>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>1.5</ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0"
+                                      minMag="5.0" maxMag="7.0" />
             <rake>90.0</rake>
-            <truncatedGutenbergRichter>
-                <aValueCumulative>3.6786313049897035</aValueCumulative>
-                <bValue>1.0</bValue>
-                <minMagnitude>5.0</minMagnitude>
-                <maxMagnitude>7.0</maxMagnitude>
-            </truncatedGutenbergRichter>
-            <simpleFaultGeometry gml:id="sfg_1">
-                <faultTrace>
-                    <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
-                        <gml:posList>
-                            -121.82290 37.73010  0.0
-                            -122.03880 37.87710  0.0
-                        </gml:posList>
-                    </gml:LineString>
-                </faultTrace>
-                <dip>38</dip>
-                <upperSeismogenicDepth>8.0</upperSeismogenicDepth>
-                <lowerSeismogenicDepth>13.0</lowerSeismogenicDepth>
-            </simpleFaultGeometry>
         </simpleFaultSource>
-        <pointSource gml:id="doublemfd">
-          <gml:name></gml:name>
-          <tectonicRegion>Active Shallow Crust</tectonicRegion>
-          <location>
-            <gml:Point><gml:pos>-125.4 42.9</gml:pos></gml:Point>
-          </location>
-          <ruptureRateModel>
-            <truncatedGutenbergRichter>
-                <aValueCumulative>3.6786313049897035</aValueCumulative>
-                <bValue>1.0</bValue>
-                <minMagnitude>5.0</minMagnitude>
-                <maxMagnitude>7.0</maxMagnitude>
-            </truncatedGutenbergRichter>
-            <strike>0.0</strike>
-            <dip>90.0</dip>
-            <rake>0.0</rake>
-          </ruptureRateModel>
-          <ruptureRateModel>
-            <truncatedGutenbergRichter>
-                <aValueCumulative>3.6786313049897035</aValueCumulative>
-                <bValue>1.0</bValue>
-                <minMagnitude>5.0</minMagnitude>
-                <maxMagnitude>7.0</maxMagnitude>
-            </truncatedGutenbergRichter>
-            <strike>0.0</strike>
-            <dip>90.0</dip>
-            <rake>0.0</rake>
-          </ruptureRateModel>
-          <ruptureDepthDistribution>
-            <magnitude>6.0 6.5</magnitude>
-            <depth>5.0 1.0</depth>
-          </ruptureDepthDistribution>
-          <hypocentralDepth>5.0</hypocentralDepth>
+
+        <simpleFaultSource id="src02" name="Mount Diablo Thrust"
+                           tectonicRegion="Active Shallow Crust">
+            <simpleFaultGeometry>
+                <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                    <gml:posList>
+                        -121.82290 37.73010  0.0
+                        -122.03880 37.87710  0.0
+                    </gml:posList>
+                </gml:LineString>
+                <dip>38</dip>
+                <upperSeismoDepth>8.0</upperSeismoDepth>
+                <lowerSeismoDepth>13.0</lowerSeismoDepth>
+            </simpleFaultGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>1.5</ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0"
+                                      minMag="5.0" maxMag="7.0" />
+            <rake>90.0</rake>
+        </simpleFaultSource>
+
+        <pointSource id="src03" name="point"
+                     tectonicRegion="Active Shallow Crust">
+            <pointGeometry>
+                <gml:Point>
+                    <gml:pos>-122.0 38.0</gml:pos>
+                </gml:Point>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>10.0</lowerSeismoDepth>
+            </pointGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>0.5</ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0"
+                                      minMag="5.0" maxMag="6.5" />
+            <nodalPlaneDist>
+                <nodalPlane probability="0.3" strike="0.0"
+                            dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.7" strike="90.0"
+                            dip="45.0" rake="90.0" />
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth probability="0.5" depth="4.0" />
+                <hypoDepth probability="0.5" depth="8.0" />
+            </hypoDepthDist>
         </pointSource>
     </sourceModel>
     """)
@@ -236,7 +217,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             'screwed_schema', {'screwed_schema': source}, 'base',
             logictree.ParsingError
         )
-        error = "'{http://openquake.org/xmlns/nrml/0.3}logicTreeSet': " \
+        error = "'{http://openquake.org/xmlns/nrml/0.4}logicTreeSet': " \
                 "This element is not expected."
         self.assertTrue(error in exc.message,
                         "wrong exception message: %s" % exc.message)
@@ -364,7 +345,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                   </logicTreeBranch>
                   <logicTreeBranch branchID="b1">
                     <uncertaintyModel>sm2</uncertaintyModel>
-                    <uncertaintyWeight>0.3</uncertaintyWeight>
+                    <uncertaintyWeight>0.4</uncertaintyWeight>
                   </logicTreeBranch>
                 </logicTreeBranchSet>
               </logicTreeBranchingLevel>
@@ -601,11 +582,9 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </simpleFaultSource>
         </sourceModel>
         """)
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, '/x',
-                                            logictree.ParsingError,
-                                            exc_filename='sm')
-        self.assertTrue("is not an element of the set" in exc.message,
-                        "wrong exception message: %s" % exc.message)
+        self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, '/x',
+                                      logictree.ParsingError,
+                                      exc_filename='sm')
 
     def test_referencing_over_level_boundaries(self):
         lt = _make_nrml("""\
@@ -1582,31 +1561,25 @@ class ReadLogicTreesTestCase(unittest.TestCase):
             smf.write(smlt)
 
         sm1 = _make_nrml("""\
-        <sourceModel gml:id="sm1">
-            <config/>
-            <simpleFaultSource gml:id="src01">
-                <gml:name>Mount Diablo Thrust</gml:name>
-                <tectonicRegion>Active Shallow Crust</tectonicRegion>
-                <rake>90.0</rake>
-                <truncatedGutenbergRichter>
-                    <aValueCumulative>3.6786313049897035</aValueCumulative>
-                    <bValue>1.0</bValue>
-                    <minMagnitude>5.0</minMagnitude>
-                    <maxMagnitude>7.0</maxMagnitude>
-                </truncatedGutenbergRichter>
-                <simpleFaultGeometry gml:id="sfg_1">
-                    <faultTrace>
-                        <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
-                            <gml:posList>
-                                -121.82290 37.73010  0.0
-                                -122.03880 37.87710  0.0
-                            </gml:posList>
-                        </gml:LineString>
-                    </faultTrace>
+        <sourceModel>
+            <simpleFaultSource id="src01" name="Mount Diablo Thrust"
+                               tectonicRegion="Active Shallow Crust">
+                <simpleFaultGeometry>
+                    <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                        <gml:posList>
+                            -121.82290 37.73010  0.0
+                            -122.03880 37.87710  0.0
+                        </gml:posList>
+                    </gml:LineString>
                     <dip>38</dip>
-                    <upperSeismogenicDepth>8.0</upperSeismogenicDepth>
-                    <lowerSeismogenicDepth>13.0</lowerSeismogenicDepth>
+                    <upperSeismoDepth>8.0</upperSeismoDepth>
+                    <lowerSeismoDepth>13.0</lowerSeismoDepth>
                 </simpleFaultGeometry>
+                <magScaleRel>WC1994</magScaleRel>
+                <ruptAspectRatio>1.5</ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0"
+                                          minMag="5.0" maxMag="7.0" />
+                <rake>90.0</rake>
             </simpleFaultSource>
         </sourceModel>
         """)
@@ -1614,30 +1587,29 @@ class ReadLogicTreesTestCase(unittest.TestCase):
             smf.write(sm1)
 
         sm2 = _make_nrml("""\
-        <sourceModel gml:id="sm2">
-            <config/>
-            <pointSource gml:id="doublemfd">
-              <gml:name></gml:name>
-              <tectonicRegion>Volcanic</tectonicRegion>
-              <location>
-                <gml:Point><gml:pos>-125.4 42.9</gml:pos></gml:Point>
-              </location>
-              <ruptureRateModel>
-                <truncatedGutenbergRichter>
-                    <aValueCumulative>3.6786313049897035</aValueCumulative>
-                    <bValue>1.0</bValue>
-                    <minMagnitude>5.0</minMagnitude>
-                    <maxMagnitude>7.0</maxMagnitude>
-                </truncatedGutenbergRichter>
-                <strike>0.0</strike>
-                <dip>90.0</dip>
-                <rake>0.0</rake>
-              </ruptureRateModel>
-              <ruptureDepthDistribution>
-                <magnitude>6.0 6.5</magnitude>
-                <depth>5.0 1.0</depth>
-              </ruptureDepthDistribution>
-              <hypocentralDepth>5.0</hypocentralDepth>
+        <sourceModel>
+            <pointSource id="1" name="point" tectonicRegion="Volcanic">
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>-122.0 38.0</gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>0.0</upperSeismoDepth>
+                    <lowerSeismoDepth>10.0</lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>WC1994</magScaleRel>
+                <ruptAspectRatio>0.5</ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0"
+                                          minMag="5.0" maxMag="6.5" />
+                <nodalPlaneDist>
+                    <nodalPlane probability="0.3" strike="0.0"
+                                dip="90.0" rake="0.0" />
+                    <nodalPlane probability="0.7" strike="90.0"
+                                dip="45.0" rake="90.0" />
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth probability="0.5" depth="4.0" />
+                    <hypoDepth probability="0.5" depth="8.0" />
+                </hypoDepthDist>
             </pointSource>
         </sourceModel>
         """)
