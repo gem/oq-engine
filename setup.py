@@ -68,6 +68,8 @@ setup(
     platforms=['any'],
     packages=['nrml'],
     package_data={'nrml': package_data},
+    requires=['lxml'],  # Shows up when running `python setup.py --requires`
+    provides=['nrml (0.4)'],
     install_requires=['lxml'],
     license='GNU AGPL v3',
     keywords='seismic hazard risk',
