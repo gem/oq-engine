@@ -24,7 +24,6 @@ at https://blueprints.launchpad.net/openquake/+spec/openquake-logic-tree-module
 import os
 import re
 import random
-import itertools
 from decimal import Decimal
 try:
     import simplejson as json
@@ -34,6 +33,7 @@ except ImportError:
 from lxml import etree
 
 import nrml
+import nhlib
 from nhlib.gsim.base import GroundShakingIntensityModel
 
 from openquake.java import jvm
@@ -185,51 +185,6 @@ class BranchSet(object):
                 return branch
         raise AssertionError('do weights really sum up to 1.0?')
 
-    @classmethod
-    def _is_gr_mfd(cls, mfd):
-        """
-        Return ``True`` if ``mfd`` is opensha GR MFD object
-        (and in particular not evenly discretized function).
-        """
-        classname = 'org.opensha.sha.magdist.GutenbergRichterMagFreqDist'
-        return isinstance(mfd, jvm().JClass(classname))
-
-    @classmethod
-    def _is_point(cls, source):
-        """
-        Return ``True`` if ``source`` is opensha source of point type.
-        """
-        classname = 'org.opensha.sha.earthquake.rupForecastImpl.' \
-                    'GEM1.SourceData.GEMPointSourceData'
-        return isinstance(source, jvm().JClass(classname))
-
-    @classmethod
-    def _is_simplefault(cls, source):
-        """
-        Return ``True`` if ``source`` is opensha source of simple fault type.
-        """
-        classname = 'org.opensha.sha.earthquake.rupForecastImpl.' \
-                    'GEM1.SourceData.GEMFaultSourceData'
-        return isinstance(source, jvm().JClass(classname))
-
-    @classmethod
-    def _is_complexfault(cls, source):
-        """
-        Return ``True`` if ``source`` is opensha source of complex fault type.
-        """
-        classname = 'org.opensha.sha.earthquake.rupForecastImpl.' \
-                    'GEM1.SourceData.GEMSubductionFaultSourceData'
-        return isinstance(source, jvm().JClass(classname))
-
-    @classmethod
-    def _is_area(cls, source):
-        """
-        Return ``True`` if ``source`` is opensha source of area type.
-        """
-        classname = 'org.opensha.sha.earthquake.rupForecastImpl.' \
-                    'GEM1.SourceData.GEMAreaSourceData'
-        return isinstance(source, jvm().JClass(classname))
-
     def filter_source(self, source):
         # pylint: disable=R0911,R0912
         """
@@ -238,25 +193,27 @@ class BranchSet(object):
         """
         for key, value in self.filters.items():
             if key == 'applyToTectonicRegionType':
-                if value != source.tectReg.name:
+                if value != source.tectonic_region_type:
                     return False
             elif key == 'applyToSourceType':
                 if value == 'area':
-                    if not self._is_area(source):
+                    if not isinstance(source, nhlib.source.AreaSource):
                         return False
                 elif value == 'point':
-                    if not self._is_point(source):
+                    # area source extends point source
+                    if not isinstance(source, nhlib.source.PointSource) \
+                            or isinstance(source, nhlib.source.AreaSource):
                         return False
                 elif value == 'simpleFault':
-                    if not self._is_simplefault(source):
+                    if not isinstance(source, nhlib.source.SimpleFaultSource):
                         return False
                 elif value == 'complexFault':
-                    if not self._is_complexfault(source):
+                    if not isinstance(source, nhlib.source.ComplexFaultSource):
                         return False
                 else:
                     raise AssertionError('unknown source type %r' % value)
             elif key == 'applyToSources':
-                if source.id not in value:
+                if source.source_id not in value:
                     return False
             else:
                 raise AssertionError('unknown filter %r' % key)
@@ -282,53 +239,35 @@ class BranchSet(object):
             in order to sample the tree once again.
         """
         if not self.filter_source(source):
+            # source didn't pass the filter
             return
 
-        # TODO: handle exceptions in java methods and rethrow LogicTreeError
-        if self._is_complexfault(source) or self._is_simplefault(source):
-            # simple fault or complex fault - only one mfd always
-            mfdlist = [source.getMfd()]
-        elif self._is_point(source):
-            # point
-            mfdlist = source.getHypoMagFreqDistAtLoc().getMagFreqDistList()
-        elif self._is_area(source):
-            # area
-            mfdlist = source.getMagfreqDistFocMech().getMagFreqDistList()
-        else:
-            raise AssertionError('type of source %r is unknown' % source)
+        if not isinstance(source.mfd, nhlib.mfd.TruncatedGRMFD):
+            # source's mfd is not gutenberg-richter
+            return
 
-        if self.uncertainty_type in ('abGRAbsolute', 'maxMagGRAbsolute'):
-            # Absolute uncertainties have lists of values -- one for each
-            # GR MFD in order of appearance.
-            valuelist = iter(value)
-        else:
-            # All other uncertainties always have one value which applies
-            # to all mfds, no matter how many are there.
-            valuelist = itertools.repeat(value)
-
-        for mfd in mfdlist:
-            # ignore all non-GR mfds
-            if self._is_gr_mfd(mfd):
-                mfd_value = next(valuelist)
-                self._apply_uncertainty_to_mfd(mfd, mfd_value)
+        self._apply_uncertainty_to_mfd(source.mfd, value)
 
     def _apply_uncertainty_to_mfd(self, mfd, value):
         """
         Modify ``mfd`` object with uncertainty value ``value``.
         """
-        # Need to cast to floats explicitly to make calls match java
-        # methods signatures in case when value is an integer.
         if self.uncertainty_type == 'abGRAbsolute':
             a, b = value
-            mfd.setAB(float(a), float(b))
+            mfd.modify('set_ab', dict(a_val=a, b_val=b))
+
         elif self.uncertainty_type == 'bGRRelative':
-            mfd.incrementB(float(value))
+            mfd.modify('increment_b', dict(value=value))
+
         elif self.uncertainty_type == 'maxMagGRRelative':
-            mfd.incrementMagUpper(float(value))
+            mfd.modify('increment_max_mag', dict(value=value))
+
         elif self.uncertainty_type == 'maxMagGRAbsolute':
-            mfd.setMagUpper(float(value))
+            mfd.modify('set_max_mag', dict(value=value))
+
         else:
-            raise AssertionError('what is %s btw?' % self.uncertainty_type)
+            raise AssertionError('unknown uncertainty type %r'
+                                 % self.uncertainty_type)
 
 
 class BaseLogicTree(object):
