@@ -29,7 +29,7 @@ import _utils
 class SourceModelParserTestCase(unittest.TestCase):
     """Tests for the :class:`nrml.parsers.SourceModelParser` parser."""
 
-    SAMPLE_FILE = 'nrml/schema/examples/source_model/mixed.xml'
+    SAMPLE_FILE = 'examples/source_model/mixed.xml'
     BAD_NAMESPACE = '''\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
@@ -327,7 +327,7 @@ m?ml version='1.0' encoding='utf-8'?>
 class SiteModelParserTestCase(unittest.TestCase):
     """Tests for :class:`parsers.SiteModelParser`."""
 
-    SAMPLE_FILE = 'nrml/schema/examples/site_model.xml'
+    SAMPLE_FILE = 'examples/site_model.xml'
 
     INVALID_SCHEMA = '''\
 <?xml version="1.0" encoding="utf-8"?>
