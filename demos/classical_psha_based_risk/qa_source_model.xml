@@ -1,0 +1,27 @@
+<?xml version="1.0"?>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.3" xmlns:gml="http://www.opengis.net/gml" gml:id="an1">
+  <sourceModel gml:id="asm1">
+    <config/>
+      <simpleFaultGeometry gml:id="asfg_52">
+        <faultTrace>
+          <gml:LineString>
+            <gml:posList>27.369989 36.95451 0.0 27.745598 36.995917 0.0 27.969018 37.023957 0.0 28.185429 37.041561 0.0 28.463684 37.086518 0.0 28.61016 37.116132 0.0</gml:posList>
+          </gml:LineString>
+        </faultTrace>
+        <dip>90.0</dip>
+        <upperSeismogenicDepth>0.0</upperSeismogenicDepth>
+        <lowerSeismogenicDepth>15.0</lowerSeismogenicDepth>
+      </simpleFaultGeometry>
+    </simpleFaultSource>
+    <simpleFaultSource gml:id="a53">
+      <gml:name>trf39</gml:name>
+      <tectonicRegion>Active Shallow Crust</tectonicRegion>
+      <rake>0.0</rake>
+      <truncatedGutenbergRichter>
+        <aValueCumulative>2.90</aValueCumulative>
+        <bValue>0.75</bValue>
+        <minMagnitude>6.0</minMagnitude>
+        <maxMagnitude>8.0</maxMagnitude>
+      </truncatedGutenbergRichter>
+  </sourceModel>
+</nrml>
