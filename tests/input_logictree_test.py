@@ -36,6 +36,7 @@ from nhlib.gsim.sadigh_1997 import SadighEtAl1997
 from nhlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
 
 from openquake.java import jvm
+from openquake.db import models
 from openquake.input import logictree
 from tests.utils.helpers import patch, get_data_path, assertDeepAlmostEqual
 
@@ -1888,14 +1889,31 @@ class BranchSetFilterTestCase(unittest.TestCase):
 
 
 class LogicTreeProcessorTestCase(unittest.TestCase):
-    BASE_PATH = get_data_path('')
-    SOURCE_MODEL_LT = get_data_path('example-source-model-logictree.xml')
-    GMPE_LT = get_data_path('example-gmpe-logictree.xml')
+    SOURCE_MODEL_LT = 'example-source-model-logictree.xml'
+    GMPE_LT = 'example-gmpe-logictree.xml'
 
     def setUp(self):
-        self.proc = logictree.LogicTreeProcessor(
-            self.BASE_PATH, self.SOURCE_MODEL_LT, self.GMPE_LT
+        owner = models.OqUser.objects.get(user_name='openquake')
+        job = models.OqJob.objects.create(owner=owner)
+        smlt_content = models.ModelContent.objects.create(
+            raw_content=open(get_data_path(self.SOURCE_MODEL_LT)).read(),
         )
+        smlt_input = models.Input.objects.create(
+            owner=owner, model_content=smlt_content,
+            size=len(smlt_content.raw_content),
+            input_type='lt_source'
+        )
+        gmpelt_content = models.ModelContent.objects.create(
+            raw_content=open(get_data_path(self.GMPE_LT)).read(),
+        )
+        gmpelt_input = models.Input.objects.create(
+            owner=owner, model_content=gmpelt_content,
+            size=len(gmpelt_content.raw_content),
+            input_type='lt_gmpe'
+        )
+        models.Input2job.objects.create(oq_job=job, input=smlt_input)
+        models.Input2job.objects.create(oq_job=job, input=gmpelt_input)
+        self.proc = logictree.LogicTreeProcessor(job.id)
 
     def test_sample_source_model(self):
         result = self.proc.sample_source_model_logictree(random_seed=42,
@@ -1928,43 +1946,13 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         assertDeepAlmostEqual(self, first_source, result[0], delta=1e-5)
 
     def test_sample_gmpe(self):
-        result = json.loads(self.proc.sample_gmpe_logictree(random_seed=123))
-        expected = {
-            u'Active Shallow Crust': \
-                u'org.opensha.sha.imr.attenRelImpl.BA_2008_AttenRel',
-            u'Subduction Interface': \
-                u'org.opensha.sha.imr.attenRelImpl.McVerryetal_2000_AttenRel'
-        }
-        self.assertEqual(expected, result)
-
-    def test_sample_and_save_source_model_logictree(self):
-        mockcache = Mock(spec=['set'])
-        key = 'zxczxc'
-        random_seed = 12345
-        mfd_bin_width = 0.123
-        json_result = 'asd'
-        with patch('openquake.input.logictree.LogicTreeProcessor.' \
-                   'sample_source_model_logictree') as samplemock:
-            samplemock.return_value = json_result
-            self.proc.sample_and_save_source_model_logictree(
-                mockcache, key, random_seed, mfd_bin_width
-            )
-            samplemock.assert_called_once_with(self.proc, random_seed,
-                                               mfd_bin_width)
-            mockcache.set.assert_called_once_with(key, json_result)
-
-    def test_sample_and_save_gmpe_logictree(self):
-        mockcache = Mock(spec=['set'])
-        key = 'sdasda'
-        random_seed = 124112
-        json_result = 'jsnrslt'
-        with patch('openquake.input.logictree.LogicTreeProcessor.' \
-                   'sample_gmpe_logictree') as samplemock:
-            samplemock.return_value = json_result
-            self.proc.sample_and_save_gmpe_logictree(mockcache, key,
-                                                     random_seed)
-            samplemock.assert_called_once_with(self.proc, random_seed)
-            mockcache.set.assert_called_once_with(key, json_result)
+        result = self.proc.sample_gmpe_logictree(random_seed=124)
+        self.assertEqual(set(result.keys()), set(['Active Shallow Crust',
+                                                  'Subduction Interface']))
+        self.assertIsInstance(result['Active Shallow Crust'], ChiouYoungs2008)
+        self.assertIsInstance(result['Subduction Interface'], SadighEtAl1997)
+        result = self.proc.sample_gmpe_logictree(random_seed=123)
+        self.assertIsInstance(result['Active Shallow Crust'], SadighEtAl1997)
 
 
 class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
