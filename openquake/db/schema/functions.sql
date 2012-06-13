@@ -23,175 +23,6 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-CREATE OR REPLACE FUNCTION check_rupture_sources() RETURNS TRIGGER
-LANGUAGE plpgsql AS
-$$
-DECLARE
-    num_sources INTEGER := 0;
-    violations TEXT := '';
-    exception_msg TEXT := '';
-BEGIN
-    IF NEW.point IS NOT NULL THEN
-        num_sources := num_sources + 1;
-        violations = 'point';
-    END IF;
-    IF NEW.simple_fault_id IS NOT NULL THEN
-        num_sources := num_sources + 1;
-        violations = violations || ' simple_fault_id';
-    END IF;
-    IF NEW.complex_fault_id IS NOT NULL THEN
-        num_sources := num_sources + 1;
-        violations = violations || ' complex_fault_id';
-    END IF;
-    IF num_sources = 0 THEN
-        exception_msg := format_exc(TG_OP, 'no seismic inputs', TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    ELSE
-        IF num_sources > 1 THEN
-            exception_msg := format_exc(TG_OP, 'more than one seismic input <' || violations || '>', TG_TABLE_NAME);
-            RAISE '%', exception_msg;
-        END IF;
-    END IF;
-
-    IF NEW.point IS NOT NULL AND NEW.si_type != 'point' THEN
-        exception_msg := format_exc(TG_OP, 'type should be point <' || NEW.si_type || '>', TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    END IF;
-    IF NEW.simple_fault_id IS NOT NULL AND NEW.si_type != 'simple' THEN
-        exception_msg := format_exc(TG_OP, 'type should be simple <' || NEW.si_type || '>', TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    END IF;
-    IF NEW.complex_fault_id IS NOT NULL AND NEW.si_type != 'complex' THEN
-        exception_msg := format_exc(TG_OP, 'type should be complex <' || NEW.si_type || '>', TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    END IF;
-
-    IF TG_OP = 'UPDATE' THEN
-        NEW.last_update := timezone('UTC'::text, now());
-    END IF;
-    RETURN NEW;
-END;
-$$;
-
-COMMENT ON FUNCTION check_rupture_sources() IS
-'Make sure a rupture only has one source (point, simple or complex fault).';
-
-CREATE OR REPLACE FUNCTION check_source_sources() RETURNS TRIGGER
-LANGUAGE plpgsql AS
-$$
-DECLARE
-    num_sources INTEGER := 0;
-    violations TEXT := '';
-    exception_msg TEXT := '';
-BEGIN
-    IF NEW.point IS NOT NULL THEN
-        num_sources := num_sources + 1;
-        violations = 'point';
-    END IF;
-    IF NEW.area IS NOT NULL THEN
-        num_sources := num_sources + 1;
-        violations = violations || ' area';
-    END IF;
-    IF NEW.simple_fault_id IS NOT NULL THEN
-        num_sources := num_sources + 1;
-        violations = violations || ' simple_fault_id';
-    END IF;
-    IF NEW.complex_fault_id IS NOT NULL THEN
-        num_sources := num_sources + 1;
-        violations = violations || ' complex_fault_id';
-    END IF;
-    IF num_sources = 0 THEN
-        exception_msg := format_exc(TG_OP, 'no seismic inputs', TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    ELSE
-        IF num_sources > 1 THEN
-            exception_msg := format_exc(TG_OP, 'more than one seismic input <' || violations || '>', TG_TABLE_NAME);
-            RAISE '%', exception_msg;
-        END IF;
-    END IF;
-
-    IF NEW.point IS NOT NULL OR NEW.area IS NOT NULL THEN
-        IF NEW.hypocentral_depth IS NULL THEN
-            exception_msg := format_exc(TG_OP, 'hypocentral_depth missing', TG_TABLE_NAME);
-            RAISE '%', exception_msg;
-        END IF;
-        IF NEW.r_depth_distr_id IS NULL THEN
-            exception_msg := format_exc(TG_OP, 'r_depth_distr_id missing', TG_TABLE_NAME);
-            RAISE '%', exception_msg;
-        END IF;
-    ELSE
-        IF NEW.hypocentral_depth IS NOT NULL THEN
-            exception_msg := format_exc(TG_OP, 'hypocentral_depth set', TG_TABLE_NAME);
-            RAISE '%', exception_msg;
-        END IF;
-        IF NEW.r_depth_distr_id IS NOT NULL THEN
-            exception_msg := format_exc(TG_OP, 'r_depth_distr_id set', TG_TABLE_NAME);
-            RAISE '%', exception_msg;
-        END IF;
-    END IF;
-
-    IF NEW.point IS NOT NULL AND NEW.si_type != 'point' THEN
-        exception_msg := format_exc(TG_OP, 'type should be point <' || NEW.si_type || '>', TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    END IF;
-    IF NEW.area IS NOT NULL AND NEW.si_type != 'area' THEN
-        exception_msg := format_exc(TG_OP, 'type should be area <' || NEW.si_type || '>', TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    END IF;
-    IF NEW.simple_fault_id IS NOT NULL AND NEW.si_type != 'simple' THEN
-        exception_msg := format_exc(TG_OP, 'type should be simple <' || NEW.si_type || '>', TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    END IF;
-    IF NEW.complex_fault_id IS NOT NULL AND NEW.si_type != 'complex' THEN
-        exception_msg := format_exc(TG_OP, 'type should be complex <' || NEW.si_type || '>', TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    END IF;
-
-    IF TG_OP = 'UPDATE' THEN
-        NEW.last_update := timezone('UTC'::text, now());
-    END IF;
-    RETURN NEW;
-END;
-$$;
-
-COMMENT ON FUNCTION check_source_sources() IS
-'Make sure a seismic source only has one source (area, point, simple or complex fault).';
-
-CREATE OR REPLACE FUNCTION check_only_one_mfd_set() RETURNS TRIGGER
-LANGUAGE plpgsql AS
-$$
-DECLARE
-    num_sources INTEGER := 0;
-    exception_msg TEXT := '';
-BEGIN
-    IF NEW.mfd_tgr_id IS NOT NULL THEN
-        -- truncated Gutenberg-Richter
-        num_sources := num_sources + 1;
-    END IF;
-    IF NEW.mfd_evd_id IS NOT NULL THEN
-        -- evenly discretized
-        num_sources := num_sources + 1;
-    END IF;
-    IF num_sources = 0 THEN
-        exception_msg := format_exc(TG_OP, 'no magnitude frequency distribution', TG_TABLE_NAME);
-        RAISE '%', exception_msg;
-    ELSE
-        IF num_sources > 1 THEN
-            exception_msg := format_exc(TG_OP, 'more than one magnitude frequency distribution', TG_TABLE_NAME);
-            RAISE '%', exception_msg;
-        END IF;
-    END IF;
-
-    IF TG_OP = 'UPDATE' THEN
-        NEW.last_update := timezone('UTC'::text, now());
-    END IF;
-    RETURN NEW;
-END;
-$$;
-
-COMMENT ON FUNCTION check_only_one_mfd_set() IS
-'Make sure only one magnitude frequency distribution is set.';
-
 CREATE OR REPLACE FUNCTION check_magnitude_data() RETURNS TRIGGER
 LANGUAGE plpgsql AS
 $$
@@ -466,7 +297,7 @@ AS $$
         if no_damage_limit is not None:
             assert no_damage_limit < imls[0], "No Damage Limit must be less than IML values"
             assert no_damage_limit >= 0, "No Damage Limit must be a positive value"
-        
+
     else:
         assert imls is None, "IMLs defined for continuous fragility model"
         assert not imt, "IMT defined for continuous fragility model"
@@ -592,26 +423,6 @@ FOR EACH ROW EXECUTE PROCEDURE
 riskr.pcheck_dmg_state_dmg_dist_total_data();
 -- End Damage Distribution, Total
 
-CREATE TRIGGER hzrdi_rupture_before_insert_update_trig
-BEFORE INSERT OR UPDATE ON hzrdi.rupture
-FOR EACH ROW EXECUTE PROCEDURE check_rupture_sources();
-
-CREATE TRIGGER hzrdi_source_before_insert_update_trig
-BEFORE INSERT OR UPDATE ON hzrdi.source
-FOR EACH ROW EXECUTE PROCEDURE check_source_sources();
-
-CREATE TRIGGER hzrdi_r_rate_mdl_before_insert_update_trig
-BEFORE INSERT OR UPDATE ON hzrdi.r_rate_mdl
-FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
-
-CREATE TRIGGER hzrdi_simple_fault_before_insert_update_trig
-BEFORE INSERT OR UPDATE ON hzrdi.simple_fault
-FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
-
-CREATE TRIGGER hzrdi_complex_fault_before_insert_update_trig
-BEFORE INSERT OR UPDATE ON hzrdi.complex_fault
-FOR EACH ROW EXECUTE PROCEDURE check_only_one_mfd_set();
-
 CREATE TRIGGER oqmif_exposure_model_before_insert_update_trig
 BEFORE INSERT ON oqmif.exposure_model
 FOR EACH ROW EXECUTE PROCEDURE pcheck_exposure_model();
@@ -647,16 +458,6 @@ CREATE TRIGGER admin_oq_user_refresh_last_update_trig BEFORE UPDATE ON admin.oq_
 CREATE TRIGGER eqcat_catalog_refresh_last_update_trig BEFORE UPDATE ON eqcat.catalog FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
 CREATE TRIGGER eqcat_surface_refresh_last_update_trig BEFORE UPDATE ON eqcat.surface FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
-
-CREATE TRIGGER hzrdi_fault_edge_refresh_last_update_trig BEFORE UPDATE ON hzrdi.fault_edge FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
-
-CREATE TRIGGER hzrdi_mfd_evd_refresh_last_update_trig BEFORE UPDATE ON hzrdi.mfd_evd FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
-
-CREATE TRIGGER hzrdi_mfd_tgr_refresh_last_update_trig BEFORE UPDATE ON hzrdi.mfd_tgr FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
-
-CREATE TRIGGER hzrdi_r_depth_distr_refresh_last_update_trig BEFORE UPDATE ON hzrdi.r_depth_distr FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
-
-CREATE TRIGGER hzrdi_focal_mechanism_refresh_last_update_trig BEFORE UPDATE ON hzrdi.focal_mechanism FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 
 CREATE TRIGGER riski_vulnerability_function_refresh_last_update_trig BEFORE UPDATE ON riski.vulnerability_function FOR EACH ROW EXECUTE PROCEDURE refresh_last_update();
 

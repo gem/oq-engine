@@ -22,37 +22,11 @@ CREATE INDEX eqcat_catalog_time_idx on eqcat.catalog(time);
 CREATE INDEX eqcat_catalog_depth_idx on eqcat.catalog(depth);
 CREATE INDEX eqcat_catalog_point_idx ON eqcat.catalog USING gist(point);
 
--- hzrdi.fault_edge
-CREATE INDEX hzrdi_fault_edge_bottom_idx ON hzrdi.fault_edge USING gist(bottom);
-CREATE INDEX hzrdi_fault_edge_top_idx ON hzrdi.fault_edge USING gist(top);
-
--- hzrdi.rupture
-CREATE INDEX hzrdi_rupture_point_idx ON hzrdi.rupture USING gist(point);
-
--- hzrdi.simple_fault
-CREATE INDEX hzrdi_simple_fault_edge_idx ON hzrdi.simple_fault USING gist(edge);
-CREATE INDEX hzrdi_simple_fault_outline_idx ON hzrdi.simple_fault USING gist(outline);
-
 -- hzrdi.site_model
 CREATE INDEX hzrdi_site_model_input_id_idx ON hzrdi.site_model(input_id);
 
--- hzrdi.source
-CREATE INDEX hzrdi_source_area_idx ON hzrdi.source USING gist(area);
-CREATE INDEX hzrdi_source_point_idx ON hzrdi.source USING gist(point);
-
 -- index for the 'owner_id' foreign key
 CREATE INDEX eqcat_catalog_owner_id_idx on eqcat.catalog(owner_id);
-CREATE INDEX hzrdi_complex_fault_owner_id_idx on hzrdi.complex_fault(owner_id);
-CREATE INDEX hzrdi_fault_edge_owner_id_idx on hzrdi.fault_edge(owner_id);
-CREATE INDEX hzrdi_focal_mechanism_owner_id_idx on hzrdi.focal_mechanism(owner_id);
-CREATE INDEX hzrdi_mfd_evd_owner_id_idx on hzrdi.mfd_evd(owner_id);
-CREATE INDEX hzrdi_mfd_tgr_owner_id_idx on hzrdi.mfd_tgr(owner_id);
-CREATE INDEX hzrdi_r_depth_distr_owner_id_idx on hzrdi.r_depth_distr(owner_id);
-CREATE INDEX hzrdi_r_rate_mdl_owner_id_idx on hzrdi.r_rate_mdl(owner_id);
-CREATE INDEX hzrdi_rupture_owner_id_idx on hzrdi.rupture(owner_id);
-CREATE INDEX hzrdi_simple_fault_owner_id_idx on hzrdi.simple_fault(owner_id);
-CREATE INDEX hzrdi_source_owner_id_idx on hzrdi.source(owner_id);
-
 CREATE INDEX uiapi_input_owner_id_idx on uiapi.input(owner_id);
 
 CREATE INDEX uiapi_oq_job_owner_id_idx on uiapi.oq_job(owner_id);
