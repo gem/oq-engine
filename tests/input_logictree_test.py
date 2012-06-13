@@ -48,8 +48,9 @@ class _TesteableSourceModelLogicTree(logictree.SourceModelLogicTree):
             self.validate_tree = self.__fail
             self.validate_filters = self.__fail
             self.validate_uncertainty_value = self.__fail
+        content = files[filename]
         super(_TesteableSourceModelLogicTree, self).__init__(
-            basepath, filename, validate
+            content, basepath, filename, validate
         )
 
     def __fail(self, *args, **kwargs):
@@ -66,25 +67,19 @@ class _TesteableSourceModelLogicTree(logictree.SourceModelLogicTree):
 class _TesteableGMPELogicTree(logictree.GMPELogicTree):
     def __init__(self, filename, content, basepath, tectonic_region_types,
                  validate=True):
-        self.content = content
         if not validate:
             self.validate_branchset = self.__fail
             self.validate_tree = self.__fail
             self.validate_filters = self.__fail
             self.validate_uncertainty_value = self.__fail
         super(_TesteableGMPELogicTree, self).__init__(
-            tectonic_region_types, basepath=basepath,
-            filename=filename, validate=validate
+            tectonic_region_types, content, basepath, filename, validate
         )
 
     def __fail(self, *args, **kwargs):
         raise AssertionError("this method shouldn't be called")
 
     def _open_file(self, filename):
-        if not self.content:
-            return super(_TesteableGMPELogicTree, self)._open_file(
-                filename
-            )
         return StringIO(self.content)
 
 
@@ -194,13 +189,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.filename, exc_filename or filename)
         self.assertEqual(exc.basepath, basepath)
         return exc
-
-    def test_nonexistent_logictree(self):
-        exc = self._assert_logic_tree_error('missing_file', {}, 'base',
-                                            logictree.ParsingError)
-        error = "[Errno 2] No such file or directory: 'base/missing_file'"
-        self.assertEqual(exc.message, error,
-                         "wrong exception message: %s" % exc.message)
 
     def test_logictree_invalid_xml(self):
         exc = self._assert_logic_tree_error(
@@ -880,13 +868,6 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.filename, filename)
         self.assertEqual(exc.basepath, basepath)
         return exc
-
-    def test_nonexistent_file(self):
-        exc = self._assert_logic_tree_error('missing', None, 'base', set(),
-                                            logictree.ParsingError)
-        error = "[Errno 2] No such file or directory: 'base/missing'"
-        self.assertEqual(exc.message, error,
-                         "wrong exception message: %s" % exc.message)
 
     def test_invalid_xml(self):
         gmpe = """zxc<nrml></nrml>"""
@@ -1627,6 +1608,23 @@ class ReadLogicTreesTestCase(unittest.TestCase):
             self.base_path, self.smlt_filename, self.gmpelt_filename
         )
         self.assertEqual(sm_filenames, [self.sm1_filename, self.sm2_filename])
+
+    def test_nonexistent_logictree(self):
+        os.unlink(self.gmpelt_path)
+        with self.assertRaises(logictree.ParsingError) as ar:
+            logictree.read_logic_trees(self.base_path, self.smlt_filename,
+                                       self.gmpelt_filename)
+        error = "[Errno 2] No such file or directory: '%s'" % self.gmpelt_path
+        self.assertEqual(ar.exception.message, error,
+                         "wrong exception message: %s" % ar.exception.message)
+
+        os.unlink(self.smlt_path)
+        with self.assertRaises(logictree.ParsingError) as ar:
+            logictree.read_logic_trees(self.base_path, self.smlt_filename,
+                                       self.gmpelt_filename)
+        error = "[Errno 2] No such file or directory: '%s'" % self.smlt_path
+        self.assertEqual(ar.exception.message, error,
+                         "wrong exception message: %s" % ar.exception.message)
 
 
 class BranchSetSampleTestCase(unittest.TestCase):

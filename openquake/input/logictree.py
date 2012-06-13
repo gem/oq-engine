@@ -270,15 +270,38 @@ class BranchSet(object):
                                  % self.uncertainty_type)
 
 
+def _open_file(basepath, filename):
+    """
+    Open file named ``filename`` and return the file content.
+
+    :param basepath:
+        Path that ``filename`` is relative to.
+    :param fileame:
+        File name, relative to ``basepath``.
+    :returns:
+        File object to read from.
+    :raises ParsingError:
+        If file can not be opened.
+    """
+    try:
+        return open(os.path.join(basepath, filename))
+    except IOError as exc:
+        raise ParsingError(filename, basepath, str(exc))
+
+
 class BaseLogicTree(object):
     """
     Common code for logic tree readers, parsers and verifiers --
     :class:`GMPELogicTree` and :class:`SourceModelLogicTree`.
 
+    :param content:
+        Raw string containing the logic tree xml content.
     :param basepath:
         Base path for logic tree itself and all files that it references.
     :param filename:
         Name of logic tree file, supposed to be relative to ``basepath``.
+        That filename together with ``basepath`` are only used for reporting
+        errors, the actual data is read from ``content``.
     :param validate:
         Boolean indicating whether or not the tree should be validated
         while parsed. This should be set to ``True`` on initial load
@@ -311,19 +334,18 @@ class BaseLogicTree(object):
             cls._xmlschema = etree.XMLSchema(file=nrml.nrml_schema_file())
         return cls._xmlschema
 
-    def __init__(self, basepath, filename, validate=True):
+    def __init__(self, content, basepath, filename, validate=True):
         self.basepath = basepath
         self.filename = filename
         parser = etree.XMLParser(schema=self.get_xmlschema())
         self.branches = {}
         self.open_ends = set()
-        filestream = self._open_file(self.filename)
         try:
-            tree = etree.parse(filestream, parser=parser)
+            tree = etree.fromstring(content, parser=parser)
         except etree.XMLSyntaxError as exc:
             # Wrap etree parsing exception to :exc:`ParsingError`.
             raise ParsingError(self.filename, self.basepath, str(exc))
-        [tree] = tree.getroot().findall('{%s}logicTree' % self.NRML)
+        [tree] = tree.findall('{%s}logicTree' % self.NRML)
         self.root_branchset = None
         self.parse_tree(tree, validate)
 
@@ -346,14 +368,9 @@ class BaseLogicTree(object):
 
         :param fileame:
             String, should be relative to tree's base path.
-        :raises ParsingError:
-            If file can not be opened.
         """
         # This was extracted to method mainly to simplify unittesting.
-        try:
-            return open(os.path.join(self.basepath, filename))
-        except IOError as exc:
-            raise ParsingError(filename, self.basepath, str(exc))
+        return _open_file(self.basepath, filename)
 
     def parse_branchinglevel(self, branchinglevel_node, depth, validate):
         """
@@ -977,9 +994,12 @@ def read_logic_trees(basepath, source_model_logictree_path,
         that need to be read, parsed and saved into the database and thus
         be available for :class:`LogicTreeProcessor`.
     """
-    smlt = SourceModelLogicTree(basepath, source_model_logictree_path,
-                                validate=True)
-    GMPELogicTree(smlt.tectonic_region_types, basepath,
+    smlt_content = _open_file(basepath, source_model_logictree_path).read()
+    smlt = SourceModelLogicTree(
+        smlt_content, basepath, source_model_logictree_path, validate=True
+    )
+    gmpelt_content = _open_file(basepath, gmpe_logictree_path).read()
+    GMPELogicTree(smlt.tectonic_region_types, gmpelt_content, basepath,
                   gmpe_logictree_path, validate=True)
     return [branch.value for branch in smlt.root_branchset.branches]
 
