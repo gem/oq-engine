@@ -618,15 +618,15 @@ class HazardJobProfile(djm.Model):
     # ERF (Earthquake Rupture Forecast) parameters:
     ###############################################
     rupture_mesh_spacing = djm.FloatField(
-        help=('Rupture mesh spacing (in kilometers) for simple/complex fault'
-              'sources rupture discretization'),
+        help_text=('Rupture mesh spacing (in kilometers) for simple/complex '
+                   'fault sources rupture discretization'),
     )
     width_of_mfd_bin = djm.FloatField(
-        help=('Truncated Gutenberg-Richter MFD (Magnitude Frequency'
+        help_text=('Truncated Gutenberg-Richter MFD (Magnitude Frequency'
               'Distribution) bin width'),
     )
     area_source_discretization = djm.FloatField(
-        help='Area Source Disretization, in kilometers',
+        help_text='Area Source Disretization, in kilometers',
     )
 
     ##################
@@ -634,7 +634,7 @@ class HazardJobProfile(djm.Model):
     ##################
     # If there is no `site_model`, these 4 parameters must be specified:
     reference_vs30_value = djm.FloatField(
-        help='Shear wave velocity in the uppermost 30 m. In m/s.',
+        help_text='Shear wave velocity in the uppermost 30 m. In m/s.',
         null=True,
     )
     VS30_TYPE_CHOICES = (
@@ -643,11 +643,11 @@ class HazardJobProfile(djm.Model):
     )
     reference_vs30_type = djm.TextField(choices=VS30_TYPE_CHOICES, null=True)
     reference_depth_to_2pt5km_per_sec = djm.FloatField(
-        help='Depth to where shear-wave velocity = 2.5 km/sec. In km.',
+        help_text='Depth to where shear-wave velocity = 2.5 km/sec. In km.',
         null=True,
     )
     reference_depth_to_1pt0km_per_sec = djm.FloatField(
-        help='Depth to where shear-wave velocity = 1.0 km/sec. In m.',
+        help_text='Depth to where shear-wave velocity = 1.0 km/sec. In m.',
         null=True,
     )
 
@@ -655,7 +655,8 @@ class HazardJobProfile(djm.Model):
     # Calculation parameters:
     #########################
     investigation_time = djm.FloatField(
-        help='Time span (in years) for probability of exceedance calculation',
+        help_text=('Time span (in years) for probability of exceedance '
+                   'calculation'),
     )
     # See code for handling JSON encoding below.
     _imts_and_imls = djm.TextField(
@@ -666,29 +667,30 @@ class HazardJobProfile(djm.Model):
             'measure levels for calculating probability of exceedence'),
     )
     truncation_level = djm.FloatField(
-        help='Level for ground motion distribution truncation'
+        help_text='Level for ground motion distribution truncation',
     )
     maximum_distance = djm.FloatField(
-        help=('Maximum distance (in km) of sources to be considered in the '
-              'probability of exceedance calculation. Sources more than this '
-              'distance away (from the sites of interest) are ignored.')
+        help_text=('Maximum distance (in km) of sources to be considered in '
+                   'the probability of exceedance calculation. Sources more '
+                   'than this distance away (from the sites of interest) are '
+                   'ignored.'),
     )
 
     ################################
     # Output/post-processing params:
     ################################
     mean_hazard_curves = djm.BooleanField(
-        help='Compute mean hazard curves'
+        help_text='Compute mean hazard curves',
         null=True,
     )
     quantile_hazard_curves = djm.BooleanField(
-        help='Compute quantile hazard curves',
+        help_text='Compute quantile hazard curves',
         null=True,
     )
     poes_hazard_maps = FloatArrayField(
-        help=('PoEs (probabilities of exceedence) to be used for computing'
-              'hazard maps (from individual curves, mean and quantile curves'
-              'if calculated)'),
+        help_text=('PoEs (probabilities of exceedence) to be used for '
+                   'computing hazard maps (from individual curves, mean and '
+                   'quantile curves if calculated)'),
         null=True,
     )
 
