@@ -137,7 +137,8 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
 
         params = {config.EXPOSURE: dummy_exposure,
                   config.DEPTHTO1PT0KMPERSEC: "33.33",
-                  config.VS30_TYPE: "measured"}
+                  config.VS30_TYPE: "measured",
+                  config.BASE_PATH: '/'}
 
         validator = config.default_validators(sections, params)
         self.assertFalse(validator.is_valid()[0])
@@ -145,7 +146,8 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
         params = {config.EXPOSURE: dummy_exposure,
                   config.REGION_GRID_SPACING: '0.5',
                   config.DEPTHTO1PT0KMPERSEC: "33.33",
-                  config.VS30_TYPE: "measured"}
+                  config.VS30_TYPE: "measured",
+                  config.BASE_PATH: '/'}
 
         validator = config.default_validators(sections, params)
         self.assertFalse(validator.is_valid()[0])
@@ -154,7 +156,8 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
                   config.INPUT_REGION: "1.0, 2.0, 3.0, 4.0, 5.0, 6.0",
                   config.REGION_GRID_SPACING: '0.5',
                   config.DEPTHTO1PT0KMPERSEC: "33.33",
-                  config.VS30_TYPE: "measured"}
+                  config.VS30_TYPE: "measured",
+                  config.BASE_PATH: '/'}
 
         validator = config.default_validators(sections, params)
         self.assertTrue(validator.is_valid()[0])
@@ -164,7 +167,8 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
 
         params = {config.CALCULATION_MODE: "CLASSICAL",
                   config.SITES: "37.9, -121.9",
-                  config.DEPTHTO1PT0KMPERSEC: "33.33"}
+                  config.DEPTHTO1PT0KMPERSEC: "33.33",
+                  config.BASE_PATH: '/'}
 
         validator = config.default_validators(sections, params)
         self.assertFalse(validator.is_valid()[0])
@@ -172,7 +176,8 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
         params = {config.CALCULATION_MODE: "CLASSICAL",
                   config.SITES: "37.9, -121.9",
                   config.DEPTHTO1PT0KMPERSEC: "33.33",
-                  config.VS30_TYPE: "measured"}
+                  config.VS30_TYPE: "measured",
+                  config.BASE_PATH: '/'}
 
         validator = config.default_validators(sections, params)
         self.assertTrue(validator.is_valid()[0])
@@ -295,16 +300,15 @@ class ConfigurationConstraintsTestCase(unittest.TestCase):
 
     def test_file_path_validation(self):
         # existing file
-        params = dict()
-        params['EXPOSURE'] = helpers.touch()
+        params = {'EXPOSURE': helpers.touch(), 'BASE_PATH': '/'}
 
         validator = config.FilePathValidator(params)
         self.assertTrue(validator.is_valid()[0])
 
         # non-existing file
-        params = dict()
-        params['VULNERABILITY'] = '/a/b/c'
-        params['SOURCE_MODEL_LOGIC_TREE_FILE'] = '/a/b/c'
+        params = {'VULNERABILITY': '/a/b/c',
+                  'SOURCE_MODEL_LOGIC_TREE_FILE': '/a/b/c',
+                  'BASE_PATH': '/'}
 
         validator = config.FilePathValidator(params)
         valid, messages = validator.is_valid()

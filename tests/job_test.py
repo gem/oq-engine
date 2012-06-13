@@ -306,11 +306,10 @@ class ConfigParseTestCase(unittest.TestCase):
         self.assertEqual(
             {'BASE_PATH': gettempdir(),
              'OUTPUT_DIR': 'output',
-             'SOURCE_MODEL_LOGIC_TREE_FILE': os.path.join(gettempdir(),
-                                                          'source-model.xml'),
-             'GMPE_LOGIC_TREE_FILE': os.path.join(gettempdir(), 'gmpe.xml'),
+             'SOURCE_MODEL_LOGIC_TREE_FILE': 'source-model.xml',
+             'GMPE_LOGIC_TREE_FILE': 'gmpe.xml',
              'EXPOSURE': '/absolute/exposure.xml',
-             'VULNERABILITY': os.path.join(gettempdir(), 'vulnerability.xml'),
+             'VULNERABILITY': 'vulnerability.xml',
              'CALCULATION_MODE': 'Event Based'},
             params)
         self.assertEqual(['GENERAL', 'HAZARD', 'RISK'], sorted(sections))
@@ -377,6 +376,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
             'W&C 1994 Mag-Length Rel.',
         'RUPTURE_ASPECT_RATIO': '1.5',
         'RUPTURE_FLOATING_TYPE': 'Along strike and down dip',
+        'BASE_PATH': '/base/path'
     }
 
     BASE_SCENARIO_PARAMS = {
@@ -394,6 +394,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         'GMPE_TRUNCATION_TYPE': '1 Sided',
         'GROUND_MOTION_CORRELATION': 'true',
         'EPSILON_RANDOM_SEED': '37',
+        'BASE_PATH': '/base/path'
     }
 
     BASE_EVENT_BASED_PARAMS = {
@@ -445,6 +446,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         'RUPTURE_ASPECT_RATIO': '1.5',
         'RUPTURE_FLOATING_TYPE': 'Along strike and down dip',
         'GMF_RANDOM_SEED': '1',
+        'BASE_PATH': '/base/path'
     }
 
     def setUp(self):
