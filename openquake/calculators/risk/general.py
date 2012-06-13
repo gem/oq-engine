@@ -1201,8 +1201,17 @@ def hazard_input_site(job_ctxt, site):
 
     If the `COMPUTE_HAZARD_AT_ASSETS_LOCATIONS` parameter
     is specified in the configuration file, the site is
-    exactly the site where the asset is defined. Otherwise
+    exactly the site where the asset is defined. Otherwise it
     is the center of the cell where the risk site falls in.
+
+    :param job_ctxt: the context of the running job.
+    :type job_ctxt: :class:`JobContext` instance
+    :param site: the risk site (a location where there
+        are some assets defined).
+    :type site: :class:`openquake.shapes.Site` instance
+    :returns: the location where the hazard must be
+        loaded from.
+    :rtype: :class:`openquake.shapes.Site` instance
     """
 
     if job_ctxt.has(job_config.COMPUTE_HAZARD_AT_ASSETS):
