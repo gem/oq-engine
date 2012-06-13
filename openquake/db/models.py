@@ -430,7 +430,6 @@ class Input(djm.Model):
         (u'fragility', u'Fragility'),
         (u'vulnerability', u'Vulnerability'),
         (u'vulnerability_retrofitted', u'Vulnerability Retroffited'),
-        (u'rupture', u'Rupture'),
         (u'site_model', u'Site Model'),
     )
     input_type = djm.TextField(choices=INPUT_TYPE_CHOICES)
@@ -566,9 +565,127 @@ class Job2profile(djm.Model):
     '''
     oq_job = djm.ForeignKey('OqJob')
     oq_job_profile = djm.ForeignKey('OqJobProfile')
+    hazard_job_profile = djm.ForeignKey('HazardJobProfile')
 
     class Meta:
         db_table = 'uiapi\".\"job2profile'
+
+
+class HazardJobProfile(djm.Model):
+    '''
+    Parameters need to run a Hazard job.
+    '''
+    owner = djm.ForeignKey('OqUser')
+
+    #####################
+    # General parameters:
+    #####################
+
+    # A description for this config profile which is meaningful to a user.
+    description = djm.TextField(default='')
+    # TODO:
+    #force_inputs = djm.BooleanField(
+    #    default=False, help_text="whether the model inputs should be parsed "
+    #    "and their content be written to the db no matter what")
+    CALC_MODE_CHOICES = (
+        (u'classical', u'Classical PSHA'),
+        (u'event_based', u'Probabilistic Event-Based'),
+        (u'scenario', u'Scenario'),
+        (u'disaggregation', u'Disaggregation'),
+    )
+    calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
+    # For the calculation geometry, choose either `region` (with
+    # `region_grid_spacing`) or `sites`.
+    region = djm.PolygonField(srid=4326, null=True)
+    # Discretization parameter for a `region`. Units in degrees.
+    region_grid_spacing = djm.FloatField(null=True)
+    # The points of interest for a calculation.
+    sites = djm.MultiPointField(srid=4326, null=True)
+
+    ########################
+    # Logic Tree parameters:
+    ########################
+    source_model_lt_random_seed = djm.IntegerField(null=True)
+    gmpe_lt_random_seed = djm.IntegerField(null=True)
+    number_of_logic_tree_samples = djm.IntegerField(null=True)
+
+    ###############################################
+    # ERF (Earthquake Rupture Forecast) parameters:
+    ###############################################
+    rupture_mesh_spacing = djm.FloatField(
+        help=('Rupture mesh spacing (in kilometers) for simple/complex fault'
+              'sources rupture discretization'),
+    )
+    width_of_mfd_bin = djm.FloatField(
+        help=('Truncated Gutenberg-Richter MFD (Magnitude Frequency'
+              'Distribution) bin width'),
+    )
+    area_source_discretization = djm.FloatField(
+        help='Area Source Disretization, in kilometers',
+    )
+
+    ##################
+    # Site parameters:
+    ##################
+    # FK to an Input with input_type=site_model
+    site_model = djm.ForeignKey('Input')
+    # If there is no `site_model`, these 4 parameters must be specified:
+    reference_vs30_value = djm.FloatField(
+        help='Shear wave velocity in the uppermost 30 m. In m/s.',
+        null=True,
+    )
+    VS30_TYPE_CHOICES = (
+        (u'measured', u'Measured'),
+        (u'inferred', u'Inferred'),
+    )
+    reference_vs30_type = djm.TextField(choices=VS30_TYPE_CHOICES, null=True)
+    reference_depth_to_2pt5km_per_sec = djm.FloatField(
+        help='Depth to where shear-wave velocity = 2.5 km/sec. In km.',
+        null=True,
+    )
+    reference_depth_to_1pt0km_per_sec = djm.FloatField(
+        help='Depth to where shear-wave velocity = 1.0 km/sec. In m.',
+        null=True,
+    )
+
+    #########################
+    # Calculation parameters:
+    #########################
+    source_model_logic_tree = djm.ForeignKey('Input')
+    gmpe_logic_tree = djm.ForeignKey('Input')
+    investigation_time = djm.FloatField(
+        help='Time span (in years) for probability of exceedance calculation',
+    )
+    intensity_measure_types_and_levels = None  # TODO: store as JSON
+    truncation_level = djm.FloatField(
+        help='Level for ground motion distribution truncation'
+    )
+    maximum_distance = djm.FloatField(
+        help=('Maximum distance (in km) of sources to be considered in the '
+              'probability of exceedance calculation. Sources more than this '
+              'distance away (from the sites of interest) are ignored.')
+    )
+
+    ################################
+    # Output/post processing params:
+    ################################
+    mean_hazard_curves = djm.BooleanField(
+        help='Compute mean hazard curves'
+        null=True,
+    )
+    quantile_hazard_curves = djm.BooleanField(
+        help='Compute quantile hazard curves',
+        null=True,
+    )
+    poes_hazard_maps = FloatArrayField(
+        help=('PoEs (probabilities of exceedence) to be used for computing'
+              'hazard maps (from individual curves, mean and quantile curves'
+              'if calculated)'),
+        null=True,
+    )
+
+    class Meta:
+        db_table = 'uiapi\".\"hazard_job_profile'
 
 
 class OqJobProfile(djm.Model):
