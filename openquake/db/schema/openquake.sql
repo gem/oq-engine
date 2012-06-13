@@ -270,6 +270,47 @@ CREATE TABLE uiapi.job_stats (
 ) TABLESPACE uiapi_ts;
 
 
+CREATE TABLE uiapi.hazard_job_profile (
+    -- TODO(larsbutler): At the moment, this model only contains Classical hazard parameters.
+    -- We'll need to update fields and constraints as we add the other calculation modes.
+    id SERIAL PRIMARY KEY,
+    owner_id INTEGER NOT NULL,
+    -- general parameters:
+    -- (see also `region` and `sites` geometries defined below)
+    description VARCHAR NOT NULL DEFAULT '',
+    calculation_mode VARCHAR NOT NULL CONSTRAINT haz_calc_mode
+        CHECK(calculation_mode IN ('classical')),
+    region_grid_spacing float,
+    -- logic tree parameters:
+    source_model_lt_random_seed INTEGER,
+    gmpe_lt_random_seed INTEGER,
+    number_of_logic_tree_samples INTEGER,
+    -- ERF parameters:
+    rupture_mesh_spacing float NOT NULL,
+    width_of_mfd_bin float NOT NULL,
+    area_source_discretization float NOT NULL,
+    -- site parameters:
+    reference_vs30_value float,
+    reference_vs30_type VARCHAR CONSTRAINT vs30_type
+        CHECK(((reference_vs30_type IS NULL)
+               OR
+               (reference_vs30_type IN ('measured', 'inferred')))),
+    reference_depth_to_2pt5km_per_sec float,
+    reference_depth_to_1pt0km_per_sec float,
+    -- calculation parameters:
+    investigation_time float NOT NULL,
+    intensity_measure_types_and_levels VARCHAR NOT NULL,  -- stored as a JSON dict, in plain text
+    truncation_level float NOT NULL,
+    maximum_distance float NOT NULL,
+    -- output/post-processing parameters:
+    mean_hazard_curves boolean NOT NULL DEFAULT false,
+    quantile_hazard_curves boolean NOT NULL DEFAULT false,
+    poes_hazard_maps float[]
+) TABLESPACE uiapi_ts;
+SELECT AddGeometryColumn('uiapi', 'hazard_job_profile', 'region', 4326, 'POLYGON', 2);
+SELECT AddGeometryColumn('uiapi', 'hazard_job_profile', 'sites', 4326, 'MULTIPOINT', 2);
+
+
 -- The parameters needed for an OpenQuake engine run
 CREATE TABLE uiapi.oq_job_profile (
     id SERIAL PRIMARY KEY,
@@ -893,6 +934,7 @@ CREATE TABLE uiapi.job2profile (
     id SERIAL PRIMARY KEY,
     oq_job_id INTEGER NOT NULL,
     oq_job_profile_id INTEGER NOT NULL,
+    hazard_job_profile_id INTEGER
     UNIQUE (oq_job_id)
 ) TABLESPACE uiapi_ts;
 
@@ -1410,6 +1452,9 @@ FOREIGN KEY (surface_id) REFERENCES eqcat.surface(id) ON DELETE RESTRICT;
 ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
+ALTER TABLE uiapi.hazard_job_profile ADD CONSTRAINT uiapi_hazard_job_profile_owner_fk
+FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
 ALTER TABLE uiapi.oq_job_profile ADD CONSTRAINT uiapi_oq_job_profile_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
@@ -1430,15 +1475,19 @@ FOREIGN KEY (lt_src_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.job2profile ADD CONSTRAINT
 uiapi_job2profile_oq_job_profile_fk FOREIGN KEY (oq_job_profile_id) REFERENCES
-uiapi.oq_job_profile(id) ON DELETE CASCADE;
+uiapi.oq_job_profile(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.job2profile ADD CONSTRAINT  uiapi_job2profile_oq_job_fk
+ALTER TABLE uiapi.job2profile ADD CONSTRAINT
+uiapi_job2profile_hazard_job_profile_fk FOREIGN KEY (hazard_profile_id)
+REFERENCES uiapi.hazard_job_profile(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.job2profile ADD CONSTRAINT uiapi_job2profile_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
-ALTER TABLE uiapi.input2upload ADD CONSTRAINT  uiapi_input2upload_input_fk
+ALTER TABLE uiapi.input2upload ADD CONSTRAINT uiapi_input2upload_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
 
-ALTER TABLE uiapi.input2upload ADD CONSTRAINT  uiapi_input2upload_upload_fk
+ALTER TABLE uiapi.input2upload ADD CONSTRAINT uiapi_input2upload_upload_fk
 FOREIGN KEY (upload_id) REFERENCES uiapi.upload(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.upload ADD CONSTRAINT uiapi_upload_owner_fk
