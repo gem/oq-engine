@@ -679,11 +679,11 @@ class HazardJobProfile(djm.Model):
     ################################
     # Output/post-processing params:
     ################################
-    mean_hazard_curves = djm.BooleanField(
+    mean_hazard_curves = djm.NullBooleanField(
         help_text='Compute mean hazard curves',
         null=True,
     )
-    quantile_hazard_curves = djm.BooleanField(
+    quantile_hazard_curves = djm.NullBooleanField(
         help_text='Compute quantile hazard curves',
         null=True,
     )
