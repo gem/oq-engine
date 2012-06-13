@@ -27,9 +27,14 @@ Model representations of the OpenQuake DB tables.
 
 import os
 try:
+    import simplejson as json
+except ImportError:
+    import json
+try:
     import cPickle as pickle
 except ImportError:
     import pickle
+
 from collections import namedtuple
 from datetime import datetime
 
@@ -605,9 +610,9 @@ class HazardJobProfile(djm.Model):
     ########################
     # Logic Tree parameters:
     ########################
-    source_model_lt_random_seed = djm.IntegerField(null=True)
-    gmpe_lt_random_seed = djm.IntegerField(null=True)
-    number_of_logic_tree_samples = djm.IntegerField(null=True)
+    source_model_lt_random_seed = djm.IntegerField()
+    gmpe_lt_random_seed = djm.IntegerField()
+    number_of_logic_tree_samples = djm.IntegerField()
 
     ###############################################
     # ERF (Earthquake Rupture Forecast) parameters:
@@ -627,8 +632,6 @@ class HazardJobProfile(djm.Model):
     ##################
     # Site parameters:
     ##################
-    # FK to an Input with input_type=site_model
-    site_model = djm.ForeignKey('Input')
     # If there is no `site_model`, these 4 parameters must be specified:
     reference_vs30_value = djm.FloatField(
         help='Shear wave velocity in the uppermost 30 m. In m/s.',
@@ -651,12 +654,17 @@ class HazardJobProfile(djm.Model):
     #########################
     # Calculation parameters:
     #########################
-    source_model_logic_tree = djm.ForeignKey('Input')
-    gmpe_logic_tree = djm.ForeignKey('Input')
     investigation_time = djm.FloatField(
         help='Time span (in years) for probability of exceedance calculation',
     )
-    intensity_measure_types_and_levels = None  # TODO: store as JSON
+    # See code for handling JSON encoding below.
+    _imts_and_imls = djm.TextField(
+        db_column='intensity_measure_types_and_levels',
+        help_text=(
+            'Dictionary containing for each intensity measure type ("PGA", '
+            '"PGV", "PGD", "SA", "IA", "RSD", "MMI"), the list of intensity '
+            'measure levels for calculating probability of exceedence'),
+    )
     truncation_level = djm.FloatField(
         help='Level for ground motion distribution truncation'
     )
@@ -667,7 +675,7 @@ class HazardJobProfile(djm.Model):
     )
 
     ################################
-    # Output/post processing params:
+    # Output/post-processing params:
     ################################
     mean_hazard_curves = djm.BooleanField(
         help='Compute mean hazard curves'
@@ -683,6 +691,15 @@ class HazardJobProfile(djm.Model):
               'if calculated)'),
         null=True,
     )
+
+    def get_imts_and_imls(self):
+        return json.loads(self._imts_and_imls)
+
+    def set_imts_and_imls(self, imt_iml):
+        self._imts_and_imls = json.dumps(imt_iml)
+
+    intensity_measure_levels_and_types = \
+        property(get_imts_and_imls, set_imts_and_imls)
 
     class Meta:
         db_table = 'uiapi\".\"hazard_job_profile'
