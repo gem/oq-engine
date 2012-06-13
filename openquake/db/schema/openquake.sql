@@ -934,7 +934,7 @@ CREATE TABLE uiapi.job2profile (
     id SERIAL PRIMARY KEY,
     oq_job_id INTEGER NOT NULL,
     oq_job_profile_id INTEGER NOT NULL,
-    hazard_job_profile_id INTEGER
+    hazard_job_profile_id INTEGER,
     UNIQUE (oq_job_id)
 ) TABLESPACE uiapi_ts;
 
@@ -1478,7 +1478,7 @@ uiapi_job2profile_oq_job_profile_fk FOREIGN KEY (oq_job_profile_id) REFERENCES
 uiapi.oq_job_profile(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.job2profile ADD CONSTRAINT
-uiapi_job2profile_hazard_job_profile_fk FOREIGN KEY (hazard_profile_id)
+uiapi_job2profile_hazard_job_profile_fk FOREIGN KEY (hazard_job_profile_id)
 REFERENCES uiapi.hazard_job_profile(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.job2profile ADD CONSTRAINT uiapi_job2profile_oq_job_fk
