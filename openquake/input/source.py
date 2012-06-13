@@ -353,10 +353,9 @@ class SourceDBWriter(object):
             )
             geom = nhlib_src.get_rupture_enclosing_polygon()
             # Resample and initialize the `shapely` polygon
-            geom._init_polygon2d()
 
             ps = models.ParsedSource(
                 input=self.inp, source_type=_source_type(src), blob=blob,
-                polygon=geom._polygon2d.wkt
+                polygon=geom.wkt
             )
             ps.save()
