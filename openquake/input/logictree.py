@@ -25,10 +25,6 @@ import os
 import re
 import random
 from decimal import Decimal
-try:
-    import simplejson as json
-except ImportError:
-    import json
 
 from lxml import etree
 
@@ -36,7 +32,7 @@ import nrml
 import nhlib
 from nhlib.gsim.base import GroundShakingIntensityModel
 
-from openquake.java import jvm
+from openquake.db import models
 
 
 class LogicTreeError(Exception):
@@ -340,6 +336,9 @@ class BaseLogicTree(object):
         parser = etree.XMLParser(schema=self.get_xmlschema())
         self.branches = {}
         self.open_ends = set()
+        if isinstance(content, unicode):
+            # etree.fromstring() refuses to parse unicode objects
+            content = content.encode('latin1')
         try:
             tree = etree.fromstring(content, parser=parser)
         except etree.XMLSyntaxError as exc:
@@ -852,7 +851,9 @@ class GMPELogicTree(BaseLogicTree):
     :param tectonic_region_types:
         Set of all tectonic region type names that are used in corresponding
         source models. Used to check that there are GMPEs for each, but
-        no unattended ones.
+        no unattended ones. That check is only performed if ``validate``
+        parameter is set to ``True`` (see :class:`BaseLogicTree`), otherwise
+        it can be an empty sequence.
     """
     #: Base GMPE class (all valid GMPEs must extend it).
     BASE_GMPE = GroundShakingIntensityModel
@@ -1006,90 +1007,74 @@ def read_logic_trees(basepath, source_model_logictree_path,
 
 class LogicTreeProcessor(object):
     """
-    Logic tree processor. High-level interface to dealing with logic trees.
-
-    :param basepath:
-        Base path for both logic tree files.
-    :param source_model_logictree_path:
-        Source model logic tree's filename, relative to ``basepath``.
-    :param gmpe_logictree_path:
-        GMPE logic tree's filename, relative to ``basepath``.
+    Logic tree processor. High-level interface to dealing with logic trees
+    that are already in the database.
     """
-    def __init__(self, basepath, source_model_logictree_path,
-                 gmpe_logictree_path):
-        self.source_model_lt = SourceModelLogicTree(
-            basepath, source_model_logictree_path
+    def __init__(self, job_id):
+        smlt_input = models.Input2job.objects.get(
+            oq_job=job_id, input__input_type='lt_source'
         )
-        trts = self.source_model_lt.tectonic_region_types
-        self.gmpe_lt = GMPELogicTree(trts, basepath, gmpe_logictree_path)
+        smlt_content = smlt_input.input.model_content.raw_content
+        gmpelt_input = models.Input2job.objects.get(
+            oq_job=job_id, input__input_type='lt_gmpe'
+        )
+        gmpelt_content = gmpelt_input.input.model_content.raw_content
+        self.source_model_lt = SourceModelLogicTree(
+            smlt_content, basepath=None, filename=None, validate=False
+        )
+        self.gmpe_lt = GMPELogicTree(
+            tectonic_region_types=[], content=gmpelt_content,
+            basepath=None, filename=None, validate=False
+        )
 
-    def sample_and_save_source_model_logictree(self, cache, key, random_seed,
-                                               mfd_bin_width):
-        """
-        Call :meth:`sample_source_model_logictree` and save the result
-        in the cache.
-
-        :param cache:
-            A cache object. Supposed to have method ``set(key, data)``.
-        :param key:
-            A cache key to save the serialized source model logic tree.
-        """
-        json_result = self.sample_source_model_logictree(random_seed,
-                                                         mfd_bin_width)
-        cache.set(key, json_result)
-
-    def sample_source_model_logictree(self, random_seed, mfd_bin_width):
+    def sample_source_model_logictree(self, random_seed):
         """
         Perform a Monte-Carlo sampling of source model logic tree.
 
         :param random_seed:
             An integer random seed value to initialize random generator
             before doing random sampling.
-        :param mfd_bin_width:
-            Float, the width of sources' MFD histograms bins.
         :return:
-            String, json-serialized source model sample. For serialization
-            the java class ``org.gem.JsonSerializer`` is used.
+            Tuple of two items: first is the name of the source model
+            to load (as it appears in the source model logic tree)
+            and second is the function to be applied to all the sources
+            as they get read from the database and converted to nhlib
+            representation. Function takes one argument, that is the nhlib
+            source object, and apply uncertainties to it in-place.
         """
+        # TODO: unittest
         rnd = random.Random(random_seed)
-        sm_reader = jvm().JClass('org.gem.engine.hazard.'
-                                 'parsers.SourceModelReader')
         branch = self.source_model_lt.root_branchset.sample(rnd)
-        sources = sm_reader(branch.value, float(mfd_bin_width)).read()
+        sm_name = branch.value
+        branchsets_and_uncertainties = []
         while True:
             branchset = branch.child_branchset
             if branchset is None:
                 break
             branch = branchset.sample(rnd)
-            for source in sources:
-                branchset.apply_uncertainty(branch.value, source)
+            branchsets_and_uncertainties.append((branchset, branch.value))
 
-        serializer = jvm().JClass('org.gem.JsonSerializer')
-        return serializer.getJsonSourceList(sources)
+        def apply_uncertainties(source):
+            for branchset, value in branchsets_and_uncertainties:
+                branchset.apply_uncertainty(value, source)
 
-    def sample_and_save_gmpe_logictree(self, cache, key, random_seed):
-        """
-        Same as :meth:`sample_and_save_source_model_logictree`, but for GMPE
-        logic trees.
-        """
-        cache.set(key, self.sample_gmpe_logictree(random_seed))
+        return sm_name, apply_uncertainties
 
     def sample_gmpe_logictree(self, random_seed):
         """
         Same as :meth:`sample_source_model_logictree`, but for GMPE logic tree.
 
         :return:
-            Json dictionary, with keys equal to tectonic region types
-            and values representing fully qualified java GMPE class names.
+            Dictionary mapping tectonic region type names to instances
+            of GSIM objects.
         """
         rnd = random.Random(random_seed)
-        value_prefix = 'org.opensha.sha.imr.attenRelImpl.'
         result = {}
         branchset = self.gmpe_lt.root_branchset
         while branchset:
             branch = branchset.sample(rnd)
             trt = branchset.filters['applyToTectonicRegionType']
             assert trt not in result
-            result[trt] = value_prefix + branch.value
+            result[trt] = branch.value
             branchset = branch.child_branchset
-        return json.dumps(result)
+        return result
