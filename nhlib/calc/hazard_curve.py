@@ -14,15 +14,19 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Module :mod:`nhlib.calc.hazard_curve` implements :func:`hazard_curves`.
+:mod:`nhlib.calc.hazard_curve` implements :func:`hazard_curves_poissonian`.
 """
 import numpy
 
 from nhlib.tom import PoissonTOM
+from nhlib.calc import filters
 
 
-def hazard_curves_poissonian(sources, sites, imts, time_span,
-                             gsims, truncation_level):
+def hazard_curves_poissonian(
+        sources, sites, imts, time_span, gsims, truncation_level,
+        source_site_filter=filters.source_site_noop_filter,
+        rupture_site_filter=filters.rupture_site_noop_filter
+    ):
     """
     Compute hazard curves on a list of sites, given a set of seismic sources
     and a set of ground shaking intensity models (one per tectonic region type
@@ -56,6 +60,10 @@ def hazard_curves_poissonian(sources, sites, imts, time_span,
     :param trunctation_level:
         Float, number of standard deviations for truncation of the intensity
         distribution.
+    :param source_site_filter:
+        Optional source-site filter function. See :mod:`nhlib.calc.filters`.
+    :param rupture_site_filter:
+        Optional rupture-site filter function. See :mod:`nhlib.calc.filters`.
 
     :returns:
         Dictionary mapping intensity measure type objects (same keys
@@ -69,15 +77,21 @@ def hazard_curves_poissonian(sources, sites, imts, time_span,
                   for imt in imts)
     tom = PoissonTOM(time_span)
 
-    for source in sources:
-        for rupture in source.iter_ruptures(tom):
+    total_sites = len(sites)
+    sources_sites = ((source, sites) for source in sources)
+    for source, s_sites in source_site_filter(sources_sites):
+        ruptures_sites = ((rupture, s_sites)
+                          for rupture in source.iter_ruptures(tom))
+        for rupture, r_sites in rupture_site_filter(ruptures_sites):
             prob = rupture.get_probability()
             gsim = gsims[rupture.tectonic_region_type]
-            sctx, rctx, dctx = gsim.make_contexts(sites, rupture)
+            sctx, rctx, dctx = gsim.make_contexts(r_sites, rupture)
             for imt in imts:
                 poes = gsim.get_poes(sctx, rctx, dctx, imt, imts[imt],
                                      truncation_level)
-                curves[imt] *= (1 - prob) ** poes
+                curves[imt] *= r_sites.expand(
+                    (1 - prob) ** poes, total_sites, placeholder=1
+                )
 
     for imt in imts:
         curves[imt] = 1 - curves[imt]

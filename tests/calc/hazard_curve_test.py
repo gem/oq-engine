@@ -17,8 +17,10 @@ import unittest
 
 import numpy
 
+import nhlib
 from nhlib import const
 from nhlib import imt
+from nhlib.site import Site, SiteCollection
 from nhlib.geo import Point
 from nhlib.tom import PoissonTOM
 from nhlib.calc.hazard_curve import hazard_curves_poissonian
@@ -52,12 +54,8 @@ class HazardCurvesTestCase(unittest.TestCase):
         def get_poes(self, sctx, rctx, dctx, imt, imls, truncation_level):
             assert truncation_level is self.truncation_level
             assert dctx is self.dists
-            return numpy.array([self.poes[(site, rctx, imt)]
-                                for site in sctx])
-
-    class FakeSite(object):
-        def __init__(self, location):
-            self.location = location
+            return numpy.array([self.poes[(epicenter.latitude, rctx, imt)]
+                                for epicenter in sctx.mesh])
 
     def test1(self):
         truncation_level = 3.4
@@ -70,27 +68,27 @@ class HazardCurvesTestCase(unittest.TestCase):
         source1 = self.FakeSource([rup11, rup12], time_span=time_span)
         source2 = self.FakeSource([rup21], time_span=time_span)
         sources = iter([source1, source2])
-        site1 = self.FakeSite(Point(10, 20))
-        site2 = self.FakeSite(Point(20, 30))
-        sites = [site1, site2]
+        site1 = Site(Point(10, 20), 1, True, 2, 3)
+        site2 = Site(Point(20, 30), 2, False, 4, 5)
+        sites = SiteCollection([site1, site2])
 
         gsim1 = self.FakeGSIM(truncation_level, imts, poes={
-            (site1, rup11, imt.PGA()): [0.1, 0.05, 0.03],
-            (site2, rup11, imt.PGA()): [0.11, 0.051, 0.034],
-            (site1, rup12, imt.PGA()): [0.12, 0.052, 0.035],
-            (site2, rup12, imt.PGA()): [0.13, 0.053, 0.036],
+            (site1.location.latitude, rup11, imt.PGA()): [0.1, 0.05, 0.03],
+            (site2.location.latitude, rup11, imt.PGA()): [0.11, 0.051, 0.034],
+            (site1.location.latitude, rup12, imt.PGA()): [0.12, 0.052, 0.035],
+            (site2.location.latitude, rup12, imt.PGA()): [0.13, 0.053, 0.036],
 
-            (site1, rup11, imt.PGD()): [0.4, 0.33],
-            (site2, rup11, imt.PGD()): [0.39, 0.331],
-            (site1, rup12, imt.PGD()): [0.38, 0.332],
-            (site2, rup12, imt.PGD()): [0.37, 0.333],
+            (site1.location.latitude, rup11, imt.PGD()): [0.4, 0.33],
+            (site2.location.latitude, rup11, imt.PGD()): [0.39, 0.331],
+            (site1.location.latitude, rup12, imt.PGD()): [0.38, 0.332],
+            (site2.location.latitude, rup12, imt.PGD()): [0.37, 0.333],
         })
         gsim2 = self.FakeGSIM(truncation_level, imts, poes={
-            (site1, rup21, imt.PGA()): [0.5, 0.3, 0.2],
-            (site2, rup21, imt.PGA()): [0.4, 0.2, 0.1],
+            (site1.location.latitude, rup21, imt.PGA()): [0.5, 0.3, 0.2],
+            (site2.location.latitude, rup21, imt.PGA()): [0.4, 0.2, 0.1],
 
-            (site1, rup21, imt.PGD()): [0.24, 0.08],
-            (site2, rup21, imt.PGD()): [0.14, 0.09],
+            (site1.location.latitude, rup21, imt.PGD()): [0.24, 0.08],
+            (site2.location.latitude, rup21, imt.PGD()): [0.14, 0.09],
         })
         gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: gsim1,
                  const.TRT.VOLCANIC: gsim2}
@@ -122,3 +120,94 @@ class HazardCurvesTestCase(unittest.TestCase):
                         str(site1_pgd_poe))
         self.assertTrue(numpy.allclose(site2_pgd_poe, site2_pgd_poe_expected),
                         str(site2_pgd_poe))
+
+
+class HazardCurvesFiltersTestCase(unittest.TestCase):
+    class SitesCounterSourceFilter(object):
+        def __init__(self, chained_generator):
+            self.counts = []
+            self.chained_generator = chained_generator
+
+        def __call__(self, sources_sites):
+            for source, sites in self.chained_generator(sources_sites):
+                self.counts.append((source.source_id, map(int, sites.vs30)))
+                yield source, sites
+
+    class SitesCounterRuptureFilter(object):
+        def __init__(self, chained_generator):
+            self.counts = []
+            self.chained_generator = chained_generator
+
+        def __call__(self, ruptures_sites):
+            for rupture, sites in self.chained_generator(ruptures_sites):
+                self.counts.append((rupture.mag, map(int, sites.vs30)))
+                yield rupture, sites
+
+    def test_point_sources(self):
+        sources = [
+            nhlib.source.PointSource(source_id='point1', name='point1',
+                tectonic_region_type=const.TRT.ACTIVE_SHALLOW_CRUST,
+                mfd=nhlib.mfd.EvenlyDiscretizedMFD(min_mag=4, bin_width=1,
+                                                   occurrence_rates=[5]),
+                nodal_plane_distribution=nhlib.pmf.PMF([
+                    (1, nhlib.geo.NodalPlane(strike=0.0, dip=90.0, rake=0.0))
+                ]),
+                hypocenter_distribution=nhlib.pmf.PMF([(1, 10)]),
+                upper_seismogenic_depth=0.0,
+                lower_seismogenic_depth=10.0,
+                magnitude_scaling_relationship = nhlib.scalerel.PeerMSR(),
+                rupture_aspect_ratio=2,
+                rupture_mesh_spacing=1.0,
+                location=Point(10, 10)
+            ),
+            nhlib.source.PointSource(source_id='point2', name='point2',
+                tectonic_region_type=const.TRT.ACTIVE_SHALLOW_CRUST,
+                mfd=nhlib.mfd.EvenlyDiscretizedMFD(min_mag=4, bin_width=2,
+                                                   occurrence_rates=[5, 6, 7]),
+                nodal_plane_distribution=nhlib.pmf.PMF([
+                    (1, nhlib.geo.NodalPlane(strike=0, dip=90, rake=0.0)),
+                ]),
+                hypocenter_distribution=nhlib.pmf.PMF([(1, 10)]),
+                upper_seismogenic_depth=0.0,
+                lower_seismogenic_depth=10.0,
+                magnitude_scaling_relationship = nhlib.scalerel.PeerMSR(),
+                rupture_aspect_ratio=2,
+                rupture_mesh_spacing=1.0,
+                location=Point(10, 11)
+            ),
+        ]
+        sites = [nhlib.site.Site(Point(11, 10), 1, True, 2, 3),
+                 nhlib.site.Site(Point(10, 16), 2, True, 2, 3),
+                 nhlib.site.Site(Point(10, 10.6), 3, True, 2, 3),
+                 nhlib.site.Site(Point(10, 10.7), 4, True, 2, 3)]
+        sitecol = nhlib.site.SiteCollection(sites)
+
+        from nhlib.gsim.sadigh_1997 import SadighEtAl1997
+        gsims = {const.TRT.ACTIVE_SHALLOW_CRUST: SadighEtAl1997()}
+        truncation_level = 1
+        time_span = 1.0
+        imts = {nhlib.imt.PGA(): [0.1, 0.5, 1.3]}
+
+        from nhlib.calc import filters
+        source_site_filter = self.SitesCounterSourceFilter(
+            filters.source_site_distance_filter(30)
+        )
+        rupture_site_filter = self.SitesCounterRuptureFilter(
+            filters.rupture_site_distance_filter(30)
+        )
+        hazard_curves_poissonian(
+            iter(sources), sitecol, imts, time_span, gsims, truncation_level,
+            source_site_filter=source_site_filter,
+            rupture_site_filter=rupture_site_filter
+        )
+        # there are two sources and four sites. first source should
+        # be filtered completely since it is too far from all the sites.
+        # the second one should take only three sites -- all except (10, 16).
+        # it generates three ruptures with magnitudes 4, 6 and 8, from which
+        # the first one doesn't affect any of sites and should be ignored,
+        # second only affects site (10, 10.7) and the last one affects all
+        # three.
+        self.assertEqual(source_site_filter.counts,
+                         [('point2', [1, 3, 4])])
+        self.assertEqual(rupture_site_filter.counts,
+                         [(6, [4]), (8, [1, 3, 4])])

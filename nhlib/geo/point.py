@@ -223,6 +223,28 @@ class Point(object):
         # and create nhlib.geo.polygon.Polygon object from it
         return Polygon._from_2d(point.buffer(radius), proj)
 
+    def closer_than(self, mesh, radius):
+        """
+        Check for proximity of points in the ``mesh``.
+
+        :param mesh:
+            :class:`nhlib.geo.mesh.Mesh` instance.
+        :param radius:
+            Proximity measure in km.
+        :returns:
+            Numpy array of boolean values in the same shape as the mesh
+            coordinate arrays with ``True`` on indexes of points that
+            are not further than ``radius`` km from this point. Function
+            :func:`~nhlib.geo.geodetic.distance` is used to calculate
+            distances to points of the mesh. Points of the mesh that
+            lie exactly ``radius`` km away from this point also have
+            ``True`` in their indices.
+        """
+        dists = geodetic.distance(self.longitude, self.latitude, self.depth,
+                                  mesh.lons, mesh.lats,
+                                  0 if mesh.depths is None else mesh.depths)
+        return dists <= radius
+
     @classmethod
     def from_vector(cls, vector):
         """

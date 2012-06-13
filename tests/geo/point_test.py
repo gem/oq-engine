@@ -182,3 +182,60 @@ class PointToPolygonTestCase(unittest.TestCase):
         numpy.testing.assert_allclose(polygon.lats, elats)
         self.assertAlmostEqual(polygon.lons.mean(), point.longitude, delta=1e-2)
         self.assertAlmostEqual(polygon.lats.mean(), point.latitude, delta=1e-2)
+
+
+class PointCloserThanTestCase(unittest.TestCase):
+    def test_no_depths(self):
+        p = geo.Point(20, 30)
+        mesh = geo.Mesh(numpy.array([[18., 19., 20., 21., 22.]] * 3),
+                        numpy.array([[29] * 5, [30] * 5, [31] * 5]),
+                        depths=None)
+        closer = p.closer_than(mesh, 120)
+        self.assertEqual(closer.dtype, bool)
+        ec = [[0, 0, 1, 0, 0],
+              [0, 1, 1, 1, 0],
+              [0, 0, 1, 0, 0]]
+        numpy.testing.assert_array_equal(closer, ec)
+        closer = p.closer_than(mesh, 100)
+        ec = [[0, 0, 0, 0, 0],
+              [0, 1, 1, 1, 0],
+              [0, 0, 0, 0, 0]]
+        numpy.testing.assert_array_equal(closer, ec)
+
+    def test_point_depth(self):
+        p = geo.Point(0, 0, 10)
+        mesh = geo.Mesh(numpy.array([0.1, 0.2, 0.3, 0.4]),
+                        numpy.array([0., 0., 0., 0.]),
+                        depths=None)
+        closer = p.closer_than(mesh, 30)
+        numpy.testing.assert_array_equal(closer, [1, 1, 0, 0])
+        closer = p.closer_than(mesh, 35)
+        numpy.testing.assert_array_equal(closer, [1, 1, 1, 0])
+        closer = p.closer_than(mesh, 15)
+        numpy.testing.assert_array_equal(closer, [1, 0, 0, 0])
+
+    def test_mesh_depth(self):
+        p = geo.Point(0.5, -0.5)
+        mesh = geo.Mesh(numpy.array([0.5, 0.5, 0.5, 0.5]),
+                        numpy.array([-0.5, -0.5, -0.5, -0.5]),
+                        numpy.array([0., 1., 2., 3.]))
+        closer = p.closer_than(mesh, 0.1)
+        numpy.testing.assert_array_equal(closer, [1, 0, 0, 0])
+        closer = p.closer_than(mesh, 1.5)
+        numpy.testing.assert_array_equal(closer, [1, 1, 0, 0])
+        closer = p.closer_than(mesh, 3)
+        numpy.testing.assert_array_equal(closer, [1, 1, 1, 1])
+
+    def test_both_depths(self):
+        p = geo.Point(3, 7, 9)
+        mesh = geo.Mesh(numpy.array([2.9, 2.9, 3., 3., 3.1, 3.1]),
+                        numpy.array([7., 7.1, 6.9, 7.1, 6.8, 7.2]),
+                        numpy.array([20., 30., 10., 20., 40., 50.]))
+        closer = p.closer_than(mesh, 20)
+        numpy.testing.assert_array_equal(closer, [1, 0, 1, 1, 0, 0])
+        closer = p.closer_than(mesh, 40)
+        numpy.testing.assert_array_equal(closer, [1, 1, 1, 1, 1, 0])
+        closer = p.closer_than(mesh, 10)
+        numpy.testing.assert_array_equal(closer, [0, 0, 0, 0, 0, 0])
+        closer = p.closer_than(mesh, 60)
+        numpy.testing.assert_array_equal(closer, [1, 1, 1, 1, 1, 1])

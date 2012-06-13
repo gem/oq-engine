@@ -58,8 +58,9 @@ class PlanarSurface(BaseSurface):
     #: Maximum difference in surface's rectangle side lengths, maximum offset
     #: of a bottom right corner from a plane that contains other corners,
     #: as well as maximum offset of a bottom left corner from a line drawn
-    #: downdip perpendicular to top edge from top left corner, in kilometers.
-    IMPERFECT_RECTANGLE_TOLERANCE = 0.3
+    #: downdip perpendicular to top edge from top left corner, expressed
+    #: as a fraction of the surface's area.
+    IMPERFECT_RECTANGLE_TOLERANCE = 0.0008
 
     def __init__(self, mesh_spacing, strike, dip,
                  top_left, top_right, bottom_right, bottom_left):
@@ -99,15 +100,20 @@ class PlanarSurface(BaseSurface):
         length1, length2 = xx[1] - xx[0], xx[3] - xx[2]
         # "width" of the rupture is measured along downdip direction
         width1, width2 = yy[2] - yy[0], yy[3] - yy[1]
-        if numpy.max(numpy.abs(dists)) > self.IMPERFECT_RECTANGLE_TOLERANCE \
-                or abs(width1 - width2) > self.IMPERFECT_RECTANGLE_TOLERANCE \
-                or width2 < 0 \
-                or abs(xx[0] - xx[2]) > self.IMPERFECT_RECTANGLE_TOLERANCE \
-                or abs(length1 - length2) > self.IMPERFECT_RECTANGLE_TOLERANCE:
-            raise ValueError("planar surface corners must "
-                             "represent a rectangle")
         self.width = (width1 + width2) / 2.0
         self.length = (length1 + length2) / 2.0
+        # calculate the imperfect rectangle tolerance
+        # relative to surface's area
+        tolerance = self.width * self.length \
+                    * self.IMPERFECT_RECTANGLE_TOLERANCE
+        if numpy.max(numpy.abs(dists)) > tolerance:
+            raise ValueError("corner points do not lie on the same plane")
+        if length2 < 0:
+            raise ValueError("corners are in the wrong order")
+        if abs(length1 - length2) > tolerance:
+            raise ValueError("top and bottom edges have different lengths")
+        if abs(xx[0] - xx[2]) > tolerance:
+            raise ValueError("surface's angles are not right")
 
     def _init_plane(self):
         """

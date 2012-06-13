@@ -99,9 +99,9 @@ class PointSource(SeismicSource):
             # compute rupture width surface projection
             rup_width = rup_width * math.cos(math.radians(np.dip))
             # the projection radius is half of the rupture diagonal
-            rds = math.sqrt((rup_length / 2.0) ** 2 + (rup_width / 2.0) ** 2)
-            if rds > max_radius:
-                max_radius = rds
+            radius = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
+            if radius > max_radius:
+                max_radius = radius
         return max_radius
 
     def get_rupture_enclosing_polygon(self, dilation=0):
@@ -115,6 +115,35 @@ class PointSource(SeismicSource):
         """
         max_rup_radius = self._get_max_rupture_projection_radius()
         return self.location.to_polygon(max_rup_radius + dilation)
+
+    def filter_sites_by_distance_to_source(self, integration_distance, sites):
+        """
+        Filter sites that are closer than maximum rupture projection radius
+        plus integration distance along the great circle arc from source's
+        epicenter location. Overrides :meth:`base class' method
+        <nhlib.source.base.SeismicSource.filter_sites_by_distance_to_source>`
+        in order to avoid using polygon.
+        """
+        radius = self._get_max_rupture_projection_radius()
+        radius += integration_distance
+        return sites.filter(self.location.closer_than(sites.mesh, radius))
+
+    @classmethod
+    def filter_sites_by_distance_to_rupture(cls, rupture, integration_distance,
+                                            sites):
+        """
+        Filter sites that are closer than rupture's projection radius
+        plus integration distance along the great circle arc from rupture's
+        epicenter location. Overrides the :meth:`base class' method
+        <nhlib.source.base.SeismicSource.filter_sites_by_distance_to_rupture>`.
+        """
+        rup_length, rup_width = rupture.surface.length, rupture.surface.width
+        rup_width = rup_width * math.cos(math.radians(rupture.surface.dip))
+        radius = math.sqrt(rup_length ** 2 + rup_width ** 2) / 2.0
+        radius += integration_distance
+        epicenter = Point(rupture.hypocenter.longitude,
+                          rupture.hypocenter.latitude)
+        return sites.filter(epicenter.closer_than(sites.mesh, radius))
 
     def iter_ruptures(self, temporal_occurrence_model):
         """
@@ -158,7 +187,8 @@ class PointSource(SeismicSource):
                     surface = self._get_rupture_surface(mag, np, hypocenter)
                     yield ProbabilisticRupture(
                         mag, np.rake, self.tectonic_region_type, hypocenter,
-                        surface, occurrence_rate, temporal_occurrence_model
+                        surface, type(self),
+                        occurrence_rate, temporal_occurrence_model
                     )
 
     def _get_rupture_dimensions(self, mag, nodal_plane):
