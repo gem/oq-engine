@@ -90,8 +90,7 @@ class OQRouterTestCase(unittest.TestCase):
         For each model in the 'hzrdi' schema, test for proper db routing
         for read operations.
         '''
-        classes = [Rupture, Source, SimpleFault, MfdEvd, MfdTgr, ComplexFault,
-            RDepthDistr, RRateMdl, FocalMechanism]
+        classes = [ParsedSource, SiteModel]
         expected_db = 'reslt_writer'
 
         self._db_for_read_helper(classes, expected_db)
@@ -101,8 +100,7 @@ class OQRouterTestCase(unittest.TestCase):
         For each model in the 'hzrdi' schema, test for proper db routing
         for write operations.
         '''
-        classes = [Rupture, Source, SimpleFault, MfdEvd, MfdTgr, ComplexFault,
-            RDepthDistr, RRateMdl, FocalMechanism]
+        classes = [ParsedSource, SiteModel]
         expected_db = 'job_init'
 
         self._db_for_write_helper(classes, expected_db)
