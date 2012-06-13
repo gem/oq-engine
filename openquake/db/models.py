@@ -29,6 +29,10 @@ Model representations of the OpenQuake DB tables.
 import os
 import re
 try:
+    import simplejson as json
+except ImportError:
+    import json
+try:
     import cPickle as pickle
 except ImportError:
     import pickle
@@ -761,6 +765,15 @@ class HazardJobProfile(djm.Model):
         null=True,
         blank=True,
     )
+
+    def get_imts_and_imls(self):
+        return json.loads(self._imts_and_imls)
+
+    def set_imts_and_imls(self, imt_iml):
+        self._imts_and_imls = json.dumps(imt_iml)
+
+    intensity_measure_levels_and_types = \
+        property(get_imts_and_imls, set_imts_and_imls)
 
     class Meta:
         db_table = 'uiapi\".\"hazard_job_profile'
