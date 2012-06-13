@@ -60,7 +60,6 @@ from openquake.job.params import ARRAY_RE
 from openquake.job.params import CALCULATION_MODE
 from openquake.job.params import INPUT_FILE_TYPES
 from openquake.job.params import PARAMS
-from openquake.job.params import PATH_PARAMS
 from openquake.kvs import mark_job_as_current
 from openquake.supervising import supervisor
 from openquake.utils import config as utils_config
@@ -498,13 +497,6 @@ def _prepare_config_parameters(params, sections):
 
         new_params[name] = value
 
-    # make file paths absolute
-    for name in PATH_PARAMS:
-        if name not in new_params:
-            continue
-
-        new_params[name] = os.path.join(params['BASE_PATH'], new_params[name])
-
     # Set default parameters (if applicable).
     # TODO(LB): This probably isn't the best place for this code (since we may
     # want to implement similar default param logic elsewhere). For now,
@@ -651,7 +643,7 @@ def _insert_input_files(params, job, force_inputs):
     for param_key, file_type in INPUT_FILE_TYPES.items():
         if param_key not in params:
             continue
-        path = params[param_key]
+        path = os.path.join(params['BASE_PATH'], params[param_key])
         input_obj = ln_input2job(path, file_type)
         if file_type == "lt_source":
             _insert_referenced_sources(input_obj, path)
