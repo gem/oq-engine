@@ -595,9 +595,6 @@ class HazardJobProfile(djm.Model):
     #    "and their content be written to the db no matter what")
     CALC_MODE_CHOICES = (
         (u'classical', u'Classical PSHA'),
-        (u'event_based', u'Probabilistic Event-Based'),
-        (u'scenario', u'Scenario'),
-        (u'disaggregation', u'Disaggregation'),
     )
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
     # For the calculation geometry, choose either `region` (with
@@ -611,8 +608,7 @@ class HazardJobProfile(djm.Model):
     ########################
     # Logic Tree parameters:
     ########################
-    source_model_lt_random_seed = djm.IntegerField()
-    gmpe_lt_random_seed = djm.IntegerField()
+    random_seed = djm.IntegerField()
     number_of_logic_tree_samples = djm.IntegerField()
 
     ###############################################
@@ -690,7 +686,7 @@ class HazardJobProfile(djm.Model):
         null=True,
         blank=True,
     )
-    quantile_hazard_curves = djm.NullBooleanField(
+    quantile_hazard_curves = FloatArrayField(
         help_text='Compute quantile hazard curves',
         null=True,
         blank=True,
