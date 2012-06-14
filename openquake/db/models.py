@@ -16,10 +16,11 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-# Disable 'Missing docstring' warnings because of all of the Meta classes.
-# pylint: disable=C0111
-# Disable 'Too many lines in module'
-# pylint: disable=C0302
+# Disable:
+# - 'Maximum number of public methods for a class'
+# - 'Missing docstring' (because of all of the model Meta)
+# - 'Too many lines in module'
+# pylint: disable=R0904,C0111,C0302
 
 '''
 Model representations of the OpenQuake DB tables.
@@ -171,7 +172,7 @@ def model_equals(model_a, model_b, ignore=None):
     return True
 
 
-class FloatArrayField(djm.Field):  # pylint: disable=R0904
+class FloatArrayField(djm.Field):
     """This field models a postgres `float` array."""
 
     def db_type(self, connection):
@@ -184,7 +185,7 @@ class FloatArrayField(djm.Field):  # pylint: disable=R0904
             return None
 
 
-class CharArrayField(djm.Field):  # pylint: disable=R0904
+class CharArrayField(djm.Field):
     """This field models a postgres `varchar` array."""
 
     def db_type(self, _connection):
@@ -665,9 +666,7 @@ class HazardJobProfile(djm.Model):
         help_text=('Time span (in years) for probability of exceedance '
                    'calculation'),
     )
-    # See code for handling JSON encoding below.
-    _imts_and_imls = djm.TextField(
-        db_column='intensity_measure_types_and_levels',
+    intensity_measure_types_and_levels = JSONField(
         help_text=(
             'Dictionary containing for each intensity measure type ("PGA", '
             '"PGV", "PGD", "SA", "IA", "RSD", "MMI"), the list of intensity '
@@ -703,15 +702,6 @@ class HazardJobProfile(djm.Model):
         null=True,
         blank=True,
     )
-
-    def get_imts_and_imls(self):
-        return json.loads(self._imts_and_imls)
-
-    def set_imts_and_imls(self, imt_iml):
-        self._imts_and_imls = json.dumps(imt_iml)
-
-    intensity_measure_types_and_levels = \
-        property(get_imts_and_imls, set_imts_and_imls)
 
     class Meta:
         db_table = 'uiapi\".\"hazard_job_profile'
