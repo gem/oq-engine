@@ -85,7 +85,7 @@ class ClassicalHazardJobForm(BaseOQModelForm):
             'reference_depth_to_2pt5km_per_sec',
             'reference_depth_to_1pt0km_per_sec',
             'investigation_time',
-            '_imts_and_imls',
+            'intensity_measure_types_and_levels',
             'truncation_level',
             'maximum_distance',
             'mean_hazard_curves',
