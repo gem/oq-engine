@@ -10,9 +10,9 @@ NUMBER_OF_LOGIC_TREE_SAMPLES = 0
 DEPTHTO1PT0KMPERSEC = 100.0
 VS30_TYPE = measured
 # file containing erf logic tree structure
-SOURCE_MODEL_LOGIC_TREE_FILE = ErfLogicTree.inp
+SOURCE_MODEL_LOGIC_TREE_FILE = example-source-model-logictree.xml
 # file containing gmpe logic tree structure
-GMPE_LOGIC_TREE_FILE = GmpeLogicTree.inp
+GMPE_LOGIC_TREE_FILE = example-gmpe-logictree.xml
 
 SOURCE_MODEL_LT_RANDOM_SEED = 23
 GMPE_LT_RANDOM_SEED = 5

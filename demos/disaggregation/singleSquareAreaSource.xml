@@ -1,12 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.3" xmlns:gml="http://www.opengis.net/gml" gml:id="n1">
-  <sourceModel gml:id="sm1">
-    <config/>
-    <areaSource gml:id="src_1">
-      <gml:name>Square Area Source</gml:name>
-      <tectonicRegion>Active Shallow Crust</tectonicRegion>
-      <areaBoundary>
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml" gml:id="n1">
+  <sourceModel>
+    <areaSource id="src_1" name="Square Area Source" tectonicRegion="Active Shallow Crust">
+      <areaGeometry>
         <gml:Polygon>
           <gml:exterior>
             <gml:LinearRing>
@@ -14,23 +11,18 @@
             </gml:LinearRing>
           </gml:exterior>
         </gml:Polygon>
-      </areaBoundary>
-      <ruptureRateModel>
-        <truncatedGutenbergRichter>
-          <aValueCumulative>4.301073427</aValueCumulative>
-          <bValue>1.0</bValue>
-          <minMagnitude>5.0</minMagnitude>
-          <maxMagnitude>9.0</maxMagnitude>
-        </truncatedGutenbergRichter>
-        <strike>0.0</strike>
-        <dip>90.0</dip>
-        <rake>0.0</rake>
-      </ruptureRateModel>
-      <ruptureDepthDistribution>
-        <magnitude>6.5</magnitude>
-        <depth>0.0</depth>
-      </ruptureDepthDistribution>
-      <hypocentralDepth>5.0</hypocentralDepth>
+        <upperSeismoDepth>0</upperSeismoDepth>
+        <lowerSeismoDepth>100</lowerSeismoDepth>
+      </areaGeometry>
+      <magScaleRel>WC1994</magScaleRel>
+      <ruptAspectRatio>1</ruptAspectRatio>
+      <truncGutenbergRichterMFD aValue="4.301073427" bValue="1.0" minMag="5.0" maxMag="9.0" />
+      <nodalPlaneDist>
+        <nodalPlane probability="1" strike="0" dip="90" rake="0" />
+      </nodalPlaneDist>
+      <hypoDepthDist>
+        <hypoDepth probability="1" depth="5"/>
+      </hypoDepthDist>
     </areaSource>
   </sourceModel>
 </nrml>
