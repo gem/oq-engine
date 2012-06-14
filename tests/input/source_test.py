@@ -24,6 +24,7 @@ from nhlib import pmf
 from nhlib import scalerel
 from nhlib import source
 from nrml import parsers as nrml_parsers
+from shapely import wkt
 
 from openquake.db import models
 from openquake.input import source as source_input
@@ -289,5 +290,16 @@ class SourceDBWriterTestCase(unittest.TestCase):
             )
 
             nhlib_poly = nhlib_src.get_rupture_enclosing_polygon()
-            nhlib_poly._init_polygon2d()
-            self.assertEquals(ps.polygon.wkt, nhlib_poly._polygon2d.wkt)
+            # nhlib tests the generation of wkt from a polygon, so we can trust
+            # that it is well-formed.
+
+            # Since we save the rupture enclosing polygon as geometry (not wkt)
+            # in the database, the WKT we get back from the DB might have
+            # slightly different coordinate values (a difference in precision).
+            # shapely can help us compare two polygons (generated from wkt)
+            # at a specific level of precision (default=6 digits after the
+            # decimal point).
+            expected_poly = wkt.loads(ps.polygon.wkt)
+            actual_poly = wkt.loads(nhlib_poly.wkt)
+
+            self.assertTrue(expected_poly.almost_equals(actual_poly))

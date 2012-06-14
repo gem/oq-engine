@@ -31,18 +31,8 @@ GRANT ALL ON SEQUENCE eqcat.catalog_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE eqcat.magnitude_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE eqcat.surface_id_seq to GROUP openquake;
 
-GRANT ALL ON SEQUENCE hzrdi.complex_fault_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE hzrdi.fault_edge_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE hzrdi.focal_mechanism_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE hzrdi.mfd_evd_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE hzrdi.mfd_tgr_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.parsed_source_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE hzrdi.r_depth_distr_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE hzrdi.r_rate_mdl_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE hzrdi.rupture_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE hzrdi.simple_fault_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.site_model_id_seq to GROUP openquake;
-GRANT ALL ON SEQUENCE hzrdi.source_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE hzrdr.gmf_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdr.hazard_curve_id_seq to GROUP openquake;
@@ -96,11 +86,6 @@ GRANT SELECT ON geography_columns TO GROUP openquake;
 GRANT SELECT ON geometry_columns TO GROUP openquake;
 GRANT SELECT ON spatial_ref_sys TO GROUP openquake;
 
-GRANT SELECT ON hzrdi.complex_source TO GROUP openquake;
-GRANT SELECT ON hzrdi.simple_source TO GROUP openquake;
-GRANT SELECT ON hzrdi.complex_rupture TO GROUP openquake;
-GRANT SELECT ON hzrdi.simple_rupture TO GROUP openquake;
-
 -- admin.oq_user
 GRANT SELECT ON admin.oq_user TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON admin.oq_user TO oq_admin;
@@ -124,53 +109,13 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON eqcat.surface TO oq_eqcat_writer;
 -- eqcat.catalog_allfields view
 GRANT SELECT ON eqcat.catalog_allfields TO GROUP openquake;
 
--- hzrdi.complex_fault
-GRANT SELECT ON hzrdi.complex_fault TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.complex_fault TO oq_job_init;
-
--- hzrdi.fault_edge
-GRANT SELECT ON hzrdi.fault_edge TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.fault_edge TO oq_job_init;
-
--- hzrdi.focal_mechanism
-GRANT SELECT ON hzrdi.focal_mechanism TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.focal_mechanism TO oq_job_init;
-
--- hzrdi.mfd_evd
-GRANT SELECT ON hzrdi.mfd_evd TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.mfd_evd TO oq_job_init;
-
--- hzrdi.mfd_tgr
-GRANT SELECT ON hzrdi.mfd_tgr TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.mfd_tgr TO oq_job_init;
-
 -- hzrdi.parsed_source
 GRANT SELECT ON hzrdi.parsed_source TO GROUP openquake;
 GRANT SELECT,INSERT,DELETE ON hzrdi.parsed_source TO oq_job_init;
 
--- hzrdi.r_depth_distr
-GRANT SELECT ON hzrdi.r_depth_distr TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.r_depth_distr TO oq_job_init;
-
--- hzrdi.r_rate_mdl
-GRANT SELECT ON hzrdi.r_rate_mdl TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.r_rate_mdl TO oq_job_init;
-
--- hzrdi.rupture
-GRANT SELECT ON hzrdi.rupture TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.rupture TO oq_job_init;
-
 -- hzrdi.site_model
 GRANT SELECT ON hzrdi.site_model TO GROUP openquake;
 GRANT SELECT,INSERT,DELETE ON hzrdi.site_model TO oq_job_init;
-
--- hzrdi.simple_fault
-GRANT SELECT ON hzrdi.simple_fault TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.simple_fault TO oq_job_init;
-
--- hzrdi.source
-GRANT SELECT ON hzrdi.source TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.source TO oq_job_init;
 
 -- hzrdr.hazard_curve
 GRANT SELECT ON hzrdr.hazard_curve TO GROUP openquake;
