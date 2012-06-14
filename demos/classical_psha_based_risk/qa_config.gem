@@ -16,9 +16,9 @@ SOURCE_MODEL_LT_RANDOM_SEED = 23
 GMPE_LT_RANDOM_SEED = 5
 
 # file containing erf logic tree structure
-SOURCE_MODEL_LOGIC_TREE_FILE = source_model_logic_tree.xml
+SOURCE_MODEL_LOGIC_TREE_FILE = qa_source_model_logic_tree.xml
 # file containing gmpe logic tree structure
-GMPE_LOGIC_TREE_FILE = gmpe_logic_tree.xml
+GMPE_LOGIC_TREE_FILE = qa_gmpe_logic_tree.xml
 # output directory - relative to this file
 OUTPUT_DIR = computed_output
 
@@ -110,10 +110,10 @@ POES =
 [RISK]
 
 # file containing the exposure in nrml format
-EXPOSURE = Istanbul_exposure_value2.xml
+EXPOSURE = qa_exposure_model.xml
 
 # file containing the vulnerability functions
-VULNERABILITY = Istanbul_vulnerability.xml
+VULNERABILITY = qa_vulnerability_model.xml
 
 LOSS_CURVES_OUTPUT_PREFIX = losscurves
 
