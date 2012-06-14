@@ -282,8 +282,7 @@ CREATE TABLE uiapi.hazard_job_profile (
         CHECK(calculation_mode IN ('classical')),
     region_grid_spacing float,
     -- logic tree parameters:
-    source_model_lt_random_seed INTEGER,
-    gmpe_lt_random_seed INTEGER,
+    random_seed INTEGER,
     number_of_logic_tree_samples INTEGER,
     -- ERF parameters:
     rupture_mesh_spacing float NOT NULL,
@@ -303,8 +302,8 @@ CREATE TABLE uiapi.hazard_job_profile (
     truncation_level float NOT NULL,
     maximum_distance float NOT NULL,
     -- output/post-processing parameters:
-    mean_hazard_curves boolean NOT NULL DEFAULT false,
-    quantile_hazard_curves boolean NOT NULL DEFAULT false,
+    mean_hazard_curves boolean DEFAULT false,
+    quantile_hazard_curves float[],
     poes_hazard_maps float[]
 ) TABLESPACE uiapi_ts;
 SELECT AddGeometryColumn('uiapi', 'hazard_job_profile', 'region', 4326, 'POLYGON', 2);
