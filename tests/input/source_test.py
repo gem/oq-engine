@@ -278,9 +278,7 @@ class SourceDBWriterTestCase(unittest.TestCase):
         # compare pristine nrml sources to those stored in pickled form in the
         # database (by unpickling them first, of course):
         for i, ns in enumerate(nrml_sources):
-            self.assertTrue(
-                *helpers.deep_eq(ns, pickle.loads(parsed_sources[i].blob))
-            )
+            self.assertTrue(*helpers.deep_eq(ns, parsed_sources[i].nrml))
 
         # now check that the ParsedSource geometry is correct
         # it should be the same as the 'rupture-enclosing' geometry for the
