@@ -349,6 +349,7 @@ class SourceDBWriter(object):
                 src, self.mesh_spacing, self.bin_width, self.area_src_disc
             )
             geom = nhlib_src.get_rupture_enclosing_polygon()
+
             ps = models.ParsedSource(
                 input=self.inp, source_type=_source_type(src), nrml=src,
                 polygon=geom.wkt

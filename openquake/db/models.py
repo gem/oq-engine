@@ -28,14 +28,9 @@ Model representations of the OpenQuake DB tables.
 
 import os
 try:
-    import simplejson as json
-except ImportError:
-    import json
-try:
     import cPickle as pickle
 except ImportError:
     import pickle
-
 from collections import namedtuple
 from datetime import datetime
 
