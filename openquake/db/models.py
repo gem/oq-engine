@@ -25,11 +25,14 @@
 Model representations of the OpenQuake DB tables.
 '''
 
-import base64
 import os
-
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 from collections import namedtuple
 from datetime import datetime
+
 from django.contrib.gis.db import models as djm
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
@@ -198,6 +201,33 @@ class CharArrayField(djm.Field):  # pylint: disable=R0904
             return '{' + ', '.join('"%s"' % str(v) for v in value) + '}'
         else:
             return None
+
+
+class PickleField(djm.Field):
+    """Field for transparent pickling and unpickling of python objects."""
+
+    __metaclass__ = djm.SubfieldBase
+
+    SUPPORTED_BACKENDS = set((
+        'django.contrib.gis.db.backends.postgis',
+        'django.db.backends.postgresql_psycopg2'
+    ))
+
+    def db_type(self, connection):
+        """Return "bytea" as postgres' column type."""
+        assert connection.settings_dict['ENGINE'] in self.SUPPORTED_BACKENDS
+        return 'bytea'
+
+    def to_python(self, value):
+        """Unpickle the value."""
+        if value and isinstance(value, (buffer, str, bytearray)):
+            return pickle.loads(str(value))
+        else:
+            return value
+
+    def get_prep_value(self, value):
+        """Pickle the value."""
+        return bytearray(pickle.dumps(value, pickle.HIGHEST_PROTOCOL))
 
 
 ## Tables in the 'admin' schema.
@@ -394,9 +424,7 @@ class ParsedSource(djm.Model):
        tree format."""
     input = djm.ForeignKey('Input')
     source_type = djm.TextField(choices=Source.SI_TYPE_CHOICES)
-    _blob = djm.TextField(db_column='blob', help_text=(
-        "The BLOB that holds the serialized python object tree.")
-    )
+    nrml = PickleField(help_text="NRML object representing the source")
     polygon = djm.PolygonField(
         srid=4326, dim=2,
         help_text=('The surface projection (2D) of the "rupture enclosing" '
@@ -405,14 +433,6 @@ class ParsedSource(djm.Model):
                    'parsed_source record given a minimum integration distance,'
                    ' use this polygon in distance calculations.')
     )
-
-    def set_blob(self, blob):
-        self._blob = base64.encodestring(blob)
-
-    def get_blob(self):
-        return base64.decodestring(self._blob)
-
-    blob = property(get_blob, set_blob)
 
     class Meta:
         db_table = 'hzrdi\".\"parsed_source'
