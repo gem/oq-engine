@@ -60,8 +60,8 @@ class EngineAPITestCase(unittest.TestCase):
             owner=helpers.default_user(),
             path=os.path.abspath(helpers.demo_file(
                 'HazardMapTest/gmpe_logic_tree.xml')),
-            input_type='lt_gmpe', size=730,
-            digest="f3e07cbf46dc07a7eab20e7959cc1414")
+            input_type='lt_gmpe', size=776,
+            digest="aa4a5ccf61553f7be22ec4f9eabe43b4")
 
         src_model_input = models.Input(
             owner=helpers.default_user(),
