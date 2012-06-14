@@ -54,21 +54,21 @@ class EngineAPITestCase(unittest.TestCase):
             path=os.path.abspath(helpers.demo_file(
                 'HazardMapTest/source_model_logic_tree.xml')),
             input_type='lt_source', size=671,
-            digest="4372d13cec89f2a1072a2c7c694656d0")
+            digest="a4afc25a1ae0bc4786444d4294c29753")
 
         gmpelt_input = models.Input(
             owner=helpers.default_user(),
             path=os.path.abspath(helpers.demo_file(
                 'HazardMapTest/gmpe_logic_tree.xml')),
-            input_type='lt_gmpe', size=709,
-            digest="d9ece248a1e73ee25bd5964670282012")
+            input_type='lt_gmpe', size=730,
+            digest="f3e07cbf46dc07a7eab20e7959cc1414")
 
         src_model_input = models.Input(
             owner=helpers.default_user(),
             path=os.path.abspath(helpers.demo_file(
                 'HazardMapTest/source_model.xml')),
-            input_type='source', size=1644,
-            digest="3118538b30b69289e6ea47967e9f51aa")
+            input_type='source', size=1144,
+            digest="68bbbc82682e99b1b2c3c33cbbf57c54")
 
         expected_inputs_map = dict(
             lt_source=smlt_input, lt_gmpe=gmpelt_input, source=src_model_input)
