@@ -587,7 +587,7 @@ class HazardJobProfile(djm.Model):
     #####################
 
     # A description for this config profile which is meaningful to a user.
-    description = djm.TextField(default='')
+    description = djm.TextField(default='', blank=True)
     # TODO:
     #force_inputs = djm.BooleanField(
     #    default=False, help_text="whether the model inputs should be parsed "
@@ -601,11 +601,11 @@ class HazardJobProfile(djm.Model):
     calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
     # For the calculation geometry, choose either `region` (with
     # `region_grid_spacing`) or `sites`.
-    region = djm.PolygonField(srid=4326, null=True)
+    region = djm.PolygonField(srid=4326, null=True, blank=True)
     # Discretization parameter for a `region`. Units in degrees.
-    region_grid_spacing = djm.FloatField(null=True)
+    region_grid_spacing = djm.FloatField(null=True, blank=True)
     # The points of interest for a calculation.
-    sites = djm.MultiPointField(srid=4326, null=True)
+    sites = djm.MultiPointField(srid=4326, null=True, blank=True)
 
     ########################
     # Logic Tree parameters:
@@ -636,19 +636,26 @@ class HazardJobProfile(djm.Model):
     reference_vs30_value = djm.FloatField(
         help_text='Shear wave velocity in the uppermost 30 m. In m/s.',
         null=True,
+        blank=True,
     )
     VS30_TYPE_CHOICES = (
         (u'measured', u'Measured'),
         (u'inferred', u'Inferred'),
     )
-    reference_vs30_type = djm.TextField(choices=VS30_TYPE_CHOICES, null=True)
+    reference_vs30_type = djm.TextField(
+        choices=VS30_TYPE_CHOICES,
+        null=True,
+        blank=True,
+    )
     reference_depth_to_2pt5km_per_sec = djm.FloatField(
         help_text='Depth to where shear-wave velocity = 2.5 km/sec. In km.',
         null=True,
+        blank=True,
     )
     reference_depth_to_1pt0km_per_sec = djm.FloatField(
         help_text='Depth to where shear-wave velocity = 1.0 km/sec. In m.',
         null=True,
+        blank=True,
     )
 
     #########################
@@ -682,16 +689,19 @@ class HazardJobProfile(djm.Model):
     mean_hazard_curves = djm.NullBooleanField(
         help_text='Compute mean hazard curves',
         null=True,
+        blank=True,
     )
     quantile_hazard_curves = djm.NullBooleanField(
         help_text='Compute quantile hazard curves',
         null=True,
+        blank=True,
     )
     poes_hazard_maps = FloatArrayField(
         help_text=('PoEs (probabilities of exceedence) to be used for '
                    'computing hazard maps (from individual curves, mean and '
                    'quantile curves if calculated)'),
         null=True,
+        blank=True,
     )
 
     def get_imts_and_imls(self):
@@ -700,7 +710,7 @@ class HazardJobProfile(djm.Model):
     def set_imts_and_imls(self, imt_iml):
         self._imts_and_imls = json.dumps(imt_iml)
 
-    intensity_measure_levels_and_types = \
+    intensity_measure_types_and_levels = \
         property(get_imts_and_imls, set_imts_and_imls)
 
     class Meta:
