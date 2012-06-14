@@ -458,14 +458,13 @@ class IdenticalInputTestCase(unittest.TestCase, helpers.DbTestCase):
 class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
     """Test the _insert_input_files() function."""
 
-    GLT = helpers.demo_file("simple_fault_demo_hazard/gmpe_logic_tree.xml")
-    SLT = helpers.demo_file(
-        "simple_fault_demo_hazard/source_model_logic_tree.xml")
+    GLT = "gmpe_logic_tree.xml"
+    SLT = "source_model_logic_tree.xml"
 
     PARAMS = {
         "GMPE_LOGIC_TREE_FILE": GLT,
         "SOURCE_MODEL_LOGIC_TREE_FILE": SLT,
-        "BASE_PATH": helpers.get_data_path('')
+        "BASE_PATH": helpers.demo_file("simple_fault_demo_hazard")
     }
 
     old_job = None
@@ -490,10 +489,11 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
         i2j = models.Input2job(input=self.glt_i, oq_job=self.old_job)
         i2j.save()
         # md5sum digest correct
+        slt_path = os.path.join(self.PARAMS['BASE_PATH'], self.SLT)
         if sys.platform == 'darwin':
-            digest = subprocess.check_output(["md5", self.SLT]).split()[-1]
+            digest = subprocess.check_output(["md5", slt_path]).split()[-1]
         else:
-            digest = subprocess.check_output(["md5sum", self.SLT]).split()[0]
+            digest = subprocess.check_output(["md5sum", slt_path]).split()[0]
         self.slt_i = models.Input(input_type="lt_source", size=123,
                                   path=self.SLT, owner=self.old_job.owner,
                                   digest=digest)
@@ -523,19 +523,19 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
     def test_model_content_single_file(self):
         # The contents of input files (such as logic trees, exposure models,
         # etc.) should be saved to the uiapi.model_content table.
-
-        expected_content = open(self.SLT, 'r').read()
-        params = dict(SOURCE_MODEL_LOGIC_TREE_FILE=self.SLT, BASE_PATH='/')
-
-        engine._insert_input_files(params, self.job, True)
+        slt_path = os.path.join(self.PARAMS['BASE_PATH'], self.SLT)
+        expected_content = open(slt_path, 'r').read()
+        engine._insert_input_files(self.PARAMS, self.job, True)
         [slt] = models.inputs4job(self.job.id, input_type="lt_source")
 
         self.assertEqual('xml', slt.model_content.content_type)
         self.assertEqual(expected_content, slt.model_content.raw_content)
 
     def test_model_content_many_files(self):
-        slt_content = open(self.SLT, 'r').read()
-        glt_content = open(self.GLT, 'r').read()
+        slt_path = os.path.join(self.PARAMS['BASE_PATH'], self.SLT)
+        slt_content = open(slt_path, 'r').read()
+        glt_path = os.path.join(self.PARAMS['BASE_PATH'], self.GLT)
+        glt_content = open(glt_path, 'r').read()
 
         engine._insert_input_files(self.PARAMS, self.job, True)
         [slt] = models.inputs4job(self.job.id, input_type="lt_source")
