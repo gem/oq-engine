@@ -23,7 +23,6 @@ import os, os.path
 import unittest
 from StringIO import StringIO
 from decimal import Decimal
-import json
 import tempfile
 import shutil
 
@@ -40,7 +39,7 @@ from openquake.db import models
 from openquake.input import logictree
 from openquake.input.source import nrml_to_nhlib
 from openquake.engine import _insert_input_files
-from tests.utils.helpers import get_data_path, assertDeepAlmostEqual, deep_eq
+from tests.utils.helpers import get_data_path, deep_eq
 
 
 class _TesteableSourceModelLogicTree(logictree.SourceModelLogicTree):
@@ -213,7 +212,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         )
         error = "'{http://openquake.org/xmlns/nrml/0.4}logicTreeSet': " \
                 "This element is not expected."
-        self.assertTrue(error in exc.message,
+        self.assertTrue(error in str(exc),
                         "wrong exception message: %s" % exc.message)
 
     def test_missing_source_model_file(self):
@@ -259,8 +258,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.lineno, 4)
         error = 'first branchset must define an uncertainty ' \
                 'of type "sourceModel"'
-        self.assertEqual(exc.message, error,
-                        "wrong exception message: %s" % exc.message)
+        self.assertTrue(error in str(exc),
+                        "wrong exception message: %s" % exc)
 
     def test_source_model_uncert_on_wrong_level(self):
         lt = _make_nrml("""\
