@@ -27,6 +27,7 @@ Model representations of the OpenQuake DB tables.
 '''
 
 import os
+import re
 try:
     import cPickle as pickle
 except ImportError:
@@ -34,6 +35,7 @@ except ImportError:
 from collections import namedtuple
 from datetime import datetime
 
+from django import forms
 from django.contrib.gis.db import models as djm
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
@@ -167,6 +169,41 @@ def model_equals(model_a, model_b, ignore=None):
     return True
 
 
+class FloatArrayFormField(forms.Field):
+
+    #: regex for splitting string lists on whitespace or commas
+    ARRAY_RE = re.compile('[\s,]+')
+
+    def clean(self, value):
+        """Try to coerce either a string list of values (separated by
+        whitespace and/or commas or a list/tuple of values to a list of
+        floats. If unsuccessful, raise a
+        :exception:`django.forms.ValidationError`
+        """
+        if isinstance(value, (tuple, list)):
+            try:
+                value = [float(x) for x in value]
+            except (TypeError, ValueError):
+                raise forms.ValidationError(
+                    'Could not coerce sequence values to `float` values'
+                )
+        elif isinstance(value, str):
+            # it could be a string list, like this: "1, 2,3 , 4 5"
+            # try to convert it to a an actual list of floats
+            try:
+                value = [float(x) for x in self.ARRAY_RE.split(value)]
+            except ValueError:
+                raise forms.ValidationError(
+                    'Could not coerce `str` to a list of `float` values'
+                )
+        else:
+            raise forms.ValidationError(
+                'Could not convert value to `list` of `float` values: %s'
+                % value
+            )
+        return value
+
+
 class FloatArrayField(djm.Field):
     """This field models a postgres `float` array."""
 
@@ -178,6 +215,14 @@ class FloatArrayField(djm.Field):
             return "{" + ', '.join(str(v) for v in value) + "}"
         else:
             return None
+
+    def formfield(self, **kwargs):
+        """Specify a custom form field type so forms know how to handle fields
+        of this type.
+        """
+        defaults = {'form_class': FloatArrayFormField}
+        defaults.update(kwargs)
+        return super(FloatArrayField, self).formfield(**defaults)
 
 
 class CharArrayField(djm.Field):
@@ -657,7 +702,7 @@ class HazardJobProfile(djm.Model):
         help_text=('Time span (in years) for probability of exceedance '
                    'calculation'),
     )
-    intensity_measure_types_and_levels = JSONField(
+    intensity_measure_types_and_levels = PickleField(
         help_text=(
             'Dictionary containing for each intensity measure type ("PGA", '
             '"PGV", "PGD", "SA", "IA", "RSD", "MMI"), the list of intensity '
