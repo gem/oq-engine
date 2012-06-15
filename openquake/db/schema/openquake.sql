@@ -298,7 +298,7 @@ CREATE TABLE uiapi.hazard_job_profile (
     reference_depth_to_1pt0km_per_sec float,
     -- calculation parameters:
     investigation_time float NOT NULL,
-    intensity_measure_types_and_levels VARCHAR NOT NULL,  -- stored as a JSON dict, in plain text
+    intensity_measure_types_and_levels bytea NOT NULL,  -- stored as a pickled `dict`
     truncation_level float NOT NULL,
     maximum_distance float NOT NULL,
     -- output/post-processing parameters:
