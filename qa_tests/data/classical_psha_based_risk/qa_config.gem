@@ -4,7 +4,7 @@ CALCULATION_MODE = Classical
 
 # NOTE: The order of the vertices is to be kept!!!
 # lat, lon of polygon vertices (in clock or counter-clock wise order)
-REGION_VERTEX = 41.0, 29.50, 41.0, 28.60, 40.70, 28.60, 40.70, 29.50
+REGION_VERTEX = 41.40, 29.50, 41.40, 28.60, 40.70, 28.60, 40.70, 29.50
 # degrees
 REGION_GRID_SPACING = 0.5
 

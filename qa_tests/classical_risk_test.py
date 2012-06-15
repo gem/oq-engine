@@ -19,6 +19,7 @@ import unittest
 
 from lxml import etree
 from glob import glob
+from itertools import repeat
 
 from openquake.db.models import OqJob
 from openquake.nrml.utils import nrml_schema_file
@@ -32,6 +33,15 @@ QA_OUTPUT_DIR = helpers.qa_file('classical_psha_based_risk/computed_output')
 
 class ClassicalRiskQATestCase(unittest.TestCase):
     """Single site QA tests for the Classical Risk calculator."""
+
+    def tearDown(self):
+        filenames = [os.path.join(QA_OUTPUT_DIR,
+            filename) for filename in os.listdir(QA_OUTPUT_DIR)]
+        for filename in filenames:
+            try:
+                os.unlink(filename)
+            except OSError:
+                pass
 
     def test_classical_psha_based_risk(self):
         cfg = helpers.demo_file(
@@ -49,32 +59,40 @@ class ClassicalRiskQATestCase(unittest.TestCase):
             'classical_psha_based_risk/qa_config.gem')
         self._run_job(cfg)
 
-        exp_num_assets = 16733
+        exp_num_items = 43194
         job = OqJob.objects.latest('id')
 
         lc_block_pattern = "%s/losscurves-block-#%s-block#*.xml" % (
             QA_OUTPUT_DIR, job.id)
         lc_lblock_pattern = "%s/losscurves-loss-block-#%s-block#*.xml" % (
             QA_OUTPUT_DIR, job.id)
+        losses_at = "%s/losses_at-0.1.xml" % (QA_OUTPUT_DIR)
 
-        assets_lc_block_files = self._compute_num_assets(lc_block_pattern)
-        assets_lc_lblock_files = self._compute_num_assets(lc_lblock_pattern)
+        num_assets_lc_block_files = self._compute_sum_items(
+            'asset', lc_block_pattern)
+        num_assets_lc_lblock_files = self._compute_sum_items(
+            'asset', lc_lblock_pattern)
+        num_losses = self._compute_sum_items('loss', losses_at)
 
-        self.assertEqual(exp_num_assets, assets_lc_block_files)
-        self.assertEqual(exp_num_assets, assets_lc_lblock_files)
+        self.assertEqual(exp_num_items, num_assets_lc_block_files)
+        self.assertEqual(exp_num_items, num_assets_lc_lblock_files)
+        self.assertEqual(exp_num_items, num_losses)
 
-    def _compute_num_assets(self, pattern):
-        assets_per_filenames = map(self._count_num_assets_in_filename,
-                                    glob(pattern))
-        return sum(assets_per_filenames)
+    def _compute_sum_items(self, item, pattern):
+        fun = self._count_num_items_in_filename
+        filenames = glob(pattern)
+        items = repeat(item, len(filenames))
+        items_per_filenames = [fun(item, pattern)
+                                for item, pattern in zip(items, filenames)]
+        return sum(items_per_filenames)
 
-    def _count_num_assets_in_filename(self, filename):
+    def _count_num_items_in_filename(self, item, filename):
         schema = etree.XMLSchema(file=nrml_schema_file())
         parser = etree.XMLParser(schema=schema)
         root = etree.parse(filename, parser=parser).getroot()
-        exp = etree.XPath('count(//n:asset)', namespaces={'n': NRML_NS})
-        num_assets = exp(root)
-        return num_assets
+        exp = etree.XPath('count(//n:%s)' % item, namespaces={'n': NRML_NS})
+        num_items = exp(root)
+        return num_items
 
     def _verify_loss_maps(self):
         xpath = ('{%(ns)s}riskResult/{%(ns)s}lossMap/'
