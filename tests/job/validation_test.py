@@ -25,29 +25,31 @@ from tests.utils import helpers
 class ClassicalHazardJobFormTestCase(unittest.TestCase):
     """Tests for classical hazard job param validation."""
 
-    VALID_IML_IMT_JSON = r"""
-{"PGV": [0.005, 0.007, 0.0098],
-"IA": [0.005, 0.007, 0.0098],
-"PGD": [0.005, 0.007, 0.0098],
-"MMI": [0.005, 0.007, 0.0098],
-"PGA": [0.005, 0.007, 0.0098],
-"RSD": [0.005, 0.007, 0.0098],
-"SA(0)": [0.005, 0.007, 0.0098],
-"SA(0.025)": [0.005, 0.007, 0.0098],
-"SA(2.5)": [0.005, 0.007, 0.0098],
-"SA(0.45)": [0.005, 0.007, 0.0098]}"""
+    VALID_IML_IMT = {
+        "PGV": [0.005, 0.007, 0.0098],
+        "IA": [0.005, 0.007, 0.0098],
+        "PGD": [0.005, 0.007, 0.0098],
+        "MMI": [0.005, 0.007, 0.0098],
+        "PGA": [0.007, 0.005, 0.0098],
+        "RSD": [0.005, 0.007, 0.0098],
+        "SA(0)": [0.005, 0.007, 0.0098],
+        "SA(0.025)": [0.005, 0.007, 0.0098],
+        "SA(2.5)": [0.005, 0.007, 0.0098],
+        "SA(0.45)": [0.005, 0.007, 0.0098],
+    }
 
-    INVALID_IML_IMT_JSON = r"""
-{"PGZ": [0.005, 0.007, 0.0098],
-"IA": [0.0, 0.007, 0.0098],
-"PGD": [0.005, 0.007, 0.0098],
-"MMI": [0.005, 0.007, 0.0098],
-"PGA": [0.005, 0.007, 0.0098],
-"RSD": [0.005, 0.007, 0.0098],
-"SA(-0.1)": [0.005, 0.007, 0.0098],
-"SA(0.025)": [0.005, 0.007, 0.0098],
-"SA<2.5>": [0.005, 0.007, 0.0098],
-"SA(0.45)": [0.005, 0.007, 0.0098]}"""
+    INVALID_IML_IMT = {
+        "PGZ": [0.005, 0.007, 0.0098],
+        "IA": [0.0, 0.007, 0.0098],
+        "PGD": [0.005, 0.007, 0.0098],
+        "MMI": [0.005, 0.007, 0.0098],
+        "PGA": [-0.001, 0.6, 0.0098],
+        "RSD": [0.005, 0.007, 0.0098],
+        "SA(-0.1)": [0.005, 0.007, 0.0098],
+        "SA(0.025)": [0.005, 0.007, 0.0098],
+        "SA<2.5>": [0.005, 0.007, 0.0098],
+        "SA(0.45)": [0.005, 0.007, 0.0098],
+    }
 
 
     def test_hazard_job_profile_is_valid(self):
@@ -60,8 +62,12 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
             rupture_mesh_spacing=0.001,
             width_of_mfd_bin=0.001,
             area_source_discretization=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
             investigation_time=1.0,
-            intensity_measure_types_and_levels=(self.VALID_IML_IMT_JSON),
+            intensity_measure_types_and_levels=self.VALID_IML_IMT,
             truncation_level=0.0,
             maximum_distance=100.0,
             mean_hazard_curves=True,
@@ -69,12 +75,42 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
         form = validation.ClassicalHazardJobForm(instance=hjp, files=None)
-
-        self.assertTrue(form.is_valid())
+        import nose; nose.tools.set_trace()
+        self.assertTrue(form.is_valid(), dict(form.errors))
 
     def test_hazard_job_profile_is_not_valid(self):
         # test with an invalid job profile
         # several parameters are given invalid values
+        expected_errors = {
+            'area_source_discretization': [
+                'Area source discretization must be > 0',
+            ],
+            'calculation_mode': [
+                'Select a valid choice. Classical is not one of the available '
+                'choices.',
+                'Calculation mode must be "classical"',
+            ],
+            'investigation_time': ['Investigation time must be > 0'],
+            'maximum_distance': ['Maximum distance must be > 0'],
+            'number_of_logic_tree_samples': [
+                'Number of logic tree samples must be > 0',
+            ],
+            'poes_hazard_maps': [
+                'PoEs for hazard maps must be in the range [0, 1]',
+            ],
+            'quantile_hazard_curves': [
+                'Quantile hazard curve values must in the range [0, 1]'
+            ],
+            'random_seed': [
+                'Random seed must be a value from -2147483648 to 2147483647 '
+                '(inclusive)',
+            ],
+            'rupture_mesh_spacing': ['Rupture mesh spacing must be > 0'],
+            'truncation_level': ['Truncation level must be >= 0'],
+            'width_of_mfd_bin': ['Width of MFD bin must be > 0'],
+        }
+
+
         hjp = models.HazardJobProfile(
             owner=helpers.default_user(),
             description='',
@@ -85,24 +121,22 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
             ),
             region_grid_spacing=0,
             sites='MULTIPOINT((-122.0 38.113), (-122.114 38.113))',
-            calculation_mode='classical',
+            calculation_mode='Classical',
             random_seed=2147483648,
             number_of_logic_tree_samples=0,
             rupture_mesh_spacing=0,
             width_of_mfd_bin=0,
             area_source_discretization=0,
             investigation_time=0,
-            intensity_measure_types_and_levels=(self.INVALID_IML_IMT_JSON),
-            truncation_level=0.0,
-            maximum_distance=100.0,
-            mean_hazard_curves=True,
-            quantile_hazard_curves=[0.0, 0.5, 1.0],
-            poes_hazard_maps=[1.0, 0.5, 0.0],
+            intensity_measure_types_and_levels=self.INVALID_IML_IMT,
+            truncation_level=-0.1,
+            maximum_distance=0,
+            quantile_hazard_curves=[0.0, -0.1, 1.1],
+            poes_hazard_maps=[1.00001, -0.5, 0.0],
         )
 
         form = validation.ClassicalHazardJobForm(instance=hjp, files=None)
 
         self.assertFalse(form.is_valid())
-        print form.errors
-        import nose; nose.tools.set_trace()
-        self.assertTrue(False)
+        equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
+        self.assertTrue(equal, err)
