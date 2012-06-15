@@ -25,6 +25,7 @@ import os
 import re
 import random
 from decimal import Decimal
+import abc
 
 from lxml import etree
 
@@ -49,12 +50,6 @@ class LogicTreeError(Exception):
         super(LogicTreeError, self).__init__(msg)
         self.filename = filename
         self.basepath = basepath
-
-    def get_filepath(self):
-        """
-        Reconstruct and return absolute path to affected file.
-        """
-        return os.path.join(self.basepath, self.filename)
 
     def __str__(self):
         return 'basepath %r, filename %r: %s' % (self.basepath, self.filename,
@@ -317,6 +312,8 @@ class BaseLogicTree(object):
 
     _xmlschema = None
 
+    __metaclass__ = abc.ABCMeta
+
     @classmethod
     def get_xmlschema(cls):
         """
@@ -512,6 +509,7 @@ class BaseLogicTree(object):
             the root branchset for this tree.
         """
 
+    @abc.abstractmethod
     def parse_uncertainty_value(self, node, branchset, value):
         """
         Do any kind of type conversion or adaptation on the uncertainty value.
@@ -523,8 +521,8 @@ class BaseLogicTree(object):
         :return:
             Something to replace ``value`` as the uncertainty value.
         """
-        raise NotImplementedError()
 
+    @abc.abstractmethod
     def validate_uncertainty_value(self, node, branchset, value):
         """
         Check the value ``value`` for correctness to be set for one
@@ -542,8 +540,8 @@ class BaseLogicTree(object):
             The actual value to be checked. Type depends on branchset's
             uncertainty type.
         """
-        raise NotImplementedError()
 
+    @abc.abstractmethod
     def parse_filters(self, branchset_node, uncertainty_type, filters):
         """
         Do any kind of type conversion or adaptation on the filters.
@@ -555,8 +553,8 @@ class BaseLogicTree(object):
         :return:
             The filters dictionary to replace the original.
         """
-        raise NotImplementedError()
 
+    @abc.abstractmethod
     def validate_filters(self, node, uncertainty_type, filters):
         """
         Check that filters ``filters`` are valid for given uncertainty type.
@@ -571,8 +569,8 @@ class BaseLogicTree(object):
         :param filters:
             Filters dictionary.
         """
-        raise NotImplementedError()
 
+    @abc.abstractmethod
     def validate_branchset(self, branchset_node, depth, number, branchset):
         """
         Check that branchset is valid.
@@ -590,7 +588,6 @@ class BaseLogicTree(object):
         :param branchset:
             An instance of :class:`BranchSet`.
         """
-        raise NotImplementedError()
 
 
 class SourceModelLogicTree(BaseLogicTree):
