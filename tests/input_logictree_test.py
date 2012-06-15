@@ -34,11 +34,13 @@ from nhlib.pmf import PMF
 from nhlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
 from nhlib.gsim.sadigh_1997 import SadighEtAl1997
 from nhlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
+from nrml.parsers import SourceModelParser
 
-from openquake.java import jvm
 from openquake.db import models
 from openquake.input import logictree
-from tests.utils.helpers import patch, get_data_path, assertDeepAlmostEqual
+from openquake.input.source import nrml_to_nhlib
+from openquake.engine import _insert_input_files
+from tests.utils.helpers import get_data_path, assertDeepAlmostEqual, deep_eq
 
 
 class _TesteableSourceModelLogicTree(logictree.SourceModelLogicTree):
@@ -1916,34 +1918,9 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.proc = logictree.LogicTreeProcessor(job.id)
 
     def test_sample_source_model(self):
-        result = self.proc.sample_source_model_logictree(random_seed=42,
-                                                         mfd_bin_width=0.1)
-        result = json.loads(result)
-        first_source = {
-            'dip': 38.0,
-            'floatRuptureFlag': True,
-            'id': 'src01',
-            'mfd': {
-                'D': False,
-                'delta': 0.1,
-                'first': True,
-                'info': '',
-                'maxX': 6.95,
-                'minX': 6.55,
-                'name': u'',
-                'num': 5,
-                'points': [0.001062, 0.000883, 0.000734, 0.000611, 0.000508],
-                'tolerance': 1e-07
-            },
-            'name': 'Mount Diablo Thrust',
-            'rake': 90.0,
-            'seismDepthLow': 13.0,
-            'seismDepthUpp': 8.0,
-            'tectReg': 'ACTIVE_SHALLOW',
-            'trace': [{'depth': 0.0, 'lat': 0.658514, 'lon': -2.126210},
-                      {'depth': 0.0, 'lat': 0.661080, 'lon': -2.129978}]
-        }
-        assertDeepAlmostEqual(self, first_source, result[0], delta=1e-5)
+        sm_name, modify = self.proc.sample_source_model_logictree(42)
+        self.assertEqual(sm_name, 'example-source-model.xml')
+        self.assertTrue(callable(modify))
 
     def test_sample_gmpe(self):
         result = self.proc.sample_gmpe_logictree(random_seed=124)
@@ -1956,20 +1933,23 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
 
 
 class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
-    GMPE_LT = get_data_path('example-gmpe-logictree.xml')
     MFD_BIN_WIDTH = 1e-3
-
-    def setUp(self):
-        with patch('openquake.input.logictree.GMPELogicTree') as mock:
-            self.proc = logictree.LogicTreeProcessor(
-                self.BASE_PATH, self.SOURCE_MODEL_LT, self.GMPE_LT
-            )
-        mock.assert_called_once_with(self.TECTONIC_REGION_TYPES,
-                                     self.BASE_PATH, self.GMPE_LT)
+    GMPE_LT = 'gmpe-logictree.xml'
+    NRML_TO_NHLIB_PARAMS = {'mesh_spacing': 1, 'bin_width': 1,
+                            'area_src_disc': 10}
 
     def _do_test(self, path, expected_result):
-        [branch] = self.proc.source_model_lt.root_branchset.branches
-        all_branches = self.proc.source_model_lt.branches
+        params = {'BASE_PATH': self.BASE_PATH,
+                  'SOURCE_MODEL_LOGIC_TREE_FILE': self.SOURCE_MODEL_LT,
+                  'GMPE_LOGIC_TREE_FILE': self.GMPE_LT}
+        job = models.OqJob.objects.create(
+            owner=models.OqUser.objects.get(user_name='openquake')
+        )
+        _insert_input_files(params, job, False)
+        proc = logictree.LogicTreeProcessor(job.id)
+
+        [branch] = proc.source_model_lt.root_branchset.branches
+        all_branches = proc.source_model_lt.branches
         path = iter(path)
         while branch.child_branchset is not None:
             nextbranch = all_branches[next(path)]
@@ -1978,26 +1958,33 @@ class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
             branch = nextbranch
         assert list(path) == []
 
-        result = json.loads(self.proc.sample_source_model_logictree(
-            0, self.MFD_BIN_WIDTH
-        ))
+        sm_path, modify_source = proc.sample_source_model_logictree(0)
 
-        sm_reader = jvm().JClass('org.gem.engine.hazard.'
-                                 'parsers.SourceModelReader')
-        sources = sm_reader(os.path.join(self.BASE_PATH, expected_result),
-                            self.MFD_BIN_WIDTH).read()
-        serializer = jvm().JClass('org.gem.JsonSerializer')
-        expected_result = json.loads(serializer.getJsonSourceList(sources))
-        assertDeepAlmostEqual(self, expected_result, result, delta=1e-1)
+        expected_result_path = os.path.join(self.BASE_PATH, expected_result)
+        e_nrml_sources = SourceModelParser(expected_result_path).parse()
+        e_nhlib_sources = [nrml_to_nhlib(source, **self.NRML_TO_NHLIB_PARAMS)
+                           for source in e_nrml_sources]
+
+        original_sm_path = os.path.join(self.BASE_PATH, sm_path)
+        a_nrml_sources = SourceModelParser(original_sm_path).parse()
+        a_nhlib_sources = [nrml_to_nhlib(source, **self.NRML_TO_NHLIB_PARAMS)
+                           for source in a_nrml_sources]
+        for i, source in enumerate(a_nhlib_sources):
+            modify_source(source)
+            # these parameters are expected to be different
+            del source.mfd._original_parameters
+            del e_nhlib_sources[i].mfd._original_parameters
+
+        self.assertEqual(len(e_nhlib_sources), len(a_nhlib_sources))
+        for i in xrange(len(e_nhlib_sources)):
+            expected_source = e_nhlib_sources[i]
+            actual_source = a_nhlib_sources[i]
+            self.assertTrue(*deep_eq(expected_source, actual_source))
 
 
 class RelSMLTBBTestCase(_BaseSourceModelLogicTreeBlackboxTestCase):
     BASE_PATH = get_data_path('LogicTreeRelativeUncertaintiesTest')
     SOURCE_MODEL_LT = 'logic_tree.xml'
-    TECTONIC_REGION_TYPES = set([
-        'Subduction IntraSlab', 'Subduction Interface', 'Stable Shallow Crust',
-        'Active Shallow Crust'
-    ])
 
     def test_b4(self):
         self._do_test(['b2', 'b4'], 'result_b4.xml')
@@ -2015,10 +2002,6 @@ class RelSMLTBBTestCase(_BaseSourceModelLogicTreeBlackboxTestCase):
 class AbsSMLTBBTestCase(_BaseSourceModelLogicTreeBlackboxTestCase):
     BASE_PATH = get_data_path('LogicTreeAbsoluteUncertaintiesTest')
     SOURCE_MODEL_LT = 'logic_tree.xml'
-    TECTONIC_REGION_TYPES = set([
-        'Subduction IntraSlab', 'Subduction Interface', 'Stable Shallow Crust',
-        'Active Shallow Crust'
-    ])
 
     def test_b4(self):
         self._do_test(['b2', 'b4'], 'result_b4.xml')
