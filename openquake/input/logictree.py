@@ -1042,7 +1042,6 @@ class LogicTreeProcessor(object):
             representation. Function takes one argument, that is the nhlib
             source object, and apply uncertainties to it in-place.
         """
-        # TODO: unittest
         rnd = random.Random(random_seed)
         branch = self.source_model_lt.root_branchset.sample(rnd)
         sm_name = branch.value
