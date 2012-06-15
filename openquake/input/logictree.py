@@ -24,17 +24,16 @@ at https://blueprints.launchpad.net/openquake/+spec/openquake-logic-tree-module
 import os
 import re
 import random
-import itertools
 from decimal import Decimal
-try:
-    import simplejson as json
-except ImportError:
-    import json
+import abc
 
 from lxml import etree
 
-from openquake.java import jvm
-from openquake.nrml.utils import nrml_schema_file
+import nrml
+import nhlib
+from nhlib.gsim.base import GroundShakingIntensityModel
+
+from openquake.db import models
 
 
 class LogicTreeError(Exception):
@@ -52,14 +51,9 @@ class LogicTreeError(Exception):
         self.filename = filename
         self.basepath = basepath
 
-    def get_filepath(self):
-        """
-        Reconstruct and return absolute path to affected file.
-        """
-        return os.path.join(self.basepath, self.filename)
-
     def __str__(self):
-        return 'file %r: %s' % (self.get_filepath(), self.message)
+        return 'basepath %r, filename %r: %s' % (self.basepath, self.filename,
+                                                 self.message)
 
 
 class ParsingError(LogicTreeError):
@@ -84,8 +78,8 @@ class ValidationError(LogicTreeError):
         self.lineno = node.sourceline
 
     def __str__(self):
-        return 'file %r line %r: %s' % (self.get_filepath(), self.lineno,
-                                        self.message)
+        return 'basepath %r, filename %r, line %r: %s' % (
+                self.basepath, self.filename, self.lineno, self.message)
 
 
 class Branch(object):
@@ -182,51 +176,6 @@ class BranchSet(object):
                 return branch
         raise AssertionError('do weights really sum up to 1.0?')
 
-    @classmethod
-    def _is_gr_mfd(cls, mfd):
-        """
-        Return ``True`` if ``mfd`` is opensha GR MFD object
-        (and in particular not evenly discretized function).
-        """
-        classname = 'org.opensha.sha.magdist.GutenbergRichterMagFreqDist'
-        return isinstance(mfd, jvm().JClass(classname))
-
-    @classmethod
-    def _is_point(cls, source):
-        """
-        Return ``True`` if ``source`` is opensha source of point type.
-        """
-        classname = 'org.opensha.sha.earthquake.rupForecastImpl.' \
-                    'GEM1.SourceData.GEMPointSourceData'
-        return isinstance(source, jvm().JClass(classname))
-
-    @classmethod
-    def _is_simplefault(cls, source):
-        """
-        Return ``True`` if ``source`` is opensha source of simple fault type.
-        """
-        classname = 'org.opensha.sha.earthquake.rupForecastImpl.' \
-                    'GEM1.SourceData.GEMFaultSourceData'
-        return isinstance(source, jvm().JClass(classname))
-
-    @classmethod
-    def _is_complexfault(cls, source):
-        """
-        Return ``True`` if ``source`` is opensha source of complex fault type.
-        """
-        classname = 'org.opensha.sha.earthquake.rupForecastImpl.' \
-                    'GEM1.SourceData.GEMSubductionFaultSourceData'
-        return isinstance(source, jvm().JClass(classname))
-
-    @classmethod
-    def _is_area(cls, source):
-        """
-        Return ``True`` if ``source`` is opensha source of area type.
-        """
-        classname = 'org.opensha.sha.earthquake.rupForecastImpl.' \
-                    'GEM1.SourceData.GEMAreaSourceData'
-        return isinstance(source, jvm().JClass(classname))
-
     def filter_source(self, source):
         # pylint: disable=R0911,R0912
         """
@@ -235,25 +184,27 @@ class BranchSet(object):
         """
         for key, value in self.filters.items():
             if key == 'applyToTectonicRegionType':
-                if value != source.tectReg.name:
+                if value != source.tectonic_region_type:
                     return False
             elif key == 'applyToSourceType':
                 if value == 'area':
-                    if not self._is_area(source):
+                    if not isinstance(source, nhlib.source.AreaSource):
                         return False
                 elif value == 'point':
-                    if not self._is_point(source):
+                    # area source extends point source
+                    if not isinstance(source, nhlib.source.PointSource) \
+                            or isinstance(source, nhlib.source.AreaSource):
                         return False
                 elif value == 'simpleFault':
-                    if not self._is_simplefault(source):
+                    if not isinstance(source, nhlib.source.SimpleFaultSource):
                         return False
                 elif value == 'complexFault':
-                    if not self._is_complexfault(source):
+                    if not isinstance(source, nhlib.source.ComplexFaultSource):
                         return False
                 else:
                     raise AssertionError('unknown source type %r' % value)
             elif key == 'applyToSources':
-                if source.id not in value:
+                if source.source_id not in value:
                     return False
             else:
                 raise AssertionError('unknown filter %r' % key)
@@ -279,53 +230,54 @@ class BranchSet(object):
             in order to sample the tree once again.
         """
         if not self.filter_source(source):
+            # source didn't pass the filter
             return
 
-        # TODO: handle exceptions in java methods and rethrow LogicTreeError
-        if self._is_complexfault(source) or self._is_simplefault(source):
-            # simple fault or complex fault - only one mfd always
-            mfdlist = [source.getMfd()]
-        elif self._is_point(source):
-            # point
-            mfdlist = source.getHypoMagFreqDistAtLoc().getMagFreqDistList()
-        elif self._is_area(source):
-            # area
-            mfdlist = source.getMagfreqDistFocMech().getMagFreqDistList()
-        else:
-            raise AssertionError('type of source %r is unknown' % source)
+        if not isinstance(source.mfd, nhlib.mfd.TruncatedGRMFD):
+            # source's mfd is not gutenberg-richter
+            return
 
-        if self.uncertainty_type in ('abGRAbsolute', 'maxMagGRAbsolute'):
-            # Absolute uncertainties have lists of values -- one for each
-            # GR MFD in order of appearance.
-            valuelist = iter(value)
-        else:
-            # All other uncertainties always have one value which applies
-            # to all mfds, no matter how many are there.
-            valuelist = itertools.repeat(value)
-
-        for mfd in mfdlist:
-            # ignore all non-GR mfds
-            if self._is_gr_mfd(mfd):
-                mfd_value = next(valuelist)
-                self._apply_uncertainty_to_mfd(mfd, mfd_value)
+        self._apply_uncertainty_to_mfd(source.mfd, value)
 
     def _apply_uncertainty_to_mfd(self, mfd, value):
         """
         Modify ``mfd`` object with uncertainty value ``value``.
         """
-        # Need to cast to floats explicitly to make calls match java
-        # methods signatures in case when value is an integer.
         if self.uncertainty_type == 'abGRAbsolute':
             a, b = value
-            mfd.setAB(float(a), float(b))
+            mfd.modify('set_ab', dict(a_val=a, b_val=b))
+
         elif self.uncertainty_type == 'bGRRelative':
-            mfd.incrementB(float(value))
+            mfd.modify('increment_b', dict(value=value))
+
         elif self.uncertainty_type == 'maxMagGRRelative':
-            mfd.incrementMagUpper(float(value))
+            mfd.modify('increment_max_mag', dict(value=value))
+
         elif self.uncertainty_type == 'maxMagGRAbsolute':
-            mfd.setMagUpper(float(value))
+            mfd.modify('set_max_mag', dict(value=value))
+
         else:
-            raise AssertionError('what is %s btw?' % self.uncertainty_type)
+            raise AssertionError('unknown uncertainty type %r'
+                                 % self.uncertainty_type)
+
+
+def _open_file(basepath, filename):
+    """
+    Open file named ``filename`` and return the file content.
+
+    :param basepath:
+        Path that ``filename`` is relative to.
+    :param fileame:
+        File name, relative to ``basepath``.
+    :returns:
+        File object to read from.
+    :raises ParsingError:
+        If file can not be opened.
+    """
+    try:
+        return open(os.path.join(basepath, filename))
+    except IOError as exc:
+        raise ParsingError(filename, basepath, str(exc))
 
 
 class BaseLogicTree(object):
@@ -333,10 +285,19 @@ class BaseLogicTree(object):
     Common code for logic tree readers, parsers and verifiers --
     :class:`GMPELogicTree` and :class:`SourceModelLogicTree`.
 
+    :param content:
+        Raw string containing the logic tree xml content.
     :param basepath:
         Base path for logic tree itself and all files that it references.
     :param filename:
         Name of logic tree file, supposed to be relative to ``basepath``.
+        That filename together with ``basepath`` are only used for reporting
+        errors, the actual data is read from ``content``.
+    :param validate:
+        Boolean indicating whether or not the tree should be validated
+        while parsed. This should be set to ``True`` on initial load
+        of the logic tree (before importing it to the database) and
+        to ``False`` on workers side (when loaded from the database).
     :raises ParsingError:
         If logic tree file or any of the referenced files is unable to read
         or parse.
@@ -344,12 +305,14 @@ class BaseLogicTree(object):
         If logic tree file has a logic error, which can not be prevented
         by xml schema rules (like referencing sources with missing id).
     """
-    NRML = 'http://openquake.org/xmlns/nrml/0.3'
+    NRML = nrml.NAMESPACE
     FILTERS = ('applyToTectonicRegionType',
                'applyToSources',
                'applyToSourceType')
 
     _xmlschema = None
+
+    __metaclass__ = abc.ABCMeta
 
     @classmethod
     def get_xmlschema(cls):
@@ -361,35 +324,39 @@ class BaseLogicTree(object):
         class attribute.
         """
         if not cls._xmlschema:
-            cls._xmlschema = etree.XMLSchema(file=nrml_schema_file())
+            cls._xmlschema = etree.XMLSchema(file=nrml.nrml_schema_file())
         return cls._xmlschema
 
-    def __init__(self, basepath, filename):
+    def __init__(self, content, basepath, filename, validate=True):
         self.basepath = basepath
         self.filename = filename
         parser = etree.XMLParser(schema=self.get_xmlschema())
         self.branches = {}
         self.open_ends = set()
-        filestream = self._open_file(self.filename)
+        if isinstance(content, unicode):
+            # etree.fromstring() refuses to parse unicode objects
+            content = content.encode('latin1')
         try:
-            tree = etree.parse(filestream, parser=parser)
+            tree = etree.fromstring(content, parser=parser)
         except etree.XMLSyntaxError as exc:
             # Wrap etree parsing exception to :exc:`ParsingError`.
             raise ParsingError(self.filename, self.basepath, str(exc))
-        [tree] = tree.getroot().findall('{%s}logicTree' % self.NRML)
+        [tree] = tree.findall('{%s}logicTree' % self.NRML)
         self.root_branchset = None
-        self.parse_tree(tree)
+        self.parse_tree(tree, validate)
 
-    def parse_tree(self, tree_node):
+    def parse_tree(self, tree_node, validate):
         """
         Parse the whole tree and point ``root_branchset`` attribute
-        to the tree's root. Calls :meth:`validate_tree` when done.
+        to the tree's root. If ``validate`` is set to ``True``, calls
+        :meth:`validate_tree` when done. Also passes that value
+        to :meth:`parse_branchinglevel`.
         """
         levels = tree_node.findall('{%s}logicTreeBranchingLevel' % self.NRML)
         for depth, branchinglevel_node in enumerate(levels):
-            self.parse_branchinglevel(branchinglevel_node, depth)
-        self.root_branchset = self.validate_tree(tree_node,
-                                                 self.root_branchset)
+            self.parse_branchinglevel(branchinglevel_node, depth, validate)
+        if validate:
+            self.validate_tree(tree_node, self.root_branchset)
 
     def _open_file(self, filename):
         """
@@ -397,16 +364,11 @@ class BaseLogicTree(object):
 
         :param fileame:
             String, should be relative to tree's base path.
-        :raises ParsingError:
-            If file can not be opened.
         """
         # This was extracted to method mainly to simplify unittesting.
-        try:
-            return open(os.path.join(self.basepath, filename))
-        except IOError as exc:
-            raise ParsingError(filename, self.basepath, str(exc))
+        return _open_file(self.basepath, filename)
 
-    def parse_branchinglevel(self, branchinglevel_node, depth):
+    def parse_branchinglevel(self, branchinglevel_node, depth, validate):
         """
         Parse one branching level.
 
@@ -414,6 +376,9 @@ class BaseLogicTree(object):
             ``etree.Element`` object with tag "logicTreeBranchingLevel".
         :param depth:
             The sequential number of this branching level, based on 0.
+        :param validate:
+            Whether or not the branching level, its branchsets and their
+            branches should be validated.
 
         Enumerates children branchsets and call :meth:`parse_branchset`,
         :meth:`validate_branchset`, :meth:`parse_branches` and finally
@@ -428,10 +393,9 @@ class BaseLogicTree(object):
         branchsets = branchinglevel_node.findall('{%s}logicTreeBranchSet' %
                                                 self.NRML)
         for number, branchset_node in enumerate(branchsets):
-            branchset = self.parse_branchset(branchset_node)
-            branchset = self.validate_branchset(branchset_node, depth, number,
-                                                branchset)
-            self.parse_branches(branchset_node, branchset)
+            branchset = self.parse_branchset(branchset_node, depth, number,
+                                             validate)
+            self.parse_branches(branchset_node, branchset, validate)
             if depth == 0 and number == 0:
                 self.root_branchset = branchset
             else:
@@ -441,12 +405,19 @@ class BaseLogicTree(object):
         self.open_ends.clear()
         self.open_ends.update(new_open_ends)
 
-    def parse_branchset(self, branchset_node):
+    def parse_branchset(self, branchset_node, depth, number, validate):
         """
         Create :class:`BranchSet` object using data in ``branchset_node``.
 
         :param branchset_node:
             ``etree.Element`` object with tag "logicTreeBranchSet".
+        :param depth:
+            The sequential number of branchset's branching level, based on 0.
+        :param number:
+            Index number of this branchset inside branching level, based on 0.
+        :param validate:
+            Whether or not filters defined in branchset and the branchset
+            itself should be validated.
         :returns:
             An instance of :class:`BranchSet` with filters applied but with
             no branches (they're attached in :meth:`parse_branches`).
@@ -455,12 +426,15 @@ class BaseLogicTree(object):
         filters = dict((filtername, branchset_node.get(filtername))
                        for filtername in self.FILTERS
                        if filtername in branchset_node.attrib)
-        filters = self.validate_filters(branchset_node, uncertainty_type,
-                                        filters)
+        if validate:
+            self.validate_filters(branchset_node, uncertainty_type, filters)
+        filters = self.parse_filters(branchset_node, uncertainty_type, filters)
         branchset = BranchSet(uncertainty_type, filters)
+        if validate:
+            self.validate_branchset(branchset_node, depth, number, branchset)
         return branchset
 
-    def parse_branches(self, branchset_node, branchset):
+    def parse_branches(self, branchset_node, branchset, validate):
         """
         Create and attach branches at ``branchset_node`` to ``branchset``.
 
@@ -468,6 +442,8 @@ class BaseLogicTree(object):
             Same as for :meth:`parse_branchset`.
         :param branchset:
             An instance of :class:`BranchSet`.
+        :param validate:
+            Whether or not branches' uncertainty values should be validated.
 
         Checks that each branch has :meth:`valid <validate_uncertainty_value>`
         value, unique id and that all branches have total weight of 1.0.
@@ -482,9 +458,11 @@ class BaseLogicTree(object):
             weight = Decimal(weight.strip())
             weight_sum += weight
             value_node = branchnode.find('{%s}uncertaintyModel' % self.NRML)
-            value = self.validate_uncertainty_value(
-                value_node, branchset, value_node.text.strip()
-            )
+            if validate:
+                self.validate_uncertainty_value(value_node, branchset,
+                                                value_node.text.strip())
+            value = self.parse_uncertainty_value(value_node, branchset,
+                                                value_node.text.strip())
             branch_id = branchnode.get('branchID')
             branch = Branch(branch_id, weight, value)
             if branch_id in self.branches:
@@ -522,24 +500,35 @@ class BaseLogicTree(object):
         """
         Check the whole parsed tree for consistency and sanity.
 
-        Abstract method, must be overriden by subclasses.
+        Can be overriden by subclasses. Base class implementation does nothing.
 
         :param tree_node:
             ``etree.Element`` object with tag "logicTree".
         :param root_branchset:
             An instance of :class:`BranchSet` which is about to become
             the root branchset for this tree.
-        :return:
-            An object to make it root branchset.
         """
-        raise NotImplementedError()
 
+    @abc.abstractmethod
+    def parse_uncertainty_value(self, node, branchset, value):
+        """
+        Do any kind of type conversion or adaptation on the uncertainty value.
+
+        Abstract method, must be overridden by subclasses.
+
+        Parameters are the same as for :meth:`validate_uncertainty_value`.
+
+        :return:
+            Something to replace ``value`` as the uncertainty value.
+        """
+
+    @abc.abstractmethod
     def validate_uncertainty_value(self, node, branchset, value):
         """
         Check the value ``value`` for correctness to be set for one
-        of branchet's branches.
+        of branchset's branches.
 
-        Abstract method, must be overriden by subclasses.
+        Abstract method, must be overridden by subclasses.
 
         :param node:
             ``etree.Element`` object with tag "uncertaintyModel" (the one
@@ -550,11 +539,22 @@ class BaseLogicTree(object):
         :param value:
             The actual value to be checked. Type depends on branchset's
             uncertainty type.
-        :return:
-            The value to replace an original (for example, with type casted).
         """
-        raise NotImplementedError()
 
+    @abc.abstractmethod
+    def parse_filters(self, branchset_node, uncertainty_type, filters):
+        """
+        Do any kind of type conversion or adaptation on the filters.
+
+        Abstract method, must be overriden by subclasses.
+
+        Parameters are the same as for :meth:`validate_filters`.
+
+        :return:
+            The filters dictionary to replace the original.
+        """
+
+    @abc.abstractmethod
     def validate_filters(self, node, uncertainty_type, filters):
         """
         Check that filters ``filters`` are valid for given uncertainty type.
@@ -568,11 +568,9 @@ class BaseLogicTree(object):
             See the list in :class:`BranchSet`.
         :param filters:
             Filters dictionary.
-        :return:
-            The filters dictionary to replace an original.
         """
-        raise NotImplementedError()
 
+    @abc.abstractmethod
     def validate_branchset(self, branchset_node, depth, number, branchset):
         """
         Check that branchset is valid.
@@ -590,7 +588,6 @@ class BaseLogicTree(object):
         :param branchset:
             An instance of :class:`BranchSet`.
         """
-        raise NotImplementedError()
 
 
 class SourceModelLogicTree(BaseLogicTree):
@@ -600,18 +597,25 @@ class SourceModelLogicTree(BaseLogicTree):
     SOURCE_TYPES = ('point', 'area', 'complexFault', 'simpleFault')
 
     def __init__(self, *args, **kwargs):
-        self.source_ids_to_num_gr_mfds = {}
+        self.source_ids = set()
         self.tectonic_region_types = set()
         self.source_types = set()
         super(SourceModelLogicTree, self).__init__(*args, **kwargs)
 
-    def validate_tree(self, tree_node, root_branchset):
+    def parse_uncertainty_value(self, node, branchset, value):
         """
         See superclass' method for description and signature specification.
 
-        Does not check anything, returns ``root_branchset`` intact.
+        Doesn't change source model file name, converts other values to either
+        pair of floats or a single float depending on uncertainty type.
         """
-        return root_branchset
+        if branchset.uncertainty_type == 'sourceModel':
+            return value
+        elif branchset.uncertainty_type == 'abGRAbsolute':
+            [a, b] = value.strip().split()
+            return float(a), float(b)
+        else:
+            return float(value)
 
     def validate_uncertainty_value(self, node, branchset, value):
         """
@@ -622,40 +626,26 @@ class SourceModelLogicTree(BaseLogicTree):
         * For uncertainty of type "sourceModel": referenced file must exist
           and be readable. This is checked in :meth:`collect_source_model_data`
           along with saving the source model information.
-        * For absolute uncertainties: the number of values must match
-          the number of GR MFDs in source. The source (only one) itself
-          must be referenced in branchset's filter "applyToSources".
+        * For uncertainty of type "abGRAbsolute": value should be two float
+          values.
+        * For both absolute uncertainties: the source (only one) must
+          be referenced in branchset's filter "applyToSources".
         * For all other cases: value should be a single float value.
         """
         _float_re = re.compile(r'^(\+|\-)?(\d+|\d*\.\d+)$')
+
         if branchset.uncertainty_type == 'sourceModel':
             self.collect_source_model_data(value)
-            return os.path.join(self.basepath, value)
-        elif branchset.uncertainty_type == 'abGRAbsolute' \
-                or branchset.uncertainty_type == 'maxMagGRAbsolute':
-            [source_id] = branchset.filters['applyToSources']
-            num_numbers_expected = self.source_ids_to_num_gr_mfds[source_id]
-            assert num_numbers_expected != 0
-            if branchset.uncertainty_type == 'abGRAbsolute':
-                num_numbers_expected *= 2
-            values = []
-            for single_number in value.split():
-                if not _float_re.match(single_number):
-                    break
-                values.append(float(single_number))
-                if len(values) > num_numbers_expected:
-                    break
-            else:
-                if len(values) == num_numbers_expected:
-                    if branchset.uncertainty_type == 'abGRAbsolute':
-                        return zip(*((iter(values), ) * 2))
-                    else:
-                        return values
+
+        elif branchset.uncertainty_type == 'abGRAbsolute':
+            ab = value.split()
+            if len(ab) == 2:
+                a, b = ab
+                if _float_re.match(a) and _float_re.match(b):
+                    return
             raise ValidationError(
                 node, self.filename, self.basepath,
-                'expected list of %d float(s) separated by space, ' \
-                'as source %r has %d GR MFD(s)' % (num_numbers_expected,
-                source_id, self.source_ids_to_num_gr_mfds[source_id])
+                'expected a pair of floats separated by space'
             )
         else:
             if not _float_re.match(value):
@@ -663,7 +653,16 @@ class SourceModelLogicTree(BaseLogicTree):
                     node, self.filename, self.basepath,
                     'expected single float value'
                 )
-            return float(value)
+
+    def parse_filters(self, branchset_node, uncertainty_type, filters):
+        """
+        See superclass' method for description and signature specification.
+
+        Converts "applyToSources" filter value by just splitting it to a list.
+        """
+        if 'applyToSources' in filters:
+            filters['applyToSources'] = filters['applyToSources'].split()
+        return filters
 
     def validate_filters(self, branchset_node, uncertainty_type, filters):
         """
@@ -687,24 +686,13 @@ class SourceModelLogicTree(BaseLogicTree):
                 branchset_node, self.filename, self.basepath,
                 'filters are not allowed on source model uncertainty'
             )
+
         if len(filters) > 1:
             raise ValidationError(
                 branchset_node, self.filename, self.basepath,
                 "only one filter is allowed per branchset"
             )
-        if 'applyToSources' in filters:
-            source_ids = filters['applyToSources'].split()
-            nonexistent_source_ids = set(source_ids)
-            nonexistent_source_ids.difference_update(
-                self.source_ids_to_num_gr_mfds
-            )
-            if nonexistent_source_ids:
-                raise ValidationError(
-                    branchset_node, self.filename, self.basepath,
-                    'source ids %s are not defined in source models' %
-                    list(nonexistent_source_ids)
-                )
-            filters['applyToSources'] = source_ids
+
         if 'applyToTectonicRegionType' in filters:
             if not filters['applyToTectonicRegionType'] \
                     in self.tectonic_region_types:
@@ -721,19 +709,23 @@ class SourceModelLogicTree(BaseLogicTree):
                     filters['applyToSourceType']
                 )
 
-        if not filters:
-            filter_ = filter_value = None
-        else:
-            [[filter_, filter_value]] = filters.items()
+        if 'applyToSources' in filters:
+            for source_id in filters['applyToSources'].split():
+                if not source_id in self.source_ids:
+                    raise ValidationError(
+                        branchset_node, self.filename, self.basepath,
+                        "source with id %r is not defined in source models"
+                        % source_id
+                    )
+
         if uncertainty_type in ('abGRAbsolute', 'maxMagGRAbsolute'):
-            if not filter_ or not filter_ == 'applyToSources' \
-                    or not len(filter_value) == 1:
+            if not filters or not filters.keys() == ['applyToSources'] \
+                    or not len(filters['applyToSources'].split()) == 1:
                 raise ValidationError(
                     branchset_node, self.filename, self.basepath,
                     "uncertainty of type %r must define 'applyToSources' " \
                     "with only one source id" % uncertainty_type
                 )
-        return filters
 
     def validate_branchset(self, branchset_node, depth, number, branchset):
         """
@@ -772,7 +764,6 @@ class SourceModelLogicTree(BaseLogicTree):
                     'uncertainty of type "gmpeModel" is not allowed '
                     'in source model logic tree'
                 )
-        return branchset
 
     def apply_branchset(self, branchset_node, branchset):
         """
@@ -815,13 +806,12 @@ class SourceModelLogicTree(BaseLogicTree):
     def collect_source_model_data(self, filename):
         """
         Parse source model file and collect information about source ids,
-        source types and tectonic region types available in it and also
-        the number of GR MFDs for each source. That information is used then
-        for :meth:`validate_filters` and :meth:`validate_uncertainty_value`.
+        source types and tectonic region types available in it. That
+        information is used then for :meth:`validate_filters` and
+        :meth:`validate_uncertainty_value`.
         """
         all_source_types = set('{%s}%sSource' % (self.NRML, tagname)
                                for tagname in self.SOURCE_TYPES)
-        tectonic_region_type_tag = '{%s}tectonicRegion' % self.NRML
         sourcetype_slice = slice(len('{%s}' % self.NRML), - len('Source'))
         eventstream = etree.iterparse(self._open_file(filename),
                                       tag='{%s}*' % self.NRML,
@@ -834,30 +824,21 @@ class SourceModelLogicTree(BaseLogicTree):
             except etree.XMLSyntaxError as exc:
                 raise ParsingError(filename, self.basepath, str(exc))
             if not node.tag in all_source_types:
-                if node.tag == tectonic_region_type_tag:
-                    self.tectonic_region_types.add(node.text)
-            else:
-                source_id = node.attrib['{http://www.opengis.net/gml}id']
-                source_type = node.tag[sourcetype_slice]
-                if source_type == 'point' or source_type == 'area':
-                    mfds = len(node.findall(
-                        '{%s}ruptureRateModel/{%s}truncatedGutenbergRichter' %
-                        (self.NRML, self.NRML)
-                    ))
-                else:
-                    mfds = 1
-                self.source_ids_to_num_gr_mfds[source_id] = mfds
+                continue
+            self.tectonic_region_types.add(node.attrib['tectonicRegion'])
+            source_id = node.attrib['id']
+            source_type = node.tag[sourcetype_slice]
+            self.source_ids.add(source_id)
+            self.source_types.add(source_type)
 
-                self.source_types.add(source_type)
-
-                # saving memory by removing already processed nodes.
-                # see http://lxml.de/parsing.html#modifying-the-tree
-                node.clear()
-                parent = node.getparent()
+            # saving memory by removing already processed nodes.
+            # see http://lxml.de/parsing.html#modifying-the-tree
+            node.clear()
+            parent = node.getparent()
+            prev = node.getprevious()
+            while prev is not None:
+                parent.remove(prev)
                 prev = node.getprevious()
-                while prev is not None:
-                    parent.remove(prev)
-                    prev = node.getprevious()
 
 
 class GMPELogicTree(BaseLogicTree):
@@ -867,39 +848,64 @@ class GMPELogicTree(BaseLogicTree):
     :param tectonic_region_types:
         Set of all tectonic region type names that are used in corresponding
         source models. Used to check that there are GMPEs for each, but
-        no unattended ones.
+        no unattended ones. That check is only performed if ``validate``
+        parameter is set to ``True`` (see :class:`BaseLogicTree`), otherwise
+        it can be an empty sequence.
     """
-    #: Java package to look for GMPE classes.
-    GMPE_PACKAGE = 'org.opensha.sha.imr.attenRelImpl'
-    #: Base GMPE java class (all valid GMPEs must extend it).
-    BASE_GMPE = 'org.opensha.sha.imr.ScalarIntensityMeasureRelationshipAPI'
+    #: Base GMPE class (all valid GMPEs must extend it).
+    BASE_GMPE = GroundShakingIntensityModel
 
     def __init__(self, tectonic_region_types, *args, **kwargs):
         self.tectonic_region_types = frozenset(tectonic_region_types)
         self.defined_tectonic_region_types = set()
         super(GMPELogicTree, self).__init__(*args, **kwargs)
 
+    def parse_uncertainty_value(self, node, branchset, value):
+        """
+        See superclass' method for description and signature specification.
+
+        Convert gmpe import path to a gmpe object.
+        """
+        module, classname = value.rsplit('.', 1)
+        module = __import__(module, fromlist=[classname])
+        gmpe_class = getattr(module, classname)
+        return gmpe_class()
+
     def validate_uncertainty_value(self, node, branchset, value):
         """
         See superclass' method for description and signature specification.
 
-        Checks that the value is the name of the class inside java package
-        :attr:`GMPE_PACKAGE` which implements interface :attr:`BASE_GMPE`.
+        Checks that the value is the import name of the class that extends
+        :attr:`BASE_GMPE` abstract base class.
         """
-        base_gmpe = jvm().JClass(self.BASE_GMPE)
+        if not '.' in value:
+            raise ValidationError(
+                node, self.filename, self.basepath,
+                'gmpe name must be fully-qualified import path'
+            )
+        module, classname = value.rsplit('.', 1)
         try:
-            gmpe = jvm().JClass('%s.%s' % (self.GMPE_PACKAGE, value))
-        except jvm().JavaException:
-            # Class not found
-            pass
-        else:
-            if issubclass(gmpe, base_gmpe):
-                # Class exists and implements the proper interface.
-                return value
-        raise ValidationError(
-            node, self.filename, self.basepath,
-            'gmpe %r is not available' % value
-        )
+            module = __import__(module, fromlist=[classname])
+        except ImportError as exc:
+            raise ValidationError(node, self.filename, self.basepath,
+                                  'could not import module %r: %s'
+                                  % (module, exc))
+        if not hasattr(module, classname):
+            raise ValidationError(node, self.filename, self.basepath,
+                                  'module %r does not contain name %r'
+                                  % (module.__name__, classname))
+        gmpe_class = getattr(module, classname)
+        if not issubclass(gmpe_class, self.BASE_GMPE):
+            raise ValidationError(node, self.filename, self.basepath,
+                                  '%r is not a gmpe class' % gmpe_class)
+
+    def parse_filters(self, node, uncertainty_type, filters):
+        """
+        See superclass' method for description and signature specification.
+
+        Does nothing, simply returns ``filters``.
+        """
+        return filters
 
     def validate_filters(self, node, uncertainty_type, filters):
         """
@@ -931,7 +937,6 @@ class GMPELogicTree(BaseLogicTree):
                 'been defined' % trt
             )
         self.defined_tectonic_region_types.add(trt)
-        return filters
 
     def validate_tree(self, tree_node, root_branchset):
         """
@@ -949,7 +954,6 @@ class GMPELogicTree(BaseLogicTree):
                 'in source model logic tree but not in gmpe logic tree: %s' %
                 list(sorted(missing_trts))
             )
-        return root_branchset
 
     def validate_branchset(self, branchset_node, depth, number, branchset):
         """
@@ -970,12 +974,12 @@ class GMPELogicTree(BaseLogicTree):
                 'only one branchset on each branching level is allowed '
                 'in gmpe logic tree'
             )
-        return branchset
 
 
-class LogicTreeProcessor(object):
+def read_logic_trees(basepath, source_model_logictree_path,
+                     gmpe_logictree_path):
     """
-    Logic tree processor. High-level interface to dealing with logic trees.
+    Read, parse and validate both logic trees.
 
     :param basepath:
         Base path for both logic tree files.
@@ -983,82 +987,90 @@ class LogicTreeProcessor(object):
         Source model logic tree's filename, relative to ``basepath``.
     :param gmpe_logictree_path:
         GMPE logic tree's filename, relative to ``basepath``.
+    :returns:
+        A list of filenames (relative to ``basepath``) of source model files
+        that need to be read, parsed and saved into the database and thus
+        be available for :class:`LogicTreeProcessor`.
     """
-    def __init__(self, basepath, source_model_logictree_path,
-                 gmpe_logictree_path):
-        self.source_model_lt = SourceModelLogicTree(
-            basepath, source_model_logictree_path
+    smlt_content = _open_file(basepath, source_model_logictree_path).read()
+    smlt = SourceModelLogicTree(
+        smlt_content, basepath, source_model_logictree_path, validate=True
+    )
+    gmpelt_content = _open_file(basepath, gmpe_logictree_path).read()
+    GMPELogicTree(smlt.tectonic_region_types, gmpelt_content, basepath,
+                  gmpe_logictree_path, validate=True)
+    return [branch.value for branch in smlt.root_branchset.branches]
+
+
+class LogicTreeProcessor(object):
+    """
+    Logic tree processor. High-level interface to dealing with logic trees
+    that are already in the database.
+    """
+    def __init__(self, job_id):
+        smlt_input = models.Input2job.objects.get(
+            oq_job=job_id, input__input_type='lt_source'
         )
-        trts = self.source_model_lt.tectonic_region_types
-        self.gmpe_lt = GMPELogicTree(trts, basepath, gmpe_logictree_path)
+        smlt_content = smlt_input.input.model_content.raw_content
+        gmpelt_input = models.Input2job.objects.get(
+            oq_job=job_id, input__input_type='lt_gmpe'
+        )
+        gmpelt_content = gmpelt_input.input.model_content.raw_content
+        self.source_model_lt = SourceModelLogicTree(
+            smlt_content, basepath=None, filename=None, validate=False
+        )
+        self.gmpe_lt = GMPELogicTree(
+            tectonic_region_types=[], content=gmpelt_content,
+            basepath=None, filename=None, validate=False
+        )
 
-    def sample_and_save_source_model_logictree(self, cache, key, random_seed,
-                                               mfd_bin_width):
-        """
-        Call :meth:`sample_source_model_logictree` and save the result
-        in the cache.
-
-        :param cache:
-            A cache object. Supposed to have method ``set(key, data)``.
-        :param key:
-            A cache key to save the serialized source model logic tree.
-        """
-        json_result = self.sample_source_model_logictree(random_seed,
-                                                         mfd_bin_width)
-        cache.set(key, json_result)
-
-    def sample_source_model_logictree(self, random_seed, mfd_bin_width):
+    def sample_source_model_logictree(self, random_seed):
         """
         Perform a Monte-Carlo sampling of source model logic tree.
 
         :param random_seed:
             An integer random seed value to initialize random generator
             before doing random sampling.
-        :param mfd_bin_width:
-            Float, the width of sources' MFD histograms bins.
         :return:
-            String, json-serialized source model sample. For serialization
-            the java class ``org.gem.JsonSerializer`` is used.
+            Tuple of two items: first is the name of the source model
+            to load (as it appears in the source model logic tree)
+            and second is the function to be applied to all the sources
+            as they get read from the database and converted to nhlib
+            representation. Function takes one argument, that is the nhlib
+            source object, and apply uncertainties to it in-place.
         """
         rnd = random.Random(random_seed)
-        sm_reader = jvm().JClass('org.gem.engine.hazard.'
-                                 'parsers.SourceModelReader')
         branch = self.source_model_lt.root_branchset.sample(rnd)
-        sources = sm_reader(branch.value, float(mfd_bin_width)).read()
+        sm_name = branch.value
+        branchsets_and_uncertainties = []
         while True:
             branchset = branch.child_branchset
             if branchset is None:
                 break
             branch = branchset.sample(rnd)
-            for source in sources:
-                branchset.apply_uncertainty(branch.value, source)
+            branchsets_and_uncertainties.append((branchset, branch.value))
 
-        serializer = jvm().JClass('org.gem.JsonSerializer')
-        return serializer.getJsonSourceList(sources)
+        def apply_uncertainties(source):
+            for branchset, value in branchsets_and_uncertainties:
+                branchset.apply_uncertainty(value, source)
 
-    def sample_and_save_gmpe_logictree(self, cache, key, random_seed):
-        """
-        Same as :meth:`sample_and_save_source_model_logictree`, but for GMPE
-        logic trees.
-        """
-        cache.set(key, self.sample_gmpe_logictree(random_seed))
+        return sm_name, apply_uncertainties
 
     def sample_gmpe_logictree(self, random_seed):
         """
         Same as :meth:`sample_source_model_logictree`, but for GMPE logic tree.
 
         :return:
-            Json dictionary, with keys equal to tectonic region types
-            and values representing fully qualified java GMPE class names.
+            Dictionary mapping tectonic region type names to instances
+            of GSIM objects.
         """
         rnd = random.Random(random_seed)
-        value_prefix = 'org.opensha.sha.imr.attenRelImpl.'
         result = {}
         branchset = self.gmpe_lt.root_branchset
         while branchset:
             branch = branchset.sample(rnd)
             trt = branchset.filters['applyToTectonicRegionType']
             assert trt not in result
-            result[trt] = value_prefix + branch.value
+            result[trt] = branch.value
             branchset = branch.child_branchset
-        return json.dumps(result)
+        return result

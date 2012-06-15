@@ -26,9 +26,13 @@ Model representations of the OpenQuake DB tables.
 '''
 
 import os
-
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
 from collections import namedtuple
 from datetime import datetime
+
 from django.contrib.gis.db import models as djm
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
@@ -199,6 +203,33 @@ class CharArrayField(djm.Field):  # pylint: disable=R0904
             return None
 
 
+class PickleField(djm.Field):
+    """Field for transparent pickling and unpickling of python objects."""
+
+    __metaclass__ = djm.SubfieldBase
+
+    SUPPORTED_BACKENDS = set((
+        'django.contrib.gis.db.backends.postgis',
+        'django.db.backends.postgresql_psycopg2'
+    ))
+
+    def db_type(self, connection):
+        """Return "bytea" as postgres' column type."""
+        assert connection.settings_dict['ENGINE'] in self.SUPPORTED_BACKENDS
+        return 'bytea'
+
+    def to_python(self, value):
+        """Unpickle the value."""
+        if value and isinstance(value, (buffer, str, bytearray)):
+            return pickle.loads(str(value))
+        else:
+            return value
+
+    def get_prep_value(self, value):
+        """Pickle the value."""
+        return bytearray(pickle.dumps(value, pickle.HIGHEST_PROTOCOL))
+
+
 ## Tables in the 'admin' schema.
 
 
@@ -308,258 +339,29 @@ class Surface(djm.Model):
 ## Tables in the 'hzrdi' (Hazard Input) schema.
 
 
-class Rupture(djm.Model):
-    '''
-    Rupture
-    '''
-    owner = djm.ForeignKey('OqUser')
+class ParsedSource(djm.Model):
+    """Stores parsed hazard input model sources in serialized python object
+       tree format."""
     input = djm.ForeignKey('Input')
-    gid = djm.TextField()
-    name = djm.TextField(null=True)
-    description = djm.TextField(null=True)
-    SI_TYPE_CHOICES = (
-        (u'complex', u'Complex'),
-        (u'point', u'Point'),
-        (u'simple', u'Simple'),
-    )
-    si_type = djm.TextField(choices=SI_TYPE_CHOICES, default='simple')
-    TECT_REG_CHOICES = (
-        (u'active', u'Active Shallow Crust'),
-        (u'stable', u'Stable Shallow Crust'),
-        (u'interface', u'Subduction Interface'),
-        (u'intraslab', u'Subduction Intraslab'),
-        (u'volcanic', u'Volcanic'),
-    )
-    tectonic_region = djm.TextField(choices=TECT_REG_CHOICES)
-    rake = djm.FloatField(null=True)
-    magnitude = djm.FloatField()
-    MAG_TYPE_CHOICES = (
-        (u'Mb', u'Body Wave Magnitude'),
-        (u'Md', u'Duration Magnitude'),
-        (u'Ml', u'Local Magnitude'),
-        (u'Ms', u'Surface Wave Magnitude'),
-        (u'Mw', u'Moment Magnitude'),
-    )
-    magnitude_type = djm.CharField(max_length=2, choices=MAG_TYPE_CHOICES,
-        default='Mw')
-    simple_fault = djm.ForeignKey('SimpleFault')
-    complex_fault = djm.ForeignKey('ComplexFault')
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-    point = djm.PointField(srid=4326)
-
-    class Meta:
-        db_table = 'hzrdi\".\"rupture'
-
-
-class Source(djm.Model):
-    '''
-    Source
-    '''
-    owner = djm.ForeignKey('OqUser')
-    input = djm.ForeignKey('Input')
-    gid = djm.TextField()
-    name = djm.TextField(null=True)
-    description = djm.TextField(null=True)
-    SI_TYPE_CHOICES = (
+    SRC_TYPE_CHOICES = (
         (u'area', u'Area'),
         (u'point', u'Point'),
         (u'complex', u'Complex'),
         (u'simple', u'Simple'),
     )
-    si_type = djm.TextField(choices=SI_TYPE_CHOICES, default='simple')
-    TECT_REG_CHOICES = (
-        (u'active', u'Active Shallow Crust'),
-        (u'stable', u'Stable Shallow Crust'),
-        (u'interface', u'Subduction Interface'),
-        (u'intraslab', u'Subduction Intraslab'),
-        (u'volcanic', u'Volcanic'),
+    source_type = djm.TextField(choices=SRC_TYPE_CHOICES)
+    nrml = PickleField(help_text="NRML object representing the source")
+    polygon = djm.PolygonField(
+        srid=4326, dim=2,
+        help_text=('The surface projection (2D) of the "rupture enclosing" '
+                   'polygon for each source. This is relevant to all source '
+                   'types, including point sources. When considering a '
+                   'parsed_source record given a minimum integration distance,'
+                   ' use this polygon in distance calculations.')
     )
-    tectonic_region = djm.TextField(choices=TECT_REG_CHOICES)
-    simple_fault = djm.ForeignKey('SimpleFault')
-    complex_fault = djm.ForeignKey('ComplexFault')
-    rake = djm.FloatField(null=True)
-    hypocentral_depth = djm.FloatField(null=True)
-    r_depth_distr = djm.ForeignKey('RDepthDistr')
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-    point = djm.PointField(srid=4326)
-    area = djm.PolygonField(srid=4326)
-
-    class Meta:
-        db_table = 'hzrdi\".\"source'
-
-
-class ParsedSource(djm.Model):
-    """Stores parsed hazard input model sources in serialized python object
-       tree format."""
-    input = djm.ForeignKey('Input')
-    source_type = djm.TextField(choices=Source.SI_TYPE_CHOICES)
-    blob = djm.TextField(help_text="The BLOB that holds the serialized "
-                                   "python object tree.")
-    geom = djm.GeometryField(
-        srid=4326, dim=2, help_text="A generic 2-dimensional geometry column "
-                                    "with the various source geometries.")
 
     class Meta:
         db_table = 'hzrdi\".\"parsed_source'
-
-
-class SimpleFault(djm.Model):
-    '''
-    Simple fault geometry
-    '''
-    owner = djm.ForeignKey('OqUser')
-    gid = djm.TextField()
-    name = djm.TextField(null=True)
-    description = djm.TextField(null=True)
-    dip = djm.FloatField()
-    upper_depth = djm.FloatField()
-    lower_depth = djm.FloatField()
-    mfd_tgr = djm.ForeignKey('MfdTgr')
-    mfd_evd = djm.ForeignKey('MfdEvd')
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-    edge = djm.LineStringField(srid=4326)
-    outline = djm.PolygonField(srid=4326)
-
-    class Meta:
-        db_table = 'hzrdi\".\"simple_fault'
-
-
-class MfdEvd(djm.Model):
-    '''
-    Magnitude Frequency Distribution, evenly discretized
-    '''
-    owner = djm.ForeignKey('OqUser')
-    MAG_TYPE_CHOICES = (
-        (u'Mb', u'Body Wave Magnitude'),
-        (u'Md', u'Duration Magnitude'),
-        (u'Ml', u'Local Magnitude'),
-        (u'Ms', u'Surface Wave Magnitude'),
-        (u'Mw', u'Moment Magnitude'),
-    )
-    magnitude_type = djm.CharField(max_length=2, choices=MAG_TYPE_CHOICES,
-        default='Mw')
-    min_val = djm.FloatField()
-    max_val = djm.FloatField(default=-1.0)
-    bin_size = djm.FloatField()
-    mfd_values = FloatArrayField()
-    total_cumulative_rate = djm.FloatField(null=True)
-    total_moment_rate = djm.FloatField(null=True)
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'hzrdi\".\"mfd_evd'
-
-
-class MfdTgr(djm.Model):
-    '''
-    Magnitude Frequency Distribution, truncated Gutenberg-Richter
-    '''
-    owner = djm.ForeignKey('OqUser')
-    MAG_TYPE_CHOICES = (
-        (u'Mb', u'Body Wave Magnitude'),
-        (u'Md', u'Duration Magnitude'),
-        (u'Ml', u'Local Magnitude'),
-        (u'Ms', u'Surface Wave Magnitude'),
-        (u'Mw', u'Moment Magnitude'),
-    )
-    magnitude_type = djm.CharField(max_length=2, choices=MAG_TYPE_CHOICES,
-        default='Mw')
-    min_val = djm.FloatField()
-    max_val = djm.FloatField()
-    a_val = djm.FloatField()
-    b_val = djm.FloatField()
-    total_cumulative_rate = djm.FloatField(null=True)
-    total_moment_rate = djm.FloatField(null=True)
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'hzrdi\".\"mfd_tgr'
-
-
-class ComplexFault(djm.Model):
-    '''
-    Complex fault geometry
-    '''
-    owner = djm.ForeignKey('OqUser')
-    gid = djm.TextField()
-    name = djm.TextField(null=True)
-    description = djm.TextField(null=True)
-    mfd_tgr = djm.ForeignKey('MfdTgr')
-    mfd_evd = djm.ForeignKey('MfdEvd')
-    fault_edge = djm.ForeignKey('FaultEdge')
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-    outline = djm.PolygonField(srid=4326)
-
-    class Meta:
-        db_table = 'hzrdi\".\"complex_fault'
-
-
-class FaultEdge(djm.Model):
-    '''
-    Fault edge
-    '''
-    owner = djm.ForeignKey('OqUser')
-    gid = djm.TextField()
-    name = djm.TextField(null=True)
-    description = djm.TextField(null=True)
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-    top = djm.LineStringField(srid=4326)
-    bottom = djm.LineStringField(srid=4326)
-
-    class Meta:
-        db_table = 'hzrdi\".\"fault_edge'
-
-
-class RDepthDistr(djm.Model):
-    '''
-    Rupture Depth Distribution
-    '''
-    owner = djm.ForeignKey('OqUser')
-    gid = djm.TextField()
-    name = djm.TextField(null=True)
-    description = djm.TextField(null=True)
-    magnitude_type = djm.CharField(max_length=2)
-    magnitude = FloatArrayField()
-    depth = FloatArrayField()
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'hzrdi\".\"r_depth_distr'
-
-
-class RRateMdl(djm.Model):
-    '''
-    Rupture Rate Model
-    '''
-    owner = djm.ForeignKey('OqUser')
-    gid = djm.TextField()
-    name = djm.TextField(null=True)
-    description = djm.TextField(null=True)
-    mfd_tgr = djm.ForeignKey('MfdTgr')
-    mfd_evd = djm.ForeignKey('MfdEvd')
-    focal_mechanism = djm.ForeignKey('FocalMechanism')
-    source = djm.ForeignKey('Source')
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'hzrdi\".\"r_rate_mdl'
-
-
-class FocalMechanism(djm.Model):
-    '''
-    Holds strike, dip and rake values with the respective constraints
-    '''
-    owner = djm.ForeignKey('OqUser')
-    gid = djm.TextField()
-    name = djm.TextField(null=True)
-    description = djm.TextField(null=True)
-    strike = djm.FloatField(null=True)
-    dip = djm.FloatField(null=True)
-    rake = djm.FloatField(null=True)
-    last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    class Meta:
-        db_table = 'hzrdi\".\"focal_mechanism'
 
 
 class SiteModel(djm.Model):
@@ -615,6 +417,7 @@ class Input(djm.Model):
     '''
     owner = djm.ForeignKey('OqUser')
     model_content = djm.ForeignKey('ModelContent')
+    name = djm.TextField(null=True)
     digest = djm.TextField(help_text="32 byte md5sum digest, used to "
                                      "detect identical input model files")
     path = djm.TextField()

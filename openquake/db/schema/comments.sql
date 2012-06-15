@@ -62,101 +62,16 @@ COMMENT ON VIEW eqcat.catalog_allfields IS 'A global catalog view, needed for ge
 
 
 -- hzrdi schema tables ------------------------------------------
-COMMENT ON TABLE hzrdi.complex_fault IS 'A complex (fault) geometry, in essence a sequence of fault edges. However, we only support a single fault edge at present.';
-COMMENT ON COLUMN hzrdi.complex_fault.gid IS 'An alpha-numeric identifier for this complex fault geometry.';
-COMMENT ON COLUMN hzrdi.complex_fault.mfd_tgr_id IS 'Foreign key to a magnitude frequency distribution (truncated Gutenberg-Richter).';
-COMMENT ON COLUMN hzrdi.complex_fault.mfd_evd_id IS 'Foreign key to a magnitude frequency distribution (evenly discretized).';
-COMMENT ON COLUMN hzrdi.complex_fault.fault_edge_id IS 'Foreign key to a fault edge.';
-COMMENT ON COLUMN hzrdi.complex_fault.outline IS 'The outline of the fault surface, computed by using the top/bottom fault edges.';
-
-COMMENT ON VIEW hzrdi.complex_rupture IS 'A complex rupture view, needed for opengeo server integration.';
-COMMENT ON VIEW hzrdi.complex_source IS 'A complex source view, needed for opengeo server integration.';
-
-
-COMMENT ON TABLE hzrdi.fault_edge IS 'Part of a complex (fault) geometry, describes the top and the bottom seismic edges.';
-COMMENT ON COLUMN hzrdi.fault_edge.bottom IS 'Bottom fault edge.';
-COMMENT ON COLUMN hzrdi.fault_edge.top IS 'Top fault edge.';
-
-
-COMMENT ON TABLE hzrdi.focal_mechanism IS 'Holds strike, dip and rake values with the respective constraints.';
-
-
-COMMENT ON TABLE hzrdi.mfd_evd IS 'Magnitude frequency distribution, evenly discretized.';
-COMMENT ON COLUMN hzrdi.mfd_evd.magnitude_type IS 'Magnitude type i.e. one of:
-    - body wave magnitude (Mb)
-    - duration magnitude (Md)
-    - local magnitude (Ml)
-    - surface wave magnitude (Ms)
-    - moment magnitude (Mw)';
-COMMENT ON COLUMN hzrdi.mfd_evd.min_val IS 'Minimum magnitude value.';
-COMMENT ON COLUMN hzrdi.mfd_evd.max_val IS 'Maximum magnitude value (will be derived/calculated for evenly discretized magnitude frequency distributions).';
-
-
-COMMENT ON TABLE hzrdi.mfd_tgr IS 'Magnitude frequency distribution, truncated Gutenberg-Richter.';
-COMMENT ON COLUMN hzrdi.mfd_tgr.magnitude_type IS 'Magnitude type i.e. one of:
-    - body wave magnitude (Mb)
-    - duration magnitude (Md)
-    - local magnitude (Ml)
-    - surface wave magnitude (Ms)
-    - moment magnitude (Mw)';
-COMMENT ON COLUMN hzrdi.mfd_tgr.min_val IS 'Minimum magnitude value.';
-COMMENT ON COLUMN hzrdi.mfd_tgr.max_val IS 'Maximum magnitude value.';
-
 
 COMMENT ON TABLE hzrdi.parsed_source IS 'Stores parsed hazard input model sources in serialized python object tree format';
-COMMENT ON COLUMN hzrdi.parsed_source.blob IS 'The BLOB that holds the serialized python object tree.';
-COMMENT ON COLUMN hzrdi.parsed_source.geom IS 'A generic 2-dimensional geometry column that will hold the various source geometries.';
+COMMENT ON COLUMN hzrdi.parsed_source.nrml IS 'NRML object representing the source';
 COMMENT ON COLUMN hzrdi.parsed_source.input_id IS 'The foreign key to the associated input model file';
 COMMENT ON COLUMN hzrdi.parsed_source.source_type IS 'The source''s seismic input type: can be one of: area, point, complex or simple.';
-
-
-COMMENT ON TABLE hzrdi.r_depth_distr IS 'Rupture depth distribution.';
-COMMENT ON COLUMN hzrdi.r_depth_distr.magnitude_type IS 'Magnitude type i.e. one of:
-    - body wave magnitude (Mb)
-    - duration magnitude (Md)
-    - local magnitude (Ml)
-    - surface wave magnitude (Ms)
-    - moment magnitude (Mw)';
-
-
-COMMENT ON TABLE hzrdi.r_rate_mdl IS 'Rupture rate model.';
-
-
-COMMENT ON TABLE hzrdi.rupture IS 'A rupture, can be based on a point or a complex or simple fault.';
-COMMENT ON COLUMN hzrdi.rupture.si_type IS 'The rupture''s seismic input type: can be one of: point, complex or simple.';
-COMMENT ON COLUMN hzrdi.rupture.magnitude_type IS 'Magnitude type i.e. one of:
-    - body wave magnitude (Mb)
-    - duration magnitude (Md)
-    - local magnitude (Ml)
-    - surface wave magnitude (Ms)
-    - moment magnitude (Mw)';
-COMMENT ON COLUMN hzrdi.rupture.tectonic_region IS 'Tectonic region type i.e. one of:
-    - Active Shallow Crust (active)
-    - Stable Shallow Crust (stable)
-    - Subduction Interface (interface)
-    - Subduction IntraSlab (intraslab)
-    - Volcanic             (volcanic)';
-
-
-COMMENT ON TABLE hzrdi.simple_fault IS 'A simple fault geometry.';
-COMMENT ON COLUMN hzrdi.simple_fault.dip IS 'The fault''s inclination angle with respect to the plane.';
-COMMENT ON COLUMN hzrdi.simple_fault.upper_depth IS 'The upper seismogenic depth.';
-COMMENT ON COLUMN hzrdi.simple_fault.lower_depth IS 'The lower seismogenic depth.';
-COMMENT ON COLUMN hzrdi.simple_fault.outline IS 'The outline of the fault surface, computed by using the dip and the upper/lower seismogenic depth.';
-
-COMMENT ON VIEW hzrdi.simple_rupture IS 'A simple rupture view, needed for opengeo server integration.';
-COMMENT ON VIEW hzrdi.simple_source IS 'A simple source view, needed for opengeo server integration.';
-
-
-COMMENT ON TABLE hzrdi.source IS 'A seismic source, can be based on a point, area or a complex or simple fault.';
-COMMENT ON COLUMN hzrdi.source.si_type IS 'The source''s seismic input type: can be one of: area, point, complex or simple.';
-COMMENT ON COLUMN hzrdi.source.tectonic_region IS 'Tectonic region type i.e. one of:
-    - Active Shallow Crust (active)
-    - Stable Shallow Crust (stable)
-    - Subduction Interface (interface)
-    - Subduction IntraSlab (intraslab)
-    - Volcanic             (volcanic)';
-
+COMMENT ON COLUMN hzrdi.parsed_source.polygon IS 'The surface projection (2D)
+of the "rupture enclosing" polygon for each source.
+This is relevant to all source types, including point sources.
+When considering a parsed_source record given a minimum integration distance,
+use this polygon in distance calculations.';
 
 
 -- hzrdr schema tables ------------------------------------------
