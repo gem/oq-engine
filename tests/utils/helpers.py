@@ -139,6 +139,15 @@ def demo_file(file_name):
         os.path.dirname(__file__), "../../demos", file_name)
 
 
+def qa_file(file_name):
+    """
+    Take a file name and return the full path to the file in the qa_tests/data
+    directory.
+    """
+    return os.path.join(
+        os.path.dirname(__file__), "../../qa_tests/data", file_name)
+
+
 def testdata_path(file_name):
     """
     Take a file name and return the full path to the file in the
