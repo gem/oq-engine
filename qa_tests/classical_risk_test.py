@@ -35,6 +35,7 @@ class ClassicalRiskQATestCase(unittest.TestCase):
     """Single site QA tests for the Classical Risk calculator."""
 
     def tearDown(self):
+        # Removes file generated in the qa data folder if any.
         filenames = [os.path.join(QA_OUTPUT_DIR,
             filename) for filename in os.listdir(QA_OUTPUT_DIR)]
         for filename in filenames:
