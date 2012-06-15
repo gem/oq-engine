@@ -55,6 +55,7 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         self._verify_loss_ratio_curve()
         self._verify_loss_maps()
 
+    @attr('slow')
     def test_verify_output_per_asset(self):
         cfg = helpers.qa_file(
             'classical_psha_based_risk/qa_config.gem')
