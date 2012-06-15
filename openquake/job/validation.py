@@ -40,10 +40,13 @@ def region_is_valid(mdl):
 
 
 def region_grid_spacing_is_valid(mdl):
+    if not mdl.region_grid_spacing > 0:
+        return False, ['Region grid spacing must be > 0']
     return True, []
 
 
 def sites_is_valid(mdl):
+    # TODO:
     return True, []
 
 
@@ -55,57 +58,94 @@ def random_seed_is_valid(mdl):
 
 
 def number_of_logic_tree_samples_is_valid(mdl):
+    if not mdl.number_of_logic_tree_samples > 0:
+        return False, ['Number of logic tree samples must be > 0']
     return True, []
 
 
 def rupture_mesh_spacing_is_valid(mdl):
+    if not mdl.rupture_mesh_spacing > 0:
+        return False, ['Rupture mesh spacing must be > 0']
     return True, []
 
 
 def width_of_mfd_bin_is_valid(mdl):
+    if not mdl.width_of_mfd_bin > 0:
+        return False, ['Width of MFD bin must be > 0']
     return True, []
 
 
 def area_source_discretization_is_valid(mdl):
+    if not mdl.area_source_discretization > 0:
+        return False, ['Area source discretization must be > 0']
     return True, []
 
 
 def reference_vs30_value_is_valid(mdl):
+    if not mdl.reference_vs30_value > 0:
+        return False, ['Reference VS30 value must be > 0']
     return True, []
 
 
 def reference_vs30_type_is_valid(mdl):
+    if not mdl.reference_vs30_type in ('measured', 'inferred'):
+        return False, ['Reference VS30 type must be either '
+                       '"measured" or "inferred"']
     return True, []
 
 
 def reference_depth_to_2pt5km_per_sec_is_valid(mdl):
+    if not mdl.reference_depth_to_2pt5km_per_sec > 0:
+        return False, ['Reference depth to 2.5 km/sec must be > 0']
     return True, []
 
 
 def reference_depth_to_1pt0km_per_sec_is_valid(mdl):
+    if not mdl.reference_depth_to_1pt0km_per_sec > 0:
+        return False, ['Reference depth to 1.0 km/sec must be > 0']
     return True, []
 
 
 def investigation_time_is_valid(mdl):
+    if not mdl.investigation_time > 0:
+        return False, ['Investigation time must be > 0']
     return True, []
 
 
 def intensity_measure_types_and_levels_is_valid(mdl):
+    # TODO: more complex
     return True, []
 
 def truncation_level_is_valid(mdl):
+    if not mdl.truncation_level >= 0:
+        return False, ['Truncation level must be >= 0']
     return True, []
 
 def maximum_distance_is_valid(mdl):
+    if not mdl.maximum_distance > 0:
+        return False, ['Maximum distance must be > 0']
     return True, []
 
-def mean_hazard_curves_is_valid(mdl):
+def mean_hazard_curves_is_valid(_mdl):
+    # The validation form should normalize the type to a boolean.
+    # We don't need to check anything here.
     return True, []
 
 def quantile_hazard_curves_is_valid(mdl):
+    qhc = mdl.quantile_hazard_curves
+
+    if qhc is not None:
+        if not all([0.0 <= x <= 1.0 for x in qhc]):
+            return False, ['Quantile hazard curve values must in the range '
+                           '[0, 1]']
     return True, []
 
 def poes_hazard_maps_is_valid(mdl):
+    phm = mdl.poes_hazard_maps
+
+    if phm is not None:
+        if not all([0.0 <= x <= 1.0 for x in phm]):
+            return False, ['PoEs for hazard maps must be in the range [0, 1]']
     return True, []
 
 class BaseOQModelForm(ModelForm):
@@ -204,7 +244,7 @@ class ClassicalHazardJobForm(BaseOQModelForm):
         # HazardJobProfile
         hjp = self.instance
 
-        import nose; nose.tools.set_trace()
+        # Exclude special fields that require contextual validation.
         for field in sorted(set(self.fields) - set(self.special_fields)):
             valid, errs = eval('%s_is_valid' % field)(self.instance)
             all_valid = all_valid and valid
@@ -216,6 +256,5 @@ class ClassicalHazardJobForm(BaseOQModelForm):
                     self.errors[field] = errs
 
         # TODO: deal with special fields
-        import nose; nose.tools.set_trace()
 
         return all_valid
