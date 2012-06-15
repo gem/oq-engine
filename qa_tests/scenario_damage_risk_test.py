@@ -32,6 +32,13 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
     QA test for the Scenario Damage Risk calculator.
     """
 
+    def test_hazard_input_on_exposure_sites(self):
+        cfg = helpers.demo_file(
+            "scenario_damage_risk/config_hzr_exposure.gem")
+
+        self._run_job(cfg)
+        self._verify_job_succeeded()
+
     def test_scenario_damage_con(self):
         cfg = helpers.demo_file("scenario_damage_risk/config.gem")
 
