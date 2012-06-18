@@ -13,11 +13,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+"""This module contains functions and Django model forms for carrying out job
+profile validation.
+"""
+
+import re
 
 from django.forms import ModelForm
+from nhlib import imt
 
 from openquake.db import models
-
 
 #: Minimum value for a signed 32-bit int
 MIN_SINT_32 = -(2 ** 31)
@@ -25,7 +30,11 @@ MIN_SINT_32 = -(2 ** 31)
 MAX_SINT_32 = (2 ** 31) - 1
 
 
-def description_is_valid(mdl):
+# Silencing 'Missing docstring' and 'Invalid name' for all of the validation
+# functions (the latter because some of the function names are very long).
+# pylint: disable=C0111,C0103
+
+def description_is_valid(_mdl):
     return True, []
 
 
@@ -36,7 +45,27 @@ def calculation_mode_is_valid(mdl):
 
 
 def region_is_valid(mdl):
-    return True, []
+    valid = True
+    errors = []
+
+    if not mdl.region.valid:
+        valid = False
+        errors.append('Invalid region geomerty: %s' % mdl.region.valid_reason)
+
+    if len(mdl.region.coords) > 1:
+        valid = False
+        errors.append('Region geometry can only be a single linear ring')
+    else:
+        ring = mdl.region.coords[0]
+        lons = [lon for lon, _ in ring]
+        lats = [lat for _, lat in ring]
+        if not all([-180 <= x <= 180 for x in lons]):
+            valid = False
+            errors.append('Longitude values must in the range [-180, 180]')
+        if not all([-90 <= x <= 90 for x in lats]):
+            valid = False
+            errors.append('Latitude values must be in the range [-90, 90]')
+    return valid, errors
 
 
 def region_grid_spacing_is_valid(mdl):
@@ -46,8 +75,19 @@ def region_grid_spacing_is_valid(mdl):
 
 
 def sites_is_valid(mdl):
-    # TODO:
-    return True, []
+    valid = True
+    errors = []
+
+    lons = [pt.x for pt in mdl.sites]
+    lats = [pt.y for pt in mdl.sites]
+    if not all([-180 <= x <= 180 for x in lons]):
+        valid = False
+        errors.append('Longitude values must in the range [-180, 180]')
+    if not all([-90 <= x <= 90 for x in lats]):
+        valid = False
+        errors.append('Latitude values must be in the range [-90, 90]')
+
+    return valid, errors
 
 
 def random_seed_is_valid(mdl):
@@ -113,23 +153,75 @@ def investigation_time_is_valid(mdl):
 
 
 def intensity_measure_types_and_levels_is_valid(mdl):
-    # TODO: more complex
-    return True, []
+    im = mdl.intensity_measure_types_and_levels
+
+    valid = True
+    errors = []
+
+    # SA intensity measure configs need special handling
+    imts = list(set(imt.__all__) - set(['SA']))
+
+    for im_type, imls in im.iteritems():
+        if im_type in imts:
+            if not isinstance(imls, list):
+                valid = False
+                errors.append(
+                    '%s: IMLs must be specified as a list of floats' % im_type
+                )
+            else:
+                if len(imls) == 0:
+                    valid = False
+                    errors.append('IML lists must have at least 1 value')
+                elif not all([x > 0 for x in imls]):
+                    valid = False
+                    errors.append('%s: IMLs must be > 0' % im_type)
+        elif 'SA' in im_type:
+            match = re.match(r'^SA\((.+?)\)$', im_type)
+            if match is None:
+                # SA key is not formatted properly
+                valid = False
+                errors.append(
+                    '%s: SA must be specified with a period value, in the form'
+                    ' `SA(N)`, where N is a value >= 0' % im_type
+                )
+            else:
+                # there's a match; make sure the period value is valid
+                sa_period = match.groups()[0]
+                try:
+                    if float(sa_period) < 0:
+                        valid = False
+                        errors.append(
+                            '%s: SA period values must be >= 0' % im_type
+                        )
+                except ValueError:
+                    valid = False
+                    errors.append(
+                        '%s: SA period value should be a float >= 0' % im_type
+                    )
+        else:
+            valid = False
+            errors.append('%s: Invalid intensity measure type' % im_type)
+
+    return valid, errors
+
 
 def truncation_level_is_valid(mdl):
     if not mdl.truncation_level >= 0:
         return False, ['Truncation level must be >= 0']
     return True, []
 
+
 def maximum_distance_is_valid(mdl):
     if not mdl.maximum_distance > 0:
         return False, ['Maximum distance must be > 0']
     return True, []
 
+
 def mean_hazard_curves_is_valid(_mdl):
     # The validation form should normalize the type to a boolean.
     # We don't need to check anything here.
     return True, []
+
 
 def quantile_hazard_curves_is_valid(mdl):
     qhc = mdl.quantile_hazard_curves
@@ -140,6 +232,7 @@ def quantile_hazard_curves_is_valid(mdl):
                            '[0, 1]']
     return True, []
 
+
 def poes_hazard_maps_is_valid(mdl):
     phm = mdl.poes_hazard_maps
 
@@ -147,6 +240,7 @@ def poes_hazard_maps_is_valid(mdl):
         if not all([0.0 <= x <= 1.0 for x in phm]):
             return False, ['PoEs for hazard maps must be in the range [0, 1]']
     return True, []
+
 
 class BaseOQModelForm(ModelForm):
     """This class is based on :class:`django.forms.ModelForm`. Constructor
@@ -231,6 +325,29 @@ class ClassicalHazardJobForm(BaseOQModelForm):
             'poes_hazard_maps',
         )
 
+    def _add_error(self, field_name, error_msg):
+        """Add an error to the `errors` dict.
+
+        If errors for the given ``field_name`` already exist append the error
+        to that list. Otherwise, a new entry will have to be created for the
+        ``field_name`` to hold the ``error_msg``.
+
+        ``error_msg`` can also be a list or tuple of error messages.
+        """
+        is_list = isinstance(error_msg, (list, tuple))
+        if self.errors.get(field_name) is not None:
+            if is_list:
+                self.errors[field_name].extend(error_msg)
+            else:
+                self.errors[field_name].append(error_msg)
+        else:
+            # no errors for this field have been recorded yet
+            if is_list:
+                if len(error_msg) > 0:
+                    self.errors[field_name] = error_msg
+            else:
+                self.errors[field_name] = [error_msg]
+
     def is_valid(self):
         """Overrides :method:`django.forms.ModelForm.is_valid` to perform
         custom validation checks (in addition to superclass validation).
@@ -246,15 +363,58 @@ class ClassicalHazardJobForm(BaseOQModelForm):
 
         # Exclude special fields that require contextual validation.
         for field in sorted(set(self.fields) - set(self.special_fields)):
-            valid, errs = eval('%s_is_valid' % field)(self.instance)
+            valid, errs = eval('%s_is_valid' % field)(hjp)
             all_valid = all_valid and valid
-            if len(errs) > 0:
-                # see if an error for this field already exists
-                if self.errors.get(field) is not None:
-                    self.errors[field].extend(errs)
-                else:
-                    self.errors[field] = errs
 
-        # TODO: deal with special fields
+            self._add_error(field, errs)
+
+        # Now do checks which require more context.
+
+        # Cannot specify region AND sites
+        if (hjp.region is not None
+            and hjp.sites is not None):
+            all_valid = False
+            err = 'Cannot specify `region` and `sites`. Choose one.'
+            self._add_error('region', err)
+        # At least one must be specified (region OR sites)
+        elif not (hjp.region is not None or hjp.sites is not None):
+            all_valid = False
+            err = 'Must specify either `region` or `sites`.'
+            self._add_error('region', err)
+            self._add_error('sites', err)
+        # Only region is specified
+        elif hjp.region is not None:
+            if hjp.region_grid_spacing is not None:
+                valid, errs = region_grid_spacing_is_valid(hjp)
+                all_valid = all_valid and valid
+
+                self._add_error('region_grid_spacing', errs)
+            else:
+                all_valid = False
+                err = '`region` requires `region_grid_spacing`'
+                self._add_error('region', err)
+
+            # validate the region
+            valid, errs = region_is_valid(hjp)
+            all_valid = all_valid and valid
+            self._add_error('region', errs)
+        # Only sites was specified
+        else:
+            valid, errs = sites_is_valid(hjp)
+            all_valid = all_valid and valid
+            self._add_error('sites', errs)
+
+        if 'SITE_MODEL_FILE' not in self.files:
+            # make sure the reference parameters are defined and valid
+
+            for field in (
+                'reference_vs30_value',
+                'reference_vs30_type',
+                'reference_depth_to_2pt5km_per_sec',
+                'reference_depth_to_1pt0km_per_sec',
+            ):
+                valid, errs = eval('%s_is_valid' % field)(hjp)
+                all_valid = all_valid and valid
+                self._add_error(field, errs)
 
         return all_valid
