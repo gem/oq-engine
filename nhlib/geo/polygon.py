@@ -60,6 +60,22 @@ class Polygon(object):
         self._projection = None
         self._polygon2d = None
 
+    @property
+    def wkt(self):
+        """
+        Generate WKT (Well-Known Text) to represent this polygon.
+        """
+        pairs = []
+        for i, lon in enumerate(self.lons):
+            lat = self.lats[i]
+            pairs.append('%s %s' % (lon, lat))
+
+        # The polygon must form a closed loop; first and last coord pairs are
+        # the same.
+        pairs.append(pairs[0])
+
+        return 'POLYGON((%s))' % ', '.join(pairs)
+
     @classmethod
     def _from_2d(cls, polygon2d, proj):
         """
