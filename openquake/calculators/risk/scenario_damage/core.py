@@ -36,7 +36,7 @@ from openquake.db.models import inputs4job
 from openquake.utils.tasks import distribute
 from openquake.export.risk import export_dmg_dist_per_asset
 from openquake.export.risk import export_dmg_dist_per_taxonomy
-from openquake.export.risk import  export_dmg_dist_total, export_collapse_map
+from openquake.export.risk import export_dmg_dist_total, export_collapse_map
 
 LOGGER = logs.LOG
 
