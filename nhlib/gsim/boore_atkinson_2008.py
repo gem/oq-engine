@@ -87,7 +87,7 @@ class BooreAtkinson2008(GMPE):
         #: - equations (8a) to (8c).
         #: Mref, Rref values are given in the caption to table 6, pag 119.
         mean =  self._compute_magnitude_scaling(rup,C) +\
-                self._compute_distance_scaling(rup,dists,C,Mref=4.5,Rref=1.0) +\
+                self._compute_distance_scaling(rup,dists,C) +\
                 self._get_site_amplification_linear(sites,C) +\
                 self._get_site_amplification_non_linear(sites,rup,dists,C)
                 
@@ -110,10 +110,12 @@ class BooreAtkinson2008(GMPE):
                 stddevs.append(C['tau']+np.zeros(num_sites))
         return stddevs
         
-    def _compute_distance_scaling(self,rup,dists,C,Mref,Rref):
+    def _compute_distance_scaling(self,rup,dists,C):
         """
         Compute distance-scaling term, equations (3) and (4), pag 107.
         """
+        Mref=4.5
+        Rref=1.0
         R = np.sqrt(dists.rjb**2 + C['h']**2)
         return (C['c1'] + C['c2'] * (rup.mag - Mref)) * np.log(R / Rref) + \
                                                     C['c3'] * (R - Rref)
@@ -171,10 +173,15 @@ class BooreAtkinson2008(GMPE):
         #: Median PGA in g for Vref = 760.0, without site amplification,
         #: that is equation (1) pag 106, without the third and fourth terms
         #: Mref and Rref values are given in the caption to table 6, pag 119
-        #: Note that Rref = 5.0 km
+        #: Note that in the original paper, the caption reads:
+        #: "Distance-scaling coefficients (Mref=4.5 and Rref=1.0 km for all periods, 
+        #: except Rref=5.0 km for pga4nl)". However this is a mistake as reported
+        #: in http://www.daveboore.com/pubs_online.php:
+        #: ERRATUM: 27 August 2008. Tom Blake pointed out that the caption to Table 6 
+        #: should read "Distance-scaling coefficients (Mref=4.5 and Rref=1.0 km for all periods)".
         C_pga = self.COEFFS[PGA()]
         pga4nl = np.exp(self._compute_magnitude_scaling(rup,C_pga) +\
-                    self._compute_distance_scaling(rup,dists,C_pga,Mref=4.5,Rref=5.0))
+                    self._compute_distance_scaling(rup,dists,C_pga))
                     
         #: non linear slope
         bnl = self._compute_non_linear_slope(sites,C)
