@@ -240,3 +240,10 @@ texinfo_documents = [
 
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 #texinfo_show_urls = 'footnote'
+
+nitpick_ignore = [
+    ('py:obj', 'float'),
+    ('py:obj', 'int'),
+    ('py:obj', 'array'),
+    ('py:exc', 'ValueError'),
+]
