@@ -170,6 +170,7 @@ def model_equals(model_a, model_b, ignore=None):
 
 
 class FloatArrayFormField(forms.Field):
+    """Form field for properly handling float arrays/lists."""
 
     #: regex for splitting string lists on whitespace or commas
     ARRAY_RE = re.compile('[\s,]+')
@@ -201,6 +202,19 @@ class FloatArrayFormField(forms.Field):
                 'Could not convert value to `list` of `float` values: %s'
                 % value
             )
+        return value
+
+
+class PickleFormField(forms.Field):
+    """Form field for Python objects which are pickle and saved to the
+    database."""
+
+    def clean(self, value):
+        """We assume that the Python value specified for this field is exactly
+        what we want to pickle and save to the database.
+
+        The value will not modified.
+        """
         return value
 
 
@@ -274,6 +288,15 @@ class PickleField(djm.Field):
     def get_prep_value(self, value):
         """Pickle the value."""
         return bytearray(pickle.dumps(value, pickle.HIGHEST_PROTOCOL))
+
+    def formfield(self, **kwargs):
+        """Specify a custom form field type so forms don't treat this as a
+        default type (such as a string). Any Python object is valid for this
+        field type.
+        """
+        defaults = {'form_class': PickleFormField}
+        defaults.update(kwargs)
+        return super(PickleField, self).formfield(**defaults)
 
 
 ## Tables in the 'admin' schema.
