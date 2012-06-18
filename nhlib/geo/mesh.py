@@ -297,7 +297,8 @@ class RectangularMesh(Mesh):
         Compute and return Joyner-Boore distance to each point of ``mesh``.
         Point's depth is ignored.
 
-        See :meth:`nhlib.geo.surface.BaseSurface.get_joyner_boore_distance`
+        See
+        :meth:`nhlib.geo.surface.base.BaseSurface.get_joyner_boore_distance`
         for definition of this distance.
 
         :returns:

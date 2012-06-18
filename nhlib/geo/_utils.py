@@ -49,11 +49,12 @@ def line_intersects_itself(lons, lats, closed_shape=False):
     longitudes and latitudes (depth is not taken into account).
 
     :param closed_shape:
-        If ``True`` the line will be checked twice: first time with its
-        original shape and second time with the points sequence being
-        shifted by one point (the last point becomes first, the first
-        turns second and so on). This is useful for checking that
-        the sequence of points defines a valid :class:`Polygon`.
+        If ``True`` the line will be checked twice: first time with
+        its original shape and second time with the points sequence
+        being shifted by one point (the last point becomes first,
+        the first turns second and so on). This is useful for
+        checking that the sequence of points defines a valid
+        :class:`~nhlib.geo.polygon.Polygon`.
     """
     assert len(lons) == len(lats)
 
@@ -165,10 +166,10 @@ def get_orthographic_projection(west, east, north, south):
     This projection is prone to distance, area and angle distortions
     everywhere outside of the center point, but still can be used for
     checking shapes: verifying if line intersects itself (like in
-    :func:`_line_intersects_itself`) or if point is inside of a polygon
-    (like in :meth:`Polygon.discretize`). It can be also used for measuring
-    distance to an extent of around 700 kilometers (error doesn't exceed
-    1 km up until then).
+    :func:`line_intersects_itself`) or if point is inside of a polygon
+    (like in :meth:`nhlib.geo.polygon.Polygon.discretize`). It can be also
+    used for measuring distance to an extent of around 700 kilometers (error
+    doesn't exceed 1 km up until then).
     """
     lambda0, phi0 = numpy.radians(get_middle_point(west, north, east, south))
     cos_phi0 = numpy.cos(phi0)

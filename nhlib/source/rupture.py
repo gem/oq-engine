@@ -17,7 +17,6 @@
 Module :mod:`nhlib.source.rupture` defines classes :class:`Rupture`
 and its subclass :class:`ProbabilisticRupture`.
 """
-from nhlib import const
 from nhlib.geo.nodalplane import NodalPlane
 
 

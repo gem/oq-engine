@@ -18,8 +18,6 @@ Module :mod:`nhlib.source.base` defines a base class for seismic sources.
 """
 import abc
 
-from nhlib import const
-
 
 class SeismicSource(object):
     """
@@ -32,7 +30,7 @@ class SeismicSource(object):
     :param name:
         String, a human-readable name of the source.
     :param tectonic_region_type:
-        Source's tectonic regime. See :class:`const.TRT`.
+        Source's tectonic regime. See :class:`nhlib.const.TRT`.
     :param mfd:
         Magnitude-Frequency distribution for the source. See :mod:`nhlib.mfd`.
     :param rupture_mesh_spacing:
@@ -189,7 +187,7 @@ class SeismicSource(object):
         Get a list of pairs "magnitude -- annual occurrence rate".
 
         The list is taken from assigned MFD object
-        (see :meth:`nhlib.mfd.base.BaseMFD.get_annual_occurrence_rate`)
+        (see :meth:`nhlib.mfd.base.BaseMFD.get_annual_occurrence_rates`)
         with simple filtering by rate applied.
 
         :param min_rate:

@@ -45,9 +45,9 @@ class SimpleFaultSource(SeismicSource):
     parameters.
 
     :raises ValueError:
-        If :meth:`SimpleFaultSurface.check_fault_data` fails, if rake value
-        is invalid and if rupture mesh spacing is too low for the lowest
-        magnitude value.
+        If :meth:`~nhlib.geo.surface.simple_fault.SimpleFaultSurface.check_fault_data`
+        fails, if rake value is invalid and if rupture mesh spacing is too high
+        for the lowest magnitude value.
     """
     def __init__(self, source_id, name, tectonic_region_type,
                  mfd, rupture_mesh_spacing,

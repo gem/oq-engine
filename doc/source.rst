@@ -43,6 +43,7 @@ Complex fault
 
 .. automodule:: nhlib.source.complex_fault
     :members:
+    :private-members:
 
 
 ----------------------------
