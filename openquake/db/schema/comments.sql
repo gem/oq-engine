@@ -103,6 +103,13 @@ COMMENT ON COLUMN hzrdi.mfd_tgr.min_val IS 'Minimum magnitude value.';
 COMMENT ON COLUMN hzrdi.mfd_tgr.max_val IS 'Maximum magnitude value.';
 
 
+COMMENT ON TABLE hzrdi.parsed_source IS 'Stores parsed hazard input model sources in serialized python object tree format';
+COMMENT ON COLUMN hzrdi.parsed_source.blob IS 'The BLOB that holds the serialized python object tree.';
+COMMENT ON COLUMN hzrdi.parsed_source.geom IS 'A generic 2-dimensional geometry column that will hold the various source geometries.';
+COMMENT ON COLUMN hzrdi.parsed_source.input_id IS 'The foreign key to the associated input model file';
+COMMENT ON COLUMN hzrdi.parsed_source.source_type IS 'The source''s seismic input type: can be one of: area, point, complex or simple.';
+
+
 COMMENT ON TABLE hzrdi.r_depth_distr IS 'Rupture depth distribution.';
 COMMENT ON COLUMN hzrdi.r_depth_distr.magnitude_type IS 'Magnitude type i.e. one of:
     - body wave magnitude (Mb)
@@ -270,11 +277,14 @@ COMMENT ON COLUMN riski.ffd.last_update IS 'Date/time of the last change of the 
 COMMENT ON TABLE riski.fragility_model IS 'A risk fragility model';
 COMMENT ON COLUMN riski.fragility_model.format IS 'One of "discrete", "continuous"';
 COMMENT ON COLUMN riski.fragility_model.lss IS 'A list of limit states';
-COMMENT ON COLUMN riski.fragility_model.imls IS 'Optional list of intensity measure levels, only applicable to discrete fragility models';
+COMMENT ON COLUMN riski.fragility_model.imls IS 'List of intensity measure levels, mandatory for discrete fragility models';
+COMMENT ON COLUMN riski.fragility_model.iml_unit IS 'Optional: unit of measurement for the intensity measure levels.';
 COMMENT ON COLUMN riski.fragility_model.imt IS 'An optional intensity measure type, only applicable to discrete fragility models';
 COMMENT ON COLUMN riski.fragility_model.description IS 'An optional description of the risk fragility model at hand';
 COMMENT ON COLUMN riski.fragility_model.input_id IS 'The foreign key to the associated input model file';
 COMMENT ON COLUMN riski.fragility_model.last_update IS 'Date/time of the last change of the model at hand';
+COMMENT ON COLUMN riski.fragility_model.max_iml IS 'Optional: maximum intensity measure level, only allowed for continuous models.';
+COMMENT ON COLUMN riski.fragility_model.min_iml IS 'Optional: minimum intensity measure level, only allowed for continuous models.';
 
 
 COMMENT ON TABLE riski.vulnerability_function IS 'A risk vulnerability function';
@@ -423,6 +433,10 @@ COMMENT ON COLUMN uiapi.output.output_type IS 'Output type, one of:
     - bcr_distribution';
 COMMENT ON COLUMN uiapi.output.shapefile_path IS 'The full path of the shapefile generated for a hazard or loss map (optional).';
 
+COMMENT ON TABLE uiapi.src2ltsrc IS '
+Associate an "lt_source" type input (a logic tree source) with "source"
+type inputs (hazard sources referenced by the logic tree source).
+This is needed for worker-side logic tree processing.';
 
 COMMENT ON TABLE uiapi.upload IS 'A batch of OpenQuake input files uploaded by the user';
 COMMENT ON COLUMN uiapi.upload.job_pid IS 'The process id (PID) of the NRML loader process';

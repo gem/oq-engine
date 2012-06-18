@@ -25,13 +25,7 @@ from django.db import transaction
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
 from openquake import java
-from openquake.calculators.base import Calculator
-from openquake.calculators.hazard.general import generate_erf
-from openquake.calculators.hazard.general import generate_gmpe_map
-from openquake.calculators.hazard.general import get_iml_list
-from openquake.calculators.hazard.general import set_gmpe_params
-from openquake.calculators.hazard.general import store_gmpe_map
-from openquake.calculators.hazard.general import store_source_model
+from openquake.calculators.hazard import general
 from openquake.calculators.hazard.uhs.ath import completed_task_count
 from openquake.calculators.hazard.uhs.ath import uhs_task_handler
 from openquake.db.models import Output
@@ -48,6 +42,8 @@ from openquake.utils import tasks as utils_tasks
 from openquake.utils.general import block_splitter
 
 
+# Disabling 'Too many local variables'
+# pylint: disable=R0914
 @task(ignore_results=True)
 @stats.progress_indicator('h')
 @java.unpack_exception
@@ -79,6 +75,8 @@ def compute_uhs_task(job_id, realization, site):
     write_uhs_spectrum_data(job_ctxt, realization, site, uhs_results)
 
 
+# Disabling 'Too many arguments'
+# pylint: disable=R0913
 def compute_uhs(the_job, site):
     """Given a `JobContext` and a site of interest, compute UHS. The Java
     `UHSCalculator` is called to do perform the core computation.
@@ -93,30 +91,73 @@ def compute_uhs(the_job, site):
 
     periods = list_to_jdouble_array(the_job['UHS_PERIODS'])
     poes = list_to_jdouble_array(the_job['POES'])
-    imls = get_iml_list(the_job['INTENSITY_MEASURE_LEVELS'],
-                        the_job['INTENSITY_MEASURE_TYPE'])
+    imls = general.get_iml_list(the_job['INTENSITY_MEASURE_LEVELS'],
+                                the_job['INTENSITY_MEASURE_TYPE'])
     max_distance = the_job['MAXIMUM_DISTANCE']
 
     cache = java.jclass('KVS')(
         config.get('kvs', 'host'),
         int(config.get('kvs', 'port')))
 
-    erf = generate_erf(the_job.job_id, cache)
-    gmpe_map = generate_gmpe_map(the_job.job_id, cache)
-    set_gmpe_params(gmpe_map, the_job.params)
+    erf = general.generate_erf(the_job.job_id, cache)
+    gmpe_map = general.generate_gmpe_map(the_job.job_id, cache)
+    general.set_gmpe_params(gmpe_map, the_job.params)
 
     uhs_calc = java.jclass('UHSCalculator')(periods, poes, imls, erf, gmpe_map,
                                             max_distance)
 
-    uhs_results = uhs_calc.computeUHS(
-        site.latitude,
-        site.longitude,
-        the_job['VS30_TYPE'],
-        the_job['REFERENCE_VS30_VALUE'],
-        the_job['DEPTHTO1PT0KMPERSEC'],
-        the_job['REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM'])
+    site_model = general.get_site_model(the_job.oq_job.id)
+
+    if site_model is not None:
+        sm_data = general.get_closest_site_model_data(site_model, site)
+        vs30_type = sm_data.vs30_type.capitalize()
+        vs30 = sm_data.vs30
+        z1pt0 = sm_data.z1pt0
+        z2pt5 = sm_data.z2pt5
+    else:
+        jp = the_job.oq_job_profile
+
+        vs30_type = jp.vs30_type.capitalize()
+        vs30 = jp.reference_vs30_value
+        z1pt0 = jp.depth_to_1pt_0km_per_sec
+        z2pt5 = jp.reference_depth_to_2pt5km_per_sec_param
+
+    uhs_results = _compute_uhs(
+        uhs_calc, site.latitude, site.longitude, vs30_type, vs30, z1pt0, z2pt5
+    )
 
     return uhs_results
+
+
+def _compute_uhs(calc, lat, lon, vs30_type, vs30, z1pt0, z2pt5):
+    """Helper function for executing `computeUHS` in the java calculator.
+
+    As a separate function, this makes it easier to mock (since we can't really
+    mock the java code).
+
+    See also :function:`compute_uhs`.
+
+    :param calc:
+        jpype `org.gem.calc.UHSCalculator` object.
+    :param float lat:
+        Site latitude.
+    :param float lon:
+        Site longitude.
+    :param vs30_type:
+        'measured' or 'inferred'. Identifies if vs30 value has been measured or
+        inferred.
+    :param float vs30:
+        Average shear wave velocity for top 30 m. Units m/s.
+    :param float z1pt0:
+        Depth to shear wave velocity of 1.0 km/s. Units m.
+    :param float z2pt5:
+        Depth to shear wave velocity of 2.5 km/s. Units km.
+
+    :returns:
+        jpype `java.util.List` of `org.gem.calc.UHSResult` objects, one for
+        each PoE value (which is provided to the ``calc``).
+    """
+    return calc.computeUHS(lat, lon, vs30_type, vs30, z1pt0, z2pt5)
 
 
 @transaction.commit_on_success(using='reslt_writer')
@@ -201,7 +242,7 @@ def write_uhs_spectrum_data(job_ctxt, realization, site, uhs_results):
         uh_spectrum_data.save()
 
 
-class UHSCalculator(Calculator):
+class UHSCalculator(general.BaseHazardCalculator):
     """Uniform Hazard Spectra calculator"""
 
     # LogicTreeProcessor for sampling the source model and gmpe logic trees.
@@ -209,6 +250,7 @@ class UHSCalculator(Calculator):
 
     def initialize(self):
         """Set the task total counter."""
+        super(UHSCalculator, self).initialize()
         task_total = (self.job_ctxt.oq_job_profile.realizations
                       * len(self.job_ctxt.sites_to_compute()))
         stats.set_total(self.job_ctxt.job_id, 'h', 'uhs:tasks', task_total)
@@ -245,10 +287,10 @@ class UHSCalculator(Calculator):
         for rlz in xrange(job_ctxt.oq_job_profile.realizations):
 
             # Sample the gmpe and source models:
-            store_source_model(
+            general.store_source_model(
                 job_ctxt.job_id, src_model_rnd.getrandbits(32),
                 job_ctxt.params, self.lt_processor)
-            store_gmpe_map(
+            general.store_gmpe_map(
                 job_ctxt.job_id, gmpe_rnd.getrandbits(32), self.lt_processor)
 
             for site_block in block_splitter(all_sites, site_block_size):

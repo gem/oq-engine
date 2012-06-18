@@ -59,7 +59,16 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
 
     def pre_execute(self):
         """
-        Write the initial db container records for the calculation results.
+        Perform the following pre-execution tasks:
+
+        * store the exposure model specified in the
+        configuration file into database
+        * store the fragility model specified in the
+        configuration file into database
+        * split the interested sites into blocks for
+        later processing
+        * write the initial database container records
+        for calculation results
         """
 
         self.store_exposure_assets()
@@ -148,6 +157,14 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         """
         Sum the fractions (of each damage state per building taxonomy)
         of each computation block.
+
+        :param region_fractions: fractions for each damage state
+            per building taxonomy for each different block computed.
+        :type region_fractions: `list` of 2d `numpy.array`.
+            Each column of the array represents a damage state (in order from
+            the lowest to the highest). Each row represents the
+            values for that damage state for a particular
+            ground motion value.
         """
 
         for bfractions in region_fractions:
@@ -183,6 +200,12 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         :keyword fmodel: fragility model associated to this computation.
         :type fmodel: instance of
             :py:class:`openquake.db.models.FragilityModel`
+        :return: the sum of the fractions (for each damage state)
+            per asset taxonomy for the computed block.
+        :rtype: `dict` where each key is a string representing a
+            taxonomy and each value is the sum of fractions of all
+            the assets related to that taxonomy (represented as
+            a 2d `numpy.array`)
         """
 
         fm = kwargs["fmodel"]
@@ -245,6 +268,20 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
     def _store_dda(self, fractions, asset, fm):
         """
         Store the damage distribution per asset.
+
+        :param fm: fragility model associated to
+            the distribution being stored.
+        :type fm: instance of
+            :py:class:`openquake.db.models.FragilityModel`
+        :param asset: asset associated to the distribution being stored.
+        :type asset: instance of :py:class:`openquake.db.model.ExposureData`
+        :param fractions: fractions for each damage state associated
+            to the given asset.
+        :type fractions: 2d `numpy.array`. Each column represents
+            a damage state (in order from the lowest
+            to the highest). Each row represents the
+            values for that damage state for a particular
+            ground motion value.
         """
 
         [dds] = DmgDistPerAsset.objects.filter(
@@ -406,6 +443,18 @@ def compute_gmv_fractions(funcs, gmv):
         to the highest)
     """
 
+    def _no_damage(fm, gmv):
+        """
+        There is no damage when ground motions values are less
+        than the first iml or when the no damage limit value
+        is greater than the ground motions value.
+        """
+        discrete = fm.format == "discrete"
+        no_damage_limit = fm.no_damage_limit is not None
+
+        return ((discrete and not no_damage_limit and gmv < fm.imls[0]) or
+            (discrete and no_damage_limit and gmv < fm.no_damage_limit))
+
     def compute_poe_con(iml, func):
         """
         Compute the Probability of Exceedance for the given
@@ -426,14 +475,17 @@ def compute_gmv_fractions(funcs, gmv):
         """
 
         highest_iml = func.fragility_model.imls[-1]
+        no_damage_limit = func.fragility_model.no_damage_limit
 
         # when the intensity measure level is above
         # the range, we use the highest one
         if iml > highest_iml:
             iml = highest_iml
 
-        return scipy.interpolate.interp1d(
-            func.fragility_model.imls, func.poes)(iml)
+        imls = [no_damage_limit] + func.fragility_model.imls
+        poes = [0.0] + func.poes
+
+        return scipy.interpolate.interp1d(imls, poes)(iml)
 
     ftype_poe_map = {Ffc: compute_poe_con, Ffd: compute_poe_dsc}
 
@@ -448,7 +500,7 @@ def compute_gmv_fractions(funcs, gmv):
     # intensity measure level defined in the model
     # we simply use 100% no_damage and 0% for the
     # remaining limit states
-    if fm.format == "discrete" and gmv < fm.imls[0]:
+    if _no_damage(fm, gmv):
         damage_states[0] = 1.0
         return numpy.array(damage_states)
 

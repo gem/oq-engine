@@ -13,5 +13,5 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-"""This package contains code creating output in NRML, geotiff, and SVG format.
+"""This package contains code creating output in NRML and SVG format.
 """

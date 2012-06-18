@@ -2,6 +2,11 @@
 Hazard Calculators
 ##################
 
+*******
+General
+*******
+.. automodule:: openquake.calculators.hazard.general
+
 *************************
 Classical PSHA Calculator
 *************************
