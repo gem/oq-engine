@@ -274,7 +274,9 @@ class SourceDBWriterTestCase(unittest.TestCase):
             nrml_parsers.SourceModelParser(MIXED_SRC_MODEL).parse()
         )
 
-        parsed_sources = list(models.ParsedSource.objects.filter(input=inp.id))
+        parsed_sources = list(
+            models.ParsedSource.objects.filter(input=inp.id).order_by('id')
+        )
 
         # compare pristine nrml sources to those stored in pickled form in the
         # database (by unpickling them first, of course):
