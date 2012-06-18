@@ -34,6 +34,7 @@ from django.contrib.gis.db import models
 from django.contrib.gis.geos import GEOSGeometry
 from django.core.exceptions import ObjectDoesNotExist
 
+
 from openquake.calculators.hazard import CALCULATORS as HAZ_CALCS
 from openquake.calculators.risk import CALCULATORS as RISK_CALCS
 from openquake.db.models import CharArrayField
@@ -44,10 +45,12 @@ from openquake.db.models import Input2job
 from openquake.db.models import inputs4job
 from openquake.db.models import Job2profile
 from openquake.db.models import JobStats
+from openquake.db.models import ModelContent
 from openquake.db.models import OqJob
 from openquake.db.models import OqJobProfile
 from openquake.db.models import OqUser
 from openquake.db.models import profile4job
+from openquake.db.models import Src2ltsrc
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
@@ -285,7 +288,7 @@ class JobContext(object):
             self._extract_coords('REGION_VERTEX'))
 
         region.cell_size = self['REGION_GRID_SPACING']
-        return [site for site in region]
+        return region.grid.centers()
 
     def build_nrml_path(self, nrml_file):
         """Return the complete output path for the given nrml_file"""
@@ -517,6 +520,13 @@ def _prepare_config_parameters(params, sections):
         # config params to be strings at this point:
         new_params['COMPUTE_MEAN_HAZARD_CURVE'] = 'true'
 
+    # Fri, 11 May 2012 11:03:03 +0200, al-maisan
+    # According to dmonelli and larsbutler the intensity measure type for UHS
+    # jobs is *always* SA irrespective of the value specified in the config
+    # file.
+    if calc_mode == "uhs":
+        new_params["INTENSITY_MEASURE_TYPE"] = "SA"
+
     return new_params, sections
 
 
@@ -532,15 +542,18 @@ def _file_digest(path):
         return checksum.hexdigest()
 
 
-def _identical_input(input_type, digest):
+def _identical_input(input_type, digest, owner_id):
     """Get an identical input with the same type or `None`.
 
     Identical inputs are found by comparing md5sum digests. In order to avoid
     reusing corrupted/broken input models we ignore all the inputs that are
     associated with a first job that failed.
+    Also, we only want inputs owned by the user who is running the current job
+    and if there is more than one input we want the most recent one.
 
     :param str input_type: input model type
     :param str digest: md5sum digest
+    :param int owner_id: the database key of the owner
     :returns: an `:class:openquake.db.models.Input` instance or `None`
     """
     q = """
@@ -549,13 +562,27 @@ def _identical_input(input_type, digest):
             uiapi.oq_job, (
                 SELECT DISTINCT MIN(j.id) AS min_job_id, i.id AS input_id
                 FROM uiapi.oq_job AS j, uiapi.input2job AS i2j,
-                     uiapi.input AS i
+                     uiapi.input AS i, admin.oq_user u
                 WHERE i2j.oq_job_id = j.id AND i2j.input_id = i.id
                     AND i.digest = %s AND i.input_type = %s
+                    AND j.owner_id = u.id AND u.id = %s
                 GROUP BY i.id ORDER BY i.id DESC) AS mjq
             WHERE id = mjq.min_job_id AND status = 'succeeded')"""
-    ios = list(Input.objects.raw(q, [digest, input_type]))
+    ios = list(Input.objects.raw(q, [digest, input_type, owner_id]))
     return ios[0] if ios else None
+
+
+def _get_content_type(path):
+    """Given the path to a file, guess the content type by looking at the file
+    extension. If there is none, simply return 'unknown'.
+    """
+    _, ext = os.path.splitext(path)
+    if ext == '':
+        return 'unknown'
+    else:
+        # This gives us the . and extension (such as '.xml').
+        # Don't include the period.
+        return ext[1:]
 
 
 def _insert_input_files(params, job, force_inputs):
@@ -569,7 +596,7 @@ def _insert_input_files(params, job, force_inputs):
 
     inputs_seen = []
 
-    def ln_input2job(job, path, input_type):
+    def ln_input2job(path, input_type):
         """Link identical or newly created input to the given job."""
         digest = _file_digest(path)
         linked_inputs = inputs4job(job.id)
@@ -577,33 +604,57 @@ def _insert_input_files(params, job, force_inputs):
                for li in linked_inputs):
             return
 
-        in_model = (_identical_input(input_type, digest)
+        in_model = (_identical_input(input_type, digest, job.owner.id)
                     if not force_inputs else None)
         if in_model is None:
+            # Save the raw input file contents to the DB:
+            model_content = ModelContent()
+            with open(path, 'rb') as fh:
+                model_content.raw_content = fh.read()
+            # Try to guess the content type:
+            model_content.content_type = _get_content_type(path)
+            model_content.save()
+
             in_model = Input(path=path, input_type=input_type, owner=job.owner,
-                             size=os.path.getsize(path), digest=digest)
+                             size=os.path.getsize(path), digest=digest,
+                             model_content=model_content)
             in_model.save()
 
         # Make sure we don't link to the same input more than once.
-        if in_model.id in inputs_seen:
-            return
-        else:
+        if in_model.id not in inputs_seen:
             inputs_seen.append(in_model.id)
 
-        i2j = Input2job(input=in_model, oq_job=job)
-        i2j.save()
+            i2j = Input2job(input=in_model, oq_job=job)
+            i2j.save()
+
+        return in_model
+
+    def _insert_referenced_sources(lt_src_input, lt_src_path):
+        """
+        :param lt_src_input: an `:class:openquake.db.models.Input` of type
+            "lt_source"
+        :param str lt_src_path: path to the current logic tree source
+        """
+        # insert source models referenced in the logic tree
+        for path in _get_source_models(lt_src_path):
+            hzrd_src_input = ln_input2job(path, "source")
+            one_or_none = Src2ltsrc.objects.filter(hzrd_src=hzrd_src_input,
+                                                   lt_src=lt_src_input)
+            if len(one_or_none) == 0:
+                # No link table entry found, create one.
+                src_link = Src2ltsrc(
+                    hzrd_src=hzrd_src_input, lt_src=lt_src_input,
+                    filename=os.path.basename(path))
+                src_link.save()
 
     # insert input files in input table
     for param_key, file_type in INPUT_FILE_TYPES.items():
         if param_key not in params:
             continue
         path = params[param_key]
-        ln_input2job(job, path, file_type)
-
-    # insert source models referenced in the logic tree
-    if 'SOURCE_MODEL_LOGIC_TREE_FILE' in params:
-        for path in _get_source_models(params['SOURCE_MODEL_LOGIC_TREE_FILE']):
-            ln_input2job(job, path, "source")
+        input_obj = ln_input2job(path, file_type)
+        if file_type == "lt_source":
+            _insert_referenced_sources(input_obj, path)
 
 
 def prepare_job(user_name="openquake"):
@@ -747,7 +798,7 @@ def _store_input_parameters(params, calc_mode, job_profile):
 
 
 def run_job(job, params, sections, output_type='db', log_level='warn',
-            force_inputs=False):
+            force_inputs=False, log_file=None):
     """Given an :class:`openquake.db.models.OqJobProfile` object, create a new
     :class:`openquake.db.models.OqJob` object and run the job.
 
@@ -771,6 +822,8 @@ def run_job(job, params, sections, output_type='db', log_level='warn',
         Defaults to 'warn'.
     :param bool force_inputs: If `True` the model input files will be parsed
         and the resulting content written to the database no matter what.
+    :param str log_file:
+        Optional log file location.
 
     :returns:
         :class:`openquake.db.models.OqJob` instance.
@@ -830,7 +883,7 @@ def run_job(job, params, sections, output_type='db', log_level='warn',
         job.supervisor_pid = supervisor_pid
         job.job_pid = job_pid
         job.save()
-        supervisor.supervise(job_pid, job.id)
+        supervisor.supervise(job_pid, job.id, log_file=log_file)
         return
 
     # parent process

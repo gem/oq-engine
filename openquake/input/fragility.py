@@ -76,7 +76,9 @@ class FragilityDBWriter(object):
             fragm = self.parser.model
             self.model = models.FragilityModel(
                 owner=self.owner, input=self.smi, lss=fragm.limits,
-                format=fragm.format)
+                format=fragm.format, iml_unit=fragm.iml_unit,
+                max_iml=fragm.max_iml, min_iml=fragm.min_iml,
+                no_damage_limit=fragm.no_damage_limit)
             for key, tag in self.model_attrs:
                 value = getattr(fragm, tag)
                 if value:
