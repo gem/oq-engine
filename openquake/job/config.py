@@ -470,7 +470,8 @@ class FilePathValidator(object):
             if name not in self.params:
                 continue
 
-            if not os.path.exists(self.params[name]):
+            path = os.path.join(self.params['BASE_PATH'], self.params[name])
+            if not os.path.exists(path):
                 errors.append("File '%s' specified by parameter %s not found" %
                               (self.params[name], name))
 
