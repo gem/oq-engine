@@ -272,7 +272,9 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
 
         for site in block.sites:
             point = self.job_ctxt.region.grid.point_at(site)
-            hazard_curve = self._get_db_curve(point.site)
+            hazard_curve = self._get_db_curve(
+                general.hazard_input_site(self.job_ctxt, site))
+
             assets = general.BaseRiskCalculator.assets_at(
                 self.job_ctxt.job_id, site)
 
