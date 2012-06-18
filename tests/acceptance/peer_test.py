@@ -152,19 +152,19 @@ class Set1TestCase(unittest.TestCase):
         s1hc, s2hc, s3hc, s4hc, s5hc, s6hc, s7hc = curves[test_data.IMT]
 
         assert_hazard_curve_is(self, s1hc, test_data.SET1_CASE2_SITE1_POES,
-                               tolerance=1.5e-2)
+                               tolerance=3e-3)
         assert_hazard_curve_is(self, s2hc, test_data.SET1_CASE2_SITE2_POES,
-                               tolerance=1.5e-2)
+                               tolerance=2e-5)
         assert_hazard_curve_is(self, s3hc, test_data.SET1_CASE2_SITE3_POES,
-                               tolerance=1.5e-2)
+                               tolerance=2e-5)
         assert_hazard_curve_is(self, s4hc, test_data.SET1_CASE2_SITE4_POES,
-                               tolerance=1.5e-2)
+                               tolerance=1e-3)
         assert_hazard_curve_is(self, s5hc, test_data.SET1_CASE2_SITE5_POES,
-                               tolerance=1.5e-2)
+                               tolerance=1e-3)
         assert_hazard_curve_is(self, s6hc, test_data.SET1_CASE2_SITE6_POES,
-                               tolerance=1.5e-2)
+                               tolerance=1e-3)
         assert_hazard_curve_is(self, s7hc, test_data.SET1_CASE2_SITE7_POES,
-                               tolerance=1.5e-2)
+                               tolerance=2e-5)
 
     def test_case_5(self):
         # only mfd differs from case 2
