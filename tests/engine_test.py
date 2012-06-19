@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import os
 import subprocess
 import sys
@@ -24,6 +23,7 @@ from django.contrib.gis.geos import GEOSGeometry
 from django.core.exceptions import ObjectDoesNotExist
 
 from openquake.calculators.risk.event_based import core
+from openquake.input.exposure import read_sites_from_exposure
 from openquake.db import models
 from openquake import engine
 from openquake import shapes
@@ -219,7 +219,7 @@ class EngineAPITestCase(unittest.TestCase):
             self.assertTrue(
                 models.model_equals(
                     exp_inp, act_inp, ignore=(
-                        "id",  "last_update", "path", "model", "_owner_cache",
+                        "id", "last_update", "path", "model", "_owner_cache",
                         "owner_id", "model_content_id")))
 
     def test_import_job_profile_as_specified_user(self):
@@ -331,7 +331,7 @@ class ReadSitesFromExposureTestCase(unittest.TestCase):
             shapes.Site(-118.067592, 33.855398),
             shapes.Site(-118.186739, 33.779013)])
 
-        actual_sites = set(engine.read_sites_from_exposure(test_job))
+        actual_sites = set(read_sites_from_exposure(test_job))
 
         self.assertEqual(expected_sites, actual_sites)
 
