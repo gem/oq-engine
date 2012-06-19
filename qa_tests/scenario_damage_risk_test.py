@@ -47,18 +47,18 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
     def _verify_collapse_map_con(self):
         mean, stddev = self._map_asset_values("a1")
 
-        self._close_to(723.4242765613, mean)
-        self._close_to(755.9750053225, stddev)
+        self._close_to(329.3743174305, mean)
+        self._close_to(347.3929450270, stddev)
 
         mean, stddev = self._map_asset_values("a2")
 
-        self._close_to(1227.2442314019, mean)
-        self._close_to(549.4191085089, stddev)
+        self._close_to(1270.1751143182, mean)
+        self._close_to(575.8724057319, stddev)
 
         mean, stddev = self._map_asset_values("a3")
 
-        self._close_to(284.7222314506, mean)
-        self._close_to(248.9585500745, stddev)
+        self._close_to(195.4618668074, mean)
+        self._close_to(253.9130901018, stddev)
 
     def _verify_total_dist_con(self):
         job = OqJob.objects.latest("id")
@@ -180,18 +180,18 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
     def _verify_collapse_map_dsc(self):
         mean, stddev = self._map_asset_values("a1")
 
-        self._close_to(1045.9782707418, mean)
-        self._close_to(749.3971884847, stddev)
-
-        mean, stddev = self._map_asset_values("a3")
-
-        self._close_to(414.1443910394, mean)
-        self._close_to(232.3139816472, stddev)
+        self._close_to(675.8929310273, mean)
+        self._close_to(556.7659393118, stddev)
 
         mean, stddev = self._map_asset_values("a2")
 
-        self._close_to(866.2058685200, mean)
-        self._close_to(398.0973556984, stddev)
+        self._close_to(429.0315464096, mean)
+        self._close_to(412.3365089014, stddev)
+
+        mean, stddev = self._map_asset_values("a3")
+
+        self._close_to(589.6825259861, mean)
+        self._close_to(221.1583216939, stddev)
 
     def _verify_total_dist_dsc(self):
         job = OqJob.objects.latest("id")
@@ -301,12 +301,13 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
     def _map_asset_values(self, asset_ref):
         job = OqJob.objects.latest("id")
         filename = "%s/collapse-map-%s.xml" % (OUTPUT_DIR, job.id)
+        root = self._root(filename)
 
-        xpath_mean = ("//nrml:cf[@assetRef='" + asset_ref+ "']/nrml:mean")
-        xpath_stddev = ("//nrml:cf[@assetRef='" + asset_ref+ "']/nrml:stdDev")
+        xpath_mean = ("//nrml:cf[@assetRef='" + asset_ref + "']/nrml:mean")
+        xpath_stddev = ("//nrml:cf[@assetRef='" + asset_ref + "']/nrml:stdDev")
 
-        return float(self._get(filename, xpath_mean).text), float(
-                self._get(filename, xpath_stddev).text)
+        return float(self._get(root, xpath_mean).text), float(
+                self._get(root, xpath_stddev).text)
 
     def _ds_td(self, damage_state, root):
         xpath = ("nrml:totalDmgDist/"
