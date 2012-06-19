@@ -59,6 +59,7 @@ class DmgDistPerAssetXMLWriter(object):
             There are no restrictions about the ordering of the elements,
             the component is able to correctly re-order the elements by
             site and asset.
+
         :raises: `RuntimeError` in case of list empty or `None`.
         """
 

@@ -46,11 +46,10 @@ from openquake.db import models
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
-from openquake.input.exposure import ExposureDBWriter
+from openquake.input import exposure as exposure_input
 from openquake.input.fragility import FragilityDBWriter
 from openquake.job import config as job_config
 from openquake.output import risk as risk_output
-from openquake.parser import exposure
 from openquake.parser import fragility
 from openquake.parser import vulnerability
 from openquake.utils import round_float
@@ -132,8 +131,7 @@ class BaseRiskCalculator(Calculator):
         """
         return self.job_ctxt.params[job_config.CALCULATION_MODE] in (
             job_config.BCR_CLASSICAL_MODE,
-            job_config.BCR_EVENT_BASED_MODE
-        )
+            job_config.BCR_EVENT_BASED_MODE)
 
     def pre_execute(self):
         """Make sure the exposure and vulnerability data is in the database."""
@@ -142,16 +140,19 @@ class BaseRiskCalculator(Calculator):
         self.partition()
 
     @staticmethod
-    def _cell_to_polygon(lowerleft, cell_size):
+    def _cell_to_polygon(center, cell_size):
         """Return the cell with the given mid point and size.
 
-        :param lowerleft: the lower left corner of the risk cell
-        :type lowerleft: a :py:class:`openquake.shapes.Site` instance
+        :param center: the center of the risk cell
+        :type center: a :py:class:`openquake.shapes.Site` instance
         :param float cell_size: the configured risk cell size
 
         :return: the risk cell as a :py:class:`django.contrib.gis.geos.Polygon`
         """
-        lon, lat = lowerleft.coords
+        clon, clat = center.coords
+        half_csize = cell_size / 2.0
+        lon, lat = (clon - half_csize, clat - half_csize)
+
         coos = [(lon, lat),                             # lower left
                 (lon, lat + cell_size),                 # upper left
                 (lon + cell_size, lat + cell_size),     # upper right
@@ -171,12 +172,12 @@ class BaseRiskCalculator(Calculator):
             cls._em_job_id = job_id
 
     @classmethod
-    def assets_for_cell(cls, job_id, lowerleft):
+    def assets_for_cell(cls, job_id, center):
         """Return exposure assets for the given job and risk cell mid-point.
 
         :param int job_id: the database key of the job in question
-        :param lowerleft: a :py:class:`openquake.shapes.Site` instance
-            with the location of the lower left corner of the risk cell
+        :param center: a :py:class:`openquake.shapes.Site` instance
+            with the location of the risk cell center
         :returns: a potentially empty list of
             :py:class:`openquake.db.models.ExposureData` instances
         """
@@ -187,7 +188,7 @@ class BaseRiskCalculator(Calculator):
         if not cls._em_inputs:
             return []
 
-        risk_cell = cls._cell_to_polygon(lowerleft, jp.region_grid_spacing)
+        risk_cell = cls._cell_to_polygon(center, jp.region_grid_spacing)
         result = models.ExposureData.objects.filter(
             exposure_model__input__in=cls._em_inputs,
             site__contained=risk_cell)
@@ -221,11 +222,9 @@ class BaseRiskCalculator(Calculator):
     def partition(self):
         """Split the sites to compute in blocks and store
         them in the underlying KVS system."""
-        # pylint: disable=W0404
-        from openquake import engine
 
         self.job_ctxt.blocks_keys = []  # pylint: disable=W0201
-        sites = engine.read_sites_from_exposure(self.job_ctxt)
+        sites = exposure_input.read_sites_from_exposure(self.job_ctxt)
 
         block_count = 0
 
@@ -239,16 +238,13 @@ class BaseRiskCalculator(Calculator):
                  len(sites), block_count)
 
     def store_exposure_assets(self):
-        """Load exposure assets and write them to database."""
-        [emi] = models.inputs4job(self.job_ctxt.job_id, "exposure")
-        if emi.exposuremodel_set.all().count() > 0:
-            return
+        """
+        Load exposure assets from input file and store them
+        into database, if necessary.
+        """
 
-        path = os.path.join(self.job_ctxt.base_path, emi.path)
-        exposure_parser = exposure.ExposureModelFile(path)
-        writer = ExposureDBWriter(emi)
-        writer.serialize(exposure_parser)
-        return emi.model()
+        exposure_input.store_exposure_assets(
+            self.job_ctxt.job_id, self.job_ctxt.base_path)
 
     def store_fragility_model(self):
         """Load fragility model and write it to database."""
@@ -327,37 +323,43 @@ class BaseRiskCalculator(Calculator):
                 yield point, asset
 
     def _write_output_for_block(self, job_id, block_id):
-        """ Given a job and a block, write out a plotted curve """
-        loss_ratio_curves = []
+        """
+        Write loss / loss ratio curves to xml for a single block.
+        """
+
         loss_curves = []
+        loss_ratio_curves = []
         block = Block.from_kvs(job_id, block_id)
-        for point, asset in self.grid_assets_iterator(
-                block.grid(self.job_ctxt.region)):
-            site = shapes.Site(asset.site.x, asset.site.y)
 
-            loss_curve = kvs.get_client().get(
-                kvs.tokens.loss_curve_key(
+        for site in block.sites:
+            point = self.job_ctxt.region.grid.point_at(site)
+            assets = BaseRiskCalculator.assets_at(self.job_ctxt.job_id, site)
+
+            for asset in assets:
+                loss_curve = kvs.get_client().get(
+                    kvs.tokens.loss_curve_key(
                     job_id, point.row, point.column, asset.asset_ref))
-            loss_ratio_curve = kvs.get_client().get(
-                kvs.tokens.loss_ratio_key(
+
+                loss_ratio_curve = kvs.get_client().get(
+                    kvs.tokens.loss_ratio_key(
                     job_id, point.row, point.column, asset.asset_ref))
 
-            if loss_curve:
-                loss_curve = shapes.Curve.from_json(loss_curve)
-                loss_curves.append((site, (loss_curve, asset)))
+                if loss_curve:
+                    loss_curve = shapes.Curve.from_json(loss_curve)
+                    loss_curves.append((site, (loss_curve, asset)))
 
-            if loss_ratio_curve:
-                loss_ratio_curve = shapes.Curve.from_json(loss_ratio_curve)
-                loss_ratio_curves.append((site, (loss_ratio_curve, asset)))
+                if loss_ratio_curve:
+                    loss_ratio_curve = shapes.Curve.from_json(loss_ratio_curve)
+                    loss_ratio_curves.append((site, (loss_ratio_curve, asset)))
 
-        results = self._serialize(block_id,
-                                           curves=loss_ratio_curves,
-                                           curve_mode='loss_ratio')
+        results = self._serialize(block_id, curves=loss_ratio_curves,
+                curve_mode="loss_ratio")
+
         if loss_curves:
-            results.extend(
-                self._serialize(
-                    block_id, curves=loss_curves, curve_mode='loss',
-                    curve_mode_prefix='loss_curve', render_multi=True))
+            results.extend(self._serialize(
+                block_id, curves=loss_curves, curve_mode="loss",
+                curve_mode_prefix="loss_curve", render_multi=True))
+
         return results
 
     def asset_losses_per_site(self, loss_poe, assets_iterator):
@@ -1189,3 +1191,30 @@ def load_gmvs_at(job_id, point):
     """
     gmfs_key = kvs.tokens.ground_motion_values_key(job_id, point)
     return [float(x['mag']) for x in kvs.get_list_json_decoded(gmfs_key)]
+
+
+def hazard_input_site(job_ctxt, site):
+    """
+    Given a specific risk site (a location where we have
+    some assets defined), return the corresponding site
+    where to load hazard input from.
+
+    If the `COMPUTE_HAZARD_AT_ASSETS_LOCATIONS` parameter
+    is specified in the configuration file, the site is
+    exactly the site where the asset is defined. Otherwise it
+    is the center of the cell where the risk site falls in.
+
+    :param job_ctxt: the context of the running job.
+    :type job_ctxt: :class:`JobContext` instance
+    :param site: the risk site (a location where there
+        are some assets defined).
+    :type site: :class:`openquake.shapes.Site` instance
+    :returns: the location where the hazard must be
+        loaded from.
+    :rtype: :class:`openquake.shapes.Site` instance
+    """
+
+    if job_ctxt.has(job_config.COMPUTE_HAZARD_AT_ASSETS):
+        return site
+    else:
+        return job_ctxt.region.grid.point_at(site).site

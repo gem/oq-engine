@@ -277,11 +277,11 @@ class CollapseMapXMLWriterTestCase(unittest.TestCase, helpers.DbTestCase):
 
     def make_data(self, asset, mean, stddev):
         data = models.CollapseMapData(
-            collapse_map = self.cm,
-            asset_ref = asset.asset_ref,
-            value = mean,
-            std_dev = stddev,
-            location = asset.site)
+            collapse_map=self.cm,
+            asset_ref=asset.asset_ref,
+            value=mean,
+            std_dev=stddev,
+            location=asset.site)
 
         data.save()
         self.data.append(data)
@@ -368,11 +368,11 @@ class DmgDistPerTaxonomyXMLWriterTestCase(
 
     def make_data(self, taxonomy, dmg_state, mean, stddev):
         data = models.DmgDistPerTaxonomyData(
-            dmg_dist_per_taxonomy = self.ddt,
-            taxonomy = taxonomy,
-            dmg_state = dmg_state,
-            mean = mean,
-            stddev = stddev)
+            dmg_dist_per_taxonomy=self.ddt,
+            taxonomy=taxonomy,
+            dmg_state=dmg_state,
+            mean=mean,
+            stddev=stddev)
 
         data.save()
         self.data.append(data)
@@ -453,10 +453,10 @@ class DmgDistTotalXMLWriterTestCase(
 
     def make_data(self, dmg_state, mean, stddev):
         data = models.DmgDistTotalData(
-            dmg_dist_total = self.ddt,
-            dmg_state = dmg_state,
-            mean = mean,
-            stddev = stddev)
+            dmg_dist_total=self.ddt,
+            dmg_state=dmg_state,
+            mean=mean,
+            stddev=stddev)
 
         data.save()
         self.data.append(data)

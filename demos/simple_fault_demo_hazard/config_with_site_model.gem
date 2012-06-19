@@ -4,21 +4,27 @@ CALCULATION_MODE = Classical
 
 # NOTE: The order of the vertices is to be kept!!!
 # lat, lon of polygon vertices (in clock or counter-clock wise order)
-REGION_VERTEX = 45.8, 6.5, 46.5, 6.5, 46.5, 8.5, 45.8, 8.5
+REGION_VERTEX = 40.1, 10.1, 44.9, 10.1, 44.9, 14.9, 40.1, 14.9
 # degrees
 REGION_GRID_SPACING = 0.1
 
 [HAZARD]
 
-DEPTHTO1PT0KMPERSEC = 100.0
-VS30_TYPE = measured
 SOURCE_MODEL_LT_RANDOM_SEED = 23
 GMPE_LT_RANDOM_SEED = 5
 
 # file containing erf logic tree structure
 SOURCE_MODEL_LOGIC_TREE_FILE = source_model_logic_tree.xml
+
 # file containing gmpe logic tree structure
 GMPE_LOGIC_TREE_FILE = gmpe_logic_tree.xml
+
+# File containing site-specific parameters for hazard calculations
+# (VS30, VS30 type, Z 1.0, Z 2.5).
+# The calculations sites or region of interest must be completely contained
+# by the convex hull formed by the sites in the SITE_MODEL.
+SITE_MODEL = ../_site_model/site_model.xml
+
 # output directory - relative to this file
 OUTPUT_DIR = computed_output
 
@@ -51,11 +57,6 @@ GMPE_TRUNCATION_TYPE = 2 Sided
 TRUNCATION_LEVEL = 3
 # (Total, Inter-Event, Intra-Event, None (zero), Total (Mag Dependent), Total (PGA Dependent), Intra-Event (Mag Dependent))
 STANDARD_DEVIATION_TYPE = None (zero)
-# (m/s)
-REFERENCE_VS30_VALUE = 760.0
-# The depth to where shear-wave velocity = 2.5 km/sec.
-# Cambpell basin depth. Measure is (km)
-REFERENCE_DEPTH_TO_2PT5KM_PER_SEC_PARAM = 5.0
 
 # Rock, Deep-Soil
 SADIGH_SITE_TYPE = Rock

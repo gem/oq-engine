@@ -36,6 +36,7 @@ GRANT ALL ON SEQUENCE hzrdi.fault_edge_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.focal_mechanism_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.mfd_evd_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.mfd_tgr_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE hzrdi.parsed_source_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.r_depth_distr_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.r_rate_mdl_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdi.rupture_id_seq to GROUP openquake;
@@ -87,11 +88,13 @@ GRANT ALL ON SEQUENCE uiapi.output_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.upload_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.error_msg_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.input2job_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE uiapi.src2ltsrc_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.input2upload_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.job2profile_id_seq to GROUP openquake;
 
 GRANT SELECT ON geography_columns TO GROUP openquake;
 GRANT SELECT ON geometry_columns TO GROUP openquake;
+GRANT SELECT ON spatial_ref_sys TO GROUP openquake;
 
 GRANT SELECT ON hzrdi.complex_source TO GROUP openquake;
 GRANT SELECT ON hzrdi.simple_source TO GROUP openquake;
@@ -140,6 +143,10 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.mfd_evd TO oq_job_init;
 -- hzrdi.mfd_tgr
 GRANT SELECT ON hzrdi.mfd_tgr TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdi.mfd_tgr TO oq_job_init;
+
+-- hzrdi.parsed_source
+GRANT SELECT ON hzrdi.parsed_source TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON hzrdi.parsed_source TO oq_job_init;
 
 -- hzrdi.r_depth_distr
 GRANT SELECT ON hzrdi.r_depth_distr TO GROUP openquake;
@@ -300,6 +307,10 @@ GRANT SELECT,INSERT,DELETE ON uiapi.model_content to oq_job_init;
 -- uiapi.input2job
 GRANT SELECT ON uiapi.input2job TO GROUP openquake;
 GRANT SELECT,INSERT,DELETE ON uiapi.input2job TO oq_job_init;
+
+-- uiapi.src2ltsrc
+GRANT SELECT ON uiapi.src2ltsrc TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON uiapi.src2ltsrc TO oq_job_init;
 
 -- uiapi.input2upload
 GRANT SELECT ON uiapi.input2upload TO GROUP openquake;

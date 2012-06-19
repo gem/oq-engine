@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import itertools
 import os
 import numpy
@@ -29,6 +28,8 @@ from openquake.calculators.risk.general import BetaDistribution
 from openquake.calculators.risk.general import compute_alpha
 from openquake.calculators.risk.general import compute_beta
 from openquake.calculators.risk.general import load_gmvs_at
+from openquake.calculators.risk.general import hazard_input_site
+from openquake.job import config
 from openquake.db import models
 from openquake import engine
 from openquake import kvs
@@ -160,7 +161,7 @@ class BetaDistributionTestCase(unittest.TestCase):
 
         expected_alphas = [3.750, 5.525, 8.689, 14.600, 19.200]
 
-        alphas = [compute_alpha(mean_loss_ratio, stddev) for  mean_loss_ratio,
+        alphas = [compute_alpha(mean_loss_ratio, stddev) for mean_loss_ratio,
                 stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
         self.assertTrue(numpy.allclose(alphas, expected_alphas, atol=0.0002))
 
@@ -169,7 +170,7 @@ class BetaDistributionTestCase(unittest.TestCase):
 
         expected_betas = [71.250, 49.725, 34.756, 21.900, 4.800]
 
-        betas = [compute_beta(mean_loss_ratio, stddev) for  mean_loss_ratio,
+        betas = [compute_beta(mean_loss_ratio, stddev) for mean_loss_ratio,
                 stddev in itertools.izip(self.mean_loss_ratios, self.stddevs)]
         self.assertTrue(numpy.allclose(betas, expected_betas, atol=0.0001))
 
@@ -272,7 +273,7 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
 
     def test_assets_for_cell_with_more_than_one(self):
         # All assets in the risk cell are found.
-        site = shapes.Site(10.0, 46.0)
+        site = shapes.Site(10.3, 46.3)
         self.job_ctxt.oq_job_profile.region_grid_spacing = 0.6
         self.job_ctxt.oq_job_profile.save()
 
@@ -285,7 +286,7 @@ class AssetsForCellTestCase(unittest.TestCase, helpers.DbTestCase):
 
     def test_assets_for_cell_with_one(self):
         # A single asset in the risk cell is found.
-        site = shapes.Site(10.0, 46.0)
+        site = shapes.Site(10.15, 46.15)
         self.job_ctxt.oq_job_profile.region_grid_spacing = 0.3
         self.job_ctxt.oq_job_profile.save()
         [asset] = BaseRiskCalculator.assets_for_cell(self.job.id, site)
@@ -398,3 +399,32 @@ class LoadGroundMotionValuesTestCase(unittest.TestCase):
 
         actual_gmvs = load_gmvs_at(self.job_id, point)
         self.assertEqual(expected_gmvs, actual_gmvs)
+
+
+class HazardInputSiteTestCase(unittest.TestCase):
+
+    def test_hazard_input_is_the_exposure_site(self):
+        # when `COMPUTE_HAZARD_AT_ASSETS_LOCATIONS` is specified,
+        # the hazard must be looked up on the same risk location
+        # (the input parameter of the function)
+        params = {config.COMPUTE_HAZARD_AT_ASSETS: True}
+        job_ctxt = engine.JobContext(params, None)
+
+        self.assertEqual(shapes.Site(1.0, 1.0), hazard_input_site(
+                job_ctxt, shapes.Site(1.0, 1.0)))
+
+    def test_hazard_input_is_the_cell_center(self):
+        # when `COMPUTE_HAZARD_AT_ASSETS_LOCATIONS` is not specified,
+        # the hazard must be looked up on the center of the cell
+        # where the given site falls in
+        params = {config.INPUT_REGION: \
+            "1.0, 1.0, 2.0, 1.0, 2.0, 2.0, 1.0, 2.0",
+            config.REGION_GRID_SPACING: 0.5}
+
+        job_ctxt = engine.JobContext(params, None)
+
+        self.assertEqual(shapes.Site(1.0, 1.0), hazard_input_site(
+                job_ctxt, shapes.Site(1.2, 1.2)))
+
+        self.assertEqual(shapes.Site(1.5, 1.5), hazard_input_site(
+                job_ctxt, shapes.Site(1.6, 1.6)))

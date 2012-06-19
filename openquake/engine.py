@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
-"""The 'Engine' is responsible for instantiating calculators and running jobs.
+"""
+The engine is responsible for instantiating calculators and running jobs.
 """
 
 
@@ -34,20 +34,23 @@ from django.contrib.gis.db import models
 from django.contrib.gis.geos import GEOSGeometry
 from django.core.exceptions import ObjectDoesNotExist
 
+
+from openquake.input import exposure
 from openquake.calculators.hazard import CALCULATORS as HAZ_CALCS
 from openquake.calculators.risk import CALCULATORS as RISK_CALCS
 from openquake.db.models import CharArrayField
-from openquake.db.models import ExposureData
 from openquake.db.models import FloatArrayField
 from openquake.db.models import Input
 from openquake.db.models import Input2job
 from openquake.db.models import inputs4job
 from openquake.db.models import Job2profile
 from openquake.db.models import JobStats
+from openquake.db.models import ModelContent
 from openquake.db.models import OqJob
 from openquake.db.models import OqJobProfile
 from openquake.db.models import OqUser
 from openquake.db.models import profile4job
+from openquake.db.models import Src2ltsrc
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
@@ -259,7 +262,8 @@ class JobContext(object):
             print "COMPUTE_HAZARD_AT_ASSETS_LOCATIONS selected, " \
                 "computing hazard on exposure sites..."
 
-            self.sites = read_sites_from_exposure(self)
+            exposure.store_exposure_assets(self._job_id, self._base_path)
+            self.sites = exposure.read_sites_from_exposure(self)
         elif self.has(jobconf.SITES):
 
             coords = self._extract_coords(jobconf.SITES)
@@ -335,28 +339,6 @@ class JobContext(object):
                 job_stats.realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
 
         job_stats.save()
-
-
-def read_sites_from_exposure(job_ctxt):
-    """Given a :class:`JobContext` object, get all of the sites in the exposure
-    model which are contained by the region of interest (defined in the
-    `JobContext`).
-
-    It is assumed that exposure model is already loaded into the database.
-
-    :param job_ctxt:
-        :class:`JobContext` instance.
-    :returns:
-        `list` of :class:`openquake.shapes.Site` objects, with no duplicates
-    """
-    em_inputs = inputs4job(job_ctxt.job_id, input_type="exposure")
-    exp_points = ExposureData.objects.filter(
-        exposure_model__input__id__in=[em.id for em in em_inputs],
-        site__contained=job_ctxt.oq_job_profile.region).values(
-            'site').distinct()
-
-    sites = [shapes.Site(p['site'].x, p['site'].y) for p in exp_points]
-    return sites
 
 
 # Too many local variables
@@ -569,6 +551,19 @@ def _identical_input(input_type, digest, owner_id):
     return ios[0] if ios else None
 
 
+def _get_content_type(path):
+    """Given the path to a file, guess the content type by looking at the file
+    extension. If there is none, simply return 'unknown'.
+    """
+    _, ext = os.path.splitext(path)
+    if ext == '':
+        return 'unknown'
+    else:
+        # This gives us the . and extension (such as '.xml').
+        # Don't include the period.
+        return ext[1:]
+
+
 def _insert_input_files(params, job, force_inputs):
     """Create uiapi.input records for all input files
 
@@ -580,7 +575,7 @@ def _insert_input_files(params, job, force_inputs):
 
     inputs_seen = []
 
-    def ln_input2job(job, path, input_type):
+    def ln_input2job(path, input_type):
         """Link identical or newly created input to the given job."""
         digest = _file_digest(path)
         linked_inputs = inputs4job(job.id)
@@ -591,30 +586,54 @@ def _insert_input_files(params, job, force_inputs):
         in_model = (_identical_input(input_type, digest, job.owner.id)
                     if not force_inputs else None)
         if in_model is None:
+            # Save the raw input file contents to the DB:
+            model_content = ModelContent()
+            with open(path, 'rb') as fh:
+                model_content.raw_content = fh.read()
+            # Try to guess the content type:
+            model_content.content_type = _get_content_type(path)
+            model_content.save()
+
             in_model = Input(path=path, input_type=input_type, owner=job.owner,
-                             size=os.path.getsize(path), digest=digest)
+                             size=os.path.getsize(path), digest=digest,
+                             model_content=model_content)
             in_model.save()
 
         # Make sure we don't link to the same input more than once.
-        if in_model.id in inputs_seen:
-            return
-        else:
+        if in_model.id not in inputs_seen:
             inputs_seen.append(in_model.id)
 
-        i2j = Input2job(input=in_model, oq_job=job)
-        i2j.save()
+            i2j = Input2job(input=in_model, oq_job=job)
+            i2j.save()
+
+        return in_model
+
+    def _insert_referenced_sources(lt_src_input, lt_src_path):
+        """
+        :param lt_src_input: an `:class:openquake.db.models.Input` of type
+            "lt_source"
+        :param str lt_src_path: path to the current logic tree source
+        """
+        # insert source models referenced in the logic tree
+        for path in _get_source_models(lt_src_path):
+            hzrd_src_input = ln_input2job(path, "source")
+            one_or_none = Src2ltsrc.objects.filter(hzrd_src=hzrd_src_input,
+                                                   lt_src=lt_src_input)
+            if len(one_or_none) == 0:
+                # No link table entry found, create one.
+                src_link = Src2ltsrc(
+                    hzrd_src=hzrd_src_input, lt_src=lt_src_input,
+                    filename=os.path.basename(path))
+                src_link.save()
 
     # insert input files in input table
     for param_key, file_type in INPUT_FILE_TYPES.items():
         if param_key not in params:
             continue
         path = params[param_key]
-        ln_input2job(job, path, file_type)
-
-    # insert source models referenced in the logic tree
-    if 'SOURCE_MODEL_LOGIC_TREE_FILE' in params:
-        for path in _get_source_models(params['SOURCE_MODEL_LOGIC_TREE_FILE']):
-            ln_input2job(job, path, "source")
+        input_obj = ln_input2job(path, file_type)
+        if file_type == "lt_source":
+            _insert_referenced_sources(input_obj, path)
 
 
 def prepare_job(user_name="openquake"):

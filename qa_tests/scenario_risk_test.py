@@ -60,7 +60,8 @@ class ScenarioRiskQATest(unittest.TestCase):
             actual_lm_data.append(node_data)
 
         helpers.assertDeepAlmostEqual(
-            self, expected_data, actual_lm_data, places=self.LOSSMAP_PRECISION)
+            self, sorted(expected_data), sorted(actual_lm_data),
+            places=self.LOSSMAP_PRECISION)
 
     def test_scenario_risk(self):
         # This test exercises the 'mean-based' path through the Scenario Risk
@@ -176,7 +177,8 @@ class ScenarioRiskQATest(unittest.TestCase):
             self.assertTrue(exp_lm_node['stddev'] > lm_node['stddev'])
 
         # Sanity checks are done. Let's do this.
-        scen_cfg = helpers.demo_file('scenario_risk/config_sample-based.gem')
+        scen_cfg = helpers.demo_file(
+            'scenario_risk/config_sample-based_qa.gem')
         result = helpers.run_job(scen_cfg, ['--output-type=xml'],
                                  check_output=True)
 

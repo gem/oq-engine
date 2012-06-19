@@ -814,3 +814,24 @@ def prepare_cli_output(raw_output, discard_header=True):
         lines.pop(0)
 
     return lines
+
+
+def prepare_job_context(path_to_cfg):
+    """Given a path to a config file, prepare and return a
+    :class:`openquake.engine.JobContext`. This convenient because it can be
+    immediately passed to a calculator constructor.
+
+    This also creates the necessary job and oq_job_profile records.
+    """
+    job = engine.prepare_job()
+
+    cfg = demo_file(path_to_cfg)
+
+    job_profile, params, sections = engine.import_job_profile(
+        cfg, job, force_inputs=True)
+
+    job_ctxt = engine.JobContext(
+        params, job.id, sections=sections, oq_job_profile=job_profile,
+        oq_job=job)
+
+    return job_ctxt

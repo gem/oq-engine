@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import os
 import subprocess
 import sys
@@ -24,6 +23,7 @@ from django.contrib.gis.geos import GEOSGeometry
 from django.core.exceptions import ObjectDoesNotExist
 
 from openquake.calculators.risk.event_based import core
+from openquake.input.exposure import read_sites_from_exposure
 from openquake.db import models
 from openquake import engine
 from openquake import shapes
@@ -219,8 +219,8 @@ class EngineAPITestCase(unittest.TestCase):
             self.assertTrue(
                 models.model_equals(
                     exp_inp, act_inp, ignore=(
-                        "id",  "last_update", "path", "model", "_owner_cache",
-                        "owner_id")))
+                        "id", "last_update", "path", "model", "_owner_cache",
+                        "owner_id", "model_content_id")))
 
     def test_import_job_profile_as_specified_user(self):
         # Test importing of a job profile when a user is specified
@@ -331,7 +331,7 @@ class ReadSitesFromExposureTestCase(unittest.TestCase):
             shapes.Site(-118.067592, 33.855398),
             shapes.Site(-118.186739, 33.779013)])
 
-        actual_sites = set(engine.read_sites_from_exposure(test_job))
+        actual_sites = set(read_sites_from_exposure(test_job))
 
         self.assertEqual(expected_sites, actual_sites)
 
@@ -513,3 +513,59 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertNotEqual(self.glt_i.id, glt_i.id)
         [slt_i] = models.inputs4job(self.job.id, input_type="lt_source")
         self.assertEqual(self.slt_i.id, slt_i.id)
+        # Make sure the LT and the hazard source have been associated.
+        [src_link] = models.Src2ltsrc.objects.filter(lt_src=slt_i)
+        self.assertEqual("dissFaultModel.xml", src_link.filename)
+        self.assertEqual(slt_i, src_link.lt_src)
+        [hzrd_i] = models.inputs4job(self.job.id, input_type="source")
+        self.assertEqual(hzrd_i, src_link.hzrd_src)
+
+    def test_model_content_single_file(self):
+        # The contents of input files (such as logic trees, exposure models,
+        # etc.) should be saved to the uiapi.model_content table.
+
+        expected_content = open(self.SLT, 'r').read()
+        params = dict(SOURCE_MODEL_LOGIC_TREE_FILE=self.SLT)
+
+        engine._insert_input_files(params, self.job, True)
+        [slt] = models.inputs4job(self.job.id, input_type="lt_source")
+
+        self.assertEqual('xml', slt.model_content.content_type)
+        self.assertEqual(expected_content, slt.model_content.raw_content)
+
+    def test_model_content_many_files(self):
+        slt_content = open(self.SLT, 'r').read()
+        glt_content = open(self.GLT, 'r').read()
+
+        engine._insert_input_files(self.PARAMS, self.job, True)
+        [slt] = models.inputs4job(self.job.id, input_type="lt_source")
+        [glt] = models.inputs4job(self.job.id, input_type="lt_gmpe")
+
+        self.assertEqual('xml', slt.model_content.content_type)
+        self.assertEqual(slt_content, slt.model_content.raw_content)
+
+        self.assertEqual('xml', glt.model_content.content_type)
+        self.assertEqual(glt_content, glt.model_content.raw_content)
+
+    def test_model_content_detect_content_type(self):
+        # Test detection of the content type (using the file extension).
+        test_file = helpers.touch(suffix=".html")
+
+        # We use the gmpe logic tree as our test target because there is no
+        # parsing required in the function under test. Thus, we can put
+        # whatever test garbage we want in the file, or just use an empty file
+        # (which is the case here).
+        params = dict(GMPE_LOGIC_TREE_FILE=test_file)
+        engine._insert_input_files(params, self.job, True)
+
+        [glt] = models.inputs4job(self.job.id, input_type="lt_gmpe")
+        self.assertEqual('html', glt.model_content.content_type)
+
+    def test_model_content_unknown_content_type(self):
+        test_file = helpers.touch()
+
+        params = dict(GMPE_LOGIC_TREE_FILE=test_file)
+        engine._insert_input_files(params, self.job, True)
+
+        [glt] = models.inputs4job(self.job.id, input_type="lt_gmpe")
+        self.assertEqual('unknown', glt.model_content.content_type)
