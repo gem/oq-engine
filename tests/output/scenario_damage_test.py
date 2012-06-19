@@ -277,11 +277,11 @@ class CollapseMapXMLWriterTestCase(unittest.TestCase, helpers.DbTestCase):
 
     def make_data(self, asset, mean, stddev):
         data = models.CollapseMapData(
-            collapse_map = self.cm,
-            asset_ref = asset.asset_ref,
-            value = mean,
-            std_dev = stddev,
-            location = asset.site)
+            collapse_map=self.cm,
+            asset_ref=asset.asset_ref,
+            value=mean,
+            std_dev=stddev,
+            location=asset.site)
 
         data.save()
         self.data.append(data)
