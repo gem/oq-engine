@@ -668,7 +668,7 @@ class HazardJobProfile(djm.Model):
                             # ring by appending the first coord to the end
                             if field == 'region':
                                 points.append(points[0])
-                            kwargs[field]  = wkt_fmt % ', '.join(points)
+                            kwargs[field] = wkt_fmt % ', '.join(points)
         super(HazardJobProfile, self).__init__(*args, **kwargs)
 
 
