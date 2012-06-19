@@ -28,16 +28,14 @@ Model representations of the OpenQuake DB tables.
 
 import os
 import re
-try:
-    import cPickle as pickle
-except ImportError:
-    import pickle
+
 from collections import namedtuple
 from datetime import datetime
 
-from django import forms
 from django.contrib.gis.db import models as djm
 from django.contrib.gis.geos.geometry import GEOSGeometry
+
+from openquake.db import fields
 
 
 VS30_TYPE_CHOICES = (
@@ -169,136 +167,6 @@ def model_equals(model_a, model_b, ignore=None):
     return True
 
 
-class FloatArrayFormField(forms.Field):
-    """Form field for properly handling float arrays/lists."""
-
-    #: regex for splitting string lists on whitespace or commas
-    ARRAY_RE = re.compile('[\s,]+')
-
-    def clean(self, value):
-        """Try to coerce either a string list of values (separated by
-        whitespace and/or commas or a list/tuple of values to a list of
-        floats. If unsuccessful, raise a
-        :exception:`django.forms.ValidationError`
-        """
-        if isinstance(value, (tuple, list)):
-            try:
-                value = [float(x) for x in value]
-            except (TypeError, ValueError):
-                raise forms.ValidationError(
-                    'Could not coerce sequence values to `float` values'
-                )
-        elif isinstance(value, str):
-            # it could be a string list, like this: "1, 2,3 , 4 5"
-            # try to convert it to a an actual list of floats
-            try:
-                value = [float(x) for x in self.ARRAY_RE.split(value)]
-            except ValueError:
-                raise forms.ValidationError(
-                    'Could not coerce `str` to a list of `float` values'
-                )
-        else:
-            raise forms.ValidationError(
-                'Could not convert value to `list` of `float` values: %s'
-                % value
-            )
-        return value
-
-
-class PickleFormField(forms.Field):
-    """Form field for Python objects which are pickle and saved to the
-    database."""
-
-    def clean(self, value):
-        """We assume that the Python value specified for this field is exactly
-        what we want to pickle and save to the database.
-
-        The value will not modified.
-        """
-        return value
-
-
-class FloatArrayField(djm.Field):
-    """This field models a postgres `float` array."""
-
-    def db_type(self, connection):
-        return 'float[]'
-
-    def get_prep_value(self, value):
-        if value is not None:
-            return "{" + ', '.join(str(v) for v in value) + "}"
-        else:
-            return None
-
-    def formfield(self, **kwargs):
-        """Specify a custom form field type so forms know how to handle fields
-        of this type.
-        """
-        defaults = {'form_class': FloatArrayFormField}
-        defaults.update(kwargs)
-        return super(FloatArrayField, self).formfield(**defaults)
-
-
-class CharArrayField(djm.Field):
-    """This field models a postgres `varchar` array."""
-
-    def db_type(self, _connection):
-        return 'varchar[]'
-
-    def get_prep_value(self, value):
-        """Return data in a format that has been prepared for use as a
-        parameter in a query.
-
-        :param value: sequence of string values to be saved in a varchar[]
-            field
-        :type value: list or tuple
-
-        >>> caf = CharArrayField()
-        >>> caf.get_prep_value(['foo', 'bar', 'baz123'])
-        '{"foo", "bar", "baz123"}'
-        """
-        if value is not None:
-            return '{' + ', '.join('"%s"' % str(v) for v in value) + '}'
-        else:
-            return None
-
-
-class PickleField(djm.Field):
-    """Field for transparent pickling and unpickling of python objects."""
-
-    __metaclass__ = djm.SubfieldBase
-
-    SUPPORTED_BACKENDS = set((
-        'django.contrib.gis.db.backends.postgis',
-        'django.db.backends.postgresql_psycopg2'
-    ))
-
-    def db_type(self, connection):
-        """Return "bytea" as postgres' column type."""
-        assert connection.settings_dict['ENGINE'] in self.SUPPORTED_BACKENDS
-        return 'bytea'
-
-    def to_python(self, value):
-        """Unpickle the value."""
-        if value and isinstance(value, (buffer, str, bytearray)):
-            return pickle.loads(str(value))
-        else:
-            return value
-
-    def get_prep_value(self, value):
-        """Pickle the value."""
-        return bytearray(pickle.dumps(value, pickle.HIGHEST_PROTOCOL))
-
-    def formfield(self, **kwargs):
-        """Specify a custom form field type so forms don't treat this as a
-        default type (such as a string). Any Python object is valid for this
-        field type.
-        """
-        defaults = {'form_class': PickleFormField}
-        defaults.update(kwargs)
-        return super(PickleField, self).formfield(**defaults)
-
-
 ## Tables in the 'admin' schema.
 
 
@@ -419,7 +287,7 @@ class ParsedSource(djm.Model):
         (u'simple', u'Simple'),
     )
     source_type = djm.TextField(choices=SRC_TYPE_CHOICES)
-    nrml = PickleField(help_text="NRML object representing the source")
+    nrml = fields.PickleField(help_text="NRML object representing the source")
     polygon = djm.PolygonField(
         srid=4326, dim=2,
         help_text=('The surface projection (2D) of the "rupture enclosing" '
@@ -725,7 +593,7 @@ class HazardJobProfile(djm.Model):
         help_text=('Time span (in years) for probability of exceedance '
                    'calculation'),
     )
-    intensity_measure_types_and_levels = PickleField(
+    intensity_measure_types_and_levels = fields.PickleField(
         help_text=(
             'Dictionary containing for each intensity measure type ("PGA", '
             '"PGV", "PGD", "SA", "IA", "RSD", "MMI"), the list of intensity '
@@ -749,12 +617,12 @@ class HazardJobProfile(djm.Model):
         null=True,
         blank=True,
     )
-    quantile_hazard_curves = FloatArrayField(
+    quantile_hazard_curves = fields.FloatArrayField(
         help_text='Compute quantile hazard curves',
         null=True,
         blank=True,
     )
-    poes_hazard_maps = FloatArrayField(
+    poes_hazard_maps = fields.FloatArrayField(
         help_text=('PoEs (probabilities of exceedence) to be used for '
                    'computing hazard maps (from individual curves, mean and '
                    'quantile curves if calculated)'),
@@ -788,7 +656,7 @@ class OqJobProfile(djm.Model):
         (u'event_based_bcr', u'Probabilistic Event-Based BCR'),
     )
     calc_mode = djm.TextField(choices=CALC_MODE_CHOICES)
-    job_type = CharArrayField()
+    job_type = fields.CharArrayField()
     min_magnitude = djm.FloatField(null=True)
     investigation_time = djm.FloatField(null=True)
     COMPONENT_CHOICES = (
@@ -820,8 +688,8 @@ class OqJobProfile(djm.Model):
     truncation_level = djm.FloatField(default=3.0)
     reference_vs30_value = djm.FloatField(
         "Average shear-wave velocity in the upper 30 meters of a site")
-    imls = FloatArrayField(null=True)
-    poes = FloatArrayField(null=True)
+    imls = fields.FloatArrayField(null=True)
+    poes = fields.FloatArrayField(null=True)
     realizations = djm.IntegerField(null=True)
     histories = djm.IntegerField(null=True)
     gm_correlated = djm.NullBooleanField(null=True)
@@ -844,7 +712,7 @@ class OqJobProfile(djm.Model):
     asset_correlation = djm.TextField(null=True,
                                       choices=ASSET_CORRELATION_CHOICES)
     compute_mean_hazard_curve = djm.NullBooleanField(null=True)
-    conditional_loss_poe = FloatArrayField(null=True)
+    conditional_loss_poe = fields.FloatArrayField(null=True)
     fault_magnitude_scaling_relationship = djm.TextField(null=True)
     fault_magnitude_scaling_sigma = djm.FloatField(null=True)
     fault_rupture_offset = djm.FloatField(null=True)
@@ -862,7 +730,7 @@ class OqJobProfile(djm.Model):
     # Only used for Event-Based Risk calculations.
     loss_histogram_bins = djm.IntegerField(null=True)
     maximum_distance = djm.FloatField(null=True)
-    quantile_levels = FloatArrayField(null=True)
+    quantile_levels = fields.FloatArrayField(null=True)
     reference_depth_to_2pt5km_per_sec_param = djm.FloatField(null=True)
     rupture_aspect_ratio = djm.FloatField(null=True)
     RUPTURE_FLOATING_TYPE_CHOICES = (
@@ -912,11 +780,11 @@ class OqJobProfile(djm.Model):
 
     # The following bin limits fields are for the Disaggregation calculator
     # only:
-    lat_bin_limits = FloatArrayField(null=True)
-    lon_bin_limits = FloatArrayField(null=True)
-    mag_bin_limits = FloatArrayField(null=True)
-    epsilon_bin_limits = FloatArrayField(null=True)
-    distance_bin_limits = FloatArrayField(null=True)
+    lat_bin_limits = fields.FloatArrayField(null=True)
+    lon_bin_limits = fields.FloatArrayField(null=True)
+    mag_bin_limits = fields.FloatArrayField(null=True)
+    epsilon_bin_limits = fields.FloatArrayField(null=True)
+    distance_bin_limits = fields.FloatArrayField(null=True)
     # PMF (Probability Mass Function) result choices for the Disaggregation
     # calculator
     # TODO(LB), Sept. 23, 2011: We should consider implementing some custom
@@ -935,8 +803,8 @@ class OqJobProfile(djm.Model):
     #   LatLonTRTPMF (Latitude-Longitude-Tectonic Region Type PMF)
     #   FullDisaggMatrix (The full disaggregation matrix; includes
     #       Lat, Lon, Magnitude, Epsilon, and Tectonic Region Type)
-    disagg_results = CharArrayField(null=True)
-    uhs_periods = FloatArrayField(null=True)
+    disagg_results = fields.CharArrayField(null=True)
+    uhs_periods = fields.FloatArrayField(null=True)
     vs30_type = djm.TextField(choices=VS30_TYPE_CHOICES, default="measured",
                               null=True)
     depth_to_1pt_0km_per_sec = djm.FloatField(default=100.0)
@@ -1057,7 +925,7 @@ class HazardCurveData(djm.Model):
     values and the geographical point associated with the curve
     '''
     hazard_curve = djm.ForeignKey('HazardCurve')
-    poes = FloatArrayField()
+    poes = fields.FloatArrayField()
     location = djm.PointField(srid=4326)
 
     class Meta:
@@ -1088,7 +956,7 @@ class UhSpectra(djm.Model):
     output = djm.ForeignKey('Output')
     timespan = djm.FloatField()
     realizations = djm.IntegerField()
-    periods = FloatArrayField()
+    periods = fields.FloatArrayField()
 
     class Meta:
         db_table = 'hzrdr\".\"uh_spectra'
@@ -1115,7 +983,7 @@ class UhSpectrumData(djm.Model):
     """
     uh_spectrum = djm.ForeignKey('UhSpectrum')
     realization = djm.IntegerField()
-    sa_values = FloatArrayField()
+    sa_values = fields.FloatArrayField()
     location = djm.PointField(srid=4326)
 
     class Meta:
@@ -1181,8 +1049,8 @@ class LossCurveData(djm.Model):
 
     loss_curve = djm.ForeignKey("LossCurve")
     asset_ref = djm.TextField()
-    losses = FloatArrayField()
-    poes = FloatArrayField()
+    losses = fields.FloatArrayField()
+    poes = fields.FloatArrayField()
     location = djm.PointField(srid=4326)
 
     class Meta:
@@ -1195,8 +1063,8 @@ class AggregateLossCurveData(djm.Model):
     '''
 
     loss_curve = djm.ForeignKey("LossCurve")
-    losses = FloatArrayField()
-    poes = FloatArrayField()
+    losses = fields.FloatArrayField()
+    poes = fields.FloatArrayField()
 
     class Meta:
         db_table = 'riskr\".\"aggregate_loss_curve_data'
@@ -1259,7 +1127,7 @@ class DmgDistPerAsset(djm.Model):
     """Holds metadata for damage distributions per asset."""
 
     output = djm.ForeignKey("Output")
-    dmg_states = CharArrayField()
+    dmg_states = fields.CharArrayField()
     end_branch_label = djm.TextField(null=True)
 
     class Meta:
@@ -1285,7 +1153,7 @@ class DmgDistPerTaxonomy(djm.Model):
     """Hold metdata for damage distributions per taxonomy."""
 
     output = djm.ForeignKey("Output")
-    dmg_states = CharArrayField()
+    dmg_states = fields.CharArrayField()
     end_branch_label = djm.TextField(null=True)
 
     class Meta:
@@ -1310,7 +1178,7 @@ class DmgDistTotal(djm.Model):
     calculation. This is the total over all assets and GMFs."""
 
     output = djm.ForeignKey("Output")
-    dmg_states = CharArrayField()
+    dmg_states = fields.CharArrayField()
     end_branch_label = djm.TextField(null=True)
 
     class Meta:
@@ -1454,7 +1322,7 @@ class VulnerabilityModel(djm.Model):
     name = djm.TextField()
     description = djm.TextField(null=True)
     imt = djm.TextField(choices=OqJobProfile.IMT_CHOICES)
-    imls = FloatArrayField()
+    imls = fields.FloatArrayField()
     category = djm.TextField()
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
@@ -1469,8 +1337,8 @@ class VulnerabilityFunction(djm.Model):
 
     vulnerability_model = djm.ForeignKey("VulnerabilityModel")
     taxonomy = djm.TextField()
-    loss_ratios = FloatArrayField()
-    covs = FloatArrayField()
+    loss_ratios = fields.FloatArrayField()
+    covs = fields.FloatArrayField()
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:
@@ -1488,8 +1356,9 @@ class FragilityModel(djm.Model):
         (u"discrete", u"Discrete fragility model"),
     )
     format = djm.TextField(choices=FORMAT_CHOICES)
-    lss = CharArrayField(help_text="limit states")
-    imls = FloatArrayField(null=True, help_text="Intensity measure levels")
+    lss = fields.CharArrayField(help_text="limit states")
+    imls = fields.FloatArrayField(null=True,
+                                  help_text="Intensity measure levels")
     imt = djm.TextField(null=True, choices=OqJobProfile.IMT_CHOICES,
                            help_text="Intensity measure type")
     iml_unit = djm.TextField(null=True, help_text="IML unit of measurement")
@@ -1532,7 +1401,7 @@ class Ffd(djm.Model):
                   "function in accordance with the limit states")
     ls = djm.TextField(help_text="limit state")
     taxonomy = djm.TextField()
-    poes = FloatArrayField(help_text="Probabilities of exceedance")
+    poes = fields.FloatArrayField(help_text="Probabilities of exceedance")
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
     class Meta:
