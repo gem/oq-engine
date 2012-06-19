@@ -205,7 +205,7 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
                 '-122.0 38.113))'
             ),
             region_grid_spacing=0,
-            sites='MULTIPOINT((-122.0 38.113), (-122.114 38.113))',
+            sites='-122.0  38.113 , -122.114,38.113',
             calculation_mode='Classical',
             random_seed=2147483648,
             number_of_logic_tree_samples=0,

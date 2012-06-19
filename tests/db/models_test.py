@@ -218,3 +218,67 @@ class Inputs4JobTestCase(unittest.TestCase):
         self.assertEqual(
             [inp2],
             models.inputs4job(self.job.id, input_type="source", path=path))
+
+
+class HazardJobProfileGeometryTestCase(unittest.TestCase):
+    """Test special geometry handling in the HazardJobProfile constructor."""
+
+    def test_sites_from_wkt(self):
+        # should succeed with no errors
+        hjp = models.HazardJobProfile(sites='MULTIPOINT(1 2, 3 4)')
+        expected_wkt = (
+            'MULTIPOINT (1.0000000000000000 2.0000000000000000,'
+            ' 3.0000000000000000 4.0000000000000000)'
+        )
+
+        self.assertEqual(expected_wkt, hjp.sites.wkt)
+
+    def test_sites_invalid_str(self):
+        self.assertRaises(ValueError, models.HazardJobProfile, sites='a 5')
+
+    def test_sites_odd_num_of_coords_in_str_list(self):
+        self.assertRaises(ValueError, models.HazardJobProfile, sites='1 2, 3')
+
+    def test_sites_valid_str_list(self):
+        hjp = models.HazardJobProfile(sites='1 2, 3 4')
+        expected_wkt = (
+            'MULTIPOINT (1.0000000000000000 2.0000000000000000,'
+            ' 3.0000000000000000 4.0000000000000000)'
+        )
+
+        self.assertEqual(expected_wkt, hjp.sites.wkt)
+
+    def test_region_from_wkt(self):
+        hjp = models.HazardJobProfile(region='POLYGON((1 2, 3 4, 5 6, 1 2))')
+        expected_wkt = (
+            'POLYGON ((1.0000000000000000 2.0000000000000000, '
+            '3.0000000000000000 4.0000000000000000, '
+            '5.0000000000000000 6.0000000000000000, '
+            '1.0000000000000000 2.0000000000000000))'
+        )
+
+        self.assertEqual(expected_wkt, hjp.region.wkt)
+
+    def test_region_invalid_str(self):
+        self.assertRaises(
+            ValueError, models.HazardJobProfile,
+            region='0, 0, 5a 5, 1, 3, 0, 0'
+        )
+
+    def test_region_odd_num_of_coords_in_str_list(self):
+        self.assertRaises(
+            ValueError, models.HazardJobProfile, region='1 2, 3 4, 5 6, 1'
+        )
+
+    def test_region_valid_str_list(self):
+        # note that the last coord (with closes the ring) can be ommitted
+        # in this case
+        hjp = models.HazardJobProfile(region='1 2, 3 4, 5 6')
+        expected_wkt = (
+            'POLYGON ((1.0000000000000000 2.0000000000000000, '
+            '3.0000000000000000 4.0000000000000000, '
+            '5.0000000000000000 6.0000000000000000, '
+            '1.0000000000000000 2.0000000000000000))'
+        )
+
+        self.assertEqual(expected_wkt, hjp.region.wkt)
