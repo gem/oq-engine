@@ -20,15 +20,15 @@ try:
 except ImportError:
     import pickle
 
-from django import forms
+from django.contrib.gis import forms
 from django.contrib.gis.db import models as djm
 
+#: regex for splitting string lists on whitespace and/or commas
+ARRAY_RE = re.compile('[\s,]+')
 
 class FloatArrayFormField(forms.Field):
     """Form field for properly handling float arrays/lists."""
 
-    #: regex for splitting string lists on whitespace or commas
-    ARRAY_RE = re.compile('[\s,]+')
 
     def clean(self, value):
         """Try to coerce either a string list of values (separated by
@@ -47,7 +47,7 @@ class FloatArrayFormField(forms.Field):
             # it could be a string list, like this: "1, 2,3 , 4 5"
             # try to convert it to a an actual list of floats
             try:
-                value = [float(x) for x in self.ARRAY_RE.split(value)]
+                value = [float(x) for x in ARRAY_RE.split(value)]
             except ValueError:
                 raise forms.ValidationError(
                     'Could not coerce `str` to a list of `float` values'
@@ -152,5 +152,3 @@ class PickleField(djm.Field):
         defaults = {'form_class': PickleFormField}
         defaults.update(kwargs)
         return super(PickleField, self).formfield(**defaults)
-
-
