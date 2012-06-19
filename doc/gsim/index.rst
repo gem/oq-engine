@@ -13,6 +13,7 @@ Built-in GSIMs
 
     chiou_youngs_2008
     sadigh_1997
+    boore_atkinson_2008
 
 
 -----------------------------------
