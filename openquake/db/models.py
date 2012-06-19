@@ -27,13 +27,13 @@ Model representations of the OpenQuake DB tables.
 '''
 
 import os
-import re
 
 from collections import namedtuple
 from datetime import datetime
 
 from django.contrib.gis.db import models as djm
 from django.contrib.gis.geos.geometry import GEOSGeometry
+from shapely import wkt
 
 from openquake.db import fields
 
@@ -632,6 +632,44 @@ class HazardJobProfile(djm.Model):
 
     class Meta:
         db_table = 'uiapi\".\"hazard_job_profile'
+
+    def __init__(self, *args, **kwargs):
+        # If geometries were specified as string lists of coords,
+        # convert them to WKT before doing anything else.
+        for field, wkt_fmt in (('sites', 'MULTIPOINT(%s)'),
+                               ('region', 'POLYGON((%s))')):
+            if field in kwargs:
+                geom = kwargs[field]
+                try:
+                    wkt.loads(geom)
+                    # if this succeeds, we know the wkt is at least valid
+                    # we don't know the geometry type though; we'll leave that
+                    # to subsequent validation
+                except wkt.ReadingError:
+                    try:
+                        coords = [
+                            float(x) for x in fields.ARRAY_RE.split(geom)
+                        ]
+                    except ValueError:
+                        raise ValueError(
+                            'Could not coerce `str` to a list of `float`s'
+                        )
+                    else:
+                        if not len(coords) % 2 == 0:
+                            raise ValueError(
+                                'Got an odd number of coordinate values'
+                            )
+                        else:
+                            # Construct WKT from the coords
+                            # NOTE: ordering is expected to be lon,lat
+                            points = ['%s %s' % (coords[i], coords[i + 1])
+                                      for i in xrange(0, len(coords), 2)]
+                            # if this is the region, close the linear polygon
+                            # ring by appending the first coord to the end
+                            if field == 'region':
+                                points.append(points[0])
+                            kwargs[field]  = wkt_fmt % ', '.join(points)
+        super(HazardJobProfile, self).__init__(*args, **kwargs)
 
 
 class OqJobProfile(djm.Model):
