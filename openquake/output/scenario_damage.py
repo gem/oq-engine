@@ -124,6 +124,118 @@ class DmgDistPerAssetXMLWriter(object):
         return dd_node_el
 
 
+class CollapseMapXMLWriter(object):
+    """
+    Write the collapse map artifact to the defined NRML format.
+
+    :param path: full path to the resulting XML file (including file name).
+    :type path: string
+    :param end_branch_label: logic tree branch which was used for the
+        realization associated with this distribution.
+    :type end_branch_label: string
+    """
+
+    def __init__(self, path, end_branch_label):
+        self.path = path
+        self.elems_id = 1
+        self.end_branch_label = end_branch_label
+
+        # <nrml /> element
+        self.root = None
+
+        # <collapseMap /> element
+        self.collapse_map_el = None
+
+    def serialize(self, cmap_data):
+        """
+        Serialize the entire distribution.
+
+        :param cmap_data: the distribution to be written.
+        :type cmap_data: list of
+            :py:class:`openquake.db.models.CollapseMapData` instances.
+            There are no restrictions about the ordering of the elements,
+            the component is able to correctly re-order the elements by
+            site and asset.
+        :raises: `RuntimeError` in case of list empty or `None`.
+        """
+
+        if cmap_data is None or not len(cmap_data):
+            raise RuntimeError(
+                "empty maps are not supported by the schema.")
+
+        # contains the set of <CMNode /> elements indexed per site
+        cm_nodes = {}
+
+        with open(self.path, "w") as fh:
+            self.root, self.collapse_map_el = self._create_root_elems()
+
+            for cfraction in cmap_data:
+                site = cfraction.location
+
+                # lookup the correct <CMNode /> element
+                cm_node_el = cm_nodes.get(site.wkt, None)
+
+                # nothing yet related to this site,
+                # creating the <CMNode /> element
+                if cm_node_el is None:
+                    cm_node_el = cm_nodes[site.wkt] = \
+                            self._create_cm_node_elem(site)
+
+                _create_cf_elem(cfraction, cm_node_el)
+
+            fh.write(etree.tostring(
+                self.root, pretty_print=True, xml_declaration=True,
+                encoding="UTF-8"))
+
+    def _create_cm_node_elem(self, site):
+        """
+        Create the <CMNode /> element related to the given site.
+        """
+
+        cm_node_el = etree.SubElement(self.collapse_map_el, "CMNode")
+        cm_node_el.set("%sid" % xml.GML, "n" + str(self.elems_id))
+        self.elems_id += 1
+
+        site_el = etree.SubElement(cm_node_el, xml.RISK_SITE_TAG)
+
+        point_el = etree.SubElement(site_el, xml.GML_POINT_TAG)
+        point_el.set(xml.GML_SRS_ATTR_NAME, xml.GML_SRS_EPSG_4326)
+
+        pos_el = etree.SubElement(point_el, xml.GML_POS_TAG)
+        pos_el.text = "%s %s" % (site.x, site.y)
+
+        return cm_node_el
+
+    def _create_root_elems(self):
+        """
+        Create the <nrml /> and <collapseMap /> elements.
+        """
+
+        root = etree.Element("nrml", nsmap=xml.NSMAP)
+        root.set("%sid" % xml.GML, "n" + str(self.elems_id))
+        self.elems_id += 1
+
+        cm_el = etree.SubElement(root, "collapseMap")
+        cm_el.set("endBranchLabel", str(self.end_branch_label))
+
+        return root, cm_el
+
+
+def _create_cf_elem(cfraction, cm_node_el):
+    """
+    Create the <cf /> element related to the given site.
+    """
+
+    cf_el = etree.SubElement(cm_node_el, "cf")
+    cf_el.set("assetRef", cfraction.asset_ref)
+
+    mean_el = etree.SubElement(cf_el, "mean")
+    mean_el.text = str(cfraction.value)
+
+    std_el = etree.SubElement(cf_el, "stdDev")
+    std_el.text = str(cfraction.std_dev)
+
+
 class DmgDistPerTaxonomyXMLWriter(object):
     """
     Write the damage distribution per taxonomy artifact
