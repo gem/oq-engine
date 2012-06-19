@@ -314,7 +314,8 @@ class ScenarioDamageRiskCalculatorTestCase(
         return [os.path.join(
             target_dir, "dmg-dist-asset-%s.xml" % self.job.id), os.path.join(
             target_dir, "dmg-dist-taxonomy-%s.xml" % self.job.id),
-            os.path.join(target_dir, "dmg-dist-total-%s.xml" % self.job.id)]
+            os.path.join(target_dir, "dmg-dist-total-%s.xml" % self.job.id),
+            os.path.join(target_dir, "collapse-map-%s.xml" % self.job.id)]
 
     def _close_to(self, expected, actual):
         self.assertTrue(numpy.allclose(actual, expected, atol=0.0, rtol=0.05))
