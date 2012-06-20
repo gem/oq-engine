@@ -82,6 +82,34 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
         form = validation.ClassicalHazardJobForm(instance=hjp, files=None)
         self.assertTrue(form.is_valid(), dict(form.errors))
 
+    def test_hazard_job_profile_is_valid_region_only_as_str_list(self):
+        hjp = models.HazardJobProfile(
+            owner=helpers.default_user(),
+            description='',
+            region='-122.0, 38.113, -122.114, 38.113, -122.57, 38.111',
+            region_grid_spacing=0.001,
+            calculation_mode='classical',
+            random_seed=37,
+            number_of_logic_tree_samples=1,
+            rupture_mesh_spacing=0.001,
+            width_of_mfd_bin=0.001,
+            area_source_discretization=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            investigation_time=1.0,
+            intensity_measure_types_and_levels=self.VALID_IML_IMT,
+            truncation_level=0.0,
+            maximum_distance=100.0,
+            mean_hazard_curves=True,
+            quantile_hazard_curves=[0.0, 0.5, 1.0],
+            poes_hazard_maps=[1.0, 0.5, 0.0],
+        )
+        form = validation.ClassicalHazardJobForm(instance=hjp, files=None)
+        self.assertTrue(form.is_valid(), dict(form.errors))
+
+
     def test_hazard_job_profile_is_valid_with_site_model(self):
         hjp = models.HazardJobProfile(
             owner=helpers.default_user(),
@@ -136,12 +164,39 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
             intensity_measure_types_and_levels=self.VALID_IML_IMT,
             truncation_level=0.0,
             maximum_distance=100.0,
+            mean_hazard_curves='true',
+            quantile_hazard_curves=[0.0, 0.5, 1.0],
+            poes_hazard_maps=[1.0, 0.5, 0.0],
+        )
+        form = validation.ClassicalHazardJobForm(instance=hjp, files=None)
+        self.assertTrue(form.is_valid(), dict(form.errors))
+
+    def test_hazard_job_profile_is_valid_sites_only_as_str_list(self):
+        hjp = models.HazardJobProfile(
+            owner=helpers.default_user(),
+            description='',
+            sites='-122.114, 38.113, -122.115, 38.114',
+            calculation_mode='classical',
+            random_seed=37,
+            number_of_logic_tree_samples=1,
+            rupture_mesh_spacing=0.001,
+            width_of_mfd_bin=0.001,
+            area_source_discretization=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            investigation_time=1.0,
+            intensity_measure_types_and_levels=self.VALID_IML_IMT,
+            truncation_level=0.0,
+            maximum_distance=100.0,
             mean_hazard_curves=True,
             quantile_hazard_curves=[0.0, 0.5, 1.0],
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
         form = validation.ClassicalHazardJobForm(instance=hjp, files=None)
         self.assertTrue(form.is_valid(), dict(form.errors))
+
 
     def test_hazard_job_profile_is_not_valid_missing_geom(self):
         expected_errors = {
