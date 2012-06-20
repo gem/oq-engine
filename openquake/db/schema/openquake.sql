@@ -211,12 +211,12 @@ CREATE TABLE uiapi.input (
     -- Input file type, one of:
     --      source model file (source)
     --      source logic tree (lt_source)
-    --      GMPE logic tree (lt_gmpe)
+    --      GSIM logic tree (lt_gsim)
     --      exposure file (exposure)
     --      vulnerability file (vulnerability)
     --      rupture file (rupture)
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
-        CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gmpe',
+        CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gsim',
                              'exposure', 'fragility', 'rupture',
                              'vulnerability', 'vulnerability_retrofitted',
                              'site_model')),
