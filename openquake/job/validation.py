@@ -55,8 +55,10 @@ def region_is_valid(mdl):
     if len(mdl.region.coords) > 1:
         valid = False
         errors.append('Region geometry can only be a single linear ring')
-    else:
-        ring = mdl.region.coords[0]
+
+    # There should only be a single linear ring.
+    # Even if there are multiple, we can still check for and report errors.
+    for ring in mdl.region.coords:
         lons = [lon for lon, _ in ring]
         lats = [lat for _, lat in ring]
         if not all([-180 <= x <= 180 for x in lons]):
@@ -171,7 +173,9 @@ def intensity_measure_types_and_levels_is_valid(mdl):
             else:
                 if len(imls) == 0:
                     valid = False
-                    errors.append('IML lists must have at least 1 value')
+                    errors.append(
+                        '%s: IML lists must have at least 1 value' % im_type
+                    )
                 elif not all([x > 0 for x in imls]):
                     valid = False
                     errors.append('%s: IMLs must be > 0' % im_type)
