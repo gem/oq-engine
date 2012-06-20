@@ -17,8 +17,6 @@
 'hzrdi.parsed_source' table.
 """
 
-import pickle
-
 from django.db import router
 from django.db import transaction
 from nhlib import geo
@@ -347,15 +345,12 @@ class SourceDBWriter(object):
         self.inp.save()
 
         for src in self.source_model:
-            blob = pickle.dumps(src, pickle.HIGHEST_PROTOCOL)
             nhlib_src = nrml_to_nhlib(
                 src, self.mesh_spacing, self.bin_width, self.area_src_disc
             )
             geom = nhlib_src.get_rupture_enclosing_polygon()
-            # Resample and initialize the `shapely` polygon
-
             ps = models.ParsedSource(
-                input=self.inp, source_type=_source_type(src), blob=blob,
+                input=self.inp, source_type=_source_type(src), nrml=src,
                 polygon=geom.wkt
             )
             ps.save()

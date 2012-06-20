@@ -13,11 +13,10 @@
 #
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
-
-
 import unittest
+import pickle
 
-from openquake.db.models import CharArrayField, FloatArrayField
+from openquake.db.models import CharArrayField, FloatArrayField, PickleField
 
 
 class FloatArrayFieldTestCase(unittest.TestCase):
@@ -48,3 +47,18 @@ class CharArrayFieldTestCase(unittest.TestCase):
         actual = caf.get_prep_value(['MagPMF', 'MagDistPMF', 'LatLonPMF'])
 
         self.assertEqual(expected, actual)
+
+
+class PickleFieldTestCase(unittest.TestCase):
+    def test_to_python(self):
+        field = PickleField()
+        data = {'foo': None, (1, False): 'baz'}
+        self.assertEqual(field.to_python(buffer(pickle.dumps(data))), data)
+        self.assertIs(data, data)
+        empty_buffer = buffer('')
+        self.assertIs(empty_buffer, empty_buffer)
+
+    def test_get_prep_value(self):
+        field = PickleField()
+        data = {'foo': None, (1, False): 'baz'}
+        self.assertEqual(pickle.loads(field.get_db_prep_value(data)), data)

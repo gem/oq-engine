@@ -33,7 +33,6 @@ from openquake.db import models
 from openquake import shapes
 from openquake.calculators.risk.event_based.core import (
     EventBasedRiskCalculator)
-from openquake.engine import _get_source_models
 from openquake.engine import import_job_profile
 from openquake.engine import JobContext
 from openquake.engine import _parse_config_file
@@ -306,11 +305,10 @@ class ConfigParseTestCase(unittest.TestCase):
         self.assertEqual(
             {'BASE_PATH': gettempdir(),
              'OUTPUT_DIR': 'output',
-             'SOURCE_MODEL_LOGIC_TREE_FILE': os.path.join(gettempdir(),
-                                                          'source-model.xml'),
-             'GMPE_LOGIC_TREE_FILE': os.path.join(gettempdir(), 'gmpe.xml'),
+             'SOURCE_MODEL_LOGIC_TREE_FILE': 'source-model.xml',
+             'GMPE_LOGIC_TREE_FILE': 'gmpe.xml',
              'EXPOSURE': '/absolute/exposure.xml',
-             'VULNERABILITY': os.path.join(gettempdir(), 'vulnerability.xml'),
+             'VULNERABILITY': 'vulnerability.xml',
              'CALCULATION_MODE': 'Event Based'},
             params)
         self.assertEqual(['GENERAL', 'HAZARD', 'RISK'], sorted(sections))
@@ -377,6 +375,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
             'W&C 1994 Mag-Length Rel.',
         'RUPTURE_ASPECT_RATIO': '1.5',
         'RUPTURE_FLOATING_TYPE': 'Along strike and down dip',
+        'BASE_PATH': '/base/path'
     }
 
     BASE_SCENARIO_PARAMS = {
@@ -394,6 +393,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         'GMPE_TRUNCATION_TYPE': '1 Sided',
         'GROUND_MOTION_CORRELATION': 'true',
         'EPSILON_RANDOM_SEED': '37',
+        'BASE_PATH': '/base/path'
     }
 
     BASE_EVENT_BASED_PARAMS = {
@@ -445,6 +445,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         'RUPTURE_ASPECT_RATIO': '1.5',
         'RUPTURE_FLOATING_TYPE': 'Along strike and down dip',
         'GMF_RANDOM_SEED': '1',
+        'BASE_PATH': '/base/path'
     }
 
     def setUp(self):
@@ -468,24 +469,14 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
 
         return sorted(inputs, key=lambda i: (i['type'], i['path']))
 
-    def test_get_source_models(self):
-        abs_path = partial(datapath, "classical_psha_simple")
-
-        path = abs_path('source_model_logic_tree.xml')
-        models = _get_source_models(path)
-        expected_models = [abs_path('source_model1.xml'),
-                           abs_path('source_model2.xml')]
-
-        self.assertEqual(expected_models, models),
-
     def test_prepare_classical_job(self):
         abs_path = partial(datapath, "classical_psha_simple")
         params = self.BASE_CLASSICAL_PARAMS.copy()
         params['REGION_VERTEX'] = '37.9, -121.9, 37.9, -121.6, 37.5, -121.6'
         params['REGION_GRID_SPACING'] = '0.1'
-        params['SOURCE_MODEL_LOGIC_TREE_FILE'] = abs_path(
-            "source_model_logic_tree.xml")
-        params['GMPE_LOGIC_TREE_FILE'] = abs_path("gmpe_logic_tree.xml")
+        params['BASE_PATH'] = abs_path('')
+        params['SOURCE_MODEL_LOGIC_TREE_FILE'] = "source_model_logic_tree.xml"
+        params['GMPE_LOGIC_TREE_FILE'] = "gmpe_logic_tree.xml"
         params['EXPOSURE'] = abs_path("small_exposure.xml")
         params['VULNERABILITY'] = abs_path("vulnerability.xml")
         params['SOURCE_MODEL_LT_RANDOM_SEED'] = '23'
@@ -614,9 +605,9 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
         params['REGION_VERTEX'] = \
             '33.88, -118.3, 33.88, -118.06, 33.76, -118.06'
         params['REGION_GRID_SPACING'] = '0.02'
-        params['SOURCE_MODEL_LOGIC_TREE_FILE'] = abs_path(
-            "source_model_logic_tree.xml")
-        params['GMPE_LOGIC_TREE_FILE'] = abs_path("gmpe_logic_tree.xml")
+        params['BASE_PATH'] = abs_path('')
+        params['SOURCE_MODEL_LOGIC_TREE_FILE'] = "source_model_logic_tree.xml"
+        params['GMPE_LOGIC_TREE_FILE'] = "gmpe_logic_tree.xml"
         params['EXPOSURE'] = abs_path("small_exposure.xml")
         params['VULNERABILITY'] = abs_path("vulnerability.xml")
         params['GMF_RANDOM_SEED'] = '1'
