@@ -503,7 +503,6 @@ class Job2profile(djm.Model):
     '''
     oq_job = djm.ForeignKey('OqJob')
     oq_job_profile = djm.ForeignKey('OqJobProfile')
-    hazard_job_profile = djm.ForeignKey('HazardJobProfile')
 
     class Meta:
         db_table = 'uiapi\".\"job2profile'
