@@ -117,6 +117,30 @@ def _get_content_type(path):
 
 
 def get_input(path, input_type, owner, force_input):
+    """Get an :class:`~openquake.db.models.Input` object for the given file
+    (``path``).
+
+    If ``force_input`` is `False` or there are no existing copies of the input
+    available to ``owner``, create a fresh `Input` record.
+
+    :param str path:
+        Path to the input file.
+    :param str input_type:
+        The type of input. See :class:`openquake.db.models.Input` for a list of
+        valid types.
+    :param owner:
+        The :class:`~openquake.db.models.OqUser` who will own the input, if a
+        fresh input record is being created. If the record is being reused, we
+        will only reuse records which belong to this user (if any exist).
+    :param bool force_input:
+        If `True` do not reuse existing inputs that match the file at ``path``
+        and always create a new input.
+    :returns:
+        :class:`openquake.db.models.Input` object to represent the input. As a
+        side effect, this function will also store a full raw copy of the input
+        file (see :class:`openquake.db.models.ModelContent`) and associate it
+        to the `Input`.
+    """
     inp = None
 
     digest = _file_digest(path)
@@ -182,15 +206,22 @@ def _identical_input(input_type, digest, owner_id):
 def create_hazard_job_profile(params, owner):
     """Given a params `dict` parsed from the config file, create a
     :class:`~openquake.db.models.HazardJobProfile`.
+
+    :param dict params:
+        Dictionary of parameter names and values. Parameter names should match
+        exactly the field names of
+        :class:`openquake.db.model.HazardJobProfile`.
+    :param owner:
+        The :class:`~openquake.db.models.OqUser` who will own this profile.
+    :returns:
+        :class:`openquake.db.model.HazardJobProfile` object. A corresponding
+        record will obviously be saved to the database.
     """
     hjp = models.HazardJobProfile(**params)
     hjp.owner = owner
     hjp.save()
 
     return hjp
-
-def get_calculator(calc_mode):
-    pass
 
 def run_hazard(job):
     # validate the job profile
@@ -203,6 +234,3 @@ def run_hazard(job):
     # - Start the supervisor
     # - Instantiate the calculator class
     # - Run the calculation
-
-def format_validation_errors(errors):
-    pass
