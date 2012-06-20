@@ -24,7 +24,6 @@ import os
 from django.core import exceptions
 
 from openquake.db import models
-from openquake.job import validation
 
 
 def prepare_job(user_name="openquake"):
