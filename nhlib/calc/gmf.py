@@ -17,7 +17,7 @@
 :mod:`~nhlib.calc.gmf` exports :func:`ground_motion_fields`.
 """
 import numpy
-from scipy.stats import norm
+import scipy.stats
 
 from nhlib.const import StdDev
 from nhlib.calc import filters
@@ -39,7 +39,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         :class:`~nhlib.gsim.base.GMPE` or :class:`~nhlib.gsim.base.IPE`.
     :param trunctation_level:
         Float, number of standard deviations for truncation of the intensity
-        distribution.
+        distribution, or ``None``.
     :param rupture_site_filter:
         Optional rupture-site filter function. See :mod:`nhlib.calc.filters`.
 
@@ -49,22 +49,28 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         representing ground shaking intensity for all sites
         in the collection.
     """
-    # TODO: unittest
     ruptures_sites = list(rupture_site_filter([(rupture, sites)]))
     if not ruptures_sites:
+        # TODO: unittest this
         return dict((imt, numpy.zeros(len(sites))) for imt in imts)
 
     total_sites = len(sites)
     [(rupture, sites)] = ruptures_sites
 
+    if truncation_level is None:
+        distribution = scipy.stats.norm()
+    else:
+        distribution = scipy.stats.truncnorm(- truncation_level,
+                                             truncation_level)
+
     sctx, rctx, dctx = gsim.make_contexts(sites, rupture)
     result = {}
     for imt in imts:
-        mean, [stddev_inter, stddev_intra] = get_mean_and_stddevs(
+        mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
             sctx, rctx, dctx, imt, [StdDev.INTER_EVENT, StdDev.INTRA_EVENT]
         )
-        gmf = mean + norm.rvs(scale=stddev_inter, size=len(stddev_inter)) \
-                   + norm.rvs(scale=stddev_intra, size=len(stddev_intra))
+        gmf = mean + stddev_inter * distribution.rvs(size=len(sites)) \
+                   + stddev_intra * distribution.rvs(size=1)
         result[imt] = sites.expand(gmf, total_sites, placeholder=0)
 
     return result
