@@ -185,13 +185,13 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
 
         mean, stddev = self._map_asset_values("a2")
 
-        self._close_to(429.0315464096, mean)
-        self._close_to(412.3365089014, stddev)
+        self._close_to(907.46737796, mean)
+        self._close_to(417.30737837, stddev)
 
         mean, stddev = self._map_asset_values("a3")
 
-        self._close_to(589.6825259861, mean)
-        self._close_to(221.1583216939, stddev)
+        self._close_to(309.93823125, mean)
+        self._close_to(246.84424913, stddev)
 
     def _verify_total_dist_dsc(self):
         job = OqJob.objects.latest("id")
