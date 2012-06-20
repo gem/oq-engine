@@ -243,13 +243,6 @@ def run_hazard(job):
         :class:`openquake.db.models.OqJob` instance which references a valid
         :class:`openquake.db.models.HazardJobProfile`.
     """
-    # For the moment, just print whether or not the configuration is valid.
-    form = validation.ClassicalHazardJobForm(instance=job.hazard_job_profile)
-    if form.is_valid():
-        print 'Configuration is valid'
-    else:
-        print 'Configuration is not valid. Errors: %s' % form.errors
-
     # TODO:
     # - Start the supervisor
     # - Instantiate the calculator class
