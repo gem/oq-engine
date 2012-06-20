@@ -17,6 +17,10 @@
 
 import re
 try:
+    import simplejson as json
+except ImportError:
+    import json
+try:
     import cPickle as pickle
 except ImportError:
     import pickle
@@ -153,3 +157,33 @@ class PickleField(djm.Field):
         defaults = {'form_class': PickleFormField}
         defaults.update(kwargs)
         return super(PickleField, self).formfield(**defaults)
+
+
+class DictField(PickleField):
+    """Field for storing Python `dict` objects (or a JSON text representation.
+    """
+
+    def to_python(self, value):
+        """The value of a DictField can obviously be a `dict`. The value can
+        also be specified as a JSON string. If it is, convert it to a `dict`.
+        """
+        if isinstance(value, str):
+            try:
+                value = json.loads(value)
+            except ValueError:
+                # This string is not JSON.
+                value = super(DictField, self).to_python(value)
+        else:
+            value = super(DictField, self).to_python(value)
+
+        return value
+
+    def get_prep_value(self, value):
+        """It is possible to specify either an acutal `dict` or a JSON string
+        representation of a `dict`. If a string is specified for ``value``, we
+        will attempt to read it as a JSON string and convert it to a dict.
+        """
+        if isinstance(value, str) and len(value) > 0:
+            value = json.loads(value)
+
+        return super(DictField, self).get_prep_value(value)
