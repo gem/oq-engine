@@ -41,7 +41,7 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
     INVALID_IML_IMT = {
         "PGZ": [0.005, 0.007, 0.0098],
         "IA": [0.0, 0.007, 0.0098],
-        "PGD": [0.005, 0.007, 0.0098],
+        "PGD": [],
         "MMI": (0.005, 0.007, 0.0098),
         "PGA": [-0.001, 0.6, 0.0098],
         "RSD": [0.005, 0.007, 0.0098],
@@ -143,6 +143,38 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
         form = validation.ClassicalHazardJobForm(instance=hjp, files=None)
         self.assertTrue(form.is_valid(), dict(form.errors))
 
+    def test_hazard_job_profile_is_not_valid_missing_geom(self):
+        expected_errors = {
+            'region': ['Must specify either `region` or `sites`.'],
+            'sites': ['Must specify either `region` or `sites`.'],
+        }
+
+        hjp = models.HazardJobProfile(
+            owner=helpers.default_user(),
+            description='',
+            calculation_mode='classical',
+            random_seed=37,
+            number_of_logic_tree_samples=1,
+            rupture_mesh_spacing=0.001,
+            width_of_mfd_bin=0.001,
+            area_source_discretization=0.001,
+            reference_vs30_value=0.001,
+            reference_vs30_type='measured',
+            reference_depth_to_2pt5km_per_sec=0.001,
+            reference_depth_to_1pt0km_per_sec=0.001,
+            investigation_time=1.0,
+            intensity_measure_types_and_levels=self.VALID_IML_IMT,
+            truncation_level=0.0,
+            maximum_distance=100.0,
+            mean_hazard_curves=True,
+            quantile_hazard_curves=[0.0, 0.5, 1.0],
+            poes_hazard_maps=[1.0, 0.5, 0.0],
+        )
+        form = validation.ClassicalHazardJobForm(instance=hjp, files=None)
+        self.assertFalse(form.is_valid())
+
+        self.assertEqual(expected_errors, dict(form.errors))
+
     def test_hazard_job_profile_is_not_valid(self):
         # test with an invalid job profile
         # several parameters are given invalid values
@@ -178,6 +210,7 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
                 ('SA<2.5>: SA must be specified with a period value, in the '
                  'form `SA(N)`, where N is a value >= 0'),
                 'IA: IMLs must be > 0',
+                'PGD: IML lists must have at least 1 value',
                 'SA(2x): SA period value should be a float >= 0',
                 'PGA: IMLs must be > 0',
                 'PGZ: Invalid intensity measure type',
@@ -234,6 +267,7 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
             'region_grid_spacing': ['Region grid spacing must be > 0'],
             'region': [
                 'Invalid region geomerty: Self-intersection[0 0]',
+                'Region geometry can only be a single linear ring',
                 'Longitude values must in the range [-180, 180]',
                 'Latitude values must be in the range [-90, 90]'],
             'reference_vs30_value': ['Reference VS30 value must be > 0'],
@@ -253,7 +287,7 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
             description='',
             region=(
                 'POLYGON((-180.001 90.001, 180.001 -90.001, -179.001 -89.001, '
-                '179.001 89.001, -180.001 90.001))'
+                '179.001 89.001, -180.001 90.001), (1 1, 2 2, 3 3, 4 4, 1 1))'
             ),
             region_grid_spacing=0,
             calculation_mode='classical',
