@@ -19,24 +19,44 @@
 Tests for python logic tree processor.
 """
 
-import os
+import os, os.path
 import unittest
 from StringIO import StringIO
 from decimal import Decimal
-import json
+import tempfile
+import shutil
 
 from mock import Mock
 
-from openquake.java import jvm
+import nhlib
+from nhlib.pmf import PMF
+from nhlib.mfd import TruncatedGRMFD, EvenlyDiscretizedMFD
+from nhlib.gsim.sadigh_1997 import SadighEtAl1997
+from nhlib.gsim.chiou_youngs_2008 import ChiouYoungs2008
+from nrml.parsers import SourceModelParser
+
+from openquake.db import models
 from openquake.input import logictree
-from tests.utils.helpers import patch, get_data_path, assertDeepAlmostEqual
+from openquake.input.source import nrml_to_nhlib
+from openquake.engine import _insert_input_files
+from tests.utils.helpers import get_data_path, deep_eq
 
 
 class _TesteableSourceModelLogicTree(logictree.SourceModelLogicTree):
-    def __init__(self, filename, files, basepath):
+    def __init__(self, filename, files, basepath, validate=True):
         self.files = files
-        super(_TesteableSourceModelLogicTree, self).__init__(basepath,
-                                                             filename)
+        if not validate:
+            self.validate_branchset = self.__fail
+            self.validate_tree = self.__fail
+            self.validate_filters = self.__fail
+            self.validate_uncertainty_value = self.__fail
+        content = files[filename]
+        super(_TesteableSourceModelLogicTree, self).__init__(
+            content, basepath, filename, validate
+        )
+
+    def __fail(self, *args, **kwargs):
+        raise AssertionError("this method shouldn't be called")
 
     def _open_file(self, filename):
         if not filename in self.files:
@@ -47,25 +67,28 @@ class _TesteableSourceModelLogicTree(logictree.SourceModelLogicTree):
 
 
 class _TesteableGMPELogicTree(logictree.GMPELogicTree):
-    def __init__(self, filename, content, basepath, tectonic_region_types):
-        self.content = content
+    def __init__(self, filename, content, basepath, tectonic_region_types,
+                 validate=True):
+        if not validate:
+            self.validate_branchset = self.__fail
+            self.validate_tree = self.__fail
+            self.validate_filters = self.__fail
+            self.validate_uncertainty_value = self.__fail
         super(_TesteableGMPELogicTree, self).__init__(
-            tectonic_region_types, basepath=basepath,
-            filename=filename
+            tectonic_region_types, content, basepath, filename, validate
         )
 
+    def __fail(self, *args, **kwargs):
+        raise AssertionError("this method shouldn't be called")
+
     def _open_file(self, filename):
-        if not self.content:
-            return super(_TesteableGMPELogicTree, self)._open_file(
-                filename
-            )
         return StringIO(self.content)
 
 
 def _make_nrml(content):
     return """\
     <nrml xmlns:gml="http://www.opengis.net/gml"\
-          xmlns="http://openquake.org/xmlns/nrml/0.3"\
+          xmlns="http://openquake.org/xmlns/nrml/0.4"\
           gml:id="n1">\
         %s
     </nrml>""" % content
@@ -73,89 +96,70 @@ def _make_nrml(content):
 
 def _whatever_sourcemodel():
     return _make_nrml("""\
-    <sourceModel gml:id="sm1">
-        <config/>
-        <simpleFaultSource gml:id="src01">
-            <gml:name>Mount Diablo Thrust</gml:name>
-            <tectonicRegion>Active Shallow Crust</tectonicRegion>
-            <rake>90.0</rake>
-            <truncatedGutenbergRichter>
-                <aValueCumulative>3.6786313049897035</aValueCumulative>
-                <bValue>1.0</bValue>
-                <minMagnitude>5.0</minMagnitude>
-                <maxMagnitude>7.0</maxMagnitude>
-            </truncatedGutenbergRichter>
-            <simpleFaultGeometry gml:id="sfg_1">
-                <faultTrace>
-                    <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
-                        <gml:posList>
-                            -121.82290 37.73010  0.0
-                            -122.03880 37.87710  0.0
-                        </gml:posList>
-                    </gml:LineString>
-                </faultTrace>
+    <sourceModel>
+        <simpleFaultSource id="src01" name="Mount Diablo Thrust"
+                           tectonicRegion="Active Shallow Crust">
+            <simpleFaultGeometry>
+                <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                    <gml:posList>
+                        -121.82290 37.73010  0.0
+                        -122.03880 37.87710  0.0
+                    </gml:posList>
+                </gml:LineString>
                 <dip>38</dip>
-                <upperSeismogenicDepth>8.0</upperSeismogenicDepth>
-                <lowerSeismogenicDepth>13.0</lowerSeismogenicDepth>
+                <upperSeismoDepth>8.0</upperSeismoDepth>
+                <lowerSeismoDepth>13.0</lowerSeismoDepth>
             </simpleFaultGeometry>
-        </simpleFaultSource>
-        <simpleFaultSource gml:id="src02">
-            <gml:name>Mount Diablo Thrust</gml:name>
-            <tectonicRegion>Active Shallow Crust</tectonicRegion>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>1.5</ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0"
+                                      minMag="5.0" maxMag="7.0" />
             <rake>90.0</rake>
-            <truncatedGutenbergRichter>
-                <aValueCumulative>3.6786313049897035</aValueCumulative>
-                <bValue>1.0</bValue>
-                <minMagnitude>5.0</minMagnitude>
-                <maxMagnitude>7.0</maxMagnitude>
-            </truncatedGutenbergRichter>
-            <simpleFaultGeometry gml:id="sfg_1">
-                <faultTrace>
-                    <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
-                        <gml:posList>
-                            -121.82290 37.73010  0.0
-                            -122.03880 37.87710  0.0
-                        </gml:posList>
-                    </gml:LineString>
-                </faultTrace>
-                <dip>38</dip>
-                <upperSeismogenicDepth>8.0</upperSeismogenicDepth>
-                <lowerSeismogenicDepth>13.0</lowerSeismogenicDepth>
-            </simpleFaultGeometry>
         </simpleFaultSource>
-        <pointSource gml:id="doublemfd">
-          <gml:name></gml:name>
-          <tectonicRegion>Active Shallow Crust</tectonicRegion>
-          <location>
-            <gml:Point><gml:pos>-125.4 42.9</gml:pos></gml:Point>
-          </location>
-          <ruptureRateModel>
-            <truncatedGutenbergRichter>
-                <aValueCumulative>3.6786313049897035</aValueCumulative>
-                <bValue>1.0</bValue>
-                <minMagnitude>5.0</minMagnitude>
-                <maxMagnitude>7.0</maxMagnitude>
-            </truncatedGutenbergRichter>
-            <strike>0.0</strike>
-            <dip>90.0</dip>
-            <rake>0.0</rake>
-          </ruptureRateModel>
-          <ruptureRateModel>
-            <truncatedGutenbergRichter>
-                <aValueCumulative>3.6786313049897035</aValueCumulative>
-                <bValue>1.0</bValue>
-                <minMagnitude>5.0</minMagnitude>
-                <maxMagnitude>7.0</maxMagnitude>
-            </truncatedGutenbergRichter>
-            <strike>0.0</strike>
-            <dip>90.0</dip>
-            <rake>0.0</rake>
-          </ruptureRateModel>
-          <ruptureDepthDistribution>
-            <magnitude>6.0 6.5</magnitude>
-            <depth>5.0 1.0</depth>
-          </ruptureDepthDistribution>
-          <hypocentralDepth>5.0</hypocentralDepth>
+
+        <simpleFaultSource id="src02" name="Mount Diablo Thrust"
+                           tectonicRegion="Active Shallow Crust">
+            <simpleFaultGeometry>
+                <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                    <gml:posList>
+                        -121.82290 37.73010  0.0
+                        -122.03880 37.87710  0.0
+                    </gml:posList>
+                </gml:LineString>
+                <dip>38</dip>
+                <upperSeismoDepth>8.0</upperSeismoDepth>
+                <lowerSeismoDepth>13.0</lowerSeismoDepth>
+            </simpleFaultGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>1.5</ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0"
+                                      minMag="5.0" maxMag="7.0" />
+            <rake>90.0</rake>
+        </simpleFaultSource>
+
+        <pointSource id="src03" name="point"
+                     tectonicRegion="Active Shallow Crust">
+            <pointGeometry>
+                <gml:Point>
+                    <gml:pos>-122.0 38.0</gml:pos>
+                </gml:Point>
+                <upperSeismoDepth>0.0</upperSeismoDepth>
+                <lowerSeismoDepth>10.0</lowerSeismoDepth>
+            </pointGeometry>
+            <magScaleRel>WC1994</magScaleRel>
+            <ruptAspectRatio>0.5</ruptAspectRatio>
+            <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0"
+                                      minMag="5.0" maxMag="6.5" />
+            <nodalPlaneDist>
+                <nodalPlane probability="0.3" strike="0.0"
+                            dip="90.0" rake="0.0" />
+                <nodalPlane probability="0.7" strike="90.0"
+                            dip="45.0" rake="90.0" />
+            </nodalPlaneDist>
+            <hypoDepthDist>
+                <hypoDepth probability="0.5" depth="4.0" />
+                <hypoDepth probability="0.5" depth="8.0" />
+            </hypoDepthDist>
         </pointSource>
     </sourceModel>
     """)
@@ -188,13 +192,6 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.basepath, basepath)
         return exc
 
-    def test_nonexistent_logictree(self):
-        exc = self._assert_logic_tree_error('missing_file', {}, 'base',
-                                            logictree.ParsingError)
-        error = "[Errno 2] No such file or directory: 'base/missing_file'"
-        self.assertEqual(exc.message, error,
-                         "wrong exception message: %s" % exc.message)
-
     def test_logictree_invalid_xml(self):
         exc = self._assert_logic_tree_error(
             'broken_xml', {'broken_xml': "<?xml foo bar baz"}, 'basepath',
@@ -213,9 +210,9 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             'screwed_schema', {'screwed_schema': source}, 'base',
             logictree.ParsingError
         )
-        error = "'{http://openquake.org/xmlns/nrml/0.3}logicTreeSet': " \
+        error = "'{http://openquake.org/xmlns/nrml/0.4}logicTreeSet': " \
                 "This element is not expected."
-        self.assertTrue(error in exc.message,
+        self.assertTrue(error in str(exc),
                         "wrong exception message: %s" % exc.message)
 
     def test_missing_source_model_file(self):
@@ -261,8 +258,8 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.lineno, 4)
         error = 'first branchset must define an uncertainty ' \
                 'of type "sourceModel"'
-        self.assertEqual(exc.message, error,
-                        "wrong exception message: %s" % exc.message)
+        self.assertTrue(error in str(exc),
+                        "wrong exception message: %s" % exc)
 
     def test_source_model_uncert_on_wrong_level(self):
         lt = _make_nrml("""\
@@ -341,7 +338,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
                   </logicTreeBranch>
                   <logicTreeBranch branchID="b1">
                     <uncertaintyModel>sm2</uncertaintyModel>
-                    <uncertaintyWeight>0.3</uncertaintyWeight>
+                    <uncertaintyWeight>0.4</uncertaintyWeight>
                   </logicTreeBranch>
                 </logicTreeBranchSet>
               </logicTreeBranchingLevel>
@@ -482,81 +479,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ValidationError)
         self.assertEqual(exc.lineno, 16)
-        error = "expected list of 2 float(s) separated by space, " \
-                "as source 'src01' has 1 GR MFD(s)"
-        self.assertEqual(exc.message, error,
-                        "wrong exception message: %s" % exc.message)
-
-    def test_ab_gr_absolute_wrong_number_of_pairs(self):
-        lt = _make_nrml("""\
-            <logicTree logicTreeID="lt1">
-              <logicTreeBranchingLevel branchingLevelID="bl1">
-                <logicTreeBranchSet uncertaintyType="sourceModel"
-                                    branchSetID="bs1">
-                  <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>sm</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                  </logicTreeBranch>
-                </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-              <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="abGRAbsolute"
-                                    applyToSources="doublemfd"
-                                    branchSetID="bs1">
-                  <logicTreeBranch branchID="b2">
-                    <uncertaintyModel>
-                        123 321
-                        345 567
-                        142 555
-                    </uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                  </logicTreeBranch>
-                </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-            </logicTree>
-        """)
-        sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ValidationError)
-        self.assertEqual(exc.lineno, 16)
-        error = "expected list of 4 float(s) separated by space, " \
-                "as source 'doublemfd' has 2 GR MFD(s)"
-        self.assertEqual(exc.message, error,
-                        "wrong exception message: %s" % exc.message)
-
-    def test_max_mag_absolute_wrong_number_of_numbers(self):
-        lt = _make_nrml("""\
-            <logicTree logicTreeID="lt1">
-              <logicTreeBranchingLevel branchingLevelID="bl1">
-                <logicTreeBranchSet uncertaintyType="sourceModel"
-                                    branchSetID="bs1">
-                  <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>sm</uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                  </logicTreeBranch>
-                </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-              <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
-                                    applyToSources="doublemfd"
-                                    branchSetID="bs1">
-                  <logicTreeBranch branchID="b2">
-                    <uncertaintyModel>
-                        345 567
-                        142 555
-                    </uncertaintyModel>
-                    <uncertaintyWeight>1.0</uncertaintyWeight>
-                  </logicTreeBranch>
-                </logicTreeBranchSet>
-              </logicTreeBranchingLevel>
-            </logicTree>
-        """)
-        sm = _whatever_sourcemodel()
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
-                                            logictree.ValidationError)
-        self.assertEqual(exc.lineno, 16)
-        error = "expected list of 2 float(s) separated by space, " \
-                "as source 'doublemfd' has 2 GR MFD(s)"
+        error = "expected a pair of floats separated by space"
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
 
@@ -652,11 +575,9 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
             </simpleFaultSource>
         </sourceModel>
         """)
-        exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, '/x',
-                                            logictree.ParsingError,
-                                            exc_filename='sm')
-        self.assertTrue("is not an element of the set" in exc.message,
-                        "wrong exception message: %s" % exc.message)
+        self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, '/x',
+                                      logictree.ParsingError,
+                                      exc_filename='sm')
 
     def test_referencing_over_level_boundaries(self):
         lt = _make_nrml("""\
@@ -794,7 +715,7 @@ class SourceModelLogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('lt', {'lt': lt, 'sm': sm}, 'base',
                                             logictree.ValidationError)
         self.assertEqual(exc.lineno, 14)
-        error = "source ids ['bzzz'] are not defined in source models"
+        error = "source with id 'bzzz' is not defined in source models"
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
 
@@ -950,13 +871,6 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
         self.assertEqual(exc.basepath, basepath)
         return exc
 
-    def test_nonexistent_file(self):
-        exc = self._assert_logic_tree_error('missing', None, 'base', set(),
-                                            logictree.ParsingError)
-        error = "[Errno 2] No such file or directory: 'base/missing'"
-        self.assertEqual(exc.message, error,
-                         "wrong exception message: %s" % exc.message)
-
     def test_invalid_xml(self):
         gmpe = """zxc<nrml></nrml>"""
         exc = self._assert_logic_tree_error('gmpe', gmpe, 'base', set(),
@@ -1003,7 +917,9 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                                     branchSetID="bs1"
                                     applyToTectonicRegionType="Volcanic">
                     <logicTreeBranch branchID="b1">
-                        <uncertaintyModel>CL_2002_AttenRel</uncertaintyModel>
+                        <uncertaintyModel>
+                            nhlib.gsim.sadigh_1997.SadighEtAl1997
+                        </uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
@@ -1011,7 +927,9 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                             branchSetID="bs2"
                             applyToTectonicRegionType="Subduction IntraSlab">
                     <logicTreeBranch branchID="b2">
-                        <uncertaintyModel>CB_2008_AttenRel</uncertaintyModel>
+                        <uncertaintyModel>
+                            nhlib.gsim.sadigh_1997.SadighEtAl1997
+                        </uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
@@ -1026,9 +944,9 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                 'in gmpe logic tree'
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
-        self.assertEqual(exc.lineno, 13)
+        self.assertEqual(exc.lineno, 15)
 
-    def test_unavailable_gmpe_no_such_class(self):
+    def test_unavailable_gmpe_not_fully_qualified_import_path(self):
         gmpe = _make_nrml("""\
         <logicTree logicTreeID="lt1">
             <logicTreeBranchingLevel branchingLevelID="bl1">
@@ -1046,11 +964,12 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
                                             set(['Volcanic']),
                                             logictree.ValidationError)
-        self.assertEqual(exc.message, "gmpe 'no_such_gmpe' is not available",
-                        "wrong exception message: %s" % exc.message)
+        self.assertEqual(exc.message,
+                         "gmpe name must be fully-qualified import path",
+                         "wrong exception message: %s" % exc.message)
         self.assertEqual(exc.lineno, 7)
 
-    def test_unavailable_gmpe_wrong_class(self):
+    def test_unavailable_gmpe_module_not_importable(self):
         gmpe = _make_nrml("""\
         <logicTree logicTreeID="lt1">
             <logicTreeBranchingLevel branchingLevelID="bl1">
@@ -1058,9 +977,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                                     branchSetID="bs1"
                                     applyToTectonicRegionType="Volcanic">
                     <logicTreeBranch branchID="b1">
-                        <uncertaintyModel>
-                            constants.AkB2010Constants
-                        </uncertaintyModel>
+                        <uncertaintyModel>gmpe_mod.gmpe_cls</uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
@@ -1070,7 +987,53 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
         exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
                                             set(['Volcanic']),
                                             logictree.ValidationError)
-        error = "gmpe 'constants.AkB2010Constants' is not available"
+        error = "could not import module 'gmpe_mod': No module named gmpe_mod"
+        self.assertEqual(exc.message, error,
+                        "wrong exception message: %s" % exc.message)
+        self.assertEqual(exc.lineno, 7)
+
+    def test_unavailable_gmpe_module_doesnt_export_class(self):
+        gmpe = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                    branchSetID="bs1"
+                                    applyToTectonicRegionType="Volcanic">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>nhlib.gsim.GMPE</uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
+                                            set(['Volcanic']),
+                                            logictree.ValidationError)
+        error = "module 'nhlib.gsim' does not contain name 'GMPE'"
+        self.assertEqual(exc.message, error,
+                        "wrong exception message: %s" % exc.message)
+        self.assertEqual(exc.lineno, 7)
+
+    def test_unavailable_gmpe_not_subclass_of_base_class(self):
+        gmpe = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                                    branchSetID="bs1"
+                                    applyToTectonicRegionType="Volcanic">
+                    <logicTreeBranch branchID="b1">
+                        <uncertaintyModel>nhlib.site.Site</uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        exc = self._assert_logic_tree_error('gmpe', gmpe, 'base',
+                                            set(['Volcanic']),
+                                            logictree.ValidationError)
+        error = "<class 'nhlib.site.Site'> is not a gmpe class"
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
         self.assertEqual(exc.lineno, 7)
@@ -1135,7 +1098,9 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                             branchSetID="bs1"
                             applyToTectonicRegionType="Subduction Interface">
                     <logicTreeBranch branchID="b1">
-                        <uncertaintyModel>AS_1997_AttenRel</uncertaintyModel>
+                        <uncertaintyModel>
+                            nhlib.gsim.sadigh_1997.SadighEtAl1997
+                        </uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
@@ -1145,7 +1110,9 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                             branchSetID="bs2"
                             applyToTectonicRegionType="Subduction Interface">
                     <logicTreeBranch branchID="b2">
-                        <uncertaintyModel>BA_2008_AttenRel</uncertaintyModel>
+                        <uncertaintyModel>
+                            nhlib.gsim.chiou_youngs_2008.ChiouYoungs2008
+                        </uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
@@ -1159,7 +1126,7 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                 "'Subduction Interface' has already been defined"
         self.assertEqual(exc.message, error,
                         "wrong exception message: %s" % exc.message)
-        self.assertEqual(exc.lineno, 15)
+        self.assertEqual(exc.lineno, 17)
 
     def test_missing_tectonic_region_type(self):
         gmpe = _make_nrml("""\
@@ -1169,7 +1136,9 @@ class GMPELogicTreeBrokenInputTestCase(unittest.TestCase):
                             branchSetID="bs1"
                             applyToTectonicRegionType="Subduction Interface">
                   <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>Campbell_1997_AttenRel</uncertaintyModel>
+                    <uncertaintyModel>
+                        nhlib.gsim.sadigh_1997.SadighEtAl1997
+                    </uncertaintyModel>
                     <uncertaintyWeight>1.0</uncertaintyWeight>
                   </logicTreeBranch>
                 </logicTreeBranchSet>
@@ -1231,11 +1200,12 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         lt = _TesteableSourceModelLogicTree(
-            'lt', {'lt': lt_source, 'sm1': sm, 'sm2': sm}, 'basepath'
+            'lt', {'lt': lt_source, 'sm1': sm, 'sm2': sm}, 'basepath',
+            validate=False
         )
         self.assert_branchset_equal(lt.root_branchset, 'sourceModel', {},
-                                    [('b1', '0.6', 'basepath/sm1'),
-                                     ('b2', '0.4', 'basepath/sm2')])
+                                    [('b1', '0.6', 'sm1'),
+                                     ('b2', '0.4', 'sm2')])
 
     def test_two_levels(self):
         lt_source = _make_nrml("""\
@@ -1266,10 +1236,10 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         lt = _TesteableSourceModelLogicTree('lt', {'lt': lt_source, 'sm': sm},
-                                            '/base')
+                                            '/base', validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
-            [('b1', '1.0', '/base/sm',
+            [('b1', '1.0', 'sm',
                 ('maxMagGRRelative', {},
                     [('b2', '0.6', +123),
                      ('b3', '0.4', -123)])
@@ -1306,13 +1276,13 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         lt = _TesteableSourceModelLogicTree('lt', {'lt': lt_source, 'sm': sm},
-                                            '/base')
+                                            '/base', validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
-            [('b1', '1.0', '/base/sm',
+            [('b1', '1.0', 'sm',
                 ('abGRAbsolute', {'applyToSources': ['src01']},
-                    [('b2', '0.9', [(100, 500)]),
-                     ('b3', '0.1', [(-1.23, +0.1)])])
+                    [('b2', '0.9', (100, 500)),
+                     ('b3', '0.1', (-1.23, +0.1))])
             )]
         )
 
@@ -1359,19 +1329,20 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         lt = _TesteableSourceModelLogicTree(
-            'lt', {'lt': lt_source, 'sm1': sm, 'sm2': sm, 'sm3': sm}, '/base'
+            'lt', {'lt': lt_source, 'sm1': sm, 'sm2': sm, 'sm3': sm}, '/base',
+            validate=False
         )
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
-            [('sb1', '0.6', '/base/sm1',
+            [('sb1', '0.6', 'sm1',
                 ('bGRRelative', {},
                     [('b2', '1.0', +1)]
                 )),
-             ('sb2', '0.3', '/base/sm2',
+             ('sb2', '0.3', 'sm2',
                  ('maxMagGRAbsolute', {'applyToSources': ['src01']},
-                    [('b3', '1.0', [-3])]
+                    [('b3', '1.0', -3)]
                 )),
-             ('sb3', '0.1', '/base/sm3',
+             ('sb3', '0.1', 'sm3',
                 ('bGRRelative', {},
                     [('b2', '1.0', +1)]
                 ))
@@ -1379,88 +1350,6 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         )
         sb1, sb2, sb3 = lt.root_branchset.branches
         self.assertTrue(sb1.child_branchset is sb3.child_branchset)
-
-    def test_mixed_mfd_types_absolute_uncertainties(self):
-        lt = _make_nrml("""\
-        <logicTree logicTreeID="lt1">
-            <logicTreeBranchingLevel branchingLevelID="bl1">
-                <logicTreeBranchSet uncertaintyType="sourceModel"
-                                    branchSetID="bs1">
-                    <logicTreeBranch branchID="b1">
-                        <uncertaintyModel>sm</uncertaintyModel>
-                        <uncertaintyWeight>1.0</uncertaintyWeight>
-                    </logicTreeBranch>
-                </logicTreeBranchSet>
-            </logicTreeBranchingLevel>
-            <logicTreeBranchingLevel branchingLevelID="bl2">
-                <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute"
-                                    branchSetID="bs2"
-                                    applyToSources="triplemfd">
-                    <logicTreeBranch branchID="b2">
-                        <uncertaintyModel>10 11</uncertaintyModel>
-                        <uncertaintyWeight>1.0</uncertaintyWeight>
-                    </logicTreeBranch>
-                </logicTreeBranchSet>
-            </logicTreeBranchingLevel>
-        </logicTree>
-        """)
-        # source model has three mfds, from which
-        # only first and third are GR.
-        sm = _make_nrml("""\
-        <sourceModel gml:id="sm1">
-            <config/>
-            <pointSource gml:id="triplemfd">
-              <gml:name></gml:name>
-              <tectonicRegion>Active Shallow Crust</tectonicRegion>
-              <location>
-                <gml:Point><gml:pos>-125.4 42.9</gml:pos></gml:Point>
-              </location>
-
-              <ruptureRateModel>
-                <truncatedGutenbergRichter>
-                    <aValueCumulative>3.6786313049897035</aValueCumulative>
-                    <bValue>1.0</bValue>
-                    <minMagnitude>5.0</minMagnitude>
-                    <maxMagnitude>7.0</maxMagnitude>
-                </truncatedGutenbergRichter>
-                <strike>0.0</strike>
-                <dip>90.0</dip>
-                <rake>0.0</rake>
-              </ruptureRateModel>
-
-              <ruptureRateModel>
-                <evenlyDiscretizedIncrementalMFD minVal="6.55" binSize="0.1"
-                    type="ML">
-                    0.0010614989 8.8291627E-4 7.3437777E-4
-                    6.108288E-4 5.080653E-4
-                </evenlyDiscretizedIncrementalMFD>
-                <strike>0.0</strike>
-                <dip>90.0</dip>
-                <rake>0.0</rake>
-              </ruptureRateModel>
-
-              <ruptureRateModel>
-                <truncatedGutenbergRichter>
-                    <aValueCumulative>3.6786313049897035</aValueCumulative>
-                    <bValue>1.0</bValue>
-                    <minMagnitude>5.0</minMagnitude>
-                    <maxMagnitude>7.0</maxMagnitude>
-                </truncatedGutenbergRichter>
-                <strike>0.0</strike>
-                <dip>90.0</dip>
-                <rake>0.0</rake>
-              </ruptureRateModel>
-
-              <ruptureDepthDistribution>
-                <magnitude>6.0 6.5</magnitude>
-                <depth>5.0 1.0</depth>
-              </ruptureDepthDistribution>
-              <hypocentralDepth>5.0</hypocentralDepth>
-            </pointSource>
-        </sourceModel>
-        """)
-        # check that source and logic tree are valid
-        _TesteableSourceModelLogicTree('lt', {'lt': lt, 'sm': sm}, '')
 
     def test_comments(self):
         lt_source = _make_nrml("""\
@@ -1489,10 +1378,10 @@ class SourceModelLogicTreeTestCase(unittest.TestCase):
         """)
         sm = _whatever_sourcemodel()
         lt = _TesteableSourceModelLogicTree('lt', {'lt': lt_source, 'sm': sm},
-                                            '/base')
+                                            '/base', validate=False)
         self.assert_branchset_equal(lt.root_branchset,
             'sourceModel', {},
-            [('b1', '1.0', '/base/sm')]
+            [('b1', '1.0', 'sm')]
         )
 
 
@@ -1504,7 +1393,7 @@ class GMPELogicTreeTestCase(unittest.TestCase):
             self.assertNotEqual(len(branchset.branches), 0)
             trt = branchset.filters['applyToTectonicRegionType']
             actual_result[trt] = [
-                (branch.branch_id, str(branch.weight), branch.value)
+                (branch.branch_id, str(branch.weight), type(branch.value))
                 for branch in branchset.branches
             ]
             next_branchset = branchset.branches[0].child_branchset
@@ -1524,11 +1413,15 @@ class GMPELogicTreeTestCase(unittest.TestCase):
                             branchSetID="bs1"
                             applyToTectonicRegionType="Subduction Interface">
                     <logicTreeBranch branchID="b1">
-                        <uncertaintyModel>AS_1997_AttenRel</uncertaintyModel>
+                        <uncertaintyModel>
+                            nhlib.gsim.sadigh_1997.SadighEtAl1997
+                        </uncertaintyModel>
                         <uncertaintyWeight>0.7</uncertaintyWeight>
                     </logicTreeBranch>
                     <logicTreeBranch branchID="b2">
-                        <uncertaintyModel>BW_1997_AttenRel</uncertaintyModel>
+                        <uncertaintyModel>
+                            nhlib.gsim.chiou_youngs_2008.ChiouYoungs2008
+                        </uncertaintyModel>
                         <uncertaintyWeight>0.3</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
@@ -1538,7 +1431,9 @@ class GMPELogicTreeTestCase(unittest.TestCase):
                             branchSetID="bs2"
                             applyToTectonicRegionType="Active Shallow Crust">
                     <logicTreeBranch branchID="b3">
-                        <uncertaintyModel>BA_2008_AttenRel</uncertaintyModel>
+                        <uncertaintyModel>
+                            nhlib.gsim.sadigh_1997.SadighEtAl1997
+                        </uncertaintyModel>
                         <uncertaintyWeight>1.0</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
@@ -1549,42 +1444,189 @@ class GMPELogicTreeTestCase(unittest.TestCase):
                             applyToTectonicRegionType="Volcanic">
                     <logicTreeBranch branchID="b4">
                         <uncertaintyModel>
-                            Abrahamson_2000_AttenRel
+                            nhlib.gsim.chiou_youngs_2008.ChiouYoungs2008
                         </uncertaintyModel>
                         <uncertaintyWeight>0.1</uncertaintyWeight>
                     </logicTreeBranch>
                     <logicTreeBranch branchID="b5">
                         <uncertaintyModel>
-                            GouletEtAl_2006_AttenRel
+                            nhlib.gsim.sadigh_1997.SadighEtAl1997
                         </uncertaintyModel>
-                        <uncertaintyWeight>0.8</uncertaintyWeight>
-                    </logicTreeBranch>
-                    <logicTreeBranch branchID="b6">
-                        <uncertaintyModel>
-                            Field_2000_AttenRel
-                        </uncertaintyModel>
-                        <uncertaintyWeight>0.1</uncertaintyWeight>
+                        <uncertaintyWeight>0.9</uncertaintyWeight>
                     </logicTreeBranch>
                 </logicTreeBranchSet>
             </logicTreeBranchingLevel>
         </logicTree>
         """)
         trts = ['Subduction Interface', 'Active Shallow Crust', 'Volcanic']
-        gmpe_lt = _TesteableGMPELogicTree('gmpe', gmpe, '/base', trts)
+        gmpe_lt = _TesteableGMPELogicTree('gmpe', gmpe, '/base', trts,
+                                          validate=False)
         self.assert_result(gmpe_lt, {
             'Subduction Interface': [
-                ('b1', '0.7', 'AS_1997_AttenRel'),
-                ('b2', '0.3', 'BW_1997_AttenRel')
+                ('b1', '0.7', SadighEtAl1997),
+                ('b2', '0.3', ChiouYoungs2008)
             ],
             'Active Shallow Crust': [
-                ('b3', '1.0', 'BA_2008_AttenRel')
+                ('b3', '1.0', SadighEtAl1997)
             ],
             'Volcanic': [
-                ('b4', '0.1', 'Abrahamson_2000_AttenRel'),
-                ('b5', '0.8', 'GouletEtAl_2006_AttenRel'),
-                ('b6', '0.1', 'Field_2000_AttenRel')
+                ('b4', '0.1', ChiouYoungs2008),
+                ('b5', '0.9', SadighEtAl1997),
             ]
         })
+
+
+class ReadLogicTreesTestCase(unittest.TestCase):
+    def setUp(self):
+        self.base_path = tempfile.mkdtemp()
+        self.gmpelt_filename = 'gmpelt.xml'
+        self.gmpelt_path = os.path.join(self.base_path, self.gmpelt_filename)
+        self.smlt_filename = 'smlt.xml'
+        self.smlt_path = os.path.join(self.base_path, self.smlt_filename)
+        sm_path = os.path.basename(tempfile.mkdtemp(dir=self.base_path))
+        self.sm1_filename = os.path.join(sm_path, 'sm1.xml')
+        self.sm1_path = os.path.join(self.base_path, self.sm1_filename)
+        self.sm2_filename = os.path.join(sm_path, 'sm2.xml')
+        self.sm2_path = os.path.join(self.base_path, self.sm2_filename)
+
+        gmpelt = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl2">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                            branchSetID="bs2"
+                            applyToTectonicRegionType="Active Shallow Crust">
+                    <logicTreeBranch branchID="b3">
+                        <uncertaintyModel>
+                            nhlib.gsim.sadigh_1997.SadighEtAl1997
+                        </uncertaintyModel>
+                        <uncertaintyWeight>1.0</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+            <logicTreeBranchingLevel branchingLevelID="bl3">
+                <logicTreeBranchSet uncertaintyType="gmpeModel"
+                            branchSetID="bs3"
+                            applyToTectonicRegionType="Volcanic">
+                    <logicTreeBranch branchID="b4">
+                        <uncertaintyModel>
+                            nhlib.gsim.chiou_youngs_2008.ChiouYoungs2008
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.4</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="b5">
+                        <uncertaintyModel>
+                            nhlib.gsim.sadigh_1997.SadighEtAl1997
+                        </uncertaintyModel>
+                        <uncertaintyWeight>0.6</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """)
+        with open(self.gmpelt_path, 'w') as gmpef:
+            gmpef.write(gmpelt)
+
+        smlt = _make_nrml("""\
+        <logicTree logicTreeID="lt1">
+            <logicTreeBranchingLevel branchingLevelID="bl1">
+                <logicTreeBranchSet uncertaintyType="sourceModel"
+                                    branchSetID="bs1">
+                    <logicTreeBranch branchID="sb1">
+                        <uncertaintyModel>%s</uncertaintyModel>
+                        <uncertaintyWeight>0.99</uncertaintyWeight>
+                    </logicTreeBranch>
+                    <logicTreeBranch branchID="sb2">
+                        <uncertaintyModel>%s</uncertaintyModel>
+                        <uncertaintyWeight>0.01</uncertaintyWeight>
+                    </logicTreeBranch>
+                </logicTreeBranchSet>
+            </logicTreeBranchingLevel>
+        </logicTree>
+        """) % (self.sm1_filename, self.sm2_filename)
+        with open(self.smlt_path, 'w') as smf:
+            smf.write(smlt)
+
+        sm1 = _make_nrml("""\
+        <sourceModel>
+            <simpleFaultSource id="src01" name="Mount Diablo Thrust"
+                               tectonicRegion="Active Shallow Crust">
+                <simpleFaultGeometry>
+                    <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+                        <gml:posList>
+                            -121.82290 37.73010  0.0
+                            -122.03880 37.87710  0.0
+                        </gml:posList>
+                    </gml:LineString>
+                    <dip>38</dip>
+                    <upperSeismoDepth>8.0</upperSeismoDepth>
+                    <lowerSeismoDepth>13.0</lowerSeismoDepth>
+                </simpleFaultGeometry>
+                <magScaleRel>WC1994</magScaleRel>
+                <ruptAspectRatio>1.5</ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0"
+                                          minMag="5.0" maxMag="7.0" />
+                <rake>90.0</rake>
+            </simpleFaultSource>
+        </sourceModel>
+        """)
+        with open(self.sm1_path, 'w') as smf:
+            smf.write(sm1)
+
+        sm2 = _make_nrml("""\
+        <sourceModel>
+            <pointSource id="1" name="point" tectonicRegion="Volcanic">
+                <pointGeometry>
+                    <gml:Point>
+                        <gml:pos>-122.0 38.0</gml:pos>
+                    </gml:Point>
+                    <upperSeismoDepth>0.0</upperSeismoDepth>
+                    <lowerSeismoDepth>10.0</lowerSeismoDepth>
+                </pointGeometry>
+                <magScaleRel>WC1994</magScaleRel>
+                <ruptAspectRatio>0.5</ruptAspectRatio>
+                <truncGutenbergRichterMFD aValue="-3.5" bValue="1.0"
+                                          minMag="5.0" maxMag="6.5" />
+                <nodalPlaneDist>
+                    <nodalPlane probability="0.3" strike="0.0"
+                                dip="90.0" rake="0.0" />
+                    <nodalPlane probability="0.7" strike="90.0"
+                                dip="45.0" rake="90.0" />
+                </nodalPlaneDist>
+                <hypoDepthDist>
+                    <hypoDepth probability="0.5" depth="4.0" />
+                    <hypoDepth probability="0.5" depth="8.0" />
+                </hypoDepthDist>
+            </pointSource>
+        </sourceModel>
+        """)
+        with open(self.sm2_path, 'w') as smf:
+            smf.write(sm2)
+
+    def tearDown(self):
+        shutil.rmtree(self.base_path)
+
+    def test(self):
+        sm_filenames = logictree.read_logic_trees(
+            self.base_path, self.smlt_filename, self.gmpelt_filename
+        )
+        self.assertEqual(sm_filenames, [self.sm1_filename, self.sm2_filename])
+
+    def test_nonexistent_logictree(self):
+        os.unlink(self.gmpelt_path)
+        with self.assertRaises(logictree.ParsingError) as ar:
+            logictree.read_logic_trees(self.base_path, self.smlt_filename,
+                                       self.gmpelt_filename)
+        error = "[Errno 2] No such file or directory: '%s'" % self.gmpelt_path
+        self.assertEqual(ar.exception.message, error,
+                         "wrong exception message: %s" % ar.exception.message)
+
+        os.unlink(self.smlt_path)
+        with self.assertRaises(logictree.ParsingError) as ar:
+            logictree.read_logic_trees(self.base_path, self.smlt_filename,
+                                       self.gmpelt_filename)
+        error = "[Errno 2] No such file or directory: '%s'" % self.smlt_path
+        self.assertEqual(ar.exception.message, error,
+                         "wrong exception message: %s" % ar.exception.message)
 
 
 class BranchSetSampleTestCase(unittest.TestCase):
@@ -1625,26 +1667,30 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
         mfd = Mock()
         bs = logictree.BranchSet('abGRAbsolute', {})
         bs._apply_uncertainty_to_mfd(mfd, (0.1, 33.4))
-        self.assertEqual(mfd.method_calls, [('setAB', (0.1, 33.4), {})])
+        self.assertEqual(mfd.method_calls,
+                         [('modify', ('set_ab',
+                                      {'a_val': 0.1, 'b_val': 33.4}), {})])
 
     def test_apply_uncertainty_b_relative(self):
         mfd = Mock()
         bs = logictree.BranchSet('bGRRelative', {})
         bs._apply_uncertainty_to_mfd(mfd, -1.6)
-        self.assertEqual(mfd.method_calls, [('incrementB', (-1.6, ), {})])
+        self.assertEqual(mfd.method_calls,
+                         [('modify', ('increment_b', {'value': -1.6}), {})])
 
     def test_apply_uncertainty_mmax_relative(self):
         mfd = Mock()
         bs = logictree.BranchSet('maxMagGRRelative', {})
         bs._apply_uncertainty_to_mfd(mfd, 32.1)
         self.assertEqual(mfd.method_calls,
-                         [('incrementMagUpper', (32.1, ), {})])
+                    [('modify', ('increment_max_mag', {'value': 32.1}), {})])
 
     def test_apply_uncertainty_mmax_absolute(self):
         mfd = Mock()
         bs = logictree.BranchSet('maxMagGRAbsolute', {})
         bs._apply_uncertainty_to_mfd(mfd, 55)
-        self.assertEqual(mfd.method_calls, [('setMagUpper', (55, ), {})])
+        self.assertEqual(mfd.method_calls,
+                         [('modify', ('set_max_mag', {'value': 55}), {})])
 
     def test_apply_uncertainty_unknown_uncertainty_type(self):
         bs = logictree.BranchSet('makeMeFeelGood', {})
@@ -1654,116 +1700,115 @@ class BranchSetApplyUncertaintyMethodSignaturesTestCase(unittest.TestCase):
 
 class BranchSetApplyUncertaintyTestCase(unittest.TestCase):
     def setUp(self):
-        super(BranchSetApplyUncertaintyTestCase, self).setUp()
-        self.MFD = jvm().JClass(
-            'org.opensha.sha.magdist.GutenbergRichterMagFreqDist'
+        self.point_source = nhlib.source.PointSource(
+            source_id='point', name='point',
+            tectonic_region_type=nhlib.const.TRT.ACTIVE_SHALLOW_CRUST,
+            mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
+                               max_mag=6.5, bin_width=0.1),
+            nodal_plane_distribution=PMF(
+                [(1, nhlib.geo.NodalPlane(0.0, 90.0, 0.0))]
+            ),
+            hypocenter_distribution=PMF([(1, 10)]),
+            upper_seismogenic_depth=0.0, lower_seismogenic_depth=10.0,
+            magnitude_scaling_relationship=nhlib.scalerel.PeerMSR(),
+            rupture_aspect_ratio=1, location=nhlib.geo.Point(5, 6),
+            rupture_mesh_spacing=1.0
         )
-        SourceModelReader = jvm().JClass('org.gem.engine.hazard.' \
-                                         'parsers.SourceModelReader')
-        srcfile = get_data_path('example-source-model.xml')
-        self.single_mfd_sources = list(SourceModelReader(srcfile, 0.1).read())
-        self.non_gr_mfd_source = self.single_mfd_sources[0]
-        # filtering out first source (has non-gr mfd)
-        self.single_mfd_sources = self.single_mfd_sources[1:]
-        srcfile = get_data_path('example-source-model-double-mfds.xml')
-        self.double_mfd_sources = list(SourceModelReader(srcfile, 0.1).read())
-        _apply_uncertainty = logictree.BranchSet._apply_uncertainty_to_mfd
-        self.mock = patch('openquake.input.logictree.' \
-                          'BranchSet._apply_uncertainty_to_mfd').start()
-        self.mock.side_effect = _apply_uncertainty
-
-    def tearDown(self):
-        super(BranchSetApplyUncertaintyTestCase, self).tearDown()
-        self.mock.stop()
 
     def test_unknown_source_type(self):
-        bs = logictree.BranchSet('maxMagGRRelative', {})
+        bs = logictree.BranchSet('maxMagGRRelative',
+                                 {'applyToSourceType': 'forest'})
         self.assertRaises(AssertionError, bs.apply_uncertainty,
-                          -1, None)
+                          -1, self.point_source)
 
-    def test_relative_uncertainty_single_mfd(self):
+    def test_relative_uncertainty(self):
         uncertainties = [('maxMagGRRelative', +1),
                          ('bGRRelative', -0.2)]
         for uncertainty, value in uncertainties:
             branchset = logictree.BranchSet(uncertainty, {})
-            for source in self.single_mfd_sources:
-                branchset.apply_uncertainty(value, source)
-                self.assertEqual(self.mock.call_count, 1)
-                [(bs, mfd, call_value), kwargs] = self.mock.call_args
-                self.assertEqual(kwargs, {})
-                self.assertEqual(type(mfd), self.MFD)
-                self.assertEqual(value, call_value)
-                self.mock.reset_mock()
+            branchset.apply_uncertainty(value, self.point_source)
+        self.assertEqual(self.point_source.mfd.max_mag, 6.5 + 1)
+        self.assertEqual(self.point_source.mfd.b_val, 0.9 - 0.2)
 
-    def test_relative_uncertainty_double_mfd(self):
-        uncertainties = [('maxMagGRRelative', -1.1),
-                         ('bGRRelative', +2)]
+    def test_absolute_uncertainty(self):
+        uncertainties = [('maxMagGRAbsolute', 9),
+                         ('abGRAbsolute', (-1, 0.2))]
         for uncertainty, value in uncertainties:
             branchset = logictree.BranchSet(uncertainty, {})
-            for source in self.double_mfd_sources:
-                branchset.apply_uncertainty(value, source)
-                self.assertEqual(self.mock.call_count, 2)
-                [((bs, mfd, call_value), kwargs),
-                 ((bs, mfd2, call_value2), kwargs2)] = self.mock.call_args_list
-                self.assertEqual(kwargs, {})
-                self.assertEqual(kwargs2, {})
-                self.assertEqual(type(mfd), self.MFD)
-                self.assertEqual(type(mfd2), self.MFD)
-                self.assertTrue(mfd2 is not mfd)
-                self.assertEqual(value, call_value)
-                self.assertEqual(value, call_value2)
-                self.mock.reset_mock()
-
-    def test_absolute_uncertainty_single_mfd(self):
-        uncertainties = [('maxMagGRAbsolute', [9]),
-                         ('abGRAbsolute', [(-1, -0.2)])]
-        for uncertainty, value in uncertainties:
-            branchset = logictree.BranchSet(uncertainty, {})
-            for source in self.single_mfd_sources:
-                branchset.apply_uncertainty(value, source)
-                self.assertEqual(self.mock.call_count, 1)
-                [(bs, mfd, call_value), kwargs] = self.mock.call_args
-                self.assertEqual(kwargs, {})
-                self.assertEqual(type(mfd), self.MFD)
-                self.assertEqual(value, [call_value])
-                self.mock.reset_mock()
-
-    def test_absolute_uncertainty_double_mfd(self):
-        uncertainties = [('maxMagGRAbsolute', [10, 11.1]),
-                         ('abGRAbsolute', [(-1, -0.2), (+1, +2)])]
-        for uncertainty, value in uncertainties:
-            branchset = logictree.BranchSet(uncertainty, {})
-            for source in self.double_mfd_sources:
-                branchset.apply_uncertainty(value, source)
-                self.assertEqual(self.mock.call_count, 2)
-                [((bs, mfd, call_value), kwargs),
-                 ((bs, mfd2, call_value2), kwargs2)] = self.mock.call_args_list
-                self.assertEqual(kwargs, {})
-                self.assertEqual(kwargs2, {})
-                self.assertEqual(type(mfd), self.MFD)
-                self.assertEqual(type(mfd2), self.MFD)
-                self.assertTrue(mfd2 is not mfd)
-                self.assertEqual(value[0], call_value)
-                self.assertEqual(value[1], call_value2)
-                self.mock.reset_mock()
+            branchset.apply_uncertainty(value, self.point_source)
+        self.assertEqual(self.point_source.mfd.max_mag, 9)
+        self.assertEqual(self.point_source.mfd.b_val, 0.2)
+        self.assertEqual(self.point_source.mfd.a_val, -1)
 
     def test_ignore_non_gr_mfd(self):
-        uncertainties = [('maxMagGRAbsolute', [10, 11.1]),
-                         ('abGRAbsolute', [(-1, -0.2), (+1, +2)])]
+        uncertainties = [('maxMagGRAbsolute', 10),
+                         ('abGRAbsolute', (-1, 0.3))]
+        source = self.point_source
+        source.mfd = EvenlyDiscretizedMFD(min_mag=3, bin_width=1,
+                                          occurrence_rates=[1, 2, 3])
+        source.mfd.modify = lambda *args, **kwargs: self.fail()
         for uncertainty, value in uncertainties:
             branchset = logictree.BranchSet(uncertainty, {})
-            branchset.apply_uncertainty(value, self.non_gr_mfd_source)
-            self.assertEqual(self.mock.call_count, 0)
+            branchset.apply_uncertainty(value, source)
 
 
 class BranchSetFilterTestCase(unittest.TestCase):
     def setUp(self):
-        super(BranchSetFilterTestCase, self).setUp()
-        SourceModelReader = jvm().JClass('org.gem.engine.hazard.' \
-                                         'parsers.SourceModelReader')
-        srcfile = get_data_path('example-source-model.xml')
-        self.simple_fault, self.complex_fault, self.area, self.point, _ \
-                = SourceModelReader(srcfile, 0.1).read()
+        self.point = nhlib.source.PointSource(
+            source_id='point', name='point',
+            tectonic_region_type=nhlib.const.TRT.ACTIVE_SHALLOW_CRUST,
+            mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
+                               max_mag=6.5, bin_width=0.1),
+            nodal_plane_distribution=PMF(
+                [(1, nhlib.geo.NodalPlane(0.0, 90.0, 0.0))]
+            ),
+            hypocenter_distribution=PMF([(1, 10)]),
+            upper_seismogenic_depth=0.0, lower_seismogenic_depth=10.0,
+            magnitude_scaling_relationship=nhlib.scalerel.PeerMSR(),
+            rupture_aspect_ratio=1, location=nhlib.geo.Point(5, 6),
+            rupture_mesh_spacing=1.0
+        )
+        self.area = nhlib.source.AreaSource(
+            source_id='area', name='area',
+            tectonic_region_type=nhlib.const.TRT.ACTIVE_SHALLOW_CRUST,
+            mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
+                               max_mag=6.5, bin_width=0.1),
+            nodal_plane_distribution=PMF(
+                [(1, nhlib.geo.NodalPlane(0.0, 90.0, 0.0))]
+            ),
+            hypocenter_distribution=PMF([(1, 10)]),
+            upper_seismogenic_depth=0.0, lower_seismogenic_depth=10.0,
+            magnitude_scaling_relationship=nhlib.scalerel.PeerMSR(),
+            rupture_aspect_ratio=1,
+            polygon=nhlib.geo.Polygon([nhlib.geo.Point(0, 0),
+                                       nhlib.geo.Point(0, 1),
+                                       nhlib.geo.Point(1, 0)]),
+            area_discretization=10, rupture_mesh_spacing=1.0
+        )
+        self.simple_fault = nhlib.source.SimpleFaultSource(
+            source_id='simple_fault', name='simple fault',
+            tectonic_region_type=nhlib.const.TRT.VOLCANIC,
+            mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
+                               max_mag=6.5, bin_width=0.1),
+            upper_seismogenic_depth=0.0, lower_seismogenic_depth=10.0,
+            magnitude_scaling_relationship=nhlib.scalerel.PeerMSR(),
+            rupture_aspect_ratio=1, rupture_mesh_spacing=2.0,
+            fault_trace=nhlib.geo.Line([nhlib.geo.Point(0, 0),
+                                        nhlib.geo.Point(1, 1)]),
+            dip=45, rake=180
+        )
+        self.complex_fault = nhlib.source.ComplexFaultSource(
+            source_id='complex_fault', name='complex fault',
+            tectonic_region_type=nhlib.const.TRT.VOLCANIC,
+            mfd=TruncatedGRMFD(a_val=3.1, b_val=0.9, min_mag=5.0,
+                               max_mag=6.5, bin_width=0.1),
+            magnitude_scaling_relationship=nhlib.scalerel.PeerMSR(),
+            rupture_aspect_ratio=1, rupture_mesh_spacing=2.0, rake=0,
+            edges=[nhlib.geo.Line([nhlib.geo.Point(0, 0, 1),
+                                   nhlib.geo.Point(1, 1, 1)]),
+                   nhlib.geo.Line([nhlib.geo.Point(0, 0, 2),
+                                   nhlib.geo.Point(1, 1, 2)])]
+        )
 
     def test_unknown_filter(self):
         bs = logictree.BranchSet(None, {'applyToSources': [1], 'foo': 'bar'})
@@ -1803,36 +1848,36 @@ class BranchSetFilterTestCase(unittest.TestCase):
 
         source = self.simple_fault
 
-        source.tectReg.name = sic
+        source.tectonic_region_type = sic
         for wrong_trt in (asc, vlc, ssc, sif):
             self.assertEqual(test(wrong_trt, source), False)
         self.assertEqual(test(sic, source), True)
 
-        source.tectReg.name = vlc
+        source.tectonic_region_type = vlc
         for wrong_trt in (asc, sic, ssc, sif):
             self.assertEqual(test(wrong_trt, source), False)
         self.assertEqual(test(vlc, source), True)
 
-        source.tectReg.name = sif
+        source.tectonic_region_type = sif
         for wrong_trt in (asc, vlc, ssc, sic):
             self.assertEqual(test(wrong_trt, source), False)
         self.assertEqual(test(sif, source), True)
 
-        source.tectReg.name = ssc
+        source.tectonic_region_type = ssc
         for wrong_trt in (asc, vlc, sic, sif):
             self.assertEqual(test(wrong_trt, source), False)
         self.assertEqual(test(ssc, source), True)
 
-        source.tectReg.name = asc
+        source.tectonic_region_type = asc
         for wrong_trt in (sic, vlc, ssc, sif):
             self.assertEqual(test(wrong_trt, source), False)
         self.assertEqual(test(asc, source), True)
 
     def test_sources(self):
         test = lambda sources, source, expected_result: self.assertEqual(
-            logictree.BranchSet(None,
-                                {'applyToSources': [s.id for s in sources]}) \
-                     .filter_source(source),
+            logictree.BranchSet(
+                None, {'applyToSources': [s.source_id for s in sources]}
+            ).filter_source(source),
             expected_result
         )
 
@@ -1845,100 +1890,65 @@ class BranchSetFilterTestCase(unittest.TestCase):
 
 
 class LogicTreeProcessorTestCase(unittest.TestCase):
-    BASE_PATH = get_data_path('')
-    SOURCE_MODEL_LT = get_data_path('example-source-model-logictree.xml')
-    GMPE_LT = get_data_path('example-gmpe-logictree.xml')
+    SOURCE_MODEL_LT = 'example-source-model-logictree.xml'
+    GMPE_LT = 'example-gmpe-logictree.xml'
 
     def setUp(self):
-        self.proc = logictree.LogicTreeProcessor(
-            self.BASE_PATH, self.SOURCE_MODEL_LT, self.GMPE_LT
+        owner = models.OqUser.objects.get(user_name='openquake')
+        job = models.OqJob.objects.create(owner=owner)
+        smlt_content = models.ModelContent.objects.create(
+            raw_content=open(get_data_path(self.SOURCE_MODEL_LT)).read(),
         )
+        smlt_input = models.Input.objects.create(
+            owner=owner, model_content=smlt_content,
+            size=len(smlt_content.raw_content),
+            input_type='lt_source'
+        )
+        gmpelt_content = models.ModelContent.objects.create(
+            raw_content=open(get_data_path(self.GMPE_LT)).read(),
+        )
+        gmpelt_input = models.Input.objects.create(
+            owner=owner, model_content=gmpelt_content,
+            size=len(gmpelt_content.raw_content),
+            input_type='lt_gmpe'
+        )
+        models.Input2job.objects.create(oq_job=job, input=smlt_input)
+        models.Input2job.objects.create(oq_job=job, input=gmpelt_input)
+        self.proc = logictree.LogicTreeProcessor(job.id)
 
     def test_sample_source_model(self):
-        result = self.proc.sample_source_model_logictree(random_seed=42,
-                                                         mfd_bin_width=0.1)
-        result = json.loads(result)
-        first_source = {
-            'dip': 38.0,
-            'floatRuptureFlag': True,
-            'id': 'src01',
-            'mfd': {
-                'D': False,
-                'delta': 0.1,
-                'first': True,
-                'info': '',
-                'maxX': 6.95,
-                'minX': 6.55,
-                'name': u'',
-                'num': 5,
-                'points': [0.001062, 0.000883, 0.000734, 0.000611, 0.000508],
-                'tolerance': 1e-07
-            },
-            'name': 'Mount Diablo Thrust',
-            'rake': 90.0,
-            'seismDepthLow': 13.0,
-            'seismDepthUpp': 8.0,
-            'tectReg': 'ACTIVE_SHALLOW',
-            'trace': [{'depth': 0.0, 'lat': 0.658514, 'lon': -2.126210},
-                      {'depth': 0.0, 'lat': 0.661080, 'lon': -2.129978}]
-        }
-        assertDeepAlmostEqual(self, first_source, result[0], delta=1e-5)
+        sm_name, modify = self.proc.sample_source_model_logictree(42)
+        self.assertEqual(sm_name, 'example-source-model.xml')
+        self.assertTrue(callable(modify))
 
     def test_sample_gmpe(self):
-        result = json.loads(self.proc.sample_gmpe_logictree(random_seed=123))
-        expected = {
-            u'Active Shallow Crust': \
-                u'org.opensha.sha.imr.attenRelImpl.BA_2008_AttenRel',
-            u'Subduction Interface': \
-                u'org.opensha.sha.imr.attenRelImpl.McVerryetal_2000_AttenRel'
-        }
-        self.assertEqual(expected, result)
-
-    def test_sample_and_save_source_model_logictree(self):
-        mockcache = Mock(spec=['set'])
-        key = 'zxczxc'
-        random_seed = 12345
-        mfd_bin_width = 0.123
-        json_result = 'asd'
-        with patch('openquake.input.logictree.LogicTreeProcessor.' \
-                   'sample_source_model_logictree') as samplemock:
-            samplemock.return_value = json_result
-            self.proc.sample_and_save_source_model_logictree(
-                mockcache, key, random_seed, mfd_bin_width
-            )
-            samplemock.assert_called_once_with(self.proc, random_seed,
-                                               mfd_bin_width)
-            mockcache.set.assert_called_once_with(key, json_result)
-
-    def test_sample_and_save_gmpe_logictree(self):
-        mockcache = Mock(spec=['set'])
-        key = 'sdasda'
-        random_seed = 124112
-        json_result = 'jsnrslt'
-        with patch('openquake.input.logictree.LogicTreeProcessor.' \
-                   'sample_gmpe_logictree') as samplemock:
-            samplemock.return_value = json_result
-            self.proc.sample_and_save_gmpe_logictree(mockcache, key,
-                                                     random_seed)
-            samplemock.assert_called_once_with(self.proc, random_seed)
-            mockcache.set.assert_called_once_with(key, json_result)
+        result = self.proc.sample_gmpe_logictree(random_seed=124)
+        self.assertEqual(set(result.keys()), set(['Active Shallow Crust',
+                                                  'Subduction Interface']))
+        self.assertIsInstance(result['Active Shallow Crust'], ChiouYoungs2008)
+        self.assertIsInstance(result['Subduction Interface'], SadighEtAl1997)
+        result = self.proc.sample_gmpe_logictree(random_seed=123)
+        self.assertIsInstance(result['Active Shallow Crust'], SadighEtAl1997)
 
 
 class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
-    GMPE_LT = get_data_path('example-gmpe-logictree.xml')
     MFD_BIN_WIDTH = 1e-3
-
-    def setUp(self):
-        with patch('openquake.input.logictree.GMPELogicTree') as mock:
-            self.proc = logictree.LogicTreeProcessor(
-                self.BASE_PATH, self.SOURCE_MODEL_LT, self.GMPE_LT
-            )
-        mock.assert_called_once_with(self.TECTONIC_REGION_TYPES,
-                                     self.BASE_PATH, self.GMPE_LT)
+    GMPE_LT = 'gmpe-logictree.xml'
+    NRML_TO_NHLIB_PARAMS = {'mesh_spacing': 1, 'bin_width': 1,
+                            'area_src_disc': 10}
 
     def _do_test(self, path, expected_result):
-        [branch] = self.proc.source_model_lt.root_branchset.branches
-        all_branches = self.proc.source_model_lt.branches
+        params = {'BASE_PATH': self.BASE_PATH,
+                  'SOURCE_MODEL_LOGIC_TREE_FILE': self.SOURCE_MODEL_LT,
+                  'GMPE_LOGIC_TREE_FILE': self.GMPE_LT}
+        job = models.OqJob.objects.create(
+            owner=models.OqUser.objects.get(user_name='openquake')
+        )
+        _insert_input_files(params, job, False)
+        proc = logictree.LogicTreeProcessor(job.id)
+
+        [branch] = proc.source_model_lt.root_branchset.branches
+        all_branches = proc.source_model_lt.branches
         path = iter(path)
         while branch.child_branchset is not None:
             nextbranch = all_branches[next(path)]
@@ -1947,26 +1957,33 @@ class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
             branch = nextbranch
         assert list(path) == []
 
-        result = json.loads(self.proc.sample_source_model_logictree(
-            0, self.MFD_BIN_WIDTH
-        ))
+        sm_path, modify_source = proc.sample_source_model_logictree(0)
 
-        sm_reader = jvm().JClass('org.gem.engine.hazard.'
-                                 'parsers.SourceModelReader')
-        sources = sm_reader(os.path.join(self.BASE_PATH, expected_result),
-                            self.MFD_BIN_WIDTH).read()
-        serializer = jvm().JClass('org.gem.JsonSerializer')
-        expected_result = json.loads(serializer.getJsonSourceList(sources))
-        assertDeepAlmostEqual(self, expected_result, result, delta=1e-1)
+        expected_result_path = os.path.join(self.BASE_PATH, expected_result)
+        e_nrml_sources = SourceModelParser(expected_result_path).parse()
+        e_nhlib_sources = [nrml_to_nhlib(source, **self.NRML_TO_NHLIB_PARAMS)
+                           for source in e_nrml_sources]
+
+        original_sm_path = os.path.join(self.BASE_PATH, sm_path)
+        a_nrml_sources = SourceModelParser(original_sm_path).parse()
+        a_nhlib_sources = [nrml_to_nhlib(source, **self.NRML_TO_NHLIB_PARAMS)
+                           for source in a_nrml_sources]
+        for i, source in enumerate(a_nhlib_sources):
+            modify_source(source)
+            # these parameters are expected to be different
+            del source.mfd._original_parameters
+            del e_nhlib_sources[i].mfd._original_parameters
+
+        self.assertEqual(len(e_nhlib_sources), len(a_nhlib_sources))
+        for i in xrange(len(e_nhlib_sources)):
+            expected_source = e_nhlib_sources[i]
+            actual_source = a_nhlib_sources[i]
+            self.assertTrue(*deep_eq(expected_source, actual_source))
 
 
 class RelSMLTBBTestCase(_BaseSourceModelLogicTreeBlackboxTestCase):
     BASE_PATH = get_data_path('LogicTreeRelativeUncertaintiesTest')
     SOURCE_MODEL_LT = 'logic_tree.xml'
-    TECTONIC_REGION_TYPES = set([
-        'Subduction IntraSlab', 'Subduction Interface', 'Stable Shallow Crust',
-        'Active Shallow Crust'
-    ])
 
     def test_b4(self):
         self._do_test(['b2', 'b4'], 'result_b4.xml')
@@ -1984,10 +2001,6 @@ class RelSMLTBBTestCase(_BaseSourceModelLogicTreeBlackboxTestCase):
 class AbsSMLTBBTestCase(_BaseSourceModelLogicTreeBlackboxTestCase):
     BASE_PATH = get_data_path('LogicTreeAbsoluteUncertaintiesTest')
     SOURCE_MODEL_LT = 'logic_tree.xml'
-    TECTONIC_REGION_TYPES = set([
-        'Subduction IntraSlab', 'Subduction Interface', 'Stable Shallow Crust',
-        'Active Shallow Crust'
-    ])
 
     def test_b4(self):
         self._do_test(['b2', 'b4'], 'result_b4.xml')

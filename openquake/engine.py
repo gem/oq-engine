@@ -26,7 +26,6 @@ import re
 
 from datetime import datetime
 from ConfigParser import ConfigParser
-from lxml import etree
 
 from django.db import close_connection
 from django.db import transaction
@@ -54,17 +53,16 @@ from openquake.db.models import Src2ltsrc
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
-from openquake import xml
 from openquake.job import config as jobconf
 from openquake.job.params import ARRAY_RE
 from openquake.job.params import CALCULATION_MODE
 from openquake.job.params import INPUT_FILE_TYPES
 from openquake.job.params import PARAMS
-from openquake.job.params import PATH_PARAMS
 from openquake.kvs import mark_job_as_current
 from openquake.supervising import supervisor
 from openquake.utils import config as utils_config
 from openquake.utils import stats
+from openquake.input import logictree
 
 CALCS = dict(hazard=HAZ_CALCS, risk=RISK_CALCS)
 RE_INCLUDE = re.compile(r'^(.*)_INCLUDE')
@@ -498,13 +496,6 @@ def _prepare_config_parameters(params, sections):
 
         new_params[name] = value
 
-    # make file paths absolute
-    for name in PATH_PARAMS:
-        if name not in new_params:
-            continue
-
-        new_params[name] = os.path.join(params['BASE_PATH'], new_params[name])
-
     # Set default parameters (if applicable).
     # TODO(LB): This probably isn't the best place for this code (since we may
     # want to implement similar default param logic elsewhere). For now,
@@ -594,7 +585,7 @@ def _insert_input_files(params, job, force_inputs):
         and the resulting content written to the database no matter what.
     """
 
-    inputs_seen = []
+    inputs_seen = set()
 
     def ln_input2job(path, input_type):
         """Link identical or newly created input to the given job."""
@@ -622,39 +613,35 @@ def _insert_input_files(params, job, force_inputs):
 
         # Make sure we don't link to the same input more than once.
         if in_model.id not in inputs_seen:
-            inputs_seen.append(in_model.id)
+            inputs_seen.add(in_model.id)
 
             i2j = Input2job(input=in_model, oq_job=job)
             i2j.save()
 
         return in_model
 
-    def _insert_referenced_sources(lt_src_input, lt_src_path):
-        """
-        :param lt_src_input: an `:class:openquake.db.models.Input` of type
-            "lt_source"
-        :param str lt_src_path: path to the current logic tree source
-        """
-        # insert source models referenced in the logic tree
-        for path in _get_source_models(lt_src_path):
-            hzrd_src_input = ln_input2job(path, "source")
-            one_or_none = Src2ltsrc.objects.filter(hzrd_src=hzrd_src_input,
-                                                   lt_src=lt_src_input)
-            if len(one_or_none) == 0:
-                # No link table entry found, create one.
-                src_link = Src2ltsrc(
-                    hzrd_src=hzrd_src_input, lt_src=lt_src_input,
-                    filename=os.path.basename(path))
-                src_link.save()
-
     # insert input files in input table
     for param_key, file_type in INPUT_FILE_TYPES.items():
         if param_key not in params:
             continue
-        path = params[param_key]
+        path = os.path.join(params['BASE_PATH'], params[param_key])
         input_obj = ln_input2job(path, file_type)
+
         if file_type == "lt_source":
-            _insert_referenced_sources(input_obj, path)
+            # collect relative paths to source model files
+            # that are referenced by the logic tree
+            source_models = logictree.read_logic_trees(
+                params['BASE_PATH'], params['SOURCE_MODEL_LOGIC_TREE_FILE'],
+                params['GMPE_LOGIC_TREE_FILE']
+            )
+            # insert source model files
+            for srcrelpath in source_models:
+                abspath = os.path.join(params['BASE_PATH'], srcrelpath)
+                hzrd_src_input = ln_input2job(abspath, "source")
+                Src2ltsrc.objects.get_or_create(
+                    hzrd_src=hzrd_src_input, lt_src=input_obj,
+                    defaults={'filename': srcrelpath}
+                )
 
 
 def prepare_job(user_name="openquake"):
@@ -733,31 +720,6 @@ def _prepare_job(params, sections, owner_username, job, force_inputs):
     # slightly (with respect to geometry, for example). Thus, we want a
     # "fresh" copy of the record from the db.
     return OqJobProfile.objects.get(id=job_profile.id)
-
-
-def _get_source_models(logic_tree):
-    """Returns the source models soft-linked by the given logic tree.
-
-    :param str logic_tree: path to a source model logic tree file
-    :returns: list of source model file paths
-    """
-
-    # can be removed if we don't support .inp files
-    if not logic_tree.endswith('.xml'):
-        return []
-
-    base_path = os.path.dirname(os.path.abspath(logic_tree))
-    model_files = []
-
-    uncert_mdl_tag = xml.NRML + 'uncertaintyModel'
-
-    for _event, elem in etree.iterparse(logic_tree):
-        if elem.tag == uncert_mdl_tag:
-            e_text = elem.text.strip()
-            if e_text.endswith('.xml'):
-                model_files.append(os.path.join(base_path, e_text))
-
-    return model_files
 
 
 def _store_input_parameters(params, calc_mode, job_profile):
