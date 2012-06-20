@@ -241,6 +241,7 @@ CREATE TABLE uiapi.model_content (
 CREATE TABLE uiapi.oq_job (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
+    hazard_job_profile_id INTEGER,  -- FK to uiapi.hazard_job_profile
     description VARCHAR NOT NULL DEFAULT '',
     -- The full path of the location where the input files for the calculation
     -- engine reside. This is used internally by openquake-server, can probably
@@ -1449,6 +1450,10 @@ FOREIGN KEY (surface_id) REFERENCES eqcat.surface(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_hazard_job_profile_fk
+FOREIGN KEY (hazard_job_profile_id) REFERENCES uiapi.hazard_job_profile(id)
+ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.hazard_job_profile ADD CONSTRAINT uiapi_hazard_job_profile_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
