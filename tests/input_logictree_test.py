@@ -1910,7 +1910,7 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         gmpelt_input = models.Input.objects.create(
             owner=owner, model_content=gmpelt_content,
             size=len(gmpelt_content.raw_content),
-            input_type='lt_gmpe'
+            input_type='lt_gsim'
         )
         models.Input2job.objects.create(oq_job=job, input=smlt_input)
         models.Input2job.objects.create(oq_job=job, input=gmpelt_input)
