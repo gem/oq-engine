@@ -14,6 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import json
 import unittest
 
 from openquake.db import models
@@ -37,6 +38,8 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
         "SA(2.5)": [0.005, 0.007, 0.0098],
         "SA(0.45)": [0.005, 0.007, 0.0098],
     }
+
+    VALID_IML_IMT_STR = json.dumps(VALID_IML_IMT)
 
     INVALID_IML_IMT = {
         "PGZ": [0.005, 0.007, 0.0098],
@@ -161,7 +164,7 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
             reference_depth_to_2pt5km_per_sec=0.001,
             reference_depth_to_1pt0km_per_sec=0.001,
             investigation_time=1.0,
-            intensity_measure_types_and_levels=self.VALID_IML_IMT,
+            intensity_measure_types_and_levels=self.VALID_IML_IMT_STR,
             truncation_level=0.0,
             maximum_distance=100.0,
             mean_hazard_curves='true',
