@@ -25,6 +25,7 @@ from django.core import exceptions
 
 from openquake import engine2
 from openquake.db import models
+from openquake.job import validation
 
 from tests.utils import helpers
 
@@ -344,3 +345,20 @@ class CreateHazardJobProfileTestCase(unittest.TestCase):
         self.assertEqual(hjp.investigation_time, 50.0)
         self.assertEqual(hjp.truncation_level, 0.0)
         self.assertEqual(hjp.maximum_distance, 200.0)
+
+
+class ReadJobProfileFromConfigFileTestCase(unittest.TestCase):
+    """Integration test for basic engine functions.
+
+    Test reading/generating a hazard job profile from a config file, then run
+    through the validation form.
+    """
+
+    def test_read_and_validate_hazard_config(self):
+        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        job = engine2.prepare_job(getpass.getuser())
+        params, files = engine2.parse_config(open(cfg, 'r'))
+        profile = engine2.create_hazard_job_profile(params, job.owner)
+
+        form = validation.ClassicalHazardJobForm(instance=profile, files=files)
+        self.assertTrue(form.is_valid())
