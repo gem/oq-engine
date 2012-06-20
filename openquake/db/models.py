@@ -362,7 +362,7 @@ class Input(djm.Model):
         (u'unknown', u'Unknown'),
         (u'source', u'Source Model'),
         (u'lt_source', u'Source Model Logic Tree'),
-        (u'lt_gmpe', u'GMPE Logic Tree'),
+        (u'lt_gsim', u'Ground Shaking Intensity Model Logic Tree'),
         (u'exposure', u'Exposure'),
         (u'fragility', u'Fragility'),
         (u'vulnerability', u'Vulnerability'),
