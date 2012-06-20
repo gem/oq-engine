@@ -29,7 +29,7 @@ OUTPUT_DIR = helpers.demo_file('classical_psha_based_risk/computed_output')
 
 
 class ClassicalRiskQATestCase(unittest.TestCase):
-    """Single site QA tests for the Classical Risk calculator."""
+    """QA tests for the Classical Risk calculator."""
 
     def test_classical_psha_based_risk(self):
         cfg = helpers.demo_file(
@@ -42,14 +42,21 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         self._verify_loss_ratio_curve()
         self._verify_loss_maps()
 
-    def _verify_loss_maps(self):
-        xpath = ('{%(ns)s}riskResult/{%(ns)s}lossMap/'
-                '{%(ns)s}LMNode/{%(ns)s}loss/{%(ns)s}value')
+    def test_hazard_computed_on_exposure_sites(self):
+        # slightly different configuration where we
+        # run the engine triggering the hazard computation
+        # on sites defined in the exposure file
+        cfg = helpers.demo_file(
+            "classical_psha_based_risk/config_hzr_exposure.gem")
 
+        self._run_job(cfg)
+        self._verify_job_succeeded()
+
+    def _verify_loss_maps(self):
         filename = "%s/losses_at-0.01.xml" % OUTPUT_DIR
         expected_closs = 0.264530582
 
-        closs = float(self._get(filename, xpath))
+        closs = float(self._get(filename, "//nrml:value"))
 
         self.assertTrue(numpy.allclose(
                 closs, expected_closs, atol=0.0, rtol=0.05))
@@ -57,7 +64,7 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         filename = "%s/losses_at-0.02.xml" % OUTPUT_DIR
         expected_closs = 0.143009004
 
-        closs = float(self._get(filename, xpath))
+        closs = float(self._get(filename, "//nrml:value"))
 
         self.assertTrue(numpy.allclose(
                 closs, expected_closs, atol=0.0, rtol=0.05))
@@ -68,11 +75,7 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         filename = "%s/losscurves-block-#%s-block#0.xml" % (
                 OUTPUT_DIR, job.id)
 
-        xpath = ('{%(ns)s}riskResult/{%(ns)s}lossRatioCurveList/'
-                '{%(ns)s}asset/{%(ns)s}lossRatioCurves/{%(ns)s}'
-                'lossRatioCurve/{%(ns)s}poE')
-
-        poes = [float(x) for x in self._get(filename, xpath).split()]
+        poes = [float(x) for x in self._get(filename, "//nrml:poE").split()]
 
         expected_poes = [0.03944225, 0.03942720, 0.03856604, 0.03548283,
                 0.03122610, 0.02707623, 0.02345915, 0.02038896, 0.01780364,
@@ -85,11 +88,8 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(
                 poes, expected_poes, atol=0.0, rtol=0.05))
 
-        xpath = ('{%(ns)s}riskResult/{%(ns)s}lossRatioCurveList/'
-                '{%(ns)s}asset/{%(ns)s}lossRatioCurves/'
-                '{%(ns)s}lossRatioCurve/{%(ns)s}lossRatio')
-
-        loss_ratios = [float(x) for x in self._get(filename, xpath).split()]
+        loss_ratios = [float(x) for x in self._get(
+            filename, "//nrml:lossRatio").split()]
 
         expected_loss_ratios = [0.00, 0.01, 0.02, 0.03, 0.04, 0.05, 0.06, 0.07,
                 0.08, 0.09, 0.10, 0.12, 0.14, 0.16, 0.18, 0.20, 0.24, 0.28,
@@ -104,11 +104,7 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         filename = "%s/losscurves-loss-block-#%s-block#0.xml" % (
                 OUTPUT_DIR, job.id)
 
-        xpath = ('{%(ns)s}riskResult/{%(ns)s}lossCurveList/'
-                '{%(ns)s}asset/{%(ns)s}lossCurves/'
-                '{%(ns)s}lossCurve/{%(ns)s}poE')
-
-        poes = [float(x) for x in self._get(filename, xpath).split()]
+        poes = [float(x) for x in self._get(filename, "//nrml:poE").split()]
 
         expected_poes = [0.03944225, 0.03942720, 0.03856604, 0.03548283,
                 0.03122610, 0.02707623, 0.02345915, 0.02038896, 0.01780364,
@@ -121,11 +117,7 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         self.assertTrue(numpy.allclose(
                 poes, expected_poes, atol=0.0, rtol=0.05))
 
-        xpath = ('{%(ns)s}riskResult/{%(ns)s}lossCurveList/'
-                '{%(ns)s}asset/{%(ns)s}lossCurves/'
-                '{%(ns)s}lossCurve/{%(ns)s}loss')
-
-        losses = [float(x) for x in self._get(filename, xpath).split()]
+        losses = [float(x) for x in self._get(filename, "//nrml:loss").split()]
 
         expected_losses = [0.00, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.14, 0.16,
                 0.18, 0.20, 0.24, 0.28, 0.32, 0.36, 0.40, 0.48, 0.56,
@@ -158,7 +150,7 @@ class ClassicalRiskQATestCase(unittest.TestCase):
     def _get(self, filename, xpath):
         schema = etree.XMLSchema(file=nrml_schema_file())
         parser = etree.XMLParser(schema=schema)
-
         tree = etree.parse(filename, parser=parser)
 
-        return tree.getroot().find(xpath % {'ns': NRML_NS}).text
+        return tree.find(xpath,
+                namespaces={"nrml": NRML_NS}).text
