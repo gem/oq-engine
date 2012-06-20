@@ -13,6 +13,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+"""Engine: A collection of fundamental functions for initializing and running
+calculations."""
 
 import ConfigParser
 import getpass
@@ -223,11 +225,11 @@ def create_hazard_job_profile(params, owner):
 
     return hjp
 
+
 def run_hazard(job):
     # validate the job profile
     # get_validation_form(job.hazard_job_profile.calculation_mode)
     # form.is_valid()?
-    pass
     form = validation.ClassicalHazardJobForm(instance=job.hazard_job_profile)
 
     # TODO:
