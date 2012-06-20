@@ -56,7 +56,7 @@ def prepare_user(user_name):
 
 _FILE_PARAMS_TO_INPUT_TYPE = {
     'source_model_logic_tree_file': 'lt_source',
-    'gmpe_logic_tree_file': 'lt_gmpe',
+    'gsim_logic_tree_file': 'lt_gsim',
     'site_model_file': 'site_model',
 }
 

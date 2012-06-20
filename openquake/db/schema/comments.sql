@@ -286,7 +286,7 @@ COMMENT ON COLUMN uiapi.input.digest IS '32 byte md5sum digest, used to detect i
 COMMENT ON COLUMN uiapi.input.input_type IS 'Input file type, one of:
     - source model file (source)
     - source logic tree (lt_source)
-    - GMPE logic tree (lt_gmpe)
+    - GSIM (Ground Shaking Intensity Model) logic tree (lt_gsim)
     - exposure file (exposure)
     - vulnerability file (vulnerability)
     - rupture file (rupture)';
