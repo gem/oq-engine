@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.3"
+      xmlns="http://openquake.org/xmlns/nrml/0.4"
       gml:id="n1">
     <logicTree logicTreeID='lt1'>
         <logicTreeBranchingLevel branchingLevelID="bl1">
@@ -9,12 +9,14 @@
                     applyToTectonicRegionType="Active Shallow Crust">
 
                 <logicTreeBranch branchID="b1">
-                    <uncertaintyModel>BA_2008_AttenRel</uncertaintyModel>
+                    <!-- BA_2008_AttenRel -->
+                    <uncertaintyModel>nhlib.gsim.chiou_youngs_2008.ChiouYoungs2008</uncertaintyModel>
                     <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
 
                 <logicTreeBranch branchID="b2">
-                    <uncertaintyModel>CB_2008_AttenRel</uncertaintyModel>
+                    <!-- CB_2008_AttenRel -->
+                    <uncertaintyModel>nhlib.gsim.sadigh_1997.SadighEtAl1997</uncertaintyModel>
                     <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
 
@@ -26,12 +28,14 @@
                     applyToTectonicRegionType="Subduction Interface">
 
                 <logicTreeBranch branchID="b3">
-                    <uncertaintyModel>BA_2008_AttenRel</uncertaintyModel>
+                    <!-- BA_2008_AttenRel -->
+                    <uncertaintyModel>nhlib.gsim.chiou_youngs_2008.ChiouYoungs2008</uncertaintyModel>
                     <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
 
                 <logicTreeBranch branchID="b4">
-                    <uncertaintyModel>CB_2008_AttenRel</uncertaintyModel>
+                    <!-- CB_2008_AttenRel -->
+                    <uncertaintyModel>nhlib.gsim.sadigh_1997.SadighEtAl1997</uncertaintyModel>
                     <uncertaintyWeight>0.5</uncertaintyWeight>
                 </logicTreeBranch>
 

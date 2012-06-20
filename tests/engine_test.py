@@ -54,21 +54,21 @@ class EngineAPITestCase(unittest.TestCase):
             path=os.path.abspath(helpers.demo_file(
                 'HazardMapTest/source_model_logic_tree.xml')),
             input_type='lt_source', size=671,
-            digest="4372d13cec89f2a1072a2c7c694656d0")
+            digest="a4afc25a1ae0bc4786444d4294c29753")
 
         gmpelt_input = models.Input(
             owner=helpers.default_user(),
             path=os.path.abspath(helpers.demo_file(
                 'HazardMapTest/gmpe_logic_tree.xml')),
-            input_type='lt_gmpe', size=709,
-            digest="d9ece248a1e73ee25bd5964670282012")
+            input_type='lt_gmpe', size=776,
+            digest="aa4a5ccf61553f7be22ec4f9eabe43b4")
 
         src_model_input = models.Input(
             owner=helpers.default_user(),
             path=os.path.abspath(helpers.demo_file(
                 'HazardMapTest/source_model.xml')),
-            input_type='source', size=1644,
-            digest="3118538b30b69289e6ea47967e9f51aa")
+            input_type='source', size=1144,
+            digest="68bbbc82682e99b1b2c3c33cbbf57c54")
 
         expected_inputs_map = dict(
             lt_source=smlt_input, lt_gmpe=gmpelt_input, source=src_model_input)
@@ -151,8 +151,7 @@ class EngineAPITestCase(unittest.TestCase):
             'FAULT_MAGNITUDE_SCALING_SIGMA': '0.0',
             'FAULT_RUPTURE_OFFSET': '1.0',
             'FAULT_SURFACE_DISCRETIZATION': '1.0',
-            'GMPE_LOGIC_TREE_FILE': os.path.abspath(
-                helpers.demo_file('HazardMapTest/gmpe_logic_tree.xml')),
+            'GMPE_LOGIC_TREE_FILE': 'gmpe_logic_tree.xml',
             'GMPE_LT_RANDOM_SEED': '5',
             'GMPE_TRUNCATION_TYPE': '2 Sided',
             'GRID_SOURCE_MAGNITUDE_SCALING_RELATIONSHIP':
@@ -182,9 +181,7 @@ class EngineAPITestCase(unittest.TestCase):
             'RUPTURE_ASPECT_RATIO': '2.0',
             'RUPTURE_FLOATING_TYPE': 'Along strike and down dip',
             'SADIGH_SITE_TYPE': 'Rock',
-            'SOURCE_MODEL_LOGIC_TREE_FILE': os.path.abspath(
-                helpers.demo_file(
-                    'HazardMapTest/source_model_logic_tree.xml')),
+            'SOURCE_MODEL_LOGIC_TREE_FILE': 'source_model_logic_tree.xml',
             'SOURCE_MODEL_LT_RANDOM_SEED': '23',
             'STANDARD_DEVIATION_TYPE': 'Total',
             'SUBDUCTION_FAULT_MAGNITUDE_SCALING_RELATIONSHIP':
@@ -202,6 +199,7 @@ class EngineAPITestCase(unittest.TestCase):
 
         actual_jp, params, sections = engine.import_job_profile(
             cfg_path, self.job)
+        self.assertEqual(expected_params['BASE_PATH'], params['BASE_PATH'])
         self.assertEqual(expected_params, params)
         self.assertEqual(expected_sections, sections)
 
@@ -460,13 +458,14 @@ class IdenticalInputTestCase(unittest.TestCase, helpers.DbTestCase):
 class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
     """Test the _insert_input_files() function."""
 
-    GLT = helpers.demo_file("simple_fault_demo_hazard/gmpe_logic_tree.xml")
-    SLT = helpers.demo_file(
-        "simple_fault_demo_hazard/source_model_logic_tree.xml")
+    GLT = "gmpe_logic_tree.xml"
+    SLT = "source_model_logic_tree.xml"
 
     PARAMS = {
         "GMPE_LOGIC_TREE_FILE": GLT,
-        "SOURCE_MODEL_LOGIC_TREE_FILE": SLT}
+        "SOURCE_MODEL_LOGIC_TREE_FILE": SLT,
+        "BASE_PATH": helpers.demo_file("simple_fault_demo_hazard")
+    }
 
     old_job = None
     job = None
@@ -490,10 +489,11 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
         i2j = models.Input2job(input=self.glt_i, oq_job=self.old_job)
         i2j.save()
         # md5sum digest correct
+        slt_path = os.path.join(self.PARAMS['BASE_PATH'], self.SLT)
         if sys.platform == 'darwin':
-            digest = subprocess.check_output(["md5", self.SLT]).split()[-1]
+            digest = subprocess.check_output(["md5", slt_path]).split()[-1]
         else:
-            digest = subprocess.check_output(["md5sum", self.SLT]).split()[0]
+            digest = subprocess.check_output(["md5sum", slt_path]).split()[0]
         self.slt_i = models.Input(input_type="lt_source", size=123,
                                   path=self.SLT, owner=self.old_job.owner,
                                   digest=digest)
@@ -523,19 +523,19 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
     def test_model_content_single_file(self):
         # The contents of input files (such as logic trees, exposure models,
         # etc.) should be saved to the uiapi.model_content table.
-
-        expected_content = open(self.SLT, 'r').read()
-        params = dict(SOURCE_MODEL_LOGIC_TREE_FILE=self.SLT)
-
-        engine._insert_input_files(params, self.job, True)
+        slt_path = os.path.join(self.PARAMS['BASE_PATH'], self.SLT)
+        expected_content = open(slt_path, 'r').read()
+        engine._insert_input_files(self.PARAMS, self.job, True)
         [slt] = models.inputs4job(self.job.id, input_type="lt_source")
 
         self.assertEqual('xml', slt.model_content.content_type)
         self.assertEqual(expected_content, slt.model_content.raw_content)
 
     def test_model_content_many_files(self):
-        slt_content = open(self.SLT, 'r').read()
-        glt_content = open(self.GLT, 'r').read()
+        slt_path = os.path.join(self.PARAMS['BASE_PATH'], self.SLT)
+        slt_content = open(slt_path, 'r').read()
+        glt_path = os.path.join(self.PARAMS['BASE_PATH'], self.GLT)
+        glt_content = open(glt_path, 'r').read()
 
         engine._insert_input_files(self.PARAMS, self.job, True)
         [slt] = models.inputs4job(self.job.id, input_type="lt_source")
@@ -555,7 +555,7 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
         # parsing required in the function under test. Thus, we can put
         # whatever test garbage we want in the file, or just use an empty file
         # (which is the case here).
-        params = dict(GMPE_LOGIC_TREE_FILE=test_file)
+        params = dict(GMPE_LOGIC_TREE_FILE=test_file, BASE_PATH='/')
         engine._insert_input_files(params, self.job, True)
 
         [glt] = models.inputs4job(self.job.id, input_type="lt_gmpe")
@@ -564,7 +564,7 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
     def test_model_content_unknown_content_type(self):
         test_file = helpers.touch()
 
-        params = dict(GMPE_LOGIC_TREE_FILE=test_file)
+        params = dict(GMPE_LOGIC_TREE_FILE=test_file, BASE_PATH='/')
         engine._insert_input_files(params, self.job, True)
 
         [glt] = models.inputs4job(self.job.id, input_type="lt_gmpe")
