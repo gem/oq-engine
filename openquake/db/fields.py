@@ -51,12 +51,16 @@ class FloatArrayFormField(forms.Field):
         elif isinstance(value, str):
             # it could be a string list, like this: "1, 2,3 , 4 5"
             # try to convert it to a an actual list of floats
-            try:
-                value = [float(x) for x in ARRAY_RE.split(value)]
-            except ValueError:
-                raise forms.ValidationError(
-                    'Could not coerce `str` to a list of `float` values'
-                )
+            if len(value) == 0:
+                # It's an empty string list
+                value = []
+            else:
+                try:
+                    value = [float(x) for x in ARRAY_RE.split(value)]
+                except ValueError:
+                    raise forms.ValidationError(
+                        'Could not coerce `str` to a list of `float` values'
+                    )
         else:
             raise forms.ValidationError(
                 'Could not convert value to `list` of `float` values: %s'
@@ -85,10 +89,20 @@ class FloatArrayField(djm.Field):
         return 'float[]'
 
     def get_prep_value(self, value):
-        if value is not None:
-            return "{" + ', '.join(str(v) for v in value) + "}"
-        else:
+        if value is None:
             return None
+
+        # Normally, the value passed in here will be a list.
+        # It could also be a string list, each separated by comma/whitespace.
+        if isinstance(value, str):
+            if len(value) == 0:
+                # It's an empty string list
+                value = []
+            else:
+                # try to coerce the string to a list of floats
+                value = [float(x) for x in ARRAY_RE.split(value)]
+                # If there's an exception here, just let it be raised.
+        return "{" + ', '.join(str(v) for v in value) + "}"
 
     def formfield(self, **kwargs):
         """Specify a custom form field type so forms know how to handle fields
@@ -177,13 +191,3 @@ class DictField(PickleField):
             value = super(DictField, self).to_python(value)
 
         return value
-
-    def get_prep_value(self, value):
-        """It is possible to specify either an acutal `dict` or a JSON string
-        representation of a `dict`. If a string is specified for ``value``, we
-        will attempt to read it as a JSON string and convert it to a dict.
-        """
-        if isinstance(value, str) and len(value) > 0:
-            value = json.loads(value)
-
-        return super(DictField, self).get_prep_value(value)

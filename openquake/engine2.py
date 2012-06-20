@@ -81,6 +81,16 @@ def parse_config(source, force_inputs=False):
                 # If this is a file, create (or reuse) an Input for the file.
                 input_type = _FILE_PARAMS_TO_INPUT_TYPE[key]
                 path = value
+                # The `path` may be a path relative to the config file, or it
+                # could be an absolute path.
+                if not os.path.isabs(path):
+                    # It's a relative path.
+                    if hasattr(source, 'name'):
+                        base_path = os.path.dirname(
+                            os.path.abspath(source.name)
+                        )
+                        path = os.path.join(base_path, path)
+
                 files[key] = get_input(
                     path, input_type, prepare_user(getpass.getuser()),
                     force_inputs
@@ -227,10 +237,18 @@ def create_hazard_job_profile(params, owner):
 
 
 def run_hazard(job):
-    # validate the job profile
-    # get_validation_form(job.hazard_job_profile.calculation_mode)
-    # form.is_valid()?
+    """Run a hazard job.
+
+    :param job:
+        :class:`openquake.db.models.OqJob` instance which references a valid
+        :class:`openquake.db.models.HazardJobProfile`.
+    """
+    # For the moment, just print whether or not the configuration is valid.
     form = validation.ClassicalHazardJobForm(instance=job.hazard_job_profile)
+    if form.is_valid():
+        print 'Configuration is valid'
+    else:
+        print 'Configuration is not valid. Errors: %s' % form.errors
 
     # TODO:
     # - Start the supervisor
