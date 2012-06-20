@@ -457,6 +457,7 @@ class OqJob(djm.Model):
     An OpenQuake engine run started by the user
     '''
     owner = djm.ForeignKey('OqUser')
+    hazard_job_profile = djm.ForeignKey('HazardJobProfile')  # null allowed
     description = djm.TextField(default='')
     path = djm.TextField(null=True, unique=True)
     STATUS_CHOICES = (
