@@ -593,7 +593,7 @@ class HazardJobProfile(djm.Model):
         help_text=('Time span (in years) for probability of exceedance '
                    'calculation'),
     )
-    intensity_measure_types_and_levels = fields.PickleField(
+    intensity_measure_types_and_levels = fields.DictField(
         help_text=(
             'Dictionary containing for each intensity measure type ("PGA", '
             '"PGV", "PGD", "SA", "IA", "RSD", "MMI"), the list of intensity '
