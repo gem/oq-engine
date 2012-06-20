@@ -34,10 +34,10 @@ class Polygon(object):
     Polygon objects represent an area on the Earth surface.
 
     :param points:
-        The list of :class:`Point` objects defining the polygon vertices.
-        The points are connected by great circle arcs in order of appearance.
-        Polygon segment should not cross another polygon segment. At least
-        three points must be defined.
+        The list of :class:`~nhlib.geo.point.Point` objects defining the
+        polygon vertices. The points are connected by great circle arcs
+        in order of appearance. Polygon segment should not cross another
+        polygon segment. At least three points must be defined.
     :raises ValueError:
         If ``points`` contains less than three unique points or if polygon
         perimeter intersects itself.

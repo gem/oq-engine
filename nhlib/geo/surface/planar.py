@@ -194,7 +194,7 @@ class PlanarSurface(BaseSurface):
 
     def _create_mesh(self):
         """
-        See :meth:`nhlib.surface.base.BaseSurface._create_mesh`.
+        See :meth:`nhlib.geo.surface.base.BaseSurface._create_mesh`.
         """
         llons, llats, ldepths = geodetic.intervals_between(
             self.top_left.longitude, self.top_left.latitude,
@@ -262,7 +262,7 @@ class PlanarSurface(BaseSurface):
     def get_min_distance(self, mesh):
         """
         See :meth:`superclass' method
-        <nhlib.geo.surface.base.get_min_distance>`.
+        <nhlib.geo.surface.base.BaseSurface.get_min_distance>`.
 
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.
@@ -347,7 +347,7 @@ class PlanarSurface(BaseSurface):
     def _get_top_edge_centroid(self):
         """
         Overrides :meth:`superclass' method
-        <nhlib.geo.surface.BaseSurface._get_top_edge_centroid>`
+        <nhlib.geo.surface.base.BaseSurface._get_top_edge_centroid>`
         in order to avoid creating a mesh.
         """
         lon, lat = geo_utils.get_middle_point(
@@ -359,7 +359,7 @@ class PlanarSurface(BaseSurface):
     def get_top_edge_depth(self):
         """
         Overrides :meth:`superclass' method
-        <nhlib.geo.surface.BaseSurface.get_top_edge_depth>`
+        <nhlib.geo.surface.base.BaseSurface.get_top_edge_depth>`
         in order to avoid creating a mesh.
         """
         return self.corner_depths[0]
@@ -367,7 +367,7 @@ class PlanarSurface(BaseSurface):
     def get_joyner_boore_distance(self, mesh):
         """
         See :meth:`superclass' method
-        <nhlib.geo.surface.base.get_joyner_boore_distance>`.
+        <nhlib.geo.surface.base.BaseSurface.get_joyner_boore_distance>`.
 
         This is an optimized version specific to planar surface that doesn't
         make use of the mesh.

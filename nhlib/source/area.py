@@ -27,7 +27,7 @@ class AreaSource(PointSource):
     region.
 
     :param polygon:
-        An instance of :class:`nhlib.common.geo.Polygon` that defines
+        An instance of :class:`nhlib.geo.polygon.Polygon` that defines
         source's area.
     :param area_discretization:
         Float number, polygon area discretization spacing in kilometers.

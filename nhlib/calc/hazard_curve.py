@@ -32,7 +32,7 @@ def hazard_curves_poissonian(
     and a set of ground shaking intensity models (one per tectonic region type
     considered in the seismic sources).
 
-    The calculator assumes :class:`Poissonian <nhlib.tom.PoissonianTOM>`
+    The calculator assumes :class:`Poissonian <nhlib.tom.PoissonTOM>`
     temporal occurrence model.
 
     The calculator computes probability of ground motion exceedance according

@@ -116,10 +116,9 @@ class SimpleFaultSurface(BaseSurface):
         """
         Create and return a fault surface using fault source data.
 
-        :param fault_trace:
+        :param nhlib.geo.line.Line fault_trace:
             Geographical line representing the intersection between
-            the fault surface and the earth surface, an instance
-            of :class:`nhlib.Line`.
+            the fault surface and the earth surface.
         :param upper_seismo_depth:
             Minimum depth ruptures can reach, in km (i.e. depth
             to fault's top edge).
