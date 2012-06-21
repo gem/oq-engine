@@ -56,11 +56,14 @@ class Region(object):
         """
         Build a region from a list of polygon coordinates.
 
-        :param coordinates: List of 2-tuples (lon, lat). Example::
-            [(-118.25, 34.07), (-118.22, 34.07), (-118.22, 34.04),
-             (-118.25, 34.04)]
+        :param coordinates:
+            List of 2-tuples (lon, lat). Example ::
 
-        :returns: :py:class:`openquake.shapes.Region` instance
+                [(-118.25, 34.07), (-118.22, 34.07), (-118.22, 34.04), \
+(-118.25, 34.04)]
+
+        :returns:
+            :class:`openquake.shapes.Region` instance
         """
 
         # Constrain the precision for the coordinates:
@@ -788,14 +791,15 @@ class VulnerabilityFunction(object):
     def to_json(self):
         """
         Serialize this curve in JSON format.
-        Given the following sample data::
+        Given the following sample data ::
+
             imls = [0.005, 0.007]
             loss_ratios = [0.1, 0.3]
             covs = [0.2, 0.4]
 
-        the output will be a JSON string structured like so::
-            {'0.005': [0.1, 0.2],
-             '0.007': [0.3, 0.4]}
+        the output will be a JSON string structured like so ::
+
+        {'0.005': [0.1, 0.2], '0.007': [0.3, 0.4]}
         """
         as_dict = {}
 
@@ -812,18 +816,16 @@ class VulnerabilityFunction(object):
 
         The dictionary keys can be unordered and of
         whatever type can be converted to float with float().
-        :param vuln_func_dict: A dictionary of [loss ratio, CoV] pairs, keyed
-            by IMLs.
+
+        :param dict vuln_func_dict:
+            A dictionary of [loss ratio, CoV] pairs, keyed by IMLs.
             The IML keys can be numbers represented as either a string or
-            float.
-            Example::
-                {'0.005': [0.1, 0.2],
-                 '0.007': [0.3, 0.4],
-                 0.0098: [0.5, 0.6]}
+            float. Example ::
 
-        :type vuln_func_dict: dict
+            {'0.005': [0.1, 0.2], '0.007': [0.3, 0.4], 0.0098: [0.5, 0.6]}
 
-        :returns: :py:class:`openquake.shapes.VulnerabilityFunction` instance
+        :returns:
+            :class:`openquake.shapes.VulnerabilityFunction` instance
         """
         # flatten out the dict and convert keys to floats:
         data = [(float(iml), lr_cov) for iml, lr_cov in vuln_func_dict.items()]
