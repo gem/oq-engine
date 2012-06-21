@@ -105,7 +105,7 @@ def get_jobs(user_name):
 
 
 def get_outputs(job_id):
-    """Get all :class:`openquake.db.models.Output`s associated with the
+    """Get all :class:`openquake.db.models.Output` objects associated with the
     specified job.
 
     :param int job_id:
