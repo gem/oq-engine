@@ -222,7 +222,6 @@ class Inputs4JobTestCase(unittest.TestCase):
 
 class FloatArrayFormFieldTestCase(unittest.TestCase):
 
-
     def setUp(self):
         self.form_field = models.FloatArrayFormField()
 
