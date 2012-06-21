@@ -167,7 +167,7 @@ def write_uh_spectra(job_ctxt):
 
     In the workflow of the UHS calculator, this should be written prior to the
     execution of the main job. (See
-    :method:`openquake.calculators.base.Calculator.pre_execute`.)
+    :meth:`openquake.calculators.base.Calculator.pre_execute`.)
 
     This function writes:
     * 1 record to uiapi.output
