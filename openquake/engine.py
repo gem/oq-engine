@@ -36,9 +36,8 @@ from django.core.exceptions import ObjectDoesNotExist
 
 from openquake.calculators.hazard import CALCULATORS as HAZ_CALCS
 from openquake.calculators.risk import CALCULATORS as RISK_CALCS
-from openquake.db.models import CharArrayField
+from openquake.db import fields
 from openquake.db.models import ExposureData
-from openquake.db.models import FloatArrayField
 from openquake.db.models import Input
 from openquake.db.models import Input2job
 from openquake.db.models import inputs4job
@@ -741,9 +740,9 @@ def _store_input_parameters(params, calc_mode, job_profile):
         elif param.type == models.MultiPointField:
             ewkt = shapes.multipoint_ewkt_from_coords(value)
             value = GEOSGeometry(ewkt)
-        elif param.type == FloatArrayField:
+        elif param.type == fields.FloatArrayField:
             value = [float(v) for v in ARRAY_RE.split(value) if len(v)]
-        elif param.type == CharArrayField:
+        elif param.type == fields.CharArrayField:
             if param.to_db is not None:
                 value = param.to_db(value)
             value = [str(v) for v in ARRAY_RE.split(value) if len(v)]

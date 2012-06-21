@@ -18,7 +18,6 @@ import itertools
 import string
 import unittest
 
-from django import forms
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
 from openquake import engine
@@ -220,41 +219,65 @@ class Inputs4JobTestCase(unittest.TestCase):
             models.inputs4job(self.job.id, input_type="source", path=path))
 
 
-class FloatArrayFormFieldTestCase(unittest.TestCase):
+class HazardJobProfileGeometryTestCase(unittest.TestCase):
+    """Test special geometry handling in the HazardJobProfile constructor."""
 
-    def setUp(self):
-        self.form_field = models.FloatArrayFormField()
+    def test_sites_from_wkt(self):
+        # should succeed with no errors
+        hjp = models.HazardJobProfile(sites='MULTIPOINT(1 2, 3 4)')
+        expected_wkt = (
+            'MULTIPOINT (1.0000000000000000 2.0000000000000000,'
+            ' 3.0000000000000000 4.0000000000000000)'
+        )
 
-    def test_clean(self):
-        # a general succesful case with some mixed input which can be cast to
-        # floats
-        value = [0.0, 1, -17L, '5.1']
+        self.assertEqual(expected_wkt, hjp.sites.wkt)
 
-        expected = [0.0, 1.0, -17.0, 5.1]
+    def test_sites_invalid_str(self):
+        self.assertRaises(ValueError, models.HazardJobProfile, sites='a 5')
 
-        self.assertEqual(expected, self.form_field.clean(value))
+    def test_sites_odd_num_of_coords_in_str_list(self):
+        self.assertRaises(ValueError, models.HazardJobProfile, sites='1 2, 3')
 
-    def test_clean_empty_list(self):
-        self.assertEqual([], self.form_field.clean([]))
+    def test_sites_valid_str_list(self):
+        hjp = models.HazardJobProfile(sites='1 2, 3 4')
+        expected_wkt = (
+            'MULTIPOINT (1.0000000000000000 2.0000000000000000,'
+            ' 3.0000000000000000 4.0000000000000000)'
+        )
 
-    def test_clean_no_list_tuple_or_string(self):
-        value = object()
+        self.assertEqual(expected_wkt, hjp.sites.wkt)
 
-        self.assertRaises(forms.ValidationError, self.form_field.clean, value)
+    def test_region_from_wkt(self):
+        hjp = models.HazardJobProfile(region='POLYGON((1 2, 3 4, 5 6, 1 2))')
+        expected_wkt = (
+            'POLYGON ((1.0000000000000000 2.0000000000000000, '
+            '3.0000000000000000 4.0000000000000000, '
+            '5.0000000000000000 6.0000000000000000, '
+            '1.0000000000000000 2.0000000000000000))'
+        )
 
-    def test_clean_list_of_non_floats(self):
-        value = ['a', 5]
+        self.assertEqual(expected_wkt, hjp.region.wkt)
 
-        self.assertRaises(forms.ValidationError, self.form_field.clean, value)
+    def test_region_invalid_str(self):
+        self.assertRaises(
+            ValueError, models.HazardJobProfile,
+            region='0, 0, 5a 5, 1, 3, 0, 0'
+        )
 
-    def test_clean_str_list(self):
-        value = '1.1 -5.78, 0 ,  7'
+    def test_region_odd_num_of_coords_in_str_list(self):
+        self.assertRaises(
+            ValueError, models.HazardJobProfile, region='1 2, 3 4, 5 6, 1'
+        )
 
-        expected = [1.1, -5.78, 0.0, 7.0]
+    def test_region_valid_str_list(self):
+        # note that the last coord (with closes the ring) can be ommitted
+        # in this case
+        hjp = models.HazardJobProfile(region='1 2, 3 4, 5 6')
+        expected_wkt = (
+            'POLYGON ((1.0000000000000000 2.0000000000000000, '
+            '3.0000000000000000 4.0000000000000000, '
+            '5.0000000000000000 6.0000000000000000, '
+            '1.0000000000000000 2.0000000000000000))'
+        )
 
-        self.assertEqual(expected, self.form_field.clean(value))
-
-    def test_clean_str_list_invalid(self):
-        value = 'a 5'
-
-        self.assertRaises(forms.ValidationError, self.form_field.clean, value)
+        self.assertEqual(expected_wkt, hjp.region.wkt)

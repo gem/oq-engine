@@ -23,8 +23,8 @@ its validation.
 import os
 
 from django.contrib.gis.db import models
-from openquake.db.models import CharArrayField, FloatArrayField
 
+from openquake.db import fields
 from openquake.job.params import PARAMS, PATH_PARAMS, ARRAY_RE, str2bool
 
 
@@ -509,10 +509,10 @@ def validate_single_param(param, name, value, errors):
             # just check the array contains matching pairs
             length = len(to_float_array(value))
             invalid = length % 2 == 1
-        elif param.type is FloatArrayField:
+        elif param.type is fields.FloatArrayField:
             description = 'floating point array value'
             value = to_float_array(value)
-        elif param.type is CharArrayField:
+        elif param.type is fields.CharArrayField:
             description = 'string array value'
 
             # before converting to an array of strings,
