@@ -57,14 +57,23 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     total_sites = len(sites)
     [(rupture, sites)] = ruptures_sites
 
+    sctx, rctx, dctx = gsim.make_contexts(sites, rupture)
+    result = {}
+
+    if truncation_level == 0:
+        for imt in imts:
+            mean, _stddevs = gsim.get_mean_and_stddevs(sctx, rctx, dctx, imt,
+                                                       stddev_types=[])
+            result[imt] = sites.expand(mean, total_sites, placeholder=0)
+        return result
+
     if truncation_level is None:
         distribution = scipy.stats.norm()
     else:
+        assert truncation_level > 0
         distribution = scipy.stats.truncnorm(- truncation_level,
                                              truncation_level)
 
-    sctx, rctx, dctx = gsim.make_contexts(sites, rupture)
-    result = {}
     for imt in imts:
         mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
             sctx, rctx, dctx, imt, [StdDev.INTER_EVENT, StdDev.INTRA_EVENT]
