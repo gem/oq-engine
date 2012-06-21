@@ -244,13 +244,8 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
         point must be of type shapes.Site
         val is a dictionary like this::
 
-        {'IML': 0.8,
-         'IMT': 'PGA',
-         'poE': 0.1,
-         'endBranchLabel': '1',
-         'vs30': 760.0,
-         'investigationTimeSpan': 50.0
-        }
+        {'IML': 0.8, 'IMT': 'PGA', 'poE': 0.1, 'endBranchLabel': '1', \
+'vs30': 760.0, 'investigationTimeSpan': 50.0}
         """
 
         if isinstance(point, shapes.GridPoint):
