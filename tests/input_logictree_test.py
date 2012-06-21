@@ -19,7 +19,8 @@
 Tests for python logic tree processor.
 """
 
-import os, os.path
+import os
+import os.path
 import unittest
 from StringIO import StringIO
 from decimal import Decimal
