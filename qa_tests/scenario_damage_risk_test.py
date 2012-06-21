@@ -42,6 +42,23 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
         self._verify_dist_per_asset_con()
         self._verify_dist_per_taxonomy_con()
         self._verify_total_dist_con()
+        self._verify_collapse_map_con()
+
+    def _verify_collapse_map_con(self):
+        mean, stddev = self._map_asset_values("a1")
+
+        self._close_to(329.3743174305, mean)
+        self._close_to(347.3929450270, stddev)
+
+        mean, stddev = self._map_asset_values("a2")
+
+        self._close_to(1270.1751143182, mean)
+        self._close_to(575.8724057319, stddev)
+
+        mean, stddev = self._map_asset_values("a3")
+
+        self._close_to(195.4618668074, mean)
+        self._close_to(253.9130901018, stddev)
 
     def _verify_total_dist_con(self):
         job = OqJob.objects.latest("id")
@@ -158,6 +175,23 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
         self._verify_dist_per_asset_dsc()
         self._verify_dist_per_taxonomy_dsc()
         self._verify_total_dist_dsc()
+        self._verify_collapse_map_dsc()
+
+    def _verify_collapse_map_dsc(self):
+        mean, stddev = self._map_asset_values("a1")
+
+        self._close_to(675.8929310273, mean)
+        self._close_to(556.7659393118, stddev)
+
+        mean, stddev = self._map_asset_values("a2")
+
+        self._close_to(907.46737796, mean)
+        self._close_to(417.30737837, stddev)
+
+        mean, stddev = self._map_asset_values("a3")
+
+        self._close_to(309.93823125, mean)
+        self._close_to(246.84424913, stddev)
 
     def _verify_total_dist_dsc(self):
         job = OqJob.objects.latest("id")
@@ -263,6 +297,17 @@ class ScenarioDamageRiskQATest(unittest.TestCase):
 
         self._close_to(309.9382312514, float(ds.get("mean")))
         self._close_to(246.8442491255, float(ds.get("stddev")))
+
+    def _map_asset_values(self, asset_ref):
+        job = OqJob.objects.latest("id")
+        filename = "%s/collapse-map-%s.xml" % (OUTPUT_DIR, job.id)
+        root = self._root(filename)
+
+        xpath_mean = ("//nrml:cf[@assetRef='" + asset_ref + "']/nrml:mean")
+        xpath_stddev = ("//nrml:cf[@assetRef='" + asset_ref + "']/nrml:stdDev")
+
+        return float(self._get(root, xpath_mean).text), float(
+                self._get(root, xpath_stddev).text)
 
     def _ds_td(self, damage_state, root):
         xpath = ("nrml:totalDmgDist/"
