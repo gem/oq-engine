@@ -16,7 +16,6 @@
 import unittest
 
 import numpy
-from scipy.stats import truncnorm
 from numpy.testing import assert_allclose, assert_array_equal
 
 from nhlib import const
@@ -48,30 +47,47 @@ class GMFCalcNoCorrelationTestCase(unittest.TestCase):
         self.stddev45 = (self.inter45 ** 2 + self.intra45 ** 2) ** 0.5
         self.stddev67 = (self.inter67 ** 2 + self.intra67 ** 2) ** 0.5
         p0 = Point(0, 0)
-        sites = [Site(p0, self.mean1, True, self.inter1, self.intra1),
+        sites = [Site(p0, self.mean1, False, self.inter1, self.intra1),
                  Site(p0, self.mean2, True, self.inter2, self.intra2),
-                 Site(p0, self.mean3, True, self.inter3, self.intra3),
+                 Site(p0, self.mean3, False, self.inter3, self.intra3),
                  Site(p0, self.mean4567, True, self.inter45, self.intra45),
-                 Site(p0, self.mean4567, True, self.inter45, self.intra45),
+                 Site(p0, self.mean4567, False, self.inter45, self.intra45),
                  Site(p0, self.mean4567, True, self.inter67, self.intra67),
-                 Site(p0, self.mean4567, True, self.inter67, self.intra67)]
+                 Site(p0, self.mean4567, False, self.inter67, self.intra67)]
         self.sites = SiteCollection(sites)
         self.rupture = object()
         self.imt1 = SA(10, 5)
         self.imt2 = PGV()
 
         class FakeGSIM(object):
+            expect_stddevs = True
+            expect_same_sitecol = True
+
             def make_contexts(gsim, sites, rupture):
-                self.assertIs(sites, self.sites)
+                if gsim.expect_same_sitecol:
+                    self.assertIs(sites, self.sites)
+                else:
+                    self.assertIsNot(sites, self.sites)
                 self.assertIs(rupture, self.rupture)
                 return sites.vs30, sites.z1pt0, sites.z2pt5
 
             def get_mean_and_stddevs(gsim, mean, std_inter, std_intra, imt,
                                      stddev_types):
                 assert imt is self.imt1 or imt is self.imt2
-                self.assertEqual(stddev_types, [const.StdDev.INTER_EVENT,
-                                                const.StdDev.INTRA_EVENT])
+                if gsim.expect_stddevs:
+                    self.assertEqual(stddev_types, [const.StdDev.INTER_EVENT,
+                                                    const.StdDev.INTRA_EVENT])
+                else:
+                    self.assertEqual(stddev_types, [])
                 return mean, [std_inter, std_intra]
+
+        def rupture_site_filter(rupture_site_gen):
+            [(rupture, sites)] = rupture_site_gen
+            assert rupture is self.rupture
+            assert sites is self.sites
+            yield rupture, sites.filter(sites.vs30measured)
+
+        self.rupture_site_filter = rupture_site_filter
 
         self.gsim = FakeGSIM()
 
@@ -157,3 +173,78 @@ class GMFCalcNoCorrelationTestCase(unittest.TestCase):
         self.assertLess(intensity[4].std(), self.stddev45)
         self.assertLess(intensity[5].std(), self.stddev67)
         self.assertLess(intensity[6].std(), self.stddev67)
+        for i in xrange(7):
+            self.assertGreater(intensity[i].std(), 0)
+
+    def test_no_filtering_zero_truncation(self):
+        truncation_level = 0
+        self.gsim.expect_stddevs = False
+        gmfs = ground_motion_fields(self.rupture, self.sites,
+                                    [self.imt1, self.imt2], self.gsim,
+                                    truncation_level)
+        intensity = numpy.array([gmfs[self.imt1], gmfs[self.imt2]]).transpose()
+        for i in xrange(7):
+            self.assertEqual(intensity[i].std(), 0)
+        self.assertEqual(intensity[0].mean(), self.mean1)
+        self.assertEqual(intensity[1].mean(), self.mean2)
+        self.assertEqual(intensity[2].mean(), self.mean3)
+        self.assertEqual(intensity[3].mean(), self.mean4567)
+        self.assertEqual(intensity[4].mean(), self.mean4567)
+        self.assertEqual(intensity[5].mean(), self.mean4567)
+        self.assertEqual(intensity[6].mean(), self.mean4567)
+
+    def test_filtered_no_truncation(self):
+        numpy.random.seed(17)
+        num_samples = 50
+        intensity = []
+        self.gsim.expect_same_sitecol = False
+        for i in xrange(num_samples):
+            gmfs = ground_motion_fields(
+                self.rupture, self.sites, [self.imt1, self.imt2],
+                self.gsim, truncation_level=None,
+                rupture_site_filter=self.rupture_site_filter
+            )
+            intensity.append(gmfs[self.imt1])
+            intensity.append(gmfs[self.imt2])
+
+        intensity = numpy.array(intensity).transpose()
+
+        for imt in [self.imt1, self.imt2]:
+            self.assertEqual(intensity.shape, (7, num_samples * 2))
+            assert_array_equal(
+                intensity[(1 - self.sites.vs30measured).nonzero()], 0
+            )
+            self.assertFalse(
+                (intensity[self.sites.vs30measured.nonzero()] == 0).any()
+            )
+
+    def test_filtered_zero_truncation(self):
+        self.gsim.expect_stddevs = False
+        self.gsim.expect_same_sitecol = False
+        gmfs = ground_motion_fields(
+            self.rupture, self.sites, [self.imt1, self.imt2], self.gsim,
+            truncation_level=0, rupture_site_filter=self.rupture_site_filter
+        )
+        intensity = numpy.array([gmfs[self.imt1], gmfs[self.imt2]]).transpose()
+        for i in xrange(7):
+            self.assertEqual(intensity[i].std(), 0)
+        self.assertEqual(intensity[0].mean(), 0)
+        self.assertEqual(intensity[1].mean(), self.mean2)
+        self.assertEqual(intensity[2].mean(), 0)
+        self.assertEqual(intensity[3].mean(), self.mean4567)
+        self.assertEqual(intensity[4].mean(), 0)
+        self.assertEqual(intensity[5].mean(), self.mean4567)
+        self.assertEqual(intensity[6].mean(), 0)
+
+    def test_filter_all_out(self):
+        def rupture_site_filter(rupture_site):
+            return []
+        for truncation_level in (None, 0, 1.3):
+            gmfs = ground_motion_fields(
+                self.rupture, self.sites, [self.imt1, self.imt2], self.gsim,
+                truncation_level=truncation_level,
+                rupture_site_filter=rupture_site_filter
+            )
+            intensity = numpy.array([gmfs[self.imt1],
+                                     gmfs[self.imt2]]).transpose()
+            assert_array_equal(intensity, 0)

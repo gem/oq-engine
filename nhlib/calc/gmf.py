@@ -51,7 +51,6 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     """
     ruptures_sites = list(rupture_site_filter([(rupture, sites)]))
     if not ruptures_sites:
-        # TODO: unittest this
         return dict((imt, numpy.zeros(len(sites))) for imt in imts)
 
     total_sites = len(sites)
