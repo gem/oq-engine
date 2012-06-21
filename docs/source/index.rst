@@ -19,7 +19,6 @@ Contents:
     architecture
     formats
     java
-    job
     kvs
     logs
     input
@@ -28,7 +27,6 @@ Contents:
     risk
     schema
     shapes
-    tasks
     utils
     writer
     xml

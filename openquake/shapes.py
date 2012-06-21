@@ -867,7 +867,7 @@ def multipoint_ewkt_from_coords(coords):
     for SRS 4326 is (lon, lat).
 
     NOTE 2: All coordinate values will be rounded using
-    :py:function:`openquake.utils.round_float`
+    :func:`openquake.utils.round_float`
 
     >>> multipoint_ewkt_from_coords("38.113, -122.0, 38.113, -122.114")
     'SRID=4326;MULTIPOINT((-122.0 38.113), (-122.114 38.113))'
@@ -893,7 +893,7 @@ def polygon_ewkt_from_coords(coords):
     for SRS 4326 is (lon, lat).
 
     NOTE 2: All coordinate values will be rounded using
-    :py:function:`openquake.utils.round_float`
+    :func:`openquake.utils.round_float`
 
     >>> polygon_ewkt_from_coords(
     ...     "38.113, -122.0, 38.113, -122.114, 38.111, -122.57")
