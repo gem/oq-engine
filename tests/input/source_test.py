@@ -15,7 +15,6 @@
 
 
 import decimal
-import pickle
 import unittest
 
 from nhlib import geo
