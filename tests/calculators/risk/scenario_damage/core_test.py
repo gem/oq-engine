@@ -22,7 +22,7 @@ from django.contrib.gis import geos
 
 from openquake import kvs
 from openquake.db import models
-from openquake.shapes import Site, GridPoint
+from openquake.shapes import Site
 from openquake.engine import JobContext
 from openquake.db.models import DmgDistPerAsset, DmgDistPerAssetData
 from openquake.kvs.tokens import ground_motion_values_key
@@ -324,7 +324,7 @@ class ScenarioDamageRiskCalculatorTestCase(
         client = kvs.get_client()
         encoder = json.JSONEncoder()
 
-        key = ground_motion_values_key(self.job.id, GridPoint(None, 0, 0))
+        key = ground_motion_values_key(self.job.id, self.site)
 
         for gmv in gmvs:
             client.rpush(key, encoder.encode({"mag": gmv}))
