@@ -14,7 +14,7 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-:mod:`~nhlib.calc.gmf` exports :func:`ground_motion_fields`.
+Module :mod:`~nhlib.calc.gmf` exports :func:`ground_motion_fields`.
 """
 import numpy
 import scipy.stats
@@ -26,7 +26,10 @@ from nhlib.calc import filters
 def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
                          rupture_site_filter=filters.rupture_site_noop_filter):
     """
-    TODO: write me
+    Given an earthquake rupture, the ground motion field calculator computes
+    ground shaking over a set of sites, by randomly sampling a ground shaking
+    intensity model. A ground motion field represents a possible 'realization'
+    of the ground shaking due to an earthquake rupture.
 
     :param nhlib.source.rupture.Rupture rupture:
         Rupture to calculate ground motion fields radiated from.
