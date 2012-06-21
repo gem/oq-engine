@@ -31,6 +31,9 @@ from django.contrib.gis.db import models as djm
 #: regex for splitting string lists on whitespace and/or commas
 ARRAY_RE = re.compile('[\s,]+')
 
+# Disable pylint for 'Too many public methods'
+# pylint: disable=R0904
+
 
 class FloatArrayFormField(forms.Field):
     """Form field for properly handling float arrays/lists."""
