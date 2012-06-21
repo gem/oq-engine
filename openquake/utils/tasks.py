@@ -110,7 +110,7 @@ def get_running_job(job_id):
     :class:`openquake.engine.JobContext` object.
 
     If the calculation is not currently running, a
-    :exception:`JobCompletedError` is raised.
+    :exc:`JobCompletedError` is raised.
 
     :returns:
         :class:`openquake.engine.JobContext` object, representing an

@@ -300,7 +300,7 @@ class SourceDBWriter(object):
     The source object data will be stored in the database in pickled blob form.
     The `hzrdi.parsed_source.polygon` field will contain the "rupture
     enclosing" polygon. We use NHLib to generate this polygon. (See
-    :method:`nhlib.source.base.SeismicSource.get_rupture_enclosing_polygon`.)
+    :meth:`nhlib.source.base.SeismicSource.get_rupture_enclosing_polygon`.)
 
     :param inp:
         :class:`~openquake.db.models.Input` object, the top-level container for
