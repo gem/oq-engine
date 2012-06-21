@@ -95,6 +95,7 @@ class HazardEngineTestCase(unittest.TestCase):
             except OSError:
                 pass
 
+    @helpers.skipit
     def test_generate_hazard_curves_using_classical_psha(self):
 
         def verify_realization_haz_curves_stored_to_kvs(the_job, keys):
