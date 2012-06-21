@@ -279,7 +279,7 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.job_stats to oq_job_superv;
 
 -- uiapi.hazard_job_profile
 GRANT SELECT ON uiapi.hazard_job_profile TO GROUP openquake;
-GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.hazard_job_profile TO oq_job_init;
+GRANT SELECT,INSERT,DELETE ON uiapi.hazard_job_profile TO oq_job_init;
 
 -- uiapi.oq_job_profile
 GRANT SELECT ON uiapi.oq_job_profile TO GROUP openquake;
