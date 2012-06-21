@@ -65,6 +65,7 @@ class DisaggregationFuncsTestCase(unittest.TestCase):
 class DisaggregationTaskTestCase(unittest.TestCase):
     """Tests for the disaggregation matrix computation task."""
 
+    @helpers.skipit
     def test_compute_disagg_matrix(self):
         # Test the core function of the main disaggregation task.
 
@@ -98,6 +99,7 @@ class DisaggregationTaskTestCase(unittest.TestCase):
         # For clean up, delete the hdf5 we generated.
         os.unlink(matrix_path)
 
+    @helpers.skipit
     def test_compute_disagg_matrix_calls_site_model_fns(self):
         # Test that `compute_disagg_matrix` calls the required site model
         # functions when the configuration defines a site model.

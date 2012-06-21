@@ -16,16 +16,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-# Disable 'Missing docstring' warnings because of all of the Meta classes.
-# pylint: disable=C0111
-# Disable 'Too many lines in module'
-# pylint: disable=C0302
+# Disable:
+# - 'Maximum number of public methods for a class'
+# - 'Missing docstring' (because of all of the model Meta)
+# - 'Too many lines in module'
+# pylint: disable=R0904,C0111,C0302
 
 '''
 Model representations of the OpenQuake DB tables.
 '''
 
 import os
+import re
 try:
     import cPickle as pickle
 except ImportError:
@@ -33,6 +35,7 @@ except ImportError:
 from collections import namedtuple
 from datetime import datetime
 
+from django import forms
 from django.contrib.gis.db import models as djm
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
@@ -166,7 +169,56 @@ def model_equals(model_a, model_b, ignore=None):
     return True
 
 
-class FloatArrayField(djm.Field):  # pylint: disable=R0904
+class FloatArrayFormField(forms.Field):
+    """Form field for properly handling float arrays/lists."""
+
+    #: regex for splitting string lists on whitespace or commas
+    ARRAY_RE = re.compile('[\s,]+')
+
+    def clean(self, value):
+        """Try to coerce either a string list of values (separated by
+        whitespace and/or commas or a list/tuple of values to a list of
+        floats. If unsuccessful, raise a
+        :exception:`django.forms.ValidationError`
+        """
+        if isinstance(value, (tuple, list)):
+            try:
+                value = [float(x) for x in value]
+            except (TypeError, ValueError):
+                raise forms.ValidationError(
+                    'Could not coerce sequence values to `float` values'
+                )
+        elif isinstance(value, str):
+            # it could be a string list, like this: "1, 2,3 , 4 5"
+            # try to convert it to a an actual list of floats
+            try:
+                value = [float(x) for x in self.ARRAY_RE.split(value)]
+            except ValueError:
+                raise forms.ValidationError(
+                    'Could not coerce `str` to a list of `float` values'
+                )
+        else:
+            raise forms.ValidationError(
+                'Could not convert value to `list` of `float` values: %s'
+                % value
+            )
+        return value
+
+
+class PickleFormField(forms.Field):
+    """Form field for Python objects which are pickle and saved to the
+    database."""
+
+    def clean(self, value):
+        """We assume that the Python value specified for this field is exactly
+        what we want to pickle and save to the database.
+
+        The value will not modified.
+        """
+        return value
+
+
+class FloatArrayField(djm.Field):
     """This field models a postgres `float` array."""
 
     def db_type(self, connection):
@@ -178,8 +230,16 @@ class FloatArrayField(djm.Field):  # pylint: disable=R0904
         else:
             return None
 
+    def formfield(self, **kwargs):
+        """Specify a custom form field type so forms know how to handle fields
+        of this type.
+        """
+        defaults = {'form_class': FloatArrayFormField}
+        defaults.update(kwargs)
+        return super(FloatArrayField, self).formfield(**defaults)
 
-class CharArrayField(djm.Field):  # pylint: disable=R0904
+
+class CharArrayField(djm.Field):
     """This field models a postgres `varchar` array."""
 
     def db_type(self, _connection):
@@ -228,6 +288,15 @@ class PickleField(djm.Field):
     def get_prep_value(self, value):
         """Pickle the value."""
         return bytearray(pickle.dumps(value, pickle.HIGHEST_PROTOCOL))
+
+    def formfield(self, **kwargs):
+        """Specify a custom form field type so forms don't treat this as a
+        default type (such as a string). Any Python object is valid for this
+        field type.
+        """
+        defaults = {'form_class': PickleFormField}
+        defaults.update(kwargs)
+        return super(PickleField, self).formfield(**defaults)
 
 
 ## Tables in the 'admin' schema.
@@ -430,7 +499,6 @@ class Input(djm.Model):
         (u'fragility', u'Fragility'),
         (u'vulnerability', u'Vulnerability'),
         (u'vulnerability_retrofitted', u'Vulnerability Retroffited'),
-        (u'rupture', u'Rupture'),
         (u'site_model', u'Site Model'),
     )
     input_type = djm.TextField(choices=INPUT_TYPE_CHOICES)
@@ -566,9 +634,136 @@ class Job2profile(djm.Model):
     '''
     oq_job = djm.ForeignKey('OqJob')
     oq_job_profile = djm.ForeignKey('OqJobProfile')
+    hazard_job_profile = djm.ForeignKey('HazardJobProfile')
 
     class Meta:
         db_table = 'uiapi\".\"job2profile'
+
+
+class HazardJobProfile(djm.Model):
+    '''
+    Parameters need to run a Hazard job.
+    '''
+    owner = djm.ForeignKey('OqUser')
+
+    #####################
+    # General parameters:
+    #####################
+
+    # A description for this config profile which is meaningful to a user.
+    description = djm.TextField(default='', blank=True)
+    # TODO:
+    #force_inputs = djm.BooleanField(
+    #    default=False, help_text="whether the model inputs should be parsed "
+    #    "and their content be written to the db no matter what")
+    CALC_MODE_CHOICES = (
+        (u'classical', u'Classical PSHA'),
+    )
+    calculation_mode = djm.TextField(choices=CALC_MODE_CHOICES)
+    # For the calculation geometry, choose either `region` (with
+    # `region_grid_spacing`) or `sites`.
+    region = djm.PolygonField(srid=4326, null=True, blank=True)
+    # Discretization parameter for a `region`. Units in degrees.
+    region_grid_spacing = djm.FloatField(null=True, blank=True)
+    # The points of interest for a calculation.
+    sites = djm.MultiPointField(srid=4326, null=True, blank=True)
+
+    ########################
+    # Logic Tree parameters:
+    ########################
+    random_seed = djm.IntegerField()
+    number_of_logic_tree_samples = djm.IntegerField()
+
+    ###############################################
+    # ERF (Earthquake Rupture Forecast) parameters:
+    ###############################################
+    rupture_mesh_spacing = djm.FloatField(
+        help_text=('Rupture mesh spacing (in kilometers) for simple/complex '
+                   'fault sources rupture discretization'),
+    )
+    width_of_mfd_bin = djm.FloatField(
+        help_text=('Truncated Gutenberg-Richter MFD (Magnitude Frequency'
+              'Distribution) bin width'),
+    )
+    area_source_discretization = djm.FloatField(
+        help_text='Area Source Disretization, in kilometers',
+    )
+
+    ##################
+    # Site parameters:
+    ##################
+    # If there is no `site_model`, these 4 parameters must be specified:
+    reference_vs30_value = djm.FloatField(
+        help_text='Shear wave velocity in the uppermost 30 m. In m/s.',
+        null=True,
+        blank=True,
+    )
+    VS30_TYPE_CHOICES = (
+        (u'measured', u'Measured'),
+        (u'inferred', u'Inferred'),
+    )
+    reference_vs30_type = djm.TextField(
+        choices=VS30_TYPE_CHOICES,
+        null=True,
+        blank=True,
+    )
+    reference_depth_to_2pt5km_per_sec = djm.FloatField(
+        help_text='Depth to where shear-wave velocity = 2.5 km/sec. In km.',
+        null=True,
+        blank=True,
+    )
+    reference_depth_to_1pt0km_per_sec = djm.FloatField(
+        help_text='Depth to where shear-wave velocity = 1.0 km/sec. In m.',
+        null=True,
+        blank=True,
+    )
+
+    #########################
+    # Calculation parameters:
+    #########################
+    investigation_time = djm.FloatField(
+        help_text=('Time span (in years) for probability of exceedance '
+                   'calculation'),
+    )
+    intensity_measure_types_and_levels = PickleField(
+        help_text=(
+            'Dictionary containing for each intensity measure type ("PGA", '
+            '"PGV", "PGD", "SA", "IA", "RSD", "MMI"), the list of intensity '
+            'measure levels for calculating probability of exceedence'),
+    )
+    truncation_level = djm.FloatField(
+        help_text='Level for ground motion distribution truncation',
+    )
+    maximum_distance = djm.FloatField(
+        help_text=('Maximum distance (in km) of sources to be considered in '
+                   'the probability of exceedance calculation. Sources more '
+                   'than this distance away (from the sites of interest) are '
+                   'ignored.'),
+    )
+
+    ################################
+    # Output/post-processing params:
+    ################################
+    mean_hazard_curves = djm.NullBooleanField(
+        help_text='Compute mean hazard curves',
+        null=True,
+        blank=True,
+    )
+    quantile_hazard_curves = FloatArrayField(
+        help_text='Compute quantile hazard curves',
+        null=True,
+        blank=True,
+    )
+    poes_hazard_maps = FloatArrayField(
+        help_text=('PoEs (probabilities of exceedence) to be used for '
+                   'computing hazard maps (from individual curves, mean and '
+                   'quantile curves if calculated)'),
+        null=True,
+        blank=True,
+    )
+
+    class Meta:
+        db_table = 'uiapi\".\"hazard_job_profile'
 
 
 class OqJobProfile(djm.Model):
