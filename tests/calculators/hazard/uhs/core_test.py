@@ -70,6 +70,7 @@ class UHSCoreTestCase(UHSBaseTestCase):
                 0.6185688023781438,
                 0.11843417899553109])]
 
+    @helpers.skipit
     def test_compute_uhs(self):
         # Test the :function:`openquake.hazard.uhs.core.compute_uhs`
         # function. This function makes use of the Java `UHSCalculator` and
@@ -93,6 +94,7 @@ class UHSCoreTestCase(UHSBaseTestCase):
             self.assertTrue(numpy.allclose(self.UHS_RESULTS[i][1],
                                            [x.value for x in uhs]))
 
+    @helpers.skipit
     def test_compute_uhs_with_site_model(self):
         the_job = helpers.prepare_job_context(
             helpers.demo_file('uhs/config_with_site_model.gem'))
@@ -285,6 +287,7 @@ class UHSCalculatorTestCase(UHSBaseTestCase):
         # So, the expected total is 1.
         self.assertEqual(1, task_total())
 
+    @helpers.skipit
     def test_pre_execute(self):
         # Simply tests that `pre_execute` calls `write_uh_spectra`.
         # That's all for now.
