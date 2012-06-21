@@ -130,7 +130,7 @@ def model_equals(model_a, model_b, ignore=None):
     :param ignore:
         Optional. A list or tuple of attribute names (as strings) to ignore in
         the comparison. For example::
-            ('id', 'last_updated')
+        ('id', 'last_updated')
 
     :returns:
         `True` if the contents each model object are equal, taking into account
