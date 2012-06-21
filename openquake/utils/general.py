@@ -70,7 +70,7 @@ def block_splitter(data, block_size):
     :param int block_size:
         Maximum size for each slice. Must be greater than 0.
     :raises:
-        :exception:`ValueError` of the ``block_size`` is <= 0.
+        :exc:`ValueError` of the ``block_size`` is <= 0.
     """
     if block_size <= 0:
         raise ValueError(
