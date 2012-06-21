@@ -24,7 +24,6 @@ from openquake.db import fields
 
 class FloatArrayFormFieldTestCase(unittest.TestCase):
 
-
     def setUp(self):
         self.form_field = fields.FloatArrayFormField()
 
