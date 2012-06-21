@@ -1013,7 +1013,7 @@ class LogicTreeProcessor(object):
         )
         smlt_content = smlt_input.input.model_content.raw_content
         gmpelt_input = models.Input2job.objects.get(
-            oq_job=job_id, input__input_type='lt_gmpe'
+            oq_job=job_id, input__input_type='lt_gsim'
         )
         gmpelt_content = gmpelt_input.input.model_content.raw_content
         self.source_model_lt = SourceModelLogicTree(
