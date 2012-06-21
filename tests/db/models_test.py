@@ -18,7 +18,6 @@ import itertools
 import string
 import unittest
 
-from django import forms
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
 from openquake import engine

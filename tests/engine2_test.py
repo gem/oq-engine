@@ -77,7 +77,7 @@ class PrepareUserTestCase(unittest.TestCase):
             0, len(models.OqUser.objects.filter(user_name=user_name))
         )
 
-        user = engine2.prepare_user(user_name)
+        engine2.prepare_user(user_name)
 
         # Now the user should exist.
         self.assertEqual(
