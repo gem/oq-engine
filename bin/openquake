@@ -88,8 +88,11 @@ def set_up_arg_parser():
 
     calc_grp = parser.add_argument_group('Run calculations')
     calc_grp.add_argument(
+        '--run-hazard', help='run a hazard job with the specified config file',
+        metavar='CONFIG_FILE')
+    calc_grp.add_argument(
         '--config-file', '--config_file',
-        help='run a calculation with the specifed config file',
+        help='(DEPRECATED) run a calculation with the specifed config file',
         metavar='CONFIG_FILE')
     calc_grp.add_argument(
         '--output-type', '--output_type',
@@ -175,6 +178,40 @@ if __name__ == '__main__':
 
     if args.version:
         print utils_version.info(__version__)
+    elif args.run_hazard is not None:
+        from openquake import engine2
+        from openquake.job import validation
+
+        try:
+            if args.log_file is not None:
+                try:
+                    _touch_log_file(args.log_file)
+                except IOError as e:
+                    raise IOError('Error writing to log file %s: %s'
+                                  % (args.log_file, e.strerror))
+
+            job = engine2.prepare_job(getpass.getuser())
+            params, files = engine2.parse_config(
+                open(args.run_hazard, 'r'), force_inputs=args.force_inputs)
+            profile = engine2.create_hazard_job_profile(params, job.owner)
+            job.hazard_job_profile = profile
+            job.save()
+
+            # Validate the job:
+            form = validation.ClassicalHazardJobForm(instance=profile, files=files)
+            # For now, just print whether or not the job is valid.
+            if form.is_valid():
+                print 'Job configuration is valid'
+            else:
+                print 'Job configuration is not valid. Errors: %s' % dict(form.errors)
+
+            # Initialize the supervisor, instantiate the calculator,
+            # and run the calculation.
+            engine2.run_hazard(job)
+        except IOError as e:
+            print str(e)
+        except Exception as e:
+            raise
     elif args.config_file is not None:
         from openquake import job
         from openquake import engine
