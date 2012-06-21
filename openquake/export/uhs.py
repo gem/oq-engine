@@ -53,7 +53,7 @@ def _point_to_ds_name(point):
     >>> _point_to_ds_name(pt)
     'lon:-179.45-lat:-20.75'
 
-    This function uses :function:`openquake.utils.round_float` to round
+    This function uses :func:`openquake.utils.round_float` to round
     coordinate values. Thus, any coordinate value with more than 7 digits after
     the decimal will be rounded to 7 digits:
 
@@ -164,7 +164,7 @@ def touch_result_hdf5_file(target_dir, poe, ds_names, n_realizations,
 
 def write_uhs_data(hdf5_file, uhs_data):
     """Given a path to an empty UHS HDF5 file (see
-    :function:`touch_result_hdf5_file`), write data (spectral acceleration
+    :func:`touch_result_hdf5_file`), write data (spectral acceleration
     values) into the correct row in the correct dataset.
 
     :param str h5df_file:
