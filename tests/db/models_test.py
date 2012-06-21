@@ -18,6 +18,7 @@ import itertools
 import string
 import unittest
 
+from django import forms
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
 from openquake import engine
@@ -217,3 +218,43 @@ class Inputs4JobTestCase(unittest.TestCase):
         self.assertEqual(
             [inp2],
             models.inputs4job(self.job.id, input_type="source", path=path))
+
+
+class FloatArrayFormFieldTestCase(unittest.TestCase):
+
+    def setUp(self):
+        self.form_field = models.FloatArrayFormField()
+
+    def test_clean(self):
+        # a general succesful case with some mixed input which can be cast to
+        # floats
+        value = [0.0, 1, -17L, '5.1']
+
+        expected = [0.0, 1.0, -17.0, 5.1]
+
+        self.assertEqual(expected, self.form_field.clean(value))
+
+    def test_clean_empty_list(self):
+        self.assertEqual([], self.form_field.clean([]))
+
+    def test_clean_no_list_tuple_or_string(self):
+        value = object()
+
+        self.assertRaises(forms.ValidationError, self.form_field.clean, value)
+
+    def test_clean_list_of_non_floats(self):
+        value = ['a', 5]
+
+        self.assertRaises(forms.ValidationError, self.form_field.clean, value)
+
+    def test_clean_str_list(self):
+        value = '1.1 -5.78, 0 ,  7'
+
+        expected = [1.1, -5.78, 0.0, 7.0]
+
+        self.assertEqual(expected, self.form_field.clean(value))
+
+    def test_clean_str_list_invalid(self):
+        value = 'a 5'
+
+        self.assertRaises(forms.ValidationError, self.form_field.clean, value)
