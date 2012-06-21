@@ -217,8 +217,9 @@ class ScenarioDamageRiskCalculator(general.BaseRiskCalculator):
         ddt_fractions = {}
 
         for site in block.sites:
-            point = self.job_ctxt.region.grid.point_at(site)
-            gmf = general.load_gmvs_at(self.job_ctxt.job_id, point)
+            gmf = general.load_gmvs_at(self.job_ctxt.job_id,
+                    general.hazard_input_site(
+                    self.job_ctxt, site))
 
             assets = general.BaseRiskCalculator.assets_at(
                 self.job_ctxt.job_id, site)
