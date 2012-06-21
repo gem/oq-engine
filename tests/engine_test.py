@@ -60,7 +60,7 @@ class EngineAPITestCase(unittest.TestCase):
             owner=helpers.default_user(),
             path=os.path.abspath(helpers.demo_file(
                 'HazardMapTest/gmpe_logic_tree.xml')),
-            input_type='lt_gmpe', size=776,
+            input_type='lt_gsim', size=776,
             digest="aa4a5ccf61553f7be22ec4f9eabe43b4")
 
         src_model_input = models.Input(
@@ -71,7 +71,7 @@ class EngineAPITestCase(unittest.TestCase):
             digest="68bbbc82682e99b1b2c3c33cbbf57c54")
 
         expected_inputs_map = dict(
-            lt_source=smlt_input, lt_gmpe=gmpelt_input, source=src_model_input)
+            lt_source=smlt_input, lt_gsim=gmpelt_input, source=src_model_input)
 
         expected_jp = models.OqJobProfile(
             owner=owner,
@@ -482,7 +482,7 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
 
     def setUp(self):
         # md5sum digest incorrect
-        self.glt_i = models.Input(input_type="lt_gmpe", size=123,
+        self.glt_i = models.Input(input_type="lt_gsim", size=123,
                                   path=self.GLT, owner=self.old_job.owner,
                                   digest="0" * 32)
         self.glt_i.save()
@@ -509,7 +509,7 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
         # A new input record is inserted for the GMPE logic tree but the
         # existing input row is reused for the source model logic tree.
         engine._insert_input_files(self.PARAMS, self.job, False)
-        [glt_i] = models.inputs4job(self.job.id, input_type="lt_gmpe")
+        [glt_i] = models.inputs4job(self.job.id, input_type="lt_gsim")
         self.assertNotEqual(self.glt_i.id, glt_i.id)
         [slt_i] = models.inputs4job(self.job.id, input_type="lt_source")
         self.assertEqual(self.slt_i.id, slt_i.id)
@@ -539,7 +539,7 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
 
         engine._insert_input_files(self.PARAMS, self.job, True)
         [slt] = models.inputs4job(self.job.id, input_type="lt_source")
-        [glt] = models.inputs4job(self.job.id, input_type="lt_gmpe")
+        [glt] = models.inputs4job(self.job.id, input_type="lt_gsim")
 
         self.assertEqual('xml', slt.model_content.content_type)
         self.assertEqual(slt_content, slt.model_content.raw_content)
@@ -558,7 +558,7 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
         params = dict(GMPE_LOGIC_TREE_FILE=test_file, BASE_PATH='/')
         engine._insert_input_files(params, self.job, True)
 
-        [glt] = models.inputs4job(self.job.id, input_type="lt_gmpe")
+        [glt] = models.inputs4job(self.job.id, input_type="lt_gsim")
         self.assertEqual('html', glt.model_content.content_type)
 
     def test_model_content_unknown_content_type(self):
@@ -567,5 +567,5 @@ class InsertInputFilesTestCase(unittest.TestCase, helpers.DbTestCase):
         params = dict(GMPE_LOGIC_TREE_FILE=test_file, BASE_PATH='/')
         engine._insert_input_files(params, self.job, True)
 
-        [glt] = models.inputs4job(self.job.id, input_type="lt_gmpe")
+        [glt] = models.inputs4job(self.job.id, input_type="lt_gsim")
         self.assertEqual('unknown', glt.model_content.content_type)

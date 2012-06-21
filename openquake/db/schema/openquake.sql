@@ -211,12 +211,12 @@ CREATE TABLE uiapi.input (
     -- Input file type, one of:
     --      source model file (source)
     --      source logic tree (lt_source)
-    --      GMPE logic tree (lt_gmpe)
+    --      GSIM logic tree (lt_gsim)
     --      exposure file (exposure)
     --      vulnerability file (vulnerability)
     --      rupture file (rupture)
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
-        CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gmpe',
+        CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gsim',
                              'exposure', 'fragility', 'rupture',
                              'vulnerability', 'vulnerability_retrofitted',
                              'site_model')),
@@ -241,6 +241,7 @@ CREATE TABLE uiapi.model_content (
 CREATE TABLE uiapi.oq_job (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
+    hazard_job_profile_id INTEGER,  -- FK to uiapi.hazard_job_profile
     description VARCHAR NOT NULL DEFAULT '',
     -- The full path of the location where the input files for the calculation
     -- engine reside. This is used internally by openquake-server, can probably
@@ -933,7 +934,6 @@ CREATE TABLE uiapi.job2profile (
     id SERIAL PRIMARY KEY,
     oq_job_id INTEGER NOT NULL,
     oq_job_profile_id INTEGER NOT NULL,
-    hazard_job_profile_id INTEGER,
     UNIQUE (oq_job_id)
 ) TABLESPACE uiapi_ts;
 
@@ -1451,6 +1451,10 @@ FOREIGN KEY (surface_id) REFERENCES eqcat.surface(id) ON DELETE RESTRICT;
 ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
+ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_hazard_job_profile_fk
+FOREIGN KEY (hazard_job_profile_id) REFERENCES uiapi.hazard_job_profile(id)
+ON DELETE RESTRICT;
+
 ALTER TABLE uiapi.hazard_job_profile ADD CONSTRAINT uiapi_hazard_job_profile_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
@@ -1475,10 +1479,6 @@ FOREIGN KEY (lt_src_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
 ALTER TABLE uiapi.job2profile ADD CONSTRAINT
 uiapi_job2profile_oq_job_profile_fk FOREIGN KEY (oq_job_profile_id) REFERENCES
 uiapi.oq_job_profile(id) ON DELETE RESTRICT;
-
-ALTER TABLE uiapi.job2profile ADD CONSTRAINT
-uiapi_job2profile_hazard_job_profile_fk FOREIGN KEY (hazard_job_profile_id)
-REFERENCES uiapi.hazard_job_profile(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.job2profile ADD CONSTRAINT uiapi_job2profile_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
