@@ -77,9 +77,10 @@ class GMFCalcNoCorrelationTestCase(unittest.TestCase):
                 if gsim.expect_stddevs:
                     self.assertEqual(stddev_types, [const.StdDev.INTER_EVENT,
                                                     const.StdDev.INTRA_EVENT])
+                    return mean.copy(), [std_inter.copy(), std_intra.copy()]
                 else:
                     self.assertEqual(stddev_types, [])
-                return mean, [std_inter, std_intra]
+                    return mean.copy(), []
 
         def rupture_site_filter(rupture_site_gen):
             [(rupture, sites)] = rupture_site_gen
@@ -94,32 +95,29 @@ class GMFCalcNoCorrelationTestCase(unittest.TestCase):
     def test_no_filtering_no_truncation(self):
         truncation_level = None
         numpy.random.seed(3)
-        num_samples = 400
-        intensity = []
-        for i in xrange(num_samples):
-            gmfs = ground_motion_fields(self.rupture, self.sites,
-                                        [self.imt1, self.imt2], self.gsim,
-                                        truncation_level)
-            intensity.append(gmfs[self.imt1])
-            intensity.append(gmfs[self.imt2])
-        intensity = numpy.array(intensity).transpose()
+        realizations = 2000
+        gmfs = ground_motion_fields(self.rupture, self.sites,
+                                    [self.imt2], self.gsim,
+                                    truncation_level,
+                                    realizations=realizations)
+        intensity = gmfs[self.imt2]
 
         assert_allclose((intensity[0].mean(), intensity[0].std()),
-                        (self.mean1, self.stddev1), rtol=5e-2)
+                        (self.mean1, self.stddev1), rtol=4e-2)
         assert_allclose((intensity[1].mean(), intensity[1].std()),
-                        (self.mean2, self.stddev2), rtol=5e-2)
+                        (self.mean2, self.stddev2), rtol=4e-2)
         assert_allclose((intensity[2].mean(), intensity[2].std()),
-                        (self.mean3, self.stddev3), rtol=5e-2)
+                        (self.mean3, self.stddev3), rtol=4e-2)
 
         assert_allclose((intensity[3].mean(), intensity[3].std()),
-                        (self.mean4567, self.stddev45), rtol=5e-2)
+                        (self.mean4567, self.stddev45), rtol=4e-2)
         assert_allclose((intensity[4].mean(), intensity[4].std()),
-                        (self.mean4567, self.stddev45), rtol=5e-2)
+                        (self.mean4567, self.stddev45), rtol=4e-2)
 
         assert_allclose((intensity[5].mean(), intensity[5].std()),
-                        (self.mean4567, self.stddev67), rtol=5e-2)
+                        (self.mean4567, self.stddev67), rtol=4e-2)
         assert_allclose((intensity[6].mean(), intensity[6].std()),
-                        (self.mean4567, self.stddev67), rtol=5e-2)
+                        (self.mean4567, self.stddev67), rtol=4e-2)
 
         # sites with zero inter-event stddev, should give exactly the same
         # result, since intra-event distribution is sampled only once
@@ -130,16 +128,12 @@ class GMFCalcNoCorrelationTestCase(unittest.TestCase):
     def test_no_filtering_with_truncation(self):
         truncation_level = 1.9
         numpy.random.seed(11)
-        num_samples = 400
-        intensity = []
-        for i in xrange(num_samples):
-            gmfs = ground_motion_fields(self.rupture, self.sites,
-                                        [self.imt1, self.imt2], self.gsim,
-                                        truncation_level)
-            intensity.append(gmfs[self.imt1])
-            intensity.append(gmfs[self.imt2])
-
-        intensity = numpy.array(intensity).transpose()
+        realizations = 400
+        gmfs = ground_motion_fields(self.rupture, self.sites,
+                                    [self.imt1], self.gsim,
+                                    realizations=realizations,
+                                    truncation_level=truncation_level)
+        intensity = gmfs[self.imt1]
 
         max_deviation1 = (self.inter1 + self.intra1) * truncation_level
         max_deviation2 = (self.inter2 + self.intra2) * truncation_level
@@ -181,36 +175,33 @@ class GMFCalcNoCorrelationTestCase(unittest.TestCase):
         self.gsim.expect_stddevs = False
         gmfs = ground_motion_fields(self.rupture, self.sites,
                                     [self.imt1, self.imt2], self.gsim,
-                                    truncation_level)
-        intensity = numpy.array([gmfs[self.imt1], gmfs[self.imt2]]).transpose()
-        for i in xrange(7):
-            self.assertEqual(intensity[i].std(), 0)
-        self.assertEqual(intensity[0].mean(), self.mean1)
-        self.assertEqual(intensity[1].mean(), self.mean2)
-        self.assertEqual(intensity[2].mean(), self.mean3)
-        self.assertEqual(intensity[3].mean(), self.mean4567)
-        self.assertEqual(intensity[4].mean(), self.mean4567)
-        self.assertEqual(intensity[5].mean(), self.mean4567)
-        self.assertEqual(intensity[6].mean(), self.mean4567)
+                                    realizations=100,
+                                    truncation_level=truncation_level)
+        for intensity in gmfs[self.imt1], gmfs[self.imt2]:
+            for i in xrange(7):
+                self.assertEqual(intensity[i].std(), 0)
+            self.assertEqual(intensity[0].mean(), self.mean1)
+            self.assertEqual(intensity[1].mean(), self.mean2)
+            self.assertEqual(intensity[2].mean(), self.mean3)
+            self.assertEqual(intensity[3].mean(), self.mean4567)
+            self.assertEqual(intensity[4].mean(), self.mean4567)
+            self.assertEqual(intensity[5].mean(), self.mean4567)
+            self.assertEqual(intensity[6].mean(), self.mean4567)
 
     def test_filtered_no_truncation(self):
         numpy.random.seed(17)
-        num_samples = 50
-        intensity = []
+        realizations = 50
         self.gsim.expect_same_sitecol = False
-        for i in xrange(num_samples):
-            gmfs = ground_motion_fields(
-                self.rupture, self.sites, [self.imt1, self.imt2],
-                self.gsim, truncation_level=None,
-                rupture_site_filter=self.rupture_site_filter
-            )
-            intensity.append(gmfs[self.imt1])
-            intensity.append(gmfs[self.imt2])
-
-        intensity = numpy.array(intensity).transpose()
+        gmfs = ground_motion_fields(
+            self.rupture, self.sites, [self.imt1, self.imt2],
+            self.gsim, truncation_level=None,
+            realizations=realizations,
+            rupture_site_filter=self.rupture_site_filter
+        )
 
         for imt in [self.imt1, self.imt2]:
-            self.assertEqual(intensity.shape, (7, num_samples * 2))
+            intensity = gmfs[imt]
+            self.assertEqual(intensity.shape, (7, realizations))
             assert_array_equal(
                 intensity[(1 - self.sites.vs30measured).nonzero()], 0
             )
@@ -223,18 +214,20 @@ class GMFCalcNoCorrelationTestCase(unittest.TestCase):
         self.gsim.expect_same_sitecol = False
         gmfs = ground_motion_fields(
             self.rupture, self.sites, [self.imt1, self.imt2], self.gsim,
-            truncation_level=0, rupture_site_filter=self.rupture_site_filter
+            truncation_level=0, rupture_site_filter=self.rupture_site_filter,
+            realizations=100
         )
-        intensity = numpy.array([gmfs[self.imt1], gmfs[self.imt2]]).transpose()
-        for i in xrange(7):
-            self.assertEqual(intensity[i].std(), 0)
-        self.assertEqual(intensity[0].mean(), 0)
-        self.assertEqual(intensity[1].mean(), self.mean2)
-        self.assertEqual(intensity[2].mean(), 0)
-        self.assertEqual(intensity[3].mean(), self.mean4567)
-        self.assertEqual(intensity[4].mean(), 0)
-        self.assertEqual(intensity[5].mean(), self.mean4567)
-        self.assertEqual(intensity[6].mean(), 0)
+        for intensity in gmfs[self.imt1], gmfs[self.imt2]:
+            for i in xrange(7):
+                self.assertEqual(intensity[i].std(), 0)
+
+            self.assertEqual(intensity[0].mean(), 0)
+            self.assertEqual(intensity[1].mean(), self.mean2)
+            self.assertEqual(intensity[2].mean(), 0)
+            self.assertEqual(intensity[3].mean(), self.mean4567)
+            self.assertEqual(intensity[4].mean(), 0)
+            self.assertEqual(intensity[5].mean(), self.mean4567)
+            self.assertEqual(intensity[6].mean(), 0)
 
     def test_filter_all_out(self):
         def rupture_site_filter(rupture_site):
@@ -243,8 +236,10 @@ class GMFCalcNoCorrelationTestCase(unittest.TestCase):
             gmfs = ground_motion_fields(
                 self.rupture, self.sites, [self.imt1, self.imt2], self.gsim,
                 truncation_level=truncation_level,
+                realizations=123,
                 rupture_site_filter=rupture_site_filter
             )
-            intensity = numpy.array([gmfs[self.imt1],
-                                     gmfs[self.imt2]]).transpose()
-            assert_array_equal(intensity, 0)
+            self.assertEqual(gmfs[self.imt1].shape, (7, 123))
+            self.assertEqual(gmfs[self.imt2].shape, (7, 123))
+            assert_array_equal(gmfs[self.imt1], 0)
+            assert_array_equal(gmfs[self.imt2], 0)

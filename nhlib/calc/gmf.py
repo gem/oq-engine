@@ -24,6 +24,7 @@ from nhlib.calc import filters
 
 
 def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
+                         realizations,
                          rupture_site_filter=filters.rupture_site_noop_filter):
     """
     Given an earthquake rupture, the ground motion field calculator computes
@@ -43,18 +44,22 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     :param trunctation_level:
         Float, number of standard deviations for truncation of the intensity
         distribution, or ``None``.
+    :param realizations:
+        Integer number of GMF realizations to compute.
     :param rupture_site_filter:
         Optional rupture-site filter function. See :mod:`nhlib.calc.filters`.
 
     :returns:
         Dictionary mapping intensity measure type objects (same
-        as in parameter ``imts``) to 1d numpy arrays of float,
-        representing ground shaking intensity for all sites
-        in the collection.
+        as in parameter ``imts``) to 2d numpy arrays of floats,
+        representing different realizations of ground shaking intensity
+        for all sites in the collection. First dimension represents
+        sites and second one is for realizations.
     """
     ruptures_sites = list(rupture_site_filter([(rupture, sites)]))
     if not ruptures_sites:
-        return dict((imt, numpy.zeros(len(sites))) for imt in imts)
+        return dict((imt, numpy.zeros((len(sites), realizations)))
+                    for imt in imts)
 
     total_sites = len(sites)
     [(rupture, sites)] = ruptures_sites
@@ -66,6 +71,8 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         for imt in imts:
             mean, _stddevs = gsim.get_mean_and_stddevs(sctx, rctx, dctx, imt,
                                                        stddev_types=[])
+            mean.shape += (1, )
+            mean = mean.repeat(realizations, axis=1)
             result[imt] = sites.expand(mean, total_sites, placeholder=0)
         return result
 
@@ -80,8 +87,13 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         mean, [stddev_inter, stddev_intra] = gsim.get_mean_and_stddevs(
             sctx, rctx, dctx, imt, [StdDev.INTER_EVENT, StdDev.INTRA_EVENT]
         )
-        gmf = mean + stddev_inter * distribution.rvs(size=len(sites)) \
-                   + stddev_intra * distribution.rvs(size=1)
+        stddev_intra.shape += (1, )
+        stddev_inter.shape += (1, )
+        mean.shape += (1, )
+        intra_residual = stddev_intra * distribution.rvs(size=realizations)
+        inter_residual = stddev_inter * distribution.rvs(size=(len(sites),
+                                                               realizations))
+        gmf = mean + intra_residual + inter_residual
         result[imt] = sites.expand(gmf, total_sites, placeholder=0)
 
     return result
