@@ -112,7 +112,6 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
         form = validation.ClassicalHazardJobForm(instance=hjp, files=None)
         self.assertTrue(form.is_valid(), dict(form.errors))
 
-
     def test_hazard_job_profile_is_valid_with_site_model(self):
         hjp = models.HazardJobProfile(
             owner=helpers.default_user(),
@@ -199,7 +198,6 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
         )
         form = validation.ClassicalHazardJobForm(instance=hjp, files=None)
         self.assertTrue(form.is_valid(), dict(form.errors))
-
 
     def test_hazard_job_profile_is_not_valid_missing_geom(self):
         expected_errors = {
