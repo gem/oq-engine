@@ -108,15 +108,18 @@ bar = baz
         self.assertEqual(expected_params, params)
 
     def test_parse_config_with_files_force_inputs(self):
-        site_model_input = helpers.touch(content="foo")
+        site_model_input = helpers.touch(content="site model")
+        sm_lt_input = helpers.touch(content="source model logic tree")
+        gsim_lt_input = helpers.touch(content="gsim logic tree")
 
         source = StringIO.StringIO("""
-[general]
+[hazard_or_whatever]
 calculation_mode = classical
-[site]
+gsim_logic_tree_file = %s
+source_model_logic_tree_file = %s
 site_model_file = %s
 not_a_valid_file = foo.xml
-""" % site_model_input)
+""" % (gsim_lt_input, sm_lt_input, site_model_input))
 
         expected_params = {
             'calculation_mode': 'classical',
@@ -126,7 +129,12 @@ not_a_valid_file = foo.xml
         params, files = engine2.parse_config(source, force_inputs=True)
 
         expected_files = {
-            'site_model_file': models.Input.objects.latest('id'),
+            'site_model_file': models.Input.objects.filter(
+                input_type='site_model').latest('id'),
+            'source_model_logic_tree_file': models.Input.objects.filter(
+                input_type='lt_source').latest('id'),
+            'gsim_logic_tree_file': models.Input.objects.filter(
+                input_type='lt_gsim').latest('id'),
         }
 
         self.assertEqual(expected_params, params)
