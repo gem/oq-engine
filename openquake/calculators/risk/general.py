@@ -46,11 +46,10 @@ from openquake.db import models
 from openquake import kvs
 from openquake import logs
 from openquake import shapes
-from openquake.input.exposure import ExposureDBWriter
+from openquake.input import exposure as exposure_input
 from openquake.input.fragility import FragilityDBWriter
 from openquake.job import config as job_config
 from openquake.output import risk as risk_output
-from openquake.parser import exposure
 from openquake.parser import fragility
 from openquake.parser import vulnerability
 from openquake.utils import round_float
@@ -223,11 +222,9 @@ class BaseRiskCalculator(Calculator):
     def partition(self):
         """Split the sites to compute in blocks and store
         them in the underlying KVS system."""
-        # pylint: disable=W0404
-        from openquake import engine
 
         self.job_ctxt.blocks_keys = []  # pylint: disable=W0201
-        sites = engine.read_sites_from_exposure(self.job_ctxt)
+        sites = exposure_input.read_sites_from_exposure(self.job_ctxt)
 
         block_count = 0
 
@@ -241,16 +238,13 @@ class BaseRiskCalculator(Calculator):
                  len(sites), block_count)
 
     def store_exposure_assets(self):
-        """Load exposure assets and write them to database."""
-        [emi] = models.inputs4job(self.job_ctxt.job_id, "exposure")
-        if emi.exposuremodel_set.all().count() > 0:
-            return
+        """
+        Load exposure assets from input file and store them
+        into database, if necessary.
+        """
 
-        path = os.path.join(self.job_ctxt.base_path, emi.path)
-        exposure_parser = exposure.ExposureModelFile(path)
-        writer = ExposureDBWriter(emi)
-        writer.serialize(exposure_parser)
-        return emi.model()
+        exposure_input.store_exposure_assets(
+            self.job_ctxt.job_id, self.job_ctxt.base_path)
 
     def store_fragility_model(self):
         """Load fragility model and write it to database."""
@@ -1180,9 +1174,9 @@ class AggregateLossCurve(object):
         return _generate_curve(loss_range, probs_of_exceedance)
 
 
-def load_gmvs_at(job_id, point):
+def load_gmvs_at(job_id, site):
     """
-    From the KVS, load all the ground motion values for the given point. We
+    From the KVS, load all the ground motion values for the given site. We
     expect one ground motion value per realization of the job.
     Since there can be tens of thousands of realizations, this could return a
     large list.
@@ -1190,10 +1184,37 @@ def load_gmvs_at(job_id, point):
     Note(LB): In the future, we may want to refactor this (and the code which
     uses the values) to use a generator instead.
 
-    :param point: :py:class:`openquake.shapes.GridPoint` object
+    :param site: :py:class:`openquake.shapes.Site` object
 
     :returns: List of ground motion values (as floats). Each value represents a
-                realization of the calculation for a single point.
+                realization of the calculation for a single site.
     """
-    gmfs_key = kvs.tokens.ground_motion_values_key(job_id, point)
+    gmfs_key = kvs.tokens.ground_motion_values_key(job_id, site)
     return [float(x['mag']) for x in kvs.get_list_json_decoded(gmfs_key)]
+
+
+def hazard_input_site(job_ctxt, site):
+    """
+    Given a specific risk site (a location where we have
+    some assets defined), return the corresponding site
+    where to load hazard input from.
+
+    If the `COMPUTE_HAZARD_AT_ASSETS_LOCATIONS` parameter
+    is specified in the configuration file, the site is
+    exactly the site where the asset is defined. Otherwise it
+    is the center of the cell where the risk site falls in.
+
+    :param job_ctxt: the context of the running job.
+    :type job_ctxt: :class:`JobContext` instance
+    :param site: the risk site (a location where there
+        are some assets defined).
+    :type site: :class:`openquake.shapes.Site` instance
+    :returns: the location where the hazard must be
+        loaded from.
+    :rtype: :class:`openquake.shapes.Site` instance
+    """
+
+    if job_ctxt.has(job_config.COMPUTE_HAZARD_AT_ASSETS):
+        return site
+    else:
+        return job_ctxt.region.grid.point_at(site).site

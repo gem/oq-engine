@@ -15,8 +15,8 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
-
-"""The 'Engine' is responsible for instantiating calculators and running jobs.
+"""
+The engine is responsible for instantiating calculators and running jobs.
 """
 
 
@@ -35,10 +35,10 @@ from django.contrib.gis.geos import GEOSGeometry
 from django.core.exceptions import ObjectDoesNotExist
 
 
+from openquake.input import exposure
 from openquake.calculators.hazard import CALCULATORS as HAZ_CALCS
 from openquake.calculators.risk import CALCULATORS as RISK_CALCS
 from openquake.db.models import CharArrayField
-from openquake.db.models import ExposureData
 from openquake.db.models import FloatArrayField
 from openquake.db.models import Input
 from openquake.db.models import Input2job
@@ -262,7 +262,8 @@ class JobContext(object):
             print "COMPUTE_HAZARD_AT_ASSETS_LOCATIONS selected, " \
                 "computing hazard on exposure sites..."
 
-            self.sites = read_sites_from_exposure(self)
+            exposure.store_exposure_assets(self._job_id, self._base_path)
+            self.sites = exposure.read_sites_from_exposure(self)
         elif self.has(jobconf.SITES):
 
             coords = self._extract_coords(jobconf.SITES)
@@ -338,28 +339,6 @@ class JobContext(object):
                 job_stats.realizations = self["NUMBER_OF_LOGIC_TREE_SAMPLES"]
 
         job_stats.save()
-
-
-def read_sites_from_exposure(job_ctxt):
-    """Given a :class:`JobContext` object, get all of the sites in the exposure
-    model which are contained by the region of interest (defined in the
-    `JobContext`).
-
-    It is assumed that exposure model is already loaded into the database.
-
-    :param job_ctxt:
-        :class:`JobContext` instance.
-    :returns:
-        `list` of :class:`openquake.shapes.Site` objects, with no duplicates
-    """
-    em_inputs = inputs4job(job_ctxt.job_id, input_type="exposure")
-    exp_points = ExposureData.objects.filter(
-        exposure_model__input__id__in=[em.id for em in em_inputs],
-        site__contained=job_ctxt.oq_job_profile.region).values(
-            'site').distinct()
-
-    sites = [shapes.Site(p['site'].x, p['site'].y) for p in exp_points]
-    return sites
 
 
 # Too many local variables

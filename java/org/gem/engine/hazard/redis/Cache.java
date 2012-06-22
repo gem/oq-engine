@@ -24,6 +24,8 @@ import org.jredis.RedisException;
 import org.jredis.connector.ConnectionSpec;
 import org.jredis.ri.alphazero.JRedisClient;
 import org.jredis.ri.alphazero.connection.DefaultConnectionSpec;
+import static org.jredis.connector.Connection.Socket.Property.SO_TIMEOUT;
+
 
 /**
  * Store stuff in Redis.
@@ -70,6 +72,9 @@ public class Cache {
         connectionSpec.setAddress(addr.getAddress()).setPort(addr.getPort())
                 .setReconnectCnt(2) // # times to reconnect if we disconnected.
                 .setDatabase(db);
+
+        // The default timeout should be 10 seconds.
+        connectionSpec.setSocketProperty(SO_TIMEOUT, 60000);
 
         return connectionSpec;
     }

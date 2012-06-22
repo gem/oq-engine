@@ -96,6 +96,9 @@ class ExportDmgDistributionsTestCase(unittest.TestCase):
             [ototal] = models.Output.objects.filter(
                 oq_job=job.id, output_type="dmg_dist_total")
 
+            [omap] = models.Output.objects.filter(
+                oq_job=job.id, output_type="collapse_map")
+
             calcs = helpers.prepare_cli_output(subprocess.check_output(
                 ["bin/openquake", "--list-calculations"]))
 
@@ -106,9 +109,10 @@ class ExportDmgDistributionsTestCase(unittest.TestCase):
                 subprocess.check_output(["bin/openquake", "--list-outputs",
                 str(job.id)]))
 
-            # the damage distributios as output...
+            # the damage distributios and collapse map as output...
             check_list_outputs(self, outputs, oasset.id, "dmg_dist_per_asset")
             check_list_outputs(self, outputs, ototal.id, "dmg_dist_total")
+            check_list_outputs(self, outputs, omap.id, "collapse_map")
             check_list_outputs(self, outputs, otaxon.id,
                     "dmg_dist_per_taxonomy")
 
@@ -139,6 +143,16 @@ class ExportDmgDistributionsTestCase(unittest.TestCase):
 
             expected_file = os.path.join(export_target_dir,
                     "dmg-dist-total-%s.xml" % job.id)
+
+            self.assertEqual([expected_file], exports)
+
+            # and collapse map
+            exports = helpers.prepare_cli_output(
+                subprocess.check_output(["bin/openquake", "--export",
+                str(omap.id), export_target_dir]))
+
+            expected_file = os.path.join(export_target_dir,
+                    "collapse-map-%s.xml" % job.id)
 
             self.assertEqual([expected_file], exports)
         finally:

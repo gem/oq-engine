@@ -33,6 +33,15 @@ class ScenarioRiskQATest(unittest.TestCase):
     #: decimal places
     LOSSMAP_PRECISION = 4
 
+    def test_hazard_input_on_exposure_sites(self):
+        cfg = helpers.demo_file(
+            "scenario_risk/config_hzr_exposure.gem")
+
+        ret_code = helpers.run_job(cfg, ["--output-type=xml"])
+        self.assertEquals(0, ret_code)
+
+        self.assertEqual("succeeded", OqJob.objects.latest("id").status)
+
     def _verify_loss_map(self, path, expected_data):
         namespaces = dict(nrml=xml.NRML_NS, gml=xml.GML_NS)
         root = etree.parse(path)

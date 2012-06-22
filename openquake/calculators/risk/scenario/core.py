@@ -178,12 +178,11 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         sum_per_gmf = SumPerGroundMotionField(vuln_model, epsilon_provider)
 
         for site in block.sites:
-            point = self.job_ctxt.region.grid.point_at(site)
-
             # the scientific functions used below
             # require the gmvs to be wrapped in a dict with a single key, IMLs
             gmvs = {'IMLs': general.load_gmvs_at(
-                    self.job_ctxt.job_id, point)}
+                    self.job_ctxt.job_id, general.hazard_input_site(
+                    self.job_ctxt, site))}
 
             assets = general.BaseRiskCalculator.assets_at(
                 self.job_ctxt.job_id, site)

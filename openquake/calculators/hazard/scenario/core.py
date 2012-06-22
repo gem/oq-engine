@@ -45,8 +45,6 @@ class ScenarioHazardCalculator(BaseHazardCalculator):
         encoder = json.JSONEncoder()
         kvs_client = kvs.get_client()
 
-        grid = self.job_ctxt.region.grid
-
         for cnum in xrange(self._number_of_calculations()):
             gmf = self.compute_ground_motion_field(random_generator)
             imt = self.job_ctxt.params["INTENSITY_MEASURE_TYPE"]
@@ -54,10 +52,9 @@ class ScenarioHazardCalculator(BaseHazardCalculator):
 
             for gmv in gmf_to_dict(gmf, imt):
                 site = shapes.Site(gmv["site_lon"], gmv["site_lat"])
-                point = grid.point_at(site)
 
                 key = kvs.tokens.ground_motion_values_key(
-                    self.job_ctxt.job_id, point)
+                    self.job_ctxt.job_id, site)
                 kvs_client.rpush(key, encoder.encode(gmv))
 
     def _serialize_gmf(self, hashmap, imt, cnum):

@@ -28,6 +28,8 @@ from openquake.calculators.risk.general import BetaDistribution
 from openquake.calculators.risk.general import compute_alpha
 from openquake.calculators.risk.general import compute_beta
 from openquake.calculators.risk.general import load_gmvs_at
+from openquake.calculators.risk.general import hazard_input_site
+from openquake.job import config
 from openquake.db import models
 from openquake import engine
 from openquake import kvs
@@ -397,3 +399,32 @@ class LoadGroundMotionValuesTestCase(unittest.TestCase):
 
         actual_gmvs = load_gmvs_at(self.job_id, point)
         self.assertEqual(expected_gmvs, actual_gmvs)
+
+
+class HazardInputSiteTestCase(unittest.TestCase):
+
+    def test_hazard_input_is_the_exposure_site(self):
+        # when `COMPUTE_HAZARD_AT_ASSETS_LOCATIONS` is specified,
+        # the hazard must be looked up on the same risk location
+        # (the input parameter of the function)
+        params = {config.COMPUTE_HAZARD_AT_ASSETS: True}
+        job_ctxt = engine.JobContext(params, None)
+
+        self.assertEqual(shapes.Site(1.0, 1.0), hazard_input_site(
+                job_ctxt, shapes.Site(1.0, 1.0)))
+
+    def test_hazard_input_is_the_cell_center(self):
+        # when `COMPUTE_HAZARD_AT_ASSETS_LOCATIONS` is not specified,
+        # the hazard must be looked up on the center of the cell
+        # where the given site falls in
+        params = {config.INPUT_REGION: \
+            "1.0, 1.0, 2.0, 1.0, 2.0, 2.0, 1.0, 2.0",
+            config.REGION_GRID_SPACING: 0.5}
+
+        job_ctxt = engine.JobContext(params, None)
+
+        self.assertEqual(shapes.Site(1.0, 1.0), hazard_input_site(
+                job_ctxt, shapes.Site(1.2, 1.2)))
+
+        self.assertEqual(shapes.Site(1.5, 1.5), hazard_input_site(
+                job_ctxt, shapes.Site(1.6, 1.6)))
