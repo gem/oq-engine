@@ -16,6 +16,7 @@
 import numpy
 import os
 import unittest
+from nose.plugins.attrib import attr
 
 from lxml import etree
 from glob import glob
@@ -61,7 +62,7 @@ class ClassicalRiskQATestCase(unittest.TestCase):
             'classical_psha_based_risk/qa_config.gem')
         self._run_job(cfg)
 
-        exp_num_items = 43194
+        exp_num_items = 3815
         job = OqJob.objects.latest('id')
 
         lc_block_pattern = "%s/losscurves-block-#%s-block#*.xml" % (
