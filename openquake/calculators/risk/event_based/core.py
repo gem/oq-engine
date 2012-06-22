@@ -273,9 +273,9 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
 
         # aggregate the losses for this block
         aggregate_curve = general.AggregateLossCurve()
+        block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
+        points = list(block.grid(self.job_ctxt.region))
 
-        points = list(general.Block.from_kvs(
-            self.job_ctxt.job_id, block_id).grid(self.job_ctxt.region))
         gmf_slices = dict(
             (point.site, kvs.get_value_json_decoded(
                  kvs.tokens.gmf_set_key(self.job_ctxt.job_id, point.column,
@@ -299,13 +299,13 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
 
             return loss_ratio_curve.rescale_abscissae(asset.value)
 
-        result = general.compute_bcr_for_block(self.job_ctxt.job_id, points,
+        result = general.compute_bcr_for_block(self.job_ctxt, block.sites,
             get_loss_curve, float(self.job_ctxt.params['INTEREST_RATE']),
-            float(self.job_ctxt.params['ASSET_LIFE_EXPECTANCY'])
-        )
+            float(self.job_ctxt.params['ASSET_LIFE_EXPECTANCY']))
 
-        bcr_block_key = kvs.tokens.bcr_block_key(self.job_ctxt.job_id,
-                                                 block_id)
+        bcr_block_key = kvs.tokens.bcr_block_key(
+            self.job_ctxt.job_id, block_id)
+
         kvs.set_value_json_encoded(bcr_block_key, result)
         LOGGER.debug('bcr result for block %s: %r', block_id, result)
 
