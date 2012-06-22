@@ -17,6 +17,7 @@ import numpy
 import os
 import unittest
 from nose.plugins.attrib import attr
+from shutil import rmtree
 
 from lxml import etree
 from glob import glob
@@ -34,16 +35,6 @@ QA_OUTPUT_DIR = helpers.qa_file('classical_psha_based_risk/computed_output')
 
 class ClassicalRiskQATestCase(unittest.TestCase):
     """QA tests for the Classical Risk calculator."""
-
-    def tearDown(self):
-        # Removes file generated in the qa data folder if any.
-        filenames = [os.path.join(QA_OUTPUT_DIR,
-            filename) for filename in os.listdir(QA_OUTPUT_DIR)]
-        for filename in filenames:
-            try:
-                os.unlink(filename)
-            except OSError:
-                pass
 
     def test_classical_psha_based_risk(self):
         cfg = helpers.demo_file(
@@ -80,6 +71,9 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         self.assertEqual(exp_num_items, num_assets_lc_block_files)
         self.assertEqual(exp_num_items, num_assets_lc_lblock_files)
         self.assertEqual(exp_num_items, num_losses)
+
+        # Cleaning generated results file.
+        rmtree(QA_OUTPUT_DIR)
 
     def _compute_sum_items(self, item, pattern):
         fun = self._count_num_items_in_filename
