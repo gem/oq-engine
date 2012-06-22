@@ -16,8 +16,12 @@
 import numpy
 import os
 import unittest
+from nose.plugins.attrib import attr
+from shutil import rmtree
 
 from lxml import etree
+from glob import glob
+from itertools import repeat
 
 from openquake.db.models import OqJob
 from openquake.nrml.utils import nrml_schema_file
@@ -26,6 +30,7 @@ from openquake.xml import NRML_NS
 from tests.utils import helpers
 
 OUTPUT_DIR = helpers.demo_file('classical_psha_based_risk/computed_output')
+QA_OUTPUT_DIR = helpers.qa_file('classical_psha_based_risk/computed_output')
 
 
 class ClassicalRiskQATestCase(unittest.TestCase):
@@ -36,11 +41,55 @@ class ClassicalRiskQATestCase(unittest.TestCase):
             'classical_psha_based_risk/config.gem')
 
         self._run_job(cfg)
-        self._verify_job_succeeded()
+        self._verify_job_succeeded(OUTPUT_DIR)
 
         self._verify_loss_curve()
         self._verify_loss_ratio_curve()
         self._verify_loss_maps()
+
+    @attr('slow')
+    def test_verify_output_per_asset(self):
+        cfg = helpers.qa_file(
+            'classical_psha_based_risk/qa_config.gem')
+        self._run_job(cfg)
+
+        exp_num_items = 3815
+        job = OqJob.objects.latest('id')
+
+        lc_block_pattern = "%s/losscurves-block-#%s-block#*.xml" % (
+            QA_OUTPUT_DIR, job.id)
+        lc_lblock_pattern = "%s/losscurves-loss-block-#%s-block#*.xml" % (
+            QA_OUTPUT_DIR, job.id)
+        losses_at = "%s/losses_at-0.1.xml" % (QA_OUTPUT_DIR)
+
+        num_assets_lc_block_files = self._compute_sum_items(
+            'asset', lc_block_pattern)
+        num_assets_lc_lblock_files = self._compute_sum_items(
+            'asset', lc_lblock_pattern)
+        num_losses = self._compute_sum_items('loss', losses_at)
+
+        self.assertEqual(exp_num_items, num_assets_lc_block_files)
+        self.assertEqual(exp_num_items, num_assets_lc_lblock_files)
+        self.assertEqual(exp_num_items, num_losses)
+
+        # Cleaning generated results file.
+        rmtree(QA_OUTPUT_DIR)
+
+    def _compute_sum_items(self, item, pattern):
+        fun = self._count_num_items_in_filename
+        filenames = glob(pattern)
+        items = repeat(item, len(filenames))
+        items_per_filenames = [fun(item, pattern)
+                                for item, pattern in zip(items, filenames)]
+        return sum(items_per_filenames)
+
+    def _count_num_items_in_filename(self, item, filename):
+        schema = etree.XMLSchema(file=nrml_schema_file())
+        parser = etree.XMLParser(schema=schema)
+        root = etree.parse(filename, parser=parser).getroot()
+        exp = etree.XPath('count(//n:%s)' % item, namespaces={'n': NRML_NS})
+        num_items = exp(root)
+        return num_items
 
     def test_hazard_computed_on_exposure_sites(self):
         # slightly different configuration where we
@@ -50,7 +99,7 @@ class ClassicalRiskQATestCase(unittest.TestCase):
             "classical_psha_based_risk/config_hzr_exposure.gem")
 
         self._run_job(cfg)
-        self._verify_job_succeeded()
+        self._verify_job_succeeded(OUTPUT_DIR)
 
     def _verify_loss_maps(self):
         filename = "%s/losses_at-0.01.xml" % OUTPUT_DIR
@@ -126,7 +175,7 @@ class ClassicalRiskQATestCase(unittest.TestCase):
 
         self.assertTrue(numpy.allclose(expected_losses, losses))
 
-    def _verify_job_succeeded(self):
+    def _verify_job_succeeded(self, dir):
         job = OqJob.objects.latest('id')
         self.assertEqual('succeeded', job.status)
 
@@ -141,7 +190,7 @@ class ClassicalRiskQATestCase(unittest.TestCase):
         ]
 
         for f in expected_files:
-            self.assertTrue(os.path.exists(os.path.join(OUTPUT_DIR, f)))
+            self.assertTrue(os.path.exists(os.path.join(dir, f)))
 
     def _run_job(self, config):
         ret_code = helpers.run_job(config, ['--output-type=xml'])
