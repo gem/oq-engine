@@ -74,7 +74,7 @@ public class Cache {
                 .setDatabase(db);
 
         // The default timeout should be 10 seconds.
-        connectionSpec.setSocketProperty(SO_TIMEOUT, 10000);
+        connectionSpec.setSocketProperty(SO_TIMEOUT, 60000);
 
         return connectionSpec;
     }
