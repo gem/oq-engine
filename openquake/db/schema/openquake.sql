@@ -1460,8 +1460,15 @@ CREATE TABLE idata.source_progress (
 ) TABLESPACE idata_ts;
 
 CREATE TABLE idata.hazard_curve_progress (
+    -- This table will contain 1 record per IMT per logic tree realization
+    -- for a given calculation.
     id SERIAL PRIMARY KEY,
-    result_matrix BYTEA NOT NULL  -- stores a pickled numpy array for intermediate results
+    imt VARCHAR NOT NULL,
+    -- stores a pickled numpy array for intermediate results
+    -- array is 2d: sites x IMLs
+    -- each row indicates a site,
+    -- each column holds the PoE value for the IML at that index
+    result_matrix BYTEA NOT NULL
 ) TABLESPACE idata_ts;
 
 CREATE TABLE idata.site_data (
