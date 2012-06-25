@@ -22,6 +22,7 @@ CREATE SCHEMA oqmif;
 CREATE SCHEMA riski;
 CREATE SCHEMA riskr;
 CREATE SCHEMA uiapi;
+CREATE SCHEMA idata;
 
 
 
@@ -1433,6 +1434,44 @@ CREATE TABLE riski.ffd (
 ) TABLESPACE riski_ts;
 
 
+-- idata
+
+CREATE TABLE idata.lt_realization (
+    id SERIAL PRIMARY KEY,
+    hazard_calculation_id INTEGER NOT NULL,
+    site_data_id INTEGER NOT NULL,
+    ordinal INTEGER NOT NULL,
+    sm_lt_path VARCHAR NOT NULL,
+    gsim_lt_path VARCHAR NOT NULL,
+    seed INTEGER NOT NULL,
+    is_complete BOOLEAN DEFAULT FALSE,
+    total_sources INTEGER NOT NULL,
+    completed_sources INTEGER NOT NULL DEFAULT 0
+) TABLESPACE idata_ts;
+
+CREATE TABLE idata.source_progress (
+    id SERIAL PRIMARY KEY,
+    lt_realization_id INTEGER NOT NULL,
+    parsed_source_id INTEGER NOT NULL,
+    is_complete BOOLEAN NOT NULL DEFAULT FALSE
+) TABLESPACE idata_ts;
+
+CREATE TABLE idata.hazard_curve_progress (
+    id SERIAL PRIMARY KEY,
+    result_matrix BYTEA NOT NULL  -- stores a pickled numpy array for intermediate results
+) TABLESPACE idata_ts;
+
+CREATE TABLE idata.site_data (
+    id SERIAL PRIMARY KEY,
+    lons BYTEA NOT NULL,
+    lats BYTEA NOT NULL,
+    vs30s BYTEA NOT NULL,
+    vs30_types BYTEA NOT NULL,
+    z1pt0s BYTEA NOT NULL,
+    z2pt5s BYTEA NOT NULL
+) TABLESPACE idata_ts;
+
+
 ------------------------------------------------------------------------
 -- Constraints (foreign keys etc.) go here
 ------------------------------------------------------------------------
@@ -1675,3 +1714,31 @@ CASCADE;
 ALTER TABLE riski.ffc ADD CONSTRAINT riski_ffc_fragility_model_fk FOREIGN KEY
 (fragility_model_id) REFERENCES riski.fragility_model(id) ON DELETE
 CASCADE;
+
+-- idata.lt_realization to uiapi.hazard_calculation FK
+ALTER TABLE idata.lt_realization
+ADD CONSTRAINT idata_lt_realization_hazard_calculation_fk
+FOREIGN KEY (hazard_calculation_id)
+REFERENCES uiapi.hazard_calculation(id)
+ON DELETE CASCADE;
+
+-- idata.lt_realization to uiapi.site_data FK
+ALTER TABLE idata.lt_realization
+ADD CONSTRAINT idata_lt_realization_site_data_fk
+FOREIGN KEY (site_data_id)
+REFERENCES idata.site_data(id)
+ON DELETE RESTRICT;
+
+-- idata.source_progress to idata.lt_realization FK
+ALTER TABLE idata.source_progress
+ADD CONSTRAINT idata_source_progress_lt_realization_fk
+FOREIGN KEY (lt_realization_id)
+REFERENCES idata.lt_realization(id)
+ON DELETE CASCADE;
+
+-- idata.source_progress to hzrdi.parsed_source FK
+ALTER TABLE idata.source_progress
+ADD CONSTRAINT idata_source_progress_parsed_source_fk
+FOREIGN KEY (parsed_source_id)
+REFERENCES hzrdi.parsed_source(id)
+ON DELETE CASCADE;
