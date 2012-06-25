@@ -465,7 +465,7 @@ class OqJob(djm.Model):
         (u'post_processing', u'Post-Processing'),
         (u'complete', u'Complete'),
     )
-    status = djm.TextField(choices=STATUS_CHOICES, default='pre_execution')
+    status = djm.TextField(choices=STATUS_CHOICES, default='pre_executing')
     is_running = djm.BooleanField(default=False)
     duration = djm.IntegerField(default=0)
     job_pid = djm.IntegerField(default=0)
