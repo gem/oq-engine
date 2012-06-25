@@ -245,6 +245,9 @@ CREATE TABLE uiapi.oq_job (
     -- One of: pre_execution, executing, post_execution, post_processing, complete
     status VARCHAR NOT NULL DEFAULT 'pre_executing' CONSTRAINT job_status_value
         CHECK(status IN ('pre_executing', 'executing', 'post_executing', 'post_processing', 'complete')),
+    oq_version VARCHAR,
+    nhlib_version VARCHAR,
+    nrml_version VARCHAR,
     is_running BOOLEAN NOT NULL DEFAULT FALSE,
     duration INTEGER NOT NULL DEFAULT 0,
     job_pid INTEGER NOT NULL DEFAULT 0,
