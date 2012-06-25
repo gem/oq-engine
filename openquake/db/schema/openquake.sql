@@ -311,6 +311,13 @@ SELECT AddGeometryColumn('uiapi', 'hazard_calculation', 'region', 4326, 'POLYGON
 SELECT AddGeometryColumn('uiapi', 'hazard_calculation', 'sites', 4326, 'MULTIPOINT', 2);
 
 
+CREATE TABLE uiapi.input2haz_calc (
+    id SERIAL PRIMARY KEY,
+    input_id INTEGER NOT NULL,
+    hazard_calculation_id INTEGER NOT NULL
+) TABLESPACE uiapi_ts;
+
+
 -- The parameters needed for an OpenQuake engine run
 CREATE TABLE uiapi.oq_job_profile (
     id SERIAL PRIMARY KEY,
@@ -1457,6 +1464,12 @@ ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.hazard_calculation ADD CONSTRAINT uiapi_hazard_calculation_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.input2haz_calc ADD CONSTRAINT uiapi_input2haz_calc_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.input2haz_calc ADD CONSTRAINT uiapi_input2haz_calc_hazard_calculation_fk
+FOREIGN KEY (hazard_calculation_id) REFERENCES uiapi.hazard_calculation(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.oq_job_profile ADD CONSTRAINT uiapi_oq_job_profile_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
