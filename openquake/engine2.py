@@ -214,21 +214,21 @@ def _identical_input(input_type, digest, owner_id):
     return ios[0] if ios else None
 
 
-def create_hazard_job_profile(params, owner):
+def create_hazard_calculation(params, owner):
     """Given a params `dict` parsed from the config file, create a
-    :class:`~openquake.db.models.HazardJobProfile`.
+    :class:`~openquake.db.models.HazardCalculation`.
 
     :param dict params:
         Dictionary of parameter names and values. Parameter names should match
         exactly the field names of
-        :class:`openquake.db.model.HazardJobProfile`.
+        :class:`openquake.db.model.HazardCalculation`.
     :param owner:
         The :class:`~openquake.db.models.OqUser` who will own this profile.
     :returns:
-        :class:`openquake.db.model.HazardJobProfile` object. A corresponding
+        :class:`openquake.db.model.HazardCalculation` object. A corresponding
         record will obviously be saved to the database.
     """
-    hjp = models.HazardJobProfile(**params)
+    hjp = models.HazardCalculation(**params)
     hjp.owner = owner
     hjp.save()
 
@@ -240,7 +240,7 @@ def run_hazard(job):
 
     :param job:
         :class:`openquake.db.models.OqJob` instance which references a valid
-        :class:`openquake.db.models.HazardJobProfile`.
+        :class:`openquake.db.models.HazardCalculation`.
     """
     # TODO:
     # - Start the supervisor

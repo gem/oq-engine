@@ -457,7 +457,7 @@ class OqJob(djm.Model):
     An OpenQuake engine run started by the user
     '''
     owner = djm.ForeignKey('OqUser')
-    hazard_job_profile = djm.ForeignKey('HazardJobProfile')  # null allowed
+    hazard_calculation = djm.ForeignKey('HazardCalculation')  # null allowed
     description = djm.TextField(default='')
     path = djm.TextField(null=True, unique=True)
     STATUS_CHOICES = (
@@ -508,7 +508,7 @@ class Job2profile(djm.Model):
         db_table = 'uiapi\".\"job2profile'
 
 
-class HazardJobProfile(djm.Model):
+class HazardCalculation(djm.Model):
     '''
     Parameters need to run a Hazard job.
     '''
@@ -631,7 +631,7 @@ class HazardJobProfile(djm.Model):
     )
 
     class Meta:
-        db_table = 'uiapi\".\"hazard_job_profile'
+        db_table = 'uiapi\".\"hazard_calculation'
 
     def __init__(self, *args, **kwargs):
         # If geometries were specified as string lists of coords,
@@ -669,7 +669,7 @@ class HazardJobProfile(djm.Model):
                             if field == 'region':
                                 points.append(points[0])
                             kwargs[field] = wkt_fmt % ', '.join(points)
-        super(HazardJobProfile, self).__init__(*args, **kwargs)
+        super(HazardCalculation, self).__init__(*args, **kwargs)
 
 
 class OqJobProfile(djm.Model):
