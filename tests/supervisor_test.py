@@ -31,6 +31,7 @@ from tests.utils.helpers import DbTestCase, cleanup_loggers
 CONFIG_FILE = "config.gem"
 
 
+@unittest.skip
 class SupervisorHelpersTestCase(DbTestCase, unittest.TestCase):
     def setUp(self):
         self.job = self.setup_classic_job(create_job_path=False)
@@ -207,6 +208,7 @@ class SupervisorTestCase(unittest.TestCase):
             self.update_job_status_and_error_msg.call_args)
 
 
+@unittest.skip
 class SupersupervisorTestCase(unittest.TestCase):
     def setUp(self):
         self.running_pid = 1324
