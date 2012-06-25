@@ -325,9 +325,9 @@ class IdenticalInputTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertIs(None, actual)
 
 
-class CreateHazardJobProfileTestCase(unittest.TestCase):
+class CreateHazardCalculationTestCase(unittest.TestCase):
 
-    def test_create_hazard_job_profile(self):
+    def test_create_hazard_calculation(self):
         # Just the bare minimum set of params to satisfy not null constraints
         # in the db.
         params = {
@@ -342,9 +342,9 @@ class CreateHazardJobProfileTestCase(unittest.TestCase):
         }
 
         owner = helpers.default_user()
-        hjp = engine2.create_hazard_job_profile(params, owner)
+        hjp = engine2.create_hazard_calculation(params, owner)
         # Normalize/clean fields by fetching a fresh copy from the db.
-        hjp = models.HazardJobProfile.objects.get(id=hjp.id)
+        hjp = models.HazardCalculation.objects.get(id=hjp.id)
 
         self.assertEqual(hjp.calculation_mode, 'classical')
         self.assertEqual(hjp.width_of_mfd_bin, 1.0)
@@ -366,7 +366,9 @@ class ReadJobProfileFromConfigFileTestCase(unittest.TestCase):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
         job = engine2.prepare_job(getpass.getuser())
         params, files = engine2.parse_config(open(cfg, 'r'))
-        profile = engine2.create_hazard_job_profile(params, job.owner)
+        calculation = engine2.create_hazard_calculation(params, job.owner)
 
-        form = validation.ClassicalHazardJobForm(instance=profile, files=files)
+        form = validation.ClassicalHazardCalculationForm(
+            instance=calculation, files=files
+        )
         self.assertTrue(form.is_valid())
