@@ -36,7 +36,7 @@ class PrepareJobTestCase(unittest.TestCase):
         job = engine2.prepare_job()
 
         self.assertEqual('openquake', job.owner.user_name)
-        self.assertEqual('pending', job.status)
+        self.assertEqual('pre_executing', job.status)
 
         # Check the make sure it's in the database.
         try:
@@ -49,7 +49,7 @@ class PrepareJobTestCase(unittest.TestCase):
         job = engine2.prepare_job(user_name=user_name)
 
         self.assertEqual(user_name, job.owner.user_name)
-        self.assertEqual('pending', job.status)
+        self.assertEqual('pre_executing', job.status)
 
         try:
             models.OqJob.objects.get(id=job.id)
@@ -165,7 +165,7 @@ not_a_valid_file = foo.xml
         # In order for us to reuse the existing input, we need to associate
         # each input with a successful job.
         job = engine2.prepare_job(getpass.getuser())
-        job.status = 'succeeded'
+        job.status = 'complete'
         job.save()
         for inp in expected_files.values():
             i2j = models.Input2job(input=inp, oq_job=job)
@@ -221,6 +221,7 @@ class GetContentTypeTestCase(unittest.TestCase):
         )
 
 
+@unittest.skip
 class IdenticalInputTestCase(unittest.TestCase, helpers.DbTestCase):
     """Test the _identical_input() function."""
 

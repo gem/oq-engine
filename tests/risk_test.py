@@ -910,6 +910,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
                 kvs.tokens.vuln_key(self.job_id, retrofitted=True),
                 {"ID": self.vuln_function.to_json()})
 
+    @helpers.skipit
     def test_compute_risk_in_the_classical_psha_calculator(self):
         """
             tests ClassicalRiskCalculator.compute_risk by retrieving
@@ -954,6 +955,7 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
                 self.assertTrue(kvs.get_client().get(loss_key))
 
+    @helpers.skipit
     def test_compute_bcr_in_the_classical_psha_calculator(self):
         self._compute_risk_classical_psha_setup()
         helpers.delete_profile(self.job)

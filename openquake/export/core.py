@@ -99,9 +99,8 @@ def get_jobs(user_name):
         :class:`django.db.models.query.QuerySet`
     """
     return models.OqJob.objects.filter(
-        owner__user_name=user_name).extra(
-            where=["status in ('succeeded', 'failed')"]).order_by(
-                '-last_update')
+        status='complete', is_running=False, owner__user_name=user_name
+    ).order_by('-last_update')
 
 
 def get_outputs(job_id):

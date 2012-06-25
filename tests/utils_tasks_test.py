@@ -146,6 +146,7 @@ class DistributeTestCase(unittest.TestCase):
         self.assertEqual(expected, result)
 
 
+@unittest.skip
 class GetRunningCalculationTestCase(unittest.TestCase):
     """Tests for :function:`openquake.utils.tasks.get_running_job`."""
 

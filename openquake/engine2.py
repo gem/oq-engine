@@ -209,7 +209,10 @@ def _identical_input(input_type, digest, owner_id):
                     AND i.digest = %s AND i.input_type = %s
                     AND j.owner_id = u.id AND u.id = %s
                 GROUP BY i.id ORDER BY i.id DESC) AS mjq
-            WHERE id = mjq.min_job_id AND status = 'succeeded')"""
+            WHERE
+                id = mjq.min_job_id
+                AND status = 'complete'
+                AND is_running = false)"""
     ios = list(models.Input.objects.raw(query, [digest, input_type, owner_id]))
     return ios[0] if ios else None
 
