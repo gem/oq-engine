@@ -458,23 +458,19 @@ class OqJob(djm.Model):
     '''
     owner = djm.ForeignKey('OqUser')
     hazard_calculation = djm.ForeignKey('HazardCalculation')  # null allowed
-    description = djm.TextField(default='')
-    path = djm.TextField(null=True, unique=True)
     STATUS_CHOICES = (
-        (u'pending', u'Pending'),
-        (u'running', u'Running'),
-        (u'failed', u'Failed'),
-        (u'succeeded', u'Succeeded'),
+        (u'pre_executing', u'Pre-Executing'),
+        (u'executing', u'Executing'),
+        (u'post_executing', u'Post-Executing'),
+        (u'post_processing', u'Post-Processing'),
+        (u'complete', u'Complete'),
     )
-    status = djm.TextField(choices=STATUS_CHOICES, default='pending')
+    status = djm.TextField(choices=STATUS_CHOICES, default='pre_execution')
+    is_running = djm.BooleanField(default=False)
     duration = djm.IntegerField(default=0)
     job_pid = djm.IntegerField(default=0)
     supervisor_pid = djm.IntegerField(default=0)
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    def profile(self):
-        """Return the associated job prfile."""
-        return profile4job(self.id)
 
     class Meta:
         db_table = 'uiapi\".\"oq_job'

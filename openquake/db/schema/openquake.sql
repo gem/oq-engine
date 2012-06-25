@@ -242,14 +242,10 @@ CREATE TABLE uiapi.oq_job (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
     hazard_calculation_id INTEGER,  -- FK to uiapi.hazard_calculation
-    description VARCHAR NOT NULL DEFAULT '',
-    -- The full path of the location where the input files for the calculation
-    -- engine reside. This is used internally by openquake-server, can probably
-    -- be removed (see https://github.com/gem/openquake-server/issues/55)
-    path VARCHAR UNIQUE,
-    -- One of: pending, running, failed, succeeded
-    status VARCHAR NOT NULL DEFAULT 'pending' CONSTRAINT job_status_value
-        CHECK(status IN ('pending', 'running', 'failed', 'succeeded')),
+    -- One of: pre_execution, executing, post_execution, post_processing, complete
+    status VARCHAR NOT NULL DEFAULT 'pre_executing' CONSTRAINT job_status_value
+        CHECK(status IN ('pre_executing', 'executing', 'post_executing', 'post_processing', 'complete')),
+    is_running BOOLEAN NOT NULL DEFAULT FALSE,
     duration INTEGER NOT NULL DEFAULT 0,
     job_pid INTEGER NOT NULL DEFAULT 0,
     supervisor_pid INTEGER NOT NULL DEFAULT 0,
