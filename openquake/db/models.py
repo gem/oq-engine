@@ -672,6 +672,18 @@ class HazardCalculation(djm.Model):
         super(HazardCalculation, self).__init__(*args, **kwargs)
 
 
+class Input2HazCalc(djm.Model):
+    '''
+    `input` to `hazard_calculation` link table.
+    '''
+
+    input = djm.ForeignKey('Input')
+    hazard_calculation = djm.ForeignKey('HazardCalculation')
+
+    class Meta:
+        db_table = 'uiapi\".\"input2haz_calc'
+
+
 class OqJobProfile(djm.Model):
     '''
     Parameters needed to run an OpenQuake job
