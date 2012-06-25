@@ -289,7 +289,7 @@ class BaseOQModelForm(ModelForm):
         super(BaseOQModelForm, self).__init__(*args, **kwargs)
 
 
-class ClassicalHazardJobForm(BaseOQModelForm):
+class ClassicalHazardCalculationForm(BaseOQModelForm):
 
     # These fields require more complex validation.
     # The rules for these fields depend on other parameters
@@ -305,7 +305,7 @@ class ClassicalHazardJobForm(BaseOQModelForm):
     )
 
     class Meta:
-        model = models.HazardJobProfile
+        model = models.HazardCalculation
         fields = (
             'description',
             'calculation_mode',
@@ -360,10 +360,10 @@ class ClassicalHazardJobForm(BaseOQModelForm):
         :returns:
             If valid return `True`, else `False`.
         """
-        super_valid = super(ClassicalHazardJobForm, self).is_valid()
+        super_valid = super(ClassicalHazardCalculationForm, self).is_valid()
         all_valid = super_valid
 
-        # HazardJobProfile
+        # HazardCalculation
         hjp = self.instance
 
         # Exclude special fields that require contextual validation.
