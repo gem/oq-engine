@@ -466,6 +466,9 @@ class OqJob(djm.Model):
         (u'complete', u'Complete'),
     )
     status = djm.TextField(choices=STATUS_CHOICES, default='pre_executing')
+    oq_version = djm.TextField(null=True, blank=True)
+    nhlib_version = djm.TextField(null=True, blank=True)
+    nrml_version = djm.TextField(null=True, blank=True)
     is_running = djm.BooleanField(default=False)
     duration = djm.IntegerField(default=0)
     job_pid = djm.IntegerField(default=0)
