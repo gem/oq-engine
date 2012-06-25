@@ -123,6 +123,7 @@ class HazardCurveDBReadTestCase(unittest.TestCase, helpers.DbTestCase):
         if hasattr(self, "output") and self.output:
             self.teardown_output(self.output)
 
+    @helpers.skipit
     def test_read_curve(self):
         """Verify _get_db_curve."""
         the_job = helpers.create_job({}, job_id=self.job.id)

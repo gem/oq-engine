@@ -321,6 +321,7 @@ class HazardEngineTestCase(unittest.TestCase):
         verify_mean_haz_maps_stored_to_nrml(the_job)
         verify_quantile_haz_maps_stored_to_nrml(the_job, calculator)
 
+    @helpers.skipit
     def test_compute_mgm_intensity(self):
         results = []
         block_id = 8801
