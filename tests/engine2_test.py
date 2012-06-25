@@ -342,18 +342,31 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
             'maximum_distance': 200,
         }
 
-        owner = helpers.default_user()
-        hjp = engine2.create_hazard_calculation(params, owner)
-        # Normalize/clean fields by fetching a fresh copy from the db.
-        hjp = models.HazardCalculation.objects.get(id=hjp.id)
 
-        self.assertEqual(hjp.calculation_mode, 'classical')
-        self.assertEqual(hjp.width_of_mfd_bin, 1.0)
-        self.assertEqual(hjp.rupture_mesh_spacing, 1.0)
-        self.assertEqual(hjp.area_source_discretization, 2.0)
-        self.assertEqual(hjp.investigation_time, 50.0)
-        self.assertEqual(hjp.truncation_level, 0.0)
-        self.assertEqual(hjp.maximum_distance, 200.0)
+        owner = helpers.default_user()
+
+        site_model = models.Input(digest='123', path='/foo/bar', size=0,
+                                  input_type='site_model', owner=owner)
+        site_model.save()
+        files = [site_model]
+
+        hc = engine2.create_hazard_calculation(owner, params, files)
+        # Normalize/clean fields by fetching a fresh copy from the db.
+        hc = models.HazardCalculation.objects.get(id=hc.id)
+
+        self.assertEqual(hc.calculation_mode, 'classical')
+        self.assertEqual(hc.width_of_mfd_bin, 1.0)
+        self.assertEqual(hc.rupture_mesh_spacing, 1.0)
+        self.assertEqual(hc.area_source_discretization, 2.0)
+        self.assertEqual(hc.investigation_time, 50.0)
+        self.assertEqual(hc.truncation_level, 0.0)
+        self.assertEqual(hc.maximum_distance, 200.0)
+
+        # Test the input2haz_calc link:
+        [inp2hcs] = models.Input2HazCalc.objects.filter(
+            hazard_calculation=hc.id)
+
+        self.assertEqual(site_model.id, inp2hcs.input.id)
 
 
 class ReadJobProfileFromConfigFileTestCase(unittest.TestCase):
@@ -367,7 +380,8 @@ class ReadJobProfileFromConfigFileTestCase(unittest.TestCase):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
         job = engine2.prepare_job(getpass.getuser())
         params, files = engine2.parse_config(open(cfg, 'r'))
-        calculation = engine2.create_hazard_calculation(params, job.owner)
+        calculation = engine2.create_hazard_calculation(
+            job.owner, params, files.values())
 
         form = validation.ClassicalHazardCalculationForm(
             instance=calculation, files=files
