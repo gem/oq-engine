@@ -74,6 +74,17 @@ def inputs4job(job_id, input_type=None, path=None):
     return list(i.input for i in i2js.filter(**qargs))
 
 
+def inputs4haz_calc(calc_id, input_type=None):
+    """
+    :param int calc_id:
+        ID of a :class:`HazardCalculation`.
+    :param input_type:
+        A valid input type (optional). Leave as `None` if you want all inputs
+        for a given calculation.
+    """
+    return None
+
+
 def per_asset_value(exd):
     """Return per-asset value for the given exposure data set.
 
