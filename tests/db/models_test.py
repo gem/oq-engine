@@ -21,6 +21,7 @@ import unittest
 from django.contrib.gis.geos.geometry import GEOSGeometry
 
 from openquake import engine
+from openquake import engine2
 from openquake.db import models
 
 from tests.utils import helpers
@@ -217,6 +218,42 @@ class Inputs4JobTestCase(unittest.TestCase):
         self.assertEqual(
             [inp2],
             models.inputs4job(self.job.id, input_type="source", path=path))
+
+
+class Inputs4HazCalcTestCase(unittest.TestCase):
+
+    def test_no_inputs(self):
+        self.assertEqual([], models.inputs4haz_calc(-1))
+
+    def test_a_few_inputs(self):
+        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        params, files = engine2.parse_config(open(cfg, 'r'), force_inputs=True)
+        owner = helpers.default_user()
+        hc = engine2.create_hazard_calculation(owner, params, files.values())
+
+        expected_ids = sorted([x.id for x in files.values()])
+
+        inputs = models.inputs4haz_calc(hc.id)
+
+        actual_ids = sorted([x.id for x in inputs])
+
+        self.assertEqual(expected_ids, actual_ids)
+
+    def test_with_input_type(self):
+        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        params, files = engine2.parse_config(open(cfg, 'r'), force_inputs=True)
+        owner = helpers.default_user()
+        hc = engine2.create_hazard_calculation(owner, params, files.values())
+
+        # It should only be 1 id, actually.
+        expected_ids = [x.id for x in files.values()
+                        if x.input_type == 'lt_source']
+
+        inputs = models.inputs4haz_calc(hc.id, input_type='lt_source')
+
+        actual_ids = sorted([x.id for x in inputs])
+
+        self.assertEqual(expected_ids, actual_ids)
 
 
 class HazardCalculationGeometryTestCase(unittest.TestCase):

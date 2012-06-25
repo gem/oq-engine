@@ -76,13 +76,23 @@ def inputs4job(job_id, input_type=None, path=None):
 
 def inputs4haz_calc(calc_id, input_type=None):
     """
+    Get all of the inputs for a given hazard calculation.
+
     :param int calc_id:
         ID of a :class:`HazardCalculation`.
     :param input_type:
         A valid input type (optional). Leave as `None` if you want all inputs
         for a given calculation.
+    :returns:
+        A list of :class:`Input` instances.
     """
-    return None
+    i2hc = Input2HazCalc.objects.extra(
+        where=['hazard_calculation_id=%s'], params=[calc_id])
+
+    if input_type is not None:
+        return [x.input for x in i2hc.filter(input__input_type=input_type)]
+    else:
+        return [x.input for x in i2hc]
 
 
 def per_asset_value(exd):
