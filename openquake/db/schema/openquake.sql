@@ -1436,10 +1436,12 @@ CREATE TABLE riski.ffd (
 
 -- idata
 
+-- keep track of logic tree realization progress for a given calculation
 CREATE TABLE idata.lt_realization (
     id SERIAL PRIMARY KEY,
     hazard_calculation_id INTEGER NOT NULL,
-    site_data_id INTEGER NOT NULL,
+    -- optional FK; if null, get reference site parameters from hazard_calculation
+    site_data_id INTEGER,
     ordinal INTEGER NOT NULL,
     sm_lt_path VARCHAR NOT NULL,
     gsim_lt_path VARCHAR NOT NULL,
@@ -1449,6 +1451,7 @@ CREATE TABLE idata.lt_realization (
     completed_sources INTEGER NOT NULL DEFAULT 0
 ) TABLESPACE idata_ts;
 
+-- keep track of sources considered in a calculation, per logic tree realization
 CREATE TABLE idata.source_progress (
     id SERIAL PRIMARY KEY,
     lt_realization_id INTEGER NOT NULL,
@@ -1463,6 +1466,8 @@ CREATE TABLE idata.hazard_curve_progress (
 
 CREATE TABLE idata.site_data (
     id SERIAL PRIMARY KEY,
+    -- All 6 fields will contain pickled numpy arrays with all of the locations
+    -- and site parameters for the sites of interest for a calculation.
     lons BYTEA NOT NULL,
     lats BYTEA NOT NULL,
     vs30s BYTEA NOT NULL,
