@@ -1455,3 +1455,80 @@ class Ffd(djm.Model):
 
     class Meta:
         db_table = 'riski\".\"ffd'
+
+
+## Tables in the 'idata' schema.
+
+
+class LtRealization(djm.Model):
+    """
+    Keep track of logic tree realization progress. When ``completed_sources``
+    becomes equal to ``total_sources``, mark ``is_complete`` as `True`.
+
+    Marking progress as we go gives us the ability to resume partially-
+    completed calculations.
+    """
+
+    hazard_calculation = djm.ForeignKey('HazardCalculation')
+    ordinal = djm.IntegerField()
+    sm_lt_path = djm.TextField()
+    gsim_lt_path = djm.TextField()
+    seed = djm.IntegerField()
+    is_complete = djm.BooleanField(default=False)
+    total_sources = djm.IntegerField()
+    completed_sources = djm.IntegerField()
+
+    class Meta:
+        db_table = 'idata\".\"lt_realization'
+
+
+class SourceProgress(djm.Model):
+    """
+    Keep track of which sources have been considered for a given logic tree
+    realization.
+
+    Marking progress as we go gives us the ability to resume partially-
+    completed logic tree realizations.
+    """
+
+    lt_realization = djm.ForeignKey('LtRealization')
+    parsed_source = djm.ForeignKey('ParsedSource')
+    is_complete = djm.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'idata\".\"source_progress'
+
+
+class HazardCurveProgress(djm.Model):
+    """
+    Store intermediate results of hazard curve calculations (as a pickled numpy
+    array) for a single logic tree realization.
+    """
+
+    lt_realization = djm.ForeignKey('LtRealization')
+    result_matrix = fields.PickleField()
+
+    class Meta:
+        db_table = 'idata\".\"hazard_curve_progress'
+
+
+class SiteData(djm.Model):
+    """
+    Contains pre-computed site parameter matrices. ``lons`` and ``lats``
+    represent the calculation sites of interest. The associated site parameters
+    are from the closest point in a site model in relation to each calculation
+    point of interest.
+
+    Used only if a calculation defines a site model (otherwise, reference
+    parameters are use for all points of interest).
+    """
+
+    lons = fields.PickleField()
+    lats = fields.PickleField()
+    vs30s = fields.PickleField()
+    vs30_types = fields.PickleField()
+    z1pt0s = fields.PickleField()
+    z2pt5s = fields.PickleField()
+
+    class Meta:
+        db_table = 'idata\".\"site_data'
