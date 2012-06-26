@@ -457,7 +457,7 @@ class OqJob(djm.Model):
     An OpenQuake engine run started by the user
     '''
     owner = djm.ForeignKey('OqUser')
-    hazard_calculation = djm.ForeignKey('HazardCalculation')  # null allowed
+    hazard_calculation = djm.ForeignKey('HazardCalculation', null=True)
     STATUS_CHOICES = (
         (u'pre_executing', u'Pre-Executing'),
         (u'executing', u'Executing'),
