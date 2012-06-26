@@ -77,7 +77,7 @@ def inputs4job(job_id, input_type=None, path=None):
     return list(i.input for i in i2js.filter(**qargs))
 
 
-def inputs4haz_calc(calc_id, input_type=None):
+def inputs4hcalc(calc_id, input_type=None):
     """
     Get all of the inputs for a given hazard calculation.
 
@@ -343,6 +343,13 @@ class SiteModel(djm.Model):
     # Depth to shear wave velocity of 2.5 km/s. Units km.
     z2pt5 = djm.FloatField()
     location = djm.PointField(srid=4326)
+
+    def __repr__(self):
+        return (
+            'SiteModel(location="%s", vs30=%s, vs30_type=%s, z1pt0=%s, '
+            'z2pt5=%s)'
+            % (self.location.wkt, self.vs30, self.vs30_type, self.z1pt0,
+               self.z2pt5))
 
     class Meta:
         db_table = 'hzrdi\".\"site_model'
