@@ -671,7 +671,7 @@ class HazardCalculation(djm.Model):
         super(HazardCalculation, self).__init__(*args, **kwargs)
 
 
-class Input2HazCalc(djm.Model):
+class Input2hcalc(djm.Model):
     '''
     `input` to `hazard_calculation` link table.
     '''
@@ -680,7 +680,7 @@ class Input2HazCalc(djm.Model):
     hazard_calculation = djm.ForeignKey('HazardCalculation')
 
     class Meta:
-        db_table = 'uiapi\".\"input2haz_calc'
+        db_table = 'uiapi\".\"input2hcalc'
 
 
 class OqJobProfile(djm.Model):
