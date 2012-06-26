@@ -46,14 +46,15 @@ class GMFCalcNoCorrelationTestCase(unittest.TestCase):
         self.stddev3 = (self.inter3 ** 2 + self.intra3 ** 2) ** 0.5
         self.stddev45 = (self.inter45 ** 2 + self.intra45 ** 2) ** 0.5
         self.stddev67 = (self.inter67 ** 2 + self.intra67 ** 2) ** 0.5
-        p0 = Point(0, 0)
-        sites = [Site(p0, self.mean1, False, self.inter1, self.intra1),
-                 Site(p0, self.mean2, True, self.inter2, self.intra2),
-                 Site(p0, self.mean3, False, self.inter3, self.intra3),
-                 Site(p0, self.mean4567, True, self.inter45, self.intra45),
-                 Site(p0, self.mean4567, False, self.inter45, self.intra45),
-                 Site(p0, self.mean4567, True, self.inter67, self.intra67),
-                 Site(p0, self.mean4567, False, self.inter67, self.intra67)]
+        p = [Point(0, 0), Point(0, 0.1), Point(0, 0.2), Point(0, 0.3),
+             Point(0, 0.4), Point(0, 0.5), Point(0, 0.6)]
+        sites = [Site(p[0], self.mean1, False, self.inter1, self.intra1),
+                 Site(p[1], self.mean2, True, self.inter2, self.intra2),
+                 Site(p[2], self.mean3, False, self.inter3, self.intra3),
+                 Site(p[3], self.mean4567, True, self.inter45, self.intra45),
+                 Site(p[4], self.mean4567, False, self.inter45, self.intra45),
+                 Site(p[5], self.mean4567, True, self.inter67, self.intra67),
+                 Site(p[6], self.mean4567, False, self.inter67, self.intra67)]
         self.sites = SiteCollection(sites)
         self.rupture = object()
         self.imt1 = SA(10, 5)
@@ -96,9 +97,11 @@ class GMFCalcNoCorrelationTestCase(unittest.TestCase):
         truncation_level = None
         numpy.random.seed(3)
         realizations = 2000
+        from nhlib.correlation import JB2009CorrelationModel
         gmfs = ground_motion_fields(self.rupture, self.sites,
                                     [self.imt2], self.gsim,
                                     truncation_level,
+                                    #correlation_model=JB2009CorrelationModel(False),
                                     realizations=realizations)
         intensity = gmfs[self.imt2]
 
@@ -119,11 +122,11 @@ class GMFCalcNoCorrelationTestCase(unittest.TestCase):
         assert_allclose((intensity[6].mean(), intensity[6].std()),
                         (self.mean4567, self.stddev67), rtol=4e-2)
 
-        # sites with zero inter-event stddev, should give exactly the same
-        # result, since intra-event distribution is sampled only once
-        assert_array_equal(intensity[3], intensity[4])
+        # sites with zero intra-event stddev, should give exactly the same
+        # result, since inter-event distribution is sampled only once
+        assert_array_equal(intensity[5], intensity[6])
 
-        self.assertFalse((intensity[5] == intensity[6]).all())
+        self.assertFalse((intensity[3] == intensity[4]).all())
 
     def test_no_filtering_with_truncation(self):
         truncation_level = 1.9
