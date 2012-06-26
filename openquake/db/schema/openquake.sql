@@ -1479,7 +1479,7 @@ CREATE TABLE idata.site_data (
     lons BYTEA NOT NULL,
     lats BYTEA NOT NULL,
     vs30s BYTEA NOT NULL,
-    vs30_types BYTEA NOT NULL,
+    vs30_measured BYTEA NOT NULL,
     z1pt0s BYTEA NOT NULL,
     z2pt5s BYTEA NOT NULL
 ) TABLESPACE idata_ts;

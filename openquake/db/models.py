@@ -1586,7 +1586,9 @@ class SiteData(djm.Model):
     lons = fields.PickleField()
     lats = fields.PickleField()
     vs30s = fields.PickleField()
-    vs30_types = fields.PickleField()
+    # `vs30_measured` stores a numpy array of booleans.
+    # If a value is `False`, this means that the vs30 value is 'inferred'.
+    vs30_measured = fields.PickleField()
     z1pt0s = fields.PickleField()
     z2pt5s = fields.PickleField()
 
