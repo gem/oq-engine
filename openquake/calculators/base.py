@@ -43,3 +43,40 @@ class Calculator(object):
     def post_execute(self):
         """Implement this method in subclasses to perform post-execution
         functions, such as result serialization and garbage collection."""
+
+
+class CalculatorNext(object):
+    """
+    Base class for all calculators.
+
+    :param job: :class:`openquake.db.models.OqJob` instance.
+    """
+
+    def __init__(self, job):
+        self.job = job
+
+    def pre_execute(self):
+        """
+        Override this method in subclasses to record pre-execution stats,
+        initialize result records, perform detailed parsing of input data, etc.
+        """
+
+    def execute(self):
+        """
+        This is the only method that subclasses are required to implement. This
+        should contain all of the core calculation logic concerned with
+        splitting up and distributing work.
+        """
+        raise NotImplementedError()
+
+    def post_execute(self):
+        """
+        Override this method in subclasses to any necessary post-execution
+        actions, such as garbage collection.
+        """
+
+    def post_process(self):
+        """
+        Override this method in subclasses to perform post processing steps,
+        such as computing mean results from a set of curves or plotting maps.
+        """
