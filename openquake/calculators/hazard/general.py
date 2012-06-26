@@ -314,19 +314,19 @@ def get_site_model(hc_id):
     return site_model[0]
 
 
-def get_closest_site_model_data(input_model, site):
+def get_closest_site_model_data(input_model, point):
     """Get the closest available site model data from the database for a given
     site model :class:`~openquake.db.models.Input` and
-    :class:`~openquake.shapes.Site`.
+    :class:`nhlib.geo.point.Point`.
 
     :param input_model:
         :class:`openquake.db.models.Input` with `input_type` of 'site_model'.
     :param site:
-        :class:`openquake.shapes.Site` instance.
+        :class:`nhlib.geo.point.Point` instance.
 
     :returns:
         The closest :class:`openquake.db.models.SiteModel` for the given
-        ``input_model`` and ``site`` of interest.
+        ``input_model`` and ``point`` of interest.
 
         This function uses the PostGIS `ST_Distance_Sphere
         <http://postgis.refractions.net/docs/ST_Distance_Sphere.html>`_
@@ -346,7 +346,7 @@ def get_closest_site_model_data(input_model, site):
     LIMIT 1;"""
 
     raw_query_set = models.SiteModel.objects.raw(
-        query, ['SRID=4326; %s' % site.point.wkt, input_model.id]
+        query, ['SRID=4326; %s' % point.wkt2d, input_model.id]
     )
 
     site_model_data = list(raw_query_set)
