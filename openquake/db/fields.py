@@ -194,3 +194,24 @@ class DictField(PickleField):
             value = super(DictField, self).to_python(value)
 
         return value
+
+
+class OqNullBooleanField(djm.NullBooleanField):
+    """
+    A `NullBooleanField` that can convert meaningful strings to boolean
+    values (in the case of config file parameters).
+    """
+
+    def to_python(self, value):
+        """
+        If ``value`` is a `str`, try to extract some boolean value from it.
+        """
+        if isinstance(value, str):
+            if value.lower() in ('t', 'true', 'y', 'yes'):
+                value = True
+            elif value.lower() in ('f', 'false', 'n', 'no'):
+                value = False
+        # otherwise, it will just get cast to a bool, which could produce some
+        # strange results
+        value = super(OqNullBooleanField, self).to_python(value)
+        return value
