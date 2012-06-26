@@ -12,22 +12,8 @@ The :mod:`kvs` Module
 ------------------------
 
 .. automodule:: openquake.kvs
-    :members:
-    :undoc-members:
-    :show-inheritance:
 
 The :mod:`tokens` Module
 ------------------------
 
 .. automodule:: openquake.kvs.tokens
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-The :mod:`redis` Module
-------------------------
-
-.. automodule:: openquake.kvs.redis
-    :members:
-    :undoc-members:
-    :show-inheritance:
