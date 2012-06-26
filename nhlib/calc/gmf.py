@@ -32,6 +32,11 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     intensity model. A ground motion field represents a possible 'realization'
     of the ground shaking due to an earthquake rupture.
 
+    .. note::
+        This calculator is using random numbers. In order to reproduce the
+        same results numpy random numbers generator needs to be seeded, see
+        http://docs.scipy.org/doc/numpy/reference/generated/numpy.random.seed.html
+
     :param nhlib.source.rupture.Rupture rupture:
         Rupture to calculate ground motion fields radiated from.
     :param nhlib.site.SiteCollection sites:
