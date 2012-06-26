@@ -1582,6 +1582,7 @@ class SiteData(djm.Model):
     parameters are use for all points of interest).
     """
 
+    hazard_calculation = djm.ForeignKey('HazardCalculation')
     lons = fields.PickleField()
     lats = fields.PickleField()
     vs30s = fields.PickleField()
