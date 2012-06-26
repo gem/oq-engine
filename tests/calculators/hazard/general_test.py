@@ -17,12 +17,13 @@
 
 import unittest
 
+from nhlib import geo as nhlib_geo
+
 from openquake import engine
 from openquake import engine2
 from openquake import shapes
 from openquake.calculators.hazard import general
 from openquake.db import models
-from openquake.job.config import ValidationException
 
 from tests.utils import helpers
 
@@ -138,63 +139,65 @@ class ValidateSiteModelTestCase(unittest.TestCase):
 
             # the edges of the polygon
             # East edge
-            shapes.Site(9.9999999, 0),
+            nhlib_geo.Point(9.9999999, 0),
             # West edge
-            shapes.Site(-9.9999999, 0),
+            nhlib_geo.Point(-9.9999999, 0),
             # NOTE: The values for the north and south edges were obtained by
             # trial and error.
             # North edge
-            shapes.Site(0, 10.1507381),
+            nhlib_geo.Point(0, 10.1507381),
             # South edge
-            shapes.Site(0, -10.1507381),
+            nhlib_geo.Point(0, -10.1507381),
             # the corners
-            shapes.Site(-10, 10),
-            shapes.Site(10, 10),
-            shapes.Site(-10, -10),
-            shapes.Site(10, -10),
+            nhlib_geo.Point(-10, 10),
+            nhlib_geo.Point(10, 10),
+            nhlib_geo.Point(-10, -10),
+            nhlib_geo.Point(10, -10),
             # a few points somewhere in the middle, which are obviously inside
             # the target area
-            shapes.Site(0.0, 0.0),
-            shapes.Site(-2.5, 2.5),
-            shapes.Site(2.5, 2.5),
-            shapes.Site(-2.5, -2.5),
-            shapes.Site(2.5, -2.5),
+            nhlib_geo.Point(0.0, 0.0),
+            nhlib_geo.Point(-2.5, 2.5),
+            nhlib_geo.Point(2.5, 2.5),
+            nhlib_geo.Point(-2.5, -2.5),
+            nhlib_geo.Point(2.5, -2.5),
         ]
+        mesh = nhlib_geo.Mesh.from_points_list(sites_of_interest)
 
         # this should work without raising any errors
-        general.validate_site_model(self.site_model_nodes, sites_of_interest)
+        general.validate_site_model(self.site_model_nodes, mesh)
 
     def test_validate_site_model_invalid(self):
         test_cases = [
             # outside of the edges
             # East edge
-            [shapes.Site(10.0000001, 0)],
+            [nhlib_geo.Point(10.0000001, 0)],
             # West edge
-            [shapes.Site(-10.0000001, 0)],
+            [nhlib_geo.Point(-10.0000001, 0)],
             # NOTE: The values for the north south edges were obtained by
             # trial and error.
             # North edge
-            [shapes.Site(0, 10.1507382)],
+            [nhlib_geo.Point(0, 10.1507382)],
             # South edge
-            [shapes.Site(0, -10.1507382)],
+            [nhlib_geo.Point(0, -10.1507382)],
             # outside of the corners
             # first corner (a)
-            [shapes.Site(-10.0000001, 10)],
-            [shapes.Site(-10, 10.0000001)],
+            [nhlib_geo.Point(-10.0000001, 10)],
+            [nhlib_geo.Point(-10, 10.0000001)],
             # second corner (b)
-            [shapes.Site(10.0000001, 10)],
-            [shapes.Site(10, 10.0000001)],
+            [nhlib_geo.Point(10.0000001, 10)],
+            [nhlib_geo.Point(10, 10.0000001)],
             # third corner (d)
-            [shapes.Site(-10.0000001, -10)],
-            [shapes.Site(-10, -10.0000001)],
+            [nhlib_geo.Point(-10.0000001, -10)],
+            [nhlib_geo.Point(-10, -10.0000001)],
             # fourth corner (e)
-            [shapes.Site(10.0000001, -10)],
-            [shapes.Site(10, -10.0000001)],
+            [nhlib_geo.Point(10.0000001, -10)],
+            [nhlib_geo.Point(10, -10.0000001)],
         ]
 
         for tc in test_cases:
-            self.assertRaises(ValidationException, general.validate_site_model,
-                              self.site_model_nodes, tc)
+            mesh = nhlib_geo.Mesh.from_points_list(tc)
+            self.assertRaises(RuntimeError, general.validate_site_model,
+                              self.site_model_nodes, mesh)
 
     @helpers.skipit
     def test_initialize_calls_validate(self):
