@@ -250,24 +250,23 @@ def store_site_model(input_mdl, source):
     return sm_data
 
 
-def validate_site_model(sm_nodes, sites):
+def validate_site_model(sm_nodes, mesh):
     """Given the geometry for a site model and the geometry of interest for the
-    calculation, make sure the geometry of interest lies completely inside of
-    the convex hull formed by the site model locations.
+    calculation (``mesh``, make sure the geometry of interest lies completely
+    inside of the convex hull formed by the site model locations.
 
-    If a site of interest lies directly on top of a vertex or edge of the site
+    If a point of interest lies directly on top of a vertex or edge of the site
     model area (a polygon), it is considered "inside"
 
     :param sm_nodes:
         Sequence of :class:`~openquake.db.models.SiteModel` objects.
-    :param sites:
-        Sequence of :class:`~openquake.shapes.Site` objects which represent the
-        calculation points of interest.
+    :param mesh:
+        A :class:`nhlib.geo.mesh.Mesh` which represents the calculation points
+        of interest.
 
     :raises:
-        :exc:`openquake.job.config.ValidationException` if the area of
-        interest (given as a collection of sites) is not entirely contained by
-        the site model.
+        :exc:`RuntimeError` if the area of interest (given as a mesh) is not
+        entirely contained by the site model.
     """
     sm_mp = geometry.MultiPoint(
         [(n.location.x, n.location.y) for n in sm_nodes]
@@ -276,17 +275,15 @@ def validate_site_model(sm_nodes, sites):
         [nhlib_geo.Point(*x) for x in sm_mp.convex_hull.exterior.coords]
     )
 
-    interest_mesh = nhlib_geo.Mesh.from_points_list(sites)
-
     # "Intersects" is the correct operation (not "contains"), since we're just
     # checking a collection of points (mesh). "Contains" would tell us if the
     # points are inside the polygon, but would return `False` if a point was
     # directly on top of a polygon edge or vertex. We want these points to be
     # included.
-    intersects = sm_poly.intersects(interest_mesh)
+    intersects = sm_poly.intersects(mesh)
 
     if not intersects.all():
-        raise ValidationException(
+        raise RuntimeError(
             ['Sites of interest are outside of the site model coverage area.'
              ' This configuration is invalid.']
         )
