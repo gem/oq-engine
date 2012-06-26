@@ -248,7 +248,7 @@ class GetSiteModelTestCase(unittest.TestCase):
         self.assertIsNone(general.get_site_model(haz_calc.id))
 
         # Complete the link:
-        models.Input2HazCalc(
+        models.Input2hcalc(
             input=site_model_inp, hazard_calculation=haz_calc).save()
 
         actual_site_model = general.get_site_model(haz_calc.id)
@@ -269,9 +269,9 @@ class GetSiteModelTestCase(unittest.TestCase):
         site_model_inp2.save()
 
         # link both site models to the calculation:
-        models.Input2HazCalc(
+        models.Input2hcalc(
             input=site_model_inp1, hazard_calculation=haz_calc).save()
-        models.Input2HazCalc(
+        models.Input2hcalc(
             input=site_model_inp2, hazard_calculation=haz_calc).save()
 
         with self.assertRaises(RuntimeError) as assert_raises:
