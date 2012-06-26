@@ -164,6 +164,38 @@ class Mesh(object):
         return geodetic.min_distance(self.lons, self.lats, depths1,
                                      mesh.lons, mesh.lats, depths2)
 
+    def get_distance_matrix(self):
+        """
+        Compute and return distances between each pairs of points in the mesh.
+
+        This method requires that all the points lie on Earth surface (have
+        zero depth) and coordinate arrays are one-dimensional.
+
+        .. warning::
+            Since its quadratic space and time complexity this method is safe
+            to use for meshes of up to several thousand points. For mesh of 10k
+            sites it needs ~800 Mb for just the resulting matrix and four times
+            that much for intermediate storage.
+
+        :returns:
+            Two-dimensional numpy array, square matrix of distances. The matrix
+            has zeros on main diagonal and positive distances in kilometers
+            on all other cells. That is, value in cell (3, 5) is the distance
+            between mesh's points 3 and 5 in km, and it is equal to value
+            in cell (5, 3).
+
+        Uses :func:`nhlib.geo.geodetic.geodetic_distance`.
+        """
+        assert self.lons.ndim == 1
+        assert self.depths is None or (self.depths == 0).all()
+        distances = geodetic.geodetic_distance(
+            self.lons.reshape(self.lons.shape + (1, )),
+            self.lats.reshape(self.lats.shape + (1, )),
+            self.lons,
+            self.lats
+        )
+        return numpy.matrix(distances, copy=False)
+
     def get_convex_hull(self):
         """
         Get a convex polygon object that contains projections of all the points
