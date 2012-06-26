@@ -42,7 +42,7 @@ class FloatArrayFormField(forms.Field):
         """Try to coerce either a string list of values (separated by
         whitespace and/or commas or a list/tuple of values to a list of
         floats. If unsuccessful, raise a
-        :exception:`django.forms.ValidationError`
+        :exc:`django.forms.ValidationError`
         """
         if isinstance(value, (tuple, list)):
             try:

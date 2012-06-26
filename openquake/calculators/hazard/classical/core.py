@@ -187,22 +187,30 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         The calculated curves will only be serialized if the `serializer`
         parameter is not `None`.
 
-        :param sites: The sites for which to calculate hazard curves.
-        :type sites: list of :py:class:`openquake.shapes.Site`
-        :param realizations: The number of realizations to calculate
-        :type realizations: :py:class:`int`
-        :param serializer: A serializer for the calculated hazard curves,
-            receives the KVS keys of the calculated hazard curves in
-            its single parameter.
-        :type serializer: a callable with a single parameter: list of strings
-        :param the_task: The `celery` task to use for the hazard curve
-            calculation, it takes the following parameters:
-                * job ID
-                * the sites for which to calculate the hazard curves
-                * the logic tree realization number
-        :type the_task: a callable taking three parameters
-        :returns: KVS keys of the calculated hazard curves.
-        :rtype: list of string
+        :param sites:
+            The sites for which to calculate hazard curves.
+        :type sites:
+            List of :py:class:`openquake.shapes.Site`
+        :param int realizations:
+            The number of realizations to calculate
+        :param serializer:
+            A serializer for the calculated hazard curves, receives the KVS
+            keys of the calculated hazard curves in its single parameter.
+        :type serializer:
+            A callable with a single parameter: list of strings
+        :param the_task:
+            The `celery` task to use for the hazard curve calculation, which
+            takes the following parameters:
+
+            * job ID
+            * the sites for which to calculate the hazard curves
+            * the logic tree realization number
+        :type the_task:
+            A callable taking three parameters
+        :returns:
+            KVS keys of the calculated hazard curves.
+        :rtype:
+            list of strings
         """
         source_model_generator = random.Random()
         source_model_generator.seed(
@@ -236,26 +244,36 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         The calculated mean curves/maps will only be serialized if the
         corresponding `serializer` parameter was set.
 
-        :param sites: The sites for which to calculate mean curves/maps.
-        :type sites: list of :py:class:`openquake.shapes.Site`
-        :param realizations: The number of realizations that were calculated
-        :type realizations: :py:class:`int`
-        :param curve_serializer: A serializer for the calculated curves,
-            receives the KVS keys of the calculated curves in
-            its single parameter.
-        :type curve_serializer: function([string])
-        :param map_serializer: A serializer for the calculated maps,
-            receives the KVS keys of the calculated maps in its single
-            parameter.
-        :type map_serializer: function([string])
-        :param curve_task: The `celery` task to use for the curve calculation,
-            it takes the following parameters:
-                * job ID
-                * the sites for which to calculate the hazard curves
-        :type curve_task: function(string, [:py:class:`openquake.shapes.Site`])
-        :param map_func: A function that computes mean hazard maps.
-        :type map_func: function(:py:class:`openquake.engine.JobContext`)
-        :returns: `None`
+        :param sites:
+            The sites for which to calculate mean curves/maps.
+        :type sites:
+            list of :py:class:`openquake.shapes.Site`
+        :param int realizations:
+            The number of realizations that were calculated
+        :param curve_serializer:
+            A serializer for the calculated curves, receives the KVS keys of
+            the calculated curves in its single parameter.
+        :type curve_serializer:
+            function([string])
+        :param map_serializer:
+            A serializer for the calculated maps, receives the KVS keys of the
+            calculated maps in its single parameter.
+        :type map_serializer:
+            function([string])
+        :param curve_task:
+            The `celery` task to use for the curve calculation, which takes the
+            following parameters:
+
+            * job ID
+            * the sites for which to calculate the hazard curves
+        :type curve_task:
+            function(string, [:py:class:`openquake.shapes.Site`])
+        :param map_func:
+            A function that computes mean hazard maps.
+        :type map_func:
+            function(:py:class:`openquake.engine.JobContext`)
+        :returns:
+            `None`
         """
         if not self.job_ctxt["COMPUTE_MEAN_HAZARD_CURVE"]:
             return
@@ -281,37 +299,48 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             map_serializer(sites, self.poes_hazard_maps)
 
     # pylint: disable=R0913
-    def do_quantiles(
-        self, sites, realizations, quantiles, curve_serializer=None,
-        curve_task=compute_quantile_curves, map_func=None,
-        map_serializer=None):
+    def do_quantiles(self, sites, realizations, quantiles,
+                     curve_serializer=None, curve_task=compute_quantile_curves,
+                     map_func=None, map_serializer=None):
         """Trigger the calculation/serialization of quantile curves/maps.
 
         The calculated quantile curves/maps will only be serialized if the
         corresponding `serializer` parameter was set.
 
-        :param sites: The sites for which to calculate quantile curves/maps.
-        :type sites: list of :py:class:`openquake.shapes.Site`
-        :param realizations: The number of realizations that were calculated
-        :type realizations: :py:class:`int`
-        :param quantiles: The quantiles to calculate
-        :param quantiles: list of float
-        :param curve_serializer: A serializer for the calculated curves,
-            receives the KVS keys of the calculated curves in
-            its single parameter.
-        :type curve_serializer: function([string])
-        :param map_serializer: A serializer for the calculated maps,
-            receives the KVS keys of the calculated maps in its single
-            parameter.
-        :type map_serializer: function([string])
-        :param curve_task: The `celery` task to use for the curve calculation,
-            it takes the following parameters:
-                * job ID
-                * the sites for which to calculate the hazard curves
-        :type curve_task: function(string, [:py:class:`openquake.shapes.Site`])
-        :param map_func: A function that computes quantile hazard maps.
-        :type map_func: function(:py:class:`openquake.engine.JobContext`)
-        :returns: `None`
+        :param sites:
+            The sites for which to calculate quantile curves/maps.
+        :type sites:
+            List of :py:class:`openquake.shapes.Site`
+        :param int realizations:
+            The number of realizations that were calculated
+        :param quantiles:
+            The quantiles to calculate
+        :type quantiles:
+            List of floats
+        :param curve_serializer:
+            A serializer for the calculated curves, receives the KVS keys of
+            the calculated curves in its single parameter.
+        :type curve_serializer:
+            function([string])
+        :param map_serializer:
+            A serializer for the calculated maps, receives the KVS keys of the
+            calculated maps in its single parameter.
+        :type map_serializer:
+            function([string])
+        :param curve_task:
+            The `celery` task to use for the curve calculation, it takes the
+            following parameters:
+
+            * job ID
+            * the sites for which to calculate the hazard curves
+        :type curve_task:
+            function(string, [:py:class:`openquake.shapes.Site`])
+        :param map_func:
+            A function that computes quantile hazard maps.
+        :type map_func:
+            function(:py:class:`openquake.engine.JobContext`)
+        :returns:
+            `None`
         """
         if not quantiles:
             return

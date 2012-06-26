@@ -267,7 +267,8 @@ class BaseOQModelForm(ModelForm):
     In this case, however, we expect `files` to be a dict of
     :class:`openquake.db.models.Input`, keyed by config file parameter for the
     input. For example::
-        {'SITE_MODEL_FILE': <Input: 174||site_model||0xdeadbeef||>}
+
+    {'SITE_MODEL_FILE': <Input: 174||site_model||0xdeadbeef||>}
     """
 
     def __init__(self, *args, **kwargs):
@@ -353,7 +354,7 @@ class ClassicalHazardJobForm(BaseOQModelForm):
                 self.errors[field_name] = [error_msg]
 
     def is_valid(self):
-        """Overrides :method:`django.forms.ModelForm.is_valid` to perform
+        """Overrides :meth:`django.forms.ModelForm.is_valid` to perform
         custom validation checks (in addition to superclass validation).
 
         :returns:

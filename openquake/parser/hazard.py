@@ -78,18 +78,15 @@ class NrmlFile(producer.FileProducer):
     geographical site as WGS84 lon/lat), and the second one
     is a dictionary with hazard-related attribute values for this site.
 
-    The attribute dictionary looks like
-    {'IMT': 'PGA',
-     'IDmodel': 'Model_Id',
-     'investigationTimeSpan': 50.0,
-     'endBranchLabel': 'Foo',
-     'saDamping': 0.2,
-     'saPeriod': 0.1,
-     'IMLValues': [5.0000e-03, 7.0000e-03, ...],
-     'PoEValues': [9.8728e-01, 9.8266e-01, ...],
-    }
+    The attribute dictionary looks like ::
+
+    {'IMT': 'PGA', 'IDmodel': 'Model_Id', 'investigationTimeSpan': 50.0, \
+'endBranchLabel': 'Foo', 'saDamping': 0.2, 'saPeriod': 0.1, \
+'IMLValues': [5.0000e-03, 7.0000e-03, ...], \
+'PoEValues': [9.8728e-01, 9.8266e-01, ...]}
 
     Notes:
+
     1) TODO(fab): require that attribute values of 'IMT' are from list
        of allowed values (see NRML XML Schema)
     2) 'endBranchLabel' can be replaced by 'aggregationType'

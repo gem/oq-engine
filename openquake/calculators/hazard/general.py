@@ -231,7 +231,7 @@ def store_site_model(input_mdl, source):
     :returns:
         `list` of :class:`openquake.db.models.SiteModel` objects. These
         represent to newly-inserted `hzrdi.site_model` records.
-    ."""
+    """
     parser = nrml_parsers.SiteModelParser(source)
 
     sm_data = []
@@ -469,7 +469,7 @@ class BaseHazardCalculator(Calculator):
         site-specific parameters. This method handles both cases.
 
         NOTE: If a `SITE_MODEL` is used, it needs to be properly stored first.
-        See :function:`~openquake.calculators.hazard.general.store_site_model`.
+        See :func:`~openquake.calculators.hazard.general.store_site_model`.
 
         :param site_list:
             `list` of :class:`~openquake.shapes.Site` objects.
