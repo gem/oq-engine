@@ -81,7 +81,7 @@ class BaseExportTestCase(unittest.TestCase):
             oq_job=self.uhs_pending_job, oq_job_profile=self.uhs_jp).save()
 
         self.cpsha_running_job = models.OqJob(
-            owner=self.cpsha_jp.owner,status='executing')
+            owner=self.cpsha_jp.owner, status='executing')
         self.cpsha_running_job.save()
         models.Job2profile(
             oq_job=self.cpsha_running_job, oq_job_profile=self.cpsha_jp).save()
