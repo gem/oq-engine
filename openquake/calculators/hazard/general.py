@@ -360,6 +360,63 @@ def get_closest_site_model_data(input_model, point):
         return None
 
 
+def store_site_data(hc_id, site_model_inp, mesh):
+    """
+    Given a ``mesh`` of points (calculation points of interest) and a
+    site model (``site_model_inp``), get the closest site model data
+    for each points and store the mesh point location plus the site parameters
+    as a single record in the `idata.site_data` table.
+
+    NOTE: This should only be necessary for calculations which specify a site
+    model. Otherwise, the same 4 reference site parameters are used for all
+    sites.
+
+    :param int hc_id:
+        ID of a :class:`~openquake.db.models.HazardCalculation`.
+    :param site_model_inp:
+        An :class:`~openquake.db.models.Input` with an
+        `input_type`=='site_model'. This tells us which site model dataset to
+        query.
+    :param mesh:
+        Calculation points of interest, as a :class:`nhlib.geo.mesh.Mesh`.
+    :returns:
+        The :class:`openquake.db.models.SiteData` object that was created to
+        store computation points of interest with associated site parameters.
+    """
+    lons = []
+    lats = []
+    vs30s = []
+    vs30_types = []
+    z1pt0s = []
+    z2pt5s = []
+
+    for pt in mesh:
+        smd = get_closest_site_model_data(site_model_inp, pt)
+
+        lons.append(pt.longitude)
+        lats.append(pt.latitude)
+
+        vs30s.append(smd.vs30)
+        vs30_types.append(smd.vs30_type)
+        z1pt0s.append(smd.z1pt0)
+        z2pt5s.append(smd.z2pt5)
+
+    site_data = models.SiteData(hazard_calculation_id=hc_id)
+    site_data.lons = numpy.array(lons)
+    site_data.lats = numpy.array(lats)
+    site_data.vs30s = numpy.array(vs30s)
+    # We convert from strings to booleans here because this is what a nhlib
+    # SiteCollection expects for the vs30 type. If we do the conversion here,
+    # we only do it once and we can directly consume the data on the worker
+    # side without having to convert inside each task.
+    site_data.vs30_measured = numpy.array(vs30_types) == 'measured'
+    site_data.z1pt0s = numpy.array(z1pt0s)
+    site_data.z2pt5s = numpy.array(z2pt5s)
+    site_data.save()
+
+    return site_data
+
+
 def set_java_site_parameters(jsite, sm_data):
     """Given a site model node and an OpenSHA `Site` object,
     set vs30, vs30, z2pt5, and z1pt0 parameters.

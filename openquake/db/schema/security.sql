@@ -23,6 +23,7 @@ GRANT USAGE ON SCHEMA oqmif TO GROUP openquake;
 GRANT USAGE ON SCHEMA riski TO GROUP openquake;
 GRANT USAGE ON SCHEMA riskr TO GROUP openquake;
 GRANT USAGE ON SCHEMA uiapi TO GROUP openquake;
+GRANT USAGE ON SCHEMA idata to GROUP openquake;
 
 GRANT ALL ON SEQUENCE admin.oq_user_id_seq TO oq_admin;
 GRANT ALL ON SEQUENCE admin.organization_id_seq TO oq_admin;
@@ -83,6 +84,8 @@ GRANT ALL ON SEQUENCE uiapi.input2job_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.src2ltsrc_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.input2upload_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.job2profile_id_seq to GROUP openquake;
+
+GRANT ALL ON SEQUENCE idata.site_data_id_seq to GROUP openquake;
 
 GRANT SELECT ON geography_columns TO GROUP openquake;
 GRANT SELECT ON geometry_columns TO GROUP openquake;
@@ -301,3 +304,6 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.upload TO oq_job_init;
 -- uiapi.error_msg
 GRANT SELECT ON uiapi.error_msg TO openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.error_msg TO oq_job_superv;
+
+GRANT SELECT ON idata.site_data TO openquake;
+GRANT SELECT,INSERT,DELETE ON idata.site_data TO oq_reslt_writer;
