@@ -635,7 +635,7 @@ class HazardCalculation(djm.Model):
     ################################
     # Output/post-processing params:
     ################################
-    mean_hazard_curves = djm.NullBooleanField(
+    mean_hazard_curves = fields.OqNullBooleanField(
         help_text='Compute mean hazard curves',
         null=True,
         blank=True,
