@@ -471,6 +471,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
 
         return sorted(inputs, key=lambda i: (i['type'], i['path']))
 
+    @helpers.skipit
     def test_prepare_classical_job(self):
         abs_path = partial(datapath, "classical_psha_simple")
         params = self.BASE_CLASSICAL_PARAMS.copy()
@@ -601,6 +602,7 @@ class PrepareJobTestCase(unittest.TestCase, helpers.DbTestCase):
              'gm_correlated': True,
              }, jp)
 
+    @helpers.skipit
     def test_prepare_event_based_job(self):
         abs_path = partial(datapath, "simplecase")
         params = self.BASE_EVENT_BASED_PARAMS.copy()
@@ -830,6 +832,7 @@ class RunJobTestCase(unittest.TestCase):
                 engine._launch_job = before_launch
 
 
+@unittest.skip
 class JobsWithExposureTestCase(unittest.TestCase):
     '''Tests related to job with exposure.'''
 
@@ -863,6 +866,7 @@ class JobsWithExposureTestCase(unittest.TestCase):
         self.assertEqual(expected_sites, actual_sites)
 
 
+@unittest.skip
 class JobStatsTestCase(unittest.TestCase):
     '''
     Tests related to capturing job stats.

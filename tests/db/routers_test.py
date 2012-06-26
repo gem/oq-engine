@@ -91,7 +91,7 @@ class OQRouterTestCase(unittest.TestCase):
         for read operations.
         '''
         classes = [ParsedSource, SiteModel]
-        expected_db = 'reslt_writer'
+        expected_db = 'job_init'
 
         self._db_for_read_helper(classes, expected_db)
 
@@ -111,7 +111,7 @@ class OQRouterTestCase(unittest.TestCase):
         for read operations.
         '''
         classes = [Upload, Input, OqJob, OqJobProfile, Output, ErrorMsg]
-        expected_db = 'reslt_writer'
+        expected_db = 'job_init'
 
         self._db_for_read_helper(classes, expected_db)
 
@@ -133,7 +133,7 @@ class OQRouterTestCase(unittest.TestCase):
         '''
         classes = [HazardMap, HazardMapData, HazardCurve, HazardCurveData,
             GmfData]
-        expected_db = 'job_init'
+        expected_db = 'reslt_writer'
 
         self._db_for_read_helper(classes, expected_db)
 
@@ -157,7 +157,7 @@ class OQRouterTestCase(unittest.TestCase):
         classes = [LossMap, LossMapData, LossCurve, LossCurveData,
             AggregateLossCurveData, CollapseMap, CollapseMapData,
             BCRDistribution, BCRDistributionData]
-        expected_db = 'job_init'
+        expected_db = 'reslt_writer'
 
         self._db_for_read_helper(classes, expected_db)
 
@@ -179,7 +179,7 @@ class OQRouterTestCase(unittest.TestCase):
         for read operations.
         '''
         classes = [ExposureModel, ExposureData]
-        expected_db = 'job_init'
+        expected_db = 'reslt_writer'
 
         self._db_for_read_helper(classes, expected_db)
 
@@ -199,7 +199,7 @@ class OQRouterTestCase(unittest.TestCase):
         for read operations.
         '''
         classes = [VulnerabilityModel, VulnerabilityFunction]
-        expected_db = 'reslt_writer'
+        expected_db = 'job_init'
 
         self._db_for_read_helper(classes, expected_db)
 
