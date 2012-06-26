@@ -1473,6 +1473,7 @@ CREATE TABLE idata.hazard_curve_progress (
 
 CREATE TABLE idata.site_data (
     id SERIAL PRIMARY KEY,
+    hazard_calculation_id INTEGER NOT NULL,
     -- All 6 fields will contain pickled numpy arrays with all of the locations
     -- and site parameters for the sites of interest for a calculation.
     lons BYTEA NOT NULL,
@@ -1753,4 +1754,11 @@ ALTER TABLE idata.source_progress
 ADD CONSTRAINT idata_source_progress_parsed_source_fk
 FOREIGN KEY (parsed_source_id)
 REFERENCES hzrdi.parsed_source(id)
+ON DELETE CASCADE;
+
+-- idata.site_data to uiapi.hazard_calculation FK
+ALTER TABLE idata.site_data
+ADD CONSTRAINT idata_site_data_hazard_calculation_fk
+FOREIGN KEY (hazard_calculation_id)
+REFERENCES uiapi.hazard_calculation(id)
 ON DELETE CASCADE;
