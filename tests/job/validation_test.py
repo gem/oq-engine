@@ -23,7 +23,7 @@ from openquake.job import validation
 from tests.utils import helpers
 
 
-class ClassicalHazardJobFormTestCase(unittest.TestCase):
+class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
     """Tests for classical hazard job param validation."""
 
     VALID_IML_IMT = {
@@ -55,8 +55,8 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
         "SA(2x)": [0.005, 0.007, 0.0098],
     }
 
-    def test_hazard_job_profile_is_valid_region_only(self):
-        hjp = models.HazardJobProfile(
+    def test_hazard_calculation_is_valid_region_only(self):
+        hc = models.HazardCalculation(
             owner=helpers.default_user(),
             description='',
             region=(
@@ -82,11 +82,13 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
             quantile_hazard_curves=[0.0, 0.5, 1.0],
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
-        form = validation.ClassicalHazardJobForm(instance=hjp, files=None)
+        form = validation.ClassicalHazardCalculationForm(
+            instance=hc, files=None
+        )
         self.assertTrue(form.is_valid(), dict(form.errors))
 
-    def test_hazard_job_profile_is_valid_region_only_as_str_list(self):
-        hjp = models.HazardJobProfile(
+    def test_hazard_calculation_is_valid_region_only_as_str_list(self):
+        hc = models.HazardCalculation(
             owner=helpers.default_user(),
             description='',
             region='-122.0, 38.113, -122.114, 38.113, -122.57, 38.111',
@@ -109,11 +111,13 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
             quantile_hazard_curves=[0.0, 0.5, 1.0],
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
-        form = validation.ClassicalHazardJobForm(instance=hjp, files=None)
+        form = validation.ClassicalHazardCalculationForm(
+            instance=hc, files=None
+        )
         self.assertTrue(form.is_valid(), dict(form.errors))
 
-    def test_hazard_job_profile_is_valid_with_site_model(self):
-        hjp = models.HazardJobProfile(
+    def test_hazard_calculation_is_valid_with_site_model(self):
+        hc = models.HazardCalculation(
             owner=helpers.default_user(),
             description='',
             region=(
@@ -142,13 +146,13 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
             quantile_hazard_curves=[0.0, 0.5, 1.0],
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
-        form = validation.ClassicalHazardJobForm(
-            instance=hjp, files=dict(SITE_MODEL_FILE=object())
+        form = validation.ClassicalHazardCalculationForm(
+            instance=hc, files=dict(SITE_MODEL_FILE=object())
         )
         self.assertTrue(form.is_valid(), dict(form.errors))
 
-    def test_hazard_job_profile_is_valid_sites_only(self):
-        hjp = models.HazardJobProfile(
+    def test_hazard_calculation_is_valid_sites_only(self):
+        hc = models.HazardCalculation(
             owner=helpers.default_user(),
             description='',
             sites='MULTIPOINT((-122.114 38.113))',
@@ -170,11 +174,13 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
             quantile_hazard_curves=[0.0, 0.5, 1.0],
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
-        form = validation.ClassicalHazardJobForm(instance=hjp, files=None)
+        form = validation.ClassicalHazardCalculationForm(
+            instance=hc, files=None
+        )
         self.assertTrue(form.is_valid(), dict(form.errors))
 
-    def test_hazard_job_profile_is_valid_sites_only_as_str_list(self):
-        hjp = models.HazardJobProfile(
+    def test_hazard_calculation_is_valid_sites_only_as_str_list(self):
+        hc = models.HazardCalculation(
             owner=helpers.default_user(),
             description='',
             sites='-122.114, 38.113, -122.115, 38.114',
@@ -196,16 +202,18 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
             quantile_hazard_curves=[0.0, 0.5, 1.0],
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
-        form = validation.ClassicalHazardJobForm(instance=hjp, files=None)
+        form = validation.ClassicalHazardCalculationForm(
+            instance=hc, files=None
+        )
         self.assertTrue(form.is_valid(), dict(form.errors))
 
-    def test_hazard_job_profile_is_not_valid_missing_geom(self):
+    def test_hazard_calculation_is_not_valid_missing_geom(self):
         expected_errors = {
             'region': ['Must specify either `region` or `sites`.'],
             'sites': ['Must specify either `region` or `sites`.'],
         }
 
-        hjp = models.HazardJobProfile(
+        hc = models.HazardCalculation(
             owner=helpers.default_user(),
             description='',
             calculation_mode='classical',
@@ -226,12 +234,14 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
             quantile_hazard_curves=[0.0, 0.5, 1.0],
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
-        form = validation.ClassicalHazardJobForm(instance=hjp, files=None)
+        form = validation.ClassicalHazardCalculationForm(
+            instance=hc, files=None
+        )
         self.assertFalse(form.is_valid())
 
         self.assertEqual(expected_errors, dict(form.errors))
 
-    def test_hazard_job_profile_is_not_valid(self):
+    def test_hazard_calculation_is_not_valid(self):
         # test with an invalid job profile
         # several parameters are given invalid values
         expected_errors = {
@@ -286,7 +296,7 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
 
         }
 
-        hjp = models.HazardJobProfile(
+        hc = models.HazardCalculation(
             owner=helpers.default_user(),
             description='',
             region=(
@@ -312,13 +322,15 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
             poes_hazard_maps=[1.00001, -0.5, 0.0],
         )
 
-        form = validation.ClassicalHazardJobForm(instance=hjp, files=None)
+        form = validation.ClassicalHazardCalculationForm(
+            instance=hc, files=None
+        )
 
         self.assertFalse(form.is_valid())
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
-    def test_hazard_job_profile_is_not_valid_region_only(self):
+    def test_hazard_calculation_is_not_valid_region_only(self):
         expected_errors = {
             'region_grid_spacing': ['Region grid spacing must be > 0'],
             'region': [
@@ -338,7 +350,7 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
             ],
         }
 
-        hjp = models.HazardJobProfile(
+        hc = models.HazardCalculation(
             owner=helpers.default_user(),
             description='',
             region=(
@@ -360,18 +372,20 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
 
-        form = validation.ClassicalHazardJobForm(instance=hjp, files=None)
+        form = validation.ClassicalHazardCalculationForm(
+            instance=hc, files=None
+        )
 
         self.assertFalse(form.is_valid())
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
-    def test_hazard_job_profile_is_not_valid_missing_grid_spacing(self):
+    def test_hazard_calculation_is_not_valid_missing_grid_spacing(self):
         expected_errors = {
             'region': ['`region` requires `region_grid_spacing`'],
         }
 
-        hjp = models.HazardJobProfile(
+        hc = models.HazardCalculation(
             owner=helpers.default_user(),
             description='',
             region=(
@@ -397,13 +411,15 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
 
-        form = validation.ClassicalHazardJobForm(instance=hjp, files=None)
+        form = validation.ClassicalHazardCalculationForm(
+            instance=hc, files=None
+        )
 
         self.assertFalse(form.is_valid())
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))
         self.assertTrue(equal, err)
 
-    def test_hazard_job_profile_is_not_valid_sites_only(self):
+    def test_hazard_calculation_is_not_valid_sites_only(self):
         expected_errors = {
             'sites': [
                 'Longitude values must in the range [-180, 180]',
@@ -421,7 +437,7 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
             ],
         }
 
-        hjp = models.HazardJobProfile(
+        hc = models.HazardCalculation(
             owner=helpers.default_user(),
             description='',
             sites='MULTIPOINT((-180.001 90.001), (180.001 -90.001))',
@@ -439,7 +455,9 @@ class ClassicalHazardJobFormTestCase(unittest.TestCase):
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
 
-        form = validation.ClassicalHazardJobForm(instance=hjp, files=None)
+        form = validation.ClassicalHazardCalculationForm(
+            instance=hc, files=None
+        )
 
         self.assertFalse(form.is_valid())
         equal, err = helpers.deep_eq(expected_errors, dict(form.errors))

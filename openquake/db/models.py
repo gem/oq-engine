@@ -457,24 +457,23 @@ class OqJob(djm.Model):
     An OpenQuake engine run started by the user
     '''
     owner = djm.ForeignKey('OqUser')
-    hazard_job_profile = djm.ForeignKey('HazardJobProfile')  # null allowed
-    description = djm.TextField(default='')
-    path = djm.TextField(null=True, unique=True)
+    hazard_calculation = djm.ForeignKey('HazardCalculation', null=True)
     STATUS_CHOICES = (
-        (u'pending', u'Pending'),
-        (u'running', u'Running'),
-        (u'failed', u'Failed'),
-        (u'succeeded', u'Succeeded'),
+        (u'pre_executing', u'Pre-Executing'),
+        (u'executing', u'Executing'),
+        (u'post_executing', u'Post-Executing'),
+        (u'post_processing', u'Post-Processing'),
+        (u'complete', u'Complete'),
     )
-    status = djm.TextField(choices=STATUS_CHOICES, default='pending')
+    status = djm.TextField(choices=STATUS_CHOICES, default='pre_executing')
+    oq_version = djm.TextField(null=True, blank=True)
+    nhlib_version = djm.TextField(null=True, blank=True)
+    nrml_version = djm.TextField(null=True, blank=True)
+    is_running = djm.BooleanField(default=False)
     duration = djm.IntegerField(default=0)
     job_pid = djm.IntegerField(default=0)
     supervisor_pid = djm.IntegerField(default=0)
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
-
-    def profile(self):
-        """Return the associated job prfile."""
-        return profile4job(self.id)
 
     class Meta:
         db_table = 'uiapi\".\"oq_job'
@@ -508,7 +507,7 @@ class Job2profile(djm.Model):
         db_table = 'uiapi\".\"job2profile'
 
 
-class HazardJobProfile(djm.Model):
+class HazardCalculation(djm.Model):
     '''
     Parameters need to run a Hazard job.
     '''
@@ -631,7 +630,7 @@ class HazardJobProfile(djm.Model):
     )
 
     class Meta:
-        db_table = 'uiapi\".\"hazard_job_profile'
+        db_table = 'uiapi\".\"hazard_calculation'
 
     def __init__(self, *args, **kwargs):
         # If geometries were specified as string lists of coords,
@@ -669,7 +668,19 @@ class HazardJobProfile(djm.Model):
                             if field == 'region':
                                 points.append(points[0])
                             kwargs[field] = wkt_fmt % ', '.join(points)
-        super(HazardJobProfile, self).__init__(*args, **kwargs)
+        super(HazardCalculation, self).__init__(*args, **kwargs)
+
+
+class Input2hcalc(djm.Model):
+    '''
+    `input` to `hazard_calculation` link table.
+    '''
+
+    input = djm.ForeignKey('Input')
+    hazard_calculation = djm.ForeignKey('HazardCalculation')
+
+    class Meta:
+        db_table = 'uiapi\".\"input2hcalc'
 
 
 class OqJobProfile(djm.Model):
