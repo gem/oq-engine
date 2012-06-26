@@ -240,6 +240,7 @@ def create_hazard_calculation(owner, params, files):
     """
     hc = models.HazardCalculation(**params)
     hc.owner = owner
+    hc.full_clean()
     hc.save()
 
     for f in files:
