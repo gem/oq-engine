@@ -10,21 +10,29 @@ The :mod:`Utils` Sub-package
 Utility functions that are of interest to and shared by the entire
 OpenQuake python code base.
 
-The :mod:`db.loader` Module
---------------------------------
-Utility classes to load source models into the OpenQuake database.
+:mod:`general`
+--------------
 
-.. automodule:: openquake.utils.db.loader
-    :members:
-    :undoc-members:
-    :show-inheritance:
+.. automodule:: openquake.utils.general
 
-The :mod:`tasks` Module
---------------------------------
+:mod:`version`
+--------------
+
+.. automodule:: openquake.utils.version
+
+:mod:`config`
+-------------
+
+.. automodule:: openquake.utils.config
+
+:mod:`stats`
+------------
+
+.. automodule:: openquake.utils.stats
+
+:mod:`tasks`
+------------
 Various utility functions related to splitting work into tasks and/or
 managing these.
 
 .. automodule:: openquake.utils.tasks
-    :members:
-    :undoc-members:
-    :show-inheritance:

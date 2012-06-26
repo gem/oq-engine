@@ -60,11 +60,11 @@ def makedirs(fn):
     """Decorator for export functions. Creates intermediate directories (if
     necessary) to the target export directory.
 
-    This is equivalent to `mkdir -p` and :function:`os.makedirs`.
+    This is equivalent to `mkdir -p` and :func:`os.makedirs`.
     """
 
     def wrapped(output, target_dir):
-        """Call :function:`os.makedirs` to create intermediate directories to
+        """Call :func:`os.makedirs` to create intermediate directories to
         the ``target_dir``.
         """
         if os.path.exists(target_dir):
@@ -105,7 +105,7 @@ def get_jobs(user_name):
 
 
 def get_outputs(job_id):
-    """Get all :class:`openquake.db.models.Output`s associated with the
+    """Get all :class:`openquake.db.models.Output` objects associated with the
     specified job.
 
     :param int job_id:

@@ -10,14 +10,15 @@ Contents:
 
 .. toctree::
 
-    calculators/hazard
     engine
+    job/validation
+    calculators/hazard
     export/index
     db/models
+    db/fields
     architecture
     formats
     java
-    job
     kvs
     logs
     input
@@ -26,7 +27,6 @@ Contents:
     risk
     schema
     shapes
-    tasks
     utils
     writer
     xml

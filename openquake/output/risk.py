@@ -170,19 +170,21 @@ class BaseMapXMLWriter(nrml.TreeNRMLWriter):
         This method assumes that `riskResult` and `lossMap` element
         data has already been written.
 
-        :param site: the region location of the data being written
-        :type site: :py:class:`openquake.shapes.Site`
+        :param site:
+            The geographical location of the data being written
+        :type site:
+            :class:`openquake.shapes.Site`
 
-        :param values: contains a list of pairs in the form
-            (loss dict, asset dict) with all the data
-            to be written related to the given site
-        :type values: tuple with the following members
-            :py:class:`dict` (loss dict) with the following keys:
-                ***mean_loss*** - the Mean Loss for a certain Node/Site
-                ***stddev_loss*** - the Standard Deviation for a certain
-                    Node/Site
+        :param values:
+            Contains a list of pairs in the form (loss dict, asset dict)
+            with all the data to be written related to the given site.
 
-            :py:class:`dict` (asset dict)
+            :class:`dict` (loss dict) with the following keys:
+
+            * **mean_loss** - the Mean Loss for a certain Node/Site
+            * **stddev_loss** - the Standard Deviation for a certain Node/Site
+
+            :class:`dict` (asset dict)
                 ***assetID*** - the assetID
         """
 
@@ -453,20 +455,21 @@ class LossMapDBWriter(writer.DBWriter):
 
     def insert_datum(self, site, values):
         """
-        :param site: the region location of the data being written
-        :type site: :py:class:`openquake.shapes.Site`
+        :param site:
+            A :class:`~openquake.shapes.Site`, indicating the geographical
+            location of the data being written
+        :param values:
+            Contains a list of pairs in the form `(loss_dict, asset_dict)` with
+            all the data to be written related to the given site.
 
-        :param values: contains a list of pairs in the form
-            (loss dict, asset dict) with all the data
-            to be written related to the given site
-        :type values: tuple with the following members
-            :py:class:`dict` (loss dict) with the following keys:
-                ***mean_loss*** - the Mean Loss for a certain Node/Site
-                ***stddev_loss*** - the Standard Deviation for a certain
-                    Node/Site
+            `loss_dict` has should have the following keys:
 
-            :py:class:`dict` (asset dict)
-                ***assetID*** - the assetID
+            * **mean_loss** - the Mean Loss for this location
+            * **stddev_loss** - the Standard Deviation for this location
+
+            `asset_dict` should have the following keys:
+
+            * **assetID** - the assetID
         """
         for loss, asset in values:
 
@@ -746,12 +749,15 @@ class LossCurveDBWriter(writer.DBWriter):
         """
         Called for each item in the iterable beeing serialized.
 
-        :param key: the location of the asset for which the loss curve has been
-                    calculated
-        :type key: :py:class:`openquake.shapes.Site`
+        :param key:
+            The location of the asset for which the loss curve has been
+            calculated
+        :type key:
+            :class:`openquake.shapes.Site`
 
-        :param values: a tuple (curve, asset). See
-        :py:meth:`insert_asset_loss_curve` for more details.
+        :param values:
+            A tuple (curve, asset). See :meth:`insert_asset_loss_curve`
+            for more details.
         """
         point = key
 
