@@ -31,8 +31,11 @@ import os
 from collections import namedtuple
 from datetime import datetime
 
+import numpy
+
 from django.contrib.gis.db import models as djm
 from django.contrib.gis.geos.geometry import GEOSGeometry
+from nhlib import geo as nhlib_geo
 from shapely import wkt
 
 from openquake.db import fields
@@ -690,6 +693,29 @@ class HazardCalculation(djm.Model):
                                 points.append(points[0])
                             kwargs[field] = wkt_fmt % ', '.join(points)
         super(HazardCalculation, self).__init__(*args, **kwargs)
+
+    def points_to_compute(self):
+        """
+        Generate a :class:`~nhlib.geo.mesh.Mesh` of points. These points
+        indicate the locations of interest in a hazard calculation.
+
+        The mesh can be calculated given a `region` polygon and
+        `region_grid_spacing` (the discretization parameter), or from a list of
+        `sites`.
+        """
+        if self.region is not None and self.region_grid_spacing is not None:
+            # assume that the polygon is a single linear ring
+            coords = self.region.coords[0]
+            points = [nhlib_geo.Point(*x) for x in coords]
+            poly = nhlib_geo.Polygon(points)
+            return poly.discretize(self.region_grid_spacing)
+        elif self.sites is not None:
+            lons, lats = zip(*self.sites.coords)
+            return nhlib_geo.Mesh(
+                numpy.array(lons), numpy.array(lats), depths=None)
+        else:
+            # there's no geometry defined
+            return None
 
 
 class Input2hcalc(djm.Model):
