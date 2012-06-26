@@ -14,20 +14,27 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
-from openquake.calculators import base
-from openquake.calculators.hazard import general
+import unittest
+
+from openquake.calculators.hazard.classical import core_next
+
+from tests.utils import helpers
 
 
-class ClassicalHazardCalculator(base.CalculatorNext):
+class ClassicalHazardCalculatorTestCase(unittest.TestCase):
+    """
+    Tests for the basic functions of the classical hazard calculator
+    (pre_execute, execute, etc.).
+    """
 
-    def pre_execute(self):
-        site_model = general.get_site_model(self.job.hazard_calculation.id)
+    def test_pre_execute_stores_site_model(self):
+        cfg = helpers.demo_file(
+            'simple_fault_demo_hazard/job_with_site_model.ini')
+        job = helpers.get_hazard_job(cfg)
 
-        if site_model is not None:
-            # Explicit cast to `str` here because the XML parser doesn't like
-            # unicode. (More specifically, lxml doesn't like unicode.)
-            site_model_content = str(site_model.model_content.raw_content)
-            site_model_data = general.store_site_model(
-                site_model, StringIO.StringIO(site_model_content))
+        calc = core_next.ClassicalHazardCalculator(job)
 
-            general.validate_site_model(site_model_data, None)
+        calc.pre_execute()
+
+    def test_pre_execute_no_site_model(self):
+        pass
