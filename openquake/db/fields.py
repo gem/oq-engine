@@ -157,7 +157,8 @@ class PickleField(djm.Field):
 
     def to_python(self, value):
         """Unpickle the value."""
-        if value and isinstance(value, (buffer, str, bytearray)):
+        if isinstance(value, (buffer, str, bytearray)) and value:
+            import nose; nose.tools.set_trace()
             return pickle.loads(str(value))
         else:
             return value

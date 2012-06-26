@@ -46,8 +46,16 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
         self.assertEqual(2601, len(sm_nodes))
 
+        num_pts_to_compute = len(
+            calc.job.hazard_calculation.points_to_compute())
         # The site model is good. Now test that `site_data` was computed.
-        pass
+        # For now, just test the lengths of the site data collections:
+        self.assertEqual(num_pts_to_compute, len(calc.site_data.lons))
+        self.assertEqual(num_pts_to_compute, len(calc.site_data.lats))
+        self.assertEqual(num_pts_to_compute, len(calc.site_data.vs30s))
+        self.assertEqual(num_pts_to_compute, len(calc.site_data.vs30_measured))
+        self.assertEqual(num_pts_to_compute, len(calc.site_data.z1pt0s))
+        self.assertEqual(num_pts_to_compute, len(calc.site_data.z2pt5s))
 
     def test_pre_execute_no_site_model(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
