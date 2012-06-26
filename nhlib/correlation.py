@@ -36,27 +36,29 @@ class JB2009CorrelationModel(object):
     def __init__(self, vs30_clustering):
         self.vs30_clustering = vs30_clustering
 
-    def get_correlation_matrix(self, sites, imt):
+    def get_correlation_matrix(self, distances, imt):
         """
         Calculate correlation matrix for a given sites collection.
 
         Correlation depends on spectral period, Vs 30 clustering behaviour
         and distance between sites.
 
-        :param sites:
-            :class:`~nhlib.site.SiteCollection` to create
-            correlation matrix for.
+        :param distances:
+            Numpy square matrix of mutual distances between
+            sites in km (like the one returned from
+            :meth:`nhlib.geo.mesh.Mesh.get_distance_matrix`)
         :param imt:
             Intensity measure type object, an instance of either
             of :class:`nhlib.imt.SA` or :class:`nhlib.imt.PGA`.
+        :returns:
+            Square matrix of the same rank as ``distances`` with
+            correlation data (values between 0 and 1).
         """
         if isinstance(imt, SA):
             period = imt.period
         else:
             assert isinstance(imt, PGA)
             period = 0
-
-        distances = sites.mesh.get_distance_matrix()
 
         # formulae are from page 1700
         if period < 1:
