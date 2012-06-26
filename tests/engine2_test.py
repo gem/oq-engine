@@ -362,7 +362,7 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
         self.assertEqual(hc.maximum_distance, 200.0)
 
         # Test the input2haz_calc link:
-        [inp2hcs] = models.Input2HazCalc.objects.filter(
+        [inp2hcs] = models.Input2hcalc.objects.filter(
             hazard_calculation=hc.id)
 
         self.assertEqual(site_model.id, inp2hcs.input.id)

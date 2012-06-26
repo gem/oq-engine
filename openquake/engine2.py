@@ -243,7 +243,7 @@ def create_hazard_calculation(owner, params, files):
     hc.save()
 
     for f in files:
-        models.Input2HazCalc(input=f, hazard_calculation=hc).save()
+        models.Input2hcalc(input=f, hazard_calculation=hc).save()
 
     return hc
 
