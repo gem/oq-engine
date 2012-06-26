@@ -89,7 +89,7 @@ def inputs4haz_calc(calc_id, input_type=None):
     :returns:
         A list of :class:`Input` instances.
     """
-    i2hc = Input2HazCalc.objects.extra(
+    i2hc = Input2hcalc.objects.extra(
         where=['hazard_calculation_id=%s'], params=[calc_id])
 
     if input_type is not None:
