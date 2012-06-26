@@ -232,6 +232,9 @@ class GetSiteModelTestCase(unittest.TestCase):
             'investigation_time': 50,
             'truncation_level': 0,
             'maximum_distance': 200,
+            'number_of_logic_tree_samples': 1,
+            'intensity_measure_types_and_levels': dict(PGA=[1,2,3,4]),
+            'random_seed': 37,
         }
         owner = helpers.default_user()
         hc = engine2.create_hazard_calculation(owner, params, [])
@@ -298,7 +301,7 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         # We haven't yet linked any site model data to this input, so we
         # expect a result of `None`.
         self.assertIsNone(general.get_closest_site_model_data(
-            self.site_model_inp, shapes.Site(0, 0))
+            self.site_model_inp, nhlib_geo.Point(0, 0))
         )
 
     def test_get_closest_site_model_data(self):
@@ -333,11 +336,11 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         #
         # Thus, I decided to not include this in my test case, since it caused
         # the test to intermittently fail.
-        site1 = shapes.Site(-0.0000001, 0)
-        site2 = shapes.Site(0.0000001, 0)
+        point1 = nhlib_geo.Point(-0.0000001, 0)
+        point2 = nhlib_geo.Point(0.0000001, 0)
 
-        res1 = general.get_closest_site_model_data(self.site_model_inp, site1)
-        res2 = general.get_closest_site_model_data(self.site_model_inp, site2)
+        res1 = general.get_closest_site_model_data(self.site_model_inp, point1)
+        res2 = general.get_closest_site_model_data(self.site_model_inp, point2)
 
         self.assertEqual(sm1, res1)
         self.assertEqual(sm2, res2)

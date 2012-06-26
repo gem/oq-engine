@@ -28,7 +28,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     (pre_execute, execute, etc.).
     """
 
-    def test_pre_execute_stores_site_model(self):
+    def test_pre_execute_stores_site_model_and_site_data(self):
         cfg = helpers.demo_file(
             'simple_fault_demo_hazard/job_with_site_model.ini')
         job = helpers.get_hazard_job(cfg)
@@ -45,6 +45,9 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         sm_nodes = models.SiteModel.objects.filter(input=site_model_inp)
 
         self.assertEqual(2601, len(sm_nodes))
+
+        # The site model is good. Now test that `site_data` was computed.
+        pass
 
     def test_pre_execute_no_site_model(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')

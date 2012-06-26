@@ -23,15 +23,15 @@ from openquake.calculators.hazard import general
 class ClassicalHazardCalculator(base.CalculatorNext):
 
     def pre_execute(self):
-        site_model = general.get_site_model(self.job.hazard_calculation.id)
+        site_model_inp = general.get_site_model(self.job.hazard_calculation.id)
 
-        if site_model is not None:
+        if site_model_inp is not None:
             # Explicit cast to `str` here because the XML parser doesn't like
             # unicode. (More specifically, lxml doesn't like unicode.)
-            site_model_content = str(site_model.model_content.raw_content)
+            site_model_content = str(site_model_inp.model_content.raw_content)
             site_model_data = general.store_site_model(
-                site_model, StringIO.StringIO(site_model_content))
+                site_model_inp, StringIO.StringIO(site_model_content))
 
-            general.validate_site_model(
-                site_model_data,
-                self.job.hazard_calculation.points_to_compute())
+            mesh = self.job.hazard_calculation.points_to_compute()
+
+            general.validate_site_model(site_model_data, mesh)
