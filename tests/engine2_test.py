@@ -342,7 +342,6 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
             'maximum_distance': 200,
         }
 
-
         owner = helpers.default_user()
 
         site_model = models.Input(digest='123', path='/foo/bar', size=0,
