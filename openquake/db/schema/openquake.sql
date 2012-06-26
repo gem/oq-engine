@@ -241,15 +241,14 @@ CREATE TABLE uiapi.model_content (
 CREATE TABLE uiapi.oq_job (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
-    hazard_job_profile_id INTEGER,  -- FK to uiapi.hazard_job_profile
-    description VARCHAR NOT NULL DEFAULT '',
-    -- The full path of the location where the input files for the calculation
-    -- engine reside. This is used internally by openquake-server, can probably
-    -- be removed (see https://github.com/gem/openquake-server/issues/55)
-    path VARCHAR UNIQUE,
-    -- One of: pending, running, failed, succeeded
-    status VARCHAR NOT NULL DEFAULT 'pending' CONSTRAINT job_status_value
-        CHECK(status IN ('pending', 'running', 'failed', 'succeeded')),
+    hazard_calculation_id INTEGER,  -- FK to uiapi.hazard_calculation
+    -- One of: pre_execution, executing, post_execution, post_processing, complete
+    status VARCHAR NOT NULL DEFAULT 'pre_executing' CONSTRAINT job_status_value
+        CHECK(status IN ('pre_executing', 'executing', 'post_executing', 'post_processing', 'complete')),
+    oq_version VARCHAR,
+    nhlib_version VARCHAR,
+    nrml_version VARCHAR,
+    is_running BOOLEAN NOT NULL DEFAULT FALSE,
     duration INTEGER NOT NULL DEFAULT 0,
     job_pid INTEGER NOT NULL DEFAULT 0,
     supervisor_pid INTEGER NOT NULL DEFAULT 0,
@@ -271,7 +270,7 @@ CREATE TABLE uiapi.job_stats (
 ) TABLESPACE uiapi_ts;
 
 
-CREATE TABLE uiapi.hazard_job_profile (
+CREATE TABLE uiapi.hazard_calculation (
     -- TODO(larsbutler): At the moment, this model only contains Classical hazard parameters.
     -- We'll need to update fields and constraints as we add the other calculation modes.
     id SERIAL PRIMARY KEY,
@@ -307,8 +306,15 @@ CREATE TABLE uiapi.hazard_job_profile (
     quantile_hazard_curves float[],
     poes_hazard_maps float[]
 ) TABLESPACE uiapi_ts;
-SELECT AddGeometryColumn('uiapi', 'hazard_job_profile', 'region', 4326, 'POLYGON', 2);
-SELECT AddGeometryColumn('uiapi', 'hazard_job_profile', 'sites', 4326, 'MULTIPOINT', 2);
+SELECT AddGeometryColumn('uiapi', 'hazard_calculation', 'region', 4326, 'POLYGON', 2);
+SELECT AddGeometryColumn('uiapi', 'hazard_calculation', 'sites', 4326, 'MULTIPOINT', 2);
+
+
+CREATE TABLE uiapi.input2hcalc (
+    id SERIAL PRIMARY KEY,
+    input_id INTEGER NOT NULL,
+    hazard_calculation_id INTEGER NOT NULL
+) TABLESPACE uiapi_ts;
 
 
 -- The parameters needed for an OpenQuake engine run
@@ -1451,12 +1457,18 @@ FOREIGN KEY (surface_id) REFERENCES eqcat.surface(id) ON DELETE RESTRICT;
 ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_hazard_job_profile_fk
-FOREIGN KEY (hazard_job_profile_id) REFERENCES uiapi.hazard_job_profile(id)
+ALTER TABLE uiapi.oq_job ADD CONSTRAINT uiapi_oq_job_hazard_calculation
+FOREIGN KEY (hazard_calculation_id) REFERENCES uiapi.hazard_calculation(id)
 ON DELETE RESTRICT;
 
-ALTER TABLE uiapi.hazard_job_profile ADD CONSTRAINT uiapi_hazard_job_profile_owner_fk
+ALTER TABLE uiapi.hazard_calculation ADD CONSTRAINT uiapi_hazard_calculation_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.input2hcalc ADD CONSTRAINT uiapi_input2hcalc_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.input2hcalc ADD CONSTRAINT uiapi_input2hcalc_hazard_calculation_fk
+FOREIGN KEY (hazard_calculation_id) REFERENCES uiapi.hazard_calculation(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.oq_job_profile ADD CONSTRAINT uiapi_oq_job_profile_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
