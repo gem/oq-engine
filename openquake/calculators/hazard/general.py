@@ -292,19 +292,19 @@ def validate_site_model(sm_nodes, sites):
         )
 
 
-def get_site_model(job_id):
+def get_site_model(hc_id):
     """Get the site model :class:`~openquake.db.models.Input` record for the
     given job id.
 
-    :param int job_id:
-        ID of a job.
+    :param int hc_id:
+        The id of a :class:`~openquake.db.models.HazardCalculation`.
 
     :returns:
         The site model :class:`~openquake.db.models.Input` record for this job.
     :raises:
         :exc:`RuntimeError` if the job has more than 1 site model.
     """
-    site_model = models.inputs4job(job_id, input_type='site_model')
+    site_model = models.inputs4haz_calc(hc_id, input_type='site_model')
 
     if len(site_model) == 0:
         return None
