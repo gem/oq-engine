@@ -72,32 +72,6 @@ class StoreSiteModelTestCase(unittest.TestCase):
         for i, val in enumerate(ret_val):
             self.assertEqual(val, actual_site_model[i])
 
-    @helpers.skipit
-    def test_initialize_stores_site_model(self):
-        job_ctxt = helpers.prepare_job_context(
-            helpers.demo_file(
-                'simple_fault_demo_hazard/config_with_site_model.gem'))
-
-        calc = general.BaseHazardCalculator(job_ctxt)
-
-        [site_model_input] = models.inputs4job(
-            job_ctxt.oq_job.id, input_type='site_model')
-
-        site_model_nodes = models.SiteModel.objects.filter(
-            input=site_model_input)
-
-        # Test precondition: The site_model table shouldn't be populated yet.
-        self.assertEqual(0, len(site_model_nodes))
-
-        calc.initialize()
-
-        # Now it should be populated.
-        site_model_nodes = models.SiteModel.objects.filter(
-            input=site_model_input)
-        # It would be overkill to test the contents; just check that the number
-        # of records is correct.
-        self.assertEqual(2601, len(site_model_nodes))
-
 
 class ValidateSiteModelTestCase(unittest.TestCase):
     """Tests for
