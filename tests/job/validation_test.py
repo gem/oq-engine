@@ -147,7 +147,7 @@ class ClassicalHazardCalculationFormTestCase(unittest.TestCase):
             poes_hazard_maps=[1.0, 0.5, 0.0],
         )
         form = validation.ClassicalHazardCalculationForm(
-            instance=hc, files=dict(SITE_MODEL_FILE=object())
+            instance=hc, files=dict(site_model_file=object())
         )
         self.assertTrue(form.is_valid(), dict(form.errors))
 
