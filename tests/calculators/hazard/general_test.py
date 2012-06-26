@@ -71,6 +71,7 @@ class StoreSiteModelTestCase(unittest.TestCase):
         for i, val in enumerate(ret_val):
             self.assertEqual(val, actual_site_model[i])
 
+    @helpers.skipit
     def test_initialize_stores_site_model(self):
         job_ctxt = helpers.prepare_job_context(
             helpers.demo_file(
@@ -195,6 +196,7 @@ class ValidateSiteModelTestCase(unittest.TestCase):
             self.assertRaises(ValidationException, general.validate_site_model,
                               self.site_model_nodes, tc)
 
+    @helpers.skipit
     def test_initialize_calls_validate(self):
         # Test make sure the calculator `initialize` calls
         # `validate_site_model`.
