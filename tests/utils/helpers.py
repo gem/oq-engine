@@ -45,6 +45,7 @@ from openquake.calculators.hazard.general import store_source_model
 from openquake.db import models
 from openquake.engine import JobContext
 from openquake import engine
+from openquake import engine2
 from openquake import logs
 from openquake import producer
 from openquake.input.logictree import LogicTreeProcessor
@@ -919,3 +920,17 @@ def _deep_eq(a, b, decimal):
             numpy.testing.assert_almost_equal(a, b, decimal=decimal)
         else:
             assert a == b, "%s != %s" % (a, b)
+
+
+def get_hazard_job(cfg):
+    """
+    Given a path to a config file, create a
+    :class:`openquake.db.models.OqJob` object for a hazard calculation.
+    """
+    job = engine2.prepare_job(default_user().user_name)
+    params, files = engine2.parse_config(open(cfg, 'r'), force_inputs=True)
+    haz_calc = engine2.create_hazard_calculation(
+        job.owner, params, files.values())
+    job.hazard_calculation = haz_calc
+    job.save()
+    return job
