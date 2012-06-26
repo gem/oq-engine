@@ -16,6 +16,7 @@
 
 import unittest
 
+from openquake.db import models
 from openquake.calculators.hazard.classical import core_next
 
 from tests.utils import helpers
@@ -35,6 +36,23 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         calc = core_next.ClassicalHazardCalculator(job)
 
         calc.pre_execute()
+        # If the site model isn't valid for the calculation geometry, a
+        # `RuntimeError` should be raised here
+
+        # Okay, it's all good. Now check the count of the site model records.
+        [site_model_inp] = models.inputs4hcalc(
+            job.hazard_calculation.id, input_type='site_model')
+        sm_nodes = models.SiteModel.objects.filter(input=site_model_inp)
+
+        self.assertEqual(2601, len(sm_nodes))
 
     def test_pre_execute_no_site_model(self):
-        pass
+        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        job = helpers.get_hazard_job(cfg)
+
+        calc = core_next.ClassicalHazardCalculator(job)
+
+        patch_path = 'openquake.calculators.hazard.general.store_site_model'
+        with helpers.patch(patch_path) as store_sm_patch:
+            calc.pre_execute()
+            self.assertEqual(0, store_sm_patch.call_count)

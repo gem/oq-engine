@@ -301,7 +301,7 @@ def get_site_model(hc_id):
     :raises:
         :exc:`RuntimeError` if the job has more than 1 site model.
     """
-    site_model = models.inputs4haz_calc(hc_id, input_type='site_model')
+    site_model = models.inputs4hcalc(hc_id, input_type='site_model')
 
     if len(site_model) == 0:
         return None

@@ -14,6 +14,8 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import StringIO
+
 from openquake.calculators import base
 from openquake.calculators.hazard import general
 
@@ -30,4 +32,6 @@ class ClassicalHazardCalculator(base.CalculatorNext):
             site_model_data = general.store_site_model(
                 site_model, StringIO.StringIO(site_model_content))
 
-            general.validate_site_model(site_model_data, None)
+            general.validate_site_model(
+                site_model_data,
+                self.job.hazard_calculation.points_to_compute())
