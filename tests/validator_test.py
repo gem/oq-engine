@@ -472,6 +472,7 @@ class DisaggregationValidatorTestCase(unittest.TestCase):
         self.assertFalse(validator.is_valid()[0])
 
 
+@unittest.skip
 class DefaultValidatorsTestCase(unittest.TestCase):
     """Tests :function:`openquake.job.config.default_validators`
     for correct behavior with various types of job configurations.

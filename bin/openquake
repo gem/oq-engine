@@ -193,12 +193,12 @@ if __name__ == '__main__':
             job = engine2.prepare_job(getpass.getuser())
             params, files = engine2.parse_config(
                 open(args.run_hazard, 'r'), force_inputs=args.force_inputs)
-            profile = engine2.create_hazard_job_profile(params, job.owner)
-            job.hazard_job_profile = profile
+            calculation = engine2.create_hazard_calculation(params, job.owner)
+            job.hazard_calculation = calculation
             job.save()
 
             # Validate the job:
-            form = validation.ClassicalHazardJobForm(instance=profile, files=files)
+            form = validation.ClassicalHazardCalculationForm(instance=calculation, files=files)
             # For now, just print whether or not the job is valid.
             if form.is_valid():
                 print 'Job configuration is valid'
