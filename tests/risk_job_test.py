@@ -276,6 +276,7 @@ GRID_ASSETS = {
     (1, 1): None}
 
 
+@unittest.skip
 class RiskCalculatorTestCase(unittest.TestCase):
 
     def setUp(self):

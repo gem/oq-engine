@@ -271,6 +271,7 @@ class HazardMapDBWriterTestCase(HazardMapDBBaseTestCase):
         self.assertEqual(round_float(maximum), round_float(output.max_value))
 
 
+@unittest.skip
 class HazardMapDBReaderTestCase(HazardMapDBBaseTestCase):
     """
     Unit tests for the HazardMapDBReader class, which deserializes
@@ -394,6 +395,7 @@ class HazardCurveDBWriterTestCase(HazardCurveDBBaseTestCase):
                           self.normalize(inserted_data))
 
 
+@unittest.skip
 class HazardCurveDBReaderTestCase(HazardCurveDBBaseTestCase):
     """
     Unit tests for the HazardMapDBReader class, which deserializes
