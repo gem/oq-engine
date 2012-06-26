@@ -174,8 +174,8 @@ class Mesh(object):
         .. warning::
             Since its quadratic space and time complexity this method is safe
             to use for meshes of up to several thousand points. For mesh of 10k
-            sites it needs ~800 Mb for just the resulting matrix and four times
-            that much for intermediate storage.
+            points it needs ~800 Mb for just the resulting matrix and four
+            times that much for intermediate storage.
 
         :returns:
             Two-dimensional numpy array, square matrix of distances. The matrix
