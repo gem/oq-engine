@@ -1440,8 +1440,6 @@ CREATE TABLE riski.ffd (
 CREATE TABLE idata.lt_realization (
     id SERIAL PRIMARY KEY,
     hazard_calculation_id INTEGER NOT NULL,
-    -- optional FK; if null, get reference site parameters from hazard_calculation
-    site_data_id INTEGER,
     ordinal INTEGER NOT NULL,
     sm_lt_path VARCHAR NOT NULL,
     gsim_lt_path VARCHAR NOT NULL,
@@ -1463,6 +1461,7 @@ CREATE TABLE idata.hazard_curve_progress (
     -- This table will contain 1 record per IMT per logic tree realization
     -- for a given calculation.
     id SERIAL PRIMARY KEY,
+    lt_realization_id INTEGER NOT NULL,
     imt VARCHAR NOT NULL,
     -- stores a pickled numpy array for intermediate results
     -- array is 2d: sites x IMLs
@@ -1735,13 +1734,6 @@ FOREIGN KEY (hazard_calculation_id)
 REFERENCES uiapi.hazard_calculation(id)
 ON DELETE CASCADE;
 
--- idata.lt_realization to uiapi.site_data FK
-ALTER TABLE idata.lt_realization
-ADD CONSTRAINT idata_lt_realization_site_data_fk
-FOREIGN KEY (site_data_id)
-REFERENCES idata.site_data(id)
-ON DELETE RESTRICT;
-
 -- idata.source_progress to idata.lt_realization FK
 ALTER TABLE idata.source_progress
 ADD CONSTRAINT idata_source_progress_lt_realization_fk
@@ -1754,6 +1746,13 @@ ALTER TABLE idata.source_progress
 ADD CONSTRAINT idata_source_progress_parsed_source_fk
 FOREIGN KEY (parsed_source_id)
 REFERENCES hzrdi.parsed_source(id)
+ON DELETE CASCADE;
+
+-- idata.hazard_curve_progress to idata.lt_realization FK
+ALTER TABLE idata.hazard_curve_progress
+ADD CONSTRAINT idata_hazard_curve_progress_lt_realization_fk
+FOREIGN KEY (lt_realization_id)
+REFERENCES idata.lt_realization(id)
 ON DELETE CASCADE;
 
 -- idata.site_data to uiapi.hazard_calculation FK
