@@ -19,14 +19,14 @@ distributed ground-shaking intensities.
 """
 import numpy
 
-from nhlib.imt import SA
+from nhlib.imt import SA, PGA
 
 
 class JB2009CorrelationModel(object):
     """
     "Correlation model for spatially distributed ground-motion intensities"
     by Nirmal Jayaram and Jack W. Baker. Published in Earthquake Engineering
-    and Structural Dynamics 2009; 38, pages 1687–1708.
+    and Structural Dynamics 2009; 38, pages 1687-1708.
 
     :param vs30_clustering:
         Boolean value to indicate whether "Case 1" or "Case 2" from page 1700
@@ -40,28 +40,35 @@ class JB2009CorrelationModel(object):
         """
         Calculate correlation matrix for a given sites collection.
 
+        Correlation depends on spectral period, Vs 30 clustering behaviour
+        and distance between sites.
+
         :param sites:
             :class:`~nhlib.site.SiteCollection` to create
             correlation matrix for.
         :param imt:
-            Intensity measure type object, an instance
-            of :class:`nhlib.imt.SA`. Correlation depends
-            on spectral period.
+            Intensity measure type object, an instance of either
+            of :class:`nhlib.imt.SA` or :class:`nhlib.imt.PGA`.
         """
-        assert isinstance(imt, SA)
+        if isinstance(imt, SA):
+            period = imt.period
+        else:
+            assert isinstance(imt, PGA)
+            period = 0
+
         distances = sites.mesh.get_distance_matrix()
 
         # formulae are from page 1700
-        if imt.period < 1:
+        if period < 1:
             if not self.vs30_clustering:
                 # case 1, eq. (17)
-                b = 8.5 + 17.2 * imt.period
+                b = 8.5 + 17.2 * period
             else:
                 # case 2, eq. (18)
-                b = 40.7 - 15.0 * imt.period
+                b = 40.7 - 15.0 * period
         else:
             # both cases, eq. (19)
-            b = 22.0 + 3.7 * imt.period
+            b = 22.0 + 3.7 * period
 
         # eq. (20)
         return numpy.exp((- 3.0 / b) * distances)

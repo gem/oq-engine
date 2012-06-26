@@ -17,7 +17,7 @@ import unittest
 
 import numpy
 
-from nhlib.imt import SA
+from nhlib.imt import SA, PGA
 from nhlib.correlation import JB2009CorrelationModel
 from nhlib.site import Site, SiteCollection
 from nhlib.geo import Point
@@ -82,4 +82,18 @@ class JB2009CorrelationMatrixTestCase(unittest.TestCase):
                           [1,          0.56813402, 1,          0.56813402],
                           [0.56813402, 0.32277627, 0.56813402, 1]])
         corma2 = cormo2.get_correlation_matrix(self.SITECOL, imt)
+        self.assertTrue((corma == corma2).all())
+
+    def test_pga(self):
+        sa = SA(period=1e-50, damping=5)
+        pga = PGA()
+
+        cormo = JB2009CorrelationModel(vs30_clustering=False)
+        corma = cormo.get_correlation_matrix(self.SITECOL, sa)
+        corma2 = cormo.get_correlation_matrix(self.SITECOL, pga)
+        self.assertTrue((corma == corma2).all())
+
+        cormo = JB2009CorrelationModel(vs30_clustering=True)
+        corma = cormo.get_correlation_matrix(self.SITECOL, sa)
+        corma2 = cormo.get_correlation_matrix(self.SITECOL, pga)
         self.assertTrue((corma == corma2).all())
