@@ -22,8 +22,14 @@ from openquake.calculators.hazard import general
 
 class ClassicalHazardCalculator(base.CalculatorNext):
 
+    def __init__(self, job):
+        self.site_data = None  # assigned a value only if there is a site model
+        super(ClassicalHazardCalculator, self).__init__(job)
+
     def pre_execute(self):
-        site_model_inp = general.get_site_model(self.job.hazard_calculation.id)
+        hc_id = self.job.hazard_calculation.id
+
+        site_model_inp = general.get_site_model(hc_id)
 
         if site_model_inp is not None:
             # Explicit cast to `str` here because the XML parser doesn't like
@@ -35,3 +41,6 @@ class ClassicalHazardCalculator(base.CalculatorNext):
             mesh = self.job.hazard_calculation.points_to_compute()
 
             general.validate_site_model(site_model_data, mesh)
+
+            self.site_data = general.store_site_data(
+                hc_id, site_model_inp, mesh)
