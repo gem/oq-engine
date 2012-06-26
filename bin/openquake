@@ -193,7 +193,7 @@ if __name__ == '__main__':
             job = engine2.prepare_job(getpass.getuser())
             params, files = engine2.parse_config(
                 open(args.run_hazard, 'r'), force_inputs=args.force_inputs)
-            calculation = engine2.create_hazard_calculation(job.owner, params, files)
+            calculation = engine2.create_hazard_calculation(job.owner, params, files.values())
             job.hazard_calculation = calculation
             job.save()
 
