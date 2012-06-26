@@ -18,6 +18,7 @@
 import unittest
 
 from openquake import engine
+from openquake import engine2
 from openquake import shapes
 from openquake.calculators.hazard import general
 from openquake.db import models
@@ -215,42 +216,64 @@ class ValidateSiteModelTestCase(unittest.TestCase):
 
 class GetSiteModelTestCase(unittest.TestCase):
 
+    @classmethod
+    def _create_haz_calc(cls):
+        params = {
+            'calculation_mode': 'classical',
+            'region': '1 1 2 2 3 3',
+            'width_of_mfd_bin': '1',
+            'rupture_mesh_spacing': '1',
+            'area_source_discretization': '2',
+            'investigation_time': 50,
+            'truncation_level': 0,
+            'maximum_distance': 200,
+        }
+        owner = helpers.default_user()
+        hc = engine2.create_hazard_calculation(owner, params, [])
+        return hc
+
+
     def test_get_site_model(self):
-        job = engine.prepare_job()
+        haz_calc = self._create_haz_calc()
+
         site_model_inp = models.Input(
-            owner=job.owner, digest='fake', path='fake',
+            owner=haz_calc.owner, digest='fake', path='fake',
             input_type='site_model', size=0
         )
         site_model_inp.save()
 
-        # The link has not yet been made in the input2job table.
-        self.assertIsNone(general.get_site_model(job.id))
+        # The link has not yet been made in the input2haz_calc table.
+        self.assertIsNone(general.get_site_model(haz_calc.id))
 
         # Complete the link:
-        models.Input2job(input=site_model_inp, oq_job=job).save()
+        models.Input2HazCalc(
+            input=site_model_inp, hazard_calculation=haz_calc).save()
 
-        actual_site_model = general.get_site_model(job.id)
+        actual_site_model = general.get_site_model(haz_calc.id)
         self.assertEqual(site_model_inp, actual_site_model)
 
     def test_get_site_model_too_many_site_models(self):
-        job = engine.prepare_job()
+        haz_calc = self._create_haz_calc()
+
         site_model_inp1 = models.Input(
-            owner=job.owner, digest='fake', path='fake',
+            owner=haz_calc.owner, digest='fake', path='fake',
             input_type='site_model', size=0
         )
         site_model_inp1.save()
         site_model_inp2 = models.Input(
-            owner=job.owner, digest='fake', path='fake',
+            owner=haz_calc.owner, digest='fake', path='fake',
             input_type='site_model', size=0
         )
         site_model_inp2.save()
 
-        # link both site models to the job:
-        models.Input2job(input=site_model_inp1, oq_job=job).save()
-        models.Input2job(input=site_model_inp2, oq_job=job).save()
+        # link both site models to the calculation:
+        models.Input2HazCalc(
+            input=site_model_inp1, hazard_calculation=haz_calc).save()
+        models.Input2HazCalc(
+            input=site_model_inp2, hazard_calculation=haz_calc).save()
 
         with self.assertRaises(RuntimeError) as assert_raises:
-            general.get_site_model(job.id)
+            general.get_site_model(haz_calc.id)
 
         self.assertEqual('Only 1 site model per job is allowed, found 2.',
                          assert_raises.exception.message)
