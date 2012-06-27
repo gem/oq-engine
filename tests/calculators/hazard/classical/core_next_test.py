@@ -48,6 +48,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
         num_pts_to_compute = len(
             calc.job.hazard_calculation.points_to_compute())
+
         # The site model is good. Now test that `site_data` was computed.
         # For now, just test the lengths of the site data collections:
         self.assertEqual(num_pts_to_compute, len(calc.site_data.lons))
