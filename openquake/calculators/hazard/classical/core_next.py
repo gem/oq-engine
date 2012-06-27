@@ -18,6 +18,7 @@ import StringIO
 
 from openquake.calculators import base
 from openquake.calculators.hazard import general
+from openquake.db import models
 
 
 class ClassicalHazardCalculator(base.CalculatorNext):
@@ -35,10 +36,16 @@ class ClassicalHazardCalculator(base.CalculatorNext):
             # Explicit cast to `str` here because the XML parser doesn't like
             # unicode. (More specifically, lxml doesn't like unicode.)
             site_model_content = str(site_model_inp.model_content.raw_content)
-            site_model_data = general.store_site_model(
+
+            # Store `site_model` records:
+            general.store_site_model(
                 site_model_inp, StringIO.StringIO(site_model_content))
 
             mesh = self.job.hazard_calculation.points_to_compute()
+
+            # Get the site model records we stored:
+            site_model_data = models.SiteModel.objects.filter(
+                input=site_model_inp)
 
             general.validate_site_model(site_model_data, mesh)
 
