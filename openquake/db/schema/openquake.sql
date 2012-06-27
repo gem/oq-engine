@@ -1441,8 +1441,10 @@ CREATE TABLE idata.lt_realization (
     id SERIAL PRIMARY KEY,
     hazard_calculation_id INTEGER NOT NULL,
     ordinal INTEGER NOT NULL,
-    sm_lt_path VARCHAR NOT NULL,
-    gsim_lt_path VARCHAR NOT NULL,
+    -- A list of the logic tree branchIDs which indicate the path taken through the tree
+    sm_lt_path VARCHAR[] NOT NULL,
+    -- A list of the logic tree branchIDs which indicate the path taken through the tree
+    gsim_lt_path VARCHAR[] NOT NULL,
     seed INTEGER NOT NULL,
     is_complete BOOLEAN DEFAULT FALSE,
     total_sources INTEGER NOT NULL,
