@@ -1032,45 +1032,61 @@ class LogicTreeProcessor(object):
             An integer random seed value to initialize random generator
             before doing random sampling.
         :return:
-            Tuple of two items: first is the name of the source model
+            Tuple of three items: first is the name of the source model
             to load (as it appears in the source model logic tree)
             and second is the function to be applied to all the sources
             as they get read from the database and converted to nhlib
             representation. Function takes one argument, that is the nhlib
-            source object, and apply uncertainties to it in-place.
+            source object, and apply uncertainties to it in-place. The third
+            item is a list of the branchIDs (strings) which indicate the
+            complete path taken through the logic tree for this sample.
         """
+        branch_ids = []
+
         rnd = random.Random(random_seed)
+
         branch = self.source_model_lt.root_branchset.sample(rnd)
+        branch_ids.append(branch.branch_id)
+
         sm_name = branch.value
         branchsets_and_uncertainties = []
         while True:
             branchset = branch.child_branchset
             if branchset is None:
                 break
+
             branch = branchset.sample(rnd)
+            branch_ids.append(branch.branch_id)
+
             branchsets_and_uncertainties.append((branchset, branch.value))
 
         def apply_uncertainties(source):
             for branchset, value in branchsets_and_uncertainties:
                 branchset.apply_uncertainty(value, source)
 
-        return sm_name, apply_uncertainties
+        return sm_name, apply_uncertainties, branch_ids
 
     def sample_gmpe_logictree(self, random_seed):
         """
         Same as :meth:`sample_source_model_logictree`, but for GMPE logic tree.
 
         :return:
-            Dictionary mapping tectonic region type names to instances
-            of GSIM objects.
+            Tuple of two items: The first item is a dictionary mapping tectonic
+            region type names to instances of GSIM objects. The second item is
+            a list of the branchIDs (strings) which indicate the complete path
+            taken through the logic tree for this sample.
         """
+        branch_ids = []
+
         rnd = random.Random(random_seed)
-        result = {}
+        trt_to_gsim = {}
         branchset = self.gmpe_lt.root_branchset
         while branchset:
             branch = branchset.sample(rnd)
+            branch_ids.append(branch.branch_id)
+
             trt = branchset.filters['applyToTectonicRegionType']
-            assert trt not in result
-            result[trt] = branch.value
+            assert trt not in trt_to_gsim
+            trt_to_gsim[trt] = branch.value
             branchset = branch.child_branchset
-        return result
+        return trt_to_gsim, branch_ids
