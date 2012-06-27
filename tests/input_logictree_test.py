@@ -1918,18 +1918,22 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.proc = logictree.LogicTreeProcessor(job.id)
 
     def test_sample_source_model(self):
-        sm_name, modify = self.proc.sample_source_model_logictree(42)
+        sm_name, modify, branch_ids = \
+            self.proc.sample_source_model_logictree(42)
+        self.assertEqual(['b1', 'b3', 'b7'], branch_ids)
         self.assertEqual(sm_name, 'example-source-model.xml')
         self.assertTrue(callable(modify))
 
     def test_sample_gmpe(self):
-        result = self.proc.sample_gmpe_logictree(random_seed=124)
-        self.assertEqual(set(result.keys()), set(['Active Shallow Crust',
+        trt_to_gsim, branch_ids = self.proc.sample_gmpe_logictree(random_seed=124)
+        self.assertEqual(['b2', 'b3'], branch_ids)
+        self.assertEqual(set(trt_to_gsim.keys()), set(['Active Shallow Crust',
                                                   'Subduction Interface']))
-        self.assertIsInstance(result['Active Shallow Crust'], ChiouYoungs2008)
-        self.assertIsInstance(result['Subduction Interface'], SadighEtAl1997)
-        result = self.proc.sample_gmpe_logictree(random_seed=123)
-        self.assertIsInstance(result['Active Shallow Crust'], SadighEtAl1997)
+        self.assertIsInstance(trt_to_gsim['Active Shallow Crust'], ChiouYoungs2008)
+        self.assertIsInstance(trt_to_gsim['Subduction Interface'], SadighEtAl1997)
+        trt_to_gsim, branch_ids = self.proc.sample_gmpe_logictree(random_seed=123)
+        self.assertEqual(['b1', 'b3'], branch_ids)
+        self.assertIsInstance(trt_to_gsim['Active Shallow Crust'], SadighEtAl1997)
 
 
 class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
@@ -1938,7 +1942,7 @@ class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
     NRML_TO_NHLIB_PARAMS = {'mesh_spacing': 1, 'bin_width': 1,
                             'area_src_disc': 10}
 
-    def _do_test(self, path, expected_result):
+    def _do_test(self, path, expected_result, expected_branch_ids):
         params = {'BASE_PATH': self.BASE_PATH,
                   'SOURCE_MODEL_LOGIC_TREE_FILE': self.SOURCE_MODEL_LT,
                   'GMPE_LOGIC_TREE_FILE': self.GMPE_LT}
@@ -1958,7 +1962,9 @@ class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
             branch = nextbranch
         assert list(path) == []
 
-        sm_path, modify_source = proc.sample_source_model_logictree(0)
+        sm_path, modify_source, branch_ids = \
+            proc.sample_source_model_logictree(0)
+        self.assertEqual(expected_branch_ids, branch_ids)
 
         expected_result_path = os.path.join(self.BASE_PATH, expected_result)
         e_nrml_sources = SourceModelParser(expected_result_path).parse()
@@ -1987,16 +1993,16 @@ class RelSMLTBBTestCase(_BaseSourceModelLogicTreeBlackboxTestCase):
     SOURCE_MODEL_LT = 'logic_tree.xml'
 
     def test_b4(self):
-        self._do_test(['b2', 'b4'], 'result_b4.xml')
+        self._do_test(['b2', 'b4'], 'result_b4.xml', ['b1', 'b2', 'b4'])
 
     def test_b5(self):
-        self._do_test(['b2', 'b5'], 'result_b5.xml')
+        self._do_test(['b2', 'b5'], 'result_b5.xml', ['b1', 'b2', 'b5'])
 
     def test_b6(self):
-        self._do_test(['b3', 'b6'], 'result_b6.xml')
+        self._do_test(['b3', 'b6'], 'result_b6.xml', ['b1', 'b3', 'b6'])
 
     def test_b7(self):
-        self._do_test(['b3', 'b7'], 'result_b7.xml')
+        self._do_test(['b3', 'b7'], 'result_b7.xml', ['b1', 'b3', 'b7'])
 
 
 class AbsSMLTBBTestCase(_BaseSourceModelLogicTreeBlackboxTestCase):
@@ -2004,16 +2010,18 @@ class AbsSMLTBBTestCase(_BaseSourceModelLogicTreeBlackboxTestCase):
     SOURCE_MODEL_LT = 'logic_tree.xml'
 
     def test_b4(self):
-        self._do_test(['b2', 'b4'], 'result_b4.xml')
+        self._do_test(['b2', 'b4'], 'result_b4.xml', ['b1', 'b2', 'b4'])
 
     def test_b5(self):
-        self._do_test(['b2', 'b5'], 'result_b5.xml')
+        self._do_test(['b2', 'b5'], 'result_b5.xml', ['b1', 'b2', 'b5'])
 
     def test_b7(self):
-        self._do_test(['b3', 'b7'], 'result_b7.xml')
+        self._do_test(['b3', 'b7'], 'result_b7.xml', ['b1', 'b3', 'b7'])
 
     def test_b8(self):
-        self._do_test(['b3', 'b6', 'b8'], 'result_b8.xml')
+        self._do_test(
+            ['b3', 'b6', 'b8'], 'result_b8.xml', ['b1', 'b3', 'b6', 'b8'])
 
     def test_b9(self):
-        self._do_test(['b3', 'b6', 'b9'], 'result_b9.xml')
+        self._do_test(
+            ['b3', 'b6', 'b9'], 'result_b9.xml', ['b1', 'b3', 'b6', 'b9'])
