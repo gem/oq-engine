@@ -23,64 +23,65 @@ from nhlib.site import Site, SiteCollection
 from nhlib.geo import Point
 
 
+aaae = numpy.testing.assert_array_almost_equal
+
+
 class JB2009CorrelationMatrixTestCase(unittest.TestCase):
     SITECOL = SiteCollection([Site(Point(2, -40), 1, True, 1, 1),
                               Site(Point(2, -40.1), 1, True, 1, 1),
                               Site(Point(2, -40), 1, True, 1, 1),
                               Site(Point(2, -39.9), 1, True, 1, 1)])
-    aaae = lambda self, *args, **kwargs: \
-        numpy.testing.assert_array_almost_equal(*args, **kwargs)
 
     def test_no_clustering(self):
         cormo = JB2009CorrelationModel(vs30_clustering=False)
         imt = SA(period=0.1, damping=5)
         corma = cormo.get_correlation_matrix(self.SITECOL, imt)
-        self.aaae(corma, [[1,          0.03823366, 1,          0.03823366],
-                          [0.03823366, 1,          0.03823366, 0.00146181],
-                          [1,          0.03823366, 1,          0.03823366],
-                          [0.03823366, 0.00146181, 0.03823366, 1]])
+        aaae(corma, [[1,          0.03823366, 1,          0.03823366],
+                     [0.03823366, 1,          0.03823366, 0.00146181],
+                     [1,          0.03823366, 1,          0.03823366],
+                     [0.03823366, 0.00146181, 0.03823366, 1]])
 
         imt = SA(period=0.95, damping=5)
         corma = cormo.get_correlation_matrix(self.SITECOL, imt)
-        self.aaae(corma, [[1,          0.26107857, 1,          0.26107857],
-                          [0.26107857, 1,          0.26107857, 0.06816202],
-                          [1,          0.26107857, 1,          0.26107857],
-                          [0.26107857, 0.06816202, 0.26107857, 1]])
+        aaae(corma, [[1,          0.26107857, 1,          0.26107857],
+                     [0.26107857, 1,          0.26107857, 0.06816202],
+                     [1,          0.26107857, 1,          0.26107857],
+                     [0.26107857, 0.06816202, 0.26107857, 1]])
 
     def test_clustered(self):
         cormo = JB2009CorrelationModel(vs30_clustering=True)
         imt = SA(period=0.001, damping=5)
         corma = cormo.get_correlation_matrix(self.SITECOL, imt)
-        self.aaae(corma, [[1,          0.44046654, 1,          0.44046654],
-                          [0.44046654, 1,          0.44046654, 0.19401077],
-                          [1,          0.44046654, 1,          0.44046654],
-                          [0.44046654, 0.19401077, 0.44046654, 1]])
+        aaae(corma, [[1,          0.44046654, 1,          0.44046654],
+                     [0.44046654, 1,          0.44046654, 0.19401077],
+                     [1,          0.44046654, 1,          0.44046654],
+                     [0.44046654, 0.19401077, 0.44046654, 1]])
 
         imt = SA(period=0.5, damping=5)
         corma = cormo.get_correlation_matrix(self.SITECOL, imt)
-        self.aaae(corma, [[1,          0.36612758, 1,          0.36612758],
-                          [0.36612758, 1,          0.36612758, 0.1340494],
-                          [1,          0.36612758, 1,          0.36612758],
-                          [0.36612758, 0.1340494, 0.36612758, 1]])
+        aaae(corma, [[1,          0.36612758, 1,          0.36612758],
+                     [0.36612758, 1,          0.36612758, 0.1340494],
+                     [1,          0.36612758, 1,          0.36612758],
+                     [0.36612758, 0.1340494, 0.36612758, 1]])
 
     def test_period_one_and_above(self):
         cormo = JB2009CorrelationModel(vs30_clustering=False)
         cormo2 = JB2009CorrelationModel(vs30_clustering=True)
         imt = SA(period=1.0, damping=5)
         corma = cormo.get_correlation_matrix(self.SITECOL, imt)
-        self.aaae(corma, [[1,         0.2730787, 1,          0.2730787],
-                          [0.2730787, 1,          0.2730787, 0.07457198],
-                          [1,         0.2730787, 1,          0.2730787],
-                          [0.2730787, 0.07457198, 0.2730787, 1]])
+        aaae(corma, [[1,         0.2730787, 1,          0.2730787],
+                     [0.2730787, 1,          0.2730787, 0.07457198],
+                     [1,         0.2730787, 1,          0.2730787],
+                     [0.2730787, 0.07457198, 0.2730787, 1]])
         corma2 = cormo2.get_correlation_matrix(self.SITECOL, imt)
         self.assertTrue((corma == corma2).all())
 
         imt = SA(period=10.0, damping=5)
         corma = cormo.get_correlation_matrix(self.SITECOL, imt)
-        self.aaae(corma, [[1,          0.56813402, 1,          0.56813402],
-                          [0.56813402, 1,          0.56813402, 0.32277627],
-                          [1,          0.56813402, 1,          0.56813402],
-                          [0.56813402, 0.32277627, 0.56813402, 1]])
+        aaae(corma, [[1,          0.56813402, 1,          0.56813402],
+                     [0.56813402, 1,          0.56813402, 0.32277627],
+                     [1,          0.56813402, 1,          0.56813402],
+                     [0.56813402, 0.32277627, 0.56813402, 1]])
         corma2 = cormo2.get_correlation_matrix(self.SITECOL, imt)
         self.assertTrue((corma == corma2).all())
 
@@ -97,3 +98,16 @@ class JB2009CorrelationMatrixTestCase(unittest.TestCase):
         corma = cormo.get_correlation_matrix(self.SITECOL, sa)
         corma2 = cormo.get_correlation_matrix(self.SITECOL, pga)
         self.assertTrue((corma == corma2).all())
+
+
+class JB2009LowerTriangleCorrelationMatrixTestCase(unittest.TestCase):
+    SITECOL = SiteCollection([Site(Point(2, -40), 1, True, 1, 1),
+                              Site(Point(2, -40.1), 1, True, 1, 1),
+                              Site(Point(2, -39.9), 1, True, 1, 1)])
+
+    def test(self):
+        cormo = JB2009CorrelationModel(vs30_clustering=False)
+        lt = cormo.get_lower_triangle_correlation_matrix(self.SITECOL, PGA())
+        aaae(lt, [[1.0,            0.0,            0.0],
+                  [1.97514806e-02, 9.99804920e-01, 0.0],
+                  [1.97514806e-02, 5.42206860e-20, 9.99804920e-01]])

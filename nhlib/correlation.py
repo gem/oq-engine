@@ -72,3 +72,13 @@ class JB2009CorrelationModel(object):
 
         # eq. (20)
         return numpy.exp((- 3.0 / b) * distances)
+
+    def get_lower_triangle_correlation_matrix(self, sites, imt):
+        """
+        Calculate correlation matrix and return lower triangle matrix
+        as a result of Cholesky decomposition of it.
+
+        Parameters are the same as for :meth:`get_correlation_matrix`.
+        The resulting matrix has zeros on values above the main diagonal.
+        """
+        return numpy.linalg.cholesky(self.get_correlation_matrix(sites, imt))
