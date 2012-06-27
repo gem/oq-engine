@@ -28,21 +28,20 @@ class JB2009CorrelationMatrixTestCase(unittest.TestCase):
                               Site(Point(2, -40.1), 1, True, 1, 1),
                               Site(Point(2, -40), 1, True, 1, 1),
                               Site(Point(2, -39.9), 1, True, 1, 1)])
-    DISTS = SITECOL.mesh.get_distance_matrix()
     aaae = lambda self, *args, **kwargs: \
         numpy.testing.assert_array_almost_equal(*args, **kwargs)
 
     def test_no_clustering(self):
         cormo = JB2009CorrelationModel(vs30_clustering=False)
         imt = SA(period=0.1, damping=5)
-        corma = cormo.get_correlation_matrix(self.DISTS, imt)
+        corma = cormo.get_correlation_matrix(self.SITECOL, imt)
         self.aaae(corma, [[1,          0.03823366, 1,          0.03823366],
                           [0.03823366, 1,          0.03823366, 0.00146181],
                           [1,          0.03823366, 1,          0.03823366],
                           [0.03823366, 0.00146181, 0.03823366, 1]])
 
         imt = SA(period=0.95, damping=5)
-        corma = cormo.get_correlation_matrix(self.DISTS, imt)
+        corma = cormo.get_correlation_matrix(self.SITECOL, imt)
         self.aaae(corma, [[1,          0.26107857, 1,          0.26107857],
                           [0.26107857, 1,          0.26107857, 0.06816202],
                           [1,          0.26107857, 1,          0.26107857],
@@ -51,14 +50,14 @@ class JB2009CorrelationMatrixTestCase(unittest.TestCase):
     def test_clustered(self):
         cormo = JB2009CorrelationModel(vs30_clustering=True)
         imt = SA(period=0.001, damping=5)
-        corma = cormo.get_correlation_matrix(self.DISTS, imt)
+        corma = cormo.get_correlation_matrix(self.SITECOL, imt)
         self.aaae(corma, [[1,          0.44046654, 1,          0.44046654],
                           [0.44046654, 1,          0.44046654, 0.19401077],
                           [1,          0.44046654, 1,          0.44046654],
                           [0.44046654, 0.19401077, 0.44046654, 1]])
 
         imt = SA(period=0.5, damping=5)
-        corma = cormo.get_correlation_matrix(self.DISTS, imt)
+        corma = cormo.get_correlation_matrix(self.SITECOL, imt)
         self.aaae(corma, [[1,          0.36612758, 1,          0.36612758],
                           [0.36612758, 1,          0.36612758, 0.1340494],
                           [1,          0.36612758, 1,          0.36612758],
@@ -68,21 +67,21 @@ class JB2009CorrelationMatrixTestCase(unittest.TestCase):
         cormo = JB2009CorrelationModel(vs30_clustering=False)
         cormo2 = JB2009CorrelationModel(vs30_clustering=True)
         imt = SA(period=1.0, damping=5)
-        corma = cormo.get_correlation_matrix(self.DISTS, imt)
+        corma = cormo.get_correlation_matrix(self.SITECOL, imt)
         self.aaae(corma, [[1,         0.2730787, 1,          0.2730787],
                           [0.2730787, 1,          0.2730787, 0.07457198],
                           [1,         0.2730787, 1,          0.2730787],
                           [0.2730787, 0.07457198, 0.2730787, 1]])
-        corma2 = cormo2.get_correlation_matrix(self.DISTS, imt)
+        corma2 = cormo2.get_correlation_matrix(self.SITECOL, imt)
         self.assertTrue((corma == corma2).all())
 
         imt = SA(period=10.0, damping=5)
-        corma = cormo.get_correlation_matrix(self.DISTS, imt)
+        corma = cormo.get_correlation_matrix(self.SITECOL, imt)
         self.aaae(corma, [[1,          0.56813402, 1,          0.56813402],
                           [0.56813402, 1,          0.56813402, 0.32277627],
                           [1,          0.56813402, 1,          0.56813402],
                           [0.56813402, 0.32277627, 0.56813402, 1]])
-        corma2 = cormo2.get_correlation_matrix(self.DISTS, imt)
+        corma2 = cormo2.get_correlation_matrix(self.SITECOL, imt)
         self.assertTrue((corma == corma2).all())
 
     def test_pga(self):
@@ -90,11 +89,11 @@ class JB2009CorrelationMatrixTestCase(unittest.TestCase):
         pga = PGA()
 
         cormo = JB2009CorrelationModel(vs30_clustering=False)
-        corma = cormo.get_correlation_matrix(self.DISTS, sa)
-        corma2 = cormo.get_correlation_matrix(self.DISTS, pga)
+        corma = cormo.get_correlation_matrix(self.SITECOL, sa)
+        corma2 = cormo.get_correlation_matrix(self.SITECOL, pga)
         self.assertTrue((corma == corma2).all())
 
         cormo = JB2009CorrelationModel(vs30_clustering=True)
-        corma = cormo.get_correlation_matrix(self.DISTS, sa)
-        corma2 = cormo.get_correlation_matrix(self.DISTS, pga)
+        corma = cormo.get_correlation_matrix(self.SITECOL, sa)
+        corma2 = cormo.get_correlation_matrix(self.SITECOL, pga)
         self.assertTrue((corma == corma2).all())
