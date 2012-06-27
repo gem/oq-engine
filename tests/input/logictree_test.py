@@ -1925,15 +1925,20 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
         self.assertTrue(callable(modify))
 
     def test_sample_gmpe(self):
-        trt_to_gsim, branch_ids = self.proc.sample_gmpe_logictree(random_seed=124)
+        trt_to_gsim, branch_ids = \
+            self.proc.sample_gmpe_logictree(random_seed=124)
         self.assertEqual(['b2', 'b3'], branch_ids)
         self.assertEqual(set(trt_to_gsim.keys()), set(['Active Shallow Crust',
                                                   'Subduction Interface']))
-        self.assertIsInstance(trt_to_gsim['Active Shallow Crust'], ChiouYoungs2008)
-        self.assertIsInstance(trt_to_gsim['Subduction Interface'], SadighEtAl1997)
-        trt_to_gsim, branch_ids = self.proc.sample_gmpe_logictree(random_seed=123)
+        self.assertIsInstance(trt_to_gsim['Active Shallow Crust'],
+                              ChiouYoungs2008)
+        self.assertIsInstance(trt_to_gsim['Subduction Interface'],
+                              SadighEtAl1997)
+        trt_to_gsim, branch_ids = \
+            self.proc.sample_gmpe_logictree(random_seed=123)
         self.assertEqual(['b1', 'b3'], branch_ids)
-        self.assertIsInstance(trt_to_gsim['Active Shallow Crust'], SadighEtAl1997)
+        self.assertIsInstance(trt_to_gsim['Active Shallow Crust'],
+                              SadighEtAl1997)
 
 
 class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
