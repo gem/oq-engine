@@ -33,6 +33,7 @@ from shapely import geometry
 
 from openquake import java
 from openquake import kvs
+from openquake import writer
 from openquake.calculators.base import Calculator
 from openquake.db import models
 from openquake.input import logictree
@@ -236,16 +237,22 @@ def store_site_model(input_mdl, source):
 
     sm_data = []
 
+    inserter = writer.BulkInserter(models.SiteModel)
+
     for node in parser.parse():
-        sm = models.SiteModel()
-        sm.vs30 = node.vs30
-        sm.vs30_type = node.vs30_type
-        sm.z1pt0 = node.z1pt0
-        sm.z2pt5 = node.z2pt5
-        sm.location = node.wkt
-        sm.input = input_mdl
-        sm.save()
-        sm_data.append(sm)
+        sm = dict()
+        # sm = models.SiteModel()
+        sm['vs30'] = node.vs30
+        sm['vs30_type'] = node.vs30_type
+        sm['z1pt0'] = node.z1pt0
+        sm['z2pt5'] = node.z2pt5
+        sm['location'] = node.wkt
+        sm['input_id'] = input_mdl.id
+        # sm.save()
+        # sm_data.append(sm)
+        inserter.add_entry(**sm)
+
+    inserter.flush()
 
     return sm_data
 
@@ -417,6 +424,15 @@ def store_site_data(hc_id, site_model_inp, mesh):
     return site_data
 
 
+def store_lt_realizations(hc_id):
+    """
+    :param hc_id:
+        ID of a :class:`~openquake.db.models.HazardCalculation`. The generated
+        logic tree realizations will be associated with this calculation.
+    """
+    pass
+
+
 def set_java_site_parameters(jsite, sm_data):
     """Given a site model node and an OpenSHA `Site` object,
     set vs30, vs30, z2pt5, and z1pt0 parameters.
@@ -461,9 +477,9 @@ class BaseHazardCalculator(Calculator):
             # Explicit cast to `str` here because the XML parser doesn't like
             # unicode. (More specifically, lxml doesn't like unicode.)
             site_model_content = str(site_model.model_content.raw_content)
-            site_model_data = store_site_model(
-                site_model, StringIO.StringIO(site_model_content)
-            )
+            store_site_model(site_model, StringIO.StringIO(site_model_content))
+
+            site_model_data = models.SiteModel.objects.filter(input=site_model)
 
             validate_site_model(
                 site_model_data, self.job_ctxt.sites_to_compute()
