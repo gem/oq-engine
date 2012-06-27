@@ -97,11 +97,9 @@ class GMFCalcNoCorrelationTestCase(unittest.TestCase):
         truncation_level = None
         numpy.random.seed(3)
         realizations = 2000
-        from nhlib.correlation import JB2009CorrelationModel
         gmfs = ground_motion_fields(self.rupture, self.sites,
                                     [self.imt2], self.gsim,
                                     truncation_level,
-                                    #correlation_model=JB2009CorrelationModel(False),
                                     realizations=realizations)
         intensity = gmfs[self.imt2]
 
