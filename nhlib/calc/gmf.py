@@ -24,7 +24,7 @@ from nhlib.calc import filters
 
 
 def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
-                         realizations, correlation_model=None,
+                         realizations, lt_correlation_matrices=None,
                          rupture_site_filter=filters.rupture_site_noop_filter):
     """
     Given an earthquake rupture, the ground motion field calculator computes
@@ -51,8 +51,10 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         distribution, or ``None``.
     :param realizations:
         Integer number of GMF realizations to compute.
-    :param correlation_model:
-        TBD
+    :param lt_correlation_matrices:
+        Optional dictionary mapping IMT objects (the same ones as in ``imts``)
+        to lower-triangular matrix, taken from Cholesky-decomposition
+        of sites correlation matrix. See :mod:`nhlib.correlation`.
     :param rupture_site_filter:
         Optional rupture-site filter function. See :mod:`nhlib.calc.filters`.
 
@@ -75,6 +77,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
     result = {}
 
     if truncation_level == 0:
+        assert lt_correlation_matrices is None
         for imt in imts:
             mean, _stddevs = gsim.get_mean_and_stddevs(sctx, rctx, dctx, imt,
                                                        stddev_types=[])
@@ -100,6 +103,10 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
 
         intra_residual = stddev_intra * distribution.rvs(size=(len(sites),
                                                                realizations))
+        if lt_correlation_matrices is not None:
+            intra_residual = (intra_residual.transpose()
+                              * lt_correlation_matrices[imt]).transpose()
+
         inter_residual = stddev_inter * distribution.rvs(size=realizations)
         gmf = mean + intra_residual + inter_residual
         result[imt] = sites.expand(gmf, total_sites, placeholder=0)
