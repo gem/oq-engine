@@ -18,6 +18,7 @@ import numpy
 import unittest
 
 from lxml import etree
+from shutil import rmtree
 
 from openquake.db.models import OqJob, Output
 from openquake.export.risk import export_agg_loss_curve
@@ -27,23 +28,39 @@ from tests.utils import helpers
 
 OUTPUT_DIR = helpers.demo_file(
     "probabilistic_event_based_risk/computed_output")
+QA_OUTPUT_DIR = helpers.qa_file(
+    "probabilistic_event_based_risk/computed_output")
 
 
 class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
     """QA tests for the Probabilistic Event Based Risk calculator."""
 
-    def test_probabilistic_risk(self):
+    def test_probabilistic_risk_mean_based(self):
         cfg = helpers.demo_file(
             "probabilistic_event_based_risk/config_qa.gem")
 
         self._run_job(cfg)
-        self._verify_job_succeeded()
-        self._verify_loss_maps()
-        self._verify_loss_ratio_curves()
-        self._verify_loss_curves()
-        self._verify_aggregate_curve()
+        self._verify_job_succeeded(OUTPUT_DIR)
+        self._verify_loss_maps(OUTPUT_DIR, 0.05)
+        self._verify_loss_ratio_curves(OUTPUT_DIR, 0.05)
+        self._verify_loss_curves(OUTPUT_DIR, 0.05)
+        self._verify_aggregate_curve(OUTPUT_DIR, 0.05)
 
-    def _verify_loss_curves(self):
+    def test_probabilistic_risk_sample_based(self):
+        cfg = helpers.qa_file(
+            "probabilistic_event_based_risk/config_qa.gem")
+
+        self._run_job(cfg)
+        self._verify_job_succeeded(QA_OUTPUT_DIR)
+        self._verify_loss_maps(QA_OUTPUT_DIR, 0.15)
+        #self._verify_loss_ratio_curves(QA_OUTPUT_DIR, 0.25)
+        #self._verify_loss_curves(QA_OUTPUT_DIR, 0.25)
+        #self._verify_aggregate_curve(QA_OUTPUT_DIR, 0.25)
+
+        # Cleaning generated results file.
+        rmtree(QA_OUTPUT_DIR)
+
+    def _verify_loss_curves(self, output_dir, tol):
 
         def xpath_poes(asset_ref):
             return ("//nrml:asset[@gml:id='" + asset_ref + "']//nrml:poE")
@@ -54,7 +71,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         job = OqJob.objects.latest("id")
 
         filename = "%s/loss_curves-loss-block-#%s-block#0.xml" % (
-                OUTPUT_DIR, job.id)
+                output_dir, job.id)
 
         root = self._root(filename)
         poes = [float(x) for x in self._get(root, xpath_poes("a1")).split()]
@@ -65,7 +82,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
             0.6321525149]
 
         self.assertTrue(numpy.allclose(
-                poes, expected_poes, atol=0.0, rtol=0.05))
+                poes, expected_poes, atol=0.0, rtol=tol))
 
         losses = [float(x) for x in self._get(
                 root, xpath_losses("a1")).split()]
@@ -76,7 +93,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
             249.5466508710]
 
         self.assertTrue(numpy.allclose(
-                losses, expected_losses, atol=0.0, rtol=0.05))
+                losses, expected_losses, atol=0.0, rtol=tol))
 
         poes = [float(x) for x in self._get(root, xpath_poes("a2")).split()]
 
@@ -86,7 +103,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
             0.6321542453]
 
         self.assertTrue(numpy.allclose(
-                poes, expected_poes, atol=0.0, rtol=0.05))
+                poes, expected_poes, atol=0.0, rtol=tol))
 
         losses = [float(x) for x in self._get(
                 root, xpath_losses("a2")).split()]
@@ -97,7 +114,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
             61.8967094338]
 
         self.assertTrue(numpy.allclose(
-                losses, expected_losses, atol=0.0, rtol=0.05))
+                losses, expected_losses, atol=0.0, rtol=tol))
 
         poes = [float(x) for x in self._get(root, xpath_poes("a3")).split()]
 
@@ -107,7 +124,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
             0.9816858693]
 
         self.assertTrue(numpy.allclose(
-                poes, expected_poes, atol=0.0, rtol=0.05))
+                poes, expected_poes, atol=0.0, rtol=tol))
 
         losses = [float(x) for x in self._get(
                 root, xpath_losses("a3")).split()]
@@ -118,9 +135,9 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
             24.8088449721]
 
         self.assertTrue(numpy.allclose(
-                losses, expected_losses, atol=0.0, rtol=0.05))
+                losses, expected_losses, atol=0.0, rtol=tol))
 
-    def _verify_loss_ratio_curves(self):
+    def _verify_loss_ratio_curves(self, output_dir, tol):
 
         def xpath_poes(asset_ref):
             return ("//nrml:asset[@gml:id='" + asset_ref + "']//nrml:poE")
@@ -132,7 +149,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         job = OqJob.objects.latest("id")
 
         filename = "%s/loss_curves-block-#%s-block#0.xml" % (
-                OUTPUT_DIR, job.id)
+                output_dir, job.id)
 
         root = self._root(filename)
         poes = [float(x) for x in self._get(root, xpath_poes("a1")).split()]
@@ -143,7 +160,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
             0.6321525149]
 
         self.assertTrue(numpy.allclose(
-                poes, expected_poes, atol=0.0, rtol=0.05))
+                poes, expected_poes, atol=0.0, rtol=tol))
 
         loss_ratios = [float(x) for x in self._get(
                 root, xpath_ratios("a1")).split()]
@@ -154,7 +171,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
             0.083182216957]
 
         self.assertTrue(numpy.allclose(
-                loss_ratios, expected_loss_ratios, atol=0.0, rtol=0.05))
+                loss_ratios, expected_loss_ratios, atol=0.0, rtol=tol))
 
         poes = [float(x) for x in self._get(root, xpath_poes("a2")).split()]
 
@@ -164,7 +181,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
             0.6321542453]
 
         self.assertTrue(numpy.allclose(
-                poes, expected_poes, atol=0.0, rtol=0.05))
+                poes, expected_poes, atol=0.0, rtol=tol))
 
         loss_ratios = [float(x) for x in self._get(
                 root, xpath_ratios("a2")).split()]
@@ -175,7 +192,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
             0.0309483547]
 
         self.assertTrue(numpy.allclose(
-                loss_ratios, expected_loss_ratios, atol=0.0, rtol=0.05))
+                loss_ratios, expected_loss_ratios, atol=0.0, rtol=tol))
 
         poes = [float(x) for x in self._get(
                 root, xpath_poes("a3")).split()]
@@ -186,7 +203,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
             0.9816858693]
 
         self.assertTrue(numpy.allclose(
-                poes, expected_poes, atol=0.0, rtol=0.05))
+                poes, expected_poes, atol=0.0, rtol=tol))
 
         loss_ratios = [float(x) for x in self._get(
                 root, xpath_ratios("a3")).split()]
@@ -197,9 +214,9 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
             0.0248088450]
 
         self.assertTrue(numpy.allclose(
-                loss_ratios, expected_loss_ratios, atol=0.0, rtol=0.05))
+                loss_ratios, expected_loss_ratios, atol=0.0, rtol=tol))
 
-    def _verify_job_succeeded(self):
+    def _verify_job_succeeded(self, output_dir):
         job = OqJob.objects.latest("id")
         self.assertEqual("succeeded", job.status)
 
@@ -210,43 +227,43 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         ]
 
         for f in expected_files:
-            self.assertTrue(os.path.exists(os.path.join(OUTPUT_DIR, f)))
+            self.assertTrue(os.path.exists(os.path.join(output_dir, f)))
 
-    def _verify_loss_maps(self):
+    def _verify_loss_maps(self, output_dir, tol):
 
         def xpath(asset_ref):
             return ("//nrml:loss[@assetRef='" + asset_ref + "']//nrml:value")
 
-        filename = "%s/losses_at-0.99.xml" % OUTPUT_DIR
+        filename = "%s/losses_at-0.99.xml" % output_dir
         root = self._root(filename)
 
         expected_closs = 78.1154725900
         closs = float(self._get(root, xpath("a1")))
 
         self.assertTrue(numpy.allclose(
-                closs, expected_closs, atol=0.0, rtol=0.05))
+                closs, expected_closs, atol=0.0, rtol=tol))
 
         expected_closs = 36.2507008221
         closs = float(self._get(root, xpath("a2")))
 
         self.assertTrue(numpy.allclose(
-                closs, expected_closs, atol=0.0, rtol=0.05))
+                closs, expected_closs, atol=0.0, rtol=tol))
 
         expected_closs = 23.4782545574
         closs = float(self._get(root, xpath("a3")))
 
         self.assertTrue(numpy.allclose(
-                closs, expected_closs, atol=0.0, rtol=0.05))
+                closs, expected_closs, atol=0.0, rtol=tol))
 
-    def _verify_aggregate_curve(self):
+    def _verify_aggregate_curve(self, output_dir, tol):
         job = OqJob.objects.latest("id")
 
         [output] = Output.objects.filter(
             oq_job=job.id,
             output_type="agg_loss_curve")
 
-        export_agg_loss_curve(output, OUTPUT_DIR)
-        filename = "%s/aggregate_loss_curve.xml" % OUTPUT_DIR
+        export_agg_loss_curve(output, output_dir)
+        filename = "%s/aggregate_loss_curve.xml" % output_dir
 
         root = self._root(filename)
         xpath = "//nrml:aggregateLossCurve//nrml:poE"
@@ -257,7 +274,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
             0.8646752036, 0.6321506245, 0.6321525149]
 
         self.assertTrue(numpy.allclose(
-                poes, expected_poes, atol=0.0, rtol=0.05))
+                poes, expected_poes, atol=0.0, rtol=tol))
 
         xpath = "//nrml:aggregateLossCurve//nrml:loss"
         losses = [float(x) for x in self._get(root, xpath).split()]
@@ -267,7 +284,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
             241.3180562370, 278.4439110427, 315.5697658484]
 
         self.assertTrue(numpy.allclose(
-                losses, expected_losses, atol=0.0, rtol=0.05))
+                losses, expected_losses, atol=0.0, rtol=tol))
 
     def _run_job(self, config):
         ret_code = helpers.run_job(config, ["--output-type=xml"])
