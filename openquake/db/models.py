@@ -546,6 +546,7 @@ class HazardCalculation(djm.Model):
     # Contains the absolute path to the directory containing the job config
     # file.
     base_path = djm.TextField()
+    force_inputs = djm.BooleanField()
 
     #####################
     # General parameters:
