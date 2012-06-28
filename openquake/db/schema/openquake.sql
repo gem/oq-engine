@@ -1070,6 +1070,25 @@ SELECT AddGeometryColumn('hzrdr', 'uh_spectrum_data', 'location', 4326, 'POINT',
 ALTER TABLE hzrdr.uh_spectrum_data ALTER COLUMN location SET NOT NULL;
 
 
+-- keep track of logic tree realization progress for a given calculation
+CREATE TABLE hzrdr.lt_realization (
+    id SERIAL PRIMARY KEY,
+    hazard_calculation_id INTEGER NOT NULL,
+    -- pre-computed calculation point of interest to site parameters table
+    -- can be null if no site_model was defined for the calculation
+    site_data_id INTEGER,
+    ordinal INTEGER NOT NULL,
+    seed INTEGER NOT NULL,
+    -- A list of the logic tree branchIDs which indicate the path taken through the tree
+    sm_lt_path VARCHAR[] NOT NULL,
+    -- A list of the logic tree branchIDs which indicate the path taken through the tree
+    gsim_lt_path VARCHAR[] NOT NULL,
+    is_complete BOOLEAN DEFAULT FALSE,
+    total_sources INTEGER NOT NULL,
+    completed_sources INTEGER NOT NULL DEFAULT 0
+) TABLESPACE hzrdr_ts;
+
+
 -- Loss map data.
 CREATE TABLE riskr.loss_map (
     id SERIAL PRIMARY KEY,
@@ -1437,26 +1456,6 @@ CREATE TABLE riski.ffd (
 ) TABLESPACE riski_ts;
 
 
--- htemp
-
--- keep track of logic tree realization progress for a given calculation
-CREATE TABLE htemp.lt_realization (
-    id SERIAL PRIMARY KEY,
-    hazard_calculation_id INTEGER NOT NULL,
-    -- pre-computed calculation point of interest to site parameters table
-    -- can be null if no site_model was defined for the calculation
-    site_data_id INTEGER,
-    ordinal INTEGER NOT NULL,
-    -- A list of the logic tree branchIDs which indicate the path taken through the tree
-    sm_lt_path VARCHAR[] NOT NULL,
-    -- A list of the logic tree branchIDs which indicate the path taken through the tree
-    gsim_lt_path VARCHAR[] NOT NULL,
-    seed INTEGER NOT NULL,
-    is_complete BOOLEAN DEFAULT FALSE,
-    total_sources INTEGER NOT NULL,
-    completed_sources INTEGER NOT NULL DEFAULT 0
-) TABLESPACE htemp_ts;
-
 -- keep track of sources considered in a calculation, per logic tree realization
 CREATE TABLE htemp.source_progress (
     id SERIAL PRIMARY KEY,
@@ -1743,11 +1742,11 @@ ALTER TABLE riski.ffc ADD CONSTRAINT riski_ffc_fragility_model_fk FOREIGN KEY
 CASCADE;
 
 
--- htemp.source_progress to htemp.lt_realization FK
+-- htemp.source_progress to hzrdr.lt_realization FK
 ALTER TABLE htemp.source_progress
 ADD CONSTRAINT htemp_source_progress_lt_realization_fk
 FOREIGN KEY (lt_realization_id)
-REFERENCES htemp.lt_realization(id)
+REFERENCES hzrdr.lt_realization(id)
 ON DELETE CASCADE;
 
 -- htemp.source_progress to hzrdi.parsed_source FK
@@ -1757,11 +1756,11 @@ FOREIGN KEY (parsed_source_id)
 REFERENCES hzrdi.parsed_source(id)
 ON DELETE CASCADE;
 
--- htemp.hazard_curve_progress to htemp.lt_realization FK
+-- htemp.hazard_curve_progress to hzrdr.lt_realization FK
 ALTER TABLE htemp.hazard_curve_progress
 ADD CONSTRAINT htemp_hazard_curve_progress_lt_realization_fk
 FOREIGN KEY (lt_realization_id)
-REFERENCES htemp.lt_realization(id)
+REFERENCES hzrdr.lt_realization(id)
 ON DELETE CASCADE;
 
 -- htemp.site_data to uiapi.hazard_calculation FK

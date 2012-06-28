@@ -1108,9 +1108,9 @@ class LtRealization(djm.Model):
 
     hazard_calculation = djm.ForeignKey('HazardCalculation')
     ordinal = djm.IntegerField()
+    seed = djm.IntegerField()
     sm_lt_path = fields.CharArrayField()
     gsim_lt_path = fields.CharArrayField()
-    seed = djm.IntegerField()
     is_complete = djm.BooleanField(default=False)
     total_sources = djm.IntegerField()
     completed_sources = djm.IntegerField(default=0)
