@@ -372,7 +372,7 @@ def store_site_data(hc_id, site_model_inp, mesh):
     Given a ``mesh`` of points (calculation points of interest) and a
     site model (``site_model_inp``), get the closest site model data
     for each points and store the mesh point location plus the site parameters
-    as a single record in the `idata.site_data` table.
+    as a single record in the `htemp.site_data` table.
 
     NOTE: This should only be necessary for calculations which specify a site
     model. Otherwise, the same 4 reference site parameters are used for all
@@ -422,15 +422,6 @@ def store_site_data(hc_id, site_model_inp, mesh):
     site_data.save()
 
     return site_data
-
-
-def store_lt_realizations(hc_id):
-    """
-    :param hc_id:
-        ID of a :class:`~openquake.db.models.HazardCalculation`. The generated
-        logic tree realizations will be associated with this calculation.
-    """
-    pass
 
 
 def set_java_site_parameters(jsite, sm_data):
