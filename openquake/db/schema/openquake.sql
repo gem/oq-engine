@@ -276,6 +276,8 @@ CREATE TABLE uiapi.hazard_calculation (
     -- We'll need to update fields and constraints as we add the other calculation modes.
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
+    -- Contains the absolute path to the directory containing the job config file
+    base_path VARCHAR NOT NULL,
     -- general parameters:
     -- (see also `region` and `sites` geometries defined below)
     description VARCHAR NOT NULL DEFAULT '',

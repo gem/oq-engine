@@ -543,6 +543,9 @@ class HazardCalculation(djm.Model):
     Parameters need to run a Hazard job.
     '''
     owner = djm.ForeignKey('OqUser')
+    # Contains the absolute path to the directory containing the job config
+    # file.
+    base_path = djm.TextField()
 
     #####################
     # General parameters:
