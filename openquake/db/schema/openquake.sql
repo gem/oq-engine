@@ -278,6 +278,7 @@ CREATE TABLE uiapi.hazard_calculation (
     owner_id INTEGER NOT NULL,
     -- Contains the absolute path to the directory containing the job config file
     base_path VARCHAR NOT NULL,
+    force_inputs BOOLEAN NOT NULL,
     -- general parameters:
     -- (see also `region` and `sites` geometries defined below)
     description VARCHAR NOT NULL DEFAULT '',

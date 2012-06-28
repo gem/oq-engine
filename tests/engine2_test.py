@@ -105,6 +105,7 @@ bar = baz
 
         expected_params = {
             'base_path': exp_base_path,
+            'force_inputs': False,
             'calculation_mode': 'classical',
             'region': '1 1 2 2 3 3',
             'bar': 'baz',
@@ -135,6 +136,7 @@ not_a_valid_file = foo.xml
 
         expected_params = {
             'base_path': exp_base_path,
+            'force_inputs': True,
             'calculation_mode': 'classical',
             'not_a_valid_file': 'foo.xml',
         }
@@ -174,6 +176,7 @@ not_a_valid_file = foo.xml
 
         expected_params = {
             'base_path': exp_base_path,
+            'force_inputs': False,
             'calculation_mode': 'classical',
             'not_a_valid_file': 'foo.xml',
         }

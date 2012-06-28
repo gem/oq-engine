@@ -77,7 +77,7 @@ def parse_config(source, force_inputs=False):
 
     base_path = os.path.dirname(
         os.path.join(os.path.abspath('.'), source.name))
-    params = dict(base_path=base_path)
+    params = dict(base_path=base_path, force_inputs=force_inputs)
     files = dict()
 
     for sect in cp.sections():
