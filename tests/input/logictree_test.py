@@ -40,7 +40,8 @@ from openquake.db import models
 from openquake.input import logictree
 from openquake.input.source import nrml_to_nhlib
 from openquake.engine import _insert_input_files
-from tests.utils.helpers import get_data_path, deep_eq
+
+from tests.utils import helpers
 
 
 class _TesteableSourceModelLogicTree(logictree.SourceModelLogicTree):
@@ -1895,27 +1896,10 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
     GMPE_LT = 'example-gmpe-logictree.xml'
 
     def setUp(self):
-        owner = models.OqUser.objects.get(user_name='openquake')
-        job = models.OqJob.objects.create(owner=owner)
-        smlt_content = models.ModelContent.objects.create(
-            raw_content=open(get_data_path(self.SOURCE_MODEL_LT)).read(),
-        )
-        smlt_input = models.Input.objects.create(
-            owner=owner, model_content=smlt_content,
-            size=len(smlt_content.raw_content),
-            input_type='lt_source'
-        )
-        gmpelt_content = models.ModelContent.objects.create(
-            raw_content=open(get_data_path(self.GMPE_LT)).read(),
-        )
-        gmpelt_input = models.Input.objects.create(
-            owner=owner, model_content=gmpelt_content,
-            size=len(gmpelt_content.raw_content),
-            input_type='lt_gsim'
-        )
-        models.Input2job.objects.create(oq_job=job, input=smlt_input)
-        models.Input2job.objects.create(oq_job=job, input=gmpelt_input)
-        self.proc = logictree.LogicTreeProcessor(job.id)
+        cfg = helpers.get_data_path('classical_job.ini')
+        job = helpers.get_hazard_job(cfg)
+
+        self.proc = logictree.LogicTreeProcessor(job.hazard_calculation.id)
 
     def test_sample_source_model(self):
         sm_name, modify, branch_ids = \
@@ -1942,20 +1926,19 @@ class LogicTreeProcessorTestCase(unittest.TestCase):
 
 
 class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
-    MFD_BIN_WIDTH = 1e-3
-    GMPE_LT = 'gmpe-logictree.xml'
-    NRML_TO_NHLIB_PARAMS = {'mesh_spacing': 1, 'bin_width': 1,
-                            'area_src_disc': 10}
+    JOB_CONFIG = None
+    NRML_TO_NHLIB_PARAMS = {
+        'mesh_spacing': 1,
+        'bin_width': 1,
+        'area_src_disc': 10,
+    }
 
     def _do_test(self, path, expected_result, expected_branch_ids):
-        params = {'BASE_PATH': self.BASE_PATH,
-                  'SOURCE_MODEL_LOGIC_TREE_FILE': self.SOURCE_MODEL_LT,
-                  'GMPE_LOGIC_TREE_FILE': self.GMPE_LT}
-        job = models.OqJob.objects.create(
-            owner=models.OqUser.objects.get(user_name='openquake')
-        )
-        _insert_input_files(params, job, False)
-        proc = logictree.LogicTreeProcessor(job.id)
+        cfg = helpers.get_data_path(self.JOB_CONFIG)
+        job = helpers.get_hazard_job(cfg)
+        base_path = job.hazard_calculation.base_path
+
+        proc = logictree.LogicTreeProcessor(job.hazard_calculation.id)
 
         [branch] = proc.source_model_lt.root_branchset.branches
         all_branches = proc.source_model_lt.branches
@@ -1971,12 +1954,12 @@ class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
             proc.sample_source_model_logictree(0)
         self.assertEqual(expected_branch_ids, branch_ids)
 
-        expected_result_path = os.path.join(self.BASE_PATH, expected_result)
+        expected_result_path = os.path.join(base_path, expected_result)
         e_nrml_sources = SourceModelParser(expected_result_path).parse()
         e_nhlib_sources = [nrml_to_nhlib(source, **self.NRML_TO_NHLIB_PARAMS)
                            for source in e_nrml_sources]
 
-        original_sm_path = os.path.join(self.BASE_PATH, sm_path)
+        original_sm_path = os.path.join(base_path, sm_path)
         a_nrml_sources = SourceModelParser(original_sm_path).parse()
         a_nhlib_sources = [nrml_to_nhlib(source, **self.NRML_TO_NHLIB_PARAMS)
                            for source in a_nrml_sources]
@@ -1990,12 +1973,12 @@ class _BaseSourceModelLogicTreeBlackboxTestCase(unittest.TestCase):
         for i in xrange(len(e_nhlib_sources)):
             expected_source = e_nhlib_sources[i]
             actual_source = a_nhlib_sources[i]
-            self.assertTrue(*deep_eq(expected_source, actual_source))
+            self.assertTrue(*helpers.deep_eq(expected_source, actual_source))
 
 
 class RelSMLTBBTestCase(_BaseSourceModelLogicTreeBlackboxTestCase):
-    BASE_PATH = get_data_path('LogicTreeRelativeUncertaintiesTest')
-    SOURCE_MODEL_LT = 'logic_tree.xml'
+    JOB_CONFIG = helpers.get_data_path(
+        'LogicTreeRelativeUncertaintiesTest/rel_uncert.ini')
 
     def test_b4(self):
         self._do_test(['b2', 'b4'], 'result_b4.xml', ['b1', 'b2', 'b4'])
@@ -2011,8 +1994,8 @@ class RelSMLTBBTestCase(_BaseSourceModelLogicTreeBlackboxTestCase):
 
 
 class AbsSMLTBBTestCase(_BaseSourceModelLogicTreeBlackboxTestCase):
-    BASE_PATH = get_data_path('LogicTreeAbsoluteUncertaintiesTest')
-    SOURCE_MODEL_LT = 'logic_tree.xml'
+    JOB_CONFIG = helpers.get_data_path(
+        'LogicTreeAbsoluteUncertaintiesTest/abs_uncert.ini')
 
     def test_b4(self):
         self._do_test(['b2', 'b4'], 'result_b4.xml', ['b1', 'b2', 'b4'])
