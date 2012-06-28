@@ -28,14 +28,14 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     (pre_execute, execute, etc.).
     """
 
-    def test_pre_execute_stores_site_model_and_site_data(self):
+    def test_initialize_site_model(self):
         cfg = helpers.demo_file(
             'simple_fault_demo_hazard/job_with_site_model.ini')
         job = helpers.get_hazard_job(cfg)
 
         calc = core_next.ClassicalHazardCalculator(job)
 
-        calc.pre_execute()
+        calc.initialize_site_model()
         # If the site model isn't valid for the calculation geometry, a
         # `RuntimeError` should be raised here
 
@@ -58,7 +58,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.assertEqual(num_pts_to_compute, len(calc.site_data.z1pt0s))
         self.assertEqual(num_pts_to_compute, len(calc.site_data.z2pt5s))
 
-    def test_pre_execute_no_site_model(self):
+    def test_initialize_site_model_no_site_model(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
         job = helpers.get_hazard_job(cfg)
 
@@ -66,5 +66,32 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
         patch_path = 'openquake.calculators.hazard.general.store_site_model'
         with helpers.patch(patch_path) as store_sm_patch:
-            calc.pre_execute()
+            calc.initialize_site_model()
+            # We should never try to store a site model in this case.
             self.assertEqual(0, store_sm_patch.call_count)
+
+    def test_initalize_sources(self):
+        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        job = helpers.get_hazard_job(cfg)
+
+        calc = core_next.ClassicalHazardCalculator(job)
+
+        calc.initialize_sources()
+
+        # The source model logic tree for this configuration has only 1 source
+        # model:
+        [source] = models.inputs4hcalc(
+            job.hazard_calculation.id, input_type='source')
+
+        parsed_sources = models.ParsedSource.objects.filter(input=source)
+        # This source model contains 118 sources:
+        self.assertEqual(118, len(parsed_sources))
+
+        # Finally, check the Src2ltsrc linkage:
+        [smlt] = models.inputs4hcalc(
+            job.hazard_calculation.id, input_type='lt_source')
+        [src2ltsrc] = models.Src2ltsrc.objects.filter(
+            hzrd_src=source, lt_src=smlt)
+        # Make sure the `filename` is exactly as it apprears in the logic tree.
+        # This is import for the logic tree processing we need to do later on.
+        self.assertEqual('dissFaultModel.xml', src2ltsrc.filename)
