@@ -1006,16 +1006,17 @@ class LogicTreeProcessor(object):
     """
     Logic tree processor. High-level interface to dealing with logic trees
     that are already in the database.
+
+    :param int calc_id:
+        ID of a :class:`openquake.db.models.HazardCalculation`.
     """
-    def __init__(self, job_id):
-        smlt_input = models.Input2job.objects.get(
-            oq_job=job_id, input__input_type='lt_source'
-        )
-        smlt_content = smlt_input.input.model_content.raw_content
-        gmpelt_input = models.Input2job.objects.get(
-            oq_job=job_id, input__input_type='lt_gsim'
-        )
-        gmpelt_content = gmpelt_input.input.model_content.raw_content
+    def __init__(self, calc_id):
+        [smlt_input] = models.inputs4hcalc(calc_id, input_type='lt_source')
+        smlt_content = smlt_input.model_content.raw_content
+
+        [gmpelt_input] = models.inputs4hcalc(calc_id, input_type='lt_gsim')
+        gmpelt_content = gmpelt_input.model_content.raw_content
+
         self.source_model_lt = SourceModelLogicTree(
             smlt_content, basepath=None, filename=None, validate=False
         )
