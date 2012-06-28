@@ -19,6 +19,8 @@ density functions for earthquake temporal occurrence modeling.
 """
 import math
 
+import numpy
+
 
 class PoissonTOM(object):
     """
@@ -48,3 +50,19 @@ class PoissonTOM(object):
             Float value between 0 and 1 inclusive.
         """
         return 1 - math.exp(- occurrence_rate * self.time_span)
+
+    def sample_number_of_occurrences(self, occurrence_rate):
+        """
+        Draw a random sample from the distribution and return a number
+        of events to occur.
+
+        Method uses numpy random generator, which needs to be seeded
+        outside of this method in order to get reproducible results.
+
+        :param occurrence_rate:
+            The average number of events per year.
+        :return:
+            Sampled integer number of events to occur within model's
+            time span.
+        """
+        return numpy.random.poisson(occurrence_rate * self.time_span)
