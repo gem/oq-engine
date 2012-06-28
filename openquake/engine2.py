@@ -75,7 +75,9 @@ def parse_config(source, force_inputs=False):
     cp = ConfigParser.ConfigParser()
     cp.readfp(source)
 
-    params = dict()
+    base_path = os.path.dirname(
+        os.path.join(os.path.abspath('.'), source.name))
+    params = dict(base_path=base_path)
     files = dict()
 
     for sect in cp.sections():

@@ -97,7 +97,14 @@ region = 1 1 2 2 3 3
 [foo]
 bar = baz
 """)
+
+        # Add a 'name' to make this look like a real file:
+        source.name = 'path/to/some/job.ini'
+        exp_base_path = os.path.dirname(
+            os.path.join(os.path.abspath('.'), source.name))
+
         expected_params = {
+            'base_path': exp_base_path,
             'calculation_mode': 'classical',
             'region': '1 1 2 2 3 3',
             'bar': 'baz',
@@ -121,7 +128,13 @@ site_model_file = %s
 not_a_valid_file = foo.xml
 """ % (gsim_lt_input, sm_lt_input, site_model_input))
 
+        # Add a 'name' to make this look like a real file:
+        source.name = 'path/to/some/job.ini'
+        exp_base_path = os.path.dirname(
+            os.path.join(os.path.abspath('.'), source.name))
+
         expected_params = {
+            'base_path': exp_base_path,
             'calculation_mode': 'classical',
             'not_a_valid_file': 'foo.xml',
         }
@@ -154,7 +167,13 @@ site_model_file = %s
 not_a_valid_file = foo.xml
 """ % site_model_input)
 
+        # Add a 'name' to make this look like a real file:
+        source.name = 'path/to/some/job.ini'
+        exp_base_path = os.path.dirname(
+            os.path.join(os.path.abspath('.'), source.name))
+
         expected_params = {
+            'base_path': exp_base_path,
             'calculation_mode': 'classical',
             'not_a_valid_file': 'foo.xml',
         }
@@ -332,6 +351,7 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
         # Just the bare minimum set of params to satisfy not null constraints
         # in the db.
         params = {
+            'base_path': 'path/to/job.ini',
             'calculation_mode': 'classical',
             'region': '1 1 2 2 3 3',
             'width_of_mfd_bin': '1',
