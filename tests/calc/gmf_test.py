@@ -23,9 +23,10 @@ from nhlib.imt import SA, PGV
 from nhlib.site import Site, SiteCollection
 from nhlib.geo import Point
 from nhlib.calc.gmf import ground_motion_fields
+from nhlib.correlation import JB2009CorrelationModel
 
 
-class GMFCalcNoCorrelationTestCase(unittest.TestCase):
+class BaseGMFCalcTestCase(unittest.TestCase):
     def setUp(self):
         self.mean1 = 1
         self.mean2 = 5
@@ -93,6 +94,8 @@ class GMFCalcNoCorrelationTestCase(unittest.TestCase):
 
         self.gsim = FakeGSIM()
 
+
+class GMFCalcNoCorrelationTestCase(BaseGMFCalcTestCase):
     def test_no_filtering_no_truncation(self):
         truncation_level = None
         numpy.random.seed(3)
@@ -244,3 +247,28 @@ class GMFCalcNoCorrelationTestCase(unittest.TestCase):
             self.assertEqual(gmfs[self.imt2].shape, (7, 123))
             assert_array_equal(gmfs[self.imt1], 0)
             assert_array_equal(gmfs[self.imt2], 0)
+
+
+class GMFCalcCorrelatedTestCase(BaseGMFCalcTestCase):
+    def test_no_truncation(self):
+        mean = 10
+        inter = 1e-300
+        intra = 3
+        points = [Point(0, 0), Point(0, 0.05), Point(0.06, 0.025),
+                  Point(0, 1.0), Point(-10, -10)]
+        sites = [Site(point, mean, False, inter, intra) for point in points]
+        self.sites = SiteCollection(sites)
+
+        numpy.random.seed(23)
+        cormo = JB2009CorrelationModel(vs30_clustering=False)
+        corma = cormo.get_correlation_matrix(self.sites, self.imt1)
+        lt_corma = cormo.get_lower_triangle_correlation_matrix(self.sites,
+                                                               self.imt1)
+        gmfs = ground_motion_fields(
+            self.rupture, self.sites, [self.imt1], self.gsim,
+            truncation_level=None, realizations=6000,
+            lt_correlation_matrices={self.imt1: lt_corma}
+        )
+
+        sampled_corma = numpy.corrcoef(gmfs[self.imt1])
+        assert_allclose(corma, sampled_corma, rtol=0, atol=0.02)
