@@ -43,7 +43,6 @@ def stochastic_event_set(sources, time_span):
         are contained in an event set. Some ruptures can be missing from
         it, others can appear one or more times in a row.
     """
-    # TODO: unittest
     tom = PoissonTOM(time_span)
 
     for source in sources:
