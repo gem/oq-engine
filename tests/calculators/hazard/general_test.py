@@ -198,6 +198,7 @@ class GetSiteModelTestCase(unittest.TestCase):
     @classmethod
     def _create_haz_calc(cls):
         params = {
+            'base_path': 'a/fake/path',
             'calculation_mode': 'classical',
             'region': '1 1 2 2 3 3',
             'width_of_mfd_bin': '1',
