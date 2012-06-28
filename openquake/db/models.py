@@ -1097,6 +1097,28 @@ class UhSpectrumData(djm.Model):
         db_table = 'hzrdr\".\"uh_spectrum_data'
 
 
+class LtRealization(djm.Model):
+    """
+    Keep track of logic tree realization progress. When ``completed_sources``
+    becomes equal to ``total_sources``, mark ``is_complete`` as `True`.
+
+    Marking progress as we go gives us the ability to resume partially-
+    completed calculations.
+    """
+
+    hazard_calculation = djm.ForeignKey('HazardCalculation')
+    ordinal = djm.IntegerField()
+    sm_lt_path = fields.CharArrayField()
+    gsim_lt_path = fields.CharArrayField()
+    seed = djm.IntegerField()
+    is_complete = djm.BooleanField(default=False)
+    total_sources = djm.IntegerField()
+    completed_sources = djm.IntegerField(default=0)
+
+    class Meta:
+        db_table = 'hzrdr\".\"lt_realization'
+
+
 ## Tables in the 'riskr' schema.
 
 
@@ -1515,29 +1537,8 @@ class Ffd(djm.Model):
         db_table = 'riski\".\"ffd'
 
 
-## Tables in the 'idata' schema.
+## Tables in the 'htemp' schema.
 
-
-class LtRealization(djm.Model):
-    """
-    Keep track of logic tree realization progress. When ``completed_sources``
-    becomes equal to ``total_sources``, mark ``is_complete`` as `True`.
-
-    Marking progress as we go gives us the ability to resume partially-
-    completed calculations.
-    """
-
-    hazard_calculation = djm.ForeignKey('HazardCalculation')
-    ordinal = djm.IntegerField()
-    sm_lt_path = fields.CharArrayField()
-    gsim_lt_path = fields.CharArrayField()
-    seed = djm.IntegerField()
-    is_complete = djm.BooleanField(default=False)
-    total_sources = djm.IntegerField()
-    completed_sources = djm.IntegerField()
-
-    class Meta:
-        db_table = 'idata\".\"lt_realization'
 
 
 class SourceProgress(djm.Model):
@@ -1554,7 +1555,7 @@ class SourceProgress(djm.Model):
     is_complete = djm.BooleanField(default=False)
 
     class Meta:
-        db_table = 'idata\".\"source_progress'
+        db_table = 'htemp\".\"source_progress'
 
 
 class HazardCurveProgress(djm.Model):
@@ -1572,7 +1573,7 @@ class HazardCurveProgress(djm.Model):
     result_matrix = fields.PickleField()
 
     class Meta:
-        db_table = 'idata\".\"hazard_curve_progress'
+        db_table = 'htemp\".\"hazard_curve_progress'
 
 
 class SiteData(djm.Model):
@@ -1597,4 +1598,4 @@ class SiteData(djm.Model):
     z2pt5s = fields.PickleField()
 
     class Meta:
-        db_table = 'idata\".\"site_data'
+        db_table = 'htemp\".\"site_data'
