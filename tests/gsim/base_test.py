@@ -170,7 +170,7 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
         self.assertAlmostEqual(poe23, 0.5521092)
 
 
-class ConvertIMLsConvertIntensityTestCase(unittest.TestCase):
+class ToIMTUnitsToDistributionTestCase(unittest.TestCase):
     def test_gmpe(self):
         class TGMPE(GMPE):
             DEFINED_FOR_TECTONIC_REGION_TYPE = None
@@ -184,9 +184,9 @@ class ConvertIMLsConvertIntensityTestCase(unittest.TestCase):
         gmpe = TGMPE()
         lin_intensity = [0.001, 0.1, 0.7, 1.4]
         log_intensity = [-6.90775528, -2.30258509, -0.35667494, 0.33647224]
-        numpy.testing.assert_allclose(gmpe.convert_imls(lin_intensity),
+        numpy.testing.assert_allclose(gmpe.to_distribution_values(lin_intensity),
                                       log_intensity)
-        numpy.testing.assert_allclose(gmpe.convert_intensities(log_intensity),
+        numpy.testing.assert_allclose(gmpe.to_imt_unit_values(log_intensity),
                                       lin_intensity)
 
     def test_ipe(self):
@@ -201,8 +201,9 @@ class ConvertIMLsConvertIntensityTestCase(unittest.TestCase):
             get_mean_and_stddevs = None
         ipe = TIPE()
         intensity = [0.001, 0.1, 0.7, 1.4]
-        numpy.testing.assert_equal(ipe.convert_imls(intensity), intensity)
-        numpy.testing.assert_equal(ipe.convert_intensities(intensity),
+        numpy.testing.assert_equal(ipe.to_distribution_values(intensity),
+                                   intensity)
+        numpy.testing.assert_equal(ipe.to_imt_unit_values(intensity),
                                    intensity)
 
 
