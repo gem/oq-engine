@@ -1564,11 +1564,11 @@ class HazardCurveProgress(djm.Model):
     """
 
     lt_realization = djm.ForeignKey('LtRealization')
+    imt = djm.TextField()
     # stores a pickled numpy array for intermediate results
     # array is 2d: sites x IMLs
     # each row indicates a site,
     # each column holds the PoE vaue for the IML at that index
-    imt = djm.TextField()
     result_matrix = fields.PickleField()
 
     class Meta:
