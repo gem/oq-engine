@@ -208,6 +208,7 @@ def compose_writers(writers):
         return CompositeWriter(*writers)
 
 
+# pylint: disable=W0212
 class BulkInserter(object):
     """Handle bulk object insertion"""
 
@@ -215,8 +216,8 @@ class BulkInserter(object):
         """
         Create a new bulk inserter for a Django model class
 
-        :param dj_model: Django model
-        :type dj_model: :class:`django.db.models.Model`
+        :param dj_model:
+            Django model class
         """
         self.table = dj_model
         self.fields = None
@@ -250,7 +251,7 @@ class BulkInserter(object):
         value_args = []
 
         field_map = dict()
-        for f in self.table._meta.fields:  # pylint: disable=W0212
+        for f in self.table._meta.fields:
             field_map[f.column] = f
 
         for f in self.fields:
@@ -260,7 +261,6 @@ class BulkInserter(object):
             else:
                 value_args.append('%s')
 
-        # pylint: disable=W0212
         sql = "INSERT INTO \"%s\" (%s) VALUES " % (
             self.table._meta.db_table, ", ".join(self.fields)) + \
             ", ".join(["(" + ", ".join(value_args) + ")"] * self.count)

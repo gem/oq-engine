@@ -17,11 +17,13 @@
 
 import unittest
 
+from nhlib import geo as nhlib_geo
+
 from openquake import engine
+from openquake import engine2
 from openquake import shapes
 from openquake.calculators.hazard import general
 from openquake.db import models
-from openquake.job.config import ValidationException
 
 from tests.utils import helpers
 
@@ -70,31 +72,6 @@ class StoreSiteModelTestCase(unittest.TestCase):
         for i, val in enumerate(ret_val):
             self.assertEqual(val, actual_site_model[i])
 
-    def test_initialize_stores_site_model(self):
-        job_ctxt = helpers.prepare_job_context(
-            helpers.demo_file(
-                'simple_fault_demo_hazard/config_with_site_model.gem'))
-
-        calc = general.BaseHazardCalculator(job_ctxt)
-
-        [site_model_input] = models.inputs4job(
-            job_ctxt.oq_job.id, input_type='site_model')
-
-        site_model_nodes = models.SiteModel.objects.filter(
-            input=site_model_input)
-
-        # Test precondition: The site_model table shouldn't be populated yet.
-        self.assertEqual(0, len(site_model_nodes))
-
-        calc.initialize()
-
-        # Now it should be populated.
-        site_model_nodes = models.SiteModel.objects.filter(
-            input=site_model_input)
-        # It would be overkill to test the contents; just check that the number
-        # of records is correct.
-        self.assertEqual(2601, len(site_model_nodes))
-
 
 class ValidateSiteModelTestCase(unittest.TestCase):
     """Tests for
@@ -136,64 +113,67 @@ class ValidateSiteModelTestCase(unittest.TestCase):
 
             # the edges of the polygon
             # East edge
-            shapes.Site(9.9999999, 0),
+            nhlib_geo.Point(9.9999999, 0),
             # West edge
-            shapes.Site(-9.9999999, 0),
+            nhlib_geo.Point(-9.9999999, 0),
             # NOTE: The values for the north and south edges were obtained by
             # trial and error.
             # North edge
-            shapes.Site(0, 10.1507381),
+            nhlib_geo.Point(0, 10.1507381),
             # South edge
-            shapes.Site(0, -10.1507381),
+            nhlib_geo.Point(0, -10.1507381),
             # the corners
-            shapes.Site(-10, 10),
-            shapes.Site(10, 10),
-            shapes.Site(-10, -10),
-            shapes.Site(10, -10),
+            nhlib_geo.Point(-10, 10),
+            nhlib_geo.Point(10, 10),
+            nhlib_geo.Point(-10, -10),
+            nhlib_geo.Point(10, -10),
             # a few points somewhere in the middle, which are obviously inside
             # the target area
-            shapes.Site(0.0, 0.0),
-            shapes.Site(-2.5, 2.5),
-            shapes.Site(2.5, 2.5),
-            shapes.Site(-2.5, -2.5),
-            shapes.Site(2.5, -2.5),
+            nhlib_geo.Point(0.0, 0.0),
+            nhlib_geo.Point(-2.5, 2.5),
+            nhlib_geo.Point(2.5, 2.5),
+            nhlib_geo.Point(-2.5, -2.5),
+            nhlib_geo.Point(2.5, -2.5),
         ]
+        mesh = nhlib_geo.Mesh.from_points_list(sites_of_interest)
 
         # this should work without raising any errors
-        general.validate_site_model(self.site_model_nodes, sites_of_interest)
+        general.validate_site_model(self.site_model_nodes, mesh)
 
     def test_validate_site_model_invalid(self):
         test_cases = [
             # outside of the edges
             # East edge
-            [shapes.Site(10.0000001, 0)],
+            [nhlib_geo.Point(10.0000001, 0)],
             # West edge
-            [shapes.Site(-10.0000001, 0)],
+            [nhlib_geo.Point(-10.0000001, 0)],
             # NOTE: The values for the north south edges were obtained by
             # trial and error.
             # North edge
-            [shapes.Site(0, 10.1507382)],
+            [nhlib_geo.Point(0, 10.1507382)],
             # South edge
-            [shapes.Site(0, -10.1507382)],
+            [nhlib_geo.Point(0, -10.1507382)],
             # outside of the corners
             # first corner (a)
-            [shapes.Site(-10.0000001, 10)],
-            [shapes.Site(-10, 10.0000001)],
+            [nhlib_geo.Point(-10.0000001, 10)],
+            [nhlib_geo.Point(-10, 10.0000001)],
             # second corner (b)
-            [shapes.Site(10.0000001, 10)],
-            [shapes.Site(10, 10.0000001)],
+            [nhlib_geo.Point(10.0000001, 10)],
+            [nhlib_geo.Point(10, 10.0000001)],
             # third corner (d)
-            [shapes.Site(-10.0000001, -10)],
-            [shapes.Site(-10, -10.0000001)],
+            [nhlib_geo.Point(-10.0000001, -10)],
+            [nhlib_geo.Point(-10, -10.0000001)],
             # fourth corner (e)
-            [shapes.Site(10.0000001, -10)],
-            [shapes.Site(10, -10.0000001)],
+            [nhlib_geo.Point(10.0000001, -10)],
+            [nhlib_geo.Point(10, -10.0000001)],
         ]
 
         for tc in test_cases:
-            self.assertRaises(ValidationException, general.validate_site_model,
-                              self.site_model_nodes, tc)
+            mesh = nhlib_geo.Mesh.from_points_list(tc)
+            self.assertRaises(RuntimeError, general.validate_site_model,
+                              self.site_model_nodes, mesh)
 
+    @helpers.skipit
     def test_initialize_calls_validate(self):
         # Test make sure the calculator `initialize` calls
         # `validate_site_model`.
@@ -215,42 +195,68 @@ class ValidateSiteModelTestCase(unittest.TestCase):
 
 class GetSiteModelTestCase(unittest.TestCase):
 
+    @classmethod
+    def _create_haz_calc(cls):
+        params = {
+            'base_path': 'a/fake/path',
+            'calculation_mode': 'classical',
+            'region': '1 1 2 2 3 3',
+            'width_of_mfd_bin': '1',
+            'rupture_mesh_spacing': '1',
+            'area_source_discretization': '2',
+            'investigation_time': 50,
+            'truncation_level': 0,
+            'maximum_distance': 200,
+            'number_of_logic_tree_samples': 1,
+            'intensity_measure_types_and_levels': dict(PGA=[1,2,3,4]),
+            'random_seed': 37,
+        }
+        owner = helpers.default_user()
+        hc = engine2.create_hazard_calculation(owner, params, [])
+        return hc
+
+
     def test_get_site_model(self):
-        job = engine.prepare_job()
+        haz_calc = self._create_haz_calc()
+
         site_model_inp = models.Input(
-            owner=job.owner, digest='fake', path='fake',
+            owner=haz_calc.owner, digest='fake', path='fake',
             input_type='site_model', size=0
         )
         site_model_inp.save()
 
-        # The link has not yet been made in the input2job table.
-        self.assertIsNone(general.get_site_model(job.id))
+        # The link has not yet been made in the input2haz_calc table.
+        self.assertIsNone(general.get_site_model(haz_calc.id))
 
         # Complete the link:
-        models.Input2job(input=site_model_inp, oq_job=job).save()
+        models.Input2hcalc(
+            input=site_model_inp, hazard_calculation=haz_calc).save()
 
-        actual_site_model = general.get_site_model(job.id)
+        actual_site_model = general.get_site_model(haz_calc.id)
         self.assertEqual(site_model_inp, actual_site_model)
 
     def test_get_site_model_too_many_site_models(self):
-        job = engine.prepare_job()
+        haz_calc = self._create_haz_calc()
+
         site_model_inp1 = models.Input(
-            owner=job.owner, digest='fake', path='fake',
+            owner=haz_calc.owner, digest='fake', path='fake',
             input_type='site_model', size=0
         )
         site_model_inp1.save()
         site_model_inp2 = models.Input(
-            owner=job.owner, digest='fake', path='fake',
+            owner=haz_calc.owner, digest='fake', path='fake',
             input_type='site_model', size=0
         )
         site_model_inp2.save()
 
-        # link both site models to the job:
-        models.Input2job(input=site_model_inp1, oq_job=job).save()
-        models.Input2job(input=site_model_inp2, oq_job=job).save()
+        # link both site models to the calculation:
+        models.Input2hcalc(
+            input=site_model_inp1, hazard_calculation=haz_calc).save()
+        models.Input2hcalc(
+            input=site_model_inp2, hazard_calculation=haz_calc).save()
 
         with self.assertRaises(RuntimeError) as assert_raises:
-            general.get_site_model(job.id)
+            general.get_site_model(haz_calc.id)
 
         self.assertEqual('Only 1 site model per job is allowed, found 2.',
                          assert_raises.exception.message)
@@ -270,7 +276,7 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         # We haven't yet linked any site model data to this input, so we
         # expect a result of `None`.
         self.assertIsNone(general.get_closest_site_model_data(
-            self.site_model_inp, shapes.Site(0, 0))
+            self.site_model_inp, nhlib_geo.Point(0, 0))
         )
 
     def test_get_closest_site_model_data(self):
@@ -305,11 +311,11 @@ class ClosestSiteModelTestCase(unittest.TestCase):
         #
         # Thus, I decided to not include this in my test case, since it caused
         # the test to intermittently fail.
-        site1 = shapes.Site(-0.0000001, 0)
-        site2 = shapes.Site(0.0000001, 0)
+        point1 = nhlib_geo.Point(-0.0000001, 0)
+        point2 = nhlib_geo.Point(0.0000001, 0)
 
-        res1 = general.get_closest_site_model_data(self.site_model_inp, site1)
-        res2 = general.get_closest_site_model_data(self.site_model_inp, site2)
+        res1 = general.get_closest_site_model_data(self.site_model_inp, point1)
+        res2 = general.get_closest_site_model_data(self.site_model_inp, point2)
 
         self.assertEqual(sm1, res1)
         self.assertEqual(sm2, res2)

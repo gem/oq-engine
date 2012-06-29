@@ -919,6 +919,7 @@ class ParameterizeSitesTestCase(unittest.TestCase):
                 exp_sadigh, jsite.getParameter('Sadigh Site Type').getValue()
             )
 
+    @helpers.skipit
     def test_parameterize_sites_with_site_model(self):
         job_ctxt = helpers.prepare_job_context(
             helpers.demo_file(

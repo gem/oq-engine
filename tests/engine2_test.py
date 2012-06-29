@@ -97,7 +97,15 @@ region = 1 1 2 2 3 3
 [foo]
 bar = baz
 """)
+
+        # Add a 'name' to make this look like a real file:
+        source.name = 'path/to/some/job.ini'
+        exp_base_path = os.path.dirname(
+            os.path.join(os.path.abspath('.'), source.name))
+
         expected_params = {
+            'base_path': exp_base_path,
+            'force_inputs': False,
             'calculation_mode': 'classical',
             'region': '1 1 2 2 3 3',
             'bar': 'baz',
@@ -121,7 +129,14 @@ site_model_file = %s
 not_a_valid_file = foo.xml
 """ % (gsim_lt_input, sm_lt_input, site_model_input))
 
+        # Add a 'name' to make this look like a real file:
+        source.name = 'path/to/some/job.ini'
+        exp_base_path = os.path.dirname(
+            os.path.join(os.path.abspath('.'), source.name))
+
         expected_params = {
+            'base_path': exp_base_path,
+            'force_inputs': True,
             'calculation_mode': 'classical',
             'not_a_valid_file': 'foo.xml',
         }
@@ -154,7 +169,14 @@ site_model_file = %s
 not_a_valid_file = foo.xml
 """ % site_model_input)
 
+        # Add a 'name' to make this look like a real file:
+        source.name = 'path/to/some/job.ini'
+        exp_base_path = os.path.dirname(
+            os.path.join(os.path.abspath('.'), source.name))
+
         expected_params = {
+            'base_path': exp_base_path,
+            'force_inputs': False,
             'calculation_mode': 'classical',
             'not_a_valid_file': 'foo.xml',
         }
@@ -332,6 +354,7 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
         # Just the bare minimum set of params to satisfy not null constraints
         # in the db.
         params = {
+            'base_path': 'path/to/job.ini',
             'calculation_mode': 'classical',
             'region': '1 1 2 2 3 3',
             'width_of_mfd_bin': '1',
@@ -340,20 +363,35 @@ class CreateHazardCalculationTestCase(unittest.TestCase):
             'investigation_time': 50,
             'truncation_level': 0,
             'maximum_distance': 200,
+            'number_of_logic_tree_samples': 1,
+            'intensity_measure_types_and_levels': dict(PGA=[1,2,3,4]),
+            'random_seed': 37,
         }
 
         owner = helpers.default_user()
-        hjp = engine2.create_hazard_calculation(params, owner)
-        # Normalize/clean fields by fetching a fresh copy from the db.
-        hjp = models.HazardCalculation.objects.get(id=hjp.id)
 
-        self.assertEqual(hjp.calculation_mode, 'classical')
-        self.assertEqual(hjp.width_of_mfd_bin, 1.0)
-        self.assertEqual(hjp.rupture_mesh_spacing, 1.0)
-        self.assertEqual(hjp.area_source_discretization, 2.0)
-        self.assertEqual(hjp.investigation_time, 50.0)
-        self.assertEqual(hjp.truncation_level, 0.0)
-        self.assertEqual(hjp.maximum_distance, 200.0)
+        site_model = models.Input(digest='123', path='/foo/bar', size=0,
+                                  input_type='site_model', owner=owner)
+        site_model.save()
+        files = [site_model]
+
+        hc = engine2.create_hazard_calculation(owner, params, files)
+        # Normalize/clean fields by fetching a fresh copy from the db.
+        hc = models.HazardCalculation.objects.get(id=hc.id)
+
+        self.assertEqual(hc.calculation_mode, 'classical')
+        self.assertEqual(hc.width_of_mfd_bin, 1.0)
+        self.assertEqual(hc.rupture_mesh_spacing, 1.0)
+        self.assertEqual(hc.area_source_discretization, 2.0)
+        self.assertEqual(hc.investigation_time, 50.0)
+        self.assertEqual(hc.truncation_level, 0.0)
+        self.assertEqual(hc.maximum_distance, 200.0)
+
+        # Test the input2haz_calc link:
+        [inp2hcs] = models.Input2hcalc.objects.filter(
+            hazard_calculation=hc.id)
+
+        self.assertEqual(site_model.id, inp2hcs.input.id)
 
 
 class ReadJobProfileFromConfigFileTestCase(unittest.TestCase):
@@ -367,7 +405,8 @@ class ReadJobProfileFromConfigFileTestCase(unittest.TestCase):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
         job = engine2.prepare_job(getpass.getuser())
         params, files = engine2.parse_config(open(cfg, 'r'))
-        calculation = engine2.create_hazard_calculation(params, job.owner)
+        calculation = engine2.create_hazard_calculation(
+            job.owner, params, files.values())
 
         form = validation.ClassicalHazardCalculationForm(
             instance=calculation, files=files
