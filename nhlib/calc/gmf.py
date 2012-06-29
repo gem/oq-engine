@@ -104,10 +104,10 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         intra_residual = stddev_intra * distribution.rvs(size=(len(sites),
                                                                realizations))
         if lt_correlation_matrices is not None:
-            intra_residual = (
-                intra_residual.transpose()
-                * lt_correlation_matrices[imt].transpose()
-            ).transpose().A
+            intra_residual = numpy.dot(
+                intra_residual.transpose(),
+                numpy.array(lt_correlation_matrices[imt]).transpose()
+            ).transpose()
 
         inter_residual = stddev_inter * distribution.rvs(size=realizations)
         gmf = mean + intra_residual + inter_residual

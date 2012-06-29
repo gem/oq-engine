@@ -299,3 +299,25 @@ class GMFCalcCorrelatedTestCase(BaseGMFCalcTestCase):
         self.assertAlmostEqual(s2_intensity.mean(), mean2, delta=1e-3)
         self.assertAlmostEqual(s1_intensity.std(), intra1, delta=2e-3)
         self.assertAlmostEqual(s2_intensity.std(), intra2, delta=1e-2)
+
+    def test_array_instead_of_matrix(self):
+        mean = 10
+        inter = 1e-300
+        intra = 1
+        points = [Point(0, 0), Point(0, 0.23)]
+        sites = [Site(point, mean, False, inter, intra) for point in points]
+        self.sites = SiteCollection(sites)
+
+        numpy.random.seed(43)
+        cormo = JB2009CorrelationModel(vs30_clustering=False)
+        corma = cormo.get_correlation_matrix(self.sites, self.imt1)
+        lt_corma = cormo.get_lower_triangle_correlation_matrix(self.sites,
+                                                               self.imt1)
+        gmfs = ground_motion_fields(
+            self.rupture, self.sites, [self.imt1], self.gsim,
+            truncation_level=None, realizations=6000,
+            lt_correlation_matrices={self.imt1: lt_corma.A}
+        )
+
+        sampled_corma = numpy.corrcoef(gmfs[self.imt1])
+        assert_allclose(corma, sampled_corma, rtol=0, atol=0.02)
