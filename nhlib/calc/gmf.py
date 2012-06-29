@@ -81,6 +81,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
         for imt in imts:
             mean, _stddevs = gsim.get_mean_and_stddevs(sctx, rctx, dctx, imt,
                                                        stddev_types=[])
+            mean = gsim.convert_intensities(mean)
             mean.shape += (1, )
             mean = mean.repeat(realizations, axis=1)
             result[imt] = sites.expand(mean, total_sites, placeholder=0)
@@ -119,7 +120,7 @@ def ground_motion_fields(rupture, sites, imts, gsim, truncation_level,
             ).transpose()
 
         inter_residual = stddev_inter * distribution.rvs(size=realizations)
-        gmf = mean + intra_residual + inter_residual
+        gmf = gsim.convert_intensities(mean + intra_residual + inter_residual)
         result[imt] = sites.expand(gmf, total_sites, placeholder=0)
 
     return result

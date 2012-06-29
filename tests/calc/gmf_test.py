@@ -79,10 +79,15 @@ class BaseGMFCalcTestCase(unittest.TestCase):
                 if gsim.expect_stddevs:
                     self.assertEqual(stddev_types, [const.StdDev.INTER_EVENT,
                                                     const.StdDev.INTRA_EVENT])
-                    return mean.copy(), [std_inter.copy(), std_intra.copy()]
+                    # + 10 is needed to make sure that convert_intensities
+                    # is called on the result of gmf calc
+                    return mean + 10, [std_inter, std_intra]
                 else:
                     self.assertEqual(stddev_types, [])
-                    return mean.copy(), []
+                    return mean + 10, []
+
+            def convert_intensities(gsim, intensities):
+                return intensities - 10.
 
         def rupture_site_filter(rupture_site_gen):
             [(rupture, sites)] = rupture_site_gen
