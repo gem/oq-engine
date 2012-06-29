@@ -95,15 +95,17 @@ class ClassicalHazardCalculatorPreExecuteTestCase(unittest.TestCase):
         num_pts_to_compute = len(
             self.job.hazard_calculation.points_to_compute())
 
+        [site_data] = models.SiteData.objects.filter(
+            hazard_calculation=self.job.hazard_calculation.id)
+
         # The site model is good. Now test that `site_data` was computed.
         # For now, just test the lengths of the site data collections:
-        self.assertEqual(num_pts_to_compute, len(self.calc.site_data.lons))
-        self.assertEqual(num_pts_to_compute, len(self.calc.site_data.lats))
-        self.assertEqual(num_pts_to_compute, len(self.calc.site_data.vs30s))
-        self.assertEqual(
-            num_pts_to_compute, len(self.calc.site_data.vs30_measured))
-        self.assertEqual(num_pts_to_compute, len(self.calc.site_data.z1pt0s))
-        self.assertEqual(num_pts_to_compute, len(self.calc.site_data.z2pt5s))
+        self.assertEqual(num_pts_to_compute, len(site_data.lons))
+        self.assertEqual(num_pts_to_compute, len(site_data.lats))
+        self.assertEqual(num_pts_to_compute, len(site_data.vs30s))
+        self.assertEqual(num_pts_to_compute, len(site_data.vs30_measured))
+        self.assertEqual(num_pts_to_compute, len(site_data.z1pt0s))
+        self.assertEqual(num_pts_to_compute, len(site_data.z2pt5s))
 
     def test_initialize_site_model_no_site_model(self):
         patch_path = 'openquake.calculators.hazard.general.store_site_model'
