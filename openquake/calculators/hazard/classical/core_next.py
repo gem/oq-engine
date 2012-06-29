@@ -13,6 +13,9 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+Core functionality for the classical PSHA hazard calculator.
+"""
 
 import os
 import random
@@ -33,12 +36,31 @@ from openquake.job.validation import MAX_SINT_32
 
 
 class ClassicalHazardCalculator(base.CalculatorNext):
+    """
+    Classical PSHA hazard calculator. Computes hazard curves for a given set of
+    points.
 
-    def __init__(self, job):
-        self.site_data = None  # assigned a value only if there is a site model
-        super(ClassicalHazardCalculator, self).__init__(job)
+    For each realization of the calculation, we randomly sample source models
+    and GMPEs (Ground Motion Prediction Equations) from logic trees.
+    """
 
     def initialize_site_model(self):
+        """
+        If a site model is specified in the calculation configuration. parse
+        it and load it into the `hzrdi.site_model` table. This includes a
+        validation step to ensure that the area covered by the site model
+        completely envelops the calculation geometry. (If this requirement is
+        not satisfied, an exception will be raised. See
+        :func:`openquake.calculators.hazard.general.validate_site_model`.)
+
+        Then, take all of the points/locations of interest defined by the
+        calculation geometry. For each point, do distance queries on the site
+        model and get the site parameters which are closest to the point of
+        interest. This aggregation of points to the closest site parameters
+        is what we store in `htemp.site_data`. (Computing this once prior to
+        starting the calculation is optimal, since each task will need to
+        consider all sites.)
+        """
         hc_id = self.job.hazard_calculation.id
 
         site_model_inp = general.get_site_model(hc_id)
@@ -59,8 +81,7 @@ class ClassicalHazardCalculator(base.CalculatorNext):
 
             general.validate_site_model(site_model_data, mesh)
 
-            self.site_data = general.store_site_data(
-                hc_id, site_model_inp, mesh)
+            general.store_site_data(hc_id, site_model_inp, mesh)
 
     def initialize_sources(self):
         """
@@ -103,8 +124,20 @@ class ClassicalHazardCalculator(base.CalculatorNext):
                 hc.width_of_mfd_bin, hc.area_source_discretization)
             src_db_writer.serialize()
 
+    # Silencing 'Too many local variables'
+    # pylint: disable=R0914
     @transaction.commit_on_success(using='reslt_writer')
     def initialize_realizations(self):
+        """
+        Create records for the `hzrdr.lt_realization` and
+        `htemp.source_progress` records. To do this, we sample the source model
+        logic tree to choose a source model for the realization, then we sample
+        the GSIM logic tree. We record the logic tree paths for both trees in
+        the `lt_realization` record.
+
+        Then we create `htemp.source_progress` records for each source in the
+        source model chosen for each realization.
+        """
         hc = self.job.hazard_calculation
 
         # Each realization will have two seeds:
@@ -154,6 +187,12 @@ class ClassicalHazardCalculator(base.CalculatorNext):
             seed = rnd.randint(MIN_SINT_32, MAX_SINT_32)
 
     def pre_execute(self):
+        """
+        Do pre-execution work. At the moment, this work entails: parsing and
+        initializing sources, parsing and initializing the site model (if there
+        is one), and generating logic tree realizations. (The latter piece
+        basically defines the work to be done in the `execute` phase.)
+        """
 
         # Parse logic trees and create source Inputs.
         self.initialize_sources()

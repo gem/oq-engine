@@ -1540,7 +1540,6 @@ class Ffd(djm.Model):
 ## Tables in the 'htemp' schema.
 
 
-
 class SourceProgress(djm.Model):
     """
     Keep track of which sources have been considered for a given logic tree
