@@ -226,7 +226,7 @@ class Inputs4JobTestCase(unittest.TestCase):
 class Inputs4HazCalcTestCase(unittest.TestCase):
 
     def test_no_inputs(self):
-        self.assertEqual([], models.inputs4hcalc(-1))
+        self.assertEqual([], list(models.inputs4hcalc(-1)))
 
     def test_a_few_inputs(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
