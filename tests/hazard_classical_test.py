@@ -31,8 +31,7 @@ from openquake import logs
 from openquake import shapes
 from openquake.utils import stats
 
-from tests.utils.helpers import (patch, TestStore, demo_file,
-                                 create_job, skipit)
+from tests.utils.helpers import patch, TestStore, demo_file, create_job
 from tests.utils.tasks import (
     fake_compute_hazard_curve, test_async_data_reflector,
     test_compute_hazard_curve, test_data_reflector)

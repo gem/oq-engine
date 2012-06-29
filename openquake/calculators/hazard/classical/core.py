@@ -449,6 +449,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
 
         LOG.debug("< post_execute")
 
+    # pylint: disable=W0221
     def clean_up(self, test_keys=None):
         """Clean up stats counters and perform garbage collection."""
         LOG.debug("> clean_up")
