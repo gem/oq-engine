@@ -189,6 +189,7 @@ class ClassicalHazardCalculator(base.CalculatorNext):
 
             # update the seed for the next realization
             seed = rnd.randint(MIN_SINT_32, MAX_SINT_32)
+            rnd.seed(seed)
 
     def initialize_hazard_curve_progress(self, lt_rlz):
         """
