@@ -272,3 +272,30 @@ class GMFCalcCorrelatedTestCase(BaseGMFCalcTestCase):
 
         sampled_corma = numpy.corrcoef(gmfs[self.imt1])
         assert_allclose(corma, sampled_corma, rtol=0, atol=0.02)
+
+    def test_no_correlation_mean_and_intra_respected(self):
+        mean1 = 10
+        mean2 = 14
+        inter = 1e-300
+        intra1 = 0.2
+        intra2 = 1.6
+        p1 = Point(0, 0)
+        p2 = Point(0, 0.3)
+        sites = [Site(p1, mean1, False, inter, intra1),
+                 Site(p2, mean2, False, inter, intra2)]
+        self.sites = SiteCollection(sites)
+
+        numpy.random.seed(41)
+        cormo = JB2009CorrelationModel(vs30_clustering=False)
+        lt_corma = cormo.get_lower_triangle_correlation_matrix(self.sites,
+                                                               self.imt1)
+        s1_intensity, s2_intensity = ground_motion_fields(
+            self.rupture, self.sites, [self.imt1], self.gsim,
+            truncation_level=None, realizations=6000,
+            lt_correlation_matrices={self.imt1: lt_corma}
+        )[self.imt1]
+
+        self.assertAlmostEqual(s1_intensity.mean(), mean1, delta=1e-3)
+        self.assertAlmostEqual(s2_intensity.mean(), mean2, delta=1e-3)
+        self.assertAlmostEqual(s1_intensity.std(), intra1, delta=2e-3)
+        self.assertAlmostEqual(s2_intensity.std(), intra2, delta=1e-2)
