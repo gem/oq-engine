@@ -17,6 +17,7 @@
 Core functionality for the classical PSHA hazard calculator.
 """
 
+import numpy
 import os
 import random
 import StringIO
@@ -183,8 +184,42 @@ class ClassicalHazardCalculator(base.CalculatorNext):
                     lt_realization_id=lt_rlz.id, parsed_source_id=ps.id)
             sp_inserter.flush()
 
+            # Now stub out the curve result records for this realization:
+            self.initialize_hazard_curve_progress(lt_rlz)
+
             # update the seed for the next realization
             seed = rnd.randint(MIN_SINT_32, MAX_SINT_32)
+
+    def initialize_hazard_curve_progress(self, lt_rlz):
+        """
+        As a calculation progresses, workers will periodically update the
+        intermediate results. These results will be stored in
+        `htemp.hazard_curve_progress` until the calculation is completed.
+
+        Before the core calculation begins, we need to initalize these records,
+        one data set per IMT. Each dataset will be stored in the database as a
+        pickled 2D numpy array (with number of rows == calculation points of
+        interest and number of columns == number of IML values for a given
+        IMT).
+
+        We will create 1 `hazard_curve_progress` record per IMT per
+        realization.
+
+        :param lt_rlz:
+            :class:`openquake.db.models.LtRealization` object to associate
+            with these inital hazard curve values.
+        """
+        hc = self.job.hazard_calculation
+
+        num_points = len(hc.points_to_compute())
+
+        im_data = hc.intensity_measure_types_and_levels
+        for imt, imls in im_data.items():
+            hc_prog = models.HazardCurveProgress()
+            hc_prog.lt_realization = lt_rlz
+            hc_prog.imt = imt
+            hc_prog.result_matrix = numpy.zeros((num_points, len(imls)))
+            hc_prog.save()
 
     def pre_execute(self):
         """
@@ -204,4 +239,8 @@ class ClassicalHazardCalculator(base.CalculatorNext):
         # Now bootstrap the logic tree realizations and related data.
         # This defines for us the "work" that needs to be done when we reach
         # the `execute` phase.
+        # This will also stub out hazard curve result records. Workers will
+        # update these periodically with partial results (partial meaning,
+        # result curves for just a subset of the overall sources) when some
+        # work is complete.
         self.initialize_realizations()

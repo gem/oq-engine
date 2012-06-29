@@ -88,6 +88,7 @@ GRANT ALL ON SEQUENCE uiapi.job2profile_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE htemp.site_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE htemp.source_progress_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE htemp.hazard_curve_progress_id_seq to GROUP openquake;
 
 GRANT SELECT ON geography_columns TO GROUP openquake;
 GRANT SELECT ON geometry_columns TO GROUP openquake;
@@ -317,4 +318,8 @@ GRANT SELECT,INSERT,DELETE ON htemp.site_data TO oq_reslt_writer;
 
 -- htemp.source_progress
 GRANT SELECT ON htemp.source_progress TO openquake;
-GRANT SELECT,INSERT,DELETE ON htemp.source_progress TO oq_reslt_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON htemp.source_progress TO oq_reslt_writer;
+
+-- htemp.hazard_curve_progress
+GRANT SELECT ON htemp.hazard_curve_progress TO openquake;
+GRANT SELECT,INSERT,UPDATE,DELETE ON htemp.hazard_curve_progress TO oq_reslt_writer;

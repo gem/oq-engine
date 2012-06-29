@@ -158,3 +158,15 @@ class ClassicalHazardCalculatorPreExecuteTestCase(unittest.TestCase):
                 lt_realization=ltr.id)
             self.assertEqual(118, len(src_prog))
             self.assertFalse(any([x.is_complete for x in src_prog]))
+
+            # Check that hazard curve progress records were properly
+            # initialized:
+            [hc_prog_pga] = models.HazardCurveProgress.objects.filter(
+                lt_realization=ltr.id, imt="PGA")
+            self.assertEqual((28, 15), hc_prog_pga.result_matrix.shape)
+            self.assertTrue((hc_prog_pga.result_matrix == 0).all())
+
+            [hc_prog_sa] = models.HazardCurveProgress.objects.filter(
+                lt_realization=ltr.id, imt="SA(0.025)")
+            self.assertEqual((28, 19), hc_prog_sa.result_matrix.shape)
+            self.assertTrue((hc_prog_sa.result_matrix == 0).all())
