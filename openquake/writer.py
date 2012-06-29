@@ -131,9 +131,17 @@ class DBWriter(object):
         assert self.output is None
 
         job = models.OqJob.objects.get(id=self.oq_job_id)
-        one_or_none = models.Output.objects.filter(
-            oq_job=job, display_name=basename(self.nrml_path),
-            output_type=output_type)
+
+        # al-maisan, Fri, 29 Jun 2012 17:36:35 +0200
+        # https://bugs.launchpad.net/openquake/+bug/1019317
+        # figure out why using a single output record for gmf_data breaks the
+        # probablistic event-based risk calculator.
+        if output_type == "gmf":
+            one_or_none = []
+        else:
+            one_or_none = models.Output.objects.filter(
+                oq_job=job, display_name=basename(self.nrml_path),
+                output_type=output_type)
         if len(one_or_none) == 1:
             self.output = one_or_none[0]
             LOGGER.info("using output = '%s'", self.output)

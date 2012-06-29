@@ -797,7 +797,6 @@ class GmfDBWriter(writer.DBWriter):
     def __init__(self, nrml_path, oq_job_id):
         super(GmfDBWriter, self).__init__(nrml_path, oq_job_id)
 
-        self.curves_per_branch_label = {}
         self.bulk_inserter = writer.BulkInserter(models.GmfData)
 
     def get_output_type(self):

@@ -175,25 +175,6 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
 
         return gmfs
 
-    def _get_kvs_gmfs(self, sites, histories, realizations):
-        """Aggregates GMF data from the KVS by site"""
-        gmf_keys = self._sites_to_gmf_keys(sites)
-        gmfs = dict((k, []) for k in gmf_keys)
-
-        for i in range(0, histories):
-            for j in range(0, realizations):
-                key = kvs.tokens.stochastic_set_key(
-                    self.job_ctxt.job_id, i, j)
-                fieldset = shapes.FieldSet.from_json(kvs.get(key),
-                    self.job_ctxt.region.grid)
-
-                for field in fieldset:
-                    for key in gmfs.keys():
-                        (row, col) = key.split("!")
-                        gmfs[key].append(field.get(int(row), int(col)))
-
-        return gmfs
-
     def slice_gmfs(self, block_id):
         """Load and collate GMF values for all sites in this block. """
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
