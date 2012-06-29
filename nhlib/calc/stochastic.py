@@ -14,12 +14,12 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-:mod:`nhlib.calc.stochastic` implements :func:`stochastic_event_set`.
+:mod:`nhlib.calc.stochastic` contains :func:`stochastic_event_set_poissonian`.
 """
 from nhlib.tom import PoissonTOM
 
 
-def stochastic_event_set(sources, time_span):
+def stochastic_event_set_poissonian(sources, time_span):
     """
     The Poissonian Stochastic Event Set calculator generates a 'Stochastic
     Event Set' (that is a collection of earthquake ruptures) by randomly

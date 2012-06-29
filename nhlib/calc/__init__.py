@@ -18,5 +18,5 @@ Package :mod:`nhlib.calc` contains hazard calculator modules
 and utilities for them, such as :mod:`~nhlib.calc.filters`.
 """
 from nhlib.calc.hazard_curve import hazard_curves_poissonian
-from nhlib.calc.stochastic import stochastic_event_set
+from nhlib.calc.stochastic import stochastic_event_set_poissonian
 from nhlib.calc import filters

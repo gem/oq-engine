@@ -16,7 +16,7 @@
 import unittest
 
 from nhlib.tom import PoissonTOM
-from nhlib.calc.stochastic import stochastic_event_set
+from nhlib.calc.stochastic import stochastic_event_set_poissonian
 
 
 class StochasticEventSetTestCase(unittest.TestCase):
@@ -43,5 +43,6 @@ class StochasticEventSetTestCase(unittest.TestCase):
         r2_1 = self.FakeRupture(1)
         source1 = self.FakeSource([r1_1, r1_0, r1_2], time_span)
         source2 = self.FakeSource([r2_1], time_span)
-        ses = list(stochastic_event_set([source1, source2], time_span))
+        ses = list(stochastic_event_set_poissonian([source1, source2],
+                                                   time_span))
         self.assertEqual(ses, [r1_1, r1_2, r1_2, r2_1])
