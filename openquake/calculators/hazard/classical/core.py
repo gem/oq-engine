@@ -15,23 +15,24 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+
 """Core functionality for Classical PSHA-based hazard calculations."""
 
 
+from collections import namedtuple
 import json
 import random
-import time
-
-from collections import namedtuple
 from itertools import izip
+import time
 
 from celery.task import task
 
 from openquake import java
 from openquake import kvs
 from openquake import logs
-from openquake import xml
+from openquake.export import psha as psha_exp
 from openquake.output import hazard as hazard_output
+from openquake import xml
 from openquake.utils import config
 from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
@@ -40,8 +41,9 @@ from openquake.calculators.hazard import general
 LOG = logs.LOG
 HAZARD_LOG = logs.HAZARD_LOG
 
-HAZARD_CURVE_FILENAME_PREFIX = 'hazardcurve'
-HAZARD_MAP_FILENAME_PREFIX = 'hazardmap'
+
+PSHA_KVS_PURGE_PARAMS = namedtuple(
+    "PSHA_KVS_PURGE_PARAMS", "job_id, poes, quantiles, realizations, sites")
 
 
 def unwrap_validation_error(jpype, runtime_exception, path=None):
@@ -125,52 +127,43 @@ def compute_quantile_curves(job_id, sites, realizations, quantiles):
                                                   quantiles)
 
 
-def release_data_from_kvs(job_id, sites, realizations, quantiles, poes,
-                          kvs_keys_purged):
-    """Purge the hazard curve data for the given `sites` from the kvs.
+def release_data_from_kvs(pps, kvs_keys_purged=None):
+    """Purge the hazard curve data for the given calculator.
 
-    The parameters below will be used to construct kvs keys for
-        - hazard curves (including means and quantiles)
-        - hazard maps (including means)
-
-    :param int job_id: the identifier of the job at hand
-    :param list sites: the sites for which to purge content from the kvs
-    :param int sites: the number of logic tree passes for this calculation
-    :param list sites: the quantiles specified for this calculation
-    :param list poes: the probabilities of exceedence specified for this
-        calculation
+    :param pps: a `PSHA_KVS_PURGE_PARAMS` named tuple instance with the
+        following data: job_id, poes, quantiles, realizations, sites
     :param kvs_keys_purged: a list only passed by tests who check the
         kvs keys used/purged in the course of the job.
     """
-    for realization in xrange(0, realizations):
+    for realization in xrange(0, pps.realizations):
         template = kvs.tokens.hazard_curve_poes_key_template(
-            job_id, realization)
-        keys = [template % hash(site) for site in sites]
+            pps.job_id, realization)
+        keys = [template % hash(site) for site in pps.sites]
         kvs.get_client().delete(*keys)
         if kvs_keys_purged is not None:
             kvs_keys_purged.extend(keys)
 
-    template = kvs.tokens.mean_hazard_curve_key_template(job_id)
-    keys = [template % hash(site) for site in sites]
+    template = kvs.tokens.mean_hazard_curve_key_template(pps.job_id)
+    keys = [template % hash(site) for site in pps.sites]
     kvs.get_client().delete(*keys)
     if kvs_keys_purged is not None:
         kvs_keys_purged.extend(keys)
 
-    for quantile in quantiles:
+    for quantile in pps.quantiles:
         template = kvs.tokens.quantile_hazard_curve_key_template(
-            job_id, quantile)
-        keys = [template % hash(site) for site in sites]
-        for poe in poes:
+            pps.job_id, quantile)
+        keys = [template % hash(site) for site in pps.sites]
+        for poe in pps.poes:
             template = kvs.tokens.quantile_hazard_map_key_template(
-                job_id, poe, quantile)
-            keys.extend([template % hash(site) for site in sites])
+                pps.job_id, poe, quantile)
+            keys.extend([template % hash(site) for site in pps.sites])
         kvs.get_client().delete(*keys)
         if kvs_keys_purged is not None:
             kvs_keys_purged.extend(keys)
 
-    for poe in poes:
-        template = kvs.tokens.mean_hazard_map_key_template(job_id, poe)
-        keys = [template % hash(site) for site in sites]
+    for poe in pps.poes:
+        template = kvs.tokens.mean_hazard_map_key_template(pps.job_id, poe)
+        keys = [template % hash(site) for site in pps.sites]
         kvs.get_client().delete(*keys)
         if kvs_keys_purged is not None:
             kvs_keys_purged.extend(keys)
@@ -222,7 +215,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
 
             tf_args = dict(job_id=self.job_ctxt.job_id,
                            realization=realization)
-            ath_args = dict(sites=sites, realization=realization)
+            ath_args = dict(sites=sites, rtype="curve", datum=realization)
             utils_tasks.distribute(
                 the_task, ("sites", [[s] for s in sites]), tf_args=tf_args,
                 ath=serializer, ath_args=ath_args)
@@ -265,7 +258,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
 
         tf_args = dict(job_id=self.job_ctxt.job_id,
                        realizations=realizations)
-        ath_args = dict(sites=sites)
+        ath_args = dict(sites=sites, rtype="mean")
         utils_tasks.distribute(
             curve_task, ("sites", [[s] for s in sites]), tf_args=tf_args,
             ath=curve_serializer, ath_args=ath_args)
@@ -278,7 +271,7 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             map_func(self.job_ctxt.job_id, sites, self.job_ctxt.imls,
                      self.poes_hazard_maps)
             LOG.debug(">> mean maps!")
-            map_serializer(sites, self.poes_hazard_maps)
+            map_serializer(self.job_ctxt, sites, self.poes_hazard_maps)
 
     # pylint: disable=R0913
     def do_quantiles(
@@ -339,11 +332,12 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
                      % len(quantiles))
             for quantile in quantiles:
                 LOG.debug(">> quantile maps!")
-                map_serializer(sites, self.poes_hazard_maps, quantile)
+                map_serializer(self.job_ctxt, sites, self.poes_hazard_maps,
+                               quantile)
 
     @java.unpack_exception
     @general.create_java_cache
-    def execute(self, kvs_keys_purged=None):  # pylint: disable=W0221
+    def execute(self):  # pylint: disable=W0221
         """
         Trigger the calculation and serialization of hazard curves, mean hazard
         curves/maps and quantile curves.
@@ -376,275 +370,22 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
             data = sites[start:end]
 
             LOG.debug("> curves!")
-            self.do_curves(
-                data, realizations,
-                serializer=self.serialize_hazard_curve_of_realization)
+            self.do_curves(data, realizations, serializer=self.ath)
 
             LOG.debug("> means!")
             # mean curves
             self.do_means(
-                data, realizations,
-                curve_serializer=self.serialize_mean_hazard_curves,
+                data, realizations, curve_serializer=self.ath,
                 map_func=general.compute_mean_hazard_maps,
-                map_serializer=self.serialize_mean_hazard_map)
+                map_serializer=psha_exp.map2db)
 
             LOG.debug("> quantiles!")
             # quantile curves
             quantiles = self.quantile_levels
             self.do_quantiles(
-                data, realizations, quantiles,
-                curve_serializer=self.serialize_quantile_hazard_curves,
+                data, realizations, quantiles, curve_serializer=self.quantc2db,
                 map_func=general.compute_quantile_hazard_maps,
-                map_serializer=self.serialize_quantile_hazard_map)
-
-            # Done with this block, purge intermediate results from kvs.
-            release_data_from_kvs(self.job_ctxt.job_id, data, realizations,
-                                  quantiles, self.poes_hazard_maps,
-                                  kvs_keys_purged)
-
-    def serialize_hazard_curve_of_realization(self, sites, realization):
-        """
-        Serialize the hazard curves of a set of sites for a given realization.
-
-        :param sites: the sites of which the curves will be serialized
-        :type sites: list of :py:class:`openquake.shapes.Site`
-        :param realization: the realization to be serialized
-        :type realization: :py:class:`int`
-        """
-        hc_attrib_update = {'endBranchLabel': realization}
-        nrml_file = self.hazard_curve_filename(realization)
-        key_template = kvs.tokens.hazard_curve_poes_key_template(
-            self.job_ctxt.job_id, realization)
-        self.serialize_hazard_curve(nrml_file, key_template,
-                                    hc_attrib_update, sites)
-
-    def serialize_mean_hazard_curves(self, sites):
-        """
-        Serialize the mean hazard curves of a set of sites.
-
-        :param sites: the sites of which the curves will be serialized
-        :type sites: list of :py:class:`openquake.shapes.Site`
-        """
-        hc_attrib_update = {'statistics': 'mean'}
-        nrml_file = self.mean_hazard_curve_filename()
-        key_template = kvs.tokens.mean_hazard_curve_key_template(
-            self.job_ctxt.job_id)
-        self.serialize_hazard_curve(nrml_file, key_template, hc_attrib_update,
-                                    sites)
-
-    def serialize_quantile_hazard_curves(self, sites, quantiles):
-        """
-        Serialize the quantile hazard curves of a set of sites for a given
-        quantile.
-
-        :param sites: the sites of which the curves will be serialized
-        :type sites: list of :py:class:`openquake.shapes.Site`
-        :param quantile: the quantile to be serialized
-        :type quantile: :py:class:`float`
-        """
-        for quantile in quantiles:
-            hc_attrib_update = {
-                'statistics': 'quantile',
-                'quantileValue': quantile}
-            nrml_file = self.quantile_hazard_curve_filename(quantile)
-            key_template = kvs.tokens.quantile_hazard_curve_key_template(
-                self.job_ctxt.job_id, str(quantile))
-            self.serialize_hazard_curve(nrml_file, key_template,
-                                        hc_attrib_update, sites)
-
-    # Silencing 'Too many local variables'
-    # pylint: disable=R0914,W0212
-    def serialize_hazard_curve(self, nrml_file, key_template, hc_attrib_update,
-                               sites):
-        """
-        Serialize the hazard curves of a set of sites.
-
-        Depending on the parameters the serialized curve will be a plain, mean
-        or quantile hazard curve.
-
-        :param nrml_file: the output filename
-        :type nrml_file: :py:class:`string`
-        :param key_template: a template for constructing the key to get, for
-                             each site, its curve from the KVS
-        :type key_template: :py:class:`string`
-        :param hc_attrib_update: a dictionary containing metadata for the set
-                                 of curves that will be serialized
-        :type hc_attrib_update: :py:class:`dict`
-        :param sites: the sites of which the curve will be serialized
-        :type sites: list of :py:class:`openquake.shapes.Site`
-        """
-
-        def pause_generator(value):
-            """
-            Returns the initial value when called for the first time and
-            the double value upon each subsequent invocation.
-
-            N.B.: the maximum value returned will never exceed 90 (seconds).
-            """
-            yield value
-            while True:
-                if value < 45:
-                    value *= 2
-                yield value
-
-        # XML serialization context
-        xsc = namedtuple("XSC", "blocks, cblock, i_total, i_done, i_next")(
-                         stats.pk_get(self.job_ctxt.job_id, "blocks"),
-                         stats.pk_get(self.job_ctxt.job_id, "cblock"),
-                         len(sites), 0, 0)
-
-        nrml_path = self.job_ctxt.build_nrml_path(nrml_file)
-
-        curve_writer = hazard_output.create_hazardcurve_writer(
-            self.job_ctxt.job_id, self.job_ctxt.serialize_results_to,
-            nrml_path)
-
-        sites = set(sites)
-        accounted_for = set()
-        min_pause = 0.1
-        pgen = pause_generator(min_pause)
-        pause = pgen.next()
-
-        while accounted_for != sites:
-            failures = stats.failure_counters(self.job_ctxt.job_id, "h")
-            if failures:
-                raise RuntimeError("hazard failures (%s), aborting" % failures)
-            hc_data = []
-            # Sleep a little before checking the availability of additional
-            # hazard curve results.
-            time.sleep(pause)
-            results_found = 0
-            for site in sites:
-                if site in accounted_for:
-                    continue
-                value = kvs.get_value_json_decoded(key_template % hash(site))
-                if value is None:
-                    # No value yet, proceed to next site.
-                    continue
-                # Use hazard curve ordinate values (PoE) from KVS and abscissae
-                # from the IML list in config.
-                hc_attrib = {
-                    'investigationTimeSpan':
-                        self.job_ctxt['INVESTIGATION_TIME'],
-                    'IMLValues': self.job_ctxt.imls,
-                    'IMT': self.job_ctxt['INTENSITY_MEASURE_TYPE'],
-                    'PoEValues': value}
-                hc_attrib.update(hc_attrib_update)
-                hc_data.append((site, hc_attrib))
-                accounted_for.add(site)
-                results_found += 1
-            if not results_found:
-                # No results found, increase the sleep pause.
-                pause = pgen.next()
-            else:
-                hazard_output.SerializerContext().update(
-                    xsc._replace(i_next=len(hc_data)))
-                curve_writer.serialize(hc_data)
-                xsc = xsc._replace(i_done=xsc.i_done + len(hc_data))
-                pause *= 0.8
-                pause = min_pause if pause < min_pause else pause
-
-        return nrml_path
-
-    def serialize_mean_hazard_map(self, sites, poes):
-        """
-        Serialize the mean hazard map for a set of sites, one map for each
-        given PoE.
-
-        :param sites: the sites of which the map will be serialized
-        :type sites: list of :py:class:`openquake.shapes.Site`
-        :param poes: the PoEs at which the map will be serialized
-        :type poes: list of :py:class:`float`
-        """
-        for poe in poes:
-            nrml_file = self.mean_hazard_map_filename(poe)
-
-            hm_attrib_update = {'statistics': 'mean'}
-            key_template = kvs.tokens.mean_hazard_map_key_template(
-                self.job_ctxt.job_id, poe)
-
-            self.serialize_hazard_map_at_poe(sites, poe, key_template,
-                                             hm_attrib_update, nrml_file)
-
-    def serialize_quantile_hazard_map(self, sites, poes, quantile):
-        """
-        Serialize the quantile hazard map for a set of sites, one map for each
-        given PoE and quantile.
-
-        :param sites: the sites of which the map will be serialized
-        :type sites: list of :py:class:`openquake.shapes.Site`
-        :param poes: the PoEs at which the maps will be serialized
-        :type poes: list of :py:class:`float`
-        :param quantile: the quantile at which the maps will be serialized
-        :type quantile: :py:class:`float`
-        """
-        for poe in poes:
-            nrml_file = self.quantile_hazard_map_filename(quantile, poe)
-
-            key_template = kvs.tokens.quantile_hazard_map_key_template(
-                self.job_ctxt.job_id, poe, quantile)
-
-            hm_attrib_update = {'statistics': 'quantile',
-                                'quantileValue': quantile}
-
-            self.serialize_hazard_map_at_poe(sites, poe, key_template,
-                                             hm_attrib_update, nrml_file)
-
-    def serialize_hazard_map_at_poe(self, sites, poe, key_template,
-                                    hm_attrib_update, nrml_file):
-        """
-        Serialize the hazard map for a set of sites at a given PoE.
-
-        Depending on the parameters the serialized map will be a mean or
-        quantile hazard map.
-
-        :param sites: the sites of which the map will be serialized
-        :type sites: list of :py:class:`openquake.shapes.Site`
-        :param poe: the PoE at which the map will be serialized
-        :type poe: :py:class:`float`
-        :param key_template: a template for constructing the key used to get,
-                             for each site, its map from the KVS
-        :type key_template: :py:class:`string`
-        :param hc_attrib_update: a dictionary containing metadata for the set
-                                 of maps that will be serialized
-        :type hc_attrib_update: :py:class:`dict`
-        :param nrml_file: the output filename
-        :type nrml_file: :py:class:`string`
-        """
-        nrml_path = self.job_ctxt.build_nrml_path(nrml_file)
-
-        LOG.info("Generating NRML hazard map file for PoE %s, "
-                 "%s nodes in hazard map: %s" % (poe, len(sites), nrml_file))
-
-        map_writer = hazard_output.create_hazardmap_writer(
-            self.job_ctxt.job_id, self.job_ctxt.serialize_results_to,
-            nrml_path)
-        hm_data = []
-
-        for site in sites:
-            key = key_template % hash(site)
-            # use hazard map IML values from KVS
-            hm_attrib = {
-                'investigationTimeSpan':
-                    self.job_ctxt['INVESTIGATION_TIME'],
-                'IMT': self.job_ctxt['INTENSITY_MEASURE_TYPE'],
-                'vs30': self.job_ctxt['REFERENCE_VS30_VALUE'],
-                'IML': kvs.get_value_json_decoded(key),
-                'poE': poe}
-
-            hm_attrib.update(hm_attrib_update)
-            hm_data.append((site, hm_attrib))
-
-        LOG.debug(">> path: %s" % nrml_path)
-        # XML serialization context
-        xsc = namedtuple("XSC", "blocks, cblock, i_total, i_done, i_next")(
-                         stats.pk_get(self.job_ctxt.job_id, "blocks"),
-                         stats.pk_get(self.job_ctxt.job_id, "cblock"),
-                         len(sites), 0, len(hm_data))
-        hazard_output.SerializerContext().update(xsc)
-        map_writer.serialize(hm_data)
-
-        return nrml_path
+                map_serializer=psha_exp.map2db)
 
     @general.create_java_cache
     def compute_hazard_curve(self, sites, realization):
@@ -677,53 +418,6 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
 
         return curve_keys
 
-    def _hazard_curve_filename(self, filename_part):
-        "Helper to build the filenames of hazard curves"
-        return self.job_ctxt.build_nrml_path('%s-%s.xml'
-                                    % (HAZARD_CURVE_FILENAME_PREFIX,
-                                       filename_part))
-
-    def hazard_curve_filename(self, realization):
-        """
-        Build the name of a file that will contain an hazard curve for a given
-        realization.
-        """
-        return self._hazard_curve_filename(realization)
-
-    def mean_hazard_curve_filename(self):
-        """
-        Build the name of a file that will contain the mean hazard curve for
-        this job.
-        """
-        return self._hazard_curve_filename('mean')
-
-    def quantile_hazard_curve_filename(self, quantile):
-        """
-        Build the name of a file that will contain the quantile hazard curve
-        for this job and the given quantile.
-        """
-        return self._hazard_curve_filename('quantile-%.2f' % quantile)
-
-    def _hazard_map_filename(self, filename_part):
-        """Helper to build the filenames of hazard maps"""
-        return self.job_ctxt.build_nrml_path('%s-%s.xml'
-                                    % (HAZARD_MAP_FILENAME_PREFIX,
-                                       filename_part))
-
-    def mean_hazard_map_filename(self, poe):
-        """
-        Build the name of a file that will contain the mean hazard map for this
-        job and the given PoE.
-        """
-        return self._hazard_map_filename('%s-mean' % poe)
-
-    def quantile_hazard_map_filename(self, quantile, poe):
-        """
-        Build the name of a file that will contain the quantile hazard map for
-        this job and the given PoE and quantile.
-        """
-        return self._hazard_map_filename('%s-quantile-%.2f' % (poe, quantile))
-
     @property
     def quantile_levels(self):
         """Returns the quantile levels specified in the config file of this
@@ -742,3 +436,113 @@ class ClassicalHazardCalculator(general.BaseHazardCalculator):
         return self.job_ctxt.extract_values_from_config(
             general.POES_PARAM_NAME,
             check_value=lambda v: v >= 0.0 and v <= 1.0)
+
+    def post_execute(self):
+        """Clean up stats counters and create XML output artifacts (if
+           requested)."""
+        LOG.debug("> post_execute")
+        if 'xml' in self.job_ctxt.serialize_results_to:
+            LOG.debug("*> xml is on")
+            psha_exp.curves2nrml(self.job_ctxt)
+            psha_exp.maps2nrml(self.job_ctxt, self.poes_hazard_maps,
+                               self.quantile_levels)
+
+        LOG.debug("< post_execute")
+
+    def clean_up(self, test_keys=None):
+        """Clean up stats counters and perform garbage collection."""
+        LOG.debug("> clean_up")
+        # Purge data used by the calculation from the KVS.
+        pps = PSHA_KVS_PURGE_PARAMS(
+            self.job_ctxt.job_id, self.poes_hazard_maps, self.quantile_levels,
+            self.job_ctxt["NUMBER_OF_LOGIC_TREE_SAMPLES"],
+            self.job_ctxt.sites_to_compute())
+        release_data_from_kvs(pps, test_keys)
+        LOG.debug("< clean_up")
+
+    # pylint: disable=R0914,W0212
+    def ath(self, sites, rtype, datum=None):
+        """
+        Write calculation results to the database.
+
+        :param sites: the sites for which to write calculation results.
+        :type sites: list of :py:class:`openquake.shapes.Site`
+        :param str rtype: hazard curve type, one of: curve, mean, quantile
+        :param datum: one of: realization, None, quantile
+        """
+
+        def pause_generator(value):
+            """
+            Returns the initial value when called for the first time and
+            the double value upon each subsequent invocation.
+
+            N.B.: the maximum value returned will never exceed 90 (seconds).
+            """
+            yield value
+            while True:
+                if value < 45:
+                    value *= 2
+                yield value
+
+        sites = set(sites)
+        accounted_for = set()
+        min_pause = 0.1
+        pgen = pause_generator(min_pause)
+        pause = pgen.next()
+
+        key_template, nrml_path, hc_meta = psha_exp.hcs_meta(
+            self.job_ctxt, rtype, datum)
+
+        curve_writer = hazard_output.HazardCurveDBWriter(
+            nrml_path, self.job_ctxt.job_id)
+
+        while accounted_for != sites:
+            failures = stats.failure_counters(self.job_ctxt.job_id, "h")
+            if failures:
+                raise RuntimeError("hazard failures (%s), aborting" % failures)
+            hc_data = []
+            # Sleep a little before checking the availability of additional
+            # hazard curve results.
+            time.sleep(pause)
+            results_found = 0
+            for site in sites:
+                if site in accounted_for:
+                    continue
+                value = kvs.get_value_json_decoded(key_template % hash(site))
+                if value is None:
+                    # No value yet, proceed to next site.
+                    continue
+                # Use hazard curve ordinate values (PoE) from KVS and abscissae
+                # from the IML list in config.
+                hc_attrib = {
+                    'investigationTimeSpan':
+                        self.job_ctxt['INVESTIGATION_TIME'],
+                    'IMLValues': self.job_ctxt.imls,
+                    'IMT': self.job_ctxt['INTENSITY_MEASURE_TYPE'],
+                    'PoEValues': value}
+                hc_attrib.update(hc_meta)
+                hc_data.append((site, hc_attrib))
+                accounted_for.add(site)
+                results_found += 1
+            if not results_found:
+                # No results found, increase the sleep pause.
+                pause = pgen.next()
+            else:
+                curve_writer.serialize(hc_data)
+                pause *= 0.8
+                pause = min_pause if pause < min_pause else pause
+
+        return nrml_path
+
+    def quantc2db(self, sites, quantiles):
+        """
+        Write the quantile hazard curves of a set of sites for a given
+        quantile to the database
+
+        :param sites: the sites for which the curves will be serialized
+        :type sites: list of :py:class:`openquake.shapes.Site`
+        :param quantiles: the quantile to be serialized
+        :type quantiles: a list of :py:class:`float`
+        """
+        for quantile in quantiles:
+            self.ath(sites, rtype="quantile", datum=quantile)
