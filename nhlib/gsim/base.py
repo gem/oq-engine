@@ -224,7 +224,7 @@ class GroundShakingIntensityModel(object):
 
         if truncation_level == 0:
             # zero truncation mode, just compare imls to mean
-            imls = self._convert_imls(imls)
+            imls = self.convert_imls(imls)
             mean, _ = self.get_mean_and_stddevs(sctx, rctx, dctx, imt, [])
             mean = mean.reshape(mean.shape + (1, ))
             return (imls <= mean).astype(float)
@@ -237,7 +237,7 @@ class GroundShakingIntensityModel(object):
             else:
                 distribution = scipy.stats.truncnorm(- truncation_level,
                                                      truncation_level)
-            imls = self._convert_imls(imls)
+            imls = self.convert_imls(imls)
             mean, [stddev] = self.get_mean_and_stddevs(sctx, rctx, dctx, imt,
                                                        [const.StdDev.TOTAL])
             mean = mean.reshape(mean.shape + (1, ))
@@ -245,7 +245,7 @@ class GroundShakingIntensityModel(object):
             return distribution.sf((imls - mean) / stddev)
 
     @abc.abstractmethod
-    def _convert_imls(self, imls):
+    def convert_imls(self, imls):
         """
         Convert a list of IML values to a numpy array and convert the actual
         values with respect to intensity measure distribution (like taking
@@ -253,6 +253,15 @@ class GroundShakingIntensityModel(object):
 
         This method is implemented by both :class:`GMPE` and :class:`IPE`
         so there is no need to override it in actual GSIM implementations.
+        """
+
+    @abc.abstractmethod
+    def convert_intensities(self, intensities):
+        """
+        Convert a list or array of intensity values, as returned by
+        :meth:`get_mean_and_stddevs`, to actual values with respect
+        to intensity measure distribution. This is the opposite operation
+        to :meth:`convert_imls`.
         """
 
     def make_contexts(self, site_collection, rupture):
@@ -328,11 +337,17 @@ class GMPE(GroundShakingIntensityModel):
     of actual GMPE implementations is supposed to return the mean
     value as a natural logarithm of intensity.
     """
-    def _convert_imls(self, imls):
+    def convert_imls(self, imls):
         """
         Returns numpy array of natural logarithms of ``imls``.
         """
         return numpy.log(imls)
+
+    def convert_intensities(self, intensities):
+        """
+        Returns numpy array of exponents of ``intensities``.
+        """
+        return numpy.exp(intensities)
 
 
 class IPE(GroundShakingIntensityModel):
@@ -342,11 +357,17 @@ class IPE(GroundShakingIntensityModel):
     intensity measures that are normally distributed. In particular,
     for :class:`~nhlib.imt.MMI`.
     """
-    def _convert_imls(self, imls):
+    def convert_imls(self, imls):
         """
         Returns numpy array of ``imls`` without any conversion.
         """
         return numpy.array(imls, dtype=float)
+
+    def convert_intensities(self, intensities):
+        """
+        Returns numpy array of ``intensities`` without any conversion.
+        """
+        return numpy.array(intensities, dtype=float)
 
 
 class SitesContext(object):

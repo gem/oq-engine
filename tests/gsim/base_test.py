@@ -19,7 +19,8 @@ import collections
 import numpy
 
 from nhlib import const
-from nhlib.gsim.base import IPE, SitesContext, RuptureContext, DistancesContext
+from nhlib.gsim.base import GMPE, IPE, SitesContext, RuptureContext, \
+                            DistancesContext
 from nhlib.geo.mesh import Mesh
 from nhlib.geo.point import Point
 from nhlib.imt import PGA, PGV
@@ -167,6 +168,42 @@ class GetPoEsTestCase(_FakeGSIMTestCase):
         self.assertAlmostEqual(poe21, 0.6531376)
         self.assertAlmostEqual(poe22, 0.6034116)
         self.assertAlmostEqual(poe23, 0.5521092)
+
+
+class ConvertIMLsConvertIntensityTestCase(unittest.TestCase):
+    def test_gmpe(self):
+        class TGMPE(GMPE):
+            DEFINED_FOR_TECTONIC_REGION_TYPE = None
+            DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
+            DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
+            DEFINED_FOR_STANDARD_DEVIATION_TYPES = None
+            REQUIRES_SITES_PARAMETERS = None
+            REQUIRES_RUPTURE_PARAMETERS = None
+            REQUIRES_DISTANCES = None
+            get_mean_and_stddevs = None
+        gmpe = TGMPE()
+        lin_intensity = [0.001, 0.1, 0.7, 1.4]
+        log_intensity = [-6.90775528, -2.30258509, -0.35667494, 0.33647224]
+        numpy.testing.assert_allclose(gmpe.convert_imls(lin_intensity),
+                                      log_intensity)
+        numpy.testing.assert_allclose(gmpe.convert_intensities(log_intensity),
+                                      lin_intensity)
+
+    def test_ipe(self):
+        class TIPE(IPE):
+            DEFINED_FOR_TECTONIC_REGION_TYPE = None
+            DEFINED_FOR_INTENSITY_MEASURE_TYPES = None
+            DEFINED_FOR_INTENSITY_MEASURE_COMPONENT = None
+            DEFINED_FOR_STANDARD_DEVIATION_TYPES = None
+            REQUIRES_SITES_PARAMETERS = None
+            REQUIRES_RUPTURE_PARAMETERS = None
+            REQUIRES_DISTANCES = None
+            get_mean_and_stddevs = None
+        ipe = TIPE()
+        intensity = [0.001, 0.1, 0.7, 1.4]
+        numpy.testing.assert_equal(ipe.convert_imls(intensity), intensity)
+        numpy.testing.assert_equal(ipe.convert_intensities(intensity),
+                                   intensity)
 
 
 class MakeContextsTestCase(_FakeGSIMTestCase):
