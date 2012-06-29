@@ -43,6 +43,7 @@ GRANT ALL ON SEQUENCE hzrdr.hazard_map_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdr.uh_spectra_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdr.uh_spectrum_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE hzrdr.uh_spectrum_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE hzrdr.lt_realization_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE oqmif.exposure_data_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE oqmif.exposure_model_id_seq to GROUP openquake;
@@ -86,6 +87,7 @@ GRANT ALL ON SEQUENCE uiapi.input2upload_id_seq to GROUP openquake;
 GRANT ALL ON SEQUENCE uiapi.job2profile_id_seq to GROUP openquake;
 
 GRANT ALL ON SEQUENCE htemp.site_data_id_seq to GROUP openquake;
+GRANT ALL ON SEQUENCE htemp.source_progress_id_seq to GROUP openquake;
 
 GRANT SELECT ON geography_columns TO GROUP openquake;
 GRANT SELECT ON geometry_columns TO GROUP openquake;
@@ -153,6 +155,10 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdr.uh_spectrum TO oq_reslt_writer;
 -- hzrdr.uh_spectrum_data
 GRANT SELECT ON hzrdr.uh_spectrum_data TO GROUP openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdr.uh_spectrum_data TO oq_reslt_writer;
+
+-- hzrdr.lt_realization
+GRANT SELECT ON hzrdr.lt_realization TO GROUP openquake;
+GRANT SELECT,INSERT,DELETE ON hzrdr.lt_realization TO oq_reslt_writer;
 
 -- oqmif.exposure_data
 GRANT SELECT ON oqmif.exposure_data TO GROUP openquake;
@@ -305,5 +311,10 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.upload TO oq_job_init;
 GRANT SELECT ON uiapi.error_msg TO openquake;
 GRANT SELECT,INSERT,UPDATE,DELETE ON uiapi.error_msg TO oq_job_superv;
 
+-- htemp.site_data
 GRANT SELECT ON htemp.site_data TO openquake;
 GRANT SELECT,INSERT,DELETE ON htemp.site_data TO oq_reslt_writer;
+
+-- htemp.source_progress
+GRANT SELECT ON htemp.source_progress TO openquake;
+GRANT SELECT,INSERT,DELETE ON htemp.source_progress TO oq_reslt_writer;

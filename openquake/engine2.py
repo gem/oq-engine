@@ -133,7 +133,7 @@ def _get_content_type(path):
         return ext[1:]
 
 
-def get_input(path, input_type, owner, force_input):
+def get_input(path, input_type, owner, force_input, name=None):
     """Get an :class:`~openquake.db.models.Input` object for the given file
     (``path``).
 
@@ -152,6 +152,8 @@ def get_input(path, input_type, owner, force_input):
     :param bool force_input:
         If `True` do not reuse existing inputs that match the file at ``path``
         and always create a new input.
+    :param str name:
+        Optional name to help idenfity this input.
     :returns:
         :class:`openquake.db.models.Input` object to represent the input. As a
         side effect, this function will also store a full raw copy of the input
@@ -176,7 +178,7 @@ def get_input(path, input_type, owner, force_input):
         inp = models.Input(
             path=path, input_type=input_type, owner=owner,
             size=os.path.getsize(path), digest=digest,
-            model_content=model_content
+            model_content=model_content, name=name
         )
         inp.save()
     else:
