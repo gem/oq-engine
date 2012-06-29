@@ -89,13 +89,10 @@ def inputs4hcalc(calc_id, input_type=None):
     :returns:
         A list of :class:`Input` instances.
     """
-    i2hc = Input2hcalc.objects.extra(
-        where=['hazard_calculation_id=%s'], params=[calc_id])
-
+    result = Input.objects.filter(input2hcalc__hazard_calculation=calc_id)
     if input_type is not None:
-        return [x.input for x in i2hc.filter(input__input_type=input_type)]
-    else:
-        return [x.input for x in i2hc]
+        result = result.filter(input_type=input_type)
+    return result
 
 
 def per_asset_value(exd):
