@@ -23,10 +23,14 @@ import random
 import StringIO
 
 from django.db import transaction
+from celery.task import task
 from nrml import parsers as nrml_parsers
+import nhlib
 
 from openquake import engine2
 from openquake import writer
+from openquake.utils import config
+from openquake.utils import tasks as utils_tasks
 from openquake.calculators import base
 from openquake.calculators.hazard import general
 from openquake.db import models
@@ -245,3 +249,123 @@ class ClassicalHazardCalculator(base.CalculatorNext):
         # result curves for just a subset of the overall sources) when some
         # work is complete.
         self.initialize_realizations()
+
+    def execute(self):
+        """
+        Distribute work among workers.
+        """
+        # TODO: better documentation
+        # TODO: unittest
+        job = self.job
+        hc = job.hazard_calculation
+        sources_per_task = config.get('hazard', 'block_size')
+
+        total_sources_to_compute = 0
+
+        realizations = models.LtRealization.objects.filter(
+                hazard_calculation=hc, is_complete=False)
+
+        for lt_rlz in realizations:
+            source_progress = models.SourceProgress.objects.filter(
+                    is_complete=False, lt_realization=lt_rlz)
+            source_ids = source_progress.values_list('parsed_source_id',
+                                                     flat=True)
+            total_sources_to_compute += len(source_ids)
+
+            for offset in xrange(0, len(source_ids), sources_per_task):
+                hazard_curves.apply_async(job.id, lt_rlz.id,
+                        source_ids[offset:offset + sources_per_task])
+
+        # TODO: create a queue for this job for workers to report progress
+        # and listen on events on that queue, counting computed sources
+        # and comparing it with total_sources_to_compute. exit when two
+        # are equal
+
+
+@task(ignore_result=True)
+def hazard_curves(job_id, lt_rlz_id, src_ids):
+    """
+    Celery task for hazard curve calculator.
+
+    :param lt_rlz_id:
+        Id of logic tree realization model to calculate for.
+    :param src_ids:
+        List of ids of parsed source models to take into account.
+    """
+    # TODO: better documentation
+    # TODO: unittest
+    # make sure the job is not yet finished and set up logging
+    utils_tasks.get_running_job(job_id)
+
+    hc = models.HazardCalculation.objects.get(oqjob=job_id)
+
+    lt_rlz = models.LtRealization.objects.get(pk=lt_rlz_id)
+    ltp = logictree.LogicTreeProcessor(hc.id)
+
+    # it is important to maintain the same way logic tree processor
+    # random generators are seeded here exactly the same as it is
+    # done in ClassicalHazardCalculator.initialize_realizations()
+    rnd = random.Random(lt_rlz.seed)
+    _, apply_uncertainties, _ = ltp.sample_source_model_logictree(
+            rnd.randint(MIN_SINT_32, MAX_SINT_32))
+    gsims, _ = ltp.sample_gmpe_logictree(
+            rnd.randint(MIN_SINT_32, MAX_SINT_32))
+
+    def gen_sources():
+        """
+        Nhlib source objects generator for a given set of sources.
+
+        Performs lazy loading, converting and processing of sources.
+        """
+        for src_id in src_ids:
+            nrml_source = models.ParsedSource.objects.get(pk=src_id)
+            nhlib_source = source.nrml_to_nhlib(nrml_source)
+            apply_uncertainties(nhlib_source)
+            yield nhlib_source
+
+    # TODO: convert here string ids of IMTs to nhlib objects (see nhlib.imt)
+    imts = hc.intensity_measure_types_and_levels
+
+    calc_kwargs = {'gsims': gsims,
+                   'truncation_level': hc.truncation_level,
+                   'time_span': hc.investigation_time,
+                   'sources': gen_sources(),
+                   'imts': imts,
+                   'sites': 'TODO: load sites collection'}
+
+    if hc.maximum_distance:
+        dist = hc.maximum_distance
+        calc_kwargs['source_site_filter'] = (
+                nhlib.calc.filters.source_site_distance_filter(dist))
+        calc_kwargs['rupture_site_filter'] = (
+                nhlib.calc.filters.rupture_site_distance_filter(dist))
+
+    # mapping "imt" to 2d array of hazard curves: first dimension -- sites,
+    # second -- IMLs
+    matrices = nhlib.calc.hazard_curve.hazard_curves_poissonian(**calc_kwargs)
+
+    with transaction.commit_on_success():
+        for imt in hc.intensity_measure_types_and_levels.keys():
+            hc_progress = models.HazardCurveProgress.objects \
+                         .select_for_update() \
+                         .get(lt_realization=lt_rlz, imt=imt)
+
+            # TODO: check here if any of records in source progress model
+            # with parsed_source_id from src_ids are marked as complete,
+            # and rollback and abort if there is at least one
+
+            hc_progress.result_matrix = (
+                1 - (1 - hc_progress.result_matrix) * (1 - matrices[imt]))
+            hc_progress.save()
+
+            models.SourceProgress.objects.filter(lt_realization=lt_rlz,
+                                                 parsed_source__in=src_ids) \
+                                         .update(is_complete=True)
+
+            lt_rlz.completed_sources += len(src_ids)
+            if lt_rlz.completed_sources == lt_rlz.total_sources:
+                lt_rlz.is_complete = True
+
+            lt_rlz.save()
+
+    # TODO: signal back to calculator
