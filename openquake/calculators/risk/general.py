@@ -640,10 +640,10 @@ def split_into_blocks(job_id, sites, block_size=BLOCK_SIZE):
                     sites=sites[i:i + block_size])
 
 
-def compute_bcr_for_block(job_id, points, get_loss_curve,
+def compute_bcr_for_block(job_ctxt, sites, get_loss_curve,
                           interest_rate, asset_life_expectancy):
     """
-    Compute and return Benefit-Cost Ratio data for a number of points.
+    Compute and return Benefit-Cost Ratio data for a number of sites.
 
     :param get_loss_curve:
         Function that takes three positional arguments: point object,
@@ -660,13 +660,16 @@ def compute_bcr_for_block(job_id, points, get_loss_curve,
     """
     # too many local vars (16/15) -- pylint: disable=R0914
     result = defaultdict(list)
+    job_id = job_ctxt.job_id
 
     vuln_curves = vulnerability.load_vuln_model_from_kvs(job_id)
     vuln_curves_retrofitted = vulnerability.load_vuln_model_from_kvs(
         job_id, retrofitted=True)
 
-    for point in points:
-        assets = BaseRiskCalculator.assets_for_cell(job_id, point.site)
+    for site in sites:
+        point = job_ctxt.region.grid.point_at(site)
+        assets = BaseRiskCalculator.assets_at(job_id, site)
+
         for asset in assets:
             vuln_function = vuln_curves[asset.taxonomy]
             loss_curve = get_loss_curve(point, vuln_function, asset)
