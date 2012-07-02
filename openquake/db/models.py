@@ -1008,14 +1008,20 @@ class HazardCurve(djm.Model):
     Hazard Curve header information
     '''
     output = djm.ForeignKey('Output')
-    end_branch_label = djm.TextField(null=True)
+    # FK only required for non-statistical results (i.e., mean or quantile
+    # curves).
+    lt_realization = djm.ForeignKey('LtRealization', null=True)
+    investigation_time = djm.FloatField()
+    imt = djm.TextField()
+    imls = fields.FloatArrayField()
     STAT_CHOICES = (
         (u'mean', u'Mean'),
-        (u'median', u'Median'),
         (u'quantile', u'Quantile'),
     )
-    statistic_type = djm.TextField(null=True, choices=STAT_CHOICES)
+    statistics = djm.TextField(null=True, choices=STAT_CHOICES)
     quantile = djm.FloatField(null=True)
+    sa_period = djm.FloatField(null=True)
+    sa_damping = djm.FloatField(null=True)
 
     class Meta:
         db_table = 'hzrdr\".\"hazard_curve'
