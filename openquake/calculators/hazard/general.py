@@ -33,6 +33,7 @@ from shapely import geometry
 
 from openquake import java
 from openquake import kvs
+from openquake import writer
 from openquake.calculators.base import Calculator
 from openquake.db import models
 from openquake.input import logictree
@@ -236,38 +237,43 @@ def store_site_model(input_mdl, source):
 
     sm_data = []
 
+    inserter = writer.BulkInserter(models.SiteModel)
+
     for node in parser.parse():
-        sm = models.SiteModel()
-        sm.vs30 = node.vs30
-        sm.vs30_type = node.vs30_type
-        sm.z1pt0 = node.z1pt0
-        sm.z2pt5 = node.z2pt5
-        sm.location = node.wkt
-        sm.input = input_mdl
-        sm.save()
-        sm_data.append(sm)
+        sm = dict()
+        # sm = models.SiteModel()
+        sm['vs30'] = node.vs30
+        sm['vs30_type'] = node.vs30_type
+        sm['z1pt0'] = node.z1pt0
+        sm['z2pt5'] = node.z2pt5
+        sm['location'] = node.wkt
+        sm['input_id'] = input_mdl.id
+        # sm.save()
+        # sm_data.append(sm)
+        inserter.add_entry(**sm)
+
+    inserter.flush()
 
     return sm_data
 
 
-def validate_site_model(sm_nodes, sites):
+def validate_site_model(sm_nodes, mesh):
     """Given the geometry for a site model and the geometry of interest for the
-    calculation, make sure the geometry of interest lies completely inside of
-    the convex hull formed by the site model locations.
+    calculation (``mesh``, make sure the geometry of interest lies completely
+    inside of the convex hull formed by the site model locations.
 
-    If a site of interest lies directly on top of a vertex or edge of the site
+    If a point of interest lies directly on top of a vertex or edge of the site
     model area (a polygon), it is considered "inside"
 
     :param sm_nodes:
         Sequence of :class:`~openquake.db.models.SiteModel` objects.
-    :param sites:
-        Sequence of :class:`~openquake.shapes.Site` objects which represent the
-        calculation points of interest.
+    :param mesh:
+        A :class:`nhlib.geo.mesh.Mesh` which represents the calculation points
+        of interest.
 
     :raises:
-        :exc:`openquake.job.config.ValidationException` if the area of
-        interest (given as a collection of sites) is not entirely contained by
-        the site model.
+        :exc:`RuntimeError` if the area of interest (given as a mesh) is not
+        entirely contained by the site model.
     """
     sm_mp = geometry.MultiPoint(
         [(n.location.x, n.location.y) for n in sm_nodes]
@@ -276,35 +282,33 @@ def validate_site_model(sm_nodes, sites):
         [nhlib_geo.Point(*x) for x in sm_mp.convex_hull.exterior.coords]
     )
 
-    interest_mesh = nhlib_geo.Mesh.from_points_list(sites)
-
     # "Intersects" is the correct operation (not "contains"), since we're just
     # checking a collection of points (mesh). "Contains" would tell us if the
     # points are inside the polygon, but would return `False` if a point was
     # directly on top of a polygon edge or vertex. We want these points to be
     # included.
-    intersects = sm_poly.intersects(interest_mesh)
+    intersects = sm_poly.intersects(mesh)
 
     if not intersects.all():
-        raise ValidationException(
+        raise RuntimeError(
             ['Sites of interest are outside of the site model coverage area.'
              ' This configuration is invalid.']
         )
 
 
-def get_site_model(job_id):
+def get_site_model(hc_id):
     """Get the site model :class:`~openquake.db.models.Input` record for the
     given job id.
 
-    :param int job_id:
-        ID of a job.
+    :param int hc_id:
+        The id of a :class:`~openquake.db.models.HazardCalculation`.
 
     :returns:
         The site model :class:`~openquake.db.models.Input` record for this job.
     :raises:
         :exc:`RuntimeError` if the job has more than 1 site model.
     """
-    site_model = models.inputs4job(job_id, input_type='site_model')
+    site_model = models.inputs4hcalc(hc_id, input_type='site_model')
 
     if len(site_model) == 0:
         return None
@@ -317,19 +321,19 @@ def get_site_model(job_id):
     return site_model[0]
 
 
-def get_closest_site_model_data(input_model, site):
+def get_closest_site_model_data(input_model, point):
     """Get the closest available site model data from the database for a given
     site model :class:`~openquake.db.models.Input` and
-    :class:`~openquake.shapes.Site`.
+    :class:`nhlib.geo.point.Point`.
 
     :param input_model:
         :class:`openquake.db.models.Input` with `input_type` of 'site_model'.
     :param site:
-        :class:`openquake.shapes.Site` instance.
+        :class:`nhlib.geo.point.Point` instance.
 
     :returns:
         The closest :class:`openquake.db.models.SiteModel` for the given
-        ``input_model`` and ``site`` of interest.
+        ``input_model`` and ``point`` of interest.
 
         This function uses the PostGIS `ST_Distance_Sphere
         <http://postgis.refractions.net/docs/ST_Distance_Sphere.html>`_
@@ -349,7 +353,7 @@ def get_closest_site_model_data(input_model, site):
     LIMIT 1;"""
 
     raw_query_set = models.SiteModel.objects.raw(
-        query, ['SRID=4326; %s' % site.point.wkt, input_model.id]
+        query, ['SRID=4326; %s' % point.wkt2d, input_model.id]
     )
 
     site_model_data = list(raw_query_set)
@@ -361,6 +365,63 @@ def get_closest_site_model_data(input_model, site):
         return site_model_data[0]
     else:
         return None
+
+
+def store_site_data(hc_id, site_model_inp, mesh):
+    """
+    Given a ``mesh`` of points (calculation points of interest) and a
+    site model (``site_model_inp``), get the closest site model data
+    for each points and store the mesh point location plus the site parameters
+    as a single record in the `htemp.site_data` table.
+
+    NOTE: This should only be necessary for calculations which specify a site
+    model. Otherwise, the same 4 reference site parameters are used for all
+    sites.
+
+    :param int hc_id:
+        ID of a :class:`~openquake.db.models.HazardCalculation`.
+    :param site_model_inp:
+        An :class:`~openquake.db.models.Input` with an
+        `input_type`=='site_model'. This tells us which site model dataset to
+        query.
+    :param mesh:
+        Calculation points of interest, as a :class:`nhlib.geo.mesh.Mesh`.
+    :returns:
+        The :class:`openquake.db.models.SiteData` object that was created to
+        store computation points of interest with associated site parameters.
+    """
+    lons = []
+    lats = []
+    vs30s = []
+    vs30_types = []
+    z1pt0s = []
+    z2pt5s = []
+
+    for pt in mesh:
+        smd = get_closest_site_model_data(site_model_inp, pt)
+
+        lons.append(pt.longitude)
+        lats.append(pt.latitude)
+
+        vs30s.append(smd.vs30)
+        vs30_types.append(smd.vs30_type)
+        z1pt0s.append(smd.z1pt0)
+        z2pt5s.append(smd.z2pt5)
+
+    site_data = models.SiteData(hazard_calculation_id=hc_id)
+    site_data.lons = numpy.array(lons)
+    site_data.lats = numpy.array(lats)
+    site_data.vs30s = numpy.array(vs30s)
+    # We convert from strings to booleans here because this is what a nhlib
+    # SiteCollection expects for the vs30 type. If we do the conversion here,
+    # we only do it once and we can directly consume the data on the worker
+    # side without having to convert inside each task.
+    site_data.vs30_measured = numpy.array(vs30_types) == 'measured'
+    site_data.z1pt0s = numpy.array(z1pt0s)
+    site_data.z2pt5s = numpy.array(z2pt5s)
+    site_data.save()
+
+    return site_data
 
 
 def set_java_site_parameters(jsite, sm_data):
@@ -407,9 +468,9 @@ class BaseHazardCalculator(Calculator):
             # Explicit cast to `str` here because the XML parser doesn't like
             # unicode. (More specifically, lxml doesn't like unicode.)
             site_model_content = str(site_model.model_content.raw_content)
-            site_model_data = store_site_model(
-                site_model, StringIO.StringIO(site_model_content)
-            )
+            store_site_model(site_model, StringIO.StringIO(site_model_content))
+
+            site_model_data = models.SiteModel.objects.filter(input=site_model)
 
             validate_site_model(
                 site_model_data, self.job_ctxt.sites_to_compute()
