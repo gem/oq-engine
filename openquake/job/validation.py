@@ -268,7 +268,7 @@ class BaseOQModelForm(ModelForm):
     :class:`openquake.db.models.Input`, keyed by config file parameter for the
     input. For example::
 
-    {'SITE_MODEL_FILE': <Input: 174||site_model||0xdeadbeef||>}
+    {'site_model_file': <Input: 174||site_model||0xdeadbeef||>}
     """
 
     def __init__(self, *args, **kwargs):
@@ -409,7 +409,7 @@ class ClassicalHazardCalculationForm(BaseOQModelForm):
             all_valid = all_valid and valid
             self._add_error('sites', errs)
 
-        if 'SITE_MODEL_FILE' not in self.files:
+        if 'site_model_file' not in self.files:
             # make sure the reference parameters are defined and valid
 
             for field in (
