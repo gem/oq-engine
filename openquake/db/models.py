@@ -31,8 +31,11 @@ import os
 from collections import namedtuple
 from datetime import datetime
 
+import numpy
+
 from django.contrib.gis.db import models as djm
 from django.contrib.gis.geos.geometry import GEOSGeometry
+from nhlib import geo as nhlib_geo
 from shapely import wkt
 
 from openquake.db import fields
@@ -72,6 +75,24 @@ def inputs4job(job_id, input_type=None, path=None):
         qargs.append(("input__path", path))
     qargs = dict(qargs)
     return list(i.input for i in i2js.filter(**qargs))
+
+
+def inputs4hcalc(calc_id, input_type=None):
+    """
+    Get all of the inputs for a given hazard calculation.
+
+    :param int calc_id:
+        ID of a :class:`HazardCalculation`.
+    :param input_type:
+        A valid input type (optional). Leave as `None` if you want all inputs
+        for a given calculation.
+    :returns:
+        A list of :class:`Input` instances.
+    """
+    result = Input.objects.filter(input2hcalc__hazard_calculation=calc_id)
+    if input_type is not None:
+        result = result.filter(input_type=input_type)
+    return result
 
 
 def per_asset_value(exd):
@@ -320,6 +341,13 @@ class SiteModel(djm.Model):
     z2pt5 = djm.FloatField()
     location = djm.PointField(srid=4326)
 
+    def __repr__(self):
+        return (
+            'SiteModel(location="%s", vs30=%s, vs30_type=%s, z1pt0=%s, '
+            'z2pt5=%s)'
+            % (self.location.wkt, self.vs30, self.vs30_type, self.z1pt0,
+               self.z2pt5))
+
     class Meta:
         db_table = 'hzrdi\".\"site_model'
 
@@ -512,6 +540,10 @@ class HazardCalculation(djm.Model):
     Parameters need to run a Hazard job.
     '''
     owner = djm.ForeignKey('OqUser')
+    # Contains the absolute path to the directory containing the job config
+    # file.
+    base_path = djm.TextField()
+    force_inputs = djm.BooleanField()
 
     #####################
     # General parameters:
@@ -611,7 +643,7 @@ class HazardCalculation(djm.Model):
     ################################
     # Output/post-processing params:
     ################################
-    mean_hazard_curves = djm.NullBooleanField(
+    mean_hazard_curves = fields.OqNullBooleanField(
         help_text='Compute mean hazard curves',
         null=True,
         blank=True,
@@ -669,6 +701,29 @@ class HazardCalculation(djm.Model):
                                 points.append(points[0])
                             kwargs[field] = wkt_fmt % ', '.join(points)
         super(HazardCalculation, self).__init__(*args, **kwargs)
+
+    def points_to_compute(self):
+        """
+        Generate a :class:`~nhlib.geo.mesh.Mesh` of points. These points
+        indicate the locations of interest in a hazard calculation.
+
+        The mesh can be calculated given a `region` polygon and
+        `region_grid_spacing` (the discretization parameter), or from a list of
+        `sites`.
+        """
+        if self.region is not None and self.region_grid_spacing is not None:
+            # assume that the polygon is a single linear ring
+            coords = self.region.coords[0]
+            points = [nhlib_geo.Point(*x) for x in coords]
+            poly = nhlib_geo.Polygon(points)
+            return poly.discretize(self.region_grid_spacing)
+        elif self.sites is not None:
+            lons, lats = zip(*self.sites.coords)
+            return nhlib_geo.Mesh(
+                numpy.array(lons), numpy.array(lats), depths=None)
+        else:
+            # there's no geometry defined
+            return None
 
 
 class Input2hcalc(djm.Model):
@@ -1037,6 +1092,28 @@ class UhSpectrumData(djm.Model):
 
     class Meta:
         db_table = 'hzrdr\".\"uh_spectrum_data'
+
+
+class LtRealization(djm.Model):
+    """
+    Keep track of logic tree realization progress. When ``completed_sources``
+    becomes equal to ``total_sources``, mark ``is_complete`` as `True`.
+
+    Marking progress as we go gives us the ability to resume partially-
+    completed calculations.
+    """
+
+    hazard_calculation = djm.ForeignKey('HazardCalculation')
+    ordinal = djm.IntegerField()
+    seed = djm.IntegerField()
+    sm_lt_path = fields.CharArrayField()
+    gsim_lt_path = fields.CharArrayField()
+    is_complete = djm.BooleanField(default=False)
+    total_sources = djm.IntegerField()
+    completed_sources = djm.IntegerField(default=0)
+
+    class Meta:
+        db_table = 'hzrdr\".\"lt_realization'
 
 
 ## Tables in the 'riskr' schema.
@@ -1457,29 +1534,7 @@ class Ffd(djm.Model):
         db_table = 'riski\".\"ffd'
 
 
-## Tables in the 'idata' schema.
-
-
-class LtRealization(djm.Model):
-    """
-    Keep track of logic tree realization progress. When ``completed_sources``
-    becomes equal to ``total_sources``, mark ``is_complete`` as `True`.
-
-    Marking progress as we go gives us the ability to resume partially-
-    completed calculations.
-    """
-
-    hazard_calculation = djm.ForeignKey('HazardCalculation')
-    ordinal = djm.IntegerField()
-    sm_lt_path = djm.TextField()
-    gsim_lt_path = djm.TextField()
-    seed = djm.IntegerField()
-    is_complete = djm.BooleanField(default=False)
-    total_sources = djm.IntegerField()
-    completed_sources = djm.IntegerField()
-
-    class Meta:
-        db_table = 'idata\".\"lt_realization'
+## Tables in the 'htemp' schema.
 
 
 class SourceProgress(djm.Model):
@@ -1496,7 +1551,7 @@ class SourceProgress(djm.Model):
     is_complete = djm.BooleanField(default=False)
 
     class Meta:
-        db_table = 'idata\".\"source_progress'
+        db_table = 'htemp\".\"source_progress'
 
 
 class HazardCurveProgress(djm.Model):
@@ -1506,15 +1561,15 @@ class HazardCurveProgress(djm.Model):
     """
 
     lt_realization = djm.ForeignKey('LtRealization')
+    imt = djm.TextField()
     # stores a pickled numpy array for intermediate results
     # array is 2d: sites x IMLs
     # each row indicates a site,
     # each column holds the PoE vaue for the IML at that index
-    imt = djm.TextField()
     result_matrix = fields.PickleField()
 
     class Meta:
-        db_table = 'idata\".\"hazard_curve_progress'
+        db_table = 'htemp\".\"hazard_curve_progress'
 
 
 class SiteData(djm.Model):
@@ -1528,12 +1583,15 @@ class SiteData(djm.Model):
     parameters are use for all points of interest).
     """
 
+    hazard_calculation = djm.ForeignKey('HazardCalculation')
     lons = fields.PickleField()
     lats = fields.PickleField()
     vs30s = fields.PickleField()
-    vs30_types = fields.PickleField()
+    # `vs30_measured` stores a numpy array of booleans.
+    # If a value is `False`, this means that the vs30 value is 'inferred'.
+    vs30_measured = fields.PickleField()
     z1pt0s = fields.PickleField()
     z2pt5s = fields.PickleField()
 
     class Meta:
-        db_table = 'idata\".\"site_data'
+        db_table = 'htemp\".\"site_data'

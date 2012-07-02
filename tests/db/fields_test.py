@@ -105,3 +105,19 @@ class PickleFieldTestCase(unittest.TestCase):
         field = fields.PickleField()
         data = {'foo': None, (1, False): 'baz'}
         self.assertEqual(pickle.loads(field.get_db_prep_value(data)), data)
+
+
+class OqNullBooleanFieldTestCase(unittest.TestCase):
+
+    def test_to_python(self):
+        field = fields.OqNullBooleanField()
+
+        true_cases = ['T', 't', 'TRUE', 'True', 'true', 'Y', 'y', 'YES', 'yes']
+        false_cases = ['F', 'f', 'FALSE', 'False', 'false', 'N', 'n', 'NO',
+                       'no']
+
+        for tc in true_cases:
+            self.assertEqual(True, field.to_python(tc))
+
+        for fc in false_cases:
+            self.assertEqual(False, field.to_python(fc))

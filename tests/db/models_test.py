@@ -18,9 +18,13 @@ import itertools
 import string
 import unittest
 
+import numpy
+
 from django.contrib.gis.geos.geometry import GEOSGeometry
+from nhlib import geo as nhlib_geo
 
 from openquake import engine
+from openquake import engine2
 from openquake.db import models
 
 from tests.utils import helpers
@@ -219,6 +223,42 @@ class Inputs4JobTestCase(unittest.TestCase):
             models.inputs4job(self.job.id, input_type="source", path=path))
 
 
+class Inputs4HazCalcTestCase(unittest.TestCase):
+
+    def test_no_inputs(self):
+        self.assertEqual([], list(models.inputs4hcalc(-1)))
+
+    def test_a_few_inputs(self):
+        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        params, files = engine2.parse_config(open(cfg, 'r'), force_inputs=True)
+        owner = helpers.default_user()
+        hc = engine2.create_hazard_calculation(owner, params, files.values())
+
+        expected_ids = sorted([x.id for x in files.values()])
+
+        inputs = models.inputs4hcalc(hc.id)
+
+        actual_ids = sorted([x.id for x in inputs])
+
+        self.assertEqual(expected_ids, actual_ids)
+
+    def test_with_input_type(self):
+        cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
+        params, files = engine2.parse_config(open(cfg, 'r'), force_inputs=True)
+        owner = helpers.default_user()
+        hc = engine2.create_hazard_calculation(owner, params, files.values())
+
+        # It should only be 1 id, actually.
+        expected_ids = [x.id for x in files.values()
+                        if x.input_type == 'lt_source']
+
+        inputs = models.inputs4hcalc(hc.id, input_type='lt_source')
+
+        actual_ids = sorted([x.id for x in inputs])
+
+        self.assertEqual(expected_ids, actual_ids)
+
+
 class HazardCalculationGeometryTestCase(unittest.TestCase):
     """Test special geometry handling in the HazardCalculation constructor."""
 
@@ -281,3 +321,65 @@ class HazardCalculationGeometryTestCase(unittest.TestCase):
         )
 
         self.assertEqual(expected_wkt, hjp.region.wkt)
+
+    def test_points_to_compute_none(self):
+        hc = models.HazardCalculation()
+        self.assertIsNone(hc.points_to_compute())
+
+        hc = models.HazardCalculation(region='1 2, 3 4, 5 6')
+        # There's no region grid spacing
+        self.assertIsNone(hc.points_to_compute())
+
+    def test_points_to_compute_region(self):
+        lons = [
+            6.761295081695822, 7.022590163391642,
+            7.28388524508746, 7.54518032678328,
+            7.806475408479099, 8.067770490174919,
+            8.329065571870737, 6.760434846130313,
+            7.020869692260623, 7.281304538390934,
+            7.541739384521245, 7.802174230651555,
+            8.062609076781865, 8.323043922912175,
+            6.759582805761787, 7.019165611523571,
+            7.278748417285356, 7.53833122304714,
+            7.797914028808925, 8.057496834570708,
+            8.317079640332492, 6.758738863707749,
+            7.017477727415495, 7.276216591123242,
+            7.534955454830988, 7.793694318538734,
+            8.05243318224648, 8.311172045954226,
+        ]
+
+        lats = [
+            46.5, 46.5,
+            46.5, 46.5,
+            46.5, 46.5,
+            46.5, 46.320135678816236,
+            46.320135678816236, 46.320135678816236,
+            46.320135678816236, 46.320135678816236,
+            46.320135678816236, 46.320135678816236,
+            46.140271357632486, 46.140271357632486,
+            46.140271357632486, 46.140271357632486,
+            46.140271357632486, 46.140271357632486,
+            46.140271357632486, 45.96040703644873,
+            45.96040703644873, 45.96040703644873,
+            45.96040703644873, 45.96040703644873,
+            45.96040703644873, 45.96040703644873,
+        ]
+
+        hc = models.HazardCalculation(
+            region='6.5 45.8, 6.5 46.5, 8.5 46.5, 8.5 45.8',
+            region_grid_spacing=20)
+        mesh = hc.points_to_compute()
+
+        numpy.testing.assert_array_equal(lons, mesh.lons)
+        numpy.testing.assert_array_equal(lats, mesh.lats)
+
+    def test_points_to_compute_sites(self):
+        lons = [6.5, 6.5, 8.5, 8.5]
+        lats = [45.8, 46.5, 46.5, 45.8]
+        hc = models.HazardCalculation(
+            sites='6.5 45.8, 6.5 46.5, 8.5 46.5, 8.5 45.8')
+
+        mesh = hc.points_to_compute()
+
+        numpy.testing.assert_array_equal(lons, mesh.lons)
+        numpy.testing.assert_array_equal(lats, mesh.lats)

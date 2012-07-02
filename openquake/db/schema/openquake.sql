@@ -22,7 +22,7 @@ CREATE SCHEMA oqmif;
 CREATE SCHEMA riski;
 CREATE SCHEMA riskr;
 CREATE SCHEMA uiapi;
-CREATE SCHEMA idata;
+CREATE SCHEMA htemp;
 
 
 
@@ -276,6 +276,9 @@ CREATE TABLE uiapi.hazard_calculation (
     -- We'll need to update fields and constraints as we add the other calculation modes.
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
+    -- Contains the absolute path to the directory containing the job config file
+    base_path VARCHAR NOT NULL,
+    force_inputs BOOLEAN NOT NULL,
     -- general parameters:
     -- (see also `region` and `sites` geometries defined below)
     description VARCHAR NOT NULL DEFAULT '',
@@ -1067,6 +1070,25 @@ SELECT AddGeometryColumn('hzrdr', 'uh_spectrum_data', 'location', 4326, 'POINT',
 ALTER TABLE hzrdr.uh_spectrum_data ALTER COLUMN location SET NOT NULL;
 
 
+-- keep track of logic tree realization progress for a given calculation
+CREATE TABLE hzrdr.lt_realization (
+    id SERIAL PRIMARY KEY,
+    hazard_calculation_id INTEGER NOT NULL,
+    -- pre-computed calculation point of interest to site parameters table
+    -- can be null if no site_model was defined for the calculation
+    site_data_id INTEGER,
+    ordinal INTEGER NOT NULL,
+    seed INTEGER NOT NULL,
+    -- A list of the logic tree branchIDs which indicate the path taken through the tree
+    sm_lt_path VARCHAR[] NOT NULL,
+    -- A list of the logic tree branchIDs which indicate the path taken through the tree
+    gsim_lt_path VARCHAR[] NOT NULL,
+    is_complete BOOLEAN DEFAULT FALSE,
+    total_sources INTEGER NOT NULL,
+    completed_sources INTEGER NOT NULL DEFAULT 0
+) TABLESPACE hzrdr_ts;
+
+
 -- Loss map data.
 CREATE TABLE riskr.loss_map (
     id SERIAL PRIMARY KEY,
@@ -1434,54 +1456,39 @@ CREATE TABLE riski.ffd (
 ) TABLESPACE riski_ts;
 
 
--- idata
-
--- keep track of logic tree realization progress for a given calculation
-CREATE TABLE idata.lt_realization (
-    id SERIAL PRIMARY KEY,
-    hazard_calculation_id INTEGER NOT NULL,
-    -- optional FK; if null, get reference site parameters from hazard_calculation
-    site_data_id INTEGER,
-    ordinal INTEGER NOT NULL,
-    sm_lt_path VARCHAR NOT NULL,
-    gsim_lt_path VARCHAR NOT NULL,
-    seed INTEGER NOT NULL,
-    is_complete BOOLEAN DEFAULT FALSE,
-    total_sources INTEGER NOT NULL,
-    completed_sources INTEGER NOT NULL DEFAULT 0
-) TABLESPACE idata_ts;
-
 -- keep track of sources considered in a calculation, per logic tree realization
-CREATE TABLE idata.source_progress (
+CREATE TABLE htemp.source_progress (
     id SERIAL PRIMARY KEY,
     lt_realization_id INTEGER NOT NULL,
     parsed_source_id INTEGER NOT NULL,
     is_complete BOOLEAN NOT NULL DEFAULT FALSE
-) TABLESPACE idata_ts;
+) TABLESPACE htemp_ts;
 
-CREATE TABLE idata.hazard_curve_progress (
+CREATE TABLE htemp.hazard_curve_progress (
     -- This table will contain 1 record per IMT per logic tree realization
     -- for a given calculation.
     id SERIAL PRIMARY KEY,
+    lt_realization_id INTEGER NOT NULL,
     imt VARCHAR NOT NULL,
     -- stores a pickled numpy array for intermediate results
     -- array is 2d: sites x IMLs
     -- each row indicates a site,
     -- each column holds the PoE value for the IML at that index
     result_matrix BYTEA NOT NULL
-) TABLESPACE idata_ts;
+) TABLESPACE htemp_ts;
 
-CREATE TABLE idata.site_data (
+CREATE TABLE htemp.site_data (
     id SERIAL PRIMARY KEY,
+    hazard_calculation_id INTEGER NOT NULL,
     -- All 6 fields will contain pickled numpy arrays with all of the locations
     -- and site parameters for the sites of interest for a calculation.
     lons BYTEA NOT NULL,
     lats BYTEA NOT NULL,
     vs30s BYTEA NOT NULL,
-    vs30_types BYTEA NOT NULL,
+    vs30_measured BYTEA NOT NULL,
     z1pt0s BYTEA NOT NULL,
     z2pt5s BYTEA NOT NULL
-) TABLESPACE idata_ts;
+) TABLESPACE htemp_ts;
 
 
 ------------------------------------------------------------------------
@@ -1628,6 +1635,13 @@ ALTER TABLE hzrdr.uh_spectrum_data
 ADD CONSTRAINT hzrdr_uh_spectrum_data_uh_spectrum_fk
 FOREIGN KEY (uh_spectrum_id) REFERENCES hzrdr.uh_spectrum(id) ON DELETE CASCADE;
 
+-- hzrdr.lt_realization -> uiapi.hazard_calculation FK
+ALTER TABLE hzrdr.lt_realization
+ADD CONSTRAINT hzrdr_lt_realization_hazard_calculation_fk
+FOREIGN KEY (hazard_calculation_id)
+REFERENCES uiapi.hazard_calculation(id)
+ON DELETE CASCADE;
+
 ALTER TABLE riskr.loss_map
 ADD CONSTRAINT riskr_loss_map_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
@@ -1727,30 +1741,31 @@ ALTER TABLE riski.ffc ADD CONSTRAINT riski_ffc_fragility_model_fk FOREIGN KEY
 (fragility_model_id) REFERENCES riski.fragility_model(id) ON DELETE
 CASCADE;
 
--- idata.lt_realization to uiapi.hazard_calculation FK
-ALTER TABLE idata.lt_realization
-ADD CONSTRAINT idata_lt_realization_hazard_calculation_fk
-FOREIGN KEY (hazard_calculation_id)
-REFERENCES uiapi.hazard_calculation(id)
-ON DELETE CASCADE;
 
--- idata.lt_realization to uiapi.site_data FK
-ALTER TABLE idata.lt_realization
-ADD CONSTRAINT idata_lt_realization_site_data_fk
-FOREIGN KEY (site_data_id)
-REFERENCES idata.site_data(id)
-ON DELETE RESTRICT;
-
--- idata.source_progress to idata.lt_realization FK
-ALTER TABLE idata.source_progress
-ADD CONSTRAINT idata_source_progress_lt_realization_fk
+-- htemp.source_progress to hzrdr.lt_realization FK
+ALTER TABLE htemp.source_progress
+ADD CONSTRAINT htemp_source_progress_lt_realization_fk
 FOREIGN KEY (lt_realization_id)
-REFERENCES idata.lt_realization(id)
+REFERENCES hzrdr.lt_realization(id)
 ON DELETE CASCADE;
 
--- idata.source_progress to hzrdi.parsed_source FK
-ALTER TABLE idata.source_progress
-ADD CONSTRAINT idata_source_progress_parsed_source_fk
+-- htemp.source_progress to hzrdi.parsed_source FK
+ALTER TABLE htemp.source_progress
+ADD CONSTRAINT htemp_source_progress_parsed_source_fk
 FOREIGN KEY (parsed_source_id)
 REFERENCES hzrdi.parsed_source(id)
+ON DELETE CASCADE;
+
+-- htemp.hazard_curve_progress to hzrdr.lt_realization FK
+ALTER TABLE htemp.hazard_curve_progress
+ADD CONSTRAINT htemp_hazard_curve_progress_lt_realization_fk
+FOREIGN KEY (lt_realization_id)
+REFERENCES hzrdr.lt_realization(id)
+ON DELETE CASCADE;
+
+-- htemp.site_data to uiapi.hazard_calculation FK
+ALTER TABLE htemp.site_data
+ADD CONSTRAINT htemp_site_data_hazard_calculation_fk
+FOREIGN KEY (hazard_calculation_id)
+REFERENCES uiapi.hazard_calculation(id)
 ON DELETE CASCADE;
