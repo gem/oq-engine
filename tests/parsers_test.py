@@ -33,8 +33,7 @@ class SourceModelParserTestCase(unittest.TestCase):
     BAD_NAMESPACE = '''\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.3"
-      gml:id="n1">
+      xmlns="http://openquake.org/xmlns/nrml/0.3">
 </nrml>'''
 
     # The NRML element should be first
@@ -42,23 +41,20 @@ class SourceModelParserTestCase(unittest.TestCase):
 m?ml version='1.0' encoding='utf-8'?>
 <sourceModel xmlns="http://openquake.org/xmlns/nrml/0.4" name="test">
 <nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4"
-      gml:id="n1">
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
 </nrml>
 </sourceModel>'''
 
     NO_SRC_MODEL = '''\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
-  xmlns="http://openquake.org/xmlns/nrml/0.4"
-  gml:id="n1">
+  xmlns="http://openquake.org/xmlns/nrml/0.4">
 </nrml>'''
 
     INVALID_SCHEMA = '''\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4"
-      gml:id="n1">
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
     <sourceModel name="Some Source Model">
         <pointSource id="1" name="point" tectonicRegion="Stable Continental Crust">
             <pointGeometry>
@@ -247,8 +243,7 @@ m?ml version='1.0' encoding='utf-8'?>
         source_xml = '''\
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4"
-      gml:id="n1">
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
     <sourceModel name="Some Source Model">
         <areaSource id="1" name="Quito" tectonicRegion="Active Shallow Crust">
             <areaGeometry>
@@ -332,8 +327,7 @@ class SiteModelParserTestCase(unittest.TestCase):
     INVALID_SCHEMA = '''\
 <?xml version="1.0" encoding="utf-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.3"
-      gml:id="n1">
+      xmlns="http://openquake.org/xmlns/nrml/0.3">
     <siteModel>
         <site lon="-122.5" lat="37.5" vs30="800.0" vs30Type="measured" z1pt0="100.0" z2pt5="5.0" />
         <site lon="-122.6" lat="37.6" vs30="801.0" vs30Type="measured" z1pt0="101.0" z2pt5="5.1" />

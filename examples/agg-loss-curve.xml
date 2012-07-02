@@ -1,7 +1,6 @@
 <?xml version="1.0"?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4"
-      gml:id="n1">
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
 
     <riskResult gml:id="rr1">
         <config/>

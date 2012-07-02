@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4"
-      gml:id="IDXXX">
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
     <disaggregationResultField poE="0.1" IMT="PGA" endBranchLabel="1" gml:id="ID000">
         <!-- List PMF subsets contained in the referenced binary files.-->
         <disaggregationResultTypes>MagPMF MagDistPMF MagDistEpsPMF LatLonMagEpsPMF FullDisaggMatrix</disaggregationResultTypes>
