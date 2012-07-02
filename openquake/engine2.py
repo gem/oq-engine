@@ -66,12 +66,18 @@ def parse_config(source, force_inputs=False):
     :param source:
         File-like object containing the config parameters.
     :returns:
-        A `dict` of the parameter keys and values parsed from the config file.
+        A `dict` of the parameter keys and values parsed from the config file
+        and a `dict` of :class:`~openquake.db.models.Input` objects, keyed by
+        the config file parameter.
+
+        These dicts are return as a tuple/pair.
     """
     cp = ConfigParser.ConfigParser()
     cp.readfp(source)
 
-    params = dict()
+    base_path = os.path.dirname(
+        os.path.join(os.path.abspath('.'), source.name))
+    params = dict(base_path=base_path, force_inputs=force_inputs)
     files = dict()
 
     for sect in cp.sections():
@@ -127,7 +133,7 @@ def _get_content_type(path):
         return ext[1:]
 
 
-def get_input(path, input_type, owner, force_input):
+def get_input(path, input_type, owner, force_input, name=None):
     """Get an :class:`~openquake.db.models.Input` object for the given file
     (``path``).
 
@@ -146,6 +152,8 @@ def get_input(path, input_type, owner, force_input):
     :param bool force_input:
         If `True` do not reuse existing inputs that match the file at ``path``
         and always create a new input.
+    :param str name:
+        Optional name to help idenfity this input.
     :returns:
         :class:`openquake.db.models.Input` object to represent the input. As a
         side effect, this function will also store a full raw copy of the input
@@ -170,7 +178,7 @@ def get_input(path, input_type, owner, force_input):
         inp = models.Input(
             path=path, input_type=input_type, owner=owner,
             size=os.path.getsize(path), digest=digest,
-            model_content=model_content
+            model_content=model_content, name=name
         )
         inp.save()
     else:
@@ -217,25 +225,32 @@ def _identical_input(input_type, digest, owner_id):
     return ios[0] if ios else None
 
 
-def create_hazard_calculation(params, owner):
+def create_hazard_calculation(owner, params, files):
     """Given a params `dict` parsed from the config file, create a
     :class:`~openquake.db.models.HazardCalculation`.
 
+    :param owner:
+        The :class:`~openquake.db.models.OqUser` who will own this profile.
     :param dict params:
         Dictionary of parameter names and values. Parameter names should match
         exactly the field names of
         :class:`openquake.db.model.HazardCalculation`.
-    :param owner:
-        The :class:`~openquake.db.models.OqUser` who will own this profile.
+    :param list files:
+        List of :class:`~openquake.db.models.Input` objects to be linked to the
+        calculation.
     :returns:
         :class:`openquake.db.model.HazardCalculation` object. A corresponding
         record will obviously be saved to the database.
     """
-    hjp = models.HazardCalculation(**params)
-    hjp.owner = owner
-    hjp.save()
+    hc = models.HazardCalculation(**params)
+    hc.owner = owner
+    hc.full_clean()
+    hc.save()
 
-    return hjp
+    for f in files:
+        models.Input2hcalc(input=f, hazard_calculation=hc).save()
+
+    return hc
 
 
 def run_hazard(job):
