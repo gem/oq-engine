@@ -45,32 +45,27 @@
         </xs:appinfo>
    </xs:annotation>
 
-    <xs:element name="nrml" type="NRML" substitutionGroup="gml:_Feature"/>
+    <xs:element name="nrml" type="NRML" />
     <xs:complexType name="NRML">
-        <xs:complexContent>
-            <xs:extension base="gml:AbstractFeatureType">
-                <xs:sequence>
-                    <xs:choice minOccurs="0" maxOccurs="1">
-                        <xs:element ref="hazardResult"/>
-                        <xs:element ref="sourceModel"/>
-                        <xs:element ref="rupture"/>
-                        <xs:element ref="riskResult"/>
-                        <xs:element ref="exposureModel"/>
-                        <xs:element ref="fragilityModel"/>
-                        <xs:element ref="vulnerabilityModel"/>
-                        <xs:element ref="logicTree"/>
-                        <xs:element ref="disaggregationResultField"/>
-                        <xs:element ref="uhsResultSet"/>
-                        <xs:element ref="rawSourceModel"/>
-                        <xs:element ref="dmgDistPerAsset"/>
-                        <xs:element ref="dmgDistPerTaxonomy"/>
-                        <xs:element ref="totalDmgDist"/>
-                        <xs:element ref="collapseMap"/>
-                        <xs:element ref="siteModel"/>
-                    </xs:choice>
-                </xs:sequence>
-            </xs:extension>
-        </xs:complexContent>
+        <xs:choice minOccurs="0" maxOccurs="1">
+            <xs:element ref="hazardResult" />
+            <xs:element ref="sourceModel" />
+            <xs:element ref="rupture" />
+            <xs:element ref="riskResult" />
+            <xs:element ref="exposureModel" />
+            <xs:element ref="fragilityModel" />
+            <xs:element ref="vulnerabilityModel" />
+            <xs:element ref="logicTree" />
+            <xs:element ref="disaggregationResultField" />
+            <xs:element ref="uhsResultSet" />
+            <xs:element ref="rawSourceModel" />
+            <xs:element ref="dmgDistPerAsset" />
+            <xs:element ref="dmgDistPerTaxonomy" />
+            <xs:element ref="totalDmgDist" />
+            <xs:element ref="collapseMap" />
+            <xs:element ref="siteModel" />
+            <xs:element ref="hazardCurves" />
+        </xs:choice>
     </xs:complexType>
 
 </xs:schema>
