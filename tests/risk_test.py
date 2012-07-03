@@ -287,7 +287,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
                              0.1145, 0.2883, 0.4734, 0.4885]),
                 compute_loss_ratios(vuln_function, gmfs,
                                     EpsilonProvider(expected_asset, epsilons),
-                                    expected_asset), atol=0.0001))
+                                    expected_asset), atol=0.0, rtol=0.01))
 
     def test_sampling_lr_gmfs_less_than_first_vulnimls(self):
         """
@@ -316,7 +316,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
                               0.0, 0.3020]),
                 compute_loss_ratios(vuln_function, gmfs,
                     EpsilonProvider(expected_asset, epsilons),
-                    expected_asset), atol=0.0001))
+                    expected_asset), atol=0.0, rtol=0.01))
 
     def test_sampling_lr_gmfs_greater_than_last_vulnimls(self):
         """
@@ -344,7 +344,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
                              0.0394, 0.1145, 0.2883, 0.5975, 0.4885]),
                 compute_loss_ratios(vuln_function, gmfs,
                     EpsilonProvider(expected_asset, epsilons),
-                    expected_asset), atol=0.0001))
+                    expected_asset), atol=0.0, rtol=0.01))
 
     def test_loss_ratios_boundaries(self):
         """Loss ratios generation given a GMFs and a vulnerability function.

@@ -850,10 +850,9 @@ def _sampled_based(vuln_function, gmf_set, epsilon_provider, asset):
             loss_ratios.append(0.0)
         else:
             if ground_motion_field > vuln_function.imls[-1]:
-                mean_ratio = vuln_function.loss_ratio_for(
-                    vuln_function.imls[-1])
-            else:
-                mean_ratio = vuln_function.loss_ratio_for(ground_motion_field)
+                ground_motion_field = vuln_function.imls[-1]
+
+            mean_ratio = vuln_function.loss_ratio_for(ground_motion_field)
 
             cov = vuln_function.cov_for(ground_motion_field)
             variance = (mean_ratio * cov) ** 2.0
