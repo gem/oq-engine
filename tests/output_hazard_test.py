@@ -111,44 +111,45 @@ def HAZARD_MAP_QUANTILE_DATA():
 # the IMLValues and PoEValues are trimmed to the last 4 values and 3 decimals
 def HAZARD_CURVE_DATA():
     return [
-        (Site(-122.2, 37.5),
-         {'investigationTimeSpan': '50.0',
-          'IMLValues': [0.778, 1.09, 1.52, 2.13],
-          'PoEValues': [0.354, 0.114, 0.023, 0.002],
-          'IMT': 'PGA',
-          'endBranchLabel': '1_1'}),
-        (Site(-122.1, 37.5),
-         {'investigationTimeSpan': '50.0',
-          'IMLValues': [0.778, 1.09, 1.52, 2.13],
-          'PoEValues': [0.354, 0.114, 0.023, 0.002],
-          'IMT': 'PGA',
-          'endBranchLabel': '1_2'}),
-        (Site(-122.0, 37.5),
-         {'investigationTimeSpan': '50.0',
-          'IMLValues': [0.778, 1.09, 1.52, 2.13],
-          'PoEValues': [0.354, 0.114, 0.023, 0.002],
-          'IMT': 'PGA',
-          'endBranchLabel': '1_1'}),
-        (Site(-122.0, 37.5),
-         {'investigationTimeSpan': '50.0',
-          'IMLValues': [0.778, 1.09, 1.52, 2.13],
-          'PoEValues': [0.354, 0.114, 0.023, 0.002],
-          'IMT': 'PGA',
-          'quantileValue': 0.6,
-          'statistics': 'quantile'}),
-        (Site(-122.1, 37.5),
-         {'investigationTimeSpan': '50.0',
-          'IMLValues': [0.778, 1.09, 1.52, 2.13],
-          'PoEValues': [0.354, 0.114, 0.023, 0.002],
-          'IMT': 'PGA',
-          'quantileValue': 0.6,
-          'statistics': 'quantile'}),
-        (Site(-121.9, 37.5),
-         {'investigationTimeSpan': '50.0',
-          'IMLValues': [0.778, 1.09, 1.52, 2.13],
-          'PoEValues': [0.354, 0.114, 0.023, 0.002],
-          'IMT': 'PGA',
-          'endBranchLabel': '2'})]
+        [(Site(-122.2, 37.5),
+          {'investigationTimeSpan': '50.0',
+           'IMLValues': [0.778, 1.09, 1.52, 2.13],
+           'PoEValues': [0.354, 0.114, 0.023, 0.002],
+           'IMT': 'PGA',
+           'endBranchLabel': '1_1'}),
+         (Site(-122.0, 37.5),
+          {'investigationTimeSpan': '50.0',
+           'IMLValues': [0.778, 1.09, 1.52, 2.13],
+           'PoEValues': [0.354, 0.114, 0.023, 0.002],
+           'IMT': 'PGA',
+           'endBranchLabel': '1_1'})],
+        [(Site(-122.1, 37.5),
+          {'investigationTimeSpan': '50.0',
+           'IMLValues': [0.778, 1.09, 1.52, 2.13],
+           'PoEValues': [0.354, 0.114, 0.023, 0.002],
+           'IMT': 'PGA',
+           'endBranchLabel': '1_2'})],
+        [(Site(-121.9, 37.5),
+          {'investigationTimeSpan': '50.0',
+           'IMLValues': [0.778, 1.09, 1.52, 2.13],
+           'PoEValues': [0.354, 0.114, 0.023, 0.002],
+           'IMT': 'PGA',
+           'endBranchLabel': '2'})],
+        [(Site(-122.0, 37.5),
+          {'investigationTimeSpan': '50.0',
+           'IMLValues': [0.778, 1.09, 1.52, 2.13],
+           'PoEValues': [0.354, 0.114, 0.023, 0.002],
+           'IMT': 'PGA',
+           'quantileValue': 0.6,
+           'statistics': 'quantile'}),
+         (Site(-122.1, 37.5),
+          {'investigationTimeSpan': '50.0',
+           'IMLValues': [0.778, 1.09, 1.52, 2.13],
+           'PoEValues': [0.354, 0.114, 0.023, 0.002],
+           'IMT': 'PGA',
+           'quantileValue': 0.6,
+           'statistics': 'quantile'})],
+         ]
 
 
 def GMF_DATA():
@@ -326,11 +327,6 @@ class HazardCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestCase):
 
     def setUp(self):
         self.job = self.setup_classic_job()
-        output_path = self.generate_output_path(self.job)
-        self.display_name = os.path.basename(output_path)
-
-        self.writer = HazardCurveDBWriter(output_path, self.job.id)
-        self.reader = HazardCurveDBReader()
 
     def sort(self, values):
         def sort_key(v):
@@ -361,22 +357,28 @@ class HazardCurveDBWriterTestCase(HazardCurveDBBaseTestCase):
         # This job has no outputs before calling the function under test.
         self.assertEqual(0, len(self.job.output_set.all()))
 
-        # Call the function under test.
-        self.writer.serialize(HAZARD_CURVE_DATA())
+        for hcd in HAZARD_CURVE_DATA():
+            output_path = self.generate_output_path(self.job,
+                                                    output_type="hazard_curve")
+            writer = HazardCurveDBWriter(output_path, self.job.id)
+            # Call the function under test.
+            writer.serialize(hcd)
 
         # After calling the function under test we see the expected output.
         self.job = models.OqJob.objects.get(id=self.job.id)
-        self.assertEqual(1, len(self.job.output_set.all()))
+        self.assertEqual(4, len(self.job.output_set.all()))
 
         # After calling the function under test we see the expected map data.
-        output = self.job.output_set.get()
-        self.assertEqual(4, len(output.hazardcurve_set.all()))
-        self.assertEqual(0, len(output.lossmap_set.all()))
+        hcs = models.HazardCurve.objects.filter(output__oq_job=self.job)
+        self.assertEqual(4, len(hcs))
 
         # read data from the DB and check that it's equal to the original data
-        inserted_data = []
 
-        for hc in output.hazardcurve_set.all():
+        ebl2index = {"1_1": 0, "1_2": 1, "2": 2}
+        for hc in hcs:
+            indb = []
+            ebl = hc.end_branch_label
+            hdidx = 3 if ebl is None else ebl2index[ebl]
             for hcd in hc.hazardcurvedata_set.all():
                 location = hcd.location
                 node = (Site(location.x, location.y),
@@ -388,10 +390,9 @@ class HazardCurveDBWriterTestCase(HazardCurveDBBaseTestCase):
                     if hc.quantile is not None:
                         node[1]['quantileValue'] = hc.quantile
 
-                inserted_data.append(node)
-
-        self.assertEquals(self.normalize(HAZARD_CURVE_DATA()),
-                          self.normalize(inserted_data))
+                indb.append(node)
+            self.assertEquals(self.normalize(HAZARD_CURVE_DATA()[hdidx]),
+                              self.normalize(indb))
 
 
 class HazardCurveDBReaderTestCase(HazardCurveDBBaseTestCase):
@@ -401,23 +402,31 @@ class HazardCurveDBReaderTestCase(HazardCurveDBBaseTestCase):
     """
     def test_deserialize(self):
         """Hazard map is read back correctly"""
-        self.writer.serialize(HAZARD_CURVE_DATA())
-
-        data = self.reader.deserialize(self.writer.output.id)
-
         def _normalize(data):
             result = []
 
+            key = "investigationTimeSpan"
             for pt, val in data:
                 new = val.copy()
-                new['investigationTimeSpan'] = \
-                    float(new['investigationTimeSpan'])
+                new[key] = float(new[key])
                 result.append((pt, new))
 
             return result
 
-        self.assertEquals(self.sort(_normalize(HAZARD_CURVE_DATA())),
-                          self.sort(_normalize(data)))
+        outputs = []
+        for idx, hcd in enumerate(HAZARD_CURVE_DATA()):
+            output_path = self.generate_output_path(self.job,
+                                                    output_type="hazard_curve")
+            writer = HazardCurveDBWriter(output_path, self.job.id)
+            # Call the function under test.
+            writer.serialize(hcd)
+            outputs.append((idx, writer.output))
+
+        for idx, output in outputs:
+            reader = HazardCurveDBReader()
+            data = reader.deserialize(output.id)
+            self.assertEquals(self.sort(_normalize(HAZARD_CURVE_DATA()[idx])),
+                              self.sort(_normalize(data)))
 
 
 class GmfDBBaseTestCase(unittest.TestCase, helpers.DbTestCase):

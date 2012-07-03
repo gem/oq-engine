@@ -262,11 +262,10 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
                                    None)
         self.assertEqual(0, data.size)
 
-    def test_with_valid_covs_we_sample_the_loss_ratios(self):
-        """With valid covs we need to sample loss ratios.
-
-        If the vulnerability function has some covs greater than 0.0 we need to
-        use a different algorithm (sampled based) to compute the loss ratios.
+    def test_sampling_lr_gmfs_inside_range_vulnimls(self):
+        """
+        Sampling loss ratios (covs greater than zero), Ground Motion Fields
+        IMLs inside range defined by Vulnerability function's imls.
         """
 
         imls = [0.10, 0.30, 0.50, 1.00]
@@ -288,33 +287,64 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
                              0.1145, 0.2883, 0.4734, 0.4885]),
                 compute_loss_ratios(vuln_function, gmfs,
                                     EpsilonProvider(expected_asset, epsilons),
-                                    expected_asset), atol=0.0001))
+                                    expected_asset), atol=0.0, rtol=0.01))
 
-    def test_when_the_mean_is_zero_the_loss_ratio_is_zero(self):
-        """In sampled based, when an interpolated mean loss ratio is zero,
-        the resulting loss ratio is also zero.
-
-        This is how the interpolation is done:
-        mean_ratio = vuln_function.ordinate_for(ground_motion_field)
-
-        In this case, the first IML from the GMFs is 0.10 and the
-        mean loss ratio in the vulnerability function for that IML
-        is zero. So the resulting loss ratio must be zero.
+    def test_sampling_lr_gmfs_less_than_first_vulnimls(self):
+        """
+        Sampling loss ratios (covs greater than zero), Ground Motion Fields
+        IMLs outside range defined by Vulnerability function's imls, some
+        values are less than the lower bound.
         """
 
-        imls = [0.10, 0.30]
-        loss_ratios = [0.00, 0.10]
-        covs = [0.30, 0.30]
+        imls = [0.10, 0.30, 0.50, 1.00]
+        loss_ratios = [0.05, 0.10, 0.15, 0.30]
+        covs = [0.30, 0.30, 0.20, 0.20]
         vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
 
-        epsilons = [0.5377]
+        epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
+                    -0.4336, 0.3426, 3.5784, 2.7694]
+
         expected_asset = object()
 
-        gmfs = {"IMLs": (0.1000, )}
+        gmfs = {"IMLs": (0.08, 0.9706, 0.9572, 0.4854, 0.8003,
+                         0.1419, 0.4218, 0.9157, 0.05, 0.9595)}
 
-        self.assertEqual(0.0, compute_loss_ratios(
-            vuln_function, gmfs, EpsilonProvider(expected_asset, epsilons),
-            expected_asset)[0])
+        self.assertTrue(
+            numpy.allclose(
+                numpy.array([0.0, 0.3176, 0.4049, 0.0902,
+                              0.2793, 0.0636, 0.0932, 0.2472,
+                              0.0, 0.3020]),
+                compute_loss_ratios(vuln_function, gmfs,
+                    EpsilonProvider(expected_asset, epsilons),
+                    expected_asset), atol=0.0, rtol=0.01))
+
+    def test_sampling_lr_gmfs_greater_than_last_vulnimls(self):
+        """
+        Sampling loss ratios (covs greater than zero), Ground Motion Fields
+        IMLs outside range defined by Vulnerability function's imls, some
+        values are greater than the upper bound.
+        """
+
+        imls = [0.10, 0.30, 0.50, 1.00]
+        loss_ratios = [0.05, 0.10, 0.15, 0.30]
+        covs = [0.30, 0.30, 0.20, 0.20]
+        vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
+
+        epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
+                   -0.4336, 0.3426, 3.5784, 2.7694]
+
+        expected_asset = object()
+
+        gmfs = {"IMLs": (1.1, 0.9706, 0.9572, 0.4854, 0.8003,
+                         0.1419, 0.4218, 0.9157, 1.05, 0.9595)}
+
+        self.assertTrue(
+            numpy.allclose(
+                numpy.array([0.3272, 0.4105, 0.1800, 0.1710, 0.2508,
+                             0.0394, 0.1145, 0.2883, 0.5975, 0.4885]),
+                compute_loss_ratios(vuln_function, gmfs,
+                    EpsilonProvider(expected_asset, epsilons),
+                    expected_asset), atol=0.0, rtol=0.01))
 
     def test_loss_ratios_boundaries(self):
         """Loss ratios generation given a GMFs and a vulnerability function.

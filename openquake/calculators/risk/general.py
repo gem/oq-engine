@@ -640,10 +640,10 @@ def split_into_blocks(job_id, sites, block_size=BLOCK_SIZE):
                     sites=sites[i:i + block_size])
 
 
-def compute_bcr_for_block(job_id, points, get_loss_curve,
+def compute_bcr_for_block(job_ctxt, sites, get_loss_curve,
                           interest_rate, asset_life_expectancy):
     """
-    Compute and return Benefit-Cost Ratio data for a number of points.
+    Compute and return Benefit-Cost Ratio data for a number of sites.
 
     :param get_loss_curve:
         Function that takes three positional arguments: point object,
@@ -660,13 +660,16 @@ def compute_bcr_for_block(job_id, points, get_loss_curve,
     """
     # too many local vars (16/15) -- pylint: disable=R0914
     result = defaultdict(list)
+    job_id = job_ctxt.job_id
 
     vuln_curves = vulnerability.load_vuln_model_from_kvs(job_id)
     vuln_curves_retrofitted = vulnerability.load_vuln_model_from_kvs(
         job_id, retrofitted=True)
 
-    for point in points:
-        assets = BaseRiskCalculator.assets_for_cell(job_id, point.site)
+    for site in sites:
+        point = job_ctxt.region.grid.point_at(site)
+        assets = BaseRiskCalculator.assets_at(job_id, site)
+
         for asset in assets:
             vuln_function = vuln_curves[asset.taxonomy]
             loss_curve = get_loss_curve(point, vuln_function, asset)
@@ -845,21 +848,24 @@ def _sampled_based(vuln_function, gmf_set, epsilon_provider, asset):
 
     loss_ratios = []
 
-    means = vuln_function.loss_ratio_for(gmf_set["IMLs"])
-    covs = vuln_function.cov_for(gmf_set["IMLs"])
-
-    for mean_ratio, cov in zip(means, covs):
-        if mean_ratio <= 0.0:
+    for ground_motion_field in gmf_set["IMLs"]:
+        if ground_motion_field < vuln_function.imls[0]:
             loss_ratios.append(0.0)
         else:
+            if ground_motion_field > vuln_function.imls[-1]:
+                ground_motion_field = vuln_function.imls[-1]
+
+            mean_ratio = vuln_function.loss_ratio_for(ground_motion_field)
+
+            cov = vuln_function.cov_for(ground_motion_field)
             variance = (mean_ratio * cov) ** 2.0
 
             epsilon = epsilon_provider.epsilon(asset)
             sigma = math.sqrt(
-                        math.log((variance / mean_ratio ** 2.0) + 1.0))
+                math.log((variance / mean_ratio ** 2.0) + 1.0))
 
             mu = math.log(mean_ratio ** 2.0 / math.sqrt(
-                    variance + mean_ratio ** 2.0))
+                variance + mean_ratio ** 2.0))
 
             loss_ratios.append(math.exp(mu + (epsilon * sigma)))
 
