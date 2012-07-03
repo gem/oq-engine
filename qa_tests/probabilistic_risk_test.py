@@ -52,10 +52,10 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
 
         self._run_job(cfg)
         self._verify_job_succeeded(QA_OUTPUT_DIR)
-        self._verify_loss_maps(QA_OUTPUT_DIR, 0.15)
-        #self._verify_loss_ratio_curves(QA_OUTPUT_DIR, 0.25)
-        #self._verify_loss_curves(QA_OUTPUT_DIR, 0.25)
-        #self._verify_aggregate_curve(QA_OUTPUT_DIR, 0.25)
+        self._verify_loss_maps(QA_OUTPUT_DIR, 0.10)
+        self._verify_loss_ratio_curves(QA_OUTPUT_DIR, 0.10)
+        self._verify_loss_curves(QA_OUTPUT_DIR, 0.10)
+        self._verify_aggregate_curve(QA_OUTPUT_DIR, 0.10)
 
         # Cleaning generated results file.
         rmtree(QA_OUTPUT_DIR)
