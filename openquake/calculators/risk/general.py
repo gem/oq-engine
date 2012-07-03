@@ -848,21 +848,24 @@ def _sampled_based(vuln_function, gmf_set, epsilon_provider, asset):
 
     loss_ratios = []
 
-    means = vuln_function.loss_ratio_for(gmf_set["IMLs"])
-    covs = vuln_function.cov_for(gmf_set["IMLs"])
-
-    for mean_ratio, cov in zip(means, covs):
-        if mean_ratio <= 0.0:
+    for ground_motion_field in gmf_set["IMLs"]:
+        if ground_motion_field < vuln_function.imls[0]:
             loss_ratios.append(0.0)
         else:
+            if ground_motion_field > vuln_function.imls[-1]:
+                ground_motion_field = vuln_function.imls[-1]
+
+            mean_ratio = vuln_function.loss_ratio_for(ground_motion_field)
+
+            cov = vuln_function.cov_for(ground_motion_field)
             variance = (mean_ratio * cov) ** 2.0
 
             epsilon = epsilon_provider.epsilon(asset)
             sigma = math.sqrt(
-                        math.log((variance / mean_ratio ** 2.0) + 1.0))
+                math.log((variance / mean_ratio ** 2.0) + 1.0))
 
             mu = math.log(mean_ratio ** 2.0 / math.sqrt(
-                    variance + mean_ratio ** 2.0))
+                variance + mean_ratio ** 2.0))
 
             loss_ratios.append(math.exp(mu + (epsilon * sigma)))
 
