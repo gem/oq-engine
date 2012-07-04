@@ -179,6 +179,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         # Update job status to move on to the execution phase.
         self.job.status = 'executing'
         self.job.save()
+        import nose; nose.tools.set_trace()
         self.calc.execute()
         import nose; nose.tools.set_trace()
 
@@ -186,10 +187,10 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 class ImtsToNhlibTestCase(unittest.TestCase):
     """
     Tests for
-    :func:`openquake.calculators.hazard.classical.core_next.imts_to_nhlib`.
+    :func:`openquake.calculators.hazard.classical.core_next.im_dict_to_nhlib`.
     """
 
-    def test_imts_to_nhlib(self):
+    def test_im_dict_to_nhlib(self):
         imts_in = {
             'PGA': [1, 2],
             'PGV': [2, 3],
@@ -212,7 +213,7 @@ class ImtsToNhlibTestCase(unittest.TestCase):
             nhlib.imt.MMI(): [0.5, 0.6],
         }
 
-        actual = core_next.im_to_nhlib(imts_in)
+        actual = core_next.im_dict_to_nhlib(imts_in)
         self.assertEqual(len(expected), len(actual))
 
         for i, (exp_imt, exp_imls) in enumerate(expected.items()):

@@ -421,7 +421,7 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
             apply_uncertainties(nhlib_source)
             yield nhlib_source
 
-    imts = im_to_nhlib(hc.intensity_measure_types_and_levels)
+    imts = im_dict_to_nhlib(hc.intensity_measure_types_and_levels)
 
     # Now initialize the site collection for use in the calculation.
     # If there is no site model defined, we will use the same reference
@@ -467,16 +467,22 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
 
     with transaction.commit_on_success():
         for imt in hc.intensity_measure_types_and_levels.keys():
-            hc_progress = models.HazardCurveProgress.objects \
-                         .select_for_update() \
-                         .get(lt_realization=lt_rlz, imt=imt)
+            nhlib_imt = _imt_to_nhlib(imt)
+            query = """
+            SELECT * FROM htemp.hazard_curve_progress
+            WHERE lt_realization_id = %s
+            AND imt = %s
+            FOR UPDATE"""
+            [hc_progress] = models.HazardCurveProgress.objects.raw(
+                query, [lt_rlz.id, imt])
 
             # TODO: check here if any of records in source progress model
             # with parsed_source_id from src_ids are marked as complete,
             # and rollback and abort if there is at least one
 
             hc_progress.result_matrix = (
-                1 - (1 - hc_progress.result_matrix) * (1 - matrices[imt]))
+                1 - (1 - hc_progress.result_matrix)
+                * (1 - matrices[nhlib_imt]))
             hc_progress.save()
 
             models.SourceProgress.objects.filter(lt_realization=lt_rlz,
@@ -532,7 +538,7 @@ def signal_task_complete(job_id, num_sources):
             producer.publish(msg)
 
 
-def im_to_nhlib(im):
+def im_dict_to_nhlib(im_dict):
     """
     Given the dict of intensity measure types and levels, convert them to a
     dict with the same values, except create :mod:`mhlib.imt` objects for the
@@ -546,13 +552,23 @@ def im_to_nhlib(im):
     # Why are values of 0.0 not allowed?
     nhlib_im = {}
 
-    for imt, imls in im.items():
-        if 'SA' in imt:
-            match = re.match(r'^SA\((.+?)\)$', imt)
-            period = float(match.group(1))
-            nhlib_im[nhlib.imt.SA(period, DEFAULT_SA_DAMPING)] = imls
-        else:
-            imt_class = getattr(nhlib.imt, imt)
-            nhlib_im[imt_class()] = imls
+    for imt, imls in im_dict.items():
+        nhlib_imt = _imt_to_nhlib(imt)
+        nhlib_im[nhlib_imt] = imls
 
     return nhlib_im
+
+def _imt_to_nhlib(imt):
+    """Covert an IMT string to an nhlib object.
+
+    :param str imt:
+        Given the IMT string (defined in the job config file), convert it to
+        equivlent nhlib object. See :mod:`nhlib.imt`.
+    """
+    if 'SA' in imt:
+        match = re.match(r'^SA\((.+?)\)$', imt)
+        period = float(match.group(1))
+        return nhlib.imt.SA(period, DEFAULT_SA_DAMPING)
+    else:
+        imt_class = getattr(nhlib.imt, imt)
+        return imt_class()

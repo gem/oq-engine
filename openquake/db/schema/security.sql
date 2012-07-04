@@ -159,7 +159,7 @@ GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdr.uh_spectrum_data TO oq_reslt_writer;
 
 -- hzrdr.lt_realization
 GRANT SELECT ON hzrdr.lt_realization TO GROUP openquake;
-GRANT SELECT,INSERT,DELETE ON hzrdr.lt_realization TO oq_reslt_writer;
+GRANT SELECT,INSERT,UPDATE,DELETE ON hzrdr.lt_realization TO oq_reslt_writer;
 
 -- oqmif.exposure_data
 GRANT SELECT ON oqmif.exposure_data TO GROUP openquake;
