@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml" gml:id="n1">
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
   <sourceModel name="DISS Fault Model">
     <simpleFaultSource id="ALCS001" name="Southern Albania offshore" tectonicRegion="Active Shallow Crust">
       <simpleFaultGeometry>
