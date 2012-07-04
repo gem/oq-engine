@@ -20,24 +20,37 @@ Core functionality for the classical PSHA hazard calculator.
 import numpy
 import os
 import random
+import re
 import StringIO
+
+import kombu
+import nhlib
+import nhlib.calc
+import nhlib.imt
+import nhlib.site
 
 from django.db import transaction
 from celery.task import task
 from nrml import parsers as nrml_parsers
-import nhlib
 
 from openquake import engine2
 from openquake import writer
-from openquake.utils import config
-from openquake.utils import tasks as utils_tasks
 from openquake.calculators import base
 from openquake.calculators.hazard import general
 from openquake.db import models
 from openquake.input import logictree
 from openquake.input import source
-from openquake.job.validation import MIN_SINT_32
 from openquake.job.validation import MAX_SINT_32
+from openquake.job.validation import MIN_SINT_32
+from openquake.utils import config
+from openquake.utils import tasks as utils_tasks
+
+#: Default Spectral Acceleration damping. At the moment, this is not
+#: configurable.
+DEFAULT_SA_DAMPING = 5.0
+# Routing key format string for communication between tasks and the control
+# node.
+_ROUTING_KEY_FMT = 'oq.job.%(job_id)s.htasks'
 
 
 class ClassicalHazardCalculator(base.CalculatorNext):
@@ -256,30 +269,108 @@ class ClassicalHazardCalculator(base.CalculatorNext):
         """
         # TODO: better documentation
         # TODO: unittest
+        # TODO: Fix deadlocking of execute method when tasks encounter
+        # exceptions. Perhaps put in a try/except in the task and signal back
+        # the failure (via amqp)?
         job = self.job
         hc = job.hazard_calculation
-        sources_per_task = config.get('hazard', 'block_size')
+        sources_per_task = int(config.get('hazard', 'block_size'))
+        concurrent_tasks = int(config.get('hazard', 'concurrent_tasks'))
 
-        total_sources_to_compute = 0
+        # The following two counters are dicts so that we can use them in the
+        # closures below:
+        total_sources_to_compute = dict(value=0)
+        # When `sources_computed` becomes equal to `total_sources_to_compute`,
+        # `execute` can conclude.
+        sources_computed = dict(value=0)
 
-        realizations = models.LtRealization.objects.filter(
-                hazard_calculation=hc, is_complete=False)
+        def task_complete_callback(body, message):
+            """
+            :param dict body:
+                ``body`` is the message sent by the task. The dict should
+                contain 2 keys: `job_id` and `num_sources` (to indicate the
+                number of sources computed).
 
-        for lt_rlz in realizations:
-            source_progress = models.SourceProgress.objects.filter(
-                    is_complete=False, lt_realization=lt_rlz)
-            source_ids = source_progress.values_list('parsed_source_id',
-                                                     flat=True)
-            total_sources_to_compute += len(source_ids)
+                Both values are `int`.
+            :param message:
+                A :class:`kombu.transport.pyamqplib.Message`, which contains
+                metadata about the message (including content type, channel,
+                etc.). See kombu docs for more details.
+            """
+            job_id = body['job_id']
+            num_sources = body['num_sources']
 
-            for offset in xrange(0, len(source_ids), sources_per_task):
-                hazard_curves.apply_async(job.id, lt_rlz.id,
-                        source_ids[offset:offset + sources_per_task])
+            assert job_id == job.id
+            sources_computed['value'] += num_sources
 
-        # TODO: create a queue for this job for workers to report progress
-        # and listen on events on that queue, counting computed sources
-        # and comparing it with total_sources_to_compute. exit when two
-        # are equal
+            # TODO: do we actually need the ack?
+            message.ack()
+
+        def task_arg_gen():
+            """
+            Loop through realizations and sources to generate a sequence of
+            task arg tuples. Each tuple of args applies to a single tasks.
+
+            Yielded results are triples of (job_id, realization_id,
+            source_id_list).
+            """
+            realizations = models.LtRealization.objects.filter(
+                    hazard_calculation=hc, is_complete=False)
+
+            for lt_rlz in realizations:
+                source_progress = models.SourceProgress.objects.filter(
+                        is_complete=False, lt_realization=lt_rlz)
+                source_ids = source_progress.values_list('parsed_source_id',
+                                                         flat=True)
+                total_sources_to_compute['value'] += len(source_ids)
+
+                for offset in xrange(0, len(source_ids), sources_per_task):
+                    task_args = (job.id, lt_rlz.id,
+                                 source_ids[offset:offset + sources_per_task])
+                    yield task_args
+
+        task_gen = task_arg_gen()
+        # First: Queue up the initial tasks.
+        for _ in xrange(concurrent_tasks):
+            try:
+                hazard_curves.apply_async(task_gen.next())
+            except StopIteration:
+                # If we get a `StopIteration` here, that means we have a number
+                # of tasks < concurrent_tasks.
+                # This basically just means that we could be under-utilizing
+                # worker node resources.
+                break
+
+        exchange = kombu.Exchange(
+            config.get_section('hazard')['task_exchange'], type='direct')
+
+        routing_key = _ROUTING_KEY_FMT % dict(job_id=job.id)
+        task_signal_queue = kombu.Queue(
+            'htasks.job.%s' % job.id, exchange=exchange,
+            routing_key=routing_key)
+
+        amqp_cfg = config.get_section('amqp')
+        conn_args = {
+            'hostname': amqp_cfg['host'],
+            'userid': amqp_cfg['user'],
+            'password': amqp_cfg['password'],
+            'virtual_host': amqp_cfg['vhost'],
+        }
+
+        with kombu.BrokerConnection(**conn_args) as conn:
+            task_signal_queue(conn.channel()).declare()
+            with conn.Consumer(task_signal_queue,
+                               callbacks=[task_complete_callback]):
+                conn.drain_events()  # This blocks until a message is received.
+
+                while (sources_computed['value']
+                       < total_sources_to_compute['value']):
+                    try:
+                        hazard_curves.apply_async(task_gen.next())
+                    except StopIteration:
+                        # TODO: If the `task_gen` runs out before we compute
+                        # all sources, something is wrong. Raise an error.
+                        pass
 
 
 @task(ignore_result=True)
@@ -294,8 +385,11 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
     """
     # TODO: better documentation
     # TODO: unittest
-    # make sure the job is not yet finished and set up logging
-    utils_tasks.get_running_job(job_id)
+
+    # Make sure the job is not yet finished and set up logging.
+    # This will throw a JobCompletedError if the job is not currently in the
+    # `executing` phase.
+    utils_tasks.check_executing_job(job_id)
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
 
@@ -318,20 +412,47 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
         Performs lazy loading, converting and processing of sources.
         """
         for src_id in src_ids:
-            nrml_source = models.ParsedSource.objects.get(pk=src_id)
-            nhlib_source = source.nrml_to_nhlib(nrml_source)
+            parsed_source = models.ParsedSource.objects.get(pk=src_id)
+
+            nhlib_source = source.nrml_to_nhlib(
+                parsed_source.nrml, hc.rupture_mesh_spacing,
+                hc.width_of_mfd_bin, hc.area_source_discretization)
+
             apply_uncertainties(nhlib_source)
             yield nhlib_source
 
-    # TODO: convert here string ids of IMTs to nhlib objects (see nhlib.imt)
-    imts = hc.intensity_measure_types_and_levels
+    imts = im_to_nhlib(hc.intensity_measure_types_and_levels)
 
+    # Now initialize the site collection for use in the calculation.
+    # If there is no site model defined, we will use the same reference
+    # parameters (defined in the HazardCalculation) for every site.
+    site_data = models.SiteData.objects.filter(hazard_calculation=hc.id)
+    if len(site_data) > 0:
+        site_data = site_data[0]
+        sites = zip(site_data.lons, site_data.lats, site_data.vs30s,
+                    site_data.vs30_measured, site_data.z1pt0s,
+                    site_data.z2pt5s)
+        sites = [nhlib.site.Site(
+            nhlib.geo.Point(lon, lat), vs30, vs30m, z1pt0, z2pt5)
+            for lon, lat, vs30, vs30m, z1pt0, z2pt5 in sites]
+    else:
+        # Use the calculation reference parameters to make a site collection.
+        points = hc.points_to_compute()
+        measured = hc.reference_vs30_type == 'measured'
+        sites = [
+            nhlib.site.Site(pt, hc.reference_vs30_value, measured,
+                            hc.reference_depth_to_2pt5km_per_sec,
+                            hc.reference_depth_to_1pt0km_per_sec)
+            for pt in points]
+    site_coll = nhlib.site.SiteCollection(sites)
+
+    # Prepare args for the calculator.
     calc_kwargs = {'gsims': gsims,
                    'truncation_level': hc.truncation_level,
                    'time_span': hc.investigation_time,
                    'sources': gen_sources(),
                    'imts': imts,
-                   'sites': 'TODO: load sites collection'}
+                   'sites': site_coll}
 
     if hc.maximum_distance:
         dist = hc.maximum_distance
@@ -368,4 +489,70 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
 
             lt_rlz.save()
 
-    # TODO: signal back to calculator
+    # Last thing, signal back the control node to indicate the completion of
+    # task. The control node needs this to manage the task distribution and
+    # keep track of progress.
+    signal_task_complete(job_id, len(src_ids))
+
+
+def signal_task_complete(job_id, num_sources):
+    """
+    Send a signal back through a dedicated queue to the 'control node' to
+    notify of task completion and the number of sources computed.
+
+    Signalling back this metric is needed to tell the control node when it can
+    conclude its `execute` phase.
+
+    :param int job_id:
+        ID of a currently running :class:`~openquake.db.models.OqJob`.
+    :param int num_sources:
+        Number of sources computed in the completed task.
+    """
+    # TODO: The job ID may be redundant (since it's in the routing key), but
+    # we can put this here for a sanity check on the receiver side.
+    # Maybe we can remove this.
+    msg = dict(job_id=job_id, num_sources=num_sources)
+
+    exchange = kombu.Exchange(
+        config.get_section('hazard')['task_exchange'], type='direct')
+
+    amqp_cfg = config.get_section('amqp')
+    conn_args = {
+        'hostname': amqp_cfg['host'],
+        'userid': amqp_cfg['user'],
+        'password': amqp_cfg['password'],
+        'virtual_host': amqp_cfg['vhost'],
+    }
+
+    routing_key = _ROUTING_KEY_FMT % dict(job_id=job_id)
+
+    with kombu.BrokerConnection(**conn_args) as conn:
+        with conn.Producer(exchange=exchange,
+                           routing_key=routing_key) as producer:
+            producer.publish(msg)
+
+
+def im_to_nhlib(im):
+    """
+    Given the dict of intensity measure types and levels, convert them to a
+    dict with the same values, except create :mod:`mhlib.imt` objects for the
+    new keys.
+
+    :returns:
+        A dict of intensity measure level lists, keyed by an IMT object. See
+        :mod:`nhlib.imt` for more information.
+    """
+    # TODO: file a bug about  SA periods in nhlib imts.
+    # Why are values of 0.0 not allowed?
+    nhlib_im = {}
+
+    for imt, imls in im.items():
+        if 'SA' in imt:
+            match = re.match(r'^SA\((.+?)\)$', imt)
+            period = float(match.group(1))
+            nhlib_im[nhlib.imt.SA(period, DEFAULT_SA_DAMPING)] = imls
+        else:
+            imt_class = getattr(nhlib.imt, imt)
+            nhlib_im[imt_class()] = imls
+
+    return nhlib_im

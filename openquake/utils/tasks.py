@@ -23,6 +23,7 @@ import itertools
 from celery.task.sets import TaskSet
 
 from openquake import logs
+from openquake.db import models
 
 
 def distribute(task_func, (name, data), tf_args=None, ath=None, ath_args=None,
@@ -134,6 +135,24 @@ def get_running_job(job_id):
     logs.init_logs_amqp_send(level=level, job_id=job_id)
 
     return job_ctxt
+
+
+def check_executing_job(job_id):
+    """
+    Get an :class:`~openquake.db.models.OqJob` by ID which currently has the
+    status `executing`.
+
+    :param int job_id:
+        ID of an :class:`openquake.db.models.OqJob`.
+    :returns:
+        :class:`openquake.db.models.OqJob` instance, or `None` if no job
+        matches the criteria.
+    """
+    # TODO: what's the debug level?
+    logs.init_logs_amqp_send(level='warn', job_id=job_id)
+    jobs = models.OqJob.objects.filter(id=job_id, status='executing')
+    if len(jobs) == 0:
+        raise JobCompletedError(job_id)
 
 
 def calculator_for_task(job_id, job_type):

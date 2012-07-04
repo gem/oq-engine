@@ -16,15 +16,17 @@
 
 import unittest
 
+import nhlib.imt
+
 from openquake.db import models
 from openquake.calculators.hazard.classical import core_next
 
 from tests.utils import helpers
 
 
-class ClassicalHazardCalculatorPreExecuteTestCase(unittest.TestCase):
+class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     """
-    Tests for everything which needs to run during the `pre_execute` phase.
+    Tests for the main methods of the classical hazard calculator.
     """
 
     def setUp(self):
@@ -170,3 +172,49 @@ class ClassicalHazardCalculatorPreExecuteTestCase(unittest.TestCase):
                 lt_realization=ltr.id, imt="SA(0.025)")
             self.assertEqual((28, 19), hc_prog_sa.result_matrix.shape)
             self.assertTrue((hc_prog_sa.result_matrix == 0).all())
+
+    def test_execute(self):
+        self.calc.pre_execute()
+
+        # Update job status to move on to the execution phase.
+        self.job.status = 'executing'
+        self.job.save()
+        self.calc.execute()
+        import nose; nose.tools.set_trace()
+
+
+class ImtsToNhlibTestCase(unittest.TestCase):
+    """
+    Tests for
+    :func:`openquake.calculators.hazard.classical.core_next.imts_to_nhlib`.
+    """
+
+    def test_imts_to_nhlib(self):
+        imts_in = {
+            'PGA': [1, 2],
+            'PGV': [2, 3],
+            'PGD': [3, 4],
+            'SA(0.1)': [0.1, 0.2],
+            'SA(0.025)': [0.2, 0.3],
+            'IA': [0.3, 0.4],
+            'RSD': [0.4, 0.5],
+            'MMI': [0.5, 0.6],
+        }
+
+        expected = {
+            nhlib.imt.PGA(): [1, 2],
+            nhlib.imt.PGV(): [2, 3],
+            nhlib.imt.PGD(): [3, 4],
+            nhlib.imt.SA(0.1, core_next.DEFAULT_SA_DAMPING): [0.1, 0.2],
+            nhlib.imt.SA(0.025, core_next.DEFAULT_SA_DAMPING): [0.2, 0.3],
+            nhlib.imt.IA(): [0.3, 0.4],
+            nhlib.imt.RSD(): [0.4, 0.5],
+            nhlib.imt.MMI(): [0.5, 0.6],
+        }
+
+        actual = core_next.im_to_nhlib(imts_in)
+        self.assertEqual(len(expected), len(actual))
+
+        for i, (exp_imt, exp_imls) in enumerate(expected.items()):
+            act_imls = actual[exp_imt]
+            self.assertEqual(exp_imls, act_imls)
