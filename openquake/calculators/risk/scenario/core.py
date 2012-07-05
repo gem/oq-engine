@@ -188,12 +188,15 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                 self.job_ctxt.job_id, site)
 
             for asset in assets:
+
                 vuln_function = vuln_model[asset.taxonomy]
 
-                asset_mean_loss = compute_mean_loss(
-                    vuln_function, gmvs, epsilon_provider, asset)
+                #asset_mean_loss = compute_mean_loss(
+                #    vuln_function, gmvs, epsilon_provider, asset)
+                #asset_stddev_loss = compute_stddev_loss(
+                #    vuln_function, gmvs, epsilon_provider, asset)
 
-                asset_stddev_loss = compute_stddev_loss(
+                asset_mean_loss, asset_stddev_loss = compute_mean_and_stddev(
                     vuln_function, gmvs, epsilon_provider, asset)
 
                 asset_site = shapes.Site(asset.site.x, asset.site.y)
@@ -236,6 +239,7 @@ def _mean_loss_from_loss_ratios(loss_ratios, asset):
     """
 
     losses = loss_ratios * asset.value
+    ## insert here code for insured losses
     return numpy.mean(losses)
 
 
@@ -250,7 +254,19 @@ def _stddev_loss_from_loss_ratios(loss_ratios, asset):
     """
 
     losses = loss_ratios * asset.value
+    ## insert here code for insured losses
     return numpy.std(losses, ddof=1)
+
+
+def compute_mean_and_stddev(vuln_function, gmf_set, epsilon_provider, asset):
+
+    loss_ratios = general.compute_loss_ratios(
+        vuln_function, gmf_set, epsilon_provider, asset)
+    losses = loss_ratios * asset.value
+
+    mean = numpy.mean(losses)
+    stddev = numpy.std(losses, ddof=1)
+    return mean, stddev
 
 
 def compute_mean_loss(vuln_function, gmf_set,
