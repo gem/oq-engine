@@ -26,7 +26,7 @@ PERIOD = 0.0
 DAMPING = 5.0
 
 # NRML serialization of gmf-* files
-GMF_OUTPUT = false
+SAVE_GMFS = false
 
 # (None, 1 Sided, 2 Sided)
 GMPE_TRUNCATION_TYPE = 2 Sided
@@ -65,5 +65,3 @@ EXPOSURE = exposure_model.xml
 
 # file containing the vulnerability functions
 VULNERABILITY = vulnerability_model_non-zero_covs.xml
-
-EPSILON_RANDOM_SEED = 37

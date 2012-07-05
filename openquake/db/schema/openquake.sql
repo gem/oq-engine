@@ -245,6 +245,25 @@ SELECT AddGeometryColumn('hzrdi', 'simple_fault', 'edge', 4326, 'LINESTRING', 3)
 ALTER TABLE hzrdi.simple_fault ALTER COLUMN edge SET NOT NULL;
 SELECT AddGeometryColumn('hzrdi', 'simple_fault', 'outline', 4326, 'POLYGON', 3);
 
+-- Site-specific parameters for hazard calculations.
+CREATE TABLE hzrdi.site_model (
+    id SERIAL PRIMARY KEY,
+    input_id INTEGER NOT NULL,
+    -- Average shear wave velocity for top 30 m. Units m/s.
+    vs30 float NOT NULL CONSTRAINT site_model_vs30
+        CHECK(vs30 > 0.0),
+    -- 'measured' or 'inferred'. Identifies if vs30 value has been measured or inferred.
+    vs30_type VARCHAR NOT NULL CONSTRAINT site_model_vs30_type
+        CHECK(vs30_type in ('measured', 'inferred')),
+    -- Depth to shear wave velocity of 1.0 km/s. Units m.
+    z1pt0 float NOT NULL CONSTRAINT site_model_z1pt0
+        CHECK(z1pt0 > 0.0),
+    -- Depth to shear wave velocity of 2.5 km/s. Units km.
+    z2pt5 float NOT NULL CONSTRAINT site_model_z2pt5
+        CHECK(z2pt5 > 0.0)
+) TABLESPACE hzrdi_ts;
+SELECT AddGeometryColumn('hzrdi', 'site_model', 'location', 4326, 'POINT', 2);
+
 -- Magnitude frequency distribution, Evenly discretized
 CREATE TABLE hzrdi.mfd_evd (
     id SERIAL PRIMARY KEY,
@@ -486,6 +505,22 @@ CREATE TABLE hzrdi.focal_mechanism (
 ) TABLESPACE hzrdi_ts;
 
 
+-- Parsed sources
+CREATE TABLE hzrdi.parsed_source (
+    id SERIAL PRIMARY KEY,
+    input_id INTEGER NOT NULL,
+    source_type VARCHAR NOT NULL
+        CONSTRAINT enforce_source_type CHECK
+        (source_type IN ('area', 'point', 'complex', 'simple')),
+    blob TEXT NOT NULL,
+    geom geometry NOT NULL,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL,
+    CONSTRAINT enforce_dims_geom CHECK (ndims(geom) = 2),
+    CONSTRAINT enforce_srid_geom CHECK (srid(geom) = 4326)
+) TABLESPACE hzrdi_ts;
+
+
 -- A batch of OpenQuake input files uploaded by the user
 CREATE TABLE uiapi.upload (
     id SERIAL PRIMARY KEY,
@@ -509,6 +544,7 @@ CREATE TABLE uiapi.upload (
 CREATE TABLE uiapi.input (
     id SERIAL PRIMARY KEY,
     owner_id INTEGER NOT NULL,
+    model_content_id INTEGER,  -- TODO(larsbutler), May 11th 2012: Eventually make this is a required FK (NOT NULL).
     -- The full path of the input file on the server
     path VARCHAR NOT NULL,
     digest VARCHAR(32) NOT NULL,
@@ -522,9 +558,20 @@ CREATE TABLE uiapi.input (
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
         CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gmpe',
                              'exposure', 'fragility', 'rupture',
-                             'vulnerability', 'vulnerability_retrofitted')),
+                             'vulnerability', 'vulnerability_retrofitted',
+                             'site_model')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL
+) TABLESPACE uiapi_ts;
+
+
+CREATE TABLE uiapi.model_content (
+    id SERIAL PRIMARY KEY,
+    -- contains the raw text of an input file
+    raw_content TEXT NOT NULL,
+    content_type VARCHAR NOT NULL,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE uiapi_ts;
@@ -613,22 +660,14 @@ CREATE TABLE uiapi.oq_job_profile (
     --      relative significant duration (rsd)
     --      Modified Mercalli Intensity
     -- For UHS calculations, IMT should always be 'sa'.
-    imt VARCHAR NOT NULL CONSTRAINT imt_value
-        CHECK(((calc_mode = 'uhs') AND (imt = 'sa'))
-            OR (imt IN ('pga', 'sa', 'pgv', 'pgd', 'ia', 'rsd', 'mmi'))),
-    period float CONSTRAINT period_is_set
-        -- The 'period' parameter is only used when the intensity measure type is SA.
-        -- This rule only applies to calc modes != 'uhs' (the Uniform Hazard Spectra
-        -- calculator instead defines an array of periods).
-        CHECK(((imt = 'sa' AND calc_mode != 'uhs') AND (period IS NOT NULL))
-              OR ((imt != 'sa' OR calc_mode = 'uhs') AND (period IS NULL))),
+    imt VARCHAR,
+    period float,
     damping float CONSTRAINT damping_is_set
         CHECK(((imt = 'sa') AND (damping IS NOT NULL))
               OR ((imt != 'sa') AND (damping IS NULL))),
     truncation_type VARCHAR NOT NULL CONSTRAINT truncation_type_value
         CHECK(truncation_type IN ('none', 'onesided', 'twosided')),
     truncation_level float NOT NULL DEFAULT 3.0,
-    reference_vs30_value float NOT NULL,
     -- Intensity measure levels
     imls float[] CONSTRAINT imls_are_set
         CHECK(
@@ -673,8 +712,7 @@ CREATE TABLE uiapi.oq_job_profile (
             OR
             ((calc_mode NOT IN ('scenario', 'scenario_damage'))
              AND (rupture_surface_discretization IS NULL))),
-
-    aggregate_loss_curve boolean,
+    asset_correlation VARCHAR,
     area_source_discretization float
         CONSTRAINT area_source_discretization_is_set
         CHECK(
@@ -865,7 +903,6 @@ CREATE TABLE uiapi.oq_job_profile (
             OR
             ((calc_mode != 'classical')
              AND (quantile_levels IS NULL))),
-    reference_depth_to_2pt5km_per_sec_param float,
     rupture_aspect_ratio float
         CONSTRAINT rupture_aspect_ratio_is_set
         CHECK(
@@ -1079,15 +1116,13 @@ CREATE TABLE uiapi.oq_job_profile (
             ((calc_mode = 'uhs') AND (uhs_periods IS NOT NULL) AND (array_length(uhs_periods, 1) > 0))
             OR
             ((calc_mode != 'uhs') AND (uhs_periods IS NULL))),
-    depth_to_1pt_0km_per_sec float NOT NULL DEFAULT 100.0
+    reference_vs30_value float,
+    vs30_type VARCHAR DEFAULT 'measured' CONSTRAINT vs30_type_value
+        CHECK(vs30_type IN ('measured', 'inferred')),
+    depth_to_1pt_0km_per_sec float DEFAULT 100.0
         CONSTRAINT depth_to_1pt_0km_per_sec_above_zero
         CHECK(depth_to_1pt_0km_per_sec > 0.0),
-    vs30_type VARCHAR NOT NULL DEFAULT 'measured' CONSTRAINT vs30_type_value
-        CHECK(vs30_type IN ('measured', 'inferred')),
-    epsilon_random_seed INTEGER CONSTRAINT epsilon_rnd_seed_is_set
-        CHECK(
-            (calc_mode = 'scenario' AND epsilon_random_seed IS NOT NULL)
-            OR (calc_mode != 'scenario' AND epsilon_random_seed IS NULL)),
+    reference_depth_to_2pt5km_per_sec_param float,
     -- timestamp
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
@@ -1164,6 +1199,22 @@ CREATE TABLE uiapi.input2job (
     input_id INTEGER NOT NULL,
     oq_job_id INTEGER NOT NULL,
     UNIQUE (input_id, oq_job_id)
+) TABLESPACE uiapi_ts;
+
+
+-- Associate an 'lt_source' type input (a logic tree source) with 'source'
+-- type inputs (hazard sources referenced by the logic tree source).
+-- This is needed for worker-side logic tree processing.
+CREATE TABLE uiapi.src2ltsrc (
+    id SERIAL PRIMARY KEY,
+    -- foreign key to the input of type 'source'
+    hzrd_src_id INTEGER NOT NULL,
+    -- foreign key to the input of type 'lt_source'
+    lt_src_id INTEGER NOT NULL,
+    -- Due to input file reuse, the original file name may deviate from
+    -- the current. We hence need to capture the latter.
+    filename VARCHAR NOT NULL,
+    UNIQUE (hzrd_src_id, lt_src_id)
 ) TABLESPACE uiapi_ts;
 
 
@@ -1623,6 +1674,9 @@ CREATE TABLE riski.fragility_model (
     min_iml float,
     -- maximum IML value, only applicable to continuous fragility models.
     max_iml float,
+    -- defines the IML after which damage is observed, only applicable to
+    -- discrete fragility models.
+    no_damage_limit float,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE riski_ts;
@@ -1729,6 +1783,10 @@ FOREIGN KEY (mfd_tgr_id) REFERENCES hzrdi.mfd_tgr(id) ON DELETE RESTRICT;
 ALTER TABLE hzrdi.simple_fault ADD CONSTRAINT hzrdi_simple_fault_mfd_evd_fk
 FOREIGN KEY (mfd_evd_id) REFERENCES hzrdi.mfd_evd(id) ON DELETE RESTRICT;
 
+-- hzrdi.site_model
+ALTER TABLE hzrdi.site_model ADD CONSTRAINT hzrdi_site_model_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
+
 ALTER TABLE hzrdi.complex_fault ADD CONSTRAINT hzrdi_complex_fault_mfd_tgr_fk
 FOREIGN KEY (mfd_tgr_id) REFERENCES hzrdi.mfd_tgr(id) ON DELETE RESTRICT;
 
@@ -1756,6 +1814,9 @@ FOREIGN KEY (complex_fault_id) REFERENCES hzrdi.complex_fault(id) ON DELETE REST
 ALTER TABLE hzrdi.rupture ADD CONSTRAINT hzrdi_rupture_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
+ALTER TABLE hzrdi.parsed_source ADD CONSTRAINT hzrdi_parsed_source_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
+
 ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
@@ -1780,6 +1841,12 @@ FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
 ALTER TABLE uiapi.input2job ADD CONSTRAINT  uiapi_input2job_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
 
+ALTER TABLE uiapi.src2ltsrc ADD CONSTRAINT  uiapi_src2ltsrc_src_fk
+FOREIGN KEY (hzrd_src_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.src2ltsrc ADD CONSTRAINT  uiapi_src2ltsrc_ltsrc_fk
+FOREIGN KEY (lt_src_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
+
 ALTER TABLE uiapi.job2profile ADD CONSTRAINT
 uiapi_job2profile_oq_job_profile_fk FOREIGN KEY (oq_job_profile_id) REFERENCES
 uiapi.oq_job_profile(id) ON DELETE CASCADE;
@@ -1798,6 +1865,9 @@ FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
+
+ALTER TABLE uiapi.input ADD CONSTRAINT uiapi_input_model_content_fk
+FOREIGN KEY (model_content_id) REFERENCES uiapi.model_content(id) ON DELETE RESTRICT;
 
 ALTER TABLE uiapi.output ADD CONSTRAINT uiapi_output_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE RESTRICT;

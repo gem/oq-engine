@@ -16,12 +16,18 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
+"""
+Serializer and related functions to save exposure data to the database.
+"""
 
-"""Serializer to save exposure data to the database"""
+import os
 
 from openquake.db import models
 from django.db import router
 from django.db import transaction
+
+from openquake.parser import exposure
+from openquake import shapes
 
 
 class ExposureDBWriter(object):
@@ -98,3 +104,53 @@ class ExposureDBWriter(object):
                                     occupants=odata.occupants,
                                     description=odata.description)
             oobj.save()
+
+
+def read_sites_from_exposure(job_ctxt):
+    """
+    Given a :class:`JobContext` object, get all of the sites in the exposure
+    model which are contained by the region of interest (defined in the
+    `JobContext`).
+
+    It is assumed that exposure model is already loaded into the database.
+
+    :param job_ctxt:
+        :class:`JobContext` instance.
+    :returns:
+        `list` of :class:`openquake.shapes.Site` objects, with no duplicates
+    """
+
+    em_inputs = models.inputs4job(job_ctxt.job_id, input_type="exposure")
+    exp_points = models.ExposureData.objects.filter(
+        exposure_model__input__id__in=[em.id for em in em_inputs],
+        site__contained=job_ctxt.oq_job_profile.region).values(
+        'site').distinct()
+
+    return [shapes.Site(p['site'].x, p['site'].y) for p in exp_points]
+
+
+def store_exposure_assets(job_id, base_path):
+    """
+    Load exposure assets from input file and store them
+    into database.
+
+    If the given job already has an input of type `exposure`,
+    this function simply returns without doing anything.
+
+    :param job_id: the id of the job where the assets
+        belong to.
+    :type job_id: integer
+    :param base_path: the path where the application has been
+        triggered. It is used to properly locate the input
+        files, that are stored with a relative path.
+    :type base_path: string
+    """
+
+    [emi] = models.inputs4job(job_id, "exposure")
+    if emi.exposuremodel_set.all().count() > 0:
+        return
+
+    path = os.path.join(base_path, emi.path)
+    exposure_parser = exposure.ExposureModelFile(path)
+    writer = ExposureDBWriter(emi)
+    writer.serialize(exposure_parser)

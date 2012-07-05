@@ -355,17 +355,17 @@ def column_row_from_gmf_set_key(kvs_key):
     return kvs_key.split(_KVS_KEY_SEPARATOR)[2:]
 
 
-def ground_motion_values_key(job_id, point):
+def ground_motion_values_key(job_id, site):
     """
     Return the key used to store multiple realizations of ground motion
-    values for a single point in the grid.
+    values for a single site in the region of interest.
 
     :param job_id: the id of the job.
     :type job_id: integer
-    :param point: grid location of the GMF data
-    :type point: :py:class:`shapes.GridPoint` object
+    :param site: location of the GMF data.
+    :type site: :py:class:`openquake.shapes.Site` object
     :returns: the key.
     :rtype: string
     """
 
-    return _generate_key(job_id, GMFS_KEY_TOKEN, point.column, point.row)
+    return _generate_key(job_id, GMFS_KEY_TOKEN, hash(site))

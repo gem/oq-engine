@@ -139,6 +139,15 @@ def demo_file(file_name):
         os.path.dirname(__file__), "../../demos", file_name)
 
 
+def qa_file(file_name):
+    """
+    Take a file name and return the full path to the file in the qa_tests/data
+    directory.
+    """
+    return os.path.join(
+        os.path.dirname(__file__), "../../qa_tests/data", file_name)
+
+
 def testdata_path(file_name):
     """
     Take a file name and return the full path to the file in the
@@ -578,13 +587,16 @@ class DbTestCase(object):
         [input.delete() for input in inputs]
 
     @classmethod
-    def setup_job_profile(cls, job, force_inputs):
+    def setup_job_profile(cls, job, force_inputs, save2db=True):
         """Create a profile for the given job.
 
         :param job: The :class:`openquake.db.models.OqJob` instance to use
         :param bool force_inputs: If `True` the model input files will be
             parsed and the resulting content written to the database no matter
             what.
+        :param bool save2db: If `False` the job profile instance will be
+            returned but not saved to the database. Otherwise it is saved to
+            the database and returned then.
         :returns: a :class:`openquake.db.models.OqJobProfile` instance
         """
         oqjp = models.OqJobProfile()
@@ -641,7 +653,8 @@ class DbTestCase(object):
             "POLYGON((-81.3 37.2, -80.63 38.04, -80.02 37.49, -81.3 37.2))")
         oqjp.source_model_lt_random_seed = 23
         oqjp.gmpe_lt_random_seed = 5
-        oqjp.save()
+        if save2db:
+            oqjp.save()
         return oqjp
 
     @classmethod
@@ -810,3 +823,24 @@ def prepare_cli_output(raw_output, discard_header=True):
         lines.pop(0)
 
     return lines
+
+
+def prepare_job_context(path_to_cfg):
+    """Given a path to a config file, prepare and return a
+    :class:`openquake.engine.JobContext`. This convenient because it can be
+    immediately passed to a calculator constructor.
+
+    This also creates the necessary job and oq_job_profile records.
+    """
+    job = engine.prepare_job()
+
+    cfg = demo_file(path_to_cfg)
+
+    job_profile, params, sections = engine.import_job_profile(
+        cfg, job, force_inputs=True)
+
+    job_ctxt = engine.JobContext(
+        params, job.id, sections=sections, oq_job_profile=job_profile,
+        oq_job=job)
+
+    return job_ctxt

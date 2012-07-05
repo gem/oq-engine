@@ -36,7 +36,6 @@ LOGGER = logs.LOG
 # Too many public methods
 # pylint: disable=R0904
 
-
 class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
     """Calculator for Event-Based Risk computations."""
 
@@ -176,25 +175,6 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
 
         return gmfs
 
-    def _get_kvs_gmfs(self, sites, histories, realizations):
-        """Aggregates GMF data from the KVS by site"""
-        gmf_keys = self._sites_to_gmf_keys(sites)
-        gmfs = dict((k, []) for k in gmf_keys)
-
-        for i in range(0, histories):
-            for j in range(0, realizations):
-                key = kvs.tokens.stochastic_set_key(
-                    self.job_ctxt.job_id, i, j)
-                fieldset = shapes.FieldSet.from_json(kvs.get(key),
-                    self.job_ctxt.region.grid)
-
-                for field in fieldset:
-                    for key in gmfs.keys():
-                        (row, col) = key.split("!")
-                        gmfs[key].append(field.get(int(row), int(col)))
-
-        return gmfs
-
     def slice_gmfs(self, block_id):
         """Load and collate GMF values for all sites in this block. """
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
@@ -228,21 +208,24 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         # aggregate the losses for this block
         aggregate_curve = general.AggregateLossCurve()
 
-        for point in block.grid(self.job_ctxt.region):
-            key = kvs.tokens.gmf_set_key(self.job_ctxt.job_id, point.column,
-                                         point.row)
-            gmf_slice = kvs.get_value_json_decoded(key)
+        for site in block.sites:
+            point = self.job_ctxt.region.grid.point_at(site)
 
-            assets = self.assets_for_cell(self.job_ctxt.job_id, point.site)
+            key = kvs.tokens.gmf_set_key(
+                self.job_ctxt.job_id, point.column, point.row)
+
+            gmf = kvs.get_value_json_decoded(key)
+            assets = general.BaseRiskCalculator.assets_at(
+                self.job_ctxt.job_id, site)
+
             for asset in assets:
-                LOGGER.debug("Processing asset %s" % asset)
 
                 # loss ratios, used both to produce the curve
                 # and to aggregate the losses
-                loss_ratios = self.compute_loss_ratios(asset, gmf_slice)
+                loss_ratios = self.compute_loss_ratios(asset, gmf)
 
                 loss_ratio_curve = self.compute_loss_ratio_curve(
-                    point.column, point.row, asset, gmf_slice, loss_ratios)
+                    point.column, point.row, asset, gmf, loss_ratios)
 
                 aggregate_curve.append(loss_ratios * asset.value)
 
@@ -271,9 +254,9 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
 
         # aggregate the losses for this block
         aggregate_curve = general.AggregateLossCurve()
+        block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
+        points = list(block.grid(self.job_ctxt.region))
 
-        points = list(general.Block.from_kvs(
-            self.job_ctxt.job_id, block_id).grid(self.job_ctxt.region))
         gmf_slices = dict(
             (point.site, kvs.get_value_json_decoded(
                  kvs.tokens.gmf_set_key(self.job_ctxt.job_id, point.column,
@@ -297,13 +280,13 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
 
             return loss_ratio_curve.rescale_abscissae(asset.value)
 
-        result = general.compute_bcr_for_block(self.job_ctxt.job_id, points,
+        result = general.compute_bcr_for_block(self.job_ctxt, block.sites,
             get_loss_curve, float(self.job_ctxt.params['INTEREST_RATE']),
-            float(self.job_ctxt.params['ASSET_LIFE_EXPECTANCY'])
-        )
+            float(self.job_ctxt.params['ASSET_LIFE_EXPECTANCY']))
 
-        bcr_block_key = kvs.tokens.bcr_block_key(self.job_ctxt.job_id,
-                                                 block_id)
+        bcr_block_key = kvs.tokens.bcr_block_key(
+            self.job_ctxt.job_id, block_id)
+
         kvs.set_value_json_encoded(bcr_block_key, result)
         LOGGER.debug('bcr result for block %s: %r', block_id, result)
 
