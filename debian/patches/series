@@ -1,5 +1,3 @@
-acerisara-bug-984055.patch
-rm-oqmif-db-user
 oq-restart.patch
 config.patch
 oqpath.patch
