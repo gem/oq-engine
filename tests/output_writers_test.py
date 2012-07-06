@@ -19,7 +19,6 @@
 Database related unit tests for hazard computations with the hazard engine.
 """
 
-from collections import namedtuple
 import itertools
 import mock
 import string
@@ -28,8 +27,6 @@ import unittest
 from openquake import writer
 from openquake.output import hazard as hazard_output
 from openquake.output import risk as risk_output
-
-from tests.utils import helpers
 
 
 class ComposeWritersTest(unittest.TestCase):
@@ -113,22 +110,6 @@ class SMWrapper(object):
         return self.func(*args, **kwargs)
 
 
-class CreateHazardmapWriterTestCase(unittest.TestCase, CreateWriterTestBase):
-    """Tests for openquake.output.hazard.create_hazardmap_writer()."""
-
-    create_function = SMWrapper(hazard_output.create_hazardmap_writer)
-    xml_writer_class = hazard_output.HazardMapXMLWriter
-    db_writer_class = hazard_output.HazardMapDBWriter
-
-
-class CreateHazardcurveWriterTestCase(unittest.TestCase, CreateWriterTestBase):
-    """Tests for openquake.output.hazard.create_hazardcurve_writer()."""
-
-    create_function = SMWrapper(hazard_output.create_hazardcurve_writer)
-    xml_writer_class = hazard_output.HazardCurveXMLWriter
-    db_writer_class = hazard_output.HazardCurveDBWriter
-
-
 class CreateGMFWriterTestCase(unittest.TestCase, CreateWriterTestBase):
     """Tests for openquake.output.hazard.create_gmf_writer()."""
 
@@ -180,107 +161,6 @@ class CreateRiskWriterTest(unittest.TestCase):
 
         self.assertEqual(type(writer),
                 risk_output.LossMapDBWriter)
-
-
-class GetModeTestCase(helpers.RedisTestCase, unittest.TestCase):
-    """Tests the behaviour of output.hazard.get_mode()."""
-
-    # XML serialization context
-    XSC = namedtuple("XSC", "blocks, cblock, i_total, i_done, i_next")
-
-    def test_get_mode_at_start(self):
-        """
-        At the first block, no data serialized yet, the mode
-        returned has only the 'start' flag set.
-        """
-        hazard_output.SerializerContext().update(
-            self.XSC(blocks=3, cblock=1, i_total=5, i_done=0, i_next=2))
-        self.assertEqual((True, False, False),
-                         hazard_output.SerializerContext().get_mode())
-
-    def test_get_mode_at_start_with_some_data_serialized(self):
-        """
-        At the first block, with some data serialized already, the mode
-        returned has only the 'middle' flag set.
-        """
-        hazard_output.SerializerContext().update(
-            self.XSC(blocks=3, cblock=1, i_total=5, i_done=1, i_next=2))
-        self.assertEqual((False, True, False),
-                         hazard_output.SerializerContext().get_mode())
-
-    def test_get_mode_in_the_middle(self):
-        """
-        At a block in the middle, the mode returned has only the
-        'middle' flag set.
-        """
-        hazard_output.SerializerContext().update(
-            self.XSC(blocks=3, cblock=2, i_total=5, i_done=1, i_next=2))
-        self.assertEqual((False, True, False),
-                         hazard_output.SerializerContext().get_mode())
-
-    def test_get_mode_at_the_end(self):
-        """
-        At the last block, about to serialize the last batch of data, the
-        mode returned has only the 'end' flag set.
-        """
-        hazard_output.SerializerContext().update(
-            self.XSC(blocks=2, cblock=2, i_total=5, i_done=1, i_next=4))
-        self.assertEqual((False, False, True),
-                         hazard_output.SerializerContext().get_mode())
-
-    def test_get_mode_at_the_end_and_not_the_last_batch_of_data(self):
-        """
-        At the last block, about to serialize a batch of data but more
-        remains, the mode returned has only the 'middle' flag set.
-        """
-        hazard_output.SerializerContext().update(
-            self.XSC(blocks=2, cblock=2, i_total=6, i_done=1, i_next=4))
-        self.assertEqual((False, True, False),
-                         hazard_output.SerializerContext().get_mode())
-
-    def test_get_mode_with_single_block_at_start_and_multi_batch_start(self):
-        """
-        A single block with no data serialized yet. Data is serialized in
-        multiple batches and the next batch is not the last one.
-        The mode returned has only the 'start' flag set.
-        """
-        hazard_output.SerializerContext().update(
-            self.XSC(blocks=1, cblock=1, i_total=5, i_done=0, i_next=2))
-        self.assertEqual((True, False, False),
-                         hazard_output.SerializerContext().get_mode())
-
-    def test_get_mode_with_single_block_at_start_and_single_batch(self):
-        """
-        A single block with no data serialized yet. The data is serialized
-        in a single batch.
-        The mode returned has the 'start' and the 'end' flag set.
-        """
-        hazard_output.SerializerContext().update(
-            self.XSC(blocks=1, cblock=1, i_total=5, i_done=0, i_next=5))
-        self.assertEqual((True, False, True),
-                         hazard_output.SerializerContext().get_mode())
-
-    def test_get_mode_with_single_block_at_start_and_multi_batch_middle(self):
-        """
-        A single block with some data serialized already. Data is serialized in
-        multiple batches and the next batch is *not* the last one.
-        The mode returned has only the 'middle' flag set.
-        """
-        hazard_output.SerializerContext().update(
-            self.XSC(blocks=1, cblock=1, i_total=5, i_done=2, i_next=2))
-        self.assertEqual((False, True, False),
-                         hazard_output.SerializerContext().get_mode())
-
-    def test_get_mode_with_single_block_at_start_and_multi_batch_end(self):
-        """
-        A single block with some data serialized already. Data is serialized in
-        multiple batches and the next batch *is* the last one.
-        The mode returned has only the 'end' flag set.
-        """
-        hazard_output.SerializerContext().update(
-            self.XSC(blocks=1, cblock=1, i_total=5, i_done=3, i_next=2))
-        self.assertEqual((False, False, True),
-                         hazard_output.SerializerContext().get_mode())
 
 
 class CreateWriterTestCase(unittest.TestCase):
@@ -378,107 +258,4 @@ class CreateWriterTestCase(unittest.TestCase):
         self.assertEqual(2, self.d.call_count)
         self.assertEqual(2, self.x.call_count)
         self.assertEqual([self.dbs.next() - 1, self.xmls.next() - 1],
-                         [rw() for rw in result.writers])
-
-    def test__create_writers_with_multi_stage_and_curve(self):
-        """
-        Multi-stage XML serialization, both serializers are created, the XML
-        serializer is cached.
-        """
-        self._init_curve()
-        job_id = self.jobs.next()
-        nrml_path = self.files.next()
-        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
-                                              self.x, self.d, True)
-        self.assertEqual(1, self.d.call_count)
-        self.assertEqual(1, self.x.call_count)
-        xml_serializer = self.xmls.next() - 1
-        self.assertEqual([self.dbs.next() - 1, xml_serializer],
-                         [rw() for rw in result.writers])
-        # Next time we call the method under test it will invoke only
-        # the constructor for the db serializer and the cached xml serializer
-        # is returned.
-        # This only works if the function under test is called with the same
-        # 'job_id' and 'nrml_path'.
-        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
-                                              self.x, self.d, True)
-        self.assertEqual(2, self.d.call_count)
-        self.assertEqual(1, self.x.call_count)
-        self.assertEqual([self.dbs.next() - 1, xml_serializer],
-                         [rw() for rw in result.writers])
-
-    def test__create_writers_with_multi_stage_and_map(self):
-        """
-        Multi-stage XML serialization, both serializers are created, the XML
-        serializer is cached.
-        """
-        self._init_map()
-        job_id = self.jobs.next()
-        nrml_path = self.files.next()
-        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
-                                              self.x, self.d, True)
-        self.assertEqual(1, self.d.call_count)
-        self.assertEqual(1, self.x.call_count)
-        xml_serializer = self.xmls.next() - 1
-        self.assertEqual([self.dbs.next() - 1, xml_serializer],
-                         [rw() for rw in result.writers])
-        # Next time we call the method under test it will invoke only
-        # the constructor for the db serializer and the cached xml serializer
-        # is returned.
-        # This only works if the function under test is called with the same
-        # 'job_id' and 'nrml_path'.
-        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
-                                              self.x, self.d, True)
-        self.assertEqual(2, self.d.call_count)
-        self.assertEqual(1, self.x.call_count)
-        self.assertEqual([self.dbs.next() - 1, xml_serializer],
-                         [rw() for rw in result.writers])
-
-    def test__create_writers_with_multi_stage_and_curve_but_other_job(self):
-        """
-        Both serializers are created, the xml serializer is *not* cached
-        because the jobs differ.
-        """
-        self._init_curve()
-        job_id = self.jobs.next()
-        nrml_path = self.files.next()
-        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
-                                              self.x, self.d, True)
-        self.assertEqual(1, self.d.call_count)
-        self.assertEqual(1, self.x.call_count)
-        xml_serializer = self.xmls.next() - 1
-        self.assertEqual([self.dbs.next() - 1, xml_serializer],
-                         [rw() for rw in result.writers])
-        # We are passing different job identifiers to the method under test.
-        # It will thus call both constructors.  The serializers returned are
-        # different.
-        result = hazard_output._create_writer(self.jobs.next(), ["db", "xml"],
-                                              nrml_path, self.x, self.d, True)
-        self.assertEqual(2, self.d.call_count)
-        self.assertEqual(2, self.x.call_count)
-        self.assertEqual([self.dbs.next() - 1,  self.xmls.next() - 1],
-                         [rw() for rw in result.writers])
-
-    def test__create_writers_with_multi_stage_and_map_but_different_path(self):
-        """
-        Both serializers are created, the xml serializer is *not* cached
-        because the paths differ.
-        """
-        self._init_map()
-        job_id = self.jobs.next()
-        nrml_path = self.files.next()
-        result = hazard_output._create_writer(job_id, ["db", "xml"], nrml_path,
-                                              self.x, self.d, True)
-        self.assertEqual(1, self.d.call_count)
-        self.assertEqual(1, self.x.call_count)
-        xml_serializer = self.xmls.next() - 1
-        self.assertEqual([self.dbs.next() - 1, xml_serializer],
-                         [rw() for rw in result.writers])
-        # We are passing different paths to the method under test. It will
-        # thus call both constructors. The serializers returned are different.
-        result = hazard_output._create_writer(
-            job_id, ["db", "xml"], self.files.next(), self.x, self.d, True)
-        self.assertEqual(2, self.d.call_count)
-        self.assertEqual(2, self.x.call_count)
-        self.assertEqual([self.dbs.next() - 1,  self.xmls.next() - 1],
                          [rw() for rw in result.writers])

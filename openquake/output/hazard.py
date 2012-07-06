@@ -23,17 +23,13 @@ to NRML format.
 
 import logging
 
-from collections import defaultdict, namedtuple
 from lxml import etree
 
 from openquake import shapes
 from openquake import writer
 from openquake.db import models
 from openquake.job.params import REVERSE_ENUM_MAP
-from openquake.utils import config
-from openquake.utils import general
 from openquake.utils import round_float
-from openquake.utils import stats
 from openquake.xml import NSMAP, NRML, GML
 
 
@@ -59,18 +55,6 @@ class HazardCurveXMLWriter(writer.FileWriter):
         self.hcnode_counter = 0
         self.hcfield_counter = 0
 
-    def _maintain_debug_stats(self):
-        """Capture the file written if debug statistics are turned on."""
-        key = stats.key_name(config.Config().job_id,
-                             *stats.STATS_KEYS["hcls_xmlcurvewrites"])
-        if key:
-            stats.kvs_op("rpush", key, self.path)
-
-    def open(self):
-        """Make sure the mode is set before the base class' open is called."""
-        self.mode = SerializerContext().get_mode()
-        super(HazardCurveXMLWriter, self).open()
-
     def close(self):
         """Write all the collected lxml object model to the stream."""
 
@@ -79,13 +63,10 @@ class HazardCurveXMLWriter(writer.FileWriter):
                          "a valid output!")
             raise RuntimeError(error_msg)
 
-        self.mode = SerializerContext().get_mode()
-        if self.mode.end:
-            self._maintain_debug_stats()
-            self.file.write(etree.tostring(
-                self.nrml_el, pretty_print=True, xml_declaration=True,
-                encoding="UTF-8"))
-            writer.FileWriter.close(self)
+        self.file.write(etree.tostring(
+            self.nrml_el, pretty_print=True, xml_declaration=True,
+            encoding="UTF-8"))
+        writer.FileWriter.close(self)
 
     def write(self, point, values):
         """Write a hazard curve.
@@ -233,11 +214,6 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
         self.parent_node = None
         self.hazard_processing_node = None
 
-    def open(self):
-        """Make sure the mode is set before the base class' open is called."""
-        self.mode = SerializerContext().get_mode()
-        super(HazardMapXMLWriter, self).open()
-
     def write(self, point, val):
         """Writes hazard map for one site.
 
@@ -257,11 +233,7 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
     def write_header(self):
         """Header (i.e., common) information for all nodes."""
 
-        self.mode = SerializerContext().get_mode()
         LOGGER.debug("hazard map, write header!")
-        LOGGER.debug(self.mode)
-        if not self.mode.start:
-            return
 
         self.root_node = etree.Element(self.root_tag, nsmap=NSMAP)
         self.root_node.attrib['%sid' % GML] = self.NRML_DEFAULT_ID
@@ -281,27 +253,16 @@ class HazardMapXMLWriter(writer.XMLFileWriter):
             self.hazard_map_tag, nsmap=NSMAP)
         self.parent_node.attrib['%sid' % GML] = self.HAZARD_MAP_DEFAULT_ID
 
-    def _maintain_debug_stats(self):
-        """Capture the file written if debug statistics are turned on."""
-        key = stats.key_name(config.Config().job_id,
-                             *stats.STATS_KEYS["hcls_xmlmapwrites"])
-        if key:
-            stats.kvs_op("rpush", key, self.path)
-
     def write_footer(self):
         """Serialize tree to file."""
-
-        self.mode = SerializerContext().get_mode()
-        if self.mode.end:
-            self._maintain_debug_stats()
-            if self._ensure_all_attributes_set():
-                et = etree.ElementTree(self.root_node)
-                et.write(self.file, pretty_print=True, xml_declaration=True,
-                         encoding="UTF-8")
-            else:
-                error_msg = ("not all required attributes set in hazard curve "
-                             "dataset")
-                raise ValueError(error_msg)
+        if self._ensure_all_attributes_set():
+            et = etree.ElementTree(self.root_node)
+            et.write(self.file, pretty_print=True, xml_declaration=True,
+                     encoding="UTF-8")
+        else:
+            error_msg = ("not all required attributes set in hazard curve "
+                         "dataset")
+            raise ValueError(error_msg)
 
     def _append_node(self, point, val, parent_node):
         """Write HMNode element."""
@@ -611,13 +572,18 @@ class HazardMapDBWriter(writer.DBWriter):
 
         # get the value for HazardMap from the first value
         header = iterable[0][1]
-        self.hazard_map = models.HazardMap(
-            output=self.output, poe=header['poE'],
-            statistic_type=header['statistics'])
-        if header['statistics'] == 'quantile':
-            self.hazard_map.quantile = header['quantileValue']
+        fargs = dict(output=self.output, poe=header["poE"],
+                     statistic_type=header["statistics"])
+        if header["statistics"] == "quantile":
+            fargs.update(dict(quantile=header["quantileValue"]))
 
-        self.hazard_map.save()
+        one_or_none = models.HazardMap.objects.filter(**fargs)
+
+        if len(one_or_none) == 1:
+            self.hazard_map = one_or_none[0]
+        else:
+            self.hazard_map = models.HazardMap(**fargs)
+            self.hazard_map.save()
 
         # Update the output record with the minimum/maximum values.
         self.output.min_value = round_float(min(
@@ -722,12 +688,37 @@ class HazardCurveDBWriter(writer.DBWriter):
     """
     def __init__(self, nrml_path, oq_job_id):
         super(HazardCurveDBWriter, self).__init__(nrml_path, oq_job_id)
-
-        self.curves_per_branch_label = {}
         self.bulk_inserter = writer.BulkInserter(models.HazardCurveData)
+        self.hazard_curve = None
 
     def get_output_type(self):
         return "hazard_curve"
+
+    def prepare_curve(self, values):
+        """Create or find the needed hazard curve.
+
+        :param values: dictionary of metadata/values
+        :returns: a :py:class:`openquake.db.models.HazardCurve` instance
+        """
+        if self.hazard_curve is not None:
+            return self.hazard_curve
+
+        if 'endBranchLabel' in values:
+            fargs = dict(output=self.output,
+                         end_branch_label=values['endBranchLabel'])
+        else:
+            fargs = dict(output=self.output,
+                         statistic_type=values['statistics'])
+            if 'quantileValue' in values:
+                fargs.update(dict(quantile=values['quantileValue']))
+
+        one_or_none = models.HazardCurve.objects.filter(**fargs)
+        if len(one_or_none) == 1:
+            self.hazard_curve = one_or_none[0]
+        else:
+            self.hazard_curve = models.HazardCurve(**fargs)
+            self.hazard_curve.save()
+        return self.hazard_curve
 
     def insert_datum(self, point, values):
         """
@@ -744,31 +735,16 @@ class HazardCurveDBWriter(writer.DBWriter):
             error_msg = "hazardCurveField cannot have both an end branch " \
                         "and a statistics label"
             raise ValueError(error_msg)
-        elif 'endBranchLabel' in values:
-            curve_label = values['endBranchLabel']
-        elif 'statistics' in values:
-            curve_label = values['statistics']
+        elif "endBranchLabel" in values:
+            pass
+        elif "statistics" in values:
+            pass
         else:
             error_msg = "hazardCurveField has to have either an end branch " \
                         "or a statistics label"
             raise ValueError(error_msg)
 
-        if curve_label in self.curves_per_branch_label:
-            hazard_curve = self.curves_per_branch_label[curve_label]
-        else:
-            if 'endBranchLabel' in values:
-                hazard_curve = models.HazardCurve(
-                    output=self.output, end_branch_label=curve_label)
-            else:
-                hazard_curve = models.HazardCurve(
-                    output=self.output, statistic_type=curve_label)
-
-                if 'quantileValue' in values:
-                    hazard_curve.quantile = values['quantileValue']
-
-            self.curves_per_branch_label[curve_label] = hazard_curve
-            hazard_curve.save()
-
+        hazard_curve = self.prepare_curve(values)
         self.bulk_inserter.add_entry(
             hazard_curve_id=hazard_curve.id,
             poes=values['PoEValues'],
@@ -816,7 +792,6 @@ class GmfDBWriter(writer.DBWriter):
     def __init__(self, nrml_path, oq_job_id):
         super(GmfDBWriter, self).__init__(nrml_path, oq_job_id)
 
-        self.curves_per_branch_label = {}
         self.bulk_inserter = writer.BulkInserter(models.GmfData)
 
     def get_output_type(self):
@@ -837,13 +812,8 @@ class GmfDBWriter(writer.DBWriter):
             location="POINT(%s %s)" % (point.point.x, point.point.y))
 
 
-# Facilitate multi-stage XML serialization by using the same serializer
-# object for a given job and NRML path.
-_XML_SERIALIZER_CACHE = defaultdict(lambda: None)
-
-
 def _create_writer(job_id, serialize_to, nrml_path, create_xml_writer,
-                   create_db_writer, multistage_serialization=False):
+                   create_db_writer):
     """Common code for the functions below"""
 
     writers = []
@@ -854,48 +824,10 @@ def _create_writer(job_id, serialize_to, nrml_path, create_xml_writer,
         writers.append(create_db_writer(nrml_path, job_id))
 
     if 'xml' in serialize_to and nrml_path:
-        if multistage_serialization:
-            obj = _XML_SERIALIZER_CACHE[(job_id, nrml_path)]
-            if obj is None:
-                obj = create_xml_writer(nrml_path)
-                _XML_SERIALIZER_CACHE[(job_id, nrml_path)] = obj
-        else:
-            obj = create_xml_writer(nrml_path)
+        obj = create_xml_writer(nrml_path)
         writers.append(obj)
 
     return writer.compose_writers(writers)
-
-
-def create_hazardcurve_writer(job_id, serialize_to, nrml_path):
-    """Create a hazard curve writer observing the settings in the config file.
-
-    :param job_id: the id of the job the curve belongs to.
-    :type job_id: int
-    :param serialize_to: where to serialize
-    :type serialize_to: list of strings. Permitted values: 'db', 'xml'.
-    :param str nrml_path: the full path of the XML/NRML representation of the
-        hazard curve.
-    :returns: an :py:class:`output.hazard.HazardCurveXMLWriter` or an
-        :py:class:`output.hazard.HazardCurveDBWriter` instance.
-    """
-    return _create_writer(job_id, serialize_to, nrml_path,
-                          HazardCurveXMLWriter, HazardCurveDBWriter, True)
-
-
-def create_hazardmap_writer(job_id, serialize_to, nrml_path):
-    """Create a hazard map writer observing the settings in the config file.
-
-    :param job_id: the id of the job the curve belongs to.
-    :type job_id: int
-    :param serialize_to: where to serialize
-    :type serialize_to: list of strings. Permitted values: 'db', 'xml'.
-    :param str nrml_path: the full path of the XML/NRML representation of the
-        hazard map.
-    :returns: an :py:class:`output.hazard.HazardMapXMLWriter` or an
-        :py:class:`output.hazard.HazardMapDBWriter` instance.
-    """
-    return _create_writer(job_id, serialize_to, nrml_path, HazardMapXMLWriter,
-                          HazardMapDBWriter, True)
 
 
 def create_gmf_writer(job_id, serialize_to, nrml_path):
@@ -912,75 +844,3 @@ def create_gmf_writer(job_id, serialize_to, nrml_path):
     """
     return _create_writer(
         job_id, serialize_to, nrml_path, GMFXMLWriter, GmfDBWriter)
-
-
-@general.singleton
-class SerializerContext(object):
-    """Used to facilitate multi-stage XML serialization."""
-    def __init__(self):
-        self.blocks = 0
-        self.cblock = 0
-        self.i_total = 0
-        self.i_done = 0
-        self.i_next = 0
-
-    def update(self, context):
-        """Updates the serialization context.
-
-        :param namedtuple context: a `namedtuple` with the following
-            five integers:
-                - blocks: overall number of blocks the calculation is divided
-                    into
-                - cblock: current block number (1 based)
-                - i_total: overall number of items to be serialized in the
-                    current block
-                - i_done: number of items already serialized in the
-                    current block
-                - i_next: number of items to be serialized next
-        """
-        LOGGER.debug(context)
-        self.blocks = context.blocks
-        self.cblock = context.cblock
-        self.i_total = context.i_total
-        self.i_done = context.i_done
-        self.i_next = context.i_next
-
-    def get_mode(self):
-        """Figure out the XML serialization mode.
-
-        The possible modes are:
-            - start
-            - middle
-            - end
-            - start and end (single pass serialization)
-
-        :returns: a `namedtuple` with three booleans: start, middle and end
-            that are set to reflect the current serialization mode.
-        """
-        # Figure out the mode, are we at the beginning, in the middle or at
-        # the end of the XML file?
-
-        mode = namedtuple("SerializerMode", "start, middle, end")
-
-        if self.cblock > 1 and self.cblock < self.blocks:
-            return mode(False, True, False)
-
-        start = middle = end = False
-        if self.cblock == 1:
-            # We are serializing data from the first block.
-            if self.i_done == 0:
-                # First block, nothing serialized yet.
-                start = True
-            else:
-                middle = True
-        if self.cblock == self.blocks:
-            # We are serializing data from the last block.
-            items_left = self.i_total - self.i_done - self.i_next
-            if items_left == 0:
-                # Last block, last batch.
-                middle = False
-                end = True
-            elif not start:
-                middle = True
-
-        return mode(start, middle, end)
