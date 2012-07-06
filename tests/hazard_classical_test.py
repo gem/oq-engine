@@ -31,8 +31,7 @@ from openquake import logs
 from openquake import shapes
 from openquake.utils import stats
 
-from tests.utils.helpers import (patch, TestStore, demo_file,
-                                 create_job)
+from tests.utils.helpers import patch, TestStore, demo_file, create_job
 from tests.utils.tasks import (
     fake_compute_hazard_curve, test_async_data_reflector,
     test_compute_hazard_curve, test_data_reflector)
@@ -127,9 +126,7 @@ class DoCurvesTestCase(unittest.TestCase):
         stats.delete_job_counters(self.job_ctxt.job_id)
         try:
             self.calculator.do_curves(
-                self.sites, 2,
-                self.calculator.serialize_hazard_curve_of_realization,
-                fake_compute_hazard_curve)
+                self.sites, 2, self.calculator.ath, fake_compute_hazard_curve)
         except RuntimeError, err:
             self.assertTrue("h/fake_compute_hazard_curve-failures" in
                             err.args[0])
@@ -213,7 +210,7 @@ class DoMeansTestCase(unittest.TestCase):
         parameter is specified in the configuration file.
         """
 
-        def fake_serializer(sites, poes):
+        def fake_serializer(*args):
             """Fake serialization function to be used in this test."""
             # Check that the data returned is the one we expect for the current
             # realization.
@@ -501,17 +498,17 @@ class ClassicalExecuteTestCase(unittest.TestCase):
             - get passed 3, 3 and 2 sites on the 1st, 2nd and 3rd invocation
               respectively.
         """
-        data_slices = [self.sites[:3], self.sites[3:6], self.sites[6:]]
-        # Make sure no real logic is invoked.
-        with patch("openquake.input.logictree.LogicTreeProcessor"):
-            with patch("openquake.calculators.hazard.classical.core"
-                       ".release_data_from_kvs") as m:
-                self.calculator.execute()
-                self.assertEqual(3, m.call_count)
-                for idx, data_len in enumerate([3, 3, 2]):
-                    # Get the arguments for an invocation identified by `idx`.
-                    args = m.call_args_list[idx][0]
-                    self.assertEqual(data_slices[idx], args[1])
+        pps = classical.PSHA_KVS_PURGE_PARAMS(
+            self.job_ctxt.job_id, self.calculator.poes_hazard_maps,
+            self.calculator.quantile_levels,
+            self.job_ctxt["NUMBER_OF_LOGIC_TREE_SAMPLES"],
+            self.job_ctxt.sites_to_compute())
+        with patch("openquake.calculators.hazard.classical.core"
+                   ".release_data_from_kvs") as m:
+            self.calculator.clean_up()
+            self.assertEqual(1, m.call_count)
+            args = m.call_args_list[0][0][0]
+            self.assertEqual(pps, args)
 
 
 class ReleaseDataFromKvsTestCase(unittest.TestCase):
@@ -523,7 +520,6 @@ class ReleaseDataFromKvsTestCase(unittest.TestCase):
     REALIZATIONS = 2
     POES = [0.01, 0.1]
     QUANTILES = [0.25, 0.5]
-    ARGS = (SITES, REALIZATIONS, QUANTILES, POES, None)
 
     def _populate_data_in_kvs(self, job_id, keys):
         """Load the data to be purged into the kvs."""
@@ -553,7 +549,9 @@ class ReleaseDataFromKvsTestCase(unittest.TestCase):
         self._populate_data_in_kvs(job_id, keys)
         self.assertEqual(sorted(k % job_id for k in keys),
                          sorted(self._keys_found(job_id, keys)))
-        classical.release_data_from_kvs(job_id, *self.ARGS)
+        pps = classical.PSHA_KVS_PURGE_PARAMS(
+            job_id, self.POES, self.QUANTILES, self.REALIZATIONS, self.SITES)
+        classical.release_data_from_kvs(pps)
         self.assertFalse(self._keys_found(job_id, keys))
 
     def test_curve_data(self):
