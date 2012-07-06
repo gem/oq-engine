@@ -38,6 +38,7 @@ from openquake.calculators.hazard import CALCULATORS
 from openquake.calculators.hazard import general as hazard_general
 from openquake.calculators.hazard.classical import core as classical
 from openquake.engine import JobContext
+from openquake.export import psha
 from openquake.job import params as job_params
 from openquake.kvs import tokens
 from openquake.nrml.utils import nrml_schema_file
@@ -130,7 +131,7 @@ class HazardEngineTestCase(unittest.TestCase):
             hazard maps have been written to KVS."""
 
             if (the_job.params[hazard_general.POES_PARAM_NAME] != '' and
-                the_job.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == \
+                the_job.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() ==
                 'true'):
 
                 LOG.debug("verifying KVS entries for mean hazard maps")
@@ -148,7 +149,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
             quantiles = calculator.quantile_levels
 
-            LOG.debug("verifying KVS entries for quantile hazard curves, "\
+            LOG.debug("verifying KVS entries for quantile hazard curves, "
                 "%s quantile values" % len(quantiles))
 
             for quantile in quantiles:
@@ -168,7 +169,7 @@ class HazardEngineTestCase(unittest.TestCase):
 
                 poes = calculator.poes_hazard_maps
 
-                LOG.debug("verifying KVS entries for quantile hazard maps, "\
+                LOG.debug("verifying KVS entries for quantile hazard maps, "
                     "%s quantile values, %s PoEs" % (
                     len(quantiles), len(poes)))
 
@@ -189,15 +190,14 @@ class HazardEngineTestCase(unittest.TestCase):
                 the_job.params['NUMBER_OF_LOGIC_TREE_SAMPLES'])
             for realization in xrange(0, realizations):
 
-                nrml_path = os.path.join(
-                    "demos/classical_psha_simple/computed_output",
-                    calculator.hazard_curve_filename(realization))
+                nrml_path = psha.nrml_path(calculator.job_ctxt, "curve",
+                                           realization)
 
                 LOG.debug("validating NRML file %s" % nrml_path)
 
                 self.assertTrue(xml.validates_against_xml_schema(
                     nrml_path, NRML_SCHEMA_PATH),
-                    "NRML instance file %s does not validate against schema" \
+                    "NRML instance file %s does not validate against schema"
                     % nrml_path)
 
         def verify_mean_haz_curves_stored_to_nrml(the_job, calculator):
@@ -207,15 +207,13 @@ class HazardEngineTestCase(unittest.TestCase):
             """
 
             if the_job.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == 'true':
-                nrml_path = os.path.join(
-                    "demos/classical_psha_simple/computed_output",
-                    calculator.mean_hazard_curve_filename())
+                nrml_path = psha.nrml_path(calculator.job_ctxt, "mean")
 
                 LOG.debug("validating NRML file %s" % nrml_path)
 
                 self.assertTrue(xml.validates_against_xml_schema(
                     nrml_path, NRML_SCHEMA_PATH),
-                    "NRML instance file %s does not validate against schema" \
+                    "NRML instance file %s does not validate against schema"
                     % nrml_path)
 
         def verify_mean_haz_maps_stored_to_nrml(the_job):
@@ -224,20 +222,19 @@ class HazardEngineTestCase(unittest.TestCase):
             Does NOT test if results in NRML file are correct.
             """
             if (the_job.params[hazard_general.POES_PARAM_NAME] != '' and
-                the_job.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() == \
+                the_job.params['COMPUTE_MEAN_HAZARD_CURVE'].lower() ==
                 'true'):
 
                 for poe in calculator.poes_hazard_maps:
-                    nrml_path = os.path.join(
-                        "demos/classical_psha_simple/computed_output",
-                        calculator.mean_hazard_map_filename(poe))
+                    _, nrml_path, _ = psha.hms_meta(
+                        calculator.job_ctxt, "mean", (poe,))
 
-                    LOG.debug("validating NRML file for mean hazard map %s" \
+                    LOG.debug("validating NRML file for mean hazard map %s"
                         % nrml_path)
 
                     self.assertTrue(xml.validates_against_xml_schema(
                         nrml_path, NRML_SCHEMA_PATH),
-                        "NRML instance file %s does not validate against "\
+                        "NRML instance file %s does not validate against "
                         "schema" % nrml_path)
 
         def verify_quantile_haz_curves_stored_to_nrml(the_job, calculator):
@@ -248,16 +245,14 @@ class HazardEngineTestCase(unittest.TestCase):
 
             for quantile in calculator.quantile_levels:
 
-                nrml_path = os.path.join(
-                    "demos/classical_psha_simple/computed_output",
-                    calculator.quantile_hazard_curve_filename(quantile))
-
-                LOG.debug("validating NRML file for quantile hazard curve: "\
+                nrml_path = psha.nrml_path(calculator.job_ctxt, "quantile",
+                                           quantile)
+                LOG.debug("validating NRML file for quantile hazard curve: "
                     "%s" % nrml_path)
 
                 self.assertTrue(xml.validates_against_xml_schema(
                     nrml_path, NRML_SCHEMA_PATH),
-                    "NRML instance file %s does not validate against schema" \
+                    "NRML instance file %s does not validate against schema"
                     % nrml_path)
 
         def verify_quantile_haz_maps_stored_to_nrml(the_job, calculator):
@@ -273,17 +268,15 @@ class HazardEngineTestCase(unittest.TestCase):
 
                 for poe in calculator.poes_hazard_maps:
                     for quantile in quantiles:
-                        nrml_path = os.path.join(
-                            "demos/classical_psha_simple/computed_output",
-                            calculator.quantile_hazard_map_filename(quantile,
-                                                                   poe))
+                        _, nrml_path, _ = psha.hms_meta(
+                            calculator.job_ctxt, "quantile", (poe, quantile))
 
-                        LOG.debug("validating NRML file for quantile hazard "\
+                        LOG.debug("validating NRML file for quantile hazard "
                             "map: %s" % nrml_path)
 
                         self.assertTrue(xml.validates_against_xml_schema(
                             nrml_path, NRML_SCHEMA_PATH),
-                            "NRML instance file %s does not validate against "\
+                            "NRML instance file %s does not validate against "
                             "schema" % nrml_path)
 
         base_path = helpers.testdata_path("classical_psha_simple")
@@ -300,8 +293,10 @@ class HazardEngineTestCase(unittest.TestCase):
         calc_mode = job_profile.calc_mode
         calculator = CALCULATORS[calc_mode](the_job)
 
+        calculator.execute()
+        calculator.post_execute()
         used_keys = []
-        calculator.execute(used_keys)
+        calculator.clean_up(used_keys)
 
         verify_realization_haz_curves_stored_to_kvs(the_job, used_keys)
         verify_realization_haz_curves_stored_to_nrml(the_job, calculator)

@@ -26,23 +26,27 @@ class Calculator(object):
         """
         self.job_ctxt = job_ctxt
 
-    def initialize(self):
+    def initialize(self, *args, **kwargs):
         """Implement this method in subclasses to record pre-execution stats,
         estimate the calculation size, etc."""
 
-    def pre_execute(self):
+    def pre_execute(self, *args, **kwargs):
         """Implement this method in subclasses to perform pre-execution
         functions, such as instantiating objects need for the calculation and
         loading calculation data into a cache."""
 
-    def execute(self):
+    def execute(self, *args, **kwargs):
         """This is only method that subclasses are required to implement. This
         should contain all of the calculation logic."""
         raise NotImplementedError()
 
-    def post_execute(self):
+    def post_execute(self, *args, **kwargs):
         """Implement this method in subclasses to perform post-execution
-        functions, such as result serialization and garbage collection."""
+           functions, such as result serialization."""
+
+    def clean_up(self, *args, **kwargs):
+        """Implement this method in subclasses to perform clean-up actions
+           like garbage collection, etc."""
 
 
 class CalculatorNext(object):

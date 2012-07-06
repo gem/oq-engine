@@ -48,6 +48,23 @@ def HAZARD_CURVE_DATA():
           'IMLValues': [0.778, 1.09, 1.52, 2.13],
           'PoEValues': [0.354, 0.114, 0.023, 0.002],
           'IMT': 'PGA',
+          'endBranchLabel': '1'}),
+        (Site(-122.1, 37.5),
+         {'investigationTimeSpan': '50.0',
+          'IMLValues': [0.778, 1.09, 1.52, 2.13],
+          'PoEValues': [0.454, 0.214, 0.123, 0.102],
+          'IMT': 'PGA',
+          'endBranchLabel': '1'}),
+    ]
+
+
+def MEAN_CURVE_DATA():
+    return [
+        (Site(-122.2, 37.5),
+         {'investigationTimeSpan': '50.0',
+          'IMLValues': [0.778, 1.09, 1.52, 2.13],
+          'PoEValues': [0.354, 0.114, 0.023, 0.002],
+          'IMT': 'PGA',
           'statistics': 'mean'}),
         (Site(-122.1, 37.5),
          {'investigationTimeSpan': '50.0',
@@ -55,6 +72,11 @@ def HAZARD_CURVE_DATA():
           'PoEValues': [0.454, 0.214, 0.123, 0.102],
           'IMT': 'PGA',
           'statistics': 'mean'}),
+    ]
+
+
+def QUANTILE_CURVE_DATA():
+    return [
         (Site(-122.2, 37.5),
          {'investigationTimeSpan': '50.0',
           'IMLValues': [0.778, 1.09, 1.52, 2.13],
@@ -69,18 +91,6 @@ def HAZARD_CURVE_DATA():
           'IMT': 'PGA',
           'statistics': 'quantile',
           'quantileValue': 0.25}),
-        (Site(-122.2, 37.5),
-         {'investigationTimeSpan': '50.0',
-          'IMLValues': [0.778, 1.09, 1.52, 2.13],
-          'PoEValues': [0.354, 0.114, 0.023, 0.002],
-          'IMT': 'PGA',
-          'endBranchLabel': '1'}),
-        (Site(-122.1, 37.5),
-         {'investigationTimeSpan': '50.0',
-          'IMLValues': [0.778, 1.09, 1.52, 2.13],
-          'PoEValues': [0.454, 0.214, 0.123, 0.102],
-          'IMT': 'PGA',
-          'endBranchLabel': '1'}),
     ]
 
 
@@ -113,9 +123,18 @@ class HazardCurveDBReadTestCase(unittest.TestCase, helpers.DbTestCase):
     """
     def setUp(self):
         self.job = self.setup_classic_job()
-        output_path = self.generate_output_path(self.job)
+        output_path = self.generate_output_path(self.job,
+                                                output_type="hazard_curve")
         hcw = HazardCurveDBWriter(output_path, self.job.id)
         hcw.serialize(HAZARD_CURVE_DATA())
+        output_path = self.generate_output_path(self.job,
+                                                output_type="hazard_curve")
+        hcw = HazardCurveDBWriter(output_path, self.job.id)
+        hcw.serialize(MEAN_CURVE_DATA())
+        output_path = self.generate_output_path(self.job,
+                                                output_type="hazard_curve")
+        hcw = HazardCurveDBWriter(output_path, self.job.id)
+        hcw.serialize(QUANTILE_CURVE_DATA())
 
     def tearDown(self):
         if hasattr(self, "job") and self.job:
