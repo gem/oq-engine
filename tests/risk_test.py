@@ -1188,40 +1188,38 @@ class ScenarioEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
         self.gmfs = {"IMLs": (0.1576, 0.9706, 0.9572, 0.4854, 0.8003,
                      0.1419, 0.4218, 0.9157, 0.7922, 0.9595)}
 
-    def test_computes_the_mean_loss_from_loss_ratios(self):
-        asset = models.ExposureData(exposure_model=self.emdl, stco=1000)
-        loss_ratios = numpy.array([0.20, 0.05, 0.10, 0.05, 0.10])
+        self.asset = models.ExposureData(exposure_model=self.emdl, stco=1000)
+        self.eps_provider = EpsilonProvider(self.asset, self.epsilons)
 
-        self.assertEqual(100, scenario._mean_loss_from_loss_ratios(
-                         loss_ratios, asset))
+    def test_compute_uninsured_losses(self):
+        expected = numpy.array([72.23120833, 410.55950159, 180.02423357,
+                                171.02684563, 250.77079384, 39.45861103,
+                                114.54372035, 288.28653452, 473.38307021,
+                                488.47447798])
 
-    def test_computes_the_mean_loss(self):
-        asset = models.ExposureData(exposure_model=self.emdl, stco=10)
-        epsilon_provider = EpsilonProvider(asset, self.epsilons)
+        self.assertTrue(numpy.allclose(expected,
+            scenario.compute_uninsured_losses(self.vuln_function,
+                self.gmfs, self.eps_provider, self.asset)))
 
-        self.assertTrue(numpy.allclose(2.4887999999999999,
-                        scenario.compute_mean_loss(
-                            self.vuln_function, self.gmfs, epsilon_provider,
-                            asset),
-                        atol=0.0001))
+    def test_insurance_boundaries_defined(self):
+        self.asset.ref = 'a14'
+        self.asset.ins_limit = 700
+        self.asset.deductible = 300
+        self.assertTrue(scenario.insurance_boundaries_defind(self.asset))
 
-    def test_computes_the_stddev_loss_from_loss_ratios(self):
-        asset = models.ExposureData(exposure_model=self.emdl, stco=1000)
-        loss_ratios = numpy.array([0.20, 0.05, 0.10, 0.05, 0.10])
+        self.asset.ins_limit = None
+        self.assertRaises(RuntimeError, scenario.insurance_boundaries_defind,
+                self.asset)
 
-        self.assertTrue(numpy.allclose(61.237,
-                        scenario._stddev_loss_from_loss_ratios(
-                        loss_ratios, asset), atol=0.001))
+    def test_compute_insured_losses(self):
+        self.asset.deductible = 150
+        self.asset.ins_limit = 300
+        expected = numpy.array([0, 300, 180.02423357, 171.02684563,
+                                250.77079384, 0, 0, 288.28653452, 300, 300])
 
-    def test_computes_the_stddev_loss(self):
-        asset = models.ExposureData(exposure_model=self.emdl, stco=10)
-        epsilon_provider = EpsilonProvider(asset, self.epsilons)
-
-        self.assertTrue(numpy.allclose(1.631,
-                        scenario.compute_stddev_loss(
-                            self.vuln_function, self.gmfs, epsilon_provider,
-                            asset),
-                        atol=0.002))
+        self.assertTrue(numpy.allclose(expected,
+            scenario.compute_insured_losses(self.vuln_function,
+                self.gmfs, self.eps_provider, self.asset)))
 
     def test_calls_the_loss_ratios_calculator_correctly(self):
         gmfs = {"IMLs": ()}

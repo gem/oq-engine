@@ -162,9 +162,11 @@ def define_param(name, column, modes=None, default=None, to_db=None,
                              java_name=java_name)
     else:
         column_type = type(OqJobProfile._meta.get_field_by_name(column)[0])
+
         PARAMS[name] = Param(column=column, type=column_type,
                              default=default, modes=modes, to_db=to_db,
                              to_job=to_job, java_name=java_name)
+
 
 
 # A few helper functions for transforming job config params when they are read
@@ -408,3 +410,6 @@ define_param('WIDTH_OF_MFD_BIN', 'width_of_mfd_bin',
              modes=('classical', 'event_based', 'disaggregation', 'uhs',
                     'classical_bcr', 'event_based_bcr'),
              to_job=float)
+define_param('INSURED_LOSSES', 'insured_losses',
+             modes='scenario', to_job=str2bool)
+
