@@ -667,18 +667,17 @@ def compute_bcr_for_block(job_ctxt, sites, get_loss_curve,
         job_id, retrofitted=True)
 
     for site in sites:
-        point = job_ctxt.region.grid.point_at(site)
         assets = BaseRiskCalculator.assets_at(job_id, site)
 
         for asset in assets:
             vuln_function = vuln_curves[asset.taxonomy]
-            loss_curve = get_loss_curve(point, vuln_function, asset)
+            loss_curve = get_loss_curve(site, vuln_function, asset)
             LOG.info('for asset %s loss_curve = %s',
                      asset.asset_ref, loss_curve)
             eal_original = compute_mean_loss(loss_curve)
 
             vuln_function = vuln_curves_retrofitted[asset.taxonomy]
-            loss_curve = get_loss_curve(point, vuln_function, asset)
+            loss_curve = get_loss_curve(site, vuln_function, asset)
             LOG.info('for asset %s loss_curve retrofitted = %s',
                      asset.asset_ref, loss_curve)
             eal_retrofitted = compute_mean_loss(loss_curve)

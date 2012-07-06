@@ -19,16 +19,14 @@
 
 """Core functionality for Event-Based Risk calculations."""
 
-from numpy import zeros
-
 from celery.exceptions import TimeoutError
 
 from openquake import kvs
 from openquake import logs
-from openquake import shapes
 from openquake.db import models
 from openquake.parser import vulnerability
 from openquake.calculators.risk import general
+from django.contrib.gis import geos
 
 LOGGER = logs.LOG
 
@@ -124,70 +122,18 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         """Return the time span specified for this job."""
         return float(self.job_ctxt.params["INVESTIGATION_TIME"])
 
-    def _gmf_db_list(self, job_id):  # pylint: disable=R0201
-        """Returns a list of the output IDs of all computed GMFs"""
+    def _get_gmvs_at(self, site, job_id):
+# TODO (ac): Add doc!..
+# TODO (ac): Add tests!..
+        output_ids = models.Output.objects.filter(
+            oq_job=job_id, output_type="gmf")
 
-        ids = models.Output.objects.filter(
-            oq_job=job_id, output_type='gmf').values_list('id',
-                                                                  flat=True)
+        gmvs = models.GmfData.objects.filter(output__in=output_ids,
+            location=geos.Point(site.longitude,
+            site.latitude)).order_by("output")
 
-        return list(ids)
-
-    def _get_db_gmf(self, gmf_id):
-        """Returns a field for the given GMF"""
-        grid = self.job_ctxt.region.grid
-        field = zeros((grid.rows, grid.columns))
-
-        gmf_sites = models.GmfData.objects.filter(output=gmf_id)
-
-        for gmf_site in gmf_sites:
-            loc = gmf_site.location
-            site = shapes.Site(loc.x, loc.y)
-            grid_point = grid.point_at(site)
-
-            field[grid_point.row][grid_point.column] = gmf_site.ground_motion
-
-        return shapes.Field(field)
-
-    def _sites_to_gmf_keys(self, sites):
-        """Returns the GMF keys "row!col" for the given site list"""
-        keys = []
-
-        for site in sites:
-            risk_point = self.job_ctxt.region.grid.point_at(site)
-            key = "%s!%s" % (risk_point.row, risk_point.column)
-            keys.append(key)
-
-        return keys
-
-    def _get_db_gmfs(self, sites, job_id):
-        """Aggregates GMF data from the DB by site"""
-        all_gmfs = self._gmf_db_list(job_id)
-        gmf_keys = self._sites_to_gmf_keys(sites)
-        gmfs = dict((k, []) for k in gmf_keys)
-
-        for gmf_id in all_gmfs:
-            field = self._get_db_gmf(gmf_id)
-
-            for key in gmfs.keys():
-                (row, col) = key.split("!")
-                gmfs[key].append(field.get(int(row), int(col)))
-
-        return gmfs
-
-    def slice_gmfs(self, block_id):
-        """Load and collate GMF values for all sites in this block. """
-        block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
-        gmfs = self._get_db_gmfs(block.sites, self.job_ctxt.job_id)
-
-        for key, gmf_slice in gmfs.items():
-            (row, col) = key.split("!")
-            key_gmf = kvs.tokens.gmf_set_key(self.job_ctxt.job_id, col, row)
-            LOGGER.debug("GMF_SLICE for %s X %s : \n\t%s" % (
-                    col, row, gmf_slice))
-            gmf = {"IMLs": gmf_slice, "TSES": self._tses(),
-                    "TimeSpan": self._time_span()}
-            kvs.set_value_json_encoded(key_gmf, gmf)
+        return {"IMLs": [gmv.ground_motion for gmv in gmvs],
+                "TSES": self._tses(), "TimeSpan": self._time_span()}
 
     def _compute_loss(self, block_id):
         """Compute risk for a block of sites, that means:
@@ -197,8 +143,6 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         * conditional losses
         * (partial) aggregate loss curve
         """
-
-        self.slice_gmfs(block_id)
 
         self.vuln_curves = vulnerability.load_vuln_model_from_kvs(
             self.job_ctxt.job_id)
@@ -210,11 +154,9 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
 
         for site in block.sites:
             point = self.job_ctxt.region.grid.point_at(site)
+            gmf = self._get_gmvs_at(general.hazard_input_site(
+                    self.job_ctxt, site), self.job_ctxt.job_id)
 
-            key = kvs.tokens.gmf_set_key(
-                self.job_ctxt.job_id, point.column, point.row)
-
-            gmf = kvs.get_value_json_decoded(key)
             assets = general.BaseRiskCalculator.assets_at(
                 self.job_ctxt.job_id, site)
 
@@ -250,25 +192,16 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         See :func:`openquake.risk.job.general.compute_bcr_for_block` for result
         data structure spec.
         """
-        self.slice_gmfs(block_id)
 
         # aggregate the losses for this block
         aggregate_curve = general.AggregateLossCurve()
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
-        points = list(block.grid(self.job_ctxt.region))
-
-        gmf_slices = dict(
-            (point.site, kvs.get_value_json_decoded(
-                 kvs.tokens.gmf_set_key(self.job_ctxt.job_id, point.column,
-                                        point.row)
-            ))
-            for point in points
-        )
         epsilon_provider = general.EpsilonProvider(self.job_ctxt.params)
 
-        def get_loss_curve(point, vuln_function, asset):
+        def get_loss_curve(site, vuln_function, asset):
             "Compute loss curve basing on GMF data"
-            gmf_slice = gmf_slices[point.site]
+            gmf_slice = self._get_gmvs_at(general.hazard_input_site(
+                    self.job_ctxt, site), self.job_ctxt.job_id)
             loss_ratios = general.compute_loss_ratios(
                 vuln_function, gmf_slice, epsilon_provider, asset)
             loss_ratio_curve = general.compute_loss_ratio_curve(
