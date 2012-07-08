@@ -265,9 +265,20 @@ class ClassicalHazardCalculator(base.CalculatorNext):
 
     def execute(self):
         """
-        Distribute work among workers.
+        Calculation work is parallelized over sources, which means that each
+        task will compute hazard for all sites but only with a subset of the
+        seismic sources defined in the input model.
+
+        The general workflow is as follows:
+
+        1. Fill the queue with an initial set of tasks. The number of initial
+        tasks is configurable using the `concurrent_tasks` parameter in the
+        `[hazard]` section of the OpenQuake config file.
+
+        2. Wait for tasks to signal completion (via AMQP message) and enqueue a
+        new task each time another completes. Once all of the job work is
+        enqueued, we just wait until all of the tasks conclude.
         """
-        # TODO: better documentation
         # TODO: unittest
         # TODO: Fix deadlocking of execute method when tasks encounter
         # exceptions. Perhaps put in a try/except in the task and signal back
@@ -333,6 +344,7 @@ class ClassicalHazardCalculator(base.CalculatorNext):
         # First: Queue up the initial tasks.
         for _ in xrange(concurrent_tasks):
             try:
+                print "enqueuing initial tasks"
                 hazard_curves.apply_async(task_gen.next())
             except StopIteration:
                 # If we get a `StopIteration` here, that means we have a number
@@ -376,20 +388,91 @@ class ClassicalHazardCalculator(base.CalculatorNext):
                         # to wait until all tasks signal completion.
                         pass
 
+    def post_execute(self):
+        """
+        Create the final output records for
+        """
+        # TODO: better doc
+        hc = self.job.hazard_calculation
+        im = hc.intensity_measure_types_and_levels
+        points = hc.points_to_compute()
+
+        realizations = models.LtRealization.objects.filter(
+            hazard_calculation=hc.id)
+
+        for rlz in realizations:
+            # create a new `HazardCurve` 'container' record for each
+            # realization for each intensity measure type
+            for imt, imls in im.items():
+                sa_period = None
+                sa_damping = None
+                if 'SA' in imt:
+                    match = re.match(r'^SA\((.+?)\)$', imt)
+                    sa_period = float(match.group(1))
+                    sa_damping = DEFAULT_SA_DAMPING
+                    hc_im_type = 'SA'  # don't include the period
+                else:
+                    hc_im_type= imt
+
+                # TODO: create an `Output` record here as well
+                # with type == 'hazard_curve'
+                hco = models.Output(
+                    owner=hc.owner,
+                    oq_job=self.job,
+                    display_name="",  # TODO: good display name
+                    output_type='hazard_curve',
+                )
+                hco.save()
+
+                haz_curve = models.HazardCurve(
+                    output=hco,
+                    lt_realization=rlz,
+                    investigation_time=hc.investigation_time,
+                    imt=hc_im_type,
+                    imls=imls,
+                    sa_period=sa_period,
+                    sa_damping=sa_damping,
+                )
+                haz_curve.save()
+
+                [hc_progress] = models.HazardCurveProgress.objects.filter(
+                    lt_realization=rlz.id, imt=imt)
+
+                for i, poes in enumerate(hc_progress.result_matrix):
+                    # TODO: Bulk insert HazardCurveData
+                    [location] = points[i:i + 1]
+                    haz_curve_data = models.HazardCurveData(
+                        hazard_curve=haz_curve,
+                        poes=poes,
+                        location=location.wkt2d
+                    )
+                    haz_curve_data.save()
+
 
 @task(ignore_result=True)
 def hazard_curves(job_id, lt_rlz_id, src_ids):
     """
     Celery task for hazard curve calculator.
 
+    Samples logic trees, gathers site parameters, and calls the hazard curve
+    calculator.
+
+    Once hazard curve data is computed, result progress updated (within a
+    transaction, to prevent race conditions) in the
+    `htemp.hazard_curve_progress` table.
+
+    Once all of this work is complete, a signal will be sent via AMQP to let
+    the control node know that the work is complete. (If there is any work left
+    to be dispatched, this signal will indicate to the control node that more
+    work can be enqueued.)
+
+    :param int job_id:
+        ID of the currently running job.
     :param lt_rlz_id:
         Id of logic tree realization model to calculate for.
     :param src_ids:
         List of ids of parsed source models to take into account.
     """
-    # TODO: better documentation
-    # TODO: unittest
-
     # Make sure the job is not yet finished and set up logging.
     # This will throw a JobCompletedError if the job is not currently in the
     # `executing` phase.
