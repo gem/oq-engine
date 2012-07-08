@@ -14,6 +14,7 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import getpass
 import unittest
 
 import nhlib.imt
@@ -31,7 +32,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
 
     def setUp(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
-        self.job = helpers.get_hazard_job(cfg)
+        self.job = helpers.get_hazard_job(cfg, username=getpass.getuser())
         self.calc = core_next.ClassicalHazardCalculator(self.job)
 
     def test_pre_execute(self):
@@ -179,9 +180,10 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         # Update job status to move on to the execution phase.
         self.job.status = 'executing'
         self.job.save()
-        import nose; nose.tools.set_trace()
         self.calc.execute()
-        import nose; nose.tools.set_trace()
+        self.job.status = 'complete'
+        self.job.is_running = False
+        self.job.save()
 
 
 class ImtsToNhlibTestCase(unittest.TestCase):

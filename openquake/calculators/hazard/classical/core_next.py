@@ -357,19 +357,23 @@ class ClassicalHazardCalculator(base.CalculatorNext):
             'virtual_host': amqp_cfg['vhost'],
         }
 
-        with kombu.BrokerConnection(**conn_args) as conn:
-            task_signal_queue(conn.channel()).declare()
-            with conn.Consumer(task_signal_queue,
-                               callbacks=[task_complete_callback]):
-                conn.drain_events()  # This blocks until a message is received.
+        while (sources_computed['value']
+               < total_sources_to_compute['value']):
 
-                while (sources_computed['value']
-                       < total_sources_to_compute['value']):
+            with kombu.BrokerConnection(**conn_args) as conn:
+                task_signal_queue(conn.channel()).declare()
+                with conn.Consumer(task_signal_queue,
+                                   callbacks=[task_complete_callback]):
+                    # This blocks until a message is received.
+                    conn.drain_events()
+
+                    # Once we receive a completion signal, enqueue the next
+                    # piece of work (if there's anything left to be done).
                     try:
                         hazard_curves.apply_async(task_gen.next())
                     except StopIteration:
-                        # TODO: If the `task_gen` runs out before we compute
-                        # all sources, something is wrong. Raise an error.
+                        # There are no more tasks to dispatch; now we just need
+                        # to wait until all tasks signal completion.
                         pass
 
 
