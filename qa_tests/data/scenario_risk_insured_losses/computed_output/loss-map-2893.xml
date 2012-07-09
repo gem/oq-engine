@@ -1,0 +1,40 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<nrml xmlns:gml="http://www.opengis.net/gml" xmlns="http://openquake.org/xmlns/nrml/0.3" gml:id="undefined">
+  <riskResult gml:id="undefined">
+    <lossMap gml:id="undefined" endBranchLabel="undefined" lossCategory="undefined" unit="undefined">
+      <LMNode gml:id="mn_1">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>15.48 38.25</gml:pos>
+          </gml:Point>
+        </site>
+        <loss assetRef="a3">
+          <mean>180.717534009</mean>
+          <stdDev>92.212264481</stdDev>
+        </loss>
+      </LMNode>
+      <LMNode gml:id="mn_2">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>15.48 38.09</gml:pos>
+          </gml:Point>
+        </site>
+        <loss assetRef="a1">
+          <mean>440.147078318</mean>
+          <stdDev>182.615976702</stdDev>
+        </loss>
+      </LMNode>
+      <LMNode gml:id="mn_3">
+        <site>
+          <gml:Point srsName="epsg:4326">
+            <gml:pos>15.56 38.17</gml:pos>
+          </gml:Point>
+        </site>
+        <loss assetRef="a2">
+          <mean>432.225448143</mean>
+          <stdDev>186.86445695</stdDev>
+        </loss>
+      </LMNode>
+    </lossMap>
+  </riskResult>
+</nrml>
