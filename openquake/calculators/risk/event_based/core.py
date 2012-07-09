@@ -19,6 +19,7 @@
 
 """Core functionality for Event-Based Risk calculations."""
 
+import geohash
 from celery.exceptions import TimeoutError
 
 from openquake import kvs
@@ -26,7 +27,6 @@ from openquake import logs
 from openquake.db import models
 from openquake.parser import vulnerability
 from openquake.calculators.risk import general
-from django.contrib.gis import geos
 
 LOGGER = logs.LOG
 
@@ -122,15 +122,21 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         """Return the time span specified for this job."""
         return float(self.job_ctxt.params["INVESTIGATION_TIME"])
 
-    def _get_gmvs_at(self, site, job_id):
-# TODO (ac): Add doc!..
-# TODO (ac): Add tests!..
-        output_ids = models.Output.objects.filter(
-            oq_job=job_id, output_type="gmf")
+    def _get_gmvs_at(self, site):
+        """
+        Return the ground motion values defined at the given site.
 
-        gmvs = models.GmfData.objects.filter(output__in=output_ids,
-            location=geos.Point(site.longitude,
-            site.latitude)).order_by("output")
+        :param site: location where to load the values.
+        :type site: instance of :py:class:`openquake.shapes.Site`
+        """
+
+        output_ids = models.Output.objects.filter(
+            oq_job=self.job_ctxt.job_id, output_type="gmf")
+
+        gh = geohash.encode(site.latitude, site.longitude, precision=12)
+        gmvs = models.GmfData.objects.filter(output__in=output_ids).extra(
+                where=["ST_GeoHash(location, 12) = %s"],
+                params=[gh]).order_by("output")
 
         return {"IMLs": [gmv.ground_motion for gmv in gmvs],
                 "TSES": self._tses(), "TimeSpan": self._time_span()}
@@ -155,7 +161,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         for site in block.sites:
             point = self.job_ctxt.region.grid.point_at(site)
             gmf = self._get_gmvs_at(general.hazard_input_site(
-                    self.job_ctxt, site), self.job_ctxt.job_id)
+                    self.job_ctxt, site))
 
             assets = general.BaseRiskCalculator.assets_at(
                 self.job_ctxt.job_id, site)
@@ -201,7 +207,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
         def get_loss_curve(site, vuln_function, asset):
             "Compute loss curve basing on GMF data"
             gmf_slice = self._get_gmvs_at(general.hazard_input_site(
-                    self.job_ctxt, site), self.job_ctxt.job_id)
+                    self.job_ctxt, site))
             loss_ratios = general.compute_loss_ratios(
                 vuln_function, gmf_slice, epsilon_provider, asset)
             loss_ratio_curve = general.compute_loss_ratio_curve(
