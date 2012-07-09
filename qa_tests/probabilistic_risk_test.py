@@ -61,7 +61,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         rmtree(QA_OUTPUT_DIR)
 
     def test_hazard_computed_on_exposure_sites(self):
-        # in this test we compute the hazard on locations
+        # here we compute the hazard on locations
         # defined in the exposure file. For now, we just
         # check the job completes correctly.
 
