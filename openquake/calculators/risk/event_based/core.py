@@ -138,8 +138,7 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
                 where=["ST_GeoHash(location, 12) = %s"],
                 params=[gh]).order_by("output")
 
-        return {"IMLs": [gmv.ground_motion for gmv in gmvs],
-                "TSES": self._tses(), "TimeSpan": self._time_span()}
+        return [gmv.ground_motion for gmv in gmvs]
 
     def _compute_loss(self, block_id):
         """Compute risk for a block of sites, that means:
@@ -160,8 +159,11 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
 
         for site in block.sites:
             point = self.job_ctxt.region.grid.point_at(site)
-            gmf = self._get_gmvs_at(general.hazard_input_site(
+            gmvs = self._get_gmvs_at(general.hazard_input_site(
                     self.job_ctxt, site))
+
+            gmf = {"IMLs": gmvs, "TSES": self._tses(),
+                    "TimeSpan": self._time_span()}
 
             assets = general.BaseRiskCalculator.assets_at(
                 self.job_ctxt.job_id, site)
@@ -206,8 +208,12 @@ class EventBasedRiskCalculator(general.ProbabilisticRiskCalculator):
 
         def get_loss_curve(site, vuln_function, asset):
             "Compute loss curve basing on GMF data"
-            gmf_slice = self._get_gmvs_at(general.hazard_input_site(
+            gmvs = self._get_gmvs_at(general.hazard_input_site(
                     self.job_ctxt, site))
+
+            gmf_slice = {"IMLs": gmvs, "TSES": self._tses(),
+                    "TimeSpan": self._time_span()}
+
             loss_ratios = general.compute_loss_ratios(
                 vuln_function, gmf_slice, epsilon_provider, asset)
             loss_ratio_curve = general.compute_loss_ratio_curve(
