@@ -85,7 +85,7 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                 for site, data in region_loss_map_data.iteritems()]
 
         # serialize the loss map data to XML
-        if self.job_ctxt.params.insured_losses:
+        if self.job_ctxt.params.get('INSURED_LOSSES'):
             output_filename= 'insured-loss-map%s.xml'
         else:
             output_filename = 'loss-map-%s.xml'
