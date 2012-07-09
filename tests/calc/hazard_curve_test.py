@@ -31,7 +31,7 @@ class HazardCurvesTestCase(unittest.TestCase):
         def __init__(self, probability, tectonic_region_type):
             self.probability = probability
             self.tectonic_region_type = tectonic_region_type
-        def get_probability(self):
+        def get_probability_one_or_more_occurrences(self):
             return self.probability
 
     class FakeSource(object):

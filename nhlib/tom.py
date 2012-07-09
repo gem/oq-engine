@@ -36,7 +36,7 @@ class PoissonTOM(object):
             raise ValueError('time_span must be positive')
         self.time_span = time_span
 
-    def get_probability(self, occurrence_rate):
+    def get_probability_one_or_more_occurrences(self, occurrence_rate):
         """
         Calculate and return the probability of event to happen one or more
         times within the time range defined by constructor's ``time_span``

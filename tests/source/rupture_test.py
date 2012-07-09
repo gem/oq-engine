@@ -82,11 +82,13 @@ class RuptureCreationTestCase(unittest.TestCase):
 
 
 class ProbabilisticRuptureTestCase(unittest.TestCase):
-    def test_get_probability(self):
+    def test_get_probability_one_or_more(self):
         rupture = make_rupture(ProbabilisticRupture,
                                occurrence_rate=1e-2,
                                temporal_occurrence_model=PoissonTOM(10))
-        self.assertAlmostEqual(rupture.get_probability(), 0.0951626)
+        self.assertAlmostEqual(
+            rupture.get_probability_one_or_more_occurrences(), 0.0951626
+        )
 
     def test_sample_number_of_occurrences(self):
         time_span = 20

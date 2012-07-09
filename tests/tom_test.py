@@ -25,18 +25,18 @@ class PoissonTOMTestCase(unittest.TestCase):
         self.assertRaises(ValueError, PoissonTOM, -1)
         self.assertRaises(ValueError, PoissonTOM, 0)
 
-    def test_get_probability(self):
+    def test_get_probability_one_or_more_occurrences(self):
         pdf = PoissonTOM(time_span=50)
-        self.assertEqual(pdf.get_probability(occurrence_rate=10), 1)
+        self.assertEqual(pdf.get_probability_one_or_more_occurrences(10), 1)
         aae = self.assertAlmostEqual
-        aae(pdf.get_probability(occurrence_rate=0.1), 0.9932621)
-        aae(pdf.get_probability(occurrence_rate=0.01), 0.39346934)
+        aae(pdf.get_probability_one_or_more_occurrences(0.1), 0.9932621)
+        aae(pdf.get_probability_one_or_more_occurrences(0.01), 0.39346934)
 
         pdf = PoissonTOM(time_span=5)
-        self.assertEqual(pdf.get_probability(occurrence_rate=8), 1)
+        self.assertEqual(pdf.get_probability_one_or_more_occurrences(8), 1)
         aae = self.assertAlmostEqual
-        aae(pdf.get_probability(occurrence_rate=0.1), 0.3934693)
-        aae(pdf.get_probability(occurrence_rate=0.01), 0.0487706)
+        aae(pdf.get_probability_one_or_more_occurrences(0.1), 0.3934693)
+        aae(pdf.get_probability_one_or_more_occurrences(0.01), 0.0487706)
 
     def test_sample_number_of_occurrences(self):
         time_span = 40
