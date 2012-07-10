@@ -899,6 +899,7 @@ def _launch_job(job_ctxt, sections):
         calculator.pre_execute()
         calculator.execute()
         calculator.post_execute()
+        calculator.clean_up()
 
 
 def import_job_profile(path_to_cfg, job, user_name='openquake',
