@@ -61,6 +61,7 @@ STATS_KEYS = {
     "blocks": ("g", "gen:blocks", "t"),
     # The current block
     "cblock": ("g", "gen:cblock", "i"),
+    "compute_uhs_task": ("h", "compute_uhs_task", "i"),
 }
 
 
