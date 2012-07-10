@@ -47,12 +47,14 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
         self._sum_region_losses = None
         self._loss_map_data = None
+        self._loss_ratios_calculator = compute_uninsured_losses
 
     def pre_execute(self):
         super(ScenarioRiskCalculator, self).pre_execute()
 
         if self.job_ctxt.params.get("INSURED_LOSSES"):
             self._output_filename = "insured-loss-map%s.xml"
+            self._loss_ratios_calculator = compute_insured_losses
 
     def post_execute(self):
         loss_map_path = os.path.join(
@@ -96,13 +98,13 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
         region_data = distribute(
             general.compute_risk, ("block_id", self.job_ctxt.blocks_keys),
             tf_args=dict(job_id=self.job_ctxt.job_id,
-            vuln_model=vuln_model))
+            vuln_model=vuln_model, calculator=self._loss_ratios_calculator))
 
         for block_data in region_data:
             region_losses.append(block_data[0])
             collect_region_data(block_data[1], region_loss_map_data)
 
-        self._sum_region_losses = reduce(lambda x,y: x + y, region_losses)
+        self._sum_region_losses = reduce(lambda x, y: x + y, region_losses)
 
         self._loss_map_data = [(site, data)
                 for site, data in region_loss_map_data.iteritems()]
@@ -168,22 +170,16 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                     ])]
         """
 
-        vuln_model = kwargs['vuln_model']
+        vuln_model = kwargs["vuln_model"]
+        compute_losses = kwargs["calculator"]
         epsilon_provider = general.EpsilonProvider(self.job_ctxt.params)
         block = general.Block.from_kvs(self.job_ctxt.job_id, block_id)
 
-        loss_data = {}
-
-        if self.job_ctxt.params.get("INSURED_LOSSES"):
-            compute_losses = compute_insured_losses
-        else:
-            compute_losses = compute_uninsured_losses
-
+        loss_map_data = {}
         block_losses = []
+
         for site in block.sites:
-            # the scientific functions used below
-            # require the gmvs to be wrapped in a dict with a single key, IMLs
-            gmvs = {'IMLs': general.load_gmvs_at(
+            gmvs = {"IMLs": general.load_gmvs_at(
                     self.job_ctxt.job_id, general.hazard_input_site(
                     self.job_ctxt, site))}
 
@@ -191,28 +187,24 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                 self.job_ctxt.job_id, site)
 
             for asset in assets:
-
                 vuln_function = vuln_model[asset.taxonomy]
 
                 losses = compute_losses(
                         vuln_function, gmvs, epsilon_provider, asset)
 
-                mean_loss = numpy.mean(losses)
-                stddev_loss = numpy.std(losses, ddof=1)
                 asset_site = shapes.Site(asset.site.x, asset.site.y)
 
                 loss = ({
-                    'mean_loss': mean_loss,
-                    'stddev_loss': stddev_loss},
-                    {'assetID': asset.asset_ref})
+                    "mean_loss": numpy.mean(losses),
+                    "stddev_loss": numpy.std(losses, ddof=1)}, {
+                    "assetID": asset.asset_ref
+                })
 
                 block_losses.append(losses)
+                collect_block_data(loss_map_data, asset_site, loss)
 
-                collect_block_data(loss_data, asset_site, loss)
-
-        sum_block_losses = reduce(lambda x,y: x + y, block_losses)
-
-        return sum_block_losses, loss_data
+        sum_block_losses = reduce(lambda x, y: x + y, block_losses)
+        return sum_block_losses, loss_map_data
 
 
 def collect_region_data(block_loss_map_data, region_loss_map_data):
@@ -231,9 +223,10 @@ def collect_block_data(loss_data, asset_site, asset_data):
     loss_data[asset_site] = data
 
 
-def compute_uninsured_losses(vuln_function, gmf_set, epsilon_provider, asset):
+def compute_uninsured_losses(vuln_function, gmvs, epsilon_provider, asset):
     loss_ratios = general.compute_loss_ratios(
-        vuln_function, gmf_set, epsilon_provider, asset)
+        vuln_function, gmvs, epsilon_provider, asset)
+
     losses = loss_ratios * asset.value
 
     return losses
@@ -247,8 +240,8 @@ def insurance_boundaries_defind(asset):
             % asset.asset_ref)
 
 
-def compute_insured_losses(vuln_function, gmf_set, epsilon_provider, asset):
-    losses = compute_uninsured_losses(vuln_function, gmf_set,
+def compute_insured_losses(vuln_function, gmvs, epsilon_provider, asset):
+    losses = compute_uninsured_losses(vuln_function, gmvs,
                 epsilon_provider, asset)
 
     if insurance_boundaries_defind(asset):
