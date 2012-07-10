@@ -61,10 +61,7 @@ STATS_KEYS = {
     "blocks": ("g", "gen:blocks", "t"),
     # The current block
     "cblock": ("g", "gen:cblock", "i"),
-    # debug statistic: list of paths of hazard curves written to xml
-    "hcls_xmlcurvewrites": ("h", "cls:debug:xmlcurvewrites", "d"),
-    # debug statistic: list of paths of hazard maps written to xml
-    "hcls_xmlmapwrites": ("h", "cls:debug:xmlmapwrites", "d"),
+    "compute_uhs_task": ("h", "compute_uhs_task", "i"),
 }
 
 

@@ -955,6 +955,9 @@ class Output(djm.Model):
 
     last_update = djm.DateTimeField(editable=False, default=datetime.utcnow)
 
+    def __str__(self):
+        return "%d||%s||%s" % (self.id, self.output_type, self.display_name)
+
     class Meta:
         db_table = 'uiapi\".\"output'
 
