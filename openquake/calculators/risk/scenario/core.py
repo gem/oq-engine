@@ -52,7 +52,15 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
         epsilon_provider = general.EpsilonProvider(self.job_ctxt.params)
 
-        sum_per_gmf = SumPerGroundMotionField(vuln_model, epsilon_provider)
+        if self.job_ctxt.params.get('INSURED_LOSSES'):
+            lr_calc = compute_insured_losses
+            output_filename = 'insured-loss-map%s.xml'
+        else:
+            lr_calc = compute_uninsured_losses
+            output_filename = 'loss-map-%s.xml'
+
+        sum_per_gmf = SumPerGroundMotionField(
+                vuln_model, epsilon_provider, lr_calc)
 
         region_loss_map_data = {}
 
@@ -85,10 +93,6 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
                 for site, data in region_loss_map_data.iteritems()]
 
         # serialize the loss map data to XML
-        if self.job_ctxt.params.get('INSURED_LOSSES'):
-            output_filename= 'insured-loss-map%s.xml'
-        else:
-            output_filename = 'loss-map-%s.xml'
         loss_map_path = os.path.join(
             self.job_ctxt['BASE_PATH'],
             self.job_ctxt['OUTPUT_DIR'],
@@ -178,13 +182,14 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
         loss_data = {}
 
-        # used to sum the losses for the whole block
-        sum_per_gmf = SumPerGroundMotionField(vuln_model, epsilon_provider)
-
         if self.job_ctxt.params.get("INSURED_LOSSES"):
             compute_losses = compute_insured_losses
         else:
             compute_losses = compute_uninsured_losses
+
+        # used to sum the losses for the whole block
+        sum_per_gmf = SumPerGroundMotionField(vuln_model,
+                epsilon_provider, compute_losses)
 
         for site in block.sites:
             # the scientific functions used below
@@ -231,6 +236,7 @@ def collect_block_data(loss_data, asset_site, asset_data):
     data.append(asset_data)
     loss_data[asset_site] = data
 
+
 def compute_uninsured_losses(vuln_function, gmf_set, epsilon_provider, asset):
     loss_ratios = general.compute_loss_ratios(
         vuln_function, gmf_set, epsilon_provider, asset)
@@ -238,12 +244,14 @@ def compute_uninsured_losses(vuln_function, gmf_set, epsilon_provider, asset):
 
     return losses
 
+
 def insurance_boundaries_defind(asset):
-    if (asset.ins_limit >=0 and asset.deductible >= 0):
+    if (asset.ins_limit >= 0 and asset.deductible >= 0):
         return True
     else:
         raise RuntimeError('Insurance boundaries for asset %s are not defined'
             % asset.asset_ref)
+
 
 def compute_insured_losses(vuln_function, gmf_set, epsilon_provider, asset):
     losses = compute_uninsured_losses(vuln_function, gmf_set,
@@ -258,7 +266,6 @@ def compute_insured_losses(vuln_function, gmf_set, epsilon_provider, asset):
                     losses[i] = asset.ins_limit
 
     return losses
-
 
 
 class SumPerGroundMotionField(object):
@@ -294,7 +301,6 @@ class SumPerGroundMotionField(object):
     def add(self, gmf_set, asset):
         """Compute the losses for the given ground motion field set, and
         sum those to the current sum of the losses.
-
         If the asset refers to a vulnerability function that is not
         supported by the vulnerability model, the distribution
         of the losses is discarded.
@@ -315,10 +321,8 @@ class SumPerGroundMotionField(object):
 
         vuln_function = self.vuln_model[asset.taxonomy]
 
-        loss_ratios = self.lr_calculator(vuln_function, gmf_set,
+        losses = self.lr_calculator(vuln_function, gmf_set,
                                          self.epsilon_provider, asset)
-
-        losses = numpy.array(loss_ratios) * asset.value
 
         self.sum_losses(losses)
 
