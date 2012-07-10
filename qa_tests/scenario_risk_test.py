@@ -17,12 +17,16 @@ import os
 import unittest
 
 from lxml import etree
+from shutil import rmtree
 from nose.plugins.attrib import attr
 
 from openquake.db.models import OqJob
 from openquake import xml
 
 from tests.utils import helpers
+
+QA_OUTPUT_DIR = helpers.qa_file(
+    "scenario_risk_insured_losses/computed_output")
 
 
 class ScenarioRiskQATest(unittest.TestCase):
@@ -212,3 +216,56 @@ class ScenarioRiskQATest(unittest.TestCase):
             exp_mean_loss, actual_mean, places=self.TOTAL_LOSS_PRECISION)
         self.assertAlmostEqual(
             exp_stddev_loss, actual_stddev, places=self.TOTAL_LOSS_PRECISION)
+
+    def test_scenario_risk_insured_losses(self):
+        # This test exercises the 'mean-based' path through the Scenario Risk
+        # calculator. There is no random sampling done here so the results are
+        # 100% predictable.
+        scen_cfg = helpers.qa_file('scenario_risk_insured_losses/config.gem')
+
+        exp_mean_loss = 799.102578
+        exp_stddev_loss = 382.148808
+        expected_loss_map = [
+            dict(asset='a3', pos='15.48 38.25', mean=156.750910806,
+                stddev=100.422061776),
+            dict(asset='a2', pos='15.56 38.17', mean=314.859579324,
+                stddev=293.976254984),
+            dict(asset='a1', pos='15.48 38.09', mean=327.492087529,
+                stddev=288.47906994),
+            ]
+
+        result = helpers.run_job(scen_cfg, ['--output-type=xml'],
+            check_output=True)
+
+        job = OqJob.objects.latest('id')
+        self.assertEqual('succeeded', job.status)
+
+        expected_loss_map_file = helpers.qa_file(
+            'scenario_risk_insured_losses/computed_output/insured-loss-map%s'
+            '.xml' % job.id)
+
+        self.assertTrue(os.path.exists(expected_loss_map_file))
+
+        self._verify_loss_map(expected_loss_map_file, expected_loss_map)
+
+        # We expected the shell output to look something like the following
+        # two lines:
+        # Mean region loss value: 799.102
+        # Standard deviation region loss value: 382.148
+
+        # split on newline and filter out empty lines
+        result = [line for line in result.split('\n') if len(line) > 0]
+
+        # we expect 2 lines; 1 for mean, 1 for stddev
+        self.assertEqual(2, len(result))
+
+        actual_mean = float(result[0].split()[-1])
+        actual_stddev = float(result[1].split()[-1])
+
+        self.assertAlmostEqual(
+            exp_mean_loss, actual_mean, places=self.TOTAL_LOSS_PRECISION)
+        self.assertAlmostEqual(
+            exp_stddev_loss, actual_stddev, places=self.TOTAL_LOSS_PRECISION)
+
+        # Cleaning generated results file.
+        rmtree(QA_OUTPUT_DIR)
