@@ -1271,8 +1271,10 @@ class ScenarioEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
                                     stco=200)
         calculator.add(None, asset)
 
-        expected_sum = [62.63191284, 98.16576808,
-                        166.2920523, 84.25372286, 23.10280904]
+        expected_sum = [0.140147324, 0.151530140, 0.016176042, 0.101786402,
+                        0.025190577, 0.154760019, 0.001203867, 0.370820698,
+                        0.220145117, 0.067291408, 0.010945875, 0.413257970,
+                        0.267141193, 0.040157738, 0.001981645]
 
         self.assertTrue(numpy.allclose(expected_sum, calculator.losses))
 
