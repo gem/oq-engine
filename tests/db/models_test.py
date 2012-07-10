@@ -370,8 +370,8 @@ class HazardCalculationGeometryTestCase(unittest.TestCase):
             region_grid_spacing=20)
         mesh = hc.points_to_compute()
 
-        numpy.testing.assert_array_equal(lons, mesh.lons)
-        numpy.testing.assert_array_equal(lats, mesh.lats)
+        numpy.testing.assert_array_almost_equal(lons, mesh.lons)
+        numpy.testing.assert_array_almost_equal(lats, mesh.lats)
 
     def test_points_to_compute_sites(self):
         lons = [6.5, 6.5, 8.5, 8.5]
