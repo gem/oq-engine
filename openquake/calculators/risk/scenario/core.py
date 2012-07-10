@@ -30,74 +30,36 @@ from openquake import shapes
 from openquake.output import risk as risk_output
 from openquake.parser import vulnerability
 from openquake.calculators.risk import general
-
+from openquake.utils.tasks import distribute
 
 LOGGER = logs.LOG
 
 
 class ScenarioRiskCalculator(general.BaseRiskCalculator):
-    """Scenario method for performing risk calculations."""
+    """
+    Scenario method for performing risk calculations.
+    """
 
-    # pylint: disable=R0914
-    def execute(self):
-        """Entry point for triggering the computation."""
-        LOGGER.debug("Executing scenario risk computation.")
-        LOGGER.debug("This will calculate mean and standard deviation loss"
-            "values for the region defined in the job config.")
+    def __init__(self, job_ctxt):
+        general.BaseRiskCalculator.__init__(self, job_ctxt)
+        
+        self._output_filename = "loss-map-%s.xml"
 
-        tasks = []
+        self._sum_region_losses = None
+        self._loss_map_data = None
 
-        vuln_model = vulnerability.load_vuln_model_from_kvs(
-            self.job_ctxt.job_id)
+    def pre_execute(self):
+        super(ScenarioRiskCalculator, self).pre_execute()
 
-        epsilon_provider = general.EpsilonProvider(self.job_ctxt.params)
+        if self.job_ctxt.params.get("INSURED_LOSSES"):
+            self._output_filename = "insured-loss-map%s.xml"
 
-        if self.job_ctxt.params.get('INSURED_LOSSES'):
-            lr_calc = compute_insured_losses
-            output_filename = 'insured-loss-map%s.xml'
-        else:
-            lr_calc = compute_uninsured_losses
-            output_filename = 'loss-map-%s.xml'
-
-        region_losses = []
-
-        region_loss_map_data = {}
-
-        for block_id in self.job_ctxt.blocks_keys:
-            LOGGER.debug("Dispatching task for block %s of %s"
-                % (block_id, len(self.job_ctxt.blocks_keys)))
-            a_task = general.compute_risk.delay(
-                self.job_ctxt.job_id, block_id, vuln_model=vuln_model)
-            tasks.append(a_task)
-
-        for task in tasks:
-            task.wait()
-            if not task.successful():
-                raise Exception(task.result)
-
-            block_loss, block_loss_map_data = task.result
-            region_losses.append(block_loss)
-
-            # do some basic validation on our results
-            assert block_loss is not None, "Expected a result != None"
-            assert isinstance(block_loss, numpy.ndarray), \
-                "Expected a numpy array"
-
-            # our result should be a 1-dimensional numpy.array of loss values
-
-
-            collect_region_data(
-                block_loss_map_data, region_loss_map_data)
-
-        sum_region_losses= reduce(lambda x,y: x + y, region_losses)
-        loss_map_data = [(site, data)
-                for site, data in region_loss_map_data.iteritems()]
-
-        # serialize the loss map data to XML
+    def post_execute(self):
         loss_map_path = os.path.join(
-            self.job_ctxt['BASE_PATH'],
-            self.job_ctxt['OUTPUT_DIR'],
-            output_filename % self.job_ctxt.job_id)
+            self.job_ctxt["BASE_PATH"],
+            self.job_ctxt["OUTPUT_DIR"],
+            self._output_filename % self.job_ctxt.job_id)
+
         loss_map_writer = risk_output.create_loss_map_writer(
             self.job_ctxt.job_id, self.job_ctxt.serialize_results_to,
             loss_map_path, True)
@@ -107,14 +69,43 @@ class ScenarioRiskCalculator(general.BaseRiskCalculator):
 
             # Add a metadata dict in the first list position
             # Note: the metadata is still incomplete (see bug 809410)
-            loss_map_metadata = {'scenario': True}
-            loss_map_data.insert(0, loss_map_metadata)
-            loss_map_writer.serialize(loss_map_data)
+            loss_map_metadata = {"scenario": True}
+            self._loss_map_data.insert(0, loss_map_metadata)
+            loss_map_writer.serialize(self._loss_map_data)
 
         # For now, just print these values.
         # These are not debug statements; please don't remove them!
-        print "Mean region loss value: %s" % numpy.mean(sum_region_losses)
-        print "Standard deviation region loss value: %s" % numpy.std(sum_region_losses, ddof=1)
+        print "Mean region loss value: %s" % numpy.mean(self._sum_region_losses)
+        print "Standard deviation region loss value: %s" % numpy.std(self._sum_region_losses, ddof=1)
+
+    def execute(self):
+        """
+        Entry point for triggering the computation.
+        """
+
+        LOGGER.debug("Executing scenario risk computation.")
+        LOGGER.debug("This will calculate mean and standard deviation loss"
+            "values for the region defined in the job config.")
+
+        vuln_model = vulnerability.load_vuln_model_from_kvs(
+            self.job_ctxt.job_id)
+
+        region_losses = []
+        region_loss_map_data = {}
+
+        region_data = distribute(
+            general.compute_risk, ("block_id", self.job_ctxt.blocks_keys),
+            tf_args=dict(job_id=self.job_ctxt.job_id,
+            vuln_model=vuln_model))
+
+        for block_data in region_data:
+            region_losses.append(block_data[0])
+            collect_region_data(block_data[1], region_loss_map_data)
+
+        self._sum_region_losses = reduce(lambda x,y: x + y, region_losses)
+
+        self._loss_map_data = [(site, data)
+                for site, data in region_loss_map_data.iteritems()]
 
     def compute_risk(self, block_id, **kwargs):
         """
