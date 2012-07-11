@@ -34,6 +34,7 @@ from celery.task import task
 from nrml import parsers as nrml_parsers
 
 from openquake import engine2
+from openquake import logs
 from openquake import writer
 from openquake.calculators import base
 from openquake.calculators.hazard import general
@@ -320,7 +321,7 @@ class ClassicalHazardCalculator(base.CalculatorNext):
         def task_arg_gen():
             """
             Loop through realizations and sources to generate a sequence of
-            task arg tuples. Each tuple of args applies to a single tasks.
+            task arg tuples. Each tuple of args applies to a single task.
 
             Yielded results are triples of (job_id, realization_id,
             source_id_list).
@@ -344,7 +345,6 @@ class ClassicalHazardCalculator(base.CalculatorNext):
         # First: Queue up the initial tasks.
         for _ in xrange(concurrent_tasks):
             try:
-                print "enqueuing initial tasks"
                 hazard_curves.apply_async(task_gen.next())
             except StopIteration:
                 # If we get a `StopIteration` here, that means we have a number
@@ -477,6 +477,8 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
     # This will throw a JobCompletedError if the job is not currently in the
     # `executing` phase.
     utils_tasks.check_executing_job(job_id)
+    logs.LOG.debug('> starting task: job_id=%s, realization=%s'
+                   % (job_id, lt_rlz_id))
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
 
@@ -513,6 +515,7 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
     # Now initialize the site collection for use in the calculation.
     # If there is no site model defined, we will use the same reference
     # parameters (defined in the HazardCalculation) for every site.
+    logs.LOG.debug('> creating site collection')
     site_data = models.SiteData.objects.filter(hazard_calculation=hc.id)
     if len(site_data) > 0:
         site_data = site_data[0]
@@ -532,6 +535,7 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
                             hc.reference_depth_to_1pt0km_per_sec)
             for pt in points]
     site_coll = nhlib.site.SiteCollection(sites)
+    logs.LOG.debug('< done creating site collection')
 
     # Prepare args for the calculator.
     calc_kwargs = {'gsims': gsims,
@@ -550,10 +554,15 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
 
     # mapping "imt" to 2d array of hazard curves: first dimension -- sites,
     # second -- IMLs
+    logs.LOG.debug('> computing hazard matrices')
     matrices = nhlib.calc.hazard_curve.hazard_curves_poissonian(**calc_kwargs)
+    logs.LOG.debug('< done computing hazard matrices')
 
+    logs.LOG.debug('> starting transaction')
     with transaction.commit_on_success():
+        logs.LOG.debug('looping over IMTs')
         for imt in hc.intensity_measure_types_and_levels.keys():
+            logs.LOG.debug('> updating hazard for IMT=%s' % imt)
             nhlib_imt = _imt_to_nhlib(imt)
             query = """
             SELECT * FROM htemp.hazard_curve_progress
@@ -581,10 +590,13 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
                 lt_rlz.is_complete = True
 
             lt_rlz.save()
+            logs.LOG.debug('< done updating hazard for IMT=%s' % imt)
+    logs.LOG.debug('< transaction complete')
 
     # Last thing, signal back the control node to indicate the completion of
     # task. The control node needs this to manage the task distribution and
     # keep track of progress.
+    logs.LOG.debug('< task complete, signalling completion')
     signal_task_complete(job_id, len(src_ids))
 
 
