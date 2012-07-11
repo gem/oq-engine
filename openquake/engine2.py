@@ -316,6 +316,13 @@ def run_hazard(job, log_level, log_file):
 
 
 def _do_run_hazard(job):
+    """
+    Step through all of the phases of a hazard calculation, updating the job
+    status at each phase.
+
+    :param job:
+        An :class:`~openquake.db.models.OqJob` instance.
+    """
     # TODO: support calculator selection based on calc mode
     from openquake.calculators.hazard.classical.core_next import (
         ClassicalHazardCalculator)
