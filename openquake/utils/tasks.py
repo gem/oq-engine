@@ -148,8 +148,9 @@ def check_executing_job(job_id):
         :class:`openquake.db.models.OqJob` instance, or `None` if no job
         matches the criteria.
     """
-    # TODO: what's the debug level?
-    logs.init_logs_amqp_send(level='warn', job_id=job_id)
+    # TODO: Is this a bad default for logging? Maybe we need to save this in
+    # OqJob?
+    logs.init_logs_amqp_send(level='debug', job_id=job_id)
     jobs = models.OqJob.objects.filter(id=job_id, status='executing')
     if len(jobs) == 0:
         raise JobCompletedError(job_id)
