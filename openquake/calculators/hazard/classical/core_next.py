@@ -44,6 +44,7 @@ from openquake.input import source
 from openquake.job.validation import MAX_SINT_32
 from openquake.job.validation import MIN_SINT_32
 from openquake.utils import config
+from openquake.utils import stats
 from openquake.utils import tasks as utils_tasks
 
 #: Default Spectral Acceleration damping. At the moment, this is not
@@ -449,7 +450,8 @@ class ClassicalHazardCalculator(base.CalculatorNext):
                     haz_curve_data.save()
 
 
-@task(ignore_result=True)
+@utils_tasks.oqtask
+@stats.progress_indicator('h')
 def hazard_curves(job_id, lt_rlz_id, src_ids):
     """
     Celery task for hazard curve calculator.
@@ -473,11 +475,7 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
     :param src_ids:
         List of ids of parsed source models to take into account.
     """
-    # Make sure the job is not yet finished and set up logging.
-    # This will throw a JobCompletedError if the job is not currently in the
-    # `executing` phase.
-    utils_tasks.check_executing_job(job_id)
-    logs.LOG.debug('> starting task: job_id=%s, realization=%s'
+    logs.LOG.debug('> starting task: job_id=%s, lt_realization_id=%s'
                    % (job_id, lt_rlz_id))
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
