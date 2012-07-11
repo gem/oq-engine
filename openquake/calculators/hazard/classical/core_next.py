@@ -654,6 +654,7 @@ def im_dict_to_nhlib(im_dict):
 
     return nhlib_im
 
+
 def _imt_to_nhlib(imt):
     """Covert an IMT string to an nhlib object.
 

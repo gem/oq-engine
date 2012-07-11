@@ -313,6 +313,7 @@ def run_hazard(job, log_level, log_file):
     # wait till both child processes are done
     os.waitpid(job_pid, 0)
     os.waitpid(supervisor_pid, 0)
+    return job
 
 
 def _do_run_hazard(job):
@@ -322,6 +323,8 @@ def _do_run_hazard(job):
 
     :param job:
         An :class:`~openquake.db.models.OqJob` instance.
+    :returns:
+        The input job object when the calculation completes.
     """
     # TODO: support calculator selection based on calc mode
     from openquake.calculators.hazard.classical.core_next import (
@@ -345,5 +348,8 @@ def _do_run_hazard(job):
     job.save()
     calc.post_process()
 
+    job.status = 'complete'
     job.is_running = False
     job.save()
+
+    return job

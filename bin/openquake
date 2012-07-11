@@ -210,7 +210,15 @@ if __name__ == '__main__':
 
             # Initialize the supervisor, instantiate the calculator,
             # and run the calculation.
-            engine2.run_hazard(job, args.log_level, args.log_file)
+            completed_job = engine2.run_hazard(
+                job, args.log_level, args.log_file)
+            if completed_job is not None:
+                # We check for `None` here because the supervisor and executor
+                # process forks return to here as well. We want to ignore them.
+                if completed_job.status == 'complete':
+                    print 'Job %s ran successfully' % completed_job.id
+                else:
+                    print 'Job %s failed' % completed_job.id
         except IOError as e:
             print str(e)
         except Exception as e:
