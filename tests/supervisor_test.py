@@ -141,7 +141,7 @@ class SupervisorTestCase(unittest.TestCase):
             # the status in the job record is updated
             self.assertEqual(1,
                              self.update_job_status_and_error_msg.call_count)
-            self.assertEqual(((123, 'failed', 'a msg'), {}),
+            self.assertEqual(((123, 'a msg'), {}),
                              self.update_job_status_and_error_msg.call_args)
 
     def test_actions_after_job_process_termination(self):
@@ -201,10 +201,9 @@ class SupervisorTestCase(unittest.TestCase):
         self.assertEqual(((123,), {}), self.cleanup_after_job.call_args)
 
         # the status in the job record is updated
-        self.assertEqual(1,
-                            self.update_job_status_and_error_msg.call_count)
+        self.assertEqual(1, self.update_job_status_and_error_msg.call_count)
         self.assertEqual(
-            ((123, 'failed', 'job process 1 crashed or terminated'), {}),
+            ((123,), {'error_msg': 'job process 1 crashed or terminated'}),
             self.update_job_status_and_error_msg.call_args)
 
 
