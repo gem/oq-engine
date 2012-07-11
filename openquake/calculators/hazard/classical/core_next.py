@@ -30,7 +30,6 @@ import nhlib.imt
 import nhlib.site
 
 from django.db import transaction
-from celery.task import task
 from nrml import parsers as nrml_parsers
 
 from openquake import engine2
@@ -413,7 +412,7 @@ class ClassicalHazardCalculator(base.CalculatorNext):
                     sa_damping = DEFAULT_SA_DAMPING
                     hc_im_type = 'SA'  # don't include the period
                 else:
-                    hc_im_type= imt
+                    hc_im_type = imt
 
                 # TODO: create an `Output` record here as well
                 # with type == 'hazard_curve'
