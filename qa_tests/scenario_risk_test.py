@@ -167,18 +167,18 @@ class ScenarioRiskQATest(unittest.TestCase):
         # Loss map for the mean-based approach:
         mb_loss_map = [
             dict(asset='a3', pos='15.48 38.25', mean=200.54874638,
-                 stddev=94.2302991022),
+                stddev=94.2302991022),
             dict(asset='a2', pos='15.56 38.17', mean=510.821363253,
-                 stddev=259.964152622),
+                stddev=259.964152622),
             dict(asset='a1', pos='15.48 38.09', mean=521.885458891,
-                 stddev=244.825980356),
+                stddev=244.825980356),
         ]
 
         # Sanity checks are done. Let's do this.
         scen_cfg = helpers.demo_file(
             'scenario_risk/config_sample-based_qa.gem')
         result = helpers.run_job(scen_cfg, ['--output-type=xml'],
-                                 check_output=True)
+            check_output=True)
 
         job = OqJob.objects.latest('id')
         self.assertEqual('succeeded', job.status)
@@ -191,12 +191,11 @@ class ScenarioRiskQATest(unittest.TestCase):
         self._verify_loss_map_within_range(sorted(mb_loss_map),
             sorted(loss_map), 0.05)
 
-        actual_mean, actual_stddev = self._mean_stddev_from_result_line(result)
-
-        self.assertAlmostEqual(
-            exp_mean_loss, actual_mean, places=self.TOTAL_LOSS_PRECISION)
-        self.assertAlmostEqual(
-            exp_stddev_loss, actual_stddev, places=self.TOTAL_LOSS_PRECISION)
+        exp_mean_loss, exp_stddev_loss = self._mean_stddev_from_result_line(
+            result)
+        self.assertAlmostEqual(mb_mean_loss, exp_mean_loss,
+            delta=mb_mean_loss * 0.05)
+        self.assertTrue(exp_stddev_loss > mb_stddev_loss)
 
     def test_scenario_risk_insured_losses(self):
         # This test exercises the 'mean-based' path through the Scenario Risk
