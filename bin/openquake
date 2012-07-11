@@ -194,21 +194,24 @@ if __name__ == '__main__':
             job = engine2.prepare_job(getpass.getuser())
             params, files = engine2.parse_config(
                 open(args.run_hazard, 'r'), force_inputs=args.force_inputs)
-            calculation = engine2.create_hazard_calculation(job.owner, params, files.values())
+            calculation = engine2.create_hazard_calculation(job.owner, params,
+                                                            files.values())
             job.hazard_calculation = calculation
             job.save()
 
             # Validate the job:
-            form = validation.ClassicalHazardCalculationForm(instance=calculation, files=files)
+            form = validation.ClassicalHazardCalculationForm(
+                instance=calculation, files=files)
             # For now, just print whether or not the job is valid.
             if form.is_valid():
                 print 'Job configuration is valid'
             else:
-                print 'Job configuration is not valid. Errors: %s' % dict(form.errors)
+                print ('Job configuration is not valid. Errors: %s'
+                       % dict(form.errors))
 
             # Initialize the supervisor, instantiate the calculator,
             # and run the calculation.
-            engine2.run_hazard(job)
+            engine2.run_hazard(job, args.log_level, args.log_file)
         except IOError as e:
             print str(e)
         except Exception as e:
