@@ -166,15 +166,18 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             # initialized:
             [hc_prog_pga] = models.HazardCurveProgress.objects.filter(
                 lt_realization=ltr.id, imt="PGA")
-            self.assertEqual((28, 15), hc_prog_pga.result_matrix.shape)
+            self.assertEqual((120, 19), hc_prog_pga.result_matrix.shape)
             self.assertTrue((hc_prog_pga.result_matrix == 0).all())
 
             [hc_prog_sa] = models.HazardCurveProgress.objects.filter(
                 lt_realization=ltr.id, imt="SA(0.025)")
-            self.assertEqual((28, 19), hc_prog_sa.result_matrix.shape)
+            self.assertEqual((120, 19), hc_prog_sa.result_matrix.shape)
             self.assertTrue((hc_prog_sa.result_matrix == 0).all())
 
+    @unittest.skip
     def test_execute(self):
+        # TODO: move the scope of this test to a qa test
+        # (because execution takes a long time)
         self.calc.pre_execute()
 
         # Update job status to move on to the execution phase.
@@ -184,6 +187,7 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
         self.job.status = 'complete'
         self.job.is_running = False
         self.job.save()
+        self.calc.post_execute()
 
 
 class ImtsToNhlibTestCase(unittest.TestCase):

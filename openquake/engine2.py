@@ -26,6 +26,7 @@ from datetime import datetime
 from django.core import exceptions
 from django.db import close_connection
 
+from openquake import kvs
 from openquake import logs
 from openquake.db import models
 from openquake.supervising import supervisor
@@ -283,6 +284,9 @@ def run_hazard(job, log_level, log_file):
                 num_sites=len(hc.points_to_compute()),
                 realizations=hc.number_of_logic_tree_samples)
             # run the job
+            job.is_running = True
+            job.save()
+            kvs.mark_job_as_current(job.id)
             _do_run_hazard(job)
         except Exception, ex:
             logs.LOG.critical("Calculation failed with exception: '%s'"
@@ -313,7 +317,9 @@ def run_hazard(job, log_level, log_file):
 
 def _do_run_hazard(job):
     # TODO: support calculator selection based on calc mode
-    from openquake.calculators.hazard.classical.core_next import ClassicalHazardCalculator
+    from openquake.calculators.hazard.classical.core_next import (
+        ClassicalHazardCalculator)
+
     # - Instantiate the calculator class
     calc = ClassicalHazardCalculator(job)
 

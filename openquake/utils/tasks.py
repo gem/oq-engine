@@ -20,7 +20,11 @@
 """Utility functions related to splitting work into tasks."""
 
 import itertools
+
+from functools import wraps
+
 from celery.task.sets import TaskSet
+from celery.task import task
 
 from openquake import logs
 from openquake.db import models
@@ -183,3 +187,25 @@ def calculator_for_task(job_id, job_type):
     calculator = CALCS[job_type][calc_mode](job_ctxt)
 
     return calculator
+
+
+def oqtask(task_func):
+
+    def wrapped(*args, **kwargs):
+        # Set up logging via amqp.
+        # The job_id is assumed to be the first positional arg.
+        job_id = args[0]
+        logs.init_logs_amqp_send(level='debug', job_id=job_id)
+        try:
+            # check if the job is still running
+            jobs = models.OqJob.objects.filter(
+                id=job_id, status='executing', is_running=True)
+            if len(jobs) == 0:
+                # the job is not running
+                raise JobCompletedError(job_id)
+            # the job is running, proceed with task execution
+            task_func(*args, **kwargs)
+        except Exception, err:
+            logs.LOG.critical('Error occurred in task: %s' % str(err))
+
+    return task(wrapped, ignore_result=True)
