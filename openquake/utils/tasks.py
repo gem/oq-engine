@@ -21,8 +21,6 @@
 
 import itertools
 
-from functools import wraps
-
 from celery.task.sets import TaskSet
 from celery.task import task
 
@@ -190,8 +188,20 @@ def calculator_for_task(job_id, job_type):
 
 
 def oqtask(task_func):
+    """
+    Task function decorator which sets up logging and catches (and logs) any
+    errors which occur inside the task. Also checks to make sure the job is
+    actually still running. If it is not running, raise a
+    :exc:`JobCompletedError`. (This also means that the task doesn't get
+    executed, so we don't do useless computation.)
+    """
 
     def wrapped(*args, **kwargs):
+        """
+        Initialize logs, make sure the job is still running, and run the task
+        code surrounded by a try-except. If any error occurs, log it as a
+        critical failure.
+        """
         # Set up logging via amqp.
         # The job_id is assumed to be the first positional arg.
         job_id = args[0]
@@ -205,7 +215,9 @@ def oqtask(task_func):
                 raise JobCompletedError(job_id)
             # the job is running, proceed with task execution
             task_func(*args, **kwargs)
+        # TODO: should we do something different with the JobCompletedError?
         except Exception, err:
             logs.LOG.critical('Error occurred in task: %s' % str(err))
+            logs.LOG.exception(err)
 
     return task(wrapped, ignore_result=True)
