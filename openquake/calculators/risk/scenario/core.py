@@ -234,8 +234,8 @@ def collect_block_data(loss_data, asset_site, asset_data):
 
 def compute_uninsured_losses(vuln_function, gmvs, epsilon_provider, asset):
     """
-    Compute losses for the given asset using the related ground motion field
-    set and vulnerability function.
+    Compute losses for the given asset using the related set of ground
+    motion values and vulnerability function.
     :param vuln_function: the vulnerability function used to compute the loss
      ratios.
     :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
@@ -274,8 +274,8 @@ def insurance_boundaries_defind(asset):
 
 def compute_insured_losses(vuln_function, gmvs, epsilon_provider, asset):
     """
-    Compute insured losses for the given asset using the related ground motion
-    field set and vulnerability function.
+    Compute insured losses for the given asset using the related set of ground
+    motion values and vulnerability function.
     :param vuln_function: the vulnerability function used to compute the loss
     ratios.
     :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
