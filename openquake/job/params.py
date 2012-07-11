@@ -167,13 +167,10 @@ def define_param(name, column, modes=None, default=None, to_db=None,
                              default=default, modes=modes, to_db=to_db,
                              to_job=to_job, java_name=java_name)
 
-
-
 # A few helper functions for transforming job config params when they are read
 # from the config file into a Job. Shortened names for the sake of brevity.
 cttl = config_text_to_list
 cttfl = lambda x: cttl(x, float)  # config text to float list
-
 
 # general params
 define_param('CALCULATION_MODE', None)
@@ -412,4 +409,3 @@ define_param('WIDTH_OF_MFD_BIN', 'width_of_mfd_bin',
              to_job=float)
 define_param('INSURED_LOSSES', 'insured_losses',
              modes='scenario', to_job=str2bool)
-
