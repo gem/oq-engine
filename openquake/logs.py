@@ -25,6 +25,7 @@ TODO(jmc): support debug level per logger.
 import logging
 import socket
 import threading
+import traceback
 
 import kombu
 from openquake.signalling import AMQPMessageConsumer, amqp_connect
@@ -117,14 +118,19 @@ class AMQPHandler(logging.Handler):  # pylint: disable=R0902
         self._MDC.job_id = job_id
 
     def emit(self, record):  # pylint: disable=E0202
-        # exc_info objects are not easily serializable
-        # so we can not support "logger.exception()"
-        assert not record.exc_info
         data = vars(record).copy()
+        msg = record.getMessage()
+        if record.exc_info:
+            # An exception was logged.
+            # Set this to None because can't serialize `traceback` objects
+            data['exc_info'] = None
+            # The traceback text is in `msg`, so we still have everything we
+            # need to log a useful error in the the case of logger.exception()
+
         # instead of 'msg' with placeholders putting formatted message
         # and removing args list to guarantee serializability no matter
         # what was in args
-        data['msg'] = record.getMessage()
+        data['msg'] = msg
         data['args'] = ()
         data['hostname'] = socket.getfqdn()
         data['job_id'] = getattr(self._MDC, 'job_id', None)

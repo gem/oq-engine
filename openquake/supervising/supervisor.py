@@ -274,7 +274,7 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
 
         if job_failed or process_stopped:
             job_status = get_job_status(self.job_id)
-            if process_stopped and job_status == 'succeeded':
+            if process_stopped and job_status == 'complete':
                 message = 'job process %s succeeded' % self.job_pid
                 self.selflogger.info(message)
             elif not job_status == 'complete':
