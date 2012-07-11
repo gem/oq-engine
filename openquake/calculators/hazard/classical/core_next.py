@@ -390,7 +390,7 @@ class ClassicalHazardCalculator(base.CalculatorNext):
 
     def post_execute(self):
         """
-        Create the final output records for
+        Create the final output records for hazard curves.
         """
         # TODO: better doc
         hc = self.job.hazard_calculation
@@ -512,6 +512,11 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
     # Now initialize the site collection for use in the calculation.
     # If there is no site model defined, we will use the same reference
     # parameters (defined in the HazardCalculation) for every site.
+
+    # TODO: We could just create the SiteCollection once, pickle it, and store
+    # it in the DB (in SiteData). Creating the SiteCollection isn't an
+    # expensive operation (at least for small calculations), but this is
+    # wasted work.
     logs.LOG.debug('> creating site collection')
     site_data = models.SiteData.objects.filter(hazard_calculation=hc.id)
     if len(site_data) > 0:
