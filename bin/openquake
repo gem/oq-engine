@@ -203,11 +203,10 @@ if __name__ == '__main__':
             form = validation.ClassicalHazardCalculationForm(
                 instance=calculation, files=files)
             # For now, just print whether or not the job is valid.
-            if form.is_valid():
-                print 'Job configuration is valid'
-            else:
+            if not form.is_valid():
                 print ('Job configuration is not valid. Errors: %s'
                        % dict(form.errors))
+                sys.exit(1)
 
             # Initialize the supervisor, instantiate the calculator,
             # and run the calculation.
