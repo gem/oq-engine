@@ -53,22 +53,22 @@ class EngineAPITestCase(unittest.TestCase):
             owner=helpers.default_user(),
             path=os.path.abspath(helpers.demo_file(
                 'HazardMapTest/source_model_logic_tree.xml')),
-            input_type='lt_source', size=671,
-            digest="a4afc25a1ae0bc4786444d4294c29753")
+            input_type='lt_source', size=653,
+            digest="b6c359d292631db3285f0672d4d87816")
 
         gmpelt_input = models.Input(
             owner=helpers.default_user(),
             path=os.path.abspath(helpers.demo_file(
                 'HazardMapTest/gmpe_logic_tree.xml')),
-            input_type='lt_gsim', size=776,
-            digest="aa4a5ccf61553f7be22ec4f9eabe43b4")
+            input_type='lt_gsim', size=758,
+            digest="7e19ae114f77d51affc1577ecec94afe")
 
         src_model_input = models.Input(
             owner=helpers.default_user(),
             path=os.path.abspath(helpers.demo_file(
                 'HazardMapTest/source_model.xml')),
-            input_type='source', size=1144,
-            digest="68bbbc82682e99b1b2c3c33cbbf57c54")
+            input_type='source', size=1126,
+            digest="f58dd65b39268501335331201a7e0bcf")
 
         expected_inputs_map = dict(
             lt_source=smlt_input, lt_gsim=gmpelt_input, source=src_model_input)
@@ -214,6 +214,9 @@ class EngineAPITestCase(unittest.TestCase):
 
         for act_inp in actual_inputs:
             exp_inp = expected_inputs_map[act_inp.input_type]
+            import pprint
+            pprint.pprint(exp_inp.__dict__)
+            pprint.pprint(act_inp.__dict__)
             self.assertTrue(
                 models.model_equals(
                     exp_inp, act_inp, ignore=(

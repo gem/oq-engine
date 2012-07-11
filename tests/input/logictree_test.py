@@ -90,8 +90,7 @@ class _TesteableGMPELogicTree(logictree.GMPELogicTree):
 def _make_nrml(content):
     return """\
     <nrml xmlns:gml="http://www.opengis.net/gml"\
-          xmlns="http://openquake.org/xmlns/nrml/0.4"\
-          gml:id="n1">\
+          xmlns="http://openquake.org/xmlns/nrml/0.4">\
         %s
     </nrml>""" % content
 
