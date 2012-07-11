@@ -4,7 +4,7 @@
 Each source belong to a different tectonic region type: Stable Shallow Crust, Active Shallow Crust,
 Subduction Interface, Subduction IntraSlab. -->
 
-<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml" gml:id="n1">
+<nrml xmlns="http://openquake.org/xmlns/nrml/0.4" xmlns:gml="http://www.opengis.net/gml">
   <sourceModel name="sm1">
     <areaSource id="src_1" name="Example Area Source" tectonicRegion="Stable Shallow Crust">
       <areaGeometry>

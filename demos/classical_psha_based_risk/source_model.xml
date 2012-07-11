@@ -1,8 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
       xmlns:qml="http://quakeml.org/xmlns/quakeml/1.1"
-      xmlns="http://openquake.org/xmlns/nrml/0.4"
-      gml:id="n1">
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
 
     <sourceModel name="sm1">
         <simpleFaultSource id="src01" name="PEER test 'FAULT 1' model" tectonicRegion="Active Shallow Crust">
