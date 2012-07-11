@@ -1185,7 +1185,7 @@ class ScenarioEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
         self.epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
                     -0.4336, 0.3426, 3.5784, 2.7694]
 
-        self.gmfs = {"IMLs": (0.1576, 0.9706, 0.9572, 0.4854, 0.8003,
+        self.gmvs = {"IMLs": (0.1576, 0.9706, 0.9572, 0.4854, 0.8003,
                      0.1419, 0.4218, 0.9157, 0.7922, 0.9595)}
 
         self.asset = models.ExposureData(exposure_model=self.emdl, stco=1000)
@@ -1199,7 +1199,7 @@ class ScenarioEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
         self.assertTrue(numpy.allclose(expected,
             scenario.compute_uninsured_losses(self.vuln_function,
-                self.gmfs, self.eps_provider, self.asset)))
+                self.gmvs, self.eps_provider, self.asset)))
 
     def test_insurance_boundaries_defined(self):
         self.asset.ref = 'a14'
@@ -1219,7 +1219,7 @@ class ScenarioEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
 
         self.assertTrue(numpy.allclose(expected,
             scenario.compute_insured_losses(self.vuln_function,
-                self.gmfs, self.eps_provider, self.asset)))
+                self.gmvs, self.eps_provider, self.asset)))
 
 
 class RiskCommonTestCase(unittest.TestCase):

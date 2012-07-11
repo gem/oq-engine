@@ -232,14 +232,14 @@ def collect_block_data(loss_data, asset_site, asset_data):
     loss_data[asset_site] = data
 
 
-def compute_uninsured_losses(vuln_function, gmf_set, epsilon_provider, asset):
+def compute_uninsured_losses(vuln_function, gmvs, epsilon_provider, asset):
     """
     Compute losses for the given asset using the related ground motion field
     set and vulnerability function.
     :param vuln_function: the vulnerability function used to compute the loss
      ratios.
     :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
-    :param gmf_set: the set of ground motion fields used to compute the loss
+    :param gmvs: the set of ground motion fields used to compute the loss
     ratios.
     :type gmf_set: :py:class:`dict` with the following keys: **IMLs** - tuple
      of ground motion fields (float).
@@ -251,7 +251,7 @@ def compute_uninsured_losses(vuln_function, gmf_set, epsilon_provider, asset):
     """
 
     loss_ratios = general.compute_loss_ratios(
-        vuln_function, gmf_set, epsilon_provider, asset)
+        vuln_function, gmvs, epsilon_provider, asset)
     losses = loss_ratios * asset.value
 
     return losses
@@ -272,14 +272,14 @@ def insurance_boundaries_defind(asset):
             % asset.asset_ref)
 
 
-def compute_insured_losses(vuln_function, gmf_set, epsilon_provider, asset):
+def compute_insured_losses(vuln_function, gmvs, epsilon_provider, asset):
     """
     Compute insured losses for the given asset using the related ground motion
     field set and vulnerability function.
     :param vuln_function: the vulnerability function used to compute the loss
     ratios.
     :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
-    :param gmf_set: the set of ground motion fields used to compute the loss
+    :param gmvs: the set of ground motion fields used to compute the loss
     ratios.
     :type gmf_set: :py:class:`dict` with the following keys: **IMLs** - tuple
     of ground motion fields (float).
@@ -290,7 +290,7 @@ def compute_insured_losses(vuln_function, gmf_set, epsilon_provider, asset):
     :type asset: an :py:class:`openquake.db.model.ExposureData` instance
     """
 
-    losses = compute_uninsured_losses(vuln_function, gmf_set,
+    losses = compute_uninsured_losses(vuln_function, gmvs,
                 epsilon_provider, asset)
 
     if insurance_boundaries_defind(asset):
