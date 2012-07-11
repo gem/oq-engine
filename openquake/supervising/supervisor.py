@@ -115,19 +115,17 @@ def get_job_status(job_id):
     return OqJob.objects.get(id=job_id).status
 
 
-def update_job_status_and_error_msg(job_id, status, error_msg=None):
+def update_job_status_and_error_msg(job_id, error_msg=None):
     """
     Store in the database the status of a job and optionally an error message.
 
     :param job_id: the id of the job
     :type job_id: int
-    :param status: the status of the job, e.g. 'failed'
-    :type status: string
     :param error_msg: the error message, if any
     :type error_msg: string or None
     """
     job = OqJob.objects.get(id=job_id)
-    job.status = status
+    job.is_running = False
     job.save()
 
     if error_msg:
@@ -237,8 +235,7 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
 
         terminate_job(self.job_pid)
 
-        update_job_status_and_error_msg(self.job_id, 'failed',
-                                        record.getMessage())
+        update_job_status_and_error_msg(self.job_id, record.getMessage())
 
         record_job_stop_time(self.job_id)
 
@@ -280,12 +277,12 @@ class SupervisorLogMessageConsumer(logs.AMQPLogSource):
             if process_stopped and job_status == 'succeeded':
                 message = 'job process %s succeeded' % self.job_pid
                 self.selflogger.info(message)
-            elif job_status == 'running':
+            elif not job_status == 'complete':
                 # The job crashed without having a chance to update the
                 # status in the database, or it has been running even though
                 # there were failures. We update the job status here.
                 self.selflogger.error(message)
-                update_job_status_and_error_msg(self.job_id, 'failed', message)
+                update_job_status_and_error_msg(self.job_id, error_msg=message)
 
             record_job_stop_time(self.job_id)
             cleanup_after_job(self.job_id)
