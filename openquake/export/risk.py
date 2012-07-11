@@ -24,6 +24,9 @@ from openquake.db import models
 from openquake.export.core import makedirs
 from openquake.output.risk import AggregateLossCurveXMLWriter
 from openquake.output.scenario_damage import DmgDistPerAssetXMLWriter
+from openquake.output.scenario_damage import DmgDistPerTaxonomyXMLWriter
+from openquake.output.scenario_damage import DmgDistTotalXMLWriter
+from openquake.output.scenario_damage import CollapseMapXMLWriter
 
 
 @makedirs
@@ -70,6 +73,86 @@ def export_dmg_dist_per_asset(output, target_dir):
         file_path, dda.end_branch_label, dda.dmg_states)
 
     data = models.DmgDistPerAssetData.objects.filter(dmg_dist_per_asset=dda)
+    writer.serialize(data)
+
+    return [file_path]
+
+
+@makedirs
+def export_dmg_dist_per_taxonomy(output, target_dir):
+    """
+    Export the damage distribution per taxonomy identified
+    by the given output to the `target_dir`.
+
+    :param output: db output record which identifies the distribution.
+    :type output: :py:class:`openquake.db.models.Output`
+    :param target_dir: destination directory of the exported file.
+    :type target_dir: string
+    """
+
+    file_name = "dmg-dist-taxonomy-%s.xml" % output.oq_job.id
+    file_path = os.path.join(target_dir, file_name)
+
+    ddt = models.DmgDistPerTaxonomy.objects.get(output=output)
+    writer = DmgDistPerTaxonomyXMLWriter(
+        file_path, ddt.end_branch_label, ddt.dmg_states)
+
+    data = models.DmgDistPerTaxonomyData.objects.filter(
+        dmg_dist_per_taxonomy=ddt)
+
+    writer.serialize(data)
+
+    return [file_path]
+
+
+@makedirs
+def export_dmg_dist_total(output, target_dir):
+    """
+    Export the total damage distribution identified
+    by the given output to the `target_dir`.
+
+    :param output: db output record which identifies the distribution.
+    :type output: :py:class:`openquake.db.models.Output`
+    :param target_dir: destination directory of the exported file.
+    :type target_dir: string
+    """
+
+    file_name = "dmg-dist-total-%s.xml" % output.oq_job.id
+    file_path = os.path.join(target_dir, file_name)
+
+    ddt = models.DmgDistTotal.objects.get(output=output)
+    writer = DmgDistTotalXMLWriter(
+        file_path, ddt.end_branch_label, ddt.dmg_states)
+
+    data = models.DmgDistTotalData.objects.filter(
+        dmg_dist_total=ddt)
+
+    writer.serialize(data)
+
+    return [file_path]
+
+
+@makedirs
+def export_collapse_map(output, target_dir):
+    """
+    Export the collapse map identified
+    by the given output to the `target_dir`.
+
+    :param output: db output record which identifies the distribution.
+    :type output: :py:class:`openquake.db.models.Output`
+    :param target_dir: destination directory of the exported file.
+    :type target_dir: string
+    """
+
+    file_name = "collapse-map-%s.xml" % output.oq_job.id
+    file_path = os.path.join(target_dir, file_name)
+
+    cm = models.CollapseMap.objects.get(output=output)
+    writer = CollapseMapXMLWriter(file_path, None)
+
+    data = models.CollapseMapData.objects.filter(
+        collapse_map=cm)
+
     writer.serialize(data)
 
     return [file_path]

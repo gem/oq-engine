@@ -53,6 +53,7 @@ INPUT_FILE_TYPES = {
     'VULNERABILITY': 'vulnerability',
     'VULNERABILITY_RETROFITTED': 'vulnerability_retrofitted',
     'SINGLE_RUPTURE_MODEL': 'rupture',
+    'SITE_MODEL': 'site_model',
 }
 
 ENUM_MAP = {
@@ -90,9 +91,7 @@ REVERSE_ENUM_MAP = dict((v, k) for k, v in ENUM_MAP.iteritems())
 
 CALCULATION_MODES = set(CALCULATION_MODE.values())
 PARAMS = {}
-PATH_PARAMS = ['VULNERABILITY', 'FRAGILITY', 'VULNERABILITY_RETROFITTED',
-               'SINGLE_RUPTURE_MODEL', 'EXPOSURE',
-               'SOURCE_MODEL_LOGIC_TREE_FILE', 'GMPE_LOGIC_TREE_FILE']
+PATH_PARAMS = INPUT_FILE_TYPES.keys()
 
 
 def config_text_to_list(text, transform=lambda x: x):
@@ -203,6 +202,7 @@ define_param('GMPE_LOGIC_TREE_FILE', None,
 define_param('SOURCE_MODEL_LOGIC_TREE_FILE', None,
              modes=('classical', 'event_based', 'disaggregation', 'uhs',
                     'classical_bcr', 'event_based_bcr'))
+define_param('SITE_MODEL', None)
 
 # Disaggregation parameters:
 define_param('DISAGGREGATION_RESULTS', 'disagg_results',
@@ -332,9 +332,9 @@ define_param('COMPUTE_MEAN_HAZARD_CURVE', 'compute_mean_hazard_curve',
              modes=('classical', 'classical_bcr'), to_job=str2bool)
 define_param('CONDITIONAL_LOSS_POE', 'conditional_loss_poe', to_job=cttfl)
 define_param('DAMPING', 'damping', default=0.0, to_job=float)
-define_param('EPSILON_RANDOM_SEED', 'epsilon_random_seed', modes='scenario',
+define_param('EPSILON_RANDOM_SEED', None, modes='scenario',
              to_job=int)
-define_param('GMF_OUTPUT', None,
+define_param('SAVE_GMFS', None,
              modes=('event_based', 'scenario', 'scenario_damage'),
              to_job=str2bool)
 define_param('GMF_RANDOM_SEED', 'gmf_random_seed',

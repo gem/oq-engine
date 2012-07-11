@@ -505,6 +505,22 @@ CREATE TABLE hzrdi.focal_mechanism (
 ) TABLESPACE hzrdi_ts;
 
 
+-- Parsed sources
+CREATE TABLE hzrdi.parsed_source (
+    id SERIAL PRIMARY KEY,
+    input_id INTEGER NOT NULL,
+    source_type VARCHAR NOT NULL
+        CONSTRAINT enforce_source_type CHECK
+        (source_type IN ('area', 'point', 'complex', 'simple')),
+    blob TEXT NOT NULL,
+    geom geometry NOT NULL,
+    last_update timestamp without time zone
+        DEFAULT timezone('UTC'::text, now()) NOT NULL,
+    CONSTRAINT enforce_dims_geom CHECK (ndims(geom) = 2),
+    CONSTRAINT enforce_srid_geom CHECK (srid(geom) = 4326)
+) TABLESPACE hzrdi_ts;
+
+
 -- A batch of OpenQuake input files uploaded by the user
 CREATE TABLE uiapi.upload (
     id SERIAL PRIMARY KEY,
@@ -542,7 +558,8 @@ CREATE TABLE uiapi.input (
     input_type VARCHAR NOT NULL CONSTRAINT input_type_value
         CHECK(input_type IN ('unknown', 'source', 'lt_source', 'lt_gmpe',
                              'exposure', 'fragility', 'rupture',
-                             'vulnerability', 'vulnerability_retrofitted')),
+                             'vulnerability', 'vulnerability_retrofitted',
+                             'site_model')),
     -- Number of bytes in file
     size INTEGER NOT NULL DEFAULT 0,
     last_update timestamp without time zone
@@ -651,7 +668,6 @@ CREATE TABLE uiapi.oq_job_profile (
     truncation_type VARCHAR NOT NULL CONSTRAINT truncation_type_value
         CHECK(truncation_type IN ('none', 'onesided', 'twosided')),
     truncation_level float NOT NULL DEFAULT 3.0,
-    reference_vs30_value float NOT NULL,
     -- Intensity measure levels
     imls float[] CONSTRAINT imls_are_set
         CHECK(
@@ -887,7 +903,6 @@ CREATE TABLE uiapi.oq_job_profile (
             OR
             ((calc_mode != 'classical')
              AND (quantile_levels IS NULL))),
-    reference_depth_to_2pt5km_per_sec_param float,
     rupture_aspect_ratio float
         CONSTRAINT rupture_aspect_ratio_is_set
         CHECK(
@@ -1101,15 +1116,13 @@ CREATE TABLE uiapi.oq_job_profile (
             ((calc_mode = 'uhs') AND (uhs_periods IS NOT NULL) AND (array_length(uhs_periods, 1) > 0))
             OR
             ((calc_mode != 'uhs') AND (uhs_periods IS NULL))),
-    depth_to_1pt_0km_per_sec float NOT NULL DEFAULT 100.0
+    reference_vs30_value float,
+    vs30_type VARCHAR DEFAULT 'measured' CONSTRAINT vs30_type_value
+        CHECK(vs30_type IN ('measured', 'inferred')),
+    depth_to_1pt_0km_per_sec float DEFAULT 100.0
         CONSTRAINT depth_to_1pt_0km_per_sec_above_zero
         CHECK(depth_to_1pt_0km_per_sec > 0.0),
-    vs30_type VARCHAR NOT NULL DEFAULT 'measured' CONSTRAINT vs30_type_value
-        CHECK(vs30_type IN ('measured', 'inferred')),
-    epsilon_random_seed INTEGER CONSTRAINT epsilon_rnd_seed_is_set
-        CHECK(
-            (calc_mode = 'scenario' AND epsilon_random_seed IS NOT NULL)
-            OR (calc_mode != 'scenario' AND epsilon_random_seed IS NULL)),
+    reference_depth_to_2pt5km_per_sec_param float,
     -- timestamp
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
@@ -1186,6 +1199,22 @@ CREATE TABLE uiapi.input2job (
     input_id INTEGER NOT NULL,
     oq_job_id INTEGER NOT NULL,
     UNIQUE (input_id, oq_job_id)
+) TABLESPACE uiapi_ts;
+
+
+-- Associate an 'lt_source' type input (a logic tree source) with 'source'
+-- type inputs (hazard sources referenced by the logic tree source).
+-- This is needed for worker-side logic tree processing.
+CREATE TABLE uiapi.src2ltsrc (
+    id SERIAL PRIMARY KEY,
+    -- foreign key to the input of type 'source'
+    hzrd_src_id INTEGER NOT NULL,
+    -- foreign key to the input of type 'lt_source'
+    lt_src_id INTEGER NOT NULL,
+    -- Due to input file reuse, the original file name may deviate from
+    -- the current. We hence need to capture the latter.
+    filename VARCHAR NOT NULL,
+    UNIQUE (hzrd_src_id, lt_src_id)
 ) TABLESPACE uiapi_ts;
 
 
@@ -1645,6 +1674,9 @@ CREATE TABLE riski.fragility_model (
     min_iml float,
     -- maximum IML value, only applicable to continuous fragility models.
     max_iml float,
+    -- defines the IML after which damage is observed, only applicable to
+    -- discrete fragility models.
+    no_damage_limit float,
     last_update timestamp without time zone
         DEFAULT timezone('UTC'::text, now()) NOT NULL
 ) TABLESPACE riski_ts;
@@ -1782,6 +1814,9 @@ FOREIGN KEY (complex_fault_id) REFERENCES hzrdi.complex_fault(id) ON DELETE REST
 ALTER TABLE hzrdi.rupture ADD CONSTRAINT hzrdi_rupture_input_fk
 FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
 
+ALTER TABLE hzrdi.parsed_source ADD CONSTRAINT hzrdi_parsed_source_input_fk
+FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE RESTRICT;
+
 ALTER TABLE eqcat.catalog ADD CONSTRAINT eqcat_catalog_owner_fk
 FOREIGN KEY (owner_id) REFERENCES admin.oq_user(id) ON DELETE RESTRICT;
 
@@ -1805,6 +1840,12 @@ FOREIGN KEY (input_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.input2job ADD CONSTRAINT  uiapi_input2job_oq_job_fk
 FOREIGN KEY (oq_job_id) REFERENCES uiapi.oq_job(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.src2ltsrc ADD CONSTRAINT  uiapi_src2ltsrc_src_fk
+FOREIGN KEY (hzrd_src_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
+
+ALTER TABLE uiapi.src2ltsrc ADD CONSTRAINT  uiapi_src2ltsrc_ltsrc_fk
+FOREIGN KEY (lt_src_id) REFERENCES uiapi.input(id) ON DELETE CASCADE;
 
 ALTER TABLE uiapi.job2profile ADD CONSTRAINT
 uiapi_job2profile_oq_job_profile_fk FOREIGN KEY (oq_job_profile_id) REFERENCES

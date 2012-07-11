@@ -192,22 +192,29 @@ class HazardMandatoryParamsValidator(MandatoryParamsValidator):
             (False, [ERROR_MESSAGE#1, ERROR_MESSAGE#2, ..., ERROR_MESSAGE#N])
             tuple is returned
         """
-        result, msgs = super(HazardMandatoryParamsValidator, self).is_valid()
-        # The check failed in the base class already, just return.
-        if not result:
-            return (result, msgs)
-        # The check in the base class succeeded. Now -- in addition -- make
-        # sure that we have a 'java_name' set for each mandatory hazard
-        # parameter.
-        params_lacking_java_name = [p for p in self.MANDATORY_PARAMS
-                                    if PARAMS[p].java_name is None]
-        if params_lacking_java_name:
-            msg = ("The following mandatory hazard parameter(s) lack "
-                   "a 'java_name' property: %s"
-                   % ", ".join(params_lacking_java_name))
-            return(False, [msg])
+        if 'SITE_MODEL' in self.params:
+            # We can ignore the other mandatory parameters.
+            # The site model will provide site-specific vs30, vs30 type,
+            # z 1.0, and z 2.5 values.
+            return (True, [])
         else:
-            return (result, msgs)
+            result, msgs = super(
+                HazardMandatoryParamsValidator, self).is_valid()
+            # The check failed in the base class already, just return.
+            if not result:
+                return (result, msgs)
+            # The check in the base class succeeded. Now -- in addition -- make
+            # sure that we have a 'java_name' set for each mandatory hazard
+            # parameter.
+            params_lacking_java_name = [p for p in self.MANDATORY_PARAMS
+                                        if PARAMS[p].java_name is None]
+            if params_lacking_java_name:
+                msg = ("The following mandatory hazard parameter(s) lack "
+                       "a 'java_name' property: %s"
+                       % ", ".join(params_lacking_java_name))
+                return(False, [msg])
+            else:
+                return (result, msgs)
 
 
 class ComputationTypeValidator(object):
@@ -275,15 +282,6 @@ class ScenarioComputationValidator(object):
             return (False, [err.message])
 
         return (True, [])
-
-
-class ScenarioValidator(MandatoryParamsValidator):
-    """Checks for the presence of mandatory params in the Scenario Risk
-    calculator.
-    """
-
-    SECTION_OF_INTEREST = RISK_SECTION
-    MANDATORY_PARAMS = ['EPSILON_RANDOM_SEED']
 
 
 class ScenarioDamageValidator(MandatoryParamsValidator):
@@ -707,9 +705,6 @@ def default_validators(sections, params):
         validators.add(BCRValidator(params))
     elif calc_mode in (SCENARIO_MODE, SCENARIO_DAMAGE_MODE):
         validators.add(ScenarioComputationValidator(sections, params))
-
-    if calc_mode == SCENARIO_MODE:
-        validators.add(ScenarioValidator(sections, params))
 
     if calc_mode == SCENARIO_DAMAGE_MODE:
         validators.add(ScenarioDamageValidator(sections, params))

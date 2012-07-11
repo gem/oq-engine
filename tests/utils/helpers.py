@@ -139,6 +139,15 @@ def demo_file(file_name):
         os.path.dirname(__file__), "../../demos", file_name)
 
 
+def qa_file(file_name):
+    """
+    Take a file name and return the full path to the file in the qa_tests/data
+    directory.
+    """
+    return os.path.join(
+        os.path.dirname(__file__), "../../qa_tests/data", file_name)
+
+
 def testdata_path(file_name):
     """
     Take a file name and return the full path to the file in the
@@ -814,3 +823,24 @@ def prepare_cli_output(raw_output, discard_header=True):
         lines.pop(0)
 
     return lines
+
+
+def prepare_job_context(path_to_cfg):
+    """Given a path to a config file, prepare and return a
+    :class:`openquake.engine.JobContext`. This convenient because it can be
+    immediately passed to a calculator constructor.
+
+    This also creates the necessary job and oq_job_profile records.
+    """
+    job = engine.prepare_job()
+
+    cfg = demo_file(path_to_cfg)
+
+    job_profile, params, sections = engine.import_job_profile(
+        cfg, job, force_inputs=True)
+
+    job_ctxt = engine.JobContext(
+        params, job.id, sections=sections, oq_job_profile=job_profile,
+        oq_job=job)
+
+    return job_ctxt

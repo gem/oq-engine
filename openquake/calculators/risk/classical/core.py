@@ -267,7 +267,9 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
 
         for site in block.sites:
             point = self.job_ctxt.region.grid.point_at(site)
-            hazard_curve = self._get_db_curve(point.site)
+            hazard_curve = self._get_db_curve(
+                general.hazard_input_site(self.job_ctxt, site))
+
             assets = general.BaseRiskCalculator.assets_at(
                 self.job_ctxt.job_id, site)
 
@@ -295,8 +297,9 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
         data structure spec.
         """
         job_ctxt = self.job_ctxt
-        points = list(general.Block.from_kvs(
-            job_ctxt.job_id, block_id).grid(job_ctxt.region))
+        block = general.Block.from_kvs(job_ctxt.job_id, block_id)
+        points = list(block.grid(job_ctxt.region))
+
         hazard_curves = dict((point.site, self._get_db_curve(point.site))
                              for point in points)
 
@@ -309,9 +312,10 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
                     job_profile.lrem_steps_per_interval)
             return compute_loss_curve(loss_ratio_curve, asset.value)
 
-        bcr = general.compute_bcr_for_block(job_ctxt.job_id, points,
+        bcr = general.compute_bcr_for_block(job_ctxt, block.sites,
             get_loss_curve, float(job_ctxt.params['INTEREST_RATE']),
             float(job_ctxt.params['ASSET_LIFE_EXPECTANCY']))
+
         bcr_block_key = kvs.tokens.bcr_block_key(job_ctxt.job_id, block_id)
         kvs.set_value_json_encoded(bcr_block_key, bcr)
         LOGGER.debug('bcr result for block %s: %r', block_id, bcr)

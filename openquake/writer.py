@@ -39,8 +39,6 @@ class FileWriter(object):
         self.path = path
         self.file = None
         self.root_node = None
-        # Either none or a namedtuple with 3 booleans: (start, middle, end)
-        self.mode = None
 
     def initialize(self):
         """Initialization hook for derived classes."""
@@ -48,8 +46,7 @@ class FileWriter(object):
 
     def open(self):
         """Get the file handle open for writing"""
-        if self.mode is None or self.mode.end:
-            self.file = open(self.path, "w")
+        self.file = open(self.path, "w")
 
     def write(self, point, value):
         """
@@ -134,11 +131,26 @@ class DBWriter(object):
         assert self.output is None
 
         job = models.OqJob.objects.get(id=self.oq_job_id)
-        self.output = models.Output(owner=job.owner, oq_job=job,
-                                    display_name=basename(self.nrml_path),
-                                    output_type=output_type, db_backed=True)
-        self.output.save()
-        LOGGER.info("output = '%s'", self.output)
+
+        # al-maisan, Fri, 29 Jun 2012 17:36:35 +0200
+        # https://bugs.launchpad.net/openquake/+bug/1019317
+        # figure out why using a single output record for gmf_data breaks the
+        # probablistic event-based risk calculator.
+        if output_type == "gmf":
+            one_or_none = []
+        else:
+            one_or_none = models.Output.objects.filter(
+                oq_job=job, display_name=basename(self.nrml_path),
+                output_type=output_type)
+        if len(one_or_none) == 1:
+            self.output = one_or_none[0]
+            LOGGER.info("using output = '%s'", self.output)
+        else:
+            self.output = models.Output(
+                owner=job.owner, oq_job=job, db_backed=True,
+                display_name=basename(self.nrml_path), output_type=output_type)
+            self.output.save()
+            LOGGER.info("creating output = '%s'", self.output)
 
     def get_output_type(self):
         """
