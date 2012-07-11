@@ -30,6 +30,29 @@ from openquake.output import hazard as hzrd_out
 LOG = logs.LOG
 
 
+def export_psha(output, target_dir):
+    """Export the specified ``output`` to the ``target_dir``.
+
+    :param output:
+        :class:`openquake.db.models.Output` associated with PSHA calculation
+        results.
+    :param str target_dir:
+        Destination directory location of the exported files.
+
+    :returns:
+        A list of exported file names (including the absolute path to each
+        file).
+    """
+    assert output.output_type in ("hazard_curve", "hazard_map"), (
+        "wrong output type, should either be a hazard curve or a map")
+
+    path = os.path.join(target_dir, output.display_name)
+    if output.output_type == "hazard_curve":
+        [dba] = models.HazardCurve.objects.filter(output=output)
+    else:
+        [dba] = models.HazardMap.objects.filter(output=output)
+
+
 def nrml_path(job_ctxt, rtype, datum=None):
     """Return meta data required for hazard curve serialization.
 
@@ -174,17 +197,21 @@ def curves2nrml(job_ctxt):
     LOG.debug("< curves2nrml")
 
 
-def curve2nrml(job_ctxt, hc):
+def curve2nrml(job_ctxt, hc, path_to_use=None):
     """Write a single hazard curve to a NRML file.
 
     :param job_ctxt: the `JobContext` instance to use.
     :param hc: the :py:class:`openquake.db.models.HazardCurve` instance to dump
+    :param str path_to_use: optional path to use for serialization
     """
     LOG.debug("> curve2nrml")
     rtype = hc.statistic_type if hc.statistic_type is not None else "curve"
     datum = hc.end_branch_label if rtype == "curve" else hc.quantile
 
     _, path, hc_meta = hcs_meta(job_ctxt, rtype, datum)
+
+    if path_to_use:
+        path = path_to_use
     LOG.debug("*> path: '%s'" % path)
     check_target_dir(path)
 
@@ -203,6 +230,7 @@ def curve2nrml(job_ctxt, hc):
 
     writer.serialize(hc_data)
     LOG.debug("< curve2nrml")
+    return path
 
 
 def maps2nrml(job_ctxt, poes, quantiles):
