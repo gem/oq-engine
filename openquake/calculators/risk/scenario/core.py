@@ -241,7 +241,7 @@ def compute_uninsured_losses(vuln_function, gmvs, epsilon_provider, asset):
     :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
     :param gmvs: the set of ground motion fields used to compute the loss
     ratios.
-    :type gmf_set: :py:class:`dict` with the following keys: **IMLs** - tuple
+    :type gmvs: :py:class:`dict` with the following keys: **IMLs** - tuple
      of ground motion fields (float).
     :param epsilon_provider: service used to get the epsilon when using the
     sampled based algorithm.
@@ -281,7 +281,7 @@ def compute_insured_losses(vuln_function, gmvs, epsilon_provider, asset):
     :type vuln_function: :py:class:`openquake.shapes.VulnerabilityFunction`
     :param gmvs: the set of ground motion fields used to compute the loss
     ratios.
-    :type gmf_set: :py:class:`dict` with the following keys: **IMLs** - tuple
+    :type gmvs: :py:class:`dict` with the following keys: **IMLs** - tuple
     of ground motion fields (float).
     :param epsilon_provider: service used to get the epsilon when using the
     sampled based algorithm.
