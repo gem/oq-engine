@@ -19,9 +19,10 @@ import unittest
 
 import nhlib.imt
 
+from nose.plugins.attrib import attr
+
 from openquake.db import models
 from openquake.calculators.hazard.classical import core_next
-
 from tests.utils import helpers
 
 
@@ -174,18 +175,18 @@ class ClassicalHazardCalculatorTestCase(unittest.TestCase):
             self.assertEqual((120, 19), hc_prog_sa.result_matrix.shape)
             self.assertTrue((hc_prog_sa.result_matrix == 0).all())
 
-    @unittest.skip
-    def test_execute(self):
-        # TODO: move the scope of this test to a qa test
-        # (because execution takes a long time)
+    @attr('slow')
+    def test_execute_and_post_execute(self):
         self.calc.pre_execute()
 
         # Update job status to move on to the execution phase.
+        self.job.is_running = True
+
         self.job.status = 'executing'
         self.job.save()
         self.calc.execute()
-        self.job.status = 'complete'
-        self.job.is_running = False
+
+        self.job.status = 'post_executing'
         self.job.save()
         self.calc.post_execute()
 
