@@ -60,8 +60,13 @@ SINGLE_RUPTURE_MODEL = Messina1908.xml
 
 [RISK]
 
+EPSILON_RANDOM_SEED = 1
+
 # file containing the exposure in nrml format
 EXPOSURE = exposure_model.xml
 
 # file containing the vulnerability functions
 VULNERABILITY = vulnerability_model.xml
+
+# compute insured losses
+INSURED_LOSSES = true
