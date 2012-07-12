@@ -313,7 +313,10 @@ def run_hazard(job, log_level, log_file):
     # wait till both child processes are done
     os.waitpid(job_pid, 0)
     os.waitpid(supervisor_pid, 0)
-    return job
+
+    # Refresh the job record, since the forked processes are going to modify
+    # job state.
+    return models.OqJob.objects.get(id=job.id)
 
 
 def _do_run_hazard(job):
