@@ -130,7 +130,30 @@ class BCRQATestCase(unittest.TestCase):
         ret_code = helpers.run_job('%s/config_ebased.gem' % BCR_DEMO_BASE,
                 ['--output-type=xml'])
 
+        self._verify_job_succeeded(ret_code)
+
+    def test_bcr_classical_hazard_on_exposure_sites(self):
+        # here we compute the hazard on locations
+        # defined in the exposure file. For now, we just
+        # check the job completes correctly.
+        ret_code = helpers.run_job(
+            '%s/config_hzr_exposure.gem' % BCR_DEMO_BASE,
+            ['--output-type=xml'])
+
+        self._verify_job_succeeded(ret_code)
+
+    def test_bcr_event_hazard_on_exposure_sites(self):
+        # here we compute the hazard on locations
+        # defined in the exposure file. For now, we just
+        # check the job completes correctly.
+        ret_code = helpers.run_job(
+            '%s/config_ebased_hzr_exposure.gem' % BCR_DEMO_BASE,
+            ['--output-type=xml'])
+
+        self._verify_job_succeeded(ret_code)
+
+    def _verify_job_succeeded(self, ret_code):
         self.assertEqual(0, ret_code)
 
-        job = OqJob.objects.latest('id')
-        self.assertEqual('succeeded', job.status)
+        job = OqJob.objects.latest("id")
+        self.assertEqual("succeeded", job.status)
