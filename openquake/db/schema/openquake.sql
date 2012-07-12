@@ -980,23 +980,27 @@ ALTER TABLE hzrdr.hazard_map_data ALTER COLUMN location SET NOT NULL;
 CREATE TABLE hzrdr.hazard_curve (
     id SERIAL PRIMARY KEY,
     output_id INTEGER NOT NULL,
-    -- Realization reference string
-    end_branch_label VARCHAR CONSTRAINT end_branch_label_value
-        CHECK(
-            ((end_branch_label IS NULL) AND (statistic_type IS NOT NULL))
-            OR ((end_branch_label IS NOT NULL) AND (statistic_type IS NULL))),
-    -- Statistic type, one of:
-    --      mean
-    --      median
-    --      quantile
-    statistic_type VARCHAR CONSTRAINT statistic_type_value
-        CHECK(statistic_type IS NULL OR
-              statistic_type IN ('mean', 'median', 'quantile')),
+    lt_realization_id INTEGER,  -- lt_realization FK, only required for non-statistical curves
+    investigation_time float NOT NULL,
+    imt VARCHAR NOT NULL CONSTRAINT hazard_curve_imt
+        CHECK(imt in ('PGA', 'PGV', 'PGD', 'SA', 'IA', 'RSD', 'MMI')),
+    imls float[] NOT NULL,
+    statistics VARCHAR CONSTRAINT hazard_curve_statistics
+        CHECK(statistics IS NULL OR
+              statistics IN ('mean', 'quantile')),
     -- Quantile value (only for "quantile" statistics)
     quantile float CONSTRAINT quantile_value
         CHECK(
-            ((statistic_type = 'quantile') AND (quantile IS NOT NULL))
-            OR (((statistic_type <> 'quantile') AND (quantile IS NULL))))
+            ((statistics = 'quantile') AND (quantile IS NOT NULL))
+            OR (((statistics != 'quantile') AND (quantile IS NULL)))),
+    sa_period float CONSTRAINT hazard_curve_sa_period
+        CHECK(
+            ((imt = 'SA') AND (sa_period IS NOT NULL))
+            OR ((imt != 'SA') AND (sa_period IS NULL))),
+    sa_damping float CONSTRAINT hazard_curve_sa_damping
+        CHECK(
+            ((imt = 'SA') AND (sa_damping IS NOT NULL))
+            OR ((imt != 'SA') AND (sa_damping IS NULL)))
 ) TABLESPACE hzrdr_ts;
 
 
@@ -1610,6 +1614,11 @@ FOREIGN KEY (hazard_map_id) REFERENCES hzrdr.hazard_map(id) ON DELETE CASCADE;
 ALTER TABLE hzrdr.hazard_curve
 ADD CONSTRAINT hzrdr_hazard_curve_output_fk
 FOREIGN KEY (output_id) REFERENCES uiapi.output(id) ON DELETE CASCADE;
+
+ALTER TABLE hzrdr.hazard_curve
+ADD CONSTRAINT hzrdr_hazard_curve_lt_realization_fk
+FOREIGN KEY (lt_realization_id) REFERENCES hzrdr.lt_realization(id)
+ON DELETE RESTRICT;
 
 ALTER TABLE hzrdr.hazard_curve_data
 ADD CONSTRAINT hzrdr_hazard_curve_data_hazard_curve_fk
