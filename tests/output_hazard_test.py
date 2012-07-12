@@ -348,6 +348,7 @@ class HazardCurveDBBaseTestCase(unittest.TestCase, helpers.DbTestCase):
         return self.sort((s, norm(v)) for s, v in values)
 
 
+@unittest.skip
 class HazardCurveDBWriterTestCase(HazardCurveDBBaseTestCase):
     """
     Unit tests for the HazardCurveDBWriter class, which serializes
