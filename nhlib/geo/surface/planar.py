@@ -274,8 +274,6 @@ class PlanarSurface(BaseSurface):
                   + self.uv1 * xx.reshape(xx.shape + (1, )) \
                   + self.uv2 * yy.reshape(yy.shape + (1, )) \
                   + self.normal * dists.reshape(dists.shape + (1, ))
-        if (dists == 0).all():
-            assert ((vectors * self.normal).sum(axis=-1) + self.d < 1e-12).all()
         return geo_utils.cartesian_to_spherical(vectors)
 
     def get_min_distance(self, mesh):
