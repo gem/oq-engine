@@ -160,6 +160,8 @@ class PlanarSurface(BaseSurface):
                                               p2.longitude, p2.latitude)
         # avoid calling PlanarSurface's constructor
         nsurf = object.__new__(PlanarSurface)
+        # but do call BaseSurface's one
+        BaseSurface.__init__(nsurf)
         nsurf.mesh_spacing = self.mesh_spacing
         nsurf.dip = self.dip
         nsurf.strike = self.strike
