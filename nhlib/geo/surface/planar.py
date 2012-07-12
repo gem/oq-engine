@@ -362,7 +362,13 @@ class PlanarSurface(BaseSurface):
         return numpy.sqrt(dists ** 2 + dists2d_squares)
 
     def get_closest_points(self, mesh):
-        # TODO: document
+        """
+        See :meth:`superclass' method
+        <nhlib.geo.surface.base.BaseSurface.get_closest_points>`.
+
+        This is an optimized version specific to planar surface that doesn't
+        make use of the mesh.
+        """
         dists, xx, yy = self._project(mesh.lons, mesh.lats, mesh.depths)
         mxx = xx.clip(0, self.length)
         myy = yy.clip(0, self.width)
