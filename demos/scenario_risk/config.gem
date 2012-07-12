@@ -65,3 +65,6 @@ EXPOSURE = exposure_model.xml
 
 # file containing the vulnerability functions
 VULNERABILITY = vulnerability_model.xml
+
+# compute insured losses
+#INSURED_LOSSES = true
