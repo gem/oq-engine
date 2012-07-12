@@ -1211,6 +1211,11 @@ class ScenarioEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertRaises(RuntimeError, scenario.insurance_boundaries_defind,
                 self.asset)
 
+        self.asset.ins_limit = 700
+        self.asset.deductible = None
+        self.assertRaises(RuntimeError, scenario.insurance_boundaries_defind,
+                self.asset)
+
     def test_compute_insured_losses(self):
         self.asset.deductible = 150
         self.asset.ins_limit = 300
