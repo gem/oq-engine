@@ -75,14 +75,17 @@ use this polygon in distance calculations.';
 
 
 -- hzrdr schema tables ------------------------------------------
-COMMENT ON TABLE hzrdr.hazard_curve IS 'Holds data for hazard curves associated with a branch label';
+COMMENT ON TABLE hzrdr.hazard_curve IS 'A collection of hazard curves. This table defines common attributes for the collection.';
 COMMENT ON COLUMN hzrdr.hazard_curve.output_id IS 'The foreign key to the output record that represents the corresponding hazard curve.';
-COMMENT ON COLUMN hzrdr.hazard_curve.end_branch_label IS 'End branch label for this curve.';
-COMMENT ON COLUMN hzrdr.hazard_curve.statistic_type IS 'Statistic type, one of:
+COMMENT ON COLUMN hzrdr.lt_realization_id IS 'Only required for non-statistical curves';
+COMMENT ON COLUMN hzrdr.imt IS 'Intensity Measure Type: PGA, PGV, PGD, SA, IA, RSD, or MMI';
+COMMENT ON COLUMN hzrdr.imls IS 'Intensity Measure Levels common to this set of hazard curves';
+COMMENT ON COLUMN hzrdr.hazard_curve.statistics IS 'Statistic type, one of:
     - Mean     (mean)
-    - Median   (median)
     - Quantile (quantile)';
 COMMENT ON COLUMN hzrdr.hazard_curve.quantile IS 'The quantile for quantile statistical data.';
+COMMENT ON COLUMN hzrdr.sa_period IS 'Spectral Acceleration period; only relevent when imt = SA';
+COMMENT ON COLUMN hzrdr.sa_damping IS 'Spectral Acceleration damping; only relevent when imt = SA';
 
 
 COMMENT ON TABLE hzrdr.hazard_curve_data IS 'Holds location/POE data for hazard curves';
