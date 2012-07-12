@@ -2,8 +2,7 @@
 <!-- Example of source model logic tree with abGRAbsolute and maxMagGRAbsolute uncertainties.
 It tests the option applyToSources. -->
 <nrml xmlns:gml="http://www.opengis.net/gml"
-      xmlns="http://openquake.org/xmlns/nrml/0.4"
-      gml:id="n1">
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
 
     <logicTree logicTreeID="lt1">
         <logicTreeBranchingLevel branchingLevelID="bl1">
@@ -18,7 +17,7 @@ It tests the option applyToSources. -->
         </logicTreeBranchingLevel>
 
         <logicTreeBranchingLevel branchingLevelID="bl2">
-			<!-- Here we test uncertaintyType="abGRAbsolute" on src_1. -->
+            <!-- Here we test uncertaintyType="abGRAbsolute" on src_1. -->
             <logicTreeBranchSet uncertaintyType="abGRAbsolute" branchSetID="bs2" applyToSources="src_1">
 
                 <logicTreeBranch branchID="b2">
@@ -35,11 +34,11 @@ It tests the option applyToSources. -->
         </logicTreeBranchingLevel>
 
 
-		<logicTreeBranchingLevel branchingLevelID="bl3">
+        <logicTreeBranchingLevel branchingLevelID="bl3">
 
-			<!-- Here we test uncertaintyType="maxMagGRAbsolute", on src_2.
-			These uncertainties should be applied only to the source model
-			coming out from branch b2 in the previous branching level -->
+            <!-- Here we test uncertaintyType="maxMagGRAbsolute", on src_2.
+            These uncertainties should be applied only to the source model
+            coming out from branch b2 in the previous branching level -->
             <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute" branchSetID="bs3" applyToBranches="b2" applyToSources="src_2">
 
                 <logicTreeBranch branchID="b4">
@@ -54,10 +53,10 @@ It tests the option applyToSources. -->
 
             </logicTreeBranchSet>
 
-			<!-- Here we test uncertaintyType="maxMagGRAbsolute", on src_3.
-			These uncertainties should be applied only to the source model
-			coming out from branch b3 in the previous branching level -->
-			<logicTreeBranchSet uncertaintyType="maxMagGRAbsolute" branchSetID="bs4" applyToBranches="b3" applyToSources="src_3">
+            <!-- Here we test uncertaintyType="maxMagGRAbsolute", on src_3.
+            These uncertainties should be applied only to the source model
+            coming out from branch b3 in the previous branching level -->
+            <logicTreeBranchSet uncertaintyType="maxMagGRAbsolute" branchSetID="bs4" applyToBranches="b3" applyToSources="src_3">
 
                 <logicTreeBranch branchID="b6">
                     <uncertaintyModel>8.0</uncertaintyModel>
@@ -73,11 +72,11 @@ It tests the option applyToSources. -->
 
         </logicTreeBranchingLevel>
 
-		<logicTreeBranchingLevel branchingLevelID="bl4">
+        <logicTreeBranchingLevel branchingLevelID="bl4">
 
-			<!-- Here we test uncertaintyType="maxMagGRAbsolute", on src_4.
-			These uncertainties should be applied only to the source model
-			coming out from branch b6 in the previous branching level -->
+            <!-- Here we test uncertaintyType="maxMagGRAbsolute", on src_4.
+            These uncertainties should be applied only to the source model
+            coming out from branch b6 in the previous branching level -->
             <logicTreeBranchSet uncertaintyType="abGRAbsolute" branchSetID="bs5" applyToBranches="b6" applyToSources="src_4">
 
                 <logicTreeBranch branchID="b8">

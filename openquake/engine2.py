@@ -21,9 +21,15 @@ import getpass
 import md5
 import os
 
-from django.core import exceptions
+from datetime import datetime
 
+from django.core import exceptions
+from django.db import close_connection
+
+from openquake import kvs
+from openquake import logs
 from openquake.db import models
+from openquake.supervising import supervisor
 
 
 def prepare_job(user_name="openquake"):
@@ -253,14 +259,97 @@ def create_hazard_calculation(owner, params, files):
     return hc
 
 
-def run_hazard(job):
+def run_hazard(job, log_level, log_file):
     """Run a hazard job.
 
     :param job:
         :class:`openquake.db.models.OqJob` instance which references a valid
         :class:`openquake.db.models.HazardCalculation`.
     """
-    # TODO:
-    # - Start the supervisor
+    # Closing all db connections to make sure they're not shared between
+    # supervisor and job executor processes.
+    # Otherwise, if one of them closes the connection it immediately becomes
+    # unavailable for others.
+    close_connection()
+
+    job_pid = os.fork()
+    if not job_pid:
+        # calculation executor process
+        try:
+            logs.init_logs_amqp_send(level=log_level, job_id=job.id)
+            # record initial job stats
+            hc = job.hazard_calculation
+            models.JobStats.objects.create(
+                oq_job=job, start_time=datetime.utcnow(),
+                num_sites=len(hc.points_to_compute()),
+                realizations=hc.number_of_logic_tree_samples)
+            # run the job
+            job.is_running = True
+            job.save()
+            kvs.mark_job_as_current(job.id)
+            _do_run_hazard(job)
+        except Exception, ex:
+            logs.LOG.critical("Calculation failed with exception: '%s'"
+                              % str(ex))
+            raise
+        finally:
+            job.is_running = False
+            job.save()
+        return
+
+    supervisor_pid = os.fork()
+    if not supervisor_pid:
+        # supervisor process
+        logs.set_logger_level(logs.logging.root, log_level)
+        # TODO: deal with KVS garbage collection
+        supervisor.supervise(job_pid, job.id, log_file=log_file)
+        return
+
+    # parent process
+
+    # ignore Ctrl-C as well as supervisor process does. thus only
+    # job executor terminates on SIGINT
+    supervisor.ignore_sigint()
+    # wait till both child processes are done
+    os.waitpid(job_pid, 0)
+    os.waitpid(supervisor_pid, 0)
+    return job
+
+
+def _do_run_hazard(job):
+    """
+    Step through all of the phases of a hazard calculation, updating the job
+    status at each phase.
+
+    :param job:
+        An :class:`~openquake.db.models.OqJob` instance.
+    :returns:
+        The input job object when the calculation completes.
+    """
+    # TODO: support calculator selection based on calc mode
+    from openquake.calculators.hazard.classical.core_next import (
+        ClassicalHazardCalculator)
+
     # - Instantiate the calculator class
+    calc = ClassicalHazardCalculator(job)
+
     # - Run the calculation
+    calc.pre_execute()
+
+    job.status = 'executing'
+    job.save()
+    calc.execute()
+
+    job.status = 'post_executing'
+    job.save()
+    calc.post_execute()
+
+    job.status = 'post_processing'
+    job.save()
+    calc.post_process()
+
+    job.status = 'complete'
+    job.is_running = False
+    job.save()
+
+    return job
