@@ -315,7 +315,6 @@ class ClassicalHazardCalculator(base.CalculatorNext):
             assert job_id == job.id
             sources_computed['value'] += num_sources
 
-            # TODO: do we actually need the ack?
             message.ack()
 
         def task_arg_gen():
@@ -369,13 +368,12 @@ class ClassicalHazardCalculator(base.CalculatorNext):
             'virtual_host': amqp_cfg['vhost'],
         }
 
-        while (sources_computed['value']
-               < total_sources_to_compute['value']):
-
-            with kombu.BrokerConnection(**conn_args) as conn:
-                task_signal_queue(conn.channel()).declare()
-                with conn.Consumer(task_signal_queue,
-                                   callbacks=[task_complete_callback]):
+        with kombu.BrokerConnection(**conn_args) as conn:
+            task_signal_queue(conn.channel()).declare()
+            with conn.Consumer(task_signal_queue,
+                               callbacks=[task_complete_callback]):
+                while (sources_computed['value']
+                               < total_sources_to_compute['value']):
                     # This blocks until a message is received.
                     conn.drain_events()
 
@@ -390,7 +388,7 @@ class ClassicalHazardCalculator(base.CalculatorNext):
 
     def post_execute(self):
         """
-        Create the final output records for hazard curves.
+        Create the final output eecords for hazard curves.
         """
         # TODO: better doc
         hc = self.job.hazard_calculation
@@ -407,19 +405,17 @@ class ClassicalHazardCalculator(base.CalculatorNext):
                 sa_period = None
                 sa_damping = None
                 if 'SA' in imt:
-                    match = re.match(r'^SA\((.+?)\)$', imt)
+                    match = re.match(r'^SA\(([^)]+?)\)$', imt)
                     sa_period = float(match.group(1))
                     sa_damping = DEFAULT_SA_DAMPING
                     hc_im_type = 'SA'  # don't include the period
                 else:
                     hc_im_type = imt
 
-                # TODO: create an `Output` record here as well
-                # with type == 'hazard_curve'
                 hco = models.Output(
                     owner=hc.owner,
                     oq_job=self.job,
-                    display_name="",  # TODO: good display name
+                    display_name="hc-rlz-%s" % rlz.id,
                     output_type='hazard_curve',
                 )
                 hco.save()
@@ -440,6 +436,9 @@ class ClassicalHazardCalculator(base.CalculatorNext):
 
                 for i, poes in enumerate(hc_progress.result_matrix):
                     # TODO: Bulk insert HazardCurveData
+                    # We do some weird slicing here (to get a single element)
+                    # because the nhlib Mesh object doesn't support indexing.
+                    # TODO: Mesh should support this
                     [location] = points[i:i + 1]
                     haz_curve_data = models.HazardCurveData(
                         hazard_curve=haz_curve,
@@ -447,6 +446,8 @@ class ClassicalHazardCalculator(base.CalculatorNext):
                         location=location.wkt2d
                     )
                     haz_curve_data.save()
+
+        # TODO: delete htemp stuff
 
 
 @utils_tasks.oqtask
@@ -479,7 +480,7 @@ def hazard_curves(job_id, lt_rlz_id, src_ids):
 
     hc = models.HazardCalculation.objects.get(oqjob=job_id)
 
-    lt_rlz = models.LtRealization.objects.get(pk=lt_rlz_id)
+    lt_rlz = models.LtRealization.objects.get(id=lt_rlz_id)
     ltp = logictree.LogicTreeProcessor(hc.id)
 
     # it is important to maintain the same way logic tree processor
@@ -668,7 +669,7 @@ def _imt_to_nhlib(imt):
         equivlent nhlib object. See :mod:`nhlib.imt`.
     """
     if 'SA' in imt:
-        match = re.match(r'^SA\((.+?)\)$', imt)
+        match = re.match(r'^SA\(([^)]+?)\)$', imt)
         period = float(match.group(1))
         return nhlib.imt.SA(period, DEFAULT_SA_DAMPING)
     else:
