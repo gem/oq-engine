@@ -180,7 +180,7 @@ def intensity_measure_types_and_levels_is_valid(mdl):
                     valid = False
                     errors.append('%s: IMLs must be > 0' % im_type)
         elif 'SA' in im_type:
-            match = re.match(r'^SA\((.+?)\)$', im_type)
+            match = re.match(r'^SA\(([^)]+?)\)$', im_type)
             if match is None:
                 # SA key is not formatted properly
                 valid = False
