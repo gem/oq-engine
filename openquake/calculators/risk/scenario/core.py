@@ -270,6 +270,7 @@ def compute_uninsured_losses(vuln_function, gmvs, epsilon_provider, asset):
 def insurance_boundaries_defind(asset):
     """
     Check if limit and deductibles values have been defined for the asset.
+
     :param asset: the asset used to compute the losses.
     :type asset: an :py:class:`openquake.db.model.ExposureData` instance
     """
