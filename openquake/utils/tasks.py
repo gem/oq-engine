@@ -139,25 +139,6 @@ def get_running_job(job_id):
     return job_ctxt
 
 
-def check_executing_job(job_id):
-    """
-    Get an :class:`~openquake.db.models.OqJob` by ID which currently has the
-    status `executing`.
-
-    :param int job_id:
-        ID of an :class:`openquake.db.models.OqJob`.
-    :returns:
-        :class:`openquake.db.models.OqJob` instance, or `None` if no job
-        matches the criteria.
-    """
-    # TODO: Is this a bad default for logging? Maybe we need to save this in
-    # OqJob?
-    logs.init_logs_amqp_send(level='debug', job_id=job_id)
-    jobs = models.OqJob.objects.filter(id=job_id, status='executing')
-    if len(jobs) == 0:
-        raise JobCompletedError(job_id)
-
-
 def calculator_for_task(job_id, job_type):
     """Given the id of an in-progress calculation
     (:class:`openquake.db.models.OqJob`), load all of the calculation
@@ -202,15 +183,15 @@ def oqtask(task_func):
         code surrounded by a try-except. If any error occurs, log it as a
         critical failure.
         """
-        # Set up logging via amqp.
-        # The job_id is assumed to be the first positional arg.
+        # job_id is always assumed to be the first arugment passed to a task
+        # this is the only required argument
         job_id = args[0]
+        # Set up logging via amqp.
         logs.init_logs_amqp_send(level='debug', job_id=job_id)
         try:
             # check if the job is still running
-            jobs = models.OqJob.objects.filter(
-                id=job_id, status='executing', is_running=True)
-            if len(jobs) == 0:
+            job = models.OqJob.objects.get(id=job_id)
+            if not job.status == 'executing' and not job.is_running:
                 # the job is not running
                 raise JobCompletedError(job_id)
             # the job is running, proceed with task execution

@@ -214,9 +214,6 @@ class EngineAPITestCase(unittest.TestCase):
 
         for act_inp in actual_inputs:
             exp_inp = expected_inputs_map[act_inp.input_type]
-            import pprint
-            pprint.pprint(exp_inp.__dict__)
-            pprint.pprint(act_inp.__dict__)
             self.assertTrue(
                 models.model_equals(
                     exp_inp, act_inp, ignore=(
