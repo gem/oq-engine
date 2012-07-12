@@ -1,18 +1,17 @@
 <?xml version='1.0' encoding='utf-8'?>
 <nrml xmlns:gml="http://www.opengis.net/gml"
-	  xmlns="http://openquake.org/xmlns/nrml/0.4"
-      gml:id="n1">
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
 
-	<pointRupture gml:id="pr_1">
-		<magnitude type="Mw">6.5</magnitude>
+    <pointRupture gml:id="pr_1">
+        <magnitude type="Mw">6.5</magnitude>
         <strike>20.0</strike>
         <dip>90.0</dip>
         <rake>10.0</rake>
 
-		<hypocenterLocation>
-			<gml:Point srsName="urn:ogc:def:crs:EPSG::4979">
-				<gml:pos>-124.704 40.363 30.0</gml:pos>
-			</gml:Point>
-		</hypocenterLocation>
-	</pointRupture>
+        <hypocenterLocation>
+            <gml:Point srsName="urn:ogc:def:crs:EPSG::4979">
+                <gml:pos>-124.704 40.363 30.0</gml:pos>
+            </gml:Point>
+        </hypocenterLocation>
+    </pointRupture>
 </nrml>

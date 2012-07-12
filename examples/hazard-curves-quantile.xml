@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<nrml xmlns:gml="http://www.opengis.net/gml"
+      xmlns="http://openquake.org/xmlns/nrml/0.4">
+
+    <!-- Quantile curve example -->
+    <hazardCurves investigationTime="50.0" IMT="PGD" statistics="quantile" quantileValue="0.6">
+        <IMLs>5.0000e-03 7.0000e-03 1.3700e-02</IMLs>
+
+        <hazardCurve>
+            <gml:Point>
+                <gml:pos>-122.5000 37.5000</gml:pos>
+            </gml:Point>
+            <poEs>9.8728e-01 9.8266e-01 9.4957e-01</poEs>
+        </hazardCurve>
+        <hazardCurve>
+            <gml:Point>
+                <gml:pos>-123.5000 37.5000</gml:pos>
+            </gml:Point>
+            <poEs>9.8728e-02 9.8266e-02 9.4957e-02</poEs>
+        </hazardCurve>
+    </hazardCurves>
+</nrml>

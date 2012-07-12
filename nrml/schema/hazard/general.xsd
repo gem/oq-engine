@@ -82,9 +82,6 @@
                 <xs:sequence>
                     <xs:element name="config" type="Config" minOccurs="0" maxOccurs="1"/>
                     <xs:choice>
-                        <xs:sequence minOccurs="1" maxOccurs="unbounded">
-                            <xs:element ref="hazardCurveField"/>
-                        </xs:sequence>
                         <xs:element ref="groundMotionFieldSet"/>
                         <xs:element ref="hazardMap"/>
                     </xs:choice>
