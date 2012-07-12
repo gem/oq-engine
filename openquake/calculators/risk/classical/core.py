@@ -303,15 +303,12 @@ class ClassicalRiskCalculator(general.ProbabilisticRiskCalculator):
         """
         job_ctxt = self.job_ctxt
         block = general.Block.from_kvs(job_ctxt.job_id, block_id)
-        points = list(block.grid(job_ctxt.region))
 
-        hazard_curves = dict((point.site, self._get_db_curve(point.site))
-                             for point in points)
-
-        def get_loss_curve(point, vuln_function, asset):
+        def get_loss_curve(site, vuln_function, asset):
             "Compute loss curve basing on hazard curve"
             job_profile = self.job_ctxt.oq_job_profile
-            hazard_curve = hazard_curves[point.site]
+            hazard_curve = self._get_db_curve(
+                general.hazard_input_site(self.job_ctxt, site))
             loss_ratio_curve = compute_loss_ratio_curve(
                     vuln_function, hazard_curve,
                     job_profile.lrem_steps_per_interval)

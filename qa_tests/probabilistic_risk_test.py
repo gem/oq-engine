@@ -35,7 +35,7 @@ QA_OUTPUT_DIR = helpers.qa_file(
 class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
     """QA tests for the Probabilistic Event Based Risk calculator."""
 
-    def test_probabilistic_risk_mean_based(self):
+    def test_mean_based(self):
         cfg = helpers.demo_file(
             "probabilistic_event_based_risk/config_qa.gem")
 
@@ -46,7 +46,7 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
         self._verify_loss_curves(OUTPUT_DIR, 0.05)
         self._verify_aggregate_curve(OUTPUT_DIR, 0.05)
 
-    def test_probabilistic_risk_sample_based(self):
+    def test_sampled_based(self):
         cfg = helpers.qa_file(
             "probabilistic_event_based_risk/config_qa.gem")
 
@@ -59,6 +59,17 @@ class ProbabilisticEventBasedRiskQATest(unittest.TestCase):
 
         # Cleaning generated results file.
         rmtree(QA_OUTPUT_DIR)
+
+    def test_hazard_computed_on_exposure_sites(self):
+        # here we compute the hazard on locations
+        # defined in the exposure file. For now, we just
+        # check the job completes correctly.
+
+        cfg = helpers.demo_file(
+            "probabilistic_event_based_risk/config_hzr_exposure.gem")
+
+        self._run_job(cfg)
+        self._verify_job_succeeded(OUTPUT_DIR)
 
     def _verify_loss_curves(self, output_dir, tol):
 
