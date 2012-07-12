@@ -387,6 +387,23 @@ class PlanarSurfaceGetClosestPointsTestCase(unittest.TestCase):
         aae(res.lats, [-0.08, 0.07], decimal=3)
         aae(res.depths, [0.20679306, 1.69185737])
 
+    def test_against_mesh_to_mesh(self):
+        corners = [Point(2.6, 3.7, 20), Point(2.90102155, 3.99961567, 20),
+                   Point(3.2, 3.7, 75), Point(2.89905849, 3.40038407, 75)]
+        surface = PlanarSurface(0.5, 45, 70, *corners)
+        lons, lats = numpy.meshgrid(numpy.linspace(2.2, 3.6, 7),
+                                    numpy.linspace(3.4, 4.2, 7))
+        sites = Mesh(lons, lats, depths=None)
+
+        res1 = surface.get_closest_points(sites)
+        res2 = super(PlanarSurface, surface).get_closest_points(sites)
+
+        aae = numpy.testing.assert_almost_equal
+        # precision up to ~1 km
+        aae(res1.lons, res2.lons, decimal=2)
+        aae(res1.lats, res2.lats, decimal=2)
+        aae(res1.depths, res2.depths, decimal=0)
+
 
 class PlanarSurfaceGetRXDistanceTestCase(unittest.TestCase):
     def _test1to7surface(self):
