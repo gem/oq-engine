@@ -1377,7 +1377,7 @@ class ExposureModel(djm.Model):
 
     UNIT_CHOICES = (
         (u'count', u'Only the number of units is of interest'),
-        (u'economic_value', u'Economic value'),
+        (u'economic_value', u'Only the economic value is of interest'),
         (u'both', u'Number of units and the economic value is of interest'),
     )
     unit_type = djm.TextField(null=True, choices=UNIT_CHOICES)

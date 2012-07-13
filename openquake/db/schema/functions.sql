@@ -300,8 +300,12 @@ AS $$
          NEW["exposure_model_id"])
     [emdl] = plpy.execute(q)
 
-    if emdl["unit_type"] == "count" and NEW["number_of_units"] is not None:
-        return "OK"
+    if emdl["unit_type"] == "count":
+        if NEW["number_of_units"] is not None:
+            return "OK"
+        else:
+            raise Exception(fmt("number of units is mandatory for models "
+                                "with unit type <count>"))
 
     if NEW["stco"] is None and emdl["category"] != "population":
         raise Exception(fmt("structural cost is mandatory for category <%s>" %
