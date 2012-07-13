@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+# set -x
 
 help() {
 cat <<HSD
@@ -149,9 +149,10 @@ do
         fi
 
         # Find the branch author's github user name and the branch name.
-        branch=`cat $pullreq_file | perl -wane 'if ($_ =~ /span.+class=.commit-ref from.>.+class=.user.>([^<]+)<.span>:([^<]+)/) { printf("%s/%s", $1, $2); }'`
+        github_user=`cat $pullreq_file | perl -wane 'if ($_ =~ /<title>.+\s+by\s+(\S+)\s+.+$/) { print $1; }'`
+        branch_reference=`grep class=.pull-branch. $pullreq_file | tail -n 1 | perl -wane 'if ($_ =~ /<span\s+class=.pull-branch.\s+title=.([^>]+).>/) { print $1; }'`
+        branch="$github_user/$branch_reference"
         branch_name="$branch"
-        github_user=`dirname $branch`
 
         # Map the author's github user name to a "git remote" name in our
         # local repository.
@@ -160,7 +161,6 @@ do
             echo "You don't have a remote repository defined for github user $github_user. Plase add one and try again."
             exit 5
         fi
-        branch_reference=`basename $branch`
         ;;
     -L|--local)
         fetch_remotes=0
