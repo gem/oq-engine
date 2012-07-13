@@ -135,11 +135,12 @@ def list_calculations():
     """Simple UI wrapper around
     :function:`openquake.export.core.get_jobs`. It prints the results in
     a nice way."""
-    calcs = export.get_jobs(getpass.getuser())
-    if len(calcs) > 0:
+    jobs = export.get_jobs(getpass.getuser())
+    if len(jobs) > 0:
         print 'ID\tStatus\tDescription'
-        for c in calcs:
-            print '%s\t%s\t%s' % (c.id, c.status, c.description)
+        for c in jobs:
+            print '%s\t%s\t%s' % (c.id, c.status,
+                                  c.hazard_calculation.description)
 
 
 def list_outputs(job_id):
@@ -193,21 +194,31 @@ if __name__ == '__main__':
             job = engine2.prepare_job(getpass.getuser())
             params, files = engine2.parse_config(
                 open(args.run_hazard, 'r'), force_inputs=args.force_inputs)
-            calculation = engine2.create_hazard_calculation(job.owner, params, files.values())
+            calculation = engine2.create_hazard_calculation(job.owner, params,
+                                                            files.values())
             job.hazard_calculation = calculation
             job.save()
 
             # Validate the job:
-            form = validation.ClassicalHazardCalculationForm(instance=calculation, files=files)
+            form = validation.ClassicalHazardCalculationForm(
+                instance=calculation, files=files)
             # For now, just print whether or not the job is valid.
-            if form.is_valid():
-                print 'Job configuration is valid'
-            else:
-                print 'Job configuration is not valid. Errors: %s' % dict(form.errors)
+            if not form.is_valid():
+                print ('Job configuration is not valid. Errors: %s'
+                       % dict(form.errors))
+                sys.exit(1)
 
             # Initialize the supervisor, instantiate the calculator,
             # and run the calculation.
-            engine2.run_hazard(job)
+            completed_job = engine2.run_hazard(
+                job, args.log_level, args.log_file)
+            if completed_job is not None:
+                # We check for `None` here because the supervisor and executor
+                # process forks return to here as well. We want to ignore them.
+                if completed_job.status == 'complete':
+                    print 'Job %s ran successfully' % completed_job.id
+                else:
+                    print 'Job %s failed' % completed_job.id
         except IOError as e:
             print str(e)
         except Exception as e:
