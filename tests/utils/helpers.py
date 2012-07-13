@@ -922,12 +922,14 @@ def _deep_eq(a, b, decimal):
             assert a == b, "%s != %s" % (a, b)
 
 
-def get_hazard_job(cfg):
+def get_hazard_job(cfg, username=None):
     """
     Given a path to a config file, create a
     :class:`openquake.db.models.OqJob` object for a hazard calculation.
     """
-    job = engine2.prepare_job(default_user().user_name)
+    username = username if username is not None else default_user().user_name
+
+    job = engine2.prepare_job(username)
     params, files = engine2.parse_config(open(cfg, 'r'), force_inputs=True)
     haz_calc = engine2.create_hazard_calculation(
         job.owner, params, files.values())

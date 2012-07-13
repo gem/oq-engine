@@ -31,7 +31,6 @@ from tests.utils.helpers import DbTestCase, cleanup_loggers
 CONFIG_FILE = "config.gem"
 
 
-@unittest.skip
 class SupervisorHelpersTestCase(DbTestCase, unittest.TestCase):
     def setUp(self):
         self.job = self.setup_classic_job(create_job_path=False)
@@ -65,15 +64,11 @@ class SupervisorHelpersTestCase(DbTestCase, unittest.TestCase):
             self.assertEqual(((123, ), {}), cache_gc.call_args)
 
     def test_update_job_status_and_error_msg(self):
-        status = 'succeeded'
         error_msg = 'a test message'
-        supervisor.update_job_status_and_error_msg(self.job.id, status,
-                                                   error_msg)
+        supervisor.update_job_status_and_error_msg(self.job.id, error_msg)
 
-        self.assertEqual(status, supervisor.get_job_status(self.job.id))
         self.assertEqual(
-            error_msg,
-            ErrorMsg.objects.get(oq_job=self.job.id).detailed)
+            error_msg, ErrorMsg.objects.get(oq_job=self.job.id).detailed)
 
 
 class SupervisorTestCase(unittest.TestCase):
@@ -141,7 +136,7 @@ class SupervisorTestCase(unittest.TestCase):
             # the status in the job record is updated
             self.assertEqual(1,
                              self.update_job_status_and_error_msg.call_count)
-            self.assertEqual(((123, 'failed', 'a msg'), {}),
+            self.assertEqual(((123, 'a msg'), {}),
                              self.update_job_status_and_error_msg.call_args)
 
     def test_actions_after_job_process_termination(self):
@@ -201,10 +196,9 @@ class SupervisorTestCase(unittest.TestCase):
         self.assertEqual(((123,), {}), self.cleanup_after_job.call_args)
 
         # the status in the job record is updated
-        self.assertEqual(1,
-                            self.update_job_status_and_error_msg.call_count)
+        self.assertEqual(1, self.update_job_status_and_error_msg.call_count)
         self.assertEqual(
-            ((123, 'failed', 'job process 1 crashed or terminated'), {}),
+            ((123,), {'error_msg': 'job process 1 crashed or terminated'}),
             self.update_job_status_and_error_msg.call_args)
 
 

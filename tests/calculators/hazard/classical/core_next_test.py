@@ -14,22 +14,26 @@
 # along with OpenQuake.  If not, see <http://www.gnu.org/licenses/>.
 
 
+import getpass
 import unittest
+
+import nhlib.imt
+
+from nose.plugins.attrib import attr
 
 from openquake.db import models
 from openquake.calculators.hazard.classical import core_next
-
 from tests.utils import helpers
 
 
-class ClassicalHazardCalculatorPreExecuteTestCase(unittest.TestCase):
+class ClassicalHazardCalculatorTestCase(unittest.TestCase):
     """
-    Tests for everything which needs to run during the `pre_execute` phase.
+    Tests for the main methods of the classical hazard calculator.
     """
 
     def setUp(self):
         cfg = helpers.demo_file('simple_fault_demo_hazard/job.ini')
-        self.job = helpers.get_hazard_job(cfg)
+        self.job = helpers.get_hazard_job(cfg, username=getpass.getuser())
         self.calc = core_next.ClassicalHazardCalculator(self.job)
 
     def test_pre_execute(self):
@@ -163,10 +167,62 @@ class ClassicalHazardCalculatorPreExecuteTestCase(unittest.TestCase):
             # initialized:
             [hc_prog_pga] = models.HazardCurveProgress.objects.filter(
                 lt_realization=ltr.id, imt="PGA")
-            self.assertEqual((28, 15), hc_prog_pga.result_matrix.shape)
+            self.assertEqual((120, 19), hc_prog_pga.result_matrix.shape)
             self.assertTrue((hc_prog_pga.result_matrix == 0).all())
 
             [hc_prog_sa] = models.HazardCurveProgress.objects.filter(
                 lt_realization=ltr.id, imt="SA(0.025)")
-            self.assertEqual((28, 19), hc_prog_sa.result_matrix.shape)
+            self.assertEqual((120, 19), hc_prog_sa.result_matrix.shape)
             self.assertTrue((hc_prog_sa.result_matrix == 0).all())
+
+    @attr('slow')
+    def test_execute_and_post_execute(self):
+        self.calc.pre_execute()
+
+        # Update job status to move on to the execution phase.
+        self.job.is_running = True
+
+        self.job.status = 'executing'
+        self.job.save()
+        self.calc.execute()
+
+        self.job.status = 'post_executing'
+        self.job.save()
+        self.calc.post_execute()
+
+
+class ImtsToNhlibTestCase(unittest.TestCase):
+    """
+    Tests for
+    :func:`openquake.calculators.hazard.classical.core_next.im_dict_to_nhlib`.
+    """
+
+    def test_im_dict_to_nhlib(self):
+        imts_in = {
+            'PGA': [1, 2],
+            'PGV': [2, 3],
+            'PGD': [3, 4],
+            'SA(0.1)': [0.1, 0.2],
+            'SA(0.025)': [0.2, 0.3],
+            'IA': [0.3, 0.4],
+            'RSD': [0.4, 0.5],
+            'MMI': [0.5, 0.6],
+        }
+
+        expected = {
+            nhlib.imt.PGA(): [1, 2],
+            nhlib.imt.PGV(): [2, 3],
+            nhlib.imt.PGD(): [3, 4],
+            nhlib.imt.SA(0.1, core_next.DEFAULT_SA_DAMPING): [0.1, 0.2],
+            nhlib.imt.SA(0.025, core_next.DEFAULT_SA_DAMPING): [0.2, 0.3],
+            nhlib.imt.IA(): [0.3, 0.4],
+            nhlib.imt.RSD(): [0.4, 0.5],
+            nhlib.imt.MMI(): [0.5, 0.6],
+        }
+
+        actual = core_next.im_dict_to_nhlib(imts_in)
+        self.assertEqual(len(expected), len(actual))
+
+        for i, (exp_imt, exp_imls) in enumerate(expected.items()):
+            act_imls = actual[exp_imt]
+            self.assertEqual(exp_imls, act_imls)
