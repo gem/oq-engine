@@ -22,9 +22,8 @@ import json
 from django.contrib.gis import geos
 
 from openquake.calculators.risk.classical.core import ClassicalRiskCalculator
-from openquake.calculators.risk.classical.core import _generate_loss_ratios, _compute_lrem
+from openquake.calculators.risk.classical.core import _compute_lrem
 from openquake.calculators.risk.general import BaseRiskCalculator
-from openquake.calculators.risk.general import BetaDistribution
 from openquake.calculators.risk.general import compute_alpha
 from openquake.calculators.risk.general import compute_beta
 from openquake.calculators.risk.general import load_gmvs_at

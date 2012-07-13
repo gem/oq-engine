@@ -432,7 +432,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         properly formatted JSON string.
         """
         vuln_func_json = \
-            '["BT", {"0.005": [0.1, 0.2], "0.007": [0.3, 0.4], "0.0098": [0.5, 0.6]}]'
+    '["BT", {"0.005": [0.1, 0.2], "0.007": [0.3, 0.4], "0.0098": [0.5, 0.6]}]'
 
         vuln_curve = shapes.VulnerabilityFunction.from_json(vuln_func_json)
 
@@ -453,7 +453,7 @@ class VulnerabilityFunctionTestCase(unittest.TestCase):
         vuln_func = shapes.VulnerabilityFunction(imls, loss_ratios, covs, "LN")
 
         expected_json = \
-            '["LN", {"0.005": [0.1, 0.2], "0.007": [0.3, 0.4], "0.0098": [0.5, 0.6]}]'
+    '["LN", {"0.005": [0.1, 0.2], "0.007": [0.3, 0.4], "0.0098": [0.5, 0.6]}]'
 
         # The JSON data (which is essentially a dict) may not come out with the
         # data ordered in a predictable way. So, we'll decode the expected and
@@ -783,8 +783,7 @@ class ShapesUtilsTestCase(unittest.TestCase):
         test = lambda result, site1, site2: self.assertAlmostEqual(
             result, shapes.hdistance(site1.latitude, site1.longitude,
                                      site2.latitude, site2.longitude),
-            places=6
-        )
+            places=6)
         test(6382.5960025, site1, site2)
         test(6404.835013, site3, site1)
         test(13565.796382, site5, site4)

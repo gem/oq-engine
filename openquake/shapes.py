@@ -776,10 +776,10 @@ class VulnerabilityFunction(object):
 
         :returns: :py:class:`openquake.shapes.VulnerabilityFunction` instance
         """
-        
+
         distribution = vuln_func[0]
         values = vuln_func[1]
-        
+
         # flatten out the dict and convert keys to floats:
         data = [(float(iml), lr_cov) for iml, lr_cov in values.items()]
         # sort the data (by iml) in ascending order:
