@@ -102,7 +102,7 @@ class ExposureDBWriter(object):
         for odata in occupancy:
             oobj = models.Occupancy(exposure_data=data,
                                     occupants=odata.occupants,
-                                    description=odata.description)
+                                    category=odata.description)
             oobj.save()
 
 
