@@ -152,7 +152,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
         loss_ratios_1 = [0.001, 0.022, 0.051, 0.08, 0.1, 0.2, 0.405, 0.7]
         covs_1 = [0.0] * 8
         self.vuln_function_1 = shapes.VulnerabilityFunction(
-            imls_1, loss_ratios_1, covs_1)
+            imls_1, loss_ratios_1, covs_1, "LN")
 
         self.gmfs = GMFs
 
@@ -181,7 +181,7 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
             1.0, 1.0, 1.0]
         covs_2 = [0.0] * 100
         self.vuln_function_2 = shapes.VulnerabilityFunction(
-            imls_2, loss_ratios_2, covs_2)
+            imls_2, loss_ratios_2, covs_2, "LN")
 
         self.params = {}
         self.params["OUTPUT_DIR"] = helpers.OUTPUT_DIR
@@ -271,7 +271,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
         imls = [0.10, 0.30, 0.50, 1.00]
         loss_ratios = [0.05, 0.10, 0.15, 0.30]
         covs = [0.30, 0.30, 0.20, 0.20]
-        vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
+        vuln_function = shapes.VulnerabilityFunction(
+            imls, loss_ratios, covs, "LN")
 
         epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
                     -0.4336, 0.3426, 3.5784, 2.7694]
@@ -299,7 +300,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
         imls = [0.10, 0.30, 0.50, 1.00]
         loss_ratios = [0.05, 0.10, 0.15, 0.30]
         covs = [0.30, 0.30, 0.20, 0.20]
-        vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
+        vuln_function = shapes.VulnerabilityFunction(
+            imls, loss_ratios, covs, "LN")
 
         epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
                     -0.4336, 0.3426, 3.5784, 2.7694]
@@ -328,7 +330,8 @@ class ProbabilisticEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
         imls = [0.10, 0.30, 0.50, 1.00]
         loss_ratios = [0.05, 0.10, 0.15, 0.30]
         covs = [0.30, 0.30, 0.20, 0.20]
-        vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
+        vuln_function = shapes.VulnerabilityFunction(
+            imls, loss_ratios, covs, "LN")
 
         epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
                    -0.4336, 0.3426, 3.5784, 2.7694]
@@ -751,10 +754,10 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         imls = [0.100, 0.200, 0.300, 0.450, 0.600]
 
         vuln_function = shapes.VulnerabilityFunction(imls,
-                mean_loss_ratios, covs)
+                mean_loss_ratios, covs, "BT")
         # computes lrem with probabilisticDistribution='BT' (Beta Distribution)
         # set in the Vulnerabilty Function
-        lrem = classical_core._compute_lrem(vuln_function, 5, 'BT')
+        lrem = classical_core._compute_lrem(vuln_function, 5)
 
         helpers.assertDeepAlmostEqual(self, expected_beta_distributions,
             lrem, delta=0.0005)
@@ -773,7 +776,8 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         imls = [0.1, 0.2, 0.4, 0.6]
         loss_ratios = [0.05, 0.08, 0.2, 0.4]
         covs = [0.5, 0.3, 0.2, 0.1]
-        vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
+        vuln_function = shapes.VulnerabilityFunction(
+            imls, loss_ratios, covs, "LN")
 
         lrem = classical_core._compute_lrem(vuln_function, lrem_steps)
 
@@ -820,7 +824,8 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         loss_ratios = [0.05, 0.08, 0.2, 0.4]
         covs = [0.5, 0.5, 0.5, 0.5]
 
-        vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
+        vuln_function = shapes.VulnerabilityFunction(
+            imls, loss_ratios, covs, "LN")
 
         expected_steps = [0.05, 0.15, 0.3, 0.5, 0.7]
 
@@ -839,7 +844,8 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         imls = [0.1, 0.2, 0.4, 0.6]
         loss_ratios = [0.05, 0.08, 0.2, 0.4]
         covs = [0.5, 0.3, 0.2, 0.1]
-        vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios, covs)
+        vuln_function = shapes.VulnerabilityFunction(
+            imls, loss_ratios, covs, "LN")
 
         loss_ratio_curve = classical_core.compute_loss_ratio_curve(
                 vuln_function, hazard_curve, lrem_steps)
@@ -914,13 +920,13 @@ class ClassicalPSHABasedTestCase(unittest.TestCase, helpers.DbTestCase):
         loss_ratios_1 = [0.001, 0.022, 0.051, 0.08, 0.1, 0.2, 0.405, 0.700]
         covs_1 = [0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1, 0.1]
         self.vuln_function = shapes.VulnerabilityFunction(imls_1,
-            loss_ratios_1, covs_1)
+            loss_ratios_1, covs_1, "LN")
 
         imls_2 = [0.1, 0.2, 0.4, 0.6]
         loss_ratios_2 = [0.05, 0.08, 0.2, 0.4]
         covs_2 = [0.5, 0.3, 0.2, 0.1]
         self.vuln_function_2 = shapes.VulnerabilityFunction(imls_2,
-            loss_ratios_2, covs_2)
+            loss_ratios_2, covs_2, "LN")
 
         self.asset_1 = {"taxonomy": "ID", "assetValue": 124.27}
 
@@ -1180,7 +1186,7 @@ class ScenarioEventBasedTestCase(unittest.TestCase, helpers.DbTestCase):
         loss_ratios = [0.05, 0.10, 0.15, 0.30]
         covs = [0.30, 0.30, 0.20, 0.20]
         self.vuln_function = shapes.VulnerabilityFunction(imls, loss_ratios,
-            covs)
+            covs, "LN")
 
         self.epsilons = [0.5377, 1.8339, -2.2588, 0.8622, 0.3188, -1.3077,
                     -0.4336, 0.3426, 3.5784, 2.7694]
@@ -1366,7 +1372,7 @@ class RiskJobGeneralTestCase(unittest.TestCase):
         expected_result = StringIO(expected_result)
 
         events1 = [(elem.tag, elem.attrib, elem.text)
-                   for (event, elem) in etree.iterparse(result)]
+                   for (_, elem) in etree.iterparse(result)]
         events2 = [(elem.tag, elem.attrib, elem.text)
-                   for (event, elem) in etree.iterparse(expected_result)]
+                   for (_, elem) in etree.iterparse(expected_result)]
         self.assertEqual(events1, events2)
