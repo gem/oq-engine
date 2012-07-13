@@ -41,6 +41,7 @@
                 <!-- structural cost type and unit -->
                 <xs:attribute name="stcoType" type="CostType"/>
                 <xs:attribute name="stcoUnit" type="AssetValueUnit"/>
+                <xs:attribute name="unitType" type="UnitType"/>
             </xs:extension>
         </xs:complexContent>
     </xs:complexType>
@@ -95,6 +96,13 @@
         <xs:restriction base="xs:string">
             <xs:enumeration value="aggregated"/>
             <xs:enumeration value="per_asset"/>
+        </xs:restriction>
+    </xs:simpleType>
+    <xs:simpleType name="UnitType">
+        <xs:restriction base="xs:string">
+            <xs:enumeration value="count"/>
+            <xs:enumeration value="economic_value"/>
+            <xs:enumeration value="both"/>
         </xs:restriction>
     </xs:simpleType>
 </xs:schema>

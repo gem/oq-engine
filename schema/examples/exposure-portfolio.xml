@@ -18,7 +18,7 @@
              limit: (contents cost) insurance coverage limit
              deductible: (contents cost) insurance deductible
         -->
-        <exposureList gml:id="PAV01" areaType="per_asset" areaUnit="GBP" assetCategory="buildings" cocoType="per_area" cocoUnit="CHF" recoType="aggregated" recoUnit="EUR" stcoType="aggregated" stcoUnit="USD">
+        <exposureList gml:id="PAV01" areaType="per_asset" areaUnit="GBP" assetCategory="buildings" cocoType="per_area" cocoUnit="CHF" recoType="aggregated" recoUnit="EUR" stcoType="aggregated" stcoUnit="USD" unitType="economic_value">
 
             <gml:description>Collection of existing building in downtown Pavia</gml:description>
 
