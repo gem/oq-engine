@@ -238,12 +238,12 @@ class ExposureDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
         self.assertEqual(500000, assets[2].value)
         self.assertEqual("RC/DMRF-D/LR", assets[2].taxonomy)
         self.assertEqual(Site(9.14777, 45.17999), _to_site(assets[2].site))
-        morning, afternoon = sorted(assets[2].occupancy_set.all(),
+        average, transit = sorted(assets[2].occupancy_set.all(),
                                     key=lambda o: o.category)
-        self.assertEqual(5, afternoon.occupants)
-        self.assertEqual("late afternoon", afternoon.category)
-        self.assertEqual(36, morning.occupants)
-        self.assertEqual("early morning", morning.category)
+        self.assertEqual(5, transit.occupants)
+        self.assertEqual("transit", transit.category)
+        self.assertEqual(36, average.occupants)
+        self.assertEqual("average", average.category)
 
 
 class CFragilityDBWriterTestCase(unittest.TestCase, helpers.DbTestCase):
